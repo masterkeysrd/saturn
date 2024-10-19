@@ -1,0 +1,109 @@
+---
+openapi: 3.0.0
+
+info:
+  title: Saturn Personal Productivity Suite API
+  version: 1.0.0
+
+servers:
+  - url: https://localhost:3000
+    description: Local server
+
+paths:
+  /expense:
+    post:
+      summary: Create a new expense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Expense"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+components:
+  schemas:
+    ID:
+      type: string
+      format: uuid
+      description: The unique identifier for the resource
+      example: 123e4567-e89b-12d3-a456-426614174000
+      x-go-type: uuid.UUID
+      x-go-type-import:
+        path: "github.com/google/uuid"
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          description: A message describing the error
+          example: Unauthorized
+    Expense:
+      type: object
+      required:
+        - description
+        - amount
+      properties:
+        id:
+          $ref: "#/components/schemas/ID"
+          example: 123e4567-e89b-12d3-a456-426614174000
+          readOnly: true
+        description:
+          type: string
+          description: A description of the expense
+          example: Phone and internet bill
+        amount:
+          type: number
+          description: The amount of the expense in cents (e.g. $10.00 is 1000)
+          example: 1000
+  responses:
+    BadRequestError:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            message: Bad request
+    UnauthorizedError:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            message: Unauthorized
+    ForbiddenError:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFoundError:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            message: Resource not found
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            message: Internal server error
