@@ -50,3 +50,11 @@ Resources:
             Path: /expenses
             Method: POST
             RestApiId: !Ref SaturnApi
+
+  ExpenseTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: !Sub "${Environment}-saturn-expenses"
+      PrimaryKey:
+        Name: id
+        Type: String

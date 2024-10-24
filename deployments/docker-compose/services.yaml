@@ -1,0 +1,33 @@
+---
+name: saturn
+
+services:
+  dynamodb:
+    extends:
+      file: dynamodb.yaml
+      service: dynamodb
+
+  dynamodb-admin:
+    extends:
+      file: dynamodb.yaml
+      service: dynamodb-admin
+    depends_on:
+      dynamodb:
+        condition: service_healthy
+
+  dynamodb-init:
+    extends:
+      file: dynamodb.yaml
+      service: dynamodb-init
+    depends_on:
+      dynamodb:
+        condition: service_healthy
+
+volumes:
+  dynamodb-data:
+    driver: local
+
+networks:
+  default:
+    name: saturn-network
+    external: true

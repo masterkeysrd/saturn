@@ -1,0 +1,50 @@
+---
+name: saturn
+
+services:
+  dynamodb:
+    image: amazon/dynamodb-local
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -v http://dynamodb:8000"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    ports:
+      - 8000:8000
+    volumes:
+      - dynamodb-data:/data
+    restart: always
+
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin
+    ports:
+      - 8001:8001
+    environment:
+      DYNAMO_ENDPOINT: http://dynamodb:8000
+    depends_on:
+      dynamodb:
+        condition: service_healthy
+
+  dynamodb-init:
+    image: amazon/aws-cli
+    entrypoint: sh /init/init.sh
+    environment:
+      AWS_ACCESS_KEY_ID: root
+      AWS_SECRET_ACCESS_KEY: root
+      AWS_DEFAULT_REGION: us-west-2
+      DYNAMODB_ENDPOINT: http://dynamodb:8000
+    volumes:
+      - ./dynamodb:/init
+    depends_on:
+      dynamodb:
+        condition: service_healthy
+
+volumes:
+  dynamodb-data:
+
+networks:
+  default:
+    name: saturn
+    external: true
