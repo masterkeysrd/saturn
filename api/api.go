@@ -6,23 +6,29 @@
 // generate the client code, types and interfaces.
 package api
 
-import "github.com/masterkeysrd/saturn/internal/domain/expense"
+import (
+	"github.com/masterkeysrd/saturn/internal/domain/expense"
+	"github.com/masterkeysrd/saturn/internal/foundations/uuid"
+)
 
 // To generate the client code, types and interfaces from the OpenAPI specification, run:
 // go generate ./...
 
 //go:generate go run -modfile=../tools/go.mod github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen -config openapi-gen.yaml openapi.yaml
+
 func SaturnExpense(exp *Expense) *expense.Expense {
+	id, _ := uuid.NewFromStrPtr(exp.Id)
 	return &expense.Expense{
-		ID:          expense.ID(*exp.Id),
+		ID:          expense.ID(id),
 		Amount:      exp.Amount,
 		Description: exp.Description,
 	}
 }
 
 func APIExpense(exp *expense.Expense) *Expense {
+	id := uuid.UUID(exp.ID).String()
 	return &Expense{
-		Id:          (*ID)(&exp.ID),
+		Id:          &id,
 		Amount:      exp.Amount,
 		Description: exp.Description,
 	}
