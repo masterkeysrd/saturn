@@ -1,0 +1,52 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Saturn Personal Productivity Suite
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - local
+      - dev
+      - prod
+    Description: The environment to deploy the stack to (local, dev, prod)
+  Cors:
+    Type: String
+    Default: "*"
+    Description: The CORS policy to apply to the API Gateway
+
+Globals:
+  Function:
+    Timeout: 5
+    MemorySize: 128
+    Handler: bootstrap
+    Runtime: provided.al2023
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+
+Resources:
+  SaturnApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub "${Environment}-saturn-api"
+      StageName: !Ref Environment
+
+  ExpenseCreateFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${Environment}-saturn-expense-create"
+      CodeUri: ./cmd/functions/expense/create
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /expenses
+            Method: POST
+            RestApiId: !Ref SaturnApi
