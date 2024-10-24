@@ -13,7 +13,8 @@ api/build:
 api/start:
 	@echo "Starting API..."
 	sam local start-api \
-		--port 3000
+		--port 3000 \
+		--docker-network saturn-network
 
 services/start:
 	@echo "Starting services..."
