@@ -1,13 +1,11 @@
 package dynamodb
 
 import (
+	"context"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
-
-func DefaultNameResolver(name string) string {
-	return name
-}
 
 type Options struct {
 	AWSConfig aws.Config
@@ -16,6 +14,10 @@ type Options struct {
 
 type DynamoDB struct {
 	*dynamodb.Client
+}
+
+type Client interface {
+	PutItem(ctx context.Context, params *dynamodb.PutItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error)
 }
 
 func New(cfg Options) *DynamoDB {

@@ -3,18 +3,14 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"fmt"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
-	dynamodb "github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/masterkeysrd/saturn/api"
 	"github.com/masterkeysrd/saturn/internal/domain/expense"
 	sdynamodb "github.com/masterkeysrd/saturn/internal/foundations/storage/dynamodb"
-	"github.com/masterkeysrd/saturn/internal/foundations/uuid"
 )
 
 func handler(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -27,6 +23,10 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (events.A
 		AWSConfig: cfg,
 		Endpoint:  "http://dynamodb:8000",
 	})
+
+	repository := expense.NewDynamoDBRepository(client)
+	service := expense.NewService(repository)
+
 	var req api.Expense
 	if err := json.Unmarshal([]byte(event.Body), &req); err != nil {
 		return events.APIGatewayProxyResponse{
@@ -36,31 +36,11 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (events.A
 	}
 
 	exp := api.SaturnExpense(&req)
-	id, err := uuid.New()
-	if err != nil {
-		return events.APIGatewayProxyResponse{
-			StatusCode: 500,
-			Body:       "Could not generate ID",
-		}, nil
-	}
 
-	exp.ID = expense.ID(id)
-	item, err := attributevalue.MarshalMap(exp)
-	if err != nil {
+	if err := service.Create(ctx, exp); err != nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: 500,
-			Body:       "Could not marshal expense",
-		}, nil
-	}
-
-	if _, err := client.PutItem(ctx, &dynamodb.PutItemInput{
-		TableName: aws.String("local-saturn-expenses"),
-		Item:      item,
-	}); err != nil {
-		log.Println(err)
-		return events.APIGatewayProxyResponse{
-			StatusCode: 500,
-			Body:       "Could not save expense",
+			Body:       fmt.Sprintf("{\"error\": \"%s\"}", err.Error()),
 		}, nil
 	}
 
