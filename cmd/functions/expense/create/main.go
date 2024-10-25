@@ -5,15 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/masterkeysrd/saturn/api"
 	"github.com/masterkeysrd/saturn/internal/domain/expense"
 	sdynamodb "github.com/masterkeysrd/saturn/internal/foundations/storage/dynamodb"
+	"github.com/masterkeysrd/saturn/internal/foundations/transport/apigateway"
 )
 
-func handler(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func handler(ctx context.Context, payload []byte) (interface{}, error) {
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		panic("configuration error, " + err.Error())
@@ -28,36 +27,18 @@ func handler(ctx context.Context, event events.APIGatewayProxyRequest) (events.A
 	service := expense.NewService(repository)
 
 	var req api.Expense
-	if err := json.Unmarshal([]byte(event.Body), &req); err != nil {
-		return events.APIGatewayProxyResponse{
-			StatusCode: 400,
-			Body:       "Could not unmarshal request",
-		}, nil
+	if err := json.Unmarshal(payload, &req); err != nil {
+		return nil, fmt.Errorf("could not unmarshal request: %w", err)
 	}
 
 	exp := api.SaturnExpense(&req)
-
 	if err := service.Create(ctx, exp); err != nil {
-		return events.APIGatewayProxyResponse{
-			StatusCode: 500,
-			Body:       fmt.Sprintf("{\"error\": \"%s\"}", err.Error()),
-		}, nil
+		return nil, fmt.Errorf("could not create expense: %w", err)
 	}
 
-	res, err := json.Marshal(api.APIExpense(exp))
-	if err != nil {
-		return events.APIGatewayProxyResponse{
-			StatusCode: 500,
-			Body:       "Could not marshal response",
-		}, nil
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: 200,
-		Body:       string(res),
-	}, nil
+	return api.APIExpense(exp), nil
 }
 
 func main() {
-	lambda.Start(handler)
+	apigateway.Handle(handler)
 }
