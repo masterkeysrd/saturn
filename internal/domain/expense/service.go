@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/masterkeysrd/saturn/internal/foundations/errors"
 	"github.com/masterkeysrd/saturn/internal/foundations/uuid"
 )
 
@@ -16,18 +17,20 @@ func NewService(repository Repository) *Service {
 }
 
 func (s *Service) Create(ctx context.Context, expense *Expense) error {
+	const op = errors.Op("expense/service.Create")
+
 	id, err := uuid.New()
 	if err != nil {
-		return fmt.Errorf("could not generate ID: %w", err)
+		return errors.New(op, errors.Internal, err)
 	}
 
 	expense.ID = ID(id)
 	if err := expense.Validate(); err != nil {
-		return fmt.Errorf("invalid expense: %w", err)
+		return errors.New(op, errors.Invalid, fmt.Errorf("could not validate expense: %w", err))
 	}
 
 	if err := s.repository.Create(ctx, expense); err != nil {
-		return fmt.Errorf("could not create expense: %w", err)
+		return errors.New(op, errors.Internal, err)
 	}
 
 	return nil

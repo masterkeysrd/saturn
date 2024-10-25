@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/masterkeysrd/saturn/api"
@@ -28,12 +27,12 @@ func handler(ctx context.Context, payload []byte) (interface{}, error) {
 
 	var req api.Expense
 	if err := json.Unmarshal(payload, &req); err != nil {
-		return nil, fmt.Errorf("could not unmarshal request: %w", err)
+		return nil, err
 	}
 
 	exp := api.SaturnExpense(&req)
 	if err := service.Create(ctx, exp); err != nil {
-		return nil, fmt.Errorf("could not create expense: %w", err)
+		return nil, err
 	}
 
 	return api.APIExpense(exp), nil

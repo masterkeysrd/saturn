@@ -2,10 +2,12 @@ package expense
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/masterkeysrd/saturn/internal/foundations/errors"
 	sdynamodb "github.com/masterkeysrd/saturn/internal/foundations/storage/dynamodb"
 )
 
@@ -26,9 +28,11 @@ func NewDynamoDBRepository(client *sdynamodb.DynamoDB) *DynamoDBRepository {
 }
 
 func (r *DynamoDBRepository) Create(ctx context.Context, expense *Expense) error {
+	const op = errors.Op("expense/repository.Create")
+
 	item, err := attributevalue.MarshalMap(expense)
 	if err != nil {
-		return err
+		return errors.New(op, errors.Internal, fmt.Errorf("could not marshal expense: %w", err))
 	}
 
 	_, err = r.client.PutItem(ctx, &dynamodb.PutItemInput{
@@ -36,5 +40,9 @@ func (r *DynamoDBRepository) Create(ctx context.Context, expense *Expense) error
 		Item:      item,
 	})
 
-	return err
+	if err != nil {
+		return errors.New(op, errors.Storage, fmt.Errorf("could not put item: %w", err))
+	}
+
+	return nil
 }
