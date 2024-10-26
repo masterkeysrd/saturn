@@ -11,8 +11,30 @@ import (
 	"github.com/masterkeysrd/saturn/internal/foundations/transport/apigateway"
 )
 
-func handler(ctx context.Context, payload []byte) (interface{}, error) {
-	cfg, err := config.LoadDefaultConfig(ctx)
+type Handler struct {
+	expenseCreator interface {
+		Create(ctx context.Context, exp *expense.Expense) error
+	}
+}
+
+func (h *Handler) Handle(ctx context.Context, payload []byte) (interface{}, error) {
+	var req api.Expense
+	if err := json.Unmarshal(payload, &req); err != nil {
+		return nil, err
+	}
+
+	exp := api.SaturnExpense(&req)
+	if err := h.expenseCreator.Create(ctx, exp); err != nil {
+		return nil, err
+	}
+
+	return api.APIExpense(exp), nil
+}
+
+var handler *Handler
+
+func init() {
+	cfg, err := config.LoadDefaultConfig(context.Background())
 	if err != nil {
 		panic("configuration error, " + err.Error())
 	}
@@ -25,19 +47,11 @@ func handler(ctx context.Context, payload []byte) (interface{}, error) {
 	repository := expense.NewDynamoDBRepository(client)
 	service := expense.NewService(repository)
 
-	var req api.Expense
-	if err := json.Unmarshal(payload, &req); err != nil {
-		return nil, err
+	handler = &Handler{
+		expenseCreator: service,
 	}
-
-	exp := api.SaturnExpense(&req)
-	if err := service.Create(ctx, exp); err != nil {
-		return nil, err
-	}
-
-	return api.APIExpense(exp), nil
 }
 
 func main() {
-	apigateway.Handle(handler)
+	apigateway.Handle(handler.Handle)
 }
