@@ -36,6 +36,27 @@ Resources:
       Name: !Sub "${Environment}-saturn-api"
       StageName: !Ref Environment
 
+  ExpenseGetFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${Environment}-saturn-expense-get"
+      CodeUri: ./cmd/functions/expense/get
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /expenses/{id}
+            Method: GET
+            RestApiId: !Ref SaturnApi
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ExpenseTable
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref ExpenseTable
+
   ExpenseCreateFunction:
     Type: AWS::Serverless::Function
     Metadata:

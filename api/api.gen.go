@@ -33,5 +33,8 @@ type ForbiddenError = Error
 // InternalServerError defines model for InternalServerError.
 type InternalServerError = Error
 
+// NotFoundError defines model for NotFoundError.
+type NotFoundError = Error
+
 // CreateExpenseJSONRequestBody defines body for CreateExpense for application/json ContentType.
 type CreateExpenseJSONRequestBody = Expense

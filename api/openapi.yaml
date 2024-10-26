@@ -11,21 +11,20 @@ servers:
 
 paths:
   /expense:
-    /get:
-      get:
-        summary: List all expenses
-        operationId: ListExpenses
-        responses:
-          "200":
-            description: OK
-            content:
-              application/json:
-                schema:
-                  type: array
-                  items:
-                    $ref: "#/components/schemas/Expense"
-          "500":
-            $ref: "#/components/responses/InternalServerError"
+    get:
+      summary: List all expenses
+      operationId: ListExpenses
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Expense"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
     post:
       summary: Create a new expense
       operationId: CreateExpense
@@ -46,6 +45,24 @@ paths:
           $ref: "#/components/responses/BadRequestError"
         "401":
           $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /expense/{id}:
+    get:
+      summary: Get an expense by ID
+      operationId: GetExpense
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
         "500":
           $ref: "#/components/responses/InternalServerError"
 
@@ -121,3 +138,11 @@ components:
             $ref: "#/components/schemas/Error"
           example:
             message: Internal server error
+  parameters:
+    ID:
+      name: id
+      description: The unique identifier for the resource
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/ID"

@@ -16,6 +16,21 @@ func NewService(repository Repository) *Service {
 	return &Service{repository: repository}
 }
 
+func (s *Service) Get(ctx context.Context, id ID) (*Expense, error) {
+	const op = errors.Op("expense/service.Get")
+
+	if err := id.Validate(); err != nil {
+		return nil, errors.New(op, errors.Invalid, fmt.Errorf("could not validate id: %w", err))
+	}
+
+	expense, err := s.repository.Get(ctx, id)
+	if err != nil {
+		return nil, errors.New(op, errors.Internal, err)
+	}
+
+	return expense, nil
+}
+
 func (s *Service) Create(ctx context.Context, expense *Expense) error {
 	const op = errors.Op("expense/service.Create")
 

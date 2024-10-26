@@ -7,13 +7,15 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/masterkeysrd/saturn/internal/foundations/errors"
 	sdynamodb "github.com/masterkeysrd/saturn/internal/foundations/storage/dynamodb"
 )
 
 type Repository interface {
-	Create(ctx context.Context, expense *Expense) error
 	List(ctx context.Context) ([]*Expense, error)
+	Get(ctx context.Context, id ID) (*Expense, error)
+	Create(ctx context.Context, expense *Expense) error
 }
 
 type DynamoDBRepository struct {
@@ -26,6 +28,30 @@ func NewDynamoDBRepository(client *sdynamodb.DynamoDB) *DynamoDBRepository {
 		tableName: "local-saturn-expenses",
 		client:    client,
 	}
+}
+
+func (r *DynamoDBRepository) Get(ctx context.Context, id ID) (*Expense, error) {
+	const op = errors.Op("expense/repository.Get")
+
+	item, err := r.client.GetItem(ctx, &dynamodb.GetItemInput{
+		TableName: aws.String(r.tableName),
+		Key: map[string]types.AttributeValue{
+			"id": &types.AttributeValueMemberS{
+				Value: string(id),
+			},
+		},
+	})
+
+	if err != nil {
+		return nil, errors.New(op, errors.Storage, fmt.Errorf("could not get item: %w", err))
+	}
+
+	var exp Expense
+	if err := attributevalue.UnmarshalMap(item.Item, &exp); err != nil {
+		return nil, errors.New(op, errors.Internal, fmt.Errorf("could not unmarshal expense: %w", err))
+	}
+
+	return &exp, nil
 }
 
 func (r *DynamoDBRepository) Create(ctx context.Context, expense *Expense) error {

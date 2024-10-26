@@ -41,3 +41,7 @@ func (u UUID) String() string {
 func (u UUID) GoogleUUID() (uuid.UUID, error) {
 	return uuid.Parse(string(u))
 }
+
+func (u UUID) IsZero() bool {
+	return u == Empty()
+}

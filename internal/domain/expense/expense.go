@@ -8,6 +8,14 @@ import (
 
 type ID uuid.UUID
 
+func (i ID) Validate() error {
+	if uuid.UUID(i).IsZero() {
+		return fmt.Errorf("id is empty")
+	}
+
+	return nil
+}
+
 type Expense struct {
 	ID          ID     `dynamodbav:"id"`
 	Amount      int    `dynamodbav:"amount"`
