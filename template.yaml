@@ -50,6 +50,33 @@ Resources:
             Path: /expenses
             Method: POST
             RestApiId: !Ref SaturnApi
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ExpenseTable
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref ExpenseTable
+
+  ExpenseListFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${Environment}-saturn-expense-list"
+      CodeUri: ./cmd/functions/expense/list
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /expenses
+            Method: GET
+            RestApiId: !Ref SaturnApi
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ExpenseTable
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref ExpenseTable
 
   ExpenseTable:
     Type: AWS::Serverless::SimpleTable

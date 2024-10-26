@@ -3,6 +3,3 @@ package: api
 output: ./api.gen.go
 generate:
   models: true
-output-options:
-  # to make sure that all types are generated
-  skip-prune: true

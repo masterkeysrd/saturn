@@ -13,6 +13,7 @@ import (
 
 type Repository interface {
 	Create(ctx context.Context, expense *Expense) error
+	List(ctx context.Context) ([]*Expense, error)
 }
 
 type DynamoDBRepository struct {
@@ -45,4 +46,29 @@ func (r *DynamoDBRepository) Create(ctx context.Context, expense *Expense) error
 	}
 
 	return nil
+}
+
+func (r *DynamoDBRepository) List(ctx context.Context) ([]*Expense, error) {
+	const op = errors.Op("expense/repository.List")
+
+	// TODO: Change this to use Query instead of Scan when
+	// we implement the user_id index
+	res, err := r.client.Scan(ctx, &dynamodb.ScanInput{
+		TableName: aws.String(r.tableName),
+	})
+	if err != nil {
+		return nil, errors.New(op, errors.Storage, fmt.Errorf("could not scan table: %w", err))
+	}
+
+	expenses := make([]*Expense, len(res.Items))
+	for i, item := range res.Items {
+		exp := new(Expense)
+		if err := attributevalue.UnmarshalMap(item, exp); err != nil {
+			return nil, errors.New(op, errors.Internal, fmt.Errorf("could not unmarshal expense: %w", err))
+		}
+
+		expenses[i] = exp
+	}
+
+	return expenses, nil
 }

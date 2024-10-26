@@ -35,3 +35,14 @@ func (s *Service) Create(ctx context.Context, expense *Expense) error {
 
 	return nil
 }
+
+func (s *Service) List(ctx context.Context) ([]*Expense, error) {
+	const op = errors.Op("expense/service.List")
+
+	expenses, err := s.repository.List(ctx)
+	if err != nil {
+		return nil, errors.New(op, errors.Internal, err)
+	}
+
+	return expenses, nil
+}

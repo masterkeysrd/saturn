@@ -33,3 +33,12 @@ func APIExpense(exp *expense.Expense) *Expense {
 		Description: exp.Description,
 	}
 }
+
+func APIExpenses(exps []*expense.Expense) []*Expense {
+	res := make([]*Expense, len(exps))
+	for i, exp := range exps {
+		res[i] = APIExpense(exp)
+	}
+
+	return res
+}

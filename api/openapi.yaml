@@ -11,8 +11,24 @@ servers:
 
 paths:
   /expense:
+    /get:
+      get:
+        summary: List all expenses
+        operationId: ListExpenses
+        responses:
+          "200":
+            description: OK
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Expense"
+          "500":
+            $ref: "#/components/responses/InternalServerError"
     post:
       summary: Create a new expense
+      operationId: CreateExpense
       requestBody:
         required: true
         content:

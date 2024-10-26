@@ -33,11 +33,5 @@ type ForbiddenError = Error
 // InternalServerError defines model for InternalServerError.
 type InternalServerError = Error
 
-// NotFoundError defines model for NotFoundError.
-type NotFoundError = Error
-
-// UnauthorizedError defines model for UnauthorizedError.
-type UnauthorizedError = Error
-
-// PostExpenseJSONRequestBody defines body for PostExpense for application/json ContentType.
-type PostExpenseJSONRequestBody = Expense
+// CreateExpenseJSONRequestBody defines body for CreateExpense for application/json ContentType.
+type CreateExpenseJSONRequestBody = Expense
