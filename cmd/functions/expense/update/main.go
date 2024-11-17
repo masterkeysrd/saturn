@@ -43,7 +43,7 @@ func init() {
 		panic("configuration error, " + err.Error())
 	}
 
-	client := dynamodb.New(dynamodb.Options{
+	client := dynamodb.New(dynamodb.ClientOptions{
 		AWSConfig: cfg,
 		Endpoint:  "http://dynamodb:8000",
 	})

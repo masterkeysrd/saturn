@@ -6,10 +6,9 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/masterkeysrd/saturn/internal/foundations/errors"
-	sdynamodb "github.com/masterkeysrd/saturn/internal/foundations/storage/dynamodb"
+	dynamodb "github.com/masterkeysrd/saturn/internal/foundations/storage/dynamodb"
 )
 
 type Repository interface {
@@ -21,10 +20,10 @@ type Repository interface {
 
 type DynamoDBRepository struct {
 	tableName string
-	client    *sdynamodb.DynamoDB
+	client    dynamodb.Client
 }
 
-func NewDynamoDBRepository(client *sdynamodb.DynamoDB) *DynamoDBRepository {
+func NewDynamoDBRepository(client *dynamodb.DynamoDB) *DynamoDBRepository {
 	return &DynamoDBRepository{
 		tableName: "local-saturn-expenses",
 		client:    client,

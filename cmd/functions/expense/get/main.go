@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/masterkeysrd/saturn/api"
 	"github.com/masterkeysrd/saturn/internal/domain/expense"
-	sdynamodb "github.com/masterkeysrd/saturn/internal/foundations/storage/dynamodb"
+	"github.com/masterkeysrd/saturn/internal/foundations/storage/dynamodb"
 	"github.com/masterkeysrd/saturn/internal/foundations/transport"
 	"github.com/masterkeysrd/saturn/internal/foundations/transport/apigateway"
 )
@@ -36,7 +36,7 @@ func init() {
 		panic("configuration error, " + err.Error())
 	}
 
-	client := sdynamodb.New(sdynamodb.Options{
+	client := dynamodb.New(dynamodb.ClientOptions{
 		AWSConfig: cfg,
 		Endpoint:  "http://dynamodb:8000",
 	})
