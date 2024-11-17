@@ -14,6 +14,8 @@ type ScanInput = dynamodb.ScanInput
 type ScanOutput = dynamodb.ScanOutput
 type PutItemInput = dynamodb.PutItemInput
 type PutItemOutput = dynamodb.PutItemOutput
+type DeleteItemInput = dynamodb.DeleteItemInput
+type DeleteItemOutput = dynamodb.DeleteItemOutput
 
 type ClientOptions struct {
 	AWSConfig aws.Config
@@ -28,6 +30,7 @@ type Client interface {
 	Scan(ctx context.Context, params *ScanInput, optFns ...func(*Options)) (*ScanOutput, error)
 	GetItem(ctx context.Context, params *GetItemInput, optFns ...func(*Options)) (*GetItemOutput, error)
 	PutItem(ctx context.Context, params *PutItemInput, optFns ...func(*Options)) (*PutItemOutput, error)
+	DeleteItem(ctx context.Context, params *DeleteItemInput, optFns ...func(*Options)) (*DeleteItemOutput, error)
 }
 
 func New(cfg ClientOptions) *DynamoDB {

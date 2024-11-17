@@ -117,6 +117,24 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref ExpenseTable
 
+  ExpenseDeleteFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${Environment}-saturn-expense-delete"
+      CodeUri: ./cmd/functions/expense/delete
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /expenses/{id}
+            Method: DELETE
+            RestApiId: !Ref SaturnApi
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ExpenseTable
+
   ExpenseTable:
     Type: AWS::Serverless::SimpleTable
     Properties:

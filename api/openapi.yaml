@@ -91,6 +91,18 @@ paths:
           $ref: "#/components/responses/NotFoundError"
         "500":
           $ref: "#/components/responses/InternalServerError"
+    delete:
+      summary: Delete an expense by ID
+      operationId: DeleteExpense
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "204":
+          description: No content
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 
 components:
   schemas:

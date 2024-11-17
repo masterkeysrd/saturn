@@ -16,6 +16,7 @@ type Repository interface {
 	Get(ctx context.Context, id ID) (*Expense, error)
 	Create(ctx context.Context, expense *Expense) error
 	Update(ctx context.Context, expense *Expense) error
+	Delete(ctx context.Context, id ID) error
 }
 
 type DynamoDBRepository struct {
@@ -44,6 +45,10 @@ func (r *DynamoDBRepository) Get(ctx context.Context, id ID) (*Expense, error) {
 
 	if err != nil {
 		return nil, errors.New(op, errors.Storage, fmt.Errorf("could not get item: %w", err))
+	}
+
+	if item.Item == nil {
+		return nil, errors.New(op, errors.NotExist, fmt.Errorf("could not find item"))
 	}
 
 	var exp Expense
@@ -114,6 +119,25 @@ func (r *DynamoDBRepository) Update(ctx context.Context, expense *Expense) error
 
 	if err != nil {
 		return errors.New(op, errors.Storage, fmt.Errorf("could not put item: %w", err))
+	}
+
+	return nil
+}
+
+func (r *DynamoDBRepository) Delete(ctx context.Context, id ID) error {
+	const op = errors.Op("expense/repository.Delete")
+
+	_, err := r.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
+		TableName: aws.String(r.tableName),
+		Key: map[string]types.AttributeValue{
+			"id": &types.AttributeValueMemberS{
+				Value: string(id),
+			},
+		},
+	})
+
+	if err != nil {
+		return errors.New(op, errors.Storage, fmt.Errorf("could not delete item: %w", err))
 	}
 
 	return nil

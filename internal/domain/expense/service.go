@@ -25,7 +25,7 @@ func (s *Service) Get(ctx context.Context, id ID) (*Expense, error) {
 
 	expense, err := s.repository.Get(ctx, id)
 	if err != nil {
-		return nil, errors.New(op, errors.Internal, err)
+		return nil, errors.New(op, err)
 	}
 
 	return expense, nil
@@ -70,15 +70,30 @@ func (s *Service) Update(ctx context.Context, update *Expense) error {
 		return errors.New(op, err)
 	}
 
-	if expense.Update(update); err != nil {
-		return errors.New(op, errors.Invalid, fmt.Errorf("could not update expense: %w", err))
-	}
-
+	expense.Update(update)
 	if err := expense.Validate(); err != nil {
 		return errors.New(op, errors.Invalid, fmt.Errorf("could not validate expense: %w", err))
 	}
 
 	if err := s.repository.Update(ctx, expense); err != nil {
+		return errors.New(op, errors.Internal, err)
+	}
+
+	return nil
+}
+
+func (s *Service) Delete(ctx context.Context, id ID) error {
+	const op = errors.Op("expense/service.Delete")
+
+	if err := id.Validate(); err != nil {
+		return errors.New(op, errors.Invalid, fmt.Errorf("could not validate id: %w", err))
+	}
+
+	if _, err := s.Get(ctx, id); err != nil {
+		return errors.New(op, fmt.Errorf("could not get expense: %w", err))
+	}
+
+	if err := s.repository.Delete(ctx, id); err != nil {
 		return errors.New(op, errors.Internal, err)
 	}
 
