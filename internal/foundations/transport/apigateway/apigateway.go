@@ -34,9 +34,14 @@ func handle(handler transport.HandlerFunc, opts *Options) APIGatewayHandler {
 		ctx = CtxFromEvent(ctx, event)
 
 		res, err := handler(ctx, []byte(event.Body))
-
 		if err != nil {
 			return opts.ErrorEncoder(ctx, err)
+		}
+
+		if res == nil {
+			return events.APIGatewayProxyResponse{
+				StatusCode: 204,
+			}, nil
 		}
 
 		b, err := json.Marshal(res)
