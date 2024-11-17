@@ -99,6 +99,24 @@ Resources:
         Variables:
           TABLE_NAME: !Ref ExpenseTable
 
+  ExpenseUpdateFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${Environment}-saturn-expense-update"
+      CodeUri: ./cmd/functions/expense/update
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /expenses/{id}
+            Method: PUT
+            RestApiId: !Ref SaturnApi
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ExpenseTable
+
   ExpenseTable:
     Type: AWS::Serverless::SimpleTable
     Properties:

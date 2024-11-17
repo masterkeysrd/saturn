@@ -31,6 +31,17 @@ func (s *Service) Get(ctx context.Context, id ID) (*Expense, error) {
 	return expense, nil
 }
 
+func (s *Service) List(ctx context.Context) ([]*Expense, error) {
+	const op = errors.Op("expense/service.List")
+
+	expenses, err := s.repository.List(ctx)
+	if err != nil {
+		return nil, errors.New(op, errors.Internal, err)
+	}
+
+	return expenses, nil
+}
+
 func (s *Service) Create(ctx context.Context, expense *Expense) error {
 	const op = errors.Op("expense/service.Create")
 
@@ -51,13 +62,25 @@ func (s *Service) Create(ctx context.Context, expense *Expense) error {
 	return nil
 }
 
-func (s *Service) List(ctx context.Context) ([]*Expense, error) {
-	const op = errors.Op("expense/service.List")
+func (s *Service) Update(ctx context.Context, update *Expense) error {
+	const op = errors.Op("expense/service.Update")
 
-	expenses, err := s.repository.List(ctx)
+	expense, err := s.repository.Get(ctx, update.ID)
 	if err != nil {
-		return nil, errors.New(op, errors.Internal, err)
+		return errors.New(op, err)
 	}
 
-	return expenses, nil
+	if expense.Update(update); err != nil {
+		return errors.New(op, errors.Invalid, fmt.Errorf("could not update expense: %w", err))
+	}
+
+	if err := expense.Validate(); err != nil {
+		return errors.New(op, errors.Invalid, fmt.Errorf("could not validate expense: %w", err))
+	}
+
+	if err := s.repository.Update(ctx, expense); err != nil {
+		return errors.New(op, errors.Internal, err)
+	}
+
+	return nil
 }

@@ -16,6 +16,7 @@ type Repository interface {
 	List(ctx context.Context) ([]*Expense, error)
 	Get(ctx context.Context, id ID) (*Expense, error)
 	Create(ctx context.Context, expense *Expense) error
+	Update(ctx context.Context, expense *Expense) error
 }
 
 type DynamoDBRepository struct {
@@ -54,26 +55,6 @@ func (r *DynamoDBRepository) Get(ctx context.Context, id ID) (*Expense, error) {
 	return &exp, nil
 }
 
-func (r *DynamoDBRepository) Create(ctx context.Context, expense *Expense) error {
-	const op = errors.Op("expense/repository.Create")
-
-	item, err := attributevalue.MarshalMap(expense)
-	if err != nil {
-		return errors.New(op, errors.Internal, fmt.Errorf("could not marshal expense: %w", err))
-	}
-
-	_, err = r.client.PutItem(ctx, &dynamodb.PutItemInput{
-		TableName: aws.String(r.tableName),
-		Item:      item,
-	})
-
-	if err != nil {
-		return errors.New(op, errors.Storage, fmt.Errorf("could not put item: %w", err))
-	}
-
-	return nil
-}
-
 func (r *DynamoDBRepository) List(ctx context.Context) ([]*Expense, error) {
 	const op = errors.Op("expense/repository.List")
 
@@ -97,4 +78,44 @@ func (r *DynamoDBRepository) List(ctx context.Context) ([]*Expense, error) {
 	}
 
 	return expenses, nil
+}
+
+func (r *DynamoDBRepository) Create(ctx context.Context, expense *Expense) error {
+	const op = errors.Op("expense/repository.Create")
+
+	item, err := attributevalue.MarshalMap(expense)
+	if err != nil {
+		return errors.New(op, errors.Internal, fmt.Errorf("could not marshal expense: %w", err))
+	}
+
+	_, err = r.client.PutItem(ctx, &dynamodb.PutItemInput{
+		TableName: aws.String(r.tableName),
+		Item:      item,
+	})
+
+	if err != nil {
+		return errors.New(op, errors.Storage, fmt.Errorf("could not put item: %w", err))
+	}
+
+	return nil
+}
+
+func (r *DynamoDBRepository) Update(ctx context.Context, expense *Expense) error {
+	const op = errors.Op("expense/repository.Update")
+
+	item, err := attributevalue.MarshalMap(expense)
+	if err != nil {
+		return errors.New(op, errors.Internal, fmt.Errorf("could not marshal expense: %w", err))
+	}
+
+	_, err = r.client.PutItem(ctx, &dynamodb.PutItemInput{
+		TableName: aws.String(r.tableName),
+		Item:      item,
+	})
+
+	if err != nil {
+		return errors.New(op, errors.Storage, fmt.Errorf("could not put item: %w", err))
+	}
+
+	return nil
 }

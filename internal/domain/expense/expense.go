@@ -41,3 +41,13 @@ func (e *Expense) Validate() error {
 
 	return nil
 }
+
+func (e *Expense) Update(other *Expense) {
+	if other.Amount > 0 {
+		e.Amount = other.Amount
+	}
+
+	if other.Description != "" {
+		e.Description = other.Description
+	}
+}
