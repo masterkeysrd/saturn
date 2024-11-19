@@ -17,15 +17,15 @@ type Options struct {
 
 type Option func(*Options)
 
-func Handle(handler transport.HandlerFunc, opts ...Option) {
-	options := Options{
-		ErrorEncoder: defaultErrorEncoder,
-	}
+// Handle registers a transport.Handler to be executed by AWS Lambda.
+func Handle(handler transport.Handler, opts ...Option) {
+	options := buildOptions(opts...)
+	lambda.Start(handle(handler.Handle, &options))
+}
 
-	for _, o := range opts {
-		o(&options)
-	}
-
+// HandleFn registers a transport.HandlerFunc to be executed by AWS Lambda.
+func HandleFn(handler transport.HandlerFunc, opts ...Option) {
+	options := buildOptions(opts...)
 	lambda.Start(handle(handler, &options))
 }
 
@@ -54,4 +54,16 @@ func handle(handler transport.HandlerFunc, opts *Options) APIGatewayHandler {
 			Body:       string(b),
 		}, nil
 	}
+}
+
+func buildOptions(opts ...Option) Options {
+	options := Options{
+		ErrorEncoder: defaultErrorEncoder,
+	}
+
+	for _, o := range opts {
+		o(&options)
+	}
+
+	return options
 }
