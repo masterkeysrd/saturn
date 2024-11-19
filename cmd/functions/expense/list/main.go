@@ -3,49 +3,33 @@ package main
 import (
 	"context"
 
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/masterkeysrd/saturn/api"
+	expenseapi "github.com/masterkeysrd/saturn/api/expense"
+	"github.com/masterkeysrd/saturn/internal/config"
 	"github.com/masterkeysrd/saturn/internal/domain/expense"
 	"github.com/masterkeysrd/saturn/internal/foundations/storage/dynamodb"
+	"github.com/masterkeysrd/saturn/internal/foundations/transport"
 	"github.com/masterkeysrd/saturn/internal/foundations/transport/apigateway"
 )
 
-type Handler struct {
-	expenseLister interface {
-		List(ctx context.Context) ([]*expense.Expense, error)
-	}
-}
-
-func (h *Handler) Handle(ctx context.Context, payload []byte) (interface{}, error) {
-	exps, err := h.expenseLister.List(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return api.APIExpenses(exps), nil
-}
-
-var handler *Handler
+var handler transport.Handler
 
 func init() {
-	cfg, err := config.LoadDefaultConfig(context.Background())
+	cfg, err := config.NewFromEnv(context.Background())
 	if err != nil {
 		panic("configuration error, " + err.Error())
 	}
 
 	client := dynamodb.New(dynamodb.ClientOptions{
-		AWSConfig: cfg,
-		Endpoint:  "http://dynamodb:8000",
+		AWSConfig: cfg.AWS(),
+		Endpoint:  cfg.DynamoDB().Endpoint(),
 	})
 
 	repository := expense.NewDynamoDBRepository(client)
 	service := expense.NewService(repository)
-
-	handler = &Handler{
-		expenseLister: service,
-	}
+	server := expenseapi.NewServer(service)
+	handler = transport.NewHandler(server.List)
 }
 
 func main() {
-	apigateway.Handle(handler.Handle)
+	apigateway.Handle(handler)
 }
