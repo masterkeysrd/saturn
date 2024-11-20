@@ -3,6 +3,7 @@ package expense
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -20,22 +21,29 @@ type Repository interface {
 }
 
 type DynamoDBRepository struct {
-	tableName string
-	client    dynamodb.Client
+	client dynamodb.Client
 }
 
 func NewDynamoDBRepository(client *dynamodb.DynamoDB) *DynamoDBRepository {
 	return &DynamoDBRepository{
-		tableName: "local-saturn-expenses",
-		client:    client,
+		client: client,
 	}
+}
+
+func (r *DynamoDBRepository) TableName() string {
+	env := os.Getenv("ENVIRONMENT")
+	if env == "" {
+		env = "local"
+	}
+
+	return env + "-saturn-expenses"
 }
 
 func (r *DynamoDBRepository) Get(ctx context.Context, id ID) (*Expense, error) {
 	const op = errors.Op("expense/repository.Get")
 
 	item, err := r.client.GetItem(ctx, &dynamodb.GetItemInput{
-		TableName: aws.String(r.tableName),
+		TableName: aws.String(r.TableName()),
 		Key: map[string]types.AttributeValue{
 			"id": &types.AttributeValueMemberS{
 				Value: string(id),
@@ -65,7 +73,7 @@ func (r *DynamoDBRepository) List(ctx context.Context) ([]*Expense, error) {
 	// TODO: Change this to use Query instead of Scan when
 	// we implement the user_id index
 	res, err := r.client.Scan(ctx, &dynamodb.ScanInput{
-		TableName: aws.String(r.tableName),
+		TableName: aws.String(r.TableName()),
 	})
 	if err != nil {
 		return nil, errors.New(op, errors.Storage, fmt.Errorf("could not scan table: %w", err))
@@ -93,7 +101,7 @@ func (r *DynamoDBRepository) Create(ctx context.Context, expense *Expense) error
 	}
 
 	_, err = r.client.PutItem(ctx, &dynamodb.PutItemInput{
-		TableName: aws.String(r.tableName),
+		TableName: aws.String(r.TableName()),
 		Item:      item,
 	})
 
@@ -113,7 +121,7 @@ func (r *DynamoDBRepository) Update(ctx context.Context, expense *Expense) error
 	}
 
 	_, err = r.client.PutItem(ctx, &dynamodb.PutItemInput{
-		TableName: aws.String(r.tableName),
+		TableName: aws.String(r.TableName()),
 		Item:      item,
 	})
 
@@ -128,7 +136,7 @@ func (r *DynamoDBRepository) Delete(ctx context.Context, id ID) error {
 	const op = errors.Op("expense/repository.Delete")
 
 	_, err := r.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
-		TableName: aws.String(r.tableName),
+		TableName: aws.String(r.TableName()),
 		Key: map[string]types.AttributeValue{
 			"id": &types.AttributeValueMemberS{
 				Value: string(id),
