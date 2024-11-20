@@ -1,0 +1,5 @@
+# SAM CLI
+/.aws-sam
+
+# Mac
+.DS_Store
