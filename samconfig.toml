@@ -1,0 +1,25 @@
+version = 0.1
+
+[default]
+[default.global]
+[default.global.parameters]
+stack_name = "saturn-api"
+
+[default.build.parameters]
+cached = false
+parallel = true
+
+[default.local_start_api.parameters]
+warn_containers = "EAGER"
+environment = "local"
+cors = "*"
+
+[dev.deploy.parameters]
+stack_name = "saturn-api"
+resolve_s3 = true
+s3_prefix = "saturn-api"
+region = "us-west-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Environment=\"dev\" Cors=\"*\" DynamoDBEndpoint=\"\""
+image_repositories = []

@@ -14,8 +14,16 @@ Parameters:
     Description: The environment to deploy the stack to (local, dev, prod)
   Cors:
     Type: String
-    Default: "*"
+    Default: "'*'"
     Description: The CORS policy to apply to the API Gateway
+  DynamoDBEndpoint:
+    Type: String
+    Default: ""
+    Description: If specfied enables local DynamoDB with the provided endpoint.
+  AuthCallbackURL:
+    Type: String
+    Default: "https://localhost:3000"
+    Description: The URL to redirect to after authentication
 
 Globals:
   Function:
@@ -28,6 +36,7 @@ Globals:
     Environment:
       Variables:
         ENVIRONMENT: !Ref Environment
+        DYNAMODB_ENDPOINT: !Ref DynamoDBEndpoint
 
 Resources:
   SaturnApi:
@@ -35,6 +44,15 @@ Resources:
     Properties:
       Name: !Sub "${Environment}-saturn-api"
       StageName: !Ref Environment
+      Cors:
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'"
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowOrigin: !Ref Cors
+      Auth:
+        DefaultAuthorizer: SaturnAuthorizer
+        Authorizers:
+          SaturnAuthorizer:
+            UserPoolArn: !GetAtt SaturnUserPool.Arn
 
   ExpenseGetFunction:
     Type: AWS::Serverless::Function
@@ -142,3 +160,62 @@ Resources:
       PrimaryKey:
         Name: id
         Type: String
+
+  SaturnUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub "${Environment}-saturn-user-pool"
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+      Schema:
+        - AttributeDataType: String
+          Name: email
+          Required: true
+          Mutable: false
+        - AttributeDataType: String
+          Name: name
+          Mutable: true
+        - AttributeDataType: String
+          Name: created_at
+          Mutable: false
+
+  SaturnUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub "${Environment}-saturn-user-pool-client"
+      UserPoolId: !Ref SaturnUserPool
+      GenerateSecret: false
+      SupportedIdentityProviders:
+        - COGNITO
+      CallbackURLs:
+        - !Ref AuthCallbackURL
+      LogoutURLs:
+        - !Ref AuthCallbackURL
+      AllowedOAuthFlows:
+        - code
+        - implicit
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
+      AllowedOAuthFlowsUserPoolClient: true
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_CUSTOM_AUTH
+
+  SaturnUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub "${Environment}-saturn-user-pool-domain"
+      UserPoolId: !Ref SaturnUserPool
