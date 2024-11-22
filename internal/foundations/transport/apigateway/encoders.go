@@ -4,13 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aws/aws-lambda-go/events"
 	"github.com/masterkeysrd/saturn/internal/foundations/errors"
 )
 
-type ErrorEncoder func(ctx context.Context, err error) (events.APIGatewayProxyResponse, error)
+type ErrorEncoder func(ctx context.Context, err error) (APIGatewayProxyResponse, error)
 
-func defaultErrorEncoder(ctx context.Context, err error) (events.APIGatewayProxyResponse, error) {
+func defaultErrorEncoder(ctx context.Context, err error) (APIGatewayProxyResponse, error) {
 	status := 500
 	switch {
 	case errors.Is(err, errors.Invalid):
@@ -31,7 +30,7 @@ func defaultErrorEncoder(ctx context.Context, err error) (events.APIGatewayProxy
 		status = 500
 	}
 
-	return events.APIGatewayProxyResponse{
+	return APIGatewayProxyResponse{
 		StatusCode: status,
 		Body:       fmt.Sprintf(`{"error": "%s"}`, err.Error()),
 	}, nil

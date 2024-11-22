@@ -3,15 +3,23 @@ package apigateway
 import (
 	"context"
 
-	"github.com/aws/aws-lambda-go/events"
 	"github.com/masterkeysrd/saturn/internal/foundations/transport"
 )
 
-func CtxFromEvent(ctx context.Context, event events.APIGatewayProxyRequest) context.Context {
+func CtxFromEvent(parent context.Context, event APIGatewayProxyRequest) context.Context {
 	params := make(map[string]string)
 	for k, v := range event.PathParameters {
 		params[k] = v
 	}
 
-	return transport.WithPathParams(ctx, params)
+	var claims map[string]interface{}
+	if c, ok := event.RequestContext.Authorizer["claims"].(map[string]interface{}); ok {
+		claims = c
+	}
+
+	return transport.WithContext(parent).
+		WithPathParams(params).
+		WithRawEvent(event).
+		WithClaims(transport.Claims(claims)).
+		Context()
 }
