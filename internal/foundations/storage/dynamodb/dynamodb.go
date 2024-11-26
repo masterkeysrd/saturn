@@ -10,6 +10,8 @@ import (
 type Options = dynamodb.Options
 type GetItemInput = dynamodb.GetItemInput
 type GetItemOutput = dynamodb.GetItemOutput
+type QueryInput = dynamodb.QueryInput
+type QueryOutput = dynamodb.QueryOutput
 type ScanInput = dynamodb.ScanInput
 type ScanOutput = dynamodb.ScanOutput
 type PutItemInput = dynamodb.PutItemInput
@@ -27,6 +29,7 @@ type DynamoDB struct {
 }
 
 type Client interface {
+	Query(ctx context.Context, params *QueryInput, optFns ...func(*Options)) (*QueryOutput, error)
 	Scan(ctx context.Context, params *ScanInput, optFns ...func(*Options)) (*ScanOutput, error)
 	GetItem(ctx context.Context, params *GetItemInput, optFns ...func(*Options)) (*GetItemOutput, error)
 	PutItem(ctx context.Context, params *PutItemInput, optFns ...func(*Options)) (*PutItemOutput, error)
