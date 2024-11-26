@@ -19,7 +19,7 @@ func NewService(repository Repository) *Service {
 func (s *Service) Get(ctx context.Context, id ID) (*Expense, error) {
 	const op = errors.Op("expense/service.Get")
 
-	if err := id.Validate(); err != nil {
+	if err := uuid.Validate(id); err != nil {
 		return nil, errors.New(op, errors.Invalid, fmt.Errorf("could not validate id: %w", err))
 	}
 
@@ -85,7 +85,7 @@ func (s *Service) Update(ctx context.Context, update *Expense) error {
 func (s *Service) Delete(ctx context.Context, id ID) error {
 	const op = errors.Op("expense/service.Delete")
 
-	if err := id.Validate(); err != nil {
+	if err := uuid.Validate(id); err != nil {
 		return errors.New(op, errors.Invalid, fmt.Errorf("could not validate id: %w", err))
 	}
 

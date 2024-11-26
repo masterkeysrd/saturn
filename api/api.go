@@ -8,7 +8,6 @@ package api
 
 import (
 	"github.com/masterkeysrd/saturn/internal/domain/expense"
-	"github.com/masterkeysrd/saturn/internal/foundations/uuid"
 )
 
 // To generate the client code, types and interfaces from the OpenAPI specification, run:
@@ -17,7 +16,10 @@ import (
 //go:generate go run -modfile=../tools/go.mod github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen -config openapi-gen.yaml openapi.yaml
 
 func SaturnExpense(exp *Expense) *expense.Expense {
-	id, _ := uuid.NewFromStrPtr(exp.Id)
+	var id expense.ID
+	if exp.Id != nil {
+		id = expense.ID(*exp.Id)
+	}
 	return &expense.Expense{
 		ID:          expense.ID(id),
 		Amount:      exp.Amount,
@@ -26,7 +28,7 @@ func SaturnExpense(exp *Expense) *expense.Expense {
 }
 
 func APIExpense(exp *expense.Expense) *Expense {
-	id := uuid.UUID(exp.ID).String()
+	id := string(exp.ID)
 	return &Expense{
 		Id:          &id,
 		Amount:      exp.Amount,

@@ -2,19 +2,9 @@ package expense
 
 import (
 	"fmt"
-
-	"github.com/masterkeysrd/saturn/internal/foundations/uuid"
 )
 
-type ID uuid.UUID
-
-func (i ID) Validate() error {
-	if uuid.UUID(i).IsZero() {
-		return fmt.Errorf("id is empty")
-	}
-
-	return nil
-}
+type ID string
 
 type Expense struct {
 	ID          ID     `dynamodbav:"id"`

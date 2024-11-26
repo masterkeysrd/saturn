@@ -1,47 +1,39 @@
 package uuid
 
-import "github.com/google/uuid"
+import (
+	"errors"
+	"fmt"
 
-type UUID string
+	"github.com/google/uuid"
+)
 
-func New() (UUID, error) {
+// New generates a new UUID.
+func New() (string, error) {
 	id, err := uuid.NewV7()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("could not generate new UUID: %w", err)
 	}
 
-	return UUID(id.String()), nil
+	return id.String(), nil
 }
 
-func NewFromStr(s string) (UUID, error) {
-	id, err := uuid.Parse(s)
-	if err != nil {
-		return "", err
+func Validate[T ~string](id T) error {
+	s := string(id)
+	if s == "" {
+		return errors.New("id is empty")
 	}
 
-	return UUID(id.String()), nil
-}
-
-func NewFromStrPtr(s *string) (UUID, error) {
-	if s == nil {
-		return "", nil
+	if len(s) != 36 {
+		return errors.New("id is not a valid UUID")
 	}
 
-	return NewFromStr(*s)
-}
+	if string(s) == uuid.Nil.String() {
+		return errors.New("id is nil UUID")
+	}
 
-func Empty() UUID {
-	return UUID("")
-}
+	if err := uuid.Validate(s); err != nil {
+		return fmt.Errorf("id is not a valid UUID: %w", err)
+	}
 
-func (u UUID) String() string {
-	return string(u)
-}
-
-func (u UUID) GoogleUUID() (uuid.UUID, error) {
-	return uuid.Parse(string(u))
-}
-
-func (u UUID) IsZero() bool {
-	return u == Empty()
+	return nil
 }
