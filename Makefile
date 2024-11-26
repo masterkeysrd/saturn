@@ -1,5 +1,9 @@
 .PHONY: api services
 
+ENV?=dev
+FUNCTION?=
+EVENT?=
+
 generate:
 	@echo "Generating code..."
 	go generate ./...
@@ -15,6 +19,16 @@ api/start:
 	sam local start-api \
 		--port 3000 \
 		--docker-network saturn-network
+
+api/invoke:
+	@echo "Invoking API..."
+	sam local invoke $(FUNCTION) \
+		--event $(EVENT) \
+		--docker-network saturn-network
+
+api/deploy:
+	@echo "Deploying API..."
+	sam deploy --config-env $(ENV)
 
 services/start:
 	@echo "Starting services..."
