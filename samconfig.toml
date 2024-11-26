@@ -11,8 +11,10 @@ parallel = true
 
 [default.local_start_api.parameters]
 warn_containers = "EAGER"
-environment = "local"
-cors = "*"
+parameter_overrides = "Environment=\"local\" Cors=\"'*'\" DynamoDBEndpoint=\"http://dynamodb:8000\" AuthCallbackURL=\"https://localhost:3000\""
+
+[default.local_invoke.parameters]
+parameter_overrides = "Environment=\"local\" Cors=\"'*'\" DynamoDBEndpoint=\"http://dynamodb:8000\" AuthCallbackURL=\"https://localhost:3000\""
 
 [dev.deploy.parameters]
 stack_name = "saturn-api"
@@ -21,5 +23,9 @@ s3_prefix = "saturn-api"
 region = "us-west-2"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = "Environment=\"dev\" Cors=\"*\" DynamoDBEndpoint=\"\""
+parameter_overrides = "Environment=\"dev\" Cors=\"'*'\" DynamoDBEndpoint=\"\" AuthCallbackURL=\"https://localhost:3000\""
 image_repositories = []
+
+[default.sync.parameters]
+stack_name = "saturn-api"
+parameter_overrides = "Environment=\"dev\" Cors=\"'*'\" DynamoDBEndpoint=\"\" AuthCallbackURL=\"https://localhost:3000\""
