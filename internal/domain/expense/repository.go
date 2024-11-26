@@ -8,8 +8,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/masterkeysrd/saturn/internal/domain/user"
 	"github.com/masterkeysrd/saturn/internal/foundations/errors"
-	dynamodb "github.com/masterkeysrd/saturn/internal/foundations/storage/dynamodb"
+	"github.com/masterkeysrd/saturn/internal/foundations/storage/dynamodb"
+	"github.com/masterkeysrd/saturn/internal/foundations/uuid"
 )
 
 type Repository interface {
@@ -42,13 +44,20 @@ func (r *DynamoDBRepository) TableName() string {
 func (r *DynamoDBRepository) Get(ctx context.Context, id ID) (*Expense, error) {
 	const op = errors.Op("expense/repository.Get")
 
+	key := map[string]types.AttributeValue{
+		"id": &types.AttributeValueMemberS{
+			Value: string(id),
+		},
+	}
+
+	key, err := user.AppendUserIDMember(ctx, key)
+	if err != nil {
+		return nil, errors.New(op, errors.Internal, fmt.Errorf("could not append user id: %w", err))
+	}
+
 	item, err := r.client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(r.TableName()),
-		Key: map[string]types.AttributeValue{
-			"id": &types.AttributeValueMemberS{
-				Value: string(id),
-			},
-		},
+		Key:       key,
 	})
 
 	if err != nil {
@@ -70,10 +79,19 @@ func (r *DynamoDBRepository) Get(ctx context.Context, id ID) (*Expense, error) {
 func (r *DynamoDBRepository) List(ctx context.Context) ([]*Expense, error) {
 	const op = errors.Op("expense/repository.List")
 
-	// TODO: Change this to use Query instead of Scan when
-	// we implement the user_id index
-	res, err := r.client.Scan(ctx, &dynamodb.ScanInput{
-		TableName: aws.String(r.TableName()),
+	id := user.UserIDFromContext(ctx)
+	if err := uuid.Validate(id); err != nil {
+		return nil, errors.New(op, errors.Internal, fmt.Errorf("could not validate user id: %w", err))
+	}
+
+	res, err := r.client.Query(ctx, &dynamodb.QueryInput{
+		TableName:              aws.String(r.TableName()),
+		KeyConditionExpression: aws.String("user_id = :user_id"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":user_id": &types.AttributeValueMemberS{
+				Value: string(id),
+			},
+		},
 	})
 	if err != nil {
 		return nil, errors.New(op, errors.Storage, fmt.Errorf("could not scan table: %w", err))
@@ -100,13 +118,18 @@ func (r *DynamoDBRepository) Create(ctx context.Context, expense *Expense) error
 		return errors.New(op, errors.Internal, fmt.Errorf("could not marshal expense: %w", err))
 	}
 
+	item, err = user.AppendUserIDMember(ctx, item)
+	if err != nil {
+		return errors.New(op, errors.Internal, fmt.Errorf("could not append user id: %w", err))
+	}
+
 	_, err = r.client.PutItem(ctx, &dynamodb.PutItemInput{
 		TableName: aws.String(r.TableName()),
 		Item:      item,
 	})
 
 	if err != nil {
-		return errors.New(op, errors.Storage, fmt.Errorf("could not put item: %w", err))
+		return errors.New(op, errors.Storage, fmt.Errorf("could not put item: %w on table %s", err, r.TableName()))
 	}
 
 	return nil
@@ -118,6 +141,11 @@ func (r *DynamoDBRepository) Update(ctx context.Context, expense *Expense) error
 	item, err := attributevalue.MarshalMap(expense)
 	if err != nil {
 		return errors.New(op, errors.Internal, fmt.Errorf("could not marshal expense: %w", err))
+	}
+
+	item, err = user.AppendUserIDMember(ctx, item)
+	if err != nil {
+		return errors.New(op, errors.Internal, fmt.Errorf("could not append user id: %w", err))
 	}
 
 	_, err = r.client.PutItem(ctx, &dynamodb.PutItemInput{
@@ -135,13 +163,20 @@ func (r *DynamoDBRepository) Update(ctx context.Context, expense *Expense) error
 func (r *DynamoDBRepository) Delete(ctx context.Context, id ID) error {
 	const op = errors.Op("expense/repository.Delete")
 
-	_, err := r.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
-		TableName: aws.String(r.TableName()),
-		Key: map[string]types.AttributeValue{
-			"id": &types.AttributeValueMemberS{
-				Value: string(id),
-			},
+	key := map[string]types.AttributeValue{
+		"id": &types.AttributeValueMemberS{
+			Value: string(id),
 		},
+	}
+
+	key, err := user.AppendUserIDMember(ctx, key)
+	if err != nil {
+		return errors.New(op, errors.Internal, fmt.Errorf("could not append user id: %w", err))
+	}
+
+	_, err = r.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
+		TableName: aws.String(r.TableName()),
+		Key:       key,
 	})
 
 	if err != nil {

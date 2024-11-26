@@ -26,7 +26,7 @@ func NewServer(service Service) *server {
 }
 
 func (s *server) Get(ctx context.Context, payload []byte) (interface{}, error) {
-	id := transport.PathParam(ctx, "id")
+	id := transport.PathParamFromCtx(ctx, "id")
 
 	exp, err := s.service.Get(ctx, expense.ID(id))
 	if err != nil {
@@ -65,7 +65,7 @@ func (s *server) Update(ctx context.Context, payload []byte) (interface{}, error
 		return nil, err
 	}
 
-	id := transport.PathParam(ctx, "id")
+	id := transport.PathParamFromCtx(ctx, "id")
 	req.Id = &id
 
 	exp := api.SaturnExpense(&req)
@@ -77,7 +77,7 @@ func (s *server) Update(ctx context.Context, payload []byte) (interface{}, error
 }
 
 func (s *server) Delete(ctx context.Context, payload []byte) (interface{}, error) {
-	id := transport.PathParam(ctx, "id")
+	id := transport.PathParamFromCtx(ctx, "id")
 
 	if err := s.service.Delete(ctx, expense.ID(id)); err != nil {
 		return nil, err
