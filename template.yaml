@@ -154,12 +154,19 @@ Resources:
             TableName: !Ref ExpenseTable
 
   ExpenseTable:
-    Type: AWS::Serverless::SimpleTable
+    Type: AWS::DynamoDB::Table
     Properties:
       TableName: !Sub "${Environment}-saturn-expenses"
-      PrimaryKey:
-        Name: id
-        Type: String
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+        - AttributeName: id
+          KeyType: RANGE
 
   SaturnUserPool:
     Type: AWS::Cognito::UserPool

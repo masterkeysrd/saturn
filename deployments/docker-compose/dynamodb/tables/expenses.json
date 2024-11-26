@@ -2,14 +2,22 @@
   "TableName": "local-saturn-expenses",
   "AttributeDefinitions": [
     {
+      "AttributeName": "user_id",
+      "AttributeType": "S"
+    },
+    {
       "AttributeName": "id",
       "AttributeType": "S"
     }
   ],
   "KeySchema": [
     {
-      "AttributeName": "id",
+      "AttributeName": "user_id",
       "KeyType": "HASH"
+    },
+    {
+      "AttributeName": "id",
+      "KeyType": "RANGE"
     }
   ],
   "ProvisionedThroughput": {
