@@ -167,6 +167,9 @@ Resources:
           KeyType: HASH
         - AttributeName: id
           KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
 
   SaturnUserPool:
     Type: AWS::Cognito::UserPool
