@@ -195,6 +195,12 @@ Resources:
           Name: name
           Mutable: true
         - AttributeDataType: String
+          Name: family_name
+          Mutable: true
+        - AttributeDataType: String
+          Name: given_name
+          Mutable: true
+        - AttributeDataType: String
           Name: created_at
           Mutable: false
 
