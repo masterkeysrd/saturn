@@ -1,6 +1,6 @@
 import { RouteObject } from "react-router";
-import { LoginRoutes } from "./login";
+import { AuthRoutes } from "./auth";
 
-const FeatureRoutes: RouteObject[] = [LoginRoutes];
+const FeatureRoutes: RouteObject[] = [AuthRoutes];
 
 export default FeatureRoutes;
