@@ -1,9 +1,9 @@
-import React from "react";
 import { RouteObject } from "react-router";
 import Layout from "./Layout";
 import SignIn from "./SignIn";
 import ForgotPassword from "./ForgotPassword";
 import SignUp from "./SignUp";
+import ConfirmSignUp from "./ConfirmSignUp";
 
 const AuthRoutes: RouteObject = {
   path: "",
@@ -16,6 +16,10 @@ const AuthRoutes: RouteObject = {
     {
       path: "sign-up",
       element: <SignUp />,
+    },
+    {
+      path: "confirm-sign-up",
+      element: <ConfirmSignUp />,
     },
     {
       path: "forgot-password",

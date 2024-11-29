@@ -11,6 +11,8 @@ import MuiCard from "@mui/material/Card";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import { useSignIn } from "../../lib/auth/hooks";
+import { CognitoUserSession } from "amazon-cognito-identity-js";
 
 const Card = styled(MuiCard)(({ theme }) => ({
   display: "flex",
@@ -35,9 +37,27 @@ const Container = styled(Stack)(({ theme }) => ({
 }));
 
 export default function SignIn() {
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    console.log("Form submitted");
+  const { signIn } = useSignIn({
+    onSuccess: (session: CognitoUserSession) => handleSignInSuccess(session),
+    onFailure: (error: Error) => handleSignInFailure(error),
+  });
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+    signIn(email, password);
+  };
+
+  const handleSignInSuccess = (session: CognitoUserSession) => {
+    // Redirect to the dashboard
+    console.log("Sign in success", session);
+  };
+
+  const handleSignInFailure = (error: Error) => {
+    // Display an error message
+    console.error("Sign in failure", error);
   };
 
   return (
