@@ -7,24 +7,10 @@ import Button from "@mui/material/Button";
 import FormControl from "@mui/material/FormControl";
 import FormLabel from "@mui/material/FormLabel";
 import Link from "@mui/material/Link";
-import MuiCard from "@mui/material/Card";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { SignUpState, useSignUp } from "../../lib/auth/hooks";
-
-const Card = styled(MuiCard)(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  alignSelf: "center",
-  width: "100%",
-  padding: theme.spacing(4),
-  gap: theme.spacing(2),
-  margin: "auto",
-  [theme.breakpoints.up("sm")]: {
-    maxWidth: "600px",
-  },
-}));
 
 const FormRow = styled(Stack)(({ theme }) => ({
   display: "flex",
@@ -73,7 +59,7 @@ export default function SignUp() {
   };
 
   return (
-    <Card>
+    <>
       <Typography component="h1" variant="h4">
         Sign up
       </Typography>
@@ -154,6 +140,7 @@ export default function SignUp() {
           type="submit"
           variant="contained"
           color="primary"
+          size="large"
           sx={{ mt: 2 }}
         >
           Sign up
@@ -165,6 +152,6 @@ export default function SignUp() {
           </Link>
         </Typography>
       </Box>
-    </Card>
+    </>
   );
 }
