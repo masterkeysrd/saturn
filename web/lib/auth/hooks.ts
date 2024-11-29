@@ -6,6 +6,7 @@ import {
   CognitoUserSession,
 } from "amazon-cognito-identity-js";
 import config from "../config/config";
+import { useEffect, useState } from "react";
 
 const userPool = new CognitoUserPool({
   UserPoolId: config.cognito.userPoolId,
@@ -121,4 +122,30 @@ export function useConfirmSignUp({ onSuccess, onFailure }: ConfirmSignUpProps) {
   };
 
   return { confirmSignUp };
+}
+
+export function useSession() {
+  const [session, setSession] = useState<CognitoUserSession | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const user = userPool.getCurrentUser();
+
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    user.getSession((error: Error, session: null) => {
+      if (error) {
+        setLoading(false);
+        return;
+      }
+
+      setSession(session);
+      setLoading(false);
+    });
+  }, []);
+
+  return { session, loading };
 }
