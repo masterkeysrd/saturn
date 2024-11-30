@@ -1,22 +1,72 @@
-import { createContext, useContext } from "react";
-import { useSession } from "./hooks";
+import { createContext, useContext, useEffect, useState } from "react";
+import { CognitoUserSession } from "amazon-cognito-identity-js";
+import AuthService, { UserProfile } from "./service";
 
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
+  session: CognitoUserSession | null;
+  profile: UserProfile | null;
+  signIn: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  isAuthenticated: false,
+export const AuthContext = createContext<AuthContextType>({
   isLoading: true,
+  isAuthenticated: false,
+  session: null,
+  profile: null,
+  signIn: async () => {},
+  logout: async () => {},
 });
 
-function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { session, loading } = useSession();
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState<CognitoUserSession | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+  const fetchSession = async () => {
+    try {
+      const [session, profile] = await AuthService.session();
+      setSession(session);
+      setUserProfile(profile);
+    } catch (error) {
+      console.error("Error fetching session", error);
+      setSession(null);
+    }
+  };
+
+  useEffect(() => {
+    fetchSession().finally(() => setLoading(false));
+  }, []);
+
+  const signIn = async (email: string, password: string) => {
+    try {
+      await AuthService.signIn(email, password);
+      fetchSession();
+    } catch (error) {
+      console.error("Error signing in", error);
+      setSession(null);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await AuthService.signOut();
+      setSession(null);
+      setUserProfile(null);
+    } catch (error) {
+      console.error("Error signing out", error);
+    }
+  };
 
   const contextValue = {
-    isAuthenticated: !!session,
+    isAuthenticated: !!session && !!userProfile,
     isLoading: loading,
+    session,
+    profile: userProfile,
+    signIn,
+    logout,
   };
 
   return (
@@ -24,7 +74,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-const useAuth = () => {
+export const useAuth = () => {
   const context = useContext(AuthContext);
 
   if (context === undefined) {
@@ -33,5 +83,3 @@ const useAuth = () => {
 
   return context;
 };
-
-export { AuthContext, AuthProvider, useAuth };

@@ -5,13 +5,12 @@ import FormLabel from "@mui/material/FormLabel";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useLocation, useNavigate } from "react-router";
-import {
-  ConfirmSignUpState,
-  SignUpState,
-  useConfirmSignUp,
-} from "../../lib/auth/hooks";
 import { useState } from "react";
 import { Alert } from "@mui/material";
+import AuthService, {
+  ConfirmSignUpState,
+  SignUpState,
+} from "../../lib/auth/service";
 
 export default function ConfirmSignUp() {
   const navigate = useNavigate();
@@ -20,12 +19,7 @@ export default function ConfirmSignUp() {
     null,
   );
 
-  const { confirmSignUp } = useConfirmSignUp({
-    onSuccess: (state: ConfirmSignUpState) => setSignUpState(state),
-    onFailure: (state: ConfirmSignUpState) => setSignUpState(state),
-  });
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!event.currentTarget.checkValidity()) {
       if (event.currentTarget.reportValidity) {
@@ -37,7 +31,9 @@ export default function ConfirmSignUp() {
     const formData = new FormData(event.currentTarget);
     const username = formData.get("username") as string;
     const code = formData.get("code") as string;
-    confirmSignUp(username, code);
+
+    const result = await AuthService.confirmSignUp({ username, code });
+    setSignUpState(result);
   };
 
   const handleSignIn = () => {

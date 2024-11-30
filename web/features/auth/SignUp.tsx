@@ -10,7 +10,7 @@ import Link from "@mui/material/Link";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { SignUpState, useSignUp } from "../../lib/auth/hooks";
+import AuthService, { SignUpState } from "../../lib/auth/service";
 
 const FormRow = styled(Stack)(({ theme }) => ({
   display: "flex",
@@ -25,10 +25,6 @@ const FormRow = styled(Stack)(({ theme }) => ({
 export default function SignUp() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
-  const { signUp } = useSignUp({
-    onSuccess: (state: SignUpState) => handleSignUpSuccess(state),
-    onFailure: (error: Error) => handleSignUpFailure(error),
-  });
 
   const handleSignUpSuccess = (state: SignUpState) => {
     navigate("/confirm-sign-up", { state });
@@ -38,7 +34,7 @@ export default function SignUp() {
     setError(error.message);
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
     if (!event.currentTarget.checkValidity()) {
@@ -55,7 +51,13 @@ export default function SignUp() {
       email: formData.get("email") as string,
       password: formData.get("password") as string,
     };
-    signUp(data);
+
+    try {
+      const result = await AuthService.signUp(data);
+      handleSignUpSuccess(result);
+    } catch (error: unknown) {
+      handleSignUpFailure(error as Error);
+    }
   };
 
   return (

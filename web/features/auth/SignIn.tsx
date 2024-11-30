@@ -8,14 +8,12 @@ import FormLabel from "@mui/material/FormLabel";
 import Link from "@mui/material/Link";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { useSignIn } from "../../lib/auth/hooks";
-import { CognitoUserSession } from "amazon-cognito-identity-js";
+import { useAuth } from "../../lib/auth/AuthContext";
+import { Navigate, useNavigate } from "react-router";
 
 export default function SignIn() {
-  const { signIn } = useSignIn({
-    onSuccess: (session: CognitoUserSession) => handleSignInSuccess(session),
-    onFailure: (error: Error) => handleSignInFailure(error),
-  });
+  const { signIn, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -29,18 +27,28 @@ export default function SignIn() {
     const formData = new FormData(event.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
-    signIn(email, password);
+
+    try {
+      await signIn(email, password);
+      handleSignInSuccess();
+    } catch (error: unknown) {
+      handleSignInFailure(error as Error);
+    }
   };
 
-  const handleSignInSuccess = (session: CognitoUserSession) => {
-    // Redirect to the dashboard
-    console.log("Sign in success", session);
+  const handleSignInSuccess = () => {
+    // Redirect to the home page
+    navigate("/");
   };
 
   const handleSignInFailure = (error: Error) => {
     // Display an error message
     console.error("Sign in failure", error);
   };
+
+  if (isAuthenticated) {
+    return <Navigate replace to="/" />;
+  }
 
   return (
     <>

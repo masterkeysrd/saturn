@@ -13,8 +13,10 @@ import {
   paperClasses,
 } from "@mui/material";
 import MenuButton from "./MenuButton";
+import { useAuth } from "../lib/auth/AuthContext";
 
 export default function UserMenu() {
+  const { logout } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -62,6 +64,7 @@ export default function UserMenu() {
             minWidth: 200,
             [`& .${listItemIconClasses.root}`]: { ml: "auto", minWidth: 0 },
           }}
+          onClick={logout}
         >
           <ListItemText>Logout</ListItemText>
           <ListItemIcon>
