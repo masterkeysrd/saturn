@@ -1,5 +1,10 @@
-import { Typography } from "@mui/material";
+import Page from "../../components/Page";
+import PageTitle from "../../components/PageTitle";
 
 export default function Dashboard() {
-  return <Typography variant="h4">Dashboard</Typography>;
+  return (
+    <Page>
+      <PageTitle>Dashboard</PageTitle>
+    </Page>
+  );
 }

@@ -6,7 +6,7 @@ const theme = createTheme({
   cssVariables: true,
   palette: {
     background: {
-      default: "#f0f0f0",
+      default: "#fcfcfc",
     },
   },
   components: {

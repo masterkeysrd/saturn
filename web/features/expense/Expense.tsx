@@ -1,10 +1,12 @@
+import Page from "../../components/Page";
+import PageTitle from "../../components/PageTitle";
 import ExpenseList from "./components/ExpenseList";
 
 export default function Expense() {
   return (
-    <div>
-      <h1>Expense</h1>
+    <Page>
+      <PageTitle>Expenses</PageTitle>
       <ExpenseList />
-    </div>
+    </Page>
   );
 }
