@@ -1,1 +1,1 @@
-export { default as FeatureRoutes } from "./routes";
+export { default as FeatureRoutes } from "./Routes";

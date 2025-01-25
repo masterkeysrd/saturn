@@ -8,39 +8,15 @@ import {
 } from "@mui/material";
 import Paper from "@mui/material/Paper";
 import { format } from "../../../lib/money";
-
-const expenses = [
-  {
-    id: "e1",
-    description: "New TV",
-    amount: 100000,
-    created_at: new Date(),
-    updated_at: new Date(),
-  },
-  {
-    id: "e2",
-    description: "Car Insurance",
-    amount: 50000,
-    created_at: new Date(),
-    updated_at: new Date(),
-  },
-  {
-    id: "e3",
-    description: "New Desk (Wooden)",
-    amount: 50000,
-    created_at: new Date(),
-    updated_at: new Date(),
-  },
-  {
-    id: "e4",
-    description: "Toilet Paper",
-    amount: 10000,
-    created_at: new Date(),
-    updated_at: new Date(),
-  },
-];
+import { useQuery } from "@tanstack/react-query";
+import { getExpenses } from "../Expense.service";
 
 export default function ExpenseList() {
+  const { data: expenses } = useQuery({
+    queryKey: ["expenses"],
+    queryFn: getExpenses,
+  });
+
   return (
     <TableContainer component={Paper}>
       <Table>
@@ -51,7 +27,7 @@ export default function ExpenseList() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {expenses.map((expense) => (
+          {expenses?.map((expense) => (
             <TableRow key={expense.id}>
               <TableCell>{expense.description}</TableCell>
               <TableCell align="right">{format(expense.amount)}</TableCell>
