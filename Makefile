@@ -8,11 +8,23 @@ generate:
 	@echo "Generating code..."
 	go generate ./...
 
+install:
+	@echo "Installing tools..."
+	cd tools && go mod tidy
+	cd tools && go install \
+		github.com/air-verse/air \
+		github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen
+
+
 api: api/build api/start
 
 api/build:
 	@echo "Building API..."
 	sam build
+
+api/build-watch:
+	@echo "Building API..."
+	air --build.cmd="sam build" --build.bin="/usr/bin/true"
 
 api/start:
 	@echo "Starting API..."
