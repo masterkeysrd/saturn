@@ -1,8 +1,6 @@
 module github.com/masterkeysrd/saturn/tools
 
-go 1.23
-
-toolchain go1.23.5
+go 1.22
 
 require (
 	github.com/air-verse/air v1.61.7
