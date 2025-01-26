@@ -6,6 +6,7 @@ import RouteGuard from "../lib/auth/RouteGuard";
 import AuthRoutes from "./auth/routes";
 import DashboardRoutes from "./dashboard/routes";
 import { BudgetRoutes } from "./budget";
+import { ExpenseRoutes } from "./expense";
 
 const Routes: RouteObject[] = [
   AuthRoutes,
@@ -20,6 +21,7 @@ const Routes: RouteObject[] = [
       { index: true, element: <Navigate to="/dashboard" /> },
       DashboardRoutes,
       BudgetRoutes,
+      ExpenseRoutes,
     ],
   },
 ];

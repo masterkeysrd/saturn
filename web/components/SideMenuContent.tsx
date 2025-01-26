@@ -12,6 +12,7 @@ import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 const mainListItems = [
   { title: "Dashboard", icon: <DashboardRoundedIcon />, path: "/dashboard" },
   { title: "Budget", icon: <MoneyRoundedIcon />, path: "/budget" },
+  { title: "Expense", icon: <MoneyRoundedIcon />, path: "/expense" },
 ];
 
 const secondaryListItems = [
