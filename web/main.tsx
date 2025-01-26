@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router";
 import { CssBaseline, ThemeProvider } from "@mui/material";
+import { SnackbarProvider } from "notistack";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
@@ -20,13 +21,15 @@ const queryClient = new QueryClient();
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider theme={theme}>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <CssBaseline enableColorScheme />
-          <RouterProvider router={router} />
-        </AuthProvider>
-        <ReactQueryDevtools initialIsOpen={false} />
-      </QueryClientProvider>
+      <SnackbarProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <CssBaseline enableColorScheme />
+            <RouterProvider router={router} />
+          </AuthProvider>
+          <ReactQueryDevtools initialIsOpen={false} />
+        </QueryClientProvider>
+      </SnackbarProvider>
     </ThemeProvider>
   </StrictMode>,
 );
