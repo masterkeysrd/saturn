@@ -1,4 +1,4 @@
-package expense
+package budget
 
 import (
 	"context"
@@ -15,10 +15,10 @@ import (
 )
 
 type Repository interface {
-	List(ctx context.Context) ([]*Expense, error)
-	Get(ctx context.Context, id ID) (*Expense, error)
-	Create(ctx context.Context, expense *Expense) error
-	Update(ctx context.Context, expense *Expense) error
+	List(ctx context.Context) ([]*Budget, error)
+	Get(ctx context.Context, id ID) (*Budget, error)
+	Create(ctx context.Context, budget *Budget) error
+	Update(ctx context.Context, budget *Budget) error
 	Delete(ctx context.Context, id ID) error
 }
 
@@ -38,11 +38,11 @@ func (r *DynamoDBRepository) TableName() string {
 		env = "local"
 	}
 
-	return env + "-saturn-expenses"
+	return env + "-saturn-budgets"
 }
 
-func (r *DynamoDBRepository) Get(ctx context.Context, id ID) (*Expense, error) {
-	const op = errors.Op("expense/repository.Get")
+func (r *DynamoDBRepository) Get(ctx context.Context, id ID) (*Budget, error) {
+	const op = errors.Op("budget/repository.Get")
 
 	key := map[string]types.AttributeValue{
 		"id": &types.AttributeValueMemberS{
@@ -68,16 +68,16 @@ func (r *DynamoDBRepository) Get(ctx context.Context, id ID) (*Expense, error) {
 		return nil, errors.New(op, errors.NotExist, fmt.Errorf("could not find item"))
 	}
 
-	var exp Expense
+	var exp Budget
 	if err := attributevalue.UnmarshalMap(item.Item, &exp); err != nil {
-		return nil, errors.New(op, errors.Internal, fmt.Errorf("could not unmarshal expense: %w", err))
+		return nil, errors.New(op, errors.Internal, fmt.Errorf("could not unmarshal budget: %w", err))
 	}
 
 	return &exp, nil
 }
 
-func (r *DynamoDBRepository) List(ctx context.Context) ([]*Expense, error) {
-	const op = errors.Op("expense/repository.List")
+func (r *DynamoDBRepository) List(ctx context.Context) ([]*Budget, error) {
+	const op = errors.Op("budget/repository.List")
 
 	id := user.UserIDFromContext(ctx)
 	if err := uuid.Validate(id); err != nil {
@@ -97,25 +97,25 @@ func (r *DynamoDBRepository) List(ctx context.Context) ([]*Expense, error) {
 		return nil, errors.New(op, errors.Storage, fmt.Errorf("could not scan table: %w", err))
 	}
 
-	expenses := make([]*Expense, len(res.Items))
+	budgets := make([]*Budget, len(res.Items))
 	for i, item := range res.Items {
-		exp := new(Expense)
+		exp := new(Budget)
 		if err := attributevalue.UnmarshalMap(item, exp); err != nil {
-			return nil, errors.New(op, errors.Internal, fmt.Errorf("could not unmarshal expense: %w", err))
+			return nil, errors.New(op, errors.Internal, fmt.Errorf("could not unmarshal budget: %w", err))
 		}
 
-		expenses[i] = exp
+		budgets[i] = exp
 	}
 
-	return expenses, nil
+	return budgets, nil
 }
 
-func (r *DynamoDBRepository) Create(ctx context.Context, expense *Expense) error {
-	const op = errors.Op("expense/repository.Create")
+func (r *DynamoDBRepository) Create(ctx context.Context, budget *Budget) error {
+	const op = errors.Op("budget/repository.Create")
 
-	item, err := attributevalue.MarshalMap(expense)
+	item, err := attributevalue.MarshalMap(budget)
 	if err != nil {
-		return errors.New(op, errors.Internal, fmt.Errorf("could not marshal expense: %w", err))
+		return errors.New(op, errors.Internal, fmt.Errorf("could not marshal budget: %w", err))
 	}
 
 	item, err = user.AppendUserIDMember(ctx, item)
@@ -135,12 +135,12 @@ func (r *DynamoDBRepository) Create(ctx context.Context, expense *Expense) error
 	return nil
 }
 
-func (r *DynamoDBRepository) Update(ctx context.Context, expense *Expense) error {
-	const op = errors.Op("expense/repository.Update")
+func (r *DynamoDBRepository) Update(ctx context.Context, budget *Budget) error {
+	const op = errors.Op("budget/repository.Update")
 
-	item, err := attributevalue.MarshalMap(expense)
+	item, err := attributevalue.MarshalMap(budget)
 	if err != nil {
-		return errors.New(op, errors.Internal, fmt.Errorf("could not marshal expense: %w", err))
+		return errors.New(op, errors.Internal, fmt.Errorf("could not marshal budget: %w", err))
 	}
 
 	item, err = user.AppendUserIDMember(ctx, item)
@@ -161,7 +161,7 @@ func (r *DynamoDBRepository) Update(ctx context.Context, expense *Expense) error
 }
 
 func (r *DynamoDBRepository) Delete(ctx context.Context, id ID) error {
-	const op = errors.Op("expense/repository.Delete")
+	const op = errors.Op("budget/repository.Delete")
 
 	key := map[string]types.AttributeValue{
 		"id": &types.AttributeValueMemberS{

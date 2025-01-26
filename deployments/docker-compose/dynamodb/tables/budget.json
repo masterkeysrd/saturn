@@ -1,5 +1,5 @@
 {
-  "TableName": "local-saturn-expenses",
+  "TableName": "local-saturn-budgets",
   "AttributeDefinitions": [
     {
       "AttributeName": "user_id",

@@ -5,16 +5,16 @@ import (
 	"encoding/json"
 
 	"github.com/masterkeysrd/saturn/api"
-	"github.com/masterkeysrd/saturn/internal/domain/expense"
+	"github.com/masterkeysrd/saturn/internal/domain/budget"
 	"github.com/masterkeysrd/saturn/internal/foundations/transport"
 )
 
 type Service interface {
-	Get(context.Context, expense.ID) (*expense.Expense, error)
-	List(context.Context) ([]*expense.Expense, error)
-	Create(context.Context, *expense.Expense) error
-	Update(context.Context, *expense.Expense) error
-	Delete(context.Context, expense.ID) error
+	Get(context.Context, budget.ID) (*budget.Budget, error)
+	List(context.Context) ([]*budget.Budget, error)
+	Create(context.Context, *budget.Budget) error
+	Update(context.Context, *budget.Budget) error
+	Delete(context.Context, budget.ID) error
 }
 
 type server struct {
@@ -28,12 +28,12 @@ func NewServer(service Service) *server {
 func (s *server) Get(ctx context.Context, payload []byte) (interface{}, error) {
 	id := transport.PathParamFromCtx(ctx, "id")
 
-	exp, err := s.service.Get(ctx, expense.ID(id))
+	exp, err := s.service.Get(ctx, budget.ID(id))
 	if err != nil {
 		return nil, err
 	}
 
-	return api.APIExpense(exp), nil
+	return api.APIBudget(exp), nil
 }
 
 func (s *server) List(ctx context.Context, payload []byte) (interface{}, error) {
@@ -42,25 +42,25 @@ func (s *server) List(ctx context.Context, payload []byte) (interface{}, error) 
 		return nil, err
 	}
 
-	return api.APIExpenses(exps), nil
+	return api.APIBudgets(exps), nil
 }
 
 func (s *server) Create(ctx context.Context, payload []byte) (interface{}, error) {
-	var req api.Expense
+	var req api.Budget
 	if err := json.Unmarshal(payload, &req); err != nil {
 		return nil, err
 	}
 
-	exp := api.SaturnExpense(&req)
+	exp := api.SaturnBudget(&req)
 	if err := s.service.Create(ctx, exp); err != nil {
 		return nil, err
 	}
 
-	return api.APIExpense(exp), nil
+	return api.APIBudget(exp), nil
 }
 
 func (s *server) Update(ctx context.Context, payload []byte) (interface{}, error) {
-	var req api.Expense
+	var req api.Budget
 	if err := json.Unmarshal(payload, &req); err != nil {
 		return nil, err
 	}
@@ -68,18 +68,18 @@ func (s *server) Update(ctx context.Context, payload []byte) (interface{}, error
 	id := transport.PathParamFromCtx(ctx, "id")
 	req.Id = &id
 
-	exp := api.SaturnExpense(&req)
+	exp := api.SaturnBudget(&req)
 	if err := s.service.Update(ctx, exp); err != nil {
 		return nil, err
 	}
 
-	return api.APIExpense(exp), nil
+	return api.APIBudget(exp), nil
 }
 
 func (s *server) Delete(ctx context.Context, payload []byte) (interface{}, error) {
 	id := transport.PathParamFromCtx(ctx, "id")
 
-	if err := s.service.Delete(ctx, expense.ID(id)); err != nil {
+	if err := s.service.Delete(ctx, budget.ID(id)); err != nil {
 		return nil, err
 	}
 

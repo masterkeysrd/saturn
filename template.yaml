@@ -54,109 +54,109 @@ Resources:
           SaturnAuthorizer:
             UserPoolArn: !GetAtt SaturnUserPool.Arn
 
-  ExpenseGetFunction:
+  BudgetGetFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: go1.x
     Properties:
-      FunctionName: !Sub "${Environment}-saturn-expense-get"
-      CodeUri: ./cmd/functions/expense/get
+      FunctionName: !Sub "${Environment}-saturn-budget-get"
+      CodeUri: ./cmd/functions/budget/get
       Events:
         ApiEvent:
           Type: Api
           Properties:
-            Path: /expenses/{id}
+            Path: /budgets/{id}
             Method: GET
             RestApiId: !Ref SaturnApi
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref ExpenseTable
+            TableName: !Ref BudgetTable
       Environment:
         Variables:
-          TABLE_NAME: !Ref ExpenseTable
+          TABLE_NAME: !Ref BudgetTable
 
-  ExpenseCreateFunction:
+  BudgetCreateFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: go1.x
     Properties:
-      FunctionName: !Sub "${Environment}-saturn-expense-create"
-      CodeUri: ./cmd/functions/expense/create
+      FunctionName: !Sub "${Environment}-saturn-budget-create"
+      CodeUri: ./cmd/functions/budget/create
       Events:
         ApiEvent:
           Type: Api
           Properties:
-            Path: /expenses
+            Path: /budgets
             Method: POST
             RestApiId: !Ref SaturnApi
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref ExpenseTable
+            TableName: !Ref BudgetTable
       Environment:
         Variables:
-          TABLE_NAME: !Ref ExpenseTable
+          TABLE_NAME: !Ref BudgetTable
 
-  ExpenseListFunction:
+  BudgetListFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: go1.x
     Properties:
-      FunctionName: !Sub "${Environment}-saturn-expense-list"
-      CodeUri: ./cmd/functions/expense/list
+      FunctionName: !Sub "${Environment}-saturn-budget-list"
+      CodeUri: ./cmd/functions/budget/list
       Events:
         ApiEvent:
           Type: Api
           Properties:
-            Path: /expenses
+            Path: /budgets
             Method: GET
             RestApiId: !Ref SaturnApi
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref ExpenseTable
+            TableName: !Ref BudgetTable
       Environment:
         Variables:
-          TABLE_NAME: !Ref ExpenseTable
+          TABLE_NAME: !Ref BudgetTable
 
-  ExpenseUpdateFunction:
+  BudgetUpdateFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: go1.x
     Properties:
-      FunctionName: !Sub "${Environment}-saturn-expense-update"
-      CodeUri: ./cmd/functions/expense/update
+      FunctionName: !Sub "${Environment}-saturn-budget-update"
+      CodeUri: ./cmd/functions/budget/update
       Events:
         ApiEvent:
           Type: Api
           Properties:
-            Path: /expenses/{id}
+            Path: /budgets/{id}
             Method: PUT
             RestApiId: !Ref SaturnApi
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref ExpenseTable
+            TableName: !Ref BudgetTable
 
-  ExpenseDeleteFunction:
+  BudgetDeleteFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: go1.x
     Properties:
-      FunctionName: !Sub "${Environment}-saturn-expense-delete"
-      CodeUri: ./cmd/functions/expense/delete
+      FunctionName: !Sub "${Environment}-saturn-budget-delete"
+      CodeUri: ./cmd/functions/budget/delete
       Events:
         ApiEvent:
           Type: Api
           Properties:
-            Path: /expenses/{id}
+            Path: /budgets/{id}
             Method: DELETE
             RestApiId: !Ref SaturnApi
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref ExpenseTable
+            TableName: !Ref BudgetTable
 
-  ExpenseTable:
+  BudgetTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "${Environment}-saturn-expenses"
+      TableName: !Sub "${Environment}-saturn-budgets"
       AttributeDefinitions:
         - AttributeName: user_id
           AttributeType: S

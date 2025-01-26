@@ -7,7 +7,7 @@
 package api
 
 import (
-	"github.com/masterkeysrd/saturn/internal/domain/expense"
+	"github.com/masterkeysrd/saturn/internal/domain/budget"
 )
 
 // To generate the client code, types and interfaces from the OpenAPI specification, run:
@@ -15,31 +15,31 @@ import (
 
 //go:generate go run -modfile=../tools/go.mod github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen -config openapi-gen.yaml openapi.yaml
 
-func SaturnExpense(exp *Expense) *expense.Expense {
-	var id expense.ID
+func SaturnBudget(exp *Budget) *budget.Budget {
+	var id budget.ID
 	if exp.Id != nil {
-		id = expense.ID(*exp.Id)
+		id = budget.ID(*exp.Id)
 	}
-	return &expense.Expense{
-		ID:          expense.ID(id),
+	return &budget.Budget{
+		ID:          budget.ID(id),
 		Amount:      exp.Amount,
 		Description: exp.Description,
 	}
 }
 
-func APIExpense(exp *expense.Expense) *Expense {
+func APIBudget(exp *budget.Budget) *Budget {
 	id := string(exp.ID)
-	return &Expense{
+	return &Budget{
 		Id:          &id,
 		Amount:      exp.Amount,
 		Description: exp.Description,
 	}
 }
 
-func APIExpenses(exps []*expense.Expense) []*Expense {
-	res := make([]*Expense, len(exps))
+func APIBudgets(exps []*budget.Budget) []*Budget {
+	res := make([]*Budget, len(exps))
 	for i, exp := range exps {
-		res[i] = APIExpense(exp)
+		res[i] = APIBudget(exp)
 	}
 
 	return res

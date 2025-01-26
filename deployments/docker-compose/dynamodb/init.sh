@@ -9,7 +9,6 @@ fi
 
 dynamodb_cmd="aws dynamodb"
 dynamodb_flags="--endpoint-url $DYNAMODB_ENDPOINT"
-cat /init/tables/expense.json
 
 check_if_table_exists() {
   table_name=$1
@@ -21,16 +20,16 @@ check_if_table_exists() {
   fi
 }
 
-create_expense_table() {
-  if check_if_table_exists "local-saturn-expense"; then
-    echo "Table expense already exists"
+create_budget_table() {
+  if check_if_table_exists "local-saturn-budgets"; then
+    echo "Table budget already exists"
   else
-    echo "Creating table expense"
+    echo "Creating table budget"
     $dynamodb_cmd create-table \
-      --cli-input-json file://\/init/tables/expenses.json \
+      --cli-input-json file://\/init/tables/budget.json \
       $dynamodb_flags
   fi
 }
 
 echo "=> Creating tables for saturn"
-create_expense_table
+create_budget_table

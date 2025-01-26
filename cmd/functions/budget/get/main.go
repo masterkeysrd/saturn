@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 
-	expenseapi "github.com/masterkeysrd/saturn/api/expense"
+	budgetapi "github.com/masterkeysrd/saturn/api/budget"
 	"github.com/masterkeysrd/saturn/internal/config"
-	"github.com/masterkeysrd/saturn/internal/domain/expense"
+	"github.com/masterkeysrd/saturn/internal/domain/budget"
 	"github.com/masterkeysrd/saturn/internal/foundations/auth"
 	"github.com/masterkeysrd/saturn/internal/foundations/log"
 	"github.com/masterkeysrd/saturn/internal/foundations/storage/dynamodb"
@@ -27,16 +27,18 @@ func init() {
 		Endpoint:  cfg.DynamoDB().Endpoint(),
 	})
 
-	repository := expense.NewDynamoDBRepository(client)
-	service := expense.NewService(repository)
-	server := expenseapi.NewServer(service)
-	handler = transport.NewHandler(server.Create)
+	repository := budget.NewDynamoDBRepository(client)
+	service := budget.NewService(repository)
 
+	server := budgetapi.NewServer(service)
+	handler = transport.NewHandler(server.Get)
 }
 
 func main() {
 	apigateway.Handle(
 		handler,
-		apigateway.WithMiddlewares(auth.Middleware),
+		apigateway.WithMiddlewares(
+			auth.Middleware,
+		),
 	)
 }

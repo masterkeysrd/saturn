@@ -1,4 +1,4 @@
-package expense
+package budget
 
 import (
 	"fmt"
@@ -6,15 +6,15 @@ import (
 
 type ID string
 
-type Expense struct {
+type Budget struct {
 	ID          ID     `dynamodbav:"id"`
 	Amount      int    `dynamodbav:"amount"`
 	Description string `dynamodbav:"description"`
 }
 
-func (e *Expense) Validate() error {
+func (e *Budget) Validate() error {
 	if e == nil {
-		return fmt.Errorf("expense is nil")
+		return fmt.Errorf("budget is nil")
 	}
 
 	if e.ID == "" {
@@ -32,7 +32,7 @@ func (e *Expense) Validate() error {
 	return nil
 }
 
-func (e *Expense) Update(other *Expense) {
+func (e *Budget) Update(other *Budget) {
 	if other.Amount > 0 {
 		e.Amount = other.Amount
 	}
