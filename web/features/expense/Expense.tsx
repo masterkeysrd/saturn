@@ -12,6 +12,7 @@ import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import money from "../../lib/money";
 import PageHeader from "../../components/PageHeader";
+import { Outlet } from "react-router";
 
 export default function Expense() {
   const { data: expenses } = useQuery({
@@ -23,7 +24,7 @@ export default function Expense() {
     <Page>
       <PageHeader>
         <PageTitle>Expenses</PageTitle>
-        <Button variant="contained" color="primary" href="/expenses/new">
+        <Button variant="contained" color="primary" href="/expense/new">
           Add Expense
         </Button>
       </PageHeader>
@@ -46,6 +47,7 @@ export default function Expense() {
             ))}
           </TableBody>
         </Table>
+        <Outlet />
       </TableContainer>
     </Page>
   );
