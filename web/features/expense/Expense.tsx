@@ -1,3 +1,5 @@
+import { Outlet } from "react-router";
+import Button from "@mui/material/Button";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -11,6 +13,7 @@ import PageTitle from "../../components/PageTitle";
 import { getExpenseTypeLabel } from "./Expense.utils";
 import { useQuery } from "@tanstack/react-query";
 import { getExpenses } from "./Expense.service";
+import money from "../../lib/money";
 
 export const Expense = () => {
   const { data: expenses } = useQuery({
@@ -22,6 +25,9 @@ export const Expense = () => {
     <Page>
       <PageHeader>
         <PageTitle>Expenses</PageTitle>
+        <Button variant="contained" color="primary" href="/expense/new">
+          Create a new Expense
+        </Button>
       </PageHeader>
       <TableContainer component={Paper}>
         <Table>
@@ -39,12 +45,15 @@ export const Expense = () => {
                 <TableCell>{getExpenseTypeLabel(expense.type)}</TableCell>
                 <TableCell>{expense.description}</TableCell>
                 <TableCell>{expense.budget?.description}</TableCell>
-                <TableCell align="right">{expense.amount}</TableCell>
+                <TableCell align="right">
+                  {money.format(expense.amount)}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
+      <Outlet />
     </Page>
   );
 };

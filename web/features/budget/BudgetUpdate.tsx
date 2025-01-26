@@ -1,5 +1,3 @@
-import styled from "@mui/material/styles/styled";
-import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
@@ -14,6 +12,8 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createBudget, getBudget, updateBudget } from "./Budget.service";
 import { useSnackbar } from "notistack";
+
+import Form from "../../components/Form";
 
 export const BudgetUpdate = () => {
   const navigate = useNavigate();
@@ -154,20 +154,5 @@ export const BudgetUpdate = () => {
     </Dialog>
   );
 };
-
-interface FormProps {
-  children: React.ReactNode;
-}
-
-const Form = ({ children }: FormProps) => {
-  return <FormContainer>{children}</FormContainer>;
-};
-
-const FormContainer = styled(Box)(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  gap: theme.spacing(2),
-  px: theme.spacing(2),
-}));
 
 export default BudgetUpdate;

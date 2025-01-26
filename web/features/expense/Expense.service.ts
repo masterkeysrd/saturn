@@ -1,7 +1,7 @@
 import axios from "axios";
 import { Expense } from "./Expense.model";
 
-const baseUrl = "http://localhost:8080/expenses";
+const baseUrl = "http://localhost:3000/expenses";
 
 export async function getExpenses(): Promise<Expense[]> {
   const response = await axios.get<Expense[]>(baseUrl);
