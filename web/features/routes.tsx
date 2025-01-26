@@ -1,11 +1,13 @@
 import { Navigate, RouteObject } from "react-router";
-import AuthRoutes from "./auth/routes";
-import DashboardRoutes from "./dashboard/routes";
-import { ExpenseRoutes } from "./expense";
+
 import RootLayout from "../components/RootLayout";
 import RouteGuard from "../lib/auth/RouteGuard";
 
-const FeatureRoutes: RouteObject[] = [
+import AuthRoutes from "./auth/routes";
+import DashboardRoutes from "./dashboard/routes";
+import { BudgetRoutes } from "./budget";
+
+const Routes: RouteObject[] = [
   AuthRoutes,
   {
     path: "/",
@@ -17,9 +19,9 @@ const FeatureRoutes: RouteObject[] = [
     children: [
       { index: true, element: <Navigate to="/dashboard" /> },
       DashboardRoutes,
-      ExpenseRoutes,
+      BudgetRoutes,
     ],
   },
 ];
 
-export default FeatureRoutes;
+export default Routes;

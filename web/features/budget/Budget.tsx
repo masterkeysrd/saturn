@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import Page from "../../components/Page";
 import PageTitle from "../../components/PageTitle";
-import { getExpenses } from "./Expense.service";
+import { getBudgets } from "./Budget.service";
 import Button from "@mui/material/Button";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -13,19 +13,29 @@ import Paper from "@mui/material/Paper";
 import money from "../../lib/money";
 import PageHeader from "../../components/PageHeader";
 import { Outlet } from "react-router";
+import { useSnackbar } from "notistack";
+import { useEffect } from "react";
 
-export default function Expense() {
-  const { data: expenses } = useQuery({
-    queryKey: ["expenses"],
-    queryFn: getExpenses,
+export const Budget = () => {
+  const { enqueueSnackbar } = useSnackbar();
+
+  const { data: budgets, error } = useQuery({
+    queryKey: ["budgets"],
+    queryFn: getBudgets,
   });
+
+  useEffect(() => {
+    if (error) {
+      enqueueSnackbar("Failed to load budgets", { variant: "error" });
+    }
+  }, [error]);
 
   return (
     <Page>
       <PageHeader>
-        <PageTitle>Expenses</PageTitle>
-        <Button variant="contained" color="primary" href="/expense/new">
-          Add Expense
+        <PageTitle>Budgets</PageTitle>
+        <Button variant="contained" color="primary" href="/budget/new">
+          Create a new Budget
         </Button>
       </PageHeader>
       <TableContainer component={Paper}>
@@ -37,11 +47,11 @@ export default function Expense() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {expenses?.map((expense) => (
-              <TableRow key={expense.id}>
-                <TableCell>{expense.description}</TableCell>
+            {budgets?.map((budget) => (
+              <TableRow key={budget.id}>
+                <TableCell>{budget.description}</TableCell>
                 <TableCell align="right">
-                  {money.format(expense.amount)}
+                  {money.format(budget.amount)}
                 </TableCell>
               </TableRow>
             ))}
@@ -51,4 +61,6 @@ export default function Expense() {
       </TableContainer>
     </Page>
   );
-}
+};
+
+export default Budget;

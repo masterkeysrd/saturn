@@ -9,89 +9,89 @@ import FormControl from "@mui/material/FormControl";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useNavigate, useParams } from "react-router";
-import { Expense } from "./Expense.model";
+import { Budget } from "./Budget.model";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createExpense, getExpense, updateExpense } from "./Expense.service";
+import { createBudget, getBudget, updateBudget } from "./Budget.service";
 import { useSnackbar } from "notistack";
 
-export const ExpenseUpdate = () => {
+export const BudgetUpdate = () => {
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
 
   const { id } = useParams<"id">();
   const isNew = id === undefined;
-  const title = isNew ? "New Expense" : "Update Expense";
+  const title = isNew ? "Create Budget" : "Edit Budget";
 
-  const [expense, setExpense] = useState<Expense>({});
+  const [budget, setBudget] = useState<Budget>({});
 
   const queryClient = useQueryClient();
-  const { data: expenseData, isLoading } = useQuery({
+  const { data: budgetData, isLoading } = useQuery({
     enabled: !isNew,
-    queryKey: ["expense", id],
-    queryFn: async () => getExpense(id!),
+    queryKey: ["budgets", id],
+    queryFn: async () => getBudget(id!),
   });
 
-  const createExpenseMutation = useMutation({
-    mutationFn: createExpense,
+  const createBudgetMutation = useMutation({
+    mutationFn: createBudget,
     onSuccess: () => handleSaveSuccess(),
   });
 
-  const updateExpenseMutation = useMutation({
-    mutationFn: updateExpense,
+  const updateBudgetMutation = useMutation({
+    mutationFn: updateBudget,
     onSuccess: () => handleSaveSuccess(),
   });
 
   useEffect(() => {
     if (isNew) {
-      setExpense({});
+      setBudget({});
     }
   }, [isNew]);
 
   useEffect(() => {
-    if (expenseData) {
-      setExpense(expenseData);
+    if (budgetData) {
+      setBudget(budgetData);
     }
-  }, [expenseData]);
+  }, [budgetData]);
 
   const handleDescriptionChange = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    setExpense({ ...expense, description: event.target.value });
+    setBudget({ ...budget, description: event.target.value });
   };
 
   const handleAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setExpense({ ...expense, amount: parseFloat(event.target.value) });
+    setBudget({ ...budget, amount: parseFloat(event.target.value) });
   };
 
   const handleSave = () => {
     const data = {
-      ...expense,
+      ...budget,
       // Convert the amount to cents
-      amount: (expense.amount || 0) * 100,
+      amount: (budget.amount || 0) * 100,
     };
     if (isNew) {
-      createExpenseMutation.mutate(data);
+      createBudgetMutation.mutate(data);
     } else {
-      updateExpenseMutation.mutate(data);
+      updateBudgetMutation.mutate(data);
     }
   };
 
   const handleSaveSuccess = () => {
     // Show a success message
-    enqueueSnackbar(isNew ? "Expense created" : "Expense updated", {
+    enqueueSnackbar(isNew ? "Budget created" : "Budget updated", {
       variant: "success",
     });
 
     // Invalidate the cache and navigate back to the list
-    queryClient.invalidateQueries({ queryKey: ["expenses"] });
+    queryClient.invalidateQueries({ queryKey: ["budget"] });
 
     // Close the dialog
     handleClose();
   };
 
   const handleClose = () => {
-    navigate("/expense");
+    navigate("/budget");
   };
 
   if (isLoading) {
@@ -118,7 +118,7 @@ export const ExpenseUpdate = () => {
               placeholder="Enter description"
               autoFocus
               fullWidth
-              value={expense?.description}
+              value={budget?.description}
               onChange={handleDescriptionChange}
             />
           </FormControl>
@@ -137,7 +137,7 @@ export const ExpenseUpdate = () => {
               margin="dense"
               placeholder="Enter amount"
               fullWidth
-              value={expense?.amount}
+              value={budget?.amount}
               onChange={handleAmountChange}
             />
           </FormControl>
@@ -170,4 +170,4 @@ const FormContainer = styled(Box)(({ theme }) => ({
   px: theme.spacing(2),
 }));
 
-export default ExpenseUpdate;
+export default BudgetUpdate;
