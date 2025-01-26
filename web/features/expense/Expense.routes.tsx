@@ -1,14 +1,9 @@
 import { RouteObject } from "react-router";
 import Expense from "./Expense";
-import RouteGuard from "../../lib/auth/RouteGuard";
 
 const ExpenseRoutes: RouteObject = {
   path: "expense",
-  element: (
-    <RouteGuard>
-      <Expense />
-    </RouteGuard>
-  ),
+  element: <Expense />,
 };
 
 export default ExpenseRoutes;
