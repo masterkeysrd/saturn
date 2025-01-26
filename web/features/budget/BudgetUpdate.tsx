@@ -84,7 +84,7 @@ export const BudgetUpdate = () => {
     });
 
     // Invalidate the cache and navigate back to the list
-    queryClient.invalidateQueries({ queryKey: ["budget"] });
+    queryClient.invalidateQueries({ queryKey: ["budgets"] });
 
     // Close the dialog
     handleClose();
