@@ -31,5 +31,17 @@ create_budget_table() {
   fi
 }
 
+create_expense_table() {
+  if check_if_table_exists "local-saturn-expense"; then
+    echo "Table expense already exists"
+  else
+    echo "Creating table expense"
+    $dynamodb_cmd create-table \
+      --cli-input-json file://\/init/tables/expense.json \
+      $dynamodb_flags
+  fi
+}
+
 echo "=> Creating tables for saturn"
 create_budget_table
+create_expense_table

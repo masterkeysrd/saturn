@@ -54,6 +54,9 @@ Resources:
           SaturnAuthorizer:
             UserPoolArn: !GetAtt SaturnUserPool.Arn
 
+  ################################################################################################
+  # Budget Resources                                                                             #
+  ################################################################################################
   BudgetGetFunction:
     Type: AWS::Serverless::Function
     Metadata:
@@ -170,6 +173,122 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: 1
         WriteCapacityUnits: 1
+
+  ################################################################################################
+  ## Expense Resources                                                                           #
+  ################################################################################################
+
+  ExpenseGetFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${Environment}-saturn-expense-get"
+      CodeUri: ./cmd/functions/expense/get
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /expenses/{id}
+            Method: GET
+            RestApiId: !Ref SaturnApi
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ExpenseTable
+
+  ExpenseCreateFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${Environment}-saturn-expense-create"
+      CodeUri: ./cmd/functions/expense/create
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /expenses
+            Method: POST
+            RestApiId: !Ref SaturnApi
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ExpenseTable
+
+  ExpenseListFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${Environment}-saturn-expense-list"
+      CodeUri: ./cmd/functions/expense/list
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /expenses
+            Method: GET
+            RestApiId: !Ref SaturnApi
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ExpenseTable
+
+  ExpenseUpdateFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${Environment}-saturn-expense-update"
+      CodeUri: ./cmd/functions/expense/update
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /expenses/{id}
+            Method: PUT
+            RestApiId: !Ref SaturnApi
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ExpenseTable
+
+  ExpenseDeleteFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${Environment}-saturn-expense-delete"
+      CodeUri: ./cmd/functions/expense/delete
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /expenses/{id}
+            Method: DELETE
+            RestApiId: !Ref SaturnApi
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ExpenseTable
+
+  ExpenseTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${Environment}-saturn-expenses"
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+        - AttributeName: id
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+
+  ################################################################################################
+  ## Cognito Resources                                                                           #
+  ################################################################################################
 
   SaturnUserPool:
     Type: AWS::Cognito::UserPool

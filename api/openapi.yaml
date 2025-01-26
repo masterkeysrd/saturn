@@ -104,6 +104,100 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /expenses:
+    get:
+      summary: List all expenses
+      operationId: ListExpenses
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Expense"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    post:
+      summary: Create a new expense
+      operationId: CreateExpense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Expense"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /expenses/{id}:
+    get:
+      summary: Get an expense by ID
+      operationId: GetExpense
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    put:
+      summary: Update an expense by ID
+      operationId: UpdateExpense
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Expense"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      summary: Delete an expense by ID
+      operationId: DeleteExpense
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "204":
+          description: No content
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
 components:
   schemas:
     ID:
@@ -114,6 +208,7 @@ components:
       x-go-type: string
     Error:
       type: object
+      description: An error response
       properties:
         message:
           type: string
@@ -121,6 +216,7 @@ components:
           example: Unauthorized
     Budget:
       type: object
+      description: A budget to track expenses
       required:
         - description
         - amount
@@ -136,6 +232,50 @@ components:
         amount:
           type: integer
           description: The amount of the budget in cents (e.g. $10.00 is 1000)
+          example: 1000
+    Expense:
+      type: object
+      description: An expense to track
+      required:
+        - type
+        - description
+        - amount
+      properties:
+        id:
+          $ref: "#/components/schemas/ID"
+          example: 123e4567-e89b-12d3-a456-426614174000
+          readOnly: true
+        budget:
+          type: object
+          description: The budget this expense is associated with
+          properties:
+            id:
+              $ref: "#/components/schemas/ID"
+              example: 123e4567-e89b-12d3-a456-426614174000
+            description:
+              type: string
+              description: A description of the budget
+              example: Phone and internet bill
+        type:
+          type: string
+          description: >
+            The type of expense:
+              - `fixed`: A recurring expense that is the same amount each month
+              - `variable`: An expense that changes each month
+
+            When `type` is `fixed`, the `amount` is the total amount of the expense.
+            When `type` is `variable`, the `amount` is an estimate of the expense.
+          enum:
+            - fixed
+            - variable
+          example: fixed
+        description:
+          type: string
+          description: A description of the expense
+          example: Phone and internet bill
+        amount:
+          type: integer
+          description: The amount of the expense in cents (e.g. $10.00 is 1000)
           example: 1000
   responses:
     BadRequestError:

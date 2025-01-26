@@ -8,6 +8,7 @@ package api
 
 import (
 	"github.com/masterkeysrd/saturn/internal/domain/budget"
+	"github.com/masterkeysrd/saturn/internal/domain/expense"
 )
 
 // To generate the client code, types and interfaces from the OpenAPI specification, run:
@@ -40,6 +41,58 @@ func APIBudgets(exps []*budget.Budget) []*Budget {
 	res := make([]*Budget, len(exps))
 	for i, exp := range exps {
 		res[i] = APIBudget(exp)
+	}
+
+	return res
+}
+
+func SaturnExpense(exp *Expense) *expense.Expense {
+	var id expense.ID
+	if exp.Id != nil {
+		id = expense.ID(*exp.Id)
+	}
+
+	var budgetID budget.ID
+	if exp.Budget != nil && exp.Budget.Id != nil {
+		budgetID = budget.ID(*exp.Budget.Id)
+	}
+
+	return &expense.Expense{
+		ID:          id,
+		Type:        expense.ParseType(string(exp.Type)),
+		BudgetID:    budgetID,
+		Amount:      exp.Amount,
+		Description: exp.Description,
+	}
+}
+
+func APIExpense(exp *expense.Expense) *Expense {
+	id := string(exp.ID)
+
+	var budgetID string
+	if exp.BudgetID != "" {
+		budgetID = string(exp.BudgetID)
+	}
+
+	return &Expense{
+		Id:   &id,
+		Type: ExpenseType(exp.Type.String()),
+		Budget: &struct {
+			Description *string "json:\"description,omitempty\""
+			Id          *ID     "json:\"id,omitempty\""
+		}{
+			Id:          &budgetID,
+			Description: &exp.Budget.Description,
+		},
+		Amount:      exp.Amount,
+		Description: exp.Description,
+	}
+}
+
+func APIExpenses(exps []*expense.Expense) []*Expense {
+	res := make([]*Expense, len(exps))
+	for i, exp := range exps {
+		res[i] = APIExpense(exp)
 	}
 
 	return res
