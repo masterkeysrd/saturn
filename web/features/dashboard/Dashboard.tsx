@@ -1,5 +1,5 @@
-import Page from "../../components/Page";
-import PageTitle from "../../components/PageTitle";
+import Page from "../../layout/Page";
+import PageTitle from "../../layout/PageTitle";
 
 export default function Dashboard() {
   return (

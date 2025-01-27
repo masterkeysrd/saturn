@@ -1,6 +1,6 @@
 import { Navigate, RouteObject } from "react-router";
 
-import RootLayout from "../components/RootLayout";
+import RootLayout from "../layout/RootLayout";
 import RouteGuard from "../lib/auth/RouteGuard";
 
 import AuthRoutes from "./auth/routes";

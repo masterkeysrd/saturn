@@ -4,16 +4,10 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Stack from "@mui/material/Stack";
-import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
-import MoneyRoundedIcon from "@mui/icons-material/MoneyRounded";
 import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 
-const mainListItems = [
-  { title: "Dashboard", icon: <DashboardRoundedIcon />, path: "/dashboard" },
-  { title: "Budget", icon: <MoneyRoundedIcon />, path: "/budget" },
-  { title: "Expense", icon: <MoneyRoundedIcon />, path: "/expense" },
-];
+import FeaturesMenu from "../features/Menu";
 
 const secondaryListItems = [
   { title: "Profile", icon: <PersonRoundedIcon />, path: "/profile" },
@@ -22,16 +16,9 @@ const secondaryListItems = [
 
 export default function MenuContent() {
   return (
-    <Stack sx={{ flexGrow: 1, p: 1, justifyContent: "space-between" }}>
-      <List dense>
-        {mainListItems.map((item, index) => (
-          <ListItem key={index} disablePadding sx={{ display: "block" }}>
-            <ListItemButton href={item.path}>
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.title} />
-            </ListItemButton>
-          </ListItem>
-        ))}
+    <Stack sx={{ flexGrow: 1, px: 1, justifyContent: "space-between" }}>
+      <List dense sx={{ p: 0 }}>
+        <FeaturesMenu />
       </List>
 
       <List dense>
