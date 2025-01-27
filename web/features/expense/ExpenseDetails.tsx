@@ -1,20 +1,30 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router";
-import { getExpense } from "./Expense.service";
+import { useNavigate, useParams } from "react-router";
 
 import Box from "@mui/material/Box";
 import Drawer from "@mui/material/Drawer";
+import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
+
+import CloseIcon from "@mui/icons-material/Close";
+
 import money from "../../lib/money";
+import { getExpense } from "./Expense.service";
 import ExpenseTypeShip from "./components/ExpenseTypeShip";
 
 export const ExpenseDetails = () => {
+  const navigate = useNavigate();
+
   const { id } = useParams<"id">();
 
   const { data: expense, isLoading: isLoadingExpense } = useQuery({
     queryKey: ["expense", id],
     queryFn: () => getExpense(id!),
   });
+
+  const handleClose = () => {
+    navigate("/expense");
+  };
 
   if (isLoadingExpense) {
     return <div>Loading...</div>;
@@ -27,8 +37,19 @@ export const ExpenseDetails = () => {
 
   return (
     <Drawer anchor="right" open>
-      <Box sx={{ width: 300, p: 2 }}>
-        <Typography variant="h6">Expense Details</Typography>
+      <Box sx={{ width: 400, p: 2 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Typography variant="h6">Expense Details</Typography>
+          <IconButton onClick={handleClose}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
         <Box component="dl">
           <Typography component="dt" variant="subtitle2">
             ID

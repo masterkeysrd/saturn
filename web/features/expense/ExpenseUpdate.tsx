@@ -1,9 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
-import { createExpense, getExpense, updateExpense } from "./Expense.service";
 import { useForm } from "react-hook-form";
 import { AxiosError } from "axios";
 import { useSnackbar } from "notistack";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -11,18 +10,17 @@ import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
-import FormControl from "@mui/material/FormControl";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Radio from "@mui/material/Radio";
-import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
 
 import Form from "../../components/Form";
 import FormRadioGroup from "../../components/FormRadioGroup";
 import FormSelect from "../../components/FormSelect";
+import FormTextField from "../../components/FormTextField";
 
 import { Expense } from "./Expense.model";
+import { createExpense, getExpense, updateExpense } from "./Expense.service";
 import { ExpenseTypesList } from "./Expense.constants";
 import { getBudgets } from "../budget/Budget.service";
 
@@ -38,6 +36,7 @@ const form = {
   },
   amount: {
     required: "Amount is required",
+    min: 1,
   },
 };
 
@@ -77,7 +76,7 @@ export const ExpenseUpdate = () => {
 
   const { register, control, handleSubmit, formState } = useForm<Expense>({
     mode: "onSubmit",
-    defaultValues: isNew
+    values: isNew
       ? {
           type: "fixed",
           description: "",
@@ -103,6 +102,10 @@ export const ExpenseUpdate = () => {
     }
   };
 
+  const handleClose = () => {
+    navigate("/expense");
+  };
+
   const handleSaveSuccess = () => {
     enqueueSnackbar(isNew ? "Expense created" : "Expense updated", {
       variant: "success",
@@ -110,12 +113,11 @@ export const ExpenseUpdate = () => {
     queryClient.invalidateQueries({
       queryKey: ["expenses"],
     });
-    navigate("/expense");
+    handleClose();
   };
 
   const handleSaveFailure = (error: AxiosError) => {
-    console.error(error);
-    enqueueSnackbar("An error occurred", {
+    enqueueSnackbar(`Error: ${error.message}`, {
       variant: "error",
     });
   };
@@ -129,24 +131,12 @@ export const ExpenseUpdate = () => {
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
         <Form onSubmit={handleSubmit(onSubmit)}>
-          <FormControl fullWidth>
-            <Typography
-              variant="subtitle1"
-              component="label"
-              htmlFor="description"
-            >
-              {title}
-            </Typography>
-            <TextField
-              {...register("description", form.description)}
-              defaultValue={expense?.description}
-            />
-            {formState.errors.description && (
-              <Typography color="error">
-                {formState.errors.description.message}
-              </Typography>
-            )}
-          </FormControl>
+          <FormTextField
+            label="Description"
+            error={formState.errors.description}
+            {...register("description", form.description)}
+            defaultValue={expense?.description}
+          />
           <FormRadioGroup row control={control} name="type" label="Type">
             {types.map((type) => (
               <FormControlLabel
@@ -162,6 +152,7 @@ export const ExpenseUpdate = () => {
             name="budget.id"
             label="Budget"
             rules={form.budget}
+            error={formState.errors.budget?.id}
             defaultValue={expense?.budget}
           >
             {budgets?.map((budget) => (
@@ -170,23 +161,23 @@ export const ExpenseUpdate = () => {
               </MenuItem>
             ))}
           </FormSelect>
-          <FormControl fullWidth>
-            <Typography variant="subtitle1" component="label" htmlFor="amount">
-              Amount
-            </Typography>
-            <TextField
-              type="number"
-              defaultValue={expense?.amount}
-              {...register("amount", form.amount)}
-            />
-          </FormControl>
-          {formState.errors.amount && (
-            <Typography color="error">
-              {formState.errors.amount.message}
-            </Typography>
-          )}
-          <DialogActions>
-            <Button type="submit" disabled={formState.isSubmitting}>
+          <FormTextField
+            label="Amount"
+            type="number"
+            // min={form.amount.min}
+            error={formState.errors.amount}
+            {...register("amount", form.amount)}
+            defaultValue={expense?.amount}
+          />
+          <DialogActions sx={{ mt: 2 }}>
+            <Button variant="contained" color="error" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              type="submit"
+              disabled={formState.isSubmitting}
+            >
               Save
             </Button>
           </DialogActions>
