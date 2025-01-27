@@ -1,4 +1,4 @@
-import { Control, Controller } from "react-hook-form";
+import { Control, Controller, FieldError } from "react-hook-form";
 import { FormControl, Select, Typography } from "@mui/material";
 
 export interface FormSelectProps {
@@ -7,7 +7,7 @@ export interface FormSelectProps {
   defaultValue?: unknown;
   control: Control;
   rules?: Record<string, unknown>;
-  error?: string;
+  error?: FieldError;
   children?: React.ReactNode;
 }
 
@@ -37,7 +37,7 @@ export const FormSelect = ({
             <Select {...field} defaultValue={defaultValue} error={!!error}>
               {children}
             </Select>
-            {error && <Typography color="error">{error}</Typography>}
+            {error && <Typography color="error">{error.message}</Typography>}
           </>
         )}
       />
