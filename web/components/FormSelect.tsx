@@ -1,23 +1,25 @@
 import { Control, Controller } from "react-hook-form";
 import { FormControl, Select, Typography } from "@mui/material";
 
-export interface ControlledSelectProps {
+export interface FormSelectProps {
   name: string;
   label?: string;
   defaultValue?: unknown;
   control: Control;
   rules?: Record<string, unknown>;
+  error?: string;
   children?: React.ReactNode;
 }
 
-export const ControlledSelect = ({
+export const FormSelect = ({
   name,
   label,
   defaultValue,
   control,
   rules,
+  error,
   children,
-}: ControlledSelectProps) => {
+}: FormSelectProps) => {
   return (
     <FormControl fullWidth>
       {label && (
@@ -31,11 +33,16 @@ export const ControlledSelect = ({
         control={control}
         rules={rules}
         render={({ field }) => (
-          <Select {...field} defaultValue={defaultValue}>
-            {children}
-          </Select>
+          <>
+            <Select {...field} defaultValue={defaultValue} error={!!error}>
+              {children}
+            </Select>
+            {error && <Typography color="error">{error}</Typography>}
+          </>
         )}
       />
     </FormControl>
   );
 };
+
+export default FormSelect;
