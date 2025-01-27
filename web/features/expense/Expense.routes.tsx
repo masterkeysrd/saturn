@@ -1,6 +1,7 @@
 import { RouteObject } from "react-router";
 import Expense from "./Expense";
-import { ExpenseUpdate } from "./ExpenseUpdate";
+import ExpenseDetails from "./ExpenseDetails";
+import ExpenseUpdate from "./ExpenseUpdate";
 
 const Routes: RouteObject = {
   path: "expense",
@@ -12,7 +13,16 @@ const Routes: RouteObject = {
     },
     {
       path: ":id",
-      element: <ExpenseUpdate />,
+      children: [
+        {
+          index: true,
+          element: <ExpenseDetails />,
+        },
+        {
+          path: "edit",
+          element: <ExpenseUpdate />,
+        },
+      ],
     },
   ],
 };

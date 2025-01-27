@@ -1,19 +1,23 @@
 import { Outlet } from "react-router";
+import { useQuery } from "@tanstack/react-query";
+
 import Button from "@mui/material/Button";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
+import Paper from "@mui/material/Paper";
+import Page from "../../layout/Page";
+import PageHeader from "../../layout/PageHeader";
+import PageTitle from "../../layout/PageTitle";
 import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
-import Paper from "@mui/material/Paper";
-import Page from "../../components/Page";
-import PageHeader from "../../components/PageHeader";
-import PageTitle from "../../components/PageTitle";
-import { getExpenseTypeLabel } from "./Expense.utils";
-import { useQuery } from "@tanstack/react-query";
-import { getExpenses } from "./Expense.service";
+
 import money from "../../lib/money";
+import Link from "../../components/Link";
+
+import { getExpenses } from "./Expense.service";
+import ExpenseTypeShip from "./components/ExpenseTypeShip";
 
 export const Expense = () => {
   const { data: expenses } = useQuery({
@@ -33,8 +37,8 @@ export const Expense = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Type</TableCell>
               <TableCell>Description</TableCell>
+              <TableCell>Type</TableCell>
               <TableCell>Budget</TableCell>
               <TableCell align="right">Amount</TableCell>
             </TableRow>
@@ -42,9 +46,19 @@ export const Expense = () => {
           <TableBody>
             {expenses?.map((expense) => (
               <TableRow key={expense.id}>
-                <TableCell>{getExpenseTypeLabel(expense.type)}</TableCell>
-                <TableCell>{expense.description}</TableCell>
-                <TableCell>{expense.budget?.description}</TableCell>
+                <TableCell>
+                  <Link href={`/expense/${expense.id}`}>
+                    {expense.description}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <ExpenseTypeShip type={expense.type} />
+                </TableCell>
+                <TableCell>
+                  <Link href={`/budget/${expense.budget?.id}`}>
+                    {expense.budget?.description}
+                  </Link>
+                </TableCell>
                 <TableCell align="right">
                   {money.format(expense.amount)}
                 </TableCell>

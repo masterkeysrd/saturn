@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
 import { createExpense, getExpense, updateExpense } from "./Expense.service";
 import { useForm } from "react-hook-form";
+import { AxiosError } from "axios";
+import { useSnackbar } from "notistack";
 
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -13,18 +15,16 @@ import FormControl from "@mui/material/FormControl";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Radio from "@mui/material/Radio";
-import RadioGroup from "@mui/material/RadioGroup";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 
 import Form from "../../components/Form";
+import FormRadioGroup from "../../components/FormRadioGroup";
+import FormSelect from "../../components/FormSelect";
 
 import { Expense } from "./Expense.model";
 import { ExpenseTypesList } from "./Expense.constants";
 import { getBudgets } from "../budget/Budget.service";
-import { ControlledSelect } from "../../components/ControlledSelect";
-import { useSnackbar } from "notistack";
-import { AxiosError } from "axios";
 
 const form = {
   budget: {
@@ -141,27 +141,23 @@ export const ExpenseUpdate = () => {
               {...register("description", form.description)}
               defaultValue={expense?.description}
             />
+            {formState.errors.description && (
+              <Typography color="error">
+                {formState.errors.description.message}
+              </Typography>
+            )}
           </FormControl>
-          <FormControl fullWidth>
-            <Typography variant="subtitle1" component="label" htmlFor="type">
-              Type
-            </Typography>
-            <RadioGroup
-              row
-              defaultValue={expense?.type || "fixed"}
-              {...register("type", form.type)}
-            >
-              {types.map((type) => (
-                <FormControlLabel
-                  key={type.value}
-                  value={type.value}
-                  control={<Radio />}
-                  label={type.label}
-                />
-              ))}
-            </RadioGroup>
-          </FormControl>
-          <ControlledSelect
+          <FormRadioGroup row control={control} name="type" label="Type">
+            {types.map((type) => (
+              <FormControlLabel
+                key={type.value}
+                value={type.value}
+                control={<Radio />}
+                label={type.label}
+              />
+            ))}
+          </FormRadioGroup>
+          <FormSelect
             control={control}
             name="budget.id"
             label="Budget"
@@ -173,7 +169,7 @@ export const ExpenseUpdate = () => {
                 {budget.description}
               </MenuItem>
             ))}
-          </ControlledSelect>
+          </FormSelect>
           <FormControl fullWidth>
             <Typography variant="subtitle1" component="label" htmlFor="amount">
               Amount
@@ -184,6 +180,11 @@ export const ExpenseUpdate = () => {
               {...register("amount", form.amount)}
             />
           </FormControl>
+          {formState.errors.amount && (
+            <Typography color="error">
+              {formState.errors.amount.message}
+            </Typography>
+          )}
           <DialogActions>
             <Button type="submit" disabled={formState.isSubmitting}>
               Save
@@ -194,3 +195,5 @@ export const ExpenseUpdate = () => {
     </Dialog>
   );
 };
+
+export default ExpenseUpdate;
