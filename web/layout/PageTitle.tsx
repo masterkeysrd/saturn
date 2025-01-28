@@ -6,7 +6,7 @@ export interface PageTitleProps {
 
 export default function PageTitle({ children }: PageTitleProps) {
   return (
-    <Typography component="h2" variant="h5" sx={{ mb: 2 }}>
+    <Typography component="h2" variant="h5">
       {children}
     </Typography>
   );
