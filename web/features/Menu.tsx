@@ -1,5 +1,7 @@
 import Divider from "@mui/material/Divider";
+
 import AccountBalanceWalletRoundedIcon from "@mui/icons-material/AccountBalanceWalletRounded";
+import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 import MoneyOffRoundedIcon from "@mui/icons-material/MoneyOffRounded";
 
@@ -23,6 +25,7 @@ export const Menu = () => {
         icon={<AccountBalanceWalletRoundedIcon />}
         path="/budget"
       />
+      <MenuItem title="Income" icon={<AttachMoneyIcon />} path="/income" />
       <MenuItem
         title="Expense"
         icon={<MoneyOffRoundedIcon />}
