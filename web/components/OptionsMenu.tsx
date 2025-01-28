@@ -44,9 +44,14 @@ export const OptionsMenu = ({ children }: OptionsMenuProps) => {
       <Menu
         anchorEl={anchorEl}
         open={open}
-        onClose={handleClose}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
         transformOrigin={{ vertical: "top", horizontal: "right" }}
+        slotProps={{
+          paper: {
+            style: { minWidth: "160px" },
+          },
+        }}
+        onClose={handleClose}
       >
         {children}
       </Menu>

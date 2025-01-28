@@ -16,7 +16,9 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 
+import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 
 import money from "../../lib/money";
 import Link from "../../components/Link";
@@ -37,11 +39,20 @@ export const Expense = () => {
     navigate(`/expense/${id}/edit`);
   };
 
+  const handleView = (id?: string) => {
+    navigate(`/expense/${id}`);
+  };
+
   return (
     <Page>
       <PageHeader>
         <PageTitle>Expenses</PageTitle>
-        <Button variant="contained" color="primary" href="/expense/new">
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          href="/expense/new"
+        >
           Create a new Expense
         </Button>
       </PageHeader>
@@ -79,6 +90,12 @@ export const Expense = () => {
                 </TableCell>
                 <TableCell style={{ width: 50 }}>
                   <OptionsMenu>
+                    <MenuItem onClick={() => handleView(expense.id)}>
+                      <ListItemIcon>
+                        <VisibilityIcon fontSize="small" />
+                      </ListItemIcon>
+                      <ListItemText primary="View" />
+                    </MenuItem>
                     <MenuItem onClick={() => handleEdit(expense.id)}>
                       <ListItemIcon>
                         <EditIcon fontSize="small" />
