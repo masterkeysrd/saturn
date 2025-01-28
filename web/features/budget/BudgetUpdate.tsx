@@ -3,17 +3,25 @@ import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
-import FormControl from "@mui/material/FormControl";
-import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
 import { useNavigate, useParams } from "react-router";
 import { Budget } from "./Budget.model";
-import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createBudget, getBudget, updateBudget } from "./Budget.service";
 import { useSnackbar } from "notistack";
 
-import Form from "../../components/Form";
+import { useForm } from "react-hook-form";
+import money from "../../lib/money";
+import FormTextField from "../../components/FormTextField";
+
+const form = {
+  description: {
+    required: "Description is required",
+  },
+  amount: {
+    required: "Amount is required",
+    min: 1,
+  },
+};
 
 export const BudgetUpdate = () => {
   const navigate = useNavigate();
@@ -23,13 +31,23 @@ export const BudgetUpdate = () => {
   const isNew = id === undefined;
   const title = isNew ? "Create Budget" : "Edit Budget";
 
-  const [budget, setBudget] = useState<Budget>({});
-
   const queryClient = useQueryClient();
-  const { data: budgetData, isLoading } = useQuery({
+  const { data: budget, isLoading } = useQuery({
     enabled: !isNew,
     queryKey: ["budgets", id],
     queryFn: async () => getBudget(id!),
+  });
+
+  const { register, formState, handleSubmit } = useForm<Budget>({
+    mode: "onSubmit",
+    values: isNew
+      ? {
+          amount: 0,
+        }
+      : {
+          ...budget,
+          amount: money.fromCents(budget?.amount || 0),
+        },
   });
 
   const createBudgetMutation = useMutation({
@@ -42,33 +60,11 @@ export const BudgetUpdate = () => {
     onSuccess: () => handleSaveSuccess(),
   });
 
-  useEffect(() => {
-    if (isNew) {
-      setBudget({});
-    }
-  }, [isNew]);
-
-  useEffect(() => {
-    if (budgetData) {
-      setBudget(budgetData);
-    }
-  }, [budgetData]);
-
-  const handleDescriptionChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    setBudget({ ...budget, description: event.target.value });
-  };
-
-  const handleAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setBudget({ ...budget, amount: parseFloat(event.target.value) });
-  };
-
-  const handleSave = () => {
+  const handleSave = (budget: Budget) => {
     const data = {
       ...budget,
       // Convert the amount to cents
-      amount: (budget.amount || 0) * 100,
+      amount: money.toCents(budget.amount),
     };
     if (isNew) {
       createBudgetMutation.mutate(data);
@@ -99,55 +95,43 @@ export const BudgetUpdate = () => {
   }
 
   return (
-    <Dialog open={true} fullWidth>
+    <Dialog
+      open={true}
+      onClose={handleClose}
+      PaperProps={{
+        component: "form",
+        onSubmit: handleSubmit(handleSave),
+        sx: { minWidth: 400 },
+      }}
+    >
       <DialogTitle>{title}</DialogTitle>
-      <DialogContent>
-        <Form>
-          <FormControl fullWidth>
-            <Typography
-              variant="subtitle1"
-              component={"label"}
-              htmlFor="description"
-            >
-              Description
-            </Typography>
-            <TextField
-              name="description"
-              variant="outlined"
-              margin="dense"
-              placeholder="Enter description"
-              autoFocus
-              fullWidth
-              value={budget?.description}
-              onChange={handleDescriptionChange}
-            />
-          </FormControl>
-          <FormControl fullWidth>
-            <Typography
-              variant="subtitle1"
-              component={"label"}
-              htmlFor="amount"
-            >
-              Amount
-            </Typography>
-            <TextField
-              name="amount"
-              type="number"
-              variant="outlined"
-              margin="dense"
-              placeholder="Enter amount"
-              fullWidth
-              value={budget?.amount}
-              onChange={handleAmountChange}
-            />
-          </FormControl>
-        </Form>
+      <DialogContent
+        dividers
+        sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+      >
+        <FormTextField
+          label="Description"
+          required
+          autoFocus
+          fullWidth
+          {...register("description", form.description)}
+          error={formState.errors.description}
+        />
+        <FormTextField
+          label="Amount"
+          required
+          fullWidth
+          type="number"
+          {...register("amount", form.amount)}
+          error={formState.errors.amount}
+          sx={{ mb: 2 }}
+        />
       </DialogContent>
-      <DialogActions>
+      <DialogActions sx={{ my: 1 }}>
         <Button color="error" variant="contained" onClick={handleClose}>
           Cancel
         </Button>
-        <Button color="primary" variant="contained" onClick={handleSave}>
+        <Button color="primary" variant="contained" type="submit">
           Save
         </Button>
       </DialogActions>

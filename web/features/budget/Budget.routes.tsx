@@ -1,5 +1,6 @@
 import { RouteObject } from "react-router";
 import Budget from "./Budget";
+import BudgetDetails from "./BudgetDetails";
 import BudgetUpdate from "./BudgetUpdate";
 
 const BudgetRoutes: RouteObject = {
@@ -12,7 +13,16 @@ const BudgetRoutes: RouteObject = {
     },
     {
       path: ":id",
-      element: <BudgetUpdate />,
+      children: [
+        {
+          index: true,
+          element: <BudgetDetails />,
+        },
+        {
+          path: "edit",
+          element: <BudgetUpdate />,
+        },
+      ],
     },
   ],
 };
