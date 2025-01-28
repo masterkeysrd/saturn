@@ -9,6 +9,7 @@ package api
 import (
 	"github.com/masterkeysrd/saturn/internal/domain/budget"
 	"github.com/masterkeysrd/saturn/internal/domain/expense"
+	"github.com/masterkeysrd/saturn/internal/domain/income"
 )
 
 // To generate the client code, types and interfaces from the OpenAPI specification, run:
@@ -85,6 +86,38 @@ func APIExpenses(exps []*expense.Expense) []*Expense {
 	res := make([]*Expense, len(exps))
 	for i, exp := range exps {
 		res[i] = APIExpense(exp)
+	}
+
+	return res
+}
+
+func SaturnIncome(exp *Income) *income.Income {
+	var id income.ID
+	if exp.Id != nil {
+		id = income.ID(*exp.Id)
+	}
+
+	return &income.Income{
+		ID:     id,
+		Name:   exp.Name,
+		Amount: exp.Amount,
+	}
+}
+
+func APIIncome(exp *income.Income) *Income {
+	id := string(exp.ID)
+
+	return &Income{
+		Id:     &id,
+		Name:   exp.Name,
+		Amount: exp.Amount,
+	}
+}
+
+func APIIncomes(exps []*income.Income) []*Income {
+	res := make([]*Income, len(exps))
+	for i, exp := range exps {
+		res[i] = APIIncome(exp)
 	}
 
 	return res

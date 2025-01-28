@@ -287,6 +287,118 @@ Resources:
         WriteCapacityUnits: 1
 
   ################################################################################################
+  ## Income Resources                                                                            #
+  ################################################################################################
+
+  IncomeGetFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${Environment}-saturn-income-get"
+      CodeUri: ./cmd/functions/income/get
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /incomes/{id}
+            Method: GET
+            RestApiId: !Ref SaturnApi
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref IncomeTable
+
+  IncomeCreateFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${Environment}-saturn-income-create"
+      CodeUri: ./cmd/functions/income/create
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /incomes
+            Method: POST
+            RestApiId: !Ref SaturnApi
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref IncomeTable
+
+  IncomeListFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${Environment}-saturn-income-list"
+      CodeUri: ./cmd/functions/income/list
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /incomes
+            Method: GET
+            RestApiId: !Ref SaturnApi
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref IncomeTable
+
+  IncomeUpdateFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${Environment}-saturn-income-update"
+      CodeUri: ./cmd/functions/income/update
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /incomes/{id}
+            Method: PUT
+            RestApiId: !Ref SaturnApi
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref IncomeTable
+
+  IncomeDeleteFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${Environment}-saturn-income-delete"
+      CodeUri: ./cmd/functions/income/delete
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /incomes/{id}
+            Method: DELETE
+            RestApiId: !Ref SaturnApi
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref IncomeTable
+
+  IncomeTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${Environment}-saturn-incomes"
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+        - AttributeName: id
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+
+  ################################################################################################
   ## Cognito Resources                                                                           #
   ################################################################################################
 

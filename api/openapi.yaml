@@ -198,6 +198,100 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /incomes:
+    get:
+      summary: List all incomes
+      operationId: ListIncomes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Income"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    post:
+      summary: Create a new income
+      operationId: CreateIncome
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Income"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Income"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /incomes/{id}:
+    get:
+      summary: Get an income by ID
+      operationId: GetIncome
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Income"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    put:
+      summary: Update an income by ID
+      operationId: UpdateIncome
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Income"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Income"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      summary: Delete an income by ID
+      operationId: DeleteIncome
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "204":
+          description: No content
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
 components:
   schemas:
     ID:
@@ -285,6 +379,25 @@ components:
         amount:
           type: integer
           description: The amount of the expense in cents (e.g. $10.00 is 1000)
+          example: 1000
+    Income:
+      type: object
+      description: Recurring income to track
+      required:
+        - name
+        - amount
+      properties:
+        id:
+          $ref: "#/components/schemas/ID"
+          example: 123e4567-e89b-12d3-a456-426614174000
+          readOnly: true
+        name:
+          type: string
+          description: The name of the income
+          example: Paycheck
+        amount:
+          type: integer
+          description: The amount of the income in cents (e.g. $10.00 is 1000)
           example: 1000
   responses:
     BadRequestError:

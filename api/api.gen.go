@@ -68,6 +68,18 @@ type ExpenseType string
 // ID The unique identifier for the resource
 type ID = string
 
+// Income Recurring income to track
+type Income struct {
+	// Amount The amount of the income in cents (e.g. $10.00 is 1000)
+	Amount int `json:"amount"`
+
+	// Id The unique identifier for the resource
+	Id *ID `json:"id,omitempty"`
+
+	// Name The name of the income
+	Name string `json:"name"`
+}
+
 // BadRequestError An error response
 type BadRequestError = Error
 
@@ -91,3 +103,9 @@ type CreateExpenseJSONRequestBody = Expense
 
 // UpdateExpenseJSONRequestBody defines body for UpdateExpense for application/json ContentType.
 type UpdateExpenseJSONRequestBody = Expense
+
+// CreateIncomeJSONRequestBody defines body for CreateIncome for application/json ContentType.
+type CreateIncomeJSONRequestBody = Income
+
+// UpdateIncomeJSONRequestBody defines body for UpdateIncome for application/json ContentType.
+type UpdateIncomeJSONRequestBody = Income
