@@ -34,6 +34,11 @@ const form = {
   type: {
     required: "Type is required",
   },
+  billingDay: {
+    required: "Billing day is required",
+    min: 1,
+    max: 31,
+  },
   amount: {
     required: "Amount is required",
     min: 1,
@@ -81,6 +86,7 @@ export const ExpenseUpdate = () => {
           type: "fixed",
           description: "",
           budget: { id: "" },
+          billingDay: 1,
           amount: 0,
         }
       : {
@@ -158,6 +164,20 @@ export const ExpenseUpdate = () => {
             {budgets?.map((budget) => (
               <MenuItem key={budget.id} value={budget.id}>
                 {budget.description}
+              </MenuItem>
+            ))}
+          </FormSelect>
+          <FormSelect
+            control={control}
+            name="billingDay"
+            label="Billing Day"
+            rules={form.billingDay}
+            error={formState.errors.billingDay}
+            defaultValue={expense?.billingDay}
+          >
+            {[...Array(30)].map((_, index) => (
+              <MenuItem key={index + 1} value={index + 1}>
+                {index + 1}
               </MenuItem>
             ))}
           </FormSelect>

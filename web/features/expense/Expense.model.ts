@@ -6,6 +6,7 @@ export interface Expense {
   };
   description?: string;
   type?: ExpenseType;
+  billingDay?: number;
   amount?: number;
 }
 

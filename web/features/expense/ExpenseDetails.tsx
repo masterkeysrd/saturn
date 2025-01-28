@@ -76,6 +76,12 @@ export const ExpenseDetails = () => {
             {expense.budget?.description}
           </Typography>
           <Typography component="dt" variant="subtitle2">
+            Billing Day
+          </Typography>
+          <Typography component="dd" variant="body2" sx={{ mb: 2 }}>
+            {expense.billingDay} of the month
+          </Typography>
+          <Typography component="dt" variant="subtitle2">
             Amount
           </Typography>
           <Typography component="dd" variant="body2" sx={{ mb: 2 }}>
