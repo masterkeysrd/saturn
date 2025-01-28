@@ -14,6 +14,7 @@ type Expense struct {
 	BudgetID    budget.ID `dynamodbav:"budget_id"`
 	Budget      *Budget   `dynamodbav:"budget"`
 	Description string    `dynamodbav:"description"`
+	BillingDay  int       `dynamodbav:"billing_day"`
 	Amount      int       `dynamodbav:"amount"`
 }
 
@@ -38,6 +39,10 @@ func (e *Expense) Validate() error {
 
 	if e.Description == "" {
 		return fmt.Errorf("description is empty")
+	}
+
+	if e.BillingDay < 1 || e.BillingDay > 31 {
+		return fmt.Errorf("invalid billing day: %d", e.BillingDay)
 	}
 
 	if e.Amount <= 0 {

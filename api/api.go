@@ -52,40 +52,32 @@ func SaturnExpense(exp *Expense) *expense.Expense {
 		id = expense.ID(*exp.Id)
 	}
 
-	var budgetID budget.ID
-	if exp.Budget != nil && exp.Budget.Id != nil {
-		budgetID = budget.ID(*exp.Budget.Id)
-	}
-
 	return &expense.Expense{
 		ID:          id,
 		Type:        expense.ParseType(string(exp.Type)),
-		BudgetID:    budgetID,
-		Amount:      exp.Amount,
+		BudgetID:    budget.ID(exp.Budget.Id),
 		Description: exp.Description,
+		BillingDay:  exp.BillingDay,
+		Amount:      exp.Amount,
 	}
 }
 
 func APIExpense(exp *expense.Expense) *Expense {
 	id := string(exp.ID)
 
-	var budgetID string
-	if exp.BudgetID != "" {
-		budgetID = string(exp.BudgetID)
-	}
-
 	return &Expense{
 		Id:   &id,
 		Type: ExpenseType(exp.Type.String()),
-		Budget: &struct {
-			Description *string "json:\"description,omitempty\""
-			Id          *ID     "json:\"id,omitempty\""
+		Budget: struct {
+			Description *string `json:"description,omitempty"`
+			Id          ID      `json:"id"`
 		}{
-			Id:          &budgetID,
+			Id:          ID(exp.BudgetID),
 			Description: &exp.Budget.Description,
 		},
-		Amount:      exp.Amount,
 		Description: exp.Description,
+		BillingDay:  exp.BillingDay,
+		Amount:      exp.Amount,
 	}
 }
 

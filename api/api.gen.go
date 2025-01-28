@@ -32,14 +32,17 @@ type Expense struct {
 	// Amount The amount of the expense in cents (e.g. $10.00 is 1000)
 	Amount int `json:"amount"`
 
+	// BillingDay The day of the month the expense is billed
+	BillingDay int `json:"billingDay"`
+
 	// Budget The budget this expense is associated with
-	Budget *struct {
+	Budget struct {
 		// Description A description of the budget
 		Description *string `json:"description,omitempty"`
 
 		// Id The unique identifier for the resource
-		Id *ID `json:"id,omitempty"`
-	} `json:"budget,omitempty"`
+		Id ID `json:"id"`
+	} `json:"budget"`
 
 	// Description A description of the expense
 	Description string `json:"description"`
