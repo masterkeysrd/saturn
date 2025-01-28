@@ -24,7 +24,12 @@ export const FormRadioGroup = ({
   return (
     <FormControl fullWidth>
       {label && (
-        <Typography variant="subtitle1" component="label" htmlFor={name}>
+        <Typography
+          variant="subtitle1"
+          component="label"
+          htmlFor={name}
+          sx={{ mb: 0.5 }}
+        >
           {label}
         </Typography>
       )}

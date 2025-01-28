@@ -14,7 +14,6 @@ import money from "../../lib/money";
 import { Income } from "./Income.model";
 import { createIncome, getIncome, updateIncome } from "./Income.service";
 import FormTextField from "../../components/FormTextField";
-import Form from "../../components/Form";
 
 const form = {
   name: {
@@ -100,33 +99,43 @@ export const IncomeUpdate = () => {
   }
 
   return (
-    <Dialog open>
+    <Dialog
+      open={true}
+      onClose={handleClose}
+      PaperProps={{
+        component: "form",
+        sx: { width: 400 },
+        onSubmit: handleSubmit(onSubmit),
+      }}
+    >
       <DialogTitle>{title}</DialogTitle>
-      <DialogContent sx={{ width: 400 }}>
-        <Form onSubmit={handleSubmit(onSubmit)}>
-          <FormTextField
-            label="Name"
-            fullWidth
-            {...register("name", form.name)}
-            error={errors.name}
-          />
-          <FormTextField
-            label="Amount"
-            type="number"
-            fullWidth
-            {...register("amount", form.amount)}
-            error={errors.amount}
-          />
-          <DialogActions sx={{ mt: 2 }}>
-            <Button variant="contained" color="error" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button variant="contained" color="primary" type="submit">
-              Save
-            </Button>
-          </DialogActions>
-        </Form>
+      <DialogContent
+        dividers
+        sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+      >
+        <FormTextField
+          label="Name"
+          fullWidth
+          {...register("name", form.name)}
+          error={errors.name}
+        />
+        <FormTextField
+          label="Amount"
+          type="number"
+          fullWidth
+          sx={{ mb: 2 }}
+          {...register("amount", form.amount)}
+          error={errors.amount}
+        />
       </DialogContent>
+      <DialogActions sx={{ my: 1 }}>
+        <Button variant="contained" color="error" onClick={handleClose}>
+          Cancel
+        </Button>
+        <Button variant="contained" color="primary" type="submit">
+          Save
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };

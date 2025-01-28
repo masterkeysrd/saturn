@@ -14,7 +14,6 @@ import FormControlLabel from "@mui/material/FormControlLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Radio from "@mui/material/Radio";
 
-import Form from "../../components/Form";
 import FormRadioGroup from "../../components/FormRadioGroup";
 import FormSelect from "../../components/FormSelect";
 import FormTextField from "../../components/FormTextField";
@@ -134,76 +133,84 @@ export const ExpenseUpdate = () => {
   }
 
   return (
-    <Dialog open={true} fullWidth>
+    <Dialog
+      open={true}
+      fullWidth
+      onClose={handleClose}
+      PaperProps={{ component: "form", onSubmit: handleSubmit(onSubmit) }}
+      onSubmit={handleSubmit(onSubmit)}
+    >
       <DialogTitle>{title}</DialogTitle>
-      <DialogContent>
-        <Form onSubmit={handleSubmit(onSubmit)}>
-          <FormTextField
-            label="Description"
-            error={formState.errors.description}
-            {...register("description", form.description)}
-            defaultValue={expense?.description}
-          />
-          <FormRadioGroup row control={control} name="type" label="Type">
-            {types.map((type) => (
-              <FormControlLabel
-                key={type.value}
-                value={type.value}
-                control={<Radio />}
-                label={type.label}
-              />
-            ))}
-          </FormRadioGroup>
-          <FormSelect
-            control={control}
-            name="budget.id"
-            label="Budget"
-            rules={form.budget}
-            error={formState.errors.budget?.id}
-            defaultValue={expense?.budget}
-          >
-            {budgets?.map((budget) => (
-              <MenuItem key={budget.id} value={budget.id}>
-                {budget.description}
-              </MenuItem>
-            ))}
-          </FormSelect>
-          <FormSelect
-            control={control}
-            name="billingDay"
-            label="Billing Day"
-            rules={form.billingDay}
-            error={formState.errors.billingDay}
-            defaultValue={expense?.billingDay}
-          >
-            {[...Array(30)].map((_, index) => (
-              <MenuItem key={index + 1} value={index + 1}>
-                {index + 1}
-              </MenuItem>
-            ))}
-          </FormSelect>
-          <FormTextField
-            label="Amount"
-            type="number"
-            min={form.amount.min}
-            error={formState.errors.amount}
-            {...register("amount", form.amount)}
-            defaultValue={expense?.amount}
-          />
-          <DialogActions sx={{ mt: 2 }}>
-            <Button variant="contained" color="error" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button
-              variant="contained"
-              type="submit"
-              disabled={formState.isSubmitting}
-            >
-              Save
-            </Button>
-          </DialogActions>
-        </Form>
+      <DialogContent
+        dividers
+        sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+      >
+        <FormTextField
+          label="Description"
+          error={formState.errors.description}
+          {...register("description", form.description)}
+          defaultValue={expense?.description}
+        />
+        <FormRadioGroup row control={control} name="type" label="Type">
+          {types.map((type) => (
+            <FormControlLabel
+              key={type.value}
+              value={type.value}
+              control={<Radio />}
+              label={type.label}
+            />
+          ))}
+        </FormRadioGroup>
+        <FormSelect
+          control={control}
+          name="budget.id"
+          label="Budget"
+          rules={form.budget}
+          error={formState.errors.budget?.id}
+          defaultValue={expense?.budget}
+        >
+          {budgets?.map((budget) => (
+            <MenuItem key={budget.id} value={budget.id}>
+              {budget.description}
+            </MenuItem>
+          ))}
+        </FormSelect>
+        <FormSelect
+          control={control}
+          name="billingDay"
+          label="Billing Day"
+          rules={form.billingDay}
+          error={formState.errors.billingDay}
+          defaultValue={expense?.billingDay}
+        >
+          {[...Array(30)].map((_, index) => (
+            <MenuItem key={index + 1} value={index + 1}>
+              {index + 1}
+            </MenuItem>
+          ))}
+        </FormSelect>
+        <FormTextField
+          label="Amount"
+          type="number"
+          min={form.amount.min}
+          sx={{ mb: 2 }}
+          error={formState.errors.amount}
+          {...register("amount", form.amount)}
+          defaultValue={expense?.amount}
+        />
       </DialogContent>
+      <DialogActions sx={{ my: 1 }}>
+        <Button variant="contained" color="error" onClick={handleClose}>
+          Cancel
+        </Button>
+        <Button
+          variant="contained"
+          type="submit"
+          disabled={formState.isSubmitting}
+        >
+          Save
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };

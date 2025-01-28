@@ -19,11 +19,9 @@ export const Form = ({ children, onSubmit }: FormProps) => {
   );
 };
 
-const FormContainer = styled(Box)(({ theme }) => ({
+const FormContainer = styled(Box)({
   display: "flex",
   flexDirection: "column",
-  gap: theme.spacing(2),
-  px: theme.spacing(2),
-}));
+});
 
 export default Form;

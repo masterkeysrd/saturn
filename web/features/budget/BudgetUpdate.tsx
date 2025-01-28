@@ -111,7 +111,6 @@ export const BudgetUpdate = () => {
       >
         <FormTextField
           label="Description"
-          required
           autoFocus
           fullWidth
           {...register("description", form.description)}
@@ -119,7 +118,6 @@ export const BudgetUpdate = () => {
         />
         <FormTextField
           label="Amount"
-          required
           fullWidth
           type="number"
           {...register("amount", form.amount)}

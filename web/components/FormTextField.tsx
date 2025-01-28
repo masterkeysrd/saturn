@@ -15,6 +15,15 @@ export const FormTextField = forwardRef<HTMLInputElement, FormTextFieldProps>(
     { label, min, error, ...props }: FormTextFieldProps,
     ref,
   ) {
+    const errorMessage = (): string | undefined => {
+      if (error?.type === "required") {
+        return error.message;
+      }
+      if (error?.type === "min") {
+        return `${label} must be greater than or equal to ${min}`;
+      }
+    };
+
     return (
       <FormControl fullWidth>
         {label && (
@@ -22,19 +31,17 @@ export const FormTextField = forwardRef<HTMLInputElement, FormTextFieldProps>(
             variant="subtitle1"
             component="label"
             htmlFor={props.name}
+            sx={{ mb: 0.5 }}
           >
             {label}
           </Typography>
         )}
-        <TextField {...props} ref={ref} error={!!error} />
-        {error?.message && (
-          <Typography color="error">{error.message}</Typography>
-        )}
-        {error?.type === "min" && (
-          <Typography color="error">
-            {label} must be greater than or equal to {min}
-          </Typography>
-        )}
+        <TextField
+          {...props}
+          ref={ref}
+          error={!!error}
+          helperText={errorMessage()}
+        />
       </FormControl>
     );
   },
