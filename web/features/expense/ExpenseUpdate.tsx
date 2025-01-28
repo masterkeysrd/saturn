@@ -23,6 +23,7 @@ import { Expense } from "./Expense.model";
 import { createExpense, getExpense, updateExpense } from "./Expense.service";
 import { ExpenseTypesList } from "./Expense.constants";
 import { getBudgets } from "../budget/Budget.service";
+import money from "../../lib/money";
 
 const form = {
   budget: {
@@ -91,14 +92,14 @@ export const ExpenseUpdate = () => {
         }
       : {
           ...expense,
-          amount: (expense?.amount || 0) / 100,
+          amount: money.fromCents(expense?.amount),
         },
   });
 
   const onSubmit = async (data: Expense) => {
     const payload = {
       ...data,
-      amount: (data.amount || 0) * 100,
+      amount: money.toCents(data.amount),
     };
 
     if (isNew) {
@@ -184,7 +185,7 @@ export const ExpenseUpdate = () => {
           <FormTextField
             label="Amount"
             type="number"
-            // min={form.amount.min}
+            min={form.amount.min}
             error={formState.errors.amount}
             {...register("amount", form.amount)}
             defaultValue={expense?.amount}
