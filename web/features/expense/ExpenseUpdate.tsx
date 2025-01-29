@@ -55,7 +55,6 @@ export const ExpenseUpdate = () => {
   const types = ExpenseTypesList.filter((type) => type.value !== "unknown");
 
   const queryClient = useQueryClient();
-
   const { data: budgets, isLoading: isLoadingBudgets } = useQuery({
     queryKey: ["budgets"],
     queryFn: getBudgets,
@@ -79,20 +78,26 @@ export const ExpenseUpdate = () => {
     onError: (error: AxiosError) => handleSaveFailure(error),
   });
 
+  const defaultValues = (): Expense => {
+    if (isNew) {
+      return {
+        type: "fixed",
+        description: "",
+        budget: { id: "" },
+        billingDay: 1,
+        amount: 0,
+      };
+    }
+
+    return {
+      ...expense,
+      amount: money.fromCents(expense?.amount),
+    };
+  };
+
   const { register, control, handleSubmit, formState } = useForm<Expense>({
     mode: "onSubmit",
-    values: isNew
-      ? {
-          type: "fixed",
-          description: "",
-          budget: { id: "" },
-          billingDay: 1,
-          amount: 0,
-        }
-      : {
-          ...expense,
-          amount: money.fromCents(expense?.amount),
-        },
+    defaultValues: defaultValues(),
   });
 
   const onSubmit = async (data: Expense) => {
@@ -116,9 +121,11 @@ export const ExpenseUpdate = () => {
     enqueueSnackbar(isNew ? "Expense created" : "Expense updated", {
       variant: "success",
     });
+
     queryClient.invalidateQueries({
       queryKey: ["expenses"],
     });
+
     handleClose();
   };
 
@@ -138,7 +145,6 @@ export const ExpenseUpdate = () => {
       fullWidth
       onClose={handleClose}
       PaperProps={{ component: "form", onSubmit: handleSubmit(onSubmit) }}
-      onSubmit={handleSubmit(onSubmit)}
     >
       <DialogTitle>{title}</DialogTitle>
       <DialogContent

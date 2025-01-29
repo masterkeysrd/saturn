@@ -52,21 +52,27 @@ export const IncomeUpdate = () => {
     onSuccess: () => handleSaveSuccess(),
   });
 
+  const defaultValues = () => {
+    if (isNew) {
+      return {
+        name: "",
+        amount: 0,
+      };
+    }
+
+    return {
+      ...income,
+      amount: money.fromCents(income?.amount),
+    };
+  };
+
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<Income>({
     mode: "onSubmit",
-    values: isNew
-      ? {
-          name: "",
-          amount: 0,
-        }
-      : {
-          ...income,
-          amount: money.fromCents(income?.amount),
-        },
+    values: defaultValues(),
   });
 
   const onSubmit = async (data: Income) => {
