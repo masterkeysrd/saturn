@@ -8,34 +8,35 @@ import Typography from "@mui/material/Typography";
 
 import CloseIcon from "@mui/icons-material/Close";
 
-import money from "../../lib/money";
-import { getBudget } from "./Budget.service";
+import money from "../../../lib/money";
+import { getExpense } from "./Expense.service";
+import ExpenseTypeShip from "./components/ExpenseTypeShip";
 
-export const BudgetDetails = () => {
+export const ExpenseDetails = () => {
   const navigate = useNavigate();
 
   const { id } = useParams<"id">();
 
-  const { data: budget, isLoading: isLoadingBudget } = useQuery({
-    queryKey: ["budget", id],
-    queryFn: () => getBudget(id!),
+  const { data: expense, isLoading: isLoadingExpense } = useQuery({
+    queryKey: ["expense", id],
+    queryFn: () => getExpense(id!),
   });
 
   const handleClose = () => {
-    navigate("/budget");
+    navigate("/finance/expense");
   };
 
-  if (isLoadingBudget) {
+  if (isLoadingExpense) {
     return <div>Loading...</div>;
   }
 
-  if (!budget) {
+  if (!expense) {
     // TODO: Add a 404 page
-    return <div>Budget not found</div>;
+    return <div>Expense not found</div>;
   }
 
   return (
-    <Drawer anchor="right" open onClose={handleClose}>
+    <Drawer anchor="right" open>
       <Box sx={{ width: 400, p: 2 }}>
         <Box
           sx={{
@@ -44,7 +45,7 @@ export const BudgetDetails = () => {
             alignItems: "center",
           }}
         >
-          <Typography variant="h6">Budget Details</Typography>
+          <Typography variant="h6">Expense Details</Typography>
           <IconButton onClick={handleClose}>
             <CloseIcon />
           </IconButton>
@@ -54,19 +55,37 @@ export const BudgetDetails = () => {
             ID
           </Typography>
           <Typography component="dd" variant="body2" sx={{ mb: 2 }}>
-            {budget.id}
+            {expense.id}
+          </Typography>
+          <Typography component="dt" variant="subtitle2">
+            Type
+          </Typography>
+          <Typography component="dd" variant="body2" sx={{ mb: 2 }}>
+            <ExpenseTypeShip type={expense.type} />
           </Typography>
           <Typography component="dt" variant="subtitle2">
             Description
           </Typography>
           <Typography component="dd" variant="body2" sx={{ mb: 2 }}>
-            {budget.description}
+            {expense.description}
+          </Typography>
+          <Typography component="dt" variant="subtitle2">
+            Budget
+          </Typography>
+          <Typography component="dd" variant="body2" sx={{ mb: 2 }}>
+            {expense.budget?.description}
+          </Typography>
+          <Typography component="dt" variant="subtitle2">
+            Billing Day
+          </Typography>
+          <Typography component="dd" variant="body2" sx={{ mb: 2 }}>
+            {expense.billingDay} of the month
           </Typography>
           <Typography component="dt" variant="subtitle2">
             Amount
           </Typography>
           <Typography component="dd" variant="body2" sx={{ mb: 2 }}>
-            {money.format(budget.amount)}
+            {money.format(expense.amount)}
           </Typography>
         </Box>
       </Box>
@@ -74,4 +93,4 @@ export const BudgetDetails = () => {
   );
 };
 
-export default BudgetDetails;
+export default ExpenseDetails;

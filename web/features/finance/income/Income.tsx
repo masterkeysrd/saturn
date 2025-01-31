@@ -14,14 +14,14 @@ import TableRow from "@mui/material/TableRow";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 
-import Link from "../../components/Link";
-import Page from "../../layout/Page";
-import PageHeader from "../../layout/PageHeader";
-import PageTitle from "../../layout/PageTitle";
-import money from "../../lib/money";
+import Link from "../../../components/Link";
+import Page from "../../../layout/Page";
+import PageHeader from "../../../layout/PageHeader";
+import PageTitle from "../../../layout/PageTitle";
+import money from "../../../lib/money";
 import { useQuery } from "@tanstack/react-query";
 import { getIncomes } from "./Income.service";
-import OptionsMenu from "../../components/OptionsMenu";
+import OptionsMenu from "../../../components/OptionsMenu";
 
 export const Income = () => {
   const navigate = useNavigate();
@@ -32,7 +32,7 @@ export const Income = () => {
   });
 
   const handleEdit = (id?: string) => {
-    navigate(`/income/${id}/edit`);
+    navigate(`/finance/income/${id}/edit`);
   };
 
   return (
@@ -43,7 +43,7 @@ export const Income = () => {
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
-          href="/income/new"
+          href="/finance/income/new"
         >
           Create a new Income
         </Button>
@@ -61,7 +61,9 @@ export const Income = () => {
             {incomes?.map((income) => (
               <TableRow key={income.id}>
                 <TableCell>
-                  <Link href={`/income/${income.id}`}>{income.name}</Link>
+                  <Link href={`/finance/income/${income.id}`}>
+                    {income.name}
+                  </Link>
                 </TableCell>
                 <TableCell align="right">
                   {money.format(income.amount)}

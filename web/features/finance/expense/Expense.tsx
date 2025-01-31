@@ -8,9 +8,9 @@ import MenuItem from "@mui/material/MenuItem";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import Paper from "@mui/material/Paper";
-import Page from "../../layout/Page";
-import PageHeader from "../../layout/PageHeader";
-import PageTitle from "../../layout/PageTitle";
+import Page from "../../../layout/Page";
+import PageHeader from "../../../layout/PageHeader";
+import PageTitle from "../../../layout/PageTitle";
 import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
@@ -20,9 +20,9 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 
-import money from "../../lib/money";
-import Link from "../../components/Link";
-import OptionsMenu from "../../components/OptionsMenu";
+import money from "../../../lib/money";
+import Link from "../../../components/Link";
+import OptionsMenu from "../../../components/OptionsMenu";
 
 import { getExpenses } from "./Expense.service";
 import ExpenseTypeShip from "./components/ExpenseTypeShip";
@@ -36,11 +36,11 @@ export const Expense = () => {
   });
 
   const handleEdit = (id?: string) => {
-    navigate(`/expense/${id}/edit`);
+    navigate(`/finance/expense/${id}/edit`);
   };
 
   const handleView = (id?: string) => {
-    navigate(`/expense/${id}`);
+    navigate(`/finance/expense/${id}`);
   };
 
   return (
@@ -51,7 +51,7 @@ export const Expense = () => {
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
-          href="/expense/new"
+          href="/finance/expense/new"
         >
           Create a new Expense
         </Button>
@@ -72,7 +72,7 @@ export const Expense = () => {
             {expenses?.map((expense) => (
               <TableRow key={expense.id}>
                 <TableCell>
-                  <Link href={`/expense/${expense.id}`}>
+                  <Link href={`/finance/expense/${expense.id}`}>
                     {expense.description}
                   </Link>
                 </TableCell>
@@ -80,7 +80,7 @@ export const Expense = () => {
                   <ExpenseTypeShip type={expense.type} />
                 </TableCell>
                 <TableCell>
-                  <Link href={`/budget/${expense.budget?.id}`}>
+                  <Link href={`/finance/budget/${expense.budget?.id}`}>
                     {expense.budget?.description}
                   </Link>
                 </TableCell>

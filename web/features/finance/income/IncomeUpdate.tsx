@@ -9,11 +9,11 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 
-import money from "../../lib/money";
+import money from "../../../lib/money";
 
 import { Income } from "./Income.model";
 import { createIncome, getIncome, updateIncome } from "./Income.service";
-import FormTextField from "../../components/FormTextField";
+import FormTextField from "../../../components/FormTextField";
 
 const form = {
   name: {
@@ -89,7 +89,7 @@ export const IncomeUpdate = () => {
   };
 
   const handleClose = () => {
-    navigate("/income");
+    navigate("/finance/income");
   };
 
   const handleSaveSuccess = () => {

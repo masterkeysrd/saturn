@@ -8,7 +8,7 @@ import Typography from "@mui/material/Typography";
 
 import CloseIcon from "@mui/icons-material/Close";
 
-import money from "../../lib/money";
+import money from "../../../lib/money";
 import { getIncome } from "./Income.service";
 
 export const IncomeDetails = () => {
@@ -22,7 +22,7 @@ export const IncomeDetails = () => {
   });
 
   const handleClose = () => {
-    navigate("/income");
+    navigate("/finance/income");
   };
 
   if (isLoadingIncome) {

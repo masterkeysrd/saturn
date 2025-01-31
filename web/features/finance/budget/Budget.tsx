@@ -19,12 +19,12 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 
-import money from "../../lib/money";
-import Link from "../../components/Link";
-import OptionsMenu from "../../components/OptionsMenu";
-import Page from "../../layout/Page";
-import PageHeader from "../../layout/PageHeader";
-import PageTitle from "../../layout/PageTitle";
+import money from "../../../lib/money";
+import Link from "../../../components/Link";
+import OptionsMenu from "../../../components/OptionsMenu";
+import Page from "../../../layout/Page";
+import PageHeader from "../../../layout/PageHeader";
+import PageTitle from "../../../layout/PageTitle";
 
 import { getBudgets } from "./Budget.service";
 
@@ -44,11 +44,11 @@ export const Budget = () => {
   }, [error]);
 
   const handleEdit = (id?: string) => {
-    navigate(`/budget/${id}/edit`);
+    navigate(`/finance/budget/${id}/edit`);
   };
 
   const handleView = (id?: string) => {
-    navigate(`/budget/${id}`);
+    navigate(`/finance/budget/${id}`);
   };
 
   return (
@@ -59,7 +59,7 @@ export const Budget = () => {
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
-          href="/budget/new"
+          href="/finance/budget/new"
         >
           Create a new Budget
         </Button>
@@ -77,7 +77,7 @@ export const Budget = () => {
             {budgets?.map((budget) => (
               <TableRow key={budget.id}>
                 <TableCell>
-                  <Link href={`/budget/${budget.id}`}>
+                  <Link href={`/finance/budget/${budget.id}`}>
                     {budget.description}
                   </Link>
                 </TableCell>

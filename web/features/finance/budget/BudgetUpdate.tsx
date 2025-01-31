@@ -10,8 +10,8 @@ import { createBudget, getBudget, updateBudget } from "./Budget.service";
 import { useSnackbar } from "notistack";
 
 import { useForm } from "react-hook-form";
-import money from "../../lib/money";
-import FormTextField from "../../components/FormTextField";
+import money from "../../../lib/money";
+import FormTextField from "../../../components/FormTextField";
 
 const form = {
   description: {
@@ -87,7 +87,7 @@ export const BudgetUpdate = () => {
   };
 
   const handleClose = () => {
-    navigate("/budget");
+    navigate("/finance/budget");
   };
 
   if (isLoading) {

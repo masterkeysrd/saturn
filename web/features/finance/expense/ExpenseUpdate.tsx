@@ -14,15 +14,15 @@ import FormControlLabel from "@mui/material/FormControlLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Radio from "@mui/material/Radio";
 
-import FormRadioGroup from "../../components/FormRadioGroup";
-import FormSelect from "../../components/FormSelect";
-import FormTextField from "../../components/FormTextField";
+import FormRadioGroup from "../../../components/FormRadioGroup";
+import FormSelect from "../../../components/FormSelect";
+import FormTextField from "../../../components/FormTextField";
 
 import { Expense } from "./Expense.model";
 import { createExpense, getExpense, updateExpense } from "./Expense.service";
 import { ExpenseTypesList } from "./Expense.constants";
 import { getBudgets } from "../budget/Budget.service";
-import money from "../../lib/money";
+import money from "../../../lib/money";
 
 const form = {
   budget: {
@@ -114,7 +114,7 @@ export const ExpenseUpdate = () => {
   };
 
   const handleClose = () => {
-    navigate("/expense");
+    navigate("/finance/expense");
   };
 
   const handleSaveSuccess = () => {
