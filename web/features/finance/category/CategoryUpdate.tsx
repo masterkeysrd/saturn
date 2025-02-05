@@ -6,7 +6,7 @@ import DialogActions from "@mui/material/DialogActions";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Radio from "@mui/material/Radio";
 import { useNavigate, useParams } from "react-router";
-import { Category } from "./Category.model";
+import { Category, CategoryType } from "./Category.model";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createCategory,
@@ -17,45 +17,47 @@ import { useSnackbar } from "notistack";
 
 import { useForm } from "react-hook-form";
 import FormTextField from "@/components/FormTextField";
-import FormRadioGroup from "@/components/FormRadioGroup";
 
 const form = {
   name: {
     required: "Name is required",
   },
-  amount: {
-    required: "Amount is required",
-    min: 1,
-  },
 };
 
-export const CategoryUpdate = () => {
+type CategoryUpdateProps = {
+  type: CategoryType;
+};
+
+export const CategoryUpdate = ({ type }: CategoryUpdateProps) => {
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
 
   const { id } = useParams<"id">();
   const isNew = id === undefined;
-  const title = isNew ? "Create Category" : "Edit Category";
+  const capitalized = type.charAt(0).toUpperCase() + type.slice(1);
+  const title = isNew
+    ? `Create ${capitalized} Category`
+    : `Edit ${capitalized} Category`;
 
   const queryClient = useQueryClient();
   const { data: category, isLoading } = useQuery({
     enabled: !isNew,
     queryKey: ["categorys", id],
-    queryFn: async () => getCategory(id!),
+    queryFn: async () => getCategory(type, id!),
   });
 
-  const { register, formState, control, handleSubmit } = useForm<Category>({
+  const { register, formState, handleSubmit } = useForm<Category>({
     mode: "onSubmit",
     values: isNew ? {} : { ...category },
   });
 
   const createCategoryMutation = useMutation({
-    mutationFn: createCategory,
+    mutationFn: (data: Category) => createCategory(type, data),
     onSuccess: () => handleSaveSuccess(),
   });
 
   const updateCategoryMutation = useMutation({
-    mutationFn: updateCategory,
+    mutationFn: (data: Category) => updateCategory(type, data),
     onSuccess: () => handleSaveSuccess(),
   });
 
@@ -75,14 +77,14 @@ export const CategoryUpdate = () => {
     });
 
     // Invalidate the cache and navigate back to the list
-    queryClient.invalidateQueries({ queryKey: ["categories"] });
+    queryClient.invalidateQueries({ queryKey: ["categories", type] });
 
     // Close the dialog
     handleClose();
   };
 
   const handleClose = () => {
-    navigate("/finance/category");
+    navigate(`/finance/category/${type}`);
   };
 
   if (isLoading) {
@@ -104,14 +106,6 @@ export const CategoryUpdate = () => {
         dividers
         sx={{ display: "flex", flexDirection: "column", gap: 2 }}
       >
-        <FormRadioGroup label="Type" name="type" control={control} row>
-          <FormControlLabel
-            value="expense"
-            control={<Radio />}
-            label="Expense"
-          />
-          <FormControlLabel value="income" control={<Radio />} label="Income" />
-        </FormRadioGroup>
         <FormTextField
           label="Name"
           autoFocus

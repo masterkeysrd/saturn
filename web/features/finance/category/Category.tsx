@@ -1,48 +1,32 @@
-import { useEffect } from "react";
-import { Outlet, useNavigate } from "react-router";
-import { useQuery } from "@tanstack/react-query";
-import { useSnackbar } from "notistack";
+import { useEffect, useState } from "react";
+import { Outlet, useLocation } from "react-router";
 
 import Button from "@mui/material/Button";
-import ListItemIcon from "@mui/material/ListItemIcon";
-import ListItemText from "@mui/material/ListItemText";
-import MenuItem from "@mui/material/MenuItem";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import Paper from "@mui/material/Paper";
+import Link from "@mui/material/Link";
+import Tab from "@mui/material/Tab";
+import Tabs from "@mui/material/Tabs";
 
 import AddIcon from "@mui/icons-material/Add";
-import EditIcon from "@mui/icons-material/Edit";
 
-import OptionsMenu from "@/components/OptionsMenu";
 import Page from "@/layout/Page";
 import PageHeader from "@/layout/PageHeader";
 import PageTitle from "@/layout/PageTitle";
-
-import { getCategories } from "./Category.service";
+import { CategoryType } from "./Category.model";
 
 export const Category = () => {
-  const navigate = useNavigate();
-  const { enqueueSnackbar } = useSnackbar();
-
-  const { data: categories, error } = useQuery({
-    queryKey: ["categories"],
-    queryFn: getCategories,
-  });
+  const [currentTab, setCurrentTab] = useState<CategoryType | null>(null);
+  const { pathname } = useLocation();
+  const buttonTitle = `Create a new ${currentTab} Category`;
+  const buttonHref = `/finance/category/${currentTab}/new`;
 
   useEffect(() => {
-    if (error) {
-      enqueueSnackbar("Failed to load categorys", { variant: "error" });
-    }
-  }, [error]);
+    const tab = pathname.includes("income") ? "income" : "expense";
+    setCurrentTab(tab);
+  }, [pathname]);
 
-  const handleEdit = (id?: string) => {
-    navigate(`/finance/category/${id}/edit`);
-  };
+  if (!currentTab) {
+    return null;
+  }
 
   return (
     <Page>
@@ -52,43 +36,26 @@ export const Category = () => {
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
-          href="/finance/category/new"
+          href={buttonHref}
         >
-          Create a new Category
+          {buttonTitle}
         </Button>
       </PageHeader>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Type</TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell align="right" sx={{ width: 50 }}></TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {categories?.map((category) => (
-              <TableRow key={category.id}>
-                <TableCell sx={{ textTransform: "capitalize", width: 120 }}>
-                  {category.type}
-                </TableCell>
-                <TableCell>{category.name}</TableCell>
-                <TableCell align="right">
-                  <OptionsMenu>
-                    <MenuItem onClick={() => handleEdit(category.id)}>
-                      <ListItemIcon>
-                        <EditIcon fontSize="small" />
-                      </ListItemIcon>
-                      <ListItemText primary="Edit" />
-                    </MenuItem>
-                  </OptionsMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        <Outlet />
-      </TableContainer>
+      <Tabs value={currentTab} onChange={(_, value) => setCurrentTab(value)}>
+        <Tab
+          label="Expense"
+          value="expense"
+          href="/finance/category/expense"
+          component={Link}
+        />
+        <Tab
+          label="Income"
+          value="income"
+          href="/finance/category/income"
+          component={Link}
+        />
+      </Tabs>
+      <Outlet />
     </Page>
   );
 };
