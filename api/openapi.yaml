@@ -292,6 +292,84 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /categories:
+    get:
+      summary: List all categories
+      operationId: ListCategories
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    post:
+      summary: Create a new category
+      operationId: CreateCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Category"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /categories/{id}:
+    put:
+      summary: Update a category by ID
+      operationId: UpdateCategory
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Category"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      summary: Delete a category by ID
+      operationId: DeleteCategory
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "204":
+          description: No content
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
 components:
   schemas:
     ID:
@@ -355,6 +433,8 @@ components:
               description: A description of the budget
               example: Phone and internet bill
               readOnly: true
+        category:
+          $ref: "#/components/schemas/Category"
         type:
           type: string
           description: >
@@ -395,10 +475,36 @@ components:
           type: string
           description: The name of the income
           example: Paycheck
+        category:
+          $ref: "#/components/schemas/Category"
         amount:
           type: integer
           description: The amount of the income in cents (e.g. $10.00 is 1000)
           example: 1000
+    Category:
+      type: object
+      description: A category to group expenses and incomes
+      required:
+        - name
+      properties:
+        id:
+          $ref: "#/components/schemas/ID"
+          example: 123e4567-e89b-12d3-a456-426614174000
+          readOnly: true
+        type:
+          type: string
+          description: >
+            The type of category:
+              - `expense`: A category for expenses
+              - `income`: A category for incomes
+          example: expense
+          enum:
+            - expense
+            - income
+        name:
+          type: string
+          description: The name of the category
+          example: Utilities
   responses:
     BadRequestError:
       description: Bad request

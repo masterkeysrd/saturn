@@ -8,6 +8,7 @@ package api
 
 import (
 	"github.com/masterkeysrd/saturn/internal/domain/budget"
+	"github.com/masterkeysrd/saturn/internal/domain/category"
 	"github.com/masterkeysrd/saturn/internal/domain/expense"
 	"github.com/masterkeysrd/saturn/internal/domain/income"
 )
@@ -118,6 +119,36 @@ func APIIncomes(exps []*income.Income) []*Income {
 	res := make([]*Income, len(exps))
 	for i, exp := range exps {
 		res[i] = APIIncome(exp)
+	}
+
+	return res
+}
+
+func SaturnCategory(exp *Category) *category.Category {
+	var id category.ID
+	if exp.Id != nil {
+		id = category.ID(*exp.Id)
+	}
+
+	return &category.Category{
+		ID:   id,
+		Name: exp.Name,
+	}
+}
+
+func APICategory(exp *category.Category) *Category {
+	id := string(exp.ID)
+
+	return &Category{
+		Id:   &id,
+		Name: exp.Name,
+	}
+}
+
+func APICategories(exps []*category.Category) []*Category {
+	res := make([]*Category, len(exps))
+	for i, exp := range exps {
+		res[i] = APICategory(exp)
 	}
 
 	return res

@@ -53,7 +53,19 @@ create_income_table() {
   fi
 }
 
+create_list_table() {
+  if check_if_table_exists "local-saturn-lists"; then
+    echo "Table list already exists"
+  else
+    echo "Creating table list"
+    $dynamodb_cmd create-table \
+      --cli-input-json file://\/init/tables/list.json \
+      $dynamodb_flags
+  fi
+}
+
 echo "=> Creating tables for saturn"
 create_budget_table
 create_expense_table
 create_income_table
+create_list_table

@@ -399,6 +399,122 @@ Resources:
         WriteCapacityUnits: 1
 
   ################################################################################################
+  ## Category Resources                                                                          #
+  ################################################################################################
+
+  CategoryGetFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${Environment}-saturn-category-get"
+      CodeUri: ./cmd/functions/category/get
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /categories/{categoryType}/{id}
+            Method: GET
+            RestApiId: !Ref SaturnApi
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ListTable
+
+  CategoryCreateFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${Environment}-saturn-category-create"
+      CodeUri: ./cmd/functions/category/create
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /categories/{categoryType}
+            Method: POST
+            RestApiId: !Ref SaturnApi
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ListTable
+
+  CategoryListFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${Environment}-saturn-category-list"
+      CodeUri: ./cmd/functions/category/list
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /categories/{categoryType}
+            Method: GET
+            RestApiId: !Ref SaturnApi
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ListTable
+
+  CategoryUpdateFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${Environment}-saturn-category-update"
+      CodeUri: ./cmd/functions/category/update
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /categories/{categoryType}/{id}
+            Method: PUT
+            RestApiId: !Ref SaturnApi
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ListTable
+
+  CategoryDeleteFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      FunctionName: !Sub "${Environment}-saturn-category-delete"
+      CodeUri: ./cmd/functions/category/delete
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /categories/{categoryType}/{id}
+            Method: DELETE
+            RestApiId: !Ref SaturnApi
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ListTable
+
+  ################################################################################################
+  ## List Resources                                                                              #
+  ################################################################################################
+
+  ListTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${Environment}-saturn-lists"
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+        - AttributeName: id
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+
+  ################################################################################################
   ## Cognito Resources                                                                           #
   ################################################################################################
 
