@@ -5,6 +5,8 @@ import (
 
 	incomeapi "github.com/masterkeysrd/saturn/api/income"
 	"github.com/masterkeysrd/saturn/internal/config"
+	"github.com/masterkeysrd/saturn/internal/domain/category"
+	"github.com/masterkeysrd/saturn/internal/domain/general/lists"
 	"github.com/masterkeysrd/saturn/internal/domain/income"
 	"github.com/masterkeysrd/saturn/internal/foundations/auth"
 	"github.com/masterkeysrd/saturn/internal/foundations/log"
@@ -27,8 +29,17 @@ func init() {
 		Endpoint:  cfg.DynamoDB().Endpoint(),
 	})
 
+	listRepository := lists.NewDynamoDBRepository(client)
+	listService := lists.NewService(listRepository)
+
+	categoryService := category.NewService(listService)
+
 	repository := income.NewDynamoDBRepository(client)
-	service := income.NewService(repository)
+	service := income.NewService(income.ServiceParams{
+		Repository:      repository,
+		CategoryService: categoryService,
+	})
+
 	server := incomeapi.NewServer(service)
 	handler = transport.NewHandler(server.Update)
 }

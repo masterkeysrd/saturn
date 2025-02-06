@@ -28,7 +28,9 @@ func init() {
 	})
 
 	repository := income.NewDynamoDBRepository(client)
-	service := income.NewService(repository)
+	service := income.NewService(income.ServiceParams{
+		Repository: repository,
+	})
 
 	server := incomeapi.NewServer(service)
 	handler = transport.NewHandler(server.Get)
