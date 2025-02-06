@@ -7,10 +7,13 @@
 package api
 
 import (
+	"context"
+
 	"github.com/masterkeysrd/saturn/internal/domain/budget"
 	"github.com/masterkeysrd/saturn/internal/domain/category"
 	"github.com/masterkeysrd/saturn/internal/domain/expense"
 	"github.com/masterkeysrd/saturn/internal/domain/income"
+	"github.com/masterkeysrd/saturn/internal/foundations/log"
 )
 
 // To generate the client code, types and interfaces from the OpenAPI specification, run:
@@ -108,27 +111,46 @@ func APIExpenses(exps []*expense.Expense) []*Expense {
 	return res
 }
 
-func SaturnIncome(exp *Income) *income.Income {
+func SaturnIncome(inc *Income) *income.Income {
+	log.InfoCtx(context.Background(), "SaturnIncome", log.Any("exp", inc))
 	var id income.ID
-	if exp.Id != nil {
-		id = income.ID(*exp.Id)
+	if inc.Id != nil {
+		id = income.ID(*inc.Id)
 	}
 
+	var categoryID category.ID
+	if inc.Category.Id != nil {
+		categoryID = category.ID(*inc.Category.Id)
+	}
+
+	log.InfoCtx(context.Background(), "SaturnIncome", log.Any("categoryID", categoryID))
+
 	return &income.Income{
-		ID:     id,
-		Name:   exp.Name,
-		Amount: exp.Amount,
+		ID:         id,
+		CategoryID: categoryID,
+		Name:       inc.Name,
+		Amount:     inc.Amount,
 	}
 }
 
 func APIIncome(exp *income.Income) *Income {
 	id := string(exp.ID)
 
-	return &Income{
+	out := Income{
 		Id:     &id,
 		Name:   exp.Name,
 		Amount: exp.Amount,
 	}
+
+	if exp.Category != nil {
+		categoryID := string(exp.CategoryID)
+		out.Category = &Category{
+			Id:   &categoryID,
+			Name: exp.Category.Name,
+		}
+	}
+
+	return &out
 }
 
 func APIIncomes(exps []*income.Income) []*Income {
