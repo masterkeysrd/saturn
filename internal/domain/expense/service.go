@@ -5,24 +5,28 @@ import (
 	"fmt"
 
 	"github.com/masterkeysrd/saturn/internal/domain/budget"
+	"github.com/masterkeysrd/saturn/internal/domain/category"
 	"github.com/masterkeysrd/saturn/internal/foundations/errors"
 	"github.com/masterkeysrd/saturn/internal/foundations/uuid"
 )
 
 type ServiceParams struct {
-	Repository    Repository
-	BudgetService BudgetService
+	Repository      Repository
+	BudgetService   BudgetService
+	CategoryService CategoryService
 }
 
 type Service struct {
-	repository    Repository
-	budgetService BudgetService
+	repository      Repository
+	categoryService CategoryService
+	budgetService   BudgetService
 }
 
 func NewService(params ServiceParams) *Service {
 	return &Service{
-		repository:    params.Repository,
-		budgetService: params.BudgetService,
+		repository:      params.Repository,
+		budgetService:   params.BudgetService,
+		categoryService: params.CategoryService,
 	}
 }
 
@@ -74,6 +78,15 @@ func (s *Service) Create(ctx context.Context, expense *Expense) error {
 		Description: budget.Description,
 	}
 
+	catetory, err := s.categoryService.Get(ctx, category.ExpenseCategoryType, expense.CategoryID)
+	if err != nil {
+		return errors.New(op, errors.Internal, err)
+	}
+
+	expense.Category = &Category{
+		Name: catetory.Name,
+	}
+
 	if err := s.repository.Create(ctx, expense); err != nil {
 		return errors.New(op, errors.Internal, err)
 	}
@@ -95,6 +108,15 @@ func (s *Service) Update(ctx context.Context, expense *Expense) error {
 
 	expense.Budget = &Budget{
 		Description: budget.Description,
+	}
+
+	catetory, err := s.categoryService.Get(ctx, category.ExpenseCategoryType, expense.CategoryID)
+	if err != nil {
+		return errors.New(op, errors.Internal, err)
+	}
+
+	expense.Category = &Category{
+		Name: catetory.Name,
 	}
 
 	if err := s.repository.Update(ctx, expense); err != nil {
@@ -120,4 +142,8 @@ func (s *Service) Delete(ctx context.Context, id ID) error {
 
 type BudgetService interface {
 	Get(ctx context.Context, id budget.ID) (*budget.Budget, error)
+}
+
+type CategoryService interface {
+	Get(ctx context.Context, ctype category.CategoryType, id category.ID) (*category.Category, error)
 }

@@ -6,22 +6,29 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/masterkeysrd/saturn/internal/domain/budget"
+	"github.com/masterkeysrd/saturn/internal/domain/category"
 )
 
 type Expense struct {
-	ID          ID        `dynamodbav:"id"`
-	Type        Type      `dynamodbav:"type"`
-	BudgetID    budget.ID `dynamodbav:"budget_id"`
-	Budget      *Budget   `dynamodbav:"budget"`
-	Description string    `dynamodbav:"description"`
-	BillingDay  int       `dynamodbav:"billing_day"`
-	Amount      int       `dynamodbav:"amount"`
+	ID          ID          `dynamodbav:"id"`
+	Type        Type        `dynamodbav:"type"`
+	CategoryID  category.ID `dynamodbav:"category_id"`
+	Category    *Category   `dynamodbav:"category"`
+	BudgetID    budget.ID   `dynamodbav:"budget_id"`
+	Budget      *Budget     `dynamodbav:"budget"`
+	Description string      `dynamodbav:"description"`
+	BillingDay  int         `dynamodbav:"billing_day"`
+	Amount      int         `dynamodbav:"amount"`
 }
 
 type ID string
 
 type Budget struct {
 	Description string `dynamodbav:"description"`
+}
+
+type Category struct {
+	Name string `dynamodbav:"name"`
 }
 
 func (e *Expense) Validate() error {
@@ -31,6 +38,14 @@ func (e *Expense) Validate() error {
 
 	if e.ID == "" {
 		return fmt.Errorf("id is empty")
+	}
+
+	if e.Type == TypeUnknown {
+		return fmt.Errorf("type is unknown")
+	}
+
+	if e.CategoryID == "" {
+		return fmt.Errorf("category_id is empty")
 	}
 
 	if e.BudgetID == "" {

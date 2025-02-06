@@ -6,7 +6,9 @@ import (
 	expenseapi "github.com/masterkeysrd/saturn/api/expense"
 	"github.com/masterkeysrd/saturn/internal/config"
 	"github.com/masterkeysrd/saturn/internal/domain/budget"
+	"github.com/masterkeysrd/saturn/internal/domain/category"
 	"github.com/masterkeysrd/saturn/internal/domain/expense"
+	"github.com/masterkeysrd/saturn/internal/domain/general/lists"
 	"github.com/masterkeysrd/saturn/internal/foundations/auth"
 	"github.com/masterkeysrd/saturn/internal/foundations/log"
 	"github.com/masterkeysrd/saturn/internal/foundations/storage/dynamodb"
@@ -32,10 +34,16 @@ func init() {
 	budgetRepository := budget.NewDynamoDBRepository(client)
 	budgetService := budget.NewService(budgetRepository)
 
+	listRepository := lists.NewDynamoDBRepository(client)
+	listService := lists.NewService(listRepository)
+
+	categoryService := category.NewService(listService)
+
 	expenseRepository := expense.NewDynamoDBRepository(client)
 	expenseService := expense.NewService(expense.ServiceParams{
-		Repository:    expenseRepository,
-		BudgetService: budgetService,
+		Repository:      expenseRepository,
+		BudgetService:   budgetService,
+		CategoryService: categoryService,
 	})
 	server := expenseapi.NewServer(expenseService)
 	handler = transport.NewHandler(server.Update)

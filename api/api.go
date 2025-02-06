@@ -54,10 +54,16 @@ func SaturnExpense(exp *Expense) *expense.Expense {
 		id = expense.ID(*exp.Id)
 	}
 
+	var categoryID category.ID
+	if exp.Category.Id != nil {
+		categoryID = category.ID(*exp.Category.Id)
+	}
+
 	return &expense.Expense{
 		ID:          id,
 		Type:        expense.ParseType(string(exp.Type)),
 		BudgetID:    budget.ID(exp.Budget.Id),
+		CategoryID:  categoryID,
 		Description: exp.Description,
 		BillingDay:  exp.BillingDay,
 		Amount:      exp.Amount,
@@ -67,7 +73,7 @@ func SaturnExpense(exp *Expense) *expense.Expense {
 func APIExpense(exp *expense.Expense) *Expense {
 	id := string(exp.ID)
 
-	return &Expense{
+	out := Expense{
 		Id:   &id,
 		Type: ExpenseType(exp.Type.String()),
 		Budget: struct {
@@ -81,6 +87,16 @@ func APIExpense(exp *expense.Expense) *Expense {
 		BillingDay:  exp.BillingDay,
 		Amount:      exp.Amount,
 	}
+
+	if exp.Category != nil {
+		categoryID := string(exp.CategoryID)
+		out.Category = &Category{
+			Id:   &categoryID,
+			Name: exp.Category.Name,
+		}
+	}
+
+	return &out
 }
 
 func APIExpenses(exps []*expense.Expense) []*Expense {
