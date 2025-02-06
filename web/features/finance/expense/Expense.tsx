@@ -63,6 +63,7 @@ export const Expense = () => {
               <TableCell>Description</TableCell>
               <TableCell>Type</TableCell>
               <TableCell>Budget</TableCell>
+              <TableCell>Category</TableCell>
               <TableCell>Billing Day</TableCell>
               <TableCell align="right">Amount</TableCell>
               <TableCell></TableCell>
@@ -82,6 +83,13 @@ export const Expense = () => {
                 <TableCell>
                   <Link href={`/finance/budget/${expense.budget?.id}`}>
                     {expense.budget?.description}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <Link
+                    href={`/finance/category/expense/${expense.category?.id}`}
+                  >
+                    {expense.category?.name}
                   </Link>
                 </TableCell>
                 <TableCell>{expense.billingDay} of the month</TableCell>

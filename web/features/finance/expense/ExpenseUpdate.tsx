@@ -23,10 +23,14 @@ import { createExpense, getExpense, updateExpense } from "./Expense.service";
 import { ExpenseTypesList } from "./Expense.constants";
 import { getBudgets } from "../budget/Budget.service";
 import money from "../../../lib/money";
+import { getCategories } from "../category/Category.service";
 
 const form = {
   budget: {
     required: "Budget is required",
+  },
+  category: {
+    required: "Category is required",
   },
   description: {
     required: "Description is required",
@@ -60,6 +64,11 @@ export const ExpenseUpdate = () => {
     queryFn: getBudgets,
   });
 
+  const { data: categories, isLoading: isLoadingCategories } = useQuery({
+    queryKey: ["categories"],
+    queryFn: () => getCategories("expense"),
+  });
+
   const { data: expense, isLoading: isLoadingExpense } = useQuery({
     enabled: !isNew,
     queryKey: ["expenses", id],
@@ -84,6 +93,7 @@ export const ExpenseUpdate = () => {
         type: "fixed",
         description: "",
         budget: { id: "" },
+        category: { id: "" },
         billingDay: 1,
         amount: 0,
       };
@@ -97,7 +107,7 @@ export const ExpenseUpdate = () => {
 
   const { register, control, handleSubmit, formState } = useForm<Expense>({
     mode: "onSubmit",
-    defaultValues: defaultValues(),
+    values: defaultValues(),
   });
 
   const onSubmit = async (data: Expense) => {
@@ -135,7 +145,7 @@ export const ExpenseUpdate = () => {
     });
   };
 
-  if (isLoadingExpense || isLoadingBudgets) {
+  if (isLoadingExpense || isLoadingBudgets || isLoadingCategories) {
     return <Box>Loading</Box>;
   }
 
@@ -151,6 +161,20 @@ export const ExpenseUpdate = () => {
         dividers
         sx={{ display: "flex", flexDirection: "column", gap: 2 }}
       >
+        <FormSelect
+          control={control}
+          name="category.id"
+          label="Category"
+          rules={form.category}
+          error={formState.errors.category?.id}
+          defaultValue={expense?.category}
+        >
+          {categories?.map((category) => (
+            <MenuItem key={category.id} value={category.id}>
+              {category.name}
+            </MenuItem>
+          ))}
+        </FormSelect>
         <FormTextField
           label="Description"
           error={formState.errors.description}

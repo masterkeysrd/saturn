@@ -64,6 +64,12 @@ export const ExpenseDetails = () => {
             <ExpenseTypeShip type={expense.type} />
           </Typography>
           <Typography component="dt" variant="subtitle2">
+            Category
+          </Typography>
+          <Typography component="dd" variant="body2" sx={{ mb: 2 }}>
+            {expense.category?.name}
+          </Typography>
+          <Typography component="dt" variant="subtitle2">
             Description
           </Typography>
           <Typography component="dd" variant="body2" sx={{ mb: 2 }}>

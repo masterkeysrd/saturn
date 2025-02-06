@@ -4,6 +4,10 @@ export interface Expense {
     id?: string;
     description?: string;
   };
+  category?: {
+    id?: string;
+    name?: string;
+  };
   description?: string;
   type?: ExpenseType;
   billingDay?: number;
