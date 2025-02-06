@@ -14,8 +14,14 @@ import money from "../../../lib/money";
 import { Income } from "./Income.model";
 import { createIncome, getIncome, updateIncome } from "./Income.service";
 import FormTextField from "../../../components/FormTextField";
+import FormSelect from "@/components/FormSelect";
+import { getCategories } from "../category/Category.service";
+import { MenuItem } from "@mui/material";
 
 const form = {
+  category: {
+    required: "Category is required",
+  },
   name: {
     required: "Name is required",
     maxLength: { value: 100, message: "Description is too long" },
@@ -35,6 +41,11 @@ export const IncomeUpdate = () => {
   const title = isNew ? "Create Income" : "Edit Income";
 
   const queryClient = useQueryClient();
+
+  const { data: categories, isLoading: isLoadingCategories } = useQuery({
+    queryKey: ["categories"],
+    queryFn: () => getCategories("income"),
+  });
 
   const { data: income, isLoading: isLoadingIncome } = useQuery({
     queryKey: ["income", id],
@@ -56,6 +67,7 @@ export const IncomeUpdate = () => {
     if (isNew) {
       return {
         name: "",
+        category: { id: "" },
         amount: 0,
       };
     }
@@ -66,11 +78,7 @@ export const IncomeUpdate = () => {
     };
   };
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<Income>({
+  const { register, handleSubmit, control, formState } = useForm<Income>({
     mode: "onSubmit",
     values: defaultValues(),
   });
@@ -97,10 +105,10 @@ export const IncomeUpdate = () => {
       queryKey: ["incomes"],
     });
     enqueueSnackbar("Income saved successfully", { variant: "success" });
-    navigate("/income");
+    handleClose();
   };
 
-  if (isLoadingIncome) {
+  if (isLoadingIncome || isLoadingCategories) {
     return <div>Loading...</div>;
   }
 
@@ -119,11 +127,24 @@ export const IncomeUpdate = () => {
         dividers
         sx={{ display: "flex", flexDirection: "column", gap: 2 }}
       >
+        <FormSelect
+          control={control}
+          name="category.id"
+          label="Category"
+          error={formState.errors.category?.id}
+          rules={form.category}
+        >
+          {categories?.map((category) => (
+            <MenuItem key={category.id} value={category.id}>
+              {category.name}
+            </MenuItem>
+          ))}
+        </FormSelect>
         <FormTextField
           label="Name"
           fullWidth
           {...register("name", form.name)}
-          error={errors.name}
+          error={formState.errors.name}
         />
         <FormTextField
           label="Amount"
@@ -131,7 +152,7 @@ export const IncomeUpdate = () => {
           fullWidth
           sx={{ mb: 2 }}
           {...register("amount", form.amount)}
-          error={errors.amount}
+          error={formState.errors.amount}
         />
       </DialogContent>
       <DialogActions sx={{ my: 1 }}>

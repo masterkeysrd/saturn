@@ -53,6 +53,7 @@ export const Income = () => {
           <TableHead>
             <TableRow>
               <TableCell>Name</TableCell>
+              <TableCell>Category</TableCell>
               <TableCell align="right">Amount</TableCell>
               <TableCell align="right" sx={{ width: 50 }}></TableCell>
             </TableRow>
@@ -63,6 +64,13 @@ export const Income = () => {
                 <TableCell>
                   <Link href={`/finance/income/${income.id}`}>
                     {income.name}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <Link
+                    href={`/finance/category/income/${income.category?.id}`}
+                  >
+                    {income.category?.name}
                   </Link>
                 </TableCell>
                 <TableCell align="right">

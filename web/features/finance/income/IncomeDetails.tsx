@@ -57,6 +57,12 @@ export const IncomeDetails = () => {
             {income.id}
           </Typography>
           <Typography component="dt" variant="subtitle2">
+            Category
+          </Typography>
+          <Typography component="dd" variant="body2" sx={{ mb: 2 }}>
+            {income.category?.name}
+          </Typography>
+          <Typography component="dt" variant="subtitle2">
             Name
           </Typography>
           <Typography component="dd" variant="body2" sx={{ mb: 2 }}>
