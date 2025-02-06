@@ -42,7 +42,11 @@ export const FormSelect = ({
         rules={rules}
         render={({ field }) => (
           <>
-            <Select {...field} defaultValue={defaultValue} error={!!error}>
+            <Select
+              {...field}
+              value={field.value ?? defaultValue ?? ""}
+              error={!!error}
+            >
               {children}
             </Select>
           </>
