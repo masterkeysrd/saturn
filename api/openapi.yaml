@@ -1,0 +1,67 @@
+---
+openapi: 3.0.0
+
+info:
+  title: Saturn Personal Productivity Suite
+
+servers:
+  - url: http://localhost:3000
+    description: Local server
+
+paths:
+  /finance/budgest:
+    get:
+      summary: List all budgets
+      operationId: budget.ListBudgets
+      responses:
+        "200":
+          description: Budgets list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListBudgetsResponse'
+    post:
+      summary: Create a new budget
+      operationId: budget.CreateBudget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Budget'
+      responses:
+        "201":
+          description: Create budget
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Budget'
+
+components:
+  schemas:
+    ListBudgetsResponse:
+      type: object
+      description: Response of list of budgets.
+      required:
+        - budgets
+      properties:
+        budgets:
+          type: array
+          readOnly: true
+          items:
+            $ref: '#/components/schemas/Budget'
+    Budget:
+      type: object
+      description: A budget to track expenses
+      required:
+        - name
+        - amount
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+        amount:
+          type: integer
+          description: The amount of the budget in cents (e.g. $10.00 is 1000)
