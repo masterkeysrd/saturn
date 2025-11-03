@@ -1,24 +1,60 @@
 package main
 
 import (
-	"net/http"
+	"context"
+	"fmt"
+	"log/slog"
 
-	"github.com/masterkeysrd/saturn/internal/domain/budget"
+	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/pkg/deps"
+	financeinmem "github.com/masterkeysrd/saturn/internal/storage/inmem/finance"
 )
 
 func main() {
-	repo := budget.NewInMemRepository()
-	service := budget.NewService(budget.ServiceParams{
-		Repository: repo,
+	c, err := buildContainer()
+	if err != nil {
+		slog.Error("failed to build di container", slog.Any("error", err))
+		return
+	}
+
+	err = c.Invoke(func(app *finance.Application) {
+		app.CreateBudget(context.Background(), &finance.Budget{})
 	})
-	controller := budget.NewController(service)
+	if err != nil {
+		slog.Error("error starting application", slog.Any("error", err))
+		return
+	}
+	// repo := budget.NewInMemRepository()
+	// service := budget.NewService(budget.ServiceParams{
+	// 	Repository: repo,
+	// })
+	// controller := budget.NewController(service)
+	//
+	// mux := http.NewServeMux()
+	//
+	// apiV1Mux := http.NewServeMux()
+	// controller.RegisterRoutes(apiV1Mux)
+	//
+	// mux.Handle("/api/v1/", http.StripPrefix("/api/v1", apiV1Mux))
+	//
+	// http.ListenAndServe(":3000", mux)
+}
 
-	mux := http.NewServeMux()
+func buildContainer() (deps.Container, error) {
+	container := deps.NewDigContainer()
 
-	apiV1Mux := http.NewServeMux()
-	controller.RegisterRoutes(apiV1Mux)
+	// Storage
+	err := deps.Register(container,
+		financeinmem.Provide,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("cannot register storage providers: %w", err)
+	}
 
-	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", apiV1Mux))
+	// Domain Providers
+	if err := deps.Register(container, finance.RegisterProviders); err != nil {
+		return nil, fmt.Errorf("cannot register domain providers: %w", err)
+	}
 
-	http.ListenAndServe(":3000", mux)
+	return container, nil
 }

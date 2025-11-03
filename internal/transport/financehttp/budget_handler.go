@@ -1,4 +1,4 @@
-package budget
+package financehttp
 
 import (
 	"context"
@@ -9,17 +9,15 @@ import (
 	"github.com/masterkeysrd/saturn/api"
 )
 
-type Controller struct {
-	service Service
+type BudgetController struct {
+	app FinanceApplication
 }
 
-func NewController(service Service) *Controller {
-	return &Controller{
-		service: service,
-	}
+func NewController(app FinanceApplication) *BudgetController {
+	return &BudgetController{}
 }
 
-func (c *Controller) RegisterRoutes(mux *http.ServeMux) {
+func (c *BudgetController) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /budgets", func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
@@ -70,10 +68,10 @@ func (c *Controller) RegisterRoutes(mux *http.ServeMux) {
 	})
 }
 
-func (c *Controller) CreateBudget(ctx context.Context, req *api.CreateBudgetRequest) (*api.Budget, error) {
+func (c *BudgetController) CreateBudget(ctx context.Context, req *api.CreateBudgetRequest) (*api.Budget, error) {
 	budget := BudgetFromAPI(req.Budget)
 
-	if err := c.service.Create(ctx, budget); err != nil {
+	if err := c.app.CreateBudget(ctx, budget); err != nil {
 		return nil, fmt.Errorf("cannot create budget: %w", err)
 	}
 
@@ -81,8 +79,8 @@ func (c *Controller) CreateBudget(ctx context.Context, req *api.CreateBudgetRequ
 	return resp, nil
 }
 
-func (c *Controller) ListBudgets(ctx context.Context, _ *api.ListBudgetsResponse) (*api.ListBudgetsResponse, error) {
-	budgets, err := c.service.List(ctx)
+func (c *BudgetController) ListBudgets(ctx context.Context, _ *api.ListBudgetsResponse) (*api.ListBudgetsResponse, error) {
+	budgets, err := c.app.ListBudgets(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("cannot list budgets: %w", err)
 	}

@@ -3,30 +3,27 @@ package budget
 import (
 	"context"
 	"fmt"
+
+	"github.com/masterkeysrd/saturn/internal/pkg/deps"
 )
 
-var _ Service = (*service)(nil)
-
-type Service interface {
-	Create(context.Context, *Budget) error
-	List(context.Context) ([]*Budget, error)
-}
-
-type service struct {
+type Service struct {
 	repository Repository
 }
 
 type ServiceParams struct {
+	deps.In
+
 	Repository Repository
 }
 
-func NewService(params ServiceParams) *service {
-	return &service{
+func NewService(params ServiceParams) *Service {
+	return &Service{
 		repository: params.Repository,
 	}
 }
 
-func (s *service) Create(ctx context.Context, budget *Budget) error {
+func (s *Service) Create(ctx context.Context, budget *Budget) error {
 	if err := budget.Create(); err != nil {
 		return fmt.Errorf("cannot initialize budget: %w", err)
 	}
@@ -42,7 +39,7 @@ func (s *service) Create(ctx context.Context, budget *Budget) error {
 	return nil
 }
 
-func (s *service) List(ctx context.Context) ([]*Budget, error) {
+func (s *Service) List(ctx context.Context) ([]*Budget, error) {
 	budgets, err := s.repository.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("cannot list budgets: %s", err)
