@@ -32,6 +32,12 @@ func (app *Application) CreateBudget(ctx context.Context, b *budget.Budget) erro
 	return nil
 }
 
+func (app *Application) ListBudgets(ctx context.Context) ([]*budget.Budget, error) {
+	budgets, err := app.budget.List(ctx)
+	return budgets, err
+}
+
 type BudgetService interface {
 	Create(context.Context, *budget.Budget) error
+	List(context.Context) ([]*budget.Budget, error)
 }

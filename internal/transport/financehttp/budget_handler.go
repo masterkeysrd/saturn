@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/masterkeysrd/saturn/api"
+	"github.com/masterkeysrd/saturn/internal/pkg/httphandler"
 )
 
 type BudgetController struct {
@@ -14,58 +15,20 @@ type BudgetController struct {
 }
 
 func NewController(app FinanceApplication) *BudgetController {
-	return &BudgetController{}
+	return &BudgetController{
+		app: app,
+	}
 }
 
 func (c *BudgetController) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("POST /budgets", func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
+	mux.Handle("POST /budgets", httphandler.Handle(c.CreateBudget,
+		httphandler.WithCreated[*api.CreateBudgetRequest, *api.Budget](),
+		httphandler.WithInputTransformer[*api.CreateBudgetRequest, *api.Budget](transformCreateBudgetInput),
+	))
 
-		var body api.Budget
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		resp, err := c.CreateBudget(ctx, &api.CreateBudgetRequest{
-			Budget: &body,
-		})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Add("Content-Type", "application/json")
-		if resp.Id != nil {
-			w.Header().Add("Location", "api/v1/budgets/"+*resp.Id)
-		}
-		w.WriteHeader(http.StatusCreated)
-		enc := json.NewEncoder(w)
-		enc.SetEscapeHTML(true)
-		if err := enc.Encode(resp); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	})
-
-	mux.HandleFunc("GET /budgets", func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-
-		resp, err := c.ListBudgets(ctx, &api.ListBudgetsResponse{})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Add("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		enc := json.NewEncoder(w)
-		enc.SetEscapeHTML(true)
-		if err := enc.Encode(resp); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	})
+	mux.Handle("GET /budgets", httphandler.Handle(c.ListBudgets,
+		httphandler.WithInputTransformer[*api.ListBudgetsRequest, *api.ListBudgetsResponse](transformListBudgetsInput),
+	))
 }
 
 func (c *BudgetController) CreateBudget(ctx context.Context, req *api.CreateBudgetRequest) (*api.Budget, error) {
@@ -79,7 +42,7 @@ func (c *BudgetController) CreateBudget(ctx context.Context, req *api.CreateBudg
 	return resp, nil
 }
 
-func (c *BudgetController) ListBudgets(ctx context.Context, _ *api.ListBudgetsResponse) (*api.ListBudgetsResponse, error) {
+func (c *BudgetController) ListBudgets(ctx context.Context, _ *api.ListBudgetsRequest) (*api.ListBudgetsResponse, error) {
 	budgets, err := c.app.ListBudgets(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("cannot list budgets: %w", err)
@@ -88,5 +51,20 @@ func (c *BudgetController) ListBudgets(ctx context.Context, _ *api.ListBudgetsRe
 	resp := BudgetsToAPI(budgets)
 	return &api.ListBudgetsResponse{
 		Budgets: &resp,
+	}, nil
+}
+
+func transformListBudgetsInput(ctx context.Context, req *http.Request) (*api.ListBudgetsRequest, error) {
+	return &api.ListBudgetsRequest{}, nil
+}
+
+func transformCreateBudgetInput(ctx context.Context, req *http.Request) (*api.CreateBudgetRequest, error) {
+	var body api.Budget
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		return nil, fmt.Errorf("cannot decode json into body")
+	}
+
+	return &api.CreateBudgetRequest{
+		Budget: &body,
 	}, nil
 }
