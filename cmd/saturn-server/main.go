@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log/slog"
-	"net/http"
 
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
@@ -18,37 +17,13 @@ func main() {
 		return
 	}
 
-	err = c.Invoke(func(app *finance.Application) {
-		// app.CreateBudget(context.Background(), &finance.Budget{})
-		budgetController := financehttp.NewController(app)
-
-		mux := http.NewServeMux()
-
-		apiV1Mux := http.NewServeMux()
-		budgetController.RegisterRoutes(apiV1Mux)
-
-		mux.Handle("/api/v1/", http.StripPrefix("/api/v1", apiV1Mux))
-
-		http.ListenAndServe(":3000", mux)
+	err = c.Invoke(func(s *Server) error {
+		return s.Start()
 	})
 	if err != nil {
 		slog.Error("error starting application", slog.Any("error", err))
 		return
 	}
-	// repo := budget.NewInMemRepository()
-	// service := budget.NewService(budget.ServiceParams{
-	// 	Repository: repo,
-	// })
-	// controller := budget.NewController(service)
-	//
-	// mux := http.NewServeMux()
-	//
-	// apiV1Mux := http.NewServeMux()
-	// controller.RegisterRoutes(apiV1Mux)
-	//
-	// mux.Handle("/api/v1/", http.StripPrefix("/api/v1", apiV1Mux))
-	//
-	// http.ListenAndServe(":3000", mux)
 }
 
 func buildContainer() (deps.Container, error) {
@@ -65,6 +40,16 @@ func buildContainer() (deps.Container, error) {
 	// Domain Providers
 	if err := deps.Register(container, finance.RegisterProviders); err != nil {
 		return nil, fmt.Errorf("cannot register domain providers: %w", err)
+	}
+
+	// Transport Providers
+	if err := deps.Register(container, financehttp.RegisterProviders); err != nil {
+		return nil, fmt.Errorf("cannot register transport providers: %w", err)
+	}
+
+	// Provide the Server
+	if err := container.Provide(NewServer); err != nil {
+		return nil, fmt.Errorf("cannot provide server: %w", err)
 	}
 
 	return container, nil

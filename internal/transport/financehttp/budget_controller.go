@@ -14,7 +14,7 @@ type BudgetController struct {
 	app FinanceApplication
 }
 
-func NewController(app FinanceApplication) *BudgetController {
+func NewBudgetController(app FinanceApplication) *BudgetController {
 	return &BudgetController{
 		app: app,
 	}
