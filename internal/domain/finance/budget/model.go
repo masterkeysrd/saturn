@@ -15,6 +15,7 @@ type Budget struct {
 	Name      string
 	Amount    money.Cent
 	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func (b *Budget) Create() error {

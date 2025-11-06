@@ -7,6 +7,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
 	"github.com/masterkeysrd/saturn/internal/storage/postgres"
+	pgrepositories "github.com/masterkeysrd/saturn/internal/storage/postgres/repositories"
 	"github.com/masterkeysrd/saturn/internal/transport/financehttp"
 )
 
@@ -32,7 +33,7 @@ func buildContainer() (deps.Container, error) {
 
 	// Storage
 	err := deps.Register(container,
-		financeinmem.Provide,
+		pgrepositories.Provide,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("cannot register storage providers: %w", err)
