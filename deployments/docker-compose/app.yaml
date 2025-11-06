@@ -1,0 +1,16 @@
+---
+name: saturn
+
+services:
+  pg-database:
+    extends:
+      file: postgres.yaml
+      service: pg-database
+
+volumes:
+  postgres-data:
+
+networks:
+  default:
+    name: saturn
+    external: true

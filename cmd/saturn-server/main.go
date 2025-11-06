@@ -6,11 +6,12 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
-	financeinmem "github.com/masterkeysrd/saturn/internal/storage/inmem/finance"
+	"github.com/masterkeysrd/saturn/internal/storage/postgres"
 	"github.com/masterkeysrd/saturn/internal/transport/financehttp"
 )
 
 func main() {
+	slog.Info("building DI container")
 	c, err := buildContainer()
 	if err != nil {
 		slog.Error("failed to build di container", slog.Any("error", err))
@@ -45,6 +46,10 @@ func buildContainer() (deps.Container, error) {
 	// Transport Providers
 	if err := deps.Register(container, financehttp.RegisterProviders); err != nil {
 		return nil, fmt.Errorf("cannot register transport providers: %w", err)
+	}
+
+	if err := container.Provide(postgres.NewDefaultConnection); err != nil {
+		return nil, err
 	}
 
 	// Provide the Server
