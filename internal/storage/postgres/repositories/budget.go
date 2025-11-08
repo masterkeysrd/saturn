@@ -52,8 +52,8 @@ type BudgetQueries struct{}
 
 func (q BudgetQueries) Upsert(e *BudgetEntity) string {
 	return `
-	INSERT INTO budgets (id, name, amount, created_at, updated_at)
-	VALUES (:id, :name, :amount, :created_at, :updated_at)
+	INSERT INTO budgets (id, name, currency, amount, created_at, updated_at)
+	VALUES (:id, :name, :currency, :amount, :created_at, :updated_at)
 	ON CONFLICT (id) DO UPDATE
 	SET name = EXCLUDED.name,
     	amount = EXCLUDED.amount,
@@ -66,6 +66,7 @@ func (q BudgetQueries) List() string {
 	SELECT 
 		id, 
 		name, 
+		currency,
 		amount,
 		created_at,
 		updated_at
@@ -77,18 +78,20 @@ func (q BudgetQueries) List() string {
 }
 
 type BudgetEntity struct {
-	ID        string    `db:"id"`
-	Name      string    `db:"name"`
-	Amount    int64     `db:"amount"`
-	CreatedAt time.Time `db:"created_at"`
-	UpdatedAt time.Time `db:"updated_at"`
+	ID        string         `db:"id"`
+	Name      string         `db:"name"`
+	Amount    money.Cents    `db:"amount"`
+	Currency  money.Currency `db:"currency"`
+	CreatedAt time.Time      `db:"created_at"`
+	UpdatedAt time.Time      `db:"updated_at"`
 }
 
 func BudgetEntityFromModel(b *finance.Budget) *BudgetEntity {
 	return &BudgetEntity{
 		ID:        b.ID.String(),
 		Name:      b.Name,
-		Amount:    b.Amount.Int64(),
+		Currency:  b.Amount.Currency,
+		Amount:    b.Amount.Cents,
 		CreatedAt: b.CreatedAt,
 		UpdatedAt: b.UpdatedAt,
 	}
@@ -96,9 +99,12 @@ func BudgetEntityFromModel(b *finance.Budget) *BudgetEntity {
 
 func BudgetEntityToModel(e *BudgetEntity) *finance.Budget {
 	return &finance.Budget{
-		ID:        finance.BudgetID(e.ID),
-		Name:      e.Name,
-		Amount:    money.Cent(e.Amount),
+		ID:   finance.BudgetID(e.ID),
+		Name: e.Name,
+		Amount: money.Money{
+			Currency: e.Currency,
+			Cents:    e.Amount,
+		},
 		CreatedAt: e.CreatedAt,
 		UpdatedAt: e.UpdatedAt,
 	}

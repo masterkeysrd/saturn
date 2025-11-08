@@ -13,7 +13,7 @@ import (
 type Budget struct {
 	ID        ID
 	Name      string
-	Amount    money.Cent
+	Amount    money.Money
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -51,10 +51,13 @@ func (b *Budget) Validate() error {
 		return errors.New("name field exceeds 32 characters")
 	}
 
-	if b.Amount <= 0 {
+	if b.Amount.Cents <= 0 {
 		return errors.New("amount field must be a positive number")
 	}
 
+	if err := b.Amount.Validate(); err != nil {
+		return fmt.Errorf("invalid ammount: %w", err)
+	}
 	return nil
 }
 

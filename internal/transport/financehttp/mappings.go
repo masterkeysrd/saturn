@@ -3,7 +3,6 @@ package financehttp
 import (
 	"github.com/masterkeysrd/saturn/api"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
-	"github.com/masterkeysrd/saturn/internal/pkg/money"
 	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 )
 
@@ -14,7 +13,7 @@ func BudgetFromAPI(b *api.Budget) *finance.Budget {
 	return &finance.Budget{
 		ID:     finance.BudgetID(ptr.Value(b.Id)),
 		Name:   b.Name,
-		Amount: money.Cent(b.Amount),
+		Amount: api.MoneyModel(b.Amount),
 	}
 }
 
@@ -38,6 +37,6 @@ func BudgetToAPI(b *finance.Budget) *api.Budget {
 	return &api.Budget{
 		Id:     ptr.Of(b.ID.String()),
 		Name:   b.Name,
-		Amount: b.Amount.Int(),
+		Amount: api.APIMoney(b.Amount),
 	}
 }

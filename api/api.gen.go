@@ -5,8 +5,8 @@ package api
 
 // Budget A budget to track expenses
 type Budget struct {
-	// Amount The amount of the budget in cents (e.g. $10.00 is 1000)
-	Amount int     `json:"amount"`
+	// Amount Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
+	Amount Money   `json:"amount"`
 	Id     *string `json:"id,omitempty"`
 	Name   string  `json:"name"`
 }
@@ -14,6 +14,15 @@ type Budget struct {
 // ListBudgetsResponse Response of list of budgets.
 type ListBudgetsResponse struct {
 	Budgets *[]Budget `json:"budgets,omitempty"`
+}
+
+// Money Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
+type Money struct {
+	// Cents The amount in the smallest denomination (e.g., cents).
+	Cents int64 `json:"cents"`
+
+	// Currency ISO 4217 currency code (e.g., "USD", "DOP").
+	Currency string `json:"currency"`
 }
 
 // BudgetCreateBudgetJSONRequestBody defines body for BudgetCreateBudget for application/json ContentType.
