@@ -10,6 +10,8 @@ import (
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 )
 
+var _ finance.BudgetStore = (*Budget)(nil)
+
 type Budget struct {
 	db      *sqlx.DB
 	queries BudgetQueries
@@ -23,7 +25,7 @@ func NewBudget(db *sqlx.DB) *Budget {
 
 func (b *Budget) Store(ctx context.Context, budget *finance.Budget) error {
 	entity := BudgetEntityFromModel(budget)
-	query := b.queries.Upsert(entity)
+	query := b.queries.Upsert()
 
 	_, err := b.db.NamedExecContext(ctx, query, &entity)
 	if err != nil {
@@ -50,7 +52,7 @@ func (b *Budget) List(ctx context.Context) ([]*finance.Budget, error) {
 
 type BudgetQueries struct{}
 
-func (q BudgetQueries) Upsert(e *BudgetEntity) string {
+func (q BudgetQueries) Upsert() string {
 	return `
 	INSERT INTO budgets (id, name, currency, amount, created_at, updated_at)
 	VALUES (:id, :name, :currency, :amount, :created_at, :updated_at)
@@ -78,12 +80,12 @@ func (q BudgetQueries) List() string {
 }
 
 type BudgetEntity struct {
-	ID        string         `db:"id"`
-	Name      string         `db:"name"`
-	Amount    money.Cents    `db:"amount"`
-	Currency  money.Currency `db:"currency"`
-	CreatedAt time.Time      `db:"created_at"`
-	UpdatedAt time.Time      `db:"updated_at"`
+	ID        string             `db:"id"`
+	Name      string             `db:"name"`
+	Amount    money.Cents        `db:"amount"`
+	Currency  money.CurrencyCode `db:"currency"`
+	CreatedAt time.Time          `db:"created_at"`
+	UpdatedAt time.Time          `db:"updated_at"`
 }
 
 func BudgetEntityFromModel(b *finance.Budget) *BudgetEntity {

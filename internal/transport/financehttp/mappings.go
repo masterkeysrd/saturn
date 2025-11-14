@@ -40,3 +40,40 @@ func BudgetToAPI(b *finance.Budget) *api.Budget {
 		Amount: api.APIMoney(b.Amount),
 	}
 }
+
+func CurrencyFromAPI(c *api.Currency) *finance.Currency {
+	if c == nil {
+		return nil
+	}
+
+	return &finance.Currency{
+		Code: finance.CurrencyCode(c.Code),
+		Name: c.Name,
+		Rate: c.Rate,
+	}
+}
+
+func CurrenciesToAPI(list []*finance.Currency) []api.Currency {
+	resp := make([]api.Currency, 0, len(list))
+
+	for _, c := range list {
+		if c == nil {
+			continue
+		}
+		resp = append(resp, *CurrencyToAPI(c))
+	}
+
+	return resp
+}
+
+func CurrencyToAPI(c *finance.Currency) *api.Currency {
+	if c == nil {
+		return nil
+	}
+
+	return &api.Currency{
+		Code: c.Code.String(),
+		Name: c.Name,
+		Rate: c.Rate,
+	}
+}

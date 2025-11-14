@@ -6,7 +6,11 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 )
 
-type FinanceApplication interface {
+type FinanceService interface {
 	CreateBudget(context.Context, *finance.Budget) error
 	ListBudgets(context.Context) ([]*finance.Budget, error)
+
+	CreateCurrency(context.Context, *finance.Currency) error
+	ListCurrencies(context.Context) ([]*finance.Currency, error)
+	GetCurrency(context.Context, finance.CurrencyCode) (*finance.Currency, error)
 }

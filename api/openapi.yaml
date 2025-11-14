@@ -12,7 +12,7 @@ paths:
   /finance/budgest:
     get:
       summary: List all budgets
-      operationId: budget.ListBudgets
+      operationId: finance.ListBudgets
       responses:
         "200":
           description: Budgets list
@@ -22,7 +22,7 @@ paths:
                 $ref: '#/components/schemas/ListBudgetsResponse'
     post:
       summary: Create a new budget
-      operationId: budget.CreateBudget
+      operationId: finance.CreateBudget
       requestBody:
         required: true
         content:
@@ -36,6 +36,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Budget'
+  /finance/currencies:
+    get:
+      summary: List currencies
+      operationId: finance.ListCurrencies
+      responses:
+        "200":
+          description: Currencies list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListCurrenciesResponse'
+    post:
+      summary: Create a new currency
+      operationId: budget.CreateCurrency
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Currency'
+      responses:
+        "201":
+          description: Create budget
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Currency'
 
 components:
   schemas:
@@ -64,6 +91,42 @@ components:
           type: string
         amount:
           $ref: '#/components/schemas/Money'
+    ListCurrenciesResponse:
+      type: object
+      description: Response of list of currencies.
+      required:
+        - currencies
+      properties:
+        currencies:
+          type: array
+          readOnly: true
+          items:
+            $ref: '#/components/schemas/Currency'
+    Currency:
+      type: object
+      description: A currency to handle exchange reates in budgets, transactions, etc.
+      required:
+        - name
+        - code
+        - rate
+      properties:
+        code:
+          type: string
+          description: ISO 4217 currency code (e.g., "USD", "DOP").
+          minLength: 3
+          maxLength: 3
+          example: "DOP"
+        name:
+          type: string
+          description: Name of the currency (e.g., "Dominican Pesos")
+          minLenght: 3
+          maxLenght: 50
+          example: "Dominican Pesos"
+        rate:
+          type: number
+          format: double
+          description: The exchange rate for the currency againts the base currency.
+          example: 60.50
     Money:
       Money:
       type: object

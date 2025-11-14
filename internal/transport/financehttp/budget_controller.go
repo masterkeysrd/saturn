@@ -11,10 +11,10 @@ import (
 )
 
 type BudgetController struct {
-	app FinanceApplication
+	app FinanceService
 }
 
-func NewBudgetController(app FinanceApplication) *BudgetController {
+func NewBudgetController(app FinanceService) *BudgetController {
 	return &BudgetController{
 		app: app,
 	}

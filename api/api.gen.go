@@ -11,9 +11,26 @@ type Budget struct {
 	Name   string  `json:"name"`
 }
 
+// Currency A currency to handle exchange reates in budgets, transactions, etc.
+type Currency struct {
+	// Code ISO 4217 currency code (e.g., "USD", "DOP").
+	Code string `json:"code"`
+
+	// Name Name of the currency (e.g., "Dominican Pesos")
+	Name string `json:"name"`
+
+	// Rate The exchange rate for the currency againts the base currency.
+	Rate float64 `json:"rate"`
+}
+
 // ListBudgetsResponse Response of list of budgets.
 type ListBudgetsResponse struct {
 	Budgets *[]Budget `json:"budgets,omitempty"`
+}
+
+// ListCurrenciesResponse Response of list of currencies.
+type ListCurrenciesResponse struct {
+	Currencies *[]Currency `json:"currencies,omitempty"`
 }
 
 // Money Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
@@ -25,5 +42,8 @@ type Money struct {
 	Currency string `json:"currency"`
 }
 
-// BudgetCreateBudgetJSONRequestBody defines body for BudgetCreateBudget for application/json ContentType.
-type BudgetCreateBudgetJSONRequestBody = Budget
+// FinanceCreateBudgetJSONRequestBody defines body for FinanceCreateBudget for application/json ContentType.
+type FinanceCreateBudgetJSONRequestBody = Budget
+
+// BudgetCreateCurrencyJSONRequestBody defines body for BudgetCreateCurrency for application/json ContentType.
+type BudgetCreateCurrencyJSONRequestBody = Currency

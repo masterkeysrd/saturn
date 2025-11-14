@@ -2,12 +2,13 @@ package money
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 )
 
 type Money struct {
-	Currency Currency `json:"currency"`
-	Cents    Cents    `json:"cents"`
+	Currency CurrencyCode `json:"currency"`
+	Cents    Cents        `json:"cents"`
 }
 
 func (m Money) IsZero() bool {
@@ -18,25 +19,41 @@ func (m Money) Int64() int64 {
 	return m.Cents.Int64()
 }
 
+// Exchange returns a new Money in the target currency using the given rate.
+func (m Money) Exchange(target CurrencyCode, rate float64) Money {
+	return Money{
+		Cents:    m.Cents.Divide(rate),
+		Currency: target,
+	}
+}
+
 // Validate checks that Money is well-formed
 func (m Money) Validate() error {
 	if m.Currency == "" {
 		return errors.New("currency cannot be empty")
 	}
-	// Basic ISO-4217 currency code validation
-	reg := regexp.MustCompile(`^[A-Z]{3}$`)
-	if !reg.MatchString(string(m.Currency)) {
-		return errors.New("currency code must be 3 uppercase letters (ISO-4217)")
+	if err := m.Currency.Validate(); err != nil {
+		return fmt.Errorf("currency is invalid: %w", err)
 	}
 	return nil
 }
 
-type Currency string
+type CurrencyCode string
 
-func (c Currency) String() string {
+func (c CurrencyCode) Validate() error {
+	reg := regexp.MustCompile(`^[A-Z]{3}$`)
+	if !reg.MatchString(string(c)) {
+		return errors.New("currency code must be 3 uppercase letters (ISO-4217)")
+	}
+
+	return nil
+}
+
+func (c CurrencyCode) String() string {
 	return string(c)
 }
 
+// Cents represents a monetary value in minor units (e.g., cents).
 type Cents int64
 
 func (c Cents) Int() int {
@@ -45,4 +62,12 @@ func (c Cents) Int() int {
 
 func (c Cents) Int64() int64 {
 	return int64(c)
+}
+
+// Divide divides Cents by a rate, returns the floored result.
+func (c Cents) Divide(rate float64) Cents {
+	if rate <= 0 {
+		return 0 // or panic, or error, based on your needs
+	}
+	return Cents(float64(c) / rate)
 }

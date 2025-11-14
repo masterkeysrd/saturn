@@ -10,7 +10,8 @@ import (
 type Controllers struct {
 	deps.In
 
-	Budget *BudgetController
+	Budget     *BudgetController
+	Currencies *CurrencyController
 }
 
 type Router struct {
@@ -20,6 +21,7 @@ type Router struct {
 func NewRouter(c Controllers) *Router {
 	registers := []httprouter.RoutesRegister{
 		c.Budget,
+		c.Currencies,
 	}
 
 	return &Router{

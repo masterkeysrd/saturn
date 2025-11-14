@@ -19,7 +19,7 @@ func MoneyModel(in Money) money.Money {
 	}
 
 	return money.Money{
-		Currency: money.Currency(in.Currency),
+		Currency: money.CurrencyCode(in.Currency),
 		Cents:    money.Cents(in.Cents),
 	}
 }
@@ -44,3 +44,9 @@ type CreateBudgetRequest struct {
 }
 
 type ListBudgetsRequest struct{}
+
+type CreateCurrencyRequest struct {
+	Currency *Currency
+}
+
+type ListCurrenciesRequest struct{}
