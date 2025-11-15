@@ -50,3 +50,9 @@ type CreateCurrencyRequest struct {
 }
 
 type ListCurrenciesRequest struct{}
+
+type CreateExpenseRequest struct {
+	Expense *Expense
+}
+
+type ListTransactionsRequest struct{}

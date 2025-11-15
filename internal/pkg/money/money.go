@@ -11,6 +11,10 @@ type Money struct {
 	Cents    Cents        `json:"cents"`
 }
 
+func NewMoney(code CurrencyCode, cents Cents) Money {
+	return Money{code, cents}
+}
+
 func (m Money) IsZero() bool {
 	return m == Money{}
 }

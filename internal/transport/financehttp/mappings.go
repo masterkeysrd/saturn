@@ -4,6 +4,7 @@ import (
 	"github.com/masterkeysrd/saturn/api"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
+	"github.com/oapi-codegen/runtime/types"
 )
 
 func BudgetFromAPI(b *api.Budget) *finance.Budget {
@@ -75,5 +76,53 @@ func CurrencyToAPI(c *finance.Currency) *api.Currency {
 		Code: c.Code.String(),
 		Name: c.Name,
 		Rate: c.Rate,
+	}
+}
+
+func ExpenseFromAPI(e *api.Expense) *finance.Expense {
+	if e == nil {
+		return nil
+	}
+
+	return &finance.Expense{
+		ID:       finance.TransactionID(ptr.Value(e.Id)),
+		BudgetID: finance.BudgetID(e.BudgetId),
+		Operation: finance.Operation{
+			Name:        e.Name,
+			Description: ptr.Value(e.Description),
+			Amount:      api.MoneyModel(e.Amount),
+			Date:        e.Date.Time,
+		},
+	}
+}
+
+func TransactionsToAPI(list []*finance.Transaction) []api.Transaction {
+	resp := make([]api.Transaction, 0, len(list))
+	for _, t := range list {
+		if t == nil {
+			continue
+		}
+		resp = append(resp, *TransactionToAPI(t))
+	}
+	return resp
+}
+
+func TransactionToAPI(t *finance.Transaction) *api.Transaction {
+	if t == nil {
+		return nil
+	}
+
+	return &api.Transaction{
+		Id:           ptr.Of(t.ID.String()),
+		Type:         api.TransactionType(t.Type),
+		BudgetId:     ptr.Of(t.BudgetID.String()),
+		Name:         t.Name,
+		Description:  ptr.OfNonZero(t.Description),
+		Amount:       api.APIMoney(t.Amount),
+		BaseAmount:   api.APIMoney(t.BaseAmount),
+		ExchangeRate: t.ExchangeRate,
+		Date:         types.Date{Time: t.Date},
+		CreatedAt:    t.CreatedAt,
+		UpdatedAt:    t.UpdatedAt,
 	}
 }

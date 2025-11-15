@@ -22,6 +22,14 @@ func RegisterProviders(inj deps.Injector) error {
 		return fmt.Errorf("cannot provide currency controller: %w", err)
 	}
 
+	if err := inj.Provide(NewExpenseController); err != nil {
+		return fmt.Errorf("cannot provide expense controller: %w", err)
+	}
+
+	if err := inj.Provide(NewTransactionController); err != nil {
+		return fmt.Errorf("cannot provide transaction controller: %w", err)
+	}
+
 	if err := inj.Provide(NewRouter); err != nil {
 		return fmt.Errorf("cannot provide finance router: %w", err)
 	}

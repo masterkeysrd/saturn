@@ -1,6 +1,5 @@
 -- +goose Up
 -- +goose StatementBegin
-
 CREATE TABLE IF NOT EXISTS budget_periods (
     id                  UUID PRIMARY KEY,
     budget_id           UUID NOT NULL REFERENCES budgets(id) ON DELETE CASCADE,

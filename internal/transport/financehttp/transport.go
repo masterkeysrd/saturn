@@ -13,4 +13,7 @@ type FinanceService interface {
 	CreateCurrency(context.Context, *finance.Currency) error
 	ListCurrencies(context.Context) ([]*finance.Currency, error)
 	GetCurrency(context.Context, finance.CurrencyCode) (*finance.Currency, error)
+
+	CreateExpense(context.Context, *finance.Expense) (*finance.Transaction, error)
+	ListTransactions(context.Context) ([]*finance.Transaction, error)
 }

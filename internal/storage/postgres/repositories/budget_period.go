@@ -2,6 +2,7 @@ package pgrepositories
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -14,47 +15,65 @@ var _ finance.BudgetPeriodStore = (*BudgetPeriod)(nil)
 
 type BudgetPeriod struct {
 	db      *sqlx.DB
-	queries BudgetPeriodQueries
+	queries *BudgetPeriodQueries
 }
 
-func NewBudgetPeriod(db *sqlx.DB) *BudgetPeriod {
-	return &BudgetPeriod{
-		db: db,
+func NewBudgetPeriod(db *sqlx.DB) (*BudgetPeriod, error) {
+	queries, err := NewBudgetPeriodQueries(db)
+	if err != nil {
+		return nil, fmt.Errorf("cannot initialize budget period queries: %w", err)
 	}
+
+	return &BudgetPeriod{
+		db:      db,
+		queries: queries,
+	}, nil
+}
+
+func (b *BudgetPeriod) GetByDate(ctx context.Context, budgetID finance.BudgetID, date time.Time) (*finance.BudgetPeriod, error) {
+	row := b.queries.GetByDate(ctx, budgetID, date)
+	if err := row.Err(); err != nil {
+		return nil, fmt.Errorf("cannot get budget period: %w", err)
+	}
+
+	var entity BudgetPeriodEntity
+	if err := row.StructScan(&entity); err != nil {
+		return nil, fmt.Errorf("cannot scan budget period: %w", err)
+	}
+
+	return BudgetPeriodEntityToModel(&entity), nil
 }
 
 func (b *BudgetPeriod) List(ctx context.Context) ([]*finance.BudgetPeriod, error) {
-	query := b.queries.List()
+	rows, err := b.queries.List(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("cannot execute list budget periods query: %w", err)
+	}
+	defer rows.Close()
 
-	var entities []*BudgetPeriodEntity
-	if err := b.db.SelectContext(ctx, &entities, query); err != nil {
-		return nil, fmt.Errorf("cannot list budgets: %w", err)
+	entities := make([]*finance.BudgetPeriod, 0, 50) // TODO: Change this when implement pagination.
+	for rows.Next() {
+		var entity BudgetPeriodEntity
+		if err := rows.StructScan(&entity); err != nil {
+			return nil, fmt.Errorf("cannot scan budget period: %w", err)
+		}
+		entities = append(entities, BudgetPeriodEntityToModel(&entity))
 	}
 
-	periods := make([]*finance.BudgetPeriod, 0, len(entities))
-	for _, e := range entities {
-		periods = append(periods, BudgetPeriodEntityToModel(e))
-	}
-
-	return periods, nil
+	return entities, nil
 }
 
 func (b *BudgetPeriod) Store(ctx context.Context, period *finance.BudgetPeriod) error {
-	entity := BudgetPeriodEntityFromModel(period)
-	query := b.queries.Upsert()
-
-	_, err := b.db.NamedExecContext(ctx, query, &entity)
+	_, err := b.queries.Upsert(ctx, BudgetPeriodEntityFromModel(period))
 	if err != nil {
-		return fmt.Errorf("cannot store budget period: %w", err)
+		return fmt.Errorf("cannot store currency: %w", err)
 	}
 
 	return nil
 }
 
-type BudgetPeriodQueries struct{}
-
-func (b BudgetPeriodQueries) List() string {
-	return `
+const (
+	getByDateBudgetPeriodQuery = `
 	SELECT
 		id,
 		budget_id,
@@ -68,23 +87,38 @@ func (b BudgetPeriodQueries) List() string {
 		created_at,
 		updated_at
 	FROM budget_periods
-	`
-}
+	WHERE budget_id = :budget_id
+	  AND start_date <= :date
+	  AND end_date >= :date`
 
-func (b BudgetPeriodQueries) Upsert() string {
-	return `
-	INSERT INTO budget_periods (
-	    id,
-	    budget_id,
-	    start_date,
-	    end_date,
+	listBudgetPeriodsQuery = `
+	SELECT
+		id,
+		budget_id,
+		start_date,
+		end_date,
 		amount_currency,
 		amount_cents,
 		base_amount_currency,
 		base_amount_cents,
-	    exchange_rate,
-	    created_at,
-	    updated_at
+		exchange_rate,
+		created_at,
+		updated_at
+	FROM budget_periods`
+
+	upsertBudgetPeriodQuery = `
+	INSERT INTO budget_periods (
+		id,
+		budget_id,
+		start_date,
+		end_date,
+		amount_currency,
+		amount_cents,
+		base_amount_currency,
+		base_amount_cents,
+		exchange_rate,
+		created_at,
+		updated_at
 	) VALUES (
 		:id,
 		:budget_id,
@@ -99,11 +133,57 @@ func (b BudgetPeriodQueries) Upsert() string {
 		:updated_at
 	)
 	ON CONFLICT (id) DO UPDATE SET
-	    amount_cents        = EXCLUDED.amount_cents,
-	    base_amount_cents   = EXCLUDED.base_amount_cents,
-	    exchange_rate 		= EXCLUDED.exchange_rate,
-	    updated_at    		= EXCLUDED.updated_at
-	`
+		amount_cents = EXCLUDED.amount_cents,
+		base_amount_cents = EXCLUDED.base_amount_cents,
+		exchange_rate = EXCLUDED.exchange_rate,
+		updated_at = EXCLUDED.updated_at`
+)
+
+type BudgetPeriodQueries struct {
+	getByDateStmt *sqlx.NamedStmt
+	listStmt      *sqlx.Stmt
+	upsertStmt    *sqlx.NamedStmt
+}
+
+func NewBudgetPeriodQueries(db *sqlx.DB) (*BudgetPeriodQueries, error) {
+	getByDateStmt, err := db.PrepareNamed(getByDateBudgetPeriodQuery)
+	if err != nil {
+		return nil, fmt.Errorf("cannot prepare get by date query: %w", err)
+	}
+
+	listStmt, err := db.Preparex(listBudgetPeriodsQuery)
+	if err != nil {
+		getByDateStmt.Close()
+		return nil, fmt.Errorf("cannot prepare list query: %w", err)
+	}
+
+	upsertStmt, err := db.PrepareNamed(upsertBudgetPeriodQuery)
+	if err != nil {
+		getByDateStmt.Close()
+		listStmt.Close()
+		return nil, fmt.Errorf("cannot prepare upsert query: %w", err)
+	}
+
+	return &BudgetPeriodQueries{
+		getByDateStmt: getByDateStmt,
+		listStmt:      listStmt,
+		upsertStmt:    upsertStmt,
+	}, nil
+}
+
+func (q *BudgetPeriodQueries) GetByDate(ctx context.Context, budgetID finance.BudgetID, date time.Time) *sqlx.Row {
+	return q.getByDateStmt.QueryRowContext(ctx, map[string]any{
+		"budget_id": budgetID,
+		"date":      date,
+	})
+}
+
+func (q *BudgetPeriodQueries) List(ctx context.Context) (*sqlx.Rows, error) {
+	return q.listStmt.QueryxContext(ctx)
+}
+
+func (q *BudgetPeriodQueries) Upsert(ctx context.Context, entity *BudgetPeriodEntity) (sql.Result, error) {
+	return q.upsertStmt.ExecContext(ctx, entity)
 }
 
 type BudgetPeriodEntity struct {

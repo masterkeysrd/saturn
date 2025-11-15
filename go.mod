@@ -8,6 +8,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/jmoiron/sqlx v1.4.0
+	github.com/oapi-codegen/runtime v1.1.2
 	go.uber.org/dig v1.19.0
 )
 

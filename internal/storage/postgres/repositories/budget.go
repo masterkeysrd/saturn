@@ -23,16 +23,14 @@ func NewBudget(db *sqlx.DB) *Budget {
 	}
 }
 
-func (b *Budget) Store(ctx context.Context, budget *finance.Budget) error {
-	entity := BudgetEntityFromModel(budget)
-	query := b.queries.Upsert()
-
-	_, err := b.db.NamedExecContext(ctx, query, &entity)
-	if err != nil {
-		return fmt.Errorf("cannot store budget: %w", err)
+func (b *Budget) Get(ctx context.Context, id finance.BudgetID) (*finance.Budget, error) {
+	var entity BudgetEntity
+	query := b.queries.Get()
+	if err := b.db.GetContext(ctx, &entity, query, id); err != nil {
+		return nil, fmt.Errorf("cannot list budgets: %w", err)
 	}
 
-	return nil
+	return BudgetEntityToModel(&entity), nil
 }
 
 func (b *Budget) List(ctx context.Context) ([]*finance.Budget, error) {
@@ -50,6 +48,18 @@ func (b *Budget) List(ctx context.Context) ([]*finance.Budget, error) {
 	return budgets, nil
 }
 
+func (b *Budget) Store(ctx context.Context, budget *finance.Budget) error {
+	entity := BudgetEntityFromModel(budget)
+	query := b.queries.Upsert()
+
+	_, err := b.db.NamedExecContext(ctx, query, &entity)
+	if err != nil {
+		return fmt.Errorf("cannot store budget: %w", err)
+	}
+
+	return nil
+}
+
 type BudgetQueries struct{}
 
 func (q BudgetQueries) Upsert() string {
@@ -60,6 +70,21 @@ func (q BudgetQueries) Upsert() string {
 	SET name = EXCLUDED.name,
     	amount = EXCLUDED.amount,
     	updated_at = EXCLUDED.updated_at;
+	`
+}
+
+func (q BudgetQueries) Get() string {
+	return `
+	SELECT
+		id,
+		name,
+		currency,
+		amount,
+		created_at,
+		updated_at
+	FROM
+		budgets
+	WHERE id = $1
 	`
 }
 
