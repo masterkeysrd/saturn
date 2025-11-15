@@ -2,6 +2,7 @@ package pgrepositories
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -11,87 +12,67 @@ import (
 
 type Currency struct {
 	db      *sqlx.DB
-	queries CurrencyQueries
+	queries *CurrencyQueries
 }
 
-func NewCurrency(db *sqlx.DB) *Currency {
+func NewCurrency(db *sqlx.DB) (*Currency, error) {
+	queries, err := NewCurrencyQueries(db)
+	if err != nil {
+		return nil, fmt.Errorf("cannot initialize currency queries: %w", err)
+	}
+
 	return &Currency{
 		db:      db,
-		queries: CurrencyQueries{},
-	}
+		queries: queries,
+	}, nil
 }
 
 func (c *Currency) Get(ctx context.Context, code finance.CurrencyCode) (*finance.Currency, error) {
-	query := c.queries.Get()
-
-	var entity CurrencyEntity
-	rows, err := c.db.NamedQueryContext(ctx, query, CurrencyEntity{Code: code})
-	if err != nil {
+	row := c.queries.Get(ctx, code)
+	if err := row.Err(); err != nil {
 		return nil, fmt.Errorf("cannot execute Get currency query: %w", err)
 	}
-	defer rows.Close()
 
-	if rows.Next() {
-		if err := rows.StructScan(&entity); err != nil {
-			return nil, fmt.Errorf("cannot scan currency: %w", err)
-		}
-		return &finance.Currency{
-			Code:      entity.Code,
-			Name:      entity.Name,
-			Rate:      entity.Rate,
-			CreatedAt: entity.CreatedAt,
-			UpdatedAt: entity.UpdatedAt,
-		}, nil
+	var entity CurrencyEntity
+	if err := row.StructScan(&entity); err != nil {
+		return nil, fmt.Errorf("cannot scan currency: %w", err)
 	}
 
-	return nil, fmt.Errorf("currency not found")
+	return CurrencyEntityToModel(&entity), nil
 }
 
 // List retrieves all currencies from the database.
 func (c *Currency) List(ctx context.Context) ([]*finance.Currency, error) {
-	query := c.queries.List()
+	rows, err := c.queries.List(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("cannot execute list currencies query: %w", err)
+	}
+	defer rows.Close()
 
-	var entities []CurrencyEntity
-	if err := c.db.SelectContext(ctx, &entities, query); err != nil {
-		return nil, fmt.Errorf("cannot execute List currencies query: %w", err)
+	entities := make([]*finance.Currency, 0, 50) // TODO: Change this when implement pagination.
+	for rows.Next() {
+		var entity CurrencyEntity
+		if err := rows.StructScan(&entity); err != nil {
+			return nil, fmt.Errorf("cannot scan currency: %w", err)
+		}
+		entities = append(entities, CurrencyEntityToModel(&entity))
 	}
 
-	result := make([]*finance.Currency, 0, len(entities))
-	for _, entity := range entities {
-		result = append(result, &finance.Currency{
-			Code:      entity.Code,
-			Name:      entity.Name,
-			Rate:      entity.Rate,
-			CreatedAt: entity.CreatedAt,
-			UpdatedAt: entity.UpdatedAt,
-		})
-	}
-	return result, nil
+	return entities, nil
 }
 
 // Store inserts or updates a currency in the database.
 func (c *Currency) Store(ctx context.Context, currency *finance.Currency) error {
-	query := c.queries.Store()
-
-	entity := CurrencyEntity{
-		Code:      currency.Code,
-		Name:      currency.Name,
-		Rate:      currency.Rate,
-		CreatedAt: currency.CreatedAt,
-		UpdatedAt: currency.UpdatedAt,
-	}
-
-	_, err := c.db.NamedExecContext(ctx, query, entity)
+	_, err := c.queries.Store(ctx, CurrencyEntityFromModel(currency))
 	if err != nil {
 		return fmt.Errorf("cannot store currency: %w", err)
 	}
+
 	return nil
 }
 
-type CurrencyQueries struct{}
-
-func (c CurrencyQueries) Get() string {
-	return `
+const (
+	getCurrencyQuery = `
 	SELECT
 		code,
 		name,
@@ -102,10 +83,8 @@ func (c CurrencyQueries) Get() string {
 		currencies
 	WHERE
 		code = :code`
-}
 
-func (c CurrencyQueries) List() string {
-	return `
+	listCurrenciesQuery = `
 	SELECT
 		code,
 		rate,
@@ -114,17 +93,71 @@ func (c CurrencyQueries) List() string {
 		updated_at
 	FROM
 		currencies`
-}
 
-func (c CurrencyQueries) Store() string {
-	return `
-	INSERT INTO currencies (code, name, rate, created_at, updated_at)
-	VALUES (:code, :name, :rate, :created_at, :updated_at)
+	upsertCurrencyQuery = `
+	INSERT INTO currencies (
+		code, 
+		name,
+		rate,
+		created_at,
+		updated_at
+	)
+	VALUES (
+		:code,
+		:name,
+		:rate,
+		:created_at,
+		:updated_at
+	)
 	ON CONFLICT (code) DO UPDATE
 	SET 
 		name = EXCLUDED.name,
 		rate = EXCLUDED.rate,
 		updated_at = EXCLUDED.updated_at`
+)
+
+// CurrencyQueries hold queries to the currencies table.
+//
+// TODO: Implement closing of statements.
+type CurrencyQueries struct {
+	getStmt    *sqlx.NamedStmt
+	listStmt   *sqlx.Stmt
+	upsertStmt *sqlx.NamedStmt
+}
+
+func NewCurrencyQueries(db *sqlx.DB) (*CurrencyQueries, error) {
+	getStmt, err := db.PrepareNamed(getCurrencyQuery)
+	if err != nil {
+		return nil, fmt.Errorf("cannot prepare get query: %w", err)
+	}
+
+	listStmt, err := db.Preparex(listCurrenciesQuery)
+	if err != nil {
+		return nil, fmt.Errorf("cannot prepare list query: %w", err)
+	}
+
+	upsertStmt, err := db.PrepareNamed(upsertCurrencyQuery)
+	if err != nil {
+		return nil, fmt.Errorf("cannot prepare upsert query: %w", err)
+	}
+
+	return &CurrencyQueries{
+		getStmt:    getStmt,
+		listStmt:   listStmt,
+		upsertStmt: upsertStmt,
+	}, nil
+}
+
+func (c *CurrencyQueries) Get(ctx context.Context, code finance.CurrencyCode) *sqlx.Row {
+	return c.getStmt.QueryRowxContext(ctx, CurrencyEntity{Code: code})
+}
+
+func (c CurrencyQueries) List(ctx context.Context) (*sqlx.Rows, error) {
+	return c.listStmt.QueryxContext(ctx)
+}
+
+func (c CurrencyQueries) Store(ctx context.Context, e *CurrencyEntity) (sql.Result, error) {
+	return c.upsertStmt.ExecContext(ctx, e)
 }
 
 type CurrencyEntity struct {
@@ -133,4 +166,28 @@ type CurrencyEntity struct {
 	Rate      float64              `db:"rate"`
 	CreatedAt time.Time            `db:"created_at"`
 	UpdatedAt time.Time            `db:"updated_at"`
+}
+
+func CurrencyEntityToModel(e *CurrencyEntity) *finance.Currency {
+	if e == nil {
+		return nil
+	}
+
+	return &finance.Currency{
+		Code:      e.Code,
+		Name:      e.Name,
+		Rate:      e.Rate,
+		CreatedAt: e.CreatedAt,
+		UpdatedAt: e.UpdatedAt,
+	}
+}
+
+func CurrencyEntityFromModel(c *finance.Currency) *CurrencyEntity {
+	return &CurrencyEntity{
+		Code:      c.Code,
+		Name:      c.Name,
+		Rate:      c.Rate,
+		CreatedAt: c.CreatedAt,
+		UpdatedAt: c.UpdatedAt,
+	}
 }
