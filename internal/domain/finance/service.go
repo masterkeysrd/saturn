@@ -151,7 +151,7 @@ func (s *Service) GetPeriodForDate(ctx context.Context, budgetID BudgetID, date 
 	}
 
 	// Create the period for the date.
-	period, err = budget.CreatePeriod(currency, time.Now())
+	period, err = budget.CreatePeriod(currency, date)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create period: %w", err)
 	}
