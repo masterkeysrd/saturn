@@ -105,6 +105,57 @@ paths:
               schema:
                 $ref: '#/components/schemas/ListTransactionsResponse'
 
+  /finance/insights:
+    get:
+      operationId: finance.GetInsights
+      summary: Get spending insights
+      description: |
+        Retrieves finance insights including expenses.
+
+        Only support grouping data by month.
+      tags:
+        - Insights
+      parameters:
+        - name: start_date
+          in: query
+          required: true
+          description: Start date for the insights period (ISO 8601 format)
+          schema:
+            type: string
+            format: date
+            example: "2025-05-01"
+        - name: end_date
+          in: query
+          required: true
+          description: End date for the insights period (ISO 8601 format)
+          schema:
+            type: string
+            format: date
+            example: "2025-11-16"
+        - name: group_by
+          in: query
+          required: false
+          description: Time period grouping for trends
+          schema:
+            type: string
+            enum: [month]
+            default: month
+        - name: budget_ids
+          in: query
+          required: false
+          description: Comma-separated list of budget IDs to filter
+          schema:
+            type: string
+            example: "019a8ace-023e-77a1-a1ea-c16f24866b58,019a8ace-247c-7d93-b177-929c689de5e3"
+          explode: false
+      responses:
+        '200':
+          description: Spending insights retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinanceInsights'
+
 components:
   schemas:
     ListBudgetsResponse:
@@ -288,6 +339,156 @@ components:
         - income
         - transfer
       description: Type of transaction.
+
+    FinanceInsights:
+      type: object
+      required:
+        - spending
+        - meta
+      properties:
+        spending:
+          $ref: '#/components/schemas/SpendingInsights'
+
+    SpendingInsights:
+      type: object
+      required:
+        - summary
+        - by_budget
+        - trends
+      properties:
+        summary:
+          $ref: '#/components/schemas/SpendingSummary'
+        by_budget:
+          type: array
+          description: Budget-level aggregates across all periods
+          items:
+            $ref: '#/components/schemas/SpendingBudgetSummary'
+        trends:
+          type: array
+          description: Time-series data grouped by period
+          items:
+            $ref: '#/components/schemas/SpendingTrendPeriod'
+
+    SpendingSummary:
+      type: object
+      required:
+        - budgeted
+        - spent
+        - remaining
+        - usage
+        - count
+      properties:
+        spent:
+          $ref: '#/components/schemas/Money'
+        budgeted:
+          $ref: '#/components/schemas/Money'
+        remaining:
+          $ref: '#/components/schemas/Money'
+        usage:
+          type: number
+          format: double
+          description: Percentage of budgeted amount spent (0-100)
+          minimum: 0
+          example: 72.5
+        count:
+          type: integer
+          format: int32
+          description: Total transactions in for this budget
+          minimum: 0
+          example: 25
+    
+    SpendingTrendPeriod:
+      type: object
+      required:
+        - period
+        - period_start
+        - period_end
+        - budgeted
+        - spent
+        - remaining
+        - usage
+        - count
+        - budgets
+      properties:
+        period:
+          type: string
+          description: Period identifier (format depends on group_by parameter)
+          example: "2025-11"
+          pattern: '^\d{4}-\d{2}$'
+        period_start:
+          type: string
+          format: date-time
+          description: Start of the period in UTC
+          example: "2025-11-01T00:00:00Z"
+        period_end:
+          type: string
+          format: date-time
+          description: End of the period in UTC
+          example: "2025-11-30T23:59:59Z"
+        budgeted:
+          $ref: '#/components/schemas/Money'
+        spent:
+          $ref: '#/components/schemas/Money'
+        remaining:
+          $ref: '#/components/schemas/Money'
+        usage:
+          type: number
+          format: double
+          description: Percentage of budgeted amount spent for this period
+          minimum: 0
+          example: 72.5
+        count:
+          type: integer
+          format: int32
+          description: Total transactions in this period
+          minimum: 0
+          example: 25
+        budgets:
+          type: array
+          description: Budget breakdown for this period
+          items:
+            $ref: '#/components/schemas/SpendingBudgetSummary'
+
+    SpendingBudgetSummary:
+      type: object
+      required:
+        - budget_id
+        - budget_name
+        - budgeted
+        - spent
+        - remaining
+        - usage
+        - count
+      properties:
+        budget_id:
+          type: string
+          description: Unique identifier for the budget
+          example: bdg_groceries
+        budget_name:
+          type: string
+          description: Human-readable budget name
+          minLength: 1
+          maxLength: 100
+          example: Groceries
+        budgeted:
+          $ref: '#/components/schemas/Money'
+        spent:
+          $ref: '#/components/schemas/Money'
+        remaining:
+          $ref: '#/components/schemas/Money'
+        usage:
+          type: number
+          format: double
+          description: Percentage of budgeted amount spent (0-100)
+          minimum: 0
+          example: 65.0
+        count:
+          type: integer
+          format: int32
+          description: Total number of transactions
+          minimum: 0
+          example: 48
+
     Money:
       Money:
       type: object

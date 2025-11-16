@@ -14,6 +14,7 @@ type Service struct {
 	budgetPeriodStore BudgetPeriodStore
 	currencyStore     CurrencyStore
 	transactionStore  TransactionStore
+	insightsStore     InsightsStore
 }
 
 type ServiceParams struct {
@@ -23,6 +24,7 @@ type ServiceParams struct {
 	BudgetPeriod     BudgetPeriodStore
 	CurrencyStore    CurrencyStore
 	TransactionStore TransactionStore
+	InsightsStore    InsightsStore
 }
 
 func NewService(params ServiceParams) *Service {
@@ -31,6 +33,7 @@ func NewService(params ServiceParams) *Service {
 		budgetPeriodStore: params.BudgetPeriod,
 		currencyStore:     params.CurrencyStore,
 		transactionStore:  params.TransactionStore,
+		insightsStore:     params.InsightsStore,
 	}
 }
 
@@ -216,4 +219,26 @@ func (s *Service) ListCurrencies(ctx context.Context) ([]*Currency, error) {
 		return nil, fmt.Errorf("cannot list currencies: %w", err)
 	}
 	return currencies, nil
+}
+
+func (s *Service) GetInsights(ctx context.Context, in *GetInsightsInput) (*Insights, error) {
+	if err := in.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid input: %w", err)
+	}
+
+	spendingSeries, err := s.insightsStore.GetSpendingSeries(ctx, SpendingSeriesFilter{
+		StartDate: in.StartDate,
+		EndState:  in.EndState,
+		Budgets:   in.Budgets,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("cannot get spending series: %w", err)
+	}
+
+	spendingInsights := NewSpendingInsights()
+	spendingInsights.Process(spendingSeries)
+
+	return &Insights{
+		Spending: spendingInsights,
+	}, nil
 }

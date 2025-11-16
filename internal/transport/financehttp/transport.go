@@ -16,4 +16,6 @@ type FinanceService interface {
 
 	CreateExpense(context.Context, *finance.Expense) (*finance.Transaction, error)
 	ListTransactions(context.Context) ([]*finance.Transaction, error)
+
+	GetInsights(ctx context.Context, in *finance.GetInsightsInput) (*finance.Insights, error)
 }

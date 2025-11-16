@@ -14,6 +14,7 @@ type Controllers struct {
 	Currencies  *CurrencyController
 	Expense     *ExpenseController
 	Transaction *TransactionController
+	Insights    *InsightsController
 }
 
 type Router struct {
@@ -26,6 +27,7 @@ func NewRouter(c Controllers) *Router {
 		c.Currencies,
 		c.Expense,
 		c.Transaction,
+		c.Insights,
 	}
 
 	return &Router{

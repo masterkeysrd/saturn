@@ -26,3 +26,7 @@ type TransactionStore interface {
 	List(context.Context) ([]*Transaction, error)
 	Store(context.Context, *Transaction) error
 }
+
+type InsightsStore interface {
+	GetSpendingSeries(context.Context, SpendingSeriesFilter) ([]*SpendingSeries, error)
+}

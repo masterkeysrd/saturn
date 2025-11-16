@@ -56,3 +56,7 @@ type CreateExpenseRequest struct {
 }
 
 type ListTransactionsRequest struct{}
+
+type GetFinanceInsightsRequest struct {
+	FinanceGetInsightsParams
+}

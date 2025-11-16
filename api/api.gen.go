@@ -16,6 +16,11 @@ const (
 	TransactionTypeTransfer TransactionType = "transfer"
 )
 
+// Defines values for FinanceGetInsightsParamsGroupBy.
+const (
+	Month FinanceGetInsightsParamsGroupBy = "month"
+)
+
 // Defines values for FinanceListTransactionsParamsType.
 const (
 	FinanceListTransactionsParamsTypeExpense  FinanceListTransactionsParamsType = "expense"
@@ -70,6 +75,11 @@ type Expense struct {
 	Name string `json:"name"`
 }
 
+// FinanceInsights defines model for FinanceInsights.
+type FinanceInsights struct {
+	Spending SpendingInsights `json:"spending"`
+}
+
 // ListBudgetsResponse Response of list of budgets.
 type ListBudgetsResponse struct {
 	Budgets *[]Budget `json:"budgets,omitempty"`
@@ -92,6 +102,88 @@ type Money struct {
 
 	// Currency ISO 4217 currency code (e.g., "USD", "DOP").
 	Currency string `json:"currency"`
+}
+
+// SpendingBudgetSummary defines model for SpendingBudgetSummary.
+type SpendingBudgetSummary struct {
+	// BudgetId Unique identifier for the budget
+	BudgetId string `json:"budget_id"`
+
+	// BudgetName Human-readable budget name
+	BudgetName string `json:"budget_name"`
+
+	// Budgeted Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
+	Budgeted Money `json:"budgeted"`
+
+	// Count Total number of transactions
+	Count int32 `json:"count"`
+
+	// Remaining Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
+	Remaining Money `json:"remaining"`
+
+	// Spent Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
+	Spent Money `json:"spent"`
+
+	// Usage Percentage of budgeted amount spent (0-100)
+	Usage float64 `json:"usage"`
+}
+
+// SpendingInsights defines model for SpendingInsights.
+type SpendingInsights struct {
+	// ByBudget Budget-level aggregates across all periods
+	ByBudget []SpendingBudgetSummary `json:"by_budget"`
+	Summary  SpendingSummary         `json:"summary"`
+
+	// Trends Time-series data grouped by period
+	Trends []SpendingTrendPeriod `json:"trends"`
+}
+
+// SpendingSummary defines model for SpendingSummary.
+type SpendingSummary struct {
+	// Budgeted Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
+	Budgeted Money `json:"budgeted"`
+
+	// Count Total transactions in for this budget
+	Count int32 `json:"count"`
+
+	// Remaining Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
+	Remaining Money `json:"remaining"`
+
+	// Spent Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
+	Spent Money `json:"spent"`
+
+	// Usage Percentage of budgeted amount spent (0-100)
+	Usage float64 `json:"usage"`
+}
+
+// SpendingTrendPeriod defines model for SpendingTrendPeriod.
+type SpendingTrendPeriod struct {
+	// Budgeted Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
+	Budgeted Money `json:"budgeted"`
+
+	// Budgets Budget breakdown for this period
+	Budgets []SpendingBudgetSummary `json:"budgets"`
+
+	// Count Total transactions in this period
+	Count int32 `json:"count"`
+
+	// Period Period identifier (format depends on group_by parameter)
+	Period string `json:"period"`
+
+	// PeriodEnd End of the period in UTC
+	PeriodEnd time.Time `json:"period_end"`
+
+	// PeriodStart Start of the period in UTC
+	PeriodStart time.Time `json:"period_start"`
+
+	// Remaining Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
+	Remaining Money `json:"remaining"`
+
+	// Spent Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
+	Spent Money `json:"spent"`
+
+	// Usage Percentage of budgeted amount spent for this period
+	Usage float64 `json:"usage"`
 }
 
 // Transaction A fully-realized financial transaction stored in the ledger.
@@ -125,6 +217,24 @@ type Transaction struct {
 
 // TransactionType Type of transaction.
 type TransactionType string
+
+// FinanceGetInsightsParams defines parameters for FinanceGetInsights.
+type FinanceGetInsightsParams struct {
+	// StartDate Start date for the insights period (ISO 8601 format)
+	StartDate openapi_types.Date `form:"start_date" json:"start_date"`
+
+	// EndDate End date for the insights period (ISO 8601 format)
+	EndDate openapi_types.Date `form:"end_date" json:"end_date"`
+
+	// GroupBy Time period grouping for trends
+	GroupBy *FinanceGetInsightsParamsGroupBy `form:"group_by,omitempty" json:"group_by,omitempty"`
+
+	// BudgetIds Comma-separated list of budget IDs to filter
+	BudgetIds *string `form:"budget_ids,omitempty" json:"budget_ids,omitempty"`
+}
+
+// FinanceGetInsightsParamsGroupBy defines parameters for FinanceGetInsights.
+type FinanceGetInsightsParamsGroupBy string
 
 // FinanceListTransactionsParams defines parameters for FinanceListTransactions.
 type FinanceListTransactionsParams struct {
