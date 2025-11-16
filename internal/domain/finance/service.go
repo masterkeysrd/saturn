@@ -199,6 +199,10 @@ func (s *Service) CreateCurrency(ctx context.Context, currency *Currency) error 
 		return fmt.Errorf("cannot initialize currency: %w", err)
 	}
 
+	if err := currency.Validate(); err != nil {
+		return fmt.Errorf("invalid currency: %w", err)
+	}
+
 	if err := s.currencyStore.Store(ctx, currency); err != nil {
 		return fmt.Errorf("cannot store currency: %w", err)
 	}
