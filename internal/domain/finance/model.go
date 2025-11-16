@@ -351,7 +351,7 @@ type Currency struct {
 	UpdatedAt time.Time
 }
 
-func (c *Currency) Create() error {
+func (c *Currency) Initialize() error {
 	c.CreatedAt = time.Now().UTC()
 	return nil
 }

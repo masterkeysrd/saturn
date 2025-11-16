@@ -97,7 +97,7 @@ func (s *Service) ListTransactions(ctx context.Context) ([]*Transaction, error) 
 
 func (s *Service) CreateBudget(ctx context.Context, budget *Budget) error {
 	// Initialize and validates the budget.
-	if err := budget.Create(); err != nil {
+	if err := budget.Initialize(); err != nil {
 		return fmt.Errorf("cannot initialize budget: %w", err)
 	}
 	if err := budget.Validate(); err != nil {
@@ -198,7 +198,7 @@ func (s *Service) GetCurrency(ctx context.Context, code CurrencyCode) (*Currency
 }
 
 func (s *Service) CreateCurrency(ctx context.Context, currency *Currency) error {
-	if err := currency.Create(); err != nil {
+	if err := currency.Initialize(); err != nil {
 		return fmt.Errorf("cannot initialize currency: %w", err)
 	}
 
