@@ -118,6 +118,7 @@ components:
           readOnly: true
           items:
             $ref: '#/components/schemas/Budget'
+
     Budget:
       type: object
       description: A budget to track expenses
@@ -132,6 +133,7 @@ components:
           type: string
         amount:
           $ref: '#/components/schemas/Money'
+
     ListCurrenciesResponse:
       type: object
       description: Response of list of currencies.
@@ -143,6 +145,7 @@ components:
           readOnly: true
           items:
             $ref: '#/components/schemas/Currency'
+
     Currency:
       type: object
       description: A currency to handle exchange reates in budgets, transactions, etc.
@@ -168,6 +171,7 @@ components:
           format: double
           description: The exchange rate for the currency againts the base currency.
           example: 60.50
+
     Expense:
       type: object
       description: |
@@ -202,6 +206,13 @@ components:
           example: "Monthly mobile phone payment"
         amount:
           $ref: '#/components/schemas/Money'
+        exchange_rate:
+          type: number
+          format: double
+          description: |
+            Optional exchange rate for the expense.
+            If not provided, the server will use the rate from the saved currency.
+          example: 60.50
         date:
           type: string
           format: date

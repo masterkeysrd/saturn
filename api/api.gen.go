@@ -59,6 +59,10 @@ type Expense struct {
 	// Description Optional longer description.
 	Description *string `json:"description"`
 
+	// ExchangeRate Optional exchange rate for the expense.
+	// If not provided, the server will use the rate from the saved currency.
+	ExchangeRate *float64 `json:"exchange_rate,omitempty"`
+
 	// Id Generated UUID of the expense (same as transaction ID).
 	Id *string `json:"id,omitempty"`
 

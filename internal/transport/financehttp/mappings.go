@@ -88,10 +88,11 @@ func ExpenseFromAPI(e *api.Expense) *finance.Expense {
 		ID:       finance.TransactionID(ptr.Value(e.Id)),
 		BudgetID: finance.BudgetID(e.BudgetId),
 		Operation: finance.Operation{
-			Name:        e.Name,
-			Description: ptr.Value(e.Description),
-			Amount:      api.MoneyModel(e.Amount),
-			Date:        e.Date.Time,
+			Name:         e.Name,
+			Description:  ptr.Value(e.Description),
+			Amount:       api.MoneyModel(e.Amount),
+			ExchangeRate: e.ExchangeRate,
+			Date:         e.Date.Time,
 		},
 	}
 }

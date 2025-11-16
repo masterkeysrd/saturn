@@ -107,6 +107,7 @@ SELECT
 	created_at,
 	updated_at
 FROM transactions
+ORDER BY date desc, created_at
 `
 
 	upsertTransactionQuery = `

@@ -36,7 +36,7 @@ func NewService(params ServiceParams) *Service {
 
 func (s *Service) CreateExpense(ctx context.Context, exp *Expense) (*Transaction, error) {
 	// Initialize and validates the budget.
-	if err := exp.Create(); err != nil {
+	if err := exp.Initialize(); err != nil {
 		return nil, fmt.Errorf("cannot initialize expense: %w", err)
 	}
 	if err := exp.Validate(); err != nil {
@@ -48,12 +48,27 @@ func (s *Service) CreateExpense(ctx context.Context, exp *Expense) (*Transaction
 		return nil, fmt.Errorf("cannot get period for budget: %w", err)
 	}
 
-	currency, err := s.GetCurrency(ctx, budgetPeriod.Amount.Currency)
-	if err != nil {
-		return nil, fmt.Errorf("cannot get currency: %w", err)
+	// If the user does not set a rate in the expense, the
+	// rate from the currency will be used.
+	var rate float64
+	if exp.ExchangeRate != nil {
+		rate = *exp.ExchangeRate
 	}
 
-	transaction, err := exp.Transaction(currency)
+	// If the rate, is zero means that was not provided by the user,
+	// look up the currency table to get the rate.
+	if rate == 0 {
+		currency, err := s.GetCurrency(ctx, budgetPeriod.Amount.Currency)
+		if err != nil {
+			return nil, fmt.Errorf("cannot get currency: %w", err)
+		}
+		rate = currency.Rate
+	}
+
+	transaction, err := exp.Transaction(&Currency{
+		Code: budgetPeriod.Amount.Currency,
+		Rate: rate,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("cannot create transaction: %w", err)
 	}

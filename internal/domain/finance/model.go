@@ -21,10 +21,10 @@ type Expense struct {
 	BudgetID BudgetID
 }
 
-// Create initializes the Expense with a new ID and sanitizes input fields.
+// Initialize initializes the Expense with a new ID and sanitizes input fields.
 //
 // This must be called before Validate to ensure the expense is ready for persistence.
-func (e *Expense) Create() error {
+func (e *Expense) Initialize() error {
 	id, err := id.New[TransactionID]()
 	if err != nil {
 		return fmt.Errorf("cannot generate expense ID: %w", err)
@@ -86,10 +86,11 @@ func (e *Expense) Transaction(periodCurrency *Currency) (*Transaction, error) {
 // Operation contains common fields for financial operations.
 // It enforces business rules on names, amounts, and dates.
 type Operation struct {
-	Name        string
-	Description string
-	Amount      money.Money
-	Date        time.Time
+	Name         string
+	Description  string
+	Amount       money.Money
+	ExchangeRate *float64
+	Date         time.Time
 }
 
 // Validate checks that the Operation fields meet business requirements.
@@ -114,8 +115,12 @@ func (op Operation) Validate() error {
 		return fmt.Errorf("invalid amount: %w", err)
 	}
 
+	if op.ExchangeRate != nil && *op.ExchangeRate <= 0 {
+		return errors.New("exchange rate must be a positive number when provided")
+	}
+
 	if op.Date.IsZero() {
-		return errors.New("date is required")
+		return errors.New("date must be a valid non-zero time")
 	}
 
 	return nil
@@ -202,7 +207,7 @@ type Budget struct {
 	UpdatedAt time.Time
 }
 
-func (b *Budget) Create() error {
+func (b *Budget) Initialize() error {
 	id, err := id.New[BudgetID]()
 	if err != nil {
 		return fmt.Errorf("cannot created a budget identifier: %w", err)
