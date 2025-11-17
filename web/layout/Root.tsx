@@ -3,18 +3,18 @@ import Stack from "@mui/material/Stack";
 import AppNavbar from "./AppNavbar";
 import Header from "./Header";
 import SideMenu from "./SideMenu";
-import type { MenuListItem } from "./MenuContent";
+import type { Menu } from "./MenuContent";
 import { Outlet } from "react-router";
 
 interface RootProps {
-    mainMenuItems: MenuListItem[];
+    mainMenus: Menu[];
 }
 
-export default function Root({ mainMenuItems }: RootProps) {
+export default function Root({ mainMenus }: RootProps) {
     return (
         <Box sx={{ display: 'flex' }}>
-            <SideMenu mainMenuItems={mainMenuItems} />
-            <AppNavbar mainMenuItems={mainMenuItems} />
+            <SideMenu mainMenus={mainMenus} />
+            <AppNavbar mainMenus={mainMenus} />
             {/* Main content */}
             <Box
                 component="main"

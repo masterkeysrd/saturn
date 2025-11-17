@@ -1,12 +1,15 @@
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import type { MenuListItem } from '../../layout/MenuContent';
+import type { Menu } from '../../layout/MenuContent';
 
-export const Menu: MenuListItem[] = [
+export const Menus: Menu[] = [
     {
-        text: "Dashboard",
-        icon: <DashboardIcon />,
-        link: "/dashboard",
+        title: 'Dashboard',
+        items: [
+            {
+                text: "Dashboard",
+                icon: <DashboardIcon />,
+                link: "/dashboard",
+            }
+        ]
     },
-]
-
-
+];

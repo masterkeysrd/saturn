@@ -1,6 +1,6 @@
-import type { MenuListItem } from "../layout/MenuContent";
-import { Menu as DashboardMenu } from './dashboard';
+import type { Menu } from "../layout/MenuContent";
+import { Menus as DashboardMenu } from './dashboard';
 
-export const MenuItems: MenuListItem[] = [
+export const Menus: Menu[] = [
     ...DashboardMenu,
 ];

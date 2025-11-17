@@ -5,7 +5,7 @@ import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import MenuContent, { type MenuListItem } from './MenuContent';
+import MenuContent, { type Menu } from './MenuContent';
 import OptionsMenu from './OptionsMenu';
 
 const drawerWidth = 240;
@@ -22,10 +22,10 @@ const Drawer = styled(MuiDrawer)({
 });
 
 export interface SideMenuProps {
-    mainMenuItems: MenuListItem[];
+    mainMenus: Menu[];
 }
 
-export default function SideMenu({ mainMenuItems }: SideMenuProps) {
+export default function SideMenu({ mainMenus }: SideMenuProps) {
     return (
         <Drawer
             variant="permanent"
@@ -53,7 +53,7 @@ export default function SideMenu({ mainMenuItems }: SideMenuProps) {
                     flexDirection: 'column',
                 }}
             >
-                <MenuContent mainItems={mainMenuItems} />
+                <MenuContent mainMenus={mainMenus} />
             </Box>
             <Stack
                 direction="row"

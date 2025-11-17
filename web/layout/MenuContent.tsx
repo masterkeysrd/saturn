@@ -7,6 +7,7 @@ import Stack from '@mui/material/Stack';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import InfoRoundedIcon from '@mui/icons-material/InfoRounded';
 import HelpRoundedIcon from '@mui/icons-material/HelpRounded';
+import MenuHeader from '../components/MenuHeader';
 
 const secondaryListItems = [
     { text: 'Settings', icon: <SettingsRoundedIcon /> },
@@ -15,26 +16,37 @@ const secondaryListItems = [
 ];
 
 export interface MenuContentProps {
-    mainItems: MenuListItem[]
+    mainMenus: Menu[];
 }
 
+export interface Menu {
+    title: string;
+    items: MenuListItem[];
+}
+
+
 export interface MenuListItem {
-    text: string
-    icon: React.ReactNode
+    text: string;
+    icon: React.ReactNode;
     link: string;
 }
 
-export default function MenuContent({ mainItems }: MenuContentProps) {
+export default function MenuContent({ mainMenus }: MenuContentProps) {
     return (
         <Stack sx={{ flexGrow: 1, p: 1, justifyContent: 'space-between' }}>
             <List dense>
-                {mainItems.map((item, index) => (
-                    <ListItem key={index} disablePadding sx={{ display: 'block' }}>
-                        <ListItemButton href={item.link}>
-                            <ListItemIcon>{item.icon}</ListItemIcon>
-                            <ListItemText primary={item.text} />
-                        </ListItemButton>
-                    </ListItem>
+                {mainMenus.map((menu) => (
+                    <>
+                        <MenuHeader key={menu.title}>{menu.title}</MenuHeader>
+                        {menu.items.map((item, index) => (
+                            <ListItem key={index} disablePadding sx={{ display: 'block' }}>
+                                <ListItemButton href={item.link}>
+                                    <ListItemIcon>{item.icon}</ListItemIcon>
+                                    <ListItemText primary={item.text} />
+                                </ListItemButton>
+                            </ListItem>
+                        ))}
+                    </>
                 ))}
             </List>
             <List dense>

@@ -7,15 +7,15 @@ import Typography from '@mui/material/Typography';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import NotificationsRoundedIcon from '@mui/icons-material/NotificationsRounded';
 import MenuButton from '../components/MenuButton';
-import MenuContent, { type MenuListItem } from './MenuContent';
+import MenuContent, { type Menu } from './MenuContent';
 
 interface SideMenuMobileProps {
     open: boolean | undefined;
     toggleDrawer: (newOpen: boolean) => () => void;
-    mainMenuItems: MenuListItem[];
+    mainMenus: Menu[];
 }
 
-export default function SideMenuMobile({ open, toggleDrawer, mainMenuItems }: SideMenuMobileProps) {
+export default function SideMenuMobile({ open, toggleDrawer, mainMenus }: SideMenuMobileProps) {
     return (
         <Drawer
             anchor="right"
@@ -55,7 +55,7 @@ export default function SideMenuMobile({ open, toggleDrawer, mainMenuItems }: Si
                 </Stack>
                 <Divider />
                 <Stack sx={{ flexGrow: 1 }}>
-                    <MenuContent mainItems={mainMenuItems} />
+                    <MenuContent mainMenus={mainMenus} />
                     <Divider />
                 </Stack>
                 <Stack sx={{ p: 2 }}>

@@ -1,2 +1,2 @@
 export { Routes } from "./routes";
-export { MenuItems } from "./menu";
+export { Menus } from "./menu";
