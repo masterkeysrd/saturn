@@ -1,0 +1,41 @@
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import AppNavbar from "./AppNavbar";
+import Header from "./Header";
+import SideMenu from "./SideMenu";
+import type { MenuListItem } from "./MenuContent";
+import { Outlet } from "react-router";
+
+interface RootProps {
+    mainMenuItems: MenuListItem[];
+}
+
+export default function Root({ mainMenuItems }: RootProps) {
+    return (
+        <Box sx={{ display: 'flex' }}>
+            <SideMenu mainMenuItems={mainMenuItems} />
+            <AppNavbar mainMenuItems={mainMenuItems} />
+            {/* Main content */}
+            <Box
+                component="main"
+                sx={{
+                    flexGrow: 1,
+                    overflow: 'auto',
+                }}
+            >
+                <Stack
+                    spacing={2}
+                    sx={{
+                        alignItems: 'center',
+                        mx: 3,
+                        pb: 5,
+                        mt: { xs: 8, md: 0 },
+                    }}
+                >
+                    <Header />
+                    <Outlet />
+                </Stack>
+            </Box>
+        </Box>
+    )
+}
