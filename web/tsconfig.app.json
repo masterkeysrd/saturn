@@ -26,7 +26,18 @@
         "noUnusedParameters": true,
         "erasableSyntaxOnly": true,
         "noFallthroughCasesInSwitch": true,
-        "noUncheckedSideEffectImports": true
+        "noUncheckedSideEffectImports": true,
+        "paths": {
+            "@/components/*": [
+                "components/*"
+            ],
+            "@/layout/*": [
+                "layout/*"
+            ],
+            "@/lib/*": [
+                "lib/*"
+            ],
+        },
     },
     "include": [
         "./**/*.ts",

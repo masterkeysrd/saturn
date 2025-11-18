@@ -7,7 +7,7 @@ import Stack from '@mui/material/Stack';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import InfoRoundedIcon from '@mui/icons-material/InfoRounded';
 import HelpRoundedIcon from '@mui/icons-material/HelpRounded';
-import MenuHeader from '../components/MenuHeader';
+import MenuHeader from '@/components/MenuHeader';
 
 const secondaryListItems = [
     { text: 'Settings', icon: <SettingsRoundedIcon /> },
