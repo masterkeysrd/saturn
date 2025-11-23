@@ -1,39 +1,57 @@
-/* 
+export type CurrencyCode = "USD" | "EUR" | "DOP";
+
+const CurrencySymbols = {
+    DOP: "RD$",
+    USD: "$",
+    EUR: "€",
+    // add any others you prefer
+};
+
+/*
  * Uses cents to avoid floating-point precision issues.
  */
 export interface Money {
     /** Amount in smallest currency unit (cents) */
     cents: number;
     /** ISO 4217 currency code */
-    currency: string;
+    currency: CurrencyCode;
 }
 
 /**
  * Format a Money value as a locale-aware currency string.
  */
-export function formatMoney(money: Money, locale = 'en-US'): string {
+export function formatMoney(money: Money, locale = "en-US"): string {
     const text = new Intl.NumberFormat(locale, {
-        style: 'currency',
+        style: "currency",
         currency: money.currency,
         currencyDisplay: "symbol",
-        currencySign: 'standard',
+        currencySign: "standard",
     }).format(money.cents / 100);
-    return `${money.currency} ${text}`
+
+    const customSymbol = CurrencySymbols[money.currency];
+
+    // Replace only if needed
+    if (customSymbol) {
+        // Replace either a code or a default symbol
+        return text.replace(money.currency, customSymbol);
+    }
+
+    return text;
 }
 
 /**
-  * Create zero money value.
-  */
-export function zero(currency = "USD"): Money {
+ * Create zero money value.
+ */
+export function zero(currency: CurrencyCode = "USD"): Money {
     return {
         currency,
         cents: 0,
-    }
+    };
 }
 
 /**
  * Convert decimal amount to cents.
- * 
+ *
  * @example
  * ```ts
  * toCents(50.99) // 5099
@@ -47,7 +65,7 @@ export function toCents(amount: number): number {
 
 /**
  * Convert cents to decimal amount.
- * 
+ *
  * @example
  * ```ts
  * toDecimal(5099) // 50.99
@@ -61,7 +79,7 @@ export function toDecimal(cents: number): number {
 
 /**
  * Convert Money to decimal amount.
- * 
+ *
  * @example
  * ```ts
  * const price = { cents: 5099, currency: 'USD' };

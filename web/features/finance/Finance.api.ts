@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Insights } from "./Finance.model";
+import { type ListTransactionsResponse, type Insights } from "./Finance.model";
 
 export interface GetInsightsRequest {
     start_date: string;
@@ -7,6 +7,12 @@ export interface GetInsightsRequest {
 }
 
 const baseUrl = 'http://localhost:3000/api/v1/finance';
+
+export async function listTransactions() {
+    return axios
+    .get<ListTransactionsResponse>(`${baseUrl}/transactions`)
+    .then(resp => resp.data);
+}
 
 export async function getInsights(req: GetInsightsRequest) {
     const params = new URLSearchParams();

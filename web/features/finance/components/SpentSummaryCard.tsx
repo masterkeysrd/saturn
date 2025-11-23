@@ -11,24 +11,25 @@ export interface SpentSummaryCardProps {
     summary: SpendingSummary;
 }
 
-const Container = styled(Stack)({
-    minWidth: '300px',
-});
+const Container = styled(Stack)({});
 
 const SummaryRowLabel = styled(Typography)(({ theme }) => ({
+    ...theme.typography.body1,
     color: theme.palette.text.secondary,
-    fontSize: '1rem',
-    fontWeight: '500',
+    fontSize: "1rem",
+    fontWeight: "500",
 }));
 
-const SummaryRowText = styled(Typography)({
-    fontSize: '1rem',
-    fontWeight: '400',
-});
+const SummaryRowText = styled(Typography)(({ theme }) => ({
+    ...theme.typography.body1,
+    fontSize: "1rem",
+    fontWeight: "400",
+}));
 
 const AmountText = styled(Typography)(({ theme }) => ({
-    fontSize: '2rem',
-    fontWeight: '500',
+    ...theme.typography.h5,
+    fontSize: "2rem",
+    fontWeight: "500",
     marginTop: theme.spacing(1),
 }));
 
@@ -40,9 +41,7 @@ interface SummaryRowProps {
 function SummaryRow({ label, value }: SummaryRowProps) {
     return (
         <Box display="flex" alignItems="center" justifyContent="space-between">
-            <SummaryRowLabel>
-                {label}
-            </SummaryRowLabel>
+            <SummaryRowLabel>{label}</SummaryRowLabel>
             <SummaryRowText variant="body2" fontWeight="medium">
                 {value}
             </SummaryRowText>
@@ -51,7 +50,7 @@ function SummaryRow({ label, value }: SummaryRowProps) {
 }
 
 export default function SpentSummaryCard({ summary }: SpentSummaryCardProps) {
-    const { budgeted, spent, remaining, usage, count } = summary
+    const { budgeted, spent, remaining, usage, count } = summary;
     return (
         <Card sx={{ height: "100%" }}>
             <CardContent>
@@ -60,9 +59,7 @@ export default function SpentSummaryCard({ summary }: SpentSummaryCardProps) {
                         <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                             Expenses
                         </Typography>
-                        <AmountText variant="h4">
-                            {money.format(spent)}
-                        </AmountText>
+                        <AmountText variant="h5">{money.format(spent)}</AmountText>
                     </Box>
 
                     <Stack spacing={1}>
@@ -74,5 +71,5 @@ export default function SpentSummaryCard({ summary }: SpentSummaryCardProps) {
                 </Container>
             </CardContent>
         </Card>
-    )
+    );
 }

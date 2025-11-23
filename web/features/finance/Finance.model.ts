@@ -1,5 +1,26 @@
 import type { Money } from "@/lib/money";
 
+export interface ListTransactionsResponse {
+  transactions?: Transaction[];
+}
+
+export interface Transaction {
+  id?: string;
+  name?: string;
+  description?: string;
+  type?: TransactionType; // extend if needed
+  amount?: Money;
+  base_amount?: Money;
+  exchange_rate?: number;
+  budget_id?: string;
+  date?: string; // ISO date (YYYY-MM-DD)
+  created_at?: string; // ISO timestamp
+  updated_at?: string; // ISO timestamp
+}
+
+export type TransactionType = 'income' | 'expense' | 'transfer' | 'unknown';
+
+
 /**
  * FinanceInsights is the top-level response for insights queries.
  */

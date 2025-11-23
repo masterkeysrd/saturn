@@ -12,7 +12,7 @@ interface RootProps {
 
 export default function Root({ mainMenus }: RootProps) {
     return (
-        <Box sx={{ display: 'flex' }}>
+        <Box sx={{ display: "flex" }}>
             <SideMenu mainMenus={mainMenus} />
             <AppNavbar mainMenus={mainMenus} />
             {/* Main content */}
@@ -20,16 +20,12 @@ export default function Root({ mainMenus }: RootProps) {
                 component="main"
                 sx={{
                     flexGrow: 1,
-                    overflow: 'auto',
+                    overflow: "auto",
                 }}
             >
                 <Stack
-                    spacing={2}
                     sx={{
-                        alignItems: 'center',
-                        mx: 3,
-                        pb: 5,
-                        mt: { xs: 8, md: 0 },
+                        alignItems: "center",
                     }}
                 >
                     <Header />
@@ -37,5 +33,5 @@ export default function Root({ mainMenus }: RootProps) {
                 </Stack>
             </Box>
         </Box>
-    )
+    );
 }
