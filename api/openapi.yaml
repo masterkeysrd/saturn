@@ -36,6 +36,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Budget'
+
   /finance/currencies:
     get:
       summary: List currencies
@@ -86,7 +87,7 @@ paths:
 
   /finance/expenses:
     post:
-      summary: Create an expense (creates a Transaction)
+      summary: Create an expense (creates a transaction)
       operationId: finance.CreateExpense
       requestBody:
         required: true
@@ -102,7 +103,52 @@ paths:
               schema:
                 $ref: '#/components/schemas/Transaction'
 
-  /finance/transactions:
+  finance/expenses/{id}:
+    patch:
+      summary: Update an expense (update a transaction)
+      operationId: finance.UpdateExpense
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Transaction ID of the expense
+        schema:
+          type: string
+      - $ref: '#/components/parameters/UpdateMaskParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Expense'
+      responses:
+        "200":
+          description: Update transaction from expense
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+
+
+  /finance/transactions/{id}:
+    get:
+      summary: Get transaction by ID
+      operationId: finance.GetTransaction
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          description: Transaction ID
+      responses:
+        "200":
+          description: Transaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+
+  /finance/transactions/:
     get:
       summary: List transactions
       operationId: finance.ListTransactions
@@ -513,6 +559,17 @@ components:
           minimum: 0
           example: 48
 
+    FieldMask:
+      type: array
+      items:
+        type: string
+      description: |
+        List of fields to update. If not provided, all fields will be updated.
+        Supported fields: name, description, date, amount, exchange_rate
+      example: ["name", "amount"]
+      minItems: 0
+      maxItems: 10
+
     Money:
       Money:
       type: object
@@ -533,3 +590,32 @@ components:
       required:
         - cents
         - currency
+
+  parameters:
+    UpdateMaskParam:
+      name: updateMask
+      in: query
+      required: false
+      description: |
+        Comma-separated list of fields to update. If not provided, all fields will be updated.
+        Supported fields: name, description, date, amount, exchange_rate
+        
+        Examples:
+        - `name` - Update only name
+        - `name,amount` - Update name and amount
+        - `name,amount,exchange_rate` - Update multiple fields
+      schema:
+        type: string
+        pattern: '^[a-z_]+(,[a-z_]+)*$'
+      examples:
+        single_field:
+          summary: Update single field
+          value: name
+        multiple_fields:
+          summary: Update multiple fields
+          value: name,amount
+        with_nested:
+          summary: Update with nested field
+          value: name,amount,exchange_rate
+      style: form
+      explode: false

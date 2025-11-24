@@ -59,7 +59,17 @@ type CreateExpenseRequest struct {
 	Expense *Expense
 }
 
+type UpdateExpenseRequest struct {
+	ID         string
+	Expense    *Expense
+	UpdateMask *UpdateMaskParam
+}
+
 type ListTransactionsRequest struct{}
+
+type GetTransactionRequest struct {
+	ID string
+}
 
 type GetFinanceInsightsRequest struct {
 	FinanceGetInsightsParams

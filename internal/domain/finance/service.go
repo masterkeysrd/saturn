@@ -7,6 +7,7 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
 	"github.com/masterkeysrd/saturn/internal/pkg/errors"
+	"github.com/masterkeysrd/saturn/internal/pkg/id"
 )
 
 type Service struct {
@@ -42,7 +43,7 @@ func (s *Service) CreateExpense(ctx context.Context, exp *Expense) (*Transaction
 	if err := exp.Initialize(); err != nil {
 		return nil, fmt.Errorf("cannot initialize expense: %w", err)
 	}
-	if err := exp.Validate(); err != nil {
+	if err := exp.ValidateForCreate(); err != nil {
 		return nil, fmt.Errorf("invalid expense: %w", err)
 	}
 
@@ -87,12 +88,59 @@ func (s *Service) CreateExpense(ctx context.Context, exp *Expense) (*Transaction
 	return transaction, nil
 }
 
+func (s *Service) UpdateExpense(ctx context.Context, in *UpdateExpenseInput) (*Transaction, error) {
+	if err := in.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid expense for update: %w", err)
+	}
+
+	// Clean and trim the input.
+	in.Expense.Sanitize()
+
+	// Validate for update with field mask
+	if err := in.Expense.ValidateForUpdate(in.UpdateMask); err != nil {
+		return nil, fmt.Errorf("invalid expense: %w", err)
+	}
+
+	// Get existing transaction
+	existing, err := s.GetTransaction(ctx, in.ID)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get transaction: %w", err)
+	}
+
+	if err := in.Expense.UpdateTransaction(existing, in.UpdateMask); err != nil {
+		return nil, fmt.Errorf("cannot update transaction: %w", err)
+	}
+
+	if err := existing.Validate(); err != nil {
+		return nil, fmt.Errorf("updated transaction is invalid: %w", err)
+	}
+
+	if err := s.transactionStore.Store(ctx, existing); err != nil {
+		return nil, fmt.Errorf("cannot store transaction: %w", err)
+	}
+
+	return existing, nil
+}
+
 func (s *Service) ListTransactions(ctx context.Context) ([]*Transaction, error) {
 	transactions, err := s.transactionStore.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("cannot list transactions: %w", err)
 	}
 	return transactions, nil
+}
+
+func (s *Service) GetTransaction(ctx context.Context, tid TransactionID) (*Transaction, error) {
+	if err := id.Validate(tid); err != nil {
+		return nil, fmt.Errorf("invalid id: %w", err)
+	}
+
+	transaction, err := s.transactionStore.Get(ctx, tid)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get transaction: %w", err)
+	}
+
+	return transaction, nil
 }
 
 func (s *Service) CreateBudget(ctx context.Context, budget *Budget) error {

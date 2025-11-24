@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/foundation/fieldmask"
 	"github.com/masterkeysrd/saturn/internal/pkg/id"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 	"github.com/masterkeysrd/saturn/internal/pkg/timeutils"
@@ -31,19 +32,88 @@ func (e *Expense) Initialize() error {
 	}
 
 	e.ID = id
-	e.Name = strings.TrimSpace(e.Name)
-	e.Description = strings.TrimSpace(e.Description)
+	e.Sanitize()
 	return nil
 }
 
-// Validate checks that the Expense has valid BudgetID and Operation fields.
-func (e *Expense) Validate() error {
+// ValidateForCreate validates an expense before creation
+func (e *Expense) ValidateForCreate() error {
 	if e == nil {
 		return errors.New("expense is nil")
 	}
 
+	if e.ID == "" {
+		return errors.New("id is required")
+	}
+
 	if err := id.Validate(e.BudgetID); err != nil {
 		return fmt.Errorf("invalid budget id: %w", err)
+	}
+
+	return e.validate()
+}
+
+// ValidateForUpdate validates an expense before update with field mask
+func (e *Expense) ValidateForUpdate(mask *fieldmask.FieldMask) error {
+	if e == nil {
+		return errors.New("expense is nil")
+	}
+
+	if err := ExpenseUpdateSchema.Validate(mask); err != nil {
+		return err
+	}
+
+	// If mask is empty, validate all fields
+	if mask == nil || mask.IsEmpty() {
+		return e.validate()
+	}
+
+	if mask.Contains("name") && e.Name == "" {
+		return errors.New("name is required")
+	}
+
+	if mask.Contains("amount") && e.Amount <= 0 {
+		return errors.New("amount must be a positive number")
+	}
+
+	if mask.Contains("date") && e.Date.IsZero() {
+		return errors.New("date is required")
+	}
+
+	if mask.Contains("exchange_rate") && e.ExchangeRate != nil && *e.ExchangeRate <= 0 {
+		return errors.New("exchange must be a positive number if provided")
+	}
+
+	return nil
+}
+
+// Sanitize cleans up input fields without generating a new ID.
+// This should be called for both CREATE and UPDATE operations.
+func (e *Expense) Sanitize() {
+	e.Name = strings.TrimSpace(e.Name)
+	e.Description = strings.TrimSpace(e.Description)
+}
+
+// validate checks that the Expense has valid BudgetID and Operation fields.
+func (e *Expense) validate() error {
+	if e == nil {
+		return errors.New("expense is nil")
+	}
+
+	if e.Name == "" {
+		return errors.New("name is required")
+	}
+
+	if e.Amount <= 0 {
+		return errors.New("amount must be a positive number")
+	}
+
+	if e.Date.IsZero() {
+		return errors.New("date is required")
+	}
+
+	if e.ExchangeRate != nil && *e.ExchangeRate <= 0 {
+		return errors.New("exchange must be a positive number if provided")
 	}
 
 	return e.Operation.Validate()
@@ -76,6 +146,42 @@ func (e *Expense) Transaction(periodCurrency *Currency) (*Transaction, error) {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}, nil
+}
+
+func (e *Expense) UpdateTransaction(trx *Transaction, mask *fieldmask.FieldMask) error {
+	if trx == nil {
+		return fmt.Errorf("transaction cannot be nil")
+	}
+
+	amount := trx.Amount
+	exchangeRate := trx.ExchangeRate
+
+	if mask.Contains("amount") {
+		amount.Cents = e.Amount
+	}
+
+	if mask.Contains("exchange_rate") && e.ExchangeRate != nil {
+		exchangeRate = *e.ExchangeRate
+	}
+
+	trx.Amount = amount
+	trx.BaseAmount = amount.Exchange(DefaultBaseCurrency, exchangeRate)
+	trx.ExchangeRate = exchangeRate
+
+	if mask.Contains("name") {
+		trx.Name = e.Name
+	}
+
+	if mask.Contains("description") {
+		trx.Description = e.Description
+	}
+
+	if mask.Contains("date") {
+		trx.Date = e.Date
+	}
+
+	trx.UpdatedAt = time.Now().UTC()
+	return nil
 }
 
 // Operation contains common fields for financial operations.

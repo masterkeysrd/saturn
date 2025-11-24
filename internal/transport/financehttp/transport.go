@@ -15,7 +15,9 @@ type FinanceService interface {
 	GetCurrency(context.Context, finance.CurrencyCode) (*finance.Currency, error)
 
 	CreateExpense(context.Context, *finance.Expense) (*finance.Transaction, error)
+	UpdateExpense(context.Context, *finance.UpdateExpenseInput) (*finance.Transaction, error)
+	GetTransaction(context.Context, finance.TransactionID) (*finance.Transaction, error)
 	ListTransactions(context.Context) ([]*finance.Transaction, error)
 
-	GetInsights(ctx context.Context, in *finance.GetInsightsInput) (*finance.Insights, error)
+	GetInsights(context.Context, *finance.GetInsightsInput) (*finance.Insights, error)
 }
