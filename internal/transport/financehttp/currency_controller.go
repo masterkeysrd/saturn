@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/masterkeysrd/saturn/api"
+	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/pkg/httphandler"
 )
 
@@ -29,6 +30,9 @@ func (c *CurrencyController) RegisterRoutes(mux *http.ServeMux) {
 	mux.Handle("GET /currencies", httphandler.Handle(c.ListCurrencies,
 		httphandler.WithInputTransformer[*api.ListCurrenciesRequest, *api.ListCurrenciesResponse](transformListCurrenciesInput),
 	))
+	mux.Handle("GET /currencies/{code}", httphandler.Handle(c.GetCurrency,
+		httphandler.WithInputTransformer[*api.GetCurrencyRequest, *api.Currency](transformGetCurrencyInput),
+	))
 }
 
 func (c *CurrencyController) CreateCurrency(ctx context.Context, req *api.CreateCurrencyRequest) (*api.Currency, error) {
@@ -38,8 +42,27 @@ func (c *CurrencyController) CreateCurrency(ctx context.Context, req *api.Create
 		return nil, fmt.Errorf("cannot create currency: %w", err)
 	}
 
-	resp := CurrencyToAPI(currency)
-	return resp, nil
+	return CurrencyToAPI(currency), nil
+}
+
+func (c *CurrencyController) GetCurrency(ctx context.Context, req *api.GetCurrencyRequest) (*api.Currency, error) {
+	currency, err := c.app.GetCurrency(ctx, req.Code)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get currency: %w", err)
+	}
+
+	return CurrencyToAPI(currency), nil
+}
+
+func transformGetCurrencyInput(ctx context.Context, req *http.Request) (*api.GetCurrencyRequest, error) {
+	code := req.PathValue("code")
+	if code == "" {
+		return nil, fmt.Errorf("currency code is required")
+	}
+
+	return &api.GetCurrencyRequest{
+		Code: finance.CurrencyCode(code),
+	}, nil
 }
 
 func (c *CurrencyController) ListCurrencies(ctx context.Context, _ *api.ListCurrenciesRequest) (*api.ListCurrenciesResponse, error) {
