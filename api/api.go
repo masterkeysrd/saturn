@@ -49,6 +49,10 @@ type CreateCurrencyRequest struct {
 	Currency *Currency
 }
 
+type GetCurrencyRequest struct {
+	Code money.CurrencyCode
+}
+
 type ListCurrenciesRequest struct{}
 
 type CreateExpenseRequest struct {

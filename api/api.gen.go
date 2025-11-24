@@ -52,8 +52,8 @@ type Currency struct {
 // The server will validate the expense, enrich it with currency data,
 // and transform it into a Transaction.
 type Expense struct {
-	// Amount Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
-	Amount Money `json:"amount"`
+	// Amount The amount in the smallest denomination (e.g., cents).
+	Amount int64 `json:"amount"`
 
 	// BudgetId ID of the budget to which this expense belongs.
 	BudgetId string `json:"budget_id"`

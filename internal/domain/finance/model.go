@@ -59,28 +59,23 @@ func (e *Expense) Transaction(periodCurrency *Currency) (*Transaction, error) {
 		return nil, errors.New("expense is nil")
 	}
 
-	if periodCurrency.Code != e.Amount.Currency {
-		return nil, fmt.Errorf("expense currency %s does not match period currency %s", e.Amount.Currency, periodCurrency.Code)
-	}
-
 	now := time.Now().UTC()
+	amount := money.NewMoney(periodCurrency.Code, e.Amount)
 
 	// Build transaction from expense fields
-	t := &Transaction{
+	return &Transaction{
 		ID:           e.ID,
 		Type:         TransactionTypeExpense,
 		BudgetID:     e.BudgetID,
 		Name:         e.Name,
 		Description:  e.Description,
-		Amount:       e.Amount,
-		BaseAmount:   e.Amount.Exchange(DefaultBaseCurrency, periodCurrency.Rate),
+		Amount:       amount,
+		BaseAmount:   amount.Exchange(DefaultBaseCurrency, periodCurrency.Rate),
 		ExchangeRate: periodCurrency.Rate,
 		Date:         e.Date,
 		CreatedAt:    now,
 		UpdatedAt:    now,
-	}
-
-	return t, nil
+	}, nil
 }
 
 // Operation contains common fields for financial operations.
@@ -88,7 +83,7 @@ func (e *Expense) Transaction(periodCurrency *Currency) (*Transaction, error) {
 type Operation struct {
 	Name         string
 	Description  string
-	Amount       money.Money
+	Amount       money.Cents
 	ExchangeRate *float64
 	Date         time.Time
 }
@@ -107,12 +102,8 @@ func (op Operation) Validate() error {
 		return errors.New("description exceeds 250 characters")
 	}
 
-	if op.Amount.Cents <= 0 {
+	if op.Amount <= 0 {
 		return errors.New("amount must be positive")
-	}
-
-	if err := op.Amount.Validate(); err != nil {
-		return fmt.Errorf("invalid amount: %w", err)
 	}
 
 	if op.ExchangeRate != nil && *op.ExchangeRate <= 0 {

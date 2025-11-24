@@ -3,6 +3,7 @@ package financehttp
 import (
 	"github.com/masterkeysrd/saturn/api"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/pkg/money"
 	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 	"github.com/oapi-codegen/runtime/types"
 )
@@ -90,7 +91,7 @@ func ExpenseFromAPI(e *api.Expense) *finance.Expense {
 		Operation: finance.Operation{
 			Name:         e.Name,
 			Description:  ptr.Value(e.Description),
-			Amount:       api.MoneyModel(e.Amount),
+			Amount:       money.Cents(e.Amount),
 			ExchangeRate: e.ExchangeRate,
 			Date:         e.Date.Time,
 		},

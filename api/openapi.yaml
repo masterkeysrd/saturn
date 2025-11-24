@@ -63,6 +63,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Currency'
+
+  /finance/currencies/{code}:
+    get:
+      summary: Get a currency by currency code
+      operationId: currency.get
+      parameters:
+      - name: code
+        in: path
+        required: true
+        description: ISO currency code (e.g., USD, DOP, EUR)
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Currency
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Currency'
+
+
   /finance/expenses:
     post:
       summary: Create an expense (creates a Transaction)
@@ -256,7 +277,10 @@ components:
           description: Optional longer description.
           example: "Monthly mobile phone payment"
         amount:
-          $ref: '#/components/schemas/Money'
+          type: integer
+          format: int64
+          description: The amount in the smallest denomination (e.g., cents).
+          example: 400000
         exchange_rate:
           type: number
           format: double
