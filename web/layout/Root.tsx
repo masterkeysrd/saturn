@@ -1,37 +1,60 @@
 import Box from "@mui/material/Box";
-import Stack from "@mui/material/Stack";
 import AppNavbar from "./AppNavbar";
 import Header from "./Header";
 import SideMenu from "./SideMenu";
 import type { Menu } from "./MenuContent";
 import { Outlet } from "react-router";
+import { styled } from "@mui/material";
 
 interface RootProps {
-    mainMenus: Menu[];
+  mainMenus: Menu[];
 }
 
+const Container = styled(Box)({
+  display: "flex",
+  flexDirection: "column",
+  height: "100dvh",
+});
+
 export default function Root({ mainMenus }: RootProps) {
-    return (
-        <Box sx={{ display: "flex" }}>
-            <SideMenu mainMenus={mainMenus} />
-            <AppNavbar mainMenus={mainMenus} />
-            {/* Main content */}
+  return (
+    <Container>
+      <Box sx={{ flex: 1, overflow: "auto" }}>
+        <Box
+          sx={{
+            display: "flex",
+            position: "relative",
+            overflow: "hidden",
+            height: "100%",
+            width: "100%",
+          }}
+        >
+          <SideMenu mainMenus={mainMenus} />
+          <AppNavbar mainMenus={mainMenus} />
+          {/* Main content */}
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              flex: 1,
+              minWidth: 0,
+            }}
+          >
+            <Header />
             <Box
-                component="main"
-                sx={{
-                    flexGrow: 1,
-                    overflow: "auto",
-                }}
+              component="main"
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                flex: 1,
+                overflow: "auto",
+              }}
             >
-                <Stack
-                    sx={{
-                        alignItems: "center",
-                    }}
-                >
-                    <Header />
-                    <Outlet />
-                </Stack>
+              <Outlet />
             </Box>
+          </Box>
         </Box>
-    );
+      </Box>
+    </Container>
+  );
 }
