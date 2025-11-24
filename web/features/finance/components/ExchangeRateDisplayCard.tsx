@@ -66,7 +66,7 @@ export default function ExchangeRateDisplayCard({
           </Typography>
         </Typography>
       </Stack>
-      {disabled ? (
+      {!disabled ? (
         <Box display="flex" gap={0.5}>
           {/* Reset Button (only show if custom rate is set) */}
           {showResetButton && (

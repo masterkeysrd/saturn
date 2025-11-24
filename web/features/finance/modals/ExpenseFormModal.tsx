@@ -1,15 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  Stack,
-  Typography,
-} from "@mui/material";
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
-import DialogActions from "@mui/material/DialogActions";
+import Typography from "@mui/material/Typography";
 import { TextFieldElement, SelectElement } from "react-hook-form-mui";
 import { DateTime } from "luxon";
 import { money } from "@/lib/money";
@@ -24,22 +17,52 @@ import {
 import FormNumberField from "@/components/FormNumberField";
 import ExchangeRateDisplayCard from "../components/ExchangeRateDisplayCard";
 import DatePickerElement from "@/components/FormDatePicker";
+import FormDialog from "@/components/FormDialog";
+import { useParams } from "react-router";
+import { useNavigateBack } from "@/lib/navigate";
 
 export function ExpenseFormModal() {
+  const navigateBack = useNavigateBack();
+  const { id } = useParams<"id">();
+  const isNew = !id;
+
   const [isEditingExchangeRate, setIsEditingExchangeRate] = useState(false);
   const { data: budgets, isLoading: isLoadingBudgets } = useBudgets();
+  const { data: transaction, isLoading: isLoadingTransaction } =
+    useTransaction(id);
 
-  const createMutation = useCreateExpense();
+  const createMutation = useCreateExpense({
+    onSuccess: () => handleSaveSuccess(),
+  });
 
-  const { control, handleSubmit, setValue } = useForm<Expense>({
-    defaultValues: {
+  const updateMutation = useUpdateExpense({
+    onSuccess: () => handleSaveSuccess(),
+  });
+
+  const formValues = useMemo(() => {
+    if (!isNew && transaction) {
+      return {
+        budget_id: transaction.budget_id,
+        name: transaction.name,
+        description: transaction.description ?? "",
+        date: transaction.date,
+        amount: money.toDecimal(transaction.amount?.cents ?? 0),
+        exchange_rate: transaction.exchange_rate,
+      };
+    }
+
+    return {
       budget_id: "",
       name: "",
       description: "",
-      date: DateTime.now().toString(),
+      date: DateTime.now().toISO() ?? "",
       amount: 0,
       exchange_rate: undefined,
-    },
+    };
+  }, [isNew, transaction]);
+
+  const { control, handleSubmit, setValue } = useForm<Expense>({
+    values: formValues,
   });
 
   const selectedBudgetId = useWatch({
@@ -101,14 +124,27 @@ export function ExpenseFormModal() {
       exchange_rate: isEditingExchangeRate ? data.exchange_rate : undefined,
     };
 
-    console.log(payload);
-
     try {
-      await createMutation.mutateAsync(payload);
-      // Add something here.
+      if (isNew) {
+        await createMutation.mutateAsync(payload);
+        return;
+      }
+
+      updateMutation.mutateAsync({
+        id: transaction?.id ?? "",
+        data: payload,
+      });
     } catch (error) {
       console.error("Failed to create expense:", error);
     }
+  };
+
+  const handleSaveSuccess = () => {
+    handleClose();
+  };
+
+  const handleClose = () => {
+    navigateBack("/finance/transactions");
   };
 
   const displayExchangeRate = customExchangeRate ?? currencyData?.rate;
@@ -122,67 +158,62 @@ export function ExpenseFormModal() {
     customExchangeRate &&
     customExchangeRate !== currencyData.rate;
 
-  const isLoading = isLoadingBudgets;
-  const isSaving = createMutation.isPending;
+  const isSaving = createMutation.isPending || updateMutation.isPending;
+  const isLoading = isLoadingBudgets || isLoadingTransaction || isSaving;
 
   return (
-    <Dialog
+    <FormDialog
+      title={isNew ? "Create Expense" : "Edit Expense"}
       open
-      maxWidth="sm"
-      fullWidth
-      slotProps={{
-        paper: {
-          component: "form",
-          onSubmit: handleSubmit(handleFormSubmit),
-        },
-      }}
+      onSubmit={handleSubmit(handleFormSubmit)}
+      onClose={handleClose}
     >
-      <DialogTitle>Create Expense</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
-          {/* Budget Selection */}
-          <SelectElement
-            name="budget_id"
-            label="Budget"
-            control={control}
-            required
-            disabled={isLoading}
-            options={
-              budgets?.map((budget) => ({
-                id: budget.id,
-                label: `${budget.name} (${budget.amount?.currency})`,
-              })) ?? []
-            }
-          />
+      <FormDialog.Content>
+        {/* Budget Selection */}
+        <SelectElement
+          name="budget_id"
+          label="Budget"
+          control={control}
+          required
+          disabled={isLoading || !isNew}
+          options={
+            budgets?.map((budget) => ({
+              id: budget.id,
+              label: `${budget.name} (${budget.amount?.currency})`,
+            })) ?? []
+          }
+          helperText={!isNew ? "Budget cannot be changed after creation." : ""}
+        />
 
-          {/* Currency alert */}
-          {isCurrencyError ? (
-            <Alert variant="filled" severity="error">
-              Failed to get your currency. Check if is already created.
-            </Alert>
-          ) : null}
+        {/* Currency alert */}
+        {isCurrencyError ? (
+          <Alert variant="filled" severity="error">
+            Failed to get your currency. Check if is already created.
+          </Alert>
+        ) : null}
 
-          {/* Name */}
-          <TextFieldElement
-            name="name"
-            label="Name"
-            control={control}
-            required
-            disabled={isLoading}
-            fullWidth
-          />
+        {/* Name */}
+        <TextFieldElement
+          name="name"
+          label="Name"
+          control={control}
+          required
+          disabled={isLoading}
+          fullWidth
+        />
 
-          <DatePickerElement
-            name="date"
-            label="Date"
-            control={control}
-            disabled={isLoading}
-            maxDate={DateTime.now()}
-            disableFuture
-            required
-          />
+        <DatePickerElement
+          name="date"
+          label="Date"
+          control={control}
+          disabled={isLoading}
+          maxDate={DateTime.now()}
+          disableFuture
+          required
+        />
 
-          {/* Amount */}
+        {/* Amount */}
+        {selectedBudget && (
           <FormNumberField
             name="amount"
             label="Amount"
@@ -204,62 +235,65 @@ export function ExpenseFormModal() {
               )
             }
           />
+        )}
 
-          {/* Converted Amount Preview */}
-          {selectedBudget && displayExchangeRate && (
-            <ExchangeRateDisplayCard
-              loading={isLoadingCurrency}
-              editing={isEditingExchangeRate}
-              disabled={isLoading}
-              amount={{
-                currency: selectedBudget?.amount?.currency ?? "USD",
-                value: convertedAmount,
-              }}
-              exchange={{
-                currency: selectedBudget.base_amount?.currency ?? "USD",
-                rate: displayExchangeRate,
-              }}
-              showResetButton={Boolean(isCustomRate)}
-              onToggleEdit={toggleExchangeRateEdit}
-              onReset={handleResetExchangeRate}
-            />
-          )}
+        {/* Converted Amount Preview */}
+        {selectedBudget && displayExchangeRate && (
+          <ExchangeRateDisplayCard
+            loading={isLoadingCurrency}
+            editing={isEditingExchangeRate}
+            disabled={isLoading}
+            amount={{
+              currency: selectedBudget?.amount?.currency ?? "USD",
+              value: convertedAmount,
+            }}
+            exchange={{
+              currency: selectedBudget.base_amount?.currency ?? "USD",
+              rate: displayExchangeRate,
+            }}
+            showResetButton={Boolean(isCustomRate)}
+            onToggleEdit={toggleExchangeRateEdit}
+            onReset={handleResetExchangeRate}
+          />
+        )}
 
-          {/*Exchange rate field*/}
-          {isEditingExchangeRate && (
-            <FormNumberField
-              name="exchange_rate"
-              control={control}
-              label="Custom Exchange Rate"
-              min={0}
-              step={0.01}
-              decimalPlaces={4}
-              helperText="Override the default exchange rate"
-              fullWidth
-            />
-          )}
-
-          {/* Description */}
-          <TextFieldElement
-            name="description"
-            label="Description"
+        {/*Exchange rate field*/}
+        {isEditingExchangeRate && (
+          <FormNumberField
+            name="exchange_rate"
             control={control}
-            multiline
-            rows={3}
+            label="Custom Exchange Rate"
+            min={0}
+            step={0.01}
+            decimalPlaces={4}
+            helperText="Override the default exchange rate"
             fullWidth
           />
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button disabled={isSaving}>Cancel</Button>
+        )}
+
+        {/* Description */}
+        <TextFieldElement
+          name="description"
+          label="Description"
+          control={control}
+          disabled={isLoading}
+          multiline
+          rows={3}
+          fullWidth
+        />
+      </FormDialog.Content>
+      <FormDialog.Actions>
+        <Button disabled={isSaving} onClick={handleClose}>
+          Cancel
+        </Button>
         <Button
           type="submit"
           variant="contained"
           disabled={isLoading || isSaving || !selectedBudget}
         >
-          {isSaving ? "Saving..." : "Create"}
+          {isSaving ? "Saving..." : "Save"}
         </Button>
-      </DialogActions>
-    </Dialog>
+      </FormDialog.Actions>
+    </FormDialog>
   );
 }
