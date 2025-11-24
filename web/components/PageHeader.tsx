@@ -6,6 +6,7 @@ import Typography from "@mui/material/Typography";
 interface PageHeaderProps {
     title: string;
     subtitle?: string;
+    children?: React.ReactNode;
 }
 
 const Root = styled(Box)(({ theme }) => ({
@@ -22,13 +23,43 @@ const Subtitle = styled(Typography)(({ theme }) => ({
     color: theme.palette.text.secondary,
 }));
 
-export default function PageHeader({ title, subtitle }: PageHeaderProps) {
+export default function PageHeader({
+    title,
+    subtitle,
+    children,
+}: PageHeaderProps) {
     return (
         <Root>
             <Stack>
-                <Title variant="h4">{title}</Title>
-                {subtitle && <Subtitle variant="body2">{subtitle}</Subtitle>}
+                <Box>
+                    <Title variant="h4">{title}</Title>
+                    {subtitle && <Subtitle variant="body2">{subtitle}</Subtitle>}
+                </Box>
+                {children && <Box>{children}</Box>}
             </Stack>
         </Root>
     );
 }
+
+interface PageHeaderActionsProps {
+    align?: "left" | "right";
+    children: React.ReactNode;
+}
+
+export function PageHeaderActions({
+    children,
+    align = "right",
+}: PageHeaderActionsProps) {
+    return (
+        <Stack
+            direction="row"
+            spacing={1.5}
+            justifyContent={align === "left" ? "flex-start" : "flex-end"}
+            sx={{ width: "100%" }}
+        >
+            {children}
+        </Stack>
+    );
+}
+
+PageHeader.Actions = PageHeaderActions;
