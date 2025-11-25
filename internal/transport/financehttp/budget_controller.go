@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/masterkeysrd/saturn/api"
+	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/pkg/httphandler"
 )
 
@@ -28,6 +29,10 @@ func (c *BudgetController) RegisterRoutes(mux *http.ServeMux) {
 
 	mux.Handle("GET /budgets", httphandler.Handle(c.ListBudgets,
 		httphandler.WithInputTransformer[*api.ListBudgetsRequest, *api.ListBudgetsResponse](transformListBudgetsInput),
+	))
+
+	mux.Handle("GET /budgets/{id}", httphandler.Handle(c.GetBudget,
+		httphandler.WithInputTransformer[*api.GetBudgetRequest, *api.Budget](transformGetBudgetInput),
 	))
 }
 
@@ -56,6 +61,26 @@ func (c *BudgetController) ListBudgets(ctx context.Context, _ *api.ListBudgetsRe
 
 func transformListBudgetsInput(ctx context.Context, req *http.Request) (*api.ListBudgetsRequest, error) {
 	return &api.ListBudgetsRequest{}, nil
+}
+
+func (c *BudgetController) GetBudget(ctx context.Context, req *api.GetBudgetRequest) (*api.Budget, error) {
+	budget, err := c.app.GetBudget(ctx, finance.BudgetID(req.ID))
+	if err != nil {
+		return nil, fmt.Errorf("cannot get budget: %w", err)
+	}
+
+	return BudgetToAPI(budget), nil
+}
+
+func transformGetBudgetInput(ctx context.Context, req *http.Request) (*api.GetBudgetRequest, error) {
+	id := req.PathValue("id")
+	if id == "" {
+		return nil, fmt.Errorf("budget id is required")
+	}
+
+	return &api.GetBudgetRequest{
+		ID: id,
+	}, nil
 }
 
 func transformCreateBudgetInput(ctx context.Context, req *http.Request) (*api.CreateBudgetRequest, error) {

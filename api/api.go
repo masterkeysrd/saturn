@@ -45,6 +45,10 @@ type CreateBudgetRequest struct {
 
 type ListBudgetsRequest struct{}
 
+type GetBudgetRequest struct {
+	ID string
+}
+
 type CreateCurrencyRequest struct {
 	Currency *Currency
 }
