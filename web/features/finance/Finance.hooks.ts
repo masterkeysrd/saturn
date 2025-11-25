@@ -5,22 +5,26 @@ import {
   type MutationOpts,
 } from "@/lib/react-query";
 import {
+  createBudget,
   createExpense,
   getBudget,
+  getCurrencies,
   getCurrency,
   getInsights,
   getTransaction,
   listBudgets,
   listTransactions,
+  updateBudget,
   updateExpense,
   type GetInsightsRequest,
 } from "./Finance.api";
-import type { Expense, Transaction } from "./Finance.model";
+import type { Budget, Expense, Transaction } from "./Finance.model";
 
 const queryKeys = {
   listBudgets: ["budgets", "list"],
   getBudget: (id: string) => ["budgets", "detail", id],
   getTransaction: (id: string) => ["transactions", "detail", id],
+  listCurrencies: ["currencies", "list"],
   getCurrency: (code: string) => ["currencies", "detail", code],
   listTransactions: ["transactions", "list"],
   getInsights: (req: GetInsightsRequest) => [
@@ -39,6 +43,45 @@ export function useBudgets() {
   });
 }
 
+export function useCreateBudget({
+  onSuccess,
+  ...rest
+}: MutationOpts<Budget, Budget> = {}) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: ["budget", "create"],
+    mutationFn: createBudget,
+    onSuccess: (data, variables, result, context) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.listBudgets });
+      onSuccess?.(data, variables, result, context);
+    },
+    ...rest,
+  });
+}
+
+export function useUpdateBudget({
+  onSuccess,
+  ...rest
+}: MutationOpts<Budget, Budget> = {}) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: ["budget", "update"],
+    mutationFn: ({ id, data }: { id: string; data: Budget }) =>
+      updateBudget(id, data),
+    onSuccess: (data, variables, result, context) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.listBudgets });
+      queryClient.invalidateQueries({ queryKey: queryKeys.listTransactions });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.getBudget(data.id!),
+      });
+      onSuccess?.(data, variables, result, context);
+    },
+    ...rest,
+  });
+}
+
 export function useBudget(id?: string) {
   return useQuery({
     queryKey: queryKeys.getBudget(id!),
@@ -52,6 +95,14 @@ export function useCurrency(currencyCode?: string) {
     queryKey: queryKeys.getCurrency(currencyCode!),
     queryFn: () => getCurrency(currencyCode!),
     enabled: !!currencyCode,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+}
+
+export function useCurrencies() {
+  return useQuery({
+    queryKey: queryKeys.listCurrencies,
+    queryFn: () => getCurrencies(),
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 }

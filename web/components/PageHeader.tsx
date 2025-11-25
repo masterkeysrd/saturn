@@ -13,6 +13,12 @@ const Root = styled(Box)(({ theme }) => ({
   marginBottom: theme.spacing(3),
 }));
 
+const Container = styled(Stack)({
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "flex-end",
+});
+
 const Title = styled(Typography)(({ theme }) => ({
   ...theme.typography.h4,
   fontWeight: 600,
@@ -30,13 +36,17 @@ export default function PageHeader({
 }: PageHeaderProps) {
   return (
     <Root>
-      <Stack>
-        <Box>
+      <Container>
+        <Box sx={{ flex: 1 }}>
           <Title variant="h4">{title}</Title>
           {subtitle && <Subtitle variant="body2">{subtitle}</Subtitle>}
         </Box>
-        {children && <Box>{children}</Box>}
-      </Stack>
+        {children && (
+          <Box sx={{ display: "flex", flexDirection: "column" }}>
+            {children}
+          </Box>
+        )}
+      </Container>
     </Root>
   );
 }
@@ -52,6 +62,7 @@ export function PageHeaderActions({
 }: PageHeaderActionsProps) {
   return (
     <Stack
+      display="flex"
       direction="row"
       spacing={1.5}
       justifyContent={align === "left" ? "flex-start" : "flex-end"}

@@ -1,4 +1,5 @@
 import Dialog, { type DialogProps } from "@mui/material/Dialog";
+import { useMediaQuery, useTheme } from "@mui/material";
 import DialogActions, {
   type DialogActionsProps,
 } from "@mui/material/DialogActions";
@@ -20,10 +21,13 @@ export default function FormDialog({
   onSubmit,
   ...rest
 }: FormDialogProps) {
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down("md"));
   return (
     <Dialog
       maxWidth="sm"
       fullWidth
+      fullScreen={fullScreen}
       {...rest}
       slotProps={{
         paper: {
@@ -59,7 +63,14 @@ interface FormDialogActionsProps extends DialogActionsProps {
 }
 
 function FormDialogActions({ children, ...rest }: FormDialogActionsProps) {
-  return <DialogActions {...rest}>{children}</DialogActions>;
+  return (
+    <DialogActions
+      {...rest}
+      sx={{ padding: (theme) => theme.spacing(1, 2, 3) }}
+    >
+      {children}
+    </DialogActions>
+  );
 }
 
 FormDialog.Actions = FormDialogActions;

@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
-import Typography from "@mui/material/Typography";
 import { TextFieldElement, SelectElement } from "react-hook-form-mui";
 import { DateTime } from "luxon";
 import { money } from "@/lib/money";
@@ -20,6 +19,7 @@ import DatePickerElement from "@/components/FormDatePicker";
 import FormDialog from "@/components/FormDialog";
 import { useParams } from "react-router";
 import { useNavigateBack } from "@/lib/navigate";
+import FormAmountField from "../components/FormAmountField";
 
 export function ExpenseFormModal() {
   const navigateBack = useNavigateBack();
@@ -112,7 +112,6 @@ export function ExpenseFormModal() {
   };
 
   const handleFormSubmit = async (data: Expense) => {
-    console.log(data);
     const date = data.date ? DateTime.fromISO(data.date) : DateTime.now();
 
     const payload: Expense = {
@@ -127,7 +126,6 @@ export function ExpenseFormModal() {
     try {
       if (isNew) {
         await createMutation.mutateAsync(payload);
-        return;
       }
 
       updateMutation.mutateAsync({
@@ -148,10 +146,6 @@ export function ExpenseFormModal() {
   };
 
   const displayExchangeRate = customExchangeRate ?? currencyData?.rate;
-
-  const convertedAmount = displayExchangeRate
-    ? (currentAmount ?? 0) / displayExchangeRate
-    : 0;
 
   const isCustomRate =
     currencyData?.rate &&
@@ -214,10 +208,11 @@ export function ExpenseFormModal() {
 
         {/* Amount */}
         {selectedBudget && (
-          <FormNumberField
+          <FormAmountField
             name="amount"
             label="Amount"
             control={control}
+            currency={selectedBudget?.amount?.currency}
             min={1}
             step={1}
             disabled={isLoading}
@@ -225,15 +220,6 @@ export function ExpenseFormModal() {
               required: "Amount is required",
               min: { value: 0, message: "Amount must be positive" },
             }}
-            startAdornment={
-              selectedBudget && (
-                <Typography variant="body2" fontWeight="medium">
-                  {money.formatCurrency(
-                    selectedBudget.amount?.currency ?? "USD",
-                  )}
-                </Typography>
-              )
-            }
           />
         )}
 
@@ -245,12 +231,13 @@ export function ExpenseFormModal() {
             disabled={isLoading}
             amount={{
               currency: selectedBudget?.amount?.currency ?? "USD",
-              value: convertedAmount,
+              value: currentAmount ?? 0,
             }}
             exchange={{
               currency: selectedBudget.base_amount?.currency ?? "USD",
               rate: displayExchangeRate,
             }}
+            showEditButton
             showResetButton={Boolean(isCustomRate)}
             onToggleEdit={toggleExchangeRateEdit}
             onReset={handleResetExchangeRate}

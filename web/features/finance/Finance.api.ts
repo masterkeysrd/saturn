@@ -7,6 +7,7 @@ import {
   type Transaction,
   type Expense,
   type Currency,
+  type ListCurrenciesResponse,
 } from "./Finance.model";
 
 export interface GetInsightsRequest {
@@ -28,9 +29,27 @@ export async function getBudget(id: string) {
     .then((resp) => resp.data);
 }
 
+export async function createBudget(data: Budget) {
+  return axios
+    .post<Transaction>(`${baseUrl}/budgets`, data)
+    .then((resp) => resp.data);
+}
+
+export async function updateBudget(id: string, data: Budget) {
+  return axios
+    .patch<Transaction>(`${baseUrl}/budgets/${id}`, data)
+    .then((resp) => resp.data);
+}
+
 export async function getCurrency(currencyCode: string) {
   return axios
     .get<Currency>(`${baseUrl}/currencies/${currencyCode}`)
+    .then((resp) => resp.data);
+}
+
+export async function getCurrencies() {
+  return axios
+    .get<ListCurrenciesResponse>(`${baseUrl}/currencies`)
     .then((resp) => resp.data);
 }
 

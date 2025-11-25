@@ -24,7 +24,7 @@ interface NumberFieldBaseProps {
   endAdornment?: React.ReactNode;
 }
 
-interface NumberFieldProps<
+export interface NumberFieldProps<
   TFieldValues extends FieldValues = FieldValues,
   TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 > extends Omit<UseControllerProps<TFieldValues, TName>, "render">,

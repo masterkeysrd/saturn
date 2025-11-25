@@ -9,8 +9,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 
 interface ExchangeRateDisplayCardProps {
-  loading: boolean;
-  editing: boolean;
+  loading?: boolean;
+  editing?: boolean;
   disabled?: boolean;
   amount: {
     currency: CurrencyCode;
@@ -20,9 +20,10 @@ interface ExchangeRateDisplayCardProps {
     currency: CurrencyCode;
     rate: number;
   };
-  showResetButton: boolean;
-  onToggleEdit: () => void;
-  onReset: () => void;
+  showEditButton?: boolean;
+  showResetButton?: boolean;
+  onToggleEdit?: () => void;
+  onReset?: () => void;
 }
 
 export default function ExchangeRateDisplayCard({
@@ -31,6 +32,7 @@ export default function ExchangeRateDisplayCard({
   disabled,
   amount,
   exchange,
+  showEditButton,
   showResetButton,
   onToggleEdit,
   onReset,
@@ -38,6 +40,9 @@ export default function ExchangeRateDisplayCard({
   if (!amount) {
     return;
   }
+
+  const convertedAmount = amount.value / exchange.rate;
+
   return (
     <Box
       sx={{
@@ -61,8 +66,8 @@ export default function ExchangeRateDisplayCard({
         <Typography variant="caption" color="text.secondary">
           Converted amount:{" "}
           <Typography component="span" variant="caption" fontWeight="bold">
-            {money.formatCurrency(exchange.currency)} {amount.value.toFixed(2)}{" "}
-            (Base Currency){" "}
+            {money.formatCurrency(exchange.currency)}{" "}
+            {convertedAmount.toFixed(2)} (Base Currency){" "}
           </Typography>
         </Typography>
       </Stack>
@@ -83,20 +88,22 @@ export default function ExchangeRateDisplayCard({
           )}
 
           {/* Edit/Check Button */}
-          <Tooltip title={editing ? "Use this rate" : "Edit exchange rate"}>
-            <IconButton
-              size="small"
-              onClick={onToggleEdit}
-              color={editing ? "primary" : "default"}
-              disabled={loading}
-            >
-              {editing ? (
-                <CheckIcon fontSize="small" />
-              ) : (
-                <EditIcon fontSize="small" />
-              )}
-            </IconButton>
-          </Tooltip>
+          {showEditButton ? (
+            <Tooltip title={editing ? "Use this rate" : "Edit exchange rate"}>
+              <IconButton
+                size="small"
+                onClick={onToggleEdit}
+                color={editing ? "primary" : "default"}
+                disabled={loading}
+              >
+                {editing ? (
+                  <CheckIcon fontSize="small" />
+                ) : (
+                  <EditIcon fontSize="small" />
+                )}
+              </IconButton>
+            </Tooltip>
+          ) : null}
         </Box>
       ) : null}
     </Box>
