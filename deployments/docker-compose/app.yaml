@@ -7,6 +7,11 @@ services:
       file: postgres.yaml
       service: pg-database
 
+  pg-web:
+    extends:
+      file: postgres.yaml
+      service: pg-web
+
 volumes:
   postgres-data:
 

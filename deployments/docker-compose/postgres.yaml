@@ -18,6 +18,20 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
+  pg-web:
+    container_name: pg-web
+    image: sosedoff/pgweb:latest
+    environment:
+      PGWEB_DATABASE_URL: postgres://postgres:postgres@pg-database:5432/postgres?sslmode=disable
+    ports:
+      - 8081:8081
+    depends_on:
+      pg-database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "nc", "-vz", "127.0.0.1", "8081"]
+      interval: 5s
+
 volumes:
   postgres-data:
 
