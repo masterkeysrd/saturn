@@ -55,7 +55,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Budget'
-
+    patch:
+      summary: Update a budget
+      operationId: finance.UpdateBudget
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Budget ID
+        schema:
+          type: string
+      - $ref: '#/components/parameters/UpdateMaskParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Budget'
+      responses:
+        "200":
+          description: Update budget
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Budget'
 
   /finance/currencies:
     get:

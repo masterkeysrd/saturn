@@ -8,7 +8,9 @@ import (
 
 	"github.com/masterkeysrd/saturn/api"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/foundation/fieldmask"
 	"github.com/masterkeysrd/saturn/internal/pkg/httphandler"
+	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 )
 
 type BudgetController struct {
@@ -33,6 +35,10 @@ func (c *BudgetController) RegisterRoutes(mux *http.ServeMux) {
 
 	mux.Handle("GET /budgets/{id}", httphandler.Handle(c.GetBudget,
 		httphandler.WithInputTransformer[*api.GetBudgetRequest, *api.Budget](transformGetBudgetInput),
+	))
+
+	mux.Handle("PATCH /budgets/{id}", httphandler.Handle(c.UpdateBudget,
+		httphandler.WithInputTransformer[*api.UpdateBudgetRequest, *api.Budget](transformUpdateBudgetInput),
 	))
 }
 
@@ -59,10 +65,6 @@ func (c *BudgetController) ListBudgets(ctx context.Context, _ *api.ListBudgetsRe
 	}, nil
 }
 
-func transformListBudgetsInput(ctx context.Context, req *http.Request) (*api.ListBudgetsRequest, error) {
-	return &api.ListBudgetsRequest{}, nil
-}
-
 func (c *BudgetController) GetBudget(ctx context.Context, req *api.GetBudgetRequest) (*api.Budget, error) {
 	budget, err := c.app.GetBudget(ctx, finance.BudgetID(req.ID))
 	if err != nil {
@@ -70,6 +72,28 @@ func (c *BudgetController) GetBudget(ctx context.Context, req *api.GetBudgetRequ
 	}
 
 	return BudgetToAPI(budget), nil
+}
+
+func (c *BudgetController) UpdateBudget(ctx context.Context, req *api.UpdateBudgetRequest) (*api.Budget, error) {
+	input := &finance.UpdateBudgetInput{
+		ID:     finance.BudgetID(req.ID),
+		Budget: BudgetFromAPI(req.Budget),
+	}
+
+	if req.UpdateMask != nil && *req.UpdateMask != "" {
+		input.UpdateMask = fieldmask.FromString(string(*req.UpdateMask), ",")
+	}
+
+	budget, err := c.app.UpdateBudget(ctx, input)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update budget %s: %w", req.ID, err)
+	}
+
+	return BudgetToAPI(budget), nil
+}
+
+func transformListBudgetsInput(ctx context.Context, req *http.Request) (*api.ListBudgetsRequest, error) {
+	return &api.ListBudgetsRequest{}, nil
 }
 
 func transformGetBudgetInput(ctx context.Context, req *http.Request) (*api.GetBudgetRequest, error) {
@@ -92,4 +116,27 @@ func transformCreateBudgetInput(ctx context.Context, req *http.Request) (*api.Cr
 	return &api.CreateBudgetRequest{
 		Budget: &body,
 	}, nil
+}
+
+func transformUpdateBudgetInput(ctx context.Context, r *http.Request) (*api.UpdateBudgetRequest, error) {
+	id := r.PathValue("id")
+	if id == "" {
+		return nil, fmt.Errorf("expense id is required")
+	}
+
+	var budget api.Budget
+	if err := json.NewDecoder(r.Body).Decode(&budget); err != nil {
+		return nil, fmt.Errorf("invalid request body: %w", err)
+	}
+
+	req := api.UpdateBudgetRequest{
+		ID:     id,
+		Budget: &budget,
+	}
+
+	if maskStr := r.URL.Query().Get("update_mask"); maskStr != "" {
+		req.UpdateMask = ptr.Of(api.UpdateMaskParam(maskStr))
+	}
+
+	return &req, nil
 }

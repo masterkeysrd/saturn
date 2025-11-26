@@ -221,6 +221,18 @@ type TransactionType string
 // UpdateMaskParam defines model for UpdateMaskParam.
 type UpdateMaskParam = string
 
+// FinanceUpdateBudgetParams defines parameters for FinanceUpdateBudget.
+type FinanceUpdateBudgetParams struct {
+	// UpdateMask Comma-separated list of fields to update. If not provided, all fields will be updated.
+	// Supported fields: name, description, date, amount, exchange_rate
+	//
+	// Examples:
+	// - `name` - Update only name
+	// - `name,amount` - Update name and amount
+	// - `name,amount,exchange_rate` - Update multiple fields
+	UpdateMask *UpdateMaskParam `form:"updateMask,omitempty" json:"updateMask,omitempty"`
+}
+
 // FinanceGetInsightsParams defines parameters for FinanceGetInsights.
 type FinanceGetInsightsParams struct {
 	// StartDate Start date for the insights period (ISO 8601 format)
@@ -265,6 +277,9 @@ type FinanceUpdateExpenseParams struct {
 
 // FinanceCreateBudgetJSONRequestBody defines body for FinanceCreateBudget for application/json ContentType.
 type FinanceCreateBudgetJSONRequestBody = Budget
+
+// FinanceUpdateBudgetJSONRequestBody defines body for FinanceUpdateBudget for application/json ContentType.
+type FinanceUpdateBudgetJSONRequestBody = Budget
 
 // BudgetCreateCurrencyJSONRequestBody defines body for BudgetCreateCurrency for application/json ContentType.
 type BudgetCreateCurrencyJSONRequestBody = Currency

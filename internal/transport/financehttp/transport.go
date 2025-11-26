@@ -7,8 +7,9 @@ import (
 )
 
 type FinanceService interface {
-	CreateBudget(context.Context, *finance.Budget) error
 	GetBudget(context.Context, finance.BudgetID) (*finance.Budget, error)
+	CreateBudget(context.Context, *finance.Budget) error
+	UpdateBudget(context.Context, *finance.UpdateBudgetInput) (*finance.Budget, error)
 	ListBudgets(context.Context) ([]*finance.Budget, error)
 
 	CreateCurrency(context.Context, *finance.Currency) error

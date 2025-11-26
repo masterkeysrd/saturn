@@ -148,6 +148,8 @@ func (s *Service) CreateBudget(ctx context.Context, budget *Budget) error {
 	if err := budget.Initialize(); err != nil {
 		return fmt.Errorf("cannot initialize budget: %w", err)
 	}
+
+	budget.sanitize()
 	if err := budget.Validate(); err != nil {
 		return fmt.Errorf("invalid budget: %w", err)
 	}
@@ -177,6 +179,58 @@ func (s *Service) CreateBudget(ctx context.Context, budget *Budget) error {
 	}
 
 	return nil
+}
+
+func (s *Service) UpdateBudget(ctx context.Context, in *UpdateBudgetInput) (*Budget, error) {
+	if err := id.Validate(in.ID); err != nil {
+		return nil, fmt.Errorf("invalid budget update input: %w", err)
+	}
+
+	budget, err := s.GetBudget(ctx, in.ID)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get budget: %w", err)
+	}
+
+	if err := budget.Update(in.Budget, in.UpdateMask); err != nil {
+		return nil, fmt.Errorf("cannot update the budget: %w", err)
+	}
+
+	budget.sanitize()
+	if err := budget.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid budget: %w", err)
+	}
+
+	if err := s.budgetStore.Store(ctx, budget); err != nil {
+		return nil, fmt.Errorf("cannot store budget: %w", err)
+	}
+
+	if !in.UpdateMask.Contains("amount") {
+		return budget, nil
+	}
+
+	period, err := s.GetPeriodForDate(ctx, budget.ID, time.Now())
+	if err != nil {
+		return nil, fmt.Errorf("cannot get period for budget: %w", err)
+	}
+
+	currency, err := s.GetCurrency(ctx, budget.Amount.Currency)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get currency: %w", err)
+	}
+
+	if err := budget.SyncPeriod(period, currency); err != nil {
+		return nil, fmt.Errorf("cannot sync budget period: %w", err)
+	}
+
+	if err := period.Validate(); err != nil {
+		return nil, fmt.Errorf("budget period is invalid: %w", err)
+	}
+
+	if err := s.budgetPeriodStore.Store(ctx, period); err != nil {
+		return nil, fmt.Errorf("cannot store budget period: %w", err)
+	}
+
+	return budget, nil
 }
 
 func (s *Service) GetPeriodForDate(ctx context.Context, budgetID BudgetID, date time.Time) (*BudgetPeriod, error) {
@@ -237,6 +291,17 @@ func (s *Service) ListBudgets(ctx context.Context) ([]*Budget, error) {
 }
 
 func (s *Service) GetCurrency(ctx context.Context, code CurrencyCode) (*Currency, error) {
+	if err := code.Validate(); err != nil {
+		return nil, errors.New("currency code is invalid")
+	}
+
+	if code == DefaultBaseCurrency {
+		return &Currency{
+			Code: code,
+			Rate: 1,
+		}, nil
+	}
+
 	currency, err := s.currencyStore.Get(ctx, code)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get currency: %w", err)
