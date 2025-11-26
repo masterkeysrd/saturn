@@ -1,8 +1,11 @@
 import { useCallback } from "react";
 import { useSnackbar } from "notistack";
 
+const SECOND = 1000;
+
 // Define the public interface returned by the hook
 export interface NotifyAPI {
+  info: (message: string) => void;
   success: (message: string) => void;
   error: (message: string, duration?: number) => void;
   // You could also add info, warning, etc.
@@ -20,7 +23,17 @@ export const useNotify = (): NotifyAPI => {
     (message: string) => {
       enqueueSnackbar(message, {
         variant: "success",
-        autoHideDuration: 3000, // Standard hide time
+        autoHideDuration: 3 * SECOND, // Standard hide time
+      });
+    },
+    [enqueueSnackbar],
+  );
+
+  const info = useCallback(
+    (message: string, duration = 3 * SECOND) => {
+      enqueueSnackbar(message, {
+        variant: "info",
+        autoHideDuration: duration, // Longer duration for critical messages
       });
     },
     [enqueueSnackbar],
@@ -28,7 +41,7 @@ export const useNotify = (): NotifyAPI => {
 
   // Ensures error function is stable across renders
   const error = useCallback(
-    (message: string, duration = 6000) => {
+    (message: string, duration = 6 * SECOND) => {
       enqueueSnackbar(message, {
         variant: "error",
         autoHideDuration: duration, // Longer duration for critical messages
@@ -38,5 +51,5 @@ export const useNotify = (): NotifyAPI => {
   );
 
   // Return the stable API object
-  return { success, error };
+  return { info, success, error };
 };
