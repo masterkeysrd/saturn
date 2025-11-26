@@ -24,6 +24,7 @@
         "axios": "^1.13.2",
         "luxon": "^3.7.2",
         "material-ui-popup-state": "^5.3.6",
+        "notistack": "^3.0.2",
         "react": "^19.2.0",
         "react-dom": "^19.2.0",
         "react-hook-form": "^7.66.1",
