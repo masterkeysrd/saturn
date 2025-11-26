@@ -1,10 +1,11 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useParams } from "react-router";
 import { useForm, useWatch } from "react-hook-form";
 import Button from "@mui/material/Button";
 import { SelectElement, TextFieldElement } from "react-hook-form-mui";
 
 import FormDialog from "@/components/FormDialog";
+import { useNotify } from "@/lib/notify";
 import { money, type CurrencyCode } from "@/lib/money";
 import { useNavigateBack } from "@/lib/navigate";
 
@@ -26,28 +27,40 @@ interface BudgetForm {
 
 export default function BudgetFormModal() {
   const { id } = useParams<"id">();
+  const notify = useNotify();
   const navigateBack = useNavigateBack();
+
   const isNew = !id;
 
   const { data: budget, isLoading: isLoadingBudget } = useBudget(id);
   const { data: currenciesResp, isLoading: isLoadingCurrencies } =
     useCurrencies();
 
+  const handleClose = useCallback(() => {
+    navigateBack("/finance/budgets");
+  }, [navigateBack]);
+
+  const handleSaveSuccess = useCallback(() => {
+    notify.success("Budget saved successfully");
+    handleClose();
+  }, [notify, handleClose]);
+
+  const handleSaveError = useCallback(
+    (_: unknown, defaultMessage: string) => {
+      notify.error(defaultMessage);
+    },
+    [notify],
+  );
+
   const createMutation = useCreateBudget({
-    onSuccess: () => handleSaveSuccess(),
+    onSuccess: handleSaveSuccess,
+    onError: (error) => handleSaveError(error, "Failed to create budget."),
   });
 
   const updateMutation = useUpdateBudget({
-    onSuccess: () => handleSaveSuccess(),
+    onSuccess: handleSaveSuccess,
+    onError: (error) => handleSaveError(error, "Failed to update budget."),
   });
-
-  const handleSaveSuccess = () => {
-    handleClose();
-  };
-
-  const handleClose = () => {
-    navigateBack("/finance/budgets");
-  };
 
   const formValues: BudgetForm = useMemo(() => {
     if (!isNew && budget) {
@@ -104,7 +117,7 @@ export default function BudgetFormModal() {
 
   return (
     <FormDialog
-      title={isNew ? "Create Expense" : "Edit Expense"}
+      title={isNew ? "Create Budget" : "Edit Expense"}
       open
       onSubmit={handleSubmit(handleFormSubmit)}
       onClose={handleClose}
