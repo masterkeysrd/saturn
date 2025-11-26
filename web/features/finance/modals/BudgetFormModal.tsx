@@ -87,7 +87,7 @@ export default function BudgetFormModal() {
     const payload: Budget = {
       name: data.name,
       amount: {
-        currency: data.currency!,
+        currency: isNew ? data.currency! : (budget?.amount?.currency ?? "USD"),
         cents: money.toCents(data.amount ?? 0),
       },
     };
