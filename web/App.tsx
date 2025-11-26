@@ -15,7 +15,12 @@ function App() {
   return (
     <>
       <ThemeProvider theme={theme}>
-        <SnackbarProvider>
+        <SnackbarProvider
+          anchorOrigin={{
+            vertical: "bottom",
+            horizontal: "right",
+          }}
+        >
           <LocalizationProvider dateAdapter={AdapterLuxon}>
             <QueryClientProvider client={queryClient}>
               <CssBaseline />
