@@ -1,11 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router";
 import { useForm, useWatch } from "react-hook-form";
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
 import { TextFieldElement, SelectElement } from "react-hook-form-mui";
 import { DateTime } from "luxon";
+import FormNumberField from "@/components/FormNumberField";
+import ExchangeRateDisplayCard from "../components/ExchangeRateDisplayCard";
+import DatePickerElement from "@/components/FormDatePicker";
+import FormDialog from "@/components/FormDialog";
 import { money } from "@/lib/money";
-import type { Expense } from "../Finance.model";
+import { useNotify } from "@/lib/notify";
+import { useNavigateBack } from "@/lib/navigate";
 import {
   useBudgets,
   useTransaction,
@@ -13,17 +19,14 @@ import {
   useUpdateExpense,
   useCurrency,
 } from "../Finance.hooks";
-import FormNumberField from "@/components/FormNumberField";
-import ExchangeRateDisplayCard from "../components/ExchangeRateDisplayCard";
-import DatePickerElement from "@/components/FormDatePicker";
-import FormDialog from "@/components/FormDialog";
-import { useParams } from "react-router";
-import { useNavigateBack } from "@/lib/navigate";
+import type { Expense } from "../Finance.model";
 import FormAmountField from "../components/FormAmountField";
 
 export function ExpenseFormModal() {
-  const navigateBack = useNavigateBack();
   const { id } = useParams<"id">();
+  const notify = useNotify();
+  const navigateBack = useNavigateBack();
+
   const isNew = !id;
 
   const [isEditingExchangeRate, setIsEditingExchangeRate] = useState(false);
@@ -31,12 +34,30 @@ export function ExpenseFormModal() {
   const { data: transaction, isLoading: isLoadingTransaction } =
     useTransaction(id);
 
+  const handleClose = useCallback(() => {
+    navigateBack("/finance/transactions");
+  }, [navigateBack]);
+
+  const handleSaveError = useCallback(
+    (_: unknown, defaultMsg: string) => {
+      notify.error(defaultMsg);
+    },
+    [notify],
+  );
+
+  const handleSaveSuccess = useCallback(() => {
+    notify.success("Expense saved successfully");
+    handleClose();
+  }, [notify, handleClose]);
+
   const createMutation = useCreateExpense({
     onSuccess: () => handleSaveSuccess(),
+    onError: (error) => handleSaveError(error, "Failed to create expense."),
   });
 
   const updateMutation = useUpdateExpense({
     onSuccess: () => handleSaveSuccess(),
+    onError: (error) => handleSaveError(error, "Failed to update expense."),
   });
 
   const formValues = useMemo(() => {
@@ -120,29 +141,17 @@ export function ExpenseFormModal() {
       description: data.description,
       date: date.toISODate() || "",
       amount: money.toCents(data.amount ?? 0),
-      exchange_rate: isEditingExchangeRate ? data.exchange_rate : undefined,
+      exchange_rate: data.exchange_rate,
     };
 
-    try {
-      if (isNew) {
-        await createMutation.mutateAsync(payload);
-      }
-
-      updateMutation.mutateAsync({
-        id: transaction?.id ?? "",
-        data: payload,
-      });
-    } catch (error) {
-      console.error("Failed to create expense:", error);
+    if (isNew) {
+      createMutation.mutate(payload);
     }
-  };
 
-  const handleSaveSuccess = () => {
-    handleClose();
-  };
-
-  const handleClose = () => {
-    navigateBack("/finance/transactions");
+    updateMutation.mutate({
+      id: transaction?.id ?? "",
+      data: payload,
+    });
   };
 
   const displayExchangeRate = customExchangeRate ?? currencyData?.rate;
