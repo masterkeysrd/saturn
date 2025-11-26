@@ -11,6 +11,10 @@ export interface Budget {
   base_amount?: Money;
 }
 
+export interface UpdateBudgetParams {
+  update_mask?: string;
+}
+
 export interface Expense {
   id?: string;
   budget_id?: string;
@@ -21,6 +25,10 @@ export interface Expense {
   exchange_rate?: number;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface UpdateExpenseParams {
+  update_mask?: string;
 }
 
 export interface ListCurrenciesResponse {

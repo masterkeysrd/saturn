@@ -21,6 +21,7 @@ import {
 } from "../Finance.hooks";
 import type { Expense } from "../Finance.model";
 import FormAmountField from "../components/FormAmountField";
+import { FieldMask } from "@/lib/fieldmask";
 
 export function ExpenseFormModal() {
   const { id } = useParams<"id">();
@@ -82,7 +83,7 @@ export function ExpenseFormModal() {
     };
   }, [isNew, transaction]);
 
-  const { control, handleSubmit, setValue } = useForm<Expense>({
+  const { control, handleSubmit, setValue, formState } = useForm<Expense>({
     values: formValues,
   });
 
@@ -145,12 +146,20 @@ export function ExpenseFormModal() {
     };
 
     if (isNew) {
-      createMutation.mutate(payload);
+      return createMutation.mutate(payload);
+    }
+
+    const updatedFields = FieldMask.FromFormState(formState.dirtyFields);
+    if (!updatedFields.hasChanges()) {
+      notify.info("No changes detected. Closing form.");
+      handleClose();
+      return;
     }
 
     updateMutation.mutate({
       id: transaction?.id ?? "",
       data: payload,
+      params: { update_mask: updatedFields.toString() },
     });
   };
 

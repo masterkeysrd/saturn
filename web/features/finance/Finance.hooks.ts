@@ -18,7 +18,13 @@ import {
   updateExpense,
   type GetInsightsRequest,
 } from "./Finance.api";
-import type { Budget, Expense, Transaction } from "./Finance.model";
+import type {
+  Budget,
+  Expense,
+  Transaction,
+  UpdateBudgetParams,
+  UpdateExpenseParams,
+} from "./Finance.model";
 
 const queryKeys = {
   listBudgets: ["budgets", "list"],
@@ -68,8 +74,15 @@ export function useUpdateBudget({
 
   return useMutation({
     mutationKey: ["budget", "update"],
-    mutationFn: ({ id, data }: { id: string; data: Budget }) =>
-      updateBudget(id, data),
+    mutationFn: ({
+      id,
+      data,
+      params,
+    }: {
+      id: string;
+      data: Budget;
+      params: UpdateBudgetParams;
+    }) => updateBudget(id, data, params),
     onSuccess: (data, variables, result, context) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.listBudgets });
       queryClient.invalidateQueries({ queryKey: queryKeys.listTransactions });
@@ -133,8 +146,15 @@ export function useUpdateExpense({
 
   return useMutation({
     mutationKey: ["expense", "update"],
-    mutationFn: ({ id, data }: { id: string; data: Expense }) =>
-      updateExpense(id, data),
+    mutationFn: ({
+      id,
+      data,
+      params,
+    }: {
+      id: string;
+      data: Expense;
+      params: UpdateExpenseParams;
+    }) => updateExpense(id, data, params),
     onSuccess: (data, variables, result, context) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.listBudgets });
       queryClient.invalidateQueries({ queryKey: queryKeys.listTransactions });

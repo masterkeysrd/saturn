@@ -8,7 +8,10 @@ import {
   type Expense,
   type Currency,
   type ListCurrenciesResponse,
+  type UpdateBudgetParams,
+  type UpdateExpenseParams,
 } from "./Finance.model";
+import { URLQuery } from "@/lib/query";
 
 export interface GetInsightsRequest {
   start_date: string;
@@ -35,9 +38,14 @@ export async function createBudget(data: Budget) {
     .then((resp) => resp.data);
 }
 
-export async function updateBudget(id: string, data: Budget) {
+export async function updateBudget(
+  id: string,
+  data: Budget,
+  params: UpdateBudgetParams = {},
+) {
+  const query = URLQuery.build(params);
   return axios
-    .patch<Transaction>(`${baseUrl}/budgets/${id}`, data)
+    .patch<Transaction>(`${baseUrl}/budgets/${id}${query.toQuery()}`, data)
     .then((resp) => resp.data);
 }
 
@@ -59,9 +67,14 @@ export async function createExpense(data: Expense) {
     .then((resp) => resp.data);
 }
 
-export async function updateExpense(id: string, data: Expense) {
+export async function updateExpense(
+  id: string,
+  data: Expense,
+  params: UpdateExpenseParams = {},
+) {
+  const query = URLQuery.build(params);
   return axios
-    .patch<Transaction>(`${baseUrl}/expenses/${id}`, data)
+    .patch<Transaction>(`${baseUrl}/expenses/${id}${query.toQuery()}`, data)
     .then((resp) => resp.data);
 }
 
@@ -78,10 +91,8 @@ export async function listTransactions() {
 }
 
 export async function getInsights(req: GetInsightsRequest) {
-  const params = new URLSearchParams();
-  params.append("start_date", req.start_date);
-  params.append("end_date", req.end_date);
+  const query = URLQuery.build(req);
   return axios
-    .get<Insights>(`${baseUrl}/insights?${params.toString()}`)
+    .get<Insights>(`${baseUrl}/insights${query.toQuery()}`)
     .then((resp) => resp.data);
 }

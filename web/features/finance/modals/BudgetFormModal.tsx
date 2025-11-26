@@ -18,6 +18,7 @@ import {
 import type { Budget } from "../Finance.model";
 import FormAmountField from "../components/FormAmountField";
 import ExchangeRateDisplayCard from "../components/ExchangeRateDisplayCard";
+import { FieldMask } from "@/lib/fieldmask";
 
 interface BudgetForm {
   name?: string;
@@ -78,7 +79,7 @@ export default function BudgetFormModal() {
     };
   }, [isNew, budget]);
 
-  const { control, handleSubmit } = useForm<BudgetForm>({
+  const { control, handleSubmit, formState } = useForm<BudgetForm>({
     values: formValues,
   });
 
@@ -109,7 +110,18 @@ export default function BudgetFormModal() {
       return createMutation.mutate(payload);
     }
 
-    updateMutation.mutate({ id: budget?.id ?? "", data: payload });
+    const updatedFields = FieldMask.FromFormState(formState.dirtyFields);
+    if (!updatedFields.hasChanges()) {
+      notify.info("No changes detected. Closing form.");
+      handleClose();
+      return;
+    }
+
+    updateMutation.mutate({
+      id: budget?.id ?? "",
+      data: payload,
+      params: { update_mask: updatedFields.toString() },
+    });
   };
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
