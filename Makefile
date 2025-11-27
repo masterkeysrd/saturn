@@ -5,3 +5,6 @@ app/start:
 		--build \
 		--detach \
 		--remove-orphans
+
+app/stop:
+	$(DOCKER-COMPOSE) -f deployments/docker-compose/app.yaml down
