@@ -8,6 +8,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
 	"github.com/masterkeysrd/saturn/internal/pkg/errors"
 	"github.com/masterkeysrd/saturn/internal/pkg/id"
+	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 )
 
 type Service struct {
@@ -69,10 +70,7 @@ func (s *Service) CreateExpense(ctx context.Context, exp *Expense) (*Transaction
 		rate = currency.Rate
 	}
 
-	transaction, err := exp.Transaction(&Currency{
-		Code: budgetPeriod.Amount.Currency,
-		Rate: rate,
-	})
+	transaction, err := exp.Transaction(budgetPeriod, rate)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create transaction: %w", err)
 	}
@@ -94,7 +92,7 @@ func (s *Service) UpdateExpense(ctx context.Context, in *UpdateExpenseInput) (*T
 	}
 
 	// Clean and trim the input.
-	in.Expense.Sanitize()
+	in.Expense.sanitize()
 
 	// Validate for update with field mask
 	if err := in.Expense.ValidateForUpdate(in.UpdateMask); err != nil {
@@ -107,8 +105,21 @@ func (s *Service) UpdateExpense(ctx context.Context, in *UpdateExpenseInput) (*T
 		return nil, fmt.Errorf("cannot get transaction: %w", err)
 	}
 
+	// Check is done before the existing date is updated.
+	shouldUpdatePeriod := in.UpdateMask.Contains("date") && in.Expense.Date != existing.Date
+
 	if err := in.Expense.UpdateTransaction(existing, in.UpdateMask); err != nil {
 		return nil, fmt.Errorf("cannot update transaction: %w", err)
+	}
+
+	// If date was changed syncronize the period.
+	if shouldUpdatePeriod {
+		period, err := s.GetPeriodForDate(ctx, *existing.BudgetID, existing.Date)
+		if err != nil {
+			return nil, fmt.Errorf("cannot get budget period: %w", err)
+		}
+
+		existing.BudgetPeriodID = ptr.Of(period.ID)
 	}
 
 	if err := existing.Validate(); err != nil {

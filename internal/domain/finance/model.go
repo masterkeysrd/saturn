@@ -9,6 +9,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/foundation/fieldmask"
 	"github.com/masterkeysrd/saturn/internal/pkg/id"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
+	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 )
 
 // Expense represents a financial expense that generates a transaction.
@@ -31,7 +32,7 @@ func (e *Expense) Initialize() error {
 	}
 
 	e.ID = id
-	e.Sanitize()
+	e.sanitize()
 	return nil
 }
 
@@ -86,9 +87,9 @@ func (e *Expense) ValidateForUpdate(mask *fieldmask.FieldMask) error {
 	return nil
 }
 
-// Sanitize cleans up input fields without generating a new ID.
+// sanitize cleans up input fields without generating a new ID.
 // This should be called for both CREATE and UPDATE operations.
-func (e *Expense) Sanitize() {
+func (e *Expense) sanitize() {
 	e.Name = strings.TrimSpace(e.Name)
 	e.Description = strings.TrimSpace(e.Description)
 }
@@ -123,27 +124,28 @@ func (e *Expense) validate() error {
 //
 // The currency is used to calculate the base amount via exchange rate.
 // This method assumes the Expense has already been validated.
-func (e *Expense) Transaction(periodCurrency *Currency) (*Transaction, error) {
+func (e *Expense) Transaction(period *BudgetPeriod, exchangeRate float64) (*Transaction, error) {
 	if e == nil {
 		return nil, errors.New("expense is nil")
 	}
 
 	now := time.Now().UTC()
-	amount := money.NewMoney(periodCurrency.Code, e.Amount)
+	amount := money.NewMoney(period.Amount.Currency, e.Amount)
 
 	// Build transaction from expense fields
 	return &Transaction{
-		ID:           e.ID,
-		Type:         TransactionTypeExpense,
-		BudgetID:     e.BudgetID,
-		Name:         e.Name,
-		Description:  e.Description,
-		Amount:       amount,
-		BaseAmount:   amount.Exchange(DefaultBaseCurrency, periodCurrency.Rate),
-		ExchangeRate: periodCurrency.Rate,
-		Date:         e.Date,
-		CreatedAt:    now,
-		UpdatedAt:    now,
+		ID:             e.ID,
+		Type:           TransactionTypeExpense,
+		BudgetID:       ptr.Of(e.BudgetID),
+		BudgetPeriodID: ptr.Of(period.ID),
+		Name:           e.Name,
+		Description:    e.Description,
+		Amount:         amount,
+		BaseAmount:     amount.Exchange(DefaultBaseCurrency, exchangeRate),
+		ExchangeRate:   exchangeRate,
+		Date:           e.Date,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}, nil
 }
 
@@ -225,17 +227,18 @@ func (op Operation) Validate() error {
 // Transaction represents a persisted financial transaction.
 // It includes the base currency conversion and exchange rate for reporting.
 type Transaction struct {
-	ID           TransactionID
-	Type         TransactionType
-	BudgetID     BudgetID
-	Name         string
-	Description  string
-	Amount       money.Money
-	BaseAmount   money.Money
-	ExchangeRate float64
-	Date         time.Time
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID             TransactionID
+	Type           TransactionType
+	BudgetID       *BudgetID
+	BudgetPeriodID *BudgetPeriodID
+	Name           string
+	Description    string
+	Amount         money.Money
+	BaseAmount     money.Money
+	ExchangeRate   float64
+	Date           time.Time
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 // Validate ensures the Transaction is ready for persistence.

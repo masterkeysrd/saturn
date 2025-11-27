@@ -60,7 +60,8 @@ func (i *Insights) GetSpendingSeries(ctx context.Context, filter finance.Spendin
 
 const getSpendingSeriesQuery = `
 WITH period_budgets AS (
-    SELECT 
+    SELECT
+	    bp.id,
         bp.budget_id,
         bp.start_date,
         bp.end_date,
@@ -70,7 +71,7 @@ WITH period_budgets AS (
     WHERE bp.start_date >= :start_date
       AND bp.end_date <= :end_date
 )
-SELECT 
+SELECT
     b.id as budget_id,
     b.name as budget_name,
     TO_CHAR(DATE_TRUNC('month', pb.start_date), 'YYYY-MM') as period,
@@ -83,15 +84,13 @@ SELECT
     COUNT(t.id) as transaction_count
 FROM period_budgets pb
 JOIN budgets b ON pb.budget_id = b.id
-LEFT JOIN transactions t 
-    ON t.budget_id = b.id 
+LEFT JOIN transactions t
+    ON t.budget_period_id = pb.id
     AND t.type = 'expense'
-    AND t.date >= pb.start_date 
-    AND t.date <= pb.end_date
-GROUP BY 
-    b.id, 
-    b.name, 
-    pb.start_date, 
+GROUP BY
+    b.id,
+    b.name,
+    pb.start_date,
     pb.end_date,
     pb.base_amount_cents,
     pb.base_amount_currency

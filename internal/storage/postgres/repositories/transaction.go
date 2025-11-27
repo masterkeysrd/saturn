@@ -96,6 +96,7 @@ SELECT
 	id,
 	type,
 	budget_id,
+	budget_period_id,
 	name,
 	description,
 	date,
@@ -114,6 +115,7 @@ SELECT
 	id,
 	type,
 	budget_id,
+	budget_period_id,
 	name,
 	description,
 	date,
@@ -133,6 +135,7 @@ INSERT INTO transactions (
 	id,
 	type,
 	budget_id,
+	budget_period_id,
 	name,
 	description,
 	date,
@@ -148,6 +151,7 @@ VALUES (
 	:id,
 	:type,
 	:budget_id,
+	:budget_period_id,
 	:name,
 	:description,
 	:date,
@@ -161,6 +165,7 @@ VALUES (
 )
 ON CONFLICT (id) DO UPDATE SET
 	budget_id = EXCLUDED.budget_id,
+	budget_period_id = EXCLUDED.budget_period_id,
 	name = EXCLUDED.name,
 	description = EXCLUDED.description,
 	date = EXCLUDED.date,
@@ -232,6 +237,7 @@ type TransactionEntity struct {
 	ID                 finance.TransactionID   `db:"id"`
 	Type               finance.TransactionType `db:"type"`
 	BudgetID           *finance.BudgetID       `db:"budget_id"`
+	BudgetPeriodID     *finance.BudgetPeriodID `db:"budget_period_id"`
 	Name               string                  `db:"name"`
 	Description        *string                 `db:"description"`
 	Date               time.Time               `db:"date"`
@@ -250,12 +256,13 @@ func TransactionEntityToModel(e *TransactionEntity) *finance.Transaction {
 	}
 
 	return &finance.Transaction{
-		ID:          e.ID,
-		Type:        e.Type,
-		BudgetID:    ptr.Value(e.BudgetID),
-		Name:        e.Name,
-		Description: ptr.Value(e.Description),
-		Date:        e.Date,
+		ID:             e.ID,
+		Type:           e.Type,
+		BudgetID:       e.BudgetID,
+		BudgetPeriodID: e.BudgetPeriodID,
+		Name:           e.Name,
+		Description:    ptr.Value(e.Description),
+		Date:           e.Date,
 		Amount: money.NewMoney(
 			e.AmountCurrency,
 			e.AmountCents,
@@ -274,7 +281,8 @@ func TransactionEntityFromModel(t *finance.Transaction) *TransactionEntity {
 	return &TransactionEntity{
 		ID:                 t.ID,
 		Type:               t.Type,
-		BudgetID:           ptr.OfNonZero(t.BudgetID),
+		BudgetID:           t.BudgetID,
+		BudgetPeriodID:     t.BudgetPeriodID,
 		Name:               t.Name,
 		Description:        ptr.OfNonZero(t.Description),
 		Date:               t.Date,
