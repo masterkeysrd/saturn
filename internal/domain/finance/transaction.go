@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/masterkeysrd/saturn/internal/pkg/id"
+	"github.com/masterkeysrd/saturn/internal/foundation/id"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 )
 

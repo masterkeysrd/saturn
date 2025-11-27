@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/foundation/id"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
 	"github.com/masterkeysrd/saturn/internal/pkg/errors"
-	"github.com/masterkeysrd/saturn/internal/pkg/id"
 	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 )
 

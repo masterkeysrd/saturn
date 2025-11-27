@@ -3,15 +3,23 @@ package main
 import (
 	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/foundation/id"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
+	"github.com/masterkeysrd/saturn/internal/pkg/uuid"
 	"github.com/masterkeysrd/saturn/internal/storage/pg"
 	financepg "github.com/masterkeysrd/saturn/internal/storage/pg/finance"
 	financehttp "github.com/masterkeysrd/saturn/internal/transport/http/finance"
 )
 
+func init() {
+	id.SetGenerator(uuid.NewGenerator())
+}
+
 func main() {
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	slog.Info("building DI container")
 	c, err := buildContainer()
 	if err != nil {
