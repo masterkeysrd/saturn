@@ -55,6 +55,10 @@ type UpdateBudgetRequest struct {
 	UpdateMask *UpdateMaskParam
 }
 
+type DeleteBudgetRequest struct {
+	ID string
+}
+
 type CreateCurrencyRequest struct {
 	Currency *Currency
 }

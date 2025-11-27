@@ -90,6 +90,25 @@ func (t *Transactions) Delete(ctx context.Context, tid finance.TransactionID) er
 	return nil
 }
 
+func (t *Transactions) ExistsBy(ctx context.Context, criteria finance.TransactionCriteria) (bool, error) {
+	var row *sqlx.Row
+	switch v := criteria.(type) {
+	case *finance.ByBudgetID:
+		row = t.queries.ExistsByBudgetID(ctx, v)
+	default:
+		return false, fmt.Errorf("criteria %T is not supported for exists method", criteria)
+	}
+
+	var result bool
+	if err := row.Scan(&result); err != nil {
+		// If the query failed for a reason other than not finding a row, return the error.
+		// We assume the underlying query is correctly designed not to return sql.ErrNoRows.
+		return false, fmt.Errorf("cannot scan transaction exists result: %w", err)
+	}
+
+	return result, nil
+}
+
 const (
 	getTransactionQuery = `
 SELECT
@@ -179,13 +198,25 @@ ON CONFLICT (id) DO UPDATE SET
 	deleteTransactionQuery = `
 DELETE FROM transactions
  WHERE id = :id`
+
+	existsTransactionByBudgetIDQuery = `
+SELECT EXISTS (
+	SELECT 1
+    FROM
+		transactions
+    WHERE
+		budget_id = :budget_id 
+    LIMIT 1
+)
+ `
 )
 
 type TransactionQueries struct {
-	getStmt    *sqlx.NamedStmt
-	listStmt   *sqlx.Stmt
-	upsertStmt *sqlx.NamedStmt
-	deleteStmt *sqlx.NamedStmt
+	getStmt          *sqlx.NamedStmt
+	listStmt         *sqlx.Stmt
+	upsertStmt       *sqlx.NamedStmt
+	deleteStmt       *sqlx.NamedStmt
+	existsByBudgetID *sqlx.NamedStmt
 }
 
 func NewTransactionQueries(db *sqlx.DB) (*TransactionQueries, error) {
@@ -209,11 +240,17 @@ func NewTransactionQueries(db *sqlx.DB) (*TransactionQueries, error) {
 		return nil, fmt.Errorf("cannot prepare upsert transaction query: %w", err)
 	}
 
+	existsByBudgetID, err := db.PrepareNamed(existsTransactionByBudgetIDQuery)
+	if err != nil {
+		return nil, fmt.Errorf("cannot prepare exists by id transaction query: %w", err)
+	}
+
 	return &TransactionQueries{
-		getStmt:    getStmt,
-		upsertStmt: upsertStmt,
-		listStmt:   listStmt,
-		deleteStmt: deleteStmt,
+		getStmt:          getStmt,
+		upsertStmt:       upsertStmt,
+		listStmt:         listStmt,
+		deleteStmt:       deleteStmt,
+		existsByBudgetID: existsByBudgetID,
 	}, nil
 }
 
@@ -231,6 +268,12 @@ func (q *TransactionQueries) Store(ctx context.Context, e *TransactionEntity) (s
 
 func (q *TransactionQueries) Delete(ctx context.Context, tid finance.TransactionID) (sql.Result, error) {
 	return q.deleteStmt.ExecContext(ctx, map[string]any{"id": tid})
+}
+
+func (q *TransactionQueries) ExistsByBudgetID(ctx context.Context, criteria *finance.ByBudgetID) *sqlx.Row {
+	return q.existsByBudgetID.QueryRowContext(ctx, map[string]any{
+		"budget_id": criteria.ID,
+	})
 }
 
 type TransactionEntity struct {

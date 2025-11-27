@@ -79,6 +79,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Budget'
+    delete:
+      summary: Delete a budget
+      operationId: finance.DeleteBudget
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Budget ID
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Budget Updated
 
   /finance/currencies:
     get:

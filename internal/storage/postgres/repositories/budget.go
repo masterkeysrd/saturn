@@ -2,6 +2,7 @@ package pgrepositories
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -60,6 +61,27 @@ func (b *Budget) Store(ctx context.Context, budget *finance.Budget) error {
 	return nil
 }
 
+// Delete removes a single Budget record by its ID.
+func (b *Budget) Delete(ctx context.Context, id finance.BudgetID) error {
+	query := b.queries.Delete()
+
+	result, err := b.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("cannot delete budget: %w", err)
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("cannot get affected rows: %w", err)
+	}
+
+	if affected == 0 {
+		return errors.New("budget not found")
+	}
+
+	return nil
+}
+
 type BudgetQueries struct{}
 
 func (q BudgetQueries) Upsert() string {
@@ -101,6 +123,14 @@ func (q BudgetQueries) List() string {
 		budgets
 	ORDER BY
 		created_at DESC
+	`
+}
+
+// Delete returns the SQL query for deleting a budget by ID.
+func (q BudgetQueries) Delete() string {
+	return `
+	DELETE FROM budgets
+	WHERE id = $1
 	`
 }
 

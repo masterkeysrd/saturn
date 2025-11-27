@@ -11,6 +11,7 @@ type FinanceService interface {
 	CreateBudget(context.Context, *finance.Budget) error
 	UpdateBudget(context.Context, *finance.UpdateBudgetInput) (*finance.Budget, error)
 	ListBudgets(context.Context) ([]*finance.Budget, error)
+	DeleteBudget(context.Context, finance.BudgetID) error
 
 	CreateCurrency(context.Context, *finance.Currency) error
 	ListCurrencies(context.Context) ([]*finance.Currency, error)

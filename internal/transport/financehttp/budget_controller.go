@@ -28,17 +28,17 @@ func (c *BudgetController) RegisterRoutes(mux *http.ServeMux) {
 		httphandler.WithCreated[*api.CreateBudgetRequest, *api.Budget](),
 		httphandler.WithInputTransformer[*api.CreateBudgetRequest, *api.Budget](transformCreateBudgetInput),
 	))
-
 	mux.Handle("GET /budgets", httphandler.Handle(c.ListBudgets,
 		httphandler.WithInputTransformer[*api.ListBudgetsRequest, *api.ListBudgetsResponse](transformListBudgetsInput),
 	))
-
 	mux.Handle("GET /budgets/{id}", httphandler.Handle(c.GetBudget,
 		httphandler.WithInputTransformer[*api.GetBudgetRequest, *api.Budget](transformGetBudgetInput),
 	))
-
 	mux.Handle("PATCH /budgets/{id}", httphandler.Handle(c.UpdateBudget,
 		httphandler.WithInputTransformer[*api.UpdateBudgetRequest, *api.Budget](transformUpdateBudgetInput),
+	))
+	mux.Handle("DELETE /budgets/{id}", httphandler.Handle(c.DeleteBudget,
+		httphandler.WithInputTransformer[*api.DeleteBudgetRequest, *httphandler.Empty](transformDeleteBudgetInput),
 	))
 }
 
@@ -92,6 +92,14 @@ func (c *BudgetController) UpdateBudget(ctx context.Context, req *api.UpdateBudg
 	return BudgetToAPI(budget), nil
 }
 
+func (c *BudgetController) DeleteBudget(ctx context.Context, req *api.DeleteBudgetRequest) (*httphandler.Empty, error) {
+	if err := c.app.DeleteBudget(ctx, finance.BudgetID(req.ID)); err != nil {
+		return nil, fmt.Errorf("failed to delete budget %s: %w", req.ID, err)
+	}
+
+	return &httphandler.Empty{}, nil
+}
+
 func transformListBudgetsInput(ctx context.Context, req *http.Request) (*api.ListBudgetsRequest, error) {
 	return &api.ListBudgetsRequest{}, nil
 }
@@ -139,4 +147,15 @@ func transformUpdateBudgetInput(ctx context.Context, r *http.Request) (*api.Upda
 	}
 
 	return &req, nil
+}
+
+func transformDeleteBudgetInput(ctx context.Context, req *http.Request) (*api.DeleteBudgetRequest, error) {
+	id := req.PathValue("id")
+	if id == "" {
+		return nil, fmt.Errorf("budget id is required")
+	}
+
+	return &api.DeleteBudgetRequest{
+		ID: id,
+	}, nil
 }

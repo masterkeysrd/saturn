@@ -72,6 +72,35 @@ func (b *BudgetPeriod) Store(ctx context.Context, period *finance.BudgetPeriod) 
 	return nil
 }
 
+// DeleteBy handles the bulk deletion of BudgetPeriods based on specific criteria.
+// It returns the number of rows deleted (int).
+func (b *BudgetPeriod) DeleteBy(ctx context.Context, criteria finance.BudgetPeriodCriteria) (int, error) {
+	var result sql.Result
+	var err error
+
+	// Use a type switch to dispatch the correct SQL logic based on the criteria type.
+	switch v := criteria.(type) {
+	case *finance.ByBudgetID:
+		// Delete all periods belonging to the given BudgetID.
+		result, err = b.queries.DeleteByBudgetID(ctx, v.ID)
+	default:
+		return 0, fmt.Errorf("criteria %T is not supported for DeleteBy method", criteria)
+	}
+
+	if err != nil {
+		return 0, fmt.Errorf("cannot execute delete query: %w", err)
+	}
+
+	// Return the count of affected rows. This is necessary for the Domain Service
+	// to confirm the dependent records were removed successfully.
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("cannot get affected rows count: %w", err)
+	}
+
+	return int(affected), nil
+}
+
 const (
 	getByDateBudgetPeriodQuery = `
 	SELECT
@@ -137,12 +166,17 @@ const (
 		base_amount_cents = EXCLUDED.base_amount_cents,
 		exchange_rate = EXCLUDED.exchange_rate,
 		updated_at = EXCLUDED.updated_at`
+
+	deleteBudgetPeriodsByBudgetIDQuery = `
+DELETE FROM budget_periods
+WHERE budget_id = :budget_id`
 )
 
 type BudgetPeriodQueries struct {
-	getByDateStmt *sqlx.NamedStmt
-	listStmt      *sqlx.Stmt
-	upsertStmt    *sqlx.NamedStmt
+	getByDateStmt        *sqlx.NamedStmt
+	listStmt             *sqlx.Stmt
+	upsertStmt           *sqlx.NamedStmt
+	deleteByBudgetIDStmt *sqlx.NamedStmt
 }
 
 func NewBudgetPeriodQueries(db *sqlx.DB) (*BudgetPeriodQueries, error) {
@@ -164,10 +198,19 @@ func NewBudgetPeriodQueries(db *sqlx.DB) (*BudgetPeriodQueries, error) {
 		return nil, fmt.Errorf("cannot prepare upsert query: %w", err)
 	}
 
+	deleteByBudgetIDStmt, err := db.PrepareNamed(deleteBudgetPeriodsByBudgetIDQuery)
+	if err != nil {
+		getByDateStmt.Close()
+		listStmt.Close()
+		upsertStmt.Close()
+		return nil, fmt.Errorf("cannot prepare delete by budget ID query: %w", err)
+	}
+
 	return &BudgetPeriodQueries{
-		getByDateStmt: getByDateStmt,
-		listStmt:      listStmt,
-		upsertStmt:    upsertStmt,
+		getByDateStmt:        getByDateStmt,
+		listStmt:             listStmt,
+		upsertStmt:           upsertStmt,
+		deleteByBudgetIDStmt: deleteByBudgetIDStmt,
 	}, nil
 }
 
@@ -184,6 +227,13 @@ func (q *BudgetPeriodQueries) List(ctx context.Context) (*sqlx.Rows, error) {
 
 func (q *BudgetPeriodQueries) Upsert(ctx context.Context, entity *BudgetPeriodEntity) (sql.Result, error) {
 	return q.upsertStmt.ExecContext(ctx, entity)
+}
+
+// DeleteByBudgetID executes the bulk DELETE operation using the positional argument.
+func (q *BudgetPeriodQueries) DeleteByBudgetID(ctx context.Context, budgetID finance.BudgetID) (sql.Result, error) {
+	return q.deleteByBudgetIDStmt.ExecContext(ctx, map[string]any{
+		"budget_id": budgetID,
+	})
 }
 
 type BudgetPeriodEntity struct {

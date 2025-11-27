@@ -257,6 +257,32 @@ func (s *Service) UpdateBudget(ctx context.Context, in *UpdateBudgetInput) (*Bud
 	return budget, nil
 }
 
+func (s *Service) DeleteBudget(ctx context.Context, bid BudgetID) error {
+	if err := id.Validate(bid); err != nil {
+		return fmt.Errorf("invalid budget id: %w", err)
+	}
+
+	criteria := ByBudgetID{bid}
+	exists, err := s.transactionStore.ExistsBy(ctx, &criteria)
+	if err != nil {
+		return fmt.Errorf("cannot check transactions existence for budget: %w", err)
+	}
+
+	if exists {
+		return errors.New("cannot delete a budget with existing transactions")
+	}
+
+	if _, err := s.budgetPeriodStore.DeleteBy(ctx, &criteria); err != nil {
+		return fmt.Errorf("cannot delete periods for budget: %w", err)
+	}
+
+	if err := s.budgetStore.Delete(ctx, bid); err != nil {
+		return fmt.Errorf("cannot delete budget: %w", err)
+	}
+
+	return nil
+}
+
 func (s *Service) GetPeriodForDate(ctx context.Context, budgetID BudgetID, date time.Time) (*BudgetPeriod, error) {
 	// Validate data
 	budget, err := s.GetBudget(ctx, budgetID)
