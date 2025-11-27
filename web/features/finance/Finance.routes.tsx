@@ -6,6 +6,7 @@ import TransactionsPage from "./pages/TransactionsPage";
 
 import { ExpenseFormModal } from "./modals/ExpenseFormModal";
 import BudgetFormModal from "./modals/BudgetFormModal";
+import DeleteTransactionModal from "./modals/DeleteTransactionModal";
 
 export const Routes: RouteObject = {
   path: "/finance",
@@ -32,6 +33,10 @@ export const Routes: RouteObject = {
       path: "transactions",
       element: <TransactionsPage />,
       children: [
+        {
+          path: ":id/delete",
+          element: <DeleteTransactionModal />,
+        },
         {
           path: "expenses",
           children: [

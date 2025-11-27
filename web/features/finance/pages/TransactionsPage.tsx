@@ -16,6 +16,7 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import PaidIcon from "@mui/icons-material/Paid";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import TrendingDownIcon from "@mui/icons-material/TrendingDown";
+import DeleteIcon from "@mui/icons-material/Delete";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import {
   usePopupState,
@@ -129,6 +130,14 @@ export default function TransactionsPage() {
     },
     [navigate],
   );
+
+  const handleRowDelete = useCallback(
+    (transaction: Transaction) => () => {
+      navigate(`${transaction.id}/delete`);
+    },
+    [navigate],
+  );
+
   const transactionColumns: GridColDef<Transaction>[] = useMemo(
     () => [
       {
@@ -186,10 +195,17 @@ export default function TransactionsPage() {
             onClick={handleRowEdit(row)}
             showInMenu={false}
           />,
+          <GridActionsCellItem
+            key="edit-transaction"
+            label="Edit"
+            icon={<DeleteIcon />}
+            onClick={handleRowDelete(row)}
+            showInMenu={false}
+          />,
         ],
       },
     ],
-    [handleRowEdit],
+    [handleRowEdit, handleRowDelete],
   );
 
   return (

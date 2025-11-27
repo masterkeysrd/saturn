@@ -84,6 +84,10 @@ export async function getTransaction(id: string) {
     .then((resp) => resp.data);
 }
 
+export async function deleteTransaction(id: string): Promise<void> {
+  await axios.delete(`${baseUrl}/transactions/${id}`);
+}
+
 export async function listTransactions() {
   return axios
     .get<ListTransactionsResponse>(`${baseUrl}/transactions`)

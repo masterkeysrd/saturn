@@ -7,6 +7,7 @@ import {
 import {
   createBudget,
   createExpense,
+  deleteTransaction,
   getBudget,
   getCurrencies,
   getCurrency,
@@ -25,6 +26,7 @@ import type {
   UpdateBudgetParams,
   UpdateExpenseParams,
 } from "./Finance.model";
+import type { MutationOptions } from "@tanstack/react-query";
 
 const queryKeys = {
   listBudgets: ["budgets", "list"],
@@ -40,7 +42,7 @@ const queryKeys = {
     "end_date",
     req.end_date,
   ],
-};
+} as const;
 
 export function useBudgets() {
   return useQuery({
@@ -53,13 +55,14 @@ export function useCreateBudget({
   onSuccess,
   ...rest
 }: MutationOpts<Budget, Budget> = {}) {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationKey: ["budget", "create"],
     mutationFn: createBudget,
-    onSuccess: (data, variables, result, context) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.listBudgets });
+    onSuccess: async (data, variables, result, context) => {
+      await Promise.all([
+        context.client.invalidateQueries({ queryKey: queryKeys.listBudgets }),
+        context.client.invalidateQueries({ queryKey: ["insights"] }),
+      ]);
       onSuccess?.(data, variables, result, context);
     },
     ...rest,
@@ -70,8 +73,6 @@ export function useUpdateBudget({
   onSuccess,
   ...rest
 }: MutationOpts<Budget, Budget> = {}) {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationKey: ["budget", "update"],
     mutationFn: ({
@@ -83,12 +84,17 @@ export function useUpdateBudget({
       data: Budget;
       params: UpdateBudgetParams;
     }) => updateBudget(id, data, params),
-    onSuccess: (data, variables, result, context) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.listBudgets });
-      queryClient.invalidateQueries({ queryKey: queryKeys.listTransactions });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.getBudget(data.id!),
-      });
+    onSuccess: async (data, variables, result, context) => {
+      await Promise.all([
+        context.client.invalidateQueries({ queryKey: queryKeys.listBudgets }),
+        context.client.invalidateQueries({
+          queryKey: queryKeys.listTransactions,
+        }),
+        context.client.invalidateQueries({
+          queryKey: queryKeys.getBudget(data.id!),
+        }),
+        context.client.invalidateQueries({ queryKey: ["insights"] }),
+      ]);
       onSuccess?.(data, variables, result, context);
     },
     ...rest,
@@ -124,14 +130,17 @@ export function useCreateExpense({
   onSuccess,
   ...rest
 }: MutationOpts<Transaction, Expense> = {}) {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationKey: ["expense", "create"],
     mutationFn: createExpense,
-    onSuccess: (data, variables, result, context) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.listBudgets });
-      queryClient.invalidateQueries({ queryKey: queryKeys.listTransactions });
+    onSuccess: async (data, variables, result, context) => {
+      await Promise.all([
+        context.client.invalidateQueries({ queryKey: queryKeys.listBudgets }),
+        context.client.invalidateQueries({
+          queryKey: queryKeys.listTransactions,
+        }),
+        context.client.invalidateQueries({ queryKey: ["insights"] }),
+      ]);
       onSuccess?.(data, variables, result, context);
     },
     ...rest,
@@ -142,8 +151,6 @@ export function useUpdateExpense({
   onSuccess,
   ...rest
 }: MutationOpts<Transaction, Expense> = {}) {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationKey: ["expense", "update"],
     mutationFn: ({
@@ -155,12 +162,18 @@ export function useUpdateExpense({
       data: Expense;
       params: UpdateExpenseParams;
     }) => updateExpense(id, data, params),
-    onSuccess: (data, variables, result, context) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.listBudgets });
-      queryClient.invalidateQueries({ queryKey: queryKeys.listTransactions });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.getTransaction(data.id!),
-      });
+    onSuccess: async (data, variables, result, context) => {
+      const client = context.client;
+      await Promise.all([
+        client.invalidateQueries({ queryKey: queryKeys.listBudgets }),
+        client.invalidateQueries({
+          queryKey: queryKeys.listTransactions,
+        }),
+        client.invalidateQueries({
+          queryKey: queryKeys.getTransaction(data.id!),
+        }),
+        client.invalidateQueries({ queryKey: ["insights"] }),
+      ]);
       onSuccess?.(data, variables, result, context);
     },
     ...rest,
@@ -181,6 +194,37 @@ export const useTransactions = () => {
     queryFn: listTransactions,
   });
 };
+
+export function useDeleteTransaction({
+  onSuccess,
+  ...rest
+}: MutationOptions<void, string, string> = {}) {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, string, string>({
+    mutationFn: (id) => deleteTransaction(id),
+    onSuccess: async (data, variables, result, context) => {
+      const transactionKey = queryKeys.getTransaction(variables);
+      await queryClient.cancelQueries({ queryKey: transactionKey });
+      queryClient.removeQueries({ queryKey: transactionKey });
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["transactions"],
+          predicate: (query) => {
+            const isCurrentTransaction =
+              JSON.stringify(query.queryKey) === JSON.stringify(transactionKey);
+            return !isCurrentTransaction;
+          },
+        }),
+        queryClient.invalidateQueries({ queryKey: ["insights"] }),
+      ]);
+
+      onSuccess?.(data, variables, result, context);
+    },
+    ...rest,
+  });
+}
 
 export const useInsights = (req: GetInsightsRequest) => {
   return useQuery({

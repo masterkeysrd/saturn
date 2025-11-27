@@ -23,6 +23,7 @@ export default function FormDialog({
 }: FormDialogProps) {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down("md"));
+
   return (
     <Dialog
       maxWidth="sm"
