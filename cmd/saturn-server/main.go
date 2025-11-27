@@ -6,9 +6,9 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
-	"github.com/masterkeysrd/saturn/internal/storage/postgres"
-	pgrepositories "github.com/masterkeysrd/saturn/internal/storage/postgres/repositories"
-	"github.com/masterkeysrd/saturn/internal/transport/financehttp"
+	"github.com/masterkeysrd/saturn/internal/storage/pg"
+	financepg "github.com/masterkeysrd/saturn/internal/storage/pg/finance"
+	financehttp "github.com/masterkeysrd/saturn/internal/transport/http/finance"
 )
 
 func main() {
@@ -33,7 +33,7 @@ func buildContainer() (deps.Container, error) {
 
 	// Storage
 	err := deps.Register(container,
-		pgrepositories.Provide,
+		financepg.Provide,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("cannot register storage providers: %w", err)
@@ -49,7 +49,7 @@ func buildContainer() (deps.Container, error) {
 		return nil, fmt.Errorf("cannot register transport providers: %w", err)
 	}
 
-	if err := container.Provide(postgres.NewDefaultConnection); err != nil {
+	if err := container.Provide(pg.NewDefaultConnection); err != nil {
 		return nil, err
 	}
 

@@ -7,7 +7,7 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
 	"github.com/masterkeysrd/saturn/internal/pkg/httprouter"
-	"github.com/masterkeysrd/saturn/internal/transport/financehttp"
+	financehttp "github.com/masterkeysrd/saturn/internal/transport/http/finance"
 )
 
 type Server struct {
