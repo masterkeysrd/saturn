@@ -26,6 +26,7 @@ type TransactionStore interface {
 	Get(context.Context, TransactionID) (*Transaction, error)
 	List(context.Context) ([]*Transaction, error)
 	Store(context.Context, *Transaction) error
+	Delete(context.Context, TransactionID) error
 }
 
 type InsightsStore interface {

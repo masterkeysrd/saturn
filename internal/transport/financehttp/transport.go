@@ -20,6 +20,7 @@ type FinanceService interface {
 	UpdateExpense(context.Context, *finance.UpdateExpenseInput) (*finance.Transaction, error)
 	GetTransaction(context.Context, finance.TransactionID) (*finance.Transaction, error)
 	ListTransactions(context.Context) ([]*finance.Transaction, error)
+	DeleteTransaction(context.Context, finance.TransactionID) error
 
 	GetInsights(context.Context, *finance.GetInsightsInput) (*finance.Insights, error)
 }

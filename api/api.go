@@ -81,6 +81,10 @@ type GetTransactionRequest struct {
 	ID string
 }
 
+type DeleteTransactionRequest struct {
+	ID string
+}
+
 type GetFinanceInsightsRequest struct {
 	FinanceGetInsightsParams
 }

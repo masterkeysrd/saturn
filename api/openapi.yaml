@@ -189,6 +189,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Transaction'
+    delete:
+      summary: Delete transaction by ID
+      operationId: finance.DeleteTransaction
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          description: Transaction ID
+      responses:
+        "204":
+          description: Transaction deleted.
+
 
   /finance/transactions/:
     get:

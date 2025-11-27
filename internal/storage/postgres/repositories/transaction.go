@@ -72,6 +72,24 @@ func (t *Transactions) Store(ctx context.Context, tr *finance.Transaction) error
 	return nil
 }
 
+func (t *Transactions) Delete(ctx context.Context, tid finance.TransactionID) error {
+	result, err := t.queries.Delete(ctx, tid)
+	if err != nil {
+		return fmt.Errorf("cannot delete transaction: %w", err)
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("cannot get affected rows for delete transaction: %w", err)
+	}
+
+	if affected == 0 {
+		return fmt.Errorf("transaction not found")
+	}
+
+	return nil
+}
+
 const (
 	getTransactionQuery = `
 SELECT
@@ -152,12 +170,17 @@ ON CONFLICT (id) DO UPDATE SET
 	base_amount_currency = EXCLUDED.base_amount_currency,
 	exchange_rate = EXCLUDED.exchange_rate,
 	updated_at = EXCLUDED.updated_at`
+
+	deleteTransactionQuery = `
+DELETE FROM transactions
+ WHERE id = :id`
 )
 
 type TransactionQueries struct {
 	getStmt    *sqlx.NamedStmt
 	listStmt   *sqlx.Stmt
 	upsertStmt *sqlx.NamedStmt
+	deleteStmt *sqlx.NamedStmt
 }
 
 func NewTransactionQueries(db *sqlx.DB) (*TransactionQueries, error) {
@@ -166,7 +189,7 @@ func NewTransactionQueries(db *sqlx.DB) (*TransactionQueries, error) {
 		return nil, fmt.Errorf("cannot prepare get transaction query: %w", err)
 	}
 
-	listStmt, err := db.PrepareNamed(listTransactionsQuery)
+	listStmt, err := db.Preparex(listTransactionsQuery)
 	if err != nil {
 		return nil, fmt.Errorf("cannot prepare get transaction query: %w", err)
 	}
@@ -176,15 +199,21 @@ func NewTransactionQueries(db *sqlx.DB) (*TransactionQueries, error) {
 		return nil, fmt.Errorf("cannot prepare upsert transaction query: %w", err)
 	}
 
+	deleteStmt, err := db.PrepareNamed(deleteTransactionQuery)
+	if err != nil {
+		return nil, fmt.Errorf("cannot prepare upsert transaction query: %w", err)
+	}
+
 	return &TransactionQueries{
 		getStmt:    getStmt,
 		upsertStmt: upsertStmt,
-		listStmt:   listStmt.Stmt,
+		listStmt:   listStmt,
+		deleteStmt: deleteStmt,
 	}, nil
 }
 
-func (q *TransactionQueries) Get(ctx context.Context, id finance.TransactionID) *sqlx.Row {
-	return q.getStmt.QueryRowxContext(ctx, map[string]any{"id": id})
+func (q *TransactionQueries) Get(ctx context.Context, tid finance.TransactionID) *sqlx.Row {
+	return q.getStmt.QueryRowxContext(ctx, map[string]any{"id": tid})
 }
 
 func (q *TransactionQueries) List(ctx context.Context) (*sqlx.Rows, error) {
@@ -193,6 +222,10 @@ func (q *TransactionQueries) List(ctx context.Context) (*sqlx.Rows, error) {
 
 func (q *TransactionQueries) Store(ctx context.Context, e *TransactionEntity) (sql.Result, error) {
 	return q.upsertStmt.ExecContext(ctx, e)
+}
+
+func (q *TransactionQueries) Delete(ctx context.Context, tid finance.TransactionID) (sql.Result, error) {
+	return q.deleteStmt.ExecContext(ctx, map[string]any{"id": tid})
 }
 
 type TransactionEntity struct {

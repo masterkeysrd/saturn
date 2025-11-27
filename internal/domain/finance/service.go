@@ -130,6 +130,19 @@ func (s *Service) ListTransactions(ctx context.Context) ([]*Transaction, error) 
 	return transactions, nil
 }
 
+func (s *Service) DeleteTransaction(ctx context.Context, tid TransactionID) error {
+	if err := id.Validate(tid); err != nil {
+		return fmt.Errorf("invalid transaction id: %s", err)
+	}
+	if _, err := s.transactionStore.Get(ctx, tid); err != nil {
+		return fmt.Errorf("cannot get transaction: %w", err)
+	}
+	if err := s.transactionStore.Delete(ctx, tid); err != nil {
+		return fmt.Errorf("cannot delete transaction: %s", err)
+	}
+	return nil
+}
+
 func (s *Service) GetTransaction(ctx context.Context, tid TransactionID) (*Transaction, error) {
 	if err := id.Validate(tid); err != nil {
 		return nil, fmt.Errorf("invalid id: %w", err)
