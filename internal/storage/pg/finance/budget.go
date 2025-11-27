@@ -1,4 +1,4 @@
-package pgrepositories
+package financepg
 
 import (
 	"context"
@@ -11,20 +11,20 @@ import (
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 )
 
-var _ finance.BudgetStore = (*Budget)(nil)
+var _ finance.BudgetStore = (*BudgetStore)(nil)
 
-type Budget struct {
+type BudgetStore struct {
 	db      *sqlx.DB
 	queries BudgetQueries
 }
 
-func NewBudget(db *sqlx.DB) *Budget {
-	return &Budget{
+func NewBudgetStore(db *sqlx.DB) *BudgetStore {
+	return &BudgetStore{
 		db: db,
 	}
 }
 
-func (b *Budget) Get(ctx context.Context, id finance.BudgetID) (*finance.Budget, error) {
+func (b *BudgetStore) Get(ctx context.Context, id finance.BudgetID) (*finance.Budget, error) {
 	var entity BudgetEntity
 	query := b.queries.Get()
 	if err := b.db.GetContext(ctx, &entity, query, id); err != nil {
@@ -34,7 +34,7 @@ func (b *Budget) Get(ctx context.Context, id finance.BudgetID) (*finance.Budget,
 	return BudgetEntityToModel(&entity), nil
 }
 
-func (b *Budget) List(ctx context.Context) ([]*finance.Budget, error) {
+func (b *BudgetStore) List(ctx context.Context) ([]*finance.Budget, error) {
 	var entities []*BudgetEntity
 	query := b.queries.List()
 	if err := b.db.SelectContext(ctx, &entities, query); err != nil {
@@ -49,7 +49,7 @@ func (b *Budget) List(ctx context.Context) ([]*finance.Budget, error) {
 	return budgets, nil
 }
 
-func (b *Budget) Store(ctx context.Context, budget *finance.Budget) error {
+func (b *BudgetStore) Store(ctx context.Context, budget *finance.Budget) error {
 	entity := BudgetEntityFromModel(budget)
 	query := b.queries.Upsert()
 
@@ -62,7 +62,7 @@ func (b *Budget) Store(ctx context.Context, budget *finance.Budget) error {
 }
 
 // Delete removes a single Budget record by its ID.
-func (b *Budget) Delete(ctx context.Context, id finance.BudgetID) error {
+func (b *BudgetStore) Delete(ctx context.Context, id finance.BudgetID) error {
 	query := b.queries.Delete()
 
 	result, err := b.db.ExecContext(ctx, query, id)

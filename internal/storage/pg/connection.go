@@ -1,4 +1,6 @@
-package postgres
+// Package pg provides functionality to connect and interact with
+// Postgresql databases.
+package pg
 
 import (
 	"errors"

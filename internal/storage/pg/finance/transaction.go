@@ -1,4 +1,4 @@
-package pgrepositories
+package financepg
 
 import (
 	"context"
@@ -19,7 +19,7 @@ type Transactions struct {
 	queries *TransactionQueries
 }
 
-func NewTransactions(db *sqlx.DB) (*Transactions, error) {
+func NewTransactionsStore(db *sqlx.DB) (*Transactions, error) {
 	queries, err := NewTransactionQueries(db)
 	if err != nil {
 		return nil, fmt.Errorf("cannot initialize transaction queries: %w", err)

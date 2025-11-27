@@ -1,4 +1,4 @@
-package pgrepositories
+package financepg
 
 import (
 	"context"
@@ -11,22 +11,22 @@ import (
 	// "github.com/masterkeysrd/saturn/internal/pkg/str"
 )
 
-var _ finance.InsightsStore = (*Insights)(nil)
+var _ finance.InsightsStore = (*InsightsStore)(nil)
 
-// Insights provides methods to query spending insights data.
-type Insights struct {
+// InsightsStore provides methods to query spending insights data.
+type InsightsStore struct {
 	db      *sqlx.DB
 	queries *InsightsQueries
 }
 
-// NewInsights creates a new insights repository.
-func NewInsights(db *sqlx.DB) (*Insights, error) {
+// NewInsightsStore creates a new insights repository.
+func NewInsightsStore(db *sqlx.DB) (*InsightsStore, error) {
 	queries, err := NewInsightsQueries(db)
 	if err != nil {
 		return nil, fmt.Errorf("cannot initialize insights queries: %w", err)
 	}
 
-	return &Insights{
+	return &InsightsStore{
 		db:      db,
 		queries: queries,
 	}, nil
@@ -34,7 +34,7 @@ func NewInsights(db *sqlx.DB) (*Insights, error) {
 
 // GetSpendingSeries retrieves spending data aggregated by budget and period.
 // Returns flattened rows that can be grouped in memory using finance.SpendingInsights.
-func (i *Insights) GetSpendingSeries(ctx context.Context, filter finance.SpendingSeriesFilter) ([]*finance.SpendingSeries, error) {
+func (i *InsightsStore) GetSpendingSeries(ctx context.Context, filter finance.SpendingSeriesFilter) ([]*finance.SpendingSeries, error) {
 	rows, err := i.queries.GetSpendingSeries(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("cannot execute get spending series query: %w", err)

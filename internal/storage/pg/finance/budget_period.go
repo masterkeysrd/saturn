@@ -1,4 +1,4 @@
-package pgrepositories
+package financepg
 
 import (
 	"context"
@@ -11,26 +11,26 @@ import (
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 )
 
-var _ finance.BudgetPeriodStore = (*BudgetPeriod)(nil)
+var _ finance.BudgetPeriodStore = (*BudgetPeriodStore)(nil)
 
-type BudgetPeriod struct {
+type BudgetPeriodStore struct {
 	db      *sqlx.DB
 	queries *BudgetPeriodQueries
 }
 
-func NewBudgetPeriod(db *sqlx.DB) (*BudgetPeriod, error) {
+func NewBudgetPeriodStore(db *sqlx.DB) (*BudgetPeriodStore, error) {
 	queries, err := NewBudgetPeriodQueries(db)
 	if err != nil {
 		return nil, fmt.Errorf("cannot initialize budget period queries: %w", err)
 	}
 
-	return &BudgetPeriod{
+	return &BudgetPeriodStore{
 		db:      db,
 		queries: queries,
 	}, nil
 }
 
-func (b *BudgetPeriod) GetByDate(ctx context.Context, budgetID finance.BudgetID, date time.Time) (*finance.BudgetPeriod, error) {
+func (b *BudgetPeriodStore) GetByDate(ctx context.Context, budgetID finance.BudgetID, date time.Time) (*finance.BudgetPeriod, error) {
 	row := b.queries.GetByDate(ctx, budgetID, date)
 	if err := row.Err(); err != nil {
 		return nil, fmt.Errorf("cannot get budget period: %w", err)
@@ -44,7 +44,7 @@ func (b *BudgetPeriod) GetByDate(ctx context.Context, budgetID finance.BudgetID,
 	return BudgetPeriodEntityToModel(&entity), nil
 }
 
-func (b *BudgetPeriod) List(ctx context.Context) ([]*finance.BudgetPeriod, error) {
+func (b *BudgetPeriodStore) List(ctx context.Context) ([]*finance.BudgetPeriod, error) {
 	rows, err := b.queries.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("cannot execute list budget periods query: %w", err)
@@ -63,7 +63,7 @@ func (b *BudgetPeriod) List(ctx context.Context) ([]*finance.BudgetPeriod, error
 	return entities, nil
 }
 
-func (b *BudgetPeriod) Store(ctx context.Context, period *finance.BudgetPeriod) error {
+func (b *BudgetPeriodStore) Store(ctx context.Context, period *finance.BudgetPeriod) error {
 	_, err := b.queries.Upsert(ctx, BudgetPeriodEntityFromModel(period))
 	if err != nil {
 		return fmt.Errorf("cannot store currency: %w", err)
@@ -74,7 +74,7 @@ func (b *BudgetPeriod) Store(ctx context.Context, period *finance.BudgetPeriod) 
 
 // DeleteBy handles the bulk deletion of BudgetPeriods based on specific criteria.
 // It returns the number of rows deleted (int).
-func (b *BudgetPeriod) DeleteBy(ctx context.Context, criteria finance.BudgetPeriodCriteria) (int, error) {
+func (b *BudgetPeriodStore) DeleteBy(ctx context.Context, criteria finance.BudgetPeriodCriteria) (int, error) {
 	var result sql.Result
 	var err error
 

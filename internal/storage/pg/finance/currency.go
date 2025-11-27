@@ -1,4 +1,4 @@
-package pgrepositories
+package financepg
 
 import (
 	"context"
@@ -10,24 +10,24 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 )
 
-type Currency struct {
+type CurrencyStore struct {
 	db      *sqlx.DB
 	queries *CurrencyQueries
 }
 
-func NewCurrency(db *sqlx.DB) (*Currency, error) {
+func NewCurrencyStore(db *sqlx.DB) (*CurrencyStore, error) {
 	queries, err := NewCurrencyQueries(db)
 	if err != nil {
 		return nil, fmt.Errorf("cannot initialize currency queries: %w", err)
 	}
 
-	return &Currency{
+	return &CurrencyStore{
 		db:      db,
 		queries: queries,
 	}, nil
 }
 
-func (c *Currency) Get(ctx context.Context, code finance.CurrencyCode) (*finance.Currency, error) {
+func (c *CurrencyStore) Get(ctx context.Context, code finance.CurrencyCode) (*finance.Currency, error) {
 	row := c.queries.Get(ctx, code)
 	if err := row.Err(); err != nil {
 		return nil, fmt.Errorf("cannot execute Get currency query: %w", err)
@@ -42,7 +42,7 @@ func (c *Currency) Get(ctx context.Context, code finance.CurrencyCode) (*finance
 }
 
 // List retrieves all currencies from the database.
-func (c *Currency) List(ctx context.Context) ([]*finance.Currency, error) {
+func (c *CurrencyStore) List(ctx context.Context) ([]*finance.Currency, error) {
 	rows, err := c.queries.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("cannot execute list currencies query: %w", err)
@@ -62,7 +62,7 @@ func (c *Currency) List(ctx context.Context) ([]*finance.Currency, error) {
 }
 
 // Store inserts or updates a currency in the database.
-func (c *Currency) Store(ctx context.Context, currency *finance.Currency) error {
+func (c *CurrencyStore) Store(ctx context.Context, currency *finance.Currency) error {
 	_, err := c.queries.Store(ctx, CurrencyEntityFromModel(currency))
 	if err != nil {
 		return fmt.Errorf("cannot store currency: %w", err)
