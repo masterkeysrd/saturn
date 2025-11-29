@@ -11,25 +11,29 @@ import (
 	"github.com/masterkeysrd/saturn/internal/foundation/fieldmask"
 	"github.com/masterkeysrd/saturn/internal/pkg/httphandler"
 	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
+	"github.com/masterkeysrd/saturn/internal/transport/http/encoding"
+	"github.com/masterkeysrd/saturn/internal/transport/http/response"
 )
 
 type BudgetController struct {
-	app FinanceService
+	service       FinanceService
+	searchService FinanceSearchService
 }
 
-func NewBudgetController(app FinanceService) *BudgetController {
+func NewBudgetController(app FinanceService, search FinanceSearchService) *BudgetController {
 	return &BudgetController{
-		app: app,
+		service:       app,
+		searchService: search,
 	}
 }
 
 func (c *BudgetController) RegisterRoutes(mux *http.ServeMux) {
+	mux.Handle("GET /budgets", httphandler.Handle(c.ListBudgets,
+		httphandler.WithInputTransformer[*api.ListBudgetsRequest, *api.ListBudgetsResponse](transformListBudgetsInput),
+	))
 	mux.Handle("POST /budgets", httphandler.Handle(c.CreateBudget,
 		httphandler.WithCreated[*api.CreateBudgetRequest, *api.Budget](),
 		httphandler.WithInputTransformer[*api.CreateBudgetRequest, *api.Budget](transformCreateBudgetInput),
-	))
-	mux.Handle("GET /budgets", httphandler.Handle(c.ListBudgets,
-		httphandler.WithInputTransformer[*api.ListBudgetsRequest, *api.ListBudgetsResponse](transformListBudgetsInput),
 	))
 	mux.Handle("GET /budgets/{id}", httphandler.Handle(c.GetBudget,
 		httphandler.WithInputTransformer[*api.GetBudgetRequest, *api.Budget](transformGetBudgetInput),
@@ -45,7 +49,7 @@ func (c *BudgetController) RegisterRoutes(mux *http.ServeMux) {
 func (c *BudgetController) CreateBudget(ctx context.Context, req *api.CreateBudgetRequest) (*api.Budget, error) {
 	budget := BudgetFromAPI(req.Budget)
 
-	if err := c.app.CreateBudget(ctx, budget); err != nil {
+	if err := c.service.CreateBudget(ctx, budget); err != nil {
 		return nil, fmt.Errorf("cannot create budget: %w", err)
 	}
 
@@ -53,20 +57,24 @@ func (c *BudgetController) CreateBudget(ctx context.Context, req *api.CreateBudg
 	return resp, nil
 }
 
-func (c *BudgetController) ListBudgets(ctx context.Context, _ *api.ListBudgetsRequest) (*api.ListBudgetsResponse, error) {
-	budgets, err := c.app.ListBudgets(ctx)
+func (c *BudgetController) ListBudgets(ctx context.Context, req *api.ListBudgetsRequest) (*api.ListBudgetsResponse, error) {
+	page, err := c.searchService.SearchBudgets(ctx, &finance.BudgetSearchInput{
+		Term:       req.Search,
+		Pagination: req.Paginate.ToPagination(),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("cannot list budgets: %w", err)
 	}
 
-	resp := BudgetsToAPI(budgets)
+	resp := BudgetsItemsToAPI(page.Items())
 	return &api.ListBudgetsResponse{
 		Budgets: &resp,
+		Meta:    response.NewMeta(page),
 	}, nil
 }
 
 func (c *BudgetController) GetBudget(ctx context.Context, req *api.GetBudgetRequest) (*api.Budget, error) {
-	budget, err := c.app.GetBudget(ctx, finance.BudgetID(req.ID))
+	budget, err := c.service.GetBudget(ctx, finance.BudgetID(req.ID))
 	if err != nil {
 		return nil, fmt.Errorf("cannot get budget: %w", err)
 	}
@@ -84,7 +92,7 @@ func (c *BudgetController) UpdateBudget(ctx context.Context, req *api.UpdateBudg
 		input.UpdateMask = fieldmask.FromString(string(*req.UpdateMask), ",")
 	}
 
-	budget, err := c.app.UpdateBudget(ctx, input)
+	budget, err := c.service.UpdateBudget(ctx, input)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update budget %s: %w", req.ID, err)
 	}
@@ -93,7 +101,7 @@ func (c *BudgetController) UpdateBudget(ctx context.Context, req *api.UpdateBudg
 }
 
 func (c *BudgetController) DeleteBudget(ctx context.Context, req *api.DeleteBudgetRequest) (*httphandler.Empty, error) {
-	if err := c.app.DeleteBudget(ctx, finance.BudgetID(req.ID)); err != nil {
+	if err := c.service.DeleteBudget(ctx, finance.BudgetID(req.ID)); err != nil {
 		return nil, fmt.Errorf("failed to delete budget %s: %w", req.ID, err)
 	}
 
@@ -101,7 +109,15 @@ func (c *BudgetController) DeleteBudget(ctx context.Context, req *api.DeleteBudg
 }
 
 func transformListBudgetsInput(ctx context.Context, req *http.Request) (*api.ListBudgetsRequest, error) {
-	return &api.ListBudgetsRequest{}, nil
+	var p api.PaginationRequest
+	if err := encoding.DecodePagination(req, &p); err != nil {
+		return nil, fmt.Errorf("invalid pagination params: %w", err)
+	}
+
+	return &api.ListBudgetsRequest{
+		Search:   encoding.GetStringQuery(req, "search", ""),
+		Paginate: p,
+	}, nil
 }
 
 func transformGetBudgetInput(ctx context.Context, req *http.Request) (*api.GetBudgetRequest, error) {

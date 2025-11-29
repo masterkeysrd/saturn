@@ -14,6 +14,12 @@ func RegisterProviders(inj deps.Injector) error {
 		return fmt.Errorf("cannot inject finance.Application dep")
 	}
 
+	if err := inj.Provide(func(app *finance.SearchService) FinanceSearchService {
+		return app
+	}); err != nil {
+		return fmt.Errorf("cannot inject finance.SearchService dep")
+	}
+
 	if err := inj.Provide(NewBudgetController); err != nil {
 		return fmt.Errorf("cannot provide budget controller: %w", err)
 	}

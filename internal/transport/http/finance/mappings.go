@@ -32,6 +32,37 @@ func BudgetsToAPI(budgets []*finance.Budget) []api.Budget {
 	return resp
 }
 
+func BudgetsItemsToAPI(budgets []*finance.BudgetItem) []api.BudgetItem {
+	resp := make([]api.BudgetItem, 0, len(budgets))
+	for _, budget := range budgets {
+		if budget == nil {
+			continue
+		}
+
+		resp = append(resp, *BudgetItemToAPI(budget))
+	}
+
+	return resp
+}
+
+func BudgetItemToAPI(b *finance.BudgetItem) *api.BudgetItem {
+	if b == nil {
+		return nil
+	}
+	return &api.BudgetItem{
+		Id:               b.ID.String(),
+		Name:             b.Name,
+		Amount:           api.APIMoney(b.Amount),
+		BaseAmount:       ptr.Of(api.APIMoney(b.BaseAmount)),
+		Spent:            api.APIMoney(b.Spent),
+		BaseSpent:        ptr.Of(api.APIMoney(b.BaseSpent)),
+		Percentage:       ptr.Of(b.Usage()),
+		PeriodStartDate:  &types.Date{Time: b.PeriodStartDate},
+		PeriodEndDate:    &types.Date{Time: b.PeriodEndDate},
+		TransactionCount: ptr.Of(b.TransactionCount),
+	}
+}
+
 func BudgetToAPI(b *finance.Budget) *api.Budget {
 	if b == nil {
 		return nil

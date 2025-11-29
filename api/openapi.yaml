@@ -298,12 +298,56 @@ components:
       description: Response of list of budgets.
       required:
         - budgets
+        - meta
       properties:
         budgets:
           type: array
           readOnly: true
           items:
-            $ref: '#/components/schemas/Budget'
+            $ref: '#/components/schemas/BudgetItem'
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    BudgetItem:
+      type: object
+      required:
+        - id
+        - name
+        - amount
+        - spent
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          example: "Groceries"
+        amount:
+          $ref: '#/components/schemas/Money'
+        base_amount:
+          $ref: '#/components/schemas/Money'
+        spent:
+          $ref: '#/components/schemas/Money'
+          description: "Amount spent in budget currency"
+        base_spent:
+          $ref: '#/components/schemas/Money'
+          description: "Amount spent in base currency"
+        percentage:
+          type: number
+          format: double
+          minimum: 0
+          example: 65.5
+          description: "Percentage of budget spent"
+        transaction_count:
+          type: integer
+          minimum: 0
+          example: 2
+          description: "Number of transactions of the current period"
+        period_start_date:
+          type: string
+          format: date
+        period_end_date:
+          type: string
+          format: date
 
     Budget:
       type: object
@@ -658,6 +702,42 @@ components:
       required:
         - cents
         - currency
+    
+    Meta:
+      type: object
+      description: Metadata regarding the pagination state of the response.
+      required:
+        - page
+        - size
+        - total_items
+        - total_pages
+        - has_next
+        - has_previous
+      properties:
+        page:
+          type: integer
+          description: The current page number (1-based).
+          example: 1
+        size:
+          type: integer
+          description: The number of items per page.
+          example: 20
+        total_items:
+          type: integer
+          description: The total count of items matching the criteria across all pages.
+          example: 45
+        total_pages:
+          type: integer
+          description: The total number of pages available.
+          example: 3
+        has_next:
+          type: boolean
+          description: Indicates if there is a subsequent page of data.
+          example: true
+        has_previous:
+          type: boolean
+          description: Indicates if there is a preceding page of data.
+          example: false
 
   parameters:
     UpdateMaskParam:

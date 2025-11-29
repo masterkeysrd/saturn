@@ -36,6 +36,31 @@ type Budget struct {
 	Name   string  `json:"name"`
 }
 
+// BudgetItem defines model for BudgetItem.
+type BudgetItem struct {
+	// Amount Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
+	Amount Money `json:"amount"`
+
+	// BaseAmount Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
+	BaseAmount *Money `json:"base_amount,omitempty"`
+
+	// BaseSpent Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
+	BaseSpent *Money `json:"base_spent,omitempty"`
+	Id        string `json:"id"`
+	Name      string `json:"name"`
+
+	// Percentage Percentage of budget spent
+	Percentage      *float64            `json:"percentage,omitempty"`
+	PeriodEndDate   *openapi_types.Date `json:"period_end_date,omitempty"`
+	PeriodStartDate *openapi_types.Date `json:"period_start_date,omitempty"`
+
+	// Spent Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
+	Spent Money `json:"spent"`
+
+	// TransactionCount Number of transactions of the current period
+	TransactionCount *int `json:"transaction_count,omitempty"`
+}
+
 // Currency A currency to handle exchange reates in budgets, transactions, etc.
 type Currency struct {
 	// Code ISO 4217 currency code (e.g., "USD", "DOP").
@@ -82,7 +107,10 @@ type FinanceInsights struct {
 
 // ListBudgetsResponse Response of list of budgets.
 type ListBudgetsResponse struct {
-	Budgets *[]Budget `json:"budgets,omitempty"`
+	Budgets *[]BudgetItem `json:"budgets,omitempty"`
+
+	// Meta Metadata regarding the pagination state of the response.
+	Meta Meta `json:"meta"`
 }
 
 // ListCurrenciesResponse Response of list of currencies.
@@ -93,6 +121,27 @@ type ListCurrenciesResponse struct {
 // ListTransactionsResponse Response containing a list of transactions.
 type ListTransactionsResponse struct {
 	Transactions []Transaction `json:"transactions"`
+}
+
+// Meta Metadata regarding the pagination state of the response.
+type Meta struct {
+	// HasNext Indicates if there is a subsequent page of data.
+	HasNext bool `json:"has_next"`
+
+	// HasPrevious Indicates if there is a preceding page of data.
+	HasPrevious bool `json:"has_previous"`
+
+	// Page The current page number (1-based).
+	Page int `json:"page"`
+
+	// Size The number of items per page.
+	Size int `json:"size"`
+
+	// TotalItems The total count of items matching the criteria across all pages.
+	TotalItems int `json:"total_items"`
+
+	// TotalPages The total number of pages available.
+	TotalPages int `json:"total_pages"`
 }
 
 // Money Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.

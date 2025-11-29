@@ -25,3 +25,7 @@ type FinanceService interface {
 
 	GetInsights(context.Context, *finance.GetInsightsInput) (*finance.Insights, error)
 }
+
+type FinanceSearchService interface {
+	SearchBudgets(context.Context, *finance.BudgetSearchInput) (finance.BudgetPage, error)
+}

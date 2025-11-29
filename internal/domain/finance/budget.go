@@ -9,7 +9,9 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/foundation/fieldmask"
 	"github.com/masterkeysrd/saturn/internal/foundation/id"
+	"github.com/masterkeysrd/saturn/internal/foundation/pagination"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
+	"github.com/masterkeysrd/saturn/internal/pkg/round"
 	"github.com/masterkeysrd/saturn/internal/pkg/timeutils"
 )
 
@@ -37,6 +39,13 @@ type BudgetStore interface {
 	Store(context.Context, *Budget) error
 	Delete(context.Context, BudgetID) error
 }
+
+type BudgetSearcher interface {
+	Search(context.Context, *BudgetSearchCriteria) (BudgetPage, error)
+}
+
+// BudgetPage represet a page of Budget Items.
+type BudgetPage = pagination.Page[*BudgetItem]
 
 // BudgetPeriodStore defines the contract for managing BudgetPeriod entities.
 type BudgetPeriodStore interface {
@@ -276,9 +285,75 @@ func (bp *BudgetPeriod) Validate() error {
 	return nil
 }
 
+type BudgetItem struct {
+	ID               BudgetID
+	Name             string
+	Amount           money.Money
+	BaseAmount       money.Money
+	Spent            money.Money
+	BaseSpent        money.Money
+	PeriodStartDate  time.Time
+	PeriodEndDate    time.Time
+	TransactionCount int
+}
+
+func (b *BudgetItem) Usage() float64 {
+	if b.Amount.Cents == 0 {
+		return 0
+	}
+	ussage := (float64(b.Spent.Cents) / float64(b.Amount.Cents)) * 100
+	return round.Round(ussage, 2)
+}
+
 // UpdateBudgetInput encapsulates the data and metadata required to update a Budget.
 type UpdateBudgetInput struct {
 	ID         BudgetID
 	Budget     *Budget
 	UpdateMask *fieldmask.FieldMask
+}
+
+type BudgetSearchInput struct {
+	pagination.Pagination
+	Term string
+}
+
+func (bsi *BudgetSearchInput) toCriteria() BudgetSearchCriteria {
+	if bsi == nil {
+		return BudgetSearchCriteria{}
+	}
+
+	return BudgetSearchCriteria{
+		Term:       bsi.Term,
+		Pagination: bsi.Pagination,
+	}
+}
+
+type BudgetSearchCriteria struct {
+	pagination.Pagination
+	Term string
+	Date time.Time
+}
+
+func (bsc *BudgetSearchCriteria) sanitize() {
+	if bsc == nil {
+		return
+	}
+
+	bsc.Term = strings.TrimSpace(bsc.Term)
+}
+
+func (bsc *BudgetSearchCriteria) Validate() error {
+	if bsc == nil {
+		return errors.New("budget search criteria is nil")
+	}
+
+	if len(bsc.Term) > 1 && len(bsc.Term) < 3 {
+		return errors.New("term to search cannot be less than 3 characters")
+	}
+
+	if len(bsc.Term) > 20 {
+		return errors.New("term to search cannot exceeds 20 characters")
+	}
+
+	return nil
 }

@@ -6,7 +6,10 @@
 // generate the client code, types and interfaces.
 package api
 
-import "github.com/masterkeysrd/saturn/internal/pkg/money"
+import (
+	"github.com/masterkeysrd/saturn/internal/foundation/pagination"
+	"github.com/masterkeysrd/saturn/internal/pkg/money"
+)
 
 // To generate the models of the payload run:
 // go generate ./...
@@ -39,11 +42,23 @@ func (m Money) IsZero() bool {
 	return m == Money{}
 }
 
-type CreateBudgetRequest struct {
-	Budget *Budget
+type PaginationRequest struct {
+	Page int `json:"page"`
+	Size int `json:"size"`
 }
 
-type ListBudgetsRequest struct{}
+func (p PaginationRequest) ToPagination() pagination.Pagination {
+	return pagination.New(p.Page, p.Size)
+}
+
+type CreateBudgetRequest struct {
+	Budget *Budget `json:"budgets"`
+}
+
+type ListBudgetsRequest struct {
+	Search   string `json:"search"`
+	Paginate PaginationRequest
+}
 
 type GetBudgetRequest struct {
 	ID string
