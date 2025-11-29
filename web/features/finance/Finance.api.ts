@@ -51,6 +51,12 @@ export async function updateBudget(
     .then((resp) => resp.data);
 }
 
+export async function deleteBudget(id: string): Promise<void> {
+  await axios
+    .delete<Budget>(`${baseUrl}/budgets/${id}`)
+    .then((resp) => resp.data);
+}
+
 export async function getCurrency(currencyCode: string) {
   return axios
     .get<Currency>(`${baseUrl}/currencies/${currencyCode}`)

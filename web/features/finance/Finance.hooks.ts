@@ -7,6 +7,7 @@ import {
 import {
   createBudget,
   createExpense,
+  deleteBudget,
   deleteTransaction,
   getBudget,
   getCurrencies,
@@ -111,6 +112,35 @@ export function useBudget(id?: string) {
     queryKey: queryKeys.getBudget(id!),
     queryFn: () => getBudget(id!),
     enabled: !!id,
+  });
+}
+
+export function useDeleteBudget({
+  onSuccess,
+  ...rest
+}: MutationOptions<void, string, string> = {}) {
+  return useMutation<void, string, string>({
+    mutationFn: (id) => deleteBudget(id),
+    onSuccess: async (data, variables, result, context) => {
+      const budgetKey = queryKeys.getBudget(variables);
+      await context.client.cancelQueries({ queryKey: budgetKey });
+      context.client.removeQueries({ queryKey: budgetKey });
+
+      await Promise.all([
+        context.client.invalidateQueries({
+          queryKey: ["budgets"],
+          predicate: (query) => {
+            const isCurrentTransaction =
+              JSON.stringify(query.queryKey) === JSON.stringify(budgetKey);
+            return !isCurrentTransaction;
+          },
+        }),
+        context.client.invalidateQueries({ queryKey: ["insights"] }),
+      ]);
+
+      onSuccess?.(data, variables, result, context);
+    },
+    ...rest,
   });
 }
 

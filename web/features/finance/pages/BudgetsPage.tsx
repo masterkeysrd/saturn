@@ -1,10 +1,11 @@
 import { useCallback, useMemo } from "react";
-import { Outlet, useNavigate } from "react-router";
+import { Outlet, useLocation, useNavigate } from "react-router";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import AddIcon from "@mui/icons-material/Add";
+import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import SearchIcon from "@mui/icons-material/Search";
 import Page from "@/components/Page";
@@ -76,6 +77,8 @@ function CustomToolbar({ searchProps }: CustomToolbarProps) {
 
 export default function BudgetsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+
   const [params, setParams] = useSearchParams<ListBudgetParams>({
     page: 1,
     size: 10,
@@ -93,6 +96,13 @@ export default function BudgetsPage() {
     [navigate],
   );
 
+  const handleRowDelete = useCallback(
+    (budget: Budget) => () => {
+      navigate(`${budget.id}/delete${location.search}`);
+    },
+    [navigate, location],
+  );
+
   const budgetColumns: GridColDef<Budget>[] = useMemo(
     () => [
       {
@@ -101,7 +111,7 @@ export default function BudgetsPage() {
         flex: 1,
         renderCell: ({ row }) => (
           <Stack>
-            <Typography variant="body2">{row.name}</Typography>
+            <Typography variant="subtitle2">{row.name}</Typography>
           </Stack>
         ),
       },
@@ -145,10 +155,17 @@ export default function BudgetsPage() {
             onClick={handleRowEdit(row)}
             showInMenu={false}
           />,
+          <GridActionsCellItem
+            key="edit-transaction"
+            label="Edit"
+            icon={<DeleteIcon />}
+            onClick={handleRowDelete(row)}
+            showInMenu={false}
+          />,
         ],
       },
     ],
-    [handleRowEdit],
+    [handleRowEdit, handleRowDelete],
   );
 
   return (
