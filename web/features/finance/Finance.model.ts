@@ -1,7 +1,14 @@
 import type { CurrencyCode, Money } from "@/lib/money";
+import type { Pagination, Meta } from "@/lib/pagination";
 
 export interface ListBudgetsResponse {
   budgets?: Budget[];
+  meta?: Meta;
+}
+
+export interface ListBudgetParams extends Pagination {
+  search?: string;
+  page?: number;
 }
 
 export interface Budget {
@@ -9,6 +16,8 @@ export interface Budget {
   name?: string;
   amount?: Money;
   base_amount?: Money;
+  spent?: Money;
+  base_spent?: Money;
 }
 
 export interface UpdateBudgetParams {

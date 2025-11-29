@@ -41,7 +41,16 @@ export class URLQuery {
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static build<T extends Record<string, any>>(params: T): URLQuery {
-    return new URLQuery(params);
+    const clean: Record<string, unknown> = {};
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v) {
+          clean[k] = v;
+        }
+      });
+    }
+
+    return new URLQuery(clean);
   }
 
   /**

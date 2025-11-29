@@ -10,6 +10,7 @@ import {
   type ListCurrenciesResponse,
   type UpdateBudgetParams,
   type UpdateExpenseParams,
+  type ListBudgetParams,
 } from "./Finance.model";
 import { URLQuery } from "@/lib/query";
 
@@ -20,10 +21,11 @@ export interface GetInsightsRequest {
 
 const baseUrl = "http://localhost:3000/api/v1/finance";
 
-export async function listBudgets() {
+export async function listBudgets(params: ListBudgetParams) {
+  const query = URLQuery.build(params);
   return axios
-    .get<ListBudgetsResponse>(`${baseUrl}/budgets`)
-    .then((resp) => resp.data.budgets);
+    .get<ListBudgetsResponse>(`${baseUrl}/budgets${query.toQuery()}`)
+    .then((resp) => resp.data);
 }
 
 export async function getBudget(id: string) {

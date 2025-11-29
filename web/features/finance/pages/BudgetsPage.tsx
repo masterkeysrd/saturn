@@ -6,6 +6,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
+import SearchIcon from "@mui/icons-material/Search";
 import Page from "@/components/Page";
 import PageContent from "@/components/PageContent";
 import PageHeader from "@/components/PageHeader";
@@ -13,14 +14,77 @@ import { useBudgets } from "../Finance.hooks";
 import DataGrid, {
   GridActionsCellItem,
   type GridColDef,
+  Toolbar,
+  type GridToolbarProps,
 } from "@/components/DataGrid";
-import type { Budget } from "../Finance.model";
+import { type ListBudgetParams, type Budget } from "../Finance.model";
 import AmountCell from "../components/AmountCell";
 import { money } from "@/lib/money";
+import { useSearchParams } from "@/lib/search-params";
+import { PAGE_SIZE_OPTS, usePagination } from "@/lib/pagination";
+import { useSearchFilter, type SearchFilterAPI } from "@/lib/search";
+import { InputAdornment, TextField } from "@mui/material";
+
+type SearchPropsType = ReturnType<typeof useSearchFilter>;
+
+declare module "@mui/x-data-grid" {
+  interface ToolbarPropsOverrides {
+    searchProps?: SearchPropsType;
+  }
+}
+
+interface CustomToolbarProps extends GridToolbarProps {
+  searchProps?: SearchFilterAPI;
+}
+
+function CustomToolbar({ searchProps }: CustomToolbarProps) {
+  if (!searchProps) return null;
+
+  return (
+    <Toolbar>
+      <Box
+        sx={{
+          flexGrow: 1,
+          display: "flex",
+          alignItems: "center",
+          gap: 2,
+          px: 1,
+          py: 4,
+        }}
+      >
+        <TextField
+          placeholder="Search Budgets"
+          variant="outlined"
+          size="small"
+          sx={{ width: "300px" }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            },
+          }}
+          // Spread the debounced search control props (value and onChange)
+          {...searchProps}
+        />
+      </Box>
+    </Toolbar>
+  );
+}
 
 export default function BudgetsPage() {
   const navigate = useNavigate();
-  const { data: budgets, isLoading } = useBudgets();
+  const [params, setParams] = useSearchParams<ListBudgetParams>({
+    page: 1,
+    size: 10,
+    search: "",
+  });
+  const searchProps = useSearchFilter(params.search, setParams);
+  const paginationProps = usePagination(params, setParams);
+
+  const { data: page, isLoading } = useBudgets(params);
 
   const handleRowEdit = useCallback(
     (budget: Budget) => () => {
@@ -44,14 +108,30 @@ export default function BudgetsPage() {
       {
         field: "amount_display",
         headerName: "Amount",
-        width: 200,
+        width: 150,
         renderCell: ({ row }) => (
           <AmountCell
             amount={row?.amount ?? money.zero()}
             baseAmount={row?.base_amount ?? money.zero()}
-            exchangeRate={1}
           />
         ),
+      },
+      {
+        field: "spent_display",
+        headerName: "Spent",
+        width: 150,
+        renderCell: ({ row }) => (
+          <AmountCell
+            amount={row?.spent ?? money.zero()}
+            baseAmount={row?.base_spent ?? money.zero()}
+          />
+        ),
+      },
+      {
+        field: "percentage",
+        headerName: "Percentage",
+        width: 90,
+        valueGetter: (value) => `${value}%`,
       },
       {
         field: "actions",
@@ -75,7 +155,7 @@ export default function BudgetsPage() {
     <Page>
       <PageHeader
         title="Budget"
-        subtitle="	Set goals, manage expenses, build stability"
+        subtitle="Set goals, manage expenses, build stability"
       >
         <PageHeader.Actions>
           <Button variant="contained" startIcon={<AddIcon />} href="new">
@@ -87,8 +167,18 @@ export default function BudgetsPage() {
         <Box sx={{ flex: 1, width: "100%" }}>
           <DataGrid
             columns={budgetColumns}
-            rows={budgets}
+            rows={page?.budgets}
             loading={isLoading}
+            rowCount={page?.meta?.total_items}
+            pageSizeOptions={PAGE_SIZE_OPTS}
+            slots={{
+              toolbar: CustomToolbar,
+            }}
+            slotProps={{
+              toolbar: { searchProps },
+            }}
+            showToolbar
+            {...paginationProps}
           />
         </Box>
       </PageContent>

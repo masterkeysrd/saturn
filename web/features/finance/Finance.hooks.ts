@@ -22,6 +22,7 @@ import {
 import type {
   Budget,
   Expense,
+  ListBudgetParams,
   Transaction,
   UpdateBudgetParams,
   UpdateExpenseParams,
@@ -29,7 +30,11 @@ import type {
 import type { MutationOptions } from "@tanstack/react-query";
 
 const queryKeys = {
-  listBudgets: ["budgets", "list"],
+  listBudgets: (params: ListBudgetParams = {}) => [
+    "budgets",
+    "list",
+    { ...params },
+  ],
   getBudget: (id: string) => ["budgets", "detail", id],
   getTransaction: (id: string) => ["transactions", "detail", id],
   listCurrencies: ["currencies", "list"],
@@ -44,10 +49,10 @@ const queryKeys = {
   ],
 } as const;
 
-export function useBudgets() {
+export function useBudgets(params: ListBudgetParams) {
   return useQuery({
-    queryKey: queryKeys.listBudgets,
-    queryFn: listBudgets,
+    queryKey: queryKeys.listBudgets(params),
+    queryFn: () => listBudgets(params),
   });
 }
 
@@ -60,7 +65,7 @@ export function useCreateBudget({
     mutationFn: createBudget,
     onSuccess: async (data, variables, result, context) => {
       await Promise.all([
-        context.client.invalidateQueries({ queryKey: queryKeys.listBudgets }),
+        context.client.invalidateQueries({ queryKey: ["budgets", "list"] }),
         context.client.invalidateQueries({ queryKey: ["insights"] }),
       ]);
       onSuccess?.(data, variables, result, context);
@@ -86,7 +91,7 @@ export function useUpdateBudget({
     }) => updateBudget(id, data, params),
     onSuccess: async (data, variables, result, context) => {
       await Promise.all([
-        context.client.invalidateQueries({ queryKey: queryKeys.listBudgets }),
+        context.client.invalidateQueries({ queryKey: ["budgets", "list"] }),
         context.client.invalidateQueries({
           queryKey: queryKeys.listTransactions,
         }),
@@ -135,7 +140,7 @@ export function useCreateExpense({
     mutationFn: createExpense,
     onSuccess: async (data, variables, result, context) => {
       await Promise.all([
-        context.client.invalidateQueries({ queryKey: queryKeys.listBudgets }),
+        context.client.invalidateQueries({ queryKey: ["budgets", "list"] }),
         context.client.invalidateQueries({
           queryKey: queryKeys.listTransactions,
         }),
@@ -165,7 +170,7 @@ export function useUpdateExpense({
     onSuccess: async (data, variables, result, context) => {
       const client = context.client;
       await Promise.all([
-        client.invalidateQueries({ queryKey: queryKeys.listBudgets }),
+        client.invalidateQueries({ queryKey: ["budgets", "list"] }),
         client.invalidateQueries({
           queryKey: queryKeys.listTransactions,
         }),

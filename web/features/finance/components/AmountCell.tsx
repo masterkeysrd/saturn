@@ -11,7 +11,7 @@ export default function AmountCell({
 }: {
   amount: Money;
   baseAmount: Money;
-  exchangeRate: number;
+  exchangeRate?: number;
 }) {
   const sameCurrency =
     amount?.currency === baseAmount?.currency || exchangeRate === 1;
@@ -23,17 +23,19 @@ export default function AmountCell({
   return (
     <Stack spacing={0.25}>
       <Stack direction="row" spacing={0.5} alignItems="center">
-        <Typography variant="body2" fontWeight="medium" color="error">
+        <Typography variant="body2" fontWeight="medium">
           {money.format(amount)}
         </Typography>
-        <Tooltip
-          title={`Exchange rate: ${exchangeRate?.toFixed(2)}`}
-          placement="top"
-        >
-          <InfoOutlinedIcon
-            sx={{ fontSize: 14, color: "text.secondary", cursor: "help" }}
-          />
-        </Tooltip>
+        {exchangeRate ? (
+          <Tooltip
+            title={`Exchange rate: ${exchangeRate?.toFixed(2)}`}
+            placement="top"
+          >
+            <InfoOutlinedIcon
+              sx={{ fontSize: 14, color: "text.secondary", cursor: "help" }}
+            />
+          </Tooltip>
+        ) : null}
       </Stack>
       <Typography variant="caption" color="text.secondary">
         ≈ {money.format(baseAmount)}
