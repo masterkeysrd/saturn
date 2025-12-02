@@ -59,14 +59,25 @@ export default function SpentSummaryCard({ summary }: SpentSummaryCardProps) {
             <Typography variant="subtitle2" color="text.secondary" gutterBottom>
               Expenses
             </Typography>
-            <AmountText variant="h5">{money.format(spent)}</AmountText>
+            <AmountText variant="h5">
+              {money.format(spent ?? money.zero())}
+            </AmountText>
           </Box>
 
           <Stack spacing={1}>
-            <SummaryRow label="Budgeted" value={money.format(budgeted)} />
-            <SummaryRow label="Remaining" value={money.format(remaining)} />
-            <SummaryRow label="Used" value={`${usage.toFixed(2)}%`} />
-            <SummaryRow label="Transactions" value={count.toLocaleString()} />
+            <SummaryRow
+              label="Budgeted"
+              value={money.format(budgeted ?? money.zero())}
+            />
+            <SummaryRow
+              label="Remaining"
+              value={money.format(remaining ?? money.zero())}
+            />
+            <SummaryRow label="Used" value={`${(usage ?? 0).toFixed(2)}%`} />
+            <SummaryRow
+              label="Transactions"
+              value={(count ?? 0).toLocaleString()}
+            />
           </Stack>
         </Container>
       </CardContent>

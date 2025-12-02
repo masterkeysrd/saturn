@@ -14,6 +14,8 @@ export interface ListBudgetParams extends Pagination {
 export interface Budget {
   id?: string;
   name?: string;
+  color?: string;
+  icon_name?: string;
   amount?: Money;
   base_amount?: Money;
   spent?: Money;
@@ -99,15 +101,15 @@ export interface SpendingInsights {
  */
 export interface SpendingSummary {
   /** Total amount budgeted */
-  budgeted: Money;
+  budgeted?: Money;
   /** Total amount spent */
-  spent: Money;
+  spent?: Money;
   /** Remaining budget (budgeted - spent) */
-  remaining: Money;
+  remaining?: Money;
   /** Percentage of budgeted amount spent (0-100) */
-  usage: number;
+  usage?: number;
   /** Total number of transactions */
-  count: number;
+  count?: number;
 }
 
 /**

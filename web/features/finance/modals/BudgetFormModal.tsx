@@ -19,9 +19,14 @@ import type { Budget } from "../Finance.model";
 import FormAmountField from "../components/FormAmountField";
 import ExchangeRateDisplayCard from "../components/ExchangeRateDisplayCard";
 import { FieldMask } from "@/lib/fieldmask";
+import { Box, Divider, InputAdornment } from "@mui/material";
+import { FormIconPicker } from "@/components/FormIconPicker";
+import { FormColorPicker } from "@/components/FormColorPicker";
 
 interface BudgetForm {
   name?: string;
+  color?: string;
+  icon_name?: string;
   currency?: CurrencyCode;
   amount?: number;
 }
@@ -67,12 +72,16 @@ export default function BudgetFormModal() {
     if (!isNew && budget) {
       return {
         name: budget.name,
+        color: budget?.color,
+        icon_name: budget?.icon_name,
         currency: budget.amount?.currency,
         amount: money.toDecimal(budget?.amount?.cents ?? 0),
       };
     }
 
     return {
+      icon_name: "wallet",
+      color: "#2196f3",
       name: "",
       currency: "" as CurrencyCode,
       amount: 0,
@@ -100,6 +109,8 @@ export default function BudgetFormModal() {
   const handleFormSubmit = async (data: BudgetForm) => {
     const payload: Budget = {
       name: data.name,
+      color: data.color,
+      icon_name: data.icon_name,
       amount: {
         currency: isNew ? data.currency! : (budget?.amount?.currency ?? "USD"),
         cents: money.toCents(data.amount ?? 0),
@@ -138,11 +149,38 @@ export default function BudgetFormModal() {
         {/* Name */}
         <TextFieldElement
           name="name"
-          label="Name"
+          placeholder="Name"
           control={control}
           required
           disabled={isLoading}
           fullWidth
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <FormIconPicker
+                    control={control}
+                    name="icon_name"
+                    size={28} // picker custom prop
+                    rules={{ required: true }}
+                  />
+
+                  <Divider
+                    orientation="vertical"
+                    flexItem
+                    sx={{ ml: 1, mr: 1, height: 28 }}
+                  />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <Box sx={{ display: "flex", height: 24, width: 24 }}>
+                    <FormColorPicker name="color" control={control} />
+                  </Box>
+                </InputAdornment>
+              ),
+            },
+          }}
         />
 
         {/* Currency Selection */}

@@ -31,7 +31,7 @@ export function ExpenseFormModal() {
   const isNew = !id;
 
   const [isEditingExchangeRate, setIsEditingExchangeRate] = useState(false);
-  const { data: budgets, isLoading: isLoadingBudgets } = useBudgets();
+  const { data: budgetsPage, isLoading: isLoadingBudgets } = useBudgets({});
   const { data: transaction, isLoading: isLoadingTransaction } =
     useTransaction(id);
 
@@ -103,8 +103,8 @@ export function ExpenseFormModal() {
   });
 
   const selectedBudget = useMemo(() => {
-    return budgets?.find((b) => b.id === selectedBudgetId);
-  }, [budgets, selectedBudgetId]);
+    return budgetsPage?.budgets?.find((b) => b.id === selectedBudgetId);
+  }, [budgetsPage, selectedBudgetId]);
 
   const {
     data: currencyData,
@@ -189,7 +189,7 @@ export function ExpenseFormModal() {
           required
           disabled={isLoading || !isNew}
           options={
-            budgets?.map((budget) => ({
+            budgetsPage?.budgets?.map((budget) => ({
               id: budget.id,
               label: `${budget.name} (${budget.amount?.currency})`,
             })) ?? []

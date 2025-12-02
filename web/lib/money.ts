@@ -21,6 +21,10 @@ export interface Money {
  * Format a Money value as a locale-aware currency string.
  */
 export function formatMoney(money: Money, locale = "en-US"): string {
+  if (!money.currency) {
+    return `$ ${money.cents.toFixed(2)}`;
+  }
+
   const text = new Intl.NumberFormat(locale, {
     style: "currency",
     currency: money.currency,

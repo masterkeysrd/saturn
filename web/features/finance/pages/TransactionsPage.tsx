@@ -145,11 +145,13 @@ export default function TransactionsPage() {
         headerName: "Name",
         flex: 1,
         renderCell: ({ row }) => (
-          <Stack>
-            <Typography variant="body2">{row.name}</Typography>
-            <Typography variant="caption" color="textSecondary">
-              {row.description}
-            </Typography>
+          <Stack direction="column">
+            <Stack>
+              <Typography variant="body2">{row.name}</Typography>
+              <Typography variant="caption" color="textSecondary">
+                {row.description}
+              </Typography>
+            </Stack>
           </Stack>
         ),
       },

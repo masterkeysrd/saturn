@@ -6,16 +6,27 @@ import SpentBreakdownChart from "../components/SpentBreakdownChart";
 import SpendingTrendsChart from "../components/SpendingTrendsChart";
 import PageHeader from "@/components/PageHeader";
 import PageContent from "@/components/PageContent";
+import { DateTime } from "luxon";
 
 export default function InsightsPage() {
+  // Calculate dynamic date ranges using Luxon
+  const now = DateTime.now();
+
+  // Current Month range (e.g., Nov 1 to Nov 30)
+  const currentStart = now.startOf("month").toISODate();
+  const currentEnd = now.endOf("month").toISODate();
+
+  // Historical range (Start of Year to End of Current Month)
+  const lastSixMonths = now.minus({ month: 6 }).toISODate();
+
   const { data: current, isLoading: isLoadingCurrent } = useInsights({
-    start_date: "2025-11-01",
-    end_date: "2025-11-30",
+    start_date: currentStart,
+    end_date: currentEnd,
   });
 
   const { data: historical, isLoading: isLoadingHistorical } = useInsights({
-    start_date: "2025-01-01",
-    end_date: "2025-11-30",
+    start_date: lastSixMonths,
+    end_date: currentEnd,
   });
 
   if (isLoadingCurrent || !current) {

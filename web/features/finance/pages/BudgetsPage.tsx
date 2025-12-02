@@ -25,6 +25,7 @@ import { useSearchParams } from "@/lib/search-params";
 import { PAGE_SIZE_OPTS, usePagination } from "@/lib/pagination";
 import { useSearchFilter, type SearchFilterAPI } from "@/lib/search";
 import { InputAdornment, TextField } from "@mui/material";
+import { SelectedIcon } from "@/components/SelectedIcon";
 
 type SearchPropsType = ReturnType<typeof useSearchFilter>;
 
@@ -110,7 +111,10 @@ export default function BudgetsPage() {
         headerName: "Name",
         flex: 1,
         renderCell: ({ row }) => (
-          <Stack>
+          <Stack direction="row" alignItems="center" gap={0.5}>
+            {row.icon_name && (
+              <SelectedIcon name={row.icon_name} color="secondary" size={24} />
+            )}
             <Typography variant="subtitle2">{row.name}</Typography>
           </Stack>
         ),
