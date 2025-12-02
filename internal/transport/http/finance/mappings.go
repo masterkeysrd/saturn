@@ -3,6 +3,7 @@ package financehttp
 import (
 	"github.com/masterkeysrd/saturn/api"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/foundation/appearance"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 	"github.com/oapi-codegen/runtime/types"
@@ -13,8 +14,12 @@ func BudgetFromAPI(b *api.Budget) *finance.Budget {
 		return nil
 	}
 	return &finance.Budget{
-		ID:     finance.BudgetID(ptr.Value(b.Id)),
-		Name:   b.Name,
+		ID:   finance.BudgetID(ptr.Value(b.Id)),
+		Name: b.Name,
+		Appearance: appearance.Appearance{
+			Color: appearance.Color(b.Color),
+			Icon:  appearance.Icon(b.IconName),
+		},
 		Amount: api.MoneyModel(b.Amount),
 	}
 }
@@ -52,6 +57,8 @@ func BudgetItemToAPI(b *finance.BudgetItem) *api.BudgetItem {
 	return &api.BudgetItem{
 		Id:               b.ID.String(),
 		Name:             b.Name,
+		Color:            b.Icon.String(),
+		IconName:         b.Icon.String(),
 		Amount:           api.APIMoney(b.Amount),
 		BaseAmount:       ptr.Of(api.APIMoney(b.BaseAmount)),
 		Spent:            api.APIMoney(b.Spent),
@@ -68,9 +75,11 @@ func BudgetToAPI(b *finance.Budget) *api.Budget {
 		return nil
 	}
 	return &api.Budget{
-		Id:     ptr.Of(b.ID.String()),
-		Name:   b.Name,
-		Amount: api.APIMoney(b.Amount),
+		Id:       ptr.Of(b.ID.String()),
+		Name:     b.Name,
+		Color:    b.Color.String(),
+		IconName: b.Icon.String(),
+		Amount:   api.APIMoney(b.Amount),
 	}
 }
 
@@ -200,13 +209,15 @@ func budgetSummariesToAPI(summaries []*finance.SpendingBudgetSummary) []api.Spen
 	result := make([]api.SpendingBudgetSummary, len(summaries))
 	for i, s := range summaries {
 		result[i] = api.SpendingBudgetSummary{
-			BudgetId:   string(s.BudgetID),
-			BudgetName: s.BudgetName,
-			Budgeted:   api.APIMoney(s.Budgeted),
-			Spent:      api.APIMoney(s.Spent),
-			Remaining:  api.APIMoney(s.Remaining()),
-			Usage:      s.Usage(),
-			Count:      int32(s.Count),
+			BudgetId:       string(s.BudgetID),
+			BudgetName:     s.BudgetName,
+			BudgetColor:    s.BudgetColor.String(),
+			BudgetIconName: s.BudgetIconName.String(),
+			Budgeted:       api.APIMoney(s.Budgeted),
+			Spent:          api.APIMoney(s.Spent),
+			Remaining:      api.APIMoney(s.Remaining()),
+			Usage:          s.Usage(),
+			Count:          int32(s.Count),
 		}
 	}
 

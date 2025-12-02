@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/foundation/appearance"
 	"github.com/masterkeysrd/saturn/internal/foundation/fieldmask"
 	"github.com/masterkeysrd/saturn/internal/foundation/id"
 	"github.com/masterkeysrd/saturn/internal/foundation/pagination"
@@ -67,6 +68,14 @@ var BudgetUpdateSchema = fieldmask.NewSchema("budget").
 		fieldmask.WithDescription("Budget name"),
 		fieldmask.WithRequired(),
 	).
+	Field("color",
+		fieldmask.WithDescription("Budget color"),
+		fieldmask.WithRequired(),
+	).
+	Field("icon_name",
+		fieldmask.WithDescription("Budget icon name"),
+		fieldmask.WithRequired(),
+	).
 	Field("amount",
 		fieldmask.WithDescription("Budget amount in cents"),
 		fieldmask.WithRequired(),
@@ -75,8 +84,11 @@ var BudgetUpdateSchema = fieldmask.NewSchema("budget").
 
 // Budget is the Aggregate Root representing a financial limit and category.
 type Budget struct {
-	ID        BudgetID
-	Name      string
+	ID   BudgetID
+	Name string
+
+	appearance.Appearance
+
 	Amount    money.Money
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -121,6 +133,10 @@ func (b *Budget) Validate() error {
 		return errors.New("name field exceeds 32 characters")
 	}
 
+	if err := b.Appearance.Validate(); err != nil {
+		return fmt.Errorf("invalid appearance: %w", err)
+	}
+
 	if b.Amount.Cents <= 0 {
 		return errors.New("amount field must be a positive number")
 	}
@@ -148,6 +164,14 @@ func (b *Budget) Update(update *Budget, fields *fieldmask.FieldMask) error {
 
 	if fields.Contains("name") {
 		b.Name = update.Name
+	}
+
+	if fields.Contains("icon_name") {
+		b.Icon = update.Icon
+	}
+
+	if fields.Contains("color") {
+		b.Color = update.Color
 	}
 
 	if fields.Contains("amount") {
@@ -286,8 +310,10 @@ func (bp *BudgetPeriod) Validate() error {
 }
 
 type BudgetItem struct {
-	ID               BudgetID
-	Name             string
+	ID   BudgetID
+	Name string
+	appearance.Appearance
+
 	Amount           money.Money
 	BaseAmount       money.Money
 	Spent            money.Money

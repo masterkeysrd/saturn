@@ -8,6 +8,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/foundation/appearance"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 )
 
@@ -86,10 +87,12 @@ type BudgetQueries struct{}
 
 func (q BudgetQueries) Upsert() string {
 	return `
-	INSERT INTO budgets (id, name, currency, amount, created_at, updated_at)
-	VALUES (:id, :name, :currency, :amount, :created_at, :updated_at)
+	INSERT INTO budgets (id, name, color, icon_name, currency, amount, created_at, updated_at)
+	VALUES (:id, :name, :color, :icon_name, :currency, :amount, :created_at, :updated_at)
 	ON CONFLICT (id) DO UPDATE
 	SET name = EXCLUDED.name,
+		color = EXCLUDED.color,
+		icon_name = EXCLUDED.icon_name,
     	amount = EXCLUDED.amount,
     	updated_at = EXCLUDED.updated_at;
 	`
@@ -100,6 +103,8 @@ func (q BudgetQueries) Get() string {
 	SELECT
 		id,
 		name,
+		color,
+		icon_name,
 		currency,
 		amount,
 		created_at,
@@ -115,6 +120,8 @@ func (q BudgetQueries) List() string {
 	SELECT 
 		id, 
 		name, 
+		color,
+		icon_name,
 		currency,
 		amount,
 		created_at,
@@ -137,6 +144,8 @@ func (q BudgetQueries) Delete() string {
 type BudgetEntity struct {
 	ID        string             `db:"id"`
 	Name      string             `db:"name"`
+	Color     string             `db:"color"`
+	IconName  string             `db:"icon_name"`
 	Amount    money.Cents        `db:"amount"`
 	Currency  money.CurrencyCode `db:"currency"`
 	CreatedAt time.Time          `db:"created_at"`
@@ -147,6 +156,8 @@ func BudgetEntityFromModel(b *finance.Budget) *BudgetEntity {
 	return &BudgetEntity{
 		ID:        b.ID.String(),
 		Name:      b.Name,
+		Color:     b.Color.String(),
+		IconName:  b.Icon.String(),
 		Currency:  b.Amount.Currency,
 		Amount:    b.Amount.Cents,
 		CreatedAt: b.CreatedAt,
@@ -158,6 +169,10 @@ func BudgetEntityToModel(e *BudgetEntity) *finance.Budget {
 	return &finance.Budget{
 		ID:   finance.BudgetID(e.ID),
 		Name: e.Name,
+		Appearance: appearance.Appearance{
+			Color: appearance.Color(e.Color),
+			Icon:  appearance.Icon(e.IconName),
+		},
 		Amount: money.Money{
 			Currency: e.Currency,
 			Cents:    e.Amount,

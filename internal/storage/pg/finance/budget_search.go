@@ -8,6 +8,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/foundation/appearance"
 	"github.com/masterkeysrd/saturn/internal/foundation/pagination"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 )
@@ -45,9 +46,13 @@ func (bs *BudgetSearcher) Search(ctx context.Context, criteria *finance.BudgetSe
 		}
 
 		items = append(items, &finance.BudgetItem{
-			ID:               finance.BudgetID(view.ID),
-			Name:             view.Name,
-			Amount:           money.NewMoney(view.Currency, view.Amount),
+			ID:     finance.BudgetID(view.ID),
+			Name:   view.Name,
+			Amount: money.NewMoney(view.Currency, view.Amount),
+			Appearance: appearance.Appearance{
+				Color: appearance.Color(view.Color),
+				Icon:  appearance.Icon(view.IconName),
+			},
 			BaseAmount:       money.NewMoney(view.BaseCurrency, view.BaseAmount),
 			Spent:            money.NewMoney(view.Currency, view.Spent),
 			BaseSpent:        money.NewMoney(view.BaseCurrency, view.BaseSpent),
@@ -79,6 +84,8 @@ func (bs *BudgetSearcher) Search(ctx context.Context, criteria *finance.BudgetSe
 type BudgetItemView struct {
 	ID               string             `db:"id"`
 	Name             string             `db:"name"`
+	Color            string             `db:"color"`
+	IconName         string             `db:"icon_name"`
 	Amount           money.Cents        `db:"budget_amount"`
 	Currency         money.CurrencyCode `db:"amount_currency"`
 	BaseAmount       money.Cents        `db:"base_amount"`
@@ -130,6 +137,8 @@ WITH
 SELECT
     b.id,
     b.name,
+	b.color,
+	b.icon_name,
     txs.start_date,
     txs.end_date,
     b.currency amount_currency,

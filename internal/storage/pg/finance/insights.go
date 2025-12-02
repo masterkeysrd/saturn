@@ -7,6 +7,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/foundation/appearance"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 	// "github.com/masterkeysrd/saturn/internal/pkg/str"
 )
@@ -74,6 +75,8 @@ WITH period_budgets AS (
 SELECT
     b.id as budget_id,
     b.name as budget_name,
+	b.color as budget_color,
+	b.icon_name as budget_icon_name,
     TO_CHAR(DATE_TRUNC('month', pb.start_date), 'YYYY-MM') as period,
     pb.start_date as period_start,
     pb.end_date as period_end,
@@ -90,6 +93,8 @@ LEFT JOIN transactions t
 GROUP BY
     b.id,
     b.name,
+	b.color,
+	b.icon_name,
     pb.start_date,
     pb.end_date,
     pb.base_amount_cents,
@@ -133,6 +138,8 @@ func (q *InsightsQueries) Close() error {
 type SpendingSeriesEntity struct {
 	BudgetID         finance.BudgetID   `db:"budget_id"`
 	BudgetName       string             `db:"budget_name"`
+	BudgetColor      string             `db:"budget_color"`
+	BudgetIconName   string             `db:"budget_icon_name"`
 	Period           string             `db:"period"`
 	PeriodStart      time.Time          `db:"period_start"`
 	PeriodEnd        time.Time          `db:"period_end"`
@@ -150,11 +157,13 @@ func entityToSpendingSeries(e *SpendingSeriesEntity) *finance.SpendingSeries {
 	}
 
 	return &finance.SpendingSeries{
-		BudgetID:    finance.BudgetID(e.BudgetID),
-		BudgetName:  e.BudgetName,
-		Period:      e.Period,
-		PeriodStart: e.PeriodStart,
-		PeriodEnd:   e.PeriodEnd,
+		BudgetID:       finance.BudgetID(e.BudgetID),
+		BudgetName:     e.BudgetName,
+		BudgetColor:    appearance.Color(e.BudgetColor),
+		BudgetIconName: appearance.Icon(e.BudgetIconName),
+		Period:         e.Period,
+		PeriodStart:    e.PeriodStart,
+		PeriodEnd:      e.PeriodEnd,
 		Budgeted: money.Money{
 			Cents:    e.BudgetedCents,
 			Currency: e.BudgetedCurrency,

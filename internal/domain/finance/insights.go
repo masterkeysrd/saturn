@@ -3,6 +3,7 @@ package finance
 import (
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/foundation/appearance"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 	"github.com/masterkeysrd/saturn/internal/pkg/round"
 )
@@ -65,8 +66,10 @@ func (si *SpendingInsights) Aggregate(series *SpendingSeries) {
 	bgtIdx, ok := si.budgetsIdx[series.BudgetID]
 	if !ok {
 		si.ByBudget = append(si.ByBudget, &SpendingBudgetSummary{
-			BudgetID:   series.BudgetID,
-			BudgetName: series.BudgetName,
+			BudgetID:       series.BudgetID,
+			BudgetName:     series.BudgetName,
+			BudgetColor:    series.BudgetColor,
+			BudgetIconName: series.BudgetIconName,
 		})
 		bgtIdx = len(si.ByBudget) - 1
 		si.budgetsIdx[series.BudgetID] = bgtIdx
@@ -117,8 +120,10 @@ func (stp *SpendingTrendPeriod) Aggregate(series *SpendingSeries) {
 	idx, ok := stp.budgetsIdx[series.BudgetID]
 	if !ok {
 		stp.Budgets = append(stp.Budgets, &SpendingBudgetSummary{
-			BudgetID:   series.BudgetID,
-			BudgetName: series.BudgetName,
+			BudgetID:       series.BudgetID,
+			BudgetName:     series.BudgetName,
+			BudgetColor:    series.BudgetColor,
+			BudgetIconName: series.BudgetIconName,
 		})
 		idx = len(stp.Budgets) - 1
 		stp.budgetsIdx[series.BudgetID] = idx
@@ -130,8 +135,10 @@ func (stp *SpendingTrendPeriod) Aggregate(series *SpendingSeries) {
 type SpendingBudgetSummary struct {
 	SpendingAggregate
 
-	BudgetID   BudgetID
-	BudgetName string
+	BudgetID       BudgetID
+	BudgetName     string
+	BudgetColor    appearance.Color
+	BudgetIconName appearance.Icon
 }
 
 func (sbs *SpendingBudgetSummary) Aggregate(series *SpendingSeries) {
@@ -182,12 +189,14 @@ func (sa SpendingAggregate) Usage() float64 {
 // SpendingSeries represents spending data for a single budget within a specific
 // time period.
 type SpendingSeries struct {
-	BudgetID    BudgetID
-	BudgetName  string
-	Period      string
-	PeriodStart time.Time
-	PeriodEnd   time.Time
-	Budgeted    money.Money
-	Spent       money.Money
-	Count       int
+	BudgetID       BudgetID
+	BudgetName     string
+	BudgetColor    appearance.Color
+	BudgetIconName appearance.Icon
+	Period         string
+	PeriodStart    time.Time
+	PeriodEnd      time.Time
+	Budgeted       money.Money
+	Spent          money.Money
+	Count          int
 }

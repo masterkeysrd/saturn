@@ -313,6 +313,8 @@ components:
       required:
         - id
         - name
+        - color
+        - icon_name
         - amount
         - spent
       properties:
@@ -321,6 +323,16 @@ components:
         name:
           type: string
           example: "Groceries"
+        color:
+          type: string
+          description: The UI color code for the budget (Hex format).
+          pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+          example: "#2196f3"
+        icon_name:
+          type: string
+          description: The identifier for the UI icon (e.g., Material Icon name).
+          maxLength: 32
+          example: "savings"
         amount:
           $ref: '#/components/schemas/Money'
         base_amount:
@@ -355,6 +367,8 @@ components:
       required:
         - name
         - amount
+        - color
+        - icon_name
       properties:
         id:
           type: string
@@ -363,6 +377,16 @@ components:
           type: string
         amount:
           $ref: '#/components/schemas/Money'
+        color:
+          type: string
+          description: The UI color code for the budget (Hex format).
+          pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+          example: "#2196f3"
+        icon_name:
+          type: string
+          description: The identifier for the UI icon (e.g., Material Icon name).
+          maxLength: 32
+          example: "savings"
 
     ListCurrenciesResponse:
       type: object
@@ -636,6 +660,8 @@ components:
       required:
         - budget_id
         - budget_name
+        - budget_icon_name
+        - budget_color
         - budgeted
         - spent
         - remaining
@@ -652,6 +678,16 @@ components:
           minLength: 1
           maxLength: 100
           example: Groceries
+        budget_color:
+          type: string
+          description: The UI color code for the budget (Hex format).
+          pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+          example: "#2196f3"
+        budget_icon_name:
+          type: string
+          description: The identifier for the UI icon (e.g., Material Icon name).
+          maxLength: 32
+          example: "savings"
         budgeted:
           $ref: '#/components/schemas/Money'
         spent:

@@ -31,9 +31,15 @@ const (
 // Budget A budget to track expenses
 type Budget struct {
 	// Amount Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
-	Amount Money   `json:"amount"`
-	Id     *string `json:"id,omitempty"`
-	Name   string  `json:"name"`
+	Amount Money `json:"amount"`
+
+	// Color The UI color code for the budget (Hex format).
+	Color string `json:"color"`
+
+	// IconName The identifier for the UI icon (e.g., Material Icon name).
+	IconName string  `json:"icon_name"`
+	Id       *string `json:"id,omitempty"`
+	Name     string  `json:"name"`
 }
 
 // BudgetItem defines model for BudgetItem.
@@ -46,8 +52,14 @@ type BudgetItem struct {
 
 	// BaseSpent Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
 	BaseSpent *Money `json:"base_spent,omitempty"`
-	Id        string `json:"id"`
-	Name      string `json:"name"`
+
+	// Color The UI color code for the budget (Hex format).
+	Color string `json:"color"`
+
+	// IconName The identifier for the UI icon (e.g., Material Icon name).
+	IconName string `json:"icon_name"`
+	Id       string `json:"id"`
+	Name     string `json:"name"`
 
 	// Percentage Percentage of budget spent
 	Percentage      *float64            `json:"percentage,omitempty"`
@@ -155,6 +167,12 @@ type Money struct {
 
 // SpendingBudgetSummary defines model for SpendingBudgetSummary.
 type SpendingBudgetSummary struct {
+	// BudgetColor The UI color code for the budget (Hex format).
+	BudgetColor string `json:"budget_color"`
+
+	// BudgetIconName The identifier for the UI icon (e.g., Material Icon name).
+	BudgetIconName string `json:"budget_icon_name"`
+
 	// BudgetId Unique identifier for the budget
 	BudgetId string `json:"budget_id"`
 
