@@ -1,6 +1,7 @@
 package finance
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -10,6 +11,14 @@ import (
 
 // TODO: Change for a config base currency
 const DefaultBaseCurrency CurrencyCode = "USD"
+
+type CurrencyStore interface {
+	Get(context.Context, CurrencyCode) (*Currency, error)
+	List(context.Context) ([]*Currency, error)
+	Store(context.Context, *Currency) error
+}
+
+type CurrencyCode = money.CurrencyCode
 
 type Currency struct {
 	Code      CurrencyCode
@@ -43,5 +52,3 @@ func (c *Currency) Validate() error {
 
 	return nil
 }
-
-type CurrencyCode = money.CurrencyCode

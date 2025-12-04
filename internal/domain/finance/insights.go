@@ -1,12 +1,17 @@
 package finance
 
 import (
+	"context"
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/foundation/appearance"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 	"github.com/masterkeysrd/saturn/internal/pkg/round"
 )
+
+type InsightsStore interface {
+	GetSpendingSeries(context.Context, SpendingSeriesFilter) ([]*SpendingSeries, error)
+}
 
 type GetInsightsInput struct {
 	StartDate time.Time

@@ -12,6 +12,28 @@ import (
 	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 )
 
+// ExpenseUpdateSchema only includes updatable fields
+var ExpenseUpdateSchema = fieldmask.NewSchema("expense").
+	Field("name",
+		fieldmask.WithDescription("Expense name"),
+		fieldmask.WithRequired(),
+	).
+	Field("description",
+		fieldmask.WithDescription("Expense description"),
+	).
+	Field("date",
+		fieldmask.WithDescription("Expense date"),
+		fieldmask.WithRequired(),
+	).
+	Field("amount",
+		fieldmask.WithDescription("Expense amount in cents"),
+		fieldmask.WithRequired(),
+	).
+	Field("exchange_rate",
+		fieldmask.WithDescription("Custom exchange rate (optional)"),
+	).
+	Build()
+
 // Expense represents a financial expense that generates a transaction.
 //
 // It extends Operation with budget tracking and unique identification.
@@ -185,40 +207,32 @@ func (e *Expense) UpdateTransaction(trx *Transaction, mask *fieldmask.FieldMask)
 	return nil
 }
 
-// Operation contains common fields for financial operations.
-// It enforces business rules on names, amounts, and dates.
-type Operation struct {
-	Name         string
-	Description  string
-	Amount       money.Cents
-	ExchangeRate *float64
-	Date         time.Time
+// UpdateExpenseInput contains all data needed to update an expense
+type UpdateExpenseInput struct {
+	// ID is the transaction identifier
+	ID TransactionID
+
+	// Expense contains the fields to update
+	Expense *Expense
+
+	// UpdateMask specifies which fields to update.
+	// If nil or empty, all fields are updated.
+	UpdateMask *fieldmask.FieldMask
 }
 
-// Validate checks that the Operation fields meet business requirements.
-func (op Operation) Validate() error {
-	if len(op.Name) < 3 {
-		return errors.New("name must be at least 3 characters")
+func (input *UpdateExpenseInput) Validate() error {
+	if input.ID == "" {
+		return errors.New("id is required")
 	}
 
-	if len(op.Name) > 50 {
-		return errors.New("name exceeds 50 characters")
+	if input.Expense == nil {
+		return errors.New("expense is required")
 	}
 
-	if len(op.Description) > 250 {
-		return errors.New("description exceeds 250 characters")
-	}
-
-	if op.Amount <= 0 {
-		return errors.New("amount must be positive")
-	}
-
-	if op.ExchangeRate != nil && *op.ExchangeRate <= 0 {
-		return errors.New("exchange rate must be a positive number when provided")
-	}
-
-	if op.Date.IsZero() {
-		return errors.New("date must be a valid non-zero time")
+	// Validate against schema, don't validate rules just
+	// mask fields presence.
+	if err := ExpenseUpdateSchema.Validate(input.UpdateMask); err != nil {
+		return fmt.Errorf("invalid field mask: %w", err)
 	}
 
 	return nil
