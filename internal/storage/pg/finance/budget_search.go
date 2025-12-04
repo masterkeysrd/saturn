@@ -11,6 +11,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/foundation/appearance"
 	"github.com/masterkeysrd/saturn/internal/foundation/pagination"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
+	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 )
 
 var _ finance.BudgetSearcher = (*BudgetSearcher)(nil)
@@ -53,12 +54,12 @@ func (bs *BudgetSearcher) Search(ctx context.Context, criteria *finance.BudgetSe
 				Color: appearance.Color(view.Color),
 				Icon:  appearance.Icon(view.IconName),
 			},
-			BaseAmount:       money.NewMoney(view.BaseCurrency, view.BaseAmount),
-			Spent:            money.NewMoney(view.Currency, view.Spent),
-			BaseSpent:        money.NewMoney(view.BaseCurrency, view.BaseSpent),
-			PeriodStartDate:  view.StartDate,
-			PeriodEndDate:    view.EndDate,
-			TransactionCount: view.TransactionCount, // Ensure this field exists in BudgetItem if needed
+			BaseAmount:       money.NewMoney(ptr.Value(view.BaseCurrency), ptr.Value(view.BaseAmount)),
+			Spent:            money.NewMoney(view.Currency, ptr.Value(view.Spent)),
+			BaseSpent:        money.NewMoney(ptr.Value(view.BaseCurrency), ptr.Value(view.BaseSpent)),
+			PeriodStartDate:  ptr.Value(view.StartDate),
+			PeriodEndDate:    ptr.Value(view.EndDate),
+			TransactionCount: ptr.Value(view.TransactionCount), // Ensure this field exists in BudgetItem if needed
 		})
 	}
 
@@ -82,19 +83,19 @@ func (bs *BudgetSearcher) Search(ctx context.Context, criteria *finance.BudgetSe
 }
 
 type BudgetItemView struct {
-	ID               string             `db:"id"`
-	Name             string             `db:"name"`
-	Color            string             `db:"color"`
-	IconName         string             `db:"icon_name"`
-	Amount           money.Cents        `db:"budget_amount"`
-	Currency         money.CurrencyCode `db:"amount_currency"`
-	BaseAmount       money.Cents        `db:"base_amount"`
-	BaseCurrency     money.CurrencyCode `db:"base_amount_currency"`
-	Spent            money.Cents        `db:"spent_amount"`
-	BaseSpent        money.Cents        `db:"base_spent_amount"`
-	StartDate        time.Time          `db:"start_date"`
-	EndDate          time.Time          `db:"end_date"`
-	TransactionCount int                `db:"transaction_count"`
+	ID               string              `db:"id"`
+	Name             string              `db:"name"`
+	Color            string              `db:"color"`
+	IconName         string              `db:"icon_name"`
+	Amount           money.Cents         `db:"budget_amount"`
+	Currency         money.CurrencyCode  `db:"amount_currency"`
+	BaseAmount       *money.Cents        `db:"base_amount"`
+	BaseCurrency     *money.CurrencyCode `db:"base_amount_currency"`
+	Spent            *money.Cents        `db:"spent_amount"`
+	BaseSpent        *money.Cents        `db:"base_spent_amount"`
+	StartDate        *time.Time          `db:"start_date"`
+	EndDate          *time.Time          `db:"end_date"`
+	TransactionCount *int                `db:"transaction_count"`
 }
 
 var searchBudgetQuery = `
@@ -147,9 +148,9 @@ SELECT
     txs.base_amount_cents base_amount,
     txs.spent_amount_cents as spent_amount,
     txs.transaction_count
-FROM
-    TransactionsStats txs
-    JOIN budgets b ON txs.budget_id = b.id
+FROM budgets b
+LEFT JOIN
+	TransactionsStats txs ON txs.budget_id = b.id
 `
 
 var searchBudgetQueryCount = `
@@ -171,8 +172,10 @@ AggregatedData AS (
 )
 SELECT 
     COUNT(b.id)
-FROM AggregatedData ad
-JOIN budgets b ON ad.budget_id = b.id
+FROM budgets b
+LEFT JOIN
+	AggregatedData ad ON ad.budget_id = b.id
+
 `
 
 type BudgetSearcherQueries struct{}
