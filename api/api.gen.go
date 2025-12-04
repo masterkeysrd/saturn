@@ -132,7 +132,9 @@ type ListCurrenciesResponse struct {
 
 // ListTransactionsResponse Response containing a list of transactions.
 type ListTransactionsResponse struct {
-	Transactions []Transaction `json:"transactions"`
+	// Meta Metadata regarding the pagination state of the response.
+	Meta         Meta              `json:"meta"`
+	Transactions []TransactionItem `json:"transactions"`
 }
 
 // Meta Metadata regarding the pagination state of the response.
@@ -275,6 +277,51 @@ type Transaction struct {
 	Id *string `json:"id,omitempty"`
 
 	// Name Copy of operation name.
+	Name string `json:"name"`
+
+	// Type Type of transaction.
+	Type      TransactionType `json:"type"`
+	UpdatedAt time.Time       `json:"updated_at"`
+}
+
+// TransactionBudget Contextual information about the budget this transaction belongs to.
+type TransactionBudget struct {
+	// Color Hex code or name for the budget's presentation color.
+	Color string `json:"color"`
+
+	// IconName Icon identifier for the budget (e.g., 'shopping', 'transport').
+	IconName string `json:"icon_name"`
+
+	// Id Unique identifier of the associated budget.
+	Id string `json:"id"`
+
+	// Name Name of the budget (e.g., 'Groceries', 'Transport').
+	Name string `json:"name"`
+}
+
+// TransactionItem A financial transaction record, including its associated budget context.
+type TransactionItem struct {
+	// Amount Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
+	Amount Money `json:"amount"`
+
+	// BaseAmount Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
+	BaseAmount Money `json:"base_amount"`
+
+	// Budget Contextual information about the budget this transaction belongs to.
+	Budget    *TransactionBudget `json:"budget,omitempty"`
+	CreatedAt time.Time          `json:"created_at"`
+	Date      openapi_types.Date `json:"date"`
+
+	// Description Detailed notes on the transaction.
+	Description *string `json:"description"`
+
+	// ExchangeRate Rate used to convert amount → base_amount.
+	ExchangeRate float64 `json:"exchange_rate"`
+
+	// Id Unique identifier of the transaction.
+	Id string `json:"id"`
+
+	// Name Short title of the transaction.
 	Name string `json:"name"`
 
 	// Type Type of transaction.

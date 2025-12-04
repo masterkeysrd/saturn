@@ -11,16 +11,19 @@ import (
 type SearchServiceParams struct {
 	deps.In
 
-	BudgetSearcher BudgetSearcher
+	BudgetSearcher      BudgetSearcher
+	TransactionSearcher TransactionSearcher
 }
 
 type SearchService struct {
-	budgetsSearcher BudgetSearcher
+	budgetsSearcher      BudgetSearcher
+	transactionsSearcher TransactionSearcher
 }
 
 func NewSearchService(params SearchServiceParams) *SearchService {
 	return &SearchService{
-		budgetsSearcher: params.BudgetSearcher,
+		budgetsSearcher:      params.BudgetSearcher,
+		transactionsSearcher: params.TransactionSearcher,
 	}
 }
 
@@ -35,6 +38,22 @@ func (s *SearchService) SearchBudgets(ctx context.Context, in *BudgetSearchInput
 	page, err := s.budgetsSearcher.Search(ctx, &criteria)
 	if err != nil {
 		return BudgetPage{}, fmt.Errorf("cannot search budgets: %w", err)
+	}
+
+	return page, nil
+}
+
+func (s *SearchService) SearchTransactions(ctx context.Context, in *TransactionSearchInput) (TransactionPage, error) {
+	criteria := in.toCriteria()
+	criteria.sanitize()
+	if err := criteria.Validate(); err != nil {
+		return TransactionPage{}, fmt.Errorf("invalid budget search criteria: %w", err)
+	}
+
+	criteria.Date = time.Now()
+	page, err := s.transactionsSearcher.Search(ctx, &criteria)
+	if err != nil {
+		return TransactionPage{}, fmt.Errorf("cannot search budgets: %w", err)
 	}
 
 	return page, nil

@@ -4,9 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/foundation/appearance"
 	"github.com/masterkeysrd/saturn/internal/foundation/id"
+	"github.com/masterkeysrd/saturn/internal/foundation/pagination"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 )
 
@@ -21,6 +24,13 @@ type TransactionStore interface {
 type TransactionCriteria interface {
 	isTransactionCriteria()
 }
+
+type TransactionSearcher interface {
+	Search(context.Context, *TransactionSearchCriteria) (TransactionPage, error)
+}
+
+// TransactionPage represet a page of Transaction Items.
+type TransactionPage = pagination.Page[*TransactionItem]
 
 // Transaction represents a persisted financial transaction.
 // It includes the base currency conversion and exchange rate for reporting.
@@ -122,4 +132,72 @@ func (tt TransactionType) Validate() error {
 	}
 
 	return nil
+}
+
+type TransactionSearchInput struct {
+	pagination.Pagination
+	Term string
+}
+
+func (tsi *TransactionSearchInput) toCriteria() TransactionSearchCriteria {
+	if tsi == nil {
+		return TransactionSearchCriteria{}
+	}
+
+	return TransactionSearchCriteria{
+		Term:       tsi.Term,
+		Pagination: tsi.Pagination,
+	}
+}
+
+type TransactionSearchCriteria struct {
+	pagination.Pagination
+	Term string
+	Date time.Time
+}
+
+func (tsi *TransactionSearchCriteria) sanitize() {
+	if tsi == nil {
+		return
+	}
+
+	tsi.Term = strings.TrimSpace(tsi.Term)
+}
+
+func (tsi *TransactionSearchCriteria) Validate() error {
+	if tsi == nil {
+		return errors.New("transaction search criteria is nil")
+	}
+
+	if len(tsi.Term) > 1 && len(tsi.Term) < 3 {
+		return errors.New("term to search cannot be less than 3 characters")
+	}
+
+	if len(tsi.Term) > 20 {
+		return errors.New("term to search cannot exceeds 20 characters")
+	}
+
+	return nil
+}
+
+type TransactionItem struct {
+	ID           TransactionID
+	Type         TransactionType
+	Name         string
+	Description  string
+	Amount       money.Money
+	BaseAmount   money.Money
+	ExchangeRate float64
+	Date         time.Time
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+
+	Budget *TransactionBudgetItem
+}
+
+type TransactionBudgetItem struct {
+	ID   BudgetID
+	Name string
+
+	appearance.Appearance
 }

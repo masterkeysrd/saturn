@@ -30,5 +30,9 @@ func Provide(inj deps.Injector) error {
 		return err
 	}
 
+	if err := inj.Provide(NewTransactionSearcher, deps.As(new(finance.TransactionSearcher))); err != nil {
+		return err
+	}
+
 	return nil
 }

@@ -8,15 +8,19 @@ import (
 	"github.com/masterkeysrd/saturn/api"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/pkg/httphandler"
+	"github.com/masterkeysrd/saturn/internal/transport/http/encoding"
+	"github.com/masterkeysrd/saturn/internal/transport/http/response"
 )
 
 type TransactionController struct {
-	app FinanceService
+	service       FinanceService
+	searchService FinanceSearchService
 }
 
-func NewTransactionController(app FinanceService) *TransactionController {
+func NewTransactionController(app FinanceService, searchService FinanceSearchService) *TransactionController {
 	return &TransactionController{
-		app: app,
+		service:       app,
+		searchService: searchService,
 	}
 }
 
@@ -35,7 +39,7 @@ func (c *TransactionController) RegisterRoutes(mux *http.ServeMux) {
 }
 
 func (c *TransactionController) GetTransaction(ctx context.Context, req *api.GetTransactionRequest) (*api.Transaction, error) {
-	trx, err := c.app.GetTransaction(ctx, finance.TransactionID(req.ID))
+	trx, err := c.service.GetTransaction(ctx, finance.TransactionID(req.ID))
 	if err != nil {
 		return nil, fmt.Errorf("cannot get transaction: %w", err)
 	}
@@ -44,20 +48,23 @@ func (c *TransactionController) GetTransaction(ctx context.Context, req *api.Get
 }
 
 func (c *TransactionController) ListTransactions(ctx context.Context, req *api.ListTransactionsRequest) (*api.ListTransactionsResponse, error) {
-	trxs, err := c.app.ListTransactions(ctx)
+	trxs, err := c.searchService.SearchTransactions(ctx, &finance.TransactionSearchInput{
+		Term:       req.Search,
+		Pagination: req.Paginate.ToPagination(),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("cannot list transactions: %w", err)
 	}
 
-	resp := TransactionsToAPI(trxs)
-
+	resp := TransactionItemsToAPI(trxs.Items())
 	return &api.ListTransactionsResponse{
 		Transactions: resp,
+		Meta:         response.NewMeta(trxs),
 	}, nil
 }
 
 func (c *TransactionController) DeleteTransaction(ctx context.Context, req *api.DeleteTransactionRequest) (*httphandler.Empty, error) {
-	if err := c.app.DeleteTransaction(ctx, finance.TransactionID(req.ID)); err != nil {
+	if err := c.service.DeleteTransaction(ctx, finance.TransactionID(req.ID)); err != nil {
 		return nil, fmt.Errorf("cannot list transactions: %w", err)
 	}
 
@@ -75,8 +82,16 @@ func transformGetTransactionInput(ctx context.Context, r *http.Request) (*api.Ge
 	}, nil
 }
 
-func transformListTransactionsInput(ctx context.Context, _ *http.Request) (*api.ListTransactionsRequest, error) {
-	return &api.ListTransactionsRequest{}, nil
+func transformListTransactionsInput(ctx context.Context, req *http.Request) (*api.ListTransactionsRequest, error) {
+	var p api.PaginationRequest
+	if err := encoding.DecodePagination(req, &p); err != nil {
+		return nil, fmt.Errorf("invalid pagination params: %w", err)
+	}
+
+	return &api.ListTransactionsRequest{
+		Search:   encoding.GetStringQuery(req, "search", ""),
+		Paginate: p,
+	}, nil
 }
 
 func transformDeleteTransactionInput(ctx context.Context, r *http.Request) (*api.DeleteTransactionRequest, error) {

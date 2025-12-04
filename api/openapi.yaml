@@ -1,8 +1,9 @@
 ---
-openapi: 3.0.0
+openapi: 3.1.0
 
 info:
   title: Saturn Personal Productivity Suite
+  version: "0.0.1"
 
 servers:
   - url: http://localhost:3000
@@ -532,11 +533,92 @@ components:
       description: Response containing a list of transactions.
       required:
         - transactions
+        - meta
       properties:
         transactions:
           type: array
           items:
-            $ref: '#/components/schemas/Transaction'
+            $ref: '#/components/schemas/TransactionItem'
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    TransactionItem:
+      type: object
+      description: A financial transaction record, including its associated budget context.
+      required:
+        - id
+        - type
+        - name
+        - date
+        - amount
+        - base_amount
+        - exchange_rate
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the transaction.
+          example: trx_54321
+        type:
+          $ref: "#/components/schemas/TransactionType"
+        name:
+          type: string
+          description: Short title of the transaction.
+          example: Coffee at Downtown
+        description:
+          type: string
+          nullable: true
+          description: Detailed notes on the transaction.
+          example: Purchased daily coffee with client
+        amount:
+          $ref: '#/components/schemas/Money'
+        base_amount:
+          $ref: '#/components/schemas/Money'
+          description: Value converted to the base currency.
+        exchange_rate:
+          type: number
+          format: double
+          description: Rate used to convert amount → base_amount.
+          example: 60.50
+        date:
+          type: string
+          format: date
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        budget:
+          $ref: '#/components/schemas/TransactionBudget'
+          description: The budget this transaction is categorized under.
+
+    TransactionBudget:
+      type: object
+      description: Contextual information about the budget this transaction belongs to.
+      required:
+        - id
+        - name
+        - color
+        - icon_name
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the associated budget.
+          example: bgt_12345
+        name:
+          type: string
+          description: Name of the budget (e.g., 'Groceries', 'Transport').
+          example: Groceries
+        color:
+          type: string
+          description: Hex code or name for the budget's presentation color.
+          example: '#4caf50'
+        icon_name:
+          type: string
+          description: Icon identifier for the budget (e.g., 'shopping', 'transport').
+          example: shopping
 
     TransactionType:
       type: string

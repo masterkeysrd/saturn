@@ -94,7 +94,10 @@ type UpdateExpenseRequest struct {
 	UpdateMask *UpdateMaskParam
 }
 
-type ListTransactionsRequest struct{}
+type ListTransactionsRequest struct {
+	Search   string `json:"search"`
+	Paginate PaginationRequest
+}
 
 type GetTransactionRequest struct {
 	ID string
