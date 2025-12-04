@@ -14,6 +14,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import PaidIcon from "@mui/icons-material/Paid";
+import SearchIcon from "@mui/icons-material/Search";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import TrendingDownIcon from "@mui/icons-material/TrendingDown";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -30,11 +31,71 @@ import { money } from "@/lib/money";
 import DataGrid, {
   type GridColDef,
   GridActionsCellItem,
+  type GridToolbarProps,
+  Toolbar,
 } from "@/components/DataGrid";
 
 import { useTransactions } from "../Finance.hooks";
-import type { Transaction, TransactionType } from "../Finance.model";
+import type {
+  ListTransactionsParams,
+  Transaction,
+  TransactionType,
+} from "../Finance.model";
 import AmountCell from "../components/AmountCell";
+import { useSearchParams } from "@/lib/search-params";
+import { useSearchFilter, type SearchFilterAPI } from "@/lib/search";
+import { PAGE_SIZE_OPTS, usePagination } from "@/lib/pagination";
+import { InputAdornment, TextField } from "@mui/material";
+import { SelectedIcon } from "@/components/SelectedIcon";
+
+type SearchPropsType = ReturnType<typeof useSearchFilter>;
+
+declare module "@mui/x-data-grid" {
+  interface ToolbarPropsOverrides {
+    searchProps?: SearchPropsType;
+  }
+}
+
+interface CustomToolbarProps extends GridToolbarProps {
+  searchProps?: SearchFilterAPI;
+}
+
+function CustomToolbar({ searchProps }: CustomToolbarProps) {
+  if (!searchProps) return null;
+
+  return (
+    <Toolbar>
+      <Box
+        sx={{
+          flexGrow: 1,
+          display: "flex",
+          alignItems: "center",
+          gap: 2,
+          px: 1,
+          py: 4,
+        }}
+      >
+        <TextField
+          placeholder="Search Budgets"
+          variant="outlined"
+          size="small"
+          sx={{ width: "300px" }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            },
+          }}
+          // Spread the debounced search control props (value and onChange)
+          {...searchProps}
+        />
+      </Box>
+    </Toolbar>
+  );
+}
 
 interface TransactionTypeCellProps {
   type: TransactionType;
@@ -121,8 +182,17 @@ const PageActions = () => {
 };
 
 export default function TransactionsPage() {
-  const { data: transactions } = useTransactions();
   const navigate = useNavigate();
+
+  const [params, setParams] = useSearchParams<ListTransactionsParams>({
+    page: 1,
+    size: 10,
+    search: "",
+  });
+  const searchProps = useSearchFilter(params.search, setParams);
+  const paginationProps = usePagination(params, setParams);
+
+  const { data: page, isLoading } = useTransactions(params);
 
   const handleRowEdit = useCallback(
     (transaction: Transaction) => () => {
@@ -152,6 +222,33 @@ export default function TransactionsPage() {
                 {row.description}
               </Typography>
             </Stack>
+          </Stack>
+        ),
+      },
+      {
+        field: "meta",
+        headerName: "Info",
+        width: 200,
+        renderCell: ({ row }) => (
+          <Stack direction="column">
+            {row.budget && (
+              <Chip
+                label={row.budget.name}
+                size="small"
+                variant="filled"
+                icon={
+                  <SelectedIcon
+                    name={row.budget?.icon_name ?? ""}
+                    size={16}
+                    sx={{ ml: 1 }}
+                  />
+                }
+                sx={{
+                  backgroundColor: row.budget.color,
+                  color: "#fff",
+                }}
+              />
+            )}
           </Stack>
         ),
       },
@@ -223,8 +320,19 @@ export default function TransactionsPage() {
       <PageContent>
         <Box sx={{ flex: 1, width: "100%" }}>
           <DataGrid
-            rows={transactions?.transactions}
+            rows={page?.transactions}
             columns={transactionColumns}
+            loading={isLoading}
+            rowCount={page?.meta?.total_items}
+            pageSizeOptions={PAGE_SIZE_OPTS}
+            slots={{
+              toolbar: CustomToolbar,
+            }}
+            slotProps={{
+              toolbar: { searchProps },
+            }}
+            showToolbar
+            {...paginationProps}
           />
         </Box>
       </PageContent>

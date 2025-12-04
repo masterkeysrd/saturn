@@ -24,6 +24,7 @@ import type {
   Budget,
   Expense,
   ListBudgetParams,
+  ListTransactionsParams,
   Transaction,
   UpdateBudgetParams,
   UpdateExpenseParams,
@@ -37,10 +38,14 @@ const queryKeys = {
     { ...params },
   ],
   getBudget: (id: string) => ["budgets", "detail", id],
-  getTransaction: (id: string) => ["transactions", "detail", id],
   listCurrencies: ["currencies", "list"],
   getCurrency: (code: string) => ["currencies", "detail", code],
-  listTransactions: ["transactions", "list"],
+  getTransaction: (id: string) => ["transactions", "detail", id],
+  listTransactions: (params: ListTransactionsParams) => [
+    "transactions",
+    "list",
+    { ...params },
+  ],
   getInsights: (req: GetInsightsRequest) => [
     "insights",
     "start_date",
@@ -94,7 +99,7 @@ export function useUpdateBudget({
       await Promise.all([
         context.client.invalidateQueries({ queryKey: ["budgets", "list"] }),
         context.client.invalidateQueries({
-          queryKey: queryKeys.listTransactions,
+          queryKey: ["transactions", "list"],
         }),
         context.client.invalidateQueries({
           queryKey: queryKeys.getBudget(data.id!),
@@ -172,7 +177,7 @@ export function useCreateExpense({
       await Promise.all([
         context.client.invalidateQueries({ queryKey: ["budgets", "list"] }),
         context.client.invalidateQueries({
-          queryKey: queryKeys.listTransactions,
+          queryKey: ["transactions", "list"],
         }),
         context.client.invalidateQueries({ queryKey: ["insights"] }),
       ]);
@@ -202,7 +207,7 @@ export function useUpdateExpense({
       await Promise.all([
         client.invalidateQueries({ queryKey: ["budgets", "list"] }),
         client.invalidateQueries({
-          queryKey: queryKeys.listTransactions,
+          queryKey: ["transactions", "list"],
         }),
         client.invalidateQueries({
           queryKey: queryKeys.getTransaction(data.id!),
@@ -223,10 +228,10 @@ export function useTransaction(id?: string) {
   });
 }
 
-export const useTransactions = () => {
+export const useTransactions = (params: ListTransactionsParams) => {
   return useQuery({
-    queryKey: queryKeys.listTransactions,
-    queryFn: listTransactions,
+    queryKey: queryKeys.listTransactions(params),
+    queryFn: () => listTransactions(params),
   });
 };
 

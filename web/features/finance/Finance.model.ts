@@ -8,7 +8,6 @@ export interface ListBudgetsResponse {
 
 export interface ListBudgetParams extends Pagination {
   search?: string;
-  page?: number;
 }
 
 export interface Budget {
@@ -56,8 +55,13 @@ export interface ListCurrenciesResponse {
   currencies?: Currency[];
 }
 
+export interface ListTransactionsParams extends Pagination {
+  search?: string;
+}
+
 export interface ListTransactionsResponse {
   transactions?: Transaction[];
+  meta?: Meta;
 }
 
 export interface Transaction {
@@ -69,6 +73,7 @@ export interface Transaction {
   base_amount?: Money;
   exchange_rate?: number;
   budget_id?: string;
+  budget?: Budget;
   date?: string; // ISO date (YYYY-MM-DD)
   created_at?: string; // ISO timestamp
   updated_at?: string; // ISO timestamp

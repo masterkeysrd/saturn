@@ -11,6 +11,7 @@ import {
   type UpdateBudgetParams,
   type UpdateExpenseParams,
   type ListBudgetParams,
+  type ListTransactionsParams,
 } from "./Finance.model";
 import { URLQuery } from "@/lib/query";
 
@@ -96,9 +97,10 @@ export async function deleteTransaction(id: string): Promise<void> {
   await axios.delete(`${baseUrl}/transactions/${id}`);
 }
 
-export async function listTransactions() {
+export async function listTransactions(params: ListTransactionsParams) {
+  const query = URLQuery.build(params);
   return axios
-    .get<ListTransactionsResponse>(`${baseUrl}/transactions`)
+    .get<ListTransactionsResponse>(`${baseUrl}/transactions${query.toQuery()}`)
     .then((resp) => resp.data);
 }
 
