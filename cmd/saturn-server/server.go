@@ -8,6 +8,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
 	"github.com/masterkeysrd/saturn/internal/pkg/httprouter"
 	financehttp "github.com/masterkeysrd/saturn/internal/transport/http/finance"
+	identityhttp "github.com/masterkeysrd/saturn/internal/transport/http/identity"
 )
 
 type Server struct {
@@ -17,12 +18,14 @@ type Server struct {
 type ServerParams struct {
 	deps.In
 
-	FinanceRouter *financehttp.Router
+	FinanceRouter  *financehttp.Router
+	IdentityRouter *identityhttp.Router
 }
 
 func NewServer(params ServerParams) *Server {
 	routers := []httprouter.RoutesRegister{
 		params.FinanceRouter,
+		params.IdentityRouter,
 	}
 
 	mux := http.NewServeMux()

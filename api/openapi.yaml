@@ -10,6 +10,24 @@ servers:
     description: Local server
 
 paths:
+  /identity/users:
+    post:
+      summary: Create a new user
+      operationId: identity.CreateUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterUserRequest'
+      responses:
+        "201":
+          description: Created user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
   /finance/budgest:
     get:
       summary: List all budgets
@@ -294,6 +312,60 @@ paths:
 
 components:
   schemas:
+    RegisterUserRequest:
+      type: object
+      description: Request to register a new user
+      required:
+        - username
+        - email
+        - first_name
+        - last_name
+        - password
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 30
+          example: "johndoe"
+        first_name:
+          type: string
+          maxLength: 50
+          example: "John"
+        last_name:
+          type: string
+          maxLength: 50
+          example: "Doe"
+        email:
+          type: string
+          format: email
+          example: "user@mail.com"
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: "strongpassword123"
+
+    User:
+      type: object
+      description: A user of the Saturn Personal Productivity Suite
+      required:
+        - id
+        - username
+        - email
+      properties:
+        id:
+          type: string
+          readOnly: true
+        username:
+          type: string
+          minLength: 3
+          maxLength: 30
+          example: "johndoe"
+        email:
+          type: string
+          format: email
+          example: "user@mail.com"
+
     ListBudgetsResponse:
       type: object
       description: Response of list of budgets.

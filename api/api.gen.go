@@ -167,6 +167,15 @@ type Money struct {
 	Currency string `json:"currency"`
 }
 
+// RegisterUserRequest Request to register a new user
+type RegisterUserRequest struct {
+	Email     openapi_types.Email `json:"email"`
+	FirstName string              `json:"first_name"`
+	LastName  string              `json:"last_name"`
+	Password  string              `json:"password"`
+	Username  string              `json:"username"`
+}
+
 // SpendingBudgetSummary defines model for SpendingBudgetSummary.
 type SpendingBudgetSummary struct {
 	// BudgetColor The UI color code for the budget (Hex format).
@@ -332,6 +341,13 @@ type TransactionItem struct {
 // TransactionType Type of transaction.
 type TransactionType string
 
+// User A user of the Saturn Personal Productivity Suite
+type User struct {
+	Email    openapi_types.Email `json:"email"`
+	Id       *string             `json:"id,omitempty"`
+	Username string              `json:"username"`
+}
+
 // UpdateMaskParam defines model for UpdateMaskParam.
 type UpdateMaskParam = string
 
@@ -400,6 +416,9 @@ type BudgetCreateCurrencyJSONRequestBody = Currency
 
 // FinanceCreateExpenseJSONRequestBody defines body for FinanceCreateExpense for application/json ContentType.
 type FinanceCreateExpenseJSONRequestBody = Expense
+
+// IdentityCreateUserJSONRequestBody defines body for IdentityCreateUser for application/json ContentType.
+type IdentityCreateUserJSONRequestBody = RegisterUserRequest
 
 // FinanceUpdateExpenseJSONRequestBody defines body for FinanceUpdateExpense for application/json ContentType.
 type FinanceUpdateExpenseJSONRequestBody = Expense

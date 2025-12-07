@@ -5,13 +5,18 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/masterkeysrd/saturn/internal/application"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/foundation/id"
+	"github.com/masterkeysrd/saturn/internal/pkg/argon2id"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
 	"github.com/masterkeysrd/saturn/internal/pkg/uuid"
 	"github.com/masterkeysrd/saturn/internal/storage/pg"
 	financepg "github.com/masterkeysrd/saturn/internal/storage/pg/finance"
+	identitypg "github.com/masterkeysrd/saturn/internal/storage/pg/identity"
 	financehttp "github.com/masterkeysrd/saturn/internal/transport/http/finance"
+	identityhttp "github.com/masterkeysrd/saturn/internal/transport/http/identity"
 )
 
 func init() {
@@ -39,22 +44,48 @@ func main() {
 func buildContainer() (deps.Container, error) {
 	container := deps.NewDigContainer()
 
-	// Storage
-	err := deps.Register(container,
-		financepg.Provide,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("cannot register storage providers: %w", err)
+	// Wiring Providers
+	if err := container.Provide(argon2id.New); err != nil {
+		return nil, fmt.Errorf("cannot provide argon2id hasher: %w", err)
 	}
 
-	// Domain Providers
-	if err := deps.Register(container, finance.RegisterProviders); err != nil {
-		return nil, fmt.Errorf("cannot register domain providers: %w", err)
+	// Wire Hasher
+	if err := container.Provide(func(hasher *argon2id.Hasher) identity.PasswordHasher {
+		return hasher
+	}); err != nil {
+		return nil, fmt.Errorf("cannot provide password hasher: %w", err)
 	}
 
 	// Transport Providers
-	if err := deps.Register(container, financehttp.RegisterProviders); err != nil {
+	if err := deps.Register(container,
+		financehttp.RegisterProviders,
+		identityhttp.RegisterProviders,
+	); err != nil {
 		return nil, fmt.Errorf("cannot register transport providers: %w", err)
+	}
+
+	// Application Providers
+	if err := deps.Register(container,
+		application.RegisterProviders,
+	); err != nil {
+		return nil, fmt.Errorf("cannot register application providers: %w", err)
+	}
+
+	// Domain Providers
+	if err := deps.Register(container,
+		finance.RegisterProviders,
+		identity.RegisterProviders,
+	); err != nil {
+		return nil, fmt.Errorf("cannot register domain providers: %w", err)
+	}
+
+	// Storage
+	err := deps.Register(container,
+		financepg.Provide,
+		identitypg.Provide,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("cannot register storage providers: %w", err)
 	}
 
 	if err := container.Provide(pg.NewDefaultConnection); err != nil {
