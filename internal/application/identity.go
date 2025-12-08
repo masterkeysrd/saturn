@@ -17,6 +17,7 @@ type RegisterUserInput struct {
 
 type IdentityService interface {
 	CreateUser(context.Context, *identity.CreateUserInput) (*identity.User, error)
+	CreateAdminUser(context.Context, *identity.CreateUserInput) (*identity.User, error)
 }
 
 // Identity represents the identity application.
@@ -39,6 +40,15 @@ func NewIdentity(params IdentityParams) *Identity {
 // RegisterUser registers a new user in the system.
 func (a *Identity) RegisterUser(ctx context.Context, in *RegisterUserInput) (*identity.User, error) {
 	return a.identityService.CreateUser(ctx, &identity.CreateUserInput{
+		Username: in.Username,
+		Email:    in.Email,
+		Password: in.Password,
+	})
+}
+
+// RegisterAdminUser registers a new admin user in the system.
+func (a *Identity) RegisterAdminUser(ctx context.Context, in *RegisterUserInput) (*identity.User, error) {
+	return a.identityService.CreateAdminUser(ctx, &identity.CreateUserInput{
 		Username: in.Username,
 		Email:    in.Email,
 		Password: in.Password,
