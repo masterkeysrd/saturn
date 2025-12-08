@@ -10,26 +10,26 @@ import (
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 )
 
-var _ identity.UserStore = (*UserRepository)(nil)
+var _ identity.UserStore = (*UserStore)(nil)
 
-type UserRepository struct {
+type UserStore struct {
 	db      *sqlx.DB
 	queries *UserQueries
 }
 
-func NewUserRepository(db *sqlx.DB) (*UserRepository, error) {
+func NewUserStore(db *sqlx.DB) (*UserStore, error) {
 	queries, err := NewUserQueries(db)
 	if err != nil {
 		return nil, fmt.Errorf("cannot initialize user queries: %w", err)
 	}
 
-	return &UserRepository{
+	return &UserStore{
 		db:      db,
 		queries: queries,
 	}, nil
 }
 
-func (r *UserRepository) Store(ctx context.Context, user *identity.User) error {
+func (r *UserStore) Store(ctx context.Context, user *identity.User) error {
 	entity := NewUserEntityFromModel(user)
 	if err := r.queries.Upsert(ctx, entity); err != nil {
 		return fmt.Errorf("cannot store user: %w", err)
@@ -37,7 +37,7 @@ func (r *UserRepository) Store(ctx context.Context, user *identity.User) error {
 	return nil
 }
 
-func (r *UserRepository) ExistsBy(ctx context.Context, criteria identity.UserExistCriteria) (bool, error) {
+func (r *UserStore) ExistsBy(ctx context.Context, criteria identity.UserExistCriteria) (bool, error) {
 	query, args, err := r.queries.ExitsBy(ctx, criteria)
 	if err != nil {
 		return false, fmt.Errorf("exists query build failed: %w", err)

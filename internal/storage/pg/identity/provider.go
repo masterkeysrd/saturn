@@ -6,7 +6,7 @@ import (
 )
 
 func Provide(inj deps.Injector) error {
-	if err := inj.Provide(NewUserRepository, deps.As(new(identity.UserStore))); err != nil {
+	if err := inj.Provide(NewUserStore, deps.As(new(identity.UserStore))); err != nil {
 		return err
 	}
 
