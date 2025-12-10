@@ -110,3 +110,7 @@ type DeleteTransactionRequest struct {
 type GetFinanceInsightsRequest struct {
 	FinanceGetInsightsParams
 }
+
+type RevokeSessionRequest struct {
+	Token string `json:"token"`
+}

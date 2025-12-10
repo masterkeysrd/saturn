@@ -25,3 +25,18 @@ func UserToAPI(in *identity.User) *api.User {
 		Email:    types.Email(in.Email),
 	}
 }
+
+func LoginUserInputFromAPI(in *api.LoginRequest) *application.LoginUserInput {
+	return &application.LoginUserInput{
+		UsernameOrEmail: in.Username,
+		Password:        in.Password,
+	}
+}
+
+func TokenPairToAPI(session *application.TokenPair) *api.TokenResponse {
+	return &api.TokenResponse{
+		Token:        session.AccessToken,
+		RefreshToken: session.RefreshToken,
+		ExpiresAt:    session.ExpiresAt,
+	}
+}

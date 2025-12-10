@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
 	"github.com/masterkeysrd/saturn/internal/pkg/httprouter"
 	financehttp "github.com/masterkeysrd/saturn/internal/transport/http/finance"
 	identityhttp "github.com/masterkeysrd/saturn/internal/transport/http/identity"
+	"github.com/masterkeysrd/saturn/internal/transport/http/middleware"
 )
 
 type Server struct {
@@ -20,6 +22,7 @@ type ServerParams struct {
 
 	FinanceRouter  *financehttp.Router
 	IdentityRouter *identityhttp.Router
+	TokenManager   auth.TokenManager
 }
 
 func NewServer(params ServerParams) *Server {
@@ -37,8 +40,19 @@ func NewServer(params ServerParams) *Server {
 		router.RegisterRoutes(apiV1Mux)
 	}
 
+	authMiddleware := middleware.NewAuthMiddleware(middleware.AuthMiddlewareConfig{
+		TokenParser: params.TokenManager.Parse,
+		ExemptPaths: []string{
+			"/api/v1/identity/users:login",
+			"/api/v1/identity/sessions:refresh",
+		},
+	})
+
+	var handler http.Handler = mux
+	handler = authMiddleware.Handler(handler)
+
 	return &Server{
-		handler: mux,
+		handler: handler,
 	}
 }
 
@@ -49,6 +63,7 @@ func (s *Server) Start() error {
 
 	handler := s.handler
 	handler = s.cors(handler)
+
 	if err := http.ListenAndServe(":3000", handler); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("server error: %w", err)
 	}

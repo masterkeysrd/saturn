@@ -28,9 +28,11 @@ func NewUsersController(params UsersControllerParams) *UsersController {
 
 // RegisterRoutes registers the user-related routes to the provided ServeMux.
 func (c *UsersController) RegisterRoutes(mux *http.ServeMux) {
-	mux.Handle("POST /users:register", httphandler.Handle(c.RegisterUser,
+	mux.Handle("POST /users", httphandler.Handle(c.RegisterUser,
 		httphandler.WithCreated[*api.RegisterUserRequest, *api.User](),
 	))
+	mux.Handle("POST /users:login", httphandler.Handle(c.LoginUser))
+	mux.Handle("POST /users:logoutAll", httphandler.Handle(c.LogoutUserAll))
 }
 
 // RegisterUser handles the user registration request.
@@ -43,4 +45,23 @@ func (c *UsersController) RegisterUser(ctx context.Context, in *api.RegisterUser
 	}
 
 	return UserToAPI(user), nil
+}
+
+func (c *UsersController) LoginUser(ctx context.Context, in *api.LoginRequest) (*api.TokenResponse, error) {
+	appInput := LoginUserInputFromAPI(in)
+
+	session, err := c.identityApplication.LoginUser(ctx, appInput)
+	if err != nil {
+		return nil, err
+	}
+
+	return TokenPairToAPI(session), nil
+}
+
+func (c *UsersController) LogoutUserAll(ctx context.Context, _ *httphandler.Empty) (*httphandler.Empty, error) {
+	err := c.identityApplication.EndAllUserSessions(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &httphandler.Empty{}, nil
 }

@@ -28,6 +28,65 @@ paths:
               schema:
                 $ref: '#/components/schemas/User'
 
+  /identity/users:login:
+    post:
+      summary: Login user
+      operationId: identity.LoginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        "200":
+          description: Logged in user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+
+  /identity/users:logoutAll:
+    post:
+      summary: Logout user from all sessions
+      operationId: identity.LogoutUserFromAllSessions
+      responses:
+        "204":
+          description: Logged out from all sessions
+
+  /identity/sessions:refresh:
+    post:
+      summary: Refresh authentication token
+      operationId: identity.RefreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshSessionRequest'
+      responses:
+        "200":
+          description: Refreshed token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+
+  /identity/sessions/{token}:
+    delete:
+      summary: Revoke authentication token
+      operationId: identity.RevokeToken
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: Token to revoke
+          schema:
+           type: string
+      responses:
+        "204":
+          description: Token revoked
+
   /finance/budgest:
     get:
       summary: List all budgets
@@ -860,6 +919,58 @@ components:
           description: Total number of transactions
           minimum: 0
           example: 48
+
+    LoginRequest:
+      type: object
+      description: Request to login a user
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 30
+          example: "johndoe"
+          description: "The username or email of the user."
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: "strongpassword123"
+
+    TokenResponse:
+      type: object
+      description: Response containing authentication token
+      required:
+        - token
+        - refresh_token
+        - expires_at
+      properties:
+        token:
+          type: string
+          description: JWT authentication token
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        refresh_token:
+          type: string
+          description: Token used to refresh the authentication token
+          example: "dGhpcy1pcz1hLXJlZnJlc2gtdG9rZW4uLi4="
+        expires_at:
+          type: integer
+          format: int64
+          description: Unix timestamp indicating when the token expires
+          example: 1716239022
+
+    RefreshSessionRequest:
+      type: object
+      description: Request to refresh an authentication session
+      required:
+        - refresh_token
+      properties:
+        refresh_token:
+          type: string
+          description: Token used to refresh the authentication token
+          example: "dGhpcy1pcz1hLXJlZnJlc2gtdG9rZW4uLi4="
 
     FieldMask:
       type: array

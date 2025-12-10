@@ -10,5 +10,9 @@ func Provide(inj deps.Injector) error {
 		return err
 	}
 
+	if err := inj.Provide(NewSessionStore, deps.As(new(identity.SessionStore))); err != nil {
+		return err
+	}
+
 	return nil
 }

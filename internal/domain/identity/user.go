@@ -17,11 +17,22 @@ const (
 
 // UserStore defines the interface for user persistence.
 type UserStore interface {
+	// Get retrieves a user by their unique ID.
+	Get(context.Context, UserID) (*User, error)
+
 	// Store saves a new user to the store.
 	Store(context.Context, *User) error
 
+	// GetBy retrieves a user based on the given criteria.
+	GetBy(context.Context, GetUserCriteria) (*User, error)
+
 	// ExistsBy checks if a user exists based on the given criteria.
 	ExistsBy(context.Context, UserExistCriteria) (bool, error)
+}
+
+// GetUserCriteria represents criteria to retrieve a user.
+type GetUserCriteria interface {
+	isGetUserCriteria()
 }
 
 // UserExistCriteria represents criteria to check for user existence.
@@ -94,8 +105,8 @@ func (u *User) Validate() error {
 	if u.Username == "" {
 		return fmt.Errorf("username cannot be empty")
 	}
-	if len(u.Username) < 3 {
-		return fmt.Errorf("username must be at least 3 characters long")
+	if len(u.Username) < 4 {
+		return fmt.Errorf("username must be at least 4 characters long")
 	}
 	if len(u.Username) > 30 {
 		return fmt.Errorf("username cannot be longer than 30 characters")
@@ -174,4 +185,33 @@ type CreateUserInput struct {
 	Username string
 	Email    string
 	Password string
+}
+
+type LoginUserInput struct {
+	UsernameOrEmail string
+	Password        string
+	UserAgent       string
+	ClientIP        string
+	RememberMe      bool
+}
+
+func (in *LoginUserInput) Validate() error {
+	if in == nil {
+		return fmt.Errorf("login input is nil")
+	}
+
+	usernameOrEmail := strings.TrimSpace(in.UsernameOrEmail)
+	if usernameOrEmail == "" {
+		return fmt.Errorf("username or email cannot be empty")
+	}
+
+	if len(usernameOrEmail) < 4 {
+		return fmt.Errorf("username or email must be at least 4 characters long")
+	}
+
+	if strings.TrimSpace(in.Password) == "" {
+		return fmt.Errorf("password cannot be empty")
+	}
+
+	return nil
 }

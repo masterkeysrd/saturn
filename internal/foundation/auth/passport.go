@@ -1,7 +1,8 @@
 package auth
 
-type Passport struct {
-	UserID string
-	Email  string
-	Role   Role
+type UserPassport struct {
+	UserID   string
+	Username string
+	Email    string
+	Role     Role
 }

@@ -18,6 +18,10 @@ func RegisterProviders(inj deps.Injector) error {
 		return fmt.Errorf("cannot provide users controller: %w", err)
 	}
 
+	if err := inj.Provide(NewSessionsController); err != nil {
+		return fmt.Errorf("cannot provide sessions controller: %w", err)
+	}
+
 	if err := inj.Provide(NewRouter); err != nil {
 		return fmt.Errorf("cannot provide finance router: %w", err)
 	}

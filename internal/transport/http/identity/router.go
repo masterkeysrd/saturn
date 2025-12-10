@@ -11,7 +11,8 @@ import (
 type Controllers struct {
 	deps.In
 
-	Users *UsersController
+	Users    *UsersController
+	Sessions *SessionsController
 }
 
 type Router struct {
@@ -21,6 +22,7 @@ type Router struct {
 func NewRouter(c Controllers) *Router {
 	registers := []httprouter.RoutesRegister{
 		c.Users,
+		c.Sessions,
 	}
 
 	return &Router{

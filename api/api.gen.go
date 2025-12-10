@@ -137,6 +137,14 @@ type ListTransactionsResponse struct {
 	Transactions []TransactionItem `json:"transactions"`
 }
 
+// LoginRequest Request to login a user
+type LoginRequest struct {
+	Password string `json:"password"`
+
+	// Username The username or email of the user.
+	Username string `json:"username"`
+}
+
 // Meta Metadata regarding the pagination state of the response.
 type Meta struct {
 	// HasNext Indicates if there is a subsequent page of data.
@@ -165,6 +173,12 @@ type Money struct {
 
 	// Currency ISO 4217 currency code (e.g., "USD", "DOP").
 	Currency string `json:"currency"`
+}
+
+// RefreshSessionRequest Request to refresh an authentication session
+type RefreshSessionRequest struct {
+	// RefreshToken Token used to refresh the authentication token
+	RefreshToken string `json:"refresh_token"`
 }
 
 // RegisterUserRequest Request to register a new user
@@ -262,6 +276,18 @@ type SpendingTrendPeriod struct {
 
 	// Usage Percentage of budgeted amount spent for this period
 	Usage float64 `json:"usage"`
+}
+
+// TokenResponse Response containing authentication token
+type TokenResponse struct {
+	// ExpiresAt Unix timestamp indicating when the token expires
+	ExpiresAt int64 `json:"expires_at"`
+
+	// RefreshToken Token used to refresh the authentication token
+	RefreshToken string `json:"refresh_token"`
+
+	// Token JWT authentication token
+	Token string `json:"token"`
 }
 
 // Transaction A fully-realized financial transaction stored in the ledger.
@@ -417,8 +443,14 @@ type BudgetCreateCurrencyJSONRequestBody = Currency
 // FinanceCreateExpenseJSONRequestBody defines body for FinanceCreateExpense for application/json ContentType.
 type FinanceCreateExpenseJSONRequestBody = Expense
 
+// IdentityRefreshTokenJSONRequestBody defines body for IdentityRefreshToken for application/json ContentType.
+type IdentityRefreshTokenJSONRequestBody = RefreshSessionRequest
+
 // IdentityCreateUserJSONRequestBody defines body for IdentityCreateUser for application/json ContentType.
 type IdentityCreateUserJSONRequestBody = RegisterUserRequest
+
+// IdentityLoginUserJSONRequestBody defines body for IdentityLoginUser for application/json ContentType.
+type IdentityLoginUserJSONRequestBody = LoginRequest
 
 // FinanceUpdateExpenseJSONRequestBody defines body for FinanceUpdateExpense for application/json ContentType.
 type FinanceUpdateExpenseJSONRequestBody = Expense

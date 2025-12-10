@@ -8,9 +8,13 @@ import (
 	"github.com/masterkeysrd/saturn/internal/application"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/foundation/id"
+	"github.com/masterkeysrd/saturn/internal/infrastructure/token"
 	"github.com/masterkeysrd/saturn/internal/pkg/argon2id"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
+	"github.com/masterkeysrd/saturn/internal/pkg/secretgen"
+	"github.com/masterkeysrd/saturn/internal/pkg/sha256"
 	"github.com/masterkeysrd/saturn/internal/pkg/uuid"
 	"github.com/masterkeysrd/saturn/internal/storage/pg"
 	financepg "github.com/masterkeysrd/saturn/internal/storage/pg/finance"
@@ -48,12 +52,49 @@ func buildContainer() (deps.Container, error) {
 	if err := container.Provide(argon2id.New); err != nil {
 		return nil, fmt.Errorf("cannot provide argon2id hasher: %w", err)
 	}
+	if err := container.Provide(sha256.New); err != nil {
+		return nil, fmt.Errorf("cannot provide sha256 hasher: %w", err)
+	}
+	if err := container.Provide(secretgen.NewRandomGenerator); err != nil {
+		return nil, fmt.Errorf("cannot provide secret generator: %w", err)
+	}
 
 	// Wire Hasher
 	if err := container.Provide(func(hasher *argon2id.Hasher) identity.PasswordHasher {
 		return hasher
 	}); err != nil {
 		return nil, fmt.Errorf("cannot provide password hasher: %w", err)
+	}
+
+	// Infra Wiring
+	if err := deps.Register(container,
+		token.Provide,
+	); err != nil {
+		return nil, fmt.Errorf("cannot register infrastructure providers: %w", err)
+	}
+
+	// Wire JWT Generator
+	if err := container.Provide(func(gen *token.JWTGenerator) application.TokenManager {
+		return gen
+	}); err != nil {
+		return nil, fmt.Errorf("cannot provide token generator: %w", err)
+	}
+
+	if err := container.Provide(func(gen *token.JWTGenerator) auth.TokenManager {
+		return gen
+	}); err != nil {
+		return nil, fmt.Errorf("cannot provide auth token manager: %w", err)
+	}
+
+	if err := container.Provide(func(hasher *sha256.Hasher) identity.TokenHasher {
+		return hasher
+	}); err != nil {
+		return nil, fmt.Errorf("cannot provide token hasher: %w", err)
+	}
+	if err := container.Provide(func(gen *secretgen.RandomGenerator) identity.SecretGenerator {
+		return gen
+	}); err != nil {
+		return nil, fmt.Errorf("cannot provide token generator: %w", err)
 	}
 
 	// Transport Providers
