@@ -20,23 +20,29 @@ type AuthMiddlewareConfig struct {
 }
 
 type AuthMiddleware struct {
-	config AuthMiddlewareConfig
+	config      AuthMiddlewareConfig
+	exemptPaths map[string]struct{}
 }
 
 func NewAuthMiddleware(config AuthMiddlewareConfig) *AuthMiddleware {
+	if config.TokenParser == nil {
+		panic("TokenParser function must be provided")
+	}
+
+	exemptPaths := make(map[string]struct{})
+	for _, path := range config.ExemptPaths {
+		exemptPaths[path] = struct{}{}
+	}
+
 	return &AuthMiddleware{
-		config: config,
+		config:      config,
+		exemptPaths: exemptPaths,
 	}
 }
 
 func (am *AuthMiddleware) Handler(next http.Handler) http.Handler {
-	exemptPaths := make(map[string]struct{})
-	for _, path := range am.config.ExemptPaths {
-		exemptPaths[path] = struct{}{}
-	}
-
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if _, skip := exemptPaths[r.URL.Path]; skip {
+		if _, skip := am.exemptPaths[r.URL.Path]; skip {
 			next.ServeHTTP(w, r)
 			return
 		}
