@@ -1,0 +1,92 @@
+package access
+
+import (
+	"context"
+
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
+	"github.com/masterkeysrd/saturn/internal/foundation/space"
+)
+
+type principalCtxKey struct{}
+
+type Principal struct {
+	actorID auth.UserID
+	spaceID space.ID
+
+	// SystemRole is the global role assigned to the principal,
+	// outside of any specific space context.
+	//
+	// Eg: admin, superuser, etc.
+	systemRole auth.Role
+
+	// SpaceRole is the role assigned to the principal within the specific space.
+	//
+	// Eg: owner, admin, member, etc.
+	spaceRole space.Role
+}
+
+func NewPrincipal(actorID auth.UserID, spaceID space.ID, systemRole auth.Role, spaceRole space.Role) Principal {
+	return Principal{
+		actorID:    actorID,
+		spaceID:    spaceID,
+		systemRole: systemRole,
+		spaceRole:  spaceRole,
+	}
+}
+
+func (p Principal) ActorID() auth.UserID {
+	return p.actorID
+}
+
+func (p Principal) SpaceID() space.ID {
+	return p.spaceID
+}
+
+func (p Principal) SystemRole() auth.Role {
+	return p.systemRole
+}
+
+func (p Principal) SpaceRole() space.Role {
+	return p.spaceRole
+}
+
+// IsSystemAdmin checks if the principal has system-wide admin privileges.
+func (p Principal) IsSystemAdmin() bool {
+	return p.systemRole == auth.RoleAdmin
+}
+
+// IsSpaceOwner checks if the principal is the owner of the space.
+func (p Principal) IsSpaceOwner() bool {
+	return p.spaceRole == space.RoleOwner
+}
+
+func (p Principal) IsSpaceAdmin() bool {
+	return p.spaceRole == space.RoleAdmin || p.spaceRole == space.RoleOwner
+}
+
+func (p Principal) IsSpaceMember() bool {
+	return p.spaceRole == space.RoleMember || p.IsSpaceAdmin()
+}
+
+func (p *Principal) CanManageSpace() bool {
+	if p == nil {
+		return false
+	}
+	return p.IsSpaceAdmin() || p.IsSystemAdmin()
+}
+
+func InjectPrincipal(ctx context.Context, principal Principal) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	return context.WithValue(ctx, principalCtxKey{}, principal)
+}
+
+func GetPrincipal(ctx context.Context) (Principal, bool) {
+	principal, ok := ctx.Value(principalCtxKey{}).(Principal)
+	if !ok {
+		return Principal{}, false
+	}
+	return principal, true
+}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 )
 
 var _ identity.SessionStore = (*SessionStore)(nil)
@@ -204,7 +205,7 @@ func (q *SessionQueries) DeleteByCriteria(criteria identity.DeleteSessionCriteri
 
 type SessionEntity struct {
 	ID        identity.SessionID `db:"id"`
-	UserID    identity.UserID    `db:"user_id"`
+	UserID    auth.UserID        `db:"user_id"`
 	TokenHash string             `db:"token_hash"`
 	UserAgent string             `db:"user_agent"`
 	ClientIP  string             `db:"client_ip"`

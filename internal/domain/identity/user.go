@@ -10,6 +10,11 @@ import (
 	"github.com/masterkeysrd/saturn/internal/foundation/id"
 )
 
+type (
+	UserID = auth.UserID
+	Role   = auth.Role
+)
+
 const (
 	MinPasswordLength = 8  // Minimum length for user passwords
 	MaxPasswordLength = 64 // Maximum length for user passwords
@@ -44,13 +49,6 @@ type UserExistCriteria interface {
 type PasswordHasher interface {
 	Hash(password string) (string, error)
 	Compare(hashedPassword, password string) bool
-}
-
-// UserID represents a unique identifier for a user.
-type UserID string
-
-func (uid UserID) String() string {
-	return string(uid)
 }
 
 // User represents a user in the identity system.

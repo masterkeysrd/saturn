@@ -15,9 +15,9 @@ type JWTGenerator struct {
 }
 
 type Claims struct {
-	UserID   string `json:"user_id"`
-	Username string `json:"username"`
-	Role     string `json:"role"`
+	UserID   auth.UserID `json:"user_id"`
+	Username string      `json:"username"`
+	Role     auth.Role   `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -35,14 +35,14 @@ func NewJWTGenerator(secret string) *JWTGenerator {
 	}
 }
 
-func (j *JWTGenerator) Generate(ctx context.Context, passport *auth.UserPassport, ttl time.Duration) (auth.Token, error) {
+func (j *JWTGenerator) Generate(ctx context.Context, passport auth.UserPassport, ttl time.Duration) (auth.Token, error) {
 	claims := &Claims{
-		UserID:   passport.UserID,
-		Username: passport.Username,
-		Role:     string(passport.Role),
+		UserID:   passport.UserID(),
+		Username: passport.Username(),
+		Role:     passport.Role(),
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "saturn",
-			Subject:   passport.UserID,
+			Subject:   passport.UserID().String(),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(ttl)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
@@ -57,7 +57,7 @@ func (j *JWTGenerator) Generate(ctx context.Context, passport *auth.UserPassport
 	return auth.Token(signedToken), nil
 }
 
-func (j *JWTGenerator) Parse(ctx context.Context, tokenStr auth.Token) (*auth.UserPassport, error) {
+func (j *JWTGenerator) Parse(ctx context.Context, tokenStr auth.Token) (auth.UserPassport, error) {
 	var claims Claims
 	token, err := jwt.ParseWithClaims(tokenStr.String(), &claims, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -66,14 +66,9 @@ func (j *JWTGenerator) Parse(ctx context.Context, tokenStr auth.Token) (*auth.Us
 		return j.secret, nil
 	})
 	if err != nil || !token.Valid {
-		return nil, fmt.Errorf("invalid token: %w", err)
+		return auth.UserPassport{}, fmt.Errorf("invalid token: %w", err)
 	}
 
-	passport := &auth.UserPassport{
-		UserID:   claims.UserID,
-		Username: claims.Username,
-		Role:     auth.Role(claims.Role),
-	}
-
+	passport := auth.NewUserPassport(claims.UserID, claims.Username, "", claims.Role)
 	return passport, nil
 }

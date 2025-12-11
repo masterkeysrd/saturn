@@ -22,12 +22,12 @@ type IdentityService interface {
 	LoginUser(context.Context, *identity.LoginUserInput) (*identity.User, *identity.Session, string, error)
 	RefreshSession(context.Context, *identity.RefreshSessionInput) (*identity.User, *identity.Session, string, error)
 	RevokeSession(context.Context, identity.SessionID) error
-	RevokeUserSessions(context.Context, identity.UserID) error
+	RevokeUserSessions(context.Context, auth.UserID) error
 }
 
 type TokenManager interface {
-	Generate(context.Context, *auth.UserPassport, time.Duration) (auth.Token, error)
-	Parse(context.Context, auth.Token) (*auth.UserPassport, error)
+	Generate(context.Context, auth.UserPassport, time.Duration) (auth.Token, error)
+	Parse(context.Context, auth.Token) (auth.UserPassport, error)
 }
 
 // Identity represents the identity application.
@@ -53,7 +53,7 @@ func NewIdentity(params IdentityParams) *Identity {
 // RegisterUser registers a new user in the system.
 func (a *Identity) RegisterUser(ctx context.Context, in *RegisterUserInput) (*identity.User, error) {
 	currentUser, ok := auth.GetCurrentUserPassport(ctx)
-	if ok && currentUser.Role != auth.RoleAdmin {
+	if ok && !currentUser.IsAdmin() {
 		return nil, errors.New("only admin users can register new users")
 	}
 	return a.identityService.CreateUser(ctx, &identity.CreateUserInput{
@@ -83,13 +83,8 @@ func (a *Identity) LoginUser(ctx context.Context, in *LoginUserInput) (*TokenPai
 		return nil, err
 	}
 
-	passport := auth.UserPassport{
-		UserID: user.ID.String(),
-		Role:   user.Role,
-		Email:  user.Email,
-	}
-
-	accessToken, err := a.tokenManager.Generate(ctx, &passport, AccessTokenTTL)
+	passport := auth.NewUserPassport(user.ID, user.Username, user.Email, user.Role)
+	accessToken, err := a.tokenManager.Generate(ctx, passport, AccessTokenTTL)
 	if err != nil {
 		return nil, err
 	}
@@ -120,17 +115,17 @@ func (a *Identity) EndAllUserSessions(ctx context.Context) error {
 		return errors.New("unable to get current user ID from context")
 	}
 
-	return a.identityService.RevokeUserSessions(ctx, identity.UserID(userID))
+	return a.identityService.RevokeUserSessions(ctx, auth.UserID(userID))
 }
 
-func (a *Identity) VerifyAccess(ctx context.Context, token string) (*auth.UserPassport, error) {
+func (a *Identity) VerifyAccess(ctx context.Context, token string) (auth.UserPassport, error) {
 	if token == "" {
-		return nil, errors.New("access token is required")
+		return auth.UserPassport{}, errors.New("access token is required")
 	}
 
 	passport, err := a.tokenManager.Parse(ctx, auth.Token(token))
 	if err != nil {
-		return nil, err
+		return auth.UserPassport{}, err
 	}
 
 	return passport, nil
@@ -155,13 +150,13 @@ func (a *Identity) RefreshSessionToken(ctx context.Context, refreshToken string)
 		return nil, err
 	}
 
-	passport := auth.UserPassport{
-		UserID: user.ID.String(),
-		Role:   user.Role,
-		Email:  user.Email,
-	}
-
-	accessToken, err := a.tokenManager.Generate(ctx, &passport, AccessTokenTTL)
+	// passport := auth.UserPassport{
+	// 	UserID: user.ID,
+	// 	Role:   user.Role,
+	// 	Email:  user.Email,
+	// }
+	passport := auth.NewUserPassport(user.ID, user.Username, user.Email, user.Role)
+	accessToken, err := a.tokenManager.Generate(ctx, passport, AccessTokenTTL)
 	if err != nil {
 		return nil, err
 	}

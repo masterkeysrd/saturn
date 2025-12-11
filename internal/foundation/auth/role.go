@@ -3,6 +3,10 @@ package auth
 // Role represents the role of a user.
 type Role string
 
+func (r Role) String() string {
+	return string(r)
+}
+
 const (
 	RoleAdmin Role = "admin" // Administrator role
 	RoleUser  Role = "user"  // Regular user role

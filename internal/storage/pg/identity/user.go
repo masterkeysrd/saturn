@@ -29,7 +29,7 @@ func NewUserStore(db *sqlx.DB) (*UserStore, error) {
 	}, nil
 }
 
-func (s *UserStore) Get(ctx context.Context, userID identity.UserID) (*identity.User, error) {
+func (s *UserStore) Get(ctx context.Context, userID auth.UserID) (*identity.User, error) {
 	var entity UserEntity
 
 	row := s.queries.GetByID(ctx, userID)
@@ -189,7 +189,7 @@ func NewUserQueries(db *sqlx.DB) (*UserQueries, error) {
 	}, nil
 }
 
-func (q *UserQueries) GetByID(ctx context.Context, userID identity.UserID) *sqlx.Row {
+func (q *UserQueries) GetByID(ctx context.Context, userID auth.UserID) *sqlx.Row {
 	return q.getByIDStmt.QueryRowxContext(ctx, userID)
 }
 
@@ -252,7 +252,7 @@ func (q *UserQueries) ExistsBy(context context.Context, criteria identity.UserEx
 }
 
 type UserEntity struct {
-	ID             identity.UserID     `db:"id"`
+	ID             auth.UserID         `db:"id"`
 	Username       string              `db:"username"`
 	Email          string              `db:"email"`
 	Role           auth.Role           `db:"role"`

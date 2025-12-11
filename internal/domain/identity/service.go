@@ -179,7 +179,7 @@ func (s *Service) RevokeSession(ctx context.Context, sessionID SessionID) error 
 	return s.sessionStore.Delete(ctx, sessionID)
 }
 
-func (s *Service) RevokeUserSessions(ctx context.Context, userID UserID) error {
+func (s *Service) RevokeUserSessions(ctx context.Context, userID auth.UserID) error {
 	return s.sessionStore.DeleteBy(ctx, ByUserID(userID))
 }
 

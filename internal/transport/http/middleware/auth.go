@@ -16,7 +16,7 @@ type AuthMiddlewareConfig struct {
 	ExemptPaths []string
 
 	// Function to validate the token.
-	TokenParser func(context.Context, auth.Token) (*auth.UserPassport, error)
+	TokenParser func(context.Context, auth.Token) (auth.UserPassport, error)
 }
 
 type AuthMiddleware struct {
