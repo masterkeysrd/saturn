@@ -1,0 +1,170 @@
+syntax = "proto3";
+
+package saturn.spaces.v1;
+
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/masterkeysrd/saturn/gen/proto/go/saturn/spaces/v1;spacesv1";
+
+// Spaces provide features to organize and manage resources collectively.
+//
+// This is ideal for families, small teams, or any group looking to share
+// access to resources like budgets, subscriptions, or devices in a secure and
+// manageable way.
+service Spaces {
+  option (google.api.default_host) = "api.saturn.masterkeysrd.dev";
+
+  // Creates a new space.
+  // The space owner is set to the authenticated user making the request.
+  rpc CreateSpace(CreateSpaceRequest) returns (Space) {
+    option (google.api.http) = {
+      post: "/v1/spaces"
+      body: "space"
+    };
+  }
+
+  // Lists spaces accessible to the authenticated user.
+  rpc ListSpaces(ListSpacesRequest) returns (ListSpacesResponse) {
+    option (google.api.http) = {get: "/v1/space/spaces"};
+  }
+
+  // Get information from a specified Space.
+  rpc GetSpace(GetSpaceRequest) returns (Space) {
+    option (google.api.http) = {get: "/v1/space/spaces/{id}"};
+    option (google.api.method_signature) = "id,view";
+  }
+
+  // Updates a space's information.
+  rpc UpdateSpace(UpdateSpaceRequest) returns (Space) {
+    option (google.api.http) = {
+      patch: "/v1/space/spaces/{id}"
+      body: "space"
+    };
+    option (google.api.method_signature) = "id,space,update_mask";
+  }
+
+  // Deletes a space.
+  rpc DeleteSpace(DeleteSpaceRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/space/spaces/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+}
+
+// Request message for Spaces.CreateSpace.
+message CreateSpaceRequest {
+  // The space to create.
+  Space space = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for Spaces.ListSpaces.
+message ListSpacesRequest {
+  // Optional search query to filter spaces by name.
+  // The search is case-insensitive and matches spaces containing
+  // the query string in their name.
+  string search = 1;
+
+  // Optional owner ID to filter spaces by owner.
+  optional string owner_id = 2;
+
+  // The view to apply to each space in the response.
+  // Defaults to BASIC if not specified.
+  Space.View view = 3;
+
+  // If non-empty, `page` specifies the page number to retrieve.
+  int32 page = 4;
+
+  // Number of spaces to return per page, if 0 zero or less defaults
+  // to server's maximum allowed page size.
+  int32 page_size = 5;
+}
+
+// Response message for Spaces.ListSpaces.
+message ListSpacesResponse {
+  // The list of spaces.
+  repeated Space spaces = 1;
+
+  // The total number of spaces available.
+  int32 total_size = 2;
+}
+
+// Request message for Spaces.UpdateSpace.
+message UpdateSpaceRequest {
+  // The ID of the space to update.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The space data to update.
+  Space space = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. The list of fields to update.
+  // A mask specifying which fields in the Space resource should be
+  // updated. This mask is relative to the Space resource, not the
+  // UpdateSpaceRequest message. If no mask is provided, all fields
+  // will be updated. A special field mask value of "*" can be used to
+  // indicate that all fields should be updated (including fields not send
+  // in the request body).
+  google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for Spaces.DeleteSpace.
+message DeleteSpaceRequest {
+  // The ID of the space to delete.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for Spaces.GetSpace.
+message GetSpaceRequest {
+  // The ID of the space to retrieve.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The view to apply to the space.
+  Space.View view = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message Space {
+  // Defines a view over a space's fields.
+  enum View {
+    // Default value. The default view is BASIC.
+    VIEW_UNSPECIFIED = 0;
+    NAME_ONLY = 1; // Only includes the space's ID and name.
+    BASIC = 2; // Includes basic information about the space.
+    FULL = 3; // Includes all information about the space.
+  }
+
+  // Information about the space owner.
+  message Owner {
+    // The owner's user ID.
+    string id = 1;
+
+    // The owner's name.
+    string name = 2;
+
+    // The owner's email.
+    optional string email = 3;
+  }
+
+  // The unique identifier of the space.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The user ID of the space owner.
+  string owner_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The name of the space.
+  string name = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // An optional alias for the space.
+  string alias = 4;
+
+  // Output only. Timestamps for space creation and last update.
+  google.protobuf.Timestamp create_time = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamps for space creation and last update.
+  google.protobuf.Timestamp update_time = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Information about the space owner.
+  Owner owner = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
