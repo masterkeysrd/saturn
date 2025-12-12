@@ -8,8 +8,8 @@ import (
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
 	"github.com/masterkeysrd/saturn/internal/pkg/httprouter"
-	financehttp "github.com/masterkeysrd/saturn/internal/transport/http/finance"
-	identityhttp "github.com/masterkeysrd/saturn/internal/transport/http/identity"
+	financehttp "github.com/masterkeysrd/saturn/internal/transport/http/controllers/finance"
+	identityhttp "github.com/masterkeysrd/saturn/internal/transport/http/controllers/identity"
 	"github.com/masterkeysrd/saturn/internal/transport/http/middleware"
 )
 

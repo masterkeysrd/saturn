@@ -19,8 +19,8 @@ import (
 	"github.com/masterkeysrd/saturn/internal/storage/pg"
 	financepg "github.com/masterkeysrd/saturn/internal/storage/pg/finance"
 	identitypg "github.com/masterkeysrd/saturn/internal/storage/pg/identity"
-	financehttp "github.com/masterkeysrd/saturn/internal/transport/http/finance"
-	identityhttp "github.com/masterkeysrd/saturn/internal/transport/http/identity"
+	financehttp "github.com/masterkeysrd/saturn/internal/transport/http/controllers/finance"
+	identityhttp "github.com/masterkeysrd/saturn/internal/transport/http/controllers/identity"
 )
 
 func init() {
