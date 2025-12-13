@@ -28,7 +28,7 @@ func GenerateAxios(gen *protogen.Plugin, file *protogen.File, options GenerateAx
 	typesFilename := path.Base(file.GeneratedFilenamePrefix) + "_pb"
 
 	// Import statements
-	g.P("import { axiosInstance } from '", options.AxiosImportPath, "';")
+	g.P("import { getAxios } from '", options.AxiosImportPath, "';")
 	g.P("import * as Types from './", typesFilename, "';")
 	g.P("import { create, fromJson, toJson } from '@bufbuild/protobuf';")
 	g.P("")
@@ -170,7 +170,7 @@ func GenerateAxios(gen *protogen.Plugin, file *protogen.File, options GenerateAx
 			finalPath = "`" + finalPath + "`"
 
 			// Build the axios call
-			g.P(fmt.Sprintf("  return axiosInstance.%s(%s", verb, finalPath))
+			g.P(fmt.Sprintf("  return getAxios().%s(%s", verb, finalPath))
 
 			// Add body argument for POST/PUT/PATCH
 			if supportsBody {

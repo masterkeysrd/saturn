@@ -29,7 +29,7 @@ plugins:
     out: ./packages/sdk/gen
     opt:
       - paths=source_relative
-      - axios_import_path=@/lib/axios
+      - axios_import_path=@/client
       - url_prefix=/api
 
 inputs:
