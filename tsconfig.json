@@ -10,5 +10,5 @@
     "forceConsistentCasingInFileNames": true
   },
   "exclude": ["packages/**/tests/**", "packages/**/dist/**"],
-  "references": [{ "path": "packages/sdk" }]
+  "references": [{ "path": "packages/sdk" }, { "path": "apps/web" }]
 }
