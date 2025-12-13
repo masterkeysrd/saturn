@@ -9,6 +9,10 @@ lint:
     - SERVICE_SUFFIX
     - RPC_RESPONSE_STANDARD_NAME
     - RPC_REQUEST_RESPONSE_UNIQUE
+  ignore_only:
+    PACKAGE_VERSION_SUFFIX:
+      - api/proto/saturn/type
+
 breaking:
   use:
     - FILE

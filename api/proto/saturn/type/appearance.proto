@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package saturn.type;
+
+option go_package = "github.com/masterkeysrd/saturn/gen/go/saturn/type;typepb";
+
+// Represents appearance for a resource.
+message Appearance {
+  // Color code in hexadecimal format (e.g., #RRGGBB).
+  string color = 1;
+
+  // Icon identifier representing the resource.
+  // This could be a name or a URL to the icon.
+  string icon = 2;
+}

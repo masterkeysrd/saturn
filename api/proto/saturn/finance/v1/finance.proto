@@ -1,0 +1,199 @@
+syntax = "proto3";
+
+// Package saturn. finance.v1 provides the Finance API for personal finance
+// management, including budgeting, expense tracking, and financial goals.
+package saturn.finance.v1;
+
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "saturn/type/appearance.proto";
+import "saturn/type/money.proto";
+
+option go_package = "github.com/masterkeysrd/saturn/gen/proto/go/saturn/finance/v1;financev1";
+
+// Finance provides features personal finance management, including budgeting,
+// expense tracking, and financial goal setting.
+service Finance {
+  option (google.api.default_host) = "api.saturn.masterkeysrd.dev";
+
+  // Creates a new budget.
+  rpc CreateBudget(CreateBudgetRequest) returns (Budget) {
+    option (google.api.http) = {
+      post: "/v1/finance/budgets"
+      body: "budget"
+    };
+  }
+
+  // Lists budgets.
+  // Supports filtering by name using the 'search' parameter.
+  rpc ListBudgets(ListBudgetsRequest) returns (ListBudgetsResponse) {
+    option (google.api.http) = {get: "/v1/finance/budgets"};
+  }
+
+  // Get information from a specified Budget.
+  rpc GetBudget(GetBudgetRequest) returns (Budget) {
+    option (google.api.http) = {get: "/v1/finance/budgets/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Updates a budget's information.
+  rpc UpdateBudget(UpdateBudgetRequest) returns (Budget) {
+    option (google.api.http) = {
+      patch: "/v1/finance/budgets/{id}"
+      body: "budget"
+    };
+    option (google.api.method_signature) = "id,budget,update_mask";
+  }
+
+  // Deletes a budget.
+  rpc DeleteBudget(DeleteBudgetRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/finance/budgets/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+}
+
+// Request message for Finance.CreateBudget.
+message CreateBudgetRequest {
+  // The budget to create.
+  saturn.finance.v1.Budget budget = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for Finance.ListBudgets.
+message ListBudgetsRequest {
+  // A search string to filter budgets by name.
+  string search = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // The view level for the budget details.
+  // Defaults to BASIC if not specified.
+  Budget.View view = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Format: "field_name [asc|desc]"
+  // Supported fields: name, create_time, update_time, amount
+  // Examples: "name asc", "create_time desc"
+  // Defaults to "create_time desc" if not specified.
+  string order_by = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // The page number to retrieve.
+  int32 page = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // The number of budgets to return per page.
+  int32 page_size = 5 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Response message for Finance.ListBudgets.
+message ListBudgetsResponse {
+  // The list of budgets.
+  repeated Budget budgets = 1;
+
+  // The total number of budgets matching the request.
+  // Used for pagination.
+  int32 total_count = 2;
+}
+
+// Request message for Finance.GetBudget.
+message GetBudgetRequest {
+  // The unique identifier of the budget to retrieve.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The view level for the budget details.
+  Budget.View view = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for Finance.UpdateBudget.
+message UpdateBudgetRequest {
+  // The unique identifier of the budget to update.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The budget data to update.
+  Budget budget = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // The fields to be updated. If empty, all non-output fields are updated.
+  // Use "*" to update all fields.
+  google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for Finance.DeleteBudget.
+message DeleteBudgetRequest {
+  // The unique identifier of the budget to delete.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Budget represents a financial budget with its details.
+message Budget {
+  enum View {
+    // Default view showing basic budget information.
+    VIEW_UNSPECIFIED = 0;
+
+    // Basic view showing essential budget details,
+    // such as name, amount, and appearance.
+    BASIC = 1;
+
+    // Full view showing all budget details, including
+    // base_amount, exchange_rate and statistics like spent amount,
+    // remaining amount, and usage percentage.
+    FULL = 2;
+  }
+
+  // Statistics related to the budget.
+  message Stats {
+    // Total amount spent within the current budget period.
+    saturn.type.Money spent_amount = 1;
+
+    // Remaining amount in the budget for the current period.
+    // Calculated as: amount - spent_amount
+    saturn.type.Money remaining_amount = 2;
+
+    // Percentage of the budget used in the current period.
+    // Calculated as: (spent_amount / amount) * 100
+    // Range: 0.0 to 100.0+ (can exceed 100 if over budget)
+    double usage_percentage = 3;
+
+    // The start of the current period these stats cover.
+    google.protobuf.Timestamp period_start = 4;
+
+    // The end of the current period these stats cover.
+    google.protobuf.Timestamp period_end = 5;
+
+    // Number of transactions counted in spent_amount.
+    int32 transaction_count = 6;
+  }
+
+  // The unique identifier of the budget.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The name of the budget.
+  string name = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional description of the budget.
+  string description = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // The appearance settings for the budget.
+  saturn.type.Appearance appearance = 4;
+
+  // The amount allocated for the budget.
+  saturn.type.Money amount = 5 [(google.api.field_behavior) = REQUIRED];
+
+  // The creation time of the budget.
+  google.protobuf.Timestamp create_time = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The last update time of the budget.
+  google.protobuf.Timestamp update_time = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The base amount for the budget base current (space base amount).
+  // the current period.
+  // Only populated when View is FULL.
+  saturn.type.Money base_amount = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The exchange rate used to convert base_amount to amount
+  // for the current period.
+  // Only populated when View is FULL.
+  double exchange_rate = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Statistics related to the budget.
+  // Only populated when View is FULL.
+  Stats stats = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
