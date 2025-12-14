@@ -1,6 +1,12 @@
 DOCKER-COMPOSE=docker compose
 BUF_CMD=docker run --rm -v $(PWD):/workspace -v ~/.config/buf:/root/.config/buf -v ~/.cache/buf:/root/.cache/buf -w /workspace saturn/buf:latest
 
+deps: proto/deps
+
+lint: proto/lint
+
+generate: proto/generate
+
 app/start:
 	$(DOCKER-COMPOSE) -f deployments/docker-compose/app.yaml up \
 		--build \
@@ -9,7 +15,6 @@ app/start:
 
 app/stop:
 	$(DOCKER-COMPOSE) -f deployments/docker-compose/app.yaml down
-
 
 buf/build-image:
 	docker build \

@@ -13,7 +13,7 @@ import "google/protobuf/timestamp.proto";
 import "saturn/type/appearance.proto";
 import "saturn/type/money.proto";
 
-option go_package = "github.com/masterkeysrd/saturn/gen/proto/go/saturn/finance/v1;financev1";
+option go_package = "github.com/masterkeysrd/saturn/gen/proto/go/saturn/finance/v1;financepb";
 
 // Finance provides features personal finance management, including budgeting,
 // expense tracking, and financial goal setting.
@@ -89,9 +89,9 @@ message ListBudgetsResponse {
   // The list of budgets.
   repeated Budget budgets = 1;
 
-  // The total number of budgets matching the request.
+  // The total number of budgets available for the given request.
   // Used for pagination.
-  int32 total_count = 2;
+  int32 total_size = 2;
 }
 
 // Request message for Finance.GetBudget.

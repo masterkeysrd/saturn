@@ -1,36 +1,42 @@
 version: v2
-managed:
-  enabled: true
 
 plugins:
   - remote: buf.build/protocolbuffers/go
-    out: ./gen/go
+    out: .
     opt:
-      - paths=source_relative
+      - paths=import
+      - module=github.com/masterkeysrd/saturn
   - remote: buf.build/grpc/go
-    out: ./gen/go
+    out: .
     opt:
-      - paths=source_relative
+      - paths=import
+      - module=github.com/masterkeysrd/saturn
   - remote: buf.build/community/mfridman-go-json
-    out: ./gen/go
+    out: .
     opt:
-      - paths=source_relative
+      - paths=import
+      - module=github.com/masterkeysrd/saturn
       - orig_name=true
       - allow_unknown=true
       - emit_defaults=true
-  - remote: buf.build/bufbuild/es
-    out: ./packages/sdk/gen
+  - remote: buf.build/grpc-ecosystem/gateway
+    out: .
     opt:
-      - target=ts
-      - ts_nocheck=true
-      - json_types=true
-    include_imports: true
-  - local: protoc-gen-saturn-axios
-    out: ./packages/sdk/gen
-    opt:
-      - paths=source_relative
-      - axios_import_path=@/client
-      - url_prefix=/api
-
+      - paths=import
+      - module=github.com/masterkeysrd/saturn
+  # - remote: buf.build/bufbuild/es
+  #   out: ./packages/sdk/gen
+  #   opt:
+  #     - target=ts
+  #     - ts_nocheck=true
+  #     - json_types=true
+  #   include_imports: true
+  # - local: protoc-gen-saturn-axios
+  #   out: ./packages/sdk/gen
+  #   opt:
+  #     - paths=source_relative
+  #     - axios_import_path=@/client
+  #     - url_prefix=/api
+  #
 inputs:
   - directory: .

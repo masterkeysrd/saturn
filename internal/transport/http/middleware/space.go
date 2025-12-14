@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"net/textproto"
 
-	"github.com/masterkeysrd/saturn/internal/domain/space"
+	"github.com/masterkeysrd/saturn/internal/domain/tenancy"
 	"github.com/masterkeysrd/saturn/internal/foundation/access"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 )
@@ -17,7 +17,7 @@ type SpaceConfig struct {
 	ExemptPaths []string
 
 	// Function to get membership by ID.
-	MembershipGetter func(context.Context, space.MembershipID) (*space.Membership, error)
+	MembershipGetter func(context.Context, tenancy.MembershipID) (*tenancy.Membership, error)
 }
 
 type SpaceMiddleware struct {
@@ -58,7 +58,7 @@ func (sm *SpaceMiddleware) Handler(next http.Handler) http.Handler {
 			http.Error(w, "Ambiguous request: Multiple X-Space-ID headers", http.StatusBadRequest)
 			return
 		}
-		spaceID := space.SpaceID(spaceIDs[0])
+		spaceID := tenancy.SpaceID(spaceIDs[0])
 
 		ctx := r.Context()
 		passport, ok := auth.GetCurrentUserPassport(ctx)
@@ -67,8 +67,8 @@ func (sm *SpaceMiddleware) Handler(next http.Handler) http.Handler {
 			return
 		}
 
-		membership, err := sm.config.MembershipGetter(ctx, space.MembershipID{
-			SpaceID: space.SpaceID(spaceID),
+		membership, err := sm.config.MembershipGetter(ctx, tenancy.MembershipID{
+			SpaceID: tenancy.SpaceID(spaceID),
 			UserID:  passport.UserID(),
 		})
 		if err != nil {
@@ -76,12 +76,12 @@ func (sm *SpaceMiddleware) Handler(next http.Handler) http.Handler {
 			return
 		}
 
-		var spaceRole space.Role
+		var spaceRole tenancy.Role
 		if membership != nil {
 			spaceRole = membership.Role
 		} else {
 			if passport.IsAdmin() {
-				spaceRole = space.RoleAdmin
+				spaceRole = tenancy.RoleAdmin
 			} else {
 				http.Error(w, "Space not found or access denied", http.StatusForbidden)
 				return

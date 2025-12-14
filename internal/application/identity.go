@@ -8,8 +8,11 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	"github.com/masterkeysrd/saturn/internal/domain/tenancy"
+	"github.com/masterkeysrd/saturn/internal/foundation/access"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
+	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 )
 
 const (
@@ -33,6 +36,7 @@ type TokenManager interface {
 // Identity represents the identity application.
 type Identity struct {
 	identityService IdentityService
+	tenancyService  TenancyService
 	tokenManager    TokenManager
 }
 
@@ -40,12 +44,14 @@ type IdentityParams struct {
 	deps.In
 
 	IdentityService IdentityService
+	TenancyService  TenancyService
 	TokenManager    TokenManager
 }
 
 func NewIdentity(params IdentityParams) *Identity {
 	return &Identity{
 		identityService: params.IdentityService,
+		tenancyService:  params.TenancyService,
 		tokenManager:    params.TokenManager,
 	}
 }
@@ -56,11 +62,30 @@ func (a *Identity) RegisterUser(ctx context.Context, in *RegisterUserInput) (*id
 	if ok && !currentUser.IsAdmin() {
 		return nil, errors.New("only admin users can register new users")
 	}
-	return a.identityService.CreateUser(ctx, &identity.CreateUserInput{
+
+	user, err := a.identityService.CreateUser(ctx, &identity.CreateUserInput{
 		Username: in.Username,
 		Email:    in.Email,
 		Password: in.Password,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	// Automatically create a default space for the new user
+	principal := access.NewPrincipal(user.ID, "", user.Role, "")
+
+	space := &tenancy.Space{
+		Name:        "My Space",
+		Alias:       ptr.Of("my-space"),
+		Description: ptr.Of("Default space created upon user registration"),
+	}
+
+	if err := a.tenancyService.CreateSpace(ctx, principal, space); err != nil {
+		return nil, fmt.Errorf("failed to create default space for user: %w", err)
+	}
+
+	return user, nil
 }
 
 // RegisterAdminUser registers a new admin user in the system.

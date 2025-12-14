@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file saturn/type/appearance.proto.
  */
 export const file_saturn_type_appearance: GenFile = /*@__PURE__*/
-  fileDesc("ChxzYXR1cm4vdHlwZS9hcHBlYXJhbmNlLnByb3RvEgtzYXR1cm4udHlwZSIpCgpBcHBlYXJhbmNlEg0KBWNvbG9yGAEgASgJEgwKBGljb24YAiABKAlCqQEKD2NvbS5zYXR1cm4udHlwZUIPQXBwZWFyYW5jZVByb3RvUAFaOGdpdGh1Yi5jb20vbWFzdGVya2V5c3JkL3NhdHVybi9nZW4vZ28vc2F0dXJuL3R5cGU7dHlwZXBiogIDU1RYqgILU2F0dXJuLlR5cGXKAgtTYXR1cm5cVHlwZeICF1NhdHVyblxUeXBlXEdQQk1ldGFkYXRh6gIMU2F0dXJuOjpUeXBlYgZwcm90bzM");
+  fileDesc("ChxzYXR1cm4vdHlwZS9hcHBlYXJhbmNlLnByb3RvEgtzYXR1cm4udHlwZSIpCgpBcHBlYXJhbmNlEg0KBWNvbG9yGAEgASgJEgwKBGljb24YAiABKAlCQlpAZ2l0aHViLmNvbS9tYXN0ZXJrZXlzcmQvc2F0dXJuL2dlbi9wcm90by9nby9zYXR1cm4vdHlwZXBiO3R5cGVwYmIGcHJvdG8z");
 
 /**
  * Represents appearance for a resource.

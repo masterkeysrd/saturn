@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package saturn.type;
 
-option go_package = "github.com/masterkeysrd/saturn/gen/go/saturn/type;typepb";
+option go_package = "github.com/masterkeysrd/saturn/gen/proto/go/saturn/typepb;typepb";
 
 // Represents appearance for a resource.
 message Appearance {

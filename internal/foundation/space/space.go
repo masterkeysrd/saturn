@@ -15,9 +15,9 @@ func (sid ID) String() string {
 type Role string
 
 const (
-	RoleOwner  Role = "owner"  // Highest level of access.
-	RoleAdmin  Role = "admin"  // Elevated access level (can manage users and settings).
-	RoleMember Role = "member" // Standard access level (can view and contribute).
+	RoleOwner  Role = "OWNER"  // Highest level of access.
+	RoleAdmin  Role = "ADMIN"  // Elevated access level (can manage users and settings).
+	RoleMember Role = "MEMBER" // Standard access level (can view and contribute).
 )
 
 func (r Role) IsValid() bool {

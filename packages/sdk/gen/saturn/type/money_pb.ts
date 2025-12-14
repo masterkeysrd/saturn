@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file saturn/type/money.proto.
  */
 export const file_saturn_type_money: GenFile = /*@__PURE__*/
-  fileDesc("ChdzYXR1cm4vdHlwZS9tb25leS5wcm90bxILc2F0dXJuLnR5cGUiLQoFTW9uZXkSFQoNY3VycmVuY3lfY29kZRgBIAEoCRINCgVjZW50cxgCIAEoA0KkAQoPY29tLnNhdHVybi50eXBlQgpNb25leVByb3RvUAFaOGdpdGh1Yi5jb20vbWFzdGVya2V5c3JkL3NhdHVybi9nZW4vZ28vc2F0dXJuL3R5cGU7dHlwZXBiogIDU1RYqgILU2F0dXJuLlR5cGXKAgtTYXR1cm5cVHlwZeICF1NhdHVyblxUeXBlXEdQQk1ldGFkYXRh6gIMU2F0dXJuOjpUeXBlYgZwcm90bzM");
+  fileDesc("ChdzYXR1cm4vdHlwZS9tb25leS5wcm90bxILc2F0dXJuLnR5cGUiLQoFTW9uZXkSFQoNY3VycmVuY3lfY29kZRgBIAEoCRINCgVjZW50cxgCIAEoA0JCWkBnaXRodWIuY29tL21hc3RlcmtleXNyZC9zYXR1cm4vZ2VuL3Byb3RvL2dvL3NhdHVybi90eXBlcGI7dHlwZXBiYgZwcm90bzM");
 
 /**
  * Represents an amount of money with its currency type.

@@ -1,0 +1,331 @@
+syntax = "proto3";
+
+// Package saturn. tenancy. v1 provides the Tenancy API for managing
+// multi-tenant spaces in the Saturn platform.
+//
+// A "space" represents a tenant workspace where users can collaborate
+// with role-based access control (OWNER, ADMIN, MEMBER).
+package saturn.tenancy.v1;
+
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/masterkeysrd/saturn/gen/proto/go/saturn/tenancy/v1;tenancypb";
+
+// Tenancy provides features to manage tenants (spaces).
+//
+// This includes creating, updating, deleting, and retrieving tenant information,
+// as well as managing tenant settings and configurations.
+service Tenancy {
+  option (google.api.default_host) = "api.saturn.masterkeysrd.dev";
+
+  rpc CreateSpace(CreateSpaceRequest) returns (Space) {
+    option (google.api.http) = {
+      post: "/v1/spaces"
+      body: "space"
+    };
+  }
+
+  // Lists spaces accessible to the authenticated user.
+  rpc ListSpaces(ListSpacesRequest) returns (ListSpacesResponse) {
+    option (google.api.http) = {get: "/v1/spaces"};
+  }
+
+  // Get information from a specified Space.
+  rpc GetSpace(GetSpaceRequest) returns (Space) {
+    option (google.api.http) = {get: "/v1/spaces/{id}"};
+    option (google.api.method_signature) = "id,view";
+  }
+
+  // Updates a space's information.
+  //
+  // Only users with the OWNER can update space information.
+  rpc UpdateSpace(UpdateSpaceRequest) returns (Space) {
+    option (google.api.http) = {
+      patch: "/v1/spaces/{id}"
+      body: "space"
+    };
+    option (google.api.method_signature) = "id,space,update_mask";
+  }
+
+  // // Deletes a space (soft delete).
+  //
+  // The space will be marked as deleted but can be restored within 30 days.
+  // Only OWNER can delete spaces.
+  rpc DeleteSpace(DeleteSpaceRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/spaces/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
+  // Adds a new member to the space.
+  // Only users with the OWNER or ADMIN role can add members.
+  rpc AddMember(AddMemberRequest) returns (Member) {
+    option (google.api.http) = {
+      post: "/v1/spaces/{space_id}/members"
+      body: "*"
+    };
+    option (google.api.method_signature) = "space_id,member";
+  }
+
+  // Lists all members in the space.
+  // Only users with access to the space can list its members.
+  rpc ListMembers(ListMembersRequest) returns (ListMembersResponse) {
+    option (google.api.http) = {get: "/v1/spaces/{space_id}/members"};
+  }
+
+  // Updates a member's role in the space.
+  // Only users with the OWNER or ADMIN role can update members.
+  rpc UpdateMember(UpdateMemberRequest) returns (Member) {
+    option (google.api.http) = {
+      patch: "/v1/spaces/{space_id}/members/{user_id}"
+      body: "member"
+    };
+    option (google.api.method_signature) = "space_id,user_id,member,update_mask";
+  }
+
+  // Removes a member from the space.
+  //
+  // Permissions:
+  //   - OWNER:  Can remove any member (except themselves and other owners)
+  //   - ADMIN: Can remove MEMBER role only (not ADMIN or OWNER)
+  //   - MEMBER: Cannot remove members
+  rpc RemoveMember(RemoveMemberRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/spaces/{space_id}/members/{user_id}"};
+    option (google.api.method_signature) = "space_id,user_id";
+  }
+}
+
+// Request message for Spaces.CreateSpace.
+message CreateSpaceRequest {
+  // The space to create.
+  Space space = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for Spaces.ListSpaces.,
+message ListSpacesRequest {
+  // Optional search query to filter spaces by name.
+  // The search is case-insensitive and matches spaces containing
+  // the query string in their name.
+  string search = 1;
+
+  // Optional owner ID to filter spaces by owner.
+  optional string owner_id = 2;
+
+  // The view to apply to each space in the response.
+  // Defaults to BASIC if not specified.
+  Space.View view = 3;
+
+  // Sort order.  Format: "field_name [asc|desc]"
+  // Supported fields: name, create_time, update_time
+  // Defaults to "create_time desc" if not specified.
+  string order_by = 4;
+
+  // If non-empty, `page` specifies the page number to retrieve.
+  int32 page = 5;
+
+  // Number of spaces to return per page, if 0 zero or less defaults
+  // to server's maximum allowed page size.
+  int32 page_size = 6;
+}
+
+// Response message for Spaces.ListSpaces.
+message ListSpacesResponse {
+  // The list of spaces.
+  repeated Space spaces = 1;
+
+  // The total number of spaces available.
+  int32 total_size = 2;
+}
+
+// Request message for Spaces.UpdateSpace.
+message UpdateSpaceRequest {
+  // The ID of the space to update.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The space data to update.
+  Space space = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. The list of fields to update.
+  // A mask specifying which fields in the Space resource should be
+  // updated. This mask is relative to the Space resource, not the
+  // UpdateSpaceRequest message. If no mask is provided, all fields
+  // will be updated. A special field mask value of "*" can be used to
+  // indicate that all fields should be updated (including fields not send
+  // in the request body).
+  google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for Spaces.DeleteSpace.
+message DeleteSpaceRequest {
+  // The ID of the space to delete.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for Spaces.GetSpace.
+message GetSpaceRequest {
+  // The ID of the space to retrieve.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The view to apply to the space.
+  Space.View view = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message Space {
+  // Defines a view over a space's fields.
+  enum View {
+    // Default value. The default view is BASIC.
+    VIEW_UNSPECIFIED = 0;
+
+    // Only includes the space's ID, name, and alias.
+    NAME_ONLY = 1;
+
+    // Includes basic information about the space.
+    BASIC = 2;
+
+    // Includes all information about the space.
+    FULL = 3;
+  }
+
+  // The unique identifier of the space.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The user ID of the space owner.
+  string owner_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The name of the space.
+  string name = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // An optional alias for the space.
+  optional string alias = 4;
+
+  // An optional description of the space.
+  optional string description = 5;
+
+  // Output only. Timestamps for space creation and last update.
+  google.protobuf.Timestamp create_time = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamps for space creation and last update.
+  google.protobuf.Timestamp update_time = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamps for space deletion.
+  google.protobuf.Timestamp delete_time = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Information about the space owner.
+  // Only populated when View is FULL.
+  UserInfo owner = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for Members.AddMember.
+message AddMemberRequest {
+  // The ID of the space to add the member to.
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The member to add.
+  Member member = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for Members.ListMembers.
+message ListMembersRequest {
+  // The ID of the space to list members from.
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Sort order. Format: "field_name [asc|desc]"
+  // Supported fields: user_name, role, join_time
+  // Defaults to "join_time asc" if not specified.
+  string order_by = 2;
+
+  // If non-empty, `page` specifies the page number to retrieve.
+  int32 page = 3;
+
+  // Number of members to return per page, if 0 zero or less defaults
+  // to server's maximum allowed page size.
+  int32 page_size = 4;
+}
+
+// Response message for Members.ListMembers.
+message ListMembersResponse {
+  // The list of members in the space.
+  repeated Member members = 1;
+
+  // The total number of members in the space.
+  // Used for pagination.
+  int32 total_size = 2;
+}
+
+// Request message for Members.UpdateMember.
+message UpdateMemberRequest {
+  // The ID of the space containing the member.
+
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The ID of the user to update.
+  string user_id = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // The member data to update.
+  Member member = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. The list of fields to be updated.
+  // A mask specifying which fields in the Member resource should be
+  // updated. This mask is relative to the Member resource, not the
+  // UpdateMemberRequest message. If no mask is provided, all fields
+  // will be updated. A special field mask value "*" can be used to
+  // indicate that all fields should be updated.
+  google.protobuf.FieldMask update_mask = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for Members.RemoveMember.
+message RemoveMemberRequest {
+  // The ID of the space to remove the member from.
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The ID of the user to remove from the space.
+  // Cannot be the space owner or the caller's own user_id.
+  string user_id = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message Member {
+  // Role of a member in a space.
+  enum Role {
+    // Default value, should not be used.
+    ROLE_UNSPECIFIED = 0;
+
+    // Owner of the space with full permissions.
+    OWNER = 1;
+
+    // Admin of the space with elevated permissions,
+    // but not full ownership. Cannot delete the space,
+    // transfer ownership, or add/remove owners and admins.
+    ADMIN = 2;
+
+    // Regular member with standard permissions.
+    MEMBER = 3;
+  }
+
+  // The ID of the user.
+  string user_id = 1;
+
+  // The role of the member in the space.
+  Role role = 2;
+
+  // The time the member was added to the space.
+  google.protobuf.Timestamp join_time = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Information about the user.
+  UserInfo user = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Information about the space owner.
+message UserInfo {
+  // The owner's user ID.
+  string id = 1;
+
+  // The owner's name.
+  string name = 2;
+
+  // The owner's email.
+  optional string email = 3;
+}

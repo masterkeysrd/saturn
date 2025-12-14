@@ -8,6 +8,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/application"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	"github.com/masterkeysrd/saturn/internal/domain/tenancy"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/foundation/id"
 	"github.com/masterkeysrd/saturn/internal/infrastructure/token"
@@ -19,6 +20,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/storage/pg"
 	financepg "github.com/masterkeysrd/saturn/internal/storage/pg/finance"
 	identitypg "github.com/masterkeysrd/saturn/internal/storage/pg/identity"
+	tenancypg "github.com/masterkeysrd/saturn/internal/storage/pg/tenancy"
 	financehttp "github.com/masterkeysrd/saturn/internal/transport/http/controllers/finance"
 	identityhttp "github.com/masterkeysrd/saturn/internal/transport/http/controllers/identity"
 )
@@ -114,6 +116,7 @@ func buildContainer() (deps.Container, error) {
 
 	// Domain Providers
 	if err := deps.Register(container,
+		tenancy.RegisterProviders,
 		finance.RegisterProviders,
 		identity.RegisterProviders,
 	); err != nil {
@@ -122,6 +125,7 @@ func buildContainer() (deps.Container, error) {
 
 	// Storage
 	err := deps.Register(container,
+		tenancypg.Provide,
 		financepg.Provide,
 		identitypg.Provide,
 	)
