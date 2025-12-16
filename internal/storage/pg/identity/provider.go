@@ -14,5 +14,13 @@ func Provide(inj deps.Injector) error {
 		return err
 	}
 
+	if err := inj.Provide(NewBindingStore, deps.As(new(identity.BindingStore))); err != nil {
+		return err
+	}
+
+	if err := inj.Provide(NewCredentialStore, deps.As(new(identity.CredentialStore))); err != nil {
+		return err
+	}
+
 	return nil
 }

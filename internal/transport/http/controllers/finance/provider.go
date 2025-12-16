@@ -40,9 +40,5 @@ func RegisterProviders(inj deps.Injector) error {
 		return fmt.Errorf("cannot provide insights controller: %w", err)
 	}
 
-	if err := inj.Provide(NewRouter); err != nil {
-		return fmt.Errorf("cannot provide finance router: %w", err)
-	}
-
 	return nil
 }

@@ -16,6 +16,12 @@ func RegisterProviders(inj deps.Injector) error {
 		return fmt.Errorf("cannot inject identity.IdentityService dep")
 	}
 
+	if err := inj.Provide(func(s *identity.CredentialVault) CredentialVault {
+		return s
+	}); err != nil {
+		return fmt.Errorf("cannot inject identity.CredentialVault dep")
+	}
+
 	if err := inj.Provide(NewIdentity); err != nil {
 		return fmt.Errorf("cannot provide identity application: %w", err)
 	}

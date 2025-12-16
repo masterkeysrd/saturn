@@ -21,8 +21,7 @@ import (
 	financepg "github.com/masterkeysrd/saturn/internal/storage/pg/finance"
 	identitypg "github.com/masterkeysrd/saturn/internal/storage/pg/identity"
 	tenancypg "github.com/masterkeysrd/saturn/internal/storage/pg/tenancy"
-	financehttp "github.com/masterkeysrd/saturn/internal/transport/http/controllers/finance"
-	identityhttp "github.com/masterkeysrd/saturn/internal/transport/http/controllers/identity"
+	identitygrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/identity"
 )
 
 func init() {
@@ -76,11 +75,11 @@ func buildContainer() (deps.Container, error) {
 	}
 
 	// Wire JWT Generator
-	if err := container.Provide(func(gen *token.JWTGenerator) application.TokenManager {
-		return gen
-	}); err != nil {
-		return nil, fmt.Errorf("cannot provide token generator: %w", err)
-	}
+	// if err := container.Provide(func(gen *token.JWTGenerator) application.TokenManager {
+	// 	return gen
+	// }); err != nil {
+	// 	return nil, fmt.Errorf("cannot provide token generator: %w", err)
+	// }
 
 	if err := container.Provide(func(gen *token.JWTGenerator) auth.TokenManager {
 		return gen
@@ -101,8 +100,7 @@ func buildContainer() (deps.Container, error) {
 
 	// Transport Providers
 	if err := deps.Register(container,
-		financehttp.RegisterProviders,
-		identityhttp.RegisterProviders,
+		identitygrpc.RegisterDeps,
 	); err != nil {
 		return nil, fmt.Errorf("cannot register transport providers: %w", err)
 	}
@@ -118,7 +116,7 @@ func buildContainer() (deps.Container, error) {
 	if err := deps.Register(container,
 		tenancy.RegisterProviders,
 		finance.RegisterProviders,
-		identity.RegisterProviders,
+		identity.RegisterDepds,
 	); err != nil {
 		return nil, fmt.Errorf("cannot register domain providers: %w", err)
 	}

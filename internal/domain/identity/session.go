@@ -54,14 +54,14 @@ func (sid SessionID) String() string {
 }
 
 type Session struct {
-	ID        SessionID
-	UserID    UserID
-	TokenHash string // Hash of the current refresh token
-	UserAgent string
-	ClientIP  string
-	ExpiresAt time.Time
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID         SessionID
+	UserID     UserID
+	TokenHash  string // Hash of the current refresh token
+	UserAgent  *string
+	ClientIP   *string
+	ExpireTime time.Time
+	CreateTime time.Time
+	UpdateTime time.Time
 }
 
 // Initialize sets up a new session with a unique ID and timestamps.
@@ -77,8 +77,8 @@ func (s *Session) Initialize() error {
 
 	now := time.Now().UTC()
 	s.ID = sid
-	s.CreatedAt = now
-	s.UpdatedAt = now
+	s.CreateTime = now
+	s.UpdateTime = now
 
 	return nil
 }
@@ -89,8 +89,12 @@ func (s *Session) Sanitize() {
 		return
 	}
 
-	s.UserAgent = strings.TrimSpace(s.UserAgent)
-	s.ClientIP = strings.TrimSpace(s.ClientIP)
+	if s.UserAgent != nil {
+		*s.UserAgent = strings.TrimSpace(*s.UserAgent)
+	}
+	if s.ClientIP != nil {
+		*s.ClientIP = strings.TrimSpace(*s.ClientIP)
+	}
 }
 
 // Validate checks if the session data is valid.
@@ -103,7 +107,7 @@ func (s *Session) Validate() error {
 		return fmt.Errorf("user ID is required")
 	}
 
-	if s.ExpiresAt.IsZero() {
+	if s.ExpireTime.IsZero() {
 		return fmt.Errorf("expires at is required")
 	}
 
@@ -124,7 +128,7 @@ func (s *Session) IsExpired() bool {
 		return true
 	}
 
-	return time.Now().UTC().After(s.ExpiresAt)
+	return time.Now().UTC().After(s.ExpireTime)
 }
 
 // GenerateToken creates a new session token secret, hashes it into the session,
@@ -144,7 +148,7 @@ func (s *Session) GenerateToken(hasher TokenHasher, gen SecretGenerator) (string
 		return "", fmt.Errorf("failed to hash session token: %w", err)
 	}
 
-	s.UpdatedAt = time.Now().UTC()
+	s.UpdateTime = time.Now().UTC()
 	return token, nil
 }
 

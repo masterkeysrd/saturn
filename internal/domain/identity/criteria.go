@@ -1,25 +1,27 @@
 package identity
 
-// ByUserID allows filtering users by their unique ID.
-type ByUserID string
+type ByUserID UserID
 
-// isGetUserCriteria marks the criteria as a get user criteria.
+// isDeleteSessionCriteria marks the criteria as a delete session criteria.
 func (ByUserID) isDeleteSessionCriteria() {}
 
-// ByUsername allows filtering users by their username.
 type ByUsername string
 
-// isUserExistCriteria marks the criteria as a user existence check.
+// isExistsCredentialCriteria marks the criteria as an exists credential criteria.
+func (ByUsername) isExistsCredentialCriteria() {}
+
 func (ByUsername) isUserExistCriteria() {}
 
-// ByEmail allows filtering users by their email.
 type ByEmail string
 
-// isUserExistCriteria marks the criteria as a user existence check.
+// isExistsCredentialCriteria marks the criteria as an exists credential criteria.
+func (ByEmail) isExistsCredentialCriteria() {}
+
+// isUserExistCriteria marks the criteria as a user exist criteria.
 func (ByEmail) isUserExistCriteria() {}
 
-// ByUsernameOrEmail allows filtering users by either their username or email.
-type ByUsernameOrEmail string
+// ByIdentifier allows filtering credentials by their identifier (username or email).
+type ByIdentifier string
 
-// isUserExistCriteria marks the criteria as a user existence check.
-func (ByUsernameOrEmail) isGetUserCriteria() {}
+// isGetsCredentialCriteria marks the criteria as a gets credential criteria.
+func (ByIdentifier) isGetCredentialCriteria() {}

@@ -29,7 +29,7 @@ func SpacePb(m *tenancy.Space) *tenancypb.Space {
 		return nil
 	}
 
-	return &tenancypb.Space{
+	s := tenancypb.Space{
 		Id:          m.ID.String(),
 		Name:        m.Name,
 		Alias:       m.Alias,
@@ -37,6 +37,11 @@ func SpacePb(m *tenancy.Space) *tenancypb.Space {
 		OwnerId:     m.OwnerID.String(),
 		CreateTime:  timestamppb.New(m.CreateTime),
 		UpdateTime:  timestamppb.New(m.UpdateTime),
-		DeleteTime:  timestamppb.New(m.DeleteTime),
 	}
+
+	if m.DeleteTime != nil {
+		s.DeleteTime = timestamppb.New(*m.DeleteTime)
+	}
+
+	return &s
 }

@@ -45,22 +45,18 @@ type UserExistCriteria interface {
 	isUserExistCriteria()
 }
 
-// PasswordHasher defines the interface for password hashing and comparison.
-type PasswordHasher interface {
-	Hash(password string) (string, error)
-	Compare(hashedPassword, password string) bool
-}
-
 // User represents a user in the identity system.
 type User struct {
-	ID             UserID
-	Username       string
-	Email          string
-	Role           auth.Role
-	HashedPassword string
-	Status         UserStatus
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID         UserID
+	Name       string
+	AvatarURL  *string
+	Email      string
+	Username   string
+	Role       Role
+	Status     UserStatus
+	CreateTime time.Time
+	UpdateTime time.Time
+	DeleteTime *time.Time
 }
 
 // Initialize sets up the user with a new ID, timestamps, and default values.
@@ -77,9 +73,11 @@ func (u *User) Initialize() error {
 	now := time.Now().UTC()
 
 	u.ID = uid
-	u.Status = UserStatusActive
-	u.CreatedAt = now
-	u.UpdatedAt = now
+	u.Name = strings.TrimSpace(u.Name)
+	u.Username = strings.TrimSpace(u.Username)
+	u.Email = strings.TrimSpace(u.Email)
+	u.CreateTime = now
+	u.UpdateTime = now
 
 	if u.Role == "" {
 		u.Role = auth.RoleUser
@@ -97,6 +95,17 @@ func (u *User) Validate() error {
 	// Validate ID
 	if err := id.Validate(u.ID); err != nil {
 		return fmt.Errorf("invalid user ID: %w", err)
+	}
+
+	if u.Name == "" {
+		return fmt.Errorf("name cannot be empty")
+	}
+
+	if len(u.Name) < 2 {
+		return fmt.Errorf("name must be at least 2 characters long")
+	}
+	if len(u.Name) > 100 {
+		return fmt.Errorf("name cannot be longer than 100 characters")
 	}
 
 	// Validate Username
@@ -129,10 +138,6 @@ func (u *User) Validate() error {
 		return fmt.Errorf("invalid user role: %q", u.Role)
 	}
 
-	// Validate HashedPassword
-	if u.HashedPassword == "" {
-		return fmt.Errorf("hashed password cannot be empty")
-	}
 	return nil
 }
 
@@ -142,74 +147,23 @@ func (u *User) Sanitize() {
 	u.Email = strings.TrimSpace(u.Email)
 }
 
-// SetPassword hashes and sets the user's password.
-func (u *User) SetPassword(password string, hasher PasswordHasher) error {
-	password = strings.TrimSpace(password)
-	if password == "" {
-		return fmt.Errorf("password cannot be empty")
-	}
-
-	if len(password) < MinPasswordLength {
-		return fmt.Errorf("password must be at least %d characters long", MinPasswordLength)
-	}
-
-	if len(password) > MaxPasswordLength {
-		return fmt.Errorf("password cannot be longer than %d characters", MaxPasswordLength)
-	}
-
-	hashed, err := hasher.Hash(password)
-	if err != nil {
-		return fmt.Errorf("failed to hash password: %w", err)
-	}
-	u.HashedPassword = hashed
-	return nil
-}
-
-// VerifyPassword checks if the provided password matches the stored hashed password.
-func (u *User) VerifyPassword(password string, hasher PasswordHasher) bool {
-	password = strings.TrimSpace(password)
-	return hasher.Compare(u.HashedPassword, password)
-}
-
 // UserStatus represents the status of a user.
 type UserStatus string
 
 const (
-	UserStatusActive UserStatus = "active" // Active user
+	UserStatusPending UserStatus = "pending" // User pending activation.
+	UserStatusActive  UserStatus = "active"  // Active user
 )
 
-// CreateUserInput represents the input data required to create a new user.
-type CreateUserInput struct {
-	Username string
-	Email    string
-	Password string
+func (s UserStatus) IsValid() bool {
+	switch s {
+	case UserStatusPending, UserStatusActive:
+		return true
+	default:
+		return false
+	}
 }
 
-type LoginUserInput struct {
-	UsernameOrEmail string
-	Password        string
-	UserAgent       string
-	ClientIP        string
-	RememberMe      bool
-}
-
-func (in *LoginUserInput) Validate() error {
-	if in == nil {
-		return fmt.Errorf("login input is nil")
-	}
-
-	usernameOrEmail := strings.TrimSpace(in.UsernameOrEmail)
-	if usernameOrEmail == "" {
-		return fmt.Errorf("username or email cannot be empty")
-	}
-
-	if len(usernameOrEmail) < 4 {
-		return fmt.Errorf("username or email must be at least 4 characters long")
-	}
-
-	if strings.TrimSpace(in.Password) == "" {
-		return fmt.Errorf("password cannot be empty")
-	}
-
-	return nil
+func (s UserStatus) String() string {
+	return string(s)
 }
