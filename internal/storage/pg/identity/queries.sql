@@ -156,6 +156,19 @@ WHERE
   user_id =:user_id
   AND provider =:provider;
 
+-- name: GetBindingByProviderAndSubjectID
+SELECT
+  user_id,
+  provider,
+  subject_id,
+  create_time,
+  update_time
+FROM
+  identity.bindings
+WHERE
+  provider =:provider
+  AND subject_id =:subject_id;
+
 -- name: ListBindingsByUserID
 SELECT
   user_id,

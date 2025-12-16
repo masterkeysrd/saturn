@@ -21,6 +21,37 @@ func CreateRequest(req *identitypb.CreateUserRequest) *application.CreateUserReq
 	}
 }
 
+func LoginRequest(req *identitypb.LoginUserRequest) *application.LoginUserRequest {
+	if req == nil {
+		return nil
+	}
+
+	switch method := req.GetMethod().(type) {
+	case *identitypb.LoginUserRequest_UserPassword_:
+		return &application.LoginUserRequest{
+			ProviderType: identity.ProviderTypeVault,
+			Credentials: map[string]string{
+				"identifier": method.UserPassword.GetIdentifier(),
+				"password":   method.UserPassword.GetPassword(),
+			},
+		}
+	default:
+		return nil
+	}
+}
+
+func TokenPairPb(tp *application.TokenPair) *identitypb.TokenPair {
+	if tp == nil {
+		return nil
+	}
+
+	return &identitypb.TokenPair{
+		Token:        tp.AccessToken,
+		RefreshToken: tp.RefreshToken,
+		ExpiresAt:    timestamppb.New(tp.ExpireTime),
+	}
+}
+
 func UserPb(m *identity.User) *identitypb.User {
 	if m == nil {
 		return nil

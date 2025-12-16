@@ -6,7 +6,7 @@ import (
 )
 
 type Provider interface {
-	Name() ProviderType
+	Type() ProviderType
 	Authenticate(ctx context.Context, credentials map[string]string) (*UserProfile, error)
 }
 
@@ -46,6 +46,15 @@ const (
 
 func (pt ProviderType) String() string {
 	return string(pt)
+}
+
+func (pt ProviderType) IsValid() bool {
+	switch pt {
+	case ProviderTypeVault:
+		return true
+	default:
+		return false
+	}
 }
 
 type UserProfileName struct {

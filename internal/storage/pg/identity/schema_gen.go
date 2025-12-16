@@ -162,6 +162,20 @@ WHERE
   user_id =:user_id
   AND provider =:provider;`
 
+	// GetBindingByProviderAndSubjectIDQuery is the SQL for the 'GetBindingByProviderAndSubjectID' query.
+	GetBindingByProviderAndSubjectIDQuery = `
+SELECT
+  user_id,
+  provider,
+  subject_id,
+  create_time,
+  update_time
+FROM
+  identity.bindings
+WHERE
+  provider =:provider
+  AND subject_id =:subject_id;`
+
 	// ListBindingsByUserIDQuery is the SQL for the 'ListBindingsByUserID' query.
 	ListBindingsByUserIDQuery = `
 SELECT
@@ -377,6 +391,12 @@ type DeleteSessionsByUserIDParams struct {
 type GetBindingByIDParams struct {
 	UserID   string `db:"user_id"`
 	Provider string `db:"provider"`
+}
+
+// GetBindingByProviderAndSubjectIDParams represents the parameters for the 'GetBindingByProviderAndSubjectID' query.
+type GetBindingByProviderAndSubjectIDParams struct {
+	Provider  string `db:"provider"`
+	SubjectID string `db:"subject_id"`
 }
 
 // ListBindingsByUserIDParams represents the parameters for the 'ListBindingsByUserID' query.

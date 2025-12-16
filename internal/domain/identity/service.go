@@ -3,6 +3,7 @@ package identity
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
@@ -132,56 +133,80 @@ func (s *Service) createUser(ctx context.Context, profile *UserProfile, isAdmin 
 	return user, nil
 }
 
-// func (s *Service) LoginUser(ctx context.Context, in *LoginUserInput) (*User, *Session, string, error) {
-// 	// Validate early before querying the database
-// 	if err := in.Validate(); err != nil {
-// 		return nil, nil, "", fmt.Errorf("invalid login input: %w", err)
-// 	}
-//
-// 	user, err := s.userStore.GetBy(ctx, ByUsernameOrEmail(in.UsernameOrEmail))
-// 	if err != nil {
-// 		return nil, nil, "", fmt.Errorf("failed to get user: %w", err)
-// 	}
-// 	if user == nil {
-// 		return nil, nil, "", fmt.Errorf("invalid username/email or password")
-// 	}
-//
-// 	if user.Status != UserStatusActive {
-// 		return nil, nil, "", fmt.Errorf("user account is not active")
-// 	}
-//
-// 	ttl := DefaultSessionTTL
-// 	if in.RememberMe {
-// 		ttl = ExtendedSessionTTL
-// 	}
-//
-// 	session := &Session{
-// 		UserID:    user.ID,
-// 		UserAgent: in.UserAgent,
-// 		ClientIP:  in.ClientIP,
-// 		ExpiresAt: time.Now().UTC().Add(ttl),
-// 	}
-//
-// 	if err := session.Initialize(); err != nil {
-// 		return nil, nil, "", fmt.Errorf("failed to initialize session: %w", err)
-// 	}
-//
-// 	token, err := session.GenerateToken(s.tokenHasher, s.secretGenerator)
-// 	if err != nil {
-// 		return nil, nil, "", fmt.Errorf("failed to generate session token: %w", err)
-// 	}
-//
-// 	session.Sanitize()
-// 	if err := session.Validate(); err != nil {
-// 		return nil, nil, "", fmt.Errorf("invalid session data: %w", err)
-// 	}
-//
-// 	if err := s.sessionStore.Store(ctx, session); err != nil {
-// 		return nil, nil, "", fmt.Errorf("failed to store session: %w", err)
-// 	}
-//
-// 	return user, session, token, nil
-// }
+func (s *Service) LoginUser(ctx context.Context, in *LoginUserInput) (*LoginUserOutput, error) {
+	if in == nil {
+		return nil, fmt.Errorf("login input is nil")
+	}
+
+	if in.Profile == nil {
+		return nil, fmt.Errorf("user profile is nil")
+	}
+
+	if provider := in.Profile.Provider; !provider.IsValid() {
+		return nil, fmt.Errorf("invalid provider type: %q", provider)
+	}
+
+	if in.Profile.ID == "" {
+		return nil, fmt.Errorf("subject ID is required for login")
+	}
+
+	binding, err := s.bindingStore.GetBy(ctx, ByProviderAndSubjectID{
+		Provider:  in.Profile.Provider,
+		SubjectID: in.Profile.ID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get binding: %w", err)
+	}
+
+	if binding == nil {
+		return nil, fmt.Errorf("invalid credentials")
+	}
+
+	user, err := s.userStore.Get(ctx, binding.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	if user.Status != UserStatusActive {
+		return nil, fmt.Errorf("user account is not active")
+	}
+
+	ttl := DefaultSessionTTL
+	if in.RememberMe {
+		ttl = ExtendedSessionTTL
+	}
+
+	session := &Session{
+		UserID:     user.ID,
+		UserAgent:  in.UserAgent,
+		ClientIP:   in.ClientIP,
+		ExpireTime: time.Now().UTC().Add(ttl),
+	}
+
+	if err := session.Initialize(); err != nil {
+		return nil, fmt.Errorf("failed to initialize session: %w", err)
+	}
+
+	token, err := session.GenerateToken(s.tokenHasher, s.secretGenerator)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate session token: %w", err)
+	}
+
+	session.Sanitize()
+	if err := session.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid session data: %w", err)
+	}
+
+	if err := s.sessionStore.Store(ctx, session); err != nil {
+		return nil, fmt.Errorf("failed to store session: %w", err)
+	}
+
+	return &LoginUserOutput{
+		User:         user,
+		Session:      session,
+		SessionToken: token,
+	}, nil
+}
 
 func (s *Service) RefreshSession(ctx context.Context, in *RefreshSessionInput) (*User, *Session, string, error) {
 	if err := in.Validate(); err != nil {
@@ -233,4 +258,17 @@ func (s *Service) RefreshSession(ctx context.Context, in *RefreshSessionInput) (
 	}
 
 	return user, session, newToken, nil
+}
+
+type LoginUserInput struct {
+	Profile    *UserProfile
+	RememberMe bool
+	ClientIP   *string
+	UserAgent  *string
+}
+
+type LoginUserOutput struct {
+	User         *User
+	Session      *Session
+	SessionToken string
 }

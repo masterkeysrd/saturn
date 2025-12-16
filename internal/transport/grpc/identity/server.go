@@ -13,6 +13,7 @@ var _ identitypb.IdentityServer = (*IdentityServer)(nil)
 // Application represents the identity application.
 type Application interface {
 	CreateUser(context.Context, *application.CreateUserRequest) (*identity.User, error)
+	LoginUser(context.Context, *application.LoginUserRequest) (*application.TokenPair, error)
 }
 
 type IdentityServer struct {
@@ -33,4 +34,12 @@ func (s *IdentityServer) CreateUser(ctx context.Context, req *identitypb.CreateU
 		return nil, err
 	}
 	return UserPb(user), nil
+}
+
+func (s *IdentityServer) LoginUser(ctx context.Context, req *identitypb.LoginUserRequest) (*identitypb.TokenPair, error) {
+	pair, err := s.app.LoginUser(ctx, LoginRequest(req))
+	if err != nil {
+		return nil, err
+	}
+	return TokenPairPb(pair), nil
 }

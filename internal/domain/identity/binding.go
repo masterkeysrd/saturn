@@ -11,6 +11,9 @@ type BindingStore interface {
 	// Get retrieves a binding by its BindingID.
 	Get(context.Context, BindingID) (*Binding, error)
 
+	// GetBy retrieves a binding by a criateria.
+	GetBy(context.Context, GetBindingCriteria) (*Binding, error)
+
 	// List retrieves all bindings for a given UserID.
 	List(context.Context, UserID) ([]*Binding, error)
 
@@ -19,6 +22,10 @@ type BindingStore interface {
 
 	// Delete removes a binding from the store by its BindingID.
 	Delete(context.Context, BindingID) error
+}
+
+type GetBindingCriteria interface {
+	isGetBindingCriteria()
 }
 
 // BindingID represents the unique identifier for a binding

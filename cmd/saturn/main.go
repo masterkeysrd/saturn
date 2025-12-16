@@ -11,6 +11,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/tenancy"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/foundation/id"
+	infrauth "github.com/masterkeysrd/saturn/internal/infrastructure/auth"
 	"github.com/masterkeysrd/saturn/internal/infrastructure/token"
 	"github.com/masterkeysrd/saturn/internal/pkg/argon2id"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
@@ -49,6 +50,10 @@ func main() {
 func buildContainer() (deps.Container, error) {
 	container := deps.NewDigContainer()
 
+	if err := wireDeps(container); err != nil {
+		return nil, fmt.Errorf("cannot wire dependencies: %w", err)
+	}
+
 	// Wiring Providers
 	if err := container.Provide(argon2id.New); err != nil {
 		return nil, fmt.Errorf("cannot provide argon2id hasher: %w", err)
@@ -70,6 +75,7 @@ func buildContainer() (deps.Container, error) {
 	// Infra Wiring
 	if err := deps.Register(container,
 		token.Provide,
+		infrauth.RegisterDeps,
 	); err != nil {
 		return nil, fmt.Errorf("cannot register infrastructure providers: %w", err)
 	}
@@ -116,7 +122,7 @@ func buildContainer() (deps.Container, error) {
 	if err := deps.Register(container,
 		tenancy.RegisterProviders,
 		finance.RegisterProviders,
-		identity.RegisterDepds,
+		identity.RegisterDeps,
 	); err != nil {
 		return nil, fmt.Errorf("cannot register domain providers: %w", err)
 	}
@@ -141,4 +147,41 @@ func buildContainer() (deps.Container, error) {
 	}
 
 	return container, nil
+}
+
+func wireDeps(inj deps.Injector) error {
+	// Application Deps Wiring
+	if err := inj.Provide(func(factory *infrauth.ProviderFactory) application.ProviderFactory {
+		return factory
+	}); err != nil {
+		return fmt.Errorf("cannot inject infra.auth.ProviderFactory dep: %w", err)
+	}
+
+	if err := inj.Provide(func(s *identity.CredentialVault) application.CredentialVault {
+		return s
+	}); err != nil {
+		fmt.Print("build error", err.Error())
+		return fmt.Errorf("cannot inject identity.CredentialVault dep: %w", err)
+	}
+
+	if err := inj.Provide(func(s *identity.Service) application.IdentityService {
+		return s
+	}); err != nil {
+		return fmt.Errorf("cannot inject identity.Service dep: %w", err)
+	}
+
+	if err := inj.Provide(func(s *tenancy.Service) application.TenancyService {
+		return s
+	}); err != nil {
+		return fmt.Errorf("cannot inject tenancy.Service dep: %w", err)
+	}
+
+	// Infrastructure Auth Deps Wiring
+	if err := inj.Provide(func(s *identity.CredentialVault) infrauth.CredentialsVault {
+		return s
+	}); err != nil {
+		return fmt.Errorf("cannot inject identity.CredentialVault dep: %w", err)
+	}
+
+	return nil
 }

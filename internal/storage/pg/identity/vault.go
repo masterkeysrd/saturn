@@ -26,7 +26,32 @@ func (s *CredentialStore) Store(ctx context.Context, credential *identity.Creden
 }
 
 func (s *CredentialStore) GetBy(ctx context.Context, criteria identity.GetCredentialCriteria) (*identity.Credential, error) {
-	return nil, errors.New("not implemented")
+	var (
+		query string
+		args  []any
+		err   error
+	)
+
+	switch c := criteria.(type) {
+	case identity.ByIdentifier:
+		query, args, err = s.db.BindNamed(GetCredentialsByIdentifierQuery, GetCredentialsByIdentifierParams{
+			Identifier: string(c),
+		})
+	default:
+		return nil, errors.New("unsupported criteria type")
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	query = s.db.Rebind(query)
+	var entity VaultCredentialEntity
+	if err := s.db.GetContext(ctx, &entity, query, args...); err != nil {
+		return nil, err
+	}
+
+	return entity.ToModel(), nil
 }
 
 func (s *CredentialStore) ExistsBy(ctx context.Context, criteria identity.ExistsCredentialCriteria) (bool, error) {

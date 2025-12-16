@@ -25,3 +25,11 @@ type ByIdentifier string
 
 // isGetsCredentialCriteria marks the criteria as a gets credential criteria.
 func (ByIdentifier) isGetCredentialCriteria() {}
+
+type ByProviderAndSubjectID struct {
+	Provider  ProviderType
+	SubjectID SubjectID
+}
+
+// isGetBindingCriteria marks the criteria as a get binding criteria.
+func (ByProviderAndSubjectID) isGetBindingCriteria() {}

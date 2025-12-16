@@ -2,6 +2,7 @@ package identitypg
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
@@ -30,6 +31,38 @@ func (s *BindingStore) Get(ctx context.Context, id identity.BindingID) (*identit
 		return nil, err
 	}
 
+	query = s.db.Rebind(query)
+
+	var entity BindingEntity
+	if err := s.db.GetContext(ctx, &entity, query, args...); err != nil {
+		return nil, err
+	}
+
+	return entity.ToBinding(), nil
+}
+
+func (s *BindingStore) GetBy(ctx context.Context, criteria identity.GetBindingCriteria) (*identity.Binding, error) {
+	var (
+		query string
+		args  []any
+		err   error
+	)
+
+	switch c := criteria.(type) {
+	case identity.ByProviderAndSubjectID:
+		params := GetBindingByProviderAndSubjectIDParams{
+			Provider:  c.Provider.String(),
+			SubjectID: c.SubjectID.String(),
+		}
+		query, args, err = s.db.BindNamed(GetBindingByProviderAndSubjectIDQuery, params)
+
+	default:
+		return nil, fmt.Errorf("unsupported GetBindingCriteria type: %T", criteria)
+	}
+
+	if err != nil {
+		return nil, err
+	}
 	query = s.db.Rebind(query)
 
 	var entity BindingEntity

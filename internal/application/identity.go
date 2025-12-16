@@ -4,14 +4,17 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	"github.com/masterkeysrd/saturn/internal/pkg/deps"
 )
 
 // IdentityService defines the interface for managing users
 // and their bindings to authentication providers.
 type IdentityService interface {
 	CreateUser(context.Context, *identity.UserProfile) (*identity.User, error)
+	LoginUser(context.Context, *identity.LoginUserInput) (*identity.LoginUserOutput, error)
 }
 
 // CredentialVault defines the interface for managing credentials
@@ -21,15 +24,30 @@ type CredentialVault interface {
 	VerifyCredential(context.Context, *identity.ValidateCredentialInput) (*identity.UserProfile, error)
 }
 
+// ProviderFactory defines the interface for obtaining identity providers.
+type ProviderFactory interface {
+	GetProvider(providerType identity.ProviderType) (identity.Provider, error)
+}
+
 type IdentityApp struct {
 	identityService IdentityService
 	vault           CredentialVault
+	factory         ProviderFactory
 }
 
-func NewIdentity(identityService IdentityService, vault CredentialVault) *IdentityApp {
+type IdentityAppParams struct {
+	deps.In
+
+	IdentityService IdentityService
+	Vault           CredentialVault
+	Factory         ProviderFactory
+}
+
+func NewIdentity(params IdentityAppParams) *IdentityApp {
 	return &IdentityApp{
-		identityService: identityService,
-		vault:           vault,
+		identityService: params.IdentityService,
+		vault:           params.Vault,
+		factory:         params.Factory,
 	}
 }
 
@@ -79,10 +97,54 @@ func (app *IdentityApp) CreateUser(context context.Context, req *CreateUserReque
 	return user, nil
 }
 
+func (app *IdentityApp) LoginUser(context context.Context, req *LoginUserRequest) (*TokenPair, error) {
+	if req == nil {
+		return nil, fmt.Errorf("request is nil")
+	}
+
+	provider, err := app.factory.GetProvider(req.ProviderType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get provider: %w", err)
+	}
+
+	profile, err := provider.Authenticate(context, req.Credentials)
+	if err != nil {
+		return nil, fmt.Errorf("authentication failed: %w", err)
+	}
+
+	out, err := app.identityService.LoginUser(context, &identity.LoginUserInput{
+		Profile:   profile,
+		UserAgent: req.UserAgent,
+		ClientIP:  req.ClientIP,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to login user: %w", err)
+	}
+
+	return &TokenPair{
+		RefreshToken: fmt.Sprintf("%s.%s", out.Session.ID.String(), out.SessionToken),
+		ExpireTime:   out.Session.ExpireTime,
+	}, nil
+}
+
 type CreateUserRequest struct {
 	Name      string
 	AvatarURL string
 	Username  string
 	Email     string
 	Password  string
+}
+
+type LoginUserRequest struct {
+	ProviderType identity.ProviderType
+	Credentials  map[string]string
+	RememberMe   bool
+	UserAgent    *string
+	ClientIP     *string
+}
+
+type TokenPair struct {
+	AccessToken  string
+	RefreshToken string
+	ExpireTime   time.Time
 }
