@@ -6,6 +6,7 @@ import (
 	identitypb "github.com/masterkeysrd/saturn/gen/proto/go/saturn/identity/v1"
 	"github.com/masterkeysrd/saturn/internal/application"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var _ identitypb.IdentityServer = (*IdentityServer)(nil)
@@ -15,6 +16,7 @@ type Application interface {
 	CreateUser(context.Context, *application.CreateUserRequest) (*identity.User, error)
 	LoginUser(context.Context, *application.LoginUserRequest) (*application.TokenPair, error)
 	RefreshSession(context.Context, string) (*application.TokenPair, error)
+	RevokeSession(context.Context, identity.SessionID) error
 }
 
 type IdentityServer struct {
@@ -51,4 +53,11 @@ func (s *IdentityServer) RefreshSession(ctx context.Context, req *identitypb.Ref
 		return nil, err
 	}
 	return TokenPairPb(pair), nil
+}
+
+func (s *IdentityServer) RevokeSession(ctx context.Context, req *identitypb.RevokeSessionRequest) (*emptypb.Empty, error) {
+	if err := s.app.RevokeSession(ctx, identity.SessionID(req.GetId())); err != nil {
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
 }

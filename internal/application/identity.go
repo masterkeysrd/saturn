@@ -22,6 +22,7 @@ type IdentityService interface {
 	CreateAdminUser(context.Context, *identity.UserProfile) (*identity.User, error)
 	LoginUser(context.Context, *identity.LoginUserInput) (*identity.LoginUserOutput, error)
 	RefreshSession(context.Context, *identity.RefreshSessionInput) (*identity.LoginUserOutput, error)
+	RevokeSession(context.Context, identity.SessionID) error
 }
 
 // CredentialVault defines the interface for managing credentials
@@ -205,6 +206,13 @@ func (app *IdentityApp) RefreshSession(context context.Context, refreshToken str
 		RefreshToken: fmt.Sprintf("%s.%s", out.Session.ID.String(), out.SessionToken),
 		ExpireTime:   out.Session.ExpireTime,
 	}, nil
+}
+
+func (app *IdentityApp) RevokeSession(context context.Context, sessionID identity.SessionID) error {
+	if err := app.identityService.RevokeSession(context, sessionID); err != nil {
+		return fmt.Errorf("failed to revoke session: %w", err)
+	}
+	return nil
 }
 
 type CreateUserRequest struct {

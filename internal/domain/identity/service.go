@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
+	"github.com/masterkeysrd/saturn/internal/foundation/id"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
 )
 
@@ -258,12 +259,25 @@ func (s *Service) RefreshSession(ctx context.Context, in *RefreshSessionInput) (
 		return nil, fmt.Errorf("failed to update session: %w", err)
 	}
 
-	// return user, session, newToken, nil
 	return &LoginUserOutput{
 		User:         user,
 		Session:      session,
 		SessionToken: newToken,
 	}, nil
+}
+
+func (s *Service) RevokeSession(ctx context.Context, sessionID SessionID) error {
+	if err := id.Validate(sessionID); err != nil {
+		return fmt.Errorf("invalid session ID: %w", err)
+	}
+
+	// The check to confirm if the sessions belongs to the current
+	// user is omitted because if other user have the session means
+	// that is compromised and should be revoked immediately.
+	if err := s.sessionStore.Delete(ctx, sessionID); err != nil {
+		return fmt.Errorf("failed to revoke session: %w", err)
+	}
+	return nil
 }
 
 type LoginUserInput struct {
