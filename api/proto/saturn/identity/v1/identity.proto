@@ -267,7 +267,7 @@ message TokenPair {
   string refresh_token = 2;
 
   // Expiration time of the access token.
-  google.protobuf.Timestamp expires_at = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp expire_time = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 message Session {

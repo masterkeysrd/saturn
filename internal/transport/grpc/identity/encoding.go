@@ -48,7 +48,7 @@ func TokenPairPb(tp *application.TokenPair) *identitypb.TokenPair {
 	return &identitypb.TokenPair{
 		Token:        tp.AccessToken,
 		RefreshToken: tp.RefreshToken,
-		ExpiresAt:    timestamppb.New(tp.ExpireTime),
+		ExpireTime:   timestamppb.New(tp.ExpireTime),
 	}
 }
 

@@ -14,6 +14,7 @@ import (
 // and their bindings to authentication providers.
 type IdentityService interface {
 	CreateUser(context.Context, *identity.UserProfile) (*identity.User, error)
+	CreateAdminUser(context.Context, *identity.UserProfile) (*identity.User, error)
 	LoginUser(context.Context, *identity.LoginUserInput) (*identity.LoginUserOutput, error)
 }
 
@@ -52,6 +53,35 @@ func NewIdentity(params IdentityAppParams) *IdentityApp {
 }
 
 func (app *IdentityApp) CreateUser(context context.Context, req *CreateUserRequest) (*identity.User, error) {
+	profile, err := app.createProfile(context, req)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := app.identityService.CreateUser(context, profile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	return user, nil
+
+}
+
+func (app *IdentityApp) CreateAdminUser(context context.Context, req *CreateUserRequest) (*identity.User, error) {
+	profile, err := app.createProfile(context, req)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := app.identityService.CreateAdminUser(context, profile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create admin user: %w", err)
+	}
+
+	return user, nil
+}
+
+func (app *IdentityApp) createProfile(context context.Context, req *CreateUserRequest) (*identity.UserProfile, error) {
 	if req == nil {
 		return nil, fmt.Errorf("request is nil")
 	}
@@ -89,12 +119,7 @@ func (app *IdentityApp) CreateUser(context context.Context, req *CreateUserReque
 		profile.Photos = []string{req.AvatarURL}
 	}
 
-	user, err := app.identityService.CreateUser(context, profile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create user: %w", err)
-	}
-
-	return user, nil
+	return profile, nil
 }
 
 func (app *IdentityApp) LoginUser(context context.Context, req *LoginUserRequest) (*TokenPair, error) {

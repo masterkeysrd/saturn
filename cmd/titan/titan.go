@@ -32,15 +32,28 @@ func main() {
 	userStore, err := identitypg.NewUserStore(db)
 	handleErr("failed to create user store", err)
 
+	credentialStore, err := identitypg.NewCredentialStore(db)
+	handleErr("failed to create vault store", err)
+
+	bindingStore, err := identitypg.NewBindingStore(db)
+	handleErr("failed to create credential binding store", err)
+
+	vault := identity.NewCredentialVault(identity.CredentialVaultParams{
+		Store:  credentialStore,
+		Hasher: argonHasher,
+	})
+
 	// Domain services initialization
 	identityService := identity.NewService(identity.ServiceParams{
 		UserStore:      userStore,
+		BindingStore:   bindingStore,
 		PasswordHasher: argonHasher,
 	})
 
 	// Applications initialization
-	identityApp := application.NewIdentity(application.IdentityParams{
+	identityApp := application.NewIdentity(application.IdentityAppParams{
 		IdentityService: identityService,
+		Vault:           vault,
 	})
 
 	mux := console.NewConsoleMux()

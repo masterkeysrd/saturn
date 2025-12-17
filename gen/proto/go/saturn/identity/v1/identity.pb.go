@@ -735,7 +735,7 @@ type TokenPair struct {
 	// Typically expires in 7 days.
 	RefreshToken string `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
 	// Expiration time of the access token.
-	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	ExpireTime    *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=expire_time,json=expireTime,proto3" json:"expire_time,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -784,9 +784,9 @@ func (x *TokenPair) GetRefreshToken() string {
 	return ""
 }
 
-func (x *TokenPair) GetExpiresAt() *timestamppb.Timestamp {
+func (x *TokenPair) GetExpireTime() *timestamppb.Timestamp {
 	if x != nil {
-		return x.ExpiresAt
+		return x.ExpireTime
 	}
 	return nil
 }
@@ -1017,12 +1017,12 @@ const file_saturn_identity_v1_identity_proto_rawDesc = "" +
 	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\"/\n" +
 	"\bProvider\x12\x18\n" +
 	"\x14PROVIDER_UNSPECIFIED\x10\x00\x12\t\n" +
-	"\x05VAULT\x10\x01\"\x86\x01\n" +
+	"\x05VAULT\x10\x01\"\x88\x01\n" +
 	"\tTokenPair\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\x12#\n" +
-	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12>\n" +
-	"\n" +
-	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\texpiresAt\"\xf5\x02\n" +
+	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12@\n" +
+	"\vexpire_time\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"expireTime\"\xf5\x02\n" +
 	"\aSession\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x1c\n" +
 	"\auser_id\x18\x02 \x01(\tB\x03\xe0A\x03R\x06userId\x12\"\n" +
@@ -1092,7 +1092,7 @@ var file_saturn_identity_v1_identity_proto_depIdxs = []int32{
 	15, // 5: saturn.identity.v1.User.create_time:type_name -> google.protobuf.Timestamp
 	15, // 6: saturn.identity.v1.User.update_time:type_name -> google.protobuf.Timestamp
 	0,  // 7: saturn.identity.v1.Binding.provider:type_name -> saturn.identity.v1.Binding.Provider
-	15, // 8: saturn.identity.v1.TokenPair.expires_at:type_name -> google.protobuf.Timestamp
+	15, // 8: saturn.identity.v1.TokenPair.expire_time:type_name -> google.protobuf.Timestamp
 	15, // 9: saturn.identity.v1.Session.create_time:type_name -> google.protobuf.Timestamp
 	15, // 10: saturn.identity.v1.Session.last_access_time:type_name -> google.protobuf.Timestamp
 	15, // 11: saturn.identity.v1.Session.expire_time:type_name -> google.protobuf.Timestamp

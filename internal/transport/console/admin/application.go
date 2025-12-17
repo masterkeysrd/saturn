@@ -8,5 +8,5 @@ import (
 )
 
 type IdentityApplication interface {
-	RegisterAdminUser(context.Context, *application.RegisterUserInput) (*identity.User, error)
+	CreateAdminUser(context.Context, *application.CreateUserRequest) (*identity.User, error)
 }

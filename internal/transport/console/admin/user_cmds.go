@@ -24,6 +24,7 @@ func (uc *UserCommands) RegisterCommands(registrar console.Registrar) {
 
 	userCmds.Register("create-admin", console.HandlerFunc(uc.CreateAdmin),
 		console.Description("Create a new admin user"),
+		console.Flag("name", "Full name of the new admin user").Required().String(),
 		console.Flag("username", "Username for the new admin user").Required().String(),
 		console.Flag("email", "Email address for the new admin user").Required().String(),
 		console.Flag("password", "Password for the new admin user").Required().String(),
@@ -32,7 +33,8 @@ func (uc *UserCommands) RegisterCommands(registrar console.Registrar) {
 
 func (uc *UserCommands) CreateAdmin(w console.CommandWriter, r *console.Request) error {
 	flags := r.Flags()
-	user, err := uc.identityApp.RegisterAdminUser(r.Context(), &application.RegisterUserInput{
+	user, err := uc.identityApp.CreateAdminUser(r.Context(), &application.CreateUserRequest{
+		Name:     flags.Get("name").String(),
 		Username: flags.Get("username").String(),
 		Email:    flags.Get("email").String(),
 		Password: flags.Get("password").String(),

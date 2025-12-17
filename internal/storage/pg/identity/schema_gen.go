@@ -95,7 +95,7 @@ SELECT
   token_hash,
   user_agent,
   client_ip,
-  expires_at,
+  expire_time,
   create_time,
   update_time
 FROM
@@ -112,7 +112,7 @@ INSERT INTO
     token_hash,
     user_agent,
     client_ip,
-    expires_at,
+    expire_time,
     create_time,
     update_time
   )
@@ -123,7 +123,7 @@ VALUES
 :token_hash,
 :user_agent,
 :client_ip,
-:expires_at,
+:expire_time,
 :create_time,
 :update_time
   )
@@ -133,7 +133,7 @@ SET
   token_hash = EXCLUDED.token_hash,
   user_agent = EXCLUDED.user_agent,
   client_ip = EXCLUDED.client_ip,
-  expires_at = EXCLUDED.expires_at,
+  expire_time = EXCLUDED.expire_time,
   update_time = EXCLUDED.update_time;`
 
 	// DeleteSessionByIDQuery is the SQL for the 'DeleteSessionByID' query.

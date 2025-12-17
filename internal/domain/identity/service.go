@@ -87,6 +87,7 @@ func (s *Service) createUser(ctx context.Context, profile *UserProfile, isAdmin 
 
 	if isAdmin {
 		user.Role = auth.RoleAdmin
+		user.Status = UserStatusActive // Admin users are active by default
 	}
 
 	user.Sanitize()
