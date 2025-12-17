@@ -8,7 +8,9 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	identitypb "github.com/masterkeysrd/saturn/gen/proto/go/saturn/identity/v1"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
+	"github.com/masterkeysrd/saturn/internal/transport/http/middleware"
 )
 
 type Server struct {
@@ -19,6 +21,7 @@ type ServerParams struct {
 	deps.In
 
 	IdentityServer identitypb.IdentityServer
+	TokenManager   auth.TokenManager
 }
 
 func NewServer(params ServerParams) *Server {
@@ -30,8 +33,20 @@ func NewServer(params ServerParams) *Server {
 	handler := http.NewServeMux()
 	handler.Handle("/api/", http.StripPrefix("/api", mux))
 
+	authMiddleware := middleware.NewAuthMiddleware(middleware.AuthMiddlewareConfig{
+		ExemptPaths: []string{
+			"/api/v1/identity/users",
+			"/api/v1/identity/users:login",
+			"/api/v1/identity/sessions:refresh",
+		},
+		TokenParser: params.TokenManager.Parse,
+	})
+
+	var finalHandler http.Handler = handler
+	finalHandler = authMiddleware.Handler(finalHandler)
+
 	return &Server{
-		handler: handler,
+		handler: finalHandler,
 	}
 }
 
