@@ -176,6 +176,12 @@ func wireDeps(inj deps.Injector) error {
 		return fmt.Errorf("cannot inject tenancy.Service dep: %w", err)
 	}
 
+	if err := inj.Provide(func(s *token.JWTGenerator) application.TokenManager {
+		return s
+	}); err != nil {
+		return fmt.Errorf("cannot inject token.JWTGenerator dep: %w", err)
+	}
+
 	// Infrastructure Auth Deps Wiring
 	if err := inj.Provide(func(s *identity.CredentialVault) infrauth.CredentialsVault {
 		return s

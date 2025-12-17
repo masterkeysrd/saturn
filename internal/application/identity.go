@@ -7,7 +7,12 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
+)
+
+const (
+	AccessTokenTTL = 15 * time.Minute // Access token time-to-live
 )
 
 // IdentityService defines the interface for managing users
@@ -30,25 +35,33 @@ type ProviderFactory interface {
 	GetProvider(providerType identity.ProviderType) (identity.Provider, error)
 }
 
+type TokenManager interface {
+	Generate(context.Context, auth.UserPassport, time.Duration) (auth.Token, error)
+	Parse(context.Context, auth.Token) (auth.UserPassport, error)
+}
+
 type IdentityApp struct {
-	identityService IdentityService
-	vault           CredentialVault
 	factory         ProviderFactory
+	identityService IdentityService
+	tokenManager    TokenManager
+	vault           CredentialVault
 }
 
 type IdentityAppParams struct {
 	deps.In
 
-	IdentityService IdentityService
-	Vault           CredentialVault
 	Factory         ProviderFactory
+	IdentityService IdentityService
+	TokenManager    TokenManager
+	Vault           CredentialVault
 }
 
 func NewIdentity(params IdentityAppParams) *IdentityApp {
 	return &IdentityApp{
-		identityService: params.IdentityService,
-		vault:           params.Vault,
 		factory:         params.Factory,
+		identityService: params.IdentityService,
+		tokenManager:    params.TokenManager,
+		vault:           params.Vault,
 	}
 }
 
@@ -146,7 +159,15 @@ func (app *IdentityApp) LoginUser(context context.Context, req *LoginUserRequest
 		return nil, fmt.Errorf("failed to login user: %w", err)
 	}
 
+	user := out.User
+	passport := auth.NewUserPassport(user.ID, user.Username, user.Email, user.Role)
+	accessToken, err := app.tokenManager.Generate(context, passport, AccessTokenTTL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate access token: %w", err)
+	}
+
 	return &TokenPair{
+		AccessToken:  accessToken.String(),
 		RefreshToken: fmt.Sprintf("%s.%s", out.Session.ID.String(), out.SessionToken),
 		ExpireTime:   out.Session.ExpireTime,
 	}, nil
