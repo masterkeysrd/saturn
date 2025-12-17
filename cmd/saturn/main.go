@@ -22,7 +22,7 @@ import (
 	financepg "github.com/masterkeysrd/saturn/internal/storage/pg/finance"
 	identitypg "github.com/masterkeysrd/saturn/internal/storage/pg/identity"
 	tenancypg "github.com/masterkeysrd/saturn/internal/storage/pg/tenancy"
-	identitygrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/identity"
+	identitygrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/servers/identity"
 )
 
 func init() {
