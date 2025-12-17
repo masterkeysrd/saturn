@@ -3,11 +3,10 @@ package tenancypg
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/tenancy"
-	"github.com/masterkeysrd/saturn/internal/foundation/auth"
+	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 )
 
 var _ tenancy.MembershipStore = (*MembershipStore)(nil)
@@ -61,26 +60,15 @@ func (s *MembershipStore) Delete(ctx context.Context, id tenancy.MembershipID) e
 	return nil
 }
 
-type MembershipEntity struct {
-	SpaceID    tenancy.SpaceID `db:"space_id"`
-	UserID     tenancy.UserID  `db:"user_id"`
-	Role       tenancy.Role    `db:"role"`
-	JoinTime   time.Time       `db:"join_time"`
-	CreateBy   auth.UserID     `db:"create_by"`
-	CreateTime time.Time       `db:"create_time"`
-	UpdateBy   auth.UserID     `db:"update_by"`
-	UpdateTime time.Time       `db:"update_time"`
-}
-
 func NewMembershipEntityFromModel(m *tenancy.Membership) *MembershipEntity {
 	return &MembershipEntity{
-		SpaceID:    m.SpaceID,
-		UserID:     m.UserID,
-		Role:       m.Role,
+		SpaceId:    m.SpaceID.String(),
+		UserId:     m.UserID.String(),
+		Role:       m.Role.String(),
 		JoinTime:   m.JoinTime,
-		CreateBy:   m.CreatedBy,
+		CreateBy:   ptr.OfNonZero(m.CreateBy.String()),
 		CreateTime: m.CreateTime,
-		UpdateBy:   m.UpdatedBy,
+		UpdateBy:   ptr.OfNonZero(m.UpdateBy.String()),
 		UpdateTime: m.UpdateTime,
 	}
 }

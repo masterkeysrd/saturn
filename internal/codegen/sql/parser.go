@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/masterkeysrd/saturn/internal/pkg/str"
 )
 
 type Parser struct {
@@ -49,7 +50,7 @@ func (p *Parser) Parse(file io.Reader) ([]QueryDef, error) {
 			}
 			currentQuery = &QueryDef{
 				Name:   matches[1],
-				GoName: toGoIdentifier(matches[1]), // Ensure helper is available or use matches[1]
+				GoName: str.GoCamelCase(matches[1]), // Ensure helper is available or use matches[1]
 			}
 			continue
 		}
@@ -97,7 +98,7 @@ func (p *Parser) extractParams(query *QueryDef, rawSQL string) error {
 			// Add placeholder type, will be resolved later
 			params = append(params, ParamDef{
 				Name:       paramName,
-				GoName:     toGoIdentifier(paramName),
+				GoName:     str.GoCamelCase(paramName),
 				Type:       "any",
 				IsNullable: false,
 			})

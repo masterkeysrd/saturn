@@ -23,7 +23,7 @@ func NewUserStore(db *sqlx.DB) (*UserStore, error) {
 
 func (s *UserStore) Get(ctx context.Context, userID auth.UserID) (*identity.User, error) {
 	params := GetUserByIDParams{
-		ID: userID.String(),
+		Id: userID.String(),
 	}
 
 	query, args, err := s.db.BindNamed(GetUserByIDQuery, params)
@@ -85,9 +85,9 @@ func (s *UserStore) ExistsBy(ctx context.Context, criteria identity.UserExistCri
 
 func NewUserEntityFromModel(user *identity.User) *UserEntity {
 	return &UserEntity{
-		ID:         user.ID.String(),
+		Id:         user.ID.String(),
 		Name:       user.Name,
-		AvatarURL:  user.AvatarURL,
+		AvatarUrl:  user.AvatarURL,
 		Username:   user.Username,
 		Email:      user.Email,
 		Role:       user.Role.String(),
@@ -100,9 +100,9 @@ func NewUserEntityFromModel(user *identity.User) *UserEntity {
 
 func (e *UserEntity) ToModel() *identity.User {
 	return &identity.User{
-		ID:         identity.UserID(e.ID),
+		ID:         identity.UserID(e.Id),
 		Name:       e.Name,
-		AvatarURL:  e.AvatarURL,
+		AvatarURL:  e.AvatarUrl,
 		Username:   e.Username,
 		Email:      e.Email,
 		Role:       identity.Role(e.Role),

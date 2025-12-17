@@ -8,11 +8,11 @@ import (
 
 // Metadata holds auditing information for entities.
 type Metadata struct {
-	CreatedBy  auth.UserID
+	CreateBy   auth.UserID
 	CreateTime time.Time
-	UpdatedBy  auth.UserID
+	UpdateBy   auth.UserID
 	UpdateTime time.Time
-	DeletedBy  *auth.UserID
+	DeleteBy   *auth.UserID
 	DeleteTime *time.Time
 }
 
@@ -21,9 +21,9 @@ type Metadata struct {
 func NewMetadata(actor auth.UserID) Metadata {
 	now := time.Now().UTC()
 	return Metadata{
-		CreatedBy:  actor,
+		CreateBy:   actor,
 		CreateTime: now,
-		UpdatedBy:  actor,
+		UpdateBy:   actor,
 		UpdateTime: now,
 	}
 }
@@ -34,6 +34,6 @@ func (m *Metadata) Touch(actor auth.UserID) {
 	if m == nil {
 		return
 	}
-	m.UpdatedBy = actor
+	m.UpdateBy = actor
 	m.UpdateTime = time.Now().UTC()
 }

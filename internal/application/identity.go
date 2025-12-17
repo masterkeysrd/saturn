@@ -8,8 +8,11 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	"github.com/masterkeysrd/saturn/internal/domain/tenancy"
+	"github.com/masterkeysrd/saturn/internal/foundation/access"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
+	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 )
 
 const (
@@ -51,6 +54,7 @@ type TokenBlacklist interface {
 type IdentityApp struct {
 	factory         ProviderFactory
 	identityService IdentityService
+	tenancyService  TenancyService
 	tokenManager    TokenManager
 	tokenBlacklist  TokenBlacklist
 	vault           CredentialVault
@@ -61,6 +65,7 @@ type IdentityAppParams struct {
 
 	Factory         ProviderFactory
 	IdentityService IdentityService
+	TenancyService  TenancyService
 	TokenManager    TokenManager
 	TokenBlacklist  TokenBlacklist
 	Vault           CredentialVault
@@ -70,6 +75,7 @@ func NewIdentity(params IdentityAppParams) *IdentityApp {
 	return &IdentityApp{
 		factory:         params.Factory,
 		identityService: params.IdentityService,
+		tenancyService:  params.TenancyService,
 		tokenManager:    params.TokenManager,
 		tokenBlacklist:  params.TokenBlacklist,
 		vault:           params.Vault,
@@ -87,8 +93,18 @@ func (app *IdentityApp) CreateUser(ctx context.Context, req *CreateUserRequest) 
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	return user, nil
+	// After creating the user, we can create a default space for them
+	principal := access.NewPrincipal(user.ID, "", user.Role, "")
 
+	space := &tenancy.Space{
+		Name:        fmt.Sprintf("%s's Space", req.Name),
+		Description: ptr.Of("Default personal space"),
+	}
+	if err := app.tenancyService.CreateSpace(ctx, principal, space); err != nil {
+		return nil, fmt.Errorf("failed to create default space for user: %w", err)
+	}
+
+	return user, nil
 }
 
 func (app *IdentityApp) CreateAdminUser(ctx context.Context, req *CreateUserRequest) (*identity.User, error) {
@@ -102,6 +118,9 @@ func (app *IdentityApp) CreateAdminUser(ctx context.Context, req *CreateUserRequ
 		return nil, fmt.Errorf("failed to create admin user: %w", err)
 	}
 
+	// Return the created admin user, admin users are not associated to
+	// any space because the intention is just to administer the system
+	// and not to participate in any tenancy.
 	return user, nil
 }
 

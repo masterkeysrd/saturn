@@ -22,7 +22,7 @@ func NewBindingStore(db *sqlx.DB) (*BindingStore, error) {
 
 func (s *BindingStore) Get(ctx context.Context, id identity.BindingID) (*identity.Binding, error) {
 	params := GetBindingByIDParams{
-		UserID:   id.UserID.String(),
+		UserId:   id.UserID.String(),
 		Provider: id.Provider.String(),
 	}
 
@@ -52,7 +52,7 @@ func (s *BindingStore) GetBy(ctx context.Context, criteria identity.GetBindingCr
 	case identity.ByProviderAndSubjectID:
 		params := GetBindingByProviderAndSubjectIDParams{
 			Provider:  c.Provider.String(),
-			SubjectID: c.SubjectID.String(),
+			SubjectId: c.SubjectID.String(),
 		}
 		query, args, err = s.db.BindNamed(GetBindingByProviderAndSubjectIDQuery, params)
 
@@ -75,7 +75,7 @@ func (s *BindingStore) GetBy(ctx context.Context, criteria identity.GetBindingCr
 
 func (s *BindingStore) List(ctx context.Context, userID identity.UserID) ([]*identity.Binding, error) {
 	params := ListBindingsByUserIDParams{
-		UserID: userID.String(),
+		UserId: userID.String(),
 	}
 
 	query, args, err := s.db.BindNamed(ListBindingsByUserIDQuery, params)
@@ -114,7 +114,7 @@ func (s *BindingStore) Store(ctx context.Context, b *identity.Binding) error {
 
 func (s *BindingStore) Delete(ctx context.Context, id identity.BindingID) error {
 	params := DeleteBindingParams{
-		UserID:   id.UserID.String(),
+		UserId:   id.UserID.String(),
 		Provider: id.Provider.String(),
 	}
 
@@ -131,9 +131,9 @@ func (s *BindingStore) Delete(ctx context.Context, id identity.BindingID) error 
 
 func NewBindingEntity(b *identity.Binding) *BindingEntity {
 	return &BindingEntity{
-		UserID:     b.UserID.String(),
+		UserId:     b.UserID.String(),
 		Provider:   b.Provider.String(),
-		SubjectID:  b.SubjectID.String(),
+		SubjectId:  b.SubjectID.String(),
 		CreateTime: b.CreateTime,
 		UpdateTime: b.UpdateTime,
 	}
@@ -142,10 +142,10 @@ func NewBindingEntity(b *identity.Binding) *BindingEntity {
 func (e *BindingEntity) ToBinding() *identity.Binding {
 	return &identity.Binding{
 		BindingID: identity.BindingID{
-			UserID:   identity.UserID(e.UserID),
+			UserID:   identity.UserID(e.UserId),
 			Provider: identity.ProviderType(e.Provider),
 		},
-		SubjectID:  identity.SubjectID(e.SubjectID),
+		SubjectID:  identity.SubjectID(e.SubjectId),
 		CreateTime: e.CreateTime,
 		UpdateTime: e.UpdateTime,
 	}

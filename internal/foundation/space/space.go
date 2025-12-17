@@ -29,6 +29,10 @@ func (r Role) IsValid() bool {
 	}
 }
 
+func (r Role) String() string {
+	return string(r)
+}
+
 type spaceCtxKey struct{}
 
 // InjectSpace injects the given SpaceID into the context.

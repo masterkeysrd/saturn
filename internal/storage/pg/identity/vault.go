@@ -92,7 +92,7 @@ func (s *CredentialStore) ExistsBy(ctx context.Context, criteria identity.Exists
 
 func NewCredentialEntityFromModel(credential *identity.Credential) *VaultCredentialEntity {
 	return &VaultCredentialEntity{
-		SubjectID:    credential.SubjectID.String(),
+		SubjectId:    credential.SubjectID.String(),
 		Username:     credential.Username,
 		Email:        credential.Email,
 		PasswordHash: credential.PasswordHash,
@@ -103,7 +103,7 @@ func NewCredentialEntityFromModel(credential *identity.Credential) *VaultCredent
 
 func (e *VaultCredentialEntity) ToModel() *identity.Credential {
 	return &identity.Credential{
-		SubjectID:    identity.SubjectID(e.SubjectID),
+		SubjectID:    identity.SubjectID(e.SubjectId),
 		Username:     e.Username,
 		Email:        e.Email,
 		PasswordHash: e.PasswordHash,

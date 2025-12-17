@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/masterkeysrd/saturn/internal/pkg/str"
 	"github.com/masterkeysrd/saturn/internal/pkg/text"
 )
 
@@ -48,7 +49,7 @@ func (i *Inspector) ListTables(schema string) ([]TableDef, error) {
 		tables = append(tables, TableDef{
 			Name:    tableName,
 			Columns: columns,
-			GoName:  toGoIdentifier(text.Singularize(tableName)),
+			GoName:  str.GoCamelCase(text.Singularize(tableName)),
 		})
 	}
 
@@ -87,7 +88,7 @@ func (i *Inspector) ListColumns(schema, table string) ([]ColumnDef, error) {
 			return nil, fmt.Errorf("scanning column: %w", err)
 		}
 		col.IsNullable = (isNullable == "YES")
-		col.GoName = toGoIdentifier(col.Name)
+		col.GoName = str.GoCamelCase(col.Name)
 		col.GoType, col.ImportPath = mapSQLTypeToGoType(col.Type)
 		columns = append(columns, col)
 	}
@@ -137,44 +138,4 @@ func mapSQLTypeToGoType(sqlType string) (string, string) {
 	default:
 		return "any", ""
 	}
-}
-
-var wellKnownInitialisms = map[string]string{
-	"id":   "ID",
-	"url":  "URL",
-	"ip":   "IP",
-	"api":  "API",
-	"json": "JSON",
-	"sql":  "SQL",
-}
-
-func toGoIdentifier(dbName string) string {
-	if goIdent, ok := wellKnownInitialisms[dbName]; ok {
-		return goIdent
-	}
-
-	// Check suffixes
-	for suffix, replacement := range wellKnownInitialisms {
-		if len(dbName) > len(suffix) && dbName[len(dbName)-len(suffix):] == suffix {
-			base := dbName[:len(dbName)-len(suffix)]
-			return toGoIdentifier(base) + replacement
-		}
-	}
-
-	goIdent := ""
-	capNext := true
-	for _, r := range dbName {
-		if r == '_' || r == ' ' || r == '-' {
-			capNext = true
-			continue
-		}
-		if capNext {
-			if 'a' <= r && r <= 'z' {
-				r = r - 'a' + 'A'
-			}
-			capNext = false
-		}
-		goIdent += string(r)
-	}
-	return goIdent
 }

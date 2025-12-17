@@ -44,7 +44,7 @@ func NewService(params ServiceParams) *Service {
 
 // CreateUser creates a new user in the system.
 func (s *Service) CreateUser(ctx context.Context, in *UserProfile) (*User, error) {
-	user, err := s.createUser(ctx, in, false)
+	user, err := s.createUser(ctx, in, auth.RoleUser)
 	if err != nil {
 		return nil, err
 	}
@@ -52,14 +52,14 @@ func (s *Service) CreateUser(ctx context.Context, in *UserProfile) (*User, error
 }
 
 func (s *Service) CreateAdminUser(ctx context.Context, in *UserProfile) (*User, error) {
-	user, err := s.createUser(ctx, in, true)
+	user, err := s.createUser(ctx, in, auth.RoleAdmin)
 	if err != nil {
 		return nil, err
 	}
 	return user, nil
 }
 
-func (s *Service) createUser(ctx context.Context, profile *UserProfile, isAdmin bool) (*User, error) {
+func (s *Service) createUser(ctx context.Context, profile *UserProfile, role Role) (*User, error) {
 	if profile == nil {
 		return nil, fmt.Errorf("user profile is nil")
 	}
@@ -86,8 +86,7 @@ func (s *Service) createUser(ctx context.Context, profile *UserProfile, isAdmin 
 		return nil, fmt.Errorf("failed to initialize user: %w", err)
 	}
 
-	if isAdmin {
-		user.Role = auth.RoleAdmin
+	if role == auth.RoleAdmin {
 		user.Status = UserStatusActive // Admin users are active by default
 	}
 

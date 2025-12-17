@@ -304,20 +304,20 @@ SET
 
 // BindingEntity represents a row from the 'bindings' table.
 type BindingEntity struct {
-	UserID     string    `db:"user_id"`
+	UserId     string    `db:"user_id"`
 	Provider   string    `db:"provider"`
-	SubjectID  string    `db:"subject_id"`
+	SubjectId  string    `db:"subject_id"`
 	CreateTime time.Time `db:"create_time"`
 	UpdateTime time.Time `db:"update_time"`
 }
 
 // SessionEntity represents a row from the 'sessions' table.
 type SessionEntity struct {
-	ID         string    `db:"id"`
-	UserID     string    `db:"user_id"`
+	Id         string    `db:"id"`
+	UserId     string    `db:"user_id"`
 	TokenHash  string    `db:"token_hash"`
 	UserAgent  *string   `db:"user_agent"`
-	ClientIP   *string   `db:"client_ip"`
+	ClientIp   *string   `db:"client_ip"`
 	ExpireTime time.Time `db:"expire_time"`
 	CreateTime time.Time `db:"create_time"`
 	UpdateTime time.Time `db:"update_time"`
@@ -325,9 +325,9 @@ type SessionEntity struct {
 
 // UserEntity represents a row from the 'users' table.
 type UserEntity struct {
-	ID         string     `db:"id"`
+	Id         string     `db:"id"`
 	Name       string     `db:"name"`
-	AvatarURL  *string    `db:"avatar_url"`
+	AvatarUrl  *string    `db:"avatar_url"`
 	Username   string     `db:"username"`
 	Email      string     `db:"email"`
 	Role       string     `db:"role"`
@@ -339,7 +339,7 @@ type UserEntity struct {
 
 // VaultCredentialEntity represents a row from the 'vault_credentials' table.
 type VaultCredentialEntity struct {
-	SubjectID    string    `db:"subject_id"`
+	SubjectId    string    `db:"subject_id"`
 	Username     string    `db:"username"`
 	Email        string    `db:"email"`
 	PasswordHash string    `db:"password_hash"`
@@ -349,7 +349,7 @@ type VaultCredentialEntity struct {
 
 // GetUserByIDParams represents the parameters for the 'GetUserByID' query.
 type GetUserByIDParams struct {
-	ID string `db:"id"`
+	Id string `db:"id"`
 }
 
 // UpsertUserParams represents the parameters for the 'UpsertUser' query.
@@ -369,7 +369,7 @@ type ExistsUserByEmailParams struct {
 
 // GetSessionByIDParams represents the parameters for the 'GetSessionByID' query.
 type GetSessionByIDParams struct {
-	ID string `db:"id"`
+	Id string `db:"id"`
 }
 
 // UpsertSessionParams represents the parameters for the 'UpsertSession' query.
@@ -379,29 +379,29 @@ type UpsertSessionParams = SessionEntity
 
 // DeleteSessionByIDParams represents the parameters for the 'DeleteSessionByID' query.
 type DeleteSessionByIDParams struct {
-	ID string `db:"id"`
+	Id string `db:"id"`
 }
 
 // DeleteSessionsByUserIDParams represents the parameters for the 'DeleteSessionsByUserID' query.
 type DeleteSessionsByUserIDParams struct {
-	UserID string `db:"user_id"`
+	UserId string `db:"user_id"`
 }
 
 // GetBindingByIDParams represents the parameters for the 'GetBindingByID' query.
 type GetBindingByIDParams struct {
-	UserID   string `db:"user_id"`
+	UserId   string `db:"user_id"`
 	Provider string `db:"provider"`
 }
 
 // GetBindingByProviderAndSubjectIDParams represents the parameters for the 'GetBindingByProviderAndSubjectID' query.
 type GetBindingByProviderAndSubjectIDParams struct {
 	Provider  string `db:"provider"`
-	SubjectID string `db:"subject_id"`
+	SubjectId string `db:"subject_id"`
 }
 
 // ListBindingsByUserIDParams represents the parameters for the 'ListBindingsByUserID' query.
 type ListBindingsByUserIDParams struct {
-	UserID string `db:"user_id"`
+	UserId string `db:"user_id"`
 }
 
 // UpsertBindingParams represents the parameters for the 'UpsertBinding' query.
@@ -411,13 +411,13 @@ type UpsertBindingParams = BindingEntity
 
 // DeleteBindingParams represents the parameters for the 'DeleteBinding' query.
 type DeleteBindingParams struct {
-	UserID   string `db:"user_id"`
+	UserId   string `db:"user_id"`
 	Provider string `db:"provider"`
 }
 
 // GetCredentialsBySubjectIDParams represents the parameters for the 'GetCredentialsBySubjectID' query.
 type GetCredentialsBySubjectIDParams struct {
-	SubjectID string `db:"subject_id"`
+	SubjectId string `db:"subject_id"`
 }
 
 // GetCredentialsByIdentifierParams represents the parameters for the 'GetCredentialsByIdentifier' query.

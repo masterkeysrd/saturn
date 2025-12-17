@@ -24,7 +24,7 @@ func NewSessionStore(db *sqlx.DB) (*SessionStore, error) {
 
 func (s *SessionStore) Get(ctx context.Context, sessionID identity.SessionID) (*identity.Session, error) {
 	params := GetSessionByIDParams{
-		ID: sessionID.String(),
+		Id: sessionID.String(),
 	}
 
 	query, args, err := s.db.BindNamed(GetSessionByIDQuery, params)
@@ -52,7 +52,7 @@ func (s *SessionStore) Store(ctx context.Context, session *identity.Session) err
 
 func (s *SessionStore) Delete(ctx context.Context, sessionID identity.SessionID) error {
 	params := DeleteSessionByIDParams{
-		ID: sessionID.String(),
+		Id: sessionID.String(),
 	}
 
 	if _, err := s.db.NamedExecContext(ctx, DeleteSessionByIDQuery, params); err != nil {
@@ -68,7 +68,7 @@ func (s *SessionStore) DeleteBy(ctx context.Context, criteria identity.DeleteSes
 	case identity.ByUserID:
 		query = DeleteSessionsByUserIDQuery
 		params = DeleteSessionsByUserIDParams{
-			UserID: string(c),
+			UserId: string(c),
 		}
 	default:
 		return fmt.Errorf("unsupported criteria type: %T", criteria)
@@ -82,11 +82,11 @@ func (s *SessionStore) DeleteBy(ctx context.Context, criteria identity.DeleteSes
 
 func SessionEntityFromModel(session *identity.Session) *SessionEntity {
 	return &SessionEntity{
-		ID:         session.ID.String(),
-		UserID:     session.UserID.String(),
+		Id:         session.ID.String(),
+		UserId:     session.UserID.String(),
 		TokenHash:  session.TokenHash,
 		UserAgent:  session.UserAgent,
-		ClientIP:   session.ClientIP,
+		ClientIp:   session.ClientIP,
 		ExpireTime: session.ExpireTime,
 		CreateTime: session.CreateTime,
 		UpdateTime: session.UpdateTime,
@@ -95,11 +95,11 @@ func SessionEntityFromModel(session *identity.Session) *SessionEntity {
 
 func (e *SessionEntity) ToModel() *identity.Session {
 	return &identity.Session{
-		ID:         identity.SessionID(e.ID),
-		UserID:     identity.UserID(e.UserID),
+		ID:         identity.SessionID(e.Id),
+		UserID:     identity.UserID(e.UserId),
 		TokenHash:  e.TokenHash,
 		UserAgent:  e.UserAgent,
-		ClientIP:   e.ClientIP,
+		ClientIP:   e.ClientIp,
 		ExpireTime: e.ExpireTime,
 		CreateTime: e.CreateTime,
 		UpdateTime: e.UpdateTime,
