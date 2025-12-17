@@ -209,56 +209,61 @@ func (s *Service) LoginUser(ctx context.Context, in *LoginUserInput) (*LoginUser
 	}, nil
 }
 
-func (s *Service) RefreshSession(ctx context.Context, in *RefreshSessionInput) (*User, *Session, string, error) {
+func (s *Service) RefreshSession(ctx context.Context, in *RefreshSessionInput) (*LoginUserOutput, error) {
 	if err := in.Validate(); err != nil {
-		return nil, nil, "", fmt.Errorf("invalid session verification input: %w", err)
+		return nil, fmt.Errorf("invalid session verification input: %w", err)
 	}
 
 	session, err := s.sessionStore.Get(ctx, in.SessionID)
 	if err != nil {
-		return nil, nil, "", fmt.Errorf("failed to get session: %w", err)
+		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
 
 	// Verify token correctness
 	if !session.VerifyToken(in.Token, s.tokenHasher) {
 		_ = s.sessionStore.Delete(ctx, session.ID)
-		return nil, nil, "", fmt.Errorf("invalid session token")
+		return nil, fmt.Errorf("invalid session token")
 	}
 
 	if session.IsExpired() {
 		_ = s.sessionStore.Delete(ctx, session.ID)
-		return nil, nil, "", fmt.Errorf("invalid or expired session")
+		return nil, fmt.Errorf("invalid or expired session")
 	}
 
 	user, err := s.userStore.Get(ctx, session.UserID)
 	if err != nil {
-		return nil, nil, "", fmt.Errorf("failed to get user: %w", err)
+		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
 	if user == nil {
-		return nil, nil, "", fmt.Errorf("user not found for session")
+		return nil, fmt.Errorf("user not found for session")
 	}
 
 	if user.Status != UserStatusActive {
-		return nil, nil, "", fmt.Errorf("user account is not active")
+		return nil, fmt.Errorf("user account is not active")
 	}
 
 	// Rotate session token
 	newToken, err := session.GenerateToken(s.tokenHasher, s.secretGenerator)
 	if err != nil {
-		return nil, nil, "", fmt.Errorf("failed to generate new session token: %w", err)
+		return nil, fmt.Errorf("failed to generate new session token: %w", err)
 	}
 
 	session.Sanitize()
 	if err := session.Validate(); err != nil {
-		return nil, nil, "", fmt.Errorf("invalid session data: %w", err)
+		return nil, fmt.Errorf("invalid session data: %w", err)
 	}
 
 	if err := s.sessionStore.Store(ctx, session); err != nil {
-		return nil, nil, "", fmt.Errorf("failed to update session: %w", err)
+		return nil, fmt.Errorf("failed to update session: %w", err)
 	}
 
-	return user, session, newToken, nil
+	// return user, session, newToken, nil
+	return &LoginUserOutput{
+		User:         user,
+		Session:      session,
+		SessionToken: newToken,
+	}, nil
 }
 
 type LoginUserInput struct {

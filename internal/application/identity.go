@@ -21,6 +21,7 @@ type IdentityService interface {
 	CreateUser(context.Context, *identity.UserProfile) (*identity.User, error)
 	CreateAdminUser(context.Context, *identity.UserProfile) (*identity.User, error)
 	LoginUser(context.Context, *identity.LoginUserInput) (*identity.LoginUserOutput, error)
+	RefreshSession(context.Context, *identity.RefreshSessionInput) (*identity.LoginUserOutput, error)
 }
 
 // CredentialVault defines the interface for managing credentials
@@ -157,6 +158,39 @@ func (app *IdentityApp) LoginUser(context context.Context, req *LoginUserRequest
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to login user: %w", err)
+	}
+
+	user := out.User
+	passport := auth.NewUserPassport(user.ID, user.Username, user.Email, user.Role)
+	accessToken, err := app.tokenManager.Generate(context, passport, AccessTokenTTL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate access token: %w", err)
+	}
+
+	return &TokenPair{
+		AccessToken:  accessToken.String(),
+		RefreshToken: fmt.Sprintf("%s.%s", out.Session.ID.String(), out.SessionToken),
+		ExpireTime:   out.Session.ExpireTime,
+	}, nil
+}
+
+func (app *IdentityApp) RefreshSession(context context.Context, refreshToken string) (*TokenPair, error) {
+	if refreshToken == "" {
+		return nil, fmt.Errorf("refresh token is empty")
+	}
+
+	parts := strings.SplitN(refreshToken, ".", 2)
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid refresh token format")
+	}
+
+	sessionID, token := parts[0], parts[1]
+	out, err := app.identityService.RefreshSession(context, &identity.RefreshSessionInput{
+		SessionID: identity.SessionID(sessionID),
+		Token:     token,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to refresh session: %w", err)
 	}
 
 	user := out.User
