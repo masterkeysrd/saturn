@@ -15,8 +15,10 @@ var _ identitypb.IdentityServer = (*IdentityServer)(nil)
 type Application interface {
 	CreateUser(context.Context, *application.CreateUserRequest) (*identity.User, error)
 	LoginUser(context.Context, *application.LoginUserRequest) (*application.TokenPair, error)
+	LogoutUser(context.Context) error
 	RefreshSession(context.Context, string) (*application.TokenPair, error)
 	RevokeSession(context.Context, identity.SessionID) error
+	RevokeAllSessions(context.Context) error
 }
 
 type IdentityServer struct {
@@ -47,6 +49,13 @@ func (s *IdentityServer) LoginUser(ctx context.Context, req *identitypb.LoginUse
 	return TokenPairPb(pair), nil
 }
 
+func (s *IdentityServer) LogoutUser(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
+	if err := s.app.LogoutUser(ctx); err != nil {
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
+}
+
 func (s *IdentityServer) RefreshSession(ctx context.Context, req *identitypb.RefreshSessionRequest) (*identitypb.TokenPair, error) {
 	pair, err := s.app.RefreshSession(ctx, req.RefreshToken)
 	if err != nil {
@@ -57,6 +66,13 @@ func (s *IdentityServer) RefreshSession(ctx context.Context, req *identitypb.Ref
 
 func (s *IdentityServer) RevokeSession(ctx context.Context, req *identitypb.RevokeSessionRequest) (*emptypb.Empty, error) {
 	if err := s.app.RevokeSession(ctx, identity.SessionID(req.GetId())); err != nil {
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
+}
+
+func (s *IdentityServer) RevokeAllSessions(ctx context.Context, req *emptypb.Empty) (*emptypb.Empty, error) {
+	if err := s.app.RevokeAllSessions(ctx); err != nil {
 		return nil, err
 	}
 	return &emptypb.Empty{}, nil

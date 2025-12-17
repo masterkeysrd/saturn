@@ -10,19 +10,25 @@ func (uid UserID) String() string {
 // UserPassport represents the essential information about a user
 // that is included in authentication tokens and used for authorization.
 type UserPassport struct {
-	userID   UserID
-	username string
-	email    string
-	role     Role
+	sessionID SessionID
+	userID    UserID
+	username  string
+	email     string
+	role      Role
 }
 
-func NewUserPassport(userID UserID, username, email string, role Role) UserPassport {
+func NewUserPassport(session SessionID, user UserID, username, email string, role Role) UserPassport {
 	return UserPassport{
-		userID:   userID,
-		username: username,
-		email:    email,
-		role:     role,
+		sessionID: session,
+		userID:    user,
+		username:  username,
+		email:     email,
+		role:      role,
 	}
+}
+
+func (p UserPassport) SessionID() SessionID {
+	return p.sessionID
 }
 
 func (p UserPassport) UserID() UserID {

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/foundation/id"
 )
 
@@ -47,11 +48,7 @@ type SecretGenerator interface {
 	GenerateSecret(int) (string, error)
 }
 
-type SessionID string
-
-func (sid SessionID) String() string {
-	return string(sid)
-}
+type SessionID = auth.SessionID
 
 type Session struct {
 	ID         SessionID

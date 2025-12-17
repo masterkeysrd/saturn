@@ -23,15 +23,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Identity_CreateUser_FullMethodName     = "/saturn.identity.v1.Identity/CreateUser"
-	Identity_GetUser_FullMethodName        = "/saturn.identity.v1.Identity/GetUser"
-	Identity_UpdateUser_FullMethodName     = "/saturn.identity.v1.Identity/UpdateUser"
-	Identity_LoginUser_FullMethodName      = "/saturn.identity.v1.Identity/LoginUser"
-	Identity_LogoutUser_FullMethodName     = "/saturn.identity.v1.Identity/LogoutUser"
-	Identity_LogoutUserAll_FullMethodName  = "/saturn.identity.v1.Identity/LogoutUserAll"
-	Identity_ListSessions_FullMethodName   = "/saturn.identity.v1.Identity/ListSessions"
-	Identity_RefreshSession_FullMethodName = "/saturn.identity.v1.Identity/RefreshSession"
-	Identity_RevokeSession_FullMethodName  = "/saturn.identity.v1.Identity/RevokeSession"
+	Identity_CreateUser_FullMethodName        = "/saturn.identity.v1.Identity/CreateUser"
+	Identity_GetUser_FullMethodName           = "/saturn.identity.v1.Identity/GetUser"
+	Identity_UpdateUser_FullMethodName        = "/saturn.identity.v1.Identity/UpdateUser"
+	Identity_LoginUser_FullMethodName         = "/saturn.identity.v1.Identity/LoginUser"
+	Identity_LogoutUser_FullMethodName        = "/saturn.identity.v1.Identity/LogoutUser"
+	Identity_ListSessions_FullMethodName      = "/saturn.identity.v1.Identity/ListSessions"
+	Identity_RefreshSession_FullMethodName    = "/saturn.identity.v1.Identity/RefreshSession"
+	Identity_RevokeSession_FullMethodName     = "/saturn.identity.v1.Identity/RevokeSession"
+	Identity_RevokeAllSessions_FullMethodName = "/saturn.identity.v1.Identity/RevokeAllSessions"
 )
 
 // IdentityClient is the client API for Identity service.
@@ -83,14 +83,15 @@ type IdentityClient interface {
 	LoginUser(ctx context.Context, in *LoginUserRequest, opts ...grpc.CallOption) (*TokenPair, error)
 	// LogoutUser invalidates the current user's session.
 	LogoutUser(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// LogoutUserAll invalidates all sessions for the current user.
-	LogoutUserAll(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// ListSessions lists all active sessions for the current user.
 	ListSessions(ctx context.Context, in *ListSessionsRequest, opts ...grpc.CallOption) (*ListSessionsResponse, error)
 	// RefreshSession refreshes a session using a refresh token.
 	RefreshSession(ctx context.Context, in *RefreshSessionRequest, opts ...grpc.CallOption) (*TokenPair, error)
 	// RevokeSession revokes a specific session by ID.
 	RevokeSession(ctx context.Context, in *RevokeSessionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// RevokeAllSessions revokes all sessions for the current user.
+	// This action logs the user out from all devices.
+	RevokeAllSessions(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type identityClient struct {
@@ -151,16 +152,6 @@ func (c *identityClient) LogoutUser(ctx context.Context, in *emptypb.Empty, opts
 	return out, nil
 }
 
-func (c *identityClient) LogoutUserAll(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, Identity_LogoutUserAll_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *identityClient) ListSessions(ctx context.Context, in *ListSessionsRequest, opts ...grpc.CallOption) (*ListSessionsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListSessionsResponse)
@@ -185,6 +176,16 @@ func (c *identityClient) RevokeSession(ctx context.Context, in *RevokeSessionReq
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Identity_RevokeSession_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) RevokeAllSessions(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Identity_RevokeAllSessions_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -240,14 +241,15 @@ type IdentityServer interface {
 	LoginUser(context.Context, *LoginUserRequest) (*TokenPair, error)
 	// LogoutUser invalidates the current user's session.
 	LogoutUser(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
-	// LogoutUserAll invalidates all sessions for the current user.
-	LogoutUserAll(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	// ListSessions lists all active sessions for the current user.
 	ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error)
 	// RefreshSession refreshes a session using a refresh token.
 	RefreshSession(context.Context, *RefreshSessionRequest) (*TokenPair, error)
 	// RevokeSession revokes a specific session by ID.
 	RevokeSession(context.Context, *RevokeSessionRequest) (*emptypb.Empty, error)
+	// RevokeAllSessions revokes all sessions for the current user.
+	// This action logs the user out from all devices.
+	RevokeAllSessions(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	mustEmbedUnimplementedIdentityServer()
 }
 
@@ -273,9 +275,6 @@ func (UnimplementedIdentityServer) LoginUser(context.Context, *LoginUserRequest)
 func (UnimplementedIdentityServer) LogoutUser(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method LogoutUser not implemented")
 }
-func (UnimplementedIdentityServer) LogoutUserAll(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method LogoutUserAll not implemented")
-}
 func (UnimplementedIdentityServer) ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSessions not implemented")
 }
@@ -284,6 +283,9 @@ func (UnimplementedIdentityServer) RefreshSession(context.Context, *RefreshSessi
 }
 func (UnimplementedIdentityServer) RevokeSession(context.Context, *RevokeSessionRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokeSession not implemented")
+}
+func (UnimplementedIdentityServer) RevokeAllSessions(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeAllSessions not implemented")
 }
 func (UnimplementedIdentityServer) mustEmbedUnimplementedIdentityServer() {}
 func (UnimplementedIdentityServer) testEmbeddedByValue()                  {}
@@ -396,24 +398,6 @@ func _Identity_LogoutUser_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Identity_LogoutUserAll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(IdentityServer).LogoutUserAll(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Identity_LogoutUserAll_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(IdentityServer).LogoutUserAll(ctx, req.(*emptypb.Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Identity_ListSessions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListSessionsRequest)
 	if err := dec(in); err != nil {
@@ -468,6 +452,24 @@ func _Identity_RevokeSession_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Identity_RevokeAllSessions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).RevokeAllSessions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_RevokeAllSessions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).RevokeAllSessions(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Identity_ServiceDesc is the grpc.ServiceDesc for Identity service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -496,10 +498,6 @@ var Identity_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Identity_LogoutUser_Handler,
 		},
 		{
-			MethodName: "LogoutUserAll",
-			Handler:    _Identity_LogoutUserAll_Handler,
-		},
-		{
 			MethodName: "ListSessions",
 			Handler:    _Identity_ListSessions_Handler,
 		},
@@ -510,6 +508,10 @@ var Identity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RevokeSession",
 			Handler:    _Identity_RevokeSession_Handler,
+		},
+		{
+			MethodName: "RevokeAllSessions",
+			Handler:    _Identity_RevokeAllSessions_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

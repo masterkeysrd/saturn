@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -23,6 +24,7 @@ type IdentityService interface {
 	LoginUser(context.Context, *identity.LoginUserInput) (*identity.LoginUserOutput, error)
 	RefreshSession(context.Context, *identity.RefreshSessionInput) (*identity.LoginUserOutput, error)
 	RevokeSession(context.Context, identity.SessionID) error
+	RevokeAllSessions(context.Context, identity.UserID) error
 }
 
 // CredentialVault defines the interface for managing credentials
@@ -42,10 +44,15 @@ type TokenManager interface {
 	Parse(context.Context, auth.Token) (auth.UserPassport, error)
 }
 
+type TokenBlacklist interface {
+	Revoke(ctx context.Context, token auth.Token, ttl time.Duration) error
+}
+
 type IdentityApp struct {
 	factory         ProviderFactory
 	identityService IdentityService
 	tokenManager    TokenManager
+	tokenBlacklist  TokenBlacklist
 	vault           CredentialVault
 }
 
@@ -55,6 +62,7 @@ type IdentityAppParams struct {
 	Factory         ProviderFactory
 	IdentityService IdentityService
 	TokenManager    TokenManager
+	TokenBlacklist  TokenBlacklist
 	Vault           CredentialVault
 }
 
@@ -63,17 +71,18 @@ func NewIdentity(params IdentityAppParams) *IdentityApp {
 		factory:         params.Factory,
 		identityService: params.IdentityService,
 		tokenManager:    params.TokenManager,
+		tokenBlacklist:  params.TokenBlacklist,
 		vault:           params.Vault,
 	}
 }
 
-func (app *IdentityApp) CreateUser(context context.Context, req *CreateUserRequest) (*identity.User, error) {
-	profile, err := app.createProfile(context, req)
+func (app *IdentityApp) CreateUser(ctx context.Context, req *CreateUserRequest) (*identity.User, error) {
+	profile, err := app.createProfile(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
-	user, err := app.identityService.CreateUser(context, profile)
+	user, err := app.identityService.CreateUser(ctx, profile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
@@ -82,13 +91,13 @@ func (app *IdentityApp) CreateUser(context context.Context, req *CreateUserReque
 
 }
 
-func (app *IdentityApp) CreateAdminUser(context context.Context, req *CreateUserRequest) (*identity.User, error) {
-	profile, err := app.createProfile(context, req)
+func (app *IdentityApp) CreateAdminUser(ctx context.Context, req *CreateUserRequest) (*identity.User, error) {
+	profile, err := app.createProfile(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
-	user, err := app.identityService.CreateAdminUser(context, profile)
+	user, err := app.identityService.CreateAdminUser(ctx, profile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create admin user: %w", err)
 	}
@@ -96,7 +105,7 @@ func (app *IdentityApp) CreateAdminUser(context context.Context, req *CreateUser
 	return user, nil
 }
 
-func (app *IdentityApp) createProfile(context context.Context, req *CreateUserRequest) (*identity.UserProfile, error) {
+func (app *IdentityApp) createProfile(ctx context.Context, req *CreateUserRequest) (*identity.UserProfile, error) {
 	if req == nil {
 		return nil, fmt.Errorf("request is nil")
 	}
@@ -109,7 +118,7 @@ func (app *IdentityApp) createProfile(context context.Context, req *CreateUserRe
 	}
 
 	// Store the credential in the vault
-	subjectID, err := app.vault.CreateCredential(context, credential)
+	subjectID, err := app.vault.CreateCredential(ctx, credential)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create credential: %w", err)
 	}
@@ -137,7 +146,7 @@ func (app *IdentityApp) createProfile(context context.Context, req *CreateUserRe
 	return profile, nil
 }
 
-func (app *IdentityApp) LoginUser(context context.Context, req *LoginUserRequest) (*TokenPair, error) {
+func (app *IdentityApp) LoginUser(ctx context.Context, req *LoginUserRequest) (*TokenPair, error) {
 	if req == nil {
 		return nil, fmt.Errorf("request is nil")
 	}
@@ -147,12 +156,12 @@ func (app *IdentityApp) LoginUser(context context.Context, req *LoginUserRequest
 		return nil, fmt.Errorf("failed to get provider: %w", err)
 	}
 
-	profile, err := provider.Authenticate(context, req.Credentials)
+	profile, err := provider.Authenticate(ctx, req.Credentials)
 	if err != nil {
 		return nil, fmt.Errorf("authentication failed: %w", err)
 	}
 
-	out, err := app.identityService.LoginUser(context, &identity.LoginUserInput{
+	out, err := app.identityService.LoginUser(ctx, &identity.LoginUserInput{
 		Profile:   profile,
 		UserAgent: req.UserAgent,
 		ClientIP:  req.ClientIP,
@@ -162,20 +171,45 @@ func (app *IdentityApp) LoginUser(context context.Context, req *LoginUserRequest
 	}
 
 	user := out.User
-	passport := auth.NewUserPassport(user.ID, user.Username, user.Email, user.Role)
-	accessToken, err := app.tokenManager.Generate(context, passport, AccessTokenTTL)
+	session := out.Session
+	passport := auth.NewUserPassport(session.ID, user.ID, user.Username, user.Email, user.Role)
+	accessToken, err := app.tokenManager.Generate(ctx, passport, AccessTokenTTL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate access token: %w", err)
 	}
 
 	return &TokenPair{
 		AccessToken:  accessToken.String(),
-		RefreshToken: fmt.Sprintf("%s.%s", out.Session.ID.String(), out.SessionToken),
+		RefreshToken: fmt.Sprintf("%s.%s", session.ID.String(), out.SessionToken),
 		ExpireTime:   out.Session.ExpireTime,
 	}, nil
 }
 
-func (app *IdentityApp) RefreshSession(context context.Context, refreshToken string) (*TokenPair, error) {
+func (app *IdentityApp) LogoutUser(ctx context.Context) error {
+	token, ok := auth.GetToken(ctx)
+	if !ok {
+		return fmt.Errorf("failed to get token from context")
+	}
+
+	// Revoke the access token
+	if err := app.tokenBlacklist.Revoke(ctx, token, AccessTokenTTL); err != nil {
+		log.Printf("warning: failed to revoke access token: %v", err)
+	}
+
+	sessionID, ok := auth.GetCurrentSessionID(ctx)
+	if !ok {
+		return fmt.Errorf("failed to get current session ID from context")
+	}
+
+	// Revoke the session
+	if err := app.identityService.RevokeSession(ctx, sessionID); err != nil {
+		return fmt.Errorf("failed to revoke session: %w", err)
+	}
+
+	return nil
+}
+
+func (app *IdentityApp) RefreshSession(ctx context.Context, refreshToken string) (*TokenPair, error) {
 	if refreshToken == "" {
 		return nil, fmt.Errorf("refresh token is empty")
 	}
@@ -186,7 +220,7 @@ func (app *IdentityApp) RefreshSession(context context.Context, refreshToken str
 	}
 
 	sessionID, token := parts[0], parts[1]
-	out, err := app.identityService.RefreshSession(context, &identity.RefreshSessionInput{
+	out, err := app.identityService.RefreshSession(ctx, &identity.RefreshSessionInput{
 		SessionID: identity.SessionID(sessionID),
 		Token:     token,
 	})
@@ -195,22 +229,36 @@ func (app *IdentityApp) RefreshSession(context context.Context, refreshToken str
 	}
 
 	user := out.User
-	passport := auth.NewUserPassport(user.ID, user.Username, user.Email, user.Role)
-	accessToken, err := app.tokenManager.Generate(context, passport, AccessTokenTTL)
+	session := out.Session
+
+	passport := auth.NewUserPassport(session.ID, user.ID, user.Username, user.Email, user.Role)
+	accessToken, err := app.tokenManager.Generate(ctx, passport, AccessTokenTTL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate access token: %w", err)
 	}
 
 	return &TokenPair{
 		AccessToken:  accessToken.String(),
-		RefreshToken: fmt.Sprintf("%s.%s", out.Session.ID.String(), out.SessionToken),
+		RefreshToken: fmt.Sprintf("%s.%s", session.ID.String(), out.SessionToken),
 		ExpireTime:   out.Session.ExpireTime,
 	}, nil
 }
 
-func (app *IdentityApp) RevokeSession(context context.Context, sessionID identity.SessionID) error {
-	if err := app.identityService.RevokeSession(context, sessionID); err != nil {
+func (app *IdentityApp) RevokeSession(ctx context.Context, sessionID identity.SessionID) error {
+	if err := app.identityService.RevokeSession(ctx, sessionID); err != nil {
 		return fmt.Errorf("failed to revoke session: %w", err)
+	}
+	return nil
+}
+
+func (app *IdentityApp) RevokeAllSessions(ctx context.Context) error {
+	userID, ok := auth.GetCurrentUserID(ctx)
+	if !ok {
+		return fmt.Errorf("failed to get current user ID from context")
+	}
+
+	if err := app.identityService.RevokeAllSessions(ctx, userID); err != nil {
+		return fmt.Errorf("failed to revoke all sessions: %w", err)
 	}
 	return nil
 }

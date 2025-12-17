@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/masterkeysrd/saturn/internal/application"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
@@ -15,6 +16,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/infrastructure/token"
 	"github.com/masterkeysrd/saturn/internal/pkg/argon2id"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
+	"github.com/masterkeysrd/saturn/internal/pkg/mnemo"
 	"github.com/masterkeysrd/saturn/internal/pkg/secretgen"
 	"github.com/masterkeysrd/saturn/internal/pkg/sha256"
 	"github.com/masterkeysrd/saturn/internal/pkg/uuid"
@@ -150,6 +152,28 @@ func buildContainer() (deps.Container, error) {
 }
 
 func wireDeps(inj deps.Injector) error {
+	// Internal Package Deps Wiring
+	if err := inj.Provide(func() *mnemo.Cache {
+		return mnemo.NewCache(mnemo.Config{
+			DefaultTTL: 15 * time.Minute,
+		})
+	}); err != nil {
+		return fmt.Errorf("cannot inject mnemo.Cache dep: %w", err)
+	}
+
+	// Infrastructure Auth Deps Wiring
+	if err := inj.Provide(func(s *identity.CredentialVault) infrauth.CredentialsVault {
+		return s
+	}); err != nil {
+		return fmt.Errorf("cannot inject identity.CredentialVault dep: %w", err)
+	}
+
+	if err := inj.Provide(func(c *mnemo.Cache) *infrauth.MnemoTokenBlacklist {
+		return infrauth.NewMnemoTokenBlacklist(c)
+	}); err != nil {
+		return fmt.Errorf("cannot inject infra.auth.TokenBlacklist dep: %w", err)
+	}
+
 	// Application Deps Wiring
 	if err := inj.Provide(func(factory *infrauth.ProviderFactory) application.ProviderFactory {
 		return factory
@@ -182,11 +206,17 @@ func wireDeps(inj deps.Injector) error {
 		return fmt.Errorf("cannot inject token.JWTGenerator dep: %w", err)
 	}
 
-	// Infrastructure Auth Deps Wiring
-	if err := inj.Provide(func(s *identity.CredentialVault) infrauth.CredentialsVault {
-		return s
+	if err := inj.Provide(func(b *infrauth.MnemoTokenBlacklist) application.TokenBlacklist {
+		return b
 	}); err != nil {
-		return fmt.Errorf("cannot inject identity.CredentialVault dep: %w", err)
+		return fmt.Errorf("cannot inject infra.auth.MnemoTokenBlacklist dep: %w", err)
+	}
+
+	// Foundation Deps Wiring
+	if err := inj.Provide(func(bl *infrauth.MnemoTokenBlacklist) auth.TokenBlacklist {
+		return bl
+	}); err != nil {
+		return fmt.Errorf("cannot inject infra.auth.MnemoTokenBlacklist dep: %w", err)
 	}
 
 	return nil

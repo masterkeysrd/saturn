@@ -22,6 +22,7 @@ type ServerParams struct {
 
 	IdentityServer identitypb.IdentityServer
 	TokenManager   auth.TokenManager
+	TokenBlacklist auth.TokenBlacklist
 }
 
 func NewServer(params ServerParams) *Server {
@@ -39,7 +40,8 @@ func NewServer(params ServerParams) *Server {
 			"/api/v1/identity/users:login",
 			"/api/v1/identity/sessions:refresh",
 		},
-		TokenParser: params.TokenManager.Parse,
+		TokenParser:      params.TokenManager.Parse,
+		BlacklistChecker: params.TokenBlacklist.IsRevoked,
 	})
 
 	var finalHandler http.Handler = handler

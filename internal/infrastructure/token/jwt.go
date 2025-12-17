@@ -15,9 +15,10 @@ type JWTGenerator struct {
 }
 
 type Claims struct {
-	UserID   auth.UserID `json:"user_id"`
-	Username string      `json:"username"`
-	Role     auth.Role   `json:"role"`
+	UserID    auth.UserID    `json:"user_id"`
+	Username  string         `json:"username"`
+	Role      auth.Role      `json:"role"`
+	SessionID auth.SessionID `json:"sid"`
 	jwt.RegisteredClaims
 }
 
@@ -37,9 +38,10 @@ func NewJWTGenerator(secret string) *JWTGenerator {
 
 func (j *JWTGenerator) Generate(ctx context.Context, passport auth.UserPassport, ttl time.Duration) (auth.Token, error) {
 	claims := &Claims{
-		UserID:   passport.UserID(),
-		Username: passport.Username(),
-		Role:     passport.Role(),
+		UserID:    passport.UserID(),
+		Username:  passport.Username(),
+		Role:      passport.Role(),
+		SessionID: passport.SessionID(),
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "saturn",
 			Subject:   passport.UserID().String(),
@@ -69,6 +71,6 @@ func (j *JWTGenerator) Parse(ctx context.Context, tokenStr auth.Token) (auth.Use
 		return auth.UserPassport{}, fmt.Errorf("invalid token: %w", err)
 	}
 
-	passport := auth.NewUserPassport(claims.UserID, claims.Username, "", claims.Role)
+	passport := auth.NewUserPassport(claims.SessionID, claims.UserID, claims.Username, "", claims.Role)
 	return passport, nil
 }

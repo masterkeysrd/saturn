@@ -280,6 +280,17 @@ func (s *Service) RevokeSession(ctx context.Context, sessionID SessionID) error 
 	return nil
 }
 
+func (s *Service) RevokeAllSessions(ctx context.Context, userID UserID) error {
+	if err := id.Validate(userID); err != nil {
+		return fmt.Errorf("invalid user ID: %w", err)
+	}
+
+	if err := s.sessionStore.DeleteBy(ctx, ByUserID(userID)); err != nil {
+		return fmt.Errorf("failed to revoke all sessions: %w", err)
+	}
+	return nil
+}
+
 type LoginUserInput struct {
 	Profile    *UserProfile
 	RememberMe bool

@@ -17,6 +17,8 @@ type AuthMiddlewareConfig struct {
 
 	// Function to validate the token.
 	TokenParser func(context.Context, auth.Token) (auth.UserPassport, error)
+
+	BlacklistChecker func(context.Context, auth.Token) (bool, error)
 }
 
 type AuthMiddleware struct {
@@ -27,6 +29,10 @@ type AuthMiddleware struct {
 func NewAuthMiddleware(config AuthMiddlewareConfig) *AuthMiddleware {
 	if config.TokenParser == nil {
 		panic("TokenParser function must be provided")
+	}
+
+	if config.BlacklistChecker == nil {
+		panic("BlacklistChecker function must be provided")
 	}
 
 	exemptPaths := make(map[string]struct{})
@@ -58,19 +64,32 @@ func (am *AuthMiddleware) Handler(next http.Handler) http.Handler {
 			http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
 		}
 
-		prefix, token := parts[0], parts[1]
+		prefix, tokenStr := parts[0], parts[1]
 		if strings.ToLower(prefix) != "bearer" {
 			http.Error(w, "Unsupported authorization scheme", http.StatusUnauthorized)
 			return
 		}
 
 		ctx := r.Context()
-		passport, err := am.config.TokenParser(ctx, auth.Token(token))
+		token := auth.Token(tokenStr)
+		isBlacklisted, err := am.config.BlacklistChecker(ctx, token)
+		if err != nil {
+			http.Error(w, "Error checking token blacklist", http.StatusInternalServerError)
+			return
+		}
+
+		if isBlacklisted {
+			http.Error(w, "Token has been revoked", http.StatusUnauthorized)
+			return
+		}
+
+		passport, err := am.config.TokenParser(ctx, token)
 		if err != nil {
 			http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
 			return
 		}
 
+		ctx = auth.InjectToken(ctx, token)
 		ctx = auth.InjectUserPassport(ctx, passport)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})

@@ -1035,7 +1035,7 @@ const file_saturn_identity_v1_identity_proto_rawDesc = "" +
 	"\x10last_access_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\x0elastAccessTime\x12@\n" +
 	"\vexpire_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"expireTime\x12 \n" +
-	"\tis_active\x18\b \x01(\bB\x03\xe0A\x03R\bisActive2\xdc\b\n" +
+	"\tis_active\x18\b \x01(\bB\x03\xe0A\x03R\bisActive2\xe3\b\n" +
 	"\bIdentity\x12l\n" +
 	"\n" +
 	"CreateUser\x12%.saturn.identity.v1.CreateUserRequest\x1a\x18.saturn.identity.v1.User\"\x1d\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/v1/identity/users\x12m\n" +
@@ -1044,11 +1044,11 @@ const file_saturn_identity_v1_identity_proto_rawDesc = "" +
 	"UpdateUser\x12%.saturn.identity.v1.UpdateUserRequest\x1a\x18.saturn.identity.v1.User\"8\xdaA\x13id,user,update_mask\x82\xd3\xe4\x93\x02\x1c:\x01*2\x17/v1/identity/users/{id}\x12u\n" +
 	"\tLoginUser\x12$.saturn.identity.v1.LoginUserRequest\x1a\x1d.saturn.identity.v1.TokenPair\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/v1/identity/users:login\x12b\n" +
 	"\n" +
-	"LogoutUser\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"$\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/v1/identity/users:logout\x12h\n" +
-	"\rLogoutUserAll\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/identity/users:logoutAll\x12\x80\x01\n" +
+	"LogoutUser\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"$\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/v1/identity/users:logout\x12\x80\x01\n" +
 	"\fListSessions\x12'.saturn.identity.v1.ListSessionsRequest\x1a(.saturn.identity.v1.ListSessionsResponse\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/identity/sessions\x12\x84\x01\n" +
 	"\x0eRefreshSession\x12).saturn.identity.v1.RefreshSessionRequest\x1a\x1d.saturn.identity.v1.TokenPair\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/v1/identity/sessions:refresh\x12z\n" +
-	"\rRevokeSession\x12(.saturn.identity.v1.RevokeSessionRequest\x1a\x16.google.protobuf.Empty\"'\xdaA\x02id\x82\xd3\xe4\x93\x02\x1c*\x1a/v1/identity/sessions/{id}\x1a\x1e\xcaA\x1bapi.saturn.masterkeysrd.devBKZIgithub.com/masterkeysrd/saturn/gen/proto/go/saturn/identity/v1;identitypbb\x06proto3"
+	"\rRevokeSession\x12(.saturn.identity.v1.RevokeSessionRequest\x1a\x16.google.protobuf.Empty\"'\xdaA\x02id\x82\xd3\xe4\x93\x02\x1c*\x1a/v1/identity/sessions/{id}\x12o\n" +
+	"\x11RevokeAllSessions\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"*\x82\xd3\xe4\x93\x02$:\x01*\"\x1f/v1/identity/sessions:revokeAll\x1a\x1e\xcaA\x1bapi.saturn.masterkeysrd.devBKZIgithub.com/masterkeysrd/saturn/gen/proto/go/saturn/identity/v1;identitypbb\x06proto3"
 
 var (
 	file_saturn_identity_v1_identity_proto_rawDescOnce sync.Once
@@ -1101,19 +1101,19 @@ var file_saturn_identity_v1_identity_proto_depIdxs = []int32{
 	3,  // 14: saturn.identity.v1.Identity.UpdateUser:input_type -> saturn.identity.v1.UpdateUserRequest
 	4,  // 15: saturn.identity.v1.Identity.LoginUser:input_type -> saturn.identity.v1.LoginUserRequest
 	16, // 16: saturn.identity.v1.Identity.LogoutUser:input_type -> google.protobuf.Empty
-	16, // 17: saturn.identity.v1.Identity.LogoutUserAll:input_type -> google.protobuf.Empty
-	5,  // 18: saturn.identity.v1.Identity.ListSessions:input_type -> saturn.identity.v1.ListSessionsRequest
-	7,  // 19: saturn.identity.v1.Identity.RefreshSession:input_type -> saturn.identity.v1.RefreshSessionRequest
-	8,  // 20: saturn.identity.v1.Identity.RevokeSession:input_type -> saturn.identity.v1.RevokeSessionRequest
+	5,  // 17: saturn.identity.v1.Identity.ListSessions:input_type -> saturn.identity.v1.ListSessionsRequest
+	7,  // 18: saturn.identity.v1.Identity.RefreshSession:input_type -> saturn.identity.v1.RefreshSessionRequest
+	8,  // 19: saturn.identity.v1.Identity.RevokeSession:input_type -> saturn.identity.v1.RevokeSessionRequest
+	16, // 20: saturn.identity.v1.Identity.RevokeAllSessions:input_type -> google.protobuf.Empty
 	9,  // 21: saturn.identity.v1.Identity.CreateUser:output_type -> saturn.identity.v1.User
 	9,  // 22: saturn.identity.v1.Identity.GetUser:output_type -> saturn.identity.v1.User
 	9,  // 23: saturn.identity.v1.Identity.UpdateUser:output_type -> saturn.identity.v1.User
 	11, // 24: saturn.identity.v1.Identity.LoginUser:output_type -> saturn.identity.v1.TokenPair
 	16, // 25: saturn.identity.v1.Identity.LogoutUser:output_type -> google.protobuf.Empty
-	16, // 26: saturn.identity.v1.Identity.LogoutUserAll:output_type -> google.protobuf.Empty
-	6,  // 27: saturn.identity.v1.Identity.ListSessions:output_type -> saturn.identity.v1.ListSessionsResponse
-	11, // 28: saturn.identity.v1.Identity.RefreshSession:output_type -> saturn.identity.v1.TokenPair
-	16, // 29: saturn.identity.v1.Identity.RevokeSession:output_type -> google.protobuf.Empty
+	6,  // 26: saturn.identity.v1.Identity.ListSessions:output_type -> saturn.identity.v1.ListSessionsResponse
+	11, // 27: saturn.identity.v1.Identity.RefreshSession:output_type -> saturn.identity.v1.TokenPair
+	16, // 28: saturn.identity.v1.Identity.RevokeSession:output_type -> google.protobuf.Empty
+	16, // 29: saturn.identity.v1.Identity.RevokeAllSessions:output_type -> google.protobuf.Empty
 	21, // [21:30] is the sub-list for method output_type
 	12, // [12:21] is the sub-list for method input_type
 	12, // [12:12] is the sub-list for extension type_name

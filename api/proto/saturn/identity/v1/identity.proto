@@ -82,17 +82,10 @@ service Identity {
   }
 
   // LogoutUser invalidates the current user's session.
+  // This action revokes the current session token.
   rpc LogoutUser(google.protobuf.Empty) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/v1/identity/users:logout"
-      body: "*"
-    };
-  }
-
-  // LogoutUserAll invalidates all sessions for the current user.
-  rpc LogoutUserAll(google.protobuf.Empty) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/v1/identity/users:logoutAll"
       body: "*"
     };
   }
@@ -114,6 +107,15 @@ service Identity {
   rpc RevokeSession(RevokeSessionRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {delete: "/v1/identity/sessions/{id}"};
     option (google.api.method_signature) = "id";
+  }
+
+  // RevokeAllSessions revokes all sessions for the current user.
+  // This action logs the user out from all devices.
+  rpc RevokeAllSessions(google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/identity/sessions:revokeAll"
+      body: "*"
+    };
   }
 }
 
