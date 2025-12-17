@@ -11,20 +11,6 @@ import (
 
 var _ tenancy.SpaceStore = (*SpaceStore)(nil)
 
-const (
-	storeSpaceSQL = `
-INSERT INTO tenancy.spaces (id, owner_id, name, alias, description, create_by, create_time, update_by, update_time)
-VALUES (:id, :owner_id, :name, :alias, :description, :create_by, :create_time, :update_by, :update_time)
-ON CONFLICT (id) DO UPDATE SET
-  owner_id = EXCLUDED.owner_id,
-  name = EXCLUDED.name,
-  alias = EXCLUDED.alias,
-  description = EXCLUDED.description,
-  update_by = EXCLUDED.update_by,
-  update_time = EXCLUDED.update_time
-`
-)
-
 type SpaceStore struct {
 	db *sqlx.DB
 }
@@ -42,7 +28,7 @@ func (s *SpaceStore) ListBy(ctx context.Context, criteria tenancy.ListSpacesCrit
 }
 
 func (s *SpaceStore) Store(ctx context.Context, space *tenancy.Space) error {
-	result, err := s.db.NamedExecContext(ctx, storeSpaceSQL, NewSpaceEntityFromModel(space))
+	result, err := s.db.NamedExecContext(ctx, UpsertSpaceQuery, NewSpaceEntityFromModel(space))
 	if err != nil {
 		return fmt.Errorf("failed to store space: %w", err)
 	}

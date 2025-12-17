@@ -5,7 +5,72 @@ import (
 	"time"
 )
 
-const ()
+const (
+	// UpsertSpaceQuery is the SQL for the 'UpsertSpace' query.
+	UpsertSpaceQuery = `
+INSERT INTO
+  tenancy.spaces (
+    id,
+    owner_id,
+    name,
+    alias,
+    description,
+    create_by,
+    create_time,
+    update_by,
+    update_time
+  )
+VALUES
+  (
+:id,
+:owner_id,
+:name,
+:alias,
+:description,
+:create_by,
+:create_time,
+:update_by,
+:update_time
+  )
+ON CONFLICT (id) DO UPDATE
+SET
+  owner_id = EXCLUDED.owner_id,
+  name = EXCLUDED.name,
+  alias = EXCLUDED.alias,
+  description = EXCLUDED.description,
+  update_by = EXCLUDED.update_by,
+  update_time = EXCLUDED.update_time;`
+
+	// UpsertMembershipQuery is the SQL for the 'UpsertMembership' query.
+	UpsertMembershipQuery = `
+INSERT INTO
+  tenancy.memberships (
+    space_id,
+    user_id,
+    role,
+    join_time,
+    create_by,
+    create_time,
+    update_by,
+    update_time
+  )
+VALUES
+  (
+:space_id,
+:user_id,
+:role,
+:join_time,
+:create_by,
+:create_time,
+:update_by,
+:update_time
+  )
+ON CONFLICT (space_id, user_id) DO UPDATE
+SET ROLE = EXCLUDED.role,
+join_time = EXCLUDED.join_time,
+update_by = EXCLUDED.update_by,
+update_time = EXCLUDED.update_time;`
+)
 
 // MembershipEntity represents a row from the 'memberships' table.
 type MembershipEntity struct {
@@ -33,3 +98,13 @@ type SpaceEntity struct {
 	DeleteBy    *string    `db:"delete_by"`
 	DeleteTime  *time.Time `db:"delete_time"`
 }
+
+// UpsertSpaceParams represents the parameters for the 'UpsertSpace' query.
+//
+// UpsertSpaceParams is an alias of [SpaceEntity].
+type UpsertSpaceParams = SpaceEntity
+
+// UpsertMembershipParams represents the parameters for the 'UpsertMembership' query.
+//
+// UpsertMembershipParams is an alias of [MembershipEntity].
+type UpsertMembershipParams = MembershipEntity

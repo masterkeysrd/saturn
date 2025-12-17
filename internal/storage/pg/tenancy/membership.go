@@ -11,18 +11,6 @@ import (
 
 var _ tenancy.MembershipStore = (*MembershipStore)(nil)
 
-const (
-	upsertMembershipSQL = `
-INSERT INTO tenancy.memberships (space_id, user_id, role, join_time, create_by, create_time, update_by, update_time)
-VALUES (:space_id, :user_id, :role, :join_time, :create_by, :create_time, :update_by, :update_time)
-ON CONFLICT (space_id, user_id) DO UPDATE SET
-  role = EXCLUDED.role,
-  join_time = EXCLUDED.join_time,
-  update_by = EXCLUDED.update_by,
-  update_time = EXCLUDED.update_time;
-`
-)
-
 type MembershipStore struct {
 	db *sqlx.DB
 }
@@ -40,7 +28,7 @@ func (s *MembershipStore) ListBy(ctx context.Context, criteria tenancy.ListMembe
 }
 
 func (s *MembershipStore) Store(ctx context.Context, membership *tenancy.Membership) error {
-	result, err := s.db.NamedExecContext(ctx, upsertMembershipSQL, NewMembershipEntityFromModel(membership))
+	result, err := s.db.NamedExecContext(ctx, UpsertMembershipQuery, NewMembershipEntityFromModel(membership))
 	if err != nil {
 		return err
 	}
