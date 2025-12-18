@@ -1,1 +1,1 @@
-export { getAxios, setAxios } from "./client";
+export { getAxios, setAxios, clearAuthTokens, saveAuthTokens } from "./client";

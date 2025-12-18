@@ -1,4 +1,4 @@
-import { getAxios } from '@/client';
+import { getAxios } from '@saturn/sdk/client';
 import * as Types from './identity_pb';
 import { create, fromJson, toJson } from '@bufbuild/protobuf';
 
@@ -41,7 +41,7 @@ export async function getUser(req: Types.GetUserRequest): Promise<Types.User> {
   const msg = create(Types.GetUserRequestSchema, req);
   const body = toJson(Types.GetUserRequestSchema, msg);
 
-  return getAxios().get(`/api/v1/identity/users/"${body.id}"`
+  return getAxios().get(`/api/v1/identity/users/${body.id}`
   ).then((resp) => {
     return fromJson(Types.UserSchema, resp.data);
   });
@@ -59,7 +59,7 @@ export async function updateUser(req: Types.UpdateUserRequest): Promise<Types.Us
   const msg = create(Types.UpdateUserRequestSchema, req);
   const body = toJson(Types.UpdateUserRequestSchema, msg);
 
-  return getAxios().patch(`/api/v1/identity/users/"${body.id}"`
+  return getAxios().patch(`/api/v1/identity/users/${body.id}`
     , body
   ).then((resp) => {
     return fromJson(Types.UserSchema, resp.data);
@@ -165,7 +165,7 @@ export async function revokeSession(req: Types.RevokeSessionRequest): Promise<vo
   const msg = create(Types.RevokeSessionRequestSchema, req);
   const body = toJson(Types.RevokeSessionRequestSchema, msg);
 
-  return getAxios().delete(`/api/v1/identity/sessions/"${body.id}"`
+  return getAxios().delete(`/api/v1/identity/sessions/${body.id}`
   ).then(() => {
     return;
   });

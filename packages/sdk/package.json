@@ -1,8 +1,26 @@
 {
   "name": "@saturn/sdk",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "index.ts",
   "license": "MIT",
+  "exports": {
+    ".": {
+      "import": "./index.ts",
+      "types": "./index.ts"
+    },
+    "./gen/*": {
+      "import": "./gen/*.ts",
+      "types": "./gen/*.ts"
+    },
+    "./client": {
+      "import": "./client/index.ts",
+      "types": "./client/index.ts"
+    },
+    "./localstorage": {
+      "import": "./localstorage/index.ts",
+      "types": "./localstorage/index.ts"
+    }
+  },
   "dependencies": {
     "axios": "^1.13.2"
   }

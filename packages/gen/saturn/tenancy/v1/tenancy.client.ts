@@ -1,4 +1,4 @@
-import { getAxios } from '@/client';
+import { getAxios } from '@saturn/sdk/client';
 import * as Types from './tenancy_pb';
 import { create, fromJson, toJson } from '@bufbuild/protobuf';
 
@@ -53,7 +53,7 @@ export async function getSpace(req: Types.GetSpaceRequest): Promise<Types.Space>
   const msg = create(Types.GetSpaceRequestSchema, req);
   const body = toJson(Types.GetSpaceRequestSchema, msg);
 
-  return getAxios().get(`/api/v1/spaces/"${body.id}"`
+  return getAxios().get(`/api/v1/spaces/${body.id}`
     , {
       params: {
         view:  body.view,
@@ -76,7 +76,7 @@ export async function updateSpace(req: Types.UpdateSpaceRequest): Promise<Types.
   const msg = create(Types.UpdateSpaceRequestSchema, req);
   const body = toJson(Types.UpdateSpaceRequestSchema, msg);
 
-  return getAxios().patch(`/api/v1/spaces/"${body.id}"`
+  return getAxios().patch(`/api/v1/spaces/${body.id}`
     , body.space
     , {
       params: {
@@ -101,7 +101,7 @@ export async function deleteSpace(req: Types.DeleteSpaceRequest): Promise<void> 
   const msg = create(Types.DeleteSpaceRequestSchema, req);
   const body = toJson(Types.DeleteSpaceRequestSchema, msg);
 
-  return getAxios().delete(`/api/v1/spaces/"${body.id}"`
+  return getAxios().delete(`/api/v1/spaces/${body.id}`
   ).then(() => {
     return;
   });
@@ -118,7 +118,7 @@ export async function addMember(req: Types.AddMemberRequest): Promise<Types.Memb
   const msg = create(Types.AddMemberRequestSchema, req);
   const body = toJson(Types.AddMemberRequestSchema, msg);
 
-  return getAxios().post(`/api/v1/spaces/"${body.spaceId}"/members`
+  return getAxios().post(`/api/v1/spaces/${body.spaceId}/members`
     , body
   ).then((resp) => {
     return fromJson(Types.MemberSchema, resp.data);
@@ -136,7 +136,7 @@ export async function listMembers(req: Types.ListMembersRequest): Promise<Types.
   const msg = create(Types.ListMembersRequestSchema, req);
   const body = toJson(Types.ListMembersRequestSchema, msg);
 
-  return getAxios().get(`/api/v1/spaces/"${body.spaceId}"/members`
+  return getAxios().get(`/api/v1/spaces/${body.spaceId}/members`
     , {
       params: {
         orderBy:  body.orderBy,
@@ -160,7 +160,7 @@ export async function updateMember(req: Types.UpdateMemberRequest): Promise<Type
   const msg = create(Types.UpdateMemberRequestSchema, req);
   const body = toJson(Types.UpdateMemberRequestSchema, msg);
 
-  return getAxios().patch(`/api/v1/spaces/"${body.spaceId}"/members/"${body.userId}"`
+  return getAxios().patch(`/api/v1/spaces/${body.spaceId}/members/${body.userId}`
     , body.member
     , {
       params: {
@@ -187,7 +187,7 @@ export async function removeMember(req: Types.RemoveMemberRequest): Promise<void
   const msg = create(Types.RemoveMemberRequestSchema, req);
   const body = toJson(Types.RemoveMemberRequestSchema, msg);
 
-  return getAxios().delete(`/api/v1/spaces/"${body.spaceId}"/members/"${body.userId}"`
+  return getAxios().delete(`/api/v1/spaces/${body.spaceId}/members/${body.userId}`
   ).then(() => {
     return;
   });

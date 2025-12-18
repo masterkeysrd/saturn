@@ -1,4 +1,4 @@
-import { getAxios } from '@/client';
+import { getAxios } from '@saturn/sdk/client';
 import * as Types from './finance_pb';
 import { create, fromJson, toJson } from '@bufbuild/protobuf';
 
@@ -55,7 +55,7 @@ export async function getBudget(req: Types.GetBudgetRequest): Promise<Types.Budg
   const msg = create(Types.GetBudgetRequestSchema, req);
   const body = toJson(Types.GetBudgetRequestSchema, msg);
 
-  return getAxios().get(`/api/v1/finance/budgets/"${body.id}"`
+  return getAxios().get(`/api/v1/finance/budgets/${body.id}`
     , {
       params: {
         view:  body.view,
@@ -76,7 +76,7 @@ export async function updateBudget(req: Types.UpdateBudgetRequest): Promise<Type
   const msg = create(Types.UpdateBudgetRequestSchema, req);
   const body = toJson(Types.UpdateBudgetRequestSchema, msg);
 
-  return getAxios().patch(`/api/v1/finance/budgets/"${body.id}"`
+  return getAxios().patch(`/api/v1/finance/budgets/${body.id}`
     , body.budget
     , {
       params: {
@@ -98,7 +98,7 @@ export async function deleteBudget(req: Types.DeleteBudgetRequest): Promise<void
   const msg = create(Types.DeleteBudgetRequestSchema, req);
   const body = toJson(Types.DeleteBudgetRequestSchema, msg);
 
-  return getAxios().delete(`/api/v1/finance/budgets/"${body.id}"`
+  return getAxios().delete(`/api/v1/finance/budgets/${body.id}`
   ).then(() => {
     return;
   });
