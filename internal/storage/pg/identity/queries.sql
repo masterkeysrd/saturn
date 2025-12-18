@@ -2,6 +2,8 @@
 -- SQL Queries for User Management
 ----------------------------------------------
 -- name: GetUserByID
+-- return: one
+-- return_type: UserEntity
 SELECT
   id,
   name,
@@ -58,6 +60,8 @@ SET
   delete_time = EXCLUDED.delete_time;
 
 -- name: ExistsUserByUsername
+-- return: one
+-- return_type: bool
 SELECT
   EXISTS (
     SELECT
@@ -69,6 +73,8 @@ SELECT
   );
 
 -- name: ExistsUserByEmail
+-- return: one
+-- return_type: bool
 SELECT
   EXISTS (
     SELECT
@@ -83,6 +89,8 @@ SELECT
 -- SQL Queries for Session Management
 ----------------------------------------------
 -- name: GetSessionByID
+-- return: one
+-- return_type: SessionEntity
 SELECT
   id,
   user_id,
@@ -144,6 +152,8 @@ WHERE
 -- SQL Queries for Binding Management
 ----------------------------------------------
 -- name: GetBindingByID
+-- return: one
+-- return_type: BindingEntity
 SELECT
   user_id,
   provider,
@@ -157,6 +167,8 @@ WHERE
   AND provider =:provider;
 
 -- name: GetBindingByProviderAndSubjectID
+-- return: one
+-- return_type: BindingEntity
 SELECT
   user_id,
   provider,
@@ -170,6 +182,7 @@ WHERE
   AND subject_id =:subject_id;
 
 -- name: ListBindingsByUserID
+-- return_type: BindingEntity
 SELECT
   user_id,
   provider,
@@ -216,6 +229,8 @@ WHERE
 -- SQL Queries for Vault Credentials Management
 ----------------------------------------------
 -- name: GetCredentialsBySubjectID
+-- return: one
+-- return_type: VaultCredentialEntity
 SELECT
   subject_id,
   username,
@@ -229,6 +244,8 @@ WHERE
   subject_id =:subject_id;
 
 -- name: GetCredentialsByIdentifier
+-- return: one
+-- return_type: VaultCredentialEntity
 SELECT
   subject_id,
   username,
@@ -243,6 +260,8 @@ WHERE
   OR email =:identifier;
 
 -- name: ExistsCredentialsByUsername
+-- return: one
+-- return_type: bool
 SELECT
   EXISTS (
     SELECT
@@ -254,6 +273,8 @@ SELECT
   );
 
 -- name: ExistsCredentialsByEmail
+-- return: one
+-- return_type: bool
 SELECT
   EXISTS (
     SELECT
@@ -266,6 +287,7 @@ SELECT
 
 -- name: UpsertCredentials
 -- param_type: VaultCredentialEntity
+-- return: exec
 INSERT INTO
   identity.vault_credentials (
     subject_id,

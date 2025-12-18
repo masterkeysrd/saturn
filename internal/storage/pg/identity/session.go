@@ -23,19 +23,10 @@ func NewSessionStore(db *sqlx.DB) (*SessionStore, error) {
 }
 
 func (s *SessionStore) Get(ctx context.Context, sessionID identity.SessionID) (*identity.Session, error) {
-	params := GetSessionByIDParams{
+	entity, err := GetSessionByID(ctx, s.db, &GetSessionByIDParams{
 		Id: sessionID.String(),
-	}
-
-	query, args, err := s.db.BindNamed(GetSessionByIDQuery, params)
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to bind named query: %w", err)
-	}
-
-	query = s.db.Rebind(query)
-
-	var entity SessionEntity
-	if err := s.db.GetContext(ctx, &entity, query, args...); err != nil {
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
 
@@ -43,40 +34,36 @@ func (s *SessionStore) Get(ctx context.Context, sessionID identity.SessionID) (*
 }
 
 func (s *SessionStore) Store(ctx context.Context, session *identity.Session) error {
-	entity := SessionEntityFromModel(session)
-	if _, err := s.db.NamedExecContext(ctx, UpsertSessionQuery, entity); err != nil {
+	if _, err := UpsertSession(ctx, s.db, SessionEntityFromModel(session)); err != nil {
 		return fmt.Errorf("failed to upsert session: %w", err)
 	}
 	return nil
 }
 
 func (s *SessionStore) Delete(ctx context.Context, sessionID identity.SessionID) error {
-	params := DeleteSessionByIDParams{
+	if _, err := DeleteSessionByID(ctx, s.db, &DeleteSessionByIDParams{
 		Id: sessionID.String(),
-	}
-
-	if _, err := s.db.NamedExecContext(ctx, DeleteSessionByIDQuery, params); err != nil {
+	}); err != nil {
 		return fmt.Errorf("failed to delete session: %w", err)
 	}
 	return nil
 }
 
 func (s *SessionStore) DeleteBy(ctx context.Context, criteria identity.DeleteSessionCriteria) error {
-	var query string
-	var params any
+	var err error
 	switch c := criteria.(type) {
 	case identity.ByUserID:
-		query = DeleteSessionsByUserIDQuery
-		params = DeleteSessionsByUserIDParams{
+		_, err = DeleteSessionsByUserID(ctx, s.db, &DeleteSessionsByUserIDParams{
 			UserId: string(c),
-		}
+		})
 	default:
 		return fmt.Errorf("unsupported criteria type: %T", criteria)
 	}
 
-	if _, err := s.db.NamedExecContext(ctx, query, params); err != nil {
+	if err != nil {
 		return fmt.Errorf("failed to delete sessions: %w", err)
 	}
+
 	return nil
 }
 

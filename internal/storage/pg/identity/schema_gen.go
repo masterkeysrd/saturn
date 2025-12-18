@@ -2,6 +2,9 @@
 package identitypg
 
 import (
+	"context"
+	"database/sql"
+	"github.com/jmoiron/sqlx"
 	"time"
 )
 
@@ -439,3 +442,229 @@ type ExistsCredentialsByEmailParams struct {
 //
 // UpsertCredentialsParams is an alias of [VaultCredentialEntity].
 type UpsertCredentialsParams = VaultCredentialEntity
+
+// GetUserByID executes the 'GetUserByID' query and returns a single row.
+func GetUserByID(ctx context.Context, db sqlx.ExtContext, params *GetUserByIDParams) (*UserEntity, error) {
+	query, args, err := sqlx.Named(GetUserByIDQuery, params)
+	if err != nil {
+		return nil, err
+	}
+
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
+
+	var item UserEntity
+	if err := sqlx.GetContext(ctx, db, &item, query, args...); err != nil {
+		return nil, err
+	}
+
+	return &item, nil
+}
+
+// UpsertUser executes the 'UpsertUser' query.
+func UpsertUser(ctx context.Context, e sqlx.ExtContext, params *UpsertUserParams) (sql.Result, error) {
+	return sqlx.NamedExecContext(ctx, e, UpsertUserQuery, params)
+}
+
+// ExistsUserByUsername executes the 'ExistsUserByUsername' query and returns a single row.
+func ExistsUserByUsername(ctx context.Context, db sqlx.ExtContext, params *ExistsUserByUsernameParams) (bool, error) {
+	query, args, err := sqlx.Named(ExistsUserByUsernameQuery, params)
+	if err != nil {
+		return false, err
+	}
+
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
+
+	var item bool
+	if err := sqlx.GetContext(ctx, db, &item, query, args...); err != nil {
+		return false, err
+	}
+
+	return item, nil
+}
+
+// ExistsUserByEmail executes the 'ExistsUserByEmail' query and returns a single row.
+func ExistsUserByEmail(ctx context.Context, db sqlx.ExtContext, params *ExistsUserByEmailParams) (bool, error) {
+	query, args, err := sqlx.Named(ExistsUserByEmailQuery, params)
+	if err != nil {
+		return false, err
+	}
+
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
+
+	var item bool
+	if err := sqlx.GetContext(ctx, db, &item, query, args...); err != nil {
+		return false, err
+	}
+
+	return item, nil
+}
+
+// GetSessionByID executes the 'GetSessionByID' query and returns a single row.
+func GetSessionByID(ctx context.Context, db sqlx.ExtContext, params *GetSessionByIDParams) (*SessionEntity, error) {
+	query, args, err := sqlx.Named(GetSessionByIDQuery, params)
+	if err != nil {
+		return nil, err
+	}
+
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
+
+	var item SessionEntity
+	if err := sqlx.GetContext(ctx, db, &item, query, args...); err != nil {
+		return nil, err
+	}
+
+	return &item, nil
+}
+
+// UpsertSession executes the 'UpsertSession' query.
+func UpsertSession(ctx context.Context, e sqlx.ExtContext, params *UpsertSessionParams) (sql.Result, error) {
+	return sqlx.NamedExecContext(ctx, e, UpsertSessionQuery, params)
+}
+
+// DeleteSessionByID executes the 'DeleteSessionByID' query.
+func DeleteSessionByID(ctx context.Context, e sqlx.ExtContext, params *DeleteSessionByIDParams) (sql.Result, error) {
+	return sqlx.NamedExecContext(ctx, e, DeleteSessionByIDQuery, params)
+}
+
+// DeleteSessionsByUserID executes the 'DeleteSessionsByUserID' query.
+func DeleteSessionsByUserID(ctx context.Context, e sqlx.ExtContext, params *DeleteSessionsByUserIDParams) (sql.Result, error) {
+	return sqlx.NamedExecContext(ctx, e, DeleteSessionsByUserIDQuery, params)
+}
+
+// GetBindingByID executes the 'GetBindingByID' query and returns a single row.
+func GetBindingByID(ctx context.Context, db sqlx.ExtContext, params *GetBindingByIDParams) (*BindingEntity, error) {
+	query, args, err := sqlx.Named(GetBindingByIDQuery, params)
+	if err != nil {
+		return nil, err
+	}
+
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
+
+	var item BindingEntity
+	if err := sqlx.GetContext(ctx, db, &item, query, args...); err != nil {
+		return nil, err
+	}
+
+	return &item, nil
+}
+
+// GetBindingByProviderAndSubjectID executes the 'GetBindingByProviderAndSubjectID' query and returns a single row.
+func GetBindingByProviderAndSubjectID(ctx context.Context, db sqlx.ExtContext, params *GetBindingByProviderAndSubjectIDParams) (*BindingEntity, error) {
+	query, args, err := sqlx.Named(GetBindingByProviderAndSubjectIDQuery, params)
+	if err != nil {
+		return nil, err
+	}
+
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
+
+	var item BindingEntity
+	if err := sqlx.GetContext(ctx, db, &item, query, args...); err != nil {
+		return nil, err
+	}
+
+	return &item, nil
+}
+
+// ListBindingsByUserID executes the 'ListBindingsByUserID' query and returns multiple rows.
+func ListBindingsByUserID(ctx context.Context, db sqlx.ExtContext, params *ListBindingsByUserIDParams, mapper func(*BindingEntity) error) error {
+	rows, err := sqlx.NamedQueryContext(ctx, db, ListBindingsByUserIDQuery, params)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var item BindingEntity
+		if err := rows.StructScan(&item); err != nil {
+			return err
+		}
+		if err := mapper(&item); err != nil {
+			return err
+		}
+	}
+
+	return rows.Err()
+}
+
+// UpsertBinding executes the 'UpsertBinding' query.
+func UpsertBinding(ctx context.Context, e sqlx.ExtContext, params *UpsertBindingParams) (sql.Result, error) {
+	return sqlx.NamedExecContext(ctx, e, UpsertBindingQuery, params)
+}
+
+// DeleteBinding executes the 'DeleteBinding' query.
+func DeleteBinding(ctx context.Context, e sqlx.ExtContext, params *DeleteBindingParams) (sql.Result, error) {
+	return sqlx.NamedExecContext(ctx, e, DeleteBindingQuery, params)
+}
+
+// GetCredentialsBySubjectID executes the 'GetCredentialsBySubjectID' query and returns a single row.
+func GetCredentialsBySubjectID(ctx context.Context, db sqlx.ExtContext, params *GetCredentialsBySubjectIDParams) (*VaultCredentialEntity, error) {
+	query, args, err := sqlx.Named(GetCredentialsBySubjectIDQuery, params)
+	if err != nil {
+		return nil, err
+	}
+
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
+
+	var item VaultCredentialEntity
+	if err := sqlx.GetContext(ctx, db, &item, query, args...); err != nil {
+		return nil, err
+	}
+
+	return &item, nil
+}
+
+// GetCredentialsByIdentifier executes the 'GetCredentialsByIdentifier' query and returns a single row.
+func GetCredentialsByIdentifier(ctx context.Context, db sqlx.ExtContext, params *GetCredentialsByIdentifierParams) (*VaultCredentialEntity, error) {
+	query, args, err := sqlx.Named(GetCredentialsByIdentifierQuery, params)
+	if err != nil {
+		return nil, err
+	}
+
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
+
+	var item VaultCredentialEntity
+	if err := sqlx.GetContext(ctx, db, &item, query, args...); err != nil {
+		return nil, err
+	}
+
+	return &item, nil
+}
+
+// ExistsCredentialsByUsername executes the 'ExistsCredentialsByUsername' query and returns a single row.
+func ExistsCredentialsByUsername(ctx context.Context, db sqlx.ExtContext, params *ExistsCredentialsByUsernameParams) (bool, error) {
+	query, args, err := sqlx.Named(ExistsCredentialsByUsernameQuery, params)
+	if err != nil {
+		return false, err
+	}
+
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
+
+	var item bool
+	if err := sqlx.GetContext(ctx, db, &item, query, args...); err != nil {
+		return false, err
+	}
+
+	return item, nil
+}
+
+// ExistsCredentialsByEmail executes the 'ExistsCredentialsByEmail' query and returns a single row.
+func ExistsCredentialsByEmail(ctx context.Context, db sqlx.ExtContext, params *ExistsCredentialsByEmailParams) (bool, error) {
+	query, args, err := sqlx.Named(ExistsCredentialsByEmailQuery, params)
+	if err != nil {
+		return false, err
+	}
+
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
+
+	var item bool
+	if err := sqlx.GetContext(ctx, db, &item, query, args...); err != nil {
+		return false, err
+	}
+
+	return item, nil
+}
+
+// UpsertCredentials executes the 'UpsertCredentials' query.
+func UpsertCredentials(ctx context.Context, e sqlx.ExtContext, params *UpsertCredentialsParams) (sql.Result, error) {
+	return sqlx.NamedExecContext(ctx, e, UpsertCredentialsQuery, params)
+}

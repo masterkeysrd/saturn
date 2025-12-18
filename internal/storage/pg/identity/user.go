@@ -22,27 +22,17 @@ func NewUserStore(db *sqlx.DB) (*UserStore, error) {
 }
 
 func (s *UserStore) Get(ctx context.Context, userID auth.UserID) (*identity.User, error) {
-	params := GetUserByIDParams{
+	entity, err := GetUserByID(ctx, s.db, &GetUserByIDParams{
 		Id: userID.String(),
-	}
-
-	query, args, err := s.db.BindNamed(GetUserByIDQuery, params)
+	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
-
-	query = s.db.Rebind(query)
-
-	var entity UserEntity
-	if err := s.db.GetContext(ctx, &entity, query, args...); err != nil {
-		return nil, err
-	}
-
 	return entity.ToModel(), nil
 }
 
 func (s *UserStore) Store(ctx context.Context, user *identity.User) error {
-	_, err := s.db.NamedExecContext(ctx, UpsertUserQuery, NewUserEntityFromModel(user))
+	_, err := UpsertUser(ctx, s.db, NewUserEntityFromModel(user))
 	return err
 }
 
@@ -52,18 +42,17 @@ func (s *UserStore) GetBy(ctx context.Context, criteria identity.GetUserCriteria
 
 func (s *UserStore) ExistsBy(ctx context.Context, criteria identity.UserExistCriteria) (bool, error) {
 	var (
-		query string
-		args  []any
-		err   error
+		exists bool
+		err    error
 	)
 
 	switch c := criteria.(type) {
 	case identity.ByUsername:
-		query, args, err = s.db.BindNamed(ExistsUserByUsernameQuery, ExistsUserByUsernameParams{
+		exists, err = ExistsUserByUsername(ctx, s.db, &ExistsUserByUsernameParams{
 			Username: string(c),
 		})
 	case identity.ByEmail:
-		query, args, err = s.db.BindNamed(ExistsUserByEmailQuery, ExistsUserByEmailParams{
+		exists, err = ExistsUserByEmail(ctx, s.db, &ExistsUserByEmailParams{
 			Email: string(c),
 		})
 	default:
@@ -71,13 +60,7 @@ func (s *UserStore) ExistsBy(ctx context.Context, criteria identity.UserExistCri
 	}
 
 	if err != nil {
-		return false, fmt.Errorf("failed to bind query: %w", err)
-	}
-
-	query = s.db.Rebind(query)
-	var exists bool
-	if err := s.db.GetContext(ctx, &exists, query, args...); err != nil {
-		return false, fmt.Errorf("failed to execute query: %w", err)
+		return false, fmt.Errorf("failed to check user existence: %w", err)
 	}
 
 	return exists, nil

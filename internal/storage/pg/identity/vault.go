@@ -3,6 +3,7 @@ package identitypg
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
@@ -21,20 +22,17 @@ func NewCredentialStore(db *sqlx.DB) (*CredentialStore, error) {
 }
 
 func (s *CredentialStore) Store(ctx context.Context, credential *identity.Credential) error {
-	_, err := s.db.NamedExecContext(ctx, UpsertCredentialsQuery, NewCredentialEntityFromModel(credential))
+	_, err := UpsertCredentials(ctx, s.db, NewCredentialEntityFromModel(credential))
 	return err
 }
 
 func (s *CredentialStore) GetBy(ctx context.Context, criteria identity.GetCredentialCriteria) (*identity.Credential, error) {
-	var (
-		query string
-		args  []any
-		err   error
-	)
+	var entity *VaultCredentialEntity
+	var err error
 
 	switch c := criteria.(type) {
 	case identity.ByIdentifier:
-		query, args, err = s.db.BindNamed(GetCredentialsByIdentifierQuery, GetCredentialsByIdentifierParams{
+		entity, err = GetCredentialsByIdentifier(ctx, s.db, &GetCredentialsByIdentifierParams{
 			Identifier: string(c),
 		})
 	default:
@@ -42,13 +40,7 @@ func (s *CredentialStore) GetBy(ctx context.Context, criteria identity.GetCreden
 	}
 
 	if err != nil {
-		return nil, err
-	}
-
-	query = s.db.Rebind(query)
-	var entity VaultCredentialEntity
-	if err := s.db.GetContext(ctx, &entity, query, args...); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get credential: %w", err)
 	}
 
 	return entity.ToModel(), nil
@@ -56,34 +48,24 @@ func (s *CredentialStore) GetBy(ctx context.Context, criteria identity.GetCreden
 
 func (s *CredentialStore) ExistsBy(ctx context.Context, criteria identity.ExistsCredentialCriteria) (bool, error) {
 	var (
-		query string
-		args  []any
-		err   error
+		exists bool
+		err    error
 	)
 
 	switch c := criteria.(type) {
 	case identity.ByEmail:
-		params := ExistsCredentialsByEmailParams{
+		exists, err = ExistsCredentialsByEmail(ctx, s.db, &ExistsCredentialsByEmailParams{
 			Email: string(c),
-		}
-		query, args, err = s.db.BindNamed(ExistsCredentialsByEmailQuery, params)
+		})
 	case identity.ByUsername:
-		params := ExistsCredentialsByUsernameParams{
+		exists, err = ExistsCredentialsByUsername(ctx, s.db, &ExistsCredentialsByUsernameParams{
 			Username: string(c),
-		}
-		query, args, err = s.db.BindNamed(ExistsCredentialsByUsernameQuery, params)
+		})
 	default:
 		return false, errors.New("unsupported criteria type")
 	}
 
 	if err != nil {
-		return false, err
-	}
-
-	query = s.db.Rebind(query)
-
-	var exists bool
-	if err := s.db.GetContext(ctx, &exists, query, args...); err != nil {
 		return false, err
 	}
 

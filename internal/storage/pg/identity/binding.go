@@ -21,41 +21,27 @@ func NewBindingStore(db *sqlx.DB) (*BindingStore, error) {
 }
 
 func (s *BindingStore) Get(ctx context.Context, id identity.BindingID) (*identity.Binding, error) {
-	params := GetBindingByIDParams{
+	entity, err := GetBindingByID(ctx, s.db, &GetBindingByIDParams{
 		UserId:   id.UserID.String(),
 		Provider: id.Provider.String(),
-	}
-
-	query, args, err := s.db.BindNamed(GetBindingByIDQuery, params)
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	query = s.db.Rebind(query)
-
-	var entity BindingEntity
-	if err := s.db.GetContext(ctx, &entity, query, args...); err != nil {
-		return nil, err
-	}
-
 	return entity.ToBinding(), nil
 }
 
 func (s *BindingStore) GetBy(ctx context.Context, criteria identity.GetBindingCriteria) (*identity.Binding, error) {
 	var (
-		query string
-		args  []any
-		err   error
+		entity *BindingEntity
+		err    error
 	)
-
 	switch c := criteria.(type) {
 	case identity.ByProviderAndSubjectID:
-		params := GetBindingByProviderAndSubjectIDParams{
+		entity, err = GetBindingByProviderAndSubjectID(ctx, s.db, &GetBindingByProviderAndSubjectIDParams{
 			Provider:  c.Provider.String(),
 			SubjectId: c.SubjectID.String(),
-		}
-		query, args, err = s.db.BindNamed(GetBindingByProviderAndSubjectIDQuery, params)
-
+		})
 	default:
 		return nil, fmt.Errorf("unsupported GetBindingCriteria type: %T", criteria)
 	}
@@ -63,69 +49,34 @@ func (s *BindingStore) GetBy(ctx context.Context, criteria identity.GetBindingCr
 	if err != nil {
 		return nil, err
 	}
-	query = s.db.Rebind(query)
-
-	var entity BindingEntity
-	if err := s.db.GetContext(ctx, &entity, query, args...); err != nil {
-		return nil, err
-	}
 
 	return entity.ToBinding(), nil
 }
 
 func (s *BindingStore) List(ctx context.Context, userID identity.UserID) ([]*identity.Binding, error) {
-	params := ListBindingsByUserIDParams{
+	bindings := make([]*identity.Binding, 0, 10)
+	err := ListBindingsByUserID(ctx, s.db, &ListBindingsByUserIDParams{
 		UserId: userID.String(),
-	}
-
-	query, args, err := s.db.BindNamed(ListBindingsByUserIDQuery, params)
+	}, func(entity *BindingEntity) error {
+		bindings = append(bindings, entity.ToBinding())
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	query = s.db.Rebind(query)
-
-	var entities []BindingEntity
-	if err := s.db.SelectContext(ctx, &entities, query, args...); err != nil {
-		return nil, err
-	}
-
-	bindings := make([]*identity.Binding, len(entities))
-	for i, entity := range entities {
-		bindings[i] = entity.ToBinding()
-	}
-
 	return bindings, nil
 }
 
 func (s *BindingStore) Store(ctx context.Context, b *identity.Binding) error {
-	params := NewBindingEntity(b)
-
-	query, args, err := s.db.BindNamed(UpsertBindingQuery, params)
-	if err != nil {
-		return err
-	}
-
-	query = s.db.Rebind(query)
-
-	_, err = s.db.ExecContext(ctx, query, args...)
+	_, err := UpsertBinding(ctx, s.db, NewBindingEntity(b))
 	return err
 }
 
 func (s *BindingStore) Delete(ctx context.Context, id identity.BindingID) error {
-	params := DeleteBindingParams{
+	_, err := DeleteBinding(ctx, s.db, &DeleteBindingParams{
 		UserId:   id.UserID.String(),
 		Provider: id.Provider.String(),
-	}
-
-	query, args, err := s.db.BindNamed(DeleteBindingQuery, params)
-	if err != nil {
-		return err
-	}
-
-	query = s.db.Rebind(query)
-
-	_, err = s.db.ExecContext(ctx, query, args...)
+	})
 	return err
 }
 
