@@ -28,7 +28,7 @@ func (s *MembershipStore) ListBy(ctx context.Context, criteria tenancy.ListMembe
 }
 
 func (s *MembershipStore) Store(ctx context.Context, membership *tenancy.Membership) error {
-	result, err := s.db.NamedExecContext(ctx, UpsertMembershipQuery, NewMembershipEntityFromModel(membership))
+	result, err := UpsertMembership(ctx, s.db, NewMembershipEntityFromModel(membership))
 	if err != nil {
 		return err
 	}

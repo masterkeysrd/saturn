@@ -2,6 +2,7 @@
 -- SQL Queries for Space Management
 ----------------------------------------------
 -- name: UpsertSpace
+-- return: exec
 -- param_type: SpaceEntity
 INSERT INTO
   tenancy.spaces (

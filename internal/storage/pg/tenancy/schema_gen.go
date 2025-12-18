@@ -2,6 +2,9 @@
 package tenancypg
 
 import (
+	"context"
+	"database/sql"
+	"github.com/jmoiron/sqlx"
 	"time"
 )
 
@@ -108,3 +111,13 @@ type UpsertSpaceParams = SpaceEntity
 //
 // UpsertMembershipParams is an alias of [MembershipEntity].
 type UpsertMembershipParams = MembershipEntity
+
+// UpsertSpace executes the 'UpsertSpace' query.
+func UpsertSpace(ctx context.Context, e sqlx.ExtContext, params *UpsertSpaceParams) (sql.Result, error) {
+	return sqlx.NamedExecContext(ctx, e, UpsertSpaceQuery, params)
+}
+
+// UpsertMembership executes the 'UpsertMembership' query.
+func UpsertMembership(ctx context.Context, e sqlx.ExtContext, params *UpsertMembershipParams) (sql.Result, error) {
+	return sqlx.NamedExecContext(ctx, e, UpsertMembershipQuery, params)
+}

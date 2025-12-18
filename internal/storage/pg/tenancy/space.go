@@ -28,7 +28,7 @@ func (s *SpaceStore) ListBy(ctx context.Context, criteria tenancy.ListSpacesCrit
 }
 
 func (s *SpaceStore) Store(ctx context.Context, space *tenancy.Space) error {
-	result, err := s.db.NamedExecContext(ctx, UpsertSpaceQuery, NewSpaceEntityFromModel(space))
+	result, err := UpsertSpace(ctx, s.db, NewSpaceEntityFromModel(space))
 	if err != nil {
 		return fmt.Errorf("failed to store space: %w", err)
 	}
