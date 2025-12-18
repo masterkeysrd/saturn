@@ -3,6 +3,7 @@ package sqlgen
 import (
 	"bytes"
 	"go/format"
+	"log"
 	"os"
 
 	"github.com/jmoiron/sqlx"
@@ -52,6 +53,13 @@ func Generate(config Config, db *sqlx.DB) error {
 		}
 	}
 	for _, query := range queries {
+		imports["context"] = struct{}{}
+		imports["github.com/jmoiron/sqlx"] = struct{}{}
+
+		if query.Cmd == "exec" {
+			imports["database/sql"] = struct{}{}
+		}
+
 		for _, param := range query.Params {
 			if param.GoImport != "" {
 				imports[param.GoImport] = struct{}{}
@@ -74,11 +82,13 @@ func Generate(config Config, db *sqlx.DB) error {
 	}
 
 	for _, query := range queries {
-		err := generateQueryTypes(file, query)
+		err := generateParamStructs(file, query)
 		if err != nil {
 			return err
 		}
 	}
+
+	generateFunctions(file, queries)
 
 	content, err := format.Source(file.Bytes())
 	if err != nil {
@@ -104,7 +114,7 @@ func generateModel(f *File, table TableDef, config Config) error {
 	return nil
 }
 
-func generateQueryTypes(f *File, query QueryDef) error {
+func generateParamStructs(f *File, query QueryDef) error {
 	// Generate parameter struct
 	paramStructName := query.GoName + "Params"
 	f.P("// ", paramStructName, " represents the parameters for the '", query.Name, "' query.")
@@ -141,6 +151,112 @@ func generateQueryConstants(f *File, queries []QueryDef) {
 	f.P("")
 }
 
+func generateFunctions(f *File, queries []QueryDef) {
+	for _, query := range queries {
+		switch query.Cmd {
+		case "many":
+			generateManyFunction(f, query)
+		case "exec":
+			generateExecFunction(f, query)
+		case "one":
+			generateOneFunction(f, query)
+		default:
+			log.Printf("unknown query command: %s", query.Cmd)
+		}
+	}
+}
+
+func generateOneFunction(f *File, query QueryDef) {
+	zeroVal, isNative := isNativeType(query.ReturnType)
+
+	returnType := query.ReturnType
+	if !isNative {
+		returnType = "*" + query.ReturnType
+	}
+
+	returnErr := "err"
+	if isNative {
+		returnErr = zeroVal + ", err"
+	} else {
+		returnErr = "nil, err"
+	}
+
+	f.P("// ", query.GoName, " executes the '", query.Name, "' query and returns a single row.")
+	f.P("func ", query.GoName, "(ctx context.Context, db sqlx.ExtContext, params *", query.GoName, "Params) (", returnType, ", error) {")
+	f.P("  query, args, err := sqlx.Named(", query.GoName, "Query, params)")
+	f.P("  if err != nil {")
+	f.P("    return ", returnErr)
+	f.P("  }")
+	f.P("")
+	f.P("  query = sqlx.Rebind(sqlx.DOLLAR, query)")
+	f.P("")
+	f.P("  var item ", query.ReturnType)
+	f.P("  if err := sqlx.GetContext(ctx, db, &item, query, args...); err != nil {")
+	f.P("    return ", returnErr)
+	f.P("  }")
+	f.P("")
+	if isNative {
+		f.P("  return item, nil")
+	} else {
+		f.P("  return &item, nil")
+	}
+	f.P("}")
+}
+
+func generateManyFunction(f *File, query QueryDef) {
+	f.P("// ", query.GoName, " executes the '", query.Name, "' query and returns multiple rows.")
+	f.P("func ", query.GoName, "(ctx context.Context, db sqlx.ExtContext, params *", query.GoName, "Params, mapper func(*", query.ReturnType, ") error) error {")
+	f.P("  rows, err := sqlx.NamedQueryContext(ctx, db,", query.GoName, "Query, params)")
+	f.P("  if err != nil {")
+	f.P("    return err")
+	f.P("  }")
+	f.P("  defer rows.Close()")
+	f.P("")
+	f.P("  for rows.Next() {")
+	f.P("    var item ", query.ReturnType)
+	f.P("    if err := rows.StructScan(&item); err != nil {")
+	f.P("      return err")
+	f.P("    }")
+	f.P("    if err := mapper(&item); err != nil {")
+	f.P("      return err")
+	f.P("    }")
+	f.P("  }")
+	f.P("")
+	f.P("  return rows.Err()")
+	f.P("}")
+}
+
+func generateExecFunction(f *File, query QueryDef) {
+	f.P("// ", query.GoName, " executes the '", query.Name, "' query.")
+	f.P("func ", query.GoName, "(ctx context.Context, e sqlx.ExtContext, params *", query.GoName, "Params) (sql.Result, error) {")
+	f.P("  return sqlx.NamedExecContext(ctx, e,", query.GoName, "Query, params)")
+	f.P("}")
+}
+
 func writeFile(filePath string, content []byte) error {
 	return os.WriteFile(filePath, content, 0o644)
+}
+
+func isNativeType(goType string) (string, bool) {
+	nativeTypes := map[string]string{
+		"int":     "0",
+		"int8":    "0",
+		"int16":   "0",
+		"int32":   "0",
+		"int64":   "0",
+		"uint":    "0",
+		"uint8":   "0",
+		"uint16":  "0",
+		"uint32":  "0",
+		"uint64":  "0",
+		"float32": "0.0",
+		"float64": "0.0",
+		"string":  `""`,
+		"bool":    "false",
+		"byte":    "0",
+		"rune":    "0",
+	}
+
+	zeroValue, ok := nativeTypes[goType]
+	return zeroValue, ok
 }
