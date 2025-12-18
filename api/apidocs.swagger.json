@@ -1,0 +1,1569 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "saturn/type/appearance.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "Finance"
+    },
+    {
+      "name": "Identity"
+    },
+    {
+      "name": "Tenancy"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/finance/budgets": {
+      "get": {
+        "summary": "Lists budgets.\nSupports filtering by name using the 'search' parameter.",
+        "operationId": "Finance_ListBudgets",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListBudgetsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "search",
+            "description": "A search string to filter budgets by name.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "view",
+            "description": "The view level for the budget details.\nDefaults to BASIC if not specified.\n\n - VIEW_UNSPECIFIED: Default view showing basic budget information.\n - BASIC: Basic view showing essential budget details,\nsuch as name, amount, and appearance.\n - FULL: Full view showing all budget details, including\nbase_amount, exchange_rate and statistics like spent amount,\nremaining amount, and usage percentage.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "VIEW_UNSPECIFIED",
+              "BASIC",
+              "FULL"
+            ],
+            "default": "VIEW_UNSPECIFIED"
+          },
+          {
+            "name": "orderBy",
+            "description": "Format: \"field_name [asc|desc]\"\nSupported fields: name, create_time, update_time, amount\nExamples: \"name asc\", \"create_time desc\"\nDefaults to \"create_time desc\" if not specified.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "description": "The page number to retrieve.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "The number of budgets to return per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "post": {
+        "summary": "Creates a new budget.",
+        "operationId": "Finance_CreateBudget",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Budget"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "budget",
+            "description": "The budget to create.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Budget"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/budgets/{id}": {
+      "get": {
+        "summary": "Get information from a specified Budget.",
+        "operationId": "Finance_GetBudget",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Budget"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "The unique identifier of the budget to retrieve.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "view",
+            "description": "The view level for the budget details.\n\n - VIEW_UNSPECIFIED: Default view showing basic budget information.\n - BASIC: Basic view showing essential budget details,\nsuch as name, amount, and appearance.\n - FULL: Full view showing all budget details, including\nbase_amount, exchange_rate and statistics like spent amount,\nremaining amount, and usage percentage.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "VIEW_UNSPECIFIED",
+              "BASIC",
+              "FULL"
+            ],
+            "default": "VIEW_UNSPECIFIED"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "delete": {
+        "summary": "Deletes a budget.",
+        "operationId": "Finance_DeleteBudget",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "The unique identifier of the budget to delete.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "patch": {
+        "summary": "Updates a budget's information.",
+        "operationId": "Finance_UpdateBudget",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Budget"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "The unique identifier of the budget to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "budget",
+            "description": "The budget data to update.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Budget"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/identity/sessions": {
+      "get": {
+        "summary": "ListSessions lists all active sessions for the current user.",
+        "operationId": "Identity_ListSessions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSessionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "page",
+            "description": "Requested page number (starting from 1).",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Number of sessions to return per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
+    "/v1/identity/sessions/{id}": {
+      "delete": {
+        "summary": "RevokeSession revokes a specific session by ID.",
+        "operationId": "Identity_RevokeSession",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "ID of the session to be revoked.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
+    "/v1/identity/sessions:refresh": {
+      "post": {
+        "summary": "RefreshSession refreshes a session using a refresh token.",
+        "operationId": "Identity_RefreshSession",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TokenPair"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "Request message for Identity.RefreshSession.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RefreshSessionRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
+    "/v1/identity/sessions:revokeAll": {
+      "post": {
+        "summary": "RevokeAllSessions revokes all sessions for the current user.\nThis action logs the user out from all devices.",
+        "operationId": "Identity_RevokeAllSessions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
+    "/v1/identity/users": {
+      "post": {
+        "summary": "CreateUser registers a new user identity with the system.",
+        "description": "This method is intended for explicit registration flows (e.g., \"Sign Up\"\nwith Email/Password). It ensures that the required profile information\n(Name, Username) is provided upfront.\n\nUpon success, this method performs the following side effects:\n1. Creates the User resource in the Identity service.\n2. Links the provided credential (e.g., Password) to the user.\n3. Initializes the user's default context (e.g., Profile, Default Space).\n\nIf the email or username is already taken, it returns an ALREADY_EXISTS error.",
+        "operationId": "Identity_CreateUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1User"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "Request message for Identity.CreateUser.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateUserRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
+    "/v1/identity/users/{id}": {
+      "get": {
+        "summary": "GetUser retrieves a user by ID.\nUse \"me\" to get the currently authenticated user.",
+        "operationId": "Identity_GetUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1User"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "ID of the user to retrieve.\nUse \"me\" to get the currently authenticated user.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      },
+      "patch": {
+        "summary": "UpdateUser updates an existing user's information.\nUse \"me\" to update the currently authenticated user.\nOnly the fields provided in the request will be updated.",
+        "operationId": "Identity_UpdateUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1User"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "ID of the user to update.\nUse \"me\" to update the currently authenticated user.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/IdentityUpdateUserBody"
+            }
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
+    "/v1/identity/users:login": {
+      "post": {
+        "summary": "LoginUser authenticates a user and establishes a new session.",
+        "description": "This method serves as the unified entry point for both traditional authentication\n(Password) and federated login (Google, GitHub).\n\nBehavior depends on the authentication method provided:\n\n1. Password:\n   Strictly validates credentials. Returns UNAUTHENTICATED if invalid.\n\n2. Social (Google, GitHub, etc.):\n   Acts as a \"Get or Create\" operation.\n   - If the identity exists: Logs the user in.\n   - If the email exists but is not linked: Automatically links the account\n     (only if the social email is verified).\n   - If the user does not exist: Automatically registers a new User and\n     Identity (\"Just-in-Time\" provisioning).\n\nReturns a TokenPair containing a short-lived Access Token (JWT) and a\nlong-lived Refresh Token.",
+        "operationId": "Identity_LoginUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TokenPair"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "Request message for Identity.LoginUser.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1LoginUserRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
+    "/v1/identity/users:logout": {
+      "post": {
+        "summary": "LogoutUser invalidates the current user's session.\nThis action revokes the current session token.",
+        "operationId": "Identity_LogoutUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
+    "/v1/spaces": {
+      "get": {
+        "summary": "Lists spaces accessible to the authenticated user.",
+        "operationId": "Tenancy_ListSpaces",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSpacesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "search",
+            "description": "Optional search query to filter spaces by name.\nThe search is case-insensitive and matches spaces containing\nthe query string in their name.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "ownerId",
+            "description": "Optional owner ID to filter spaces by owner.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "view",
+            "description": "The view to apply to each space in the response.\nDefaults to BASIC if not specified.\n\n - VIEW_UNSPECIFIED: Default value. The default view is BASIC.\n - NAME_ONLY: Only includes the space's ID, name, and alias.\n - BASIC: Includes basic information about the space.\n - FULL: Includes all information about the space.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "VIEW_UNSPECIFIED",
+              "NAME_ONLY",
+              "BASIC",
+              "FULL"
+            ],
+            "default": "VIEW_UNSPECIFIED"
+          },
+          {
+            "name": "orderBy",
+            "description": "Sort order.  Format: \"field_name [asc|desc]\"\nSupported fields: name, create_time, update_time\nDefaults to \"create_time desc\" if not specified.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "description": "If non-empty, `page` specifies the page number to retrieve.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Number of spaces to return per page, if 0 zero or less defaults\nto server's maximum allowed page size.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "Tenancy"
+        ]
+      },
+      "post": {
+        "operationId": "Tenancy_CreateSpace",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Space"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "space",
+            "description": "The space to create.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Space"
+            }
+          }
+        ],
+        "tags": [
+          "Tenancy"
+        ]
+      }
+    },
+    "/v1/spaces/{id}": {
+      "get": {
+        "summary": "Get information from a specified Space.",
+        "operationId": "Tenancy_GetSpace",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Space"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "The ID of the space to retrieve.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "view",
+            "description": "The view to apply to the space.\n\n - VIEW_UNSPECIFIED: Default value. The default view is BASIC.\n - NAME_ONLY: Only includes the space's ID, name, and alias.\n - BASIC: Includes basic information about the space.\n - FULL: Includes all information about the space.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "VIEW_UNSPECIFIED",
+              "NAME_ONLY",
+              "BASIC",
+              "FULL"
+            ],
+            "default": "VIEW_UNSPECIFIED"
+          }
+        ],
+        "tags": [
+          "Tenancy"
+        ]
+      },
+      "delete": {
+        "summary": "// Deletes a space (soft delete).",
+        "description": "The space will be marked as deleted but can be restored within 30 days.\nOnly OWNER can delete spaces.",
+        "operationId": "Tenancy_DeleteSpace",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "The ID of the space to delete.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Tenancy"
+        ]
+      },
+      "patch": {
+        "summary": "Updates a space's information.",
+        "description": "Only users with the OWNER can update space information.",
+        "operationId": "Tenancy_UpdateSpace",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Space"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "The ID of the space to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "space",
+            "description": "The space data to update.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Space"
+            }
+          }
+        ],
+        "tags": [
+          "Tenancy"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/members": {
+      "get": {
+        "summary": "Lists all members in the space.\nOnly users with access to the space can list its members.",
+        "operationId": "Tenancy_ListMembers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListMembersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "The ID of the space to list members from.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "orderBy",
+            "description": "Sort order. Format: \"field_name [asc|desc]\"\nSupported fields: user_name, role, join_time\nDefaults to \"join_time asc\" if not specified.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "description": "If non-empty, `page` specifies the page number to retrieve.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "Number of members to return per page, if 0 zero or less defaults\nto server's maximum allowed page size.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "Tenancy"
+        ]
+      },
+      "post": {
+        "summary": "Adds a new member to the space.\nOnly users with the OWNER or ADMIN role can add members.",
+        "operationId": "Tenancy_AddMember",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Member"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "The ID of the space to add the member to.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TenancyAddMemberBody"
+            }
+          }
+        ],
+        "tags": [
+          "Tenancy"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/members/{userId}": {
+      "delete": {
+        "summary": "Removes a member from the space.",
+        "description": "Permissions:\n  - OWNER:  Can remove any member (except themselves and other owners)\n  - ADMIN: Can remove MEMBER role only (not ADMIN or OWNER)\n  - MEMBER: Cannot remove members",
+        "operationId": "Tenancy_RemoveMember",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "The ID of the space to remove the member from.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userId",
+            "description": "The ID of the user to remove from the space.\nCannot be the space owner or the caller's own user_id.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Tenancy"
+        ]
+      },
+      "patch": {
+        "summary": "Updates a member's role in the space.\nOnly users with the OWNER or ADMIN role can update members.",
+        "operationId": "Tenancy_UpdateMember",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Member"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userId",
+            "description": "The ID of the user to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "member",
+            "description": "The member data to update.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Member"
+            }
+          }
+        ],
+        "tags": [
+          "Tenancy"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "BindingProvider": {
+      "type": "string",
+      "enum": [
+        "PROVIDER_UNSPECIFIED",
+        "VAULT"
+      ],
+      "default": "PROVIDER_UNSPECIFIED",
+      "description": " - PROVIDER_UNSPECIFIED: Unknown provider.\n - VAULT: Password-based authentication.\nDefault option."
+    },
+    "BudgetStats": {
+      "type": "object",
+      "properties": {
+        "spentAmount": {
+          "$ref": "#/definitions/typeMoney",
+          "description": "Total amount spent within the current budget period."
+        },
+        "remainingAmount": {
+          "$ref": "#/definitions/typeMoney",
+          "title": "Remaining amount in the budget for the current period.\nCalculated as: amount - spent_amount"
+        },
+        "usagePercentage": {
+          "type": "number",
+          "format": "double",
+          "title": "Percentage of the budget used in the current period.\nCalculated as: (spent_amount / amount) * 100\nRange: 0.0 to 100.0+ (can exceed 100 if over budget)"
+        },
+        "periodStart": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The start of the current period these stats cover."
+        },
+        "periodEnd": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The end of the current period these stats cover."
+        },
+        "transactionCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of transactions counted in spent_amount."
+        }
+      },
+      "description": "Statistics related to the budget."
+    },
+    "IdentityUpdateUserBody": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/v1User"
+        },
+        "updateMask": {
+          "type": "string",
+          "description": "The fields to be updated. If empty, all non-output fields are updated.\nUse \"*\" to update all fields."
+        }
+      },
+      "required": [
+        "user"
+      ]
+    },
+    "LoginUserRequestUserPassword": {
+      "type": "object",
+      "properties": {
+        "identifier": {
+          "type": "string",
+          "description": "Username or email of the user."
+        },
+        "password": {
+          "type": "string",
+          "description": "Password of the user.\nRequired."
+        }
+      },
+      "description": "UserPassword authentication method.",
+      "required": [
+        "identifier",
+        "password"
+      ]
+    },
+    "MemberRole": {
+      "type": "string",
+      "enum": [
+        "ROLE_UNSPECIFIED",
+        "OWNER",
+        "ADMIN",
+        "MEMBER"
+      ],
+      "default": "ROLE_UNSPECIFIED",
+      "description": "Role of a member in a space.\n\n - ROLE_UNSPECIFIED: Default value, should not be used.\n - OWNER: Owner of the space with full permissions.\n - ADMIN: Admin of the space with elevated permissions,\nbut not full ownership. Cannot delete the space,\ntransfer ownership, or add/remove owners and admins.\n - MEMBER: Regular member with standard permissions."
+    },
+    "TenancyAddMemberBody": {
+      "type": "object",
+      "properties": {
+        "member": {
+          "$ref": "#/definitions/v1Member",
+          "description": "The member to add."
+        }
+      },
+      "description": "Request message for Members.AddMember.",
+      "required": [
+        "member"
+      ]
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "typeAppearance": {
+      "type": "object",
+      "properties": {
+        "color": {
+          "type": "string",
+          "description": "Color code in hexadecimal format (e.g., #RRGGBB)."
+        },
+        "icon": {
+          "type": "string",
+          "description": "Icon identifier representing the resource.\nThis could be a name or a URL to the icon."
+        }
+      },
+      "description": "Represents appearance for a resource."
+    },
+    "typeMoney": {
+      "type": "object",
+      "properties": {
+        "currencyCode": {
+          "type": "string",
+          "description": "The currency code, as a three-letter ISO 4217 code."
+        },
+        "cents": {
+          "type": "string",
+          "format": "int64",
+          "description": "The cents amount of money."
+        }
+      },
+      "description": "Represents an amount of money with its currency type."
+    },
+    "v1Binding": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "$ref": "#/definitions/BindingProvider",
+          "description": "The identity provider.\nDefault is PASSWORD."
+        },
+        "identifier": {
+          "type": "string",
+          "description": "The unique identifier from the identity provider.\nFor PASSWORD provider, this is the user's email."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name for the integration.\nUsed for showing user-friendly names in the UI."
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "URL to the avatar image from the identity provider."
+        }
+      },
+      "description": "Binding represents an identity provider linked to the user."
+    },
+    "v1Budget": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique identifier of the budget.",
+          "readOnly": true
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the budget."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description of the budget."
+        },
+        "appearance": {
+          "$ref": "#/definitions/typeAppearance",
+          "description": "The appearance settings for the budget."
+        },
+        "amount": {
+          "$ref": "#/definitions/typeMoney",
+          "description": "The amount allocated for the budget."
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The creation time of the budget.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The last update time of the budget.",
+          "readOnly": true
+        },
+        "baseAmount": {
+          "$ref": "#/definitions/typeMoney",
+          "description": "The base amount for the budget base current (space base amount).\nthe current period.\nOnly populated when View is FULL.",
+          "readOnly": true
+        },
+        "exchangeRate": {
+          "type": "number",
+          "format": "double",
+          "description": "The exchange rate used to convert base_amount to amount\nfor the current period.\nOnly populated when View is FULL.",
+          "readOnly": true
+        },
+        "stats": {
+          "$ref": "#/definitions/BudgetStats",
+          "description": "Statistics related to the budget.\nOnly populated when View is FULL.",
+          "readOnly": true
+        }
+      },
+      "description": "Budget represents a financial budget with its details.",
+      "required": [
+        "name",
+        "amount"
+      ]
+    },
+    "v1BudgetView": {
+      "type": "string",
+      "enum": [
+        "VIEW_UNSPECIFIED",
+        "BASIC",
+        "FULL"
+      ],
+      "default": "VIEW_UNSPECIFIED",
+      "description": " - VIEW_UNSPECIFIED: Default view showing basic budget information.\n - BASIC: Basic view showing essential budget details,\nsuch as name, amount, and appearance.\n - FULL: Full view showing all budget details, including\nbase_amount, exchange_rate and statistics like spent amount,\nremaining amount, and usage percentage."
+    },
+    "v1CreateUserRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Email address of the user to be created."
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the user to be created."
+        },
+        "username": {
+          "type": "string",
+          "description": "Username of the user to be created."
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "URL to the user's avatar image."
+        },
+        "password": {
+          "type": "string",
+          "description": "Password for the user to be created."
+        }
+      },
+      "description": "Request message for Identity.CreateUser.",
+      "required": [
+        "email",
+        "name",
+        "username",
+        "password"
+      ]
+    },
+    "v1ListBudgetsResponse": {
+      "type": "object",
+      "properties": {
+        "budgets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Budget"
+          },
+          "description": "The list of budgets."
+        },
+        "totalSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "The total number of budgets available for the given request.\nUsed for pagination."
+        }
+      },
+      "description": "Response message for Finance.ListBudgets."
+    },
+    "v1ListMembersResponse": {
+      "type": "object",
+      "properties": {
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Member"
+          },
+          "description": "The list of members in the space."
+        },
+        "totalSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "The total number of members in the space.\nUsed for pagination."
+        }
+      },
+      "description": "Response message for Members.ListMembers."
+    },
+    "v1ListSessionsResponse": {
+      "type": "object",
+      "properties": {
+        "sessions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Session"
+          },
+          "description": "List of sessions for the current user."
+        },
+        "totalSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of sessions available."
+        }
+      },
+      "description": "Response message for Identity.ListSessions."
+    },
+    "v1ListSpacesResponse": {
+      "type": "object",
+      "properties": {
+        "spaces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Space"
+          },
+          "description": "The list of spaces."
+        },
+        "totalSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "The total number of spaces available."
+        }
+      },
+      "description": "Response message for Spaces.ListSpaces."
+    },
+    "v1LoginUserRequest": {
+      "type": "object",
+      "properties": {
+        "userPassword": {
+          "$ref": "#/definitions/LoginUserRequestUserPassword",
+          "description": "UserPassword authentication method."
+        }
+      },
+      "description": "Request message for Identity.LoginUser.",
+      "required": [
+        "userPassword"
+      ]
+    },
+    "v1Member": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user."
+        },
+        "role": {
+          "$ref": "#/definitions/MemberRole",
+          "description": "The role of the member in the space."
+        },
+        "joinTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time the member was added to the space.",
+          "readOnly": true
+        },
+        "user": {
+          "$ref": "#/definitions/v1UserInfo",
+          "description": "Information about the user.",
+          "readOnly": true
+        }
+      }
+    },
+    "v1RefreshSessionRequest": {
+      "type": "object",
+      "properties": {
+        "refreshToken": {
+          "type": "string",
+          "description": "Refresh token to obtain a new JWT token."
+        }
+      },
+      "description": "Request message for Identity.RefreshSession.",
+      "required": [
+        "refreshToken"
+      ]
+    },
+    "v1Session": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the session.",
+          "readOnly": true
+        },
+        "userId": {
+          "type": "string",
+          "description": "User ID associated with the session.",
+          "readOnly": true
+        },
+        "userAgent": {
+          "type": "string",
+          "description": "User agent string of the client.",
+          "readOnly": true
+        },
+        "ipAddress": {
+          "type": "string",
+          "description": "IP address of the client.",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the session was created.",
+          "readOnly": true
+        },
+        "lastAccessTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the session was last accessed.",
+          "readOnly": true
+        },
+        "expireTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the session will expire.",
+          "readOnly": true
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Indicates if the session is active.\nA session is active if it has not expired or been revoked.",
+          "readOnly": true
+        }
+      }
+    },
+    "v1Space": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique identifier of the space.",
+          "readOnly": true
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "The user ID of the space owner.",
+          "readOnly": true
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the space."
+        },
+        "alias": {
+          "type": "string",
+          "description": "An optional alias for the space."
+        },
+        "description": {
+          "type": "string",
+          "description": "An optional description of the space."
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamps for space creation and last update.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamps for space creation and last update.",
+          "readOnly": true
+        },
+        "deleteTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamps for space deletion.",
+          "readOnly": true
+        },
+        "owner": {
+          "$ref": "#/definitions/v1UserInfo",
+          "description": "Output only. Information about the space owner.\nOnly populated when View is FULL.",
+          "readOnly": true
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "v1SpaceView": {
+      "type": "string",
+      "enum": [
+        "VIEW_UNSPECIFIED",
+        "NAME_ONLY",
+        "BASIC",
+        "FULL"
+      ],
+      "default": "VIEW_UNSPECIFIED",
+      "description": "Defines a view over a space's fields.\n\n - VIEW_UNSPECIFIED: Default value. The default view is BASIC.\n - NAME_ONLY: Only includes the space's ID, name, and alias.\n - BASIC: Includes basic information about the space.\n - FULL: Includes all information about the space."
+    },
+    "v1TokenPair": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "description": "JWT access token for authenticated requests.\nTypically expires in 15 minutes."
+        },
+        "refreshToken": {
+          "type": "string",
+          "description": "Refresh token for obtaining new access tokens.\nTypically expires in 7 days."
+        },
+        "expireTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Expiration time of the access token.",
+          "readOnly": true
+        }
+      },
+      "description": "Pair of JWT access token and refresh token."
+    },
+    "v1User": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user.",
+          "readOnly": true
+        },
+        "username": {
+          "type": "string",
+          "description": "Username of the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user."
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the user."
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "URL to the user's avatar image."
+        },
+        "bindings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Binding"
+          },
+          "description": "List of identity provider bindings linked to the user.",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the user was created.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the user was last updated.",
+          "readOnly": true
+        }
+      },
+      "description": "User represents a user in the identity service."
+    },
+    "v1UserInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The owner's user ID."
+        },
+        "name": {
+          "type": "string",
+          "description": "The owner's name."
+        },
+        "email": {
+          "type": "string",
+          "description": "The owner's email."
+        }
+      },
+      "description": "Information about the space owner."
+    }
+  }
+}

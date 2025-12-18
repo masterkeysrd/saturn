@@ -1,0 +1,17 @@
+name: saturn
+
+services:
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    container_name: swagger-ui
+    ports:
+      - 8080:8080
+    environment:
+      SWAGGER_JSON: /api/apidocs.swagger.json
+    volumes:
+      - ../../api:/api:ro
+
+networks:
+  default:
+    name: saturn
+    external: true

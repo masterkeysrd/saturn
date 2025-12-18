@@ -82,6 +82,7 @@ type IdentityClient interface {
 	// long-lived Refresh Token.
 	LoginUser(ctx context.Context, in *LoginUserRequest, opts ...grpc.CallOption) (*TokenPair, error)
 	// LogoutUser invalidates the current user's session.
+	// This action revokes the current session token.
 	LogoutUser(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// ListSessions lists all active sessions for the current user.
 	ListSessions(ctx context.Context, in *ListSessionsRequest, opts ...grpc.CallOption) (*ListSessionsResponse, error)
@@ -240,6 +241,7 @@ type IdentityServer interface {
 	// long-lived Refresh Token.
 	LoginUser(context.Context, *LoginUserRequest) (*TokenPair, error)
 	// LogoutUser invalidates the current user's session.
+	// This action revokes the current session token.
 	LogoutUser(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	// ListSessions lists all active sessions for the current user.
 	ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error)

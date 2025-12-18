@@ -24,13 +24,17 @@ plugins:
     opt:
       - paths=import
       - module=github.com/masterkeysrd/saturn
-  # - remote: buf.build/bufbuild/es
-  #   out: ./packages/sdk/gen
-  #   opt:
-  #     - target=ts
-  #     - ts_nocheck=true
-  #     - json_types=true
-  #   include_imports: true
+  - remote: buf.build/grpc-ecosystem/openapiv2
+    out: ./api
+    opt:
+      - allow_merge=true
+  - remote: buf.build/bufbuild/es
+    out: ./packages/sdk/gen
+    opt:
+      - target=ts
+      - ts_nocheck=true
+      - json_types=true
+    include_imports: true
   # - local: protoc-gen-saturn-axios
   #   out: ./packages/sdk/gen
   #   opt:
