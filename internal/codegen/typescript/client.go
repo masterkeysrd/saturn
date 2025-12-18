@@ -165,7 +165,7 @@ func GenerateAxios(gen *protogen.Plugin, file *protogen.File, options GenerateAx
 			// Build the path with interpolated values
 			finalPath := pathStr
 			for protoName, jsonName := range pathParamFields {
-				finalPath = strings.ReplaceAll(finalPath, "{"+protoName+"}", `"${body.`+jsonName+`}"`)
+				finalPath = strings.ReplaceAll(finalPath, "{"+protoName+"}", `${body.`+jsonName+`}`)
 			}
 
 			if options.URLPrefix != "" {
