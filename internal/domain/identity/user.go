@@ -75,7 +75,9 @@ func (u *User) Initialize() error {
 	u.ID = uid
 	u.Name = strings.TrimSpace(u.Name)
 	u.Username = strings.TrimSpace(u.Username)
+	u.Username = strings.ToLower(u.Username)
 	u.Email = strings.TrimSpace(u.Email)
+	u.Email = strings.ToLower(u.Email)
 	u.CreateTime = now
 	u.UpdateTime = now
 

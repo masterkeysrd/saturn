@@ -179,7 +179,9 @@ func (c *Credential) Sanitize() {
 	}
 
 	c.Username = strings.TrimSpace(c.Username)
+	c.Username = strings.ToLower(c.Username)
 	c.Email = strings.TrimSpace(c.Email)
+	c.Email = strings.ToLower(c.Email)
 }
 
 func (c *Credential) SetPassword(password string, hasher PasswordHasher) error {
