@@ -138,7 +138,12 @@ func GenerateAxios(gen *protogen.Plugin, file *protogen.File, options GenerateAx
 					clean = strings.TrimPrefix(clean, "/*")
 					clean = strings.TrimSuffix(clean, "*/")
 					clean = strings.TrimPrefix(clean, "*")
-					g.P(" * ", strings.TrimSpace(clean))
+					clean = strings.TrimSpace(clean)
+					if clean != "" {
+						g.P(" * ", strings.TrimSpace(clean))
+					} else {
+						g.P(" *")
+					}
 				}
 				g.P(" *")
 			}

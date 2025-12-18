@@ -35,12 +35,12 @@ plugins:
       - ts_nocheck=true
       - json_types=true
     include_imports: true
-  # - local: protoc-gen-saturn-axios
-  #   out: ./packages/sdk/gen
-  #   opt:
-  #     - paths=source_relative
-  #     - axios_import_path=@/client
-  #     - url_prefix=/api
-  #
+  - local: protoc-gen-saturn-axios
+    out: ./packages/sdk/gen
+    opt:
+      - paths=source_relative
+      - axios_import_path=@/client
+      - url_prefix=/api
+
 inputs:
   - directory: .

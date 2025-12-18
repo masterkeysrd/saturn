@@ -66,7 +66,7 @@ export async function getSpace(req: Types.GetSpaceRequest): Promise<Types.Space>
 
 /**
  * Updates a space's information.
- * 
+ *
  * Only users with the OWNER can update space information.
  *
  * @param req Types.UpdateSpaceRequest
@@ -90,7 +90,7 @@ export async function updateSpace(req: Types.UpdateSpaceRequest): Promise<Types.
 
 /**
  * Deletes a space (soft delete).
- * 
+ *
  * The space will be marked as deleted but can be restored within 30 days.
  * Only OWNER can delete spaces.
  *
@@ -174,7 +174,7 @@ export async function updateMember(req: Types.UpdateMemberRequest): Promise<Type
 
 /**
  * Removes a member from the space.
- * 
+ *
  * Permissions:
  * - OWNER:  Can remove any member (except themselves and other owners)
  * - ADMIN: Can remove MEMBER role only (not ADMIN or OWNER)
