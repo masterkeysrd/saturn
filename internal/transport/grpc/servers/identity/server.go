@@ -14,6 +14,7 @@ var _ identitypb.IdentityServer = (*IdentityServer)(nil)
 // Application represents the identity application.
 type Application interface {
 	CreateUser(context.Context, *application.CreateUserRequest) (*identity.User, error)
+	GetUser(context.Context, string) (*identity.User, error)
 	LoginUser(context.Context, *application.LoginUserRequest) (*application.TokenPair, error)
 	LogoutUser(context.Context) error
 	RefreshSession(context.Context, string) (*application.TokenPair, error)
@@ -35,6 +36,14 @@ func NewIdentityServer(app Application) *IdentityServer {
 
 func (s *IdentityServer) CreateUser(ctx context.Context, req *identitypb.CreateUserRequest) (*identitypb.User, error) {
 	user, err := s.app.CreateUser(ctx, CreateRequest(req))
+	if err != nil {
+		return nil, err
+	}
+	return UserPb(user), nil
+}
+
+func (s *IdentityServer) GetUser(ctx context.Context, req *identitypb.GetUserRequest) (*identitypb.User, error) {
+	user, err := s.app.GetUser(ctx, req.Id)
 	if err != nil {
 		return nil, err
 	}

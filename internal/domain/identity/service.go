@@ -134,6 +134,23 @@ func (s *Service) createUser(ctx context.Context, profile *UserProfile, role Rol
 	return user, nil
 }
 
+func (s *Service) GetUser(ctx context.Context, userID UserID) (*User, error) {
+	if err := id.Validate(userID); err != nil {
+		return nil, fmt.Errorf("invalid user ID: %w", err)
+	}
+
+	user, err := s.userStore.Get(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	if user == nil {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	return user, nil
+}
+
 func (s *Service) LoginUser(ctx context.Context, in *LoginUserInput) (*LoginUserOutput, error) {
 	if in == nil {
 		return nil, fmt.Errorf("login input is nil")

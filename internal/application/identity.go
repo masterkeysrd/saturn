@@ -23,6 +23,7 @@ const (
 // and their bindings to authentication providers.
 type IdentityService interface {
 	CreateUser(context.Context, *identity.UserProfile) (*identity.User, error)
+	GetUser(context.Context, identity.UserID) (*identity.User, error)
 	CreateAdminUser(context.Context, *identity.UserProfile) (*identity.User, error)
 	LoginUser(context.Context, *identity.LoginUserInput) (*identity.LoginUserOutput, error)
 	RefreshSession(context.Context, *identity.RefreshSessionInput) (*identity.LoginUserOutput, error)
@@ -104,6 +105,32 @@ func (app *IdentityApp) CreateUser(ctx context.Context, req *CreateUserRequest) 
 		return nil, fmt.Errorf("failed to create default space for user: %w", err)
 	}
 
+	return user, nil
+}
+
+func (app *IdentityApp) GetUser(ctx context.Context, identifier string) (*identity.User, error) {
+	if identifier == "me" {
+		userID, ok := auth.GetCurrentUserID(ctx)
+		if !ok {
+			return nil, fmt.Errorf("failed to get current user ID from context")
+		}
+		identifier = string(userID)
+	}
+
+	currUser, ok := auth.GetCurrentUserPassport(ctx)
+	if !ok {
+		return nil, fmt.Errorf("failed to get current user from context")
+	}
+
+	// Only admin users can get other users' information
+	if identifier != currUser.UserID().String() && currUser.Role() != auth.RoleAdmin {
+		return nil, fmt.Errorf("permission denied: only admin users can get other users' information")
+	}
+
+	user, err := app.identityService.GetUser(ctx, identity.UserID(identifier))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
 	return user, nil
 }
 
