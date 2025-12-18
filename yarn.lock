@@ -1167,7 +1167,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@saturn/sdk@workspace:packages/sdk":
+"@saturn/gen@workspace:*, @saturn/gen@workspace:packages/gen":
+  version: 0.0.0-use.local
+  resolution: "@saturn/gen@workspace:packages/gen"
+  dependencies:
+    axios: "npm:^1.13.2"
+  languageName: unknown
+  linkType: soft
+
+"@saturn/sdk@workspace:*, @saturn/sdk@workspace:packages/sdk":
   version: 0.0.0-use.local
   resolution: "@saturn/sdk@workspace:packages/sdk"
   dependencies:
@@ -1189,6 +1197,8 @@ __metadata:
     "@mui/x-charts": "npm:^8.18.0"
     "@mui/x-data-grid": "npm:^8.19.0"
     "@mui/x-date-pickers": "npm:^8.19.0"
+    "@saturn/gen": "workspace:*"
+    "@saturn/sdk": "workspace:*"
     "@tanstack/react-query": "npm:^5.90.10"
     "@tanstack/react-query-devtools": "npm:^5.90.2"
     "@types/luxon": "npm:^3.7.1"

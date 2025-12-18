@@ -19,6 +19,8 @@
     "@mui/x-charts": "^8.18.0",
     "@mui/x-data-grid": "^8.19.0",
     "@mui/x-date-pickers": "^8.19.0",
+    "@saturn/gen": "workspace:*",
+    "@saturn/sdk": "workspace:*",
     "@tanstack/react-query": "^5.90.10",
     "@tanstack/react-query-devtools": "^5.90.2",
     "axios": "^1.13.2",
