@@ -29,17 +29,17 @@ plugins:
     opt:
       - allow_merge=true
   - remote: buf.build/bufbuild/es
-    out: ./packages/sdk/gen
+    out: ./packages/gen
     opt:
       - target=ts
       - ts_nocheck=true
       - json_types=true
     include_imports: true
   - local: protoc-gen-saturn-axios
-    out: ./packages/sdk/gen
+    out: ./packages/gen
     opt:
       - paths=source_relative
-      - axios_import_path=@/client
+      - axios_import_path=@saturn/sdk/client
       - url_prefix=/api
 
 inputs:
