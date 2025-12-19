@@ -14,20 +14,20 @@ type TenancyService interface {
 	CreateSpace(context.Context, access.Principal, *tenancy.Space) error
 }
 
-// TenancyApplication provides methods to manage tenancy operations.
-type TenancyApplication struct {
+// TenancyApp provides methods to manage tenancy operations.
+type TenancyApp struct {
 	service TenancyService
 }
 
 // NewTenancyApplication creates a new instance of TenancyApplication.
-func NewTenancyApplication(service TenancyService) *TenancyApplication {
-	return &TenancyApplication{
+func NewTenancyApplication(service TenancyService) *TenancyApp {
+	return &TenancyApp{
 		service: service,
 	}
 }
 
 // CreateSpace creates a new space based on the provided request.
-func (app *TenancyApplication) CreateSpace(ctx context.Context, req *CreateSpaceRequest) (*tenancy.Space, error) {
+func (app *TenancyApp) CreateSpace(ctx context.Context, req *CreateSpaceRequest) (*tenancy.Space, error) {
 	principal, ok := access.GetPrincipal(ctx)
 	if !ok {
 		return nil, errors.New("unauthenticated: principal not found in context")

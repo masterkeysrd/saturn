@@ -25,6 +25,7 @@ import (
 	identitypg "github.com/masterkeysrd/saturn/internal/storage/pg/identity"
 	tenancypg "github.com/masterkeysrd/saturn/internal/storage/pg/tenancy"
 	identitygrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/servers/identity"
+	tenancygrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/servers/tenancy"
 )
 
 func init() {
@@ -82,13 +83,6 @@ func buildContainer() (deps.Container, error) {
 		return nil, fmt.Errorf("cannot register infrastructure providers: %w", err)
 	}
 
-	// Wire JWT Generator
-	// if err := container.Provide(func(gen *token.JWTGenerator) application.TokenManager {
-	// 	return gen
-	// }); err != nil {
-	// 	return nil, fmt.Errorf("cannot provide token generator: %w", err)
-	// }
-
 	if err := container.Provide(func(gen *token.JWTGenerator) auth.TokenManager {
 		return gen
 	}); err != nil {
@@ -109,6 +103,7 @@ func buildContainer() (deps.Container, error) {
 	// Transport Providers
 	if err := deps.Register(container,
 		identitygrpc.RegisterDeps,
+		tenancygrpc.RegisterDeps,
 	); err != nil {
 		return nil, fmt.Errorf("cannot register transport providers: %w", err)
 	}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	identitypb "github.com/masterkeysrd/saturn/gen/proto/go/saturn/identity/v1"
+	tenancypb "github.com/masterkeysrd/saturn/gen/proto/go/saturn/tenancy/v1"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
 	"github.com/masterkeysrd/saturn/internal/transport/http/middleware"
@@ -21,6 +22,8 @@ type ServerParams struct {
 	deps.In
 
 	IdentityServer identitypb.IdentityServer
+	TenancyServer  tenancypb.TenancyServer
+
 	TokenManager   auth.TokenManager
 	TokenBlacklist auth.TokenBlacklist
 }
@@ -30,6 +33,7 @@ func NewServer(params ServerParams) *Server {
 	mux := runtime.NewServeMux()
 
 	identitypb.RegisterIdentityHandlerServer(ctx, mux, params.IdentityServer)
+	tenancypb.RegisterTenancyHandlerServer(ctx, mux, params.TenancyServer)
 
 	handler := http.NewServeMux()
 	handler.Handle("/api/", http.StripPrefix("/api", mux))
