@@ -1,4 +1,3 @@
-import * as React from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
@@ -12,9 +11,10 @@ import Typography from "@mui/material/Typography";
 import Stack from "@mui/material/Stack";
 import MuiCard from "@mui/material/Card";
 import { styled } from "@mui/material/styles";
-import { useLogin } from "../Auth.hooks";
+import { isAuthenticated, useLogin } from "../Auth.hooks";
 import { useSearchParams } from "@/lib/search-params";
 import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
 // import ForgotPassword from './components/ForgotPassword';
 // import { GoogleIcon, FacebookIcon, SitemarkIcon } from './components/CustomIcons';
 
@@ -61,17 +61,24 @@ const SignInContainer = styled(Stack)(({ theme }) => ({
 }));
 
 export default function LoginPage() {
-  const [emailError, setEmailError] = React.useState(false);
-  const [emailErrorMessage, setEmailErrorMessage] = React.useState("");
-  const [passwordError, setPasswordError] = React.useState(false);
-  const [passwordErrorMessage, setPasswordErrorMessage] = React.useState("");
-  const [open, setOpen] = React.useState(false);
+  const [emailError, setEmailError] = useState(false);
+  const [emailErrorMessage, setEmailErrorMessage] = useState("");
+  const [passwordError, setPasswordError] = useState(false);
+  const [passwordErrorMessage, setPasswordErrorMessage] = useState("");
+  const [open, setOpen] = useState(false);
+  const authenticated = isAuthenticated();
 
   const login = useLogin();
   const navigate = useNavigate();
   const [{ returnUrl }] = useSearchParams<{ returnUrl: string }>({
     returnUrl: "/",
   });
+
+  useEffect(() => {
+    if (authenticated) {
+      navigate(returnUrl || "/");
+    }
+  }, [authenticated, navigate, returnUrl]);
 
   const handleClickOpen = () => {
     setOpen(true);
