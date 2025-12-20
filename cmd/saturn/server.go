@@ -62,6 +62,7 @@ func NewServer(params ServerParams) *Server {
 		ExemptPaths: []string{
 			"/api/v1/identity/users/*",
 			"/api/v1/spaces/*",
+			"/api/v1/identity/sessions/*",
 		},
 		MembershipGetter: params.MembershipGetter,
 	})
