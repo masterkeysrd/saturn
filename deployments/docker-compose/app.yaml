@@ -24,6 +24,8 @@ services:
       watch:
         - action: rebuild
           path: ../../internal
+        - action: rebuild
+          path: ../../cmd/saturn
 
   pg-database:
     extends:
