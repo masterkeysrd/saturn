@@ -101,11 +101,9 @@ export default function LoginPage() {
     });
     login.mutate(
       {
-        $typeName: "saturn.identity.v1.LoginUserRequest",
         method: {
           case: "userPassword",
           value: {
-            $typeName: "saturn.identity.v1.LoginUserRequest.UserPassword",
             identifier: data.get("email") as string,
             password: data.get("password") as string,
           },

@@ -13,8 +13,7 @@ const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password"];
 export const useUser = (enabled = true) => {
   return useQuery({
     queryKey: ["auth", "user"],
-    queryFn: () =>
-      getUser({ id: "me", $typeName: "saturn.identity.v1.GetUserRequest" }),
+    queryFn: () => getUser({ id: "me" }),
     retry: false,
     enabled, // Can disable if we know we have no token
     staleTime: 1000 * 60 * 5, // 5 minutes
