@@ -1,9 +1,10 @@
 import { localStore } from "../localstorage";
 import axios, { type AxiosInstance } from "axios";
 
-const AUTH_TOKEN_KEY = "auth_token";
-const REFRESH_TOKEN_KEY = "refresh_token";
-const EXPIRE_TIME_KEY = "expire_time";
+export const AUTH_TOKEN_KEY = "auth_token";
+export const REFRESH_TOKEN_KEY = "refresh_token";
+export const EXPIRE_TIME_KEY = "expire_time";
+export const SPACE_SELECTION_KEY = "current_space_id";
 const UNAUTHORIZED_STATUS = 401;
 
 export type TokenPairJson = {
@@ -73,6 +74,11 @@ function setupInterceptors() {
 
         originalRequest._retry = true;
         isRefreshing = true;
+
+        const spanSpaceId = localStore.load(SPACE_SELECTION_KEY);
+        if (spanSpaceId) {
+          originalRequest.headers["X-Saturn-Space-ID"] = spanSpaceId;
+        }
 
         try {
           const refreshToken = localStore.load(REFRESH_TOKEN_KEY);

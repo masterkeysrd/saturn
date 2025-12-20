@@ -8,6 +8,7 @@ import Typography from "@mui/material/Typography";
 import MenuContent, { type Menu } from "./MenuContent";
 import OptionsMenu from "./OptionsMenu";
 import { useCurrentUser } from "../features/auth/Auth.hooks";
+import SpaceSelector from "./SpaceSelector";
 
 const drawerWidth = 240;
 
@@ -38,13 +39,8 @@ export default function SideMenu({ mainMenus }: SideMenuProps) {
         },
       }}
     >
-      <Box
-        sx={{
-          display: "flex",
-          p: 1.5,
-        }}
-      >
-        <Typography variant="h6">Saturn</Typography>
+      <Box sx={{ px: 2, py: 1 }}>
+        <SpaceSelector />
       </Box>
       <Divider />
       <Box

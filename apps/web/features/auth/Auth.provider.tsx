@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from "react-router";
 import { useEffect } from "react";
 import { isAuthenticated, isPublicPath, useUser } from "./Auth.hooks";
+import { clearAuthTokens } from "@saturn/sdk/client";
 
 interface AuthProviderProps {
   children: React.ReactNode;
@@ -23,6 +24,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       const returnUrl = encodeURIComponent(
         `${location.pathname}${location.search}${location.hash}`,
       );
+      clearAuthTokens();
       navigate(`/login?returnUrl=${returnUrl}`, { replace: true });
     }
   }, [
