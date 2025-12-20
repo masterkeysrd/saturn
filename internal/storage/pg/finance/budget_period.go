@@ -19,86 +19,84 @@ type BudgetPeriodStore struct {
 }
 
 func NewBudgetPeriodStore(db *sqlx.DB) (*BudgetPeriodStore, error) {
-	queries, err := NewBudgetPeriodQueries(db)
-	if err != nil {
-		return nil, fmt.Errorf("cannot initialize budget period queries: %w", err)
-	}
-
 	return &BudgetPeriodStore{
-		db:      db,
-		queries: queries,
+		db: db,
 	}, nil
 }
 
 func (b *BudgetPeriodStore) GetByDate(ctx context.Context, budgetID finance.BudgetID, date time.Time) (*finance.BudgetPeriod, error) {
-	row := b.queries.GetByDate(ctx, budgetID, date)
-	if err := row.Err(); err != nil {
-		return nil, fmt.Errorf("cannot get budget period: %w", err)
-	}
-
-	var entity BudgetPeriodEntity
-	if err := row.StructScan(&entity); err != nil {
-		return nil, fmt.Errorf("cannot scan budget period: %w", err)
-	}
-
-	return BudgetPeriodEntityToModel(&entity), nil
+	// row := b.queries.GetByDate(ctx, budgetID, date)
+	// if err := row.Err(); err != nil {
+	// 	return nil, fmt.Errorf("cannot get budget period: %w", err)
+	// }
+	//
+	// var entity BudgetPeriodEntity
+	// if err := row.StructScan(&entity); err != nil {
+	// 	return nil, fmt.Errorf("cannot scan budget period: %w", err)
+	// }
+	//
+	// return BudgetPeriodEntityToModel(&entity), nil
+	return nil, fmt.Errorf("GetByDate method is not implemented yet")
 }
 
 func (b *BudgetPeriodStore) List(ctx context.Context) ([]*finance.BudgetPeriod, error) {
-	rows, err := b.queries.List(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot execute list budget periods query: %w", err)
-	}
-	defer rows.Close()
-
-	entities := make([]*finance.BudgetPeriod, 0, 50) // TODO: Change this when implement pagination.
-	for rows.Next() {
-		var entity BudgetPeriodEntity
-		if err := rows.StructScan(&entity); err != nil {
-			return nil, fmt.Errorf("cannot scan budget period: %w", err)
-		}
-		entities = append(entities, BudgetPeriodEntityToModel(&entity))
-	}
-
-	return entities, nil
+	// rows, err := b.queries.List(ctx)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("cannot execute list budget periods query: %w", err)
+	// }
+	// defer rows.Close()
+	//
+	// entities := make([]*finance.BudgetPeriod, 0, 50) // TODO: Change this when implement pagination.
+	// for rows.Next() {
+	// 	var entity BudgetPeriodEntity
+	// 	if err := rows.StructScan(&entity); err != nil {
+	// 		return nil, fmt.Errorf("cannot scan budget period: %w", err)
+	// 	}
+	// 	entities = append(entities, BudgetPeriodEntityToModel(&entity))
+	// }
+	//
+	// return entities, nil
+	return nil, fmt.Errorf("List method is not implemented yet")
 }
 
 func (b *BudgetPeriodStore) Store(ctx context.Context, period *finance.BudgetPeriod) error {
-	_, err := b.queries.Upsert(ctx, BudgetPeriodEntityFromModel(period))
-	if err != nil {
-		return fmt.Errorf("cannot store currency: %w", err)
-	}
-
-	return nil
+	return fmt.Errorf("Store method is not implemented yet")
+	// _, err := b.queries.Upsert(ctx, BudgetPeriodEntityFromModel(period))
+	// if err != nil {
+	// 	return fmt.Errorf("cannot store currency: %w", err)
+	// }
+	//
+	// return nil
 }
 
 // DeleteBy handles the bulk deletion of BudgetPeriods based on specific criteria.
 // It returns the number of rows deleted (int).
 func (b *BudgetPeriodStore) DeleteBy(ctx context.Context, criteria finance.BudgetPeriodCriteria) (int, error) {
-	var result sql.Result
-	var err error
-
-	// Use a type switch to dispatch the correct SQL logic based on the criteria type.
-	switch v := criteria.(type) {
-	case *finance.ByBudgetID:
-		// Delete all periods belonging to the given BudgetID.
-		result, err = b.queries.DeleteByBudgetID(ctx, v.ID)
-	default:
-		return 0, fmt.Errorf("criteria %T is not supported for DeleteBy method", criteria)
-	}
-
-	if err != nil {
-		return 0, fmt.Errorf("cannot execute delete query: %w", err)
-	}
-
-	// Return the count of affected rows. This is necessary for the Domain Service
-	// to confirm the dependent records were removed successfully.
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("cannot get affected rows count: %w", err)
-	}
-
-	return int(affected), nil
+	return 0, fmt.Errorf("DeleteBy method is not implemented yet")
+	// var result sql.Result
+	// var err error
+	//
+	// // Use a type switch to dispatch the correct SQL logic based on the criteria type.
+	// switch v := criteria.(type) {
+	// case *finance.ByBudgetID:
+	// 	// Delete all periods belonging to the given BudgetID.
+	// 	result, err = b.queries.DeleteByBudgetID(ctx, v.ID)
+	// default:
+	// 	return 0, fmt.Errorf("criteria %T is not supported for DeleteBy method", criteria)
+	// }
+	//
+	// if err != nil {
+	// 	return 0, fmt.Errorf("cannot execute delete query: %w", err)
+	// }
+	//
+	// // Return the count of affected rows. This is necessary for the Domain Service
+	// // to confirm the dependent records were removed successfully.
+	// affected, err := result.RowsAffected()
+	// if err != nil {
+	// 	return 0, fmt.Errorf("cannot get affected rows count: %w", err)
+	// }
+	//
+	// return int(affected), nil
 }
 
 const (
@@ -180,38 +178,39 @@ type BudgetPeriodQueries struct {
 }
 
 func NewBudgetPeriodQueries(db *sqlx.DB) (*BudgetPeriodQueries, error) {
-	getByDateStmt, err := db.PrepareNamed(getByDateBudgetPeriodQuery)
-	if err != nil {
-		return nil, fmt.Errorf("cannot prepare get by date query: %w", err)
-	}
-
-	listStmt, err := db.Preparex(listBudgetPeriodsQuery)
-	if err != nil {
-		getByDateStmt.Close()
-		return nil, fmt.Errorf("cannot prepare list query: %w", err)
-	}
-
-	upsertStmt, err := db.PrepareNamed(upsertBudgetPeriodQuery)
-	if err != nil {
-		getByDateStmt.Close()
-		listStmt.Close()
-		return nil, fmt.Errorf("cannot prepare upsert query: %w", err)
-	}
-
-	deleteByBudgetIDStmt, err := db.PrepareNamed(deleteBudgetPeriodsByBudgetIDQuery)
-	if err != nil {
-		getByDateStmt.Close()
-		listStmt.Close()
-		upsertStmt.Close()
-		return nil, fmt.Errorf("cannot prepare delete by budget ID query: %w", err)
-	}
-
-	return &BudgetPeriodQueries{
-		getByDateStmt:        getByDateStmt,
-		listStmt:             listStmt,
-		upsertStmt:           upsertStmt,
-		deleteByBudgetIDStmt: deleteByBudgetIDStmt,
-	}, nil
+	return nil, fmt.Errorf("NewBudgetPeriodQueries function is not implemented yet")
+	// getByDateStmt, err := db.PrepareNamed(getByDateBudgetPeriodQuery)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("cannot prepare get by date query: %w", err)
+	// }
+	//
+	// listStmt, err := db.Preparex(listBudgetPeriodsQuery)
+	// if err != nil {
+	// 	getByDateStmt.Close()
+	// 	return nil, fmt.Errorf("cannot prepare list query: %w", err)
+	// }
+	//
+	// upsertStmt, err := db.PrepareNamed(upsertBudgetPeriodQuery)
+	// if err != nil {
+	// 	getByDateStmt.Close()
+	// 	listStmt.Close()
+	// 	return nil, fmt.Errorf("cannot prepare upsert query: %w", err)
+	// }
+	//
+	// deleteByBudgetIDStmt, err := db.PrepareNamed(deleteBudgetPeriodsByBudgetIDQuery)
+	// if err != nil {
+	// 	getByDateStmt.Close()
+	// 	listStmt.Close()
+	// 	upsertStmt.Close()
+	// 	return nil, fmt.Errorf("cannot prepare delete by budget ID query: %w", err)
+	// }
+	//
+	// return &BudgetPeriodQueries{
+	// 	getByDateStmt:        getByDateStmt,
+	// 	listStmt:             listStmt,
+	// 	upsertStmt:           upsertStmt,
+	// 	deleteByBudgetIDStmt: deleteByBudgetIDStmt,
+	// }, nil
 }
 
 func (q *BudgetPeriodQueries) GetByDate(ctx context.Context, budgetID finance.BudgetID, date time.Time) *sqlx.Row {

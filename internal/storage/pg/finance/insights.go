@@ -9,7 +9,6 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/foundation/appearance"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
-	// "github.com/masterkeysrd/saturn/internal/pkg/str"
 )
 
 var _ finance.InsightsStore = (*InsightsStore)(nil)
@@ -22,14 +21,9 @@ type InsightsStore struct {
 
 // NewInsightsStore creates a new insights repository.
 func NewInsightsStore(db *sqlx.DB) (*InsightsStore, error) {
-	queries, err := NewInsightsQueries(db)
-	if err != nil {
-		return nil, fmt.Errorf("cannot initialize insights queries: %w", err)
-	}
-
 	return &InsightsStore{
-		db:      db,
-		queries: queries,
+		db: db,
+		// queries: queries,
 	}, nil
 }
 

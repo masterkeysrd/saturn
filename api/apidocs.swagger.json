@@ -36,7 +36,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -50,7 +50,7 @@
           },
           {
             "name": "view",
-            "description": "The view level for the budget details.\nDefaults to BASIC if not specified.\n\n - VIEW_UNSPECIFIED: Default view showing basic budget information.\n - BASIC: Basic view showing essential budget details,\nsuch as name, amount, and appearance.\n - FULL: Full view showing all budget details, including\nbase_amount, exchange_rate and statistics like spent amount,\nremaining amount, and usage percentage.",
+            "description": "The view level for the budget details.\nDefaults to BASIC if not specified.\n\n - VIEW_UNSPECIFIED: Default view showing basic budget information.\n - BASIC: Basic view showing essential budget details,\nsuch as name, description, status, amount, and appearance.\n - FULL: Full view showing all budget details, including\nbase_amount, exchange_rate and statistics like spent amount,\nremaining amount, and usage percentage.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -102,7 +102,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -136,7 +136,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -150,7 +150,7 @@
           },
           {
             "name": "view",
-            "description": "The view level for the budget details.\n\n - VIEW_UNSPECIFIED: Default view showing basic budget information.\n - BASIC: Basic view showing essential budget details,\nsuch as name, amount, and appearance.\n - FULL: Full view showing all budget details, including\nbase_amount, exchange_rate and statistics like spent amount,\nremaining amount, and usage percentage.",
+            "description": "The view level for the budget details.\n\n - VIEW_UNSPECIFIED: Default view showing basic budget information.\n - BASIC: Basic view showing essential budget details,\nsuch as name, description, status, amount, and appearance.\n - FULL: Full view showing all budget details, including\nbase_amount, exchange_rate and statistics like spent amount,\nremaining amount, and usage percentage.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -180,7 +180,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -210,7 +210,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -251,7 +251,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -293,7 +293,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -325,7 +325,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -360,7 +360,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -395,7 +395,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -429,7 +429,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -459,7 +459,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -500,7 +500,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -535,7 +535,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -569,7 +569,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -642,7 +642,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -676,7 +676,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -722,7 +722,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -753,7 +753,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -794,7 +794,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -847,7 +847,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -889,7 +889,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -926,7 +926,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -1061,16 +1061,7 @@
         "member"
       ]
     },
-    "protobufAny": {
-      "type": "object",
-      "properties": {
-        "@type": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": {}
-    },
-    "rpcStatus": {
+    "googlerpcStatus": {
       "type": "object",
       "properties": {
         "code": {
@@ -1088,6 +1079,15 @@
           }
         }
       }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
     },
     "typeAppearance": {
       "type": "object",
@@ -1160,6 +1160,10 @@
           "$ref": "#/definitions/typeAppearance",
           "description": "The appearance settings for the budget."
         },
+        "status": {
+          "$ref": "#/definitions/v1BudgetStatus",
+          "description": "The status of the budget.\nDefaults to ACTIVE."
+        },
         "amount": {
           "$ref": "#/definitions/typeMoney",
           "description": "The amount allocated for the budget."
@@ -1199,6 +1203,17 @@
         "amount"
       ]
     },
+    "v1BudgetStatus": {
+      "type": "string",
+      "enum": [
+        "STATUS_UNSPECIFIED",
+        "ACTIVE",
+        "PAUSED",
+        "ARCHIVED"
+      ],
+      "default": "STATUS_UNSPECIFIED",
+      "description": " - STATUS_UNSPECIFIED: Default status.\n - ACTIVE: The budget is active and being tracked.\n - PAUSED: The budget is paused and not being tracked.\n - ARCHIVED: The budget has been archived and is read-only."
+    },
     "v1BudgetView": {
       "type": "string",
       "enum": [
@@ -1207,7 +1222,7 @@
         "FULL"
       ],
       "default": "VIEW_UNSPECIFIED",
-      "description": " - VIEW_UNSPECIFIED: Default view showing basic budget information.\n - BASIC: Basic view showing essential budget details,\nsuch as name, amount, and appearance.\n - FULL: Full view showing all budget details, including\nbase_amount, exchange_rate and statistics like spent amount,\nremaining amount, and usage percentage."
+      "description": " - VIEW_UNSPECIFIED: Default view showing basic budget information.\n - BASIC: Basic view showing essential budget details,\nsuch as name, description, status, amount, and appearance.\n - FULL: Full view showing all budget details, including\nbase_amount, exchange_rate and statistics like spent amount,\nremaining amount, and usage percentage."
     },
     "v1CreateUserRequest": {
       "type": "object",

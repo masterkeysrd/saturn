@@ -3,8 +3,10 @@ package finance
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/foundation/access"
 	"github.com/masterkeysrd/saturn/internal/foundation/id"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
 	"github.com/masterkeysrd/saturn/internal/pkg/errors"
@@ -39,7 +41,11 @@ func NewService(params ServiceParams) *Service {
 	}
 }
 
-func (s *Service) CreateExpense(ctx context.Context, exp *Expense) (*Transaction, error) {
+func (s *Service) CreateExpense(ctx context.Context, actor access.Principal, exp *Expense) (*Transaction, error) {
+	if !actor.IsSpaceMember() {
+		return nil, errors.New("only space members can create expenses")
+	}
+
 	// Initialize and validates the budget.
 	if err := exp.Initialize(); err != nil {
 		return nil, fmt.Errorf("cannot initialize expense: %w", err)
@@ -48,7 +54,7 @@ func (s *Service) CreateExpense(ctx context.Context, exp *Expense) (*Transaction
 		return nil, fmt.Errorf("invalid expense: %w", err)
 	}
 
-	budgetPeriod, err := s.GetPeriodForDate(ctx, exp.BudgetID, exp.Date)
+	budgetPeriod, err := s.GetPeriodForDate(ctx, actor, exp.BudgetID, exp.Date)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get period for budget: %w", err)
 	}
@@ -86,7 +92,11 @@ func (s *Service) CreateExpense(ctx context.Context, exp *Expense) (*Transaction
 	return transaction, nil
 }
 
-func (s *Service) UpdateExpense(ctx context.Context, in *UpdateExpenseInput) (*Transaction, error) {
+func (s *Service) UpdateExpense(ctx context.Context, actor access.Principal, in *UpdateExpenseInput) (*Transaction, error) {
+	if !actor.IsSpaceMember() {
+		return nil, errors.New("only space members can update expenses")
+	}
+
 	if err := in.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid expense for update: %w", err)
 	}
@@ -114,7 +124,7 @@ func (s *Service) UpdateExpense(ctx context.Context, in *UpdateExpenseInput) (*T
 
 	// If date was changed syncronize the period.
 	if shouldUpdatePeriod {
-		period, err := s.GetPeriodForDate(ctx, *existing.BudgetID, existing.Date)
+		period, err := s.GetPeriodForDate(ctx, actor, *existing.BudgetID, existing.Date)
 		if err != nil {
 			return nil, fmt.Errorf("cannot get budget period: %w", err)
 		}
@@ -167,9 +177,13 @@ func (s *Service) GetTransaction(ctx context.Context, tid TransactionID) (*Trans
 	return transaction, nil
 }
 
-func (s *Service) CreateBudget(ctx context.Context, budget *Budget) error {
+func (s *Service) CreateBudget(ctx context.Context, actor access.Principal, budget *Budget) error {
+	if !actor.IsSpaceAdmin() {
+		return errors.New("only space admins can create budgets")
+	}
+
 	// Initialize and validates the budget.
-	if err := budget.Initialize(); err != nil {
+	if err := budget.Initialize(actor); err != nil {
 		return fmt.Errorf("cannot initialize budget: %w", err)
 	}
 
@@ -205,12 +219,16 @@ func (s *Service) CreateBudget(ctx context.Context, budget *Budget) error {
 	return nil
 }
 
-func (s *Service) UpdateBudget(ctx context.Context, in *UpdateBudgetInput) (*Budget, error) {
+func (s *Service) UpdateBudget(ctx context.Context, actor access.Principal, in *UpdateBudgetInput) (*Budget, error) {
+	if !actor.IsSpaceAdmin() {
+		return nil, errors.New("only space admins can update budgets")
+	}
+
 	if err := id.Validate(in.ID); err != nil {
 		return nil, fmt.Errorf("invalid budget update input: %w", err)
 	}
 
-	budget, err := s.GetBudget(ctx, in.ID)
+	budget, err := s.GetBudget(ctx, actor, in.ID)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get budget: %w", err)
 	}
@@ -232,7 +250,7 @@ func (s *Service) UpdateBudget(ctx context.Context, in *UpdateBudgetInput) (*Bud
 		return budget, nil
 	}
 
-	period, err := s.GetPeriodForDate(ctx, budget.ID, time.Now())
+	period, err := s.GetPeriodForDate(ctx, actor, budget.ID, time.Now())
 	if err != nil {
 		return nil, fmt.Errorf("cannot get period for budget: %w", err)
 	}
@@ -257,7 +275,11 @@ func (s *Service) UpdateBudget(ctx context.Context, in *UpdateBudgetInput) (*Bud
 	return budget, nil
 }
 
-func (s *Service) DeleteBudget(ctx context.Context, bid BudgetID) error {
+func (s *Service) DeleteBudget(ctx context.Context, actor access.Principal, bid BudgetID) error {
+	if !actor.IsSpaceAdmin() {
+		return errors.New("only space admins can delete budgets")
+	}
+
 	if err := id.Validate(bid); err != nil {
 		return fmt.Errorf("invalid budget id: %w", err)
 	}
@@ -276,16 +298,22 @@ func (s *Service) DeleteBudget(ctx context.Context, bid BudgetID) error {
 		return fmt.Errorf("cannot delete periods for budget: %w", err)
 	}
 
-	if err := s.budgetStore.Delete(ctx, bid); err != nil {
+	if err := s.budgetStore.Delete(ctx, BudgetKey{
+		ID: bid, SpaceID: actor.SpaceID(),
+	}); err != nil {
 		return fmt.Errorf("cannot delete budget: %w", err)
 	}
 
 	return nil
 }
 
-func (s *Service) GetPeriodForDate(ctx context.Context, budgetID BudgetID, date time.Time) (*BudgetPeriod, error) {
+func (s *Service) GetPeriodForDate(ctx context.Context, actor access.Principal, budgetID BudgetID, date time.Time) (*BudgetPeriod, error) {
+	if !actor.IsSpaceMember() {
+		return nil, errors.New("only space members can get budget periods")
+	}
+
 	// Validate data
-	budget, err := s.GetBudget(ctx, budgetID)
+	budget, err := s.GetBudget(ctx, actor, budgetID)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get budget: %w", err)
 	}
@@ -322,8 +350,12 @@ func (s *Service) GetPeriodForDate(ctx context.Context, budgetID BudgetID, date 
 	return period, nil
 }
 
-func (s *Service) GetBudget(ctx context.Context, id BudgetID) (*Budget, error) {
-	budget, err := s.budgetStore.Get(ctx, id)
+func (s *Service) GetBudget(ctx context.Context, actor access.Principal, id BudgetID) (*Budget, error) {
+	if !actor.IsSpaceMember() {
+		return nil, errors.New("only space members can get budgets")
+	}
+
+	budget, err := s.budgetStore.Get(ctx, BudgetKey{ID: id, SpaceID: actor.SpaceID()})
 	if err != nil {
 		return nil, fmt.Errorf("cannot get budget: %w", err)
 	}
@@ -331,8 +363,9 @@ func (s *Service) GetBudget(ctx context.Context, id BudgetID) (*Budget, error) {
 	return budget, nil
 }
 
-func (s *Service) ListBudgets(ctx context.Context) ([]*Budget, error) {
-	budgets, err := s.budgetStore.List(ctx)
+func (s *Service) ListBudgets(ctx context.Context, actor access.Principal) ([]*Budget, error) {
+	log.Printf("ListBudgets called by actor: %+v", actor)
+	budgets, err := s.budgetStore.List(ctx, actor.SpaceID())
 	if err != nil {
 		return nil, fmt.Errorf("cannot list budgets: %s", err)
 	}

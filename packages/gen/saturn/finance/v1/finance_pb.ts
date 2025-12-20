@@ -23,7 +23,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file saturn/finance/v1/finance.proto.
  */
 export const file_saturn_finance_v1_finance: GenFile = /*@__PURE__*/
-  fileDesc("Ch9zYXR1cm4vZmluYW5jZS92MS9maW5hbmNlLnByb3RvEhFzYXR1cm4uZmluYW5jZS52MSJFChNDcmVhdGVCdWRnZXRSZXF1ZXN0Ei4KBmJ1ZGdldBgBIAEoCzIZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldEID4EECIp4BChJMaXN0QnVkZ2V0c1JlcXVlc3QSEwoGc2VhcmNoGAEgASgJQgPgQQESMQoEdmlldxgCIAEoDjIeLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldC5WaWV3QgPgQQESFQoIb3JkZXJfYnkYAyABKAlCA+BBARIRCgRwYWdlGAQgASgFQgPgQQESFgoJcGFnZV9zaXplGAUgASgFQgPgQQEiVQoTTGlzdEJ1ZGdldHNSZXNwb25zZRIqCgdidWRnZXRzGAEgAygLMhkuc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0EhIKCnRvdGFsX3NpemUYAiABKAUiVgoQR2V0QnVkZ2V0UmVxdWVzdBIPCgJpZBgBIAEoCUID4EECEjEKBHZpZXcYAiABKA4yHi5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXQuVmlld0ID4EEBIowBChNVcGRhdGVCdWRnZXRSZXF1ZXN0Eg8KAmlkGAEgASgJQgPgQQISLgoGYnVkZ2V0GAIgASgLMhkuc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0QgPgQQISNAoLdXBkYXRlX21hc2sYAyABKAsyGi5nb29nbGUucHJvdG9idWYuRmllbGRNYXNrQgPgQQEiJgoTRGVsZXRlQnVkZ2V0UmVxdWVzdBIPCgJpZBgBIAEoCUID4EECIrMFCgZCdWRnZXQSDwoCaWQYASABKAlCA+BBAxIRCgRuYW1lGAIgASgJQgPgQQISGAoLZGVzY3JpcHRpb24YAyABKAlCA+BBARIrCgphcHBlYXJhbmNlGAQgASgLMhcuc2F0dXJuLnR5cGUuQXBwZWFyYW5jZRInCgZhbW91bnQYBSABKAsyEi5zYXR1cm4udHlwZS5Nb25leUID4EECEjQKC2NyZWF0ZV90aW1lGAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEID4EEDEjQKC3VwZGF0ZV90aW1lGAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEID4EEDEiwKC2Jhc2VfYW1vdW50GAggASgLMhIuc2F0dXJuLnR5cGUuTW9uZXlCA+BBAxIaCg1leGNoYW5nZV9yYXRlGAkgASgBQgPgQQMSMwoFc3RhdHMYCiABKAsyHy5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXQuU3RhdHNCA+BBAxr2AQoFU3RhdHMSKAoMc3BlbnRfYW1vdW50GAEgASgLMhIuc2F0dXJuLnR5cGUuTW9uZXkSLAoQcmVtYWluaW5nX2Ftb3VudBgCIAEoCzISLnNhdHVybi50eXBlLk1vbmV5EhgKEHVzYWdlX3BlcmNlbnRhZ2UYAyABKAESMAoMcGVyaW9kX3N0YXJ0GAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpwZXJpb2RfZW5kGAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIZChF0cmFuc2FjdGlvbl9jb3VudBgGIAEoBSIxCgRWaWV3EhQKEFZJRVdfVU5TUEVDSUZJRUQQABIJCgVCQVNJQxABEggKBEZVTEwQAjKdBQoHRmluYW5jZRJ2CgxDcmVhdGVCdWRnZXQSJi5zYXR1cm4uZmluYW5jZS52MS5DcmVhdGVCdWRnZXRSZXF1ZXN0Ghkuc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0IiOC0+STAh06BmJ1ZGdldCITL3YxL2ZpbmFuY2UvYnVkZ2V0cxJ5CgtMaXN0QnVkZ2V0cxIlLnNhdHVybi5maW5hbmNlLnYxLkxpc3RCdWRnZXRzUmVxdWVzdBomLnNhdHVybi5maW5hbmNlLnYxLkxpc3RCdWRnZXRzUmVzcG9uc2UiG4LT5JMCFRITL3YxL2ZpbmFuY2UvYnVkZ2V0cxJyCglHZXRCdWRnZXQSIy5zYXR1cm4uZmluYW5jZS52MS5HZXRCdWRnZXRSZXF1ZXN0Ghkuc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0IiXaQQJpZILT5JMCGhIYL3YxL2ZpbmFuY2UvYnVkZ2V0cy97aWR9EpMBCgxVcGRhdGVCdWRnZXQSJi5zYXR1cm4uZmluYW5jZS52MS5VcGRhdGVCdWRnZXRSZXF1ZXN0Ghkuc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0IkDaQRVpZCxidWRnZXQsdXBkYXRlX21hc2uC0+STAiI6BmJ1ZGdldDIYL3YxL2ZpbmFuY2UvYnVkZ2V0cy97aWR9EnUKDERlbGV0ZUJ1ZGdldBImLnNhdHVybi5maW5hbmNlLnYxLkRlbGV0ZUJ1ZGdldFJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkiJdpBAmlkgtPkkwIaKhgvdjEvZmluYW5jZS9idWRnZXRzL3tpZH0aHspBG2FwaS5zYXR1cm4ubWFzdGVya2V5c3JkLmRldkJJWkdnaXRodWIuY29tL21hc3RlcmtleXNyZC9zYXR1cm4vZ2VuL3Byb3RvL2dvL3NhdHVybi9maW5hbmNlL3YxO2ZpbmFuY2VwYmIGcHJvdG8z", [file_google_api_annotations, file_google_api_client, file_google_api_field_behavior, file_google_protobuf_empty, file_google_protobuf_field_mask, file_google_protobuf_timestamp, file_saturn_type_appearance, file_saturn_type_money]);
+  fileDesc("Ch9zYXR1cm4vZmluYW5jZS92MS9maW5hbmNlLnByb3RvEhFzYXR1cm4uZmluYW5jZS52MSJFChNDcmVhdGVCdWRnZXRSZXF1ZXN0Ei4KBmJ1ZGdldBgBIAEoCzIZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldEID4EECIp4BChJMaXN0QnVkZ2V0c1JlcXVlc3QSEwoGc2VhcmNoGAEgASgJQgPgQQESMQoEdmlldxgCIAEoDjIeLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldC5WaWV3QgPgQQESFQoIb3JkZXJfYnkYAyABKAlCA+BBARIRCgRwYWdlGAQgASgFQgPgQQESFgoJcGFnZV9zaXplGAUgASgFQgPgQQEiVQoTTGlzdEJ1ZGdldHNSZXNwb25zZRIqCgdidWRnZXRzGAEgAygLMhkuc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0EhIKCnRvdGFsX3NpemUYAiABKAUiVgoQR2V0QnVkZ2V0UmVxdWVzdBIPCgJpZBgBIAEoCUID4EECEjEKBHZpZXcYAiABKA4yHi5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXQuVmlld0ID4EEBIowBChNVcGRhdGVCdWRnZXRSZXF1ZXN0Eg8KAmlkGAEgASgJQgPgQQISLgoGYnVkZ2V0GAIgASgLMhkuc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0QgPgQQISNAoLdXBkYXRlX21hc2sYAyABKAsyGi5nb29nbGUucHJvdG9idWYuRmllbGRNYXNrQgPgQQEiJgoTRGVsZXRlQnVkZ2V0UmVxdWVzdBIPCgJpZBgBIAEoCUID4EECIrIGCgZCdWRnZXQSDwoCaWQYASABKAlCA+BBAxIRCgRuYW1lGAIgASgJQgPgQQISGAoLZGVzY3JpcHRpb24YAyABKAlCA+BBARIrCgphcHBlYXJhbmNlGAQgASgLMhcuc2F0dXJuLnR5cGUuQXBwZWFyYW5jZRI1CgZzdGF0dXMYBSABKA4yIC5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXQuU3RhdHVzQgPgQQESJwoGYW1vdW50GAYgASgLMhIuc2F0dXJuLnR5cGUuTW9uZXlCA+BBAhI0CgtjcmVhdGVfdGltZRgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAxI0Cgt1cGRhdGVfdGltZRgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAxIsCgtiYXNlX2Ftb3VudBgJIAEoCzISLnNhdHVybi50eXBlLk1vbmV5QgPgQQMSGgoNZXhjaGFuZ2VfcmF0ZRgKIAEoAUID4EEDEjMKBXN0YXRzGAsgASgLMh8uc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0LlN0YXRzQgPgQQMa9gEKBVN0YXRzEigKDHNwZW50X2Ftb3VudBgBIAEoCzISLnNhdHVybi50eXBlLk1vbmV5EiwKEHJlbWFpbmluZ19hbW91bnQYAiABKAsyEi5zYXR1cm4udHlwZS5Nb25leRIYChB1c2FnZV9wZXJjZW50YWdlGAMgASgBEjAKDHBlcmlvZF9zdGFydBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKcGVyaW9kX2VuZBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASGQoRdHJhbnNhY3Rpb25fY291bnQYBiABKAUiMQoEVmlldxIUChBWSUVXX1VOU1BFQ0lGSUVEEAASCQoFQkFTSUMQARIICgRGVUxMEAIiRgoGU3RhdHVzEhYKElNUQVRVU19VTlNQRUNJRklFRBAAEgoKBkFDVElWRRABEgoKBlBBVVNFRBACEgwKCEFSQ0hJVkVEEAMynQUKB0ZpbmFuY2USdgoMQ3JlYXRlQnVkZ2V0EiYuc2F0dXJuLmZpbmFuY2UudjEuQ3JlYXRlQnVkZ2V0UmVxdWVzdBoZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldCIjgtPkkwIdOgZidWRnZXQiEy92MS9maW5hbmNlL2J1ZGdldHMSeQoLTGlzdEJ1ZGdldHMSJS5zYXR1cm4uZmluYW5jZS52MS5MaXN0QnVkZ2V0c1JlcXVlc3QaJi5zYXR1cm4uZmluYW5jZS52MS5MaXN0QnVkZ2V0c1Jlc3BvbnNlIhuC0+STAhUSEy92MS9maW5hbmNlL2J1ZGdldHMScgoJR2V0QnVkZ2V0EiMuc2F0dXJuLmZpbmFuY2UudjEuR2V0QnVkZ2V0UmVxdWVzdBoZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldCIl2kECaWSC0+STAhoSGC92MS9maW5hbmNlL2J1ZGdldHMve2lkfRKTAQoMVXBkYXRlQnVkZ2V0EiYuc2F0dXJuLmZpbmFuY2UudjEuVXBkYXRlQnVkZ2V0UmVxdWVzdBoZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldCJA2kEVaWQsYnVkZ2V0LHVwZGF0ZV9tYXNrgtPkkwIiOgZidWRnZXQyGC92MS9maW5hbmNlL2J1ZGdldHMve2lkfRJ1CgxEZWxldGVCdWRnZXQSJi5zYXR1cm4uZmluYW5jZS52MS5EZWxldGVCdWRnZXRSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5IiXaQQJpZILT5JMCGioYL3YxL2ZpbmFuY2UvYnVkZ2V0cy97aWR9Gh7KQRthcGkuc2F0dXJuLm1hc3RlcmtleXNyZC5kZXZCSVpHZ2l0aHViLmNvbS9tYXN0ZXJrZXlzcmQvc2F0dXJuL2dlbi9wcm90by9nby9zYXR1cm4vZmluYW5jZS92MTtmaW5hbmNlcGJiBnByb3RvMw", [file_google_api_annotations, file_google_api_client, file_google_api_field_behavior, file_google_protobuf_empty, file_google_protobuf_field_mask, file_google_protobuf_timestamp, file_saturn_type_appearance, file_saturn_type_money]);
 
 /**
  * Request message for Finance.CreateBudget.
@@ -394,23 +394,31 @@ export type Budget = Message<"saturn.finance.v1.Budget"> & {
   appearance?: Appearance;
 
   /**
+   * The status of the budget.
+   * Defaults to ACTIVE.
+   *
+   * @generated from field: saturn.finance.v1.Budget.Status status = 5;
+   */
+  status: Budget_Status;
+
+  /**
    * The amount allocated for the budget.
    *
-   * @generated from field: saturn.type.Money amount = 5;
+   * @generated from field: saturn.type.Money amount = 6;
    */
   amount?: Money;
 
   /**
    * The creation time of the budget.
    *
-   * @generated from field: google.protobuf.Timestamp create_time = 6;
+   * @generated from field: google.protobuf.Timestamp create_time = 7;
    */
   createTime?: Timestamp;
 
   /**
    * The last update time of the budget.
    *
-   * @generated from field: google.protobuf.Timestamp update_time = 7;
+   * @generated from field: google.protobuf.Timestamp update_time = 8;
    */
   updateTime?: Timestamp;
 
@@ -419,7 +427,7 @@ export type Budget = Message<"saturn.finance.v1.Budget"> & {
    * the current period.
    * Only populated when View is FULL.
    *
-   * @generated from field: saturn.type.Money base_amount = 8;
+   * @generated from field: saturn.type.Money base_amount = 9;
    */
   baseAmount?: Money;
 
@@ -428,7 +436,7 @@ export type Budget = Message<"saturn.finance.v1.Budget"> & {
    * for the current period.
    * Only populated when View is FULL.
    *
-   * @generated from field: double exchange_rate = 9;
+   * @generated from field: double exchange_rate = 10;
    */
   exchangeRate: number;
 
@@ -436,7 +444,7 @@ export type Budget = Message<"saturn.finance.v1.Budget"> & {
    * Statistics related to the budget.
    * Only populated when View is FULL.
    *
-   * @generated from field: saturn.finance.v1.Budget.Stats stats = 10;
+   * @generated from field: saturn.finance.v1.Budget.Stats stats = 11;
    */
   stats?: Budget_Stats;
 };
@@ -476,23 +484,31 @@ export type BudgetJson = {
   appearance?: AppearanceJson;
 
   /**
+   * The status of the budget.
+   * Defaults to ACTIVE.
+   *
+   * @generated from field: saturn.finance.v1.Budget.Status status = 5;
+   */
+  status?: Budget_StatusJson;
+
+  /**
    * The amount allocated for the budget.
    *
-   * @generated from field: saturn.type.Money amount = 5;
+   * @generated from field: saturn.type.Money amount = 6;
    */
   amount?: MoneyJson;
 
   /**
    * The creation time of the budget.
    *
-   * @generated from field: google.protobuf.Timestamp create_time = 6;
+   * @generated from field: google.protobuf.Timestamp create_time = 7;
    */
   createTime?: TimestampJson;
 
   /**
    * The last update time of the budget.
    *
-   * @generated from field: google.protobuf.Timestamp update_time = 7;
+   * @generated from field: google.protobuf.Timestamp update_time = 8;
    */
   updateTime?: TimestampJson;
 
@@ -501,7 +517,7 @@ export type BudgetJson = {
    * the current period.
    * Only populated when View is FULL.
    *
-   * @generated from field: saturn.type.Money base_amount = 8;
+   * @generated from field: saturn.type.Money base_amount = 9;
    */
   baseAmount?: MoneyJson;
 
@@ -510,7 +526,7 @@ export type BudgetJson = {
    * for the current period.
    * Only populated when View is FULL.
    *
-   * @generated from field: double exchange_rate = 9;
+   * @generated from field: double exchange_rate = 10;
    */
   exchangeRate?: number | "NaN" | "Infinity" | "-Infinity";
 
@@ -518,7 +534,7 @@ export type BudgetJson = {
    * Statistics related to the budget.
    * Only populated when View is FULL.
    *
-   * @generated from field: saturn.finance.v1.Budget.Stats stats = 10;
+   * @generated from field: saturn.finance.v1.Budget.Stats stats = 11;
    */
   stats?: Budget_StatsJson;
 };
@@ -654,7 +670,7 @@ export enum Budget_View {
 
   /**
    * Basic view showing essential budget details,
-   * such as name, amount, and appearance.
+   * such as name, description, status, amount, and appearance.
    *
    * @generated from enum value: BASIC = 1;
    */
@@ -680,6 +696,50 @@ export type Budget_ViewJson = "VIEW_UNSPECIFIED" | "BASIC" | "FULL";
  */
 export const Budget_ViewSchema: GenEnum<Budget_View, Budget_ViewJson> = /*@__PURE__*/
   enumDesc(file_saturn_finance_v1_finance, 6, 0);
+
+/**
+ * @generated from enum saturn.finance.v1.Budget.Status
+ */
+export enum Budget_Status {
+  /**
+   * Default status.
+   *
+   * @generated from enum value: STATUS_UNSPECIFIED = 0;
+   */
+  STATUS_UNSPECIFIED = 0,
+
+  /**
+   * The budget is active and being tracked.
+   *
+   * @generated from enum value: ACTIVE = 1;
+   */
+  ACTIVE = 1,
+
+  /**
+   * The budget is paused and not being tracked.
+   *
+   * @generated from enum value: PAUSED = 2;
+   */
+  PAUSED = 2,
+
+  /**
+   * The budget has been archived and is read-only.
+   *
+   * @generated from enum value: ARCHIVED = 3;
+   */
+  ARCHIVED = 3,
+}
+
+/**
+ * @generated from enum saturn.finance.v1.Budget.Status
+ */
+export type Budget_StatusJson = "STATUS_UNSPECIFIED" | "ACTIVE" | "PAUSED" | "ARCHIVED";
+
+/**
+ * Describes the enum saturn.finance.v1.Budget.Status.
+ */
+export const Budget_StatusSchema: GenEnum<Budget_Status, Budget_StatusJson> = /*@__PURE__*/
+  enumDesc(file_saturn_finance_v1_finance, 6, 1);
 
 /**
  * Finance provides features personal finance management, including budgeting,

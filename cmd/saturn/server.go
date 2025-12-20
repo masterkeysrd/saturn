@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	financepb "github.com/masterkeysrd/saturn/gen/proto/go/saturn/finance/v1"
 	identitypb "github.com/masterkeysrd/saturn/gen/proto/go/saturn/identity/v1"
 	tenancypb "github.com/masterkeysrd/saturn/gen/proto/go/saturn/tenancy/v1"
 	"github.com/masterkeysrd/saturn/internal/domain/tenancy"
@@ -24,6 +25,7 @@ type Server struct {
 type ServerParams struct {
 	deps.In
 
+	FinanceServer  financepb.FinanceServer
 	IdentityServer identitypb.IdentityServer
 	TenancyServer  tenancypb.TenancyServer
 
@@ -36,6 +38,7 @@ func NewServer(params ServerParams) *Server {
 	ctx := context.Background()
 	mux := runtime.NewServeMux()
 
+	financepb.RegisterFinanceHandlerServer(ctx, mux, params.FinanceServer)
 	identitypb.RegisterIdentityHandlerServer(ctx, mux, params.IdentityServer)
 	tenancypb.RegisterTenancyHandlerServer(ctx, mux, params.TenancyServer)
 

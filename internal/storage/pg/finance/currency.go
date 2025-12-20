@@ -16,14 +16,9 @@ type CurrencyStore struct {
 }
 
 func NewCurrencyStore(db *sqlx.DB) (*CurrencyStore, error) {
-	queries, err := NewCurrencyQueries(db)
-	if err != nil {
-		return nil, fmt.Errorf("cannot initialize currency queries: %w", err)
-	}
-
 	return &CurrencyStore{
-		db:      db,
-		queries: queries,
+		db: db,
+		// queries: queries,
 	}, nil
 }
 

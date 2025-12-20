@@ -8,7 +8,6 @@ import (
 
 	"github.com/masterkeysrd/saturn/api"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
-	"github.com/masterkeysrd/saturn/internal/foundation/fieldmask"
 	"github.com/masterkeysrd/saturn/internal/pkg/httphandler"
 	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 	"github.com/masterkeysrd/saturn/internal/transport/http/encoding"
@@ -47,14 +46,7 @@ func (c *BudgetController) RegisterRoutes(mux *http.ServeMux) {
 }
 
 func (c *BudgetController) CreateBudget(ctx context.Context, req *api.CreateBudgetRequest) (*api.Budget, error) {
-	budget := BudgetFromAPI(req.Budget)
-
-	if err := c.service.CreateBudget(ctx, budget); err != nil {
-		return nil, fmt.Errorf("cannot create budget: %w", err)
-	}
-
-	resp := BudgetToAPI(budget)
-	return resp, nil
+	return nil, fmt.Errorf("not implemented")
 }
 
 func (c *BudgetController) ListBudgets(ctx context.Context, req *api.ListBudgetsRequest) (*api.ListBudgetsResponse, error) {
@@ -83,21 +75,7 @@ func (c *BudgetController) GetBudget(ctx context.Context, req *api.GetBudgetRequ
 }
 
 func (c *BudgetController) UpdateBudget(ctx context.Context, req *api.UpdateBudgetRequest) (*api.Budget, error) {
-	input := &finance.UpdateBudgetInput{
-		ID:     finance.BudgetID(req.ID),
-		Budget: BudgetFromAPI(req.Budget),
-	}
-
-	if req.UpdateMask != nil && *req.UpdateMask != "" {
-		input.UpdateMask = fieldmask.FromString(string(*req.UpdateMask), ",")
-	}
-
-	budget, err := c.service.UpdateBudget(ctx, input)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update budget %s: %w", req.ID, err)
-	}
-
-	return BudgetToAPI(budget), nil
+	return nil, fmt.Errorf("not implemented")
 }
 
 func (c *BudgetController) DeleteBudget(ctx context.Context, req *api.DeleteBudgetRequest) (*httphandler.Empty, error) {

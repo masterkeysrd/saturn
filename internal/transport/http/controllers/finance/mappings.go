@@ -3,26 +3,10 @@ package financehttp
 import (
 	"github.com/masterkeysrd/saturn/api"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
-	"github.com/masterkeysrd/saturn/internal/foundation/appearance"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 	"github.com/oapi-codegen/runtime/types"
 )
-
-func BudgetFromAPI(b *api.Budget) *finance.Budget {
-	if b == nil {
-		return nil
-	}
-	return &finance.Budget{
-		ID:   finance.BudgetID(ptr.Value(b.Id)),
-		Name: b.Name,
-		Appearance: appearance.Appearance{
-			Color: appearance.Color(b.Color),
-			Icon:  appearance.Icon(b.IconName),
-		},
-		Amount: api.MoneyModel(b.Amount),
-	}
-}
 
 func BudgetsToAPI(budgets []*finance.Budget) []api.Budget {
 	resp := make([]api.Budget, 0, len(budgets))

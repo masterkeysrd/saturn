@@ -20,14 +20,8 @@ type Transactions struct {
 }
 
 func NewTransactionsStore(db *sqlx.DB) (*Transactions, error) {
-	queries, err := NewTransactionQueries(db)
-	if err != nil {
-		return nil, fmt.Errorf("cannot initialize transaction queries: %w", err)
-	}
-
 	return &Transactions{
-		db:      db,
-		queries: queries,
+		db: db,
 	}, nil
 }
 

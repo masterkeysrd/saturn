@@ -7,14 +7,23 @@ import (
 	"strings"
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/foundation/access"
 	"github.com/masterkeysrd/saturn/internal/foundation/appearance"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/foundation/fieldmask"
 	"github.com/masterkeysrd/saturn/internal/foundation/id"
 	"github.com/masterkeysrd/saturn/internal/foundation/pagination"
+	"github.com/masterkeysrd/saturn/internal/foundation/space"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 	"github.com/masterkeysrd/saturn/internal/pkg/round"
 	"github.com/masterkeysrd/saturn/internal/pkg/timeutils"
 )
+
+// BudgetKey represents the unique key for a Budget aggregate within a specific space.
+type BudgetKey struct {
+	ID      BudgetID
+	SpaceID space.ID
+}
 
 // BudgetID represents the unique identifier for a Budget aggregate.
 type BudgetID string
@@ -35,10 +44,10 @@ func (i BudgetPeriodID) String() string {
 // BudgetStore defines the contract for persisting and retrieving Budget aggregate roots.
 // This interface is required by the Domain Service layer.
 type BudgetStore interface {
-	Get(context.Context, BudgetID) (*Budget, error)
-	List(context.Context) ([]*Budget, error)
+	Get(context.Context, BudgetKey) (*Budget, error)
+	List(context.Context, space.ID) ([]*Budget, error)
 	Store(context.Context, *Budget) error
-	Delete(context.Context, BudgetID) error
+	Delete(context.Context, BudgetKey) error
 }
 
 type BudgetSearcher interface {
@@ -84,29 +93,40 @@ var BudgetUpdateSchema = fieldmask.NewSchema("budget").
 
 // Budget is the Aggregate Root representing a financial limit and category.
 type Budget struct {
-	ID   BudgetID
-	Name string
+	BudgetKey
+
+	Name        string
+	Description *string
+	Status      BudgetStatus
 
 	appearance.Appearance
 
-	Amount    money.Money
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	Amount     money.Money
+	CreateTime time.Time
+	CreateBy   auth.UserID
+	UpdateTime time.Time
+	UpdateBy   auth.UserID
 }
 
 // Initialize sets the primary key (ID) and the initial creation timestamp for a
 // new Budget.
-func (b *Budget) Initialize() error {
+func (b *Budget) Initialize(actor access.Principal) error {
 	if b == nil {
 		return errors.New("cannot initialize nil budget")
 	}
+
 	id, err := id.New[BudgetID]()
 	if err != nil {
 		return fmt.Errorf("cannot created a budget identifier: %w", err)
 	}
 
+	now := time.Now().UTC()
 	b.ID = id
-	b.CreatedAt = time.Now().UTC()
+	b.SpaceID = actor.SpaceID()
+	b.CreateTime = now
+	b.CreateBy = actor.ActorID()
+	b.UpdateTime = now
+	b.UpdateBy = actor.ActorID()
 	return nil
 }
 
@@ -119,6 +139,10 @@ func (b *Budget) Validate() error {
 
 	if b.ID == "" {
 		return errors.New("id field is required")
+	}
+
+	if b.SpaceID == "" {
+		return errors.New("space_id field is required")
 	}
 
 	if err := id.Validate(b.ID); err != nil {
@@ -183,8 +207,28 @@ func (b *Budget) Update(update *Budget, fields *fieldmask.FieldMask) error {
 		b.Amount = update.Amount
 	}
 
-	b.UpdatedAt = time.Now().UTC()
+	b.UpdateTime = time.Now().UTC()
 	return nil
+}
+
+type BudgetStatus string
+
+const (
+	BudgetStatusActive BudgetStatus = "active"
+	BudgetStatusPaused BudgetStatus = "paused"
+)
+
+func (bs BudgetStatus) IsValid() bool {
+	switch bs {
+	case BudgetStatusActive, BudgetStatusPaused:
+		return true
+	default:
+		return false
+	}
+}
+
+func (bs BudgetStatus) String() string {
+	return string(bs)
 }
 
 // CreatePeriod creates a new BudgetPeriod for the provided time 't' and exchange context 'c'.

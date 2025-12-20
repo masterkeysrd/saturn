@@ -24,6 +24,7 @@ import (
 	financepg "github.com/masterkeysrd/saturn/internal/storage/pg/finance"
 	identitypg "github.com/masterkeysrd/saturn/internal/storage/pg/identity"
 	tenancypg "github.com/masterkeysrd/saturn/internal/storage/pg/tenancy"
+	financegrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/servers/finance"
 	identitygrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/servers/identity"
 	tenancygrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/servers/tenancy"
 )
@@ -104,6 +105,7 @@ func buildContainer() (deps.Container, error) {
 	if err := deps.Register(container,
 		identitygrpc.RegisterDeps,
 		tenancygrpc.RegisterDeps,
+		financegrpc.RegisterDeps,
 	); err != nil {
 		return nil, fmt.Errorf("cannot register transport providers: %w", err)
 	}
@@ -207,6 +209,12 @@ func wireDeps(inj deps.Injector) error {
 		return fmt.Errorf("cannot inject infra.auth.MnemoTokenBlacklist dep: %w", err)
 	}
 
+	if err := inj.Provide(func(s *finance.Service) application.FinanceService {
+		return s
+	}); err != nil {
+		return fmt.Errorf("cannot inject finance.Service dep: %w", err)
+	}
+
 	// Foundation Deps Wiring
 	if err := inj.Provide(func(bl *infrauth.MnemoTokenBlacklist) auth.TokenBlacklist {
 		return bl
@@ -215,7 +223,7 @@ func wireDeps(inj deps.Injector) error {
 	}
 
 	// Server Deps Wiring
-	if err := inj.Provide(func(s *tenancy.Service) MembershipGetter {
+	if err := inj.Provide(func(s *application.TenancyApp) MembershipGetter {
 		return s.GetMembership
 	}); err != nil {
 		return fmt.Errorf("cannot inject tenancy.Service dep: %w", err)

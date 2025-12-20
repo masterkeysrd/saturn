@@ -35,7 +35,7 @@ const (
 	// Default view showing basic budget information.
 	Budget_VIEW_UNSPECIFIED Budget_View = 0
 	// Basic view showing essential budget details,
-	// such as name, amount, and appearance.
+	// such as name, description, status, amount, and appearance.
 	Budget_BASIC Budget_View = 1
 	// Full view showing all budget details, including
 	// base_amount, exchange_rate and statistics like spent amount,
@@ -82,6 +82,62 @@ func (x Budget_View) Number() protoreflect.EnumNumber {
 // Deprecated: Use Budget_View.Descriptor instead.
 func (Budget_View) EnumDescriptor() ([]byte, []int) {
 	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{6, 0}
+}
+
+type Budget_Status int32
+
+const (
+	// Default status.
+	Budget_STATUS_UNSPECIFIED Budget_Status = 0
+	// The budget is active and being tracked.
+	Budget_ACTIVE Budget_Status = 1
+	// The budget is paused and not being tracked.
+	Budget_PAUSED Budget_Status = 2
+	// The budget has been archived and is read-only.
+	Budget_ARCHIVED Budget_Status = 3
+)
+
+// Enum value maps for Budget_Status.
+var (
+	Budget_Status_name = map[int32]string{
+		0: "STATUS_UNSPECIFIED",
+		1: "ACTIVE",
+		2: "PAUSED",
+		3: "ARCHIVED",
+	}
+	Budget_Status_value = map[string]int32{
+		"STATUS_UNSPECIFIED": 0,
+		"ACTIVE":             1,
+		"PAUSED":             2,
+		"ARCHIVED":           3,
+	}
+)
+
+func (x Budget_Status) Enum() *Budget_Status {
+	p := new(Budget_Status)
+	*p = x
+	return p
+}
+
+func (x Budget_Status) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Budget_Status) Descriptor() protoreflect.EnumDescriptor {
+	return file_saturn_finance_v1_finance_proto_enumTypes[1].Descriptor()
+}
+
+func (Budget_Status) Type() protoreflect.EnumType {
+	return &file_saturn_finance_v1_finance_proto_enumTypes[1]
+}
+
+func (x Budget_Status) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Budget_Status.Descriptor instead.
+func (Budget_Status) EnumDescriptor() ([]byte, []int) {
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{6, 1}
 }
 
 // Request message for Finance.CreateBudget.
@@ -449,23 +505,26 @@ type Budget struct {
 	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
 	// The appearance settings for the budget.
 	Appearance *typepb.Appearance `protobuf:"bytes,4,opt,name=appearance,proto3" json:"appearance,omitempty"`
+	// The status of the budget.
+	// Defaults to ACTIVE.
+	Status Budget_Status `protobuf:"varint,5,opt,name=status,proto3,enum=saturn.finance.v1.Budget_Status" json:"status,omitempty"`
 	// The amount allocated for the budget.
-	Amount *typepb.Money `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`
+	Amount *typepb.Money `protobuf:"bytes,6,opt,name=amount,proto3" json:"amount,omitempty"`
 	// The creation time of the budget.
-	CreateTime *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
 	// The last update time of the budget.
-	UpdateTime *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	UpdateTime *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
 	// The base amount for the budget base current (space base amount).
 	// the current period.
 	// Only populated when View is FULL.
-	BaseAmount *typepb.Money `protobuf:"bytes,8,opt,name=base_amount,json=baseAmount,proto3" json:"base_amount,omitempty"`
+	BaseAmount *typepb.Money `protobuf:"bytes,9,opt,name=base_amount,json=baseAmount,proto3" json:"base_amount,omitempty"`
 	// The exchange rate used to convert base_amount to amount
 	// for the current period.
 	// Only populated when View is FULL.
-	ExchangeRate float64 `protobuf:"fixed64,9,opt,name=exchange_rate,json=exchangeRate,proto3" json:"exchange_rate,omitempty"`
+	ExchangeRate float64 `protobuf:"fixed64,10,opt,name=exchange_rate,json=exchangeRate,proto3" json:"exchange_rate,omitempty"`
 	// Statistics related to the budget.
 	// Only populated when View is FULL.
-	Stats         *Budget_Stats `protobuf:"bytes,10,opt,name=stats,proto3" json:"stats,omitempty"`
+	Stats         *Budget_Stats `protobuf:"bytes,11,opt,name=stats,proto3" json:"stats,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -526,6 +585,13 @@ func (x *Budget) GetAppearance() *typepb.Appearance {
 		return x.Appearance
 	}
 	return nil
+}
+
+func (x *Budget) GetStatus() Budget_Status {
+	if x != nil {
+		return x.Status
+	}
+	return Budget_STATUS_UNSPECIFIED
 }
 
 func (x *Budget) GetAmount() *typepb.Money {
@@ -690,24 +756,25 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\vupdate_mask\x18\x03 \x01(\v2\x1a.google.protobuf.FieldMaskB\x03\xe0A\x01R\n" +
 	"updateMask\"*\n" +
 	"\x13DeleteBudgetRequest\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"\xf0\x06\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"\xf7\a\n" +
 	"\x06Budget\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tB\x03\xe0A\x02R\x04name\x12%\n" +
 	"\vdescription\x18\x03 \x01(\tB\x03\xe0A\x01R\vdescription\x127\n" +
 	"\n" +
 	"appearance\x18\x04 \x01(\v2\x17.saturn.type.AppearanceR\n" +
-	"appearance\x12/\n" +
-	"\x06amount\x18\x05 \x01(\v2\x12.saturn.type.MoneyB\x03\xe0A\x02R\x06amount\x12@\n" +
-	"\vcreate_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"appearance\x12=\n" +
+	"\x06status\x18\x05 \x01(\x0e2 .saturn.finance.v1.Budget.StatusB\x03\xe0A\x01R\x06status\x12/\n" +
+	"\x06amount\x18\x06 \x01(\v2\x12.saturn.type.MoneyB\x03\xe0A\x02R\x06amount\x12@\n" +
+	"\vcreate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"createTime\x12@\n" +
-	"\vupdate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"\vupdate_time\x18\b \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"updateTime\x128\n" +
-	"\vbase_amount\x18\b \x01(\v2\x12.saturn.type.MoneyB\x03\xe0A\x03R\n" +
+	"\vbase_amount\x18\t \x01(\v2\x12.saturn.type.MoneyB\x03\xe0A\x03R\n" +
 	"baseAmount\x12(\n" +
-	"\rexchange_rate\x18\t \x01(\x01B\x03\xe0A\x03R\fexchangeRate\x12:\n" +
-	"\x05stats\x18\n" +
-	" \x01(\v2\x1f.saturn.finance.v1.Budget.StatsB\x03\xe0A\x03R\x05stats\x1a\xcf\x02\n" +
+	"\rexchange_rate\x18\n" +
+	" \x01(\x01B\x03\xe0A\x03R\fexchangeRate\x12:\n" +
+	"\x05stats\x18\v \x01(\v2\x1f.saturn.finance.v1.Budget.StatsB\x03\xe0A\x03R\x05stats\x1a\xcf\x02\n" +
 	"\x05Stats\x125\n" +
 	"\fspent_amount\x18\x01 \x01(\v2\x12.saturn.type.MoneyR\vspentAmount\x12=\n" +
 	"\x10remaining_amount\x18\x02 \x01(\v2\x12.saturn.type.MoneyR\x0fremainingAmount\x12)\n" +
@@ -719,7 +786,14 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x04View\x12\x14\n" +
 	"\x10VIEW_UNSPECIFIED\x10\x00\x12\t\n" +
 	"\x05BASIC\x10\x01\x12\b\n" +
-	"\x04FULL\x10\x022\x9d\x05\n" +
+	"\x04FULL\x10\x02\"F\n" +
+	"\x06Status\x12\x16\n" +
+	"\x12STATUS_UNSPECIFIED\x10\x00\x12\n" +
+	"\n" +
+	"\x06ACTIVE\x10\x01\x12\n" +
+	"\n" +
+	"\x06PAUSED\x10\x02\x12\f\n" +
+	"\bARCHIVED\x10\x032\x9d\x05\n" +
 	"\aFinance\x12v\n" +
 	"\fCreateBudget\x12&.saturn.finance.v1.CreateBudgetRequest\x1a\x19.saturn.finance.v1.Budget\"#\x82\xd3\xe4\x93\x02\x1d:\x06budget\"\x13/v1/finance/budgets\x12y\n" +
 	"\vListBudgets\x12%.saturn.finance.v1.ListBudgetsRequest\x1a&.saturn.finance.v1.ListBudgetsResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/v1/finance/budgets\x12r\n" +
@@ -739,56 +813,58 @@ func file_saturn_finance_v1_finance_proto_rawDescGZIP() []byte {
 	return file_saturn_finance_v1_finance_proto_rawDescData
 }
 
-var file_saturn_finance_v1_finance_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_saturn_finance_v1_finance_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_saturn_finance_v1_finance_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_saturn_finance_v1_finance_proto_goTypes = []any{
 	(Budget_View)(0),              // 0: saturn.finance.v1.Budget.View
-	(*CreateBudgetRequest)(nil),   // 1: saturn.finance.v1.CreateBudgetRequest
-	(*ListBudgetsRequest)(nil),    // 2: saturn.finance.v1.ListBudgetsRequest
-	(*ListBudgetsResponse)(nil),   // 3: saturn.finance.v1.ListBudgetsResponse
-	(*GetBudgetRequest)(nil),      // 4: saturn.finance.v1.GetBudgetRequest
-	(*UpdateBudgetRequest)(nil),   // 5: saturn.finance.v1.UpdateBudgetRequest
-	(*DeleteBudgetRequest)(nil),   // 6: saturn.finance.v1.DeleteBudgetRequest
-	(*Budget)(nil),                // 7: saturn.finance.v1.Budget
-	(*Budget_Stats)(nil),          // 8: saturn.finance.v1.Budget.Stats
-	(*fieldmaskpb.FieldMask)(nil), // 9: google.protobuf.FieldMask
-	(*typepb.Appearance)(nil),     // 10: saturn.type.Appearance
-	(*typepb.Money)(nil),          // 11: saturn.type.Money
-	(*timestamppb.Timestamp)(nil), // 12: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),         // 13: google.protobuf.Empty
+	(Budget_Status)(0),            // 1: saturn.finance.v1.Budget.Status
+	(*CreateBudgetRequest)(nil),   // 2: saturn.finance.v1.CreateBudgetRequest
+	(*ListBudgetsRequest)(nil),    // 3: saturn.finance.v1.ListBudgetsRequest
+	(*ListBudgetsResponse)(nil),   // 4: saturn.finance.v1.ListBudgetsResponse
+	(*GetBudgetRequest)(nil),      // 5: saturn.finance.v1.GetBudgetRequest
+	(*UpdateBudgetRequest)(nil),   // 6: saturn.finance.v1.UpdateBudgetRequest
+	(*DeleteBudgetRequest)(nil),   // 7: saturn.finance.v1.DeleteBudgetRequest
+	(*Budget)(nil),                // 8: saturn.finance.v1.Budget
+	(*Budget_Stats)(nil),          // 9: saturn.finance.v1.Budget.Stats
+	(*fieldmaskpb.FieldMask)(nil), // 10: google.protobuf.FieldMask
+	(*typepb.Appearance)(nil),     // 11: saturn.type.Appearance
+	(*typepb.Money)(nil),          // 12: saturn.type.Money
+	(*timestamppb.Timestamp)(nil), // 13: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),         // 14: google.protobuf.Empty
 }
 var file_saturn_finance_v1_finance_proto_depIdxs = []int32{
-	7,  // 0: saturn.finance.v1.CreateBudgetRequest.budget:type_name -> saturn.finance.v1.Budget
+	8,  // 0: saturn.finance.v1.CreateBudgetRequest.budget:type_name -> saturn.finance.v1.Budget
 	0,  // 1: saturn.finance.v1.ListBudgetsRequest.view:type_name -> saturn.finance.v1.Budget.View
-	7,  // 2: saturn.finance.v1.ListBudgetsResponse.budgets:type_name -> saturn.finance.v1.Budget
+	8,  // 2: saturn.finance.v1.ListBudgetsResponse.budgets:type_name -> saturn.finance.v1.Budget
 	0,  // 3: saturn.finance.v1.GetBudgetRequest.view:type_name -> saturn.finance.v1.Budget.View
-	7,  // 4: saturn.finance.v1.UpdateBudgetRequest.budget:type_name -> saturn.finance.v1.Budget
-	9,  // 5: saturn.finance.v1.UpdateBudgetRequest.update_mask:type_name -> google.protobuf.FieldMask
-	10, // 6: saturn.finance.v1.Budget.appearance:type_name -> saturn.type.Appearance
-	11, // 7: saturn.finance.v1.Budget.amount:type_name -> saturn.type.Money
-	12, // 8: saturn.finance.v1.Budget.create_time:type_name -> google.protobuf.Timestamp
-	12, // 9: saturn.finance.v1.Budget.update_time:type_name -> google.protobuf.Timestamp
-	11, // 10: saturn.finance.v1.Budget.base_amount:type_name -> saturn.type.Money
-	8,  // 11: saturn.finance.v1.Budget.stats:type_name -> saturn.finance.v1.Budget.Stats
-	11, // 12: saturn.finance.v1.Budget.Stats.spent_amount:type_name -> saturn.type.Money
-	11, // 13: saturn.finance.v1.Budget.Stats.remaining_amount:type_name -> saturn.type.Money
-	12, // 14: saturn.finance.v1.Budget.Stats.period_start:type_name -> google.protobuf.Timestamp
-	12, // 15: saturn.finance.v1.Budget.Stats.period_end:type_name -> google.protobuf.Timestamp
-	1,  // 16: saturn.finance.v1.Finance.CreateBudget:input_type -> saturn.finance.v1.CreateBudgetRequest
-	2,  // 17: saturn.finance.v1.Finance.ListBudgets:input_type -> saturn.finance.v1.ListBudgetsRequest
-	4,  // 18: saturn.finance.v1.Finance.GetBudget:input_type -> saturn.finance.v1.GetBudgetRequest
-	5,  // 19: saturn.finance.v1.Finance.UpdateBudget:input_type -> saturn.finance.v1.UpdateBudgetRequest
-	6,  // 20: saturn.finance.v1.Finance.DeleteBudget:input_type -> saturn.finance.v1.DeleteBudgetRequest
-	7,  // 21: saturn.finance.v1.Finance.CreateBudget:output_type -> saturn.finance.v1.Budget
-	3,  // 22: saturn.finance.v1.Finance.ListBudgets:output_type -> saturn.finance.v1.ListBudgetsResponse
-	7,  // 23: saturn.finance.v1.Finance.GetBudget:output_type -> saturn.finance.v1.Budget
-	7,  // 24: saturn.finance.v1.Finance.UpdateBudget:output_type -> saturn.finance.v1.Budget
-	13, // 25: saturn.finance.v1.Finance.DeleteBudget:output_type -> google.protobuf.Empty
-	21, // [21:26] is the sub-list for method output_type
-	16, // [16:21] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	8,  // 4: saturn.finance.v1.UpdateBudgetRequest.budget:type_name -> saturn.finance.v1.Budget
+	10, // 5: saturn.finance.v1.UpdateBudgetRequest.update_mask:type_name -> google.protobuf.FieldMask
+	11, // 6: saturn.finance.v1.Budget.appearance:type_name -> saturn.type.Appearance
+	1,  // 7: saturn.finance.v1.Budget.status:type_name -> saturn.finance.v1.Budget.Status
+	12, // 8: saturn.finance.v1.Budget.amount:type_name -> saturn.type.Money
+	13, // 9: saturn.finance.v1.Budget.create_time:type_name -> google.protobuf.Timestamp
+	13, // 10: saturn.finance.v1.Budget.update_time:type_name -> google.protobuf.Timestamp
+	12, // 11: saturn.finance.v1.Budget.base_amount:type_name -> saturn.type.Money
+	9,  // 12: saturn.finance.v1.Budget.stats:type_name -> saturn.finance.v1.Budget.Stats
+	12, // 13: saturn.finance.v1.Budget.Stats.spent_amount:type_name -> saturn.type.Money
+	12, // 14: saturn.finance.v1.Budget.Stats.remaining_amount:type_name -> saturn.type.Money
+	13, // 15: saturn.finance.v1.Budget.Stats.period_start:type_name -> google.protobuf.Timestamp
+	13, // 16: saturn.finance.v1.Budget.Stats.period_end:type_name -> google.protobuf.Timestamp
+	2,  // 17: saturn.finance.v1.Finance.CreateBudget:input_type -> saturn.finance.v1.CreateBudgetRequest
+	3,  // 18: saturn.finance.v1.Finance.ListBudgets:input_type -> saturn.finance.v1.ListBudgetsRequest
+	5,  // 19: saturn.finance.v1.Finance.GetBudget:input_type -> saturn.finance.v1.GetBudgetRequest
+	6,  // 20: saturn.finance.v1.Finance.UpdateBudget:input_type -> saturn.finance.v1.UpdateBudgetRequest
+	7,  // 21: saturn.finance.v1.Finance.DeleteBudget:input_type -> saturn.finance.v1.DeleteBudgetRequest
+	8,  // 22: saturn.finance.v1.Finance.CreateBudget:output_type -> saturn.finance.v1.Budget
+	4,  // 23: saturn.finance.v1.Finance.ListBudgets:output_type -> saturn.finance.v1.ListBudgetsResponse
+	8,  // 24: saturn.finance.v1.Finance.GetBudget:output_type -> saturn.finance.v1.Budget
+	8,  // 25: saturn.finance.v1.Finance.UpdateBudget:output_type -> saturn.finance.v1.Budget
+	14, // 26: saturn.finance.v1.Finance.DeleteBudget:output_type -> google.protobuf.Empty
+	22, // [22:27] is the sub-list for method output_type
+	17, // [17:22] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_saturn_finance_v1_finance_proto_init() }
@@ -801,7 +877,7 @@ func file_saturn_finance_v1_finance_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_finance_v1_finance_proto_rawDesc), len(file_saturn_finance_v1_finance_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      2,
 			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,

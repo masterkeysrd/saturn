@@ -59,7 +59,7 @@ service Finance {
 // Request message for Finance.CreateBudget.
 message CreateBudgetRequest {
   // The budget to create.
-  saturn.finance.v1.Budget budget = 1 [(google.api.field_behavior) = REQUIRED];
+  Budget budget = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 // Request message for Finance.ListBudgets.
@@ -129,13 +129,27 @@ message Budget {
     VIEW_UNSPECIFIED = 0;
 
     // Basic view showing essential budget details,
-    // such as name, amount, and appearance.
+    // such as name, description, status, amount, and appearance.
     BASIC = 1;
 
     // Full view showing all budget details, including
     // base_amount, exchange_rate and statistics like spent amount,
     // remaining amount, and usage percentage.
     FULL = 2;
+  }
+
+  enum Status {
+    // Default status.
+    STATUS_UNSPECIFIED = 0;
+
+    // The budget is active and being tracked.
+    ACTIVE = 1;
+
+    // The budget is paused and not being tracked.
+    PAUSED = 2;
+
+    // The budget has been archived and is read-only.
+    ARCHIVED = 3;
   }
 
   // Statistics related to the budget.
@@ -174,26 +188,30 @@ message Budget {
   // The appearance settings for the budget.
   saturn.type.Appearance appearance = 4;
 
+  // The status of the budget.
+  // Defaults to ACTIVE.
+  Status status = 5 [(google.api.field_behavior) = OPTIONAL];
+
   // The amount allocated for the budget.
-  saturn.type.Money amount = 5 [(google.api.field_behavior) = REQUIRED];
+  saturn.type.Money amount = 6 [(google.api.field_behavior) = REQUIRED];
 
   // The creation time of the budget.
-  google.protobuf.Timestamp create_time = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp create_time = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // The last update time of the budget.
-  google.protobuf.Timestamp update_time = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp update_time = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // The base amount for the budget base current (space base amount).
   // the current period.
   // Only populated when View is FULL.
-  saturn.type.Money base_amount = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  saturn.type.Money base_amount = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // The exchange rate used to convert base_amount to amount
   // for the current period.
   // Only populated when View is FULL.
-  double exchange_rate = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+  double exchange_rate = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Statistics related to the budget.
   // Only populated when View is FULL.
-  Stats stats = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+  Stats stats = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
 }

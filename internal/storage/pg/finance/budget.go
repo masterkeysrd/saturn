@@ -4,19 +4,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
+	"log"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/foundation/appearance"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
+	"github.com/masterkeysrd/saturn/internal/foundation/space"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 )
 
 var _ finance.BudgetStore = (*BudgetStore)(nil)
 
 type BudgetStore struct {
-	db      *sqlx.DB
-	queries BudgetQueries
+	db *sqlx.DB
 }
 
 func NewBudgetStore(db *sqlx.DB) *BudgetStore {
@@ -25,48 +26,51 @@ func NewBudgetStore(db *sqlx.DB) *BudgetStore {
 	}
 }
 
-func (b *BudgetStore) Get(ctx context.Context, id finance.BudgetID) (*finance.Budget, error) {
-	var entity BudgetEntity
-	query := b.queries.Get()
-	if err := b.db.GetContext(ctx, &entity, query, id); err != nil {
-		return nil, fmt.Errorf("cannot list budgets: %w", err)
+func (b *BudgetStore) Get(ctx context.Context, key finance.BudgetKey) (*finance.Budget, error) {
+	entity, err := GetBudgetByID(ctx, b.db, &GetBudgetByIDParams{
+		Id:      key.ID.String(),
+		SpaceId: key.SpaceID.String(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("cannot get budget: %w", err)
 	}
 
-	return BudgetEntityToModel(&entity), nil
+	return entity.ToModel(), nil
 }
 
-func (b *BudgetStore) List(ctx context.Context) ([]*finance.Budget, error) {
-	var entities []*BudgetEntity
-	query := b.queries.List()
-	if err := b.db.SelectContext(ctx, &entities, query); err != nil {
+func (b *BudgetStore) List(ctx context.Context, spaceID space.ID) ([]*finance.Budget, error) {
+	log.Printf("Listing budgets for space ID: %s", spaceID.String())
+	budgets := make([]*finance.Budget, 0, 20) // initial capacity of 20
+	if err := ListBudgets(ctx, b.db, &ListBudgetsParams{
+		SpaceId: spaceID.String(),
+	}, func(e *BudgetEntity) error {
+		budgets = append(budgets, e.ToModel())
+		return nil
+	}); err != nil {
 		return nil, fmt.Errorf("cannot list budgets: %w", err)
-	}
-
-	budgets := make([]*finance.Budget, 0, len(entities))
-	for _, e := range entities {
-		budgets = append(budgets, BudgetEntityToModel(e))
 	}
 
 	return budgets, nil
 }
 
 func (b *BudgetStore) Store(ctx context.Context, budget *finance.Budget) error {
-	entity := BudgetEntityFromModel(budget)
-	query := b.queries.Upsert()
 
-	_, err := b.db.NamedExecContext(ctx, query, &entity)
+	entity, err := UpsertBudget(ctx, b.db, BudgetEntityFromModel(budget))
 	if err != nil {
 		return fmt.Errorf("cannot store budget: %w", err)
 	}
 
+	// Update the budget model with any changes from the database (e.g., generated IDs)
+	*budget = *entity.ToModel()
 	return nil
 }
 
-// Delete removes a single Budget record by its ID.
-func (b *BudgetStore) Delete(ctx context.Context, id finance.BudgetID) error {
-	query := b.queries.Delete()
-
-	result, err := b.db.ExecContext(ctx, query, id)
+// Delete removes a single Budget record by its Key.
+func (b *BudgetStore) Delete(ctx context.Context, key finance.BudgetKey) error {
+	result, err := DeleteBudgetByID(ctx, b.db, &DeleteBudgetByIDParams{
+		Id:      key.ID.String(),
+		SpaceId: key.SpaceID.String(),
+	})
 	if err != nil {
 		return fmt.Errorf("cannot delete budget: %w", err)
 	}
@@ -83,101 +87,46 @@ func (b *BudgetStore) Delete(ctx context.Context, id finance.BudgetID) error {
 	return nil
 }
 
-type BudgetQueries struct{}
-
-func (q BudgetQueries) Upsert() string {
-	return `
-	INSERT INTO budgets (id, name, color, icon_name, currency, amount, created_at, updated_at)
-	VALUES (:id, :name, :color, :icon_name, :currency, :amount, :created_at, :updated_at)
-	ON CONFLICT (id) DO UPDATE
-	SET name = EXCLUDED.name,
-		color = EXCLUDED.color,
-		icon_name = EXCLUDED.icon_name,
-    	amount = EXCLUDED.amount,
-    	updated_at = EXCLUDED.updated_at;
-	`
-}
-
-func (q BudgetQueries) Get() string {
-	return `
-	SELECT
-		id,
-		name,
-		color,
-		icon_name,
-		currency,
-		amount,
-		created_at,
-		updated_at
-	FROM
-		budgets
-	WHERE id = $1
-	`
-}
-
-func (q BudgetQueries) List() string {
-	return `
-	SELECT 
-		id, 
-		name, 
-		color,
-		icon_name,
-		currency,
-		amount,
-		created_at,
-		updated_at
-	FROM 
-		budgets
-	ORDER BY
-		created_at DESC
-	`
-}
-
 // Delete returns the SQL query for deleting a budget by ID.
-func (q BudgetQueries) Delete() string {
-	return `
-	DELETE FROM budgets
-	WHERE id = $1
-	`
-}
-
-type BudgetEntity struct {
-	ID        string             `db:"id"`
-	Name      string             `db:"name"`
-	Color     string             `db:"color"`
-	IconName  string             `db:"icon_name"`
-	Amount    money.Cents        `db:"amount"`
-	Currency  money.CurrencyCode `db:"currency"`
-	CreatedAt time.Time          `db:"created_at"`
-	UpdatedAt time.Time          `db:"updated_at"`
-}
 
 func BudgetEntityFromModel(b *finance.Budget) *BudgetEntity {
 	return &BudgetEntity{
-		ID:        b.ID.String(),
-		Name:      b.Name,
-		Color:     b.Color.String(),
-		IconName:  b.Icon.String(),
-		Currency:  b.Amount.Currency,
-		Amount:    b.Amount.Cents,
-		CreatedAt: b.CreatedAt,
-		UpdatedAt: b.UpdatedAt,
+		Id:             b.ID.String(),
+		SpaceId:        b.SpaceID.String(),
+		Name:           b.Name,
+		Description:    b.Description,
+		Color:          b.Color.String(),
+		IconName:       b.Icon.String(),
+		Status:         b.Status.String(),
+		AmountCurrency: b.Amount.Currency.String(),
+		AmountCents:    b.Amount.Cents.Int64(),
+		CreateTime:     b.CreateTime,
+		CreateBy:       b.CreateBy.String(),
+		UpdateTime:     b.UpdateTime,
+		UpdateBy:       b.UpdateBy.String(),
 	}
 }
 
-func BudgetEntityToModel(e *BudgetEntity) *finance.Budget {
+func (e *BudgetEntity) ToModel() *finance.Budget {
 	return &finance.Budget{
-		ID:   finance.BudgetID(e.ID),
-		Name: e.Name,
+		BudgetKey: finance.BudgetKey{
+			ID:      finance.BudgetID(e.Id),
+			SpaceID: space.ID(e.SpaceId),
+		},
+		Name:        e.Name,
+		Description: e.Description,
 		Appearance: appearance.Appearance{
 			Color: appearance.Color(e.Color),
 			Icon:  appearance.Icon(e.IconName),
 		},
+		Status: finance.BudgetStatus(e.Status),
 		Amount: money.Money{
-			Currency: e.Currency,
-			Cents:    e.Amount,
+			Currency: money.CurrencyCode(e.AmountCurrency),
+			Cents:    money.Cents(e.AmountCents),
 		},
-		CreatedAt: e.CreatedAt,
-		UpdatedAt: e.UpdatedAt,
+		CreateTime: e.CreateTime,
+		CreateBy:   auth.UserID(e.CreateBy),
+		UpdateTime: e.UpdateTime,
+		UpdateBy:   auth.UserID(e.UpdateBy),
 	}
 }
