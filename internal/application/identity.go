@@ -95,7 +95,7 @@ func (app *IdentityApp) CreateUser(ctx context.Context, req *CreateUserRequest) 
 	}
 
 	// After creating the user, we can create a default space for them
-	principal := access.NewPrincipal(user.ID, "", user.Role, "")
+	principal := access.NewPrincipal(user.ID, user.Role)
 
 	space := &tenancy.Space{
 		Name:        fmt.Sprintf("%s's Space", req.Name),

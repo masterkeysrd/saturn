@@ -25,11 +25,18 @@ type Principal struct {
 	spaceRole space.Role
 }
 
-func NewPrincipal(actorID auth.UserID, spaceID space.ID, systemRole auth.Role, spaceRole space.Role) Principal {
+func NewPrincipal(actorID auth.UserID, systemRole auth.Role) Principal {
 	return Principal{
 		actorID:    actorID,
-		spaceID:    spaceID,
 		systemRole: systemRole,
+	}
+}
+
+func (p Principal) WithSpace(spaceID space.ID, spaceRole space.Role) Principal {
+	return Principal{
+		actorID:    p.actorID,
+		spaceID:    spaceID,
+		systemRole: p.systemRole,
 		spaceRole:  spaceRole,
 	}
 }

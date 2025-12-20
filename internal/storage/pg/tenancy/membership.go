@@ -24,7 +24,27 @@ func (s *MembershipStore) Get(ctx context.Context, id tenancy.MembershipID) (*te
 }
 
 func (s *MembershipStore) ListBy(ctx context.Context, criteria tenancy.ListMembershipsCriteria) ([]*tenancy.Membership, error) {
-	return nil, nil
+	memberships := make([]*tenancy.Membership, 0, 10)
+	mf := func(m *MembershipEntity) error {
+		memberships = append(memberships, m.ToModel())
+		return nil
+	}
+
+	var err error
+	switch c := criteria.(type) {
+	case tenancy.ByUserID:
+		params := ListMembershipsByUserIDParams{
+			UserId: string(c),
+		}
+		err = ListMembershipsByUserID(ctx, s.db, &params, mf)
+	default:
+		return nil, fmt.Errorf("unsupported criteria type: %T", criteria)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return memberships, nil
 }
 
 func (s *MembershipStore) Store(ctx context.Context, membership *tenancy.Membership) error {
@@ -58,5 +78,16 @@ func NewMembershipEntityFromModel(m *tenancy.Membership) *MembershipEntity {
 		CreateTime: m.CreateTime,
 		UpdateBy:   ptr.OfNonZero(m.UpdateBy.String()),
 		UpdateTime: m.UpdateTime,
+	}
+}
+
+func (me *MembershipEntity) ToModel() *tenancy.Membership {
+	return &tenancy.Membership{
+		MembershipID: tenancy.MembershipID{
+			SpaceID: tenancy.SpaceID(me.SpaceId),
+			UserID:  tenancy.UserID(me.UserId),
+		},
+		Role:     tenancy.Role(me.Role),
+		JoinTime: me.JoinTime,
 	}
 }

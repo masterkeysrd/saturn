@@ -16,3 +16,8 @@ type BySpaceIDs []SpaceID
 
 // isListSpacesCriteria marks BySpaceIDs as a ListSpacesCriteria.
 func (c BySpaceIDs) isListSpacesCriteria() {}
+
+type ByUserIDs []UserID
+
+// isListSpacesCriteria marks ByUserIDs as a ListSpacesCriteria.
+func (c ByUserIDs) isListSpacesCriteria() {}

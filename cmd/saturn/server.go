@@ -9,10 +9,13 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	identitypb "github.com/masterkeysrd/saturn/gen/proto/go/saturn/identity/v1"
 	tenancypb "github.com/masterkeysrd/saturn/gen/proto/go/saturn/tenancy/v1"
+	"github.com/masterkeysrd/saturn/internal/domain/tenancy"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
 	"github.com/masterkeysrd/saturn/internal/transport/http/middleware"
 )
+
+type MembershipGetter func(context.Context, tenancy.MembershipID) (*tenancy.Membership, error)
 
 type Server struct {
 	handler http.Handler
@@ -24,8 +27,9 @@ type ServerParams struct {
 	IdentityServer identitypb.IdentityServer
 	TenancyServer  tenancypb.TenancyServer
 
-	TokenManager   auth.TokenManager
-	TokenBlacklist auth.TokenBlacklist
+	TokenManager     auth.TokenManager
+	TokenBlacklist   auth.TokenBlacklist
+	MembershipGetter MembershipGetter
 }
 
 func NewServer(params ServerParams) *Server {
@@ -47,8 +51,24 @@ func NewServer(params ServerParams) *Server {
 		TokenParser:      params.TokenManager.Parse,
 		BlacklistChecker: params.TokenBlacklist.IsRevoked,
 	})
+	accessMiddleware := middleware.NewAccessMiddleware(middleware.AccessConfig{
+		ExemptPaths: []string{
+			"/api/v1/identity/users",
+			"/api/v1/identity/users:login",
+			"/api/v1/identity/sessions:refresh",
+		},
+	})
+	spaceMiddleware := middleware.NewSpaceMiddleware(middleware.SpaceConfig{
+		ExemptPaths: []string{
+			"/api/v1/identity/users/*",
+			"/api/v1/spaces/*",
+		},
+		MembershipGetter: params.MembershipGetter,
+	})
 
 	var finalHandler http.Handler = handler
+	finalHandler = spaceMiddleware.Handler(finalHandler)
+	finalHandler = accessMiddleware.Handler(finalHandler)
 	finalHandler = authMiddleware.Handler(finalHandler)
 
 	return &Server{
@@ -68,18 +88,3 @@ func (s *Server) Start() error {
 
 	return nil
 }
-
-// func (s *Server) cors(handler http.Handler) http.Handler {
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		w.Header().Set("Access-Control-Allow-Origin", "*")
-// 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, PATCH, DELETE")
-// 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-//
-// 		if r.Method == http.MethodOptions {
-// 			w.WriteHeader(http.StatusOK)
-// 			return
-// 		}
-//
-// 		handler.ServeHTTP(w, r)
-// 	})
-// }

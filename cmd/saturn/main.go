@@ -214,5 +214,12 @@ func wireDeps(inj deps.Injector) error {
 		return fmt.Errorf("cannot inject infra.auth.MnemoTokenBlacklist dep: %w", err)
 	}
 
+	// Server Deps Wiring
+	if err := inj.Provide(func(s *tenancy.Service) MembershipGetter {
+		return s.GetMembership
+	}); err != nil {
+		return fmt.Errorf("cannot inject tenancy.Service dep: %w", err)
+	}
+
 	return nil
 }

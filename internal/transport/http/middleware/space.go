@@ -2,15 +2,16 @@ package middleware
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"net/textproto"
+	"strings"
 
 	"github.com/masterkeysrd/saturn/internal/domain/tenancy"
 	"github.com/masterkeysrd/saturn/internal/foundation/access"
-	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 )
 
-var SpaceHeader = textproto.CanonicalMIMEHeaderKey("X-Space-ID")
+var SpaceHeader = textproto.CanonicalMIMEHeaderKey("X-Saturn-Space-ID")
 
 type SpaceConfig struct {
 	// Paths to exempt from authentication.
@@ -22,7 +23,11 @@ type SpaceConfig struct {
 
 type SpaceMiddleware struct {
 	config      SpaceConfig
-	exemptPaths map[string]struct{}
+	exemptPaths []struct {
+		path        string
+		methods     []string
+		matchPrefix bool
+	}
 }
 
 func NewSpaceMiddleware(config SpaceConfig) *SpaceMiddleware {
@@ -30,20 +35,47 @@ func NewSpaceMiddleware(config SpaceConfig) *SpaceMiddleware {
 		panic("MembershipGetter function must be provided")
 	}
 
-	exemptPaths := make(map[string]struct{})
-	for _, path := range config.ExemptPaths {
-		exemptPaths[path] = struct{}{}
+	sm := &SpaceMiddleware{
+		config: config,
 	}
 
-	return &SpaceMiddleware{
-		config:      config,
-		exemptPaths: exemptPaths,
+	for _, p := range config.ExemptPaths {
+		var path string
+		var methods []string
+
+		parts := strings.SplitN(p, " ", 2)
+		if len(parts) == 2 {
+			methods = strings.Split(parts[0], ",")
+			path = parts[1]
+		} else {
+			path = parts[0]
+			methods = nil
+		}
+
+		matchPrefix := false
+		if strings.HasSuffix(path, "*") {
+			matchPrefix = true
+			path = strings.TrimSuffix(path, "*")
+			path = strings.TrimSuffix(path, "/")
+		}
+
+		sm.exemptPaths = append(sm.exemptPaths, struct {
+			path        string
+			methods     []string
+			matchPrefix bool
+		}{
+			path:        path,
+			methods:     methods,
+			matchPrefix: matchPrefix,
+		})
 	}
+
+	return sm
 }
 
 func (sm *SpaceMiddleware) Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if _, skip := sm.exemptPaths[r.URL.Path]; skip {
+		if sm.isExempt(r.URL.Path, r.Method) {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -61,39 +93,61 @@ func (sm *SpaceMiddleware) Handler(next http.Handler) http.Handler {
 		spaceID := tenancy.SpaceID(spaceIDs[0])
 
 		ctx := r.Context()
-		passport, ok := auth.GetCurrentUserPassport(ctx)
+		principal, ok := access.GetPrincipal(ctx)
 		if !ok {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			http.Error(w, "Unauthenticated: principal not found", http.StatusUnauthorized)
+			return
+		}
+
+		if principal.IsSystemAdmin() {
+			// System admins have access to all spaces
+			ctx = access.InjectPrincipal(ctx, principal.WithSpace(spaceID, tenancy.RoleAdmin))
+			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
 
 		membership, err := sm.config.MembershipGetter(ctx, tenancy.MembershipID{
 			SpaceID: tenancy.SpaceID(spaceID),
-			UserID:  passport.UserID(),
+			UserID:  principal.ActorID(),
 		})
 		if err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 
-		var spaceRole tenancy.Role
-		if membership != nil {
-			spaceRole = membership.Role
-		} else {
-			if passport.IsAdmin() {
-				spaceRole = tenancy.RoleAdmin
-			} else {
-				http.Error(w, "Space not found or access denied", http.StatusForbidden)
-				return
-			}
+		if membership == nil {
+			http.Error(w, "Space not found or access denied", http.StatusForbidden)
+			return
 		}
 
-		ctx = access.InjectPrincipal(ctx, access.NewPrincipal(
-			passport.UserID(),
-			spaceID,
-			passport.Role(),
-			spaceRole,
-		))
+		ctx = access.InjectPrincipal(ctx, principal.WithSpace(spaceID, membership.Role))
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func (sm *SpaceMiddleware) isExempt(path, method string) bool {
+	log.Printf("Checking exemption for path: %s, method: %s, exemptPaths: %+v", path, method, sm.exemptPaths)
+	for _, ep := range sm.exemptPaths {
+		if ep.matchPrefix && !strings.HasPrefix(path, ep.path) {
+			continue
+		}
+
+		if !ep.matchPrefix && path != ep.path {
+			continue
+		}
+
+		if len(ep.methods) == 0 {
+			log.Printf("Path %s is exempt for all methods", path)
+			return true
+		}
+
+		for _, m := range ep.methods {
+			if strings.EqualFold(m, method) {
+				log.Printf("Path %s with method %s is exempt", path, method)
+				return true
+			}
+		}
+	}
+	log.Printf("Path %s with method %s is not exempt", path, method)
+	return false
 }

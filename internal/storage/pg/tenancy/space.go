@@ -6,6 +6,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/tenancy"
+	"github.com/masterkeysrd/saturn/internal/foundation/audit"
 	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 )
 
@@ -24,7 +25,30 @@ func (s *SpaceStore) Get(ctx context.Context, id tenancy.SpaceID) (*tenancy.Spac
 }
 
 func (s *SpaceStore) ListBy(ctx context.Context, criteria tenancy.ListSpacesCriteria) ([]*tenancy.Space, error) {
-	return nil, nil
+	spaces := make([]*tenancy.Space, 0, 10)
+	mf := func(se *SpaceEntity) error {
+		spaces = append(spaces, se.ToModel())
+		return nil
+	}
+
+	var err error
+	switch c := criteria.(type) {
+	case tenancy.BySpaceIDs:
+		params := ListSpacesBySpaceIDsParams{
+			SpaceIds: make([]string, len(c)),
+		}
+		for i, sid := range c {
+			params.SpaceIds.([]string)[i] = string(sid)
+		}
+		err = ListSpacesBySpaceIDs(ctx, s.db, &params, mf)
+	default:
+		return nil, fmt.Errorf("unsupported criteria type: %T", criteria)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return spaces, nil
 }
 
 func (s *SpaceStore) Store(ctx context.Context, space *tenancy.Space) error {
@@ -66,4 +90,32 @@ func NewSpaceEntityFromModel(space *tenancy.Space) *SpaceEntity {
 	}
 
 	return &se
+}
+
+func (se *SpaceEntity) ToModel() *tenancy.Space {
+	space := &tenancy.Space{
+		ID:          tenancy.SpaceID(se.Id),
+		OwnerID:     tenancy.UserID(se.OwnerId),
+		Name:        se.Name,
+		Alias:       se.Alias,
+		Description: se.Description,
+		Metadata: audit.Metadata{
+			CreateTime: se.CreateTime,
+			UpdateTime: se.UpdateTime,
+		},
+	}
+	if se.CreateBy != nil {
+		space.CreateBy = tenancy.UserID(*se.CreateBy)
+	}
+	if se.UpdateBy != nil {
+		space.UpdateBy = tenancy.UserID(*se.UpdateBy)
+	}
+	if se.DeleteTime != nil {
+		space.DeleteTime = se.DeleteTime
+	}
+	if se.DeleteBy != nil {
+		db := tenancy.UserID(*se.DeleteBy)
+		space.DeleteBy = &db
+	}
+	return space
 }

@@ -4,11 +4,29 @@ package tenancypg
 import (
 	"context"
 	"database/sql"
-	"github.com/jmoiron/sqlx"
 	"time"
+
+	"github.com/jmoiron/sqlx"
 )
 
 const (
+	// ListSpacesBySpaceIDsQuery is the SQL for the 'ListSpacesBySpaceIDs' query.
+	ListSpacesBySpaceIDsQuery = `
+SELECT
+  id,
+  owner_id,
+  name,
+  alias,
+  description,
+  create_by,
+  create_time,
+  update_by,
+  update_time
+FROM
+  tenancy.spaces
+WHERE
+  id = ANY (:space_ids);`
+
 	// UpsertSpaceQuery is the SQL for the 'UpsertSpace' query.
 	UpsertSpaceQuery = `
 INSERT INTO
@@ -43,6 +61,22 @@ SET
   description = EXCLUDED.description,
   update_by = EXCLUDED.update_by,
   update_time = EXCLUDED.update_time;`
+
+	// ListMembershipsByUserIDQuery is the SQL for the 'ListMembershipsByUserID' query.
+	ListMembershipsByUserIDQuery = `
+SELECT
+  space_id,
+  user_id,
+  role,
+  join_time,
+  create_by,
+  create_time,
+  update_by,
+  update_time
+FROM
+  tenancy.memberships
+WHERE
+  user_id =:user_id;`
 
 	// UpsertMembershipQuery is the SQL for the 'UpsertMembership' query.
 	UpsertMembershipQuery = `
@@ -102,19 +136,71 @@ type SpaceEntity struct {
 	DeleteTime  *time.Time `db:"delete_time"`
 }
 
+// ListSpacesBySpaceIDsParams represents the parameters for the 'ListSpacesBySpaceIDs' query.
+type ListSpacesBySpaceIDsParams struct {
+	SpaceIds any `db:"space_ids"`
+}
+
 // UpsertSpaceParams represents the parameters for the 'UpsertSpace' query.
 //
 // UpsertSpaceParams is an alias of [SpaceEntity].
 type UpsertSpaceParams = SpaceEntity
+
+// ListMembershipsByUserIDParams represents the parameters for the 'ListMembershipsByUserID' query.
+type ListMembershipsByUserIDParams struct {
+	UserId string `db:"user_id"`
+}
 
 // UpsertMembershipParams represents the parameters for the 'UpsertMembership' query.
 //
 // UpsertMembershipParams is an alias of [MembershipEntity].
 type UpsertMembershipParams = MembershipEntity
 
+// ListSpacesBySpaceIDs executes the 'ListSpacesBySpaceIDs' query and returns multiple rows.
+func ListSpacesBySpaceIDs(ctx context.Context, db sqlx.ExtContext, params *ListSpacesBySpaceIDsParams, mapper func(*SpaceEntity) error) error {
+	rows, err := sqlx.NamedQueryContext(ctx, db, ListSpacesBySpaceIDsQuery, params)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var item SpaceEntity
+		if err := rows.StructScan(&item); err != nil {
+			return err
+		}
+		if err := mapper(&item); err != nil {
+			return err
+		}
+	}
+
+	return rows.Err()
+}
+
 // UpsertSpace executes the 'UpsertSpace' query.
 func UpsertSpace(ctx context.Context, e sqlx.ExtContext, params *UpsertSpaceParams) (sql.Result, error) {
 	return sqlx.NamedExecContext(ctx, e, UpsertSpaceQuery, params)
+}
+
+// ListMembershipsByUserID executes the 'ListMembershipsByUserID' query and returns multiple rows.
+func ListMembershipsByUserID(ctx context.Context, db sqlx.ExtContext, params *ListMembershipsByUserIDParams, mapper func(*MembershipEntity) error) error {
+	rows, err := sqlx.NamedQueryContext(ctx, db, ListMembershipsByUserIDQuery, params)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var item MembershipEntity
+		if err := rows.StructScan(&item); err != nil {
+			return err
+		}
+		if err := mapper(&item); err != nil {
+			return err
+		}
+	}
+
+	return rows.Err()
 }
 
 // UpsertMembership executes the 'UpsertMembership' query.

@@ -24,6 +24,14 @@ func CreateRequest(req *tenancypb.CreateSpaceRequest) *application.CreateSpaceRe
 	}
 }
 
+func SpacesPb(spaces []*tenancy.Space) []*tenancypb.Space {
+	result := make([]*tenancypb.Space, 0, len(spaces))
+	for _, m := range spaces {
+		result = append(result, SpacePb(m))
+	}
+	return result
+}
+
 func SpacePb(m *tenancy.Space) *tenancypb.Space {
 	if m == nil {
 		return nil

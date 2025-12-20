@@ -3,6 +3,7 @@ package tenancy
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/masterkeysrd/saturn/internal/foundation/access"
 	"github.com/masterkeysrd/saturn/internal/foundation/fieldmask"
@@ -64,7 +65,43 @@ func (s *Service) CreateSpace(ctx context.Context, principal access.Principal, s
 	return nil
 }
 
-func (s *Service) Update(ctx context.Context, principal UserID, update *Space, fields *fieldmask.FieldMask) error {
+func (s *Service) ListSpaces(ctx context.Context, principal UserID) ([]*Space, error) {
+	if err := id.Validate(principal); err != nil {
+		return nil, fmt.Errorf("invalid principal ID: %w", err)
+	}
+
+	memberships, err := s.membershipStore.ListBy(ctx, ByUserID(principal))
+	if err != nil {
+		return nil, fmt.Errorf("failed to list memberships: %w", err)
+	}
+
+	log.Println("Service: Retrieved memberships", "count:", len(memberships))
+	if len(memberships) == 0 {
+		return []*Space{}, nil
+	}
+
+	spaceIDs := make([]SpaceID, 0, len(memberships))
+	for _, membership := range memberships {
+		spaceIDs = append(spaceIDs, membership.SpaceID)
+	}
+
+	spaces, err := s.spaceStore.ListBy(ctx, BySpaceIDs(spaceIDs))
+	if err != nil {
+		return nil, fmt.Errorf("failed to list spaces: %w", err)
+	}
+
+	return spaces, nil
+}
+
+func (s *Service) GetMembership(ctx context.Context, membershipID MembershipID) (*Membership, error) {
+	membership, err := s.membershipStore.Get(ctx, membershipID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get membership: %w", err)
+	}
+	return membership, nil
+}
+
+func (s *Service) UpdateSpace(ctx context.Context, principal UserID, update *Space, fields *fieldmask.FieldMask) error {
 	if err := id.Validate(principal); err != nil {
 		return fmt.Errorf("invalid principal ID: %w", err)
 	}
