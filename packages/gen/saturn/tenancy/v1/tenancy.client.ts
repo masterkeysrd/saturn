@@ -1,12 +1,12 @@
 import { getAxios } from '@saturn/sdk/client';
 import * as Types from './tenancy_pb';
-import { create, fromJson, toJson } from '@bufbuild/protobuf';
+import { create, fromJson, type MessageInitShape, toJson } from '@bufbuild/protobuf';
 
 /**
  * @param req Types.CreateSpaceRequest
  * @returns Promise<Types.Space>
  */
-export async function createSpace(req: Types.CreateSpaceRequest): Promise<Types.Space> {
+export async function createSpace(req: MessageInitShape<typeof Types.CreateSpaceRequestSchema>): Promise<Types.Space> {
   const msg = create(Types.CreateSpaceRequestSchema, req);
   const body = toJson(Types.CreateSpaceRequestSchema, msg);
 
@@ -23,7 +23,7 @@ export async function createSpace(req: Types.CreateSpaceRequest): Promise<Types.
  * @param req Types.ListSpacesRequest
  * @returns Promise<Types.ListSpacesResponse>
  */
-export async function listSpaces(req: Types.ListSpacesRequest): Promise<Types.ListSpacesResponse> {
+export async function listSpaces(req: MessageInitShape<typeof Types.ListSpacesRequestSchema>): Promise<Types.ListSpacesResponse> {
   const msg = create(Types.ListSpacesRequestSchema, req);
   const body = toJson(Types.ListSpacesRequestSchema, msg);
 
@@ -49,7 +49,7 @@ export async function listSpaces(req: Types.ListSpacesRequest): Promise<Types.Li
  * @param req Types.GetSpaceRequest
  * @returns Promise<Types.Space>
  */
-export async function getSpace(req: Types.GetSpaceRequest): Promise<Types.Space> {
+export async function getSpace(req: MessageInitShape<typeof Types.GetSpaceRequestSchema>): Promise<Types.Space> {
   const msg = create(Types.GetSpaceRequestSchema, req);
   const body = toJson(Types.GetSpaceRequestSchema, msg);
 
@@ -72,7 +72,7 @@ export async function getSpace(req: Types.GetSpaceRequest): Promise<Types.Space>
  * @param req Types.UpdateSpaceRequest
  * @returns Promise<Types.Space>
  */
-export async function updateSpace(req: Types.UpdateSpaceRequest): Promise<Types.Space> {
+export async function updateSpace(req: MessageInitShape<typeof Types.UpdateSpaceRequestSchema>): Promise<Types.Space> {
   const msg = create(Types.UpdateSpaceRequestSchema, req);
   const body = toJson(Types.UpdateSpaceRequestSchema, msg);
 
@@ -97,7 +97,7 @@ export async function updateSpace(req: Types.UpdateSpaceRequest): Promise<Types.
  * @param req Types.DeleteSpaceRequest
  * @returns Promise<void>
  */
-export async function deleteSpace(req: Types.DeleteSpaceRequest): Promise<void> {
+export async function deleteSpace(req: MessageInitShape<typeof Types.DeleteSpaceRequestSchema>): Promise<void> {
   const msg = create(Types.DeleteSpaceRequestSchema, req);
   const body = toJson(Types.DeleteSpaceRequestSchema, msg);
 
@@ -114,7 +114,7 @@ export async function deleteSpace(req: Types.DeleteSpaceRequest): Promise<void> 
  * @param req Types.AddMemberRequest
  * @returns Promise<Types.Member>
  */
-export async function addMember(req: Types.AddMemberRequest): Promise<Types.Member> {
+export async function addMember(req: MessageInitShape<typeof Types.AddMemberRequestSchema>): Promise<Types.Member> {
   const msg = create(Types.AddMemberRequestSchema, req);
   const body = toJson(Types.AddMemberRequestSchema, msg);
 
@@ -132,7 +132,7 @@ export async function addMember(req: Types.AddMemberRequest): Promise<Types.Memb
  * @param req Types.ListMembersRequest
  * @returns Promise<Types.ListMembersResponse>
  */
-export async function listMembers(req: Types.ListMembersRequest): Promise<Types.ListMembersResponse> {
+export async function listMembers(req: MessageInitShape<typeof Types.ListMembersRequestSchema>): Promise<Types.ListMembersResponse> {
   const msg = create(Types.ListMembersRequestSchema, req);
   const body = toJson(Types.ListMembersRequestSchema, msg);
 
@@ -156,7 +156,7 @@ export async function listMembers(req: Types.ListMembersRequest): Promise<Types.
  * @param req Types.UpdateMemberRequest
  * @returns Promise<Types.Member>
  */
-export async function updateMember(req: Types.UpdateMemberRequest): Promise<Types.Member> {
+export async function updateMember(req: MessageInitShape<typeof Types.UpdateMemberRequestSchema>): Promise<Types.Member> {
   const msg = create(Types.UpdateMemberRequestSchema, req);
   const body = toJson(Types.UpdateMemberRequestSchema, msg);
 
@@ -183,7 +183,7 @@ export async function updateMember(req: Types.UpdateMemberRequest): Promise<Type
  * @param req Types.RemoveMemberRequest
  * @returns Promise<void>
  */
-export async function removeMember(req: Types.RemoveMemberRequest): Promise<void> {
+export async function removeMember(req: MessageInitShape<typeof Types.RemoveMemberRequestSchema>): Promise<void> {
   const msg = create(Types.RemoveMemberRequestSchema, req);
   const body = toJson(Types.RemoveMemberRequestSchema, msg);
 

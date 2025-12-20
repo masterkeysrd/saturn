@@ -1,6 +1,6 @@
 import { getAxios } from '@saturn/sdk/client';
 import * as Types from './identity_pb';
-import { create, fromJson, toJson } from '@bufbuild/protobuf';
+import { create, fromJson, type MessageInitShape, toJson } from '@bufbuild/protobuf';
 
 /**
  * CreateUser registers a new user identity with the system.
@@ -19,7 +19,7 @@ import { create, fromJson, toJson } from '@bufbuild/protobuf';
  * @param req Types.CreateUserRequest
  * @returns Promise<Types.User>
  */
-export async function createUser(req: Types.CreateUserRequest): Promise<Types.User> {
+export async function createUser(req: MessageInitShape<typeof Types.CreateUserRequestSchema>): Promise<Types.User> {
   const msg = create(Types.CreateUserRequestSchema, req);
   const body = toJson(Types.CreateUserRequestSchema, msg);
 
@@ -37,7 +37,7 @@ export async function createUser(req: Types.CreateUserRequest): Promise<Types.Us
  * @param req Types.GetUserRequest
  * @returns Promise<Types.User>
  */
-export async function getUser(req: Types.GetUserRequest): Promise<Types.User> {
+export async function getUser(req: MessageInitShape<typeof Types.GetUserRequestSchema>): Promise<Types.User> {
   const msg = create(Types.GetUserRequestSchema, req);
   const body = toJson(Types.GetUserRequestSchema, msg);
 
@@ -55,7 +55,7 @@ export async function getUser(req: Types.GetUserRequest): Promise<Types.User> {
  * @param req Types.UpdateUserRequest
  * @returns Promise<Types.User>
  */
-export async function updateUser(req: Types.UpdateUserRequest): Promise<Types.User> {
+export async function updateUser(req: MessageInitShape<typeof Types.UpdateUserRequestSchema>): Promise<Types.User> {
   const msg = create(Types.UpdateUserRequestSchema, req);
   const body = toJson(Types.UpdateUserRequestSchema, msg);
 
@@ -91,7 +91,7 @@ export async function updateUser(req: Types.UpdateUserRequest): Promise<Types.Us
  * @param req Types.LoginUserRequest
  * @returns Promise<Types.TokenPair>
  */
-export async function loginUser(req: Types.LoginUserRequest): Promise<Types.TokenPair> {
+export async function loginUser(req: MessageInitShape<typeof Types.LoginUserRequestSchema>): Promise<Types.TokenPair> {
   const msg = create(Types.LoginUserRequestSchema, req);
   const body = toJson(Types.LoginUserRequestSchema, msg);
 
@@ -122,7 +122,7 @@ export async function logoutUser(): Promise<void> {
  * @param req Types.ListSessionsRequest
  * @returns Promise<Types.ListSessionsResponse>
  */
-export async function listSessions(req: Types.ListSessionsRequest): Promise<Types.ListSessionsResponse> {
+export async function listSessions(req: MessageInitShape<typeof Types.ListSessionsRequestSchema>): Promise<Types.ListSessionsResponse> {
   const msg = create(Types.ListSessionsRequestSchema, req);
   const body = toJson(Types.ListSessionsRequestSchema, msg);
 
@@ -144,7 +144,7 @@ export async function listSessions(req: Types.ListSessionsRequest): Promise<Type
  * @param req Types.RefreshSessionRequest
  * @returns Promise<Types.TokenPair>
  */
-export async function refreshSession(req: Types.RefreshSessionRequest): Promise<Types.TokenPair> {
+export async function refreshSession(req: MessageInitShape<typeof Types.RefreshSessionRequestSchema>): Promise<Types.TokenPair> {
   const msg = create(Types.RefreshSessionRequestSchema, req);
   const body = toJson(Types.RefreshSessionRequestSchema, msg);
 
@@ -161,7 +161,7 @@ export async function refreshSession(req: Types.RefreshSessionRequest): Promise<
  * @param req Types.RevokeSessionRequest
  * @returns Promise<void>
  */
-export async function revokeSession(req: Types.RevokeSessionRequest): Promise<void> {
+export async function revokeSession(req: MessageInitShape<typeof Types.RevokeSessionRequestSchema>): Promise<void> {
   const msg = create(Types.RevokeSessionRequestSchema, req);
   const body = toJson(Types.RevokeSessionRequestSchema, msg);
 

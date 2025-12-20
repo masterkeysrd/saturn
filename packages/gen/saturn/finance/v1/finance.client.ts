@@ -1,6 +1,6 @@
 import { getAxios } from '@saturn/sdk/client';
 import * as Types from './finance_pb';
-import { create, fromJson, toJson } from '@bufbuild/protobuf';
+import { create, fromJson, type MessageInitShape, toJson } from '@bufbuild/protobuf';
 
 /**
  * Creates a new budget.
@@ -8,7 +8,7 @@ import { create, fromJson, toJson } from '@bufbuild/protobuf';
  * @param req Types.CreateBudgetRequest
  * @returns Promise<Types.Budget>
  */
-export async function createBudget(req: Types.CreateBudgetRequest): Promise<Types.Budget> {
+export async function createBudget(req: MessageInitShape<typeof Types.CreateBudgetRequestSchema>): Promise<Types.Budget> {
   const msg = create(Types.CreateBudgetRequestSchema, req);
   const body = toJson(Types.CreateBudgetRequestSchema, msg);
 
@@ -26,7 +26,7 @@ export async function createBudget(req: Types.CreateBudgetRequest): Promise<Type
  * @param req Types.ListBudgetsRequest
  * @returns Promise<Types.ListBudgetsResponse>
  */
-export async function listBudgets(req: Types.ListBudgetsRequest): Promise<Types.ListBudgetsResponse> {
+export async function listBudgets(req: MessageInitShape<typeof Types.ListBudgetsRequestSchema>): Promise<Types.ListBudgetsResponse> {
   const msg = create(Types.ListBudgetsRequestSchema, req);
   const body = toJson(Types.ListBudgetsRequestSchema, msg);
 
@@ -51,7 +51,7 @@ export async function listBudgets(req: Types.ListBudgetsRequest): Promise<Types.
  * @param req Types.GetBudgetRequest
  * @returns Promise<Types.Budget>
  */
-export async function getBudget(req: Types.GetBudgetRequest): Promise<Types.Budget> {
+export async function getBudget(req: MessageInitShape<typeof Types.GetBudgetRequestSchema>): Promise<Types.Budget> {
   const msg = create(Types.GetBudgetRequestSchema, req);
   const body = toJson(Types.GetBudgetRequestSchema, msg);
 
@@ -72,7 +72,7 @@ export async function getBudget(req: Types.GetBudgetRequest): Promise<Types.Budg
  * @param req Types.UpdateBudgetRequest
  * @returns Promise<Types.Budget>
  */
-export async function updateBudget(req: Types.UpdateBudgetRequest): Promise<Types.Budget> {
+export async function updateBudget(req: MessageInitShape<typeof Types.UpdateBudgetRequestSchema>): Promise<Types.Budget> {
   const msg = create(Types.UpdateBudgetRequestSchema, req);
   const body = toJson(Types.UpdateBudgetRequestSchema, msg);
 
@@ -94,7 +94,7 @@ export async function updateBudget(req: Types.UpdateBudgetRequest): Promise<Type
  * @param req Types.DeleteBudgetRequest
  * @returns Promise<void>
  */
-export async function deleteBudget(req: Types.DeleteBudgetRequest): Promise<void> {
+export async function deleteBudget(req: MessageInitShape<typeof Types.DeleteBudgetRequestSchema>): Promise<void> {
   const msg = create(Types.DeleteBudgetRequestSchema, req);
   const body = toJson(Types.DeleteBudgetRequestSchema, msg);
 
