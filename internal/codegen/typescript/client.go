@@ -30,7 +30,7 @@ func GenerateAxios(gen *protogen.Plugin, file *protogen.File, options GenerateAx
 	// Import statements
 	g.P("import { getAxios } from '", options.AxiosImportPath, "';")
 	g.P("import * as Types from './", typesFilename, "';")
-	g.P("import { create, fromJson, toJson } from '@bufbuild/protobuf';")
+	g.P("import { create, fromJson, type MessageInitShape, toJson } from '@bufbuild/protobuf';")
 	g.P("")
 
 	for _, service := range file.Services {
@@ -72,7 +72,7 @@ func GenerateAxios(gen *protogen.Plugin, file *protogen.File, options GenerateAx
 				resType = "void"
 			}
 
-			inputArg := "req: " + reqType
+			inputArg := "req: " + fmt.Sprintf("MessageInitShape<typeof %s>", reqSchema)
 			if reqType == "" {
 				inputArg = ""
 			}
