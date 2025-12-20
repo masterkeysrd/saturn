@@ -4,9 +4,8 @@ package tenancypg
 import (
 	"context"
 	"database/sql"
-	"time"
-
 	"github.com/jmoiron/sqlx"
+	"time"
 )
 
 const (
@@ -61,6 +60,23 @@ SET
   description = EXCLUDED.description,
   update_by = EXCLUDED.update_by,
   update_time = EXCLUDED.update_time;`
+
+	// GetMembershipByIDQuery is the SQL for the 'GetMembershipByID' query.
+	GetMembershipByIDQuery = `
+SELECT
+  space_id,
+  user_id,
+  role,
+  join_time,
+  create_by,
+  create_time,
+  update_by,
+  update_time
+FROM
+  tenancy.memberships
+WHERE
+  space_id =:space_id
+  AND user_id =:user_id;`
 
 	// ListMembershipsByUserIDQuery is the SQL for the 'ListMembershipsByUserID' query.
 	ListMembershipsByUserIDQuery = `
@@ -146,6 +162,12 @@ type ListSpacesBySpaceIDsParams struct {
 // UpsertSpaceParams is an alias of [SpaceEntity].
 type UpsertSpaceParams = SpaceEntity
 
+// GetMembershipByIDParams represents the parameters for the 'GetMembershipByID' query.
+type GetMembershipByIDParams struct {
+	SpaceId string `db:"space_id"`
+	UserId  string `db:"user_id"`
+}
+
 // ListMembershipsByUserIDParams represents the parameters for the 'ListMembershipsByUserID' query.
 type ListMembershipsByUserIDParams struct {
 	UserId string `db:"user_id"`
@@ -180,6 +202,23 @@ func ListSpacesBySpaceIDs(ctx context.Context, db sqlx.ExtContext, params *ListS
 // UpsertSpace executes the 'UpsertSpace' query.
 func UpsertSpace(ctx context.Context, e sqlx.ExtContext, params *UpsertSpaceParams) (sql.Result, error) {
 	return sqlx.NamedExecContext(ctx, e, UpsertSpaceQuery, params)
+}
+
+// GetMembershipByID executes the 'GetMembershipByID' query and returns a single row.
+func GetMembershipByID(ctx context.Context, db sqlx.ExtContext, params *GetMembershipByIDParams) (*MembershipEntity, error) {
+	query, args, err := sqlx.Named(GetMembershipByIDQuery, params)
+	if err != nil {
+		return nil, err
+	}
+
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
+
+	var item MembershipEntity
+	if err := sqlx.GetContext(ctx, db, &item, query, args...); err != nil {
+		return nil, err
+	}
+
+	return &item, nil
 }
 
 // ListMembershipsByUserID executes the 'ListMembershipsByUserID' query and returns multiple rows.

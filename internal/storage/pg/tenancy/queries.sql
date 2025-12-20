@@ -58,6 +58,24 @@ SET
 ----------------------------------------------
 -- SQL Queries for Membership Management
 ----------------------------------------------
+-- name: GetMembershipByID
+-- return: one
+-- return_type: MembershipEntity
+SELECT
+  space_id,
+  user_id,
+  role,
+  join_time,
+  create_by,
+  create_time,
+  update_by,
+  update_time
+FROM
+  tenancy.memberships
+WHERE
+  space_id =:space_id
+  AND user_id =:user_id;
+
 -- name: ListMembershipsByUserID
 -- return: many
 -- return_type: MembershipEntity

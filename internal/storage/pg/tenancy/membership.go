@@ -20,7 +20,14 @@ func NewMembershipStore(db *sqlx.DB) *MembershipStore {
 }
 
 func (s *MembershipStore) Get(ctx context.Context, id tenancy.MembershipID) (*tenancy.Membership, error) {
-	return nil, nil
+	entity, err := GetMembershipByID(ctx, s.db, &GetMembershipByIDParams{
+		SpaceId: id.SpaceID.String(),
+		UserId:  id.UserID.String(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return entity.ToModel(), nil
 }
 
 func (s *MembershipStore) ListBy(ctx context.Context, criteria tenancy.ListMembershipsCriteria) ([]*tenancy.Membership, error) {
