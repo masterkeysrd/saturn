@@ -8,10 +8,7 @@ lint: proto/lint
 generate: proto/generate
 
 app/start:
-	$(DOCKER-COMPOSE) -f deployments/docker-compose/app.yaml up \
-		--build \
-		--detach \
-		--remove-orphans
+	$(DOCKER-COMPOSE) -f deployments/docker-compose/app.yaml watch
 
 app/stop:
 	$(DOCKER-COMPOSE) -f deployments/docker-compose/app.yaml down

@@ -12,6 +12,11 @@ services:
       file: postgres.yaml
       service: pg-web
 
+  swagger-ui:
+    extends:
+      file: swagger.yaml
+      service: swagger-ui
+
 volumes:
   postgres-data:
 
