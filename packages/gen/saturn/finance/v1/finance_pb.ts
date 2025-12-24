@@ -13,6 +13,8 @@ import { file_google_api_client } from "../../../google/api/client_pb";
 import { file_google_api_field_behavior } from "../../../google/api/field_behavior_pb";
 import type { EmptySchema, FieldMask, FieldMaskJson, Timestamp, TimestampJson } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_empty, file_google_protobuf_field_mask, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { Decimal, DecimalJson } from "../../../google/type/decimal_pb";
+import { file_google_type_decimal } from "../../../google/type/decimal_pb";
 import type { Appearance, AppearanceJson } from "../../type/appearance_pb";
 import { file_saturn_type_appearance } from "../../type/appearance_pb";
 import type { Money, MoneyJson } from "../../type/money_pb";
@@ -23,7 +25,187 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file saturn/finance/v1/finance.proto.
  */
 export const file_saturn_finance_v1_finance: GenFile = /*@__PURE__*/
-  fileDesc("Ch9zYXR1cm4vZmluYW5jZS92MS9maW5hbmNlLnByb3RvEhFzYXR1cm4uZmluYW5jZS52MSJFChNDcmVhdGVCdWRnZXRSZXF1ZXN0Ei4KBmJ1ZGdldBgBIAEoCzIZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldEID4EECIp4BChJMaXN0QnVkZ2V0c1JlcXVlc3QSEwoGc2VhcmNoGAEgASgJQgPgQQESMQoEdmlldxgCIAEoDjIeLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldC5WaWV3QgPgQQESFQoIb3JkZXJfYnkYAyABKAlCA+BBARIRCgRwYWdlGAQgASgFQgPgQQESFgoJcGFnZV9zaXplGAUgASgFQgPgQQEiVQoTTGlzdEJ1ZGdldHNSZXNwb25zZRIqCgdidWRnZXRzGAEgAygLMhkuc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0EhIKCnRvdGFsX3NpemUYAiABKAUiVgoQR2V0QnVkZ2V0UmVxdWVzdBIPCgJpZBgBIAEoCUID4EECEjEKBHZpZXcYAiABKA4yHi5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXQuVmlld0ID4EEBIowBChNVcGRhdGVCdWRnZXRSZXF1ZXN0Eg8KAmlkGAEgASgJQgPgQQISLgoGYnVkZ2V0GAIgASgLMhkuc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0QgPgQQISNAoLdXBkYXRlX21hc2sYAyABKAsyGi5nb29nbGUucHJvdG9idWYuRmllbGRNYXNrQgPgQQEiJgoTRGVsZXRlQnVkZ2V0UmVxdWVzdBIPCgJpZBgBIAEoCUID4EECIrIGCgZCdWRnZXQSDwoCaWQYASABKAlCA+BBAxIRCgRuYW1lGAIgASgJQgPgQQISGAoLZGVzY3JpcHRpb24YAyABKAlCA+BBARIrCgphcHBlYXJhbmNlGAQgASgLMhcuc2F0dXJuLnR5cGUuQXBwZWFyYW5jZRI1CgZzdGF0dXMYBSABKA4yIC5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXQuU3RhdHVzQgPgQQESJwoGYW1vdW50GAYgASgLMhIuc2F0dXJuLnR5cGUuTW9uZXlCA+BBAhI0CgtjcmVhdGVfdGltZRgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAxI0Cgt1cGRhdGVfdGltZRgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAxIsCgtiYXNlX2Ftb3VudBgJIAEoCzISLnNhdHVybi50eXBlLk1vbmV5QgPgQQMSGgoNZXhjaGFuZ2VfcmF0ZRgKIAEoAUID4EEDEjMKBXN0YXRzGAsgASgLMh8uc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0LlN0YXRzQgPgQQMa9gEKBVN0YXRzEigKDHNwZW50X2Ftb3VudBgBIAEoCzISLnNhdHVybi50eXBlLk1vbmV5EiwKEHJlbWFpbmluZ19hbW91bnQYAiABKAsyEi5zYXR1cm4udHlwZS5Nb25leRIYChB1c2FnZV9wZXJjZW50YWdlGAMgASgBEjAKDHBlcmlvZF9zdGFydBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKcGVyaW9kX2VuZBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASGQoRdHJhbnNhY3Rpb25fY291bnQYBiABKAUiMQoEVmlldxIUChBWSUVXX1VOU1BFQ0lGSUVEEAASCQoFQkFTSUMQARIICgRGVUxMEAIiRgoGU3RhdHVzEhYKElNUQVRVU19VTlNQRUNJRklFRBAAEgoKBkFDVElWRRABEgoKBlBBVVNFRBACEgwKCEFSQ0hJVkVEEAMynQUKB0ZpbmFuY2USdgoMQ3JlYXRlQnVkZ2V0EiYuc2F0dXJuLmZpbmFuY2UudjEuQ3JlYXRlQnVkZ2V0UmVxdWVzdBoZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldCIjgtPkkwIdOgZidWRnZXQiEy92MS9maW5hbmNlL2J1ZGdldHMSeQoLTGlzdEJ1ZGdldHMSJS5zYXR1cm4uZmluYW5jZS52MS5MaXN0QnVkZ2V0c1JlcXVlc3QaJi5zYXR1cm4uZmluYW5jZS52MS5MaXN0QnVkZ2V0c1Jlc3BvbnNlIhuC0+STAhUSEy92MS9maW5hbmNlL2J1ZGdldHMScgoJR2V0QnVkZ2V0EiMuc2F0dXJuLmZpbmFuY2UudjEuR2V0QnVkZ2V0UmVxdWVzdBoZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldCIl2kECaWSC0+STAhoSGC92MS9maW5hbmNlL2J1ZGdldHMve2lkfRKTAQoMVXBkYXRlQnVkZ2V0EiYuc2F0dXJuLmZpbmFuY2UudjEuVXBkYXRlQnVkZ2V0UmVxdWVzdBoZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldCJA2kEVaWQsYnVkZ2V0LHVwZGF0ZV9tYXNrgtPkkwIiOgZidWRnZXQyGC92MS9maW5hbmNlL2J1ZGdldHMve2lkfRJ1CgxEZWxldGVCdWRnZXQSJi5zYXR1cm4uZmluYW5jZS52MS5EZWxldGVCdWRnZXRSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5IiXaQQJpZILT5JMCGioYL3YxL2ZpbmFuY2UvYnVkZ2V0cy97aWR9Gh7KQRthcGkuc2F0dXJuLm1hc3RlcmtleXNyZC5kZXZCSVpHZ2l0aHViLmNvbS9tYXN0ZXJrZXlzcmQvc2F0dXJuL2dlbi9wcm90by9nby9zYXR1cm4vZmluYW5jZS92MTtmaW5hbmNlcGJiBnByb3RvMw", [file_google_api_annotations, file_google_api_client, file_google_api_field_behavior, file_google_protobuf_empty, file_google_protobuf_field_mask, file_google_protobuf_timestamp, file_saturn_type_appearance, file_saturn_type_money]);
+  fileDesc("Ch9zYXR1cm4vZmluYW5jZS92MS9maW5hbmNlLnByb3RvEhFzYXR1cm4uZmluYW5jZS52MSJPChlDcmVhdGVFeGNoYW5nZVJhdGVSZXF1ZXN0EjIKBHJhdGUYASABKAsyHy5zYXR1cm4uZmluYW5jZS52MS5FeGNoYW5nZVJhdGVCA+BBAiIaChhMaXN0RXhjaGFuZ2VSYXRlc1JlcXVlc3QiSwoZTGlzdEV4Y2hhbmdlUmF0ZXNSZXNwb25zZRIuCgVyYXRlcxgBIAMoCzIfLnNhdHVybi5maW5hbmNlLnYxLkV4Y2hhbmdlUmF0ZSI0ChZHZXRFeGNoYW5nZVJhdGVSZXF1ZXN0EhoKDWN1cnJlbmN5X2NvZGUYASABKAlCA+BBAiJrChlVcGRhdGVFeGNoYW5nZVJhdGVSZXF1ZXN0EhoKDWN1cnJlbmN5X2NvZGUYASABKAlCA+BBAhIyCgRyYXRlGAIgASgLMh8uc2F0dXJuLmZpbmFuY2UudjEuRXhjaGFuZ2VSYXRlQgPgQQIiNwoZRGVsZXRlRXhjaGFuZ2VSYXRlUmVxdWVzdBIaCg1jdXJyZW5jeV9jb2RlGAEgASgJQgPgQQIiRQoTQ3JlYXRlQnVkZ2V0UmVxdWVzdBIuCgZidWRnZXQYASABKAsyGS5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXRCA+BBAiLeAQoMRXhjaGFuZ2VSYXRlEhoKDWN1cnJlbmN5X2NvZGUYASABKAlCA+BBAxInCgRyYXRlGAIgASgLMhQuZ29vZ2xlLnR5cGUuRGVjaW1hbEID4EECEh0KEGlzX2Jhc2VfY3VycmVuY3kYAyABKAhCA+BBAxI0CgtjcmVhdGVfdGltZRgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAxI0Cgt1cGRhdGVfdGltZRgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAyKeAQoSTGlzdEJ1ZGdldHNSZXF1ZXN0EhMKBnNlYXJjaBgBIAEoCUID4EEBEjEKBHZpZXcYAiABKA4yHi5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXQuVmlld0ID4EEBEhUKCG9yZGVyX2J5GAMgASgJQgPgQQESEQoEcGFnZRgEIAEoBUID4EEBEhYKCXBhZ2Vfc2l6ZRgFIAEoBUID4EEBIlUKE0xpc3RCdWRnZXRzUmVzcG9uc2USKgoHYnVkZ2V0cxgBIAMoCzIZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldBISCgp0b3RhbF9zaXplGAIgASgFIlYKEEdldEJ1ZGdldFJlcXVlc3QSDwoCaWQYASABKAlCA+BBAhIxCgR2aWV3GAIgASgOMh4uc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0LlZpZXdCA+BBASKMAQoTVXBkYXRlQnVkZ2V0UmVxdWVzdBIPCgJpZBgBIAEoCUID4EECEi4KBmJ1ZGdldBgCIAEoCzIZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldEID4EECEjQKC3VwZGF0ZV9tYXNrGAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLkZpZWxkTWFza0ID4EEBIiYKE0RlbGV0ZUJ1ZGdldFJlcXVlc3QSDwoCaWQYASABKAlCA+BBAiKyBgoGQnVkZ2V0Eg8KAmlkGAEgASgJQgPgQQMSEQoEbmFtZRgCIAEoCUID4EECEhgKC2Rlc2NyaXB0aW9uGAMgASgJQgPgQQESKwoKYXBwZWFyYW5jZRgEIAEoCzIXLnNhdHVybi50eXBlLkFwcGVhcmFuY2USNQoGc3RhdHVzGAUgASgOMiAuc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0LlN0YXR1c0ID4EEBEicKBmFtb3VudBgGIAEoCzISLnNhdHVybi50eXBlLk1vbmV5QgPgQQISNAoLY3JlYXRlX3RpbWUYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSNAoLdXBkYXRlX3RpbWUYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSLAoLYmFzZV9hbW91bnQYCSABKAsyEi5zYXR1cm4udHlwZS5Nb25leUID4EEDEhoKDWV4Y2hhbmdlX3JhdGUYCiABKAFCA+BBAxIzCgVzdGF0cxgLIAEoCzIfLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldC5TdGF0c0ID4EEDGvYBCgVTdGF0cxIoCgxzcGVudF9hbW91bnQYASABKAsyEi5zYXR1cm4udHlwZS5Nb25leRIsChByZW1haW5pbmdfYW1vdW50GAIgASgLMhIuc2F0dXJuLnR5cGUuTW9uZXkSGAoQdXNhZ2VfcGVyY2VudGFnZRgDIAEoARIwCgxwZXJpb2Rfc3RhcnQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnBlcmlvZF9lbmQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhkKEXRyYW5zYWN0aW9uX2NvdW50GAYgASgFIjEKBFZpZXcSFAoQVklFV19VTlNQRUNJRklFRBAAEgkKBUJBU0lDEAESCAoERlVMTBACIkYKBlN0YXR1cxIWChJTVEFUVVNfVU5TUEVDSUZJRUQQABIKCgZBQ1RJVkUQARIKCgZQQVVTRUQQAhIMCghBUkNISVZFRBADMoQLCgdGaW5hbmNlEo0BChJDcmVhdGVFeGNoYW5nZVJhdGUSLC5zYXR1cm4uZmluYW5jZS52MS5DcmVhdGVFeGNoYW5nZVJhdGVSZXF1ZXN0Gh8uc2F0dXJuLmZpbmFuY2UudjEuRXhjaGFuZ2VSYXRlIiiC0+STAiI6BHJhdGUiGi92MS9maW5hbmNlL2V4Y2hhbmdlLXJhdGVzEpIBChFMaXN0RXhjaGFuZ2VSYXRlcxIrLnNhdHVybi5maW5hbmNlLnYxLkxpc3RFeGNoYW5nZVJhdGVzUmVxdWVzdBosLnNhdHVybi5maW5hbmNlLnYxLkxpc3RFeGNoYW5nZVJhdGVzUmVzcG9uc2UiIoLT5JMCHBIaL3YxL2ZpbmFuY2UvZXhjaGFuZ2UtcmF0ZXMSkQEKD0dldEV4Y2hhbmdlUmF0ZRIpLnNhdHVybi5maW5hbmNlLnYxLkdldEV4Y2hhbmdlUmF0ZVJlcXVlc3QaHy5zYXR1cm4uZmluYW5jZS52MS5FeGNoYW5nZVJhdGUiMoLT5JMCLBIqL3YxL2ZpbmFuY2UvZXhjaGFuZ2UtcmF0ZXMve2N1cnJlbmN5X2NvZGV9EpoBChJVcGRhdGVFeGNoYW5nZVJhdGUSLC5zYXR1cm4uZmluYW5jZS52MS5VcGRhdGVFeGNoYW5nZVJhdGVSZXF1ZXN0Gh8uc2F0dXJuLmZpbmFuY2UudjEuRXhjaGFuZ2VSYXRlIjWC0+STAi86ASoaKi92MS9maW5hbmNlL2V4Y2hhbmdlLXJhdGVzL3tjdXJyZW5jeV9jb2RlfRKOAQoSRGVsZXRlRXhjaGFuZ2VSYXRlEiwuc2F0dXJuLmZpbmFuY2UudjEuRGVsZXRlRXhjaGFuZ2VSYXRlUmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eSIygtPkkwIsKiovdjEvZmluYW5jZS9leGNoYW5nZS1yYXRlcy97Y3VycmVuY3lfY29kZX0SdgoMQ3JlYXRlQnVkZ2V0EiYuc2F0dXJuLmZpbmFuY2UudjEuQ3JlYXRlQnVkZ2V0UmVxdWVzdBoZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldCIjgtPkkwIdOgZidWRnZXQiEy92MS9maW5hbmNlL2J1ZGdldHMSeQoLTGlzdEJ1ZGdldHMSJS5zYXR1cm4uZmluYW5jZS52MS5MaXN0QnVkZ2V0c1JlcXVlc3QaJi5zYXR1cm4uZmluYW5jZS52MS5MaXN0QnVkZ2V0c1Jlc3BvbnNlIhuC0+STAhUSEy92MS9maW5hbmNlL2J1ZGdldHMScgoJR2V0QnVkZ2V0EiMuc2F0dXJuLmZpbmFuY2UudjEuR2V0QnVkZ2V0UmVxdWVzdBoZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldCIl2kECaWSC0+STAhoSGC92MS9maW5hbmNlL2J1ZGdldHMve2lkfRKTAQoMVXBkYXRlQnVkZ2V0EiYuc2F0dXJuLmZpbmFuY2UudjEuVXBkYXRlQnVkZ2V0UmVxdWVzdBoZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldCJA2kEVaWQsYnVkZ2V0LHVwZGF0ZV9tYXNrgtPkkwIiOgZidWRnZXQyGC92MS9maW5hbmNlL2J1ZGdldHMve2lkfRJ1CgxEZWxldGVCdWRnZXQSJi5zYXR1cm4uZmluYW5jZS52MS5EZWxldGVCdWRnZXRSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5IiXaQQJpZILT5JMCGioYL3YxL2ZpbmFuY2UvYnVkZ2V0cy97aWR9Gh7KQRthcGkuc2F0dXJuLm1hc3RlcmtleXNyZC5kZXZCSVpHZ2l0aHViLmNvbS9tYXN0ZXJrZXlzcmQvc2F0dXJuL2dlbi9wcm90by9nby9zYXR1cm4vZmluYW5jZS92MTtmaW5hbmNlcGJiBnByb3RvMw", [file_google_api_annotations, file_google_api_client, file_google_api_field_behavior, file_google_protobuf_empty, file_google_protobuf_field_mask, file_google_protobuf_timestamp, file_google_type_decimal, file_saturn_type_appearance, file_saturn_type_money]);
+
+/**
+ * @generated from message saturn.finance.v1.CreateExchangeRateRequest
+ */
+export type CreateExchangeRateRequest = Message<"saturn.finance.v1.CreateExchangeRateRequest"> & {
+  /**
+   * The exchange rate to create.
+   *
+   * @generated from field: saturn.finance.v1.ExchangeRate rate = 1;
+   */
+  rate?: ExchangeRate;
+};
+
+/**
+ * @generated from message saturn.finance.v1.CreateExchangeRateRequest
+ */
+export type CreateExchangeRateRequestJson = {
+  /**
+   * The exchange rate to create.
+   *
+   * @generated from field: saturn.finance.v1.ExchangeRate rate = 1;
+   */
+  rate?: ExchangeRateJson;
+};
+
+/**
+ * Describes the message saturn.finance.v1.CreateExchangeRateRequest.
+ * Use `create(CreateExchangeRateRequestSchema)` to create a new message.
+ */
+export const CreateExchangeRateRequestSchema: GenMessage<CreateExchangeRateRequest, {jsonType: CreateExchangeRateRequestJson}> = /*@__PURE__*/
+  messageDesc(file_saturn_finance_v1_finance, 0);
+
+/**
+ * @generated from message saturn.finance.v1.ListExchangeRatesRequest
+ */
+export type ListExchangeRatesRequest = Message<"saturn.finance.v1.ListExchangeRatesRequest"> & {
+};
+
+/**
+ * @generated from message saturn.finance.v1.ListExchangeRatesRequest
+ */
+export type ListExchangeRatesRequestJson = {
+};
+
+/**
+ * Describes the message saturn.finance.v1.ListExchangeRatesRequest.
+ * Use `create(ListExchangeRatesRequestSchema)` to create a new message.
+ */
+export const ListExchangeRatesRequestSchema: GenMessage<ListExchangeRatesRequest, {jsonType: ListExchangeRatesRequestJson}> = /*@__PURE__*/
+  messageDesc(file_saturn_finance_v1_finance, 1);
+
+/**
+ * @generated from message saturn.finance.v1.ListExchangeRatesResponse
+ */
+export type ListExchangeRatesResponse = Message<"saturn.finance.v1.ListExchangeRatesResponse"> & {
+  /**
+   * The list of configured rates.
+   *
+   * @generated from field: repeated saturn.finance.v1.ExchangeRate rates = 1;
+   */
+  rates: ExchangeRate[];
+};
+
+/**
+ * @generated from message saturn.finance.v1.ListExchangeRatesResponse
+ */
+export type ListExchangeRatesResponseJson = {
+  /**
+   * The list of configured rates.
+   *
+   * @generated from field: repeated saturn.finance.v1.ExchangeRate rates = 1;
+   */
+  rates?: ExchangeRateJson[];
+};
+
+/**
+ * Describes the message saturn.finance.v1.ListExchangeRatesResponse.
+ * Use `create(ListExchangeRatesResponseSchema)` to create a new message.
+ */
+export const ListExchangeRatesResponseSchema: GenMessage<ListExchangeRatesResponse, {jsonType: ListExchangeRatesResponseJson}> = /*@__PURE__*/
+  messageDesc(file_saturn_finance_v1_finance, 2);
+
+/**
+ * @generated from message saturn.finance.v1.GetExchangeRateRequest
+ */
+export type GetExchangeRateRequest = Message<"saturn.finance.v1.GetExchangeRateRequest"> & {
+  /**
+   * @generated from field: string currency_code = 1;
+   */
+  currencyCode: string;
+};
+
+/**
+ * @generated from message saturn.finance.v1.GetExchangeRateRequest
+ */
+export type GetExchangeRateRequestJson = {
+  /**
+   * @generated from field: string currency_code = 1;
+   */
+  currencyCode?: string;
+};
+
+/**
+ * Describes the message saturn.finance.v1.GetExchangeRateRequest.
+ * Use `create(GetExchangeRateRequestSchema)` to create a new message.
+ */
+export const GetExchangeRateRequestSchema: GenMessage<GetExchangeRateRequest, {jsonType: GetExchangeRateRequestJson}> = /*@__PURE__*/
+  messageDesc(file_saturn_finance_v1_finance, 3);
+
+/**
+ * @generated from message saturn.finance.v1.UpdateExchangeRateRequest
+ */
+export type UpdateExchangeRateRequest = Message<"saturn.finance.v1.UpdateExchangeRateRequest"> & {
+  /**
+   * The currency code to update (mapped from URL path).
+   *
+   * @generated from field: string currency_code = 1;
+   */
+  currencyCode: string;
+
+  /**
+   * The new exchange rate details.
+   *
+   * @generated from field: saturn.finance.v1.ExchangeRate rate = 2;
+   */
+  rate?: ExchangeRate;
+};
+
+/**
+ * @generated from message saturn.finance.v1.UpdateExchangeRateRequest
+ */
+export type UpdateExchangeRateRequestJson = {
+  /**
+   * The currency code to update (mapped from URL path).
+   *
+   * @generated from field: string currency_code = 1;
+   */
+  currencyCode?: string;
+
+  /**
+   * The new exchange rate details.
+   *
+   * @generated from field: saturn.finance.v1.ExchangeRate rate = 2;
+   */
+  rate?: ExchangeRateJson;
+};
+
+/**
+ * Describes the message saturn.finance.v1.UpdateExchangeRateRequest.
+ * Use `create(UpdateExchangeRateRequestSchema)` to create a new message.
+ */
+export const UpdateExchangeRateRequestSchema: GenMessage<UpdateExchangeRateRequest, {jsonType: UpdateExchangeRateRequestJson}> = /*@__PURE__*/
+  messageDesc(file_saturn_finance_v1_finance, 4);
+
+/**
+ * @generated from message saturn.finance.v1.DeleteExchangeRateRequest
+ */
+export type DeleteExchangeRateRequest = Message<"saturn.finance.v1.DeleteExchangeRateRequest"> & {
+  /**
+   * @generated from field: string currency_code = 1;
+   */
+  currencyCode: string;
+};
+
+/**
+ * @generated from message saturn.finance.v1.DeleteExchangeRateRequest
+ */
+export type DeleteExchangeRateRequestJson = {
+  /**
+   * @generated from field: string currency_code = 1;
+   */
+  currencyCode?: string;
+};
+
+/**
+ * Describes the message saturn.finance.v1.DeleteExchangeRateRequest.
+ * Use `create(DeleteExchangeRateRequestSchema)` to create a new message.
+ */
+export const DeleteExchangeRateRequestSchema: GenMessage<DeleteExchangeRateRequest, {jsonType: DeleteExchangeRateRequestJson}> = /*@__PURE__*/
+  messageDesc(file_saturn_finance_v1_finance, 5);
 
 /**
  * Request message for Finance.CreateBudget.
@@ -58,7 +240,108 @@ export type CreateBudgetRequestJson = {
  * Use `create(CreateBudgetRequestSchema)` to create a new message.
  */
 export const CreateBudgetRequestSchema: GenMessage<CreateBudgetRequest, {jsonType: CreateBudgetRequestJson}> = /*@__PURE__*/
-  messageDesc(file_saturn_finance_v1_finance, 0);
+  messageDesc(file_saturn_finance_v1_finance, 6);
+
+/**
+ * ExchangeRate represents the conversion factor for a currency.
+ *
+ * @generated from message saturn.finance.v1.ExchangeRate
+ */
+export type ExchangeRate = Message<"saturn.finance.v1.ExchangeRate"> & {
+  /**
+   * The 3-letter currency code (ISO 4217), e.g., "DOP", "EUR".
+   *
+   * @generated from field: string currency_code = 1;
+   */
+  currencyCode: string;
+
+  /**
+   * The rate relative to the Space's Base Currency.
+   * Format: Decimal string (e.g., "62.50", "0.95").
+   * Logic: 1 Base Currency = [rate] This Currency.
+   *
+   * @generated from field: google.type.Decimal rate = 2;
+   */
+  rate?: Decimal;
+
+  /**
+   * Indicates if this exchange rate is the base currency for the space.
+   * Output only.
+   *
+   * @generated from field: bool is_base_currency = 3;
+   */
+  isBaseCurrency: boolean;
+
+  /**
+   * Creation timestamp of the exchange rate.
+   * Output only.
+   *
+   * @generated from field: google.protobuf.Timestamp create_time = 4;
+   */
+  createTime?: Timestamp;
+
+  /**
+   * Last update timestamp of the exchange rate.
+   * Output only.
+   *
+   * @generated from field: google.protobuf.Timestamp update_time = 5;
+   */
+  updateTime?: Timestamp;
+};
+
+/**
+ * ExchangeRate represents the conversion factor for a currency.
+ *
+ * @generated from message saturn.finance.v1.ExchangeRate
+ */
+export type ExchangeRateJson = {
+  /**
+   * The 3-letter currency code (ISO 4217), e.g., "DOP", "EUR".
+   *
+   * @generated from field: string currency_code = 1;
+   */
+  currencyCode?: string;
+
+  /**
+   * The rate relative to the Space's Base Currency.
+   * Format: Decimal string (e.g., "62.50", "0.95").
+   * Logic: 1 Base Currency = [rate] This Currency.
+   *
+   * @generated from field: google.type.Decimal rate = 2;
+   */
+  rate?: DecimalJson;
+
+  /**
+   * Indicates if this exchange rate is the base currency for the space.
+   * Output only.
+   *
+   * @generated from field: bool is_base_currency = 3;
+   */
+  isBaseCurrency?: boolean;
+
+  /**
+   * Creation timestamp of the exchange rate.
+   * Output only.
+   *
+   * @generated from field: google.protobuf.Timestamp create_time = 4;
+   */
+  createTime?: TimestampJson;
+
+  /**
+   * Last update timestamp of the exchange rate.
+   * Output only.
+   *
+   * @generated from field: google.protobuf.Timestamp update_time = 5;
+   */
+  updateTime?: TimestampJson;
+};
+
+/**
+ * Describes the message saturn.finance.v1.ExchangeRate.
+ * Use `create(ExchangeRateSchema)` to create a new message.
+ */
+export const ExchangeRateSchema: GenMessage<ExchangeRate, {jsonType: ExchangeRateJson}> = /*@__PURE__*/
+  messageDesc(file_saturn_finance_v1_finance, 7);
 
 /**
  * Request message for Finance.ListBudgets.
@@ -157,7 +440,7 @@ export type ListBudgetsRequestJson = {
  * Use `create(ListBudgetsRequestSchema)` to create a new message.
  */
 export const ListBudgetsRequestSchema: GenMessage<ListBudgetsRequest, {jsonType: ListBudgetsRequestJson}> = /*@__PURE__*/
-  messageDesc(file_saturn_finance_v1_finance, 1);
+  messageDesc(file_saturn_finance_v1_finance, 8);
 
 /**
  * Response message for Finance.ListBudgets.
@@ -208,7 +491,7 @@ export type ListBudgetsResponseJson = {
  * Use `create(ListBudgetsResponseSchema)` to create a new message.
  */
 export const ListBudgetsResponseSchema: GenMessage<ListBudgetsResponse, {jsonType: ListBudgetsResponseJson}> = /*@__PURE__*/
-  messageDesc(file_saturn_finance_v1_finance, 2);
+  messageDesc(file_saturn_finance_v1_finance, 9);
 
 /**
  * Request message for Finance.GetBudget.
@@ -257,7 +540,7 @@ export type GetBudgetRequestJson = {
  * Use `create(GetBudgetRequestSchema)` to create a new message.
  */
 export const GetBudgetRequestSchema: GenMessage<GetBudgetRequest, {jsonType: GetBudgetRequestJson}> = /*@__PURE__*/
-  messageDesc(file_saturn_finance_v1_finance, 3);
+  messageDesc(file_saturn_finance_v1_finance, 10);
 
 /**
  * Request message for Finance.UpdateBudget.
@@ -322,7 +605,7 @@ export type UpdateBudgetRequestJson = {
  * Use `create(UpdateBudgetRequestSchema)` to create a new message.
  */
 export const UpdateBudgetRequestSchema: GenMessage<UpdateBudgetRequest, {jsonType: UpdateBudgetRequestJson}> = /*@__PURE__*/
-  messageDesc(file_saturn_finance_v1_finance, 4);
+  messageDesc(file_saturn_finance_v1_finance, 11);
 
 /**
  * Request message for Finance.DeleteBudget.
@@ -357,7 +640,7 @@ export type DeleteBudgetRequestJson = {
  * Use `create(DeleteBudgetRequestSchema)` to create a new message.
  */
 export const DeleteBudgetRequestSchema: GenMessage<DeleteBudgetRequest, {jsonType: DeleteBudgetRequestJson}> = /*@__PURE__*/
-  messageDesc(file_saturn_finance_v1_finance, 5);
+  messageDesc(file_saturn_finance_v1_finance, 12);
 
 /**
  * Budget represents a financial budget with its details.
@@ -544,7 +827,7 @@ export type BudgetJson = {
  * Use `create(BudgetSchema)` to create a new message.
  */
 export const BudgetSchema: GenMessage<Budget, {jsonType: BudgetJson}> = /*@__PURE__*/
-  messageDesc(file_saturn_finance_v1_finance, 6);
+  messageDesc(file_saturn_finance_v1_finance, 13);
 
 /**
  * Statistics related to the budget.
@@ -655,7 +938,7 @@ export type Budget_StatsJson = {
  * Use `create(Budget_StatsSchema)` to create a new message.
  */
 export const Budget_StatsSchema: GenMessage<Budget_Stats, {jsonType: Budget_StatsJson}> = /*@__PURE__*/
-  messageDesc(file_saturn_finance_v1_finance, 6, 0);
+  messageDesc(file_saturn_finance_v1_finance, 13, 0);
 
 /**
  * @generated from enum saturn.finance.v1.Budget.View
@@ -695,7 +978,7 @@ export type Budget_ViewJson = "VIEW_UNSPECIFIED" | "BASIC" | "FULL";
  * Describes the enum saturn.finance.v1.Budget.View.
  */
 export const Budget_ViewSchema: GenEnum<Budget_View, Budget_ViewJson> = /*@__PURE__*/
-  enumDesc(file_saturn_finance_v1_finance, 6, 0);
+  enumDesc(file_saturn_finance_v1_finance, 13, 0);
 
 /**
  * @generated from enum saturn.finance.v1.Budget.Status
@@ -739,7 +1022,7 @@ export type Budget_StatusJson = "STATUS_UNSPECIFIED" | "ACTIVE" | "PAUSED" | "AR
  * Describes the enum saturn.finance.v1.Budget.Status.
  */
 export const Budget_StatusSchema: GenEnum<Budget_Status, Budget_StatusJson> = /*@__PURE__*/
-  enumDesc(file_saturn_finance_v1_finance, 6, 1);
+  enumDesc(file_saturn_finance_v1_finance, 13, 1);
 
 /**
  * Finance provides features personal finance management, including budgeting,
@@ -748,6 +1031,57 @@ export const Budget_StatusSchema: GenEnum<Budget_Status, Budget_StatusJson> = /*
  * @generated from service saturn.finance.v1.Finance
  */
 export const Finance: GenService<{
+  /**
+   * @generated from rpc saturn.finance.v1.Finance.CreateExchangeRate
+   */
+  createExchangeRate: {
+    methodKind: "unary";
+    input: typeof CreateExchangeRateRequestSchema;
+    output: typeof ExchangeRateSchema;
+  },
+  /**
+   * ListExchangeRates returns all configured exchange rates for the space
+   * specified in the request headers.
+   *
+   * @generated from rpc saturn.finance.v1.Finance.ListExchangeRates
+   */
+  listExchangeRates: {
+    methodKind: "unary";
+    input: typeof ListExchangeRatesRequestSchema;
+    output: typeof ListExchangeRatesResponseSchema;
+  },
+  /**
+   * GetExchangeRate returns the specific rate for a currency.
+   *
+   * @generated from rpc saturn.finance.v1.Finance.GetExchangeRate
+   */
+  getExchangeRate: {
+    methodKind: "unary";
+    input: typeof GetExchangeRateRequestSchema;
+    output: typeof ExchangeRateSchema;
+  },
+  /**
+   * UpdateExchangeRate sets or updates the exchange rate for a specific currency.
+   * The rate represents: 1 Unit of Base Currency = X Units of Target Currency.
+   *
+   * @generated from rpc saturn.finance.v1.Finance.UpdateExchangeRate
+   */
+  updateExchangeRate: {
+    methodKind: "unary";
+    input: typeof UpdateExchangeRateRequestSchema;
+    output: typeof ExchangeRateSchema;
+  },
+  /**
+   * DeleteExchangeRate removes a custom exchange rate.
+   * Effectively disables that currency for the space unless it is re-added.
+   *
+   * @generated from rpc saturn.finance.v1.Finance.DeleteExchangeRate
+   */
+  deleteExchangeRate: {
+    methodKind: "unary";
+    input: typeof DeleteExchangeRateRequestSchema;
+    output: typeof EmptySchema;
+  },
   /**
    * Creates a new budget.
    *

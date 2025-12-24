@@ -23,11 +23,16 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Finance_CreateBudget_FullMethodName = "/saturn.finance.v1.Finance/CreateBudget"
-	Finance_ListBudgets_FullMethodName  = "/saturn.finance.v1.Finance/ListBudgets"
-	Finance_GetBudget_FullMethodName    = "/saturn.finance.v1.Finance/GetBudget"
-	Finance_UpdateBudget_FullMethodName = "/saturn.finance.v1.Finance/UpdateBudget"
-	Finance_DeleteBudget_FullMethodName = "/saturn.finance.v1.Finance/DeleteBudget"
+	Finance_CreateExchangeRate_FullMethodName = "/saturn.finance.v1.Finance/CreateExchangeRate"
+	Finance_ListExchangeRates_FullMethodName  = "/saturn.finance.v1.Finance/ListExchangeRates"
+	Finance_GetExchangeRate_FullMethodName    = "/saturn.finance.v1.Finance/GetExchangeRate"
+	Finance_UpdateExchangeRate_FullMethodName = "/saturn.finance.v1.Finance/UpdateExchangeRate"
+	Finance_DeleteExchangeRate_FullMethodName = "/saturn.finance.v1.Finance/DeleteExchangeRate"
+	Finance_CreateBudget_FullMethodName       = "/saturn.finance.v1.Finance/CreateBudget"
+	Finance_ListBudgets_FullMethodName        = "/saturn.finance.v1.Finance/ListBudgets"
+	Finance_GetBudget_FullMethodName          = "/saturn.finance.v1.Finance/GetBudget"
+	Finance_UpdateBudget_FullMethodName       = "/saturn.finance.v1.Finance/UpdateBudget"
+	Finance_DeleteBudget_FullMethodName       = "/saturn.finance.v1.Finance/DeleteBudget"
 )
 
 // FinanceClient is the client API for Finance service.
@@ -37,6 +42,18 @@ const (
 // Finance provides features personal finance management, including budgeting,
 // expense tracking, and financial goal setting.
 type FinanceClient interface {
+	CreateExchangeRate(ctx context.Context, in *CreateExchangeRateRequest, opts ...grpc.CallOption) (*ExchangeRate, error)
+	// ListExchangeRates returns all configured exchange rates for the space
+	// specified in the request headers.
+	ListExchangeRates(ctx context.Context, in *ListExchangeRatesRequest, opts ...grpc.CallOption) (*ListExchangeRatesResponse, error)
+	// GetExchangeRate returns the specific rate for a currency.
+	GetExchangeRate(ctx context.Context, in *GetExchangeRateRequest, opts ...grpc.CallOption) (*ExchangeRate, error)
+	// UpdateExchangeRate sets or updates the exchange rate for a specific currency.
+	// The rate represents: 1 Unit of Base Currency = X Units of Target Currency.
+	UpdateExchangeRate(ctx context.Context, in *UpdateExchangeRateRequest, opts ...grpc.CallOption) (*ExchangeRate, error)
+	// DeleteExchangeRate removes a custom exchange rate.
+	// Effectively disables that currency for the space unless it is re-added.
+	DeleteExchangeRate(ctx context.Context, in *DeleteExchangeRateRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Creates a new budget.
 	CreateBudget(ctx context.Context, in *CreateBudgetRequest, opts ...grpc.CallOption) (*Budget, error)
 	// Lists budgets.
@@ -56,6 +73,56 @@ type financeClient struct {
 
 func NewFinanceClient(cc grpc.ClientConnInterface) FinanceClient {
 	return &financeClient{cc}
+}
+
+func (c *financeClient) CreateExchangeRate(ctx context.Context, in *CreateExchangeRateRequest, opts ...grpc.CallOption) (*ExchangeRate, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExchangeRate)
+	err := c.cc.Invoke(ctx, Finance_CreateExchangeRate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) ListExchangeRates(ctx context.Context, in *ListExchangeRatesRequest, opts ...grpc.CallOption) (*ListExchangeRatesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListExchangeRatesResponse)
+	err := c.cc.Invoke(ctx, Finance_ListExchangeRates_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) GetExchangeRate(ctx context.Context, in *GetExchangeRateRequest, opts ...grpc.CallOption) (*ExchangeRate, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExchangeRate)
+	err := c.cc.Invoke(ctx, Finance_GetExchangeRate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) UpdateExchangeRate(ctx context.Context, in *UpdateExchangeRateRequest, opts ...grpc.CallOption) (*ExchangeRate, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExchangeRate)
+	err := c.cc.Invoke(ctx, Finance_UpdateExchangeRate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) DeleteExchangeRate(ctx context.Context, in *DeleteExchangeRateRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Finance_DeleteExchangeRate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *financeClient) CreateBudget(ctx context.Context, in *CreateBudgetRequest, opts ...grpc.CallOption) (*Budget, error) {
@@ -115,6 +182,18 @@ func (c *financeClient) DeleteBudget(ctx context.Context, in *DeleteBudgetReques
 // Finance provides features personal finance management, including budgeting,
 // expense tracking, and financial goal setting.
 type FinanceServer interface {
+	CreateExchangeRate(context.Context, *CreateExchangeRateRequest) (*ExchangeRate, error)
+	// ListExchangeRates returns all configured exchange rates for the space
+	// specified in the request headers.
+	ListExchangeRates(context.Context, *ListExchangeRatesRequest) (*ListExchangeRatesResponse, error)
+	// GetExchangeRate returns the specific rate for a currency.
+	GetExchangeRate(context.Context, *GetExchangeRateRequest) (*ExchangeRate, error)
+	// UpdateExchangeRate sets or updates the exchange rate for a specific currency.
+	// The rate represents: 1 Unit of Base Currency = X Units of Target Currency.
+	UpdateExchangeRate(context.Context, *UpdateExchangeRateRequest) (*ExchangeRate, error)
+	// DeleteExchangeRate removes a custom exchange rate.
+	// Effectively disables that currency for the space unless it is re-added.
+	DeleteExchangeRate(context.Context, *DeleteExchangeRateRequest) (*emptypb.Empty, error)
 	// Creates a new budget.
 	CreateBudget(context.Context, *CreateBudgetRequest) (*Budget, error)
 	// Lists budgets.
@@ -136,6 +215,21 @@ type FinanceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedFinanceServer struct{}
 
+func (UnimplementedFinanceServer) CreateExchangeRate(context.Context, *CreateExchangeRateRequest) (*ExchangeRate, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateExchangeRate not implemented")
+}
+func (UnimplementedFinanceServer) ListExchangeRates(context.Context, *ListExchangeRatesRequest) (*ListExchangeRatesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListExchangeRates not implemented")
+}
+func (UnimplementedFinanceServer) GetExchangeRate(context.Context, *GetExchangeRateRequest) (*ExchangeRate, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetExchangeRate not implemented")
+}
+func (UnimplementedFinanceServer) UpdateExchangeRate(context.Context, *UpdateExchangeRateRequest) (*ExchangeRate, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateExchangeRate not implemented")
+}
+func (UnimplementedFinanceServer) DeleteExchangeRate(context.Context, *DeleteExchangeRateRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteExchangeRate not implemented")
+}
 func (UnimplementedFinanceServer) CreateBudget(context.Context, *CreateBudgetRequest) (*Budget, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateBudget not implemented")
 }
@@ -170,6 +264,96 @@ func RegisterFinanceServer(s grpc.ServiceRegistrar, srv FinanceServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&Finance_ServiceDesc, srv)
+}
+
+func _Finance_CreateExchangeRate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateExchangeRateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).CreateExchangeRate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_CreateExchangeRate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).CreateExchangeRate(ctx, req.(*CreateExchangeRateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_ListExchangeRates_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListExchangeRatesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).ListExchangeRates(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_ListExchangeRates_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).ListExchangeRates(ctx, req.(*ListExchangeRatesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_GetExchangeRate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetExchangeRateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).GetExchangeRate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_GetExchangeRate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).GetExchangeRate(ctx, req.(*GetExchangeRateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_UpdateExchangeRate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateExchangeRateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).UpdateExchangeRate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_UpdateExchangeRate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).UpdateExchangeRate(ctx, req.(*UpdateExchangeRateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_DeleteExchangeRate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteExchangeRateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).DeleteExchangeRate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_DeleteExchangeRate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).DeleteExchangeRate(ctx, req.(*DeleteExchangeRateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Finance_CreateBudget_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -269,6 +453,26 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "saturn.finance.v1.Finance",
 	HandlerType: (*FinanceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CreateExchangeRate",
+			Handler:    _Finance_CreateExchangeRate_Handler,
+		},
+		{
+			MethodName: "ListExchangeRates",
+			Handler:    _Finance_ListExchangeRates_Handler,
+		},
+		{
+			MethodName: "GetExchangeRate",
+			Handler:    _Finance_GetExchangeRate_Handler,
+		},
+		{
+			MethodName: "UpdateExchangeRate",
+			Handler:    _Finance_UpdateExchangeRate_Handler,
+		},
+		{
+			MethodName: "DeleteExchangeRate",
+			Handler:    _Finance_DeleteExchangeRate_Handler,
+		},
 		{
 			MethodName: "CreateBudget",
 			Handler:    _Finance_CreateBudget_Handler,

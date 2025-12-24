@@ -12,6 +12,7 @@ package financepb
 import (
 	typepb "github.com/masterkeysrd/saturn/gen/proto/go/saturn/typepb"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
+	decimal "google.golang.org/genproto/googleapis/type/decimal"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
@@ -81,7 +82,7 @@ func (x Budget_View) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Budget_View.Descriptor instead.
 func (Budget_View) EnumDescriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{6, 0}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{13, 0}
 }
 
 type Budget_Status int32
@@ -137,7 +138,275 @@ func (x Budget_Status) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Budget_Status.Descriptor instead.
 func (Budget_Status) EnumDescriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{6, 1}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{13, 1}
+}
+
+type CreateExchangeRateRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The exchange rate to create.
+	Rate          *ExchangeRate `protobuf:"bytes,1,opt,name=rate,proto3" json:"rate,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateExchangeRateRequest) Reset() {
+	*x = CreateExchangeRateRequest{}
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateExchangeRateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateExchangeRateRequest) ProtoMessage() {}
+
+func (x *CreateExchangeRateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateExchangeRateRequest.ProtoReflect.Descriptor instead.
+func (*CreateExchangeRateRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *CreateExchangeRateRequest) GetRate() *ExchangeRate {
+	if x != nil {
+		return x.Rate
+	}
+	return nil
+}
+
+type ListExchangeRatesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListExchangeRatesRequest) Reset() {
+	*x = ListExchangeRatesRequest{}
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListExchangeRatesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListExchangeRatesRequest) ProtoMessage() {}
+
+func (x *ListExchangeRatesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListExchangeRatesRequest.ProtoReflect.Descriptor instead.
+func (*ListExchangeRatesRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{1}
+}
+
+type ListExchangeRatesResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The list of configured rates.
+	Rates         []*ExchangeRate `protobuf:"bytes,1,rep,name=rates,proto3" json:"rates,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListExchangeRatesResponse) Reset() {
+	*x = ListExchangeRatesResponse{}
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListExchangeRatesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListExchangeRatesResponse) ProtoMessage() {}
+
+func (x *ListExchangeRatesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListExchangeRatesResponse.ProtoReflect.Descriptor instead.
+func (*ListExchangeRatesResponse) Descriptor() ([]byte, []int) {
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ListExchangeRatesResponse) GetRates() []*ExchangeRate {
+	if x != nil {
+		return x.Rates
+	}
+	return nil
+}
+
+type GetExchangeRateRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CurrencyCode  string                 `protobuf:"bytes,1,opt,name=currency_code,json=currencyCode,proto3" json:"currency_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetExchangeRateRequest) Reset() {
+	*x = GetExchangeRateRequest{}
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetExchangeRateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetExchangeRateRequest) ProtoMessage() {}
+
+func (x *GetExchangeRateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetExchangeRateRequest.ProtoReflect.Descriptor instead.
+func (*GetExchangeRateRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GetExchangeRateRequest) GetCurrencyCode() string {
+	if x != nil {
+		return x.CurrencyCode
+	}
+	return ""
+}
+
+type UpdateExchangeRateRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The currency code to update (mapped from URL path).
+	CurrencyCode string `protobuf:"bytes,1,opt,name=currency_code,json=currencyCode,proto3" json:"currency_code,omitempty"`
+	// The new exchange rate details.
+	Rate          *ExchangeRate `protobuf:"bytes,2,opt,name=rate,proto3" json:"rate,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateExchangeRateRequest) Reset() {
+	*x = UpdateExchangeRateRequest{}
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateExchangeRateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateExchangeRateRequest) ProtoMessage() {}
+
+func (x *UpdateExchangeRateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateExchangeRateRequest.ProtoReflect.Descriptor instead.
+func (*UpdateExchangeRateRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *UpdateExchangeRateRequest) GetCurrencyCode() string {
+	if x != nil {
+		return x.CurrencyCode
+	}
+	return ""
+}
+
+func (x *UpdateExchangeRateRequest) GetRate() *ExchangeRate {
+	if x != nil {
+		return x.Rate
+	}
+	return nil
+}
+
+type DeleteExchangeRateRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CurrencyCode  string                 `protobuf:"bytes,1,opt,name=currency_code,json=currencyCode,proto3" json:"currency_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteExchangeRateRequest) Reset() {
+	*x = DeleteExchangeRateRequest{}
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteExchangeRateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteExchangeRateRequest) ProtoMessage() {}
+
+func (x *DeleteExchangeRateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteExchangeRateRequest.ProtoReflect.Descriptor instead.
+func (*DeleteExchangeRateRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *DeleteExchangeRateRequest) GetCurrencyCode() string {
+	if x != nil {
+		return x.CurrencyCode
+	}
+	return ""
 }
 
 // Request message for Finance.CreateBudget.
@@ -151,7 +420,7 @@ type CreateBudgetRequest struct {
 
 func (x *CreateBudgetRequest) Reset() {
 	*x = CreateBudgetRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[0]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -163,7 +432,7 @@ func (x *CreateBudgetRequest) String() string {
 func (*CreateBudgetRequest) ProtoMessage() {}
 
 func (x *CreateBudgetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[0]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -176,12 +445,99 @@ func (x *CreateBudgetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateBudgetRequest.ProtoReflect.Descriptor instead.
 func (*CreateBudgetRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{0}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CreateBudgetRequest) GetBudget() *Budget {
 	if x != nil {
 		return x.Budget
+	}
+	return nil
+}
+
+// ExchangeRate represents the conversion factor for a currency.
+type ExchangeRate struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The 3-letter currency code (ISO 4217), e.g., "DOP", "EUR".
+	CurrencyCode string `protobuf:"bytes,1,opt,name=currency_code,json=currencyCode,proto3" json:"currency_code,omitempty"`
+	// The rate relative to the Space's Base Currency.
+	// Format: Decimal string (e.g., "62.50", "0.95").
+	// Logic: 1 Base Currency = [rate] This Currency.
+	Rate *decimal.Decimal `protobuf:"bytes,2,opt,name=rate,proto3" json:"rate,omitempty"`
+	// Indicates if this exchange rate is the base currency for the space.
+	// Output only.
+	IsBaseCurrency bool `protobuf:"varint,3,opt,name=is_base_currency,json=isBaseCurrency,proto3" json:"is_base_currency,omitempty"`
+	// Creation timestamp of the exchange rate.
+	// Output only.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// Last update timestamp of the exchange rate.
+	// Output only.
+	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExchangeRate) Reset() {
+	*x = ExchangeRate{}
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExchangeRate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExchangeRate) ProtoMessage() {}
+
+func (x *ExchangeRate) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExchangeRate.ProtoReflect.Descriptor instead.
+func (*ExchangeRate) Descriptor() ([]byte, []int) {
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ExchangeRate) GetCurrencyCode() string {
+	if x != nil {
+		return x.CurrencyCode
+	}
+	return ""
+}
+
+func (x *ExchangeRate) GetRate() *decimal.Decimal {
+	if x != nil {
+		return x.Rate
+	}
+	return nil
+}
+
+func (x *ExchangeRate) GetIsBaseCurrency() bool {
+	if x != nil {
+		return x.IsBaseCurrency
+	}
+	return false
+}
+
+func (x *ExchangeRate) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+func (x *ExchangeRate) GetUpdateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdateTime
 	}
 	return nil
 }
@@ -209,7 +565,7 @@ type ListBudgetsRequest struct {
 
 func (x *ListBudgetsRequest) Reset() {
 	*x = ListBudgetsRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[1]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -221,7 +577,7 @@ func (x *ListBudgetsRequest) String() string {
 func (*ListBudgetsRequest) ProtoMessage() {}
 
 func (x *ListBudgetsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[1]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -234,7 +590,7 @@ func (x *ListBudgetsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBudgetsRequest.ProtoReflect.Descriptor instead.
 func (*ListBudgetsRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{1}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListBudgetsRequest) GetSearch() string {
@@ -286,7 +642,7 @@ type ListBudgetsResponse struct {
 
 func (x *ListBudgetsResponse) Reset() {
 	*x = ListBudgetsResponse{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[2]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -298,7 +654,7 @@ func (x *ListBudgetsResponse) String() string {
 func (*ListBudgetsResponse) ProtoMessage() {}
 
 func (x *ListBudgetsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[2]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -311,7 +667,7 @@ func (x *ListBudgetsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBudgetsResponse.ProtoReflect.Descriptor instead.
 func (*ListBudgetsResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{2}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListBudgetsResponse) GetBudgets() []*Budget {
@@ -341,7 +697,7 @@ type GetBudgetRequest struct {
 
 func (x *GetBudgetRequest) Reset() {
 	*x = GetBudgetRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[3]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -353,7 +709,7 @@ func (x *GetBudgetRequest) String() string {
 func (*GetBudgetRequest) ProtoMessage() {}
 
 func (x *GetBudgetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[3]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -366,7 +722,7 @@ func (x *GetBudgetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBudgetRequest.ProtoReflect.Descriptor instead.
 func (*GetBudgetRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{3}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GetBudgetRequest) GetId() string {
@@ -399,7 +755,7 @@ type UpdateBudgetRequest struct {
 
 func (x *UpdateBudgetRequest) Reset() {
 	*x = UpdateBudgetRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[4]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -411,7 +767,7 @@ func (x *UpdateBudgetRequest) String() string {
 func (*UpdateBudgetRequest) ProtoMessage() {}
 
 func (x *UpdateBudgetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[4]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -424,7 +780,7 @@ func (x *UpdateBudgetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateBudgetRequest.ProtoReflect.Descriptor instead.
 func (*UpdateBudgetRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{4}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *UpdateBudgetRequest) GetId() string {
@@ -459,7 +815,7 @@ type DeleteBudgetRequest struct {
 
 func (x *DeleteBudgetRequest) Reset() {
 	*x = DeleteBudgetRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[5]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -471,7 +827,7 @@ func (x *DeleteBudgetRequest) String() string {
 func (*DeleteBudgetRequest) ProtoMessage() {}
 
 func (x *DeleteBudgetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[5]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -484,7 +840,7 @@ func (x *DeleteBudgetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteBudgetRequest.ProtoReflect.Descriptor instead.
 func (*DeleteBudgetRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{5}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *DeleteBudgetRequest) GetId() string {
@@ -531,7 +887,7 @@ type Budget struct {
 
 func (x *Budget) Reset() {
 	*x = Budget{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[6]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -543,7 +899,7 @@ func (x *Budget) String() string {
 func (*Budget) ProtoMessage() {}
 
 func (x *Budget) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[6]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -556,7 +912,7 @@ func (x *Budget) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Budget.ProtoReflect.Descriptor instead.
 func (*Budget) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{6}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *Budget) GetId() string {
@@ -660,7 +1016,7 @@ type Budget_Stats struct {
 
 func (x *Budget_Stats) Reset() {
 	*x = Budget_Stats{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[7]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -672,7 +1028,7 @@ func (x *Budget_Stats) String() string {
 func (*Budget_Stats) ProtoMessage() {}
 
 func (x *Budget_Stats) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[7]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -685,7 +1041,7 @@ func (x *Budget_Stats) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Budget_Stats.ProtoReflect.Descriptor instead.
 func (*Budget_Stats) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{6, 0}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{13, 0}
 }
 
 func (x *Budget_Stats) GetSpentAmount() *typepb.Money {
@@ -734,9 +1090,29 @@ var File_saturn_finance_v1_finance_proto protoreflect.FileDescriptor
 
 const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\n" +
-	"\x1fsaturn/finance/v1/finance.proto\x12\x11saturn.finance.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1csaturn/type/appearance.proto\x1a\x17saturn/type/money.proto\"M\n" +
+	"\x1fsaturn/finance/v1/finance.proto\x12\x11saturn.finance.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19google/type/decimal.proto\x1a\x1csaturn/type/appearance.proto\x1a\x17saturn/type/money.proto\"U\n" +
+	"\x19CreateExchangeRateRequest\x128\n" +
+	"\x04rate\x18\x01 \x01(\v2\x1f.saturn.finance.v1.ExchangeRateB\x03\xe0A\x02R\x04rate\"\x1a\n" +
+	"\x18ListExchangeRatesRequest\"R\n" +
+	"\x19ListExchangeRatesResponse\x125\n" +
+	"\x05rates\x18\x01 \x03(\v2\x1f.saturn.finance.v1.ExchangeRateR\x05rates\"B\n" +
+	"\x16GetExchangeRateRequest\x12(\n" +
+	"\rcurrency_code\x18\x01 \x01(\tB\x03\xe0A\x02R\fcurrencyCode\"\x7f\n" +
+	"\x19UpdateExchangeRateRequest\x12(\n" +
+	"\rcurrency_code\x18\x01 \x01(\tB\x03\xe0A\x02R\fcurrencyCode\x128\n" +
+	"\x04rate\x18\x02 \x01(\v2\x1f.saturn.finance.v1.ExchangeRateB\x03\xe0A\x02R\x04rate\"E\n" +
+	"\x19DeleteExchangeRateRequest\x12(\n" +
+	"\rcurrency_code\x18\x01 \x01(\tB\x03\xe0A\x02R\fcurrencyCode\"M\n" +
 	"\x13CreateBudgetRequest\x126\n" +
-	"\x06budget\x18\x01 \x01(\v2\x19.saturn.finance.v1.BudgetB\x03\xe0A\x02R\x06budget\"\xc5\x01\n" +
+	"\x06budget\x18\x01 \x01(\v2\x19.saturn.finance.v1.BudgetB\x03\xe0A\x02R\x06budget\"\x9a\x02\n" +
+	"\fExchangeRate\x12(\n" +
+	"\rcurrency_code\x18\x01 \x01(\tB\x03\xe0A\x03R\fcurrencyCode\x12-\n" +
+	"\x04rate\x18\x02 \x01(\v2\x14.google.type.DecimalB\x03\xe0A\x02R\x04rate\x12-\n" +
+	"\x10is_base_currency\x18\x03 \x01(\bB\x03\xe0A\x03R\x0eisBaseCurrency\x12@\n" +
+	"\vcreate_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"createTime\x12@\n" +
+	"\vupdate_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"updateTime\"\xc5\x01\n" +
 	"\x12ListBudgetsRequest\x12\x1b\n" +
 	"\x06search\x18\x01 \x01(\tB\x03\xe0A\x01R\x06search\x127\n" +
 	"\x04view\x18\x02 \x01(\x0e2\x1e.saturn.finance.v1.Budget.ViewB\x03\xe0A\x01R\x04view\x12\x1e\n" +
@@ -793,8 +1169,13 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x06ACTIVE\x10\x01\x12\n" +
 	"\n" +
 	"\x06PAUSED\x10\x02\x12\f\n" +
-	"\bARCHIVED\x10\x032\x9d\x05\n" +
-	"\aFinance\x12v\n" +
+	"\bARCHIVED\x10\x032\x84\v\n" +
+	"\aFinance\x12\x8d\x01\n" +
+	"\x12CreateExchangeRate\x12,.saturn.finance.v1.CreateExchangeRateRequest\x1a\x1f.saturn.finance.v1.ExchangeRate\"(\x82\xd3\xe4\x93\x02\":\x04rate\"\x1a/v1/finance/exchange-rates\x12\x92\x01\n" +
+	"\x11ListExchangeRates\x12+.saturn.finance.v1.ListExchangeRatesRequest\x1a,.saturn.finance.v1.ListExchangeRatesResponse\"\"\x82\xd3\xe4\x93\x02\x1c\x12\x1a/v1/finance/exchange-rates\x12\x91\x01\n" +
+	"\x0fGetExchangeRate\x12).saturn.finance.v1.GetExchangeRateRequest\x1a\x1f.saturn.finance.v1.ExchangeRate\"2\x82\xd3\xe4\x93\x02,\x12*/v1/finance/exchange-rates/{currency_code}\x12\x9a\x01\n" +
+	"\x12UpdateExchangeRate\x12,.saturn.finance.v1.UpdateExchangeRateRequest\x1a\x1f.saturn.finance.v1.ExchangeRate\"5\x82\xd3\xe4\x93\x02/:\x01*\x1a*/v1/finance/exchange-rates/{currency_code}\x12\x8e\x01\n" +
+	"\x12DeleteExchangeRate\x12,.saturn.finance.v1.DeleteExchangeRateRequest\x1a\x16.google.protobuf.Empty\"2\x82\xd3\xe4\x93\x02,**/v1/finance/exchange-rates/{currency_code}\x12v\n" +
 	"\fCreateBudget\x12&.saturn.finance.v1.CreateBudgetRequest\x1a\x19.saturn.finance.v1.Budget\"#\x82\xd3\xe4\x93\x02\x1d:\x06budget\"\x13/v1/finance/budgets\x12y\n" +
 	"\vListBudgets\x12%.saturn.finance.v1.ListBudgetsRequest\x1a&.saturn.finance.v1.ListBudgetsResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/v1/finance/budgets\x12r\n" +
 	"\tGetBudget\x12#.saturn.finance.v1.GetBudgetRequest\x1a\x19.saturn.finance.v1.Budget\"%\xdaA\x02id\x82\xd3\xe4\x93\x02\x1a\x12\x18/v1/finance/budgets/{id}\x12\x93\x01\n" +
@@ -814,57 +1195,81 @@ func file_saturn_finance_v1_finance_proto_rawDescGZIP() []byte {
 }
 
 var file_saturn_finance_v1_finance_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_saturn_finance_v1_finance_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_saturn_finance_v1_finance_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_saturn_finance_v1_finance_proto_goTypes = []any{
-	(Budget_View)(0),              // 0: saturn.finance.v1.Budget.View
-	(Budget_Status)(0),            // 1: saturn.finance.v1.Budget.Status
-	(*CreateBudgetRequest)(nil),   // 2: saturn.finance.v1.CreateBudgetRequest
-	(*ListBudgetsRequest)(nil),    // 3: saturn.finance.v1.ListBudgetsRequest
-	(*ListBudgetsResponse)(nil),   // 4: saturn.finance.v1.ListBudgetsResponse
-	(*GetBudgetRequest)(nil),      // 5: saturn.finance.v1.GetBudgetRequest
-	(*UpdateBudgetRequest)(nil),   // 6: saturn.finance.v1.UpdateBudgetRequest
-	(*DeleteBudgetRequest)(nil),   // 7: saturn.finance.v1.DeleteBudgetRequest
-	(*Budget)(nil),                // 8: saturn.finance.v1.Budget
-	(*Budget_Stats)(nil),          // 9: saturn.finance.v1.Budget.Stats
-	(*fieldmaskpb.FieldMask)(nil), // 10: google.protobuf.FieldMask
-	(*typepb.Appearance)(nil),     // 11: saturn.type.Appearance
-	(*typepb.Money)(nil),          // 12: saturn.type.Money
-	(*timestamppb.Timestamp)(nil), // 13: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),         // 14: google.protobuf.Empty
+	(Budget_View)(0),                  // 0: saturn.finance.v1.Budget.View
+	(Budget_Status)(0),                // 1: saturn.finance.v1.Budget.Status
+	(*CreateExchangeRateRequest)(nil), // 2: saturn.finance.v1.CreateExchangeRateRequest
+	(*ListExchangeRatesRequest)(nil),  // 3: saturn.finance.v1.ListExchangeRatesRequest
+	(*ListExchangeRatesResponse)(nil), // 4: saturn.finance.v1.ListExchangeRatesResponse
+	(*GetExchangeRateRequest)(nil),    // 5: saturn.finance.v1.GetExchangeRateRequest
+	(*UpdateExchangeRateRequest)(nil), // 6: saturn.finance.v1.UpdateExchangeRateRequest
+	(*DeleteExchangeRateRequest)(nil), // 7: saturn.finance.v1.DeleteExchangeRateRequest
+	(*CreateBudgetRequest)(nil),       // 8: saturn.finance.v1.CreateBudgetRequest
+	(*ExchangeRate)(nil),              // 9: saturn.finance.v1.ExchangeRate
+	(*ListBudgetsRequest)(nil),        // 10: saturn.finance.v1.ListBudgetsRequest
+	(*ListBudgetsResponse)(nil),       // 11: saturn.finance.v1.ListBudgetsResponse
+	(*GetBudgetRequest)(nil),          // 12: saturn.finance.v1.GetBudgetRequest
+	(*UpdateBudgetRequest)(nil),       // 13: saturn.finance.v1.UpdateBudgetRequest
+	(*DeleteBudgetRequest)(nil),       // 14: saturn.finance.v1.DeleteBudgetRequest
+	(*Budget)(nil),                    // 15: saturn.finance.v1.Budget
+	(*Budget_Stats)(nil),              // 16: saturn.finance.v1.Budget.Stats
+	(*decimal.Decimal)(nil),           // 17: google.type.Decimal
+	(*timestamppb.Timestamp)(nil),     // 18: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),     // 19: google.protobuf.FieldMask
+	(*typepb.Appearance)(nil),         // 20: saturn.type.Appearance
+	(*typepb.Money)(nil),              // 21: saturn.type.Money
+	(*emptypb.Empty)(nil),             // 22: google.protobuf.Empty
 }
 var file_saturn_finance_v1_finance_proto_depIdxs = []int32{
-	8,  // 0: saturn.finance.v1.CreateBudgetRequest.budget:type_name -> saturn.finance.v1.Budget
-	0,  // 1: saturn.finance.v1.ListBudgetsRequest.view:type_name -> saturn.finance.v1.Budget.View
-	8,  // 2: saturn.finance.v1.ListBudgetsResponse.budgets:type_name -> saturn.finance.v1.Budget
-	0,  // 3: saturn.finance.v1.GetBudgetRequest.view:type_name -> saturn.finance.v1.Budget.View
-	8,  // 4: saturn.finance.v1.UpdateBudgetRequest.budget:type_name -> saturn.finance.v1.Budget
-	10, // 5: saturn.finance.v1.UpdateBudgetRequest.update_mask:type_name -> google.protobuf.FieldMask
-	11, // 6: saturn.finance.v1.Budget.appearance:type_name -> saturn.type.Appearance
-	1,  // 7: saturn.finance.v1.Budget.status:type_name -> saturn.finance.v1.Budget.Status
-	12, // 8: saturn.finance.v1.Budget.amount:type_name -> saturn.type.Money
-	13, // 9: saturn.finance.v1.Budget.create_time:type_name -> google.protobuf.Timestamp
-	13, // 10: saturn.finance.v1.Budget.update_time:type_name -> google.protobuf.Timestamp
-	12, // 11: saturn.finance.v1.Budget.base_amount:type_name -> saturn.type.Money
-	9,  // 12: saturn.finance.v1.Budget.stats:type_name -> saturn.finance.v1.Budget.Stats
-	12, // 13: saturn.finance.v1.Budget.Stats.spent_amount:type_name -> saturn.type.Money
-	12, // 14: saturn.finance.v1.Budget.Stats.remaining_amount:type_name -> saturn.type.Money
-	13, // 15: saturn.finance.v1.Budget.Stats.period_start:type_name -> google.protobuf.Timestamp
-	13, // 16: saturn.finance.v1.Budget.Stats.period_end:type_name -> google.protobuf.Timestamp
-	2,  // 17: saturn.finance.v1.Finance.CreateBudget:input_type -> saturn.finance.v1.CreateBudgetRequest
-	3,  // 18: saturn.finance.v1.Finance.ListBudgets:input_type -> saturn.finance.v1.ListBudgetsRequest
-	5,  // 19: saturn.finance.v1.Finance.GetBudget:input_type -> saturn.finance.v1.GetBudgetRequest
-	6,  // 20: saturn.finance.v1.Finance.UpdateBudget:input_type -> saturn.finance.v1.UpdateBudgetRequest
-	7,  // 21: saturn.finance.v1.Finance.DeleteBudget:input_type -> saturn.finance.v1.DeleteBudgetRequest
-	8,  // 22: saturn.finance.v1.Finance.CreateBudget:output_type -> saturn.finance.v1.Budget
-	4,  // 23: saturn.finance.v1.Finance.ListBudgets:output_type -> saturn.finance.v1.ListBudgetsResponse
-	8,  // 24: saturn.finance.v1.Finance.GetBudget:output_type -> saturn.finance.v1.Budget
-	8,  // 25: saturn.finance.v1.Finance.UpdateBudget:output_type -> saturn.finance.v1.Budget
-	14, // 26: saturn.finance.v1.Finance.DeleteBudget:output_type -> google.protobuf.Empty
-	22, // [22:27] is the sub-list for method output_type
-	17, // [17:22] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	9,  // 0: saturn.finance.v1.CreateExchangeRateRequest.rate:type_name -> saturn.finance.v1.ExchangeRate
+	9,  // 1: saturn.finance.v1.ListExchangeRatesResponse.rates:type_name -> saturn.finance.v1.ExchangeRate
+	9,  // 2: saturn.finance.v1.UpdateExchangeRateRequest.rate:type_name -> saturn.finance.v1.ExchangeRate
+	15, // 3: saturn.finance.v1.CreateBudgetRequest.budget:type_name -> saturn.finance.v1.Budget
+	17, // 4: saturn.finance.v1.ExchangeRate.rate:type_name -> google.type.Decimal
+	18, // 5: saturn.finance.v1.ExchangeRate.create_time:type_name -> google.protobuf.Timestamp
+	18, // 6: saturn.finance.v1.ExchangeRate.update_time:type_name -> google.protobuf.Timestamp
+	0,  // 7: saturn.finance.v1.ListBudgetsRequest.view:type_name -> saturn.finance.v1.Budget.View
+	15, // 8: saturn.finance.v1.ListBudgetsResponse.budgets:type_name -> saturn.finance.v1.Budget
+	0,  // 9: saturn.finance.v1.GetBudgetRequest.view:type_name -> saturn.finance.v1.Budget.View
+	15, // 10: saturn.finance.v1.UpdateBudgetRequest.budget:type_name -> saturn.finance.v1.Budget
+	19, // 11: saturn.finance.v1.UpdateBudgetRequest.update_mask:type_name -> google.protobuf.FieldMask
+	20, // 12: saturn.finance.v1.Budget.appearance:type_name -> saturn.type.Appearance
+	1,  // 13: saturn.finance.v1.Budget.status:type_name -> saturn.finance.v1.Budget.Status
+	21, // 14: saturn.finance.v1.Budget.amount:type_name -> saturn.type.Money
+	18, // 15: saturn.finance.v1.Budget.create_time:type_name -> google.protobuf.Timestamp
+	18, // 16: saturn.finance.v1.Budget.update_time:type_name -> google.protobuf.Timestamp
+	21, // 17: saturn.finance.v1.Budget.base_amount:type_name -> saturn.type.Money
+	16, // 18: saturn.finance.v1.Budget.stats:type_name -> saturn.finance.v1.Budget.Stats
+	21, // 19: saturn.finance.v1.Budget.Stats.spent_amount:type_name -> saturn.type.Money
+	21, // 20: saturn.finance.v1.Budget.Stats.remaining_amount:type_name -> saturn.type.Money
+	18, // 21: saturn.finance.v1.Budget.Stats.period_start:type_name -> google.protobuf.Timestamp
+	18, // 22: saturn.finance.v1.Budget.Stats.period_end:type_name -> google.protobuf.Timestamp
+	2,  // 23: saturn.finance.v1.Finance.CreateExchangeRate:input_type -> saturn.finance.v1.CreateExchangeRateRequest
+	3,  // 24: saturn.finance.v1.Finance.ListExchangeRates:input_type -> saturn.finance.v1.ListExchangeRatesRequest
+	5,  // 25: saturn.finance.v1.Finance.GetExchangeRate:input_type -> saturn.finance.v1.GetExchangeRateRequest
+	6,  // 26: saturn.finance.v1.Finance.UpdateExchangeRate:input_type -> saturn.finance.v1.UpdateExchangeRateRequest
+	7,  // 27: saturn.finance.v1.Finance.DeleteExchangeRate:input_type -> saturn.finance.v1.DeleteExchangeRateRequest
+	8,  // 28: saturn.finance.v1.Finance.CreateBudget:input_type -> saturn.finance.v1.CreateBudgetRequest
+	10, // 29: saturn.finance.v1.Finance.ListBudgets:input_type -> saturn.finance.v1.ListBudgetsRequest
+	12, // 30: saturn.finance.v1.Finance.GetBudget:input_type -> saturn.finance.v1.GetBudgetRequest
+	13, // 31: saturn.finance.v1.Finance.UpdateBudget:input_type -> saturn.finance.v1.UpdateBudgetRequest
+	14, // 32: saturn.finance.v1.Finance.DeleteBudget:input_type -> saturn.finance.v1.DeleteBudgetRequest
+	9,  // 33: saturn.finance.v1.Finance.CreateExchangeRate:output_type -> saturn.finance.v1.ExchangeRate
+	4,  // 34: saturn.finance.v1.Finance.ListExchangeRates:output_type -> saturn.finance.v1.ListExchangeRatesResponse
+	9,  // 35: saturn.finance.v1.Finance.GetExchangeRate:output_type -> saturn.finance.v1.ExchangeRate
+	9,  // 36: saturn.finance.v1.Finance.UpdateExchangeRate:output_type -> saturn.finance.v1.ExchangeRate
+	22, // 37: saturn.finance.v1.Finance.DeleteExchangeRate:output_type -> google.protobuf.Empty
+	15, // 38: saturn.finance.v1.Finance.CreateBudget:output_type -> saturn.finance.v1.Budget
+	11, // 39: saturn.finance.v1.Finance.ListBudgets:output_type -> saturn.finance.v1.ListBudgetsResponse
+	15, // 40: saturn.finance.v1.Finance.GetBudget:output_type -> saturn.finance.v1.Budget
+	15, // 41: saturn.finance.v1.Finance.UpdateBudget:output_type -> saturn.finance.v1.Budget
+	22, // 42: saturn.finance.v1.Finance.DeleteBudget:output_type -> google.protobuf.Empty
+	33, // [33:43] is the sub-list for method output_type
+	23, // [23:33] is the sub-list for method input_type
+	23, // [23:23] is the sub-list for extension type_name
+	23, // [23:23] is the sub-list for extension extendee
+	0,  // [0:23] is the sub-list for field type_name
 }
 
 func init() { file_saturn_finance_v1_finance_proto_init() }
@@ -878,7 +1283,7 @@ func file_saturn_finance_v1_finance_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_finance_v1_finance_proto_rawDesc), len(file_saturn_finance_v1_finance_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   8,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

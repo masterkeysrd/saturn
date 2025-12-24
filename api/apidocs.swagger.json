@@ -237,6 +237,159 @@
         ]
       }
     },
+    "/v1/finance/exchange-rates": {
+      "get": {
+        "summary": "ListExchangeRates returns all configured exchange rates for the space\nspecified in the request headers.",
+        "operationId": "Finance_ListExchangeRates",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListExchangeRatesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Finance"
+        ]
+      },
+      "post": {
+        "operationId": "Finance_CreateExchangeRate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExchangeRate"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "rate",
+            "description": "The exchange rate to create.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ExchangeRate"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/exchange-rates/{currencyCode}": {
+      "get": {
+        "summary": "GetExchangeRate returns the specific rate for a currency.",
+        "operationId": "Finance_GetExchangeRate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExchangeRate"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "currencyCode",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteExchangeRate removes a custom exchange rate.\nEffectively disables that currency for the space unless it is re-added.",
+        "operationId": "Finance_DeleteExchangeRate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "currencyCode",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "put": {
+        "summary": "UpdateExchangeRate sets or updates the exchange rate for a specific currency.\nThe rate represents: 1 Unit of Base Currency = X Units of Target Currency.",
+        "operationId": "Finance_UpdateExchangeRate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExchangeRate"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "currencyCode",
+            "description": "The currency code to update (mapped from URL path).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceUpdateExchangeRateBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/identity/sessions": {
       "get": {
         "summary": "ListSessions lists all active sessions for the current user.",
@@ -1004,6 +1157,18 @@
       },
       "description": "Statistics related to the budget."
     },
+    "FinanceUpdateExchangeRateBody": {
+      "type": "object",
+      "properties": {
+        "rate": {
+          "$ref": "#/definitions/v1ExchangeRate",
+          "description": "The new exchange rate details."
+        }
+      },
+      "required": [
+        "rate"
+      ]
+    },
     "IdentityUpdateUserBody": {
       "type": "object",
       "properties": {
@@ -1102,6 +1267,16 @@
         }
       },
       "description": "Represents appearance for a resource."
+    },
+    "typeDecimal": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string",
+          "description": "The decimal value, as a string.\n\nThe string representation consists of an optional sign, `+` (`U+002B`)\nor `-` (`U+002D`), followed by a sequence of zero or more decimal digits\n(\"the integer\"), optionally followed by a fraction, optionally followed\nby an exponent.\n\nThe fraction consists of a decimal point followed by zero or more decimal\ndigits. The string must contain at least one digit in either the integer\nor the fraction. The number formed by the sign, the integer and the\nfraction is referred to as the significand.\n\nThe exponent consists of the character `e` (`U+0065`) or `E` (`U+0045`)\nfollowed by one or more decimal digits.\n\nServices **should** normalize decimal values before storing them by:\n\n  - Removing an explicitly-provided `+` sign (`+2.5` -\u003e `2.5`).\n  - Replacing a zero-length integer value with `0` (`.5` -\u003e `0.5`).\n  - Coercing the exponent character to lower-case (`2.5E8` -\u003e `2.5e8`).\n  - Removing an explicitly-provided zero exponent (`2.5e0` -\u003e `2.5`).\n\nServices **may** perform additional normalization based on its own needs\nand the internal decimal implementation selected, such as shifting the\ndecimal point and exponent value together (example: `2.5e-1` \u003c-\u003e `0.25`).\nAdditionally, services **may** preserve trailing zeroes in the fraction\nto indicate increased precision, but are not required to do so.\n\nNote that only the `.` character is supported to divide the integer\nand the fraction; `,` **should not** be supported regardless of locale.\nAdditionally, thousand separators **should not** be supported. If a\nservice does support them, values **must** be normalized.\n\nThe ENBF grammar is:\n\n    DecimalString =\n      [Sign] Significand [Exponent];\n\n    Sign = '+' | '-';\n\n    Significand =\n      Digits ['.'] [Digits] | [Digits] '.' Digits;\n\n    Exponent = ('e' | 'E') [Sign] Digits;\n\n    Digits = { '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' };\n\nServices **should** clearly document the range of supported values, the\nmaximum supported precision (total number of digits), and, if applicable,\nthe scale (number of digits after the decimal point), as well as how it\nbehaves when receiving out-of-bounds values.\n\nServices **may** choose to accept values passed as input even when the\nvalue has a higher precision or scale than the service supports, and\n**should** round the value to fit the supported scale. Alternatively, the\nservice **may** error with `400 Bad Request` (`INVALID_ARGUMENT` in gRPC)\nif precision would be lost.\n\nServices **should** error with `400 Bad Request` (`INVALID_ARGUMENT` in\ngRPC) if the service receives a value outside of the supported range."
+        }
+      },
+      "description": "A representation of a decimal value, such as 2.5. Clients may convert values\ninto language-native decimal formats, such as Java's [BigDecimal][] or\nPython's [decimal.Decimal][].\n\n[BigDecimal]:\nhttps://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/math/BigDecimal.html\n[decimal.Decimal]: https://docs.python.org/3/library/decimal.html"
     },
     "typeMoney": {
       "type": "object",
@@ -1256,6 +1431,41 @@
         "password"
       ]
     },
+    "v1ExchangeRate": {
+      "type": "object",
+      "properties": {
+        "currencyCode": {
+          "type": "string",
+          "description": "The 3-letter currency code (ISO 4217), e.g., \"DOP\", \"EUR\".",
+          "readOnly": true
+        },
+        "rate": {
+          "$ref": "#/definitions/typeDecimal",
+          "description": "The rate relative to the Space's Base Currency.\nFormat: Decimal string (e.g., \"62.50\", \"0.95\").\nLogic: 1 Base Currency = [rate] This Currency."
+        },
+        "isBaseCurrency": {
+          "type": "boolean",
+          "description": "Indicates if this exchange rate is the base currency for the space.\nOutput only.",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp of the exchange rate.\nOutput only.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp of the exchange rate.\nOutput only.",
+          "readOnly": true
+        }
+      },
+      "description": "ExchangeRate represents the conversion factor for a currency.",
+      "required": [
+        "rate"
+      ]
+    },
     "v1ListBudgetsResponse": {
       "type": "object",
       "properties": {
@@ -1274,6 +1484,19 @@
         }
       },
       "description": "Response message for Finance.ListBudgets."
+    },
+    "v1ListExchangeRatesResponse": {
+      "type": "object",
+      "properties": {
+        "rates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ExchangeRate"
+          },
+          "description": "The list of configured rates."
+        }
+      }
     },
     "v1ListMembersResponse": {
       "type": "object",

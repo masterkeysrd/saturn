@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/domain/tenancy"
 	"github.com/masterkeysrd/saturn/internal/foundation/access"
@@ -54,6 +55,7 @@ type TokenBlacklist interface {
 
 type IdentityApp struct {
 	factory         ProviderFactory
+	financeService  FinanceService
 	identityService IdentityService
 	tenancyService  TenancyService
 	tokenManager    TokenManager
@@ -65,6 +67,7 @@ type IdentityAppParams struct {
 	deps.In
 
 	Factory         ProviderFactory
+	FinanceService  FinanceService
 	IdentityService IdentityService
 	TenancyService  TenancyService
 	TokenManager    TokenManager
@@ -75,6 +78,7 @@ type IdentityAppParams struct {
 func NewIdentity(params IdentityAppParams) *IdentityApp {
 	return &IdentityApp{
 		factory:         params.Factory,
+		financeService:  params.FinanceService,
 		identityService: params.IdentityService,
 		tenancyService:  params.TenancyService,
 		tokenManager:    params.TokenManager,
@@ -103,6 +107,17 @@ func (app *IdentityApp) CreateUser(ctx context.Context, req *CreateUserRequest) 
 	}
 	if err := app.tenancyService.CreateSpace(ctx, principal, space); err != nil {
 		return nil, fmt.Errorf("failed to create default space for user: %w", err)
+	}
+
+	principal = principal.WithSpace(space.ID, tenancy.RoleOwner)
+
+	// Initialize default finance settings for the new space
+	defaultSettings := &finance.Settings{
+		SpaceID:      space.ID,
+		BaseCurrency: finance.DefaultBaseCurrency,
+	}
+	if err := app.financeService.CreateSettings(ctx, principal, defaultSettings); err != nil {
+		return nil, fmt.Errorf("failed to create default finance settings for space: %w", err)
 	}
 
 	return user, nil

@@ -75,3 +75,35 @@ func BudgetStatusPb(status finance.BudgetStatus) financepb.Budget_Status {
 		return financepb.Budget_STATUS_UNSPECIFIED
 	}
 }
+
+func ExchangeRate(pb *financepb.ExchangeRate) (*finance.ExchangeRate, error) {
+	if pb == nil {
+		return nil, nil
+	}
+
+	exRate := &finance.ExchangeRate{
+		ExchangeRateKey: finance.ExchangeRateKey{
+			CurrencyCode: finance.CurrencyCode(pb.GetCurrencyCode()),
+		},
+	}
+
+	rate, err := encoding.Decimal(pb.GetRate())
+	if err != nil {
+		return nil, err
+	}
+	exRate.Rate = rate
+
+	return exRate, nil
+}
+
+func ExchangeRatePb(e *finance.ExchangeRate) *financepb.ExchangeRate {
+	if e == nil {
+		return nil
+	}
+
+	return &financepb.ExchangeRate{
+		CurrencyCode:   e.CurrencyCode.String(),
+		Rate:           encoding.DecimalPb(e.Rate),
+		IsBaseCurrency: e.IsBase,
+	}
+}

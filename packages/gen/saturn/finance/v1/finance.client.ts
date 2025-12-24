@@ -3,6 +3,89 @@ import * as Types from './finance_pb';
 import { create, fromJson, type MessageInitShape, toJson } from '@bufbuild/protobuf';
 
 /**
+ * @param req Types.CreateExchangeRateRequest
+ * @returns Promise<Types.ExchangeRate>
+ */
+export async function createExchangeRate(req: MessageInitShape<typeof Types.CreateExchangeRateRequestSchema>): Promise<Types.ExchangeRate> {
+  const msg = create(Types.CreateExchangeRateRequestSchema, req);
+  const body = toJson(Types.CreateExchangeRateRequestSchema, msg);
+
+  return getAxios().post(`/api/v1/finance/exchange-rates`
+    , body.rate
+  ).then((resp) => {
+    return fromJson(Types.ExchangeRateSchema, resp.data);
+  });
+}
+
+/**
+ * ListExchangeRates returns all configured exchange rates for the space
+ * specified in the request headers.
+ *
+ * @param req Types.ListExchangeRatesRequest
+ * @returns Promise<Types.ListExchangeRatesResponse>
+ */
+export async function listExchangeRates(req: MessageInitShape<typeof Types.ListExchangeRatesRequestSchema>): Promise<Types.ListExchangeRatesResponse> {
+  const msg = create(Types.ListExchangeRatesRequestSchema, req);
+  const body = toJson(Types.ListExchangeRatesRequestSchema, msg);
+
+  return getAxios().get(`/api/v1/finance/exchange-rates`
+  ).then((resp) => {
+    return fromJson(Types.ListExchangeRatesResponseSchema, resp.data);
+  });
+}
+
+/**
+ * GetExchangeRate returns the specific rate for a currency.
+ *
+ * @param req Types.GetExchangeRateRequest
+ * @returns Promise<Types.ExchangeRate>
+ */
+export async function getExchangeRate(req: MessageInitShape<typeof Types.GetExchangeRateRequestSchema>): Promise<Types.ExchangeRate> {
+  const msg = create(Types.GetExchangeRateRequestSchema, req);
+  const body = toJson(Types.GetExchangeRateRequestSchema, msg);
+
+  return getAxios().get(`/api/v1/finance/exchange-rates/${body.currencyCode}`
+  ).then((resp) => {
+    return fromJson(Types.ExchangeRateSchema, resp.data);
+  });
+}
+
+/**
+ * UpdateExchangeRate sets or updates the exchange rate for a specific currency.
+ * The rate represents: 1 Unit of Base Currency = X Units of Target Currency.
+ *
+ * @param req Types.UpdateExchangeRateRequest
+ * @returns Promise<Types.ExchangeRate>
+ */
+export async function updateExchangeRate(req: MessageInitShape<typeof Types.UpdateExchangeRateRequestSchema>): Promise<Types.ExchangeRate> {
+  const msg = create(Types.UpdateExchangeRateRequestSchema, req);
+  const body = toJson(Types.UpdateExchangeRateRequestSchema, msg);
+
+  return getAxios().put(`/api/v1/finance/exchange-rates/${body.currencyCode}`
+    , body
+  ).then((resp) => {
+    return fromJson(Types.ExchangeRateSchema, resp.data);
+  });
+}
+
+/**
+ * DeleteExchangeRate removes a custom exchange rate.
+ * Effectively disables that currency for the space unless it is re-added.
+ *
+ * @param req Types.DeleteExchangeRateRequest
+ * @returns Promise<void>
+ */
+export async function deleteExchangeRate(req: MessageInitShape<typeof Types.DeleteExchangeRateRequestSchema>): Promise<void> {
+  const msg = create(Types.DeleteExchangeRateRequestSchema, req);
+  const body = toJson(Types.DeleteExchangeRateRequestSchema, msg);
+
+  return getAxios().delete(`/api/v1/finance/exchange-rates/${body.currencyCode}`
+  ).then(() => {
+    return;
+  });
+}
+
+/**
  * Creates a new budget.
  *
  * @param req Types.CreateBudgetRequest

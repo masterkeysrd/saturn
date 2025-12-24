@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/tenancy"
 	"github.com/masterkeysrd/saturn/internal/foundation/access"
+	"github.com/masterkeysrd/saturn/internal/pkg/deps"
 )
 
 // TenancyService defines the interface for tenancy-related operations.
@@ -18,13 +20,22 @@ type TenancyService interface {
 
 // TenancyApp provides methods to manage tenancy operations.
 type TenancyApp struct {
-	service TenancyService
+	tenancyService TenancyService
+	financeService FinanceService
+}
+
+type TenancyAppParams struct {
+	deps.In
+
+	TenancyService TenancyService
+	FinanceService FinanceService
 }
 
 // NewTenancyApplication creates a new instance of TenancyApplication.
-func NewTenancyApplication(service TenancyService) *TenancyApp {
+func NewTenancyApplication(params TenancyAppParams) *TenancyApp {
 	return &TenancyApp{
-		service: service,
+		tenancyService: params.TenancyService,
+		financeService: params.FinanceService,
 	}
 }
 
@@ -40,8 +51,17 @@ func (app *TenancyApp) CreateSpace(ctx context.Context, req *CreateSpaceRequest)
 		Alias:       req.Alias,
 		Description: req.Description,
 	}
-	if err := app.service.CreateSpace(ctx, principal, space); err != nil {
+	if err := app.tenancyService.CreateSpace(ctx, principal, space); err != nil {
 		return nil, fmt.Errorf("failed to create space: %w", err)
+	}
+
+	// Initialize default finance settings for the new space
+	defaultSettings := &finance.Settings{
+		SpaceID:      space.ID,
+		BaseCurrency: finance.DefaultBaseCurrency,
+	}
+	if err := app.financeService.CreateSettings(ctx, principal, defaultSettings); err != nil {
+		return nil, fmt.Errorf("failed to create default finance settings for space: %w", err)
 	}
 
 	return space, nil
@@ -53,7 +73,7 @@ func (app *TenancyApp) ListSpaces(ctx context.Context) ([]*tenancy.Space, error)
 		return nil, errors.New("unauthenticated: principal not found in context")
 	}
 
-	spaces, err := app.service.ListSpaces(ctx, principal.ActorID())
+	spaces, err := app.tenancyService.ListSpaces(ctx, principal.ActorID())
 	if err != nil {
 		return nil, fmt.Errorf("failed to list spaces: %w", err)
 	}
@@ -65,7 +85,7 @@ func (app *TenancyApp) ListSpaces(ctx context.Context) ([]*tenancy.Space, error)
 //
 // This method is primarily intended for internal use within middleware components.
 func (app *TenancyApp) GetMembership(ctx context.Context, membershipID tenancy.MembershipID) (*tenancy.Membership, error) {
-	membership, err := app.service.GetMembership(ctx, membershipID)
+	membership, err := app.tenancyService.GetMembership(ctx, membershipID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get membership: %w", err)
 	}

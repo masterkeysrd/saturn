@@ -15,7 +15,7 @@ func NewFile(buf bytes.Buffer) *File {
 	}
 }
 
-func (f *File) P(args ...interface{}) {
+func (f *File) P(args ...any) {
 	for _, arg := range args {
 		fmt.Fprint(&f.buf, arg)
 	}

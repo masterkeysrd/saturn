@@ -1,6 +1,65 @@
 ----------------------------------------------------
+-- SQL Schema for Settings Management
+----------------------------------------------------
+-- name: GetSettingsBySpaceID
+-- return: one
+-- return_type: SettingEntity
+SELECT
+  space_id,
+  state,
+  base_currency,
+  create_time,
+  create_by,
+  update_time,
+  update_by
+FROM
+  finance.settings
+WHERE
+  space_id =:space_id
+LIMIT
+  1;
+
+-- name: UpsertSettings
+-- return: one
+-- param_type: SettingEntity
+-- return_type: SettingEntity
+INSERT INTO
+  finance.settings (
+    space_id,
+    state,
+    base_currency,
+    create_time,
+    create_by,
+    update_time,
+    update_by
+  )
+VALUES
+  (
+:space_id,
+:state,
+:base_currency,
+:create_time,
+:create_by,
+:update_time,
+:update_by
+  )
+ON CONFLICT (space_id) DO UPDATE
+SET
+  state = EXCLUDED.state,
+  update_time = EXCLUDED.update_time,
+  update_by = EXCLUDED.update_by
+RETURNING
+  space_id,
+  state,
+  base_currency,
+  create_time,
+  create_by,
+  update_time,
+  update_by;
+
+----------------------------------------------------
 -- SQL Queries for Budgets Management
-----------------------------------------------
+----------------------------------------------------
 -- name: GetBudgetByID
 -- return: one
 -- return_type: BudgetEntity
@@ -110,3 +169,106 @@ DELETE FROM finance.budgets
 WHERE
   id =:id
   AND space_id =:space_id;
+
+----------------------------------------------------
+-- SQL Queries for Exchange Rates Management
+----------------------------------------------------
+-- name: GetExchangeRate
+-- return: one
+-- return_type: ExchangeRateEntity
+SELECT
+  space_id,
+  currency_code,
+  rate,
+  is_base,
+  create_time,
+  create_by,
+  update_time,
+  update_by
+FROM
+  finance.exchange_rates
+WHERE
+  space_id =:space_id
+  AND currency_code =:currency_code
+LIMIT
+  1;
+
+-- name: ExistsExchangeRate
+-- return: one
+-- return_type: bool
+SELECT
+  EXISTS (
+    SELECT
+      1
+    FROM
+      finance.exchange_rates
+    WHERE
+      space_id =:space_id
+      AND currency_code =:currency_code
+  ) AS EXISTS;
+
+-- name: ListExchangeRatesBySpaceID
+-- return: many
+-- return_type: ExchangeRateEntity
+SELECT
+  space_id,
+  currency_code,
+  rate,
+  is_base,
+  create_time,
+  create_by,
+  update_time,
+  update_by
+FROM
+  finance.exchange_rates
+WHERE
+  space_id =:space_id;
+
+-- name: UpsertExchangeRate
+-- return: one
+-- param_type: ExchangeRateEntity
+-- return_type: ExchangeRateEntity
+INSERT INTO
+  finance.exchange_rates (
+    space_id,
+    currency_code,
+    rate,
+    is_base,
+    create_time,
+    create_by,
+    update_time,
+    update_by
+  )
+VALUES
+  (
+:space_id,
+:currency_code,
+:rate,
+:is_base,
+:create_time,
+:create_by,
+:update_time,
+:update_by
+  )
+ON CONFLICT (space_id, currency_code) DO UPDATE
+SET
+  rate = EXCLUDED.rate,
+  is_base = EXCLUDED.is_base,
+  update_time = EXCLUDED.update_time,
+  update_by = EXCLUDED.update_by
+RETURNING
+  space_id,
+  currency_code,
+  rate,
+  is_base,
+  create_time,
+  create_by,
+  update_time,
+  update_by;
+
+-- name: DeleteExchangeRate
+-- return: exec
+DELETE FROM finance.exchange_rates
+WHERE
+  space_id =:space_id
+  AND currency_code =:currency_code;

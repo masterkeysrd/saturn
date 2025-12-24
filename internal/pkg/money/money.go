@@ -3,7 +3,6 @@ package money
 import (
 	"errors"
 	"fmt"
-	"regexp"
 )
 
 type Money struct {
@@ -40,21 +39,6 @@ func (m Money) Validate() error {
 		return fmt.Errorf("currency is invalid: %w", err)
 	}
 	return nil
-}
-
-type CurrencyCode string
-
-func (c CurrencyCode) Validate() error {
-	reg := regexp.MustCompile(`^[A-Z]{3}$`)
-	if !reg.MatchString(string(c)) {
-		return errors.New("currency code must be 3 uppercase letters (ISO-4217)")
-	}
-
-	return nil
-}
-
-func (c CurrencyCode) String() string {
-	return string(c)
 }
 
 // Cents represents a monetary value in minor units (e.g., cents).

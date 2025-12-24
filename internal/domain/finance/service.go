@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/foundation/access"
+	"github.com/masterkeysrd/saturn/internal/foundation/decimal"
 	"github.com/masterkeysrd/saturn/internal/foundation/id"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
 	"github.com/masterkeysrd/saturn/internal/pkg/errors"
@@ -17,8 +18,10 @@ type Service struct {
 	budgetStore       BudgetStore
 	budgetPeriodStore BudgetPeriodStore
 	currencyStore     CurrencyStore
-	transactionStore  TransactionStore
+	exchangeRateStore ExchangeRateStore
 	insightsStore     InsightsStore
+	settingsStore     SettingsStore
+	transactionStore  TransactionStore
 }
 
 type ServiceParams struct {
@@ -27,6 +30,7 @@ type ServiceParams struct {
 	BudgetStore      BudgetStore
 	BudgetPeriod     BudgetPeriodStore
 	CurrencyStore    CurrencyStore
+	SettingsStore    SettingsStore
 	TransactionStore TransactionStore
 	InsightsStore    InsightsStore
 }
@@ -37,6 +41,7 @@ func NewService(params ServiceParams) *Service {
 		budgetPeriodStore: params.BudgetPeriod,
 		currencyStore:     params.CurrencyStore,
 		transactionStore:  params.TransactionStore,
+		settingsStore:     params.SettingsStore,
 		insightsStore:     params.InsightsStore,
 	}
 }
@@ -393,6 +398,37 @@ func (s *Service) GetCurrency(ctx context.Context, code CurrencyCode) (*Currency
 	return currency, nil
 }
 
+func (s *Service) CreateExchangeRate(ctx context.Context, actor access.Principal, rate *ExchangeRate) error {
+	if !actor.IsSpaceAdmin() {
+		return errors.New("only space admins can create exchange rates")
+	}
+
+	if err := rate.Initialize(actor); err != nil {
+		return fmt.Errorf("cannot initialize exchange rate: %w", err)
+	}
+
+	if err := rate.Validate(); err != nil {
+		return fmt.Errorf("invalid exchange rate: %w", err)
+	}
+
+	exists, err := s.exchangeRateStore.Exists(ctx, ExchangeRateKey{
+		SpaceID:      actor.SpaceID(),
+		CurrencyCode: rate.CurrencyCode,
+	})
+	if err != nil {
+		return fmt.Errorf("cannot check exchange rate existence: %w", err)
+	}
+	if exists {
+		return errors.New("exchange rate for this currency already exists")
+	}
+
+	if err := s.exchangeRateStore.Store(ctx, rate); err != nil {
+		return fmt.Errorf("cannot store exchange rate: %w", err)
+	}
+
+	return nil
+}
+
 func (s *Service) CreateCurrency(ctx context.Context, currency *Currency) error {
 	if err := currency.Initialize(); err != nil {
 		return fmt.Errorf("cannot initialize currency: %w", err)
@@ -437,4 +473,110 @@ func (s *Service) GetInsights(ctx context.Context, in *GetInsightsInput) (*Insig
 	return &Insights{
 		Spending: spendingInsights,
 	}, nil
+}
+
+func (s *Service) CreateSettings(ctx context.Context, actor access.Principal, settings *Settings) error {
+	if !actor.IsSpaceOwner() {
+		return errors.New("only space owners can create settings")
+	}
+
+	// Initialize and validates the settings.
+	settings.Initialize()
+	settings.Sanitize()
+	settings.Touch(actor)
+	if err := settings.Validate(); err != nil {
+		return fmt.Errorf("invalid settings: %w", err)
+	}
+
+	if err := s.settingsStore.Store(ctx, settings); err != nil {
+		return fmt.Errorf("cannot store settings: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Service) GetSettings(ctx context.Context, actor access.Principal) (*Settings, error) {
+	if !actor.IsSpaceMember() {
+		return nil, errors.New("only space members can get settings")
+	}
+
+	settings, err := s.settingsStore.Get(ctx, actor.SpaceID())
+	if err != nil {
+		return nil, fmt.Errorf("cannot get settings: %w", err)
+	}
+
+	return settings, nil
+}
+
+func (s *Service) ActivateSettings(ctx context.Context, actor access.Principal) error {
+	if !actor.IsSpaceOwner() {
+		return errors.New("only space owners can activate settings")
+	}
+
+	settings, err := s.settingsStore.Get(ctx, actor.SpaceID())
+	if err != nil {
+		return fmt.Errorf("cannot get settings: %w", err)
+	}
+
+	if settings.State == SettingsStateActive {
+		log.Printf("Settings for space %s are already active", actor.SpaceID())
+		return nil
+	}
+
+	settings.State = SettingsStateActive
+	settings.Touch(actor)
+	if err := settings.Validate(); err != nil {
+		return fmt.Errorf("invalid settings: %w", err)
+	}
+
+	if err := s.settingsStore.Store(ctx, settings); err != nil {
+		return fmt.Errorf("cannot store settings: %w", err)
+	}
+
+	// Create the base currency exchange rate.
+	baseRate := &ExchangeRate{
+		ExchangeRateKey: ExchangeRateKey{
+			SpaceID:      actor.SpaceID(),
+			CurrencyCode: settings.BaseCurrency,
+		},
+		Rate: decimal.FromInt(1),
+	}
+
+	if err := baseRate.Initialize(actor); err != nil {
+		return fmt.Errorf("cannot initialize base exchange rate: %w", err)
+	}
+
+	if err := s.exchangeRateStore.Store(ctx, baseRate); err != nil {
+		return fmt.Errorf("cannot store base exchange rate: %w", err)
+	}
+
+	log.Printf("Settings for space %s have been activated", actor.SpaceID())
+	return nil
+}
+
+func (s *Service) UpdateSettings(ctx context.Context, actor access.Principal, in *UpdateSettingsInput) error {
+	if !actor.IsSpaceAdmin() {
+		return errors.New("only space admins can update settings")
+	}
+
+	if err := in.Validate(); err != nil {
+		return fmt.Errorf("invalid update settings input: %w", err)
+	}
+
+	settings, err := s.settingsStore.Get(ctx, actor.SpaceID())
+	if err != nil {
+		return fmt.Errorf("cannot get existing settings: %w", err)
+	}
+
+	if err := settings.Update(in.Settings, in.UpdateMask); err != nil {
+		return fmt.Errorf("cannot update settings: %w", err)
+	}
+
+	settings.Sanitize()
+	settings.Touch(actor)
+	if err := s.settingsStore.Store(ctx, settings); err != nil {
+		return fmt.Errorf("cannot store settings: %w", err)
+	}
+
+	return nil
 }

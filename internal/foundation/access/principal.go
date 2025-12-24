@@ -9,8 +9,14 @@ import (
 
 type principalCtxKey struct{}
 
+// UserID represents the unique identifier for a user in the system.
+//
+// This is an alias for [auth.UserID] to maintain to avoid importing the auth package
+// throughout the access package.
+type UserID = auth.UserID
+
 type Principal struct {
-	actorID auth.UserID
+	actorID UserID
 	spaceID space.ID
 
 	// SystemRole is the global role assigned to the principal,

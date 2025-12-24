@@ -6,6 +6,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/foundation/access"
+	"github.com/masterkeysrd/saturn/internal/foundation/decimal"
+	"github.com/masterkeysrd/saturn/internal/foundation/id"
+	"github.com/masterkeysrd/saturn/internal/foundation/space"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 )
 
@@ -50,5 +54,57 @@ func (c *Currency) Validate() error {
 		return errors.New("rate must be a positive number")
 	}
 
+	return nil
+}
+
+type ExchangeRateStore interface {
+	Get(context.Context, ExchangeRateKey) (*ExchangeRate, error)
+	Exists(context.Context, ExchangeRateKey) (bool, error)
+	Store(context.Context, *ExchangeRate) error
+}
+
+type ExchangeRateKey struct {
+	SpaceID      space.ID
+	CurrencyCode CurrencyCode
+}
+
+type ExchangeRate struct {
+	ExchangeRateKey
+	Rate       decimal.Decimal
+	IsBase     bool
+	CreateTime time.Time
+	CreateBy   access.UserID
+	UpdateTime time.Time
+	UpdateBy   access.UserID
+}
+
+func (e *ExchangeRate) Initialize(actor access.Principal) error {
+	if e == nil {
+		return errors.New("exchange rate is nil")
+	}
+
+	e.CreateBy = actor.ActorID()
+	e.CreateTime = time.Now().UTC()
+	e.UpdateBy = actor.ActorID()
+	e.UpdateTime = e.CreateTime
+	return nil
+}
+
+func (e *ExchangeRate) Validate() error {
+	if e == nil {
+		return errors.New("exchange rate is nil")
+	}
+
+	if err := id.Validate(e.SpaceID); err != nil {
+		return fmt.Errorf("space id is invalid: %w", err)
+	}
+
+	if err := e.CurrencyCode.Validate(); err != nil {
+		return fmt.Errorf("currency code is invalid: %w", err)
+	}
+
+	if e.Rate.Cmp(decimal.FromInt(0)) <= 0 {
+		return errors.New("rate must be a positive number")
+	}
 	return nil
 }

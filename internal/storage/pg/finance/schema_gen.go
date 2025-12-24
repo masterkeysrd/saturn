@@ -5,10 +5,64 @@ import (
 	"context"
 	"database/sql"
 	"github.com/jmoiron/sqlx"
+	"github.com/masterkeysrd/saturn/internal/foundation/decimal"
 	"time"
 )
 
 const (
+	// GetSettingsBySpaceIDQuery is the SQL for the 'GetSettingsBySpaceID' query.
+	GetSettingsBySpaceIDQuery = `
+SELECT
+  space_id,
+  state,
+  base_currency,
+  create_time,
+  create_by,
+  update_time,
+  update_by
+FROM
+  finance.settings
+WHERE
+  space_id =:space_id
+LIMIT
+  1;`
+
+	// UpsertSettingsQuery is the SQL for the 'UpsertSettings' query.
+	UpsertSettingsQuery = `
+INSERT INTO
+  finance.settings (
+    space_id,
+    state,
+    base_currency,
+    create_time,
+    create_by,
+    update_time,
+    update_by
+  )
+VALUES
+  (
+:space_id,
+:state,
+:base_currency,
+:create_time,
+:create_by,
+:update_time,
+:update_by
+  )
+ON CONFLICT (space_id) DO UPDATE
+SET
+  state = EXCLUDED.state,
+  update_time = EXCLUDED.update_time,
+  update_by = EXCLUDED.update_by
+RETURNING
+  space_id,
+  state,
+  base_currency,
+  create_time,
+  create_by,
+  update_time,
+  update_by;`
+
 	// GetBudgetByIDQuery is the SQL for the 'GetBudgetByID' query.
 	GetBudgetByIDQuery = `
 SELECT
@@ -114,6 +168,101 @@ DELETE FROM finance.budgets
 WHERE
   id =:id
   AND space_id =:space_id;`
+
+	// GetExchangeRateQuery is the SQL for the 'GetExchangeRate' query.
+	GetExchangeRateQuery = `
+SELECT
+  space_id,
+  currency_code,
+  rate,
+  is_base,
+  create_time,
+  create_by,
+  update_time,
+  update_by
+FROM
+  finance.exchange_rates
+WHERE
+  space_id =:space_id
+  AND currency_code =:currency_code
+LIMIT
+  1;`
+
+	// ExistsExchangeRateQuery is the SQL for the 'ExistsExchangeRate' query.
+	ExistsExchangeRateQuery = `
+SELECT
+  EXISTS (
+    SELECT
+      1
+    FROM
+      finance.exchange_rates
+    WHERE
+      space_id =:space_id
+      AND currency_code =:currency_code
+  ) AS EXISTS;`
+
+	// ListExchangeRatesBySpaceIDQuery is the SQL for the 'ListExchangeRatesBySpaceID' query.
+	ListExchangeRatesBySpaceIDQuery = `
+SELECT
+  space_id,
+  currency_code,
+  rate,
+  is_base,
+  create_time,
+  create_by,
+  update_time,
+  update_by
+FROM
+  finance.exchange_rates
+WHERE
+  space_id =:space_id;`
+
+	// UpsertExchangeRateQuery is the SQL for the 'UpsertExchangeRate' query.
+	UpsertExchangeRateQuery = `
+INSERT INTO
+  finance.exchange_rates (
+    space_id,
+    currency_code,
+    rate,
+    is_base,
+    create_time,
+    create_by,
+    update_time,
+    update_by
+  )
+VALUES
+  (
+:space_id,
+:currency_code,
+:rate,
+:is_base,
+:create_time,
+:create_by,
+:update_time,
+:update_by
+  )
+ON CONFLICT (space_id, currency_code) DO UPDATE
+SET
+  rate = EXCLUDED.rate,
+  is_base = EXCLUDED.is_base,
+  update_time = EXCLUDED.update_time,
+  update_by = EXCLUDED.update_by
+RETURNING
+  space_id,
+  currency_code,
+  rate,
+  is_base,
+  create_time,
+  create_by,
+  update_time,
+  update_by;`
+
+	// DeleteExchangeRateQuery is the SQL for the 'DeleteExchangeRate' query.
+	DeleteExchangeRateQuery = `
+DELETE FROM finance.exchange_rates
+WHERE
+  space_id =:space_id
+  AND currency_code =:currency_code;`
 )
 
 // BudgetEntity represents a row from the 'budgets' table.
@@ -133,6 +282,39 @@ type BudgetEntity struct {
 	UpdateTime     time.Time `db:"update_time"`
 	UpdateBy       string    `db:"update_by"`
 }
+
+// ExchangeRateEntity represents a row from the 'exchange_rates' table.
+type ExchangeRateEntity struct {
+	SpaceId      string          `db:"space_id"`
+	CurrencyCode string          `db:"currency_code"`
+	Rate         decimal.Decimal `db:"rate"`
+	IsBase       bool            `db:"is_base"`
+	CreateTime   time.Time       `db:"create_time"`
+	CreateBy     string          `db:"create_by"`
+	UpdateTime   time.Time       `db:"update_time"`
+	UpdateBy     string          `db:"update_by"`
+}
+
+// SettingEntity represents a row from the 'settings' table.
+type SettingEntity struct {
+	SpaceId      string    `db:"space_id"`
+	State        string    `db:"state"`
+	BaseCurrency string    `db:"base_currency"`
+	CreateTime   time.Time `db:"create_time"`
+	CreateBy     string    `db:"create_by"`
+	UpdateTime   time.Time `db:"update_time"`
+	UpdateBy     string    `db:"update_by"`
+}
+
+// GetSettingsBySpaceIDParams represents the parameters for the 'GetSettingsBySpaceID' query.
+type GetSettingsBySpaceIDParams struct {
+	SpaceId string `db:"space_id"`
+}
+
+// UpsertSettingsParams represents the parameters for the 'UpsertSettings' query.
+//
+// UpsertSettingsParams is an alias of [SettingEntity].
+type UpsertSettingsParams = SettingEntity
 
 // GetBudgetByIDParams represents the parameters for the 'GetBudgetByID' query.
 type GetBudgetByIDParams struct {
@@ -154,6 +336,68 @@ type UpsertBudgetParams = BudgetEntity
 type DeleteBudgetByIDParams struct {
 	Id      string `db:"id"`
 	SpaceId string `db:"space_id"`
+}
+
+// GetExchangeRateParams represents the parameters for the 'GetExchangeRate' query.
+type GetExchangeRateParams struct {
+	SpaceId      string `db:"space_id"`
+	CurrencyCode string `db:"currency_code"`
+}
+
+// ExistsExchangeRateParams represents the parameters for the 'ExistsExchangeRate' query.
+type ExistsExchangeRateParams struct {
+	SpaceId      string `db:"space_id"`
+	CurrencyCode string `db:"currency_code"`
+}
+
+// ListExchangeRatesBySpaceIDParams represents the parameters for the 'ListExchangeRatesBySpaceID' query.
+type ListExchangeRatesBySpaceIDParams struct {
+	SpaceId string `db:"space_id"`
+}
+
+// UpsertExchangeRateParams represents the parameters for the 'UpsertExchangeRate' query.
+//
+// UpsertExchangeRateParams is an alias of [ExchangeRateEntity].
+type UpsertExchangeRateParams = ExchangeRateEntity
+
+// DeleteExchangeRateParams represents the parameters for the 'DeleteExchangeRate' query.
+type DeleteExchangeRateParams struct {
+	SpaceId      string `db:"space_id"`
+	CurrencyCode string `db:"currency_code"`
+}
+
+// GetSettingsBySpaceID executes the 'GetSettingsBySpaceID' query and returns a single row.
+func GetSettingsBySpaceID(ctx context.Context, db sqlx.ExtContext, params *GetSettingsBySpaceIDParams) (*SettingEntity, error) {
+	query, args, err := sqlx.Named(GetSettingsBySpaceIDQuery, params)
+	if err != nil {
+		return nil, err
+	}
+
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
+
+	var item SettingEntity
+	if err := sqlx.GetContext(ctx, db, &item, query, args...); err != nil {
+		return nil, err
+	}
+
+	return &item, nil
+}
+
+// UpsertSettings executes the 'UpsertSettings' query and returns a single row.
+func UpsertSettings(ctx context.Context, db sqlx.ExtContext, params *UpsertSettingsParams) (*SettingEntity, error) {
+	query, args, err := sqlx.Named(UpsertSettingsQuery, params)
+	if err != nil {
+		return nil, err
+	}
+
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
+
+	var item SettingEntity
+	if err := sqlx.GetContext(ctx, db, &item, query, args...); err != nil {
+		return nil, err
+	}
+
+	return &item, nil
 }
 
 // GetBudgetByID executes the 'GetBudgetByID' query and returns a single row.
@@ -214,4 +458,81 @@ func UpsertBudget(ctx context.Context, db sqlx.ExtContext, params *UpsertBudgetP
 // DeleteBudgetByID executes the 'DeleteBudgetByID' query.
 func DeleteBudgetByID(ctx context.Context, e sqlx.ExtContext, params *DeleteBudgetByIDParams) (sql.Result, error) {
 	return sqlx.NamedExecContext(ctx, e, DeleteBudgetByIDQuery, params)
+}
+
+// GetExchangeRate executes the 'GetExchangeRate' query and returns a single row.
+func GetExchangeRate(ctx context.Context, db sqlx.ExtContext, params *GetExchangeRateParams) (*ExchangeRateEntity, error) {
+	query, args, err := sqlx.Named(GetExchangeRateQuery, params)
+	if err != nil {
+		return nil, err
+	}
+
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
+
+	var item ExchangeRateEntity
+	if err := sqlx.GetContext(ctx, db, &item, query, args...); err != nil {
+		return nil, err
+	}
+
+	return &item, nil
+}
+
+// ExistsExchangeRate executes the 'ExistsExchangeRate' query and returns a single row.
+func ExistsExchangeRate(ctx context.Context, db sqlx.ExtContext, params *ExistsExchangeRateParams) (bool, error) {
+	query, args, err := sqlx.Named(ExistsExchangeRateQuery, params)
+	if err != nil {
+		return false, err
+	}
+
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
+
+	var item bool
+	if err := sqlx.GetContext(ctx, db, &item, query, args...); err != nil {
+		return false, err
+	}
+
+	return item, nil
+}
+
+// ListExchangeRatesBySpaceID executes the 'ListExchangeRatesBySpaceID' query and returns multiple rows.
+func ListExchangeRatesBySpaceID(ctx context.Context, db sqlx.ExtContext, params *ListExchangeRatesBySpaceIDParams, mapper func(*ExchangeRateEntity) error) error {
+	rows, err := sqlx.NamedQueryContext(ctx, db, ListExchangeRatesBySpaceIDQuery, params)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var item ExchangeRateEntity
+		if err := rows.StructScan(&item); err != nil {
+			return err
+		}
+		if err := mapper(&item); err != nil {
+			return err
+		}
+	}
+
+	return rows.Err()
+}
+
+// UpsertExchangeRate executes the 'UpsertExchangeRate' query and returns a single row.
+func UpsertExchangeRate(ctx context.Context, db sqlx.ExtContext, params *UpsertExchangeRateParams) (*ExchangeRateEntity, error) {
+	query, args, err := sqlx.Named(UpsertExchangeRateQuery, params)
+	if err != nil {
+		return nil, err
+	}
+
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
+
+	var item ExchangeRateEntity
+	if err := sqlx.GetContext(ctx, db, &item, query, args...); err != nil {
+		return nil, err
+	}
+
+	return &item, nil
+}
+
+// DeleteExchangeRate executes the 'DeleteExchangeRate' query.
+func DeleteExchangeRate(ctx context.Context, e sqlx.ExtContext, params *DeleteExchangeRateParams) (sql.Result, error) {
+	return sqlx.NamedExecContext(ctx, e, DeleteExchangeRateQuery, params)
 }

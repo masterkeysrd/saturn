@@ -10,6 +10,7 @@ import "google/api/field_behavior.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
+import "google/type/decimal.proto";
 import "saturn/type/appearance.proto";
 import "saturn/type/money.proto";
 
@@ -19,6 +20,39 @@ option go_package = "github.com/masterkeysrd/saturn/gen/proto/go/saturn/finance/
 // expense tracking, and financial goal setting.
 service Finance {
   option (google.api.default_host) = "api.saturn.masterkeysrd.dev";
+
+  rpc CreateExchangeRate(CreateExchangeRateRequest) returns (ExchangeRate) {
+    option (google.api.http) = {
+      post: "/v1/finance/exchange-rates"
+      body: "rate"
+    };
+  }
+
+  // ListExchangeRates returns all configured exchange rates for the space
+  // specified in the request headers.
+  rpc ListExchangeRates(ListExchangeRatesRequest) returns (ListExchangeRatesResponse) {
+    option (google.api.http) = {get: "/v1/finance/exchange-rates"};
+  }
+
+  // GetExchangeRate returns the specific rate for a currency.
+  rpc GetExchangeRate(GetExchangeRateRequest) returns (ExchangeRate) {
+    option (google.api.http) = {get: "/v1/finance/exchange-rates/{currency_code}"};
+  }
+
+  // UpdateExchangeRate sets or updates the exchange rate for a specific currency.
+  // The rate represents: 1 Unit of Base Currency = X Units of Target Currency.
+  rpc UpdateExchangeRate(UpdateExchangeRateRequest) returns (ExchangeRate) {
+    option (google.api.http) = {
+      put: "/v1/finance/exchange-rates/{currency_code}"
+      body: "*"
+    };
+  }
+
+  // DeleteExchangeRate removes a custom exchange rate.
+  // Effectively disables that currency for the space unless it is re-added.
+  rpc DeleteExchangeRate(DeleteExchangeRateRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/finance/exchange-rates/{currency_code}"};
+  }
 
   // Creates a new budget.
   rpc CreateBudget(CreateBudgetRequest) returns (Budget) {
@@ -56,10 +90,61 @@ service Finance {
   }
 }
 
+message CreateExchangeRateRequest {
+  // The exchange rate to create.
+  ExchangeRate rate = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message ListExchangeRatesRequest {}
+
+message ListExchangeRatesResponse {
+  // The list of configured rates.
+  repeated ExchangeRate rates = 1;
+}
+
+message GetExchangeRateRequest {
+  string currency_code = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message UpdateExchangeRateRequest {
+  // The currency code to update (mapped from URL path).
+  string currency_code = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The new exchange rate details.
+  ExchangeRate rate = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DeleteExchangeRateRequest {
+  string currency_code = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
 // Request message for Finance.CreateBudget.
 message CreateBudgetRequest {
   // The budget to create.
   Budget budget = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// ExchangeRate represents the conversion factor for a currency.
+message ExchangeRate {
+  // The 3-letter currency code (ISO 4217), e.g., "DOP", "EUR".
+  string currency_code = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The rate relative to the Space's Base Currency.
+  // Format: Decimal string (e.g., "62.50", "0.95").
+  // Logic: 1 Base Currency = [rate] This Currency.
+  google.type.Decimal rate = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Indicates if this exchange rate is the base currency for the space.
+  // Output only.
+  bool is_base_currency = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Creation timestamp of the exchange rate.
+  // Output only.
+  google.protobuf.Timestamp create_time = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Last update timestamp of the exchange rate.
+  // Output only.
+  google.protobuf.Timestamp update_time = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // Request message for Finance.ListBudgets.

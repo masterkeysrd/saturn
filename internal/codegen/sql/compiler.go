@@ -123,8 +123,10 @@ func mapSQLTypeToGoType(sqlType string) (string, string) {
 	switch sqlType {
 	case "int4", "int8", "bigint", "integer", "smallint":
 		return "int64", ""
-	case "float4", "float8", "numeric", "decimal":
+	case "float4", "float8":
 		return "float64", ""
+	case "decimal", "numeric":
+		return "decimal.Decimal", "github.com/masterkeysrd/saturn/internal/foundation/decimal"
 	case "bool", "boolean":
 		return "bool", ""
 	case "text", "varchar", "char", "uuid":
