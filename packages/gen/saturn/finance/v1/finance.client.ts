@@ -188,6 +188,8 @@ export async function deleteBudget(req: MessageInitShape<typeof Types.DeleteBudg
 }
 
 /**
+ * GetSetting retrieves the finance settings for the space.
+ *
  * @returns Promise<Types.Setting>
  */
 export async function getSetting(): Promise<Types.Setting> {
@@ -198,6 +200,8 @@ export async function getSetting(): Promise<Types.Setting> {
 }
 
 /**
+ * UpdateSetting modifies the finance settings for the space.
+ *
  * @param req Types.UpdateSettingRequest
  * @returns Promise<Types.Setting>
  */

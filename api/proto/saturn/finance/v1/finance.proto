@@ -89,10 +89,12 @@ service Finance {
     option (google.api.method_signature) = "id";
   }
 
+  // GetSetting retrieves the finance settings for the space.
   rpc GetSetting(google.protobuf.Empty) returns (Setting) {
     option (google.api.http) = {get: "/v1/finance/setting"};
   }
 
+  // UpdateSetting modifies the finance settings for the space.
   rpc UpdateSetting(UpdateSettingRequest) returns (Setting) {
     option (google.api.http) = {
       put: "/v1/finance/setting"

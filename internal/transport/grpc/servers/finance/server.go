@@ -64,7 +64,7 @@ func (s *Server) CreateExchangeRate(ctx context.Context, req *financepb.CreateEx
 	return ExchangeRatePb(exchangeRate), nil
 }
 
-func (s *Server) GetSettings(ctx context.Context, _ *emptypb.Empty) (*financepb.Setting, error) {
+func (s *Server) GetSetting(ctx context.Context, _ *emptypb.Empty) (*financepb.Setting, error) {
 	settings, err := s.app.GetSetting(ctx)
 	if err != nil {
 		return nil, err

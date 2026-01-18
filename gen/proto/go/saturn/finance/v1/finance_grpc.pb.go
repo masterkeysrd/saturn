@@ -67,7 +67,9 @@ type FinanceClient interface {
 	UpdateBudget(ctx context.Context, in *UpdateBudgetRequest, opts ...grpc.CallOption) (*Budget, error)
 	// Deletes a budget.
 	DeleteBudget(ctx context.Context, in *DeleteBudgetRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// GetSetting retrieves the finance settings for the space.
 	GetSetting(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Setting, error)
+	// UpdateSetting modifies the finance settings for the space.
 	UpdateSetting(ctx context.Context, in *UpdateSettingRequest, opts ...grpc.CallOption) (*Setting, error)
 }
 
@@ -229,7 +231,9 @@ type FinanceServer interface {
 	UpdateBudget(context.Context, *UpdateBudgetRequest) (*Budget, error)
 	// Deletes a budget.
 	DeleteBudget(context.Context, *DeleteBudgetRequest) (*emptypb.Empty, error)
+	// GetSetting retrieves the finance settings for the space.
 	GetSetting(context.Context, *emptypb.Empty) (*Setting, error)
+	// UpdateSetting modifies the finance settings for the space.
 	UpdateSetting(context.Context, *UpdateSettingRequest) (*Setting, error)
 	mustEmbedUnimplementedFinanceServer()
 }

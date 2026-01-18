@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"net/textproto"
@@ -90,7 +91,12 @@ func (sm *SpaceMiddleware) Handler(next http.Handler) http.Handler {
 			http.Error(w, "Ambiguous request: Multiple X-Space-ID headers", http.StatusBadRequest)
 			return
 		}
+
 		spaceID := tenancy.SpaceID(spaceIDs[0])
+		if spaceID == "" {
+			http.Error(w, "Invalid X-Space-ID header: cannot be empty", http.StatusBadRequest)
+			return
+		}
 
 		ctx := r.Context()
 		principal, ok := access.GetPrincipal(ctx)
@@ -111,8 +117,7 @@ func (sm *SpaceMiddleware) Handler(next http.Handler) http.Handler {
 			UserID:  principal.ActorID(),
 		})
 		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
+			http.Error(w, fmt.Sprintf("Error retrieving membership: %v", err), http.StatusInternalServerError)
 		}
 
 		if membership == nil {

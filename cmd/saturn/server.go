@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -74,6 +75,7 @@ func NewServer(params ServerParams) *Server {
 	finalHandler = spaceMiddleware.Handler(finalHandler)
 	finalHandler = accessMiddleware.Handler(finalHandler)
 	finalHandler = authMiddleware.Handler(finalHandler)
+	finalHandler = recoveryHandler(finalHandler)
 
 	return &Server{
 		handler: finalHandler,
@@ -91,4 +93,16 @@ func (s *Server) Start() error {
 	}
 
 	return nil
+}
+
+func recoveryHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				slog.Error("Panic recovered in HTTP handler", "error", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
 }

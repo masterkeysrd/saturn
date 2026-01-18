@@ -1312,6 +1312,8 @@ export const Finance: GenService<{
     output: typeof EmptySchema;
   },
   /**
+   * GetSetting retrieves the finance settings for the space.
+   *
    * @generated from rpc saturn.finance.v1.Finance.GetSetting
    */
   getSetting: {
@@ -1320,6 +1322,8 @@ export const Finance: GenService<{
     output: typeof SettingSchema;
   },
   /**
+   * UpdateSetting modifies the finance settings for the space.
+   *
    * @generated from rpc saturn.finance.v1.Finance.UpdateSetting
    */
   updateSetting: {

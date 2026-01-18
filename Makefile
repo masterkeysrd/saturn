@@ -13,6 +13,9 @@ app/start:
 app/stop:
 	$(DOCKER-COMPOSE) -f deployments/docker-compose/app.yaml down
 
+app/clean:
+	$(DOCKER-COMPOSE) -f deployments/docker-compose/app.yaml down -v --rmi local
+
 buf/build-image:
 	docker build \
 		--file build/buf/Dockerfile \

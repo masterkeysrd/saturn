@@ -392,6 +392,7 @@
     },
     "/v1/finance/setting": {
       "get": {
+        "summary": "GetSetting retrieves the finance settings for the space.",
         "operationId": "Finance_GetSetting",
         "responses": {
           "200": {
@@ -412,6 +413,7 @@
         ]
       },
       "put": {
+        "summary": "UpdateSetting modifies the finance settings for the space.",
         "operationId": "Finance_UpdateSetting",
         "responses": {
           "200": {
