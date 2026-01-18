@@ -107,3 +107,53 @@ func ExchangeRatePb(e *finance.ExchangeRate) *financepb.ExchangeRate {
 		IsBaseCurrency: e.IsBase,
 	}
 }
+
+func Setting(pb *financepb.Setting) *finance.Setting {
+	if pb == nil {
+		return nil
+	}
+
+	return &finance.Setting{
+		BaseCurrencyCode: finance.CurrencyCode(pb.GetBaseCurrencyCode()),
+		Status:           SettingsStatus(pb.GetStatus()),
+	}
+}
+
+func SettingPb(s *finance.Setting) *financepb.Setting {
+	if s == nil {
+		return nil
+	}
+
+	return &financepb.Setting{
+		BaseCurrencyCode: s.BaseCurrencyCode.String(),
+		Status:           SettingsStatusPb(s.Status),
+		CreateTime:       encoding.TimestampPb(s.CreateTime),
+		UpdateTime:       encoding.TimestampPb(s.UpdateTime),
+	}
+}
+
+func SettingsStatus(pb financepb.Setting_Status) finance.SettingsStatus {
+	switch pb {
+	case financepb.Setting_ACTIVE:
+		return finance.SettingStatusActive
+	case financepb.Setting_DISABLED:
+		return finance.SettingStatusDisabled
+	case financepb.Setting_INCOMPLETE:
+		return finance.SettingStatusIncomplete
+	default:
+		return ""
+	}
+}
+
+func SettingsStatusPb(status finance.SettingsStatus) financepb.Setting_Status {
+	switch status {
+	case finance.SettingStatusActive:
+		return financepb.Setting_ACTIVE
+	case finance.SettingStatusDisabled:
+		return financepb.Setting_DISABLED
+	case finance.SettingStatusIncomplete:
+		return financepb.Setting_INCOMPLETE
+	default:
+		return financepb.Setting_STATUS_UNSPECIFIED
+	}
+}

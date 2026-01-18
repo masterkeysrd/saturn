@@ -5,6 +5,9 @@ import (
 
 	financepb "github.com/masterkeysrd/saturn/gen/proto/go/saturn/finance/v1"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/foundation/fieldmask"
+	"github.com/masterkeysrd/saturn/internal/transport/grpc/encoding"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var _ financepb.FinanceServer = (*Server)(nil)
@@ -14,6 +17,8 @@ type Application interface {
 	CreateBudget(context.Context, *finance.Budget) error
 	ListBudgets(context.Context) ([]*finance.Budget, error)
 	CreateExchangeRate(context.Context, *finance.ExchangeRate) error
+	GetSetting(context.Context) (*finance.Setting, error)
+	UpdateSetting(context.Context, *finance.Setting, *fieldmask.FieldMask) (*finance.Setting, error)
 }
 
 type Server struct {
@@ -57,4 +62,21 @@ func (s *Server) CreateExchangeRate(ctx context.Context, req *financepb.CreateEx
 	}
 
 	return ExchangeRatePb(exchangeRate), nil
+}
+
+func (s *Server) GetSettings(ctx context.Context, _ *emptypb.Empty) (*financepb.Setting, error) {
+	settings, err := s.app.GetSetting(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return SettingPb(settings), nil
+}
+
+func (s *Server) UpdateSettings(ctx context.Context, req *financepb.UpdateSettingRequest) (*financepb.Setting, error) {
+	settings, updateMask := Setting(req.GetSetting()), encoding.FieldMask(req.GetUpdateMask())
+	updatedSettings, err := s.app.UpdateSetting(ctx, settings, updateMask)
+	if err != nil {
+		return nil, err
+	}
+	return SettingPb(updatedSettings), nil
 }

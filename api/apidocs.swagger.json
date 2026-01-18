@@ -390,6 +390,59 @@
         ]
       }
     },
+    "/v1/finance/setting": {
+      "get": {
+        "operationId": "Finance_GetSetting",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Setting"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Finance"
+        ]
+      },
+      "put": {
+        "operationId": "Finance_UpdateSetting",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Setting"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "Request message for Finance.UpdateSetting.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpdateSettingRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/identity/sessions": {
       "get": {
         "summary": "ListSessions lists all active sessions for the current user.",
@@ -1653,6 +1706,45 @@
         }
       }
     },
+    "v1Setting": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/v1SettingStatus",
+          "description": "The status of the finance settings.",
+          "readOnly": true
+        },
+        "baseCurrencyCode": {
+          "type": "string",
+          "description": "The base currency code for the space (ISO 4217), e.g., \"\nDOP\", \"EUR\".\nThis value can be only changed while the status is INCOMPLETE once\nit changes to ACTIVE or DISABLED it becomes immutable."
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        }
+      },
+      "description": "Setting represents the finance-related settings for a space.\nCurrently includes the base currency configuration.",
+      "required": [
+        "baseCurrencyCode"
+      ]
+    },
+    "v1SettingStatus": {
+      "type": "string",
+      "enum": [
+        "STATUS_UNSPECIFIED",
+        "INCOMPLETE",
+        "ACTIVE",
+        "DISABLED"
+      ],
+      "default": "STATUS_UNSPECIFIED",
+      "description": "The current status of the finance settings.\n\n - STATUS_UNSPECIFIED: Default status.\n - INCOMPLETE: The setting is incomplete and requires configuration.\n - ACTIVE: The setting is active and fully configured.\n - DISABLED: The setting is disabled."
+    },
     "v1Space": {
       "type": "object",
       "properties": {
@@ -1736,6 +1828,23 @@
         }
       },
       "description": "Pair of JWT access token and refresh token."
+    },
+    "v1UpdateSettingRequest": {
+      "type": "object",
+      "properties": {
+        "setting": {
+          "$ref": "#/definitions/v1Setting",
+          "description": "The finance settings to update."
+        },
+        "updateMask": {
+          "type": "string",
+          "description": "The fields to be updated. If empty, all non-output fields are updated.\nUse \"*\" to update all fields.\nCurrently, only \"base_currency_code\" is updatable (when status is INCOMPLETE)."
+        }
+      },
+      "description": "Request message for Finance.UpdateSetting.",
+      "required": [
+        "setting"
+      ]
     },
     "v1User": {
       "type": "object",

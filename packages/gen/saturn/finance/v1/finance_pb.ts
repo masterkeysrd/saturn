@@ -25,7 +25,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file saturn/finance/v1/finance.proto.
  */
 export const file_saturn_finance_v1_finance: GenFile = /*@__PURE__*/
-  fileDesc("Ch9zYXR1cm4vZmluYW5jZS92MS9maW5hbmNlLnByb3RvEhFzYXR1cm4uZmluYW5jZS52MSJPChlDcmVhdGVFeGNoYW5nZVJhdGVSZXF1ZXN0EjIKBHJhdGUYASABKAsyHy5zYXR1cm4uZmluYW5jZS52MS5FeGNoYW5nZVJhdGVCA+BBAiIaChhMaXN0RXhjaGFuZ2VSYXRlc1JlcXVlc3QiSwoZTGlzdEV4Y2hhbmdlUmF0ZXNSZXNwb25zZRIuCgVyYXRlcxgBIAMoCzIfLnNhdHVybi5maW5hbmNlLnYxLkV4Y2hhbmdlUmF0ZSI0ChZHZXRFeGNoYW5nZVJhdGVSZXF1ZXN0EhoKDWN1cnJlbmN5X2NvZGUYASABKAlCA+BBAiJrChlVcGRhdGVFeGNoYW5nZVJhdGVSZXF1ZXN0EhoKDWN1cnJlbmN5X2NvZGUYASABKAlCA+BBAhIyCgRyYXRlGAIgASgLMh8uc2F0dXJuLmZpbmFuY2UudjEuRXhjaGFuZ2VSYXRlQgPgQQIiNwoZRGVsZXRlRXhjaGFuZ2VSYXRlUmVxdWVzdBIaCg1jdXJyZW5jeV9jb2RlGAEgASgJQgPgQQIiRQoTQ3JlYXRlQnVkZ2V0UmVxdWVzdBIuCgZidWRnZXQYASABKAsyGS5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXRCA+BBAiLeAQoMRXhjaGFuZ2VSYXRlEhoKDWN1cnJlbmN5X2NvZGUYASABKAlCA+BBAxInCgRyYXRlGAIgASgLMhQuZ29vZ2xlLnR5cGUuRGVjaW1hbEID4EECEh0KEGlzX2Jhc2VfY3VycmVuY3kYAyABKAhCA+BBAxI0CgtjcmVhdGVfdGltZRgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAxI0Cgt1cGRhdGVfdGltZRgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAyKeAQoSTGlzdEJ1ZGdldHNSZXF1ZXN0EhMKBnNlYXJjaBgBIAEoCUID4EEBEjEKBHZpZXcYAiABKA4yHi5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXQuVmlld0ID4EEBEhUKCG9yZGVyX2J5GAMgASgJQgPgQQESEQoEcGFnZRgEIAEoBUID4EEBEhYKCXBhZ2Vfc2l6ZRgFIAEoBUID4EEBIlUKE0xpc3RCdWRnZXRzUmVzcG9uc2USKgoHYnVkZ2V0cxgBIAMoCzIZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldBISCgp0b3RhbF9zaXplGAIgASgFIlYKEEdldEJ1ZGdldFJlcXVlc3QSDwoCaWQYASABKAlCA+BBAhIxCgR2aWV3GAIgASgOMh4uc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0LlZpZXdCA+BBASKMAQoTVXBkYXRlQnVkZ2V0UmVxdWVzdBIPCgJpZBgBIAEoCUID4EECEi4KBmJ1ZGdldBgCIAEoCzIZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldEID4EECEjQKC3VwZGF0ZV9tYXNrGAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLkZpZWxkTWFza0ID4EEBIiYKE0RlbGV0ZUJ1ZGdldFJlcXVlc3QSDwoCaWQYASABKAlCA+BBAiKyBgoGQnVkZ2V0Eg8KAmlkGAEgASgJQgPgQQMSEQoEbmFtZRgCIAEoCUID4EECEhgKC2Rlc2NyaXB0aW9uGAMgASgJQgPgQQESKwoKYXBwZWFyYW5jZRgEIAEoCzIXLnNhdHVybi50eXBlLkFwcGVhcmFuY2USNQoGc3RhdHVzGAUgASgOMiAuc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0LlN0YXR1c0ID4EEBEicKBmFtb3VudBgGIAEoCzISLnNhdHVybi50eXBlLk1vbmV5QgPgQQISNAoLY3JlYXRlX3RpbWUYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSNAoLdXBkYXRlX3RpbWUYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSLAoLYmFzZV9hbW91bnQYCSABKAsyEi5zYXR1cm4udHlwZS5Nb25leUID4EEDEhoKDWV4Y2hhbmdlX3JhdGUYCiABKAFCA+BBAxIzCgVzdGF0cxgLIAEoCzIfLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldC5TdGF0c0ID4EEDGvYBCgVTdGF0cxIoCgxzcGVudF9hbW91bnQYASABKAsyEi5zYXR1cm4udHlwZS5Nb25leRIsChByZW1haW5pbmdfYW1vdW50GAIgASgLMhIuc2F0dXJuLnR5cGUuTW9uZXkSGAoQdXNhZ2VfcGVyY2VudGFnZRgDIAEoARIwCgxwZXJpb2Rfc3RhcnQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnBlcmlvZF9lbmQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhkKEXRyYW5zYWN0aW9uX2NvdW50GAYgASgFIjEKBFZpZXcSFAoQVklFV19VTlNQRUNJRklFRBAAEgkKBUJBU0lDEAESCAoERlVMTBACIkYKBlN0YXR1cxIWChJTVEFUVVNfVU5TUEVDSUZJRUQQABIKCgZBQ1RJVkUQARIKCgZQQVVTRUQQAhIMCghBUkNISVZFRBADMoQLCgdGaW5hbmNlEo0BChJDcmVhdGVFeGNoYW5nZVJhdGUSLC5zYXR1cm4uZmluYW5jZS52MS5DcmVhdGVFeGNoYW5nZVJhdGVSZXF1ZXN0Gh8uc2F0dXJuLmZpbmFuY2UudjEuRXhjaGFuZ2VSYXRlIiiC0+STAiI6BHJhdGUiGi92MS9maW5hbmNlL2V4Y2hhbmdlLXJhdGVzEpIBChFMaXN0RXhjaGFuZ2VSYXRlcxIrLnNhdHVybi5maW5hbmNlLnYxLkxpc3RFeGNoYW5nZVJhdGVzUmVxdWVzdBosLnNhdHVybi5maW5hbmNlLnYxLkxpc3RFeGNoYW5nZVJhdGVzUmVzcG9uc2UiIoLT5JMCHBIaL3YxL2ZpbmFuY2UvZXhjaGFuZ2UtcmF0ZXMSkQEKD0dldEV4Y2hhbmdlUmF0ZRIpLnNhdHVybi5maW5hbmNlLnYxLkdldEV4Y2hhbmdlUmF0ZVJlcXVlc3QaHy5zYXR1cm4uZmluYW5jZS52MS5FeGNoYW5nZVJhdGUiMoLT5JMCLBIqL3YxL2ZpbmFuY2UvZXhjaGFuZ2UtcmF0ZXMve2N1cnJlbmN5X2NvZGV9EpoBChJVcGRhdGVFeGNoYW5nZVJhdGUSLC5zYXR1cm4uZmluYW5jZS52MS5VcGRhdGVFeGNoYW5nZVJhdGVSZXF1ZXN0Gh8uc2F0dXJuLmZpbmFuY2UudjEuRXhjaGFuZ2VSYXRlIjWC0+STAi86ASoaKi92MS9maW5hbmNlL2V4Y2hhbmdlLXJhdGVzL3tjdXJyZW5jeV9jb2RlfRKOAQoSRGVsZXRlRXhjaGFuZ2VSYXRlEiwuc2F0dXJuLmZpbmFuY2UudjEuRGVsZXRlRXhjaGFuZ2VSYXRlUmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eSIygtPkkwIsKiovdjEvZmluYW5jZS9leGNoYW5nZS1yYXRlcy97Y3VycmVuY3lfY29kZX0SdgoMQ3JlYXRlQnVkZ2V0EiYuc2F0dXJuLmZpbmFuY2UudjEuQ3JlYXRlQnVkZ2V0UmVxdWVzdBoZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldCIjgtPkkwIdOgZidWRnZXQiEy92MS9maW5hbmNlL2J1ZGdldHMSeQoLTGlzdEJ1ZGdldHMSJS5zYXR1cm4uZmluYW5jZS52MS5MaXN0QnVkZ2V0c1JlcXVlc3QaJi5zYXR1cm4uZmluYW5jZS52MS5MaXN0QnVkZ2V0c1Jlc3BvbnNlIhuC0+STAhUSEy92MS9maW5hbmNlL2J1ZGdldHMScgoJR2V0QnVkZ2V0EiMuc2F0dXJuLmZpbmFuY2UudjEuR2V0QnVkZ2V0UmVxdWVzdBoZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldCIl2kECaWSC0+STAhoSGC92MS9maW5hbmNlL2J1ZGdldHMve2lkfRKTAQoMVXBkYXRlQnVkZ2V0EiYuc2F0dXJuLmZpbmFuY2UudjEuVXBkYXRlQnVkZ2V0UmVxdWVzdBoZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldCJA2kEVaWQsYnVkZ2V0LHVwZGF0ZV9tYXNrgtPkkwIiOgZidWRnZXQyGC92MS9maW5hbmNlL2J1ZGdldHMve2lkfRJ1CgxEZWxldGVCdWRnZXQSJi5zYXR1cm4uZmluYW5jZS52MS5EZWxldGVCdWRnZXRSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5IiXaQQJpZILT5JMCGioYL3YxL2ZpbmFuY2UvYnVkZ2V0cy97aWR9Gh7KQRthcGkuc2F0dXJuLm1hc3RlcmtleXNyZC5kZXZCSVpHZ2l0aHViLmNvbS9tYXN0ZXJrZXlzcmQvc2F0dXJuL2dlbi9wcm90by9nby9zYXR1cm4vZmluYW5jZS92MTtmaW5hbmNlcGJiBnByb3RvMw", [file_google_api_annotations, file_google_api_client, file_google_api_field_behavior, file_google_protobuf_empty, file_google_protobuf_field_mask, file_google_protobuf_timestamp, file_google_type_decimal, file_saturn_type_appearance, file_saturn_type_money]);
+  fileDesc("Ch9zYXR1cm4vZmluYW5jZS92MS9maW5hbmNlLnByb3RvEhFzYXR1cm4uZmluYW5jZS52MSJPChlDcmVhdGVFeGNoYW5nZVJhdGVSZXF1ZXN0EjIKBHJhdGUYASABKAsyHy5zYXR1cm4uZmluYW5jZS52MS5FeGNoYW5nZVJhdGVCA+BBAiIaChhMaXN0RXhjaGFuZ2VSYXRlc1JlcXVlc3QiSwoZTGlzdEV4Y2hhbmdlUmF0ZXNSZXNwb25zZRIuCgVyYXRlcxgBIAMoCzIfLnNhdHVybi5maW5hbmNlLnYxLkV4Y2hhbmdlUmF0ZSI0ChZHZXRFeGNoYW5nZVJhdGVSZXF1ZXN0EhoKDWN1cnJlbmN5X2NvZGUYASABKAlCA+BBAiJrChlVcGRhdGVFeGNoYW5nZVJhdGVSZXF1ZXN0EhoKDWN1cnJlbmN5X2NvZGUYASABKAlCA+BBAhIyCgRyYXRlGAIgASgLMh8uc2F0dXJuLmZpbmFuY2UudjEuRXhjaGFuZ2VSYXRlQgPgQQIiNwoZRGVsZXRlRXhjaGFuZ2VSYXRlUmVxdWVzdBIaCg1jdXJyZW5jeV9jb2RlGAEgASgJQgPgQQIiRQoTQ3JlYXRlQnVkZ2V0UmVxdWVzdBIuCgZidWRnZXQYASABKAsyGS5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXRCA+BBAiLeAQoMRXhjaGFuZ2VSYXRlEhoKDWN1cnJlbmN5X2NvZGUYASABKAlCA+BBAxInCgRyYXRlGAIgASgLMhQuZ29vZ2xlLnR5cGUuRGVjaW1hbEID4EECEh0KEGlzX2Jhc2VfY3VycmVuY3kYAyABKAhCA+BBAxI0CgtjcmVhdGVfdGltZRgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAxI0Cgt1cGRhdGVfdGltZRgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAyKeAQoSTGlzdEJ1ZGdldHNSZXF1ZXN0EhMKBnNlYXJjaBgBIAEoCUID4EEBEjEKBHZpZXcYAiABKA4yHi5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXQuVmlld0ID4EEBEhUKCG9yZGVyX2J5GAMgASgJQgPgQQESEQoEcGFnZRgEIAEoBUID4EEBEhYKCXBhZ2Vfc2l6ZRgFIAEoBUID4EEBIlUKE0xpc3RCdWRnZXRzUmVzcG9uc2USKgoHYnVkZ2V0cxgBIAMoCzIZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldBISCgp0b3RhbF9zaXplGAIgASgFIlYKEEdldEJ1ZGdldFJlcXVlc3QSDwoCaWQYASABKAlCA+BBAhIxCgR2aWV3GAIgASgOMh4uc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0LlZpZXdCA+BBASKMAQoTVXBkYXRlQnVkZ2V0UmVxdWVzdBIPCgJpZBgBIAEoCUID4EECEi4KBmJ1ZGdldBgCIAEoCzIZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldEID4EECEjQKC3VwZGF0ZV9tYXNrGAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLkZpZWxkTWFza0ID4EEBIiYKE0RlbGV0ZUJ1ZGdldFJlcXVlc3QSDwoCaWQYASABKAlCA+BBAiKyBgoGQnVkZ2V0Eg8KAmlkGAEgASgJQgPgQQMSEQoEbmFtZRgCIAEoCUID4EECEhgKC2Rlc2NyaXB0aW9uGAMgASgJQgPgQQESKwoKYXBwZWFyYW5jZRgEIAEoCzIXLnNhdHVybi50eXBlLkFwcGVhcmFuY2USNQoGc3RhdHVzGAUgASgOMiAuc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0LlN0YXR1c0ID4EEBEicKBmFtb3VudBgGIAEoCzISLnNhdHVybi50eXBlLk1vbmV5QgPgQQISNAoLY3JlYXRlX3RpbWUYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSNAoLdXBkYXRlX3RpbWUYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSLAoLYmFzZV9hbW91bnQYCSABKAsyEi5zYXR1cm4udHlwZS5Nb25leUID4EEDEhoKDWV4Y2hhbmdlX3JhdGUYCiABKAFCA+BBAxIzCgVzdGF0cxgLIAEoCzIfLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldC5TdGF0c0ID4EEDGvYBCgVTdGF0cxIoCgxzcGVudF9hbW91bnQYASABKAsyEi5zYXR1cm4udHlwZS5Nb25leRIsChByZW1haW5pbmdfYW1vdW50GAIgASgLMhIuc2F0dXJuLnR5cGUuTW9uZXkSGAoQdXNhZ2VfcGVyY2VudGFnZRgDIAEoARIwCgxwZXJpb2Rfc3RhcnQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnBlcmlvZF9lbmQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhkKEXRyYW5zYWN0aW9uX2NvdW50GAYgASgFIjEKBFZpZXcSFAoQVklFV19VTlNQRUNJRklFRBAAEgkKBUJBU0lDEAESCAoERlVMTBACIkYKBlN0YXR1cxIWChJTVEFUVVNfVU5TUEVDSUZJRUQQABIKCgZBQ1RJVkUQARIKCgZQQVVTRUQQAhIMCghBUkNISVZFRBADIn4KFFVwZGF0ZVNldHRpbmdSZXF1ZXN0EjAKB3NldHRpbmcYASABKAsyGi5zYXR1cm4uZmluYW5jZS52MS5TZXR0aW5nQgPgQQISNAoLdXBkYXRlX21hc2sYAiABKAsyGi5nb29nbGUucHJvdG9idWYuRmllbGRNYXNrQgPgQQEioAIKB1NldHRpbmcSNgoGc3RhdHVzGAEgASgOMiEuc2F0dXJuLmZpbmFuY2UudjEuU2V0dGluZy5TdGF0dXNCA+BBAxIfChJiYXNlX2N1cnJlbmN5X2NvZGUYAiABKAlCA+BBAhI0CgtjcmVhdGVfdGltZRgLIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAxI0Cgt1cGRhdGVfdGltZRgMIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAyJKCgZTdGF0dXMSFgoSU1RBVFVTX1VOU1BFQ0lGSUVEEAASDgoKSU5DT01QTEVURRABEgoKBkFDVElWRRACEgwKCERJU0FCTEVEEANKBAgDEAsy2QwKB0ZpbmFuY2USjQEKEkNyZWF0ZUV4Y2hhbmdlUmF0ZRIsLnNhdHVybi5maW5hbmNlLnYxLkNyZWF0ZUV4Y2hhbmdlUmF0ZVJlcXVlc3QaHy5zYXR1cm4uZmluYW5jZS52MS5FeGNoYW5nZVJhdGUiKILT5JMCIjoEcmF0ZSIaL3YxL2ZpbmFuY2UvZXhjaGFuZ2UtcmF0ZXMSkgEKEUxpc3RFeGNoYW5nZVJhdGVzEisuc2F0dXJuLmZpbmFuY2UudjEuTGlzdEV4Y2hhbmdlUmF0ZXNSZXF1ZXN0Giwuc2F0dXJuLmZpbmFuY2UudjEuTGlzdEV4Y2hhbmdlUmF0ZXNSZXNwb25zZSIigtPkkwIcEhovdjEvZmluYW5jZS9leGNoYW5nZS1yYXRlcxKRAQoPR2V0RXhjaGFuZ2VSYXRlEikuc2F0dXJuLmZpbmFuY2UudjEuR2V0RXhjaGFuZ2VSYXRlUmVxdWVzdBofLnNhdHVybi5maW5hbmNlLnYxLkV4Y2hhbmdlUmF0ZSIygtPkkwIsEiovdjEvZmluYW5jZS9leGNoYW5nZS1yYXRlcy97Y3VycmVuY3lfY29kZX0SmgEKElVwZGF0ZUV4Y2hhbmdlUmF0ZRIsLnNhdHVybi5maW5hbmNlLnYxLlVwZGF0ZUV4Y2hhbmdlUmF0ZVJlcXVlc3QaHy5zYXR1cm4uZmluYW5jZS52MS5FeGNoYW5nZVJhdGUiNYLT5JMCLzoBKhoqL3YxL2ZpbmFuY2UvZXhjaGFuZ2UtcmF0ZXMve2N1cnJlbmN5X2NvZGV9Eo4BChJEZWxldGVFeGNoYW5nZVJhdGUSLC5zYXR1cm4uZmluYW5jZS52MS5EZWxldGVFeGNoYW5nZVJhdGVSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5IjKC0+STAiwqKi92MS9maW5hbmNlL2V4Y2hhbmdlLXJhdGVzL3tjdXJyZW5jeV9jb2RlfRJ2CgxDcmVhdGVCdWRnZXQSJi5zYXR1cm4uZmluYW5jZS52MS5DcmVhdGVCdWRnZXRSZXF1ZXN0Ghkuc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0IiOC0+STAh06BmJ1ZGdldCITL3YxL2ZpbmFuY2UvYnVkZ2V0cxJ5CgtMaXN0QnVkZ2V0cxIlLnNhdHVybi5maW5hbmNlLnYxLkxpc3RCdWRnZXRzUmVxdWVzdBomLnNhdHVybi5maW5hbmNlLnYxLkxpc3RCdWRnZXRzUmVzcG9uc2UiG4LT5JMCFRITL3YxL2ZpbmFuY2UvYnVkZ2V0cxJyCglHZXRCdWRnZXQSIy5zYXR1cm4uZmluYW5jZS52MS5HZXRCdWRnZXRSZXF1ZXN0Ghkuc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0IiXaQQJpZILT5JMCGhIYL3YxL2ZpbmFuY2UvYnVkZ2V0cy97aWR9EpMBCgxVcGRhdGVCdWRnZXQSJi5zYXR1cm4uZmluYW5jZS52MS5VcGRhdGVCdWRnZXRSZXF1ZXN0Ghkuc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0IkDaQRVpZCxidWRnZXQsdXBkYXRlX21hc2uC0+STAiI6BmJ1ZGdldDIYL3YxL2ZpbmFuY2UvYnVkZ2V0cy97aWR9EnUKDERlbGV0ZUJ1ZGdldBImLnNhdHVybi5maW5hbmNlLnYxLkRlbGV0ZUJ1ZGdldFJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkiJdpBAmlkgtPkkwIaKhgvdjEvZmluYW5jZS9idWRnZXRzL3tpZH0SXQoKR2V0U2V0dGluZxIWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRoaLnNhdHVybi5maW5hbmNlLnYxLlNldHRpbmciG4LT5JMCFRITL3YxL2ZpbmFuY2Uvc2V0dGluZxJ0Cg1VcGRhdGVTZXR0aW5nEicuc2F0dXJuLmZpbmFuY2UudjEuVXBkYXRlU2V0dGluZ1JlcXVlc3QaGi5zYXR1cm4uZmluYW5jZS52MS5TZXR0aW5nIh6C0+STAhg6ASoaEy92MS9maW5hbmNlL3NldHRpbmcaHspBG2FwaS5zYXR1cm4ubWFzdGVya2V5c3JkLmRldkJJWkdnaXRodWIuY29tL21hc3RlcmtleXNyZC9zYXR1cm4vZ2VuL3Byb3RvL2dvL3NhdHVybi9maW5hbmNlL3YxO2ZpbmFuY2VwYmIGcHJvdG8z", [file_google_api_annotations, file_google_api_client, file_google_api_field_behavior, file_google_protobuf_empty, file_google_protobuf_field_mask, file_google_protobuf_timestamp, file_google_type_decimal, file_saturn_type_appearance, file_saturn_type_money]);
 
 /**
  * @generated from message saturn.finance.v1.CreateExchangeRateRequest
@@ -1025,6 +1025,184 @@ export const Budget_StatusSchema: GenEnum<Budget_Status, Budget_StatusJson> = /*
   enumDesc(file_saturn_finance_v1_finance, 13, 1);
 
 /**
+ * Request message for Finance.UpdateSetting.
+ *
+ * @generated from message saturn.finance.v1.UpdateSettingRequest
+ */
+export type UpdateSettingRequest = Message<"saturn.finance.v1.UpdateSettingRequest"> & {
+  /**
+   * The finance settings to update.
+   *
+   * @generated from field: saturn.finance.v1.Setting setting = 1;
+   */
+  setting?: Setting;
+
+  /**
+   * The fields to be updated. If empty, all non-output fields are updated.
+   * Use "*" to update all fields.
+   * Currently, only "base_currency_code" is updatable (when status is INCOMPLETE).
+   *
+   * @generated from field: google.protobuf.FieldMask update_mask = 2;
+   */
+  updateMask?: FieldMask;
+};
+
+/**
+ * Request message for Finance.UpdateSetting.
+ *
+ * @generated from message saturn.finance.v1.UpdateSettingRequest
+ */
+export type UpdateSettingRequestJson = {
+  /**
+   * The finance settings to update.
+   *
+   * @generated from field: saturn.finance.v1.Setting setting = 1;
+   */
+  setting?: SettingJson;
+
+  /**
+   * The fields to be updated. If empty, all non-output fields are updated.
+   * Use "*" to update all fields.
+   * Currently, only "base_currency_code" is updatable (when status is INCOMPLETE).
+   *
+   * @generated from field: google.protobuf.FieldMask update_mask = 2;
+   */
+  updateMask?: FieldMaskJson;
+};
+
+/**
+ * Describes the message saturn.finance.v1.UpdateSettingRequest.
+ * Use `create(UpdateSettingRequestSchema)` to create a new message.
+ */
+export const UpdateSettingRequestSchema: GenMessage<UpdateSettingRequest, {jsonType: UpdateSettingRequestJson}> = /*@__PURE__*/
+  messageDesc(file_saturn_finance_v1_finance, 14);
+
+/**
+ * Setting represents the finance-related settings for a space.
+ * Currently includes the base currency configuration.
+ *
+ * @generated from message saturn.finance.v1.Setting
+ */
+export type Setting = Message<"saturn.finance.v1.Setting"> & {
+  /**
+   * The status of the finance settings.
+   *
+   * @generated from field: saturn.finance.v1.Setting.Status status = 1;
+   */
+  status: Setting_Status;
+
+  /**
+   * The base currency code for the space (ISO 4217), e.g., "
+   * DOP", "EUR".
+   * This value can be only changed while the status is INCOMPLETE once
+   * it changes to ACTIVE or DISABLED it becomes immutable.
+   *
+   * @generated from field: string base_currency_code = 2;
+   */
+  baseCurrencyCode: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp create_time = 11;
+   */
+  createTime?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp update_time = 12;
+   */
+  updateTime?: Timestamp;
+};
+
+/**
+ * Setting represents the finance-related settings for a space.
+ * Currently includes the base currency configuration.
+ *
+ * @generated from message saturn.finance.v1.Setting
+ */
+export type SettingJson = {
+  /**
+   * The status of the finance settings.
+   *
+   * @generated from field: saturn.finance.v1.Setting.Status status = 1;
+   */
+  status?: Setting_StatusJson;
+
+  /**
+   * The base currency code for the space (ISO 4217), e.g., "
+   * DOP", "EUR".
+   * This value can be only changed while the status is INCOMPLETE once
+   * it changes to ACTIVE or DISABLED it becomes immutable.
+   *
+   * @generated from field: string base_currency_code = 2;
+   */
+  baseCurrencyCode?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp create_time = 11;
+   */
+  createTime?: TimestampJson;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp update_time = 12;
+   */
+  updateTime?: TimestampJson;
+};
+
+/**
+ * Describes the message saturn.finance.v1.Setting.
+ * Use `create(SettingSchema)` to create a new message.
+ */
+export const SettingSchema: GenMessage<Setting, {jsonType: SettingJson}> = /*@__PURE__*/
+  messageDesc(file_saturn_finance_v1_finance, 15);
+
+/**
+ * The current status of the finance settings.
+ *
+ * @generated from enum saturn.finance.v1.Setting.Status
+ */
+export enum Setting_Status {
+  /**
+   * Default status.
+   *
+   * @generated from enum value: STATUS_UNSPECIFIED = 0;
+   */
+  STATUS_UNSPECIFIED = 0,
+
+  /**
+   * The setting is incomplete and requires configuration.
+   *
+   * @generated from enum value: INCOMPLETE = 1;
+   */
+  INCOMPLETE = 1,
+
+  /**
+   * The setting is active and fully configured.
+   *
+   * @generated from enum value: ACTIVE = 2;
+   */
+  ACTIVE = 2,
+
+  /**
+   * The setting is disabled.
+   *
+   * @generated from enum value: DISABLED = 3;
+   */
+  DISABLED = 3,
+}
+
+/**
+ * The current status of the finance settings.
+ *
+ * @generated from enum saturn.finance.v1.Setting.Status
+ */
+export type Setting_StatusJson = "STATUS_UNSPECIFIED" | "INCOMPLETE" | "ACTIVE" | "DISABLED";
+
+/**
+ * Describes the enum saturn.finance.v1.Setting.Status.
+ */
+export const Setting_StatusSchema: GenEnum<Setting_Status, Setting_StatusJson> = /*@__PURE__*/
+  enumDesc(file_saturn_finance_v1_finance, 15, 0);
+
+/**
  * Finance provides features personal finance management, including budgeting,
  * expense tracking, and financial goal setting.
  *
@@ -1132,6 +1310,22 @@ export const Finance: GenService<{
     methodKind: "unary";
     input: typeof DeleteBudgetRequestSchema;
     output: typeof EmptySchema;
+  },
+  /**
+   * @generated from rpc saturn.finance.v1.Finance.GetSetting
+   */
+  getSetting: {
+    methodKind: "unary";
+    input: typeof EmptySchema;
+    output: typeof SettingSchema;
+  },
+  /**
+   * @generated from rpc saturn.finance.v1.Finance.UpdateSetting
+   */
+  updateSetting: {
+    methodKind: "unary";
+    input: typeof UpdateSettingRequestSchema;
+    output: typeof SettingSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_saturn_finance_v1_finance, 0);

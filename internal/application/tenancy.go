@@ -56,11 +56,11 @@ func (app *TenancyApp) CreateSpace(ctx context.Context, req *CreateSpaceRequest)
 	}
 
 	// Initialize default finance settings for the new space
-	defaultSettings := &finance.Settings{
-		SpaceID:      space.ID,
-		BaseCurrency: finance.DefaultBaseCurrency,
+	defaultSettings := &finance.Setting{
+		SpaceID:          space.ID,
+		BaseCurrencyCode: finance.DefaultBaseCurrency,
 	}
-	if err := app.financeService.CreateSettings(ctx, principal, defaultSettings); err != nil {
+	if err := app.financeService.CreateSetting(ctx, principal, defaultSettings); err != nil {
 		return nil, fmt.Errorf("failed to create default finance settings for space: %w", err)
 	}
 

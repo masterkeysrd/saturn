@@ -475,7 +475,7 @@ func (s *Service) GetInsights(ctx context.Context, in *GetInsightsInput) (*Insig
 	}, nil
 }
 
-func (s *Service) CreateSettings(ctx context.Context, actor access.Principal, settings *Settings) error {
+func (s *Service) CreateSetting(ctx context.Context, actor access.Principal, settings *Setting) error {
 	if !actor.IsSpaceOwner() {
 		return errors.New("only space owners can create settings")
 	}
@@ -495,7 +495,7 @@ func (s *Service) CreateSettings(ctx context.Context, actor access.Principal, se
 	return nil
 }
 
-func (s *Service) GetSettings(ctx context.Context, actor access.Principal) (*Settings, error) {
+func (s *Service) GetSetting(ctx context.Context, actor access.Principal) (*Setting, error) {
 	if !actor.IsSpaceMember() {
 		return nil, errors.New("only space members can get settings")
 	}
@@ -508,7 +508,7 @@ func (s *Service) GetSettings(ctx context.Context, actor access.Principal) (*Set
 	return settings, nil
 }
 
-func (s *Service) ActivateSettings(ctx context.Context, actor access.Principal) error {
+func (s *Service) ActivateSetting(ctx context.Context, actor access.Principal) error {
 	if !actor.IsSpaceOwner() {
 		return errors.New("only space owners can activate settings")
 	}
@@ -518,12 +518,12 @@ func (s *Service) ActivateSettings(ctx context.Context, actor access.Principal) 
 		return fmt.Errorf("cannot get settings: %w", err)
 	}
 
-	if settings.State == SettingsStateActive {
+	if settings.Status == SettingStatusActive {
 		log.Printf("Settings for space %s are already active", actor.SpaceID())
 		return nil
 	}
 
-	settings.State = SettingsStateActive
+	settings.Status = SettingStatusActive
 	settings.Touch(actor)
 	if err := settings.Validate(); err != nil {
 		return fmt.Errorf("invalid settings: %w", err)
@@ -537,7 +537,7 @@ func (s *Service) ActivateSettings(ctx context.Context, actor access.Principal) 
 	baseRate := &ExchangeRate{
 		ExchangeRateKey: ExchangeRateKey{
 			SpaceID:      actor.SpaceID(),
-			CurrencyCode: settings.BaseCurrency,
+			CurrencyCode: settings.BaseCurrencyCode,
 		},
 		Rate: decimal.FromInt(1),
 	}
@@ -554,29 +554,29 @@ func (s *Service) ActivateSettings(ctx context.Context, actor access.Principal) 
 	return nil
 }
 
-func (s *Service) UpdateSettings(ctx context.Context, actor access.Principal, in *UpdateSettingsInput) error {
+func (s *Service) UpdateSetting(ctx context.Context, actor access.Principal, in *UpdateSettingInput) (*Setting, error) {
 	if !actor.IsSpaceAdmin() {
-		return errors.New("only space admins can update settings")
+		return nil, errors.New("only space admins can update settings")
 	}
 
 	if err := in.Validate(); err != nil {
-		return fmt.Errorf("invalid update settings input: %w", err)
+		return nil, fmt.Errorf("invalid update settings input: %w", err)
 	}
 
 	settings, err := s.settingsStore.Get(ctx, actor.SpaceID())
 	if err != nil {
-		return fmt.Errorf("cannot get existing settings: %w", err)
+		return nil, fmt.Errorf("cannot get existing settings: %w", err)
 	}
 
-	if err := settings.Update(in.Settings, in.UpdateMask); err != nil {
-		return fmt.Errorf("cannot update settings: %w", err)
+	if err := settings.Update(in.Setting, in.UpdateMask); err != nil {
+		return nil, fmt.Errorf("cannot update settings: %w", err)
 	}
 
 	settings.Sanitize()
 	settings.Touch(actor)
 	if err := s.settingsStore.Store(ctx, settings); err != nil {
-		return fmt.Errorf("cannot store settings: %w", err)
+		return nil, fmt.Errorf("cannot store settings: %w", err)
 	}
 
-	return nil
+	return settings, nil
 }

@@ -13,11 +13,11 @@ import (
 )
 
 type SettingsStore interface {
-	Get(context.Context, space.ID) (*Settings, error)
-	Store(context.Context, *Settings) error
+	Get(context.Context, space.ID) (*Setting, error)
+	Store(context.Context, *Setting) error
 }
 
-var SettingsUpdateSchema = fieldmask.NewSchema("Settings").
+var SettingUpdateSchema = fieldmask.NewSchema("Settings").
 	Field("state",
 		fieldmask.WithDescription("State of the finance settings."),
 	).
@@ -26,34 +26,34 @@ var SettingsUpdateSchema = fieldmask.NewSchema("Settings").
 	).
 	Build()
 
-type Settings struct {
-	SpaceID      space.ID
-	State        SettingsState
-	BaseCurrency CurrencyCode
-	CreateTime   time.Time
-	CreateBy     access.UserID
-	UpdateTime   time.Time
-	UpdateBy     access.UserID
+type Setting struct {
+	SpaceID          space.ID
+	Status           SettingsStatus
+	BaseCurrencyCode CurrencyCode
+	CreateTime       time.Time
+	CreateBy         access.UserID
+	UpdateTime       time.Time
+	UpdateBy         access.UserID
 }
 
-func (s *Settings) Initialize() {
+func (s *Setting) Initialize() {
 	if s == nil {
 		return
 	}
 
 	// All new settings start as incomplete, requiring configuration,
 	// such as setting the base currency, before they can be activated.
-	s.State = SettingsStateIncomplete
+	s.Status = SettingStatusIncomplete
 }
 
-func (s *Settings) Sanitize() {
+func (s *Setting) Sanitize() {
 	if s == nil {
 		return
 	}
-	s.BaseCurrency = CurrencyCode(s.BaseCurrency.String())
+	s.BaseCurrencyCode = CurrencyCode(s.BaseCurrencyCode.String())
 }
 
-func (s *Settings) Touch(actor access.Principal) {
+func (s *Setting) Touch(actor access.Principal) {
 	if s == nil {
 		return
 	}
@@ -68,7 +68,7 @@ func (s *Settings) Touch(actor access.Principal) {
 	s.UpdateTime = now
 }
 
-func (s *Settings) Validate() error {
+func (s *Setting) Validate() error {
 	if s == nil {
 		return nil
 	}
@@ -77,18 +77,18 @@ func (s *Settings) Validate() error {
 		return err
 	}
 
-	if !s.State.IsValid() {
-		return fmt.Errorf("invalid settings state: %s", s.State)
+	if !s.Status.IsValid() {
+		return fmt.Errorf("invalid settings state: %s", s.Status)
 	}
 
-	if err := s.BaseCurrency.Validate(); err != nil {
+	if err := s.BaseCurrencyCode.Validate(); err != nil {
 		return fmt.Errorf("invalid base currency: %w", err)
 	}
 
 	return nil
 }
 
-func (s *Settings) Update(update *Settings, mask *fieldmask.FieldMask) error {
+func (s *Setting) Update(update *Setting, mask *fieldmask.FieldMask) error {
 	if s == nil {
 		return errors.New("settings is nil")
 	}
@@ -101,62 +101,62 @@ func (s *Settings) Update(update *Settings, mask *fieldmask.FieldMask) error {
 		return errors.New("field mask is nil")
 	}
 
-	if err := SettingsUpdateSchema.Validate(mask); err != nil {
+	if err := SettingUpdateSchema.Validate(mask); err != nil {
 		return fmt.Errorf("validating field mask: %w", err)
 	}
 
 	if mask.Contains("state") {
-		if s.State == SettingsStateIncomplete && update.State != SettingsStateIncomplete {
+		if s.Status == SettingStatusIncomplete && update.Status != SettingStatusIncomplete {
 			// Incomplete can only be remove calling the activation process
-			return fmt.Errorf("cannot change state from incomplete to %s", update.State)
+			return fmt.Errorf("cannot change state from incomplete to %s", update.Status)
 		}
 
-		if update.State == SettingsStateIncomplete {
+		if update.Status == SettingStatusIncomplete {
 			return fmt.Errorf("cannot set state to incomplete")
 		}
 
-		s.State = update.State
+		s.Status = update.Status
 	}
 
 	if mask.Contains("base_currency") {
-		if s.State != SettingsStateIncomplete {
+		if s.Status != SettingStatusIncomplete {
 			return fmt.Errorf("cannot change base currency when settings are active or inactive")
 		}
 
-		s.BaseCurrency = update.BaseCurrency
+		s.BaseCurrencyCode = update.BaseCurrencyCode
 	}
 
 	return nil
 }
 
-type SettingsState string
+type SettingsStatus string
 
 const (
-	SettingsStateActive     SettingsState = "active"     // Used when settings are fully configured and operational.
-	SettingsStateInactive   SettingsState = "inactive"   // Used when settings are present but not currently active.
-	SettingsStateIncomplete SettingsState = "incomplete" // Used when settings are partially configured and cannot be used yet.
+	SettingStatusActive     SettingsStatus = "active"     // Used when settings are fully configured and operational.
+	SettingStatusDisabled   SettingsStatus = "disabled"   // Used when settings are intentionally turned off.
+	SettingStatusIncomplete SettingsStatus = "incomplete" // Used when settings are partially configured and cannot be used yet.
 )
 
-func (s SettingsState) IsValid() bool {
+func (s SettingsStatus) IsValid() bool {
 	switch s {
-	case SettingsStateActive, SettingsStateInactive, SettingsStateIncomplete:
+	case SettingStatusActive, SettingStatusDisabled, SettingStatusIncomplete:
 		return true
 	default:
 		return false
 	}
 }
 
-func (s *SettingsState) String() string {
+func (s *SettingsStatus) String() string {
 	return string(*s)
 }
 
-type UpdateSettingsInput struct {
-	Settings   *Settings
+type UpdateSettingInput struct {
+	Setting    *Setting
 	UpdateMask *fieldmask.FieldMask
 }
 
-func (i *UpdateSettingsInput) Validate() error {
-	if i.Settings == nil {
+func (i *UpdateSettingInput) Validate() error {
+	if i.Setting == nil {
 		return errors.New("settings is required")
 	}
 
@@ -164,5 +164,5 @@ func (i *UpdateSettingsInput) Validate() error {
 		return errors.New("field mask is required")
 	}
 
-	return SettingsUpdateSchema.Validate(i.UpdateMask)
+	return SettingUpdateSchema.Validate(i.UpdateMask)
 }

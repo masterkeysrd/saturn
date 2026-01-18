@@ -88,6 +88,17 @@ service Finance {
     option (google.api.http) = {delete: "/v1/finance/budgets/{id}"};
     option (google.api.method_signature) = "id";
   }
+
+  rpc GetSetting(google.protobuf.Empty) returns (Setting) {
+    option (google.api.http) = {get: "/v1/finance/setting"};
+  }
+
+  rpc UpdateSetting(UpdateSettingRequest) returns (Setting) {
+    option (google.api.http) = {
+      put: "/v1/finance/setting"
+      body: "*"
+    };
+  }
 }
 
 message CreateExchangeRateRequest {
@@ -299,4 +310,48 @@ message Budget {
   // Statistics related to the budget.
   // Only populated when View is FULL.
   Stats stats = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for Finance.UpdateSetting.
+message UpdateSettingRequest {
+  // The finance settings to update.
+  Setting setting = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The fields to be updated. If empty, all non-output fields are updated.
+  // Use "*" to update all fields.
+  // Currently, only "base_currency_code" is updatable (when status is INCOMPLETE).
+  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Setting represents the finance-related settings for a space.
+// Currently includes the base currency configuration.
+message Setting {
+  // The current status of the finance settings.
+  enum Status {
+    // Default status.
+    STATUS_UNSPECIFIED = 0;
+
+    // The setting is incomplete and requires configuration.
+    INCOMPLETE = 1;
+
+    // The setting is active and fully configured.
+    ACTIVE = 2;
+
+    // The setting is disabled.
+    DISABLED = 3;
+  }
+
+  // The status of the finance settings.
+  Status status = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The base currency code for the space (ISO 4217), e.g., "
+  // DOP", "EUR".
+  // This value can be only changed while the status is INCOMPLETE once
+  // it changes to ACTIVE or DISABLED it becomes immutable.
+  string base_currency_code = 2 [(google.api.field_behavior) = REQUIRED];
+
+  reserved 3 to 10;
+
+  google.protobuf.Timestamp create_time = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp update_time = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
 }

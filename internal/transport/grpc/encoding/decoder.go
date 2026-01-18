@@ -1,11 +1,16 @@
 package encoding
 
 import (
+	"time"
+
 	"github.com/masterkeysrd/saturn/gen/proto/go/saturn/typepb"
 	"github.com/masterkeysrd/saturn/internal/foundation/appearance"
 	"github.com/masterkeysrd/saturn/internal/foundation/decimal"
+	"github.com/masterkeysrd/saturn/internal/foundation/fieldmask"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 	decimalpb "google.golang.org/genproto/googleapis/type/decimal"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func Appearance(pb *typepb.Appearance) appearance.Appearance {
@@ -53,4 +58,15 @@ func MoneyPb(m money.Money) *typepb.Money {
 		CurrencyCode: m.Currency.String(),
 		Cents:        m.Cents.Int64(),
 	}
+}
+
+func TimestampPb(t time.Time) *timestamppb.Timestamp {
+	return timestamppb.New(t)
+}
+
+func FieldMask(mask *fieldmaskpb.FieldMask) *fieldmask.FieldMask {
+	if mask == nil {
+		return nil
+	}
+	return fieldmask.NewFieldMask(mask.GetPaths()...)
 }

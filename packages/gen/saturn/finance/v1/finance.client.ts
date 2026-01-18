@@ -187,3 +187,28 @@ export async function deleteBudget(req: MessageInitShape<typeof Types.DeleteBudg
   });
 }
 
+/**
+ * @returns Promise<Types.Setting>
+ */
+export async function getSetting(): Promise<Types.Setting> {
+  return getAxios().get(`/api/v1/finance/setting`
+  ).then((resp) => {
+    return fromJson(Types.SettingSchema, resp.data);
+  });
+}
+
+/**
+ * @param req Types.UpdateSettingRequest
+ * @returns Promise<Types.Setting>
+ */
+export async function updateSetting(req: MessageInitShape<typeof Types.UpdateSettingRequestSchema>): Promise<Types.Setting> {
+  const msg = create(Types.UpdateSettingRequestSchema, req);
+  const body = toJson(Types.UpdateSettingRequestSchema, msg);
+
+  return getAxios().put(`/api/v1/finance/setting`
+    , body
+  ).then((resp) => {
+    return fromJson(Types.SettingSchema, resp.data);
+  });
+}
+

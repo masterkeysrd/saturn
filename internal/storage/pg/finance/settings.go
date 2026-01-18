@@ -20,7 +20,7 @@ func NewSettingsStore(db *sqlx.DB) *SettingsStore {
 	return &SettingsStore{db: db}
 }
 
-func (s *SettingsStore) Get(ctx context.Context, spaceID space.ID) (*finance.Settings, error) {
+func (s *SettingsStore) Get(ctx context.Context, spaceID space.ID) (*finance.Setting, error) {
 	row, err := GetSettingsBySpaceID(ctx, s.db, &GetSettingsBySpaceIDParams{
 		SpaceId: spaceID.String(),
 	})
@@ -31,7 +31,7 @@ func (s *SettingsStore) Get(ctx context.Context, spaceID space.ID) (*finance.Set
 	return row.ToModel(), nil
 }
 
-func (s *SettingsStore) Store(ctx context.Context, settings *finance.Settings) error {
+func (s *SettingsStore) Store(ctx context.Context, settings *finance.Setting) error {
 	row, err := UpsertSettings(ctx, s.db, SettingsEntityFromModel(settings))
 	if err != nil {
 		return fmt.Errorf("upserting settings: %w", err)
@@ -44,11 +44,11 @@ func (s *SettingsStore) Store(ctx context.Context, settings *finance.Settings) e
 	return nil
 }
 
-func SettingsEntityFromModel(model *finance.Settings) *SettingEntity {
+func SettingsEntityFromModel(model *finance.Setting) *SettingEntity {
 	return &SettingEntity{
 		SpaceId:      model.SpaceID.String(),
-		State:        model.State.String(),
-		BaseCurrency: model.BaseCurrency.String(),
+		State:        model.Status.String(),
+		BaseCurrency: model.BaseCurrencyCode.String(),
 		CreateTime:   model.CreateTime,
 		CreateBy:     model.CreateBy.String(),
 		UpdateTime:   model.UpdateTime,
@@ -56,14 +56,14 @@ func SettingsEntityFromModel(model *finance.Settings) *SettingEntity {
 	}
 }
 
-func (e *SettingEntity) ToModel() *finance.Settings {
-	return &finance.Settings{
-		SpaceID:      space.ID(e.SpaceId),
-		State:        finance.SettingsState(e.State),
-		BaseCurrency: finance.CurrencyCode(e.BaseCurrency),
-		CreateTime:   e.CreateTime,
-		CreateBy:     access.UserID(e.CreateBy),
-		UpdateTime:   e.UpdateTime,
-		UpdateBy:     access.UserID(e.UpdateBy),
+func (e *SettingEntity) ToModel() *finance.Setting {
+	return &finance.Setting{
+		SpaceID:          space.ID(e.SpaceId),
+		Status:           finance.SettingsStatus(e.State),
+		BaseCurrencyCode: finance.CurrencyCode(e.BaseCurrency),
+		CreateTime:       e.CreateTime,
+		CreateBy:         access.UserID(e.CreateBy),
+		UpdateTime:       e.UpdateTime,
+		UpdateBy:         access.UserID(e.UpdateBy),
 	}
 }
