@@ -76,14 +76,13 @@ func (app *FinanceApp) GetSetting(ctx context.Context) (*finance.Setting, error)
 }
 
 func (app *FinanceApp) UpdateSetting(ctx context.Context, setting *finance.Setting, updateMask *fieldmask.FieldMask) (*finance.Setting, error) {
-	return nil, errors.New("UpdateSetting method not implemented")
-	// principal, ok := access.GetPrincipal(ctx)
-	// if !ok {
-	// 	return nil, errors.New("missing principal in context")
-	// }
-	//
-	// return app.financeService.UpdateSetting(ctx, principal, &finance.UpdateSettingInput{
-	// 	Setting:    setting,
-	// 	UpdateMask: updateMask,
-	// })
+	principal, ok := access.GetPrincipal(ctx)
+	if !ok {
+		return nil, errors.New("missing principal in context")
+	}
+
+	return app.financeService.UpdateSetting(ctx, principal, &finance.UpdateSettingInput{
+		Setting:    setting,
+		UpdateMask: updateMask,
+	})
 }

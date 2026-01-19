@@ -46,6 +46,7 @@ VALUES
 ON CONFLICT (space_id) DO UPDATE
 SET
   state = EXCLUDED.state,
+  base_currency = EXCLUDED.base_currency,
   update_time = EXCLUDED.update_time,
   update_by = EXCLUDED.update_by
 RETURNING

@@ -1376,7 +1376,7 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"INCOMPLETE\x10\x01\x12\n" +
 	"\n" +
 	"\x06ACTIVE\x10\x02\x12\f\n" +
-	"\bDISABLED\x10\x03J\x04\b\x03\x10\v2\xd9\f\n" +
+	"\bDISABLED\x10\x03J\x04\b\x03\x10\v2\xf6\f\n" +
 	"\aFinance\x12\x8d\x01\n" +
 	"\x12CreateExchangeRate\x12,.saturn.finance.v1.CreateExchangeRateRequest\x1a\x1f.saturn.finance.v1.ExchangeRate\"(\x82\xd3\xe4\x93\x02\":\x04rate\"\x1a/v1/finance/exchange-rates\x12\x92\x01\n" +
 	"\x11ListExchangeRates\x12+.saturn.finance.v1.ListExchangeRatesRequest\x1a,.saturn.finance.v1.ListExchangeRatesResponse\"\"\x82\xd3\xe4\x93\x02\x1c\x12\x1a/v1/finance/exchange-rates\x12\x91\x01\n" +
@@ -1389,8 +1389,8 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\fUpdateBudget\x12&.saturn.finance.v1.UpdateBudgetRequest\x1a\x19.saturn.finance.v1.Budget\"@\xdaA\x15id,budget,update_mask\x82\xd3\xe4\x93\x02\":\x06budget2\x18/v1/finance/budgets/{id}\x12u\n" +
 	"\fDeleteBudget\x12&.saturn.finance.v1.DeleteBudgetRequest\x1a\x16.google.protobuf.Empty\"%\xdaA\x02id\x82\xd3\xe4\x93\x02\x1a*\x18/v1/finance/budgets/{id}\x12]\n" +
 	"\n" +
-	"GetSetting\x12\x16.google.protobuf.Empty\x1a\x1a.saturn.finance.v1.Setting\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/v1/finance/setting\x12t\n" +
-	"\rUpdateSetting\x12'.saturn.finance.v1.UpdateSettingRequest\x1a\x1a.saturn.finance.v1.Setting\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\x1a\x13/v1/finance/setting\x1a\x1e\xcaA\x1bapi.saturn.masterkeysrd.devBIZGgithub.com/masterkeysrd/saturn/gen/proto/go/saturn/finance/v1;financepbb\x06proto3"
+	"GetSetting\x12\x16.google.protobuf.Empty\x1a\x1a.saturn.finance.v1.Setting\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/v1/finance/setting\x12\x90\x01\n" +
+	"\rUpdateSetting\x12'.saturn.finance.v1.UpdateSettingRequest\x1a\x1a.saturn.finance.v1.Setting\":\xdaA\x13setting,update_mask\x82\xd3\xe4\x93\x02\x1e:\asetting2\x13/v1/finance/setting\x1a\x1e\xcaA\x1bapi.saturn.masterkeysrd.devBIZGgithub.com/masterkeysrd/saturn/gen/proto/go/saturn/finance/v1;financepbb\x06proto3"
 
 var (
 	file_saturn_finance_v1_finance_proto_rawDescOnce sync.Once

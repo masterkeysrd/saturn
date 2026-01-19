@@ -209,8 +209,13 @@ export async function updateSetting(req: MessageInitShape<typeof Types.UpdateSet
   const msg = create(Types.UpdateSettingRequestSchema, req);
   const body = toJson(Types.UpdateSettingRequestSchema, msg);
 
-  return getAxios().put(`/api/v1/finance/setting`
-    , body
+  return getAxios().patch(`/api/v1/finance/setting`
+    , body.setting
+    , {
+      params: {
+        updateMask:  body.updateMask,
+      }
+    }
   ).then((resp) => {
     return fromJson(Types.SettingSchema, resp.data);
   });

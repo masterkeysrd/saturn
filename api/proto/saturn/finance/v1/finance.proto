@@ -97,9 +97,10 @@ service Finance {
   // UpdateSetting modifies the finance settings for the space.
   rpc UpdateSetting(UpdateSettingRequest) returns (Setting) {
     option (google.api.http) = {
-      put: "/v1/finance/setting"
-      body: "*"
+      patch: "/v1/finance/setting"
+      body: "setting"
     };
+    option (google.api.method_signature) = "setting,update_mask";
   }
 }
 

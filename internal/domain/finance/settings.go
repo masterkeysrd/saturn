@@ -19,9 +19,9 @@ type SettingsStore interface {
 
 var SettingUpdateSchema = fieldmask.NewSchema("Settings").
 	Field("state",
-		fieldmask.WithDescription("State of the finance settings."),
+		fieldmask.WithDescription("State of the settings."),
 	).
-	Field("base_currency",
+	Field("base_currency_code",
 		fieldmask.WithDescription("Base currency code for the space."),
 	).
 	Build()
@@ -118,7 +118,7 @@ func (s *Setting) Update(update *Setting, mask *fieldmask.FieldMask) error {
 		s.Status = update.Status
 	}
 
-	if mask.Contains("base_currency") {
+	if mask.Contains("base_currency_code") {
 		if s.Status != SettingStatusIncomplete {
 			return fmt.Errorf("cannot change base currency when settings are active or inactive")
 		}

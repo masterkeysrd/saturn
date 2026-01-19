@@ -72,7 +72,7 @@ func (s *Server) GetSetting(ctx context.Context, _ *emptypb.Empty) (*financepb.S
 	return SettingPb(settings), nil
 }
 
-func (s *Server) UpdateSettings(ctx context.Context, req *financepb.UpdateSettingRequest) (*financepb.Setting, error) {
+func (s *Server) UpdateSetting(ctx context.Context, req *financepb.UpdateSettingRequest) (*financepb.Setting, error) {
 	settings, updateMask := Setting(req.GetSetting()), encoding.FieldMask(req.GetUpdateMask())
 	updatedSettings, err := s.app.UpdateSetting(ctx, settings, updateMask)
 	if err != nil {

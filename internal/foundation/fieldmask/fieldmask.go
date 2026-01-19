@@ -71,3 +71,22 @@ func (fm *FieldMask) String() string {
 	}
 	return strings.Join(fm.paths, ",")
 }
+
+func (fm *FieldMask) Len() int {
+	if fm == nil {
+		return 0
+	}
+
+	return len(fm.paths)
+}
+
+func (fm *FieldMask) MarshalText() ([]byte, error) {
+	return []byte(fm.String()), nil
+}
+
+func (fm *FieldMask) UnmarshalText(data []byte) error {
+	fmNew := FromString(string(data), ",")
+	fm.paths = fmNew.paths
+	fm.pathsMask = fmNew.pathsMask
+	return nil
+}
