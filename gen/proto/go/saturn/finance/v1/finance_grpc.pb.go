@@ -35,6 +35,7 @@ const (
 	Finance_DeleteBudget_FullMethodName       = "/saturn.finance.v1.Finance/DeleteBudget"
 	Finance_GetSetting_FullMethodName         = "/saturn.finance.v1.Finance/GetSetting"
 	Finance_UpdateSetting_FullMethodName      = "/saturn.finance.v1.Finance/UpdateSetting"
+	Finance_ActivateSetting_FullMethodName    = "/saturn.finance.v1.Finance/ActivateSetting"
 )
 
 // FinanceClient is the client API for Finance service.
@@ -71,6 +72,10 @@ type FinanceClient interface {
 	GetSetting(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Setting, error)
 	// UpdateSetting modifies the finance settings for the space.
 	UpdateSetting(ctx context.Context, in *UpdateSettingRequest, opts ...grpc.CallOption) (*Setting, error)
+	// ActivateSetting activates the finance settings once properly configured.
+	//
+	// Once activated, certain fields (like base_currency_code) become immutable.
+	ActivateSetting(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Setting, error)
 }
 
 type financeClient struct {
@@ -201,6 +206,16 @@ func (c *financeClient) UpdateSetting(ctx context.Context, in *UpdateSettingRequ
 	return out, nil
 }
 
+func (c *financeClient) ActivateSetting(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Setting, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Setting)
+	err := c.cc.Invoke(ctx, Finance_ActivateSetting_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FinanceServer is the server API for Finance service.
 // All implementations must embed UnimplementedFinanceServer
 // for forward compatibility.
@@ -235,6 +250,10 @@ type FinanceServer interface {
 	GetSetting(context.Context, *emptypb.Empty) (*Setting, error)
 	// UpdateSetting modifies the finance settings for the space.
 	UpdateSetting(context.Context, *UpdateSettingRequest) (*Setting, error)
+	// ActivateSetting activates the finance settings once properly configured.
+	//
+	// Once activated, certain fields (like base_currency_code) become immutable.
+	ActivateSetting(context.Context, *emptypb.Empty) (*Setting, error)
 	mustEmbedUnimplementedFinanceServer()
 }
 
@@ -280,6 +299,9 @@ func (UnimplementedFinanceServer) GetSetting(context.Context, *emptypb.Empty) (*
 }
 func (UnimplementedFinanceServer) UpdateSetting(context.Context, *UpdateSettingRequest) (*Setting, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateSetting not implemented")
+}
+func (UnimplementedFinanceServer) ActivateSetting(context.Context, *emptypb.Empty) (*Setting, error) {
+	return nil, status.Error(codes.Unimplemented, "method ActivateSetting not implemented")
 }
 func (UnimplementedFinanceServer) mustEmbedUnimplementedFinanceServer() {}
 func (UnimplementedFinanceServer) testEmbeddedByValue()                 {}
@@ -518,6 +540,24 @@ func _Finance_UpdateSetting_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Finance_ActivateSetting_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).ActivateSetting(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_ActivateSetting_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).ActivateSetting(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Finance_ServiceDesc is the grpc.ServiceDesc for Finance service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -572,6 +612,10 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateSetting",
 			Handler:    _Finance_UpdateSetting_Handler,
+		},
+		{
+			MethodName: "ActivateSetting",
+			Handler:    _Finance_ActivateSetting_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

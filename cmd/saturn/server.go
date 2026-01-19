@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"runtime/debug"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	financepb "github.com/masterkeysrd/saturn/gen/proto/go/saturn/finance/v1"
@@ -99,7 +100,8 @@ func recoveryHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				slog.Error("Panic recovered in HTTP handler", "error", err)
+				stack := debug.Stack()
+				slog.Error("Panic recovered in HTTP handler", slog.Any("error", err), slog.String("stack", string(stack)))
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			}
 		}()

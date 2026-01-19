@@ -17,6 +17,7 @@ type FinanceService interface {
 	CreateSetting(context.Context, access.Principal, *finance.Setting) error
 	GetSetting(context.Context, access.Principal) (*finance.Setting, error)
 	UpdateSetting(context.Context, access.Principal, *finance.UpdateSettingInput) (*finance.Setting, error)
+	ActivateSetting(context.Context, access.Principal) (*finance.Setting, error)
 }
 
 type FinanceApp struct {
@@ -85,4 +86,18 @@ func (app *FinanceApp) UpdateSetting(ctx context.Context, setting *finance.Setti
 		Setting:    setting,
 		UpdateMask: updateMask,
 	})
+}
+
+func (app *FinanceApp) ActivateSetting(ctx context.Context) (*finance.Setting, error) {
+	principal, ok := access.GetPrincipal(ctx)
+	if !ok {
+		return nil, errors.New("missing principal in context")
+	}
+
+	setting, err := app.financeService.ActivateSetting(ctx, principal)
+	if err != nil {
+		return nil, err
+	}
+
+	return setting, nil
 }

@@ -445,6 +445,30 @@
         ]
       }
     },
+    "/v1/finance/setting:activate": {
+      "post": {
+        "summary": "ActivateSetting activates the finance settings once properly configured.",
+        "description": "Once activated, certain fields (like base_currency_code) become immutable.",
+        "operationId": "Finance_ActivateSetting",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Setting"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/identity/sessions": {
       "get": {
         "summary": "ListSessions lists all active sessions for the current user.",

@@ -102,6 +102,13 @@ service Finance {
     };
     option (google.api.method_signature) = "setting,update_mask";
   }
+
+  // ActivateSetting activates the finance settings once properly configured.
+  //
+  // Once activated, certain fields (like base_currency_code) become immutable.
+  rpc ActivateSetting(google.protobuf.Empty) returns (Setting) {
+    option (google.api.http) = {post: "/v1/finance/setting:activate"};
+  }
 }
 
 message CreateExchangeRateRequest {

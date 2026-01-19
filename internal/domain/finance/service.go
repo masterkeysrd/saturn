@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/foundation/access"
@@ -27,12 +28,13 @@ type Service struct {
 type ServiceParams struct {
 	deps.In
 
-	BudgetStore      BudgetStore
-	BudgetPeriod     BudgetPeriodStore
-	CurrencyStore    CurrencyStore
-	SettingsStore    SettingsStore
-	TransactionStore TransactionStore
-	InsightsStore    InsightsStore
+	BudgetStore       BudgetStore
+	BudgetPeriod      BudgetPeriodStore
+	CurrencyStore     CurrencyStore
+	ExchangeRateStore ExchangeRateStore
+	SettingsStore     SettingsStore
+	TransactionStore  TransactionStore
+	InsightsStore     InsightsStore
 }
 
 func NewService(params ServiceParams) *Service {
@@ -40,6 +42,7 @@ func NewService(params ServiceParams) *Service {
 		budgetStore:       params.BudgetStore,
 		budgetPeriodStore: params.BudgetPeriod,
 		currencyStore:     params.CurrencyStore,
+		exchangeRateStore: params.ExchangeRateStore,
 		transactionStore:  params.TransactionStore,
 		settingsStore:     params.SettingsStore,
 		insightsStore:     params.InsightsStore,
@@ -508,29 +511,28 @@ func (s *Service) GetSetting(ctx context.Context, actor access.Principal) (*Sett
 	return settings, nil
 }
 
-func (s *Service) ActivateSetting(ctx context.Context, actor access.Principal) error {
+func (s *Service) ActivateSetting(ctx context.Context, actor access.Principal) (*Setting, error) {
 	if !actor.IsSpaceOwner() {
-		return errors.New("only space owners can activate settings")
+		return nil, errors.New("only space owners can activate settings")
 	}
 
 	settings, err := s.settingsStore.Get(ctx, actor.SpaceID())
 	if err != nil {
-		return fmt.Errorf("cannot get settings: %w", err)
+		return nil, fmt.Errorf("cannot get settings: %w", err)
 	}
 
-	if settings.Status == SettingStatusActive {
-		log.Printf("Settings for space %s are already active", actor.SpaceID())
-		return nil
+	if settings.Status != SettingStatusIncomplete {
+		return nil, errors.New("only incomplete settings can be activated")
 	}
 
 	settings.Status = SettingStatusActive
 	settings.Touch(actor)
 	if err := settings.Validate(); err != nil {
-		return fmt.Errorf("invalid settings: %w", err)
+		return nil, fmt.Errorf("invalid settings: %w", err)
 	}
 
 	if err := s.settingsStore.Store(ctx, settings); err != nil {
-		return fmt.Errorf("cannot store settings: %w", err)
+		return nil, fmt.Errorf("cannot store settings: %w", err)
 	}
 
 	// Create the base currency exchange rate.
@@ -543,15 +545,15 @@ func (s *Service) ActivateSetting(ctx context.Context, actor access.Principal) e
 	}
 
 	if err := baseRate.Initialize(actor); err != nil {
-		return fmt.Errorf("cannot initialize base exchange rate: %w", err)
+		return nil, fmt.Errorf("cannot initialize base exchange rate: %w", err)
 	}
 
+	slog.Info("Creating base exchange rate", slog.Any("baseRate", baseRate))
 	if err := s.exchangeRateStore.Store(ctx, baseRate); err != nil {
-		return fmt.Errorf("cannot store base exchange rate: %w", err)
+		return nil, fmt.Errorf("cannot store base exchange rate: %w", err)
 	}
 
-	log.Printf("Settings for space %s have been activated", actor.SpaceID())
-	return nil
+	return settings, nil
 }
 
 func (s *Service) UpdateSetting(ctx context.Context, actor access.Principal, in *UpdateSettingInput) (*Setting, error) {

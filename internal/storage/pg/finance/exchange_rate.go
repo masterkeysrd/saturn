@@ -74,6 +74,9 @@ func ExchangeRateEntityFromModel(model *finance.ExchangeRate) *ExchangeRateEntit
 		SpaceId:      model.SpaceID.String(),
 		CurrencyCode: model.CurrencyCode.String(),
 		Rate:         model.Rate,
+		IsBase:       model.IsBase,
+		CreateTime:   model.CreateTime,
+		CreateBy:     model.CreateBy.String(),
 		UpdateTime:   model.UpdateTime,
 		UpdateBy:     model.UpdateBy.String(),
 	}

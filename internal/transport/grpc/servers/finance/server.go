@@ -19,6 +19,7 @@ type Application interface {
 	CreateExchangeRate(context.Context, *finance.ExchangeRate) error
 	GetSetting(context.Context) (*finance.Setting, error)
 	UpdateSetting(context.Context, *finance.Setting, *fieldmask.FieldMask) (*finance.Setting, error)
+	ActivateSetting(context.Context) (*finance.Setting, error)
 }
 
 type Server struct {
@@ -79,4 +80,12 @@ func (s *Server) UpdateSetting(ctx context.Context, req *financepb.UpdateSetting
 		return nil, err
 	}
 	return SettingPb(updatedSettings), nil
+}
+
+func (s *Server) ActivateSetting(ctx context.Context, _ *emptypb.Empty) (*financepb.Setting, error) {
+	settings, err := s.app.ActivateSetting(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return SettingPb(settings), nil
 }

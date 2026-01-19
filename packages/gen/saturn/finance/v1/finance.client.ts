@@ -221,3 +221,17 @@ export async function updateSetting(req: MessageInitShape<typeof Types.UpdateSet
   });
 }
 
+/**
+ * ActivateSetting activates the finance settings once properly configured.
+ *
+ * Once activated, certain fields (like base_currency_code) become immutable.
+ *
+ * @returns Promise<Types.Setting>
+ */
+export async function activateSetting(): Promise<Types.Setting> {
+  return getAxios().post(`/api/v1/finance/setting:activate`
+  ).then((resp) => {
+    return fromJson(Types.SettingSchema, resp.data);
+  });
+}
+
