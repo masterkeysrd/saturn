@@ -18,8 +18,8 @@ type SettingsStore interface {
 }
 
 var SettingUpdateSchema = fieldmask.NewSchema("Settings").
-	Field("state",
-		fieldmask.WithDescription("State of the settings."),
+	Field("status",
+		fieldmask.WithDescription("Status of the space's finance settings."),
 	).
 	Field("base_currency_code",
 		fieldmask.WithDescription("Base currency code for the space."),
@@ -105,7 +105,7 @@ func (s *Setting) Update(update *Setting, mask *fieldmask.FieldMask) error {
 		return fmt.Errorf("validating field mask: %w", err)
 	}
 
-	if mask.Contains("state") {
+	if mask.Contains("status") {
 		if s.Status == SettingStatusIncomplete && update.Status != SettingStatusIncomplete {
 			// Incomplete can only be remove calling the activation process
 			return fmt.Errorf("cannot change state from incomplete to %s", update.Status)
@@ -132,9 +132,9 @@ func (s *Setting) Update(update *Setting, mask *fieldmask.FieldMask) error {
 type SettingsStatus string
 
 const (
-	SettingStatusActive     SettingsStatus = "active"     // Used when settings are fully configured and operational.
-	SettingStatusDisabled   SettingsStatus = "disabled"   // Used when settings are intentionally turned off.
-	SettingStatusIncomplete SettingsStatus = "incomplete" // Used when settings are partially configured and cannot be used yet.
+	SettingStatusActive     SettingsStatus = "ACTIVE"     // Used when settings are fully configured and operational.
+	SettingStatusDisabled   SettingsStatus = "DISABLED"   // Used when settings are intentionally turned off.
+	SettingStatusIncomplete SettingsStatus = "INCOMPLETE" // Used when settings are partially configured and cannot be used yet.
 )
 
 func (s SettingsStatus) IsValid() bool {
@@ -146,8 +146,8 @@ func (s SettingsStatus) IsValid() bool {
 	}
 }
 
-func (s *SettingsStatus) String() string {
-	return string(*s)
+func (s SettingsStatus) String() string {
+	return string(s)
 }
 
 type UpdateSettingInput struct {

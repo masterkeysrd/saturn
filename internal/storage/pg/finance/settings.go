@@ -47,7 +47,7 @@ func (s *SettingsStore) Store(ctx context.Context, settings *finance.Setting) er
 func SettingsEntityFromModel(model *finance.Setting) *SettingEntity {
 	return &SettingEntity{
 		SpaceId:      model.SpaceID.String(),
-		State:        model.Status.String(),
+		Status:       model.Status.String(),
 		BaseCurrency: model.BaseCurrencyCode.String(),
 		CreateTime:   model.CreateTime,
 		CreateBy:     model.CreateBy.String(),
@@ -59,7 +59,7 @@ func SettingsEntityFromModel(model *finance.Setting) *SettingEntity {
 func (e *SettingEntity) ToModel() *finance.Setting {
 	return &finance.Setting{
 		SpaceID:          space.ID(e.SpaceId),
-		Status:           finance.SettingsStatus(e.State),
+		Status:           finance.SettingsStatus(e.Status),
 		BaseCurrencyCode: finance.CurrencyCode(e.BaseCurrency),
 		CreateTime:       e.CreateTime,
 		CreateBy:         access.UserID(e.CreateBy),

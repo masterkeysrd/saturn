@@ -14,7 +14,7 @@ const (
 	GetSettingsBySpaceIDQuery = `
 SELECT
   space_id,
-  state,
+  status,
   base_currency,
   create_time,
   create_by,
@@ -32,7 +32,7 @@ LIMIT
 INSERT INTO
   finance.settings (
     space_id,
-    state,
+    status,
     base_currency,
     create_time,
     create_by,
@@ -42,7 +42,7 @@ INSERT INTO
 VALUES
   (
 :space_id,
-:state,
+:status,
 :base_currency,
 :create_time,
 :create_by,
@@ -51,13 +51,13 @@ VALUES
   )
 ON CONFLICT (space_id) DO UPDATE
 SET
-  state = EXCLUDED.state,
+  status = EXCLUDED.status,
   base_currency = EXCLUDED.base_currency,
   update_time = EXCLUDED.update_time,
   update_by = EXCLUDED.update_by
 RETURNING
   space_id,
-  state,
+  status,
   base_currency,
   create_time,
   create_by,
@@ -299,7 +299,7 @@ type ExchangeRateEntity struct {
 // SettingEntity represents a row from the 'settings' table.
 type SettingEntity struct {
 	SpaceId      string    `db:"space_id"`
-	State        string    `db:"state"`
+	Status       string    `db:"status"`
 	BaseCurrency string    `db:"base_currency"`
 	CreateTime   time.Time `db:"create_time"`
 	CreateBy     string    `db:"create_by"`

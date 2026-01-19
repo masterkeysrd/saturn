@@ -6,7 +6,7 @@
 -- return_type: SettingEntity
 SELECT
   space_id,
-  state,
+  status,
   base_currency,
   create_time,
   create_by,
@@ -26,7 +26,7 @@ LIMIT
 INSERT INTO
   finance.settings (
     space_id,
-    state,
+    status,
     base_currency,
     create_time,
     create_by,
@@ -36,7 +36,7 @@ INSERT INTO
 VALUES
   (
 :space_id,
-:state,
+:status,
 :base_currency,
 :create_time,
 :create_by,
@@ -45,13 +45,13 @@ VALUES
   )
 ON CONFLICT (space_id) DO UPDATE
 SET
-  state = EXCLUDED.state,
+  status = EXCLUDED.status,
   base_currency = EXCLUDED.base_currency,
   update_time = EXCLUDED.update_time,
   update_by = EXCLUDED.update_by
 RETURNING
   space_id,
-  state,
+  status,
   base_currency,
   create_time,
   create_by,
