@@ -18,6 +18,7 @@ type Application interface {
 	ListBudgets(context.Context) ([]*finance.Budget, error)
 	CreateExchangeRate(context.Context, *finance.ExchangeRate) error
 	ListExchangeRates(context.Context) ([]*finance.ExchangeRate, error)
+	GetExchangeRate(context.Context, finance.CurrencyCode) (*finance.ExchangeRate, error)
 	GetSetting(context.Context) (*finance.Setting, error)
 	UpdateSetting(context.Context, *finance.Setting, *fieldmask.FieldMask) (*finance.Setting, error)
 	ActivateSetting(context.Context) (*finance.Setting, error)
@@ -74,6 +75,14 @@ func (s *Server) ListExchangeRates(ctx context.Context, req *financepb.ListExcha
 	return &financepb.ListExchangeRatesResponse{
 		Rates: ExchangeRatesPb(exchangeRates),
 	}, nil
+}
+
+func (s *Server) GetExchangeRate(ctx context.Context, req *financepb.GetExchangeRateRequest) (*financepb.ExchangeRate, error) {
+	exchangeRate, err := s.app.GetExchangeRate(ctx, finance.CurrencyCode(req.GetCurrencyCode()))
+	if err != nil {
+		return nil, err
+	}
+	return ExchangeRatePb(exchangeRate), nil
 }
 
 func (s *Server) GetSetting(ctx context.Context, _ *emptypb.Empty) (*financepb.Setting, error) {

@@ -15,6 +15,7 @@ type FinanceService interface {
 	ListBudgets(context.Context, access.Principal) ([]*finance.Budget, error)
 	CreateExchangeRate(context.Context, access.Principal, *finance.ExchangeRate) error
 	ListExchangeRates(context.Context, access.Principal) ([]*finance.ExchangeRate, error)
+	GetExchangeRate(context.Context, access.Principal, finance.CurrencyCode) (*finance.ExchangeRate, error)
 	CreateSetting(context.Context, access.Principal, *finance.Setting) error
 	GetSetting(context.Context, access.Principal) (*finance.Setting, error)
 	UpdateSetting(context.Context, access.Principal, *finance.UpdateSettingInput) (*finance.Setting, error)
@@ -50,6 +51,15 @@ func (app *FinanceApp) ListBudgets(ctx context.Context) ([]*finance.Budget, erro
 	return app.financeService.ListBudgets(ctx, principal)
 }
 
+func (app *FinanceApp) CreateExchangeRate(ctx context.Context, exchangeRate *finance.ExchangeRate) error {
+	principal, ok := access.GetPrincipal(ctx)
+	if !ok {
+		return errors.New("missing principal in context")
+	}
+
+	return app.financeService.CreateExchangeRate(ctx, principal, exchangeRate)
+}
+
 func (app *FinanceApp) ListExchangeRates(ctx context.Context) ([]*finance.ExchangeRate, error) {
 	principal, ok := access.GetPrincipal(ctx)
 	if !ok {
@@ -59,13 +69,14 @@ func (app *FinanceApp) ListExchangeRates(ctx context.Context) ([]*finance.Exchan
 	return app.financeService.ListExchangeRates(ctx, principal)
 }
 
-func (app *FinanceApp) CreateExchangeRate(ctx context.Context, exchangeRate *finance.ExchangeRate) error {
+func (app *FinanceApp) GetExchangeRate(ctx context.Context, currencyCode finance.CurrencyCode) (*finance.ExchangeRate, error) {
 	principal, ok := access.GetPrincipal(ctx)
+
 	if !ok {
-		return errors.New("missing principal in context")
+		return nil, errors.New("missing principal in context")
 	}
 
-	return app.financeService.CreateExchangeRate(ctx, principal, exchangeRate)
+	return app.financeService.GetExchangeRate(ctx, principal, currencyCode)
 }
 
 func (app *FinanceApp) CreateSetting(ctx context.Context, setting *finance.Setting) error {

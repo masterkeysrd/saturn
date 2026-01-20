@@ -441,6 +441,25 @@ func (s *Service) ListExchangeRates(ctx context.Context, actor access.Principal)
 	return rates, nil
 }
 
+func (s *Service) GetExchangeRate(ctx context.Context, actor access.Principal, code CurrencyCode) (*ExchangeRate, error) {
+	if !actor.IsSpaceMember() {
+		return nil, errors.New("only space members can get exchange rates")
+	}
+
+	if err := code.Validate(); err != nil {
+		return nil, errors.New("currency code is invalid")
+	}
+
+	rate, err := s.exchangeRateStore.Get(ctx, ExchangeRateKey{
+		SpaceID:      actor.SpaceID(),
+		CurrencyCode: code,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("cannot get exchange rate: %w", err)
+	}
+	return rate, nil
+}
+
 func (s *Service) CreateCurrency(ctx context.Context, currency *Currency) error {
 	if err := currency.Initialize(); err != nil {
 		return fmt.Errorf("cannot initialize currency: %w", err)
