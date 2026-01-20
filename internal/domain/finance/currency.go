@@ -84,6 +84,7 @@ func (e *ExchangeRate) Initialize(actor access.Principal) error {
 		return errors.New("exchange rate is nil")
 	}
 
+	e.SpaceID = actor.SpaceID()
 	e.CreateBy = actor.ActorID()
 	e.CreateTime = time.Now().UTC()
 	e.UpdateBy = actor.ActorID()
