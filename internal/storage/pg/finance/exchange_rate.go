@@ -89,6 +89,7 @@ func (e *ExchangeRateEntity) ToModel() *finance.ExchangeRate {
 			CurrencyCode: finance.CurrencyCode(e.CurrencyCode),
 		},
 		Rate:       e.Rate,
+		IsBase:     e.IsBase,
 		UpdateTime: e.UpdateTime,
 		UpdateBy:   access.UserID(e.UpdateBy),
 	}

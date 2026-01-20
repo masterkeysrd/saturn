@@ -76,6 +76,14 @@ func BudgetStatusPb(status finance.BudgetStatus) financepb.Budget_Status {
 	}
 }
 
+func ExchangeRatesPb(rates []*finance.ExchangeRate) []*financepb.ExchangeRate {
+	pbs := make([]*financepb.ExchangeRate, 0, len(rates))
+	for _, r := range rates {
+		pbs = append(pbs, ExchangeRatePb(r))
+	}
+	return pbs
+}
+
 func ExchangeRate(pb *financepb.ExchangeRate) (*finance.ExchangeRate, error) {
 	if pb == nil {
 		return nil, nil

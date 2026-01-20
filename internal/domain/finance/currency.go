@@ -59,6 +59,7 @@ func (c *Currency) Validate() error {
 
 type ExchangeRateStore interface {
 	Get(context.Context, ExchangeRateKey) (*ExchangeRate, error)
+	List(context.Context, space.ID) ([]*ExchangeRate, error)
 	Exists(context.Context, ExchangeRateKey) (bool, error)
 	Store(context.Context, *ExchangeRate) error
 }

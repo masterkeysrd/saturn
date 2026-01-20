@@ -3,8 +3,6 @@ package finance
 import (
 	"context"
 	"fmt"
-	"log"
-	"log/slog"
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/foundation/access"
@@ -372,7 +370,6 @@ func (s *Service) GetBudget(ctx context.Context, actor access.Principal, id Budg
 }
 
 func (s *Service) ListBudgets(ctx context.Context, actor access.Principal) ([]*Budget, error) {
-	log.Printf("ListBudgets called by actor: %+v", actor)
 	budgets, err := s.budgetStore.List(ctx, actor.SpaceID())
 	if err != nil {
 		return nil, fmt.Errorf("cannot list budgets: %s", err)
@@ -430,6 +427,18 @@ func (s *Service) CreateExchangeRate(ctx context.Context, actor access.Principal
 	}
 
 	return nil
+}
+
+func (s *Service) ListExchangeRates(ctx context.Context, actor access.Principal) ([]*ExchangeRate, error) {
+	if !actor.IsSpaceMember() {
+		return nil, errors.New("only space members can list exchange rates")
+	}
+
+	rates, err := s.exchangeRateStore.List(ctx, actor.SpaceID())
+	if err != nil {
+		return nil, fmt.Errorf("cannot list exchange rates: %w", err)
+	}
+	return rates, nil
 }
 
 func (s *Service) CreateCurrency(ctx context.Context, currency *Currency) error {
@@ -541,14 +550,14 @@ func (s *Service) ActivateSetting(ctx context.Context, actor access.Principal) (
 			SpaceID:      actor.SpaceID(),
 			CurrencyCode: settings.BaseCurrencyCode,
 		},
-		Rate: decimal.FromInt(1),
+		Rate:   decimal.FromInt(1),
+		IsBase: true,
 	}
 
 	if err := baseRate.Initialize(actor); err != nil {
 		return nil, fmt.Errorf("cannot initialize base exchange rate: %w", err)
 	}
 
-	slog.Info("Creating base exchange rate", slog.Any("baseRate", baseRate))
 	if err := s.exchangeRateStore.Store(ctx, baseRate); err != nil {
 		return nil, fmt.Errorf("cannot store base exchange rate: %w", err)
 	}
