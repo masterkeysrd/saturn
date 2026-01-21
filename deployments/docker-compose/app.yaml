@@ -37,6 +37,13 @@ services:
       file: postgres.yaml
       service: pg-web
 
+  goose:
+    extends:
+      file: postgres.yaml
+      service: goose
+    volumes:
+      - ../../internal/storage/pg/migrations:/migrations
+
   swagger-ui:
     extends:
       file: swagger.yaml

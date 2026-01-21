@@ -32,6 +32,19 @@ services:
       test: ["CMD", "nc", "-vz", "127.0.0.1", "8081"]
       interval: 5s
 
+  goose:
+    build:
+      context: ../..
+      dockerfile: ./build/goose/Dockerfile
+    environment:
+      GOOSE_DRIVER: postgres
+      GOOSE_DBSTRING: postgres://postgres:postgres@pg-database:5432/postgres?sslmode=disable
+      GOOSE_MIGRATIONS_DIR: /migrations
+    depends_on:
+      pg-database:
+        condition: service_healthy
+    command: ["goose", "up"]
+
 volumes:
   postgres-data:
 
