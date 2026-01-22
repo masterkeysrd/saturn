@@ -3,6 +3,7 @@ package finance
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/foundation/access"
@@ -458,6 +459,33 @@ func (s *Service) GetExchangeRate(ctx context.Context, actor access.Principal, c
 		return nil, fmt.Errorf("cannot get exchange rate: %w", err)
 	}
 	return rate, nil
+}
+
+func (s *Service) UpdateExchangeRate(ctx context.Context, actor access.Principal, in *UpdateExchangeRateInput) (*ExchangeRate, error) {
+	slog.Info("Service: UpdateExchangeRate called", slog.Any("input", in))
+	if !actor.IsSpaceAdmin() {
+		return nil, errors.New("only space admins can update exchange rates")
+	}
+
+	// TODO: Validate for update
+	exchangeRate, err := s.GetExchangeRate(ctx, actor, in.ExchangeRate.CurrencyCode)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get existing exchange rate: %w", err)
+	}
+
+	if err := exchangeRate.Update(actor, in.ExchangeRate, in.UpdateMask); err != nil {
+		return nil, fmt.Errorf("cannot update exchange rate: %w", err)
+	}
+
+	if err := exchangeRate.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid exchange rate: %w", err)
+	}
+
+	if err := s.exchangeRateStore.Store(ctx, exchangeRate); err != nil {
+		return nil, fmt.Errorf("cannot store exchange rate: %w", err)
+	}
+
+	return exchangeRate, nil
 }
 
 func (s *Service) CreateCurrency(ctx context.Context, currency *Currency) error {

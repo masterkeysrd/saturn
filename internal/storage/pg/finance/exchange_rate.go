@@ -90,6 +90,8 @@ func (e *ExchangeRateEntity) ToModel() *finance.ExchangeRate {
 		},
 		Rate:       e.Rate,
 		IsBase:     e.IsBase,
+		CreateTime: e.CreateTime,
+		CreateBy:   access.UserID(e.CreateBy),
 		UpdateTime: e.UpdateTime,
 		UpdateBy:   access.UserID(e.UpdateBy),
 	}

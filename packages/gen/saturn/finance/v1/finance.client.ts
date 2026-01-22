@@ -61,8 +61,13 @@ export async function updateExchangeRate(req: MessageInitShape<typeof Types.Upda
   const msg = create(Types.UpdateExchangeRateRequestSchema, req);
   const body = toJson(Types.UpdateExchangeRateRequestSchema, msg);
 
-  return getAxios().put(`/api/v1/finance/exchange-rates/${body.currencyCode}`
-    , body
+  return getAxios().patch(`/api/v1/finance/exchange-rates/${body.currencyCode}`
+    , body.rate
+    , {
+      params: {
+        updateMask:  body.updateMask,
+      }
+    }
   ).then((resp) => {
     return fromJson(Types.ExchangeRateSchema, resp.data);
   });

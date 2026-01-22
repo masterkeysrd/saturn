@@ -116,6 +116,32 @@ func ExchangeRatePb(e *finance.ExchangeRate) *financepb.ExchangeRate {
 	}
 }
 
+func UpdateExchangeRateInput(pb *financepb.UpdateExchangeRateRequest) (*finance.UpdateExchangeRateInput, error) {
+	if pb == nil {
+		return nil, nil
+	}
+
+	exRate, err := ExchangeRate(pb.GetRate())
+	if err != nil {
+		return nil, err
+	}
+
+	exRate.CurrencyCode = finance.CurrencyCode(pb.CurrencyCode)
+
+	mask := encoding.FieldMask(pb.GetUpdateMask())
+
+	// Remap "rate.value" to "rate" in the update mask,
+	// since the Rate field is represented as a Decimal struct
+	// in the domain model, not as a nested message. Also,
+	// this decouples the internal representation from the protobuf schema.
+	mask.ReplacePath("rate.value", "rate")
+
+	return &finance.UpdateExchangeRateInput{
+		ExchangeRate: exRate,
+		UpdateMask:   mask,
+	}, nil
+}
+
 func Setting(pb *financepb.Setting) *finance.Setting {
 	if pb == nil {
 		return nil

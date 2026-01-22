@@ -16,6 +16,7 @@ type FinanceService interface {
 	CreateExchangeRate(context.Context, access.Principal, *finance.ExchangeRate) error
 	ListExchangeRates(context.Context, access.Principal) ([]*finance.ExchangeRate, error)
 	GetExchangeRate(context.Context, access.Principal, finance.CurrencyCode) (*finance.ExchangeRate, error)
+	UpdateExchangeRate(context.Context, access.Principal, *finance.UpdateExchangeRateInput) (*finance.ExchangeRate, error)
 	CreateSetting(context.Context, access.Principal, *finance.Setting) error
 	GetSetting(context.Context, access.Principal) (*finance.Setting, error)
 	UpdateSetting(context.Context, access.Principal, *finance.UpdateSettingInput) (*finance.Setting, error)
@@ -77,6 +78,15 @@ func (app *FinanceApp) GetExchangeRate(ctx context.Context, currencyCode finance
 	}
 
 	return app.financeService.GetExchangeRate(ctx, principal, currencyCode)
+}
+
+func (app *FinanceApp) UpdateExchangeRate(ctx context.Context, in *finance.UpdateExchangeRateInput) (*finance.ExchangeRate, error) {
+	principal, ok := access.GetPrincipal(ctx)
+	if !ok {
+		return nil, errors.New("missing principal in context")
+	}
+
+	return app.financeService.UpdateExchangeRate(ctx, principal, in)
 }
 
 func (app *FinanceApp) CreateSetting(ctx context.Context, setting *finance.Setting) error {

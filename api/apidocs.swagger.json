@@ -351,7 +351,7 @@
           "Finance"
         ]
       },
-      "put": {
+      "patch": {
         "summary": "UpdateExchangeRate sets or updates the exchange rate for a specific currency.\nThe rate represents: 1 Unit of Base Currency = X Units of Target Currency.",
         "operationId": "Finance_UpdateExchangeRate",
         "responses": {
@@ -377,11 +377,12 @@
             "type": "string"
           },
           {
-            "name": "body",
+            "name": "rate",
+            "description": "The new exchange rate details.",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/FinanceUpdateExchangeRateBody"
+              "$ref": "#/definitions/v1ExchangeRate"
             }
           }
         ],
@@ -1235,18 +1236,6 @@
         }
       },
       "description": "Statistics related to the budget."
-    },
-    "FinanceUpdateExchangeRateBody": {
-      "type": "object",
-      "properties": {
-        "rate": {
-          "$ref": "#/definitions/v1ExchangeRate",
-          "description": "The new exchange rate details."
-        }
-      },
-      "required": [
-        "rate"
-      ]
     },
     "IdentityUpdateUserBody": {
       "type": "object",

@@ -43,9 +43,10 @@ service Finance {
   // The rate represents: 1 Unit of Base Currency = X Units of Target Currency.
   rpc UpdateExchangeRate(UpdateExchangeRateRequest) returns (ExchangeRate) {
     option (google.api.http) = {
-      put: "/v1/finance/exchange-rates/{currency_code}"
-      body: "*"
+      patch: "/v1/finance/exchange-rates/{currency_code}"
+      body: "rate"
     };
+    option (google.api.method_signature) = "currency_code,rate,update_mask";
   }
 
   // DeleteExchangeRate removes a custom exchange rate.
@@ -133,6 +134,11 @@ message UpdateExchangeRateRequest {
 
   // The new exchange rate details.
   ExchangeRate rate = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // The fields to be updated. If empty, all non-output fields are updated.
+  //
+  // Use "*" to update all fields.
+  google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
 }
 
 message DeleteExchangeRateRequest {

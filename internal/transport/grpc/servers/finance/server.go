@@ -2,6 +2,7 @@ package financegrpc
 
 import (
 	"context"
+	"log/slog"
 
 	financepb "github.com/masterkeysrd/saturn/gen/proto/go/saturn/finance/v1"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
@@ -19,6 +20,7 @@ type Application interface {
 	CreateExchangeRate(context.Context, *finance.ExchangeRate) error
 	ListExchangeRates(context.Context) ([]*finance.ExchangeRate, error)
 	GetExchangeRate(context.Context, finance.CurrencyCode) (*finance.ExchangeRate, error)
+	UpdateExchangeRate(context.Context, *finance.UpdateExchangeRateInput) (*finance.ExchangeRate, error)
 	GetSetting(context.Context) (*finance.Setting, error)
 	UpdateSetting(context.Context, *finance.Setting, *fieldmask.FieldMask) (*finance.Setting, error)
 	ActivateSetting(context.Context) (*finance.Setting, error)
@@ -83,6 +85,21 @@ func (s *Server) GetExchangeRate(ctx context.Context, req *financepb.GetExchange
 		return nil, err
 	}
 	return ExchangeRatePb(exchangeRate), nil
+}
+
+func (s *Server) UpdateExchangeRate(ctx context.Context, req *financepb.UpdateExchangeRateRequest) (*financepb.ExchangeRate, error) {
+	slog.Info("UpdateExchangeRate called", slog.Any("request", req))
+	input, err := UpdateExchangeRateInput(req)
+	if err != nil {
+		return nil, err
+	}
+
+	rate, err := s.app.UpdateExchangeRate(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	return ExchangeRatePb(rate), nil
 }
 
 func (s *Server) GetSetting(ctx context.Context, _ *emptypb.Empty) (*financepb.Setting, error) {

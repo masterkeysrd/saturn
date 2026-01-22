@@ -373,7 +373,11 @@ type UpdateExchangeRateRequest struct {
 	// The currency code to update (mapped from URL path).
 	CurrencyCode string `protobuf:"bytes,1,opt,name=currency_code,json=currencyCode,proto3" json:"currency_code,omitempty"`
 	// The new exchange rate details.
-	Rate          *ExchangeRate `protobuf:"bytes,2,opt,name=rate,proto3" json:"rate,omitempty"`
+	Rate *ExchangeRate `protobuf:"bytes,2,opt,name=rate,proto3" json:"rate,omitempty"`
+	// The fields to be updated. If empty, all non-output fields are updated.
+	//
+	// Use "*" to update all fields.
+	UpdateMask    *fieldmaskpb.FieldMask `protobuf:"bytes,3,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -418,6 +422,13 @@ func (x *UpdateExchangeRateRequest) GetCurrencyCode() string {
 func (x *UpdateExchangeRateRequest) GetRate() *ExchangeRate {
 	if x != nil {
 		return x.Rate
+	}
+	return nil
+}
+
+func (x *UpdateExchangeRateRequest) GetUpdateMask() *fieldmaskpb.FieldMask {
+	if x != nil {
+		return x.UpdateMask
 	}
 	return nil
 }
@@ -1286,10 +1297,12 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x19ListExchangeRatesResponse\x125\n" +
 	"\x05rates\x18\x01 \x03(\v2\x1f.saturn.finance.v1.ExchangeRateR\x05rates\"B\n" +
 	"\x16GetExchangeRateRequest\x12(\n" +
-	"\rcurrency_code\x18\x01 \x01(\tB\x03\xe0A\x02R\fcurrencyCode\"\x7f\n" +
+	"\rcurrency_code\x18\x01 \x01(\tB\x03\xe0A\x02R\fcurrencyCode\"\xc1\x01\n" +
 	"\x19UpdateExchangeRateRequest\x12(\n" +
 	"\rcurrency_code\x18\x01 \x01(\tB\x03\xe0A\x02R\fcurrencyCode\x128\n" +
-	"\x04rate\x18\x02 \x01(\v2\x1f.saturn.finance.v1.ExchangeRateB\x03\xe0A\x02R\x04rate\"E\n" +
+	"\x04rate\x18\x02 \x01(\v2\x1f.saturn.finance.v1.ExchangeRateB\x03\xe0A\x02R\x04rate\x12@\n" +
+	"\vupdate_mask\x18\x03 \x01(\v2\x1a.google.protobuf.FieldMaskB\x03\xe0A\x01R\n" +
+	"updateMask\"E\n" +
 	"\x19DeleteExchangeRateRequest\x12(\n" +
 	"\rcurrency_code\x18\x01 \x01(\tB\x03\xe0A\x02R\fcurrencyCode\"M\n" +
 	"\x13CreateBudgetRequest\x126\n" +
@@ -1376,12 +1389,12 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"INCOMPLETE\x10\x01\x12\n" +
 	"\n" +
 	"\x06ACTIVE\x10\x02\x12\f\n" +
-	"\bDISABLED\x10\x03J\x04\b\x03\x10\v2\xe3\r\n" +
+	"\bDISABLED\x10\x03J\x04\b\x03\x10\v2\x87\x0e\n" +
 	"\aFinance\x12\x8d\x01\n" +
 	"\x12CreateExchangeRate\x12,.saturn.finance.v1.CreateExchangeRateRequest\x1a\x1f.saturn.finance.v1.ExchangeRate\"(\x82\xd3\xe4\x93\x02\":\x04rate\"\x1a/v1/finance/exchange-rates\x12\x92\x01\n" +
 	"\x11ListExchangeRates\x12+.saturn.finance.v1.ListExchangeRatesRequest\x1a,.saturn.finance.v1.ListExchangeRatesResponse\"\"\x82\xd3\xe4\x93\x02\x1c\x12\x1a/v1/finance/exchange-rates\x12\x91\x01\n" +
-	"\x0fGetExchangeRate\x12).saturn.finance.v1.GetExchangeRateRequest\x1a\x1f.saturn.finance.v1.ExchangeRate\"2\x82\xd3\xe4\x93\x02,\x12*/v1/finance/exchange-rates/{currency_code}\x12\x9a\x01\n" +
-	"\x12UpdateExchangeRate\x12,.saturn.finance.v1.UpdateExchangeRateRequest\x1a\x1f.saturn.finance.v1.ExchangeRate\"5\x82\xd3\xe4\x93\x02/:\x01*\x1a*/v1/finance/exchange-rates/{currency_code}\x12\x8e\x01\n" +
+	"\x0fGetExchangeRate\x12).saturn.finance.v1.GetExchangeRateRequest\x1a\x1f.saturn.finance.v1.ExchangeRate\"2\x82\xd3\xe4\x93\x02,\x12*/v1/finance/exchange-rates/{currency_code}\x12\xbe\x01\n" +
+	"\x12UpdateExchangeRate\x12,.saturn.finance.v1.UpdateExchangeRateRequest\x1a\x1f.saturn.finance.v1.ExchangeRate\"Y\xdaA\x1ecurrency_code,rate,update_mask\x82\xd3\xe4\x93\x022:\x04rate2*/v1/finance/exchange-rates/{currency_code}\x12\x8e\x01\n" +
 	"\x12DeleteExchangeRate\x12,.saturn.finance.v1.DeleteExchangeRateRequest\x1a\x16.google.protobuf.Empty\"2\x82\xd3\xe4\x93\x02,**/v1/finance/exchange-rates/{currency_code}\x12v\n" +
 	"\fCreateBudget\x12&.saturn.finance.v1.CreateBudgetRequest\x1a\x19.saturn.finance.v1.Budget\"#\x82\xd3\xe4\x93\x02\x1d:\x06budget\"\x13/v1/finance/budgets\x12y\n" +
 	"\vListBudgets\x12%.saturn.finance.v1.ListBudgetsRequest\x1a&.saturn.finance.v1.ListBudgetsResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/v1/finance/budgets\x12r\n" +
@@ -1428,9 +1441,9 @@ var file_saturn_finance_v1_finance_proto_goTypes = []any{
 	(*UpdateSettingRequest)(nil),      // 17: saturn.finance.v1.UpdateSettingRequest
 	(*Setting)(nil),                   // 18: saturn.finance.v1.Setting
 	(*Budget_Stats)(nil),              // 19: saturn.finance.v1.Budget.Stats
-	(*decimal.Decimal)(nil),           // 20: google.type.Decimal
-	(*timestamppb.Timestamp)(nil),     // 21: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil),     // 22: google.protobuf.FieldMask
+	(*fieldmaskpb.FieldMask)(nil),     // 20: google.protobuf.FieldMask
+	(*decimal.Decimal)(nil),           // 21: google.type.Decimal
+	(*timestamppb.Timestamp)(nil),     // 22: google.protobuf.Timestamp
 	(*typepb.Appearance)(nil),         // 23: saturn.type.Appearance
 	(*typepb.Money)(nil),              // 24: saturn.type.Money
 	(*emptypb.Empty)(nil),             // 25: google.protobuf.Empty
@@ -1439,62 +1452,63 @@ var file_saturn_finance_v1_finance_proto_depIdxs = []int32{
 	10, // 0: saturn.finance.v1.CreateExchangeRateRequest.rate:type_name -> saturn.finance.v1.ExchangeRate
 	10, // 1: saturn.finance.v1.ListExchangeRatesResponse.rates:type_name -> saturn.finance.v1.ExchangeRate
 	10, // 2: saturn.finance.v1.UpdateExchangeRateRequest.rate:type_name -> saturn.finance.v1.ExchangeRate
-	16, // 3: saturn.finance.v1.CreateBudgetRequest.budget:type_name -> saturn.finance.v1.Budget
-	20, // 4: saturn.finance.v1.ExchangeRate.rate:type_name -> google.type.Decimal
-	21, // 5: saturn.finance.v1.ExchangeRate.create_time:type_name -> google.protobuf.Timestamp
-	21, // 6: saturn.finance.v1.ExchangeRate.update_time:type_name -> google.protobuf.Timestamp
-	0,  // 7: saturn.finance.v1.ListBudgetsRequest.view:type_name -> saturn.finance.v1.Budget.View
-	16, // 8: saturn.finance.v1.ListBudgetsResponse.budgets:type_name -> saturn.finance.v1.Budget
-	0,  // 9: saturn.finance.v1.GetBudgetRequest.view:type_name -> saturn.finance.v1.Budget.View
-	16, // 10: saturn.finance.v1.UpdateBudgetRequest.budget:type_name -> saturn.finance.v1.Budget
-	22, // 11: saturn.finance.v1.UpdateBudgetRequest.update_mask:type_name -> google.protobuf.FieldMask
-	23, // 12: saturn.finance.v1.Budget.appearance:type_name -> saturn.type.Appearance
-	1,  // 13: saturn.finance.v1.Budget.status:type_name -> saturn.finance.v1.Budget.Status
-	24, // 14: saturn.finance.v1.Budget.amount:type_name -> saturn.type.Money
-	21, // 15: saturn.finance.v1.Budget.create_time:type_name -> google.protobuf.Timestamp
-	21, // 16: saturn.finance.v1.Budget.update_time:type_name -> google.protobuf.Timestamp
-	24, // 17: saturn.finance.v1.Budget.base_amount:type_name -> saturn.type.Money
-	19, // 18: saturn.finance.v1.Budget.stats:type_name -> saturn.finance.v1.Budget.Stats
-	18, // 19: saturn.finance.v1.UpdateSettingRequest.setting:type_name -> saturn.finance.v1.Setting
-	22, // 20: saturn.finance.v1.UpdateSettingRequest.update_mask:type_name -> google.protobuf.FieldMask
-	2,  // 21: saturn.finance.v1.Setting.status:type_name -> saturn.finance.v1.Setting.Status
-	21, // 22: saturn.finance.v1.Setting.create_time:type_name -> google.protobuf.Timestamp
-	21, // 23: saturn.finance.v1.Setting.update_time:type_name -> google.protobuf.Timestamp
-	24, // 24: saturn.finance.v1.Budget.Stats.spent_amount:type_name -> saturn.type.Money
-	24, // 25: saturn.finance.v1.Budget.Stats.remaining_amount:type_name -> saturn.type.Money
-	21, // 26: saturn.finance.v1.Budget.Stats.period_start:type_name -> google.protobuf.Timestamp
-	21, // 27: saturn.finance.v1.Budget.Stats.period_end:type_name -> google.protobuf.Timestamp
-	3,  // 28: saturn.finance.v1.Finance.CreateExchangeRate:input_type -> saturn.finance.v1.CreateExchangeRateRequest
-	4,  // 29: saturn.finance.v1.Finance.ListExchangeRates:input_type -> saturn.finance.v1.ListExchangeRatesRequest
-	6,  // 30: saturn.finance.v1.Finance.GetExchangeRate:input_type -> saturn.finance.v1.GetExchangeRateRequest
-	7,  // 31: saturn.finance.v1.Finance.UpdateExchangeRate:input_type -> saturn.finance.v1.UpdateExchangeRateRequest
-	8,  // 32: saturn.finance.v1.Finance.DeleteExchangeRate:input_type -> saturn.finance.v1.DeleteExchangeRateRequest
-	9,  // 33: saturn.finance.v1.Finance.CreateBudget:input_type -> saturn.finance.v1.CreateBudgetRequest
-	11, // 34: saturn.finance.v1.Finance.ListBudgets:input_type -> saturn.finance.v1.ListBudgetsRequest
-	13, // 35: saturn.finance.v1.Finance.GetBudget:input_type -> saturn.finance.v1.GetBudgetRequest
-	14, // 36: saturn.finance.v1.Finance.UpdateBudget:input_type -> saturn.finance.v1.UpdateBudgetRequest
-	15, // 37: saturn.finance.v1.Finance.DeleteBudget:input_type -> saturn.finance.v1.DeleteBudgetRequest
-	25, // 38: saturn.finance.v1.Finance.GetSetting:input_type -> google.protobuf.Empty
-	17, // 39: saturn.finance.v1.Finance.UpdateSetting:input_type -> saturn.finance.v1.UpdateSettingRequest
-	25, // 40: saturn.finance.v1.Finance.ActivateSetting:input_type -> google.protobuf.Empty
-	10, // 41: saturn.finance.v1.Finance.CreateExchangeRate:output_type -> saturn.finance.v1.ExchangeRate
-	5,  // 42: saturn.finance.v1.Finance.ListExchangeRates:output_type -> saturn.finance.v1.ListExchangeRatesResponse
-	10, // 43: saturn.finance.v1.Finance.GetExchangeRate:output_type -> saturn.finance.v1.ExchangeRate
-	10, // 44: saturn.finance.v1.Finance.UpdateExchangeRate:output_type -> saturn.finance.v1.ExchangeRate
-	25, // 45: saturn.finance.v1.Finance.DeleteExchangeRate:output_type -> google.protobuf.Empty
-	16, // 46: saturn.finance.v1.Finance.CreateBudget:output_type -> saturn.finance.v1.Budget
-	12, // 47: saturn.finance.v1.Finance.ListBudgets:output_type -> saturn.finance.v1.ListBudgetsResponse
-	16, // 48: saturn.finance.v1.Finance.GetBudget:output_type -> saturn.finance.v1.Budget
-	16, // 49: saturn.finance.v1.Finance.UpdateBudget:output_type -> saturn.finance.v1.Budget
-	25, // 50: saturn.finance.v1.Finance.DeleteBudget:output_type -> google.protobuf.Empty
-	18, // 51: saturn.finance.v1.Finance.GetSetting:output_type -> saturn.finance.v1.Setting
-	18, // 52: saturn.finance.v1.Finance.UpdateSetting:output_type -> saturn.finance.v1.Setting
-	18, // 53: saturn.finance.v1.Finance.ActivateSetting:output_type -> saturn.finance.v1.Setting
-	41, // [41:54] is the sub-list for method output_type
-	28, // [28:41] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	20, // 3: saturn.finance.v1.UpdateExchangeRateRequest.update_mask:type_name -> google.protobuf.FieldMask
+	16, // 4: saturn.finance.v1.CreateBudgetRequest.budget:type_name -> saturn.finance.v1.Budget
+	21, // 5: saturn.finance.v1.ExchangeRate.rate:type_name -> google.type.Decimal
+	22, // 6: saturn.finance.v1.ExchangeRate.create_time:type_name -> google.protobuf.Timestamp
+	22, // 7: saturn.finance.v1.ExchangeRate.update_time:type_name -> google.protobuf.Timestamp
+	0,  // 8: saturn.finance.v1.ListBudgetsRequest.view:type_name -> saturn.finance.v1.Budget.View
+	16, // 9: saturn.finance.v1.ListBudgetsResponse.budgets:type_name -> saturn.finance.v1.Budget
+	0,  // 10: saturn.finance.v1.GetBudgetRequest.view:type_name -> saturn.finance.v1.Budget.View
+	16, // 11: saturn.finance.v1.UpdateBudgetRequest.budget:type_name -> saturn.finance.v1.Budget
+	20, // 12: saturn.finance.v1.UpdateBudgetRequest.update_mask:type_name -> google.protobuf.FieldMask
+	23, // 13: saturn.finance.v1.Budget.appearance:type_name -> saturn.type.Appearance
+	1,  // 14: saturn.finance.v1.Budget.status:type_name -> saturn.finance.v1.Budget.Status
+	24, // 15: saturn.finance.v1.Budget.amount:type_name -> saturn.type.Money
+	22, // 16: saturn.finance.v1.Budget.create_time:type_name -> google.protobuf.Timestamp
+	22, // 17: saturn.finance.v1.Budget.update_time:type_name -> google.protobuf.Timestamp
+	24, // 18: saturn.finance.v1.Budget.base_amount:type_name -> saturn.type.Money
+	19, // 19: saturn.finance.v1.Budget.stats:type_name -> saturn.finance.v1.Budget.Stats
+	18, // 20: saturn.finance.v1.UpdateSettingRequest.setting:type_name -> saturn.finance.v1.Setting
+	20, // 21: saturn.finance.v1.UpdateSettingRequest.update_mask:type_name -> google.protobuf.FieldMask
+	2,  // 22: saturn.finance.v1.Setting.status:type_name -> saturn.finance.v1.Setting.Status
+	22, // 23: saturn.finance.v1.Setting.create_time:type_name -> google.protobuf.Timestamp
+	22, // 24: saturn.finance.v1.Setting.update_time:type_name -> google.protobuf.Timestamp
+	24, // 25: saturn.finance.v1.Budget.Stats.spent_amount:type_name -> saturn.type.Money
+	24, // 26: saturn.finance.v1.Budget.Stats.remaining_amount:type_name -> saturn.type.Money
+	22, // 27: saturn.finance.v1.Budget.Stats.period_start:type_name -> google.protobuf.Timestamp
+	22, // 28: saturn.finance.v1.Budget.Stats.period_end:type_name -> google.protobuf.Timestamp
+	3,  // 29: saturn.finance.v1.Finance.CreateExchangeRate:input_type -> saturn.finance.v1.CreateExchangeRateRequest
+	4,  // 30: saturn.finance.v1.Finance.ListExchangeRates:input_type -> saturn.finance.v1.ListExchangeRatesRequest
+	6,  // 31: saturn.finance.v1.Finance.GetExchangeRate:input_type -> saturn.finance.v1.GetExchangeRateRequest
+	7,  // 32: saturn.finance.v1.Finance.UpdateExchangeRate:input_type -> saturn.finance.v1.UpdateExchangeRateRequest
+	8,  // 33: saturn.finance.v1.Finance.DeleteExchangeRate:input_type -> saturn.finance.v1.DeleteExchangeRateRequest
+	9,  // 34: saturn.finance.v1.Finance.CreateBudget:input_type -> saturn.finance.v1.CreateBudgetRequest
+	11, // 35: saturn.finance.v1.Finance.ListBudgets:input_type -> saturn.finance.v1.ListBudgetsRequest
+	13, // 36: saturn.finance.v1.Finance.GetBudget:input_type -> saturn.finance.v1.GetBudgetRequest
+	14, // 37: saturn.finance.v1.Finance.UpdateBudget:input_type -> saturn.finance.v1.UpdateBudgetRequest
+	15, // 38: saturn.finance.v1.Finance.DeleteBudget:input_type -> saturn.finance.v1.DeleteBudgetRequest
+	25, // 39: saturn.finance.v1.Finance.GetSetting:input_type -> google.protobuf.Empty
+	17, // 40: saturn.finance.v1.Finance.UpdateSetting:input_type -> saturn.finance.v1.UpdateSettingRequest
+	25, // 41: saturn.finance.v1.Finance.ActivateSetting:input_type -> google.protobuf.Empty
+	10, // 42: saturn.finance.v1.Finance.CreateExchangeRate:output_type -> saturn.finance.v1.ExchangeRate
+	5,  // 43: saturn.finance.v1.Finance.ListExchangeRates:output_type -> saturn.finance.v1.ListExchangeRatesResponse
+	10, // 44: saturn.finance.v1.Finance.GetExchangeRate:output_type -> saturn.finance.v1.ExchangeRate
+	10, // 45: saturn.finance.v1.Finance.UpdateExchangeRate:output_type -> saturn.finance.v1.ExchangeRate
+	25, // 46: saturn.finance.v1.Finance.DeleteExchangeRate:output_type -> google.protobuf.Empty
+	16, // 47: saturn.finance.v1.Finance.CreateBudget:output_type -> saturn.finance.v1.Budget
+	12, // 48: saturn.finance.v1.Finance.ListBudgets:output_type -> saturn.finance.v1.ListBudgetsResponse
+	16, // 49: saturn.finance.v1.Finance.GetBudget:output_type -> saturn.finance.v1.Budget
+	16, // 50: saturn.finance.v1.Finance.UpdateBudget:output_type -> saturn.finance.v1.Budget
+	25, // 51: saturn.finance.v1.Finance.DeleteBudget:output_type -> google.protobuf.Empty
+	18, // 52: saturn.finance.v1.Finance.GetSetting:output_type -> saturn.finance.v1.Setting
+	18, // 53: saturn.finance.v1.Finance.UpdateSetting:output_type -> saturn.finance.v1.Setting
+	18, // 54: saturn.finance.v1.Finance.ActivateSetting:output_type -> saturn.finance.v1.Setting
+	42, // [42:55] is the sub-list for method output_type
+	29, // [29:42] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_saturn_finance_v1_finance_proto_init() }

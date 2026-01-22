@@ -64,6 +64,28 @@ func (fm *FieldMask) Paths() []string {
 	return result
 }
 
+// ReplacePath replaces an old path with a new path in the field mask
+func (fm *FieldMask) ReplacePath(oldPath, newPath string) {
+	if fm == nil {
+		return
+	}
+
+	if _, exists := fm.pathsMask[oldPath]; !exists {
+		return
+	}
+
+	// Update paths slice
+	for i, path := range fm.paths {
+		if path == oldPath {
+			fm.paths[i] = newPath
+		}
+	}
+
+	// Update pathsMask
+	delete(fm.pathsMask, oldPath)
+	fm.pathsMask[newPath] = struct{}{}
+}
+
 // String returns a comma-separated string of paths
 func (fm *FieldMask) String() string {
 	if fm == nil || len(fm.paths) == 0 {

@@ -8,6 +8,7 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/foundation/access"
 	"github.com/masterkeysrd/saturn/internal/foundation/decimal"
+	"github.com/masterkeysrd/saturn/internal/foundation/fieldmask"
 	"github.com/masterkeysrd/saturn/internal/foundation/id"
 	"github.com/masterkeysrd/saturn/internal/foundation/space"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
@@ -64,6 +65,13 @@ type ExchangeRateStore interface {
 	Store(context.Context, *ExchangeRate) error
 }
 
+var ExchangeRateUpdateSchema = fieldmask.NewSchema("exchange_rate").
+	Field("rate",
+		fieldmask.WithDescription("The exchange rate value."),
+		fieldmask.WithRequired(),
+	).
+	Build()
+
 type ExchangeRateKey struct {
 	SpaceID      space.ID
 	CurrencyCode CurrencyCode
@@ -109,4 +117,31 @@ func (e *ExchangeRate) Validate() error {
 		return errors.New("rate must be a positive number")
 	}
 	return nil
+}
+
+func (e *ExchangeRate) Update(actor access.Principal, input *ExchangeRate, updateMask *fieldmask.FieldMask) error {
+	if e == nil {
+		return errors.New("exchange rate is nil")
+	}
+
+	if updateMask == nil {
+		return errors.New("update mask is nil")
+	}
+
+	if err := ExchangeRateUpdateSchema.Validate(updateMask); err != nil {
+		return fmt.Errorf("invalid update mask: %w", err)
+	}
+
+	if updateMask.Contains("rate.value") {
+		e.Rate = input.Rate
+	}
+
+	e.UpdateBy = actor.ActorID()
+	e.UpdateTime = time.Now().UTC()
+	return nil
+}
+
+type UpdateExchangeRateInput struct {
+	ExchangeRate *ExchangeRate
+	UpdateMask   *fieldmask.FieldMask
 }
