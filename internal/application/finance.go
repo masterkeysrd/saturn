@@ -10,9 +10,11 @@ import (
 	"github.com/masterkeysrd/saturn/internal/foundation/fieldmask"
 )
 
+// FinanceService defines the interface for finance-related operations.
 type FinanceService interface {
 	CreateBudget(context.Context, access.Principal, *finance.Budget) error
 	ListBudgets(context.Context, access.Principal) ([]*finance.Budget, error)
+	GetBudget(context.Context, access.Principal, finance.BudgetID) (*finance.Budget, error)
 	ListCurrencies(context.Context) ([]finance.Currency, error)
 	CreateExchangeRate(context.Context, access.Principal, *finance.ExchangeRate) error
 	ListExchangeRates(context.Context, access.Principal) ([]*finance.ExchangeRate, error)
@@ -24,16 +26,19 @@ type FinanceService interface {
 	ActivateSetting(context.Context, access.Principal) (*finance.Setting, error)
 }
 
+// FinanceApp provides application-level operations for finance management.
 type FinanceApp struct {
 	financeService FinanceService
 }
 
+// NewFinanceApp creates a new instance of FinanceApp.
 func NewFinanceApp(financeService FinanceService) *FinanceApp {
 	return &FinanceApp{
 		financeService: financeService,
 	}
 }
 
+// CreateBudget creates a new budget.
 func (app *FinanceApp) CreateBudget(ctx context.Context, budget *finance.Budget) error {
 	principal, ok := access.GetPrincipal(ctx)
 	if !ok {
@@ -43,6 +48,7 @@ func (app *FinanceApp) CreateBudget(ctx context.Context, budget *finance.Budget)
 	return app.financeService.CreateBudget(ctx, principal, budget)
 }
 
+// ListBudgets lists all budgets for the principal.
 func (app *FinanceApp) ListBudgets(ctx context.Context) ([]*finance.Budget, error) {
 	log.Println("FinanceApp: ListBudgets called")
 	principal, ok := access.GetPrincipal(ctx)
@@ -53,10 +59,27 @@ func (app *FinanceApp) ListBudgets(ctx context.Context) ([]*finance.Budget, erro
 	return app.financeService.ListBudgets(ctx, principal)
 }
 
+// GetBudget retrieves a budget by its ID.
+func (app *FinanceApp) GetBudget(ctx context.Context, budgetID finance.BudgetID) (*finance.Budget, error) {
+	principal, ok := access.GetPrincipal(ctx)
+	if !ok {
+		return nil, errors.New("missing principal in context")
+	}
+
+	budget, err := app.financeService.GetBudget(ctx, principal, budgetID)
+	if err != nil {
+		return nil, err
+	}
+
+	return budget, nil
+}
+
+// ListCurrencies lists all available currencies.
 func (app *FinanceApp) ListCurrencies(ctx context.Context) ([]finance.Currency, error) {
 	return app.financeService.ListCurrencies(ctx)
 }
 
+// CreateExchangeRate creates a new exchange rate.
 func (app *FinanceApp) CreateExchangeRate(ctx context.Context, exchangeRate *finance.ExchangeRate) error {
 	principal, ok := access.GetPrincipal(ctx)
 	if !ok {
@@ -66,6 +89,7 @@ func (app *FinanceApp) CreateExchangeRate(ctx context.Context, exchangeRate *fin
 	return app.financeService.CreateExchangeRate(ctx, principal, exchangeRate)
 }
 
+// ListExchangeRates lists all exchange rates for the principal.
 func (app *FinanceApp) ListExchangeRates(ctx context.Context) ([]*finance.ExchangeRate, error) {
 	principal, ok := access.GetPrincipal(ctx)
 	if !ok {
@@ -75,6 +99,7 @@ func (app *FinanceApp) ListExchangeRates(ctx context.Context) ([]*finance.Exchan
 	return app.financeService.ListExchangeRates(ctx, principal)
 }
 
+// GetExchangeRate retrieves an exchange rate by currency code.
 func (app *FinanceApp) GetExchangeRate(ctx context.Context, currencyCode finance.CurrencyCode) (*finance.ExchangeRate, error) {
 	principal, ok := access.GetPrincipal(ctx)
 
@@ -94,6 +119,7 @@ func (app *FinanceApp) UpdateExchangeRate(ctx context.Context, in *finance.Updat
 	return app.financeService.UpdateExchangeRate(ctx, principal, in)
 }
 
+// CreateSetting creates a new finance setting.
 func (app *FinanceApp) CreateSetting(ctx context.Context, setting *finance.Setting) error {
 	principal, ok := access.GetPrincipal(ctx)
 	if !ok {
@@ -103,6 +129,7 @@ func (app *FinanceApp) CreateSetting(ctx context.Context, setting *finance.Setti
 	return app.financeService.CreateSetting(ctx, principal, setting)
 }
 
+// GetSetting retrieves the finance setting for the principal.
 func (app *FinanceApp) GetSetting(ctx context.Context) (*finance.Setting, error) {
 	actor, ok := access.GetPrincipal(ctx)
 	if !ok {
@@ -112,6 +139,7 @@ func (app *FinanceApp) GetSetting(ctx context.Context) (*finance.Setting, error)
 	return app.financeService.GetSetting(ctx, actor)
 }
 
+// UpdateSetting updates the finance setting for the principal.
 func (app *FinanceApp) UpdateSetting(ctx context.Context, setting *finance.Setting, updateMask *fieldmask.FieldMask) (*finance.Setting, error) {
 	principal, ok := access.GetPrincipal(ctx)
 	if !ok {
@@ -124,6 +152,7 @@ func (app *FinanceApp) UpdateSetting(ctx context.Context, setting *finance.Setti
 	})
 }
 
+// ActivateSetting activates the finance setting for the principal.
 func (app *FinanceApp) ActivateSetting(ctx context.Context) (*finance.Setting, error) {
 	principal, ok := access.GetPrincipal(ctx)
 	if !ok {

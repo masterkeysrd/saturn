@@ -130,6 +130,11 @@ func (b *Budget) Initialize(actor access.Principal) error {
 	now := time.Now().UTC()
 	b.ID = id
 	b.SpaceID = actor.SpaceID()
+
+	if b.Status == "" {
+		b.Status = BudgetStatusActive
+	}
+
 	b.CreateTime = now
 	b.CreateBy = actor.ActorID()
 	b.UpdateTime = now
@@ -166,6 +171,10 @@ func (b *Budget) Validate() error {
 
 	if err := b.Appearance.Validate(); err != nil {
 		return fmt.Errorf("invalid appearance: %w", err)
+	}
+
+	if !b.Status.IsValid() {
+		return fmt.Errorf("invalid status: %s", b.Status)
 	}
 
 	if b.Amount.Cents <= 0 {
@@ -221,8 +230,8 @@ func (b *Budget) Update(update *Budget, fields *fieldmask.FieldMask) error {
 type BudgetStatus string
 
 const (
-	BudgetStatusActive BudgetStatus = "active"
-	BudgetStatusPaused BudgetStatus = "paused"
+	BudgetStatusActive BudgetStatus = "ACTIVE" // Default status
+	BudgetStatusPaused BudgetStatus = "PAUSED" // Budget is temporarily paused
 )
 
 func (bs BudgetStatus) IsValid() bool {

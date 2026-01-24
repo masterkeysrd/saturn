@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS finance.budgets (
   description TEXT,
   color VARCHAR(7) NOT NULL DEFAULT '#2196f3',
   icon_name VARCHAR(32) NOT NULL DEFAULT 'wallet',
-  status VARCHAR(16) NOT NULL DEFAULT 'active',
+  status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE',
   amount_currency VARCHAR(3) NOT NULL DEFAULT 'USD',
   amount_cents BIGINT NOT NULL,
   search_vector TSVECTOR GENERATED ALWAYS AS (
