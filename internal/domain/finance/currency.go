@@ -159,21 +159,43 @@ func (e *ExchangeRate) Update(actor access.Principal, input *ExchangeRate, updat
 	return nil
 }
 
-func (e *ExchangeRate) ConvertMoney(amount money.Money) (money.Money, error) {
+// ConvertToBase converts an amount (in this rate's currency) BACK to the Base Currency.
+//
+// Logic: BaseAmount = Amount / Rate
+// Example:
+// - Rate: 1 USD = 63.1 DOP
+// - Input: 6310 DOP (63.10 pesos)
+// - Output: 100 USD (1.00 dollar)
+func (e *ExchangeRate) ConvertToBase(amount money.Money, baseCurrencyCode CurrencyCode) (money.Money, error) {
 	if e == nil {
 		return money.Money{}, errors.New("exchange rate is nil")
 	}
 
-	if amount.Currency == e.CurrencyCode {
+	// Ensure the money passed matches this exchange rate.
+	// You cannot convert "EUR" using the "DOP" exchange rate.
+	if amount.Currency != e.CurrencyCode {
+		return money.Money{}, fmt.Errorf(
+			"currency mismatch: cannot convert %s using exchange rate for %s",
+			amount.Currency, e.CurrencyCode,
+		)
+	}
+
+	if amount.Currency == baseCurrencyCode {
 		return amount, nil
 	}
 
-	convertedCents := decimal.FromInt(amount.Cents.Int64()).Mul(e.Rate)
-	convertedCents = convertedCents.Round(0)
+	// Convert amount to decimal for calculation
+	targetAmount := decimal.FromInt(int64(amount.Cents))
+
+	// Calculate base amount
+	baseAmount := targetAmount.Div(e.Rate)
+
+	// Round to nearest cent
+	finalCents := baseAmount.Round(0)
 
 	return money.Money{
-		Currency: e.CurrencyCode,
-		Cents:    money.Cents(convertedCents.IntPart()),
+		Currency: baseCurrencyCode,
+		Cents:    money.Cents(finalCents.IntPart()),
 	}, nil
 }
 

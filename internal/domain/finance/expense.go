@@ -155,7 +155,7 @@ func (e *Expense) Transaction(period *BudgetPeriod, exchangeRate *ExchangeRate) 
 	now := time.Now().UTC()
 	amount := money.NewMoney(period.Amount.Currency, e.Amount)
 
-	baseAmount, err := exchangeRate.ConvertMoney(amount)
+	baseAmount, err := exchangeRate.ConvertToBase(amount, period.BaseAmount.Currency)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert amount using exchange rate: %w", err)
 	}
@@ -201,7 +201,7 @@ func (e *Expense) UpdateTransaction(trx *Transaction, mask *fieldmask.FieldMask)
 	}
 
 	trx.Amount = amount
-	baseAmount, err := exchangeRate.ConvertMoney(amount)
+	baseAmount, err := exchangeRate.ConvertToBase(amount, trx.BaseAmount.Currency)
 	if err != nil {
 		return fmt.Errorf("cannot convert amount using exchange rate: %w", err)
 	}

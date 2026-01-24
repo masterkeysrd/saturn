@@ -65,6 +65,10 @@ func (d Decimal) Mul(other Decimal) Decimal {
 	return Decimal{d: d.d.Mul(other.d)}
 }
 
+func (d Decimal) Div(other Decimal) Decimal {
+	return Decimal{d: d.d.Div(other.d)}
+}
+
 func (d Decimal) Round(places int32) Decimal {
 	return Decimal{d: d.d.Round(places)}
 }

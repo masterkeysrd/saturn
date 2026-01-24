@@ -204,6 +204,11 @@ func (s *Service) CreateBudget(ctx context.Context, actor access.Principal, budg
 		return fmt.Errorf("invalid budget: %w", err)
 	}
 
+	setting, err := s.settingsStore.Get(ctx, actor.SpaceID())
+	if err != nil {
+		return fmt.Errorf("cannot get settings: %w", err)
+	}
+
 	exchangeRate, err := s.exchangeRateStore.Get(ctx, ExchangeRateKey{
 		SpaceID:      actor.SpaceID(),
 		CurrencyCode: budget.Amount.Currency,
@@ -217,7 +222,7 @@ func (s *Service) CreateBudget(ctx context.Context, actor access.Principal, budg
 	}
 
 	// Create the first period for the budget.
-	period, err := budget.CreatePeriod(exchangeRate, time.Now())
+	period, err := budget.CreatePeriod(exchangeRate, setting, time.Now())
 	if err != nil {
 		return fmt.Errorf("cannot create period: %w", err)
 	}
@@ -329,6 +334,11 @@ func (s *Service) GetPeriodForDate(ctx context.Context, actor access.Principal, 
 		return nil, errors.New("only space members can get budget periods")
 	}
 
+	setting, err := s.settingsStore.Get(ctx, actor.SpaceID())
+	if err != nil {
+		return nil, fmt.Errorf("cannot get settings: %w", err)
+	}
+
 	// Validate data
 	budget, err := s.GetBudget(ctx, actor, budgetID)
 	if err != nil {
@@ -354,7 +364,7 @@ func (s *Service) GetPeriodForDate(ctx context.Context, actor access.Principal, 
 	}
 
 	// Create the period for the date.
-	period, err = budget.CreatePeriod(exchangeRate, date)
+	period, err = budget.CreatePeriod(exchangeRate, setting, date)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create period: %w", err)
 	}

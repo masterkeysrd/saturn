@@ -249,13 +249,13 @@ func (bs BudgetStatus) String() string {
 
 // CreatePeriod creates a new BudgetPeriod for the provided time 't' and exchange context 'c'.
 // This logic belongs to the Aggregate Root as it ensures the new period is created correctly.
-func (b *Budget) CreatePeriod(exchangeRate *ExchangeRate, t time.Time) (*BudgetPeriod, error) {
+func (b *Budget) CreatePeriod(exchangeRate *ExchangeRate, setting *Setting, t time.Time) (*BudgetPeriod, error) {
 	id, err := id.New[BudgetPeriodID]()
 	if err != nil {
 		return nil, fmt.Errorf("cannot create period identifier: %w", err)
 	}
 
-	baseAmount, err := exchangeRate.ConvertMoney(b.Amount)
+	baseAmount, err := exchangeRate.ConvertToBase(b.Amount, setting.BaseCurrencyCode)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert money for budget period: %w", err)
 	}
@@ -313,7 +313,7 @@ func (b *Budget) SyncPeriod(period *BudgetPeriod, exchangeRate *ExchangeRate) er
 	// Recalculate base currency value and stamp the period.
 	// period.BaseAmount = b.Amount.Exchange(DefaultBaseCurrency, currency.Rate)
 	// period.ExchangeRate = currency.Rate
-	baseAmount, err := exchangeRate.ConvertMoney(b.Amount)
+	baseAmount, err := exchangeRate.ConvertToBase(b.Amount, exchangeRate.CurrencyCode)
 	if err != nil {
 		return fmt.Errorf("cannot convert money for budget period: %w", err)
 	}
