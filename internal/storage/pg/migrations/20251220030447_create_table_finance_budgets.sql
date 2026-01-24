@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS finance.budgets (
-  id UUID PRIMARY KEY,
+  id UUID NOT NULL,
   space_id UUID NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS finance.budgets (
   create_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   create_by UUID NOT NULL,
   update_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  update_by UUID NOT NULL
+  update_by UUID NOT NULL,
+  PRIMARY KEY (space_id, id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_budgets_space_id ON finance.budgets (space_id);

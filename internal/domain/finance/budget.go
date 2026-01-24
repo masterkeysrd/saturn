@@ -34,6 +34,12 @@ func (id BudgetID) String() string {
 	return string(id)
 }
 
+// BudgetPeriodKey represents the unique key for a BudgetPeriod entity.
+type BudgetPeriodKey struct {
+	ID      BudgetPeriodID
+	SpaceID space.ID
+}
+
 // BudgetPeriodID represents the unique identifier for a BudgetPeriod entity.
 type BudgetPeriodID string
 
@@ -246,15 +252,23 @@ func (b *Budget) CreatePeriod(exchangeRate *ExchangeRate, t time.Time) (*BudgetP
 	}
 
 	start, end := timeutils.MonthStartEnd(t)
+
+	now := time.Now().UTC()
 	p := BudgetPeriod{
-		ID:           id,
+		BudgetPeriodKey: BudgetPeriodKey{
+			ID:      id,
+			SpaceID: b.SpaceID,
+		},
 		BudgetID:     b.ID,
 		StartDate:    start,
 		EndDate:      end,
 		Amount:       b.Amount,
 		BaseAmount:   baseAmount,
 		ExchangeRate: exchangeRate.Rate,
-		CreatedAt:    time.Now().UTC(),
+		CreateTime:   now,
+		CreateBy:     b.CreateBy,
+		UpdateTime:   now,
+		UpdateBy:     b.CreateBy,
 	}
 
 	return &p, nil
@@ -296,7 +310,8 @@ func (b *Budget) SyncPeriod(period *BudgetPeriod, exchangeRate *ExchangeRate) er
 	}
 	period.BaseAmount = baseAmount
 	period.ExchangeRate = exchangeRate.Rate
-	period.UpdatedAt = time.Now().UTC()
+	period.UpdateTime = time.Now().UTC()
+	period.UpdateBy = b.UpdateBy
 	return nil
 }
 
@@ -312,15 +327,17 @@ func (b *Budget) sanitize() {
 // It represents a specific time slice of the budget, capturing immutable details
 // like the exchange rate and calculated base currency amount at that time.
 type BudgetPeriod struct {
-	ID           BudgetPeriodID
+	BudgetPeriodKey
 	BudgetID     BudgetID
 	StartDate    time.Time
 	EndDate      time.Time
 	Amount       money.Money
 	BaseAmount   money.Money
 	ExchangeRate decimal.Decimal
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	CreateTime   time.Time
+	CreateBy     auth.UserID
+	UpdateTime   time.Time
+	UpdateBy     auth.UserID
 }
 
 // Validate checks whether the BudgetPeriod fields are valid and adhere to internal invariants.
@@ -358,7 +375,7 @@ func (bp *BudgetPeriod) Validate() error {
 	if bp.ExchangeRate.IsNegative() || bp.ExchangeRate.IsZero() {
 		return fmt.Errorf("exchange rate must be positive")
 	}
-	if bp.CreatedAt.IsZero() {
+	if bp.CreateTime.IsZero() {
 		return fmt.Errorf("created at is not set")
 	}
 	// UpdatedAt may be zero for new objects. Add check if you require it.

@@ -170,6 +170,69 @@ WHERE
   id =:id
   AND space_id =:space_id;`
 
+	// UpsertBudgetPeriodQuery is the SQL for the 'UpsertBudgetPeriod' query.
+	UpsertBudgetPeriodQuery = `
+INSERT INTO
+  finance.budget_periods (
+    id,
+    space_id,
+    budget_id,
+    start_date,
+    end_date,
+    amount_cents,
+    amount_currency,
+    base_amount_cents,
+    base_amount_currency,
+    exchange_rate,
+    create_time,
+    create_by,
+    update_time,
+    update_by
+  )
+VALUES
+  (
+:id,
+:space_id,
+:budget_id,
+:start_date,
+:end_date,
+:amount_cents,
+:amount_currency,
+:base_amount_cents,
+:base_amount_currency,
+:exchange_rate,
+:create_time,
+:create_by,
+:update_time,
+:update_by
+  )
+ON CONFLICT (id, space_id) DO UPDATE
+SET
+  start_date = EXCLUDED.start_date,
+  end_date = EXCLUDED.end_date,
+  amount_cents = EXCLUDED.amount_cents,
+  amount_currency = EXCLUDED.amount_currency,
+  base_amount_cents = EXCLUDED.base_amount_cents,
+  base_amount_currency = EXCLUDED.base_amount_currency,
+  exchange_rate = EXCLUDED.exchange_rate,
+  update_time = EXCLUDED.update_time,
+  update_by = EXCLUDED.update_by
+RETURNING
+  id,
+  space_id,
+  budget_id,
+  start_date,
+  end_date,
+  amount_cents,
+  amount_currency,
+  base_amount_cents,
+  base_amount_currency,
+  exchange_rate,
+  create_time,
+  create_by,
+  update_time,
+  update_by;`
+
 	// GetExchangeRateQuery is the SQL for the 'GetExchangeRate' query.
 	GetExchangeRateQuery = `
 SELECT
@@ -266,6 +329,24 @@ WHERE
   AND currency_code =:currency_code;`
 )
 
+// BudgetPeriodEntity represents a row from the 'budget_periods' table.
+type BudgetPeriodEntity struct {
+	Id                 string          `db:"id"`
+	SpaceId            string          `db:"space_id"`
+	BudgetId           string          `db:"budget_id"`
+	StartDate          time.Time       `db:"start_date"`
+	EndDate            time.Time       `db:"end_date"`
+	AmountCents        int64           `db:"amount_cents"`
+	AmountCurrency     string          `db:"amount_currency"`
+	BaseAmountCents    int64           `db:"base_amount_cents"`
+	BaseAmountCurrency string          `db:"base_amount_currency"`
+	ExchangeRate       decimal.Decimal `db:"exchange_rate"`
+	CreateTime         time.Time       `db:"create_time"`
+	CreateBy           string          `db:"create_by"`
+	UpdateTime         time.Time       `db:"update_time"`
+	UpdateBy           string          `db:"update_by"`
+}
+
 // BudgetEntity represents a row from the 'budgets' table.
 type BudgetEntity struct {
 	Id             string    `db:"id"`
@@ -338,6 +419,11 @@ type DeleteBudgetByIDParams struct {
 	Id      string `db:"id"`
 	SpaceId string `db:"space_id"`
 }
+
+// UpsertBudgetPeriodParams represents the parameters for the 'UpsertBudgetPeriod' query.
+//
+// UpsertBudgetPeriodParams is an alias of [BudgetPeriodEntity].
+type UpsertBudgetPeriodParams = BudgetPeriodEntity
 
 // GetExchangeRateParams represents the parameters for the 'GetExchangeRate' query.
 type GetExchangeRateParams struct {
@@ -459,6 +545,23 @@ func UpsertBudget(ctx context.Context, db sqlx.ExtContext, params *UpsertBudgetP
 // DeleteBudgetByID executes the 'DeleteBudgetByID' query.
 func DeleteBudgetByID(ctx context.Context, e sqlx.ExtContext, params *DeleteBudgetByIDParams) (sql.Result, error) {
 	return sqlx.NamedExecContext(ctx, e, DeleteBudgetByIDQuery, params)
+}
+
+// UpsertBudgetPeriod executes the 'UpsertBudgetPeriod' query and returns a single row.
+func UpsertBudgetPeriod(ctx context.Context, db sqlx.ExtContext, params *UpsertBudgetPeriodParams) (*BudgetPeriodEntity, error) {
+	query, args, err := sqlx.Named(UpsertBudgetPeriodQuery, params)
+	if err != nil {
+		return nil, err
+	}
+
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
+
+	var item BudgetPeriodEntity
+	if err := sqlx.GetContext(ctx, db, &item, query, args...); err != nil {
+		return nil, err
+	}
+
+	return &item, nil
 }
 
 // GetExchangeRate executes the 'GetExchangeRate' query and returns a single row.

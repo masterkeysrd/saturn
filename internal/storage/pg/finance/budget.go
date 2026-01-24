@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
@@ -39,7 +38,6 @@ func (b *BudgetStore) Get(ctx context.Context, key finance.BudgetKey) (*finance.
 }
 
 func (b *BudgetStore) List(ctx context.Context, spaceID space.ID) ([]*finance.Budget, error) {
-	log.Printf("Listing budgets for space ID: %s", spaceID.String())
 	budgets := make([]*finance.Budget, 0, 20) // initial capacity of 20
 	if err := ListBudgets(ctx, b.db, &ListBudgetsParams{
 		SpaceId: spaceID.String(),
@@ -54,8 +52,7 @@ func (b *BudgetStore) List(ctx context.Context, spaceID space.ID) ([]*finance.Bu
 }
 
 func (b *BudgetStore) Store(ctx context.Context, budget *finance.Budget) error {
-
-	entity, err := UpsertBudget(ctx, b.db, BudgetEntityFromModel(budget))
+	entity, err := UpsertBudget(ctx, b.db, NewBudgetEntity(budget))
 	if err != nil {
 		return fmt.Errorf("cannot store budget: %w", err)
 	}
@@ -87,9 +84,7 @@ func (b *BudgetStore) Delete(ctx context.Context, key finance.BudgetKey) error {
 	return nil
 }
 
-// Delete returns the SQL query for deleting a budget by ID.
-
-func BudgetEntityFromModel(b *finance.Budget) *BudgetEntity {
+func NewBudgetEntity(b *finance.Budget) *BudgetEntity {
 	return &BudgetEntity{
 		Id:             b.ID.String(),
 		SpaceId:        b.SpaceID.String(),

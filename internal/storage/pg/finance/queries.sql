@@ -172,6 +172,74 @@ WHERE
   AND space_id =:space_id;
 
 ----------------------------------------------------
+-- SQL Queries for Budget Periods Management
+----------------------------------------------------
+-- name: UpsertBudgetPeriod
+-- return: one
+-- param_type: BudgetPeriodEntity
+-- return_type: BudgetPeriodEntity
+INSERT INTO
+  finance.budget_periods (
+    id,
+    space_id,
+    budget_id,
+    start_date,
+    end_date,
+    amount_cents,
+    amount_currency,
+    base_amount_cents,
+    base_amount_currency,
+    exchange_rate,
+    create_time,
+    create_by,
+    update_time,
+    update_by
+  )
+VALUES
+  (
+:id,
+:space_id,
+:budget_id,
+:start_date,
+:end_date,
+:amount_cents,
+:amount_currency,
+:base_amount_cents,
+:base_amount_currency,
+:exchange_rate,
+:create_time,
+:create_by,
+:update_time,
+:update_by
+  )
+ON CONFLICT (id, space_id) DO UPDATE
+SET
+  start_date = EXCLUDED.start_date,
+  end_date = EXCLUDED.end_date,
+  amount_cents = EXCLUDED.amount_cents,
+  amount_currency = EXCLUDED.amount_currency,
+  base_amount_cents = EXCLUDED.base_amount_cents,
+  base_amount_currency = EXCLUDED.base_amount_currency,
+  exchange_rate = EXCLUDED.exchange_rate,
+  update_time = EXCLUDED.update_time,
+  update_by = EXCLUDED.update_by
+RETURNING
+  id,
+  space_id,
+  budget_id,
+  start_date,
+  end_date,
+  amount_cents,
+  amount_currency,
+  base_amount_cents,
+  base_amount_currency,
+  exchange_rate,
+  create_time,
+  create_by,
+  update_time,
+  update_by;
+
+----------------------------------------------------
 -- SQL Queries for Exchange Rates Management
 ----------------------------------------------------
 -- name: GetExchangeRate

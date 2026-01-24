@@ -2,21 +2,20 @@ package financepg
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
-	"github.com/masterkeysrd/saturn/internal/foundation/decimal"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
+	"github.com/masterkeysrd/saturn/internal/foundation/space"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 )
 
 var _ finance.BudgetPeriodStore = (*BudgetPeriodStore)(nil)
 
 type BudgetPeriodStore struct {
-	db      *sqlx.DB
-	queries *BudgetPeriodQueries
+	db *sqlx.DB
 }
 
 func NewBudgetPeriodStore(db *sqlx.DB) (*BudgetPeriodStore, error) {
@@ -61,13 +60,14 @@ func (b *BudgetPeriodStore) List(ctx context.Context) ([]*finance.BudgetPeriod, 
 }
 
 func (b *BudgetPeriodStore) Store(ctx context.Context, period *finance.BudgetPeriod) error {
-	return fmt.Errorf("Store method is not implemented yet")
-	// _, err := b.queries.Upsert(ctx, BudgetPeriodEntityFromModel(period))
-	// if err != nil {
-	// 	return fmt.Errorf("cannot store currency: %w", err)
-	// }
-	//
-	// return nil
+	entity, err := UpsertBudgetPeriod(ctx, b.db, NewBudgetPeriodEntity(period))
+	if err != nil {
+		return fmt.Errorf("cannot store budget period: %w", err)
+	}
+
+	// Update the budget period model with any changes from the database (e.g., generated IDs)
+	*period = *BudgetPeriodEntityToModel(entity)
+	return nil
 }
 
 // DeleteBy handles the bulk deletion of BudgetPeriods based on specific criteria.
@@ -134,139 +134,31 @@ const (
 		updated_at
 	FROM budget_periods`
 
-	upsertBudgetPeriodQuery = `
-	INSERT INTO budget_periods (
-		id,
-		budget_id,
-		start_date,
-		end_date,
-		amount_currency,
-		amount_cents,
-		base_amount_currency,
-		base_amount_cents,
-		exchange_rate,
-		created_at,
-		updated_at
-	) VALUES (
-		:id,
-		:budget_id,
-		:start_date,
-		:end_date,
-		:amount_currency,
-		:amount_cents,
-		:base_amount_currency,
-		:base_amount_cents,
-		:exchange_rate,
-		:created_at,
-		:updated_at
-	)
-	ON CONFLICT (id) DO UPDATE SET
-		amount_cents = EXCLUDED.amount_cents,
-		base_amount_cents = EXCLUDED.base_amount_cents,
-		exchange_rate = EXCLUDED.exchange_rate,
-		updated_at = EXCLUDED.updated_at`
-
 	deleteBudgetPeriodsByBudgetIDQuery = `
 DELETE FROM budget_periods
 WHERE budget_id = :budget_id`
 )
 
-type BudgetPeriodQueries struct {
-	getByDateStmt        *sqlx.NamedStmt
-	listStmt             *sqlx.Stmt
-	upsertStmt           *sqlx.NamedStmt
-	deleteByBudgetIDStmt *sqlx.NamedStmt
-}
-
-func NewBudgetPeriodQueries(db *sqlx.DB) (*BudgetPeriodQueries, error) {
-	return nil, fmt.Errorf("NewBudgetPeriodQueries function is not implemented yet")
-	// getByDateStmt, err := db.PrepareNamed(getByDateBudgetPeriodQuery)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("cannot prepare get by date query: %w", err)
-	// }
-	//
-	// listStmt, err := db.Preparex(listBudgetPeriodsQuery)
-	// if err != nil {
-	// 	getByDateStmt.Close()
-	// 	return nil, fmt.Errorf("cannot prepare list query: %w", err)
-	// }
-	//
-	// upsertStmt, err := db.PrepareNamed(upsertBudgetPeriodQuery)
-	// if err != nil {
-	// 	getByDateStmt.Close()
-	// 	listStmt.Close()
-	// 	return nil, fmt.Errorf("cannot prepare upsert query: %w", err)
-	// }
-	//
-	// deleteByBudgetIDStmt, err := db.PrepareNamed(deleteBudgetPeriodsByBudgetIDQuery)
-	// if err != nil {
-	// 	getByDateStmt.Close()
-	// 	listStmt.Close()
-	// 	upsertStmt.Close()
-	// 	return nil, fmt.Errorf("cannot prepare delete by budget ID query: %w", err)
-	// }
-	//
-	// return &BudgetPeriodQueries{
-	// 	getByDateStmt:        getByDateStmt,
-	// 	listStmt:             listStmt,
-	// 	upsertStmt:           upsertStmt,
-	// 	deleteByBudgetIDStmt: deleteByBudgetIDStmt,
-	// }, nil
-}
-
-func (q *BudgetPeriodQueries) GetByDate(ctx context.Context, budgetID finance.BudgetID, date time.Time) *sqlx.Row {
-	return q.getByDateStmt.QueryRowContext(ctx, map[string]any{
-		"budget_id": budgetID,
-		"date":      date,
-	})
-}
-
-func (q *BudgetPeriodQueries) List(ctx context.Context) (*sqlx.Rows, error) {
-	return q.listStmt.QueryxContext(ctx)
-}
-
-func (q *BudgetPeriodQueries) Upsert(ctx context.Context, entity *BudgetPeriodEntity) (sql.Result, error) {
-	return q.upsertStmt.ExecContext(ctx, entity)
-}
-
-// DeleteByBudgetID executes the bulk DELETE operation using the positional argument.
-func (q *BudgetPeriodQueries) DeleteByBudgetID(ctx context.Context, budgetID finance.BudgetID) (sql.Result, error) {
-	return q.deleteByBudgetIDStmt.ExecContext(ctx, map[string]any{
-		"budget_id": budgetID,
-	})
-}
-
-type BudgetPeriodEntity struct {
-	ID           string             `db:"id"`
-	BudgetID     string             `db:"budget_id"`
-	StartDate    time.Time          `db:"start_date"`
-	EndDate      time.Time          `db:"end_date"`
-	Currency     money.CurrencyCode `db:"amount_currency"`
-	Amount       money.Cents        `db:"amount_cents"`
-	BaseCurrency money.CurrencyCode `db:"base_amount_currency"`
-	BaseAmount   money.Cents        `db:"base_amount_cents"`
-	ExchangeRate decimal.Decimal    `db:"exchange_rate"`
-	CreatedAt    time.Time          `db:"created_at"`
-	UpdatedAt    time.Time          `db:"updated_at"`
-}
-
-func BudgetPeriodEntityFromModel(b *finance.BudgetPeriod) *BudgetPeriodEntity {
+func NewBudgetPeriodEntity(b *finance.BudgetPeriod) *BudgetPeriodEntity {
 	if b == nil {
 		return nil
 	}
 
 	return &BudgetPeriodEntity{
-		ID:           b.ID.String(),
-		BudgetID:     b.BudgetID.String(),
-		StartDate:    b.StartDate,
-		EndDate:      b.EndDate,
-		Currency:     b.Amount.Currency,
-		Amount:       b.Amount.Cents,
-		BaseCurrency: b.BaseAmount.Currency,
-		BaseAmount:   b.BaseAmount.Cents,
-		ExchangeRate: b.ExchangeRate,
-		CreatedAt:    b.CreatedAt,
-		UpdatedAt:    b.UpdatedAt,
+		Id:                 b.ID.String(),
+		SpaceId:            b.SpaceID.String(),
+		BudgetId:           b.BudgetID.String(),
+		StartDate:          b.StartDate,
+		EndDate:            b.EndDate,
+		AmountCurrency:     b.Amount.Currency.String(),
+		AmountCents:        b.Amount.Cents.Int64(),
+		BaseAmountCurrency: b.BaseAmount.Currency.String(),
+		BaseAmountCents:    b.BaseAmount.Cents.Int64(),
+		ExchangeRate:       b.ExchangeRate,
+		CreateTime:         b.CreateTime,
+		CreateBy:           b.CreateBy.String(),
+		UpdateTime:         b.UpdateTime,
+		UpdateBy:           b.UpdateBy.String(),
 	}
 }
 
@@ -276,20 +168,25 @@ func BudgetPeriodEntityToModel(e *BudgetPeriodEntity) *finance.BudgetPeriod {
 	}
 
 	return &finance.BudgetPeriod{
-		ID:        finance.BudgetPeriodID(e.ID),
-		BudgetID:  finance.BudgetID(e.BudgetID),
+		BudgetPeriodKey: finance.BudgetPeriodKey{
+			ID:      finance.BudgetPeriodID(e.Id),
+			SpaceID: space.ID(e.SpaceId),
+		},
+		BudgetID:  finance.BudgetID(e.BudgetId),
 		StartDate: e.StartDate,
 		EndDate:   e.EndDate,
 		Amount: money.Money{
-			Currency: e.Currency,
-			Cents:    e.Amount,
+			Currency: money.CurrencyCode(e.AmountCurrency),
+			Cents:    money.Cents(e.AmountCents),
 		},
 		BaseAmount: money.Money{
-			Currency: e.BaseCurrency,
-			Cents:    e.Amount,
+			Currency: money.CurrencyCode(e.BaseAmountCurrency),
+			Cents:    money.Cents(e.BaseAmountCents),
 		},
 		ExchangeRate: e.ExchangeRate,
-		CreatedAt:    e.CreatedAt,
-		UpdatedAt:    e.UpdatedAt,
+		CreateTime:   e.CreateTime,
+		CreateBy:     auth.UserID(e.CreateBy),
+		UpdateTime:   e.UpdateTime,
+		UpdateBy:     auth.UserID(e.UpdateBy),
 	}
 }
