@@ -51,39 +51,6 @@ func (p PaginationRequest) ToPagination() pagination.Pagination {
 	return pagination.New(p.Page, p.Size)
 }
 
-type CreateBudgetRequest struct {
-	Budget *Budget `json:"budgets"`
-}
-
-type ListBudgetsRequest struct {
-	Search   string `json:"search"`
-	Paginate PaginationRequest
-}
-
-type GetBudgetRequest struct {
-	ID string
-}
-
-type UpdateBudgetRequest struct {
-	ID         string
-	Budget     *Budget
-	UpdateMask *UpdateMaskParam
-}
-
-type DeleteBudgetRequest struct {
-	ID string
-}
-
-type CreateCurrencyRequest struct {
-	Currency *Currency
-}
-
-type GetCurrencyRequest struct {
-	Code money.CurrencyCode
-}
-
-type ListCurrenciesRequest struct{}
-
 type CreateExpenseRequest struct {
 	Expense *Expense
 }

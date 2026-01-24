@@ -28,63 +28,6 @@ const (
 	FinanceListTransactionsParamsTypeTransfer FinanceListTransactionsParamsType = "transfer"
 )
 
-// Budget A budget to track expenses
-type Budget struct {
-	// Amount Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
-	Amount Money `json:"amount"`
-
-	// Color The UI color code for the budget (Hex format).
-	Color string `json:"color"`
-
-	// IconName The identifier for the UI icon (e.g., Material Icon name).
-	IconName string  `json:"icon_name"`
-	Id       *string `json:"id,omitempty"`
-	Name     string  `json:"name"`
-}
-
-// BudgetItem defines model for BudgetItem.
-type BudgetItem struct {
-	// Amount Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
-	Amount Money `json:"amount"`
-
-	// BaseAmount Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
-	BaseAmount *Money `json:"base_amount,omitempty"`
-
-	// BaseSpent Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
-	BaseSpent *Money `json:"base_spent,omitempty"`
-
-	// Color The UI color code for the budget (Hex format).
-	Color string `json:"color"`
-
-	// IconName The identifier for the UI icon (e.g., Material Icon name).
-	IconName string `json:"icon_name"`
-	Id       string `json:"id"`
-	Name     string `json:"name"`
-
-	// Percentage Percentage of budget spent
-	Percentage      *float64            `json:"percentage,omitempty"`
-	PeriodEndDate   *openapi_types.Date `json:"period_end_date,omitempty"`
-	PeriodStartDate *openapi_types.Date `json:"period_start_date,omitempty"`
-
-	// Spent Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
-	Spent Money `json:"spent"`
-
-	// TransactionCount Number of transactions of the current period
-	TransactionCount *int `json:"transaction_count,omitempty"`
-}
-
-// Currency A currency to handle exchange reates in budgets, transactions, etc.
-type Currency struct {
-	// Code ISO 4217 currency code (e.g., "USD", "DOP").
-	Code string `json:"code"`
-
-	// Name Name of the currency (e.g., "Dominican Pesos")
-	Name string `json:"name"`
-
-	// Rate The exchange rate for the currency againts the base currency.
-	Rate float64 `json:"rate"`
-}
-
 // Expense Represents the user-intent to record an expense.
 // The server will validate the expense, enrich it with currency data,
 // and transform it into a Transaction.
@@ -117,32 +60,11 @@ type FinanceInsights struct {
 	Spending SpendingInsights `json:"spending"`
 }
 
-// ListBudgetsResponse Response of list of budgets.
-type ListBudgetsResponse struct {
-	Budgets *[]BudgetItem `json:"budgets,omitempty"`
-
-	// Meta Metadata regarding the pagination state of the response.
-	Meta Meta `json:"meta"`
-}
-
-// ListCurrenciesResponse Response of list of currencies.
-type ListCurrenciesResponse struct {
-	Currencies *[]Currency `json:"currencies,omitempty"`
-}
-
 // ListTransactionsResponse Response containing a list of transactions.
 type ListTransactionsResponse struct {
 	// Meta Metadata regarding the pagination state of the response.
 	Meta         Meta              `json:"meta"`
 	Transactions []TransactionItem `json:"transactions"`
-}
-
-// LoginRequest Request to login a user
-type LoginRequest struct {
-	Password string `json:"password"`
-
-	// Username The username or email of the user.
-	Username string `json:"username"`
 }
 
 // Meta Metadata regarding the pagination state of the response.
@@ -173,21 +95,6 @@ type Money struct {
 
 	// Currency ISO 4217 currency code (e.g., "USD", "DOP").
 	Currency string `json:"currency"`
-}
-
-// RefreshSessionRequest Request to refresh an authentication session
-type RefreshSessionRequest struct {
-	// RefreshToken Token used to refresh the authentication token
-	RefreshToken string `json:"refresh_token"`
-}
-
-// RegisterUserRequest Request to register a new user
-type RegisterUserRequest struct {
-	Email     openapi_types.Email `json:"email"`
-	FirstName string              `json:"first_name"`
-	LastName  string              `json:"last_name"`
-	Password  string              `json:"password"`
-	Username  string              `json:"username"`
 }
 
 // SpendingBudgetSummary defines model for SpendingBudgetSummary.
@@ -278,18 +185,6 @@ type SpendingTrendPeriod struct {
 	Usage float64 `json:"usage"`
 }
 
-// TokenResponse Response containing authentication token
-type TokenResponse struct {
-	// ExpiresAt Unix timestamp indicating when the token expires
-	ExpiresAt int64 `json:"expires_at"`
-
-	// RefreshToken Token used to refresh the authentication token
-	RefreshToken string `json:"refresh_token"`
-
-	// Token JWT authentication token
-	Token string `json:"token"`
-}
-
 // Transaction A fully-realized financial transaction stored in the ledger.
 // Produced by Expense, Income, or Transfer operations.
 type Transaction struct {
@@ -367,27 +262,8 @@ type TransactionItem struct {
 // TransactionType Type of transaction.
 type TransactionType string
 
-// User A user of the Saturn Personal Productivity Suite
-type User struct {
-	Email    openapi_types.Email `json:"email"`
-	Id       *string             `json:"id,omitempty"`
-	Username string              `json:"username"`
-}
-
 // UpdateMaskParam defines model for UpdateMaskParam.
 type UpdateMaskParam = string
-
-// FinanceUpdateBudgetParams defines parameters for FinanceUpdateBudget.
-type FinanceUpdateBudgetParams struct {
-	// UpdateMask Comma-separated list of fields to update. If not provided, all fields will be updated.
-	// Supported fields: name, description, date, amount, exchange_rate
-	//
-	// Examples:
-	// - `name` - Update only name
-	// - `name,amount` - Update name and amount
-	// - `name,amount,exchange_rate` - Update multiple fields
-	UpdateMask *UpdateMaskParam `form:"updateMask,omitempty" json:"updateMask,omitempty"`
-}
 
 // FinanceGetInsightsParams defines parameters for FinanceGetInsights.
 type FinanceGetInsightsParams struct {
@@ -431,26 +307,8 @@ type FinanceUpdateExpenseParams struct {
 	UpdateMask *UpdateMaskParam `form:"updateMask,omitempty" json:"updateMask,omitempty"`
 }
 
-// FinanceCreateBudgetJSONRequestBody defines body for FinanceCreateBudget for application/json ContentType.
-type FinanceCreateBudgetJSONRequestBody = Budget
-
-// FinanceUpdateBudgetJSONRequestBody defines body for FinanceUpdateBudget for application/json ContentType.
-type FinanceUpdateBudgetJSONRequestBody = Budget
-
-// BudgetCreateCurrencyJSONRequestBody defines body for BudgetCreateCurrency for application/json ContentType.
-type BudgetCreateCurrencyJSONRequestBody = Currency
-
 // FinanceCreateExpenseJSONRequestBody defines body for FinanceCreateExpense for application/json ContentType.
 type FinanceCreateExpenseJSONRequestBody = Expense
-
-// IdentityRefreshTokenJSONRequestBody defines body for IdentityRefreshToken for application/json ContentType.
-type IdentityRefreshTokenJSONRequestBody = RefreshSessionRequest
-
-// IdentityCreateUserJSONRequestBody defines body for IdentityCreateUser for application/json ContentType.
-type IdentityCreateUserJSONRequestBody = RegisterUserRequest
-
-// IdentityLoginUserJSONRequestBody defines body for IdentityLoginUser for application/json ContentType.
-type IdentityLoginUserJSONRequestBody = LoginRequest
 
 // FinanceUpdateExpenseJSONRequestBody defines body for FinanceUpdateExpense for application/json ContentType.
 type FinanceUpdateExpenseJSONRequestBody = Expense
