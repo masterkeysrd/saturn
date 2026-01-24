@@ -178,6 +178,33 @@ WHERE
   id =:id
   AND space_id =:space_id;`
 
+	// GetBudgetPeriodByDateQuery is the SQL for the 'GetBudgetPeriodByDate' query.
+	GetBudgetPeriodByDateQuery = `
+SELECT
+  id,
+  space_id,
+  budget_id,
+  start_date,
+  end_date,
+  amount_cents,
+  amount_currency,
+  base_amount_cents,
+  base_amount_currency,
+  exchange_rate,
+  create_time,
+  create_by,
+  update_time,
+  update_by
+FROM
+  finance.budget_periods
+WHERE
+  budget_id =:budget_id
+  AND space_id =:space_id
+  AND start_date <=:date
+  AND end_date >=:date
+LIMIT
+  1;`
+
 	// UpsertBudgetPeriodQuery is the SQL for the 'UpsertBudgetPeriod' query.
 	UpsertBudgetPeriodQuery = `
 INSERT INTO
@@ -428,6 +455,13 @@ type DeleteBudgetByIDParams struct {
 	SpaceId string `db:"space_id"`
 }
 
+// GetBudgetPeriodByDateParams represents the parameters for the 'GetBudgetPeriodByDate' query.
+type GetBudgetPeriodByDateParams struct {
+	BudgetId string    `db:"budget_id"`
+	SpaceId  string    `db:"space_id"`
+	Date     time.Time `db:"date"`
+}
+
 // UpsertBudgetPeriodParams represents the parameters for the 'UpsertBudgetPeriod' query.
 //
 // UpsertBudgetPeriodParams is an alias of [BudgetPeriodEntity].
@@ -553,6 +587,23 @@ func UpsertBudget(ctx context.Context, db sqlx.ExtContext, params *UpsertBudgetP
 // DeleteBudgetByID executes the 'DeleteBudgetByID' query.
 func DeleteBudgetByID(ctx context.Context, e sqlx.ExtContext, params *DeleteBudgetByIDParams) (sql.Result, error) {
 	return sqlx.NamedExecContext(ctx, e, DeleteBudgetByIDQuery, params)
+}
+
+// GetBudgetPeriodByDate executes the 'GetBudgetPeriodByDate' query and returns a single row.
+func GetBudgetPeriodByDate(ctx context.Context, db sqlx.ExtContext, params *GetBudgetPeriodByDateParams) (*BudgetPeriodEntity, error) {
+	query, args, err := sqlx.Named(GetBudgetPeriodByDateQuery, params)
+	if err != nil {
+		return nil, err
+	}
+
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
+
+	var item BudgetPeriodEntity
+	if err := sqlx.GetContext(ctx, db, &item, query, args...); err != nil {
+		return nil, err
+	}
+
+	return &item, nil
 }
 
 // UpsertBudgetPeriod executes the 'UpsertBudgetPeriod' query and returns a single row.

@@ -182,6 +182,34 @@ WHERE
 ----------------------------------------------------
 -- SQL Queries for Budget Periods Management
 ----------------------------------------------------
+-- name: GetBudgetPeriodByDate
+-- return: one
+-- return_type: BudgetPeriodEntity
+SELECT
+  id,
+  space_id,
+  budget_id,
+  start_date,
+  end_date,
+  amount_cents,
+  amount_currency,
+  base_amount_cents,
+  base_amount_currency,
+  exchange_rate,
+  create_time,
+  create_by,
+  update_time,
+  update_by
+FROM
+  finance.budget_periods
+WHERE
+  budget_id =:budget_id
+  AND space_id =:space_id
+  AND start_date <=:date
+  AND end_date >=:date
+LIMIT
+  1;
+
 -- name: UpsertBudgetPeriod
 -- return: one
 -- param_type: BudgetPeriodEntity

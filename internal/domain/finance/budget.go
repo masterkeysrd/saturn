@@ -66,7 +66,7 @@ type BudgetPage = pagination.Page[*BudgetItem]
 
 // BudgetPeriodStore defines the contract for managing BudgetPeriod entities.
 type BudgetPeriodStore interface {
-	GetByDate(context.Context, BudgetID, time.Time) (*BudgetPeriod, error)
+	GetByDate(context.Context, BudgetKey, time.Time) (*BudgetPeriod, error)
 	Store(context.Context, *BudgetPeriod) error
 	DeleteBy(context.Context, BudgetPeriodCriteria) (int, error)
 }
@@ -84,17 +84,20 @@ var BudgetUpdateSchema = fieldmask.NewSchema("budget").
 		fieldmask.WithDescription("Budget name"),
 		fieldmask.WithRequired(),
 	).
-	Field("color",
+	Field("appearance.color",
 		fieldmask.WithDescription("Budget color"),
 		fieldmask.WithRequired(),
 	).
-	Field("icon_name",
+	Field("appearance.icon",
 		fieldmask.WithDescription("Budget icon name"),
 		fieldmask.WithRequired(),
 	).
-	Field("amount",
+	Field("amount.cents",
 		fieldmask.WithDescription("Budget amount in cents"),
 		fieldmask.WithRequired(),
+	).
+	Field("amount.currency_code",
+		fieldmask.WithDescription("Budget currency code"),
 	).
 	Build()
 
@@ -206,15 +209,15 @@ func (b *Budget) Update(update *Budget, fields *fieldmask.FieldMask) error {
 		b.Name = update.Name
 	}
 
-	if fields.Contains("icon_name") {
+	if fields.Contains("appearance.icon") {
 		b.Icon = update.Icon
 	}
 
-	if fields.Contains("color") {
+	if fields.Contains("appearance.color") {
 		b.Color = update.Color
 	}
 
-	if fields.Contains("amount") {
+	if fields.Contains("amount.cents") {
 		// Invariant: Currency must not change after creation.
 		if b.Amount.Currency != update.Amount.Currency {
 			return fmt.Errorf("budget currency cannot be changed: %s vs %s", b.Amount.Currency, update.Amount.Currency)
@@ -310,10 +313,11 @@ func (b *Budget) SyncPeriod(period *BudgetPeriod, exchangeRate *ExchangeRate) er
 		return fmt.Errorf("budget currency (%s) cannot be synced with external currency (%s)", b.Amount.Currency, exchangeRate.CurrencyCode)
 	}
 
+	period.Amount = b.Amount
 	// Recalculate base currency value and stamp the period.
 	// period.BaseAmount = b.Amount.Exchange(DefaultBaseCurrency, currency.Rate)
 	// period.ExchangeRate = currency.Rate
-	baseAmount, err := exchangeRate.ConvertToBase(b.Amount, exchangeRate.CurrencyCode)
+	baseAmount, err := exchangeRate.ConvertToBase(b.Amount, period.BaseAmount.Currency)
 	if err != nil {
 		return fmt.Errorf("cannot convert money for budget period: %w", err)
 	}

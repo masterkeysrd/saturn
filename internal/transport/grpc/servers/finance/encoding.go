@@ -76,6 +76,20 @@ func BudgetStatusPb(status finance.BudgetStatus) financepb.Budget_Status {
 	}
 }
 
+func UpdateBudgetInput(pb *financepb.UpdateBudgetRequest) (*finance.UpdateBudgetInput, error) {
+	if pb == nil {
+		return nil, nil
+	}
+
+	budget := Budget(pb.GetBudget())
+	mask := encoding.FieldMask(pb.GetUpdateMask())
+	return &finance.UpdateBudgetInput{
+		ID:         finance.BudgetID(pb.GetId()),
+		Budget:     budget,
+		UpdateMask: mask,
+	}, nil
+}
+
 func CurrenciesPb(currencies []finance.Currency) []*financepb.Currency {
 	pbs := make([]*financepb.Currency, 0, len(currencies))
 	for _, c := range currencies {

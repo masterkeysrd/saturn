@@ -265,7 +265,7 @@ func (s *Service) UpdateBudget(ctx context.Context, actor access.Principal, in *
 		return nil, fmt.Errorf("cannot store budget: %w", err)
 	}
 
-	if !in.UpdateMask.Contains("amount") {
+	if !in.UpdateMask.ContainsPrefix("amount") {
 		return budget, nil
 	}
 
@@ -345,7 +345,10 @@ func (s *Service) GetPeriodForDate(ctx context.Context, actor access.Principal, 
 		return nil, fmt.Errorf("cannot get budget: %w", err)
 	}
 
-	period, err := s.budgetPeriodStore.GetByDate(ctx, budgetID, date)
+	period, err := s.budgetPeriodStore.GetByDate(ctx, BudgetKey{
+		ID:      budget.ID,
+		SpaceID: actor.SpaceID(),
+	}, date)
 	if err != nil && !errors.IsNotExists(err) {
 		return nil, fmt.Errorf("cannot get budget period: %w", err)
 	}

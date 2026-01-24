@@ -24,19 +24,18 @@ func NewBudgetPeriodStore(db *sqlx.DB) (*BudgetPeriodStore, error) {
 	}, nil
 }
 
-func (b *BudgetPeriodStore) GetByDate(ctx context.Context, budgetID finance.BudgetID, date time.Time) (*finance.BudgetPeriod, error) {
-	// row := b.queries.GetByDate(ctx, budgetID, date)
-	// if err := row.Err(); err != nil {
-	// 	return nil, fmt.Errorf("cannot get budget period: %w", err)
-	// }
-	//
-	// var entity BudgetPeriodEntity
-	// if err := row.StructScan(&entity); err != nil {
-	// 	return nil, fmt.Errorf("cannot scan budget period: %w", err)
-	// }
-	//
-	// return BudgetPeriodEntityToModel(&entity), nil
-	return nil, fmt.Errorf("GetByDate method is not implemented yet")
+func (b *BudgetPeriodStore) GetByDate(ctx context.Context, budgetKey finance.BudgetKey, date time.Time) (*finance.BudgetPeriod, error) {
+	row, err := GetBudgetPeriodByDate(ctx, b.db, &GetBudgetPeriodByDateParams{
+		SpaceId:  budgetKey.SpaceID.String(),
+		BudgetId: budgetKey.ID.String(),
+		Date:     date,
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("cannot get budget period by date: %w", err)
+	}
+
+	return BudgetPeriodEntityToModel(row), nil
 }
 
 func (b *BudgetPeriodStore) List(ctx context.Context) ([]*finance.BudgetPeriod, error) {
@@ -101,24 +100,6 @@ func (b *BudgetPeriodStore) DeleteBy(ctx context.Context, criteria finance.Budge
 }
 
 const (
-	getByDateBudgetPeriodQuery = `
-	SELECT
-		id,
-		budget_id,
-		start_date,
-		end_date,
-		amount_currency,
-		amount_cents,
-		base_amount_currency,
-		base_amount_cents,
-		exchange_rate,
-		created_at,
-		updated_at
-	FROM budget_periods
-	WHERE budget_id = :budget_id
-	  AND start_date <= :date
-	  AND end_date >= :date`
-
 	listBudgetPeriodsQuery = `
 	SELECT
 		id,

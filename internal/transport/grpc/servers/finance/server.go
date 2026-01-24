@@ -18,6 +18,7 @@ type Application interface {
 	CreateBudget(context.Context, *finance.Budget) error
 	ListBudgets(context.Context) ([]*finance.Budget, error)
 	GetBudget(context.Context, finance.BudgetID) (*finance.Budget, error)
+	UpdateBudget(context.Context, *finance.UpdateBudgetInput) (*finance.Budget, error)
 	ListCurrencies(context.Context) ([]finance.Currency, error)
 	CreateExchangeRate(context.Context, *finance.ExchangeRate) error
 	ListExchangeRates(context.Context) ([]*finance.ExchangeRate, error)
@@ -73,6 +74,20 @@ func (s *Server) GetBudget(ctx context.Context, req *financepb.GetBudgetRequest)
 	if err != nil {
 		return nil, err
 	}
+	return BudgetPb(budget), nil
+}
+
+func (s *Server) UpdateBudget(ctx context.Context, req *financepb.UpdateBudgetRequest) (*financepb.Budget, error) {
+	input, err := UpdateBudgetInput(req)
+	if err != nil {
+		return nil, err
+	}
+
+	budget, err := s.app.UpdateBudget(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
 	return BudgetPb(budget), nil
 }
 

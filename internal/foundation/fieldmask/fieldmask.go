@@ -48,6 +48,21 @@ func (fm *FieldMask) Contains(path string) bool {
 	return exists
 }
 
+// ContainsPrefix checks if any field path with the given prefix is in the mask
+func (fm *FieldMask) ContainsPrefix(prefix string) bool {
+	if fm == nil || len(fm.pathsMask) == 0 {
+		return true // Empty mask means all fields
+	}
+
+	for path := range fm.pathsMask {
+		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // IsEmpty returns true if no fields are masked
 func (fm *FieldMask) IsEmpty() bool {
 	return fm == nil || len(fm.paths) == 0

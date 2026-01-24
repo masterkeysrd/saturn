@@ -15,6 +15,7 @@ type FinanceService interface {
 	CreateBudget(context.Context, access.Principal, *finance.Budget) error
 	ListBudgets(context.Context, access.Principal) ([]*finance.Budget, error)
 	GetBudget(context.Context, access.Principal, finance.BudgetID) (*finance.Budget, error)
+	UpdateBudget(context.Context, access.Principal, *finance.UpdateBudgetInput) (*finance.Budget, error)
 	ListCurrencies(context.Context) ([]finance.Currency, error)
 	CreateExchangeRate(context.Context, access.Principal, *finance.ExchangeRate) error
 	ListExchangeRates(context.Context, access.Principal) ([]*finance.ExchangeRate, error)
@@ -72,6 +73,16 @@ func (app *FinanceApp) GetBudget(ctx context.Context, budgetID finance.BudgetID)
 	}
 
 	return budget, nil
+}
+
+// UpdateBudget updates an existing budget.
+func (app *FinanceApp) UpdateBudget(ctx context.Context, in *finance.UpdateBudgetInput) (*finance.Budget, error) {
+	principal, ok := access.GetPrincipal(ctx)
+	if !ok {
+		return nil, errors.New("missing principal in context")
+	}
+
+	return app.financeService.UpdateBudget(ctx, principal, in)
 }
 
 // ListCurrencies lists all available currencies.
