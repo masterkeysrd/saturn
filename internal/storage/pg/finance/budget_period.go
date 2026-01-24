@@ -8,6 +8,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/foundation/decimal"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 )
 
@@ -244,7 +245,7 @@ type BudgetPeriodEntity struct {
 	Amount       money.Cents        `db:"amount_cents"`
 	BaseCurrency money.CurrencyCode `db:"base_amount_currency"`
 	BaseAmount   money.Cents        `db:"base_amount_cents"`
-	ExchangeRate float64            `db:"exchange_rate"`
+	ExchangeRate decimal.Decimal    `db:"exchange_rate"`
 	CreatedAt    time.Time          `db:"created_at"`
 	UpdatedAt    time.Time          `db:"updated_at"`
 }

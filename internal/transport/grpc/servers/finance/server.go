@@ -17,6 +17,7 @@ var _ financepb.FinanceServer = (*Server)(nil)
 type Application interface {
 	CreateBudget(context.Context, *finance.Budget) error
 	ListBudgets(context.Context) ([]*finance.Budget, error)
+	ListCurrencies(context.Context) ([]finance.Currency, error)
 	CreateExchangeRate(context.Context, *finance.ExchangeRate) error
 	ListExchangeRates(context.Context) ([]*finance.ExchangeRate, error)
 	GetExchangeRate(context.Context, finance.CurrencyCode) (*finance.ExchangeRate, error)
@@ -36,6 +37,16 @@ func NewServer(app Application) *Server {
 	return &Server{
 		app: app,
 	}
+}
+
+func (s *Server) ListCurrencies(ctx context.Context, _ *emptypb.Empty) (*financepb.ListCurrenciesResponse, error) {
+	currencies, err := s.app.ListCurrencies(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &financepb.ListCurrenciesResponse{
+		Currencies: CurrenciesPb(currencies),
+	}, nil
 }
 
 func (s *Server) CreateBudget(ctx context.Context, req *financepb.CreateBudgetRequest) (*financepb.Budget, error) {

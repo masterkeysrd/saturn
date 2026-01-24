@@ -13,6 +13,7 @@ import (
 type FinanceService interface {
 	CreateBudget(context.Context, access.Principal, *finance.Budget) error
 	ListBudgets(context.Context, access.Principal) ([]*finance.Budget, error)
+	ListCurrencies(context.Context) ([]finance.Currency, error)
 	CreateExchangeRate(context.Context, access.Principal, *finance.ExchangeRate) error
 	ListExchangeRates(context.Context, access.Principal) ([]*finance.ExchangeRate, error)
 	GetExchangeRate(context.Context, access.Principal, finance.CurrencyCode) (*finance.ExchangeRate, error)
@@ -50,6 +51,10 @@ func (app *FinanceApp) ListBudgets(ctx context.Context) ([]*finance.Budget, erro
 	}
 
 	return app.financeService.ListBudgets(ctx, principal)
+}
+
+func (app *FinanceApp) ListCurrencies(ctx context.Context) ([]finance.Currency, error) {
+	return app.financeService.ListCurrencies(ctx)
 }
 
 func (app *FinanceApp) CreateExchangeRate(ctx context.Context, exchangeRate *finance.ExchangeRate) error {

@@ -23,6 +23,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	Finance_ListCurrencies_FullMethodName     = "/saturn.finance.v1.Finance/ListCurrencies"
 	Finance_CreateExchangeRate_FullMethodName = "/saturn.finance.v1.Finance/CreateExchangeRate"
 	Finance_ListExchangeRates_FullMethodName  = "/saturn.finance.v1.Finance/ListExchangeRates"
 	Finance_GetExchangeRate_FullMethodName    = "/saturn.finance.v1.Finance/GetExchangeRate"
@@ -45,6 +46,11 @@ const (
 // Finance provides features personal finance management, including budgeting,
 // expense tracking, and financial goal setting.
 type FinanceClient interface {
+	// ListCurrencies returns the list of all supported currencies.
+	ListCurrencies(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListCurrenciesResponse, error)
+	// CreateExchangeRate sets a new exchange rate for a specific currency.
+	//
+	// The rate represents: 1 Unit of Base Currency = X Units of Target Currency.
 	CreateExchangeRate(ctx context.Context, in *CreateExchangeRateRequest, opts ...grpc.CallOption) (*ExchangeRate, error)
 	// ListExchangeRates returns all configured exchange rates for the space
 	// specified in the request headers.
@@ -84,6 +90,16 @@ type financeClient struct {
 
 func NewFinanceClient(cc grpc.ClientConnInterface) FinanceClient {
 	return &financeClient{cc}
+}
+
+func (c *financeClient) ListCurrencies(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListCurrenciesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCurrenciesResponse)
+	err := c.cc.Invoke(ctx, Finance_ListCurrencies_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *financeClient) CreateExchangeRate(ctx context.Context, in *CreateExchangeRateRequest, opts ...grpc.CallOption) (*ExchangeRate, error) {
@@ -223,6 +239,11 @@ func (c *financeClient) ActivateSetting(ctx context.Context, in *emptypb.Empty, 
 // Finance provides features personal finance management, including budgeting,
 // expense tracking, and financial goal setting.
 type FinanceServer interface {
+	// ListCurrencies returns the list of all supported currencies.
+	ListCurrencies(context.Context, *emptypb.Empty) (*ListCurrenciesResponse, error)
+	// CreateExchangeRate sets a new exchange rate for a specific currency.
+	//
+	// The rate represents: 1 Unit of Base Currency = X Units of Target Currency.
 	CreateExchangeRate(context.Context, *CreateExchangeRateRequest) (*ExchangeRate, error)
 	// ListExchangeRates returns all configured exchange rates for the space
 	// specified in the request headers.
@@ -264,6 +285,9 @@ type FinanceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedFinanceServer struct{}
 
+func (UnimplementedFinanceServer) ListCurrencies(context.Context, *emptypb.Empty) (*ListCurrenciesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCurrencies not implemented")
+}
 func (UnimplementedFinanceServer) CreateExchangeRate(context.Context, *CreateExchangeRateRequest) (*ExchangeRate, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateExchangeRate not implemented")
 }
@@ -322,6 +346,24 @@ func RegisterFinanceServer(s grpc.ServiceRegistrar, srv FinanceServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&Finance_ServiceDesc, srv)
+}
+
+func _Finance_ListCurrencies_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).ListCurrencies(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_ListCurrencies_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).ListCurrencies(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Finance_CreateExchangeRate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -565,6 +607,10 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "saturn.finance.v1.Finance",
 	HandlerType: (*FinanceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ListCurrencies",
+			Handler:    _Finance_ListCurrencies_Handler,
+		},
 		{
 			MethodName: "CreateExchangeRate",
 			Handler:    _Finance_CreateExchangeRate_Handler,

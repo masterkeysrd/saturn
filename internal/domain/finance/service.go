@@ -17,7 +17,6 @@ import (
 type Service struct {
 	budgetStore       BudgetStore
 	budgetPeriodStore BudgetPeriodStore
-	currencyStore     CurrencyStore
 	exchangeRateStore ExchangeRateStore
 	insightsStore     InsightsStore
 	settingsStore     SettingsStore
@@ -29,7 +28,6 @@ type ServiceParams struct {
 
 	BudgetStore       BudgetStore
 	BudgetPeriod      BudgetPeriodStore
-	CurrencyStore     CurrencyStore
 	ExchangeRateStore ExchangeRateStore
 	SettingsStore     SettingsStore
 	TransactionStore  TransactionStore
@@ -40,7 +38,6 @@ func NewService(params ServiceParams) *Service {
 	return &Service{
 		budgetStore:       params.BudgetStore,
 		budgetPeriodStore: params.BudgetPeriod,
-		currencyStore:     params.CurrencyStore,
 		exchangeRateStore: params.ExchangeRateStore,
 		transactionStore:  params.TransactionStore,
 		settingsStore:     params.SettingsStore,
@@ -68,22 +65,30 @@ func (s *Service) CreateExpense(ctx context.Context, actor access.Principal, exp
 
 	// If the user does not set a rate in the expense, the
 	// rate from the currency will be used.
-	var rate float64
+	exchangeRate := &ExchangeRate{
+		ExchangeRateKey: ExchangeRateKey{
+			SpaceID:      actor.SpaceID(),
+			CurrencyCode: budgetPeriod.Amount.Currency,
+		},
+	}
 	if exp.ExchangeRate != nil {
-		rate = *exp.ExchangeRate
+		exchangeRate.Rate = *exp.ExchangeRate
 	}
 
 	// If the rate, is zero means that was not provided by the user,
 	// look up the currency table to get the rate.
-	if rate == 0 {
-		currency, err := s.GetCurrency(ctx, budgetPeriod.Amount.Currency)
+	if !exchangeRate.Rate.IsPositive() {
+		rateEntry, err := s.exchangeRateStore.Get(ctx, ExchangeRateKey{
+			SpaceID:      actor.SpaceID(),
+			CurrencyCode: budgetPeriod.Amount.Currency,
+		})
 		if err != nil {
-			return nil, fmt.Errorf("cannot get currency: %w", err)
+			return nil, fmt.Errorf("cannot get exchange rate: %w", err)
 		}
-		rate = currency.Rate
+		exchangeRate.Rate = rateEntry.Rate
 	}
 
-	transaction, err := exp.Transaction(budgetPeriod, rate)
+	transaction, err := exp.Transaction(budgetPeriod, exchangeRate)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create transaction: %w", err)
 	}
@@ -199,10 +204,12 @@ func (s *Service) CreateBudget(ctx context.Context, actor access.Principal, budg
 		return fmt.Errorf("invalid budget: %w", err)
 	}
 
-	// Get the currency for the period.
-	currency, err := s.GetCurrency(ctx, budget.Amount.Currency)
+	exchangeRate, err := s.exchangeRateStore.Get(ctx, ExchangeRateKey{
+		SpaceID:      actor.SpaceID(),
+		CurrencyCode: budget.Amount.Currency,
+	})
 	if err != nil {
-		return fmt.Errorf("cannot get currency: %w", err)
+		return fmt.Errorf("cannot get exchange rate: %w", err)
 	}
 
 	if err := s.budgetStore.Store(ctx, budget); err != nil {
@@ -210,7 +217,7 @@ func (s *Service) CreateBudget(ctx context.Context, actor access.Principal, budg
 	}
 
 	// Create the first period for the budget.
-	period, err := budget.CreatePeriod(currency, time.Now())
+	period, err := budget.CreatePeriod(exchangeRate, time.Now())
 	if err != nil {
 		return fmt.Errorf("cannot create period: %w", err)
 	}
@@ -262,12 +269,15 @@ func (s *Service) UpdateBudget(ctx context.Context, actor access.Principal, in *
 		return nil, fmt.Errorf("cannot get period for budget: %w", err)
 	}
 
-	currency, err := s.GetCurrency(ctx, budget.Amount.Currency)
+	exchangeRate, err := s.exchangeRateStore.Get(ctx, ExchangeRateKey{
+		SpaceID:      actor.SpaceID(),
+		CurrencyCode: budget.Amount.Currency,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("cannot get currency: %w", err)
+		return nil, fmt.Errorf("cannot get exchange rate: %w", err)
 	}
 
-	if err := budget.SyncPeriod(period, currency); err != nil {
+	if err := budget.SyncPeriod(period, exchangeRate); err != nil {
 		return nil, fmt.Errorf("cannot sync budget period: %w", err)
 	}
 
@@ -334,14 +344,17 @@ func (s *Service) GetPeriodForDate(ctx context.Context, actor access.Principal, 
 		return period, nil
 	}
 
-	// Get the currency for the period.
-	currency, err := s.GetCurrency(ctx, budget.Amount.Currency)
+	// Get the exchange rate for the budget currency.
+	exchangeRate, err := s.exchangeRateStore.Get(ctx, ExchangeRateKey{
+		SpaceID:      actor.SpaceID(),
+		CurrencyCode: budget.Amount.Currency,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("cannot get currency: %w", err)
+		return nil, fmt.Errorf("cannot get exchange rate: %w", err)
 	}
 
 	// Create the period for the date.
-	period, err = budget.CreatePeriod(currency, date)
+	period, err = budget.CreatePeriod(exchangeRate, date)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create period: %w", err)
 	}
@@ -377,26 +390,6 @@ func (s *Service) ListBudgets(ctx context.Context, actor access.Principal) ([]*B
 	}
 
 	return budgets, nil
-}
-
-func (s *Service) GetCurrency(ctx context.Context, code CurrencyCode) (*Currency, error) {
-	if err := code.Validate(); err != nil {
-		return nil, errors.New("currency code is invalid")
-	}
-
-	if code == DefaultBaseCurrency {
-		return &Currency{
-			Code: code,
-			Rate: 1,
-		}, nil
-	}
-
-	currency, err := s.currencyStore.Get(ctx, code)
-	if err != nil {
-		return nil, fmt.Errorf("cannot get currency: %w", err)
-	}
-
-	return currency, nil
 }
 
 func (s *Service) CreateExchangeRate(ctx context.Context, actor access.Principal, rate *ExchangeRate) error {
@@ -488,27 +481,9 @@ func (s *Service) UpdateExchangeRate(ctx context.Context, actor access.Principal
 	return exchangeRate, nil
 }
 
-func (s *Service) CreateCurrency(ctx context.Context, currency *Currency) error {
-	if err := currency.Initialize(); err != nil {
-		return fmt.Errorf("cannot initialize currency: %w", err)
-	}
-
-	if err := currency.Validate(); err != nil {
-		return fmt.Errorf("invalid currency: %w", err)
-	}
-
-	if err := s.currencyStore.Store(ctx, currency); err != nil {
-		return fmt.Errorf("cannot store currency: %w", err)
-	}
-
-	return nil
-}
-
-func (s *Service) ListCurrencies(ctx context.Context) ([]*Currency, error) {
-	currencies, err := s.currencyStore.List(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot list currencies: %w", err)
-	}
+func (s *Service) ListCurrencies(ctx context.Context) ([]Currency, error) {
+	currencies := make([]Currency, 0, len(currencyList))
+	currencies = append(currencies, currencyList...)
 	return currencies, nil
 }
 

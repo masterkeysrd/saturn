@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/foundation/decimal"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 )
 
@@ -13,7 +14,7 @@ type Operation struct {
 	Name         string
 	Description  string
 	Amount       money.Cents
-	ExchangeRate *float64
+	ExchangeRate *decimal.Decimal
 	Date         time.Time
 }
 
@@ -35,7 +36,7 @@ func (op Operation) Validate() error {
 		return errors.New("amount must be positive")
 	}
 
-	if op.ExchangeRate != nil && *op.ExchangeRate <= 0 {
+	if op.ExchangeRate.Cmp(decimal.Zero) <= 0 {
 		return errors.New("exchange rate must be a positive number when provided")
 	}
 

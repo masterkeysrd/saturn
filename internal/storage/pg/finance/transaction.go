@@ -8,6 +8,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/foundation/decimal"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 )
@@ -282,7 +283,7 @@ type TransactionEntity struct {
 	AmountCurrency     finance.CurrencyCode    `db:"amount_currency"`
 	BaseAmountCents    money.Cents             `db:"base_amount_cents"`
 	BaseAmountCurrency finance.CurrencyCode    `db:"base_amount_currency"`
-	ExchangeRate       float64                 `db:"exchange_rate"`
+	ExchangeRate       decimal.Decimal         `db:"exchange_rate"`
 	CreatedAt          time.Time               `db:"created_at"`
 	UpdatedAt          time.Time               `db:"updated_at"`
 }

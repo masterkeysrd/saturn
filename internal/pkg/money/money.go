@@ -22,14 +22,6 @@ func (m Money) Int64() int64 {
 	return m.Cents.Int64()
 }
 
-// Exchange returns a new Money in the target currency using the given rate.
-func (m Money) Exchange(target CurrencyCode, rate float64) Money {
-	return Money{
-		Cents:    m.Cents.Divide(rate),
-		Currency: target,
-	}
-}
-
 // Validate checks that Money is well-formed
 func (m Money) Validate() error {
 	if m.Currency == "" {

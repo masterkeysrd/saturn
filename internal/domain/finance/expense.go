@@ -102,7 +102,7 @@ func (e *Expense) ValidateForUpdate(mask *fieldmask.FieldMask) error {
 		return errors.New("date is required")
 	}
 
-	if mask.Contains("exchange_rate") && e.ExchangeRate != nil && *e.ExchangeRate <= 0 {
+	if mask.Contains("exchange_rate") && e.ExchangeRate != nil && !e.ExchangeRate.IsPositive() {
 		return errors.New("exchange must be a positive number if provided")
 	}
 
@@ -134,7 +134,8 @@ func (e *Expense) validate() error {
 		return errors.New("date is required")
 	}
 
-	if e.ExchangeRate != nil && *e.ExchangeRate <= 0 {
+	// if e.ExchangeRate != nil && *e.ExchangeRate <= 0 {
+	if e.ExchangeRate != nil && !e.ExchangeRate.IsPositive() {
 		return errors.New("exchange must be a positive number if provided")
 	}
 
@@ -146,13 +147,18 @@ func (e *Expense) validate() error {
 //
 // The currency is used to calculate the base amount via exchange rate.
 // This method assumes the Expense has already been validated.
-func (e *Expense) Transaction(period *BudgetPeriod, exchangeRate float64) (*Transaction, error) {
+func (e *Expense) Transaction(period *BudgetPeriod, exchangeRate *ExchangeRate) (*Transaction, error) {
 	if e == nil {
 		return nil, errors.New("expense is nil")
 	}
 
 	now := time.Now().UTC()
 	amount := money.NewMoney(period.Amount.Currency, e.Amount)
+
+	baseAmount, err := exchangeRate.ConvertMoney(amount)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert amount using exchange rate: %w", err)
+	}
 
 	// Build transaction from expense fields
 	return &Transaction{
@@ -163,8 +169,8 @@ func (e *Expense) Transaction(period *BudgetPeriod, exchangeRate float64) (*Tran
 		Name:           e.Name,
 		Description:    e.Description,
 		Amount:         amount,
-		BaseAmount:     amount.Exchange(DefaultBaseCurrency, exchangeRate),
-		ExchangeRate:   exchangeRate,
+		BaseAmount:     baseAmount,
+		ExchangeRate:   exchangeRate.Rate,
 		Date:           e.Date,
 		CreatedAt:      now,
 		UpdatedAt:      now,
@@ -177,19 +183,30 @@ func (e *Expense) UpdateTransaction(trx *Transaction, mask *fieldmask.FieldMask)
 	}
 
 	amount := trx.Amount
-	exchangeRate := trx.ExchangeRate
+	exchangeRate := ExchangeRate{
+		ExchangeRateKey: ExchangeRateKey{
+			SpaceID:      "",
+			CurrencyCode: amount.Currency,
+		},
+		Rate: trx.ExchangeRate,
+	}
+	// rate := trx.ExchangeRate
 
 	if mask.Contains("amount") {
 		amount.Cents = e.Amount
 	}
 
 	if mask.Contains("exchange_rate") && e.ExchangeRate != nil {
-		exchangeRate = *e.ExchangeRate
+		exchangeRate.Rate = *e.ExchangeRate
 	}
 
 	trx.Amount = amount
-	trx.BaseAmount = amount.Exchange(DefaultBaseCurrency, exchangeRate)
-	trx.ExchangeRate = exchangeRate
+	baseAmount, err := exchangeRate.ConvertMoney(amount)
+	if err != nil {
+		return fmt.Errorf("cannot convert amount using exchange rate: %w", err)
+	}
+	trx.BaseAmount = baseAmount
+	trx.ExchangeRate = exchangeRate.Rate
 
 	if mask.Contains("name") {
 		trx.Name = e.Name

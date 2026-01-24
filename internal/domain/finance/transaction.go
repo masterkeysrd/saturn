@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/foundation/appearance"
+	"github.com/masterkeysrd/saturn/internal/foundation/decimal"
 	"github.com/masterkeysrd/saturn/internal/foundation/id"
 	"github.com/masterkeysrd/saturn/internal/foundation/pagination"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
@@ -43,7 +44,7 @@ type Transaction struct {
 	Description    string
 	Amount         money.Money
 	BaseAmount     money.Money
-	ExchangeRate   float64
+	ExchangeRate   decimal.Decimal
 	Date           time.Time
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
@@ -71,7 +72,7 @@ func (t *Transaction) Validate() error {
 		return fmt.Errorf("invalid amount: %w", err)
 	}
 
-	if t.ExchangeRate <= 0 {
+	if t.ExchangeRate.Cmp(decimal.Zero) <= 0 {
 		return errors.New("exchange rate must be a positive number")
 	}
 

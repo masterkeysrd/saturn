@@ -7,6 +7,8 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+var Zero = Decimal{d: decimal.Zero}
+
 // Decimal represents a fixed-point decimal number.
 type Decimal struct {
 	d decimal.Decimal
@@ -57,4 +59,28 @@ func (d Decimal) MarshalBinary() ([]byte, error) {
 
 func (d Decimal) Cmp(other Decimal) int {
 	return d.d.Cmp(other.d)
+}
+
+func (d Decimal) Mul(other Decimal) Decimal {
+	return Decimal{d: d.d.Mul(other.d)}
+}
+
+func (d Decimal) Round(places int32) Decimal {
+	return Decimal{d: d.d.Round(places)}
+}
+
+func (d Decimal) IntPart() int64 {
+	return d.d.IntPart()
+}
+
+func (d Decimal) IsZero() bool {
+	return d.d.IsZero()
+}
+
+func (d Decimal) IsNegative() bool {
+	return d.d.IsNegative()
+}
+
+func (d Decimal) IsPositive() bool {
+	return d.d.IsPositive()
 }

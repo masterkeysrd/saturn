@@ -14,48 +14,66 @@ import (
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 )
 
-// TODO: Change for a config base currency
 const DefaultBaseCurrency CurrencyCode = "USD"
 
-type CurrencyStore interface {
-	Get(context.Context, CurrencyCode) (*Currency, error)
-	List(context.Context) ([]*Currency, error)
-	Store(context.Context, *Currency) error
-}
+var (
+	currencyMap = map[CurrencyCode]Currency{
+		"CAD": {
+			Code:          "CAD",
+			Name:          "Canadian Dollar",
+			Symbol:        "C$",
+			DecimalPlaces: 2,
+		},
+		"COP": {
+			Code:          "COP",
+			Name:          "Colombian Peso",
+			Symbol:        "COL$",
+			DecimalPlaces: 0,
+		},
+		"DOP": {
+			Code:          "DOP",
+			Name:          "Dominican Peso",
+			Symbol:        "RD$",
+			DecimalPlaces: 2,
+		},
+		"EUR": {
+			Code:          "EUR",
+			Name:          "Euro",
+			Symbol:        "€",
+			DecimalPlaces: 2,
+		},
+		"JPY": {
+			Code:          "JPY",
+			Name:          "Japanese Yen",
+			Symbol:        "¥",
+			DecimalPlaces: 0,
+		},
+		"MXN": {
+			Code:          "MXN",
+			Name:          "Mexican Peso",
+			Symbol:        "MX$",
+			DecimalPlaces: 2,
+		},
+		"USD": {
+			Code:          "USD",
+			Name:          "United States Dollar",
+			Symbol:        "$",
+			DecimalPlaces: 2,
+		},
+	}
+
+	currencyList = buildCurrencyList()
+)
+
+var SupportedCurrenciesList = currencyList
 
 type CurrencyCode = money.CurrencyCode
 
 type Currency struct {
-	Code      CurrencyCode
-	Name      string
-	Rate      float64
-	CreatedAt time.Time
-	UpdatedAt time.Time
-}
-
-func (c *Currency) Initialize() error {
-	c.CreatedAt = time.Now().UTC()
-	return nil
-}
-
-func (c *Currency) Validate() error {
-	if err := c.Code.Validate(); err != nil {
-		return fmt.Errorf("code is invalid: %w", err)
-	}
-
-	if c.Name == "" {
-		return errors.New("name is require")
-	}
-
-	if len(c.Name) > 50 {
-		return errors.New("name cannot have more that 50 characters ")
-	}
-
-	if c.Rate <= 0 {
-		return errors.New("rate must be a positive number")
-	}
-
-	return nil
+	Code          CurrencyCode
+	Name          string
+	Symbol        string
+	DecimalPlaces int32
 }
 
 type ExchangeRateStore interface {
@@ -141,7 +159,33 @@ func (e *ExchangeRate) Update(actor access.Principal, input *ExchangeRate, updat
 	return nil
 }
 
+func (e *ExchangeRate) ConvertMoney(amount money.Money) (money.Money, error) {
+	if e == nil {
+		return money.Money{}, errors.New("exchange rate is nil")
+	}
+
+	if amount.Currency == e.CurrencyCode {
+		return amount, nil
+	}
+
+	convertedCents := decimal.FromInt(amount.Cents.Int64()).Mul(e.Rate)
+	convertedCents = convertedCents.Round(0)
+
+	return money.Money{
+		Currency: e.CurrencyCode,
+		Cents:    money.Cents(convertedCents.IntPart()),
+	}, nil
+}
+
 type UpdateExchangeRateInput struct {
 	ExchangeRate *ExchangeRate
 	UpdateMask   *fieldmask.FieldMask
+}
+
+func buildCurrencyList() []Currency {
+	list := make([]Currency, 0, len(currencyMap))
+	for _, currency := range currencyMap {
+		list = append(list, currency)
+	}
+	return list
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/foundation/access"
 	"github.com/masterkeysrd/saturn/internal/foundation/appearance"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
+	"github.com/masterkeysrd/saturn/internal/foundation/decimal"
 	"github.com/masterkeysrd/saturn/internal/foundation/fieldmask"
 	"github.com/masterkeysrd/saturn/internal/foundation/id"
 	"github.com/masterkeysrd/saturn/internal/foundation/pagination"
@@ -233,10 +234,15 @@ func (bs BudgetStatus) String() string {
 
 // CreatePeriod creates a new BudgetPeriod for the provided time 't' and exchange context 'c'.
 // This logic belongs to the Aggregate Root as it ensures the new period is created correctly.
-func (b *Budget) CreatePeriod(c *Currency, t time.Time) (*BudgetPeriod, error) {
+func (b *Budget) CreatePeriod(exchangeRate *ExchangeRate, t time.Time) (*BudgetPeriod, error) {
 	id, err := id.New[BudgetPeriodID]()
 	if err != nil {
 		return nil, fmt.Errorf("cannot create period identifier: %w", err)
+	}
+
+	baseAmount, err := exchangeRate.ConvertMoney(b.Amount)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert money for budget period: %w", err)
 	}
 
 	start, end := timeutils.MonthStartEnd(t)
@@ -246,8 +252,8 @@ func (b *Budget) CreatePeriod(c *Currency, t time.Time) (*BudgetPeriod, error) {
 		StartDate:    start,
 		EndDate:      end,
 		Amount:       b.Amount,
-		BaseAmount:   b.Amount.Exchange(DefaultBaseCurrency, c.Rate),
-		ExchangeRate: c.Rate,
+		BaseAmount:   baseAmount,
+		ExchangeRate: exchangeRate.Rate,
 		CreatedAt:    time.Now().UTC(),
 	}
 
@@ -257,7 +263,7 @@ func (b *Budget) CreatePeriod(c *Currency, t time.Time) (*BudgetPeriod, error) {
 // SyncPeriod updates a calculated BudgetPeriod object (or Value Object)
 // based on the master Budget's current state. This is required for maintaining
 // currency conversion consistency across the aggregate.
-func (b *Budget) SyncPeriod(period *BudgetPeriod, currency *Currency) error {
+func (b *Budget) SyncPeriod(period *BudgetPeriod, exchangeRate *ExchangeRate) error {
 	if b == nil {
 		return errors.New("cannot sync period on nil budget")
 	}
@@ -266,8 +272,8 @@ func (b *Budget) SyncPeriod(period *BudgetPeriod, currency *Currency) error {
 		return errors.New("budget period is nil")
 	}
 
-	if currency == nil {
-		return errors.New("currency is nil")
+	if exchangeRate == nil {
+		return errors.New("exchange rate is nil")
 	}
 
 	// Invariant: Ensure the dependent period belongs to this root.
@@ -277,13 +283,19 @@ func (b *Budget) SyncPeriod(period *BudgetPeriod, currency *Currency) error {
 
 	// Invariant: Ensure the conversion context is compatible with the budget's
 	// currency.
-	if b.Amount.Currency != currency.Code {
-		return fmt.Errorf("budget currency (%s) cannot be synced with external currency (%s)", b.Amount.Currency, currency.Code)
+	if b.Amount.Currency != exchangeRate.CurrencyCode {
+		return fmt.Errorf("budget currency (%s) cannot be synced with external currency (%s)", b.Amount.Currency, exchangeRate.CurrencyCode)
 	}
 
 	// Recalculate base currency value and stamp the period.
-	period.BaseAmount = b.Amount.Exchange(DefaultBaseCurrency, currency.Rate)
-	period.ExchangeRate = currency.Rate
+	// period.BaseAmount = b.Amount.Exchange(DefaultBaseCurrency, currency.Rate)
+	// period.ExchangeRate = currency.Rate
+	baseAmount, err := exchangeRate.ConvertMoney(b.Amount)
+	if err != nil {
+		return fmt.Errorf("cannot convert money for budget period: %w", err)
+	}
+	period.BaseAmount = baseAmount
+	period.ExchangeRate = exchangeRate.Rate
 	period.UpdatedAt = time.Now().UTC()
 	return nil
 }
@@ -306,7 +318,7 @@ type BudgetPeriod struct {
 	EndDate      time.Time
 	Amount       money.Money
 	BaseAmount   money.Money
-	ExchangeRate float64
+	ExchangeRate decimal.Decimal
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
@@ -343,7 +355,7 @@ func (bp *BudgetPeriod) Validate() error {
 	if bp.BaseAmount.Currency == "" {
 		return fmt.Errorf("base amount currency is empty")
 	}
-	if bp.ExchangeRate <= 0 {
+	if bp.ExchangeRate.IsNegative() || bp.ExchangeRate.IsZero() {
 		return fmt.Errorf("exchange rate must be positive")
 	}
 	if bp.CreatedAt.IsZero() {

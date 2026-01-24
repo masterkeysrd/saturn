@@ -3,6 +3,22 @@ import * as Types from './finance_pb';
 import { create, fromJson, type MessageInitShape, toJson } from '@bufbuild/protobuf';
 
 /**
+ * ListCurrencies returns the list of all supported currencies.
+ *
+ * @returns Promise<Types.ListCurrenciesResponse>
+ */
+export async function listCurrencies(): Promise<Types.ListCurrenciesResponse> {
+  return getAxios().get(`/api/v1/finance/currencies`
+  ).then((resp) => {
+    return fromJson(Types.ListCurrenciesResponseSchema, resp.data);
+  });
+}
+
+/**
+ * CreateExchangeRate sets a new exchange rate for a specific currency.
+ *
+ * The rate represents: 1 Unit of Base Currency = X Units of Target Currency.
+ *
  * @param req Types.CreateExchangeRateRequest
  * @returns Promise<Types.ExchangeRate>
  */

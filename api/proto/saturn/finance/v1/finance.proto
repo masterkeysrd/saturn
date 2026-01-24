@@ -21,6 +21,14 @@ option go_package = "github.com/masterkeysrd/saturn/gen/proto/go/saturn/finance/
 service Finance {
   option (google.api.default_host) = "api.saturn.masterkeysrd.dev";
 
+  // ListCurrencies returns the list of all supported currencies.
+  rpc ListCurrencies(google.protobuf.Empty) returns (ListCurrenciesResponse) {
+    option (google.api.http) = {get: "/v1/finance/currencies"};
+  }
+
+  // CreateExchangeRate sets a new exchange rate for a specific currency.
+  //
+  // The rate represents: 1 Unit of Base Currency = X Units of Target Currency.
   rpc CreateExchangeRate(CreateExchangeRateRequest) returns (ExchangeRate) {
     option (google.api.http) = {
       post: "/v1/finance/exchange-rates"
@@ -112,22 +120,47 @@ service Finance {
   }
 }
 
+// Response message for Finance.ListCurrencies.
+message ListCurrenciesResponse {
+  repeated Currency currencies = 1;
+}
+
+// Currency represents a specific currency with its details.
+message Currency {
+  // The 3-letter currency code (ISO 4217), e.g., "DOP", "EUR".
+  string code = 1;
+
+  // The full name of the currency, e.g., "Dominican Peso", "Euro".
+  string name = 2;
+
+  // The symbol used for the currency, e.g., "$", "€".
+  string symbol = 3;
+
+  // The number of decimal places used by the currency, e.g., 2 for USD.
+  int32 decimal_places = 4;
+}
+
+// Request message for Finance.CreateExchangeRate.
 message CreateExchangeRateRequest {
   // The exchange rate to create.
   ExchangeRate rate = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
+// Request message for Finance.ListExchangeRates.
 message ListExchangeRatesRequest {}
 
+// Response message for Finance.ListExchangeRates.
 message ListExchangeRatesResponse {
   // The list of configured rates.
   repeated ExchangeRate rates = 1;
 }
 
+// Request message for Finance.GetExchangeRate.
 message GetExchangeRateRequest {
   string currency_code = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
+// Request message for Finance.UpdateExchangeRate.
 message UpdateExchangeRateRequest {
   // The currency code to update (mapped from URL path).
   string currency_code = 1 [(google.api.field_behavior) = REQUIRED];
@@ -141,6 +174,7 @@ message UpdateExchangeRateRequest {
   google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// Request message for Finance.DeleteExchangeRate.
 message DeleteExchangeRateRequest {
   string currency_code = 1 [(google.api.field_behavior) = REQUIRED];
 }
@@ -368,6 +402,9 @@ message Setting {
 
   reserved 3 to 10;
 
+  // Creation timestamp of the setting.
   google.protobuf.Timestamp create_time = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Last update timestamp of the setting.
   google.protobuf.Timestamp update_time = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
 }

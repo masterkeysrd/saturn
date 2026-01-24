@@ -14,10 +14,6 @@ func Provide(inj deps.Injector) error {
 		return err
 	}
 
-	if err := inj.Provide(NewCurrencyStore, deps.As(new(finance.CurrencyStore))); err != nil {
-		return err
-	}
-
 	if err := inj.Provide(NewTransactionsStore, deps.As(new(finance.TransactionStore))); err != nil {
 		return err
 	}

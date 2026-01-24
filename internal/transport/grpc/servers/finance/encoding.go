@@ -76,6 +76,23 @@ func BudgetStatusPb(status finance.BudgetStatus) financepb.Budget_Status {
 	}
 }
 
+func CurrenciesPb(currencies []finance.Currency) []*financepb.Currency {
+	pbs := make([]*financepb.Currency, 0, len(currencies))
+	for _, c := range currencies {
+		pbs = append(pbs, CurrencyPb(c))
+	}
+	return pbs
+}
+
+func CurrencyPb(c finance.Currency) *financepb.Currency {
+	return &financepb.Currency{
+		Code:          c.Code.String(),
+		Name:          c.Name,
+		Symbol:        c.Symbol,
+		DecimalPlaces: int32(c.DecimalPlaces),
+	}
+}
+
 func ExchangeRatesPb(rates []*finance.ExchangeRate) []*financepb.ExchangeRate {
 	pbs := make([]*financepb.ExchangeRate, 0, len(rates))
 	for _, r := range rates {
