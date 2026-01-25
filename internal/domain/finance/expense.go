@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/foundation/access"
 	"github.com/masterkeysrd/saturn/internal/foundation/fieldmask"
 	"github.com/masterkeysrd/saturn/internal/foundation/id"
-	"github.com/masterkeysrd/saturn/internal/pkg/money"
 	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 )
 
@@ -25,7 +25,11 @@ var ExpenseUpdateSchema = fieldmask.NewSchema("expense").
 		fieldmask.WithDescription("Expense date"),
 		fieldmask.WithRequired(),
 	).
-	Field("amount",
+	Field("amount.currency",
+		fieldmask.WithDescription("Expense amount currency"),
+		fieldmask.WithRequired(),
+	).
+	Field("amount.cents",
 		fieldmask.WithDescription("Expense amount in cents"),
 		fieldmask.WithRequired(),
 	).
@@ -90,12 +94,18 @@ func (e *Expense) ValidateForUpdate(mask *fieldmask.FieldMask) error {
 		return e.validate()
 	}
 
-	if mask.Contains("name") && e.Name == "" {
+	if mask.Contains("name") && e.Title == "" {
 		return errors.New("name is required")
 	}
 
-	if mask.Contains("amount") && e.Amount <= 0 {
-		return errors.New("amount must be a positive number")
+	if mask.ContainsPrefix("amount") {
+		if err := e.Amount.Validate(); err != nil {
+			return fmt.Errorf("amount is invalid: %w", err)
+		}
+
+		if e.Amount.Cents <= 0 {
+			return errors.New("amount must be a positive number")
+		}
 	}
 
 	if mask.Contains("date") && e.Date.IsZero() {
@@ -112,7 +122,7 @@ func (e *Expense) ValidateForUpdate(mask *fieldmask.FieldMask) error {
 // sanitize cleans up input fields without generating a new ID.
 // This should be called for both CREATE and UPDATE operations.
 func (e *Expense) sanitize() {
-	e.Name = strings.TrimSpace(e.Name)
+	e.Title = strings.TrimSpace(e.Title)
 	e.Description = strings.TrimSpace(e.Description)
 }
 
@@ -122,11 +132,19 @@ func (e *Expense) validate() error {
 		return errors.New("expense is nil")
 	}
 
-	if e.Name == "" {
+	if e.Title == "" {
 		return errors.New("name is required")
 	}
 
-	if e.Amount <= 0 {
+	if err := id.Validate(e.BudgetID); err != nil {
+		return fmt.Errorf("invalid budget id: %w", err)
+	}
+
+	if err := e.Amount.Validate(); err != nil {
+		return fmt.Errorf("amount is invalid: %w", err)
+	}
+
+	if e.Amount.Cents <= 0 {
 		return errors.New("amount must be a positive number")
 	}
 
@@ -147,37 +165,45 @@ func (e *Expense) validate() error {
 //
 // The currency is used to calculate the base amount via exchange rate.
 // This method assumes the Expense has already been validated.
-func (e *Expense) Transaction(period *BudgetPeriod, exchangeRate *ExchangeRate) (*Transaction, error) {
+func (e *Expense) Transaction(actor access.Principal, period *BudgetPeriod, exchangeRate *ExchangeRate) (*Transaction, error) {
 	if e == nil {
 		return nil, errors.New("expense is nil")
 	}
 
-	now := time.Now().UTC()
-	amount := money.NewMoney(period.Amount.Currency, e.Amount)
+	if period.Amount.Currency != e.Amount.Currency {
+		return nil, fmt.Errorf("expense currency %s does not match budget period currency %s", e.Amount.Currency, period.Amount.Currency)
+	}
 
-	baseAmount, err := exchangeRate.ConvertToBase(amount, period.BaseAmount.Currency)
+	now := time.Now().UTC()
+
+	baseAmount, err := exchangeRate.ConvertToBase(e.Amount, period.BaseAmount.Currency)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert amount using exchange rate: %w", err)
 	}
 
 	// Build transaction from expense fields
 	return &Transaction{
-		ID:             e.ID,
+		TransactionKey: TransactionKey{
+			ID:      e.ID,
+			SpaceID: period.SpaceID,
+		},
 		Type:           TransactionTypeExpense,
 		BudgetID:       ptr.Of(e.BudgetID),
 		BudgetPeriodID: ptr.Of(period.ID),
-		Name:           e.Name,
+		Title:          e.Title,
 		Description:    e.Description,
-		Amount:         amount,
+		Amount:         e.Amount,
 		BaseAmount:     baseAmount,
 		ExchangeRate:   exchangeRate.Rate,
 		Date:           e.Date,
-		CreatedAt:      now,
-		UpdatedAt:      now,
+		CreateTime:     now,
+		CreateBy:       actor.ActorID(),
+		UpdateTime:     now,
+		UpdateBy:       actor.ActorID(),
 	}, nil
 }
 
-func (e *Expense) UpdateTransaction(trx *Transaction, mask *fieldmask.FieldMask) error {
+func (e *Expense) UpdateTransaction(actor access.Principal, trx *Transaction, mask *fieldmask.FieldMask) error {
 	if trx == nil {
 		return fmt.Errorf("transaction cannot be nil")
 	}
@@ -190,10 +216,9 @@ func (e *Expense) UpdateTransaction(trx *Transaction, mask *fieldmask.FieldMask)
 		},
 		Rate: trx.ExchangeRate,
 	}
-	// rate := trx.ExchangeRate
 
-	if mask.Contains("amount") {
-		amount.Cents = e.Amount
+	if mask.ContainsPrefix("amount") {
+		amount = e.Amount
 	}
 
 	if mask.Contains("exchange_rate") && e.ExchangeRate != nil {
@@ -209,7 +234,7 @@ func (e *Expense) UpdateTransaction(trx *Transaction, mask *fieldmask.FieldMask)
 	trx.ExchangeRate = exchangeRate.Rate
 
 	if mask.Contains("name") {
-		trx.Name = e.Name
+		trx.Title = e.Title
 	}
 
 	if mask.Contains("description") {
@@ -220,7 +245,8 @@ func (e *Expense) UpdateTransaction(trx *Transaction, mask *fieldmask.FieldMask)
 		trx.Date = e.Date
 	}
 
-	trx.UpdatedAt = time.Now().UTC()
+	trx.UpdateTime = time.Now().UTC()
+	trx.UpdateBy = actor.ActorID()
 	return nil
 }
 

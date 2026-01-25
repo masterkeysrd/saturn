@@ -2,76 +2,73 @@ package financepg
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
-	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
-	"github.com/masterkeysrd/saturn/internal/foundation/decimal"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
+	"github.com/masterkeysrd/saturn/internal/foundation/space"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 )
 
-var _ finance.TransactionStore = (*Transactions)(nil)
+var _ finance.TransactionStore = (*TransactionsStore)(nil)
 
-type Transactions struct {
-	db      *sqlx.DB
-	queries *TransactionQueries
+type TransactionsStore struct {
+	db *sqlx.DB
 }
 
-func NewTransactionsStore(db *sqlx.DB) (*Transactions, error) {
-	return &Transactions{
+func NewTransactionsStore(db *sqlx.DB) (*TransactionsStore, error) {
+	return &TransactionsStore{
 		db: db,
 	}, nil
 }
 
-func (t *Transactions) Get(ctx context.Context, id finance.TransactionID) (*finance.Transaction, error) {
-	row := t.queries.Get(ctx, id)
-	if err := row.Err(); err != nil {
-		return nil, fmt.Errorf("cannot execute Get transaction query: %w", err)
-	}
-
-	var entity TransactionEntity
-	if err := row.StructScan(&entity); err != nil {
-		return nil, fmt.Errorf("cannot scan transaction: %w", err)
-	}
-
-	return TransactionEntityToModel(&entity), nil
-}
-
-func (t *Transactions) List(ctx context.Context) ([]*finance.Transaction, error) {
-	rows, err := t.queries.List(ctx)
+func (t *TransactionsStore) Get(ctx context.Context, key finance.TransactionKey) (*finance.Transaction, error) {
+	entity, err := GetTransactionByID(ctx, t.db, &GetTransactionByIDParams{
+		Id:      key.ID.String(),
+		SpaceId: key.SpaceID.String(),
+	})
 	if err != nil {
-		return nil, fmt.Errorf("cannot execute list transactions: %w", err)
-	}
-	defer rows.Close()
-
-	entities := []*finance.Transaction{}
-	for rows.Next() {
-		var entity TransactionEntity
-		if err := rows.StructScan(&entity); err != nil {
-			return nil, fmt.Errorf("cannot scan transaction: %w", err)
-		}
-		entities = append(entities, TransactionEntityToModel(&entity))
+		return nil, fmt.Errorf("cannot get transaction by id: %w", err)
 	}
 
-	return entities, nil
+	return TransactionEntityToModel(entity), nil
 }
 
-func (t *Transactions) Store(ctx context.Context, tr *finance.Transaction) error {
-	_, err := t.queries.Store(ctx, TransactionEntityFromModel(tr))
+func (t *TransactionsStore) List(ctx context.Context, spaceID space.ID) ([]*finance.Transaction, error) {
+	transctions := make([]*finance.Transaction, 0, 50)
+
+	err := ListTransactions(ctx, t.db, &ListTransactionsParams{
+		SpaceId: spaceID.String(),
+	}, func(e *TransactionEntity) error {
+		transctions = append(transctions, TransactionEntityToModel(e))
+		return nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("cannot list transactions: %w", err)
+	}
+
+	return transctions, nil
+}
+
+func (t *TransactionsStore) Store(ctx context.Context, tr *finance.Transaction) error {
+	entity, err := UpsertTransaction(ctx, t.db, TransactionEntityFromModel(tr))
 	if err != nil {
 		return fmt.Errorf("cannot store transaction: %w", err)
 	}
+
+	// Update the input model with any changes from the database.
+	*tr = *TransactionEntityToModel(entity)
 	return nil
 }
 
-func (t *Transactions) Delete(ctx context.Context, tid finance.TransactionID) error {
-	result, err := t.queries.Delete(ctx, tid)
-	if err != nil {
-		return fmt.Errorf("cannot delete transaction: %w", err)
-	}
+func (t *TransactionsStore) Delete(ctx context.Context, key finance.TransactionKey) error {
+	result, err := DeleteTransactionByID(ctx, t.db, &DeleteTransactionByIDParams{
+		Id:      key.ID.String(),
+		SpaceId: key.SpaceID.String(),
+	})
 
 	affected, err := result.RowsAffected()
 	if err != nil {
@@ -85,207 +82,25 @@ func (t *Transactions) Delete(ctx context.Context, tid finance.TransactionID) er
 	return nil
 }
 
-func (t *Transactions) ExistsBy(ctx context.Context, criteria finance.TransactionCriteria) (bool, error) {
-	var row *sqlx.Row
+func (t *TransactionsStore) ExistsBy(ctx context.Context, criteria finance.TransactionCriteria) (bool, error) {
+	var exists bool
+	var err error
+
 	switch v := criteria.(type) {
 	case *finance.ByBudgetID:
-		row = t.queries.ExistsByBudgetID(ctx, v)
+		exists, err = ExistsTransactionByBudget(ctx, t.db, &ExistsTransactionByBudgetParams{
+			SpaceId:  v.SpaceID.String(),
+			BudgetId: ptr.Of(v.ID.String()),
+		})
 	default:
 		return false, fmt.Errorf("criteria %T is not supported for exists method", criteria)
 	}
 
-	var result bool
-	if err := row.Scan(&result); err != nil {
-		// If the query failed for a reason other than not finding a row, return the error.
-		// We assume the underlying query is correctly designed not to return sql.ErrNoRows.
-		return false, fmt.Errorf("cannot scan transaction exists result: %w", err)
-	}
-
-	return result, nil
-}
-
-const (
-	getTransactionQuery = `
-SELECT
-	id,
-	type,
-	budget_id,
-	budget_period_id,
-	name,
-	description,
-	date,
-	amount_cents,
-	amount_currency,
-	base_amount_cents,
-	base_amount_currency,
-	exchange_rate,
-	created_at,
-	updated_at
-FROM transactions
-WHERE id = :id`
-
-	listTransactionsQuery = `
-SELECT
-	id,
-	type,
-	budget_id,
-	budget_period_id,
-	name,
-	description,
-	date,
-	amount_cents,
-	amount_currency,
-	base_amount_cents,
-	base_amount_currency,
-	exchange_rate,
-	created_at,
-	updated_at
-FROM transactions
-ORDER BY date desc, created_at
-`
-
-	upsertTransactionQuery = `
-INSERT INTO transactions (
-	id,
-	type,
-	budget_id,
-	budget_period_id,
-	name,
-	description,
-	date,
-	amount_cents,
-	amount_currency,
-	base_amount_cents,
-	base_amount_currency,
-	exchange_rate,
-	created_at,
-	updated_at
-)
-VALUES (
-	:id,
-	:type,
-	:budget_id,
-	:budget_period_id,
-	:name,
-	:description,
-	:date,
-	:amount_cents,
-	:amount_currency,
-	:base_amount_cents,
-	:base_amount_currency,
-	:exchange_rate,
-	:created_at,
-	:updated_at
-)
-ON CONFLICT (id) DO UPDATE SET
-	budget_id = EXCLUDED.budget_id,
-	budget_period_id = EXCLUDED.budget_period_id,
-	name = EXCLUDED.name,
-	description = EXCLUDED.description,
-	date = EXCLUDED.date,
-	amount_cents = EXCLUDED.amount_cents,
-	amount_currency = EXCLUDED.amount_currency,
-	base_amount_cents = EXCLUDED.base_amount_cents,
-	base_amount_currency = EXCLUDED.base_amount_currency,
-	exchange_rate = EXCLUDED.exchange_rate,
-	updated_at = EXCLUDED.updated_at`
-
-	deleteTransactionQuery = `
-DELETE FROM transactions
- WHERE id = :id`
-
-	existsTransactionByBudgetIDQuery = `
-SELECT EXISTS (
-	SELECT 1
-    FROM
-		transactions
-    WHERE
-		budget_id = :budget_id 
-    LIMIT 1
-)
- `
-)
-
-type TransactionQueries struct {
-	getStmt          *sqlx.NamedStmt
-	listStmt         *sqlx.Stmt
-	upsertStmt       *sqlx.NamedStmt
-	deleteStmt       *sqlx.NamedStmt
-	existsByBudgetID *sqlx.NamedStmt
-}
-
-func NewTransactionQueries(db *sqlx.DB) (*TransactionQueries, error) {
-	getStmt, err := db.PrepareNamed(getTransactionQuery)
 	if err != nil {
-		return nil, fmt.Errorf("cannot prepare get transaction query: %w", err)
+		return false, fmt.Errorf("cannot check existence of transaction: %w", err)
 	}
 
-	listStmt, err := db.Preparex(listTransactionsQuery)
-	if err != nil {
-		return nil, fmt.Errorf("cannot prepare get transaction query: %w", err)
-	}
-
-	upsertStmt, err := db.PrepareNamed(upsertTransactionQuery)
-	if err != nil {
-		return nil, fmt.Errorf("cannot prepare upsert transaction query: %w", err)
-	}
-
-	deleteStmt, err := db.PrepareNamed(deleteTransactionQuery)
-	if err != nil {
-		return nil, fmt.Errorf("cannot prepare upsert transaction query: %w", err)
-	}
-
-	existsByBudgetID, err := db.PrepareNamed(existsTransactionByBudgetIDQuery)
-	if err != nil {
-		return nil, fmt.Errorf("cannot prepare exists by id transaction query: %w", err)
-	}
-
-	return &TransactionQueries{
-		getStmt:          getStmt,
-		upsertStmt:       upsertStmt,
-		listStmt:         listStmt,
-		deleteStmt:       deleteStmt,
-		existsByBudgetID: existsByBudgetID,
-	}, nil
-}
-
-func (q *TransactionQueries) Get(ctx context.Context, tid finance.TransactionID) *sqlx.Row {
-	return q.getStmt.QueryRowxContext(ctx, map[string]any{"id": tid})
-}
-
-func (q *TransactionQueries) List(ctx context.Context) (*sqlx.Rows, error) {
-	return q.listStmt.QueryxContext(ctx)
-}
-
-func (q *TransactionQueries) Store(ctx context.Context, e *TransactionEntity) (sql.Result, error) {
-	return q.upsertStmt.ExecContext(ctx, e)
-}
-
-func (q *TransactionQueries) Delete(ctx context.Context, tid finance.TransactionID) (sql.Result, error) {
-	return q.deleteStmt.ExecContext(ctx, map[string]any{"id": tid})
-}
-
-func (q *TransactionQueries) ExistsByBudgetID(ctx context.Context, criteria *finance.ByBudgetID) *sqlx.Row {
-	return q.existsByBudgetID.QueryRowContext(ctx, map[string]any{
-		"budget_id": criteria.ID,
-	})
-}
-
-type TransactionEntity struct {
-	ID                 finance.TransactionID   `db:"id"`
-	Type               finance.TransactionType `db:"type"`
-	BudgetID           *finance.BudgetID       `db:"budget_id"`
-	BudgetPeriodID     *finance.BudgetPeriodID `db:"budget_period_id"`
-	Name               string                  `db:"name"`
-	Description        *string                 `db:"description"`
-	Date               time.Time               `db:"date"`
-	AmountCents        money.Cents             `db:"amount_cents"`
-	AmountCurrency     finance.CurrencyCode    `db:"amount_currency"`
-	BaseAmountCents    money.Cents             `db:"base_amount_cents"`
-	BaseAmountCurrency finance.CurrencyCode    `db:"base_amount_currency"`
-	ExchangeRate       decimal.Decimal         `db:"exchange_rate"`
-	CreatedAt          time.Time               `db:"created_at"`
-	UpdatedAt          time.Time               `db:"updated_at"`
+	return exists, nil
 }
 
 func TransactionEntityToModel(e *TransactionEntity) *finance.Transaction {
@@ -294,42 +109,61 @@ func TransactionEntityToModel(e *TransactionEntity) *finance.Transaction {
 	}
 
 	return &finance.Transaction{
-		ID:             e.ID,
-		Type:           e.Type,
-		BudgetID:       e.BudgetID,
-		BudgetPeriodID: e.BudgetPeriodID,
-		Name:           e.Name,
+		// ID:             finance.TransactionID(e.Id),
+		TransactionKey: finance.TransactionKey{
+			ID:      finance.TransactionID(e.Id),
+			SpaceID: space.ID(e.SpaceId),
+		},
+		Type:           finance.TransactionType(e.Type),
+		BudgetID:       (*finance.BudgetID)(e.BudgetId),
+		BudgetPeriodID: (*finance.BudgetPeriodID)(e.BudgetPeriodId),
+		Title:          e.Title,
 		Description:    ptr.Value(e.Description),
 		Date:           e.Date,
+		EffectiveDate:  e.EffectiveDate,
 		Amount: money.NewMoney(
-			e.AmountCurrency,
-			e.AmountCents,
+			money.CurrencyCode(e.AmountCurrency),
+			money.Cents(e.AmountCents),
 		),
 		BaseAmount: money.NewMoney(
-			e.BaseAmountCurrency,
-			e.BaseAmountCents,
+			money.CurrencyCode(e.BaseAmountCurrency),
+			money.Cents(e.BaseAmountCents),
 		),
 		ExchangeRate: e.ExchangeRate,
-		CreatedAt:    e.CreatedAt,
-		UpdatedAt:    e.UpdatedAt,
+		CreateTime:   e.CreateTime,
+		CreateBy:     auth.UserID(e.CreateBy),
+		UpdateTime:   e.UpdateTime,
+		UpdateBy:     auth.UserID(e.UpdateBy),
 	}
 }
 
 func TransactionEntityFromModel(t *finance.Transaction) *TransactionEntity {
-	return &TransactionEntity{
-		ID:                 t.ID,
-		Type:               t.Type,
-		BudgetID:           t.BudgetID,
-		BudgetPeriodID:     t.BudgetPeriodID,
-		Name:               t.Name,
+	entity := &TransactionEntity{
+		Id:                 t.ID.String(),
+		SpaceId:            t.SpaceID.String(),
+		Type:               t.Type.String(),
+		Title:              t.Title,
 		Description:        ptr.OfNonZero(t.Description),
 		Date:               t.Date,
-		AmountCents:        t.Amount.Cents,
-		AmountCurrency:     t.Amount.Currency,
-		BaseAmountCents:    t.BaseAmount.Cents,
-		BaseAmountCurrency: t.BaseAmount.Currency,
+		EffectiveDate:      t.EffectiveDate,
+		AmountCents:        t.Amount.Cents.Int64(),
+		AmountCurrency:     t.Amount.Currency.String(),
+		BaseAmountCents:    t.BaseAmount.Cents.Int64(),
+		BaseAmountCurrency: t.BaseAmount.Currency.String(),
 		ExchangeRate:       t.ExchangeRate,
-		CreatedAt:          t.CreatedAt,
-		UpdatedAt:          t.UpdatedAt,
+		CreateTime:         t.CreateTime,
+		CreateBy:           t.CreateBy.String(),
+		UpdateTime:         t.UpdateTime,
+		UpdateBy:           t.UpdateBy.String(),
 	}
+
+	if t.BudgetID != nil {
+		entity.BudgetId = ptr.Of(t.BudgetID.String())
+	}
+
+	if t.BudgetPeriodID != nil {
+		entity.BudgetPeriodId = ptr.Of(t.BudgetPeriodID.String())
+	}
+
+	return entity
 }

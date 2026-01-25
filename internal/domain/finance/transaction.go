@@ -8,17 +8,19 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/foundation/appearance"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/foundation/decimal"
 	"github.com/masterkeysrd/saturn/internal/foundation/id"
 	"github.com/masterkeysrd/saturn/internal/foundation/pagination"
+	"github.com/masterkeysrd/saturn/internal/foundation/space"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 )
 
 type TransactionStore interface {
-	Get(context.Context, TransactionID) (*Transaction, error)
-	List(context.Context) ([]*Transaction, error)
+	Get(context.Context, TransactionKey) (*Transaction, error)
+	List(context.Context, space.ID) ([]*Transaction, error)
 	Store(context.Context, *Transaction) error
-	Delete(context.Context, TransactionID) error
+	Delete(context.Context, TransactionKey) error
 	ExistsBy(context.Context, TransactionCriteria) (bool, error)
 }
 
@@ -36,18 +38,21 @@ type TransactionPage = pagination.Page[*TransactionItem]
 // Transaction represents a persisted financial transaction.
 // It includes the base currency conversion and exchange rate for reporting.
 type Transaction struct {
-	ID             TransactionID
+	TransactionKey
 	Type           TransactionType
 	BudgetID       *BudgetID
 	BudgetPeriodID *BudgetPeriodID
-	Name           string
+	Title          string
 	Description    string
 	Amount         money.Money
 	BaseAmount     money.Money
 	ExchangeRate   decimal.Decimal
 	Date           time.Time
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	EffectiveDate  time.Time
+	CreateTime     time.Time
+	CreateBy       auth.UserID
+	UpdateTime     time.Time
+	UpdateBy       auth.UserID
 }
 
 // Validate ensures the Transaction is ready for persistence.
@@ -107,6 +112,11 @@ func (t *Transaction) validateExpense() error {
 	return nil
 }
 
+type TransactionKey struct {
+	ID      TransactionID
+	SpaceID space.ID
+}
+
 // TransactionID uniquely identifies a transaction.
 type TransactionID string
 
@@ -133,6 +143,10 @@ func (tt TransactionType) Validate() error {
 	}
 
 	return nil
+}
+
+func (tt TransactionType) String() string {
+	return string(tt)
 }
 
 type TransactionSearchInput struct {

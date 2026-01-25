@@ -88,7 +88,7 @@ func (s *Service) CreateExpense(ctx context.Context, actor access.Principal, exp
 		exchangeRate.Rate = rateEntry.Rate
 	}
 
-	transaction, err := exp.Transaction(budgetPeriod, exchangeRate)
+	transaction, err := exp.Transaction(actor, budgetPeriod, exchangeRate)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create transaction: %w", err)
 	}
@@ -122,7 +122,7 @@ func (s *Service) UpdateExpense(ctx context.Context, actor access.Principal, in 
 	}
 
 	// Get existing transaction
-	existing, err := s.GetTransaction(ctx, in.ID)
+	existing, err := s.GetTransaction(ctx, actor, in.ID)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get transaction: %w", err)
 	}
@@ -130,7 +130,7 @@ func (s *Service) UpdateExpense(ctx context.Context, actor access.Principal, in 
 	// Check is done before the existing date is updated.
 	shouldUpdatePeriod := in.UpdateMask.Contains("date") && in.Expense.Date != existing.Date
 
-	if err := in.Expense.UpdateTransaction(existing, in.UpdateMask); err != nil {
+	if err := in.Expense.UpdateTransaction(actor, existing, in.UpdateMask); err != nil {
 		return nil, fmt.Errorf("cannot update transaction: %w", err)
 	}
 
@@ -155,33 +155,56 @@ func (s *Service) UpdateExpense(ctx context.Context, actor access.Principal, in 
 	return existing, nil
 }
 
-func (s *Service) ListTransactions(ctx context.Context) ([]*Transaction, error) {
-	transactions, err := s.transactionStore.List(ctx)
+func (s *Service) ListTransactions(ctx context.Context, actor access.Principal) ([]*Transaction, error) {
+	if !actor.IsSpaceMember() {
+		return nil, errors.New("only space members can list transactions")
+	}
+
+	transactions, err := s.transactionStore.List(ctx, actor.SpaceID())
 	if err != nil {
 		return nil, fmt.Errorf("cannot list transactions: %w", err)
 	}
 	return transactions, nil
 }
 
-func (s *Service) DeleteTransaction(ctx context.Context, tid TransactionID) error {
+func (s *Service) DeleteTransaction(ctx context.Context, principal access.Principal, tid TransactionID) error {
+	if !principal.IsSpaceAdmin() {
+		return errors.New("only space admins can delete transactions")
+	}
+
 	if err := id.Validate(tid); err != nil {
 		return fmt.Errorf("invalid transaction id: %s", err)
 	}
-	if _, err := s.transactionStore.Get(ctx, tid); err != nil {
+
+	key := TransactionKey{
+		ID:      tid,
+		SpaceID: principal.SpaceID(),
+	}
+
+	// Update to use a existence check instead of fetching the whole transaction
+	if _, err := s.transactionStore.Get(ctx, key); err != nil {
 		return fmt.Errorf("cannot get transaction: %w", err)
 	}
-	if err := s.transactionStore.Delete(ctx, tid); err != nil {
+
+	if err := s.transactionStore.Delete(ctx, key); err != nil {
 		return fmt.Errorf("cannot delete transaction: %s", err)
 	}
 	return nil
 }
 
-func (s *Service) GetTransaction(ctx context.Context, tid TransactionID) (*Transaction, error) {
+func (s *Service) GetTransaction(ctx context.Context, principal access.Principal, tid TransactionID) (*Transaction, error) {
+	if !principal.IsSpaceMember() {
+		return nil, errors.New("only space members can get transactions")
+	}
+
 	if err := id.Validate(tid); err != nil {
 		return nil, fmt.Errorf("invalid id: %w", err)
 	}
 
-	transaction, err := s.transactionStore.Get(ctx, tid)
+	transaction, err := s.transactionStore.Get(ctx, TransactionKey{
+		ID:      tid,
+		SpaceID: principal.SpaceID(),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("cannot get transaction: %w", err)
 	}
@@ -306,7 +329,10 @@ func (s *Service) DeleteBudget(ctx context.Context, actor access.Principal, bid 
 		return fmt.Errorf("invalid budget id: %w", err)
 	}
 
-	criteria := ByBudgetID{bid}
+	criteria := ByBudgetID{
+		ID:      bid,
+		SpaceID: actor.SpaceID(),
+	}
 	exists, err := s.transactionStore.ExistsBy(ctx, &criteria)
 	if err != nil {
 		return fmt.Errorf("cannot check transactions existence for budget: %w", err)

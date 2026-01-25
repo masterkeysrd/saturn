@@ -1,7 +1,10 @@
 package finance
 
+import "github.com/masterkeysrd/saturn/internal/foundation/space"
+
 type ByBudgetID struct {
-	ID BudgetID
+	ID      BudgetID
+	SpaceID space.ID
 }
 
 // isTransactionCriteria enable to filter some transaction

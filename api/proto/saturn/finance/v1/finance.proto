@@ -10,6 +10,7 @@ import "google/api/field_behavior.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
+import "google/type/date.proto";
 import "google/type/decimal.proto";
 import "saturn/type/appearance.proto";
 import "saturn/type/money.proto";
@@ -96,6 +97,14 @@ service Finance {
   rpc DeleteBudget(DeleteBudgetRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {delete: "/v1/finance/budgets/{id}"};
     option (google.api.method_signature) = "id";
+  }
+
+  // Create a new transaction of expense type.
+  rpc CreateExpense(CreateExpenseRequest) returns (Transaction) {
+    option (google.api.http) = {
+      post: "/v1/finance/expenses"
+      body: "expense"
+    };
   }
 
   // GetSetting retrieves the finance settings for the space.
@@ -360,6 +369,129 @@ message Budget {
   // Statistics related to the budget.
   // Only populated when View is FULL.
   Stats stats = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for Finance.CreateExpense.
+message CreateExpenseRequest {
+  // The expense transaction to create.
+  Expense expense = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Expense represents an expense transaction linked to a budget.
+message Expense {
+  // The unique identifier of the transaction.
+  // Output only.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The budget ID this expense is associated with.
+  // Required.
+  // Must refer to an existing budget.
+  string budget_id = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // The title or short description of the expense.
+  // Required.
+  string title = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // The detailed description of the expense.
+  // Optional.
+  // Max length: 500 characters.
+  string description = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // The amount of the expense.
+  // Required.
+  // Must be a positive value.
+  // Currency must match the budget's currency.
+  // Example: $50.00 (USD)
+  saturn.type.Money amount = 5 [(google.api.field_behavior) = REQUIRED];
+
+  // The exchange rate at the time of the expense.
+  // If not provided, the system uses the current exchange rate.
+  google.type.Decimal exchange_rate = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // The date when the expense occurred.
+  // Required.
+  // Must not be in the future.
+  // Format: YYYY-MM-DD
+  google.type.Date date = 7 [(google.api.field_behavior) = REQUIRED];
+
+  // The date that the expense will affect the budget.
+  // If not provided, defaults to the same as 'date'.
+  // Format: YYYY-MM-DD
+  // Optional.
+  google.type.Date effective_date = 8 [(google.api.field_behavior) = OPTIONAL];
+
+  // Creation timestamp of the expense.
+  // Output only.
+  google.protobuf.Timestamp create_time = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Last update timestamp of the expense.
+  // Output only.
+  google.protobuf.Timestamp update_time = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Transaction represents a financial transaction, such as an expense.
+message Transaction {
+  // The type of the transaction.
+  enum Type {
+    // Default type.
+    TYPE_UNSPECIFIED = 0;
+
+    // Expense transaction.
+    EXPENSE = 1;
+  }
+
+  message BudgetInfo {
+    // The budget ID this transaction is associated with.
+    string budget_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // The title or short description of the transaction.
+    string name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // The detailed description of the transaction.
+    string description = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  }
+
+  // The unique identifier of the transaction.
+  // Output only.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The type of the transaction.
+  Type type = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Information about the associated budget.
+  // Only populated for expense transactions.
+  BudgetInfo budget = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The amount of the transaction.
+  // Output only.
+  saturn.type.Money amount = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The base amount of the transaction in space base currency.
+  // Output only.
+  saturn.type.Money base_amount = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The exchange rate used for this transaction.
+  // Output only.
+  google.type.Decimal exchange_rate = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The date when the transaction occurred.
+  // Output only.
+  google.type.Date date = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The effective date that the transaction affects budgets.
+  // Output only.
+  // Defaults to 'date' if not specified during creation.
+  google.type.Date effective_date = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Creation timestamp of the transaction.
+  // Output only.
+  // Applies to all transaction types.
+  google.protobuf.Timestamp create_time = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Last update timestamp of the transaction.
+  // Output only.
+  // Applies to all transaction types.
+  google.protobuf.Timestamp update_time = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // Request message for Finance.UpdateSetting.

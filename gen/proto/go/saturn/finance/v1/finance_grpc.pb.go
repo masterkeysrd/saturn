@@ -34,6 +34,7 @@ const (
 	Finance_GetBudget_FullMethodName          = "/saturn.finance.v1.Finance/GetBudget"
 	Finance_UpdateBudget_FullMethodName       = "/saturn.finance.v1.Finance/UpdateBudget"
 	Finance_DeleteBudget_FullMethodName       = "/saturn.finance.v1.Finance/DeleteBudget"
+	Finance_CreateExpense_FullMethodName      = "/saturn.finance.v1.Finance/CreateExpense"
 	Finance_GetSetting_FullMethodName         = "/saturn.finance.v1.Finance/GetSetting"
 	Finance_UpdateSetting_FullMethodName      = "/saturn.finance.v1.Finance/UpdateSetting"
 	Finance_ActivateSetting_FullMethodName    = "/saturn.finance.v1.Finance/ActivateSetting"
@@ -74,6 +75,8 @@ type FinanceClient interface {
 	UpdateBudget(ctx context.Context, in *UpdateBudgetRequest, opts ...grpc.CallOption) (*Budget, error)
 	// Deletes a budget.
 	DeleteBudget(ctx context.Context, in *DeleteBudgetRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Create a new transaction of expense type.
+	CreateExpense(ctx context.Context, in *CreateExpenseRequest, opts ...grpc.CallOption) (*Transaction, error)
 	// GetSetting retrieves the finance settings for the space.
 	GetSetting(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Setting, error)
 	// UpdateSetting modifies the finance settings for the space.
@@ -202,6 +205,16 @@ func (c *financeClient) DeleteBudget(ctx context.Context, in *DeleteBudgetReques
 	return out, nil
 }
 
+func (c *financeClient) CreateExpense(ctx context.Context, in *CreateExpenseRequest, opts ...grpc.CallOption) (*Transaction, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Transaction)
+	err := c.cc.Invoke(ctx, Finance_CreateExpense_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *financeClient) GetSetting(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Setting, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Setting)
@@ -267,6 +280,8 @@ type FinanceServer interface {
 	UpdateBudget(context.Context, *UpdateBudgetRequest) (*Budget, error)
 	// Deletes a budget.
 	DeleteBudget(context.Context, *DeleteBudgetRequest) (*emptypb.Empty, error)
+	// Create a new transaction of expense type.
+	CreateExpense(context.Context, *CreateExpenseRequest) (*Transaction, error)
 	// GetSetting retrieves the finance settings for the space.
 	GetSetting(context.Context, *emptypb.Empty) (*Setting, error)
 	// UpdateSetting modifies the finance settings for the space.
@@ -317,6 +332,9 @@ func (UnimplementedFinanceServer) UpdateBudget(context.Context, *UpdateBudgetReq
 }
 func (UnimplementedFinanceServer) DeleteBudget(context.Context, *DeleteBudgetRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteBudget not implemented")
+}
+func (UnimplementedFinanceServer) CreateExpense(context.Context, *CreateExpenseRequest) (*Transaction, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateExpense not implemented")
 }
 func (UnimplementedFinanceServer) GetSetting(context.Context, *emptypb.Empty) (*Setting, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetSetting not implemented")
@@ -546,6 +564,24 @@ func _Finance_DeleteBudget_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Finance_CreateExpense_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateExpenseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).CreateExpense(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_CreateExpense_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).CreateExpense(ctx, req.(*CreateExpenseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Finance_GetSetting_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
@@ -650,6 +686,10 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteBudget",
 			Handler:    _Finance_DeleteBudget_Handler,
+		},
+		{
+			MethodName: "CreateExpense",
+			Handler:    _Finance_CreateExpense_Handler,
 		},
 		{
 			MethodName: "GetSetting",

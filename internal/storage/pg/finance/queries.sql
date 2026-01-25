@@ -377,3 +377,168 @@ DELETE FROM finance.exchange_rates
 WHERE
   space_id =:space_id
   AND currency_code =:currency_code;
+
+----------------------------------------------------
+-- SQL Queries for Transactions Management        --
+----------------------------------------------------
+-- name: GetTransactionByID
+-- return: one
+-- return_type: TransactionEntity
+SELECT
+  id,
+  space_id,
+  type,
+  budget_id,
+  budget_period_id,
+  title,
+  description,
+  date,
+  effective_date,
+  amount_cents,
+  amount_currency,
+  base_amount_cents,
+  base_amount_currency,
+  exchange_rate,
+  create_time,
+  create_by,
+  update_time,
+  update_by
+FROM
+  finance.transactions
+WHERE
+  id =:id
+  AND space_id =:space_id
+LIMIT
+  1;
+
+-- name: ListTransactions
+-- return: many
+-- return_type: TransactionEntity
+SELECT
+  id,
+  space_id,
+  type,
+  budget_id,
+  budget_period_id,
+  title,
+  description,
+  date,
+  effective_date,
+  amount_cents,
+  amount_currency,
+  base_amount_cents,
+  base_amount_currency,
+  exchange_rate,
+  create_time,
+  create_by,
+  update_time,
+  update_by
+FROM
+  finance.transactions
+WHERE
+  space_id =:space_id
+ORDER BY
+  date DESC,
+  create_time DESC;
+
+-- name: ExistsTransactionByBudget
+-- return: one
+-- return_type: bool
+SELECT
+  EXISTS (
+    SELECT
+      1
+    FROM
+      finance.transactions
+    WHERE
+      budget_id =:budget_id
+      AND space_id =:space_id
+  );
+
+-- name: UpsertTransaction
+-- return: one
+-- param_type: TransactionEntity
+-- return_type: TransactionEntity
+INSERT INTO
+  finance.transactions (
+    id,
+    space_id,
+    type,
+    budget_id,
+    budget_period_id,
+    title,
+    description,
+    date,
+    effective_date,
+    amount_cents,
+    amount_currency,
+    base_amount_cents,
+    base_amount_currency,
+    exchange_rate,
+    create_time,
+    create_by,
+    update_time,
+    update_by
+  )
+VALUES
+  (
+:id,
+:space_id,
+:type,
+:budget_id,
+:budget_period_id,
+:title,
+:description,
+:date,
+:effective_date,
+:amount_cents,
+:amount_currency,
+:base_amount_cents,
+:base_amount_currency,
+:exchange_rate,
+:create_time,
+:create_by,
+:update_time,
+:update_by
+  )
+ON CONFLICT (id, space_id) DO UPDATE
+SET
+  budget_id = EXCLUDED.budget_id,
+  budget_period_id = EXCLUDED.budget_period_id,
+  title = EXCLUDED.title,
+  description = EXCLUDED.description,
+  date = EXCLUDED.date,
+  effective_date = EXCLUDED.effective_date,
+  amount_cents = EXCLUDED.amount_cents,
+  amount_currency = EXCLUDED.amount_currency,
+  base_amount_cents = EXCLUDED.base_amount_cents,
+  base_amount_currency = EXCLUDED.base_amount_currency,
+  exchange_rate = EXCLUDED.exchange_rate,
+  update_time = EXCLUDED.update_time,
+  update_by = EXCLUDED.update_by
+RETURNING
+  id,
+  space_id,
+  type,
+  budget_id,
+  budget_period_id,
+  title,
+  description,
+  date,
+  effective_date,
+  amount_cents,
+  amount_currency,
+  base_amount_cents,
+  base_amount_currency,
+  exchange_rate,
+  create_time,
+  create_by,
+  update_time,
+  update_by;
+
+-- name: DeleteTransactionByID
+-- return: exec
+DELETE FROM finance.transactions
+WHERE
+  id =:id
+  AND space_id =:space_id;

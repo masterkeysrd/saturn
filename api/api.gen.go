@@ -9,83 +9,14 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
-// Defines values for TransactionType.
-const (
-	TransactionTypeExpense  TransactionType = "expense"
-	TransactionTypeIncome   TransactionType = "income"
-	TransactionTypeTransfer TransactionType = "transfer"
-)
-
 // Defines values for FinanceGetInsightsParamsGroupBy.
 const (
 	Month FinanceGetInsightsParamsGroupBy = "month"
 )
 
-// Defines values for FinanceListTransactionsParamsType.
-const (
-	FinanceListTransactionsParamsTypeExpense  FinanceListTransactionsParamsType = "expense"
-	FinanceListTransactionsParamsTypeIncome   FinanceListTransactionsParamsType = "income"
-	FinanceListTransactionsParamsTypeTransfer FinanceListTransactionsParamsType = "transfer"
-)
-
-// Expense Represents the user-intent to record an expense.
-// The server will validate the expense, enrich it with currency data,
-// and transform it into a Transaction.
-type Expense struct {
-	// Amount The amount in the smallest denomination (e.g., cents).
-	Amount int64 `json:"amount"`
-
-	// BudgetId ID of the budget to which this expense belongs.
-	BudgetId string `json:"budget_id"`
-
-	// Date The date when the expense occurred.
-	Date openapi_types.Date `json:"date"`
-
-	// Description Optional longer description.
-	Description *string `json:"description"`
-
-	// ExchangeRate Optional exchange rate for the expense.
-	// If not provided, the server will use the rate from the saved currency.
-	ExchangeRate *float64 `json:"exchange_rate,omitempty"`
-
-	// Id Generated UUID of the expense (same as transaction ID).
-	Id *string `json:"id,omitempty"`
-
-	// Name Short name of the expense.
-	Name string `json:"name"`
-}
-
 // FinanceInsights defines model for FinanceInsights.
 type FinanceInsights struct {
 	Spending SpendingInsights `json:"spending"`
-}
-
-// ListTransactionsResponse Response containing a list of transactions.
-type ListTransactionsResponse struct {
-	// Meta Metadata regarding the pagination state of the response.
-	Meta         Meta              `json:"meta"`
-	Transactions []TransactionItem `json:"transactions"`
-}
-
-// Meta Metadata regarding the pagination state of the response.
-type Meta struct {
-	// HasNext Indicates if there is a subsequent page of data.
-	HasNext bool `json:"has_next"`
-
-	// HasPrevious Indicates if there is a preceding page of data.
-	HasPrevious bool `json:"has_previous"`
-
-	// Page The current page number (1-based).
-	Page int `json:"page"`
-
-	// Size The number of items per page.
-	Size int `json:"size"`
-
-	// TotalItems The total count of items matching the criteria across all pages.
-	TotalItems int `json:"total_items"`
-
-	// TotalPages The total number of pages available.
-	TotalPages int `json:"total_pages"`
 }
 
 // Money Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
@@ -185,86 +116,6 @@ type SpendingTrendPeriod struct {
 	Usage float64 `json:"usage"`
 }
 
-// Transaction A fully-realized financial transaction stored in the ledger.
-// Produced by Expense, Income, or Transfer operations.
-type Transaction struct {
-	// Amount Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
-	Amount Money `json:"amount"`
-
-	// BaseAmount Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
-	BaseAmount Money `json:"base_amount"`
-
-	// BudgetId Budget this transaction belongs to.
-	BudgetId    *string            `json:"budget_id"`
-	CreatedAt   time.Time          `json:"created_at"`
-	Date        openapi_types.Date `json:"date"`
-	Description *string            `json:"description"`
-
-	// ExchangeRate Rate used to convert amount → base_amount.
-	ExchangeRate float64 `json:"exchange_rate"`
-
-	// Id UUID of the transaction.
-	Id *string `json:"id,omitempty"`
-
-	// Name Copy of operation name.
-	Name string `json:"name"`
-
-	// Type Type of transaction.
-	Type      TransactionType `json:"type"`
-	UpdatedAt time.Time       `json:"updated_at"`
-}
-
-// TransactionBudget Contextual information about the budget this transaction belongs to.
-type TransactionBudget struct {
-	// Color Hex code or name for the budget's presentation color.
-	Color string `json:"color"`
-
-	// IconName Icon identifier for the budget (e.g., 'shopping', 'transport').
-	IconName string `json:"icon_name"`
-
-	// Id Unique identifier of the associated budget.
-	Id string `json:"id"`
-
-	// Name Name of the budget (e.g., 'Groceries', 'Transport').
-	Name string `json:"name"`
-}
-
-// TransactionItem A financial transaction record, including its associated budget context.
-type TransactionItem struct {
-	// Amount Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
-	Amount Money `json:"amount"`
-
-	// BaseAmount Standard representation of a monetary value using minor units (cents) and ISO 4217 currency code.
-	BaseAmount Money `json:"base_amount"`
-
-	// Budget Contextual information about the budget this transaction belongs to.
-	Budget    *TransactionBudget `json:"budget,omitempty"`
-	CreatedAt time.Time          `json:"created_at"`
-	Date      openapi_types.Date `json:"date"`
-
-	// Description Detailed notes on the transaction.
-	Description *string `json:"description"`
-
-	// ExchangeRate Rate used to convert amount → base_amount.
-	ExchangeRate float64 `json:"exchange_rate"`
-
-	// Id Unique identifier of the transaction.
-	Id string `json:"id"`
-
-	// Name Short title of the transaction.
-	Name string `json:"name"`
-
-	// Type Type of transaction.
-	Type      TransactionType `json:"type"`
-	UpdatedAt time.Time       `json:"updated_at"`
-}
-
-// TransactionType Type of transaction.
-type TransactionType string
-
-// UpdateMaskParam defines model for UpdateMaskParam.
-type UpdateMaskParam = string
-
 // FinanceGetInsightsParams defines parameters for FinanceGetInsights.
 type FinanceGetInsightsParams struct {
 	// StartDate Start date for the insights period (ISO 8601 format)
@@ -282,33 +133,3 @@ type FinanceGetInsightsParams struct {
 
 // FinanceGetInsightsParamsGroupBy defines parameters for FinanceGetInsights.
 type FinanceGetInsightsParamsGroupBy string
-
-// FinanceListTransactionsParams defines parameters for FinanceListTransactions.
-type FinanceListTransactionsParams struct {
-	// BudgetId Filter by budget
-	BudgetId *string `form:"budget_id,omitempty" json:"budget_id,omitempty"`
-
-	// Type Filter by transaction type
-	Type *FinanceListTransactionsParamsType `form:"type,omitempty" json:"type,omitempty"`
-}
-
-// FinanceListTransactionsParamsType defines parameters for FinanceListTransactions.
-type FinanceListTransactionsParamsType string
-
-// FinanceUpdateExpenseParams defines parameters for FinanceUpdateExpense.
-type FinanceUpdateExpenseParams struct {
-	// UpdateMask Comma-separated list of fields to update. If not provided, all fields will be updated.
-	// Supported fields: name, description, date, amount, exchange_rate
-	//
-	// Examples:
-	// - `name` - Update only name
-	// - `name,amount` - Update name and amount
-	// - `name,amount,exchange_rate` - Update multiple fields
-	UpdateMask *UpdateMaskParam `form:"updateMask,omitempty" json:"updateMask,omitempty"`
-}
-
-// FinanceCreateExpenseJSONRequestBody defines body for FinanceCreateExpense for application/json ContentType.
-type FinanceCreateExpenseJSONRequestBody = Expense
-
-// FinanceUpdateExpenseJSONRequestBody defines body for FinanceUpdateExpense for application/json ContentType.
-type FinanceUpdateExpenseJSONRequestBody = Expense

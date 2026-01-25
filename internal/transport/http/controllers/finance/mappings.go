@@ -3,27 +3,9 @@ package financehttp
 import (
 	"github.com/masterkeysrd/saturn/api"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
-	"github.com/masterkeysrd/saturn/internal/pkg/money"
 	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 	"github.com/oapi-codegen/runtime/types"
 )
-
-func ExpenseFromAPI(e *api.Expense) *finance.Expense {
-	if e == nil {
-		return nil
-	}
-
-	return &finance.Expense{
-		ID:       finance.TransactionID(ptr.Value(e.Id)),
-		BudgetID: finance.BudgetID(e.BudgetId),
-		Operation: finance.Operation{
-			Name:        e.Name,
-			Description: ptr.Value(e.Description),
-			Amount:      money.Cents(e.Amount),
-			Date:        e.Date.Time,
-		},
-	}
-}
 
 func TransactionsToAPI(list []*finance.Transaction) []api.Transaction {
 	resp := make([]api.Transaction, 0, len(list))
@@ -45,13 +27,13 @@ func TransactionToAPI(t *finance.Transaction) *api.Transaction {
 		Id:          ptr.Of(t.ID.String()),
 		Type:        api.TransactionType(t.Type),
 		BudgetId:    ptr.Of(t.BudgetID.String()),
-		Name:        t.Name,
+		Name:        t.Title,
 		Description: ptr.OfNonZero(t.Description),
 		Amount:      api.APIMoney(t.Amount),
 		BaseAmount:  api.APIMoney(t.BaseAmount),
 		Date:        types.Date{Time: t.Date},
-		CreatedAt:   t.CreatedAt,
-		UpdatedAt:   t.UpdatedAt,
+		CreatedAt:   t.CreateTime,
+		UpdatedAt:   t.UpdateTime,
 	}
 }
 

@@ -362,6 +362,163 @@ DELETE FROM finance.exchange_rates
 WHERE
   space_id =:space_id
   AND currency_code =:currency_code;`
+
+	// GetTransactionByIDQuery is the SQL for the 'GetTransactionByID' query.
+	GetTransactionByIDQuery = `
+SELECT
+  id,
+  space_id,
+  type,
+  budget_id,
+  budget_period_id,
+  title,
+  description,
+  date,
+  effective_date,
+  amount_cents,
+  amount_currency,
+  base_amount_cents,
+  base_amount_currency,
+  exchange_rate,
+  create_time,
+  create_by,
+  update_time,
+  update_by
+FROM
+  finance.transactions
+WHERE
+  id =:id
+  AND space_id =:space_id
+LIMIT
+  1;`
+
+	// ListTransactionsQuery is the SQL for the 'ListTransactions' query.
+	ListTransactionsQuery = `
+SELECT
+  id,
+  space_id,
+  type,
+  budget_id,
+  budget_period_id,
+  title,
+  description,
+  date,
+  effective_date,
+  amount_cents,
+  amount_currency,
+  base_amount_cents,
+  base_amount_currency,
+  exchange_rate,
+  create_time,
+  create_by,
+  update_time,
+  update_by
+FROM
+  finance.transactions
+WHERE
+  space_id =:space_id
+ORDER BY
+  date DESC,
+  create_time DESC;`
+
+	// ExistsTransactionByBudgetQuery is the SQL for the 'ExistsTransactionByBudget' query.
+	ExistsTransactionByBudgetQuery = `
+SELECT
+  EXISTS (
+    SELECT
+      1
+    FROM
+      finance.transactions
+    WHERE
+      budget_id =:budget_id
+      AND space_id =:space_id
+  );`
+
+	// UpsertTransactionQuery is the SQL for the 'UpsertTransaction' query.
+	UpsertTransactionQuery = `
+INSERT INTO
+  finance.transactions (
+    id,
+    space_id,
+    type,
+    budget_id,
+    budget_period_id,
+    title,
+    description,
+    date,
+    effective_date,
+    amount_cents,
+    amount_currency,
+    base_amount_cents,
+    base_amount_currency,
+    exchange_rate,
+    create_time,
+    create_by,
+    update_time,
+    update_by
+  )
+VALUES
+  (
+:id,
+:space_id,
+:type,
+:budget_id,
+:budget_period_id,
+:title,
+:description,
+:date,
+:effective_date,
+:amount_cents,
+:amount_currency,
+:base_amount_cents,
+:base_amount_currency,
+:exchange_rate,
+:create_time,
+:create_by,
+:update_time,
+:update_by
+  )
+ON CONFLICT (id, space_id) DO UPDATE
+SET
+  budget_id = EXCLUDED.budget_id,
+  budget_period_id = EXCLUDED.budget_period_id,
+  title = EXCLUDED.title,
+  description = EXCLUDED.description,
+  date = EXCLUDED.date,
+  effective_date = EXCLUDED.effective_date,
+  amount_cents = EXCLUDED.amount_cents,
+  amount_currency = EXCLUDED.amount_currency,
+  base_amount_cents = EXCLUDED.base_amount_cents,
+  base_amount_currency = EXCLUDED.base_amount_currency,
+  exchange_rate = EXCLUDED.exchange_rate,
+  update_time = EXCLUDED.update_time,
+  update_by = EXCLUDED.update_by
+RETURNING
+  id,
+  space_id,
+  type,
+  budget_id,
+  budget_period_id,
+  title,
+  description,
+  date,
+  effective_date,
+  amount_cents,
+  amount_currency,
+  base_amount_cents,
+  base_amount_currency,
+  exchange_rate,
+  create_time,
+  create_by,
+  update_time,
+  update_by;`
+
+	// DeleteTransactionByIDQuery is the SQL for the 'DeleteTransactionByID' query.
+	DeleteTransactionByIDQuery = `
+DELETE FROM finance.transactions
+WHERE
+  id =:id
+  AND space_id =:space_id;`
 )
 
 // BudgetPeriodEntity represents a row from the 'budget_periods' table.
@@ -421,6 +578,29 @@ type SettingEntity struct {
 	CreateBy     string    `db:"create_by"`
 	UpdateTime   time.Time `db:"update_time"`
 	UpdateBy     string    `db:"update_by"`
+}
+
+// TransactionEntity represents a row from the 'transactions' table.
+type TransactionEntity struct {
+	Id                 string          `db:"id"`
+	SpaceId            string          `db:"space_id"`
+	Type               string          `db:"type"`
+	BudgetId           *string         `db:"budget_id"`
+	BudgetPeriodId     *string         `db:"budget_period_id"`
+	Title              string          `db:"title"`
+	Description        *string         `db:"description"`
+	Date               time.Time       `db:"date"`
+	EffectiveDate      time.Time       `db:"effective_date"`
+	AmountCents        int64           `db:"amount_cents"`
+	AmountCurrency     string          `db:"amount_currency"`
+	BaseAmountCents    int64           `db:"base_amount_cents"`
+	BaseAmountCurrency string          `db:"base_amount_currency"`
+	ExchangeRate       decimal.Decimal `db:"exchange_rate"`
+	SearchVector       *any            `db:"search_vector"`
+	CreateTime         time.Time       `db:"create_time"`
+	CreateBy           string          `db:"create_by"`
+	UpdateTime         time.Time       `db:"update_time"`
+	UpdateBy           string          `db:"update_by"`
 }
 
 // GetSettingsBySpaceIDParams represents the parameters for the 'GetSettingsBySpaceID' query.
@@ -493,6 +673,34 @@ type UpsertExchangeRateParams = ExchangeRateEntity
 type DeleteExchangeRateParams struct {
 	SpaceId      string `db:"space_id"`
 	CurrencyCode string `db:"currency_code"`
+}
+
+// GetTransactionByIDParams represents the parameters for the 'GetTransactionByID' query.
+type GetTransactionByIDParams struct {
+	Id      string `db:"id"`
+	SpaceId string `db:"space_id"`
+}
+
+// ListTransactionsParams represents the parameters for the 'ListTransactions' query.
+type ListTransactionsParams struct {
+	SpaceId string `db:"space_id"`
+}
+
+// ExistsTransactionByBudgetParams represents the parameters for the 'ExistsTransactionByBudget' query.
+type ExistsTransactionByBudgetParams struct {
+	BudgetId *string `db:"budget_id"`
+	SpaceId  string  `db:"space_id"`
+}
+
+// UpsertTransactionParams represents the parameters for the 'UpsertTransaction' query.
+//
+// UpsertTransactionParams is an alias of [TransactionEntity].
+type UpsertTransactionParams = TransactionEntity
+
+// DeleteTransactionByIDParams represents the parameters for the 'DeleteTransactionByID' query.
+type DeleteTransactionByIDParams struct {
+	Id      string `db:"id"`
+	SpaceId string `db:"space_id"`
 }
 
 // GetSettingsBySpaceID executes the 'GetSettingsBySpaceID' query and returns a single row.
@@ -698,4 +906,81 @@ func UpsertExchangeRate(ctx context.Context, db sqlx.ExtContext, params *UpsertE
 // DeleteExchangeRate executes the 'DeleteExchangeRate' query.
 func DeleteExchangeRate(ctx context.Context, e sqlx.ExtContext, params *DeleteExchangeRateParams) (sql.Result, error) {
 	return sqlx.NamedExecContext(ctx, e, DeleteExchangeRateQuery, params)
+}
+
+// GetTransactionByID executes the 'GetTransactionByID' query and returns a single row.
+func GetTransactionByID(ctx context.Context, db sqlx.ExtContext, params *GetTransactionByIDParams) (*TransactionEntity, error) {
+	query, args, err := sqlx.Named(GetTransactionByIDQuery, params)
+	if err != nil {
+		return nil, err
+	}
+
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
+
+	var item TransactionEntity
+	if err := sqlx.GetContext(ctx, db, &item, query, args...); err != nil {
+		return nil, err
+	}
+
+	return &item, nil
+}
+
+// ListTransactions executes the 'ListTransactions' query and returns multiple rows.
+func ListTransactions(ctx context.Context, db sqlx.ExtContext, params *ListTransactionsParams, mapper func(*TransactionEntity) error) error {
+	rows, err := sqlx.NamedQueryContext(ctx, db, ListTransactionsQuery, params)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var item TransactionEntity
+		if err := rows.StructScan(&item); err != nil {
+			return err
+		}
+		if err := mapper(&item); err != nil {
+			return err
+		}
+	}
+
+	return rows.Err()
+}
+
+// ExistsTransactionByBudget executes the 'ExistsTransactionByBudget' query and returns a single row.
+func ExistsTransactionByBudget(ctx context.Context, db sqlx.ExtContext, params *ExistsTransactionByBudgetParams) (bool, error) {
+	query, args, err := sqlx.Named(ExistsTransactionByBudgetQuery, params)
+	if err != nil {
+		return false, err
+	}
+
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
+
+	var item bool
+	if err := sqlx.GetContext(ctx, db, &item, query, args...); err != nil {
+		return false, err
+	}
+
+	return item, nil
+}
+
+// UpsertTransaction executes the 'UpsertTransaction' query and returns a single row.
+func UpsertTransaction(ctx context.Context, db sqlx.ExtContext, params *UpsertTransactionParams) (*TransactionEntity, error) {
+	query, args, err := sqlx.Named(UpsertTransactionQuery, params)
+	if err != nil {
+		return nil, err
+	}
+
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
+
+	var item TransactionEntity
+	if err := sqlx.GetContext(ctx, db, &item, query, args...); err != nil {
+		return nil, err
+	}
+
+	return &item, nil
+}
+
+// DeleteTransactionByID executes the 'DeleteTransactionByID' query.
+func DeleteTransactionByID(ctx context.Context, e sqlx.ExtContext, params *DeleteTransactionByIDParams) (sql.Result, error) {
+	return sqlx.NamedExecContext(ctx, e, DeleteTransactionByIDQuery, params)
 }

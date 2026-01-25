@@ -209,6 +209,23 @@ export async function deleteBudget(req: MessageInitShape<typeof Types.DeleteBudg
 }
 
 /**
+ * Create a new transaction of expense type.
+ *
+ * @param req Types.CreateExpenseRequest
+ * @returns Promise<Types.Transaction>
+ */
+export async function createExpense(req: MessageInitShape<typeof Types.CreateExpenseRequestSchema>): Promise<Types.Transaction> {
+  const msg = create(Types.CreateExpenseRequestSchema, req);
+  const body = toJson(Types.CreateExpenseRequestSchema, msg);
+
+  return getAxios().post(`/api/v1/finance/expenses`
+    , body.expense
+  ).then((resp) => {
+    return fromJson(Types.TransactionSchema, resp.data);
+  });
+}
+
+/**
  * GetSetting retrieves the finance settings for the space.
  *
  * @returns Promise<Types.Setting>

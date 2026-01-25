@@ -51,16 +51,6 @@ func (p PaginationRequest) ToPagination() pagination.Pagination {
 	return pagination.New(p.Page, p.Size)
 }
 
-type CreateExpenseRequest struct {
-	Expense *Expense
-}
-
-type UpdateExpenseRequest struct {
-	ID         string
-	Expense    *Expense
-	UpdateMask *UpdateMaskParam
-}
-
 type ListTransactionsRequest struct {
 	Search   string `json:"search"`
 	Paginate PaginationRequest

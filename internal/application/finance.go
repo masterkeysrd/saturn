@@ -16,11 +16,16 @@ type FinanceService interface {
 	ListBudgets(context.Context, access.Principal) ([]*finance.Budget, error)
 	GetBudget(context.Context, access.Principal, finance.BudgetID) (*finance.Budget, error)
 	UpdateBudget(context.Context, access.Principal, *finance.UpdateBudgetInput) (*finance.Budget, error)
+
 	ListCurrencies(context.Context) ([]finance.Currency, error)
+
 	CreateExchangeRate(context.Context, access.Principal, *finance.ExchangeRate) error
 	ListExchangeRates(context.Context, access.Principal) ([]*finance.ExchangeRate, error)
 	GetExchangeRate(context.Context, access.Principal, finance.CurrencyCode) (*finance.ExchangeRate, error)
 	UpdateExchangeRate(context.Context, access.Principal, *finance.UpdateExchangeRateInput) (*finance.ExchangeRate, error)
+
+	CreateExpense(context.Context, access.Principal, *finance.Expense) (*finance.Transaction, error)
+
 	CreateSetting(context.Context, access.Principal, *finance.Setting) error
 	GetSetting(context.Context, access.Principal) (*finance.Setting, error)
 	UpdateSetting(context.Context, access.Principal, *finance.UpdateSettingInput) (*finance.Setting, error)
@@ -128,6 +133,16 @@ func (app *FinanceApp) UpdateExchangeRate(ctx context.Context, in *finance.Updat
 	}
 
 	return app.financeService.UpdateExchangeRate(ctx, principal, in)
+}
+
+// CreateExpense creates a new expense and its associated transaction.
+func (app *FinanceApp) CreateExpense(ctx context.Context, expense *finance.Expense) (*finance.Transaction, error) {
+	principal, ok := access.GetPrincipal(ctx)
+	if !ok {
+		return nil, errors.New("missing principal in context")
+	}
+
+	return app.financeService.CreateExpense(ctx, principal, expense)
 }
 
 // CreateSetting creates a new finance setting.

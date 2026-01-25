@@ -173,6 +173,30 @@ func UpdateExchangeRateInput(pb *financepb.UpdateExchangeRateRequest) (*finance.
 	}, nil
 }
 
+func Expense(pb *financepb.Expense) (*finance.Expense, error) {
+	if pb == nil {
+		return nil, nil
+	}
+
+	exchangeRate, err := encoding.DecimalPtr(pb.GetExchangeRate())
+	if err != nil {
+		return nil, err
+	}
+
+	return &finance.Expense{
+		ID:       finance.TransactionID(pb.GetId()),
+		BudgetID: finance.BudgetID(pb.GetBudgetId()),
+		Operation: finance.Operation{
+			Title:         pb.GetTitle(),
+			Description:   pb.GetDescription(),
+			Amount:        encoding.Money(pb.GetAmount()),
+			Date:          encoding.Date(pb.GetDate()),
+			EffectiveDate: encoding.DatePtr(pb.GetEffectiveDate()),
+			ExchangeRate:  exchangeRate,
+		},
+	}, nil
+}
+
 func Setting(pb *financepb.Setting) *finance.Setting {
 	if pb == nil {
 		return nil
@@ -220,5 +244,40 @@ func SettingsStatusPb(status finance.SettingsStatus) financepb.Setting_Status {
 		return financepb.Setting_INCOMPLETE
 	default:
 		return financepb.Setting_STATUS_UNSPECIFIED
+	}
+}
+
+func TransactionPb(t *finance.Transaction) *financepb.Transaction {
+	if t == nil {
+		return nil
+	}
+
+	pb := &financepb.Transaction{
+		Id:            t.ID.String(),
+		Type:          TransactionTypePb(t.Type),
+		Date:          encoding.DatePb(t.Date),
+		EffectiveDate: encoding.DatePb(t.EffectiveDate),
+		Amount:        encoding.MoneyPb(t.Amount),
+		BaseAmount:    encoding.MoneyPb(t.BaseAmount),
+		ExchangeRate:  encoding.DecimalPb(t.ExchangeRate),
+		CreateTime:    encoding.TimestampPb(t.CreateTime),
+		UpdateTime:    encoding.TimestampPb(t.UpdateTime),
+	}
+
+	if t.BudgetID != nil {
+		pb.Budget = &financepb.Transaction_BudgetInfo{
+			BudgetId: t.BudgetID.String(),
+		}
+	}
+
+	return pb
+}
+
+func TransactionTypePb(t finance.TransactionType) financepb.Transaction_Type {
+	switch t {
+	case finance.TransactionTypeExpense:
+		return financepb.Transaction_EXPENSE
+	default:
+		return financepb.Transaction_TYPE_UNSPECIFIED
 	}
 }

@@ -416,6 +416,40 @@
         ]
       }
     },
+    "/v1/finance/expenses": {
+      "post": {
+        "summary": "Create a new transaction of expense type.",
+        "operationId": "Finance_CreateExpense",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Transaction"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "expense",
+            "description": "The expense transaction to create.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Expense"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/finance/setting": {
       "get": {
         "summary": "GetSetting retrieves the finance settings for the space.",
@@ -1319,6 +1353,26 @@
         "member"
       ]
     },
+    "TransactionBudgetInfo": {
+      "type": "object",
+      "properties": {
+        "budgetId": {
+          "type": "string",
+          "description": "The budget ID this transaction is associated with.",
+          "readOnly": true
+        },
+        "name": {
+          "type": "string",
+          "description": "The title or short description of the transaction.",
+          "readOnly": true
+        },
+        "description": {
+          "type": "string",
+          "description": "The detailed description of the transaction.",
+          "readOnly": true
+        }
+      }
+    },
     "googleRpcStatus": {
       "type": "object",
       "properties": {
@@ -1360,6 +1414,28 @@
         }
       },
       "description": "Represents appearance for a resource."
+    },
+    "typeDate": {
+      "type": "object",
+      "properties": {
+        "year": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Year of the date. Must be from 1 to 9999, or 0 to specify a date without\na year."
+        },
+        "month": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Month of a year. Must be from 1 to 12, or 0 to specify a year without a\nmonth and day."
+        },
+        "day": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Day of a month. Must be from 1 to 31 and valid for the year and month, or 0\nto specify a year by itself or a year and month where the day isn't\nsignificant."
+        }
+      },
+      "description": "* A full date, with non-zero year, month, and day values\n* A month and day value, with a zero year, such as an anniversary\n* A year on its own, with zero month and day values\n* A year and month value, with a zero day, such as a credit card expiration\ndate\n\nRelated types are [google.type.TimeOfDay][google.type.TimeOfDay] and\n`google.protobuf.Timestamp`.",
+      "title": "Represents a whole or partial calendar date, such as a birthday. The time of\nday and time zone are either specified elsewhere or are insignificant. The\ndate is relative to the Gregorian Calendar. This can represent one of the\nfollowing:"
     },
     "typeDecimal": {
       "type": "object",
@@ -1580,6 +1656,63 @@
       "description": "ExchangeRate represents the conversion factor for a currency.",
       "required": [
         "rate"
+      ]
+    },
+    "v1Expense": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique identifier of the transaction.\nOutput only.",
+          "readOnly": true
+        },
+        "budgetId": {
+          "type": "string",
+          "description": "The budget ID this expense is associated with.\nRequired.\nMust refer to an existing budget."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title or short description of the expense.\nRequired."
+        },
+        "description": {
+          "type": "string",
+          "description": "The detailed description of the expense.\nOptional.\nMax length: 500 characters."
+        },
+        "amount": {
+          "$ref": "#/definitions/typeMoney",
+          "title": "The amount of the expense.\nRequired.\nMust be a positive value.\nCurrency must match the budget's currency.\nExample: $50.00 (USD)"
+        },
+        "exchangeRate": {
+          "$ref": "#/definitions/typeDecimal",
+          "description": "The exchange rate at the time of the expense.\nIf not provided, the system uses the current exchange rate."
+        },
+        "date": {
+          "$ref": "#/definitions/typeDate",
+          "title": "The date when the expense occurred.\nRequired.\nMust not be in the future.\nFormat: YYYY-MM-DD"
+        },
+        "effectiveDate": {
+          "$ref": "#/definitions/typeDate",
+          "description": "The date that the expense will affect the budget.\nIf not provided, defaults to the same as 'date'.\nFormat: YYYY-MM-DD\nOptional."
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp of the expense.\nOutput only.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp of the expense.\nOutput only.",
+          "readOnly": true
+        }
+      },
+      "description": "Expense represents an expense transaction linked to a budget.",
+      "required": [
+        "budgetId",
+        "title",
+        "amount",
+        "date"
       ]
     },
     "v1ListBudgetsResponse": {
@@ -1907,6 +2040,73 @@
         }
       },
       "description": "Pair of JWT access token and refresh token."
+    },
+    "v1Transaction": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique identifier of the transaction.\nOutput only.",
+          "readOnly": true
+        },
+        "type": {
+          "$ref": "#/definitions/v1TransactionType",
+          "description": "The type of the transaction.",
+          "readOnly": true
+        },
+        "budget": {
+          "$ref": "#/definitions/TransactionBudgetInfo",
+          "description": "Information about the associated budget.\nOnly populated for expense transactions.",
+          "readOnly": true
+        },
+        "amount": {
+          "$ref": "#/definitions/typeMoney",
+          "description": "The amount of the transaction.\nOutput only.",
+          "readOnly": true
+        },
+        "baseAmount": {
+          "$ref": "#/definitions/typeMoney",
+          "description": "The base amount of the transaction in space base currency.\nOutput only.",
+          "readOnly": true
+        },
+        "exchangeRate": {
+          "$ref": "#/definitions/typeDecimal",
+          "description": "The exchange rate used for this transaction.\nOutput only.",
+          "readOnly": true
+        },
+        "date": {
+          "$ref": "#/definitions/typeDate",
+          "description": "The date when the transaction occurred.\nOutput only.",
+          "readOnly": true
+        },
+        "effectiveDate": {
+          "$ref": "#/definitions/typeDate",
+          "description": "The effective date that the transaction affects budgets.\nOutput only.\nDefaults to 'date' if not specified during creation.",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp of the transaction.\nOutput only.\nApplies to all transaction types.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp of the transaction.\nOutput only.\nApplies to all transaction types.",
+          "readOnly": true
+        }
+      },
+      "description": "Transaction represents a financial transaction, such as an expense."
+    },
+    "v1TransactionType": {
+      "type": "string",
+      "enum": [
+        "TYPE_UNSPECIFIED",
+        "EXPENSE"
+      ],
+      "default": "TYPE_UNSPECIFIED",
+      "description": "The type of the transaction.\n\n - TYPE_UNSPECIFIED: Default type.\n - EXPENSE: Expense transaction."
     },
     "v1User": {
       "type": "object",
