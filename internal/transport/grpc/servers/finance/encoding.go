@@ -329,3 +329,32 @@ func TransactionTypePb(t finance.TransactionType) financepb.Transaction_Type {
 		return financepb.Transaction_TYPE_UNSPECIFIED
 	}
 }
+
+func TransactionsItemsPb(trxs []*finance.TransactionItem) []*financepb.Transaction {
+	pbs := make([]*financepb.Transaction, 0, len(trxs))
+	for _, t := range trxs {
+		pbs = append(pbs, TransactionItemPb(t))
+	}
+	return pbs
+}
+
+func TransactionItemPb(t *finance.TransactionItem) *financepb.Transaction {
+	if t == nil {
+		return nil
+	}
+
+	pb := &financepb.Transaction{
+		Id:   t.ID.String(),
+		Type: TransactionTypePb(t.Type),
+	}
+
+	return pb
+}
+
+func SearchTransactionsInput(pb *financepb.ListTransactionsRequest) *finance.SearchTransactionsInput {
+	if pb == nil {
+		return nil
+	}
+
+	return &finance.SearchTransactionsInput{}
+}

@@ -50,14 +50,14 @@ func (bs *TransactionSearcher) Search(ctx context.Context, criteria *finance.Tra
 		item := finance.TransactionItem{
 			ID:           finance.TransactionID(view.ID),
 			Type:         finance.TransactionType(view.Type),
-			Name:         view.Name,
+			Title:        view.Title,
 			Description:  ptr.Value(view.Description),
 			Date:         view.Date,
 			Amount:       money.NewMoney(view.AmountCurrency, view.AmountCents),
 			BaseAmount:   money.NewMoney(view.BaseAmountCurrency, view.BaseAmountCents),
 			ExchangeRate: view.ExchangeRate,
-			CreatedAt:    view.CreatedAt,
-			UpdatedAt:    view.UpdatedAt,
+			CreatedAt:    view.CreateTime,
+			UpdatedAt:    view.UpdateTime,
 		}
 
 		if view.BudgetID != "" {
@@ -97,7 +97,7 @@ func (bs *TransactionSearcher) Search(ctx context.Context, criteria *finance.Tra
 type TransactionView struct {
 	ID                 string             `db:"id"`
 	Type               string             `db:"type"` // e.g., 'INCOME', 'EXPENSE'
-	Name               string             `db:"name"`
+	Title              string             `db:"title"`
 	Description        *string            `db:"description"`
 	Date               time.Time          `db:"date"`
 	AmountCents        money.Cents        `db:"amount_cents"`
@@ -105,8 +105,8 @@ type TransactionView struct {
 	BaseAmountCents    money.Cents        `db:"base_amount_cents"`
 	BaseAmountCurrency money.CurrencyCode `db:"base_amount_currency"`
 	ExchangeRate       float64            `db:"exchange_rate"`
-	CreatedAt          time.Time          `db:"created_at"`
-	UpdatedAt          time.Time          `db:"updated_at"`
+	CreateTime         time.Time          `db:"create_time"`
+	UpdateTime         time.Time          `db:"update_time"`
 
 	BudgetID    string `db:"budget_id"` // Corresponds to bgt.id
 	BudgetName  string `db:"budget_name"`
@@ -122,7 +122,7 @@ SELECT
 	bgt.name as budget_name,
 	bgt.color as budget_color,
 	bgt.icon_name as budget_icon_name,
-	trx.name,
+	trx.title,
 	trx.description,
 	trx.date,
 	trx.amount_cents,
@@ -130,17 +130,17 @@ SELECT
 	trx.base_amount_cents,
 	trx.base_amount_currency,
 	trx.exchange_rate,
-	trx.created_at,
-	trx.updated_at
-FROM transactions trx
-LEFT JOIN budgets bgt ON trx.budget_id = bgt.id
+	trx.create_time,
+	trx.update_time
+FROM finance.transactions trx
+LEFT JOIN finance.budgets bgt ON trx.budget_id = bgt.id
 `
 
 var searchTransactionQueryCount = `
 SELECT
 	COUNT(trx.id)
-FROM transactions trx
-LEFT JOIN budgets bgt ON trx.budget_id = bgt.id
+FROM finance.transactions trx
+LEFT JOIN finance.budgets bgt ON trx.budget_id = bgt.id
 `
 
 type TransactionSearcherQueries struct{}

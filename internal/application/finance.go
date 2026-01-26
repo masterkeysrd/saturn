@@ -33,6 +33,7 @@ type FinanceService interface {
 // FinanceSearchService defines the interface for finance search operations.
 type FinanceSearchService interface {
 	SearchBudgets(context.Context, access.Principal, *finance.SearchBudgetsInput) (*finance.BudgetPage, error)
+	SearchTransactions(context.Context, access.Principal, *finance.SearchTransactionsInput) (*finance.TransactionPage, error)
 }
 
 // FinanceApp provides application-level operations for finance management.
@@ -147,6 +148,16 @@ func (app *FinanceApp) CreateExpense(ctx context.Context, expense *finance.Expen
 	}
 
 	return app.financeService.CreateExpense(ctx, principal, expense)
+}
+
+// SearchTransactions searches for transactions based on the provided input.
+func (app *FinanceApp) SearchTransactions(ctx context.Context, in *finance.SearchTransactionsInput) (*finance.TransactionPage, error) {
+	principal, ok := access.GetPrincipal(ctx)
+	if !ok {
+		return nil, errors.New("missing principal in context")
+	}
+
+	return app.financeSearchService.SearchTransactions(ctx, principal, in)
 }
 
 // CreateSetting creates a new finance setting.

@@ -49,13 +49,18 @@ func (s *SearchService) SearchBudgets(ctx context.Context, actor access.Principa
 	return page, nil
 }
 
-func (s *SearchService) SearchTransactions(ctx context.Context, in *TransactionSearchInput) (*TransactionPage, error) {
+func (s *SearchService) SearchTransactions(ctx context.Context, actor access.Principal, in *SearchTransactionsInput) (*TransactionPage, error) {
+	if !actor.IsSpaceMember() {
+		return nil, fmt.Errorf("unauthorized: principal is not a space member")
+	}
+
 	criteria := in.toCriteria()
 	criteria.sanitize()
 	if err := criteria.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid budget search criteria: %w", err)
 	}
 
+	criteria.SpaceID = actor.SpaceID()
 	criteria.Date = time.Now()
 	page, err := s.transactionsSearcher.Search(ctx, &criteria)
 	if err != nil {

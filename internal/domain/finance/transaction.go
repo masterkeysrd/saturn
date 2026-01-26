@@ -149,12 +149,12 @@ func (tt TransactionType) String() string {
 	return string(tt)
 }
 
-type TransactionSearchInput struct {
+type SearchTransactionsInput struct {
 	Term          string
 	PagingRequest paging.Request
 }
 
-func (tsi *TransactionSearchInput) toCriteria() TransactionSearchCriteria {
+func (tsi *SearchTransactionsInput) toCriteria() TransactionSearchCriteria {
 	if tsi == nil {
 		return TransactionSearchCriteria{}
 	}
@@ -166,6 +166,7 @@ func (tsi *TransactionSearchInput) toCriteria() TransactionSearchCriteria {
 }
 
 type TransactionSearchCriteria struct {
+	SpaceID       space.ID
 	Term          string
 	Date          time.Time
 	PagingRequest paging.Request
@@ -198,7 +199,7 @@ func (tsi *TransactionSearchCriteria) Validate() error {
 type TransactionItem struct {
 	ID           TransactionID
 	Type         TransactionType
-	Name         string
+	Title        string
 	Description  string
 	Amount       money.Money
 	BaseAmount   money.Money
