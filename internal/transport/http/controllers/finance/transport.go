@@ -27,6 +27,6 @@ type FinanceService interface {
 }
 
 type FinanceSearchService interface {
-	SearchBudgets(context.Context, *finance.BudgetSearchInput) (finance.BudgetPage, error)
+	SearchBudgets(context.Context, *finance.SearchBudgetsInput) (finance.BudgetPage, error)
 	SearchTransactions(context.Context, *finance.TransactionSearchInput) (finance.TransactionPage, error)
 }

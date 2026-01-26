@@ -3,7 +3,6 @@ package application
 import (
 	"context"
 	"errors"
-	"log"
 
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/foundation/access"
@@ -13,7 +12,6 @@ import (
 // FinanceService defines the interface for finance-related operations.
 type FinanceService interface {
 	CreateBudget(context.Context, access.Principal, *finance.Budget) error
-	ListBudgets(context.Context, access.Principal) ([]*finance.Budget, error)
 	GetBudget(context.Context, access.Principal, finance.BudgetID) (*finance.Budget, error)
 	UpdateBudget(context.Context, access.Principal, *finance.UpdateBudgetInput) (*finance.Budget, error)
 
@@ -32,15 +30,22 @@ type FinanceService interface {
 	ActivateSetting(context.Context, access.Principal) (*finance.Setting, error)
 }
 
+// FinanceSearchService defines the interface for finance search operations.
+type FinanceSearchService interface {
+	SearchBudgets(context.Context, access.Principal, *finance.SearchBudgetsInput) (*finance.BudgetPage, error)
+}
+
 // FinanceApp provides application-level operations for finance management.
 type FinanceApp struct {
-	financeService FinanceService
+	financeService       FinanceService
+	financeSearchService FinanceSearchService
 }
 
 // NewFinanceApp creates a new instance of FinanceApp.
-func NewFinanceApp(financeService FinanceService) *FinanceApp {
+func NewFinanceApp(financeService FinanceService, financeSearchService FinanceSearchService) *FinanceApp {
 	return &FinanceApp{
-		financeService: financeService,
+		financeService:       financeService,
+		financeSearchService: financeSearchService,
 	}
 }
 
@@ -54,15 +59,14 @@ func (app *FinanceApp) CreateBudget(ctx context.Context, budget *finance.Budget)
 	return app.financeService.CreateBudget(ctx, principal, budget)
 }
 
-// ListBudgets lists all budgets for the principal.
-func (app *FinanceApp) ListBudgets(ctx context.Context) ([]*finance.Budget, error) {
-	log.Println("FinanceApp: ListBudgets called")
+// SearchBudgets searches for budgets based on the provided input.
+func (app *FinanceApp) SearchBudgets(ctx context.Context, in *finance.SearchBudgetsInput) (*finance.BudgetPage, error) {
 	principal, ok := access.GetPrincipal(ctx)
 	if !ok {
 		return nil, errors.New("missing principal in context")
 	}
 
-	return app.financeService.ListBudgets(ctx, principal)
+	return app.financeSearchService.SearchBudgets(ctx, principal, in)
 }
 
 // GetBudget retrieves a budget by its ID.

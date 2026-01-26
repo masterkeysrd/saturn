@@ -52,7 +52,6 @@ func (i BudgetPeriodID) String() string {
 // This interface is required by the Domain Service layer.
 type BudgetStore interface {
 	Get(context.Context, BudgetKey) (*Budget, error)
-	List(context.Context, space.ID) ([]*Budget, error)
 	Store(context.Context, *Budget) error
 	Delete(context.Context, BudgetKey) error
 }
@@ -62,7 +61,6 @@ type BudgetSearcher interface {
 }
 
 // BudgetPage represet a page of Budget Items.
-type BudgetPage = paging.Page[*BudgetItem]
 
 // BudgetPeriodStore defines the contract for managing BudgetPeriod entities.
 type BudgetPeriodStore interface {
@@ -395,9 +393,12 @@ func (bp *BudgetPeriod) Validate() error {
 	return nil
 }
 
+type BudgetPage = paging.Page[*BudgetItem]
+
 type BudgetItem struct {
-	ID   BudgetID
-	Name string
+	ID          BudgetID
+	Name        string
+	Description *string
 	appearance.Appearance
 
 	Amount           money.Money
@@ -424,23 +425,27 @@ type UpdateBudgetInput struct {
 	UpdateMask *fieldmask.FieldMask
 }
 
-type BudgetSearchInput struct {
+type SearchBudgetsInput struct {
+	View          BudgetView
 	Term          string
 	PagingRequest paging.Request
 }
 
-func (bsi *BudgetSearchInput) toCriteria() BudgetSearchCriteria {
+func (bsi *SearchBudgetsInput) toCriteria() BudgetSearchCriteria {
 	if bsi == nil {
 		return BudgetSearchCriteria{}
 	}
 
 	return BudgetSearchCriteria{
+		View:          bsi.View,
 		Term:          bsi.Term,
 		PagingRequest: bsi.PagingRequest,
 	}
 }
 
 type BudgetSearchCriteria struct {
+	SpaceID       space.ID
+	View          BudgetView
 	Term          string
 	Date          time.Time
 	PagingRequest paging.Request
@@ -469,3 +474,10 @@ func (bsc *BudgetSearchCriteria) Validate() error {
 
 	return nil
 }
+
+type BudgetView int
+
+const (
+	BudgetViewBasic BudgetView = iota // Only basic budget info.
+	BudgetViewFull                    // Full budget info with statistics.
+)

@@ -37,20 +37,6 @@ func (b *BudgetStore) Get(ctx context.Context, key finance.BudgetKey) (*finance.
 	return entity.ToModel(), nil
 }
 
-func (b *BudgetStore) List(ctx context.Context, spaceID space.ID) ([]*finance.Budget, error) {
-	budgets := make([]*finance.Budget, 0, 20) // initial capacity of 20
-	if err := ListBudgets(ctx, b.db, &ListBudgetsParams{
-		SpaceId: spaceID.String(),
-	}, func(e *BudgetEntity) error {
-		budgets = append(budgets, e.ToModel())
-		return nil
-	}); err != nil {
-		return nil, fmt.Errorf("cannot list budgets: %w", err)
-	}
-
-	return budgets, nil
-}
-
 func (b *BudgetStore) Store(ctx context.Context, budget *finance.Budget) error {
 	entity, err := UpsertBudget(ctx, b.db, NewBudgetEntity(budget))
 	if err != nil {

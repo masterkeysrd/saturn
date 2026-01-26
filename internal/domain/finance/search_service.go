@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/foundation/access"
 	"github.com/masterkeysrd/saturn/internal/pkg/deps"
 )
 
@@ -27,13 +28,18 @@ func NewSearchService(params SearchServiceParams) *SearchService {
 	}
 }
 
-func (s *SearchService) SearchBudgets(ctx context.Context, in *BudgetSearchInput) (*BudgetPage, error) {
+func (s *SearchService) SearchBudgets(ctx context.Context, actor access.Principal, in *SearchBudgetsInput) (*BudgetPage, error) {
+	if !actor.IsSpaceMember() {
+		return nil, fmt.Errorf("unauthorized: principal is not a space member")
+	}
+
 	criteria := in.toCriteria()
 	criteria.sanitize()
 	if err := criteria.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid budget search criteria: %w", err)
 	}
 
+	criteria.SpaceID = actor.SpaceID()
 	criteria.Date = time.Now()
 	page, err := s.budgetsSearcher.Search(ctx, &criteria)
 	if err != nil {

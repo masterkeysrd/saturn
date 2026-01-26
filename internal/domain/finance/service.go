@@ -422,15 +422,6 @@ func (s *Service) GetBudget(ctx context.Context, actor access.Principal, id Budg
 	return budget, nil
 }
 
-func (s *Service) ListBudgets(ctx context.Context, actor access.Principal) ([]*Budget, error) {
-	budgets, err := s.budgetStore.List(ctx, actor.SpaceID())
-	if err != nil {
-		return nil, fmt.Errorf("cannot list budgets: %s", err)
-	}
-
-	return budgets, nil
-}
-
 func (s *Service) CreateExchangeRate(ctx context.Context, actor access.Principal, rate *ExchangeRate) error {
 	if !actor.IsSpaceAdmin() {
 		return errors.New("only space admins can create exchange rates")

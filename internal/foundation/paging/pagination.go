@@ -8,13 +8,17 @@ const (
 
 // Source defines an interface for pagination sources.
 type Source interface {
-	GetSize() int32
 	GetPage() int32
+	GetPageSize() int32
 }
 
 type Request struct {
 	Page int
 	Size int
+}
+
+func FromSource(src Source) Request {
+	return NewRequest(int(src.GetPage()), int(src.GetPageSize()))
 }
 
 func NewRequest(page, size int) Request {

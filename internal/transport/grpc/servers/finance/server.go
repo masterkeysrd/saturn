@@ -16,7 +16,7 @@ var _ financepb.FinanceServer = (*Server)(nil)
 // Application represents the identity application.
 type Application interface {
 	CreateBudget(context.Context, *finance.Budget) error
-	ListBudgets(context.Context) ([]*finance.Budget, error)
+	SearchBudgets(context.Context, *finance.SearchBudgetsInput) (*finance.BudgetPage, error)
 	GetBudget(context.Context, finance.BudgetID) (*finance.Budget, error)
 	UpdateBudget(context.Context, *finance.UpdateBudgetInput) (*finance.Budget, error)
 	ListCurrencies(context.Context) ([]finance.Currency, error)
@@ -61,12 +61,12 @@ func (s *Server) CreateBudget(ctx context.Context, req *financepb.CreateBudgetRe
 }
 
 func (s *Server) ListBudgets(ctx context.Context, req *financepb.ListBudgetsRequest) (*financepb.ListBudgetsResponse, error) {
-	budgets, err := s.app.ListBudgets(ctx)
+	page, err := s.app.SearchBudgets(ctx, SearchBudgetsInput(req))
 	if err != nil {
 		return nil, err
 	}
 	return &financepb.ListBudgetsResponse{
-		Budgets: BudgetsPb(budgets),
+		Budgets: BudgetsItemsPb(page.Items),
 	}, nil
 }
 

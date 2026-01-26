@@ -53,6 +53,7 @@ func main() {
 
 func buildContainer() (deps.Container, error) {
 	container := deps.NewDigContainer()
+	Wire(container)
 
 	if err := wireDeps(container); err != nil {
 		return nil, fmt.Errorf("cannot wire dependencies: %w", err)

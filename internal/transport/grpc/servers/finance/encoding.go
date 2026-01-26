@@ -3,6 +3,8 @@ package financegrpc
 import (
 	financepb "github.com/masterkeysrd/saturn/gen/proto/go/saturn/finance/v1"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/foundation/paging"
+	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 	"github.com/masterkeysrd/saturn/internal/transport/grpc/encoding"
 )
 
@@ -76,6 +78,18 @@ func BudgetStatusPb(status finance.BudgetStatus) financepb.Budget_Status {
 	}
 }
 
+func SearchBudgetsInput(pb *financepb.ListBudgetsRequest) *finance.SearchBudgetsInput {
+	if pb == nil {
+		return nil
+	}
+
+	return &finance.SearchBudgetsInput{
+		View:          BudgetView(pb.GetView()),
+		Term:          pb.GetSearch(),
+		PagingRequest: paging.FromSource(pb),
+	}
+}
+
 func UpdateBudgetInput(pb *financepb.UpdateBudgetRequest) (*finance.UpdateBudgetInput, error) {
 	if pb == nil {
 		return nil, nil
@@ -88,6 +102,40 @@ func UpdateBudgetInput(pb *financepb.UpdateBudgetRequest) (*finance.UpdateBudget
 		Budget:     budget,
 		UpdateMask: mask,
 	}, nil
+}
+
+func BudgetsItemsPb(budgets []*finance.BudgetItem) []*financepb.Budget {
+	pbs := make([]*financepb.Budget, 0, len(budgets))
+	for _, b := range budgets {
+		pbs = append(pbs, BudgetItemPb(b))
+	}
+	return pbs
+}
+
+func BudgetItemPb(b *finance.BudgetItem) *financepb.Budget {
+	if b == nil {
+		return nil
+	}
+	pb := &financepb.Budget{
+		Id:          b.ID.String(),
+		Name:        b.Name,
+		Description: ptr.Value(b.Description),
+		Appearance:  encoding.AppearancePb(b.Appearance),
+		Amount:      encoding.MoneyPb(b.Amount),
+	}
+
+	return pb
+}
+
+func BudgetView(pb financepb.Budget_View) finance.BudgetView {
+	switch pb {
+	case financepb.Budget_BASIC:
+		return finance.BudgetViewBasic
+	case financepb.Budget_FULL:
+		return finance.BudgetViewFull
+	default:
+		return finance.BudgetViewBasic
+	}
 }
 
 func CurrenciesPb(currencies []finance.Currency) []*financepb.Currency {

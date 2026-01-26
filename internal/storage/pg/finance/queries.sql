@@ -86,30 +86,6 @@ WHERE
 LIMIT
   1;
 
--- name: ListBudgets
--- return: many
--- return_type: BudgetEntity
-SELECT
-  id,
-  space_id,
-  name,
-  description,
-  color,
-  icon_name,
-  status,
-  amount_currency,
-  amount_cents,
-  create_time,
-  create_by,
-  update_time,
-  update_by
-FROM
-  finance.budgets
-WHERE
-  space_id =:space_id
-ORDER BY
-  create_time DESC;
-
 -- name: UpsertBudget
 -- return: one
 -- param_type: BudgetEntity

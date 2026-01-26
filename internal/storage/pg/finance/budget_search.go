@@ -3,7 +3,6 @@ package financepg
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -12,28 +11,39 @@ import (
 	"github.com/masterkeysrd/saturn/internal/foundation/paging"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
+	"github.com/masterkeysrd/saturn/internal/pkg/sqlexp"
 )
 
 var _ finance.BudgetSearcher = (*BudgetSearcher)(nil)
 
 type BudgetSearcher struct {
-	db      *sqlx.DB
-	queries *BudgetSearcherQueries
+	db *sqlx.DB
 }
 
 func NewBudgetSearcher(db *sqlx.DB) *BudgetSearcher {
 	return &BudgetSearcher{
-		db:      db,
-		queries: &BudgetSearcherQueries{},
+		db: db,
 	}
 }
 
 func (bs *BudgetSearcher) Search(ctx context.Context, criteria *finance.BudgetSearchCriteria) (*finance.BudgetPage, error) {
-	// 1. Generate the SQL and Arguments
-	searchQuery, countQuery, args := bs.queries.Search(criteria)
+	exp := bs.getSearchExp(criteria)
 
-	// 2. Execute Data Query
-	rows, err := bs.db.NamedQueryContext(ctx, searchQuery, args)
+	if criteria.Term != "" {
+		exp = exp.AndWhere(
+			sqlexp.ILike("b.name", sqlexp.NamedParam("term")),
+		)
+	}
+
+	exp = exp.
+		Limit(sqlexp.NamedParam("limit")).
+		Offset(sqlexp.NamedParam("offset")).
+		OrderBy("b.name ASC") // Always enforce deterministic ordering
+
+	args := NewBudgetSearchParams(criteria)
+
+	query := exp.ToSQL()
+	rows, err := bs.db.NamedQueryContext(ctx, query, args)
 	if err != nil {
 		return nil, fmt.Errorf("cannot execute budget search query: %w", err)
 	}
@@ -65,21 +75,21 @@ func (bs *BudgetSearcher) Search(ctx context.Context, criteria *finance.BudgetSe
 
 	// 3. Execute Count Query
 	// We use NamedQueryContext because we are reusing the 'args' map with named parameters.
-	countRows, err := bs.db.NamedQueryContext(ctx, countQuery, args)
-	if err != nil {
-		return nil, fmt.Errorf("cannot execute budget count query: %w", err)
-	}
-	defer countRows.Close()
-
-	var totalItems int
-	if countRows.Next() {
-		if err := countRows.Scan(&totalItems); err != nil {
-			return nil, fmt.Errorf("cannot scan budget count: %w", err)
-		}
-	}
+	// countRows, err := bs.db.NamedQueryContext(ctx, countQuery, args)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("cannot execute budget count query: %w", err)
+	// }
+	// defer countRows.Close()
+	//
+	// var totalItems int
+	// if countRows.Next() {
+	// 	if err := countRows.Scan(&totalItems); err != nil {
+	// 		return nil, fmt.Errorf("cannot scan budget count: %w", err)
+	// 	}
+	// }
 
 	// 4. Return Page
-	return paging.NewPage(items, totalItems, criteria.PagingRequest.Size), nil
+	return paging.NewPage(items, 0, criteria.PagingRequest.Size), nil
 }
 
 type BudgetItemView struct {
@@ -87,7 +97,7 @@ type BudgetItemView struct {
 	Name             string              `db:"name"`
 	Color            string              `db:"color"`
 	IconName         string              `db:"icon_name"`
-	Amount           money.Cents         `db:"budget_amount"`
+	Amount           money.Cents         `db:"amount_cents"`
 	Currency         money.CurrencyCode  `db:"amount_currency"`
 	BaseAmount       *money.Cents        `db:"base_amount"`
 	BaseCurrency     *money.CurrencyCode `db:"base_amount_currency"`
@@ -109,7 +119,7 @@ WITH
             bp.base_amount_cents,
             bp.base_amount_currency
         FROM
-            budget_periods bp
+            finance.budget_periods bp
         WHERE
 			bp.start_date <= :date
 			AND bp.end_date >= :date
@@ -126,7 +136,7 @@ WITH
             COUNT(txn.id) AS transaction_count
         FROM
             FilteredBudgetPeriods fbp
-            LEFT JOIN transactions txn ON fbp.id = txn.budget_period_id
+            LEFT JOIN finance.transactions txn ON fbp.id = txn.budget_period_id
             AND fbp.budget_id = txn.budget_id
         GROUP BY
             fbp.budget_id,
@@ -142,13 +152,13 @@ SELECT
 	b.icon_name,
     txs.start_date,
     txs.end_date,
-    b.currency amount_currency,
-    b.amount budget_amount,
+    b.amount_currency,
+    b.amount_cents budget_amount,
     txs.base_amount_currency,
     txs.base_amount_cents base_amount,
     txs.spent_amount_cents as spent_amount,
     txs.transaction_count
-FROM budgets b
+FROM finance.budgets b
 LEFT JOIN
 	TransactionsStats txs ON txs.budget_id = b.id
 `
@@ -159,7 +169,7 @@ WITH DateFilteredBudgets AS (
 	    bp.id,
 		bp.budget_id
     FROM 
-		budget_periods bp
+		finance.budget_periods bp
     WHERE bp.start_date <= :date
       AND bp.end_date >= :date
 ),
@@ -167,53 +177,16 @@ AggregatedData AS (
     -- Same Aggregation CTE as above (just need budget_id to group)
     SELECT dfb.budget_id
     FROM DateFilteredBudgets dfb
-    LEFT JOIN transactions txn ON txn.budget_period_id = dfb.id AND txn.type = 'EXPENSE' 
+    LEFT JOIN finance.transactions txn ON txn.budget_period_id = dfb.id AND txn.type = 'EXPENSE' 
     GROUP BY dfb.budget_id
 )
 SELECT 
     COUNT(b.id)
-FROM budgets b
+FROM finance.budgets b
 LEFT JOIN
 	AggregatedData ad ON ad.budget_id = b.id
 
 `
-
-type BudgetSearcherQueries struct{}
-
-func (bsq *BudgetSearcherQueries) Search(criteria *finance.BudgetSearchCriteria) (string, string, any) {
-	params := NewBudgetSearchParams(criteria)
-
-	// 1. Build the Dynamic WHERE Clause
-	var whereClauseBuilder strings.Builder
-	if params.Term != "" {
-		// Apply wildcards to the parameter
-		params.Term = "%" + params.Term + "%"
-
-		// Note: Ensure the alias 'bgt' matches your main query's alias for the budgets table
-		whereClauseBuilder.WriteString("\nWHERE b.name ILIKE :term")
-	}
-	whereClause := whereClauseBuilder.String()
-
-	// 2. Build the Search (Data) Query
-	// Structure: [Base CTEs & Select] + [Where] + [Order/Limit/Offset]
-	var searchSB strings.Builder
-	searchSB.Grow(len(searchBudgetQuery) + len(whereClause) + 50)
-
-	searchSB.WriteString(searchBudgetQuery)
-	searchSB.WriteString(whereClause)
-	searchSB.WriteString("\nORDER BY b.name ASC") // Always enforce deterministic ordering
-	searchSB.WriteString("\nLIMIT :limit OFFSET :offset")
-
-	// 3. Build the Count (Total) Query
-	// Structure: [Count CTEs & Select Count] + [Where]
-	var countSB strings.Builder
-	countSB.Grow(len(searchBudgetQueryCount) + len(whereClause))
-
-	countSB.WriteString(searchBudgetQueryCount)
-	countSB.WriteString(whereClause)
-
-	return searchSB.String(), countSB.String(), params
-}
 
 // BudgetSearchParams represents database query parameters for budget search.
 type BudgetSearchParams struct {
@@ -225,10 +198,27 @@ type BudgetSearchParams struct {
 
 // NewBudgetSearchParams creates params from domain criteria.
 func NewBudgetSearchParams(criteria *finance.BudgetSearchCriteria) BudgetSearchParams {
+	term := criteria.Term
+	if term != "" {
+		term = "%" + term + "%"
+	}
 	return BudgetSearchParams{
-		Term:   criteria.Term,
+		Term:   term,
 		Date:   criteria.Date,
 		Offset: criteria.PagingRequest.Offset(),
 		Limit:  criteria.PagingRequest.Limit(),
 	}
+}
+
+func (bs *BudgetSearcher) getSearchExp(criteria *finance.BudgetSearchCriteria) sqlexp.SelectExpression {
+	switch criteria.View {
+	case finance.BudgetViewBasic:
+		return sqlexp.Select(
+			"b.id",
+			"b.name",
+			"b.amount_currency",
+			"b.amount_cents",
+		).From("finance.budgets b")
+	}
+	return sqlexp.Select()
 }
