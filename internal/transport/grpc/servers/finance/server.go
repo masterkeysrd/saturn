@@ -152,6 +152,10 @@ func (s *Server) CreateExpense(ctx context.Context, req *financepb.CreateExpense
 	return TransactionPb(trx), nil
 }
 
+func (s *Server) ListTransactions(ctx context.Context, req *financepb.ListTransactionsRequest) (*financepb.ListTransactionsResponse, error) {
+	return nil, nil
+}
+
 func (s *Server) GetSetting(ctx context.Context, _ *emptypb.Empty) (*financepb.Setting, error) {
 	settings, err := s.app.GetSetting(ctx)
 	if err != nil {

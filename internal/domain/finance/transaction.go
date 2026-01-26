@@ -11,7 +11,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/foundation/decimal"
 	"github.com/masterkeysrd/saturn/internal/foundation/id"
-	"github.com/masterkeysrd/saturn/internal/foundation/pagination"
+	"github.com/masterkeysrd/saturn/internal/foundation/paging"
 	"github.com/masterkeysrd/saturn/internal/foundation/space"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 )
@@ -29,11 +29,11 @@ type TransactionCriteria interface {
 }
 
 type TransactionSearcher interface {
-	Search(context.Context, *TransactionSearchCriteria) (TransactionPage, error)
+	Search(context.Context, *TransactionSearchCriteria) (*TransactionPage, error)
 }
 
 // TransactionPage represet a page of Transaction Items.
-type TransactionPage = pagination.Page[*TransactionItem]
+type TransactionPage = paging.Page[*TransactionItem]
 
 // Transaction represents a persisted financial transaction.
 // It includes the base currency conversion and exchange rate for reporting.
@@ -150,8 +150,8 @@ func (tt TransactionType) String() string {
 }
 
 type TransactionSearchInput struct {
-	pagination.Pagination
-	Term string
+	Term          string
+	PagingRequest paging.Request
 }
 
 func (tsi *TransactionSearchInput) toCriteria() TransactionSearchCriteria {
@@ -160,15 +160,15 @@ func (tsi *TransactionSearchInput) toCriteria() TransactionSearchCriteria {
 	}
 
 	return TransactionSearchCriteria{
-		Term:       tsi.Term,
-		Pagination: tsi.Pagination,
+		Term:          tsi.Term,
+		PagingRequest: tsi.PagingRequest,
 	}
 }
 
 type TransactionSearchCriteria struct {
-	pagination.Pagination
-	Term string
-	Date time.Time
+	Term          string
+	Date          time.Time
+	PagingRequest paging.Request
 }
 
 func (tsi *TransactionSearchCriteria) sanitize() {

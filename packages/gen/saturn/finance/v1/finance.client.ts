@@ -226,6 +226,22 @@ export async function createExpense(req: MessageInitShape<typeof Types.CreateExp
 }
 
 /**
+ * ListTransactions returns all transactions for the space.
+ *
+ * @param req Types.ListTransactionsRequest
+ * @returns Promise<Types.ListTransactionsResponse>
+ */
+export async function listTransactions(req: MessageInitShape<typeof Types.ListTransactionsRequestSchema>): Promise<Types.ListTransactionsResponse> {
+  const msg = create(Types.ListTransactionsRequestSchema, req);
+  const body = toJson(Types.ListTransactionsRequestSchema, msg);
+
+  return getAxios().get(`/api/v1/finance/transactions`
+  ).then((resp) => {
+    return fromJson(Types.ListTransactionsResponseSchema, resp.data);
+  });
+}
+
+/**
  * GetSetting retrieves the finance settings for the space.
  *
  * @returns Promise<Types.Setting>

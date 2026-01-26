@@ -529,6 +529,29 @@
         ]
       }
     },
+    "/v1/finance/transactions": {
+      "get": {
+        "summary": "ListTransactions returns all transactions for the space.",
+        "operationId": "Finance_ListTransactions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListTransactionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/identity/sessions": {
       "get": {
         "summary": "ListSessions lists all active sessions for the current user.",
@@ -1817,6 +1840,19 @@
         }
       },
       "description": "Response message for Spaces.ListSpaces."
+    },
+    "v1ListTransactionsResponse": {
+      "type": "object",
+      "properties": {
+        "transactions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Transaction"
+          },
+          "description": "The list of transactions."
+        }
+      }
     },
     "v1LoginUserRequest": {
       "type": "object",

@@ -13,7 +13,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/foundation/decimal"
 	"github.com/masterkeysrd/saturn/internal/foundation/fieldmask"
 	"github.com/masterkeysrd/saturn/internal/foundation/id"
-	"github.com/masterkeysrd/saturn/internal/foundation/pagination"
+	"github.com/masterkeysrd/saturn/internal/foundation/paging"
 	"github.com/masterkeysrd/saturn/internal/foundation/space"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 	"github.com/masterkeysrd/saturn/internal/pkg/round"
@@ -58,11 +58,11 @@ type BudgetStore interface {
 }
 
 type BudgetSearcher interface {
-	Search(context.Context, *BudgetSearchCriteria) (BudgetPage, error)
+	Search(context.Context, *BudgetSearchCriteria) (*BudgetPage, error)
 }
 
 // BudgetPage represet a page of Budget Items.
-type BudgetPage = pagination.Page[*BudgetItem]
+type BudgetPage = paging.Page[*BudgetItem]
 
 // BudgetPeriodStore defines the contract for managing BudgetPeriod entities.
 type BudgetPeriodStore interface {
@@ -425,8 +425,8 @@ type UpdateBudgetInput struct {
 }
 
 type BudgetSearchInput struct {
-	pagination.Pagination
-	Term string
+	Term          string
+	PagingRequest paging.Request
 }
 
 func (bsi *BudgetSearchInput) toCriteria() BudgetSearchCriteria {
@@ -435,15 +435,15 @@ func (bsi *BudgetSearchInput) toCriteria() BudgetSearchCriteria {
 	}
 
 	return BudgetSearchCriteria{
-		Term:       bsi.Term,
-		Pagination: bsi.Pagination,
+		Term:          bsi.Term,
+		PagingRequest: bsi.PagingRequest,
 	}
 }
 
 type BudgetSearchCriteria struct {
-	pagination.Pagination
-	Term string
-	Date time.Time
+	Term          string
+	Date          time.Time
+	PagingRequest paging.Request
 }
 
 func (bsc *BudgetSearchCriteria) sanitize() {

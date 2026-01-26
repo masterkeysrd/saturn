@@ -107,6 +107,11 @@ service Finance {
     };
   }
 
+  // ListTransactions returns all transactions for the space.
+  rpc ListTransactions(ListTransactionsRequest) returns (ListTransactionsResponse) {
+    option (google.api.http) = {get: "/v1/finance/transactions"};
+  }
+
   // GetSetting retrieves the finance settings for the space.
   rpc GetSetting(google.protobuf.Empty) returns (Setting) {
     option (google.api.http) = {get: "/v1/finance/setting"};
@@ -427,6 +432,14 @@ message Expense {
   // Last update timestamp of the expense.
   // Output only.
   google.protobuf.Timestamp update_time = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Response message for Finance.ListTransactions.
+message ListTransactionsRequest {}
+
+message ListTransactionsResponse {
+  // The list of transactions.
+  repeated Transaction transactions = 1;
 }
 
 // Transaction represents a financial transaction, such as an expense.

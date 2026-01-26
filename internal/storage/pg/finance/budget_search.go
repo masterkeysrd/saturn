@@ -9,7 +9,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/foundation/appearance"
-	"github.com/masterkeysrd/saturn/internal/foundation/pagination"
+	"github.com/masterkeysrd/saturn/internal/foundation/paging"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 )
@@ -28,22 +28,22 @@ func NewBudgetSearcher(db *sqlx.DB) *BudgetSearcher {
 	}
 }
 
-func (bs *BudgetSearcher) Search(ctx context.Context, criteria *finance.BudgetSearchCriteria) (finance.BudgetPage, error) {
+func (bs *BudgetSearcher) Search(ctx context.Context, criteria *finance.BudgetSearchCriteria) (*finance.BudgetPage, error) {
 	// 1. Generate the SQL and Arguments
 	searchQuery, countQuery, args := bs.queries.Search(criteria)
 
 	// 2. Execute Data Query
 	rows, err := bs.db.NamedQueryContext(ctx, searchQuery, args)
 	if err != nil {
-		return finance.BudgetPage{}, fmt.Errorf("cannot execute budget search query: %w", err)
+		return nil, fmt.Errorf("cannot execute budget search query: %w", err)
 	}
 	defer rows.Close()
 
-	items := make([]*finance.BudgetItem, 0, criteria.Size())
+	items := make([]*finance.BudgetItem, 0, criteria.PagingRequest.Limit())
 	for rows.Next() {
 		var view BudgetItemView
 		if err := rows.StructScan(&view); err != nil {
-			return finance.BudgetPage{}, fmt.Errorf("cannot scan budget view: %w", err)
+			return nil, fmt.Errorf("cannot scan budget view: %w", err)
 		}
 
 		items = append(items, &finance.BudgetItem{
@@ -67,19 +67,19 @@ func (bs *BudgetSearcher) Search(ctx context.Context, criteria *finance.BudgetSe
 	// We use NamedQueryContext because we are reusing the 'args' map with named parameters.
 	countRows, err := bs.db.NamedQueryContext(ctx, countQuery, args)
 	if err != nil {
-		return finance.BudgetPage{}, fmt.Errorf("cannot execute budget count query: %w", err)
+		return nil, fmt.Errorf("cannot execute budget count query: %w", err)
 	}
 	defer countRows.Close()
 
 	var totalItems int
 	if countRows.Next() {
 		if err := countRows.Scan(&totalItems); err != nil {
-			return finance.BudgetPage{}, fmt.Errorf("cannot scan budget count: %w", err)
+			return nil, fmt.Errorf("cannot scan budget count: %w", err)
 		}
 	}
 
 	// 4. Return Page
-	return pagination.NewPage(items, criteria.Page(), criteria.Size(), totalItems), nil
+	return paging.NewPage(items, totalItems, criteria.PagingRequest.Size), nil
 }
 
 type BudgetItemView struct {
@@ -228,7 +228,7 @@ func NewBudgetSearchParams(criteria *finance.BudgetSearchCriteria) BudgetSearchP
 	return BudgetSearchParams{
 		Term:   criteria.Term,
 		Date:   criteria.Date,
-		Offset: criteria.Offset(),
-		Limit:  criteria.Size(),
+		Offset: criteria.PagingRequest.Offset(),
+		Limit:  criteria.PagingRequest.Limit(),
 	}
 }

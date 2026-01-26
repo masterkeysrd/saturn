@@ -27,33 +27,33 @@ func NewSearchService(params SearchServiceParams) *SearchService {
 	}
 }
 
-func (s *SearchService) SearchBudgets(ctx context.Context, in *BudgetSearchInput) (BudgetPage, error) {
+func (s *SearchService) SearchBudgets(ctx context.Context, in *BudgetSearchInput) (*BudgetPage, error) {
 	criteria := in.toCriteria()
 	criteria.sanitize()
 	if err := criteria.Validate(); err != nil {
-		return BudgetPage{}, fmt.Errorf("invalid budget search criteria: %w", err)
+		return nil, fmt.Errorf("invalid budget search criteria: %w", err)
 	}
 
 	criteria.Date = time.Now()
 	page, err := s.budgetsSearcher.Search(ctx, &criteria)
 	if err != nil {
-		return BudgetPage{}, fmt.Errorf("cannot search budgets: %w", err)
+		return nil, fmt.Errorf("cannot search budgets: %w", err)
 	}
 
 	return page, nil
 }
 
-func (s *SearchService) SearchTransactions(ctx context.Context, in *TransactionSearchInput) (TransactionPage, error) {
+func (s *SearchService) SearchTransactions(ctx context.Context, in *TransactionSearchInput) (*TransactionPage, error) {
 	criteria := in.toCriteria()
 	criteria.sanitize()
 	if err := criteria.Validate(); err != nil {
-		return TransactionPage{}, fmt.Errorf("invalid budget search criteria: %w", err)
+		return nil, fmt.Errorf("invalid budget search criteria: %w", err)
 	}
 
 	criteria.Date = time.Now()
 	page, err := s.transactionsSearcher.Search(ctx, &criteria)
 	if err != nil {
-		return TransactionPage{}, fmt.Errorf("cannot search budgets: %w", err)
+		return nil, fmt.Errorf("cannot search budgets: %w", err)
 	}
 
 	return page, nil

@@ -10,7 +10,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/foundation/appearance"
-	"github.com/masterkeysrd/saturn/internal/foundation/pagination"
+	"github.com/masterkeysrd/saturn/internal/foundation/paging"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 )
@@ -29,22 +29,22 @@ func NewTransactionSearcher(db *sqlx.DB) *TransactionSearcher {
 	}
 }
 
-func (bs *TransactionSearcher) Search(ctx context.Context, criteria *finance.TransactionSearchCriteria) (finance.TransactionPage, error) {
+func (bs *TransactionSearcher) Search(ctx context.Context, criteria *finance.TransactionSearchCriteria) (*finance.TransactionPage, error) {
 	// 1. Generate the SQL and Arguments
 	searchQuery, countQuery, args := bs.queries.Search(criteria)
 
 	// 2. Execute Data Query
 	rows, err := bs.db.NamedQueryContext(ctx, searchQuery, args)
 	if err != nil {
-		return finance.TransactionPage{}, fmt.Errorf("cannot execute transaction search query: %w", err)
+		return nil, fmt.Errorf("cannot execute transaction search query: %w", err)
 	}
 	defer rows.Close()
 
-	items := make([]*finance.TransactionItem, 0, criteria.Size())
+	items := make([]*finance.TransactionItem, 0, criteria.PagingRequest.Limit())
 	for rows.Next() {
 		var view TransactionView
 		if err := rows.StructScan(&view); err != nil {
-			return finance.TransactionPage{}, fmt.Errorf("cannot scan transaction view: %w", err)
+			return nil, fmt.Errorf("cannot scan transaction view: %w", err)
 		}
 
 		item := finance.TransactionItem{
@@ -79,19 +79,19 @@ func (bs *TransactionSearcher) Search(ctx context.Context, criteria *finance.Tra
 	// We use NamedQueryContext because we are reusing the 'args' map with named parameters.
 	countRows, err := bs.db.NamedQueryContext(ctx, countQuery, args)
 	if err != nil {
-		return finance.TransactionPage{}, fmt.Errorf("cannot execute budget count query: %w", err)
+		return nil, fmt.Errorf("cannot execute budget count query: %w", err)
 	}
 	defer countRows.Close()
 
 	var totalItems int
 	if countRows.Next() {
 		if err := countRows.Scan(&totalItems); err != nil {
-			return finance.TransactionPage{}, fmt.Errorf("cannot scan budget count: %w", err)
+			return nil, fmt.Errorf("cannot scan budget count: %w", err)
 		}
 	}
 
 	// 4. Return Page
-	return pagination.NewPage(items, criteria.Page(), criteria.Size(), totalItems), nil
+	return paging.NewPage(items, totalItems, criteria.PagingRequest.Limit()), nil
 }
 
 type TransactionView struct {
@@ -191,7 +191,7 @@ type TransactionSearchParams struct {
 func NewTransactionSearchParams(criteria *finance.TransactionSearchCriteria) TransactionSearchParams {
 	return TransactionSearchParams{
 		Term:   criteria.Term,
-		Offset: criteria.Offset(),
-		Limit:  criteria.Size(),
+		Offset: criteria.PagingRequest.Offset(),
+		Limit:  criteria.PagingRequest.Limit(),
 	}
 }
