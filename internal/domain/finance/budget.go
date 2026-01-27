@@ -400,22 +400,47 @@ type BudgetItem struct {
 	Name        string
 	Description *string
 	appearance.Appearance
+	Status       BudgetStatus
+	Amount       money.Money
+	BaseAmount   money.Money
+	ExchangeRate decimal.Decimal
+	CreateTime   time.Time
+	UpdateTime   time.Time
 
-	Amount           money.Money
-	BaseAmount       money.Money
-	Spent            money.Money
-	BaseSpent        money.Money
-	PeriodStartDate  time.Time
-	PeriodEndDate    time.Time
-	TransactionCount int
+	Stats *BudgetItemStats
 }
 
-func (b *BudgetItem) Usage() float64 {
-	if b.Amount.Cents == 0 {
+type BudgetItemStats struct {
+	PeriodStart time.Time
+	PeriodEnd   time.Time
+	Spent       money.Money
+	BaseSpent   money.Money
+	TrxCount    int
+}
+
+func (bis *BudgetItemStats) Remaining(amount money.Money) money.Money {
+	if bis == nil {
+		return money.Money{}
+	}
+
+	remainingCents := max(amount.Cents-bis.Spent.Cents, 0)
+	return money.Money{
+		Currency: amount.Currency,
+		Cents:    remainingCents,
+	}
+}
+
+func (bis *BudgetItemStats) Usage(amount money.Money) float64 {
+	if bis == nil {
 		return 0
 	}
-	ussage := (float64(b.Spent.Cents) / float64(b.Amount.Cents)) * 100
-	return round.Round(ussage, 2)
+
+	if amount.Cents == 0 {
+		return 0
+	}
+
+	usage := float64(bis.Spent.Cents) / float64(amount.Cents) * 100
+	return round.Round(usage, 2)
 }
 
 // UpdateBudgetInput encapsulates the data and metadata required to update a Budget.
@@ -478,6 +503,7 @@ func (bsc *BudgetSearchCriteria) Validate() error {
 type BudgetView int
 
 const (
-	BudgetViewBasic BudgetView = iota // Only basic budget info.
-	BudgetViewFull                    // Full budget info with statistics.
+	BudgetViewNameOnly BudgetView = iota // Only id, name, description and appearance.
+	BudgetViewBasic                      // Only basic budget info.
+	BudgetViewFull                       // Full budget info with statistics.
 )

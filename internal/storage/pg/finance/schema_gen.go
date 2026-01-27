@@ -88,29 +88,6 @@ WHERE
 LIMIT
   1;`
 
-	// ListBudgetsQuery is the SQL for the 'ListBudgets' query.
-	ListBudgetsQuery = `
-SELECT
-  id,
-  space_id,
-  name,
-  description,
-  color,
-  icon_name,
-  status,
-  amount_currency,
-  amount_cents,
-  create_time,
-  create_by,
-  update_time,
-  update_by
-FROM
-  finance.budgets
-WHERE
-  space_id =:space_id
-ORDER BY
-  create_time DESC;`
-
 	// UpsertBudgetQuery is the SQL for the 'UpsertBudget' query.
 	UpsertBudgetQuery = `
 INSERT INTO
@@ -619,11 +596,6 @@ type GetBudgetByIDParams struct {
 	SpaceId string `db:"space_id"`
 }
 
-// ListBudgetsParams represents the parameters for the 'ListBudgets' query.
-type ListBudgetsParams struct {
-	SpaceId string `db:"space_id"`
-}
-
 // UpsertBudgetParams represents the parameters for the 'UpsertBudget' query.
 //
 // UpsertBudgetParams is an alias of [BudgetEntity].
@@ -752,27 +724,6 @@ func GetBudgetByID(ctx context.Context, db sqlx.ExtContext, params *GetBudgetByI
 	}
 
 	return &item, nil
-}
-
-// ListBudgets executes the 'ListBudgets' query and returns multiple rows.
-func ListBudgets(ctx context.Context, db sqlx.ExtContext, params *ListBudgetsParams, mapper func(*BudgetEntity) error) error {
-	rows, err := sqlx.NamedQueryContext(ctx, db, ListBudgetsQuery, params)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var item BudgetEntity
-		if err := rows.StructScan(&item); err != nil {
-			return err
-		}
-		if err := mapper(&item); err != nil {
-			return err
-		}
-	}
-
-	return rows.Err()
 }
 
 // UpsertBudget executes the 'UpsertBudget' query and returns a single row.

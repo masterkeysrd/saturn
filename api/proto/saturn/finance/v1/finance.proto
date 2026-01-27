@@ -288,14 +288,18 @@ message Budget {
     // Default view showing basic budget information.
     VIEW_UNSPECIFIED = 0;
 
+    // Name, description and appearance.
+    // Used for dropdown lists and minimal displays.
+    NAME_ONLY = 1;
+
     // Basic view showing essential budget details,
     // such as name, description, status, amount, and appearance.
-    BASIC = 1;
+    BASIC = 2;
 
     // Full view showing all budget details, including
     // base_amount, exchange_rate and statistics like spent amount,
     // remaining amount, and usage percentage.
-    FULL = 2;
+    FULL = 3;
   }
 
   enum Status {
@@ -327,10 +331,10 @@ message Budget {
     double usage_percentage = 3;
 
     // The start of the current period these stats cover.
-    google.protobuf.Timestamp period_start = 4;
+    google.type.Date period_start = 4;
 
     // The end of the current period these stats cover.
-    google.protobuf.Timestamp period_end = 5;
+    google.type.Date period_end = 5;
 
     // Number of transactions counted in spent_amount.
     int32 transaction_count = 6;
@@ -369,7 +373,7 @@ message Budget {
   // The exchange rate used to convert base_amount to amount
   // for the current period.
   // Only populated when View is FULL.
-  double exchange_rate = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.type.Decimal exchange_rate = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Statistics related to the budget.
   // Only populated when View is FULL.

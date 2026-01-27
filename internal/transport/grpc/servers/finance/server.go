@@ -67,7 +67,8 @@ func (s *Server) ListBudgets(ctx context.Context, req *financepb.ListBudgetsRequ
 		return nil, err
 	}
 	return &financepb.ListBudgetsResponse{
-		Budgets: BudgetsItemsPb(page.Items),
+		Budgets:   BudgetsItemsPb(page.Items),
+		TotalSize: int32(page.TotalCount),
 	}, nil
 }
 

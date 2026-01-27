@@ -8,9 +8,11 @@ type SelectExpression struct {
 	ctes    []CTEExpression
 	columns []string
 	from    []string
+	joins   []JoinExpression
 	where   []ConditionExpression
 	limit   string
 	offset  string
+	groupBy []string
 	orderBy []string
 }
 
@@ -22,6 +24,11 @@ func Select(columns ...string) SelectExpression {
 
 func (se SelectExpression) With(ctes ...CTEExpression) SelectExpression {
 	se.ctes = ctes
+	return se
+}
+
+func (se SelectExpression) Columns(columns ...string) SelectExpression {
+	se.columns = append(se.columns, columns...)
 	return se
 }
 
@@ -37,6 +44,22 @@ func (se SelectExpression) Where(conditions ...ConditionExpression) SelectExpres
 
 func (se SelectExpression) AndWhere(conditions ...ConditionExpression) SelectExpression {
 	se.where = append(se.where, conditions...)
+	return se
+}
+
+func (se SelectExpression) LeftJoin(table string, alias string, onCriteria ...ConditionExpression) SelectExpression {
+	join := JoinExpression{
+		joinType:   "LEFT JOIN",
+		table:      table,
+		alias:      alias,
+		onCriteria: onCriteria,
+	}
+	se.joins = append(se.joins, join)
+	return se
+}
+
+func (se SelectExpression) GroupBy(groupBys ...string) SelectExpression {
+	se.groupBy = groupBys
 	return se
 }
 
@@ -79,6 +102,26 @@ func (se SelectExpression) ToSQL() string {
 		sb.WriteString(strings.Join(se.from, ", "))
 	}
 
+	// JOIN clauses
+	for _, join := range se.joins {
+		sb.WriteString("\n")
+		sb.WriteString(join.joinType)
+		sb.WriteString(" ")
+		sb.WriteString(join.table)
+		if join.alias != "" {
+			sb.WriteString(" AS ")
+			sb.WriteString(join.alias)
+		}
+		if len(join.onCriteria) > 0 {
+			sb.WriteString(" ON ")
+			var onConditions []string
+			for _, cond := range join.onCriteria {
+				onConditions = append(onConditions, cond.ToSQL())
+			}
+			sb.WriteString(strings.Join(onConditions, " AND "))
+		}
+	}
+
 	// WHERE clause
 	if len(se.where) > 0 {
 		sb.WriteString("\nWHERE ")
@@ -93,6 +136,12 @@ func (se SelectExpression) ToSQL() string {
 	if len(se.orderBy) > 0 {
 		sb.WriteString("\nORDER BY ")
 		sb.WriteString(strings.Join(se.orderBy, ", "))
+	}
+
+	// GROUP BY clause
+	if len(se.groupBy) > 0 {
+		sb.WriteString("\nGROUP BY ")
+		sb.WriteString(strings.Join(se.groupBy, ", "))
 	}
 
 	// LIMIT clause
@@ -124,4 +173,22 @@ func Table(table string) FromExpression {
 func (fe FromExpression) As(alias string) FromExpression {
 	fe.alias = alias
 	return fe
+}
+
+type JoinExpression struct {
+	joinType   string
+	table      string
+	alias      string
+	onCriteria []ConditionExpression
+}
+
+func Join(table string) JoinExpression {
+	return JoinExpression{
+		joinType: "INNER JOIN",
+		table:    table,
+	}
+}
+func (je JoinExpression) As(alias string) JoinExpression {
+	je.alias = alias
+	return je
 }

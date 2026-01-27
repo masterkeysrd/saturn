@@ -7,7 +7,6 @@
 package api
 
 import (
-	"github.com/masterkeysrd/saturn/internal/foundation/pagination"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 )
 
@@ -40,28 +39,6 @@ func APIMoney(in money.Money) Money {
 
 func (m Money) IsZero() bool {
 	return m == Money{}
-}
-
-type PaginationRequest struct {
-	Page int `json:"page"`
-	Size int `json:"size"`
-}
-
-func (p PaginationRequest) ToPagination() pagination.Pagination {
-	return pagination.New(p.Page, p.Size)
-}
-
-type ListTransactionsRequest struct {
-	Search   string `json:"search"`
-	Paginate PaginationRequest
-}
-
-type GetTransactionRequest struct {
-	ID string
-}
-
-type DeleteTransactionRequest struct {
-	ID string
 }
 
 type GetFinanceInsightsRequest struct {

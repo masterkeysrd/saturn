@@ -3,79 +3,7 @@ package financehttp
 import (
 	"github.com/masterkeysrd/saturn/api"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
-	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
-	"github.com/oapi-codegen/runtime/types"
 )
-
-func TransactionsToAPI(list []*finance.Transaction) []api.Transaction {
-	resp := make([]api.Transaction, 0, len(list))
-	for _, t := range list {
-		if t == nil {
-			continue
-		}
-		resp = append(resp, *TransactionToAPI(t))
-	}
-	return resp
-}
-
-func TransactionToAPI(t *finance.Transaction) *api.Transaction {
-	if t == nil {
-		return nil
-	}
-
-	return &api.Transaction{
-		Id:          ptr.Of(t.ID.String()),
-		Type:        api.TransactionType(t.Type),
-		BudgetId:    ptr.Of(t.BudgetID.String()),
-		Name:        t.Title,
-		Description: ptr.OfNonZero(t.Description),
-		Amount:      api.APIMoney(t.Amount),
-		BaseAmount:  api.APIMoney(t.BaseAmount),
-		Date:        types.Date{Time: t.Date},
-		CreatedAt:   t.CreateTime,
-		UpdatedAt:   t.UpdateTime,
-	}
-}
-
-func TransactionItemsToAPI(list []*finance.TransactionItem) []api.TransactionItem {
-	resp := make([]api.TransactionItem, 0, len(list))
-	for _, t := range list {
-		if t == nil {
-			continue
-		}
-		resp = append(resp, *TransactionItemToAPI(t))
-	}
-	return resp
-}
-
-func TransactionItemToAPI(t *finance.TransactionItem) *api.TransactionItem {
-	if t == nil {
-		return nil
-	}
-	ti := api.TransactionItem{
-		Id:           t.ID.String(),
-		Type:         api.TransactionType(t.Type),
-		Name:         t.Name,
-		Description:  ptr.OfNonZero(t.Description),
-		Amount:       api.APIMoney(t.Amount),
-		BaseAmount:   api.APIMoney(t.BaseAmount),
-		ExchangeRate: t.ExchangeRate,
-		Date:         types.Date{Time: t.Date},
-		CreatedAt:    t.CreatedAt,
-		UpdatedAt:    t.UpdatedAt,
-	}
-
-	if b := t.Budget; b != nil {
-		ti.Budget = &api.TransactionBudget{
-			Id:       b.ID.String(),
-			Name:     b.Name,
-			Color:    b.Color.String(),
-			IconName: b.Icon.String(),
-		}
-	}
-
-	return &ti
-}
 
 func FinanceInsightsToAPI(insights *finance.Insights) *api.FinanceInsights {
 	if insights == nil {

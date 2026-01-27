@@ -50,12 +50,13 @@
           },
           {
             "name": "view",
-            "description": "The view level for the budget details.\nDefaults to BASIC if not specified.\n\n - VIEW_UNSPECIFIED: Default view showing basic budget information.\n - BASIC: Basic view showing essential budget details,\nsuch as name, description, status, amount, and appearance.\n - FULL: Full view showing all budget details, including\nbase_amount, exchange_rate and statistics like spent amount,\nremaining amount, and usage percentage.",
+            "description": "The view level for the budget details.\nDefaults to BASIC if not specified.\n\n - VIEW_UNSPECIFIED: Default view showing basic budget information.\n - NAME_ONLY: Name, description and appearance.\nUsed for dropdown lists and minimal displays.\n - BASIC: Basic view showing essential budget details,\nsuch as name, description, status, amount, and appearance.\n - FULL: Full view showing all budget details, including\nbase_amount, exchange_rate and statistics like spent amount,\nremaining amount, and usage percentage.",
             "in": "query",
             "required": false,
             "type": "string",
             "enum": [
               "VIEW_UNSPECIFIED",
+              "NAME_ONLY",
               "BASIC",
               "FULL"
             ],
@@ -150,12 +151,13 @@
           },
           {
             "name": "view",
-            "description": "The view level for the budget details.\n\n - VIEW_UNSPECIFIED: Default view showing basic budget information.\n - BASIC: Basic view showing essential budget details,\nsuch as name, description, status, amount, and appearance.\n - FULL: Full view showing all budget details, including\nbase_amount, exchange_rate and statistics like spent amount,\nremaining amount, and usage percentage.",
+            "description": "The view level for the budget details.\n\n - VIEW_UNSPECIFIED: Default view showing basic budget information.\n - NAME_ONLY: Name, description and appearance.\nUsed for dropdown lists and minimal displays.\n - BASIC: Basic view showing essential budget details,\nsuch as name, description, status, amount, and appearance.\n - FULL: Full view showing all budget details, including\nbase_amount, exchange_rate and statistics like spent amount,\nremaining amount, and usage percentage.",
             "in": "query",
             "required": false,
             "type": "string",
             "enum": [
               "VIEW_UNSPECIFIED",
+              "NAME_ONLY",
               "BASIC",
               "FULL"
             ],
@@ -1302,13 +1304,11 @@
           "title": "Percentage of the budget used in the current period.\nCalculated as: (spent_amount / amount) * 100\nRange: 0.0 to 100.0+ (can exceed 100 if over budget)"
         },
         "periodStart": {
-          "type": "string",
-          "format": "date-time",
+          "$ref": "#/definitions/typeDate",
           "description": "The start of the current period these stats cover."
         },
         "periodEnd": {
-          "type": "string",
-          "format": "date-time",
+          "$ref": "#/definitions/typeDate",
           "description": "The end of the current period these stats cover."
         },
         "transactionCount": {
@@ -1553,8 +1553,7 @@
           "readOnly": true
         },
         "exchangeRate": {
-          "type": "number",
-          "format": "double",
+          "$ref": "#/definitions/typeDecimal",
           "description": "The exchange rate used to convert base_amount to amount\nfor the current period.\nOnly populated when View is FULL.",
           "readOnly": true
         },
@@ -1585,11 +1584,12 @@
       "type": "string",
       "enum": [
         "VIEW_UNSPECIFIED",
+        "NAME_ONLY",
         "BASIC",
         "FULL"
       ],
       "default": "VIEW_UNSPECIFIED",
-      "description": " - VIEW_UNSPECIFIED: Default view showing basic budget information.\n - BASIC: Basic view showing essential budget details,\nsuch as name, description, status, amount, and appearance.\n - FULL: Full view showing all budget details, including\nbase_amount, exchange_rate and statistics like spent amount,\nremaining amount, and usage percentage."
+      "description": " - VIEW_UNSPECIFIED: Default view showing basic budget information.\n - NAME_ONLY: Name, description and appearance.\nUsed for dropdown lists and minimal displays.\n - BASIC: Basic view showing essential budget details,\nsuch as name, description, status, amount, and appearance.\n - FULL: Full view showing all budget details, including\nbase_amount, exchange_rate and statistics like spent amount,\nremaining amount, and usage percentage."
     },
     "v1CreateUserRequest": {
       "type": "object",

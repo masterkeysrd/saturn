@@ -117,11 +117,27 @@ func BudgetItemPb(b *finance.BudgetItem) *financepb.Budget {
 		return nil
 	}
 	pb := &financepb.Budget{
-		Id:          b.ID.String(),
-		Name:        b.Name,
-		Description: ptr.Value(b.Description),
-		Appearance:  encoding.AppearancePb(b.Appearance),
-		Amount:      encoding.MoneyPb(b.Amount),
+		Id:           b.ID.String(),
+		Name:         b.Name,
+		Description:  ptr.Value(b.Description),
+		Appearance:   encoding.AppearancePb(b.Appearance),
+		Status:       BudgetStatusPb(b.Status),
+		Amount:       encoding.MoneyPb(b.Amount),
+		BaseAmount:   encoding.MoneyPb(b.BaseAmount),
+		ExchangeRate: encoding.DecimalPb(b.ExchangeRate),
+		CreateTime:   encoding.TimestampPb(b.CreateTime),
+		UpdateTime:   encoding.TimestampPb(b.UpdateTime),
+	}
+
+	if b.Stats != nil {
+		pb.Stats = &financepb.Budget_Stats{
+			PeriodStart:      encoding.DatePb(b.Stats.PeriodStart),
+			PeriodEnd:        encoding.DatePb(b.Stats.PeriodEnd),
+			SpentAmount:      encoding.MoneyPb(b.Stats.Spent),
+			RemainingAmount:  encoding.MoneyPb(b.Stats.Remaining(b.Amount)),
+			UsagePercentage:  b.Stats.Usage(b.Amount),
+			TransactionCount: int32(b.Stats.TrxCount),
+		}
 	}
 
 	return pb
@@ -129,6 +145,8 @@ func BudgetItemPb(b *finance.BudgetItem) *financepb.Budget {
 
 func BudgetView(pb financepb.Budget_View) finance.BudgetView {
 	switch pb {
+	case financepb.Budget_NAME_ONLY:
+		return finance.BudgetViewNameOnly
 	case financepb.Budget_BASIC:
 		return finance.BudgetViewBasic
 	case financepb.Budget_FULL:

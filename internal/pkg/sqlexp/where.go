@@ -11,6 +11,14 @@ type ConditionExpression struct {
 	expression string
 }
 
+func Cond(column string, operator string, expression string) ConditionExpression {
+	return ConditionExpression{
+		column:     column,
+		operator:   operator,
+		expression: expression,
+	}
+}
+
 func Eq(column string, expression string) ConditionExpression {
 	return ConditionExpression{
 		column:     column,
