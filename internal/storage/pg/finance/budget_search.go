@@ -26,9 +26,34 @@ func NewBudgetSearcher(db *sqlx.DB) *BudgetSearcher {
 	}
 }
 
+func (bs *BudgetSearcher) Find(ctx context.Context, criteria *finance.FindBudgetCriteria) (*finance.BudgetItem, error) {
+	params := FindBudgetParams{
+		BudgetID: criteria.Key.ID.String(),
+		SpaceID:  criteria.Key.SpaceID.String(),
+		Date:     criteria.Date,
+		Limit:    1,
+	}
+	exp := bs.buildFindExpression(criteria)
+
+	query, args, err := sqlx.Named(exp.ToSQL(), params)
+
+	if err != nil {
+		return nil, fmt.Errorf("cannot build find budget query: %w", err)
+	}
+
+	query = bs.db.Rebind(query)
+
+	var view BudgetItemView
+	if err := bs.db.GetContext(ctx, &view, query, args...); err != nil {
+		return nil, fmt.Errorf("cannot execute find budget query: %w", err)
+	}
+
+	return view.ToBudgetItem(), nil
+}
+
 func (bs *BudgetSearcher) Search(ctx context.Context, criteria *finance.BudgetSearchCriteria) (*finance.BudgetPage, error) {
 	args := NewBudgetSearchParams(criteria)
-	query := bs.getSearchExp(criteria)
+	query := bs.buildSearchExpression(criteria)
 
 	rows, err := bs.db.NamedQueryContext(ctx, query.ToSQL(), args)
 	if err != nil {
@@ -54,7 +79,76 @@ func (bs *BudgetSearcher) Search(ctx context.Context, criteria *finance.BudgetSe
 	return paging.NewPage(items, count, criteria.PagingRequest.Size), nil
 }
 
-func (bs *BudgetSearcher) getSearchExp(criteria *finance.BudgetSearchCriteria) sqlexp.SelectExpression {
+func (bs *BudgetSearcher) buildFindExpression(criteria *finance.FindBudgetCriteria) sqlexp.SelectExpression {
+	exp := bs.buildExpression(criteria.View).
+		Where(
+			sqlexp.Eq("b.id", sqlexp.NamedParam("budget_id")),
+			sqlexp.Eq("b.space_id", sqlexp.NamedParam("space_id")),
+		).
+		Limit(sqlexp.NamedParam("limit"))
+
+	return exp
+}
+
+func (bs *BudgetSearcher) buildSearchExpression(criteria *finance.BudgetSearchCriteria) sqlexp.SelectExpression {
+	exp := bs.buildExpression(criteria.View)
+	if criteria.Term != "" {
+		exp = exp.AndWhere(
+			sqlexp.Cond(
+				"search_vector",
+				"@@",
+				sqlexp.Func("websearch_to_tsquery", sqlexp.NamedParam("term")),
+			),
+		)
+	}
+
+	exp = exp.
+		Limit(sqlexp.NamedParam("limit")).
+		Offset(sqlexp.NamedParam("offset")).
+		OrderBy("b.name ASC", "b.create_time DESC")
+
+	return exp
+}
+
+func (bs *BudgetSearcher) count(ctx context.Context, params BudgetSearchParams) (int, error) {
+	exp := bs.buildCountExp(params)
+
+	query, args, err := sqlx.Named(exp.ToSQL(), params)
+	if err != nil {
+		return 0, fmt.Errorf("cannot build count query: %w", err)
+	}
+
+	query = bs.db.Rebind(query)
+
+	var totalCount int
+	if err := bs.db.GetContext(ctx, &totalCount, query, args...); err != nil {
+		return 0, fmt.Errorf("cannot execute count query: %w", err)
+	}
+
+	return totalCount, nil
+}
+
+func (bs *BudgetSearcher) buildCountExp(params BudgetSearchParams) sqlexp.SelectExpression {
+	exp := sqlexp.Select("COUNT(b.id) AS total_count").
+		From("finance.budgets b").
+		Where(
+			sqlexp.Eq("b.space_id", sqlexp.NamedParam("space_id")),
+		)
+
+	if params.Term != "" {
+		exp = exp.AndWhere(
+			sqlexp.Cond(
+				"search_vector",
+				"@@",
+				sqlexp.Func("websearch_to_tsquery", sqlexp.NamedParam("term")),
+			),
+		)
+	}
+
+	return exp
+}
+
+func (bs *BudgetSearcher) buildExpression(view finance.BudgetView) sqlexp.SelectExpression {
 	exp := sqlexp.Select(
 		"b.id",
 		"b.name",
@@ -67,7 +161,7 @@ func (bs *BudgetSearcher) getSearchExp(criteria *finance.BudgetSearchCriteria) s
 			sqlexp.Eq("b.space_id", sqlexp.NamedParam("space_id")),
 		)
 
-	if criteria.View >= finance.BudgetViewBasic {
+	if view >= finance.BudgetViewBasic {
 		exp = exp.Columns(
 			"b.status",
 			"b.amount_currency",
@@ -77,7 +171,7 @@ func (bs *BudgetSearcher) getSearchExp(criteria *finance.BudgetSearchCriteria) s
 		)
 	}
 
-	if criteria.View >= finance.BudgetViewFull {
+	if view >= finance.BudgetViewFull {
 		exp = exp.
 			With(
 				sqlexp.CTE("FilteredBudgetPeriods", sqlexp.
@@ -138,59 +232,6 @@ func (bs *BudgetSearcher) getSearchExp(criteria *finance.BudgetSearchCriteria) s
 			LeftJoin("TransactionsStats", "txs",
 				sqlexp.Eq("txs.budget_id", "b.id"),
 			)
-	}
-
-	if criteria.Term != "" {
-		exp = exp.AndWhere(
-			sqlexp.Cond(
-				"search_vector",
-				"@@",
-				sqlexp.Func("websearch_to_tsquery", sqlexp.NamedParam("term")),
-			),
-		)
-	}
-
-	exp = exp.
-		Limit(sqlexp.NamedParam("limit")).
-		Offset(sqlexp.NamedParam("offset")).
-		OrderBy("b.name ASC", "b.create_time DESC")
-
-	return exp
-}
-
-func (bs *BudgetSearcher) count(ctx context.Context, params BudgetSearchParams) (int, error) {
-	exp := bs.buildCountExp(params)
-
-	query, args, err := sqlx.Named(exp.ToSQL(), params)
-	if err != nil {
-		return 0, fmt.Errorf("cannot build count query: %w", err)
-	}
-
-	query = bs.db.Rebind(query)
-
-	var totalCount int
-	if err := bs.db.GetContext(ctx, &totalCount, query, args...); err != nil {
-		return 0, fmt.Errorf("cannot execute count query: %w", err)
-	}
-
-	return totalCount, nil
-}
-
-func (bs *BudgetSearcher) buildCountExp(params BudgetSearchParams) sqlexp.SelectExpression {
-	exp := sqlexp.Select("COUNT(b.id) AS total_count").
-		From("finance.budgets b").
-		Where(
-			sqlexp.Eq("b.space_id", sqlexp.NamedParam("space_id")),
-		)
-
-	if params.Term != "" {
-		exp = exp.AndWhere(
-			sqlexp.Cond(
-				"search_vector",
-				"@@",
-				sqlexp.Func("websearch_to_tsquery", sqlexp.NamedParam("term")),
-			),
-		)
 	}
 
 	return exp
@@ -273,6 +314,13 @@ type BudgetSearchParams struct {
 	Date    time.Time `db:"date"`
 	Offset  int       `db:"offset"`
 	Limit   int       `db:"limit"`
+}
+
+type FindBudgetParams struct {
+	SpaceID  string    `db:"space_id"`
+	BudgetID string    `db:"budget_id"`
+	Date     time.Time `db:"date"`
+	Limit    int       `db:"limit"`
 }
 
 // NewBudgetSearchParams creates params from domain criteria.

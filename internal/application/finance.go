@@ -12,7 +12,6 @@ import (
 // FinanceService defines the interface for finance-related operations.
 type FinanceService interface {
 	CreateBudget(context.Context, access.Principal, *finance.Budget) error
-	GetBudget(context.Context, access.Principal, finance.BudgetID) (*finance.Budget, error)
 	UpdateBudget(context.Context, access.Principal, *finance.UpdateBudgetInput) (*finance.Budget, error)
 
 	ListCurrencies(context.Context) ([]finance.Currency, error)
@@ -33,6 +32,7 @@ type FinanceService interface {
 // FinanceSearchService defines the interface for finance search operations.
 type FinanceSearchService interface {
 	SearchBudgets(context.Context, access.Principal, *finance.SearchBudgetsInput) (*finance.BudgetPage, error)
+	FindBudget(context.Context, access.Principal, *finance.FindBudgetInput) (*finance.BudgetItem, error)
 	SearchTransactions(context.Context, access.Principal, *finance.SearchTransactionsInput) (*finance.TransactionPage, error)
 }
 
@@ -70,19 +70,13 @@ func (app *FinanceApp) SearchBudgets(ctx context.Context, in *finance.SearchBudg
 	return app.financeSearchService.SearchBudgets(ctx, principal, in)
 }
 
-// GetBudget retrieves a budget by its ID.
-func (app *FinanceApp) GetBudget(ctx context.Context, budgetID finance.BudgetID) (*finance.Budget, error) {
+// FindBudget retrieves a budget by its identifier.
+func (app *FinanceApp) FindBudget(ctx context.Context, in *finance.FindBudgetInput) (*finance.BudgetItem, error) {
 	principal, ok := access.GetPrincipal(ctx)
 	if !ok {
 		return nil, errors.New("missing principal in context")
 	}
-
-	budget, err := app.financeService.GetBudget(ctx, principal, budgetID)
-	if err != nil {
-		return nil, err
-	}
-
-	return budget, nil
+	return app.financeSearchService.FindBudget(ctx, principal, in)
 }
 
 // UpdateBudget updates an existing budget.

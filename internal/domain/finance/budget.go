@@ -57,6 +57,7 @@ type BudgetStore interface {
 }
 
 type BudgetSearcher interface {
+	Find(context.Context, *FindBudgetCriteria) (*BudgetItem, error)
 	Search(context.Context, *BudgetSearchCriteria) (*BudgetPage, error)
 }
 
@@ -498,6 +499,28 @@ func (bsc *BudgetSearchCriteria) Validate() error {
 	}
 
 	return nil
+}
+
+type FindBudgetInput struct {
+	ID   BudgetID
+	View BudgetView
+}
+
+func (fbi *FindBudgetInput) toCriteria(spaceID space.ID, t time.Time) FindBudgetCriteria {
+	return FindBudgetCriteria{
+		Key: BudgetKey{
+			ID:      fbi.ID,
+			SpaceID: spaceID,
+		},
+		Date: t,
+		View: fbi.View,
+	}
+}
+
+type FindBudgetCriteria struct {
+	Key  BudgetKey
+	Date time.Time
+	View BudgetView
 }
 
 type BudgetView int

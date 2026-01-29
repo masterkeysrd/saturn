@@ -90,6 +90,17 @@ func SearchBudgetsInput(pb *financepb.ListBudgetsRequest) *finance.SearchBudgets
 	}
 }
 
+func FindBudgetInput(pb *financepb.GetBudgetRequest) *finance.FindBudgetInput {
+	if pb == nil {
+		return nil
+	}
+
+	return &finance.FindBudgetInput{
+		ID:   finance.BudgetID(pb.GetId()),
+		View: BudgetView(pb.GetView()),
+	}
+}
+
 func UpdateBudgetInput(pb *financepb.UpdateBudgetRequest) (*finance.UpdateBudgetInput, error) {
 	if pb == nil {
 		return nil, nil

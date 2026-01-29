@@ -49,6 +49,20 @@ func (s *SearchService) SearchBudgets(ctx context.Context, actor access.Principa
 	return page, nil
 }
 
+func (s *SearchService) FindBudget(ctx context.Context, actor access.Principal, in *FindBudgetInput) (*BudgetItem, error) {
+	if !actor.IsSpaceMember() {
+		return nil, fmt.Errorf("unauthorized: principal is not a space member")
+	}
+
+	criteria := in.toCriteria(actor.SpaceID(), time.Now())
+	item, err := s.budgetsSearcher.Find(ctx, &criteria)
+	if err != nil {
+		return nil, fmt.Errorf("cannot find budget: %w", err)
+	}
+
+	return item, nil
+}
+
 func (s *SearchService) SearchTransactions(ctx context.Context, actor access.Principal, in *SearchTransactionsInput) (*TransactionPage, error) {
 	if !actor.IsSpaceMember() {
 		return nil, fmt.Errorf("unauthorized: principal is not a space member")

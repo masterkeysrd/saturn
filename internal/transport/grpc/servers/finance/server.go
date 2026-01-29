@@ -17,7 +17,7 @@ var _ financepb.FinanceServer = (*Server)(nil)
 type Application interface {
 	CreateBudget(context.Context, *finance.Budget) error
 	SearchBudgets(context.Context, *finance.SearchBudgetsInput) (*finance.BudgetPage, error)
-	GetBudget(context.Context, finance.BudgetID) (*finance.Budget, error)
+	FindBudget(context.Context, *finance.FindBudgetInput) (*finance.BudgetItem, error)
 	UpdateBudget(context.Context, *finance.UpdateBudgetInput) (*finance.Budget, error)
 	ListCurrencies(context.Context) ([]finance.Currency, error)
 	CreateExchangeRate(context.Context, *finance.ExchangeRate) error
@@ -73,11 +73,11 @@ func (s *Server) ListBudgets(ctx context.Context, req *financepb.ListBudgetsRequ
 }
 
 func (s *Server) GetBudget(ctx context.Context, req *financepb.GetBudgetRequest) (*financepb.Budget, error) {
-	budget, err := s.app.GetBudget(ctx, finance.BudgetID(req.GetId()))
+	budget, err := s.app.FindBudget(ctx, FindBudgetInput(req))
 	if err != nil {
 		return nil, err
 	}
-	return BudgetPb(budget), nil
+	return BudgetItemPb(budget), nil
 }
 
 func (s *Server) UpdateBudget(ctx context.Context, req *financepb.UpdateBudgetRequest) (*financepb.Budget, error) {
