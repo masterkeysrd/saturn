@@ -27,7 +27,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file saturn/finance/v1/finance.proto.
  */
 export const file_saturn_finance_v1_finance: GenFile = /*@__PURE__*/
-  fileDesc("Ch9zYXR1cm4vZmluYW5jZS92MS9maW5hbmNlLnByb3RvEhFzYXR1cm4uZmluYW5jZS52MSJJChZMaXN0Q3VycmVuY2llc1Jlc3BvbnNlEi8KCmN1cnJlbmNpZXMYASADKAsyGy5zYXR1cm4uZmluYW5jZS52MS5DdXJyZW5jeSJOCghDdXJyZW5jeRIMCgRjb2RlGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGc3ltYm9sGAMgASgJEhYKDmRlY2ltYWxfcGxhY2VzGAQgASgFIk8KGUNyZWF0ZUV4Y2hhbmdlUmF0ZVJlcXVlc3QSMgoEcmF0ZRgBIAEoCzIfLnNhdHVybi5maW5hbmNlLnYxLkV4Y2hhbmdlUmF0ZUID4EECIhoKGExpc3RFeGNoYW5nZVJhdGVzUmVxdWVzdCJLChlMaXN0RXhjaGFuZ2VSYXRlc1Jlc3BvbnNlEi4KBXJhdGVzGAEgAygLMh8uc2F0dXJuLmZpbmFuY2UudjEuRXhjaGFuZ2VSYXRlIjQKFkdldEV4Y2hhbmdlUmF0ZVJlcXVlc3QSGgoNY3VycmVuY3lfY29kZRgBIAEoCUID4EECIqEBChlVcGRhdGVFeGNoYW5nZVJhdGVSZXF1ZXN0EhoKDWN1cnJlbmN5X2NvZGUYASABKAlCA+BBAhIyCgRyYXRlGAIgASgLMh8uc2F0dXJuLmZpbmFuY2UudjEuRXhjaGFuZ2VSYXRlQgPgQQISNAoLdXBkYXRlX21hc2sYAyABKAsyGi5nb29nbGUucHJvdG9idWYuRmllbGRNYXNrQgPgQQEiNwoZRGVsZXRlRXhjaGFuZ2VSYXRlUmVxdWVzdBIaCg1jdXJyZW5jeV9jb2RlGAEgASgJQgPgQQIiRQoTQ3JlYXRlQnVkZ2V0UmVxdWVzdBIuCgZidWRnZXQYASABKAsyGS5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXRCA+BBAiLeAQoMRXhjaGFuZ2VSYXRlEhoKDWN1cnJlbmN5X2NvZGUYASABKAlCA+BBAxInCgRyYXRlGAIgASgLMhQuZ29vZ2xlLnR5cGUuRGVjaW1hbEID4EECEh0KEGlzX2Jhc2VfY3VycmVuY3kYAyABKAhCA+BBAxI0CgtjcmVhdGVfdGltZRgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAxI0Cgt1cGRhdGVfdGltZRgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAyKeAQoSTGlzdEJ1ZGdldHNSZXF1ZXN0EhMKBnNlYXJjaBgBIAEoCUID4EEBEjEKBHZpZXcYAiABKA4yHi5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXQuVmlld0ID4EEBEhUKCG9yZGVyX2J5GAMgASgJQgPgQQESEQoEcGFnZRgEIAEoBUID4EEBEhYKCXBhZ2Vfc2l6ZRgFIAEoBUID4EEBIlUKE0xpc3RCdWRnZXRzUmVzcG9uc2USKgoHYnVkZ2V0cxgBIAMoCzIZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldBISCgp0b3RhbF9zaXplGAIgASgFIlYKEEdldEJ1ZGdldFJlcXVlc3QSDwoCaWQYASABKAlCA+BBAhIxCgR2aWV3GAIgASgOMh4uc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0LlZpZXdCA+BBASKMAQoTVXBkYXRlQnVkZ2V0UmVxdWVzdBIPCgJpZBgBIAEoCUID4EECEi4KBmJ1ZGdldBgCIAEoCzIZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldEID4EECEjQKC3VwZGF0ZV9tYXNrGAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLkZpZWxkTWFza0ID4EEBIiYKE0RlbGV0ZUJ1ZGdldFJlcXVlc3QSDwoCaWQYASABKAlCA+BBAiLFBgoGQnVkZ2V0Eg8KAmlkGAEgASgJQgPgQQMSEQoEbmFtZRgCIAEoCUID4EECEhgKC2Rlc2NyaXB0aW9uGAMgASgJQgPgQQESKwoKYXBwZWFyYW5jZRgEIAEoCzIXLnNhdHVybi50eXBlLkFwcGVhcmFuY2USNQoGc3RhdHVzGAUgASgOMiAuc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0LlN0YXR1c0ID4EEBEicKBmFtb3VudBgGIAEoCzISLnNhdHVybi50eXBlLk1vbmV5QgPgQQISNAoLY3JlYXRlX3RpbWUYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSNAoLdXBkYXRlX3RpbWUYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSLAoLYmFzZV9hbW91bnQYCSABKAsyEi5zYXR1cm4udHlwZS5Nb25leUID4EEDEjAKDWV4Y2hhbmdlX3JhdGUYCiABKAsyFC5nb29nbGUudHlwZS5EZWNpbWFsQgPgQQMSMwoFc3RhdHMYCyABKAsyHy5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXQuU3RhdHNCA+BBAxrkAQoFU3RhdHMSKAoMc3BlbnRfYW1vdW50GAEgASgLMhIuc2F0dXJuLnR5cGUuTW9uZXkSLAoQcmVtYWluaW5nX2Ftb3VudBgCIAEoCzISLnNhdHVybi50eXBlLk1vbmV5EhgKEHVzYWdlX3BlcmNlbnRhZ2UYAyABKAESJwoMcGVyaW9kX3N0YXJ0GAQgASgLMhEuZ29vZ2xlLnR5cGUuRGF0ZRIlCgpwZXJpb2RfZW5kGAUgASgLMhEuZ29vZ2xlLnR5cGUuRGF0ZRIZChF0cmFuc2FjdGlvbl9jb3VudBgGIAEoBSJACgRWaWV3EhQKEFZJRVdfVU5TUEVDSUZJRUQQABINCglOQU1FX09OTFkQARIJCgVCQVNJQxACEggKBEZVTEwQAyJGCgZTdGF0dXMSFgoSU1RBVFVTX1VOU1BFQ0lGSUVEEAASCgoGQUNUSVZFEAESCgoGUEFVU0VEEAISDAoIQVJDSElWRUQQAyJIChRDcmVhdGVFeHBlbnNlUmVxdWVzdBIwCgdleHBlbnNlGAEgASgLMhouc2F0dXJuLmZpbmFuY2UudjEuRXhwZW5zZUID4EECIv0CCgdFeHBlbnNlEg8KAmlkGAEgASgJQgPgQQMSFgoJYnVkZ2V0X2lkGAIgASgJQgPgQQISEgoFdGl0bGUYAyABKAlCA+BBAhIYCgtkZXNjcmlwdGlvbhgEIAEoCUID4EEBEicKBmFtb3VudBgFIAEoCzISLnNhdHVybi50eXBlLk1vbmV5QgPgQQISMAoNZXhjaGFuZ2VfcmF0ZRgGIAEoCzIULmdvb2dsZS50eXBlLkRlY2ltYWxCA+BBARIkCgRkYXRlGAcgASgLMhEuZ29vZ2xlLnR5cGUuRGF0ZUID4EECEi4KDmVmZmVjdGl2ZV9kYXRlGAggASgLMhEuZ29vZ2xlLnR5cGUuRGF0ZUID4EEBEjQKC2NyZWF0ZV90aW1lGAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEID4EEDEjQKC3VwZGF0ZV90aW1lGAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEID4EEDIhkKF0xpc3RUcmFuc2FjdGlvbnNSZXF1ZXN0IlAKGExpc3RUcmFuc2FjdGlvbnNSZXNwb25zZRI0Cgx0cmFuc2FjdGlvbnMYASADKAsyHi5zYXR1cm4uZmluYW5jZS52MS5UcmFuc2FjdGlvbiLfBAoLVHJhbnNhY3Rpb24SDwoCaWQYASABKAlCA+BBAxI2CgR0eXBlGAIgASgOMiMuc2F0dXJuLmZpbmFuY2UudjEuVHJhbnNhY3Rpb24uVHlwZUID4EEDEj4KBmJ1ZGdldBgDIAEoCzIpLnNhdHVybi5maW5hbmNlLnYxLlRyYW5zYWN0aW9uLkJ1ZGdldEluZm9CA+BBAxInCgZhbW91bnQYBCABKAsyEi5zYXR1cm4udHlwZS5Nb25leUID4EEDEiwKC2Jhc2VfYW1vdW50GAUgASgLMhIuc2F0dXJuLnR5cGUuTW9uZXlCA+BBAxIwCg1leGNoYW5nZV9yYXRlGAYgASgLMhQuZ29vZ2xlLnR5cGUuRGVjaW1hbEID4EEDEiQKBGRhdGUYByABKAsyES5nb29nbGUudHlwZS5EYXRlQgPgQQMSLgoOZWZmZWN0aXZlX2RhdGUYCCABKAsyES5nb29nbGUudHlwZS5EYXRlQgPgQQMSNAoLY3JlYXRlX3RpbWUYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSNAoLdXBkYXRlX3RpbWUYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMaUQoKQnVkZ2V0SW5mbxIWCglidWRnZXRfaWQYASABKAlCA+BBAxIRCgRuYW1lGAIgASgJQgPgQQMSGAoLZGVzY3JpcHRpb24YAyABKAlCA+BBAyIpCgRUeXBlEhQKEFRZUEVfVU5TUEVDSUZJRUQQABILCgdFWFBFTlNFEAEifgoUVXBkYXRlU2V0dGluZ1JlcXVlc3QSMAoHc2V0dGluZxgBIAEoCzIaLnNhdHVybi5maW5hbmNlLnYxLlNldHRpbmdCA+BBAhI0Cgt1cGRhdGVfbWFzaxgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE1hc2tCA+BBASKgAgoHU2V0dGluZxI2CgZzdGF0dXMYASABKA4yIS5zYXR1cm4uZmluYW5jZS52MS5TZXR0aW5nLlN0YXR1c0ID4EEDEh8KEmJhc2VfY3VycmVuY3lfY29kZRgCIAEoCUID4EECEjQKC2NyZWF0ZV90aW1lGAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEID4EEDEjQKC3VwZGF0ZV90aW1lGAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEID4EEDIkoKBlN0YXR1cxIWChJTVEFUVVNfVU5TUEVDSUZJRUQQABIOCgpJTkNPTVBMRVRFEAESCgoGQUNUSVZFEAISDAoIRElTQUJMRUQQA0oECAMQCzKNEQoHRmluYW5jZRJzCg5MaXN0Q3VycmVuY2llcxIWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRopLnNhdHVybi5maW5hbmNlLnYxLkxpc3RDdXJyZW5jaWVzUmVzcG9uc2UiHoLT5JMCGBIWL3YxL2ZpbmFuY2UvY3VycmVuY2llcxKNAQoSQ3JlYXRlRXhjaGFuZ2VSYXRlEiwuc2F0dXJuLmZpbmFuY2UudjEuQ3JlYXRlRXhjaGFuZ2VSYXRlUmVxdWVzdBofLnNhdHVybi5maW5hbmNlLnYxLkV4Y2hhbmdlUmF0ZSIogtPkkwIiOgRyYXRlIhovdjEvZmluYW5jZS9leGNoYW5nZS1yYXRlcxKSAQoRTGlzdEV4Y2hhbmdlUmF0ZXMSKy5zYXR1cm4uZmluYW5jZS52MS5MaXN0RXhjaGFuZ2VSYXRlc1JlcXVlc3QaLC5zYXR1cm4uZmluYW5jZS52MS5MaXN0RXhjaGFuZ2VSYXRlc1Jlc3BvbnNlIiKC0+STAhwSGi92MS9maW5hbmNlL2V4Y2hhbmdlLXJhdGVzEpEBCg9HZXRFeGNoYW5nZVJhdGUSKS5zYXR1cm4uZmluYW5jZS52MS5HZXRFeGNoYW5nZVJhdGVSZXF1ZXN0Gh8uc2F0dXJuLmZpbmFuY2UudjEuRXhjaGFuZ2VSYXRlIjKC0+STAiwSKi92MS9maW5hbmNlL2V4Y2hhbmdlLXJhdGVzL3tjdXJyZW5jeV9jb2RlfRK+AQoSVXBkYXRlRXhjaGFuZ2VSYXRlEiwuc2F0dXJuLmZpbmFuY2UudjEuVXBkYXRlRXhjaGFuZ2VSYXRlUmVxdWVzdBofLnNhdHVybi5maW5hbmNlLnYxLkV4Y2hhbmdlUmF0ZSJZ2kEeY3VycmVuY3lfY29kZSxyYXRlLHVwZGF0ZV9tYXNrgtPkkwIyOgRyYXRlMiovdjEvZmluYW5jZS9leGNoYW5nZS1yYXRlcy97Y3VycmVuY3lfY29kZX0SjgEKEkRlbGV0ZUV4Y2hhbmdlUmF0ZRIsLnNhdHVybi5maW5hbmNlLnYxLkRlbGV0ZUV4Y2hhbmdlUmF0ZVJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkiMoLT5JMCLCoqL3YxL2ZpbmFuY2UvZXhjaGFuZ2UtcmF0ZXMve2N1cnJlbmN5X2NvZGV9EnYKDENyZWF0ZUJ1ZGdldBImLnNhdHVybi5maW5hbmNlLnYxLkNyZWF0ZUJ1ZGdldFJlcXVlc3QaGS5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXQiI4LT5JMCHToGYnVkZ2V0IhMvdjEvZmluYW5jZS9idWRnZXRzEnkKC0xpc3RCdWRnZXRzEiUuc2F0dXJuLmZpbmFuY2UudjEuTGlzdEJ1ZGdldHNSZXF1ZXN0GiYuc2F0dXJuLmZpbmFuY2UudjEuTGlzdEJ1ZGdldHNSZXNwb25zZSIbgtPkkwIVEhMvdjEvZmluYW5jZS9idWRnZXRzEnIKCUdldEJ1ZGdldBIjLnNhdHVybi5maW5hbmNlLnYxLkdldEJ1ZGdldFJlcXVlc3QaGS5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXQiJdpBAmlkgtPkkwIaEhgvdjEvZmluYW5jZS9idWRnZXRzL3tpZH0SkwEKDFVwZGF0ZUJ1ZGdldBImLnNhdHVybi5maW5hbmNlLnYxLlVwZGF0ZUJ1ZGdldFJlcXVlc3QaGS5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXQiQNpBFWlkLGJ1ZGdldCx1cGRhdGVfbWFza4LT5JMCIjoGYnVkZ2V0MhgvdjEvZmluYW5jZS9idWRnZXRzL3tpZH0SdQoMRGVsZXRlQnVkZ2V0EiYuc2F0dXJuLmZpbmFuY2UudjEuRGVsZXRlQnVkZ2V0UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eSIl2kECaWSC0+STAhoqGC92MS9maW5hbmNlL2J1ZGdldHMve2lkfRJ/Cg1DcmVhdGVFeHBlbnNlEicuc2F0dXJuLmZpbmFuY2UudjEuQ3JlYXRlRXhwZW5zZVJlcXVlc3QaHi5zYXR1cm4uZmluYW5jZS52MS5UcmFuc2FjdGlvbiIlgtPkkwIfOgdleHBlbnNlIhQvdjEvZmluYW5jZS9leHBlbnNlcxKNAQoQTGlzdFRyYW5zYWN0aW9ucxIqLnNhdHVybi5maW5hbmNlLnYxLkxpc3RUcmFuc2FjdGlvbnNSZXF1ZXN0Gisuc2F0dXJuLmZpbmFuY2UudjEuTGlzdFRyYW5zYWN0aW9uc1Jlc3BvbnNlIiCC0+STAhoSGC92MS9maW5hbmNlL3RyYW5zYWN0aW9ucxJdCgpHZXRTZXR0aW5nEhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5Ghouc2F0dXJuLmZpbmFuY2UudjEuU2V0dGluZyIbgtPkkwIVEhMvdjEvZmluYW5jZS9zZXR0aW5nEpABCg1VcGRhdGVTZXR0aW5nEicuc2F0dXJuLmZpbmFuY2UudjEuVXBkYXRlU2V0dGluZ1JlcXVlc3QaGi5zYXR1cm4uZmluYW5jZS52MS5TZXR0aW5nIjraQRNzZXR0aW5nLHVwZGF0ZV9tYXNrgtPkkwIeOgdzZXR0aW5nMhMvdjEvZmluYW5jZS9zZXR0aW5nEmsKD0FjdGl2YXRlU2V0dGluZxIWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRoaLnNhdHVybi5maW5hbmNlLnYxLlNldHRpbmciJILT5JMCHiIcL3YxL2ZpbmFuY2Uvc2V0dGluZzphY3RpdmF0ZRoeykEbYXBpLnNhdHVybi5tYXN0ZXJrZXlzcmQuZGV2QklaR2dpdGh1Yi5jb20vbWFzdGVya2V5c3JkL3NhdHVybi9nZW4vcHJvdG8vZ28vc2F0dXJuL2ZpbmFuY2UvdjE7ZmluYW5jZXBiYgZwcm90bzM", [file_google_api_annotations, file_google_api_client, file_google_api_field_behavior, file_google_protobuf_empty, file_google_protobuf_field_mask, file_google_protobuf_timestamp, file_google_type_date, file_google_type_decimal, file_saturn_type_appearance, file_saturn_type_money]);
+  fileDesc("Ch9zYXR1cm4vZmluYW5jZS92MS9maW5hbmNlLnByb3RvEhFzYXR1cm4uZmluYW5jZS52MSJJChZMaXN0Q3VycmVuY2llc1Jlc3BvbnNlEi8KCmN1cnJlbmNpZXMYASADKAsyGy5zYXR1cm4uZmluYW5jZS52MS5DdXJyZW5jeSJOCghDdXJyZW5jeRIMCgRjb2RlGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGc3ltYm9sGAMgASgJEhYKDmRlY2ltYWxfcGxhY2VzGAQgASgFIk8KGUNyZWF0ZUV4Y2hhbmdlUmF0ZVJlcXVlc3QSMgoEcmF0ZRgBIAEoCzIfLnNhdHVybi5maW5hbmNlLnYxLkV4Y2hhbmdlUmF0ZUID4EECIhoKGExpc3RFeGNoYW5nZVJhdGVzUmVxdWVzdCJLChlMaXN0RXhjaGFuZ2VSYXRlc1Jlc3BvbnNlEi4KBXJhdGVzGAEgAygLMh8uc2F0dXJuLmZpbmFuY2UudjEuRXhjaGFuZ2VSYXRlIjQKFkdldEV4Y2hhbmdlUmF0ZVJlcXVlc3QSGgoNY3VycmVuY3lfY29kZRgBIAEoCUID4EECIqEBChlVcGRhdGVFeGNoYW5nZVJhdGVSZXF1ZXN0EhoKDWN1cnJlbmN5X2NvZGUYASABKAlCA+BBAhIyCgRyYXRlGAIgASgLMh8uc2F0dXJuLmZpbmFuY2UudjEuRXhjaGFuZ2VSYXRlQgPgQQISNAoLdXBkYXRlX21hc2sYAyABKAsyGi5nb29nbGUucHJvdG9idWYuRmllbGRNYXNrQgPgQQEiNwoZRGVsZXRlRXhjaGFuZ2VSYXRlUmVxdWVzdBIaCg1jdXJyZW5jeV9jb2RlGAEgASgJQgPgQQIiRQoTQ3JlYXRlQnVkZ2V0UmVxdWVzdBIuCgZidWRnZXQYASABKAsyGS5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXRCA+BBAiLeAQoMRXhjaGFuZ2VSYXRlEhoKDWN1cnJlbmN5X2NvZGUYASABKAlCA+BBAxInCgRyYXRlGAIgASgLMhQuZ29vZ2xlLnR5cGUuRGVjaW1hbEID4EECEh0KEGlzX2Jhc2VfY3VycmVuY3kYAyABKAhCA+BBAxI0CgtjcmVhdGVfdGltZRgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAxI0Cgt1cGRhdGVfdGltZRgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCA+BBAyKeAQoSTGlzdEJ1ZGdldHNSZXF1ZXN0EjEKBHZpZXcYASABKA4yHi5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXQuVmlld0ID4EEBEhMKBnNlYXJjaBgCIAEoCUID4EEBEhUKCG9yZGVyX2J5GAMgASgJQgPgQQESEQoEcGFnZRgEIAEoBUID4EEBEhYKCXBhZ2Vfc2l6ZRgFIAEoBUID4EEBIlUKE0xpc3RCdWRnZXRzUmVzcG9uc2USKgoHYnVkZ2V0cxgBIAMoCzIZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldBISCgp0b3RhbF9zaXplGAIgASgFIlYKEEdldEJ1ZGdldFJlcXVlc3QSDwoCaWQYASABKAlCA+BBAhIxCgR2aWV3GAIgASgOMh4uc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0LlZpZXdCA+BBASKMAQoTVXBkYXRlQnVkZ2V0UmVxdWVzdBIPCgJpZBgBIAEoCUID4EECEi4KBmJ1ZGdldBgCIAEoCzIZLnNhdHVybi5maW5hbmNlLnYxLkJ1ZGdldEID4EECEjQKC3VwZGF0ZV9tYXNrGAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLkZpZWxkTWFza0ID4EEBIiYKE0RlbGV0ZUJ1ZGdldFJlcXVlc3QSDwoCaWQYASABKAlCA+BBAiLFBgoGQnVkZ2V0Eg8KAmlkGAEgASgJQgPgQQMSEQoEbmFtZRgCIAEoCUID4EECEhgKC2Rlc2NyaXB0aW9uGAMgASgJQgPgQQESKwoKYXBwZWFyYW5jZRgEIAEoCzIXLnNhdHVybi50eXBlLkFwcGVhcmFuY2USNQoGc3RhdHVzGAUgASgOMiAuc2F0dXJuLmZpbmFuY2UudjEuQnVkZ2V0LlN0YXR1c0ID4EEBEicKBmFtb3VudBgGIAEoCzISLnNhdHVybi50eXBlLk1vbmV5QgPgQQISNAoLY3JlYXRlX3RpbWUYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSNAoLdXBkYXRlX3RpbWUYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSLAoLYmFzZV9hbW91bnQYCSABKAsyEi5zYXR1cm4udHlwZS5Nb25leUID4EEDEjAKDWV4Y2hhbmdlX3JhdGUYCiABKAsyFC5nb29nbGUudHlwZS5EZWNpbWFsQgPgQQMSMwoFc3RhdHMYCyABKAsyHy5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXQuU3RhdHNCA+BBAxrkAQoFU3RhdHMSKAoMc3BlbnRfYW1vdW50GAEgASgLMhIuc2F0dXJuLnR5cGUuTW9uZXkSLAoQcmVtYWluaW5nX2Ftb3VudBgCIAEoCzISLnNhdHVybi50eXBlLk1vbmV5EhgKEHVzYWdlX3BlcmNlbnRhZ2UYAyABKAESJwoMcGVyaW9kX3N0YXJ0GAQgASgLMhEuZ29vZ2xlLnR5cGUuRGF0ZRIlCgpwZXJpb2RfZW5kGAUgASgLMhEuZ29vZ2xlLnR5cGUuRGF0ZRIZChF0cmFuc2FjdGlvbl9jb3VudBgGIAEoBSJACgRWaWV3EhQKEFZJRVdfVU5TUEVDSUZJRUQQABINCglOQU1FX09OTFkQARIJCgVCQVNJQxACEggKBEZVTEwQAyJGCgZTdGF0dXMSFgoSU1RBVFVTX1VOU1BFQ0lGSUVEEAASCgoGQUNUSVZFEAESCgoGUEFVU0VEEAISDAoIQVJDSElWRUQQAyJIChRDcmVhdGVFeHBlbnNlUmVxdWVzdBIwCgdleHBlbnNlGAEgASgLMhouc2F0dXJuLmZpbmFuY2UudjEuRXhwZW5zZUID4EECIv0CCgdFeHBlbnNlEg8KAmlkGAEgASgJQgPgQQMSFgoJYnVkZ2V0X2lkGAIgASgJQgPgQQISEgoFdGl0bGUYAyABKAlCA+BBAhIYCgtkZXNjcmlwdGlvbhgEIAEoCUID4EEBEicKBmFtb3VudBgFIAEoCzISLnNhdHVybi50eXBlLk1vbmV5QgPgQQISMAoNZXhjaGFuZ2VfcmF0ZRgGIAEoCzIULmdvb2dsZS50eXBlLkRlY2ltYWxCA+BBARIkCgRkYXRlGAcgASgLMhEuZ29vZ2xlLnR5cGUuRGF0ZUID4EECEi4KDmVmZmVjdGl2ZV9kYXRlGAggASgLMhEuZ29vZ2xlLnR5cGUuRGF0ZUID4EEBEjQKC2NyZWF0ZV90aW1lGAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEID4EEDEjQKC3VwZGF0ZV90aW1lGAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEID4EEDImAKFUdldFRyYW5zYWN0aW9uUmVxdWVzdBIPCgJpZBgBIAEoCUID4EECEjYKBHZpZXcYAiABKA4yIy5zYXR1cm4uZmluYW5jZS52MS5UcmFuc2FjdGlvbi5WaWV3QgPgQQEikQEKF0xpc3RUcmFuc2FjdGlvbnNSZXF1ZXN0EjYKBHZpZXcYASABKA4yIy5zYXR1cm4uZmluYW5jZS52MS5UcmFuc2FjdGlvbi5WaWV3QgPgQQESEwoGc2VhcmNoGAIgASgJQgPgQQESEQoEcGFnZRgDIAEoBUID4EEBEhYKCXBhZ2Vfc2l6ZRgEIAEoBUID4EEBIlAKGExpc3RUcmFuc2FjdGlvbnNSZXNwb25zZRI0Cgx0cmFuc2FjdGlvbnMYASADKAsyHi5zYXR1cm4uZmluYW5jZS52MS5UcmFuc2FjdGlvbiLFBQoLVHJhbnNhY3Rpb24SDwoCaWQYASABKAlCA+BBAxI2CgR0eXBlGAIgASgOMiMuc2F0dXJuLmZpbmFuY2UudjEuVHJhbnNhY3Rpb24uVHlwZUID4EEDEj4KBmJ1ZGdldBgDIAEoCzIpLnNhdHVybi5maW5hbmNlLnYxLlRyYW5zYWN0aW9uLkJ1ZGdldEluZm9CA+BBAxInCgZhbW91bnQYBCABKAsyEi5zYXR1cm4udHlwZS5Nb25leUID4EEDEiwKC2Jhc2VfYW1vdW50GAUgASgLMhIuc2F0dXJuLnR5cGUuTW9uZXlCA+BBAxIwCg1leGNoYW5nZV9yYXRlGAYgASgLMhQuZ29vZ2xlLnR5cGUuRGVjaW1hbEID4EEDEiQKBGRhdGUYByABKAsyES5nb29nbGUudHlwZS5EYXRlQgPgQQMSLgoOZWZmZWN0aXZlX2RhdGUYCCABKAsyES5nb29nbGUudHlwZS5EYXRlQgPgQQMSNAoLY3JlYXRlX3RpbWUYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMSNAoLdXBkYXRlX3RpbWUYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgPgQQMagwEKCkJ1ZGdldEluZm8SFgoJYnVkZ2V0X2lkGAEgASgJQgPgQQMSEQoEbmFtZRgCIAEoCUID4EEDEhgKC2Rlc2NyaXB0aW9uGAMgASgJQgPgQQMSMAoKYXBwZWFyYW5jZRgEIAEoCzIXLnNhdHVybi50eXBlLkFwcGVhcmFuY2VCA+BBAyIxCgRWaWV3EhQKEFZJRVdfVU5TUEVDSUZJRUQQABIJCgVCQVNJQxABEggKBEZVTEwQAiIpCgRUeXBlEhQKEFRZUEVfVU5TUEVDSUZJRUQQABILCgdFWFBFTlNFEAEifgoUVXBkYXRlU2V0dGluZ1JlcXVlc3QSMAoHc2V0dGluZxgBIAEoCzIaLnNhdHVybi5maW5hbmNlLnYxLlNldHRpbmdCA+BBAhI0Cgt1cGRhdGVfbWFzaxgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE1hc2tCA+BBASKgAgoHU2V0dGluZxI2CgZzdGF0dXMYASABKA4yIS5zYXR1cm4uZmluYW5jZS52MS5TZXR0aW5nLlN0YXR1c0ID4EEDEh8KEmJhc2VfY3VycmVuY3lfY29kZRgCIAEoCUID4EECEjQKC2NyZWF0ZV90aW1lGAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEID4EEDEjQKC3VwZGF0ZV90aW1lGAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEID4EEDIkoKBlN0YXR1cxIWChJTVEFUVVNfVU5TUEVDSUZJRUQQABIOCgpJTkNPTVBMRVRFEAESCgoGQUNUSVZFEAISDAoIRElTQUJMRUQQA0oECAMQCzKWEgoHRmluYW5jZRJzCg5MaXN0Q3VycmVuY2llcxIWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRopLnNhdHVybi5maW5hbmNlLnYxLkxpc3RDdXJyZW5jaWVzUmVzcG9uc2UiHoLT5JMCGBIWL3YxL2ZpbmFuY2UvY3VycmVuY2llcxKNAQoSQ3JlYXRlRXhjaGFuZ2VSYXRlEiwuc2F0dXJuLmZpbmFuY2UudjEuQ3JlYXRlRXhjaGFuZ2VSYXRlUmVxdWVzdBofLnNhdHVybi5maW5hbmNlLnYxLkV4Y2hhbmdlUmF0ZSIogtPkkwIiOgRyYXRlIhovdjEvZmluYW5jZS9leGNoYW5nZS1yYXRlcxKSAQoRTGlzdEV4Y2hhbmdlUmF0ZXMSKy5zYXR1cm4uZmluYW5jZS52MS5MaXN0RXhjaGFuZ2VSYXRlc1JlcXVlc3QaLC5zYXR1cm4uZmluYW5jZS52MS5MaXN0RXhjaGFuZ2VSYXRlc1Jlc3BvbnNlIiKC0+STAhwSGi92MS9maW5hbmNlL2V4Y2hhbmdlLXJhdGVzEpEBCg9HZXRFeGNoYW5nZVJhdGUSKS5zYXR1cm4uZmluYW5jZS52MS5HZXRFeGNoYW5nZVJhdGVSZXF1ZXN0Gh8uc2F0dXJuLmZpbmFuY2UudjEuRXhjaGFuZ2VSYXRlIjKC0+STAiwSKi92MS9maW5hbmNlL2V4Y2hhbmdlLXJhdGVzL3tjdXJyZW5jeV9jb2RlfRK+AQoSVXBkYXRlRXhjaGFuZ2VSYXRlEiwuc2F0dXJuLmZpbmFuY2UudjEuVXBkYXRlRXhjaGFuZ2VSYXRlUmVxdWVzdBofLnNhdHVybi5maW5hbmNlLnYxLkV4Y2hhbmdlUmF0ZSJZ2kEeY3VycmVuY3lfY29kZSxyYXRlLHVwZGF0ZV9tYXNrgtPkkwIyOgRyYXRlMiovdjEvZmluYW5jZS9leGNoYW5nZS1yYXRlcy97Y3VycmVuY3lfY29kZX0SjgEKEkRlbGV0ZUV4Y2hhbmdlUmF0ZRIsLnNhdHVybi5maW5hbmNlLnYxLkRlbGV0ZUV4Y2hhbmdlUmF0ZVJlcXVlc3QaFi5nb29nbGUucHJvdG9idWYuRW1wdHkiMoLT5JMCLCoqL3YxL2ZpbmFuY2UvZXhjaGFuZ2UtcmF0ZXMve2N1cnJlbmN5X2NvZGV9EnYKDENyZWF0ZUJ1ZGdldBImLnNhdHVybi5maW5hbmNlLnYxLkNyZWF0ZUJ1ZGdldFJlcXVlc3QaGS5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXQiI4LT5JMCHToGYnVkZ2V0IhMvdjEvZmluYW5jZS9idWRnZXRzEnkKC0xpc3RCdWRnZXRzEiUuc2F0dXJuLmZpbmFuY2UudjEuTGlzdEJ1ZGdldHNSZXF1ZXN0GiYuc2F0dXJuLmZpbmFuY2UudjEuTGlzdEJ1ZGdldHNSZXNwb25zZSIbgtPkkwIVEhMvdjEvZmluYW5jZS9idWRnZXRzEnIKCUdldEJ1ZGdldBIjLnNhdHVybi5maW5hbmNlLnYxLkdldEJ1ZGdldFJlcXVlc3QaGS5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXQiJdpBAmlkgtPkkwIaEhgvdjEvZmluYW5jZS9idWRnZXRzL3tpZH0SkwEKDFVwZGF0ZUJ1ZGdldBImLnNhdHVybi5maW5hbmNlLnYxLlVwZGF0ZUJ1ZGdldFJlcXVlc3QaGS5zYXR1cm4uZmluYW5jZS52MS5CdWRnZXQiQNpBFWlkLGJ1ZGdldCx1cGRhdGVfbWFza4LT5JMCIjoGYnVkZ2V0MhgvdjEvZmluYW5jZS9idWRnZXRzL3tpZH0SdQoMRGVsZXRlQnVkZ2V0EiYuc2F0dXJuLmZpbmFuY2UudjEuRGVsZXRlQnVkZ2V0UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eSIl2kECaWSC0+STAhoqGC92MS9maW5hbmNlL2J1ZGdldHMve2lkfRJ/Cg1DcmVhdGVFeHBlbnNlEicuc2F0dXJuLmZpbmFuY2UudjEuQ3JlYXRlRXhwZW5zZVJlcXVlc3QaHi5zYXR1cm4uZmluYW5jZS52MS5UcmFuc2FjdGlvbiIlgtPkkwIfOgdleHBlbnNlIhQvdjEvZmluYW5jZS9leHBlbnNlcxKGAQoOR2V0VHJhbnNhY3Rpb24SKC5zYXR1cm4uZmluYW5jZS52MS5HZXRUcmFuc2FjdGlvblJlcXVlc3QaHi5zYXR1cm4uZmluYW5jZS52MS5UcmFuc2FjdGlvbiIq2kECaWSC0+STAh8SHS92MS9maW5hbmNlL3RyYW5zYWN0aW9ucy97aWR9Eo0BChBMaXN0VHJhbnNhY3Rpb25zEiouc2F0dXJuLmZpbmFuY2UudjEuTGlzdFRyYW5zYWN0aW9uc1JlcXVlc3QaKy5zYXR1cm4uZmluYW5jZS52MS5MaXN0VHJhbnNhY3Rpb25zUmVzcG9uc2UiIILT5JMCGhIYL3YxL2ZpbmFuY2UvdHJhbnNhY3Rpb25zEl0KCkdldFNldHRpbmcSFi5nb29nbGUucHJvdG9idWYuRW1wdHkaGi5zYXR1cm4uZmluYW5jZS52MS5TZXR0aW5nIhuC0+STAhUSEy92MS9maW5hbmNlL3NldHRpbmcSkAEKDVVwZGF0ZVNldHRpbmcSJy5zYXR1cm4uZmluYW5jZS52MS5VcGRhdGVTZXR0aW5nUmVxdWVzdBoaLnNhdHVybi5maW5hbmNlLnYxLlNldHRpbmciOtpBE3NldHRpbmcsdXBkYXRlX21hc2uC0+STAh46B3NldHRpbmcyEy92MS9maW5hbmNlL3NldHRpbmcSawoPQWN0aXZhdGVTZXR0aW5nEhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5Ghouc2F0dXJuLmZpbmFuY2UudjEuU2V0dGluZyIkgtPkkwIeIhwvdjEvZmluYW5jZS9zZXR0aW5nOmFjdGl2YXRlGh7KQRthcGkuc2F0dXJuLm1hc3RlcmtleXNyZC5kZXZCSVpHZ2l0aHViLmNvbS9tYXN0ZXJrZXlzcmQvc2F0dXJuL2dlbi9wcm90by9nby9zYXR1cm4vZmluYW5jZS92MTtmaW5hbmNlcGJiBnByb3RvMw", [file_google_api_annotations, file_google_api_client, file_google_api_field_behavior, file_google_protobuf_empty, file_google_protobuf_field_mask, file_google_protobuf_timestamp, file_google_type_date, file_google_type_decimal, file_saturn_type_appearance, file_saturn_type_money]);
 
 /**
  * Response message for Finance.ListCurrencies.
@@ -502,19 +502,19 @@ export const ExchangeRateSchema: GenMessage<ExchangeRate, {jsonType: ExchangeRat
  */
 export type ListBudgetsRequest = Message<"saturn.finance.v1.ListBudgetsRequest"> & {
   /**
-   * A search string to filter budgets by name.
-   *
-   * @generated from field: string search = 1;
-   */
-  search: string;
-
-  /**
    * The view level for the budget details.
    * Defaults to BASIC if not specified.
    *
-   * @generated from field: saturn.finance.v1.Budget.View view = 2;
+   * @generated from field: saturn.finance.v1.Budget.View view = 1;
    */
   view: Budget_View;
+
+  /**
+   * A search string to filter budgets by name.
+   *
+   * @generated from field: string search = 2;
+   */
+  search: string;
 
   /**
    * Format: "field_name [asc|desc]"
@@ -548,19 +548,19 @@ export type ListBudgetsRequest = Message<"saturn.finance.v1.ListBudgetsRequest">
  */
 export type ListBudgetsRequestJson = {
   /**
-   * A search string to filter budgets by name.
-   *
-   * @generated from field: string search = 1;
-   */
-  search?: string;
-
-  /**
    * The view level for the budget details.
    * Defaults to BASIC if not specified.
    *
-   * @generated from field: saturn.finance.v1.Budget.View view = 2;
+   * @generated from field: saturn.finance.v1.Budget.View view = 1;
    */
   view?: Budget_ViewJson;
+
+  /**
+   * A search string to filter budgets by name.
+   *
+   * @generated from field: string search = 2;
+   */
+  search?: string;
 
   /**
    * Format: "field_name [asc|desc]"
@@ -1419,11 +1419,90 @@ export const ExpenseSchema: GenMessage<Expense, {jsonType: ExpenseJson}> = /*@__
   messageDesc(file_saturn_finance_v1_finance, 17);
 
 /**
+ * Request message for Finance.GetTransaction.
+ *
+ * @generated from message saturn.finance.v1.GetTransactionRequest
+ */
+export type GetTransactionRequest = Message<"saturn.finance.v1.GetTransactionRequest"> & {
+  /**
+   * The unique identifier of the transaction to retrieve.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * The view level for the transaction details.
+   * Defaults to BASIC if not specified.
+   *
+   * @generated from field: saturn.finance.v1.Transaction.View view = 2;
+   */
+  view: Transaction_View;
+};
+
+/**
+ * Request message for Finance.GetTransaction.
+ *
+ * @generated from message saturn.finance.v1.GetTransactionRequest
+ */
+export type GetTransactionRequestJson = {
+  /**
+   * The unique identifier of the transaction to retrieve.
+   *
+   * @generated from field: string id = 1;
+   */
+  id?: string;
+
+  /**
+   * The view level for the transaction details.
+   * Defaults to BASIC if not specified.
+   *
+   * @generated from field: saturn.finance.v1.Transaction.View view = 2;
+   */
+  view?: Transaction_ViewJson;
+};
+
+/**
+ * Describes the message saturn.finance.v1.GetTransactionRequest.
+ * Use `create(GetTransactionRequestSchema)` to create a new message.
+ */
+export const GetTransactionRequestSchema: GenMessage<GetTransactionRequest, {jsonType: GetTransactionRequestJson}> = /*@__PURE__*/
+  messageDesc(file_saturn_finance_v1_finance, 18);
+
+/**
  * Response message for Finance.ListTransactions.
  *
  * @generated from message saturn.finance.v1.ListTransactionsRequest
  */
 export type ListTransactionsRequest = Message<"saturn.finance.v1.ListTransactionsRequest"> & {
+  /**
+   * The view level for the transaction details.
+   * Defaults to BASIC if not specified.
+   *
+   * @generated from field: saturn.finance.v1.Transaction.View view = 1;
+   */
+  view: Transaction_View;
+
+  /**
+   * A search string to filter transactions by budget name or description.
+   *
+   * @generated from field: string search = 2;
+   */
+  search: string;
+
+  /**
+   * The page number to retrieve.
+   *
+   * @generated from field: int32 page = 3;
+   */
+  page: number;
+
+  /**
+   * The number of transactions to return per page.
+   *
+   * @generated from field: int32 page_size = 4;
+   */
+  pageSize: number;
 };
 
 /**
@@ -1432,6 +1511,34 @@ export type ListTransactionsRequest = Message<"saturn.finance.v1.ListTransaction
  * @generated from message saturn.finance.v1.ListTransactionsRequest
  */
 export type ListTransactionsRequestJson = {
+  /**
+   * The view level for the transaction details.
+   * Defaults to BASIC if not specified.
+   *
+   * @generated from field: saturn.finance.v1.Transaction.View view = 1;
+   */
+  view?: Transaction_ViewJson;
+
+  /**
+   * A search string to filter transactions by budget name or description.
+   *
+   * @generated from field: string search = 2;
+   */
+  search?: string;
+
+  /**
+   * The page number to retrieve.
+   *
+   * @generated from field: int32 page = 3;
+   */
+  page?: number;
+
+  /**
+   * The number of transactions to return per page.
+   *
+   * @generated from field: int32 page_size = 4;
+   */
+  pageSize?: number;
 };
 
 /**
@@ -1439,7 +1546,7 @@ export type ListTransactionsRequestJson = {
  * Use `create(ListTransactionsRequestSchema)` to create a new message.
  */
 export const ListTransactionsRequestSchema: GenMessage<ListTransactionsRequest, {jsonType: ListTransactionsRequestJson}> = /*@__PURE__*/
-  messageDesc(file_saturn_finance_v1_finance, 18);
+  messageDesc(file_saturn_finance_v1_finance, 19);
 
 /**
  * @generated from message saturn.finance.v1.ListTransactionsResponse
@@ -1470,7 +1577,7 @@ export type ListTransactionsResponseJson = {
  * Use `create(ListTransactionsResponseSchema)` to create a new message.
  */
 export const ListTransactionsResponseSchema: GenMessage<ListTransactionsResponse, {jsonType: ListTransactionsResponseJson}> = /*@__PURE__*/
-  messageDesc(file_saturn_finance_v1_finance, 19);
+  messageDesc(file_saturn_finance_v1_finance, 20);
 
 /**
  * Transaction represents a financial transaction, such as an expense.
@@ -1655,7 +1762,7 @@ export type TransactionJson = {
  * Use `create(TransactionSchema)` to create a new message.
  */
 export const TransactionSchema: GenMessage<Transaction, {jsonType: TransactionJson}> = /*@__PURE__*/
-  messageDesc(file_saturn_finance_v1_finance, 20);
+  messageDesc(file_saturn_finance_v1_finance, 21);
 
 /**
  * @generated from message saturn.finance.v1.Transaction.BudgetInfo
@@ -1681,6 +1788,14 @@ export type Transaction_BudgetInfo = Message<"saturn.finance.v1.Transaction.Budg
    * @generated from field: string description = 3;
    */
   description: string;
+
+  /**
+   * The appearance settings for the budget.
+   * Output only.
+   *
+   * @generated from field: saturn.type.Appearance appearance = 4;
+   */
+  appearance?: Appearance;
 };
 
 /**
@@ -1707,6 +1822,14 @@ export type Transaction_BudgetInfoJson = {
    * @generated from field: string description = 3;
    */
   description?: string;
+
+  /**
+   * The appearance settings for the budget.
+   * Output only.
+   *
+   * @generated from field: saturn.type.Appearance appearance = 4;
+   */
+  appearance?: AppearanceJson;
 };
 
 /**
@@ -1714,7 +1837,44 @@ export type Transaction_BudgetInfoJson = {
  * Use `create(Transaction_BudgetInfoSchema)` to create a new message.
  */
 export const Transaction_BudgetInfoSchema: GenMessage<Transaction_BudgetInfo, {jsonType: Transaction_BudgetInfoJson}> = /*@__PURE__*/
-  messageDesc(file_saturn_finance_v1_finance, 20, 0);
+  messageDesc(file_saturn_finance_v1_finance, 21, 0);
+
+/**
+ * @generated from enum saturn.finance.v1.Transaction.View
+ */
+export enum Transaction_View {
+  /**
+   * Default view showing basic transaction information.
+   *
+   * @generated from enum value: VIEW_UNSPECIFIED = 0;
+   */
+  VIEW_UNSPECIFIED = 0,
+
+  /**
+   * Basic view showing essential transaction details.
+   *
+   * @generated from enum value: BASIC = 1;
+   */
+  BASIC = 1,
+
+  /**
+   * Full view showing all transaction details.
+   *
+   * @generated from enum value: FULL = 2;
+   */
+  FULL = 2,
+}
+
+/**
+ * @generated from enum saturn.finance.v1.Transaction.View
+ */
+export type Transaction_ViewJson = "VIEW_UNSPECIFIED" | "BASIC" | "FULL";
+
+/**
+ * Describes the enum saturn.finance.v1.Transaction.View.
+ */
+export const Transaction_ViewSchema: GenEnum<Transaction_View, Transaction_ViewJson> = /*@__PURE__*/
+  enumDesc(file_saturn_finance_v1_finance, 21, 0);
 
 /**
  * The type of the transaction.
@@ -1748,7 +1908,7 @@ export type Transaction_TypeJson = "TYPE_UNSPECIFIED" | "EXPENSE";
  * Describes the enum saturn.finance.v1.Transaction.Type.
  */
 export const Transaction_TypeSchema: GenEnum<Transaction_Type, Transaction_TypeJson> = /*@__PURE__*/
-  enumDesc(file_saturn_finance_v1_finance, 20, 0);
+  enumDesc(file_saturn_finance_v1_finance, 21, 1);
 
 /**
  * Request message for Finance.UpdateSetting.
@@ -1801,7 +1961,7 @@ export type UpdateSettingRequestJson = {
  * Use `create(UpdateSettingRequestSchema)` to create a new message.
  */
 export const UpdateSettingRequestSchema: GenMessage<UpdateSettingRequest, {jsonType: UpdateSettingRequestJson}> = /*@__PURE__*/
-  messageDesc(file_saturn_finance_v1_finance, 21);
+  messageDesc(file_saturn_finance_v1_finance, 22);
 
 /**
  * Setting represents the finance-related settings for a space.
@@ -1886,7 +2046,7 @@ export type SettingJson = {
  * Use `create(SettingSchema)` to create a new message.
  */
 export const SettingSchema: GenMessage<Setting, {jsonType: SettingJson}> = /*@__PURE__*/
-  messageDesc(file_saturn_finance_v1_finance, 22);
+  messageDesc(file_saturn_finance_v1_finance, 23);
 
 /**
  * The current status of the finance settings.
@@ -1934,7 +2094,7 @@ export type Setting_StatusJson = "STATUS_UNSPECIFIED" | "INCOMPLETE" | "ACTIVE" 
  * Describes the enum saturn.finance.v1.Setting.Status.
  */
 export const Setting_StatusSchema: GenEnum<Setting_Status, Setting_StatusJson> = /*@__PURE__*/
-  enumDesc(file_saturn_finance_v1_finance, 22, 0);
+  enumDesc(file_saturn_finance_v1_finance, 23, 0);
 
 /**
  * Finance provides features personal finance management, including budgeting,
@@ -2067,6 +2227,16 @@ export const Finance: GenService<{
   createExpense: {
     methodKind: "unary";
     input: typeof CreateExpenseRequestSchema;
+    output: typeof TransactionSchema;
+  },
+  /**
+   * GetTransaction retrieves a specific transaction by its ID.
+   *
+   * @generated from rpc saturn.finance.v1.Finance.GetTransaction
+   */
+  getTransaction: {
+    methodKind: "unary";
+    input: typeof GetTransactionRequestSchema;
     output: typeof TransactionSchema;
   },
   /**

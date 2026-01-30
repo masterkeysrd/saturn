@@ -3,38 +3,57 @@ package financepg
 import (
 	"context"
 	"fmt"
-	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/foundation/appearance"
+	"github.com/masterkeysrd/saturn/internal/foundation/decimal"
 	"github.com/masterkeysrd/saturn/internal/foundation/paging"
+	"github.com/masterkeysrd/saturn/internal/foundation/space"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
 	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
+	"github.com/masterkeysrd/saturn/internal/pkg/sqlexp"
 )
 
 var _ finance.TransactionSearcher = (*TransactionSearcher)(nil)
 
 type TransactionSearcher struct {
-	db      *sqlx.DB
-	queries *TransactionSearcherQueries
+	db *sqlx.DB
 }
 
 func NewTransactionSearcher(db *sqlx.DB) *TransactionSearcher {
 	return &TransactionSearcher{
-		db:      db,
-		queries: &TransactionSearcherQueries{},
+		db: db,
 	}
+}
+
+func (bs *TransactionSearcher) Find(ctx context.Context, criteria *finance.FindTransactionCriteria) (*finance.TransactionItem, error) {
+	exp := bs.buildFindExpression(criteria)
+	params := NewFindTransactionParams(criteria)
+
+	query, args, err := sqlx.Named(exp.ToSQL(), params)
+	if err != nil {
+		return nil, fmt.Errorf("cannot build transaction find query: %w", err)
+	}
+
+	query = bs.db.Rebind(query)
+
+	var view TransactionView
+	if err := bs.db.GetContext(ctx, &view, query, args...); err != nil {
+		return nil, fmt.Errorf("cannot execute transaction find query: %w", err)
+	}
+
+	return view.ToTransactionItem(), nil
 }
 
 func (bs *TransactionSearcher) Search(ctx context.Context, criteria *finance.TransactionSearchCriteria) (*finance.TransactionPage, error) {
 	// 1. Generate the SQL and Arguments
-	searchQuery, countQuery, args := bs.queries.Search(criteria)
+	exp := bs.buildSearchExpression(criteria)
+	params := NewTransactionSearchParams(criteria)
 
 	// 2. Execute Data Query
-	rows, err := bs.db.NamedQueryContext(ctx, searchQuery, args)
+	rows, err := bs.db.NamedQueryContext(ctx, exp.ToSQL(), params)
 	if err != nil {
 		return nil, fmt.Errorf("cannot execute transaction search query: %w", err)
 	}
@@ -47,51 +66,140 @@ func (bs *TransactionSearcher) Search(ctx context.Context, criteria *finance.Tra
 			return nil, fmt.Errorf("cannot scan transaction view: %w", err)
 		}
 
-		item := finance.TransactionItem{
-			ID:           finance.TransactionID(view.ID),
-			Type:         finance.TransactionType(view.Type),
-			Title:        view.Title,
-			Description:  ptr.Value(view.Description),
-			Date:         view.Date,
-			Amount:       money.NewMoney(view.AmountCurrency, view.AmountCents),
-			BaseAmount:   money.NewMoney(view.BaseAmountCurrency, view.BaseAmountCents),
-			ExchangeRate: view.ExchangeRate,
-			CreatedAt:    view.CreateTime,
-			UpdatedAt:    view.UpdateTime,
-		}
-
-		if view.BudgetID != "" {
-			item.Budget = &finance.TransactionBudgetItem{
-				ID:   finance.BudgetID(view.BudgetID),
-				Name: view.BudgetName,
-				Appearance: appearance.Appearance{
-					Color: appearance.Color(view.BudgetColor),
-					Icon:  appearance.Icon(view.BudgetIcon),
-				},
-			}
-		}
-
-		items = append(items, &item)
+		items = append(items, view.ToTransactionItem())
 	}
-	slog.Info("transactions", slog.Any("trx", items), slog.String("query", searchQuery), slog.Any("args", args))
 
 	// 3. Execute Count Query
-	// We use NamedQueryContext because we are reusing the 'args' map with named parameters.
-	countRows, err := bs.db.NamedQueryContext(ctx, countQuery, args)
+	total, err := bs.count(ctx, criteria)
 	if err != nil {
-		return nil, fmt.Errorf("cannot execute budget count query: %w", err)
-	}
-	defer countRows.Close()
-
-	var totalItems int
-	if countRows.Next() {
-		if err := countRows.Scan(&totalItems); err != nil {
-			return nil, fmt.Errorf("cannot scan budget count: %w", err)
-		}
+		return nil, fmt.Errorf("cannot count transactions: %w", err)
 	}
 
-	// 4. Return Page
-	return paging.NewPage(items, totalItems, criteria.PagingRequest.Limit()), nil
+	// 4. Build and Return Page
+	return paging.NewPage(items, total, criteria.PagingRequest.Page), nil
+}
+
+func (bs *TransactionSearcher) buildFindExpression(criteria *finance.FindTransactionCriteria) sqlexp.SelectExpression {
+	exp := bs.buildExpression(criteria.View)
+	exp = exp.Where(
+		sqlexp.Eq("trx.id", sqlexp.NamedParam("id")),
+	).Limit(sqlexp.NamedParam("limit"))
+
+	return exp
+}
+
+func (bs *TransactionSearcher) buildSearchExpression(criteria *finance.TransactionSearchCriteria) sqlexp.SelectExpression {
+	exp := bs.buildExpression(criteria.View)
+
+	if criteria.Term != "" {
+		exp = exp.AndWhere(
+			sqlexp.Cond("trx.search_vector", "@@", sqlexp.Func("plainto_tsquery", sqlexp.NamedParam("term"))),
+		)
+	}
+
+	exp = exp.
+		Limit(sqlexp.NamedParam("limit")).
+		Offset(sqlexp.NamedParam("offset")).
+		OrderBy("trx.date DESC", "trx.create_time DESC")
+
+	return exp
+}
+
+func (bs *TransactionSearcher) buildExpression(view finance.TransactionView) sqlexp.SelectExpression {
+	exp := sqlexp.Select(
+		"trx.id",
+		"trx.type",
+		"trx.budget_id",
+		"trx.title",
+		"trx.description",
+		"trx.date",
+		"trx.amount_cents",
+		"trx.amount_currency",
+		"trx.base_amount_cents",
+		"trx.base_amount_currency",
+		"trx.exchange_rate",
+		"trx.create_time",
+		"trx.update_time",
+	).From("finance.transactions trx").
+		Where(
+			sqlexp.Eq("trx.space_id", sqlexp.NamedParam("space_id")),
+		)
+
+	if view >= finance.TransactionViewFull {
+		exp = exp.
+			Columns(
+				"bgt.name as budget_name",
+				"bgt.description as budget_description",
+				"bgt.color as budget_color",
+				"bgt.icon_name as budget_icon_name",
+			).
+			LeftJoin("finance.budgets", "bgt", sqlexp.Eq("trx.budget_id", "bgt.id"))
+	}
+
+	return exp
+}
+
+func (bs *TransactionSearcher) count(ctx context.Context, criteria *finance.TransactionSearchCriteria) (int, error) {
+	params := NewTransactionSearchParams(criteria)
+
+	exp := sqlexp.Select("COUNT(trx.id) AS total_count").
+		From("finance.transactions trx").
+		Where(
+			sqlexp.Eq("trx.space_id", sqlexp.NamedParam("space_id")),
+		)
+
+	if criteria.Term != "" {
+		exp = exp.AndWhere(
+			sqlexp.Cond("trx.search_vector", "@@", sqlexp.Func("plainto_tsquery", sqlexp.NamedParam("term"))),
+		)
+	}
+
+	query, args, err := sqlx.Named(exp.ToSQL(), params)
+	if err != nil {
+		return 0, fmt.Errorf("cannot build transaction count query: %w", err)
+	}
+
+	query = bs.db.Rebind(query)
+
+	var total int
+	if err := bs.db.GetContext(ctx, &total, query, args...); err != nil {
+		return 0, fmt.Errorf("cannot execute transaction count query: %w", err)
+	}
+
+	return total, nil
+}
+
+// TransactionSearchParams represents database query parameters for budget search.
+type TransactionSearchParams struct {
+	View    finance.TransactionView
+	SpaceID space.ID `db:"space_id"`
+	Term    string   `db:"term"`
+	Offset  int      `db:"offset"`
+	Limit   int      `db:"limit"`
+}
+
+// NewTransactionSearchParams creates params from domain criteria.
+func NewTransactionSearchParams(criteria *finance.TransactionSearchCriteria) TransactionSearchParams {
+	return TransactionSearchParams{
+		SpaceID: criteria.SpaceID,
+		Term:    criteria.Term,
+		Offset:  criteria.PagingRequest.Offset(),
+		Limit:   criteria.PagingRequest.Limit(),
+	}
+}
+
+type FindTransactionParams struct {
+	SpaceID space.ID `db:"space_id"`
+	ID      string   `db:"id"`
+	Limit   int      `db:"limit"`
+}
+
+func NewFindTransactionParams(criteria *finance.FindTransactionCriteria) FindTransactionParams {
+	return FindTransactionParams{
+		SpaceID: criteria.SpaceID,
+		ID:      string(criteria.ID),
+		Limit:   1,
+	}
 }
 
 type TransactionView struct {
@@ -100,98 +208,48 @@ type TransactionView struct {
 	Title              string             `db:"title"`
 	Description        *string            `db:"description"`
 	Date               time.Time          `db:"date"`
+	EffectiveDate      time.Time          `db:"effective_date"`
 	AmountCents        money.Cents        `db:"amount_cents"`
 	AmountCurrency     money.CurrencyCode `db:"amount_currency"`
 	BaseAmountCents    money.Cents        `db:"base_amount_cents"`
 	BaseAmountCurrency money.CurrencyCode `db:"base_amount_currency"`
-	ExchangeRate       float64            `db:"exchange_rate"`
+	ExchangeRate       decimal.Decimal    `db:"exchange_rate"`
 	CreateTime         time.Time          `db:"create_time"`
 	UpdateTime         time.Time          `db:"update_time"`
 
-	BudgetID    string `db:"budget_id"` // Corresponds to bgt.id
-	BudgetName  string `db:"budget_name"`
-	BudgetColor string `db:"budget_color"`
-	BudgetIcon  string `db:"budget_icon_name"` // Assuming your column is named 'icon_name'
+	BudgetID          string  `db:"budget_id"` // Corresponds to bgt.id
+	BudgetName        string  `db:"budget_name"`
+	BudgetDescription *string `db:"budget_description"`
+	BudgetColor       string  `db:"budget_color"`
+	BudgetIcon        string  `db:"budget_icon_name"` // Assuming your column is named 'icon_name'
 }
 
-var searchTransactionQuery = `
-SELECT
-	trx.id,
-	trx.type,
-	bgt.id as budget_id,
-	bgt.name as budget_name,
-	bgt.color as budget_color,
-	bgt.icon_name as budget_icon_name,
-	trx.title,
-	trx.description,
-	trx.date,
-	trx.amount_cents,
-	trx.amount_currency,
-	trx.base_amount_cents,
-	trx.base_amount_currency,
-	trx.exchange_rate,
-	trx.create_time,
-	trx.update_time
-FROM finance.transactions trx
-LEFT JOIN finance.budgets bgt ON trx.budget_id = bgt.id
-`
-
-var searchTransactionQueryCount = `
-SELECT
-	COUNT(trx.id)
-FROM finance.transactions trx
-LEFT JOIN finance.budgets bgt ON trx.budget_id = bgt.id
-`
-
-type TransactionSearcherQueries struct{}
-
-func (bsq *TransactionSearcherQueries) Search(criteria *finance.TransactionSearchCriteria) (string, string, any) {
-	params := NewTransactionSearchParams(criteria)
-
-	// 1. Build the Dynamic WHERE Clause
-	var whereClauseBuilder strings.Builder
-	if params.Term != "" {
-		// Apply wildcards to the parameter
-		params.Term = "%" + params.Term + "%"
-
-		// Note: Ensure the alias 'bgt' matches your main query's alias for the budgets table
-		whereClauseBuilder.WriteString("\nWHERE (bgt.name ILIKE :term OR searchable_text @@ to_tsquery('english', :term))\n")
+func (tiv *TransactionView) ToTransactionItem() *finance.TransactionItem {
+	ti := &finance.TransactionItem{
+		ID:            finance.TransactionID(tiv.ID),
+		Type:          finance.TransactionType(tiv.Type),
+		Title:         tiv.Title,
+		Description:   ptr.Value(tiv.Description),
+		Date:          tiv.Date,
+		EffectiveDate: tiv.EffectiveDate,
+		Amount:        money.NewMoney(tiv.AmountCurrency, tiv.AmountCents),
+		BaseAmount:    money.NewMoney(tiv.BaseAmountCurrency, tiv.BaseAmountCents),
+		ExchangeRate:  tiv.ExchangeRate,
+		CreateTime:    tiv.CreateTime,
+		UpdateTime:    tiv.UpdateTime,
 	}
-	whereClause := whereClauseBuilder.String()
 
-	// 2. Build the Search (Data) Query
-	// Structure: [Base CTEs & Select] + [Where] + [Order/Limit/Offset]
-	var searchSB strings.Builder
-	searchSB.Grow(len(searchTransactionQuery) + len(whereClause) + 50)
-
-	searchSB.WriteString(searchTransactionQuery)
-	searchSB.WriteString(whereClause)
-	searchSB.WriteString("\nORDER BY trx.date ASC") // Always enforce deterministic ordering
-	searchSB.WriteString("\nLIMIT :limit OFFSET :offset")
-
-	// 3. Build the Count (Total) Query
-	// Structure: [Count CTEs & Select Count] + [Where]
-	var countSB strings.Builder
-	countSB.Grow(len(searchTransactionQueryCount) + len(whereClause))
-
-	countSB.WriteString(searchTransactionQueryCount)
-	countSB.WriteString(whereClause)
-
-	return searchSB.String(), countSB.String(), params
-}
-
-// TransactionSearchParams represents database query parameters for budget search.
-type TransactionSearchParams struct {
-	Term   string `db:"term"`
-	Offset int    `db:"offset"`
-	Limit  int    `db:"limit"`
-}
-
-// NewTransactionSearchParams creates params from domain criteria.
-func NewTransactionSearchParams(criteria *finance.TransactionSearchCriteria) TransactionSearchParams {
-	return TransactionSearchParams{
-		Term:   criteria.Term,
-		Offset: criteria.PagingRequest.Offset(),
-		Limit:  criteria.PagingRequest.Limit(),
+	if tiv.BudgetID != "" {
+		ti.Budget = &finance.TransactionBudgetItem{
+			ID:          finance.BudgetID(tiv.BudgetID),
+			Name:        tiv.BudgetName,
+			Description: ptr.Value(tiv.BudgetDescription),
+			Appearance: appearance.Appearance{
+				Color: appearance.Color(tiv.BudgetColor),
+				Icon:  appearance.Icon(tiv.BudgetIcon),
+			},
+		}
 	}
+
+	return ti
 }

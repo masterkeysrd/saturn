@@ -107,6 +107,12 @@ service Finance {
     };
   }
 
+  // GetTransaction retrieves a specific transaction by its ID.
+  rpc GetTransaction(GetTransactionRequest) returns (Transaction) {
+    option (google.api.http) = {get: "/v1/finance/transactions/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
   // ListTransactions returns all transactions for the space.
   rpc ListTransactions(ListTransactionsRequest) returns (ListTransactionsResponse) {
     option (google.api.http) = {get: "/v1/finance/transactions"};
@@ -224,12 +230,12 @@ message ExchangeRate {
 
 // Request message for Finance.ListBudgets.
 message ListBudgetsRequest {
-  // A search string to filter budgets by name.
-  string search = 1 [(google.api.field_behavior) = OPTIONAL];
-
   // The view level for the budget details.
   // Defaults to BASIC if not specified.
-  Budget.View view = 2 [(google.api.field_behavior) = OPTIONAL];
+  Budget.View view = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // A search string to filter budgets by name.
+  string search = 2 [(google.api.field_behavior) = OPTIONAL];
 
   // Format: "field_name [asc|desc]"
   // Supported fields: name, create_time, update_time, amount
@@ -438,8 +444,31 @@ message Expense {
   google.protobuf.Timestamp update_time = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// Request message for Finance.GetTransaction.
+message GetTransactionRequest {
+  // The unique identifier of the transaction to retrieve.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The view level for the transaction details.
+  // Defaults to BASIC if not specified.
+  Transaction.View view = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
 // Response message for Finance.ListTransactions.
-message ListTransactionsRequest {}
+message ListTransactionsRequest {
+  // The view level for the transaction details.
+  // Defaults to BASIC if not specified.
+  Transaction.View view = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // A search string to filter transactions by budget name or description.
+  string search = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // The page number to retrieve.
+  int32 page = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // The number of transactions to return per page.
+  int32 page_size = 4 [(google.api.field_behavior) = OPTIONAL];
+}
 
 message ListTransactionsResponse {
   // The list of transactions.
@@ -448,6 +477,17 @@ message ListTransactionsResponse {
 
 // Transaction represents a financial transaction, such as an expense.
 message Transaction {
+  enum View {
+    // Default view showing basic transaction information.
+    VIEW_UNSPECIFIED = 0;
+
+    // Basic view showing essential transaction details.
+    BASIC = 1;
+
+    // Full view showing all transaction details.
+    FULL = 2;
+  }
+
   // The type of the transaction.
   enum Type {
     // Default type.
@@ -466,6 +506,10 @@ message Transaction {
 
     // The detailed description of the transaction.
     string description = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // The appearance settings for the budget.
+    // Output only.
+    saturn.type.Appearance appearance = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
   }
 
   // The unique identifier of the transaction.

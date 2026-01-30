@@ -42,13 +42,6 @@
         },
         "parameters": [
           {
-            "name": "search",
-            "description": "A search string to filter budgets by name.",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
             "name": "view",
             "description": "The view level for the budget details.\nDefaults to BASIC if not specified.\n\n - VIEW_UNSPECIFIED: Default view showing basic budget information.\n - NAME_ONLY: Name, description and appearance.\nUsed for dropdown lists and minimal displays.\n - BASIC: Basic view showing essential budget details,\nsuch as name, description, status, amount, and appearance.\n - FULL: Full view showing all budget details, including\nbase_amount, exchange_rate and statistics like spent amount,\nremaining amount, and usage percentage.",
             "in": "query",
@@ -61,6 +54,13 @@
               "FULL"
             ],
             "default": "VIEW_UNSPECIFIED"
+          },
+          {
+            "name": "search",
+            "description": "A search string to filter budgets by name.",
+            "in": "query",
+            "required": false,
+            "type": "string"
           },
           {
             "name": "orderBy",
@@ -549,6 +549,89 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "view",
+            "description": "The view level for the transaction details.\nDefaults to BASIC if not specified.\n\n - VIEW_UNSPECIFIED: Default view showing basic transaction information.\n - BASIC: Basic view showing essential transaction details.\n - FULL: Full view showing all transaction details.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "VIEW_UNSPECIFIED",
+              "BASIC",
+              "FULL"
+            ],
+            "default": "VIEW_UNSPECIFIED"
+          },
+          {
+            "name": "search",
+            "description": "A search string to filter transactions by budget name or description.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "description": "The page number to retrieve.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "description": "The number of transactions to return per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/transactions/{id}": {
+      "get": {
+        "summary": "GetTransaction retrieves a specific transaction by its ID.",
+        "operationId": "Finance_GetTransaction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Transaction"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "The unique identifier of the transaction to retrieve.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "view",
+            "description": "The view level for the transaction details.\nDefaults to BASIC if not specified.\n\n - VIEW_UNSPECIFIED: Default view showing basic transaction information.\n - BASIC: Basic view showing essential transaction details.\n - FULL: Full view showing all transaction details.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "VIEW_UNSPECIFIED",
+              "BASIC",
+              "FULL"
+            ],
+            "default": "VIEW_UNSPECIFIED"
+          }
+        ],
         "tags": [
           "Finance"
         ]
@@ -1393,6 +1476,11 @@
           "type": "string",
           "description": "The detailed description of the transaction.",
           "readOnly": true
+        },
+        "appearance": {
+          "$ref": "#/definitions/typeAppearance",
+          "description": "The appearance settings for the budget.\nOutput only.",
+          "readOnly": true
         }
       }
     },
@@ -2143,6 +2231,16 @@
       ],
       "default": "TYPE_UNSPECIFIED",
       "description": "The type of the transaction.\n\n - TYPE_UNSPECIFIED: Default type.\n - EXPENSE: Expense transaction."
+    },
+    "v1TransactionView": {
+      "type": "string",
+      "enum": [
+        "VIEW_UNSPECIFIED",
+        "BASIC",
+        "FULL"
+      ],
+      "default": "VIEW_UNSPECIFIED",
+      "description": " - VIEW_UNSPECIFIED: Default view showing basic transaction information.\n - BASIC: Basic view showing essential transaction details.\n - FULL: Full view showing all transaction details."
     },
     "v1User": {
       "type": "object",

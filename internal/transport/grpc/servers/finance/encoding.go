@@ -2,7 +2,9 @@ package financegrpc
 
 import (
 	financepb "github.com/masterkeysrd/saturn/gen/proto/go/saturn/finance/v1"
+	"github.com/masterkeysrd/saturn/gen/proto/go/saturn/typepb"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/foundation/appearance"
 	"github.com/masterkeysrd/saturn/internal/foundation/paging"
 	"github.com/masterkeysrd/saturn/internal/pkg/ptr"
 	"github.com/masterkeysrd/saturn/internal/transport/grpc/encoding"
@@ -373,11 +375,46 @@ func TransactionItemPb(t *finance.TransactionItem) *financepb.Transaction {
 	}
 
 	pb := &financepb.Transaction{
-		Id:   t.ID.String(),
-		Type: TransactionTypePb(t.Type),
+		Id:            t.ID.String(),
+		Type:          TransactionTypePb(t.Type),
+		Date:          encoding.DatePb(t.Date),
+		EffectiveDate: encoding.DatePb(t.EffectiveDate),
+		Amount:        encoding.MoneyPb(t.Amount),
+		BaseAmount:    encoding.MoneyPb(t.BaseAmount),
+		ExchangeRate:  encoding.DecimalPb(t.ExchangeRate),
+		CreateTime:    encoding.TimestampPb(t.CreateTime),
+		UpdateTime:    encoding.TimestampPb(t.UpdateTime),
+	}
+
+	if b := t.Budget; b != nil {
+		budgetPb := &financepb.Transaction_BudgetInfo{
+			BudgetId:    b.ID.String(),
+			Name:        b.Name,
+			Description: b.Description,
+		}
+
+		if b.Appearance != (appearance.Appearance{}) {
+			budgetPb.Appearance = &typepb.Appearance{
+				Color: b.Color.String(),
+				Icon:  b.Icon.String(),
+			}
+		}
+
+		pb.Budget = budgetPb
 	}
 
 	return pb
+}
+
+func FindTransactionInput(pb *financepb.GetTransactionRequest) *finance.FindTransactionInput {
+	if pb == nil {
+		return nil
+	}
+
+	return &finance.FindTransactionInput{
+		ID:   finance.TransactionID(pb.GetId()),
+		View: TransactionView(pb.GetView()),
+	}
 }
 
 func SearchTransactionsInput(pb *financepb.ListTransactionsRequest) *finance.SearchTransactionsInput {
@@ -385,5 +422,20 @@ func SearchTransactionsInput(pb *financepb.ListTransactionsRequest) *finance.Sea
 		return nil
 	}
 
-	return &finance.SearchTransactionsInput{}
+	return &finance.SearchTransactionsInput{
+		View:          TransactionView(pb.GetView()),
+		Term:          pb.GetSearch(),
+		PagingRequest: paging.FromSource(pb),
+	}
+}
+
+func TransactionView(pb financepb.Transaction_View) finance.TransactionView {
+	switch pb {
+	case financepb.Transaction_BASIC:
+		return finance.TransactionViewBasic
+	case financepb.Transaction_FULL:
+		return finance.TransactionViewFull
+	default:
+		return finance.TransactionViewBasic
+	}
 }

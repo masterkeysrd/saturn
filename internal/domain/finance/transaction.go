@@ -29,6 +29,7 @@ type TransactionCriteria interface {
 }
 
 type TransactionSearcher interface {
+	Find(context.Context, *FindTransactionCriteria) (*TransactionItem, error)
 	Search(context.Context, *TransactionSearchCriteria) (*TransactionPage, error)
 }
 
@@ -150,25 +151,28 @@ func (tt TransactionType) String() string {
 }
 
 type SearchTransactionsInput struct {
+	View          TransactionView
 	Term          string
 	PagingRequest paging.Request
 }
 
-func (tsi *SearchTransactionsInput) toCriteria() TransactionSearchCriteria {
+func (tsi *SearchTransactionsInput) toCriteria(spaceID space.ID) TransactionSearchCriteria {
 	if tsi == nil {
 		return TransactionSearchCriteria{}
 	}
 
 	return TransactionSearchCriteria{
+		View:          tsi.View,
+		SpaceID:       spaceID,
 		Term:          tsi.Term,
 		PagingRequest: tsi.PagingRequest,
 	}
 }
 
 type TransactionSearchCriteria struct {
+	View          TransactionView
 	SpaceID       space.ID
 	Term          string
-	Date          time.Time
 	PagingRequest paging.Request
 }
 
@@ -196,24 +200,53 @@ func (tsi *TransactionSearchCriteria) Validate() error {
 	return nil
 }
 
+type FindTransactionInput struct {
+	ID   TransactionID
+	View TransactionView
+}
+
+func (fti *FindTransactionInput) toCriteria(spaceID space.ID) FindTransactionCriteria {
+	return FindTransactionCriteria{
+		TransactionKey: TransactionKey{
+			ID:      fti.ID,
+			SpaceID: spaceID,
+		},
+		View: fti.View,
+	}
+}
+
+type FindTransactionCriteria struct {
+	TransactionKey
+	View TransactionView
+}
+
 type TransactionItem struct {
-	ID           TransactionID
-	Type         TransactionType
-	Title        string
-	Description  string
-	Amount       money.Money
-	BaseAmount   money.Money
-	ExchangeRate float64
-	Date         time.Time
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID            TransactionID
+	Type          TransactionType
+	Title         string
+	Description   string
+	Amount        money.Money
+	BaseAmount    money.Money
+	ExchangeRate  decimal.Decimal
+	Date          time.Time
+	EffectiveDate time.Time
+	CreateTime    time.Time
+	UpdateTime    time.Time
 
 	Budget *TransactionBudgetItem
 }
 
 type TransactionBudgetItem struct {
-	ID   BudgetID
-	Name string
+	ID          BudgetID
+	Name        string
+	Description string
 
 	appearance.Appearance
 }
+
+type TransactionView int
+
+const (
+	TransactionViewBasic TransactionView = iota
+	TransactionViewFull
+)

@@ -137,8 +137,8 @@ export async function listBudgets(req: MessageInitShape<typeof Types.ListBudgets
   return getAxios().get(`/api/v1/finance/budgets`
     , {
       params: {
-        search:  body.search,
         view:  body.view,
+        search:  body.search,
         orderBy:  body.orderBy,
         page:  body.page,
         pageSize:  body.pageSize,
@@ -226,6 +226,27 @@ export async function createExpense(req: MessageInitShape<typeof Types.CreateExp
 }
 
 /**
+ * GetTransaction retrieves a specific transaction by its ID.
+ *
+ * @param req Types.GetTransactionRequest
+ * @returns Promise<Types.Transaction>
+ */
+export async function getTransaction(req: MessageInitShape<typeof Types.GetTransactionRequestSchema>): Promise<Types.Transaction> {
+  const msg = create(Types.GetTransactionRequestSchema, req);
+  const body = toJson(Types.GetTransactionRequestSchema, msg);
+
+  return getAxios().get(`/api/v1/finance/transactions/${body.id}`
+    , {
+      params: {
+        view:  body.view,
+      }
+    }
+  ).then((resp) => {
+    return fromJson(Types.TransactionSchema, resp.data);
+  });
+}
+
+/**
  * ListTransactions returns all transactions for the space.
  *
  * @param req Types.ListTransactionsRequest
@@ -236,6 +257,14 @@ export async function listTransactions(req: MessageInitShape<typeof Types.ListTr
   const body = toJson(Types.ListTransactionsRequestSchema, msg);
 
   return getAxios().get(`/api/v1/finance/transactions`
+    , {
+      params: {
+        view:  body.view,
+        search:  body.search,
+        page:  body.page,
+        pageSize:  body.pageSize,
+      }
+    }
   ).then((resp) => {
     return fromJson(Types.ListTransactionsResponseSchema, resp.data);
   });
