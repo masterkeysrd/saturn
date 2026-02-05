@@ -44,10 +44,33 @@ func (c Cents) Int64() int64 {
 	return int64(c)
 }
 
-// Divide divides Cents by a rate, returns the floored result.
-func (c Cents) Divide(rate float64) Cents {
-	if rate <= 0 {
-		return 0 // or panic, or error, based on your needs
+func (c Cents) Float64() float64 {
+	return float64(c)
+}
+
+func (c Cents) IsZero() bool {
+	return c == 0
+}
+
+func (c Cents) IsNegative() bool {
+	return c < 0
+}
+
+func (c Cents) Add(other Cents) Cents {
+	return c + other
+}
+
+func (c Cents) Sub(other Cents) Cents {
+	return c - other
+}
+
+func (c Cents) Mul(factor int64) Cents {
+	return Cents(int64(c) * factor)
+}
+
+func (c Cents) Div(divisor int64) Cents {
+	if divisor == 0 {
+		return 0
 	}
-	return Cents(float64(c) / rate)
+	return Cents(int64(c) / divisor)
 }

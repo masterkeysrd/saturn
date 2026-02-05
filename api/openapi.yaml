@@ -63,35 +63,6 @@ paths:
 
 components:
   schemas:
-    FinanceInsights:
-      type: object
-      required:
-        - spending
-        - meta
-      properties:
-        spending:
-          $ref: '#/components/schemas/SpendingInsights'
-
-    SpendingInsights:
-      type: object
-      required:
-        - summary
-        - by_budget
-        - trends
-      properties:
-        summary:
-          $ref: '#/components/schemas/SpendingSummary'
-        by_budget:
-          type: array
-          description: Budget-level aggregates across all periods
-          items:
-            $ref: '#/components/schemas/SpendingBudgetSummary'
-        trends:
-          type: array
-          description: Time-series data grouped by period
-          items:
-            $ref: '#/components/schemas/SpendingTrendPeriod'
-
     SpendingSummary:
       type: object
       required:

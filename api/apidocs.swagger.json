@@ -9,6 +9,9 @@
       "name": "Finance"
     },
     {
+      "name": "Insights"
+    },
+    {
       "name": "Identity"
     },
     {
@@ -449,6 +452,94 @@
         ],
         "tags": [
           "Finance"
+        ]
+      }
+    },
+    "/v1/finance/insights": {
+      "get": {
+        "summary": "GetInsights retrieves comprehensive financial insights, including spending\nsummaries, budget allocations, and spending trends over time.",
+        "operationId": "Insights_GetInsights",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetInsightsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "startDate.year",
+            "description": "Year of the date. Must be from 1 to 9999, or 0 to specify a date without\na year.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "startDate.month",
+            "description": "Month of a year. Must be from 1 to 12, or 0 to specify a year without a\nmonth and day.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "startDate.day",
+            "description": "Day of a month. Must be from 1 to 31 and valid for the year and month, or 0\nto specify a year by itself or a year and month where the day isn't\nsignificant.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "endDate.year",
+            "description": "Year of the date. Must be from 1 to 9999, or 0 to specify a date without\na year.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "endDate.month",
+            "description": "Month of a year. Must be from 1 to 12, or 0 to specify a year without a\nmonth and day.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "endDate.day",
+            "description": "Day of a month. Must be from 1 to 31 and valid for the year and month, or 0\nto specify a year by itself or a year and month where the day isn't\nsignificant.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "granularity",
+            "description": "The granularity of the spending data aggregation.\nDefault is MONTHLY.\n\nThe constrains are:\n- For DAILY granularity, the date range must not exceed 90 days.\n- For WEEKLY granularity, the date range must not exceed 1 year.\n- For MONTHLY granularity, the date range must not exceed 5 years.\n- For YEARLY granularity, the date range must not exceed 10 years.\n\n - GRANULARITY_UNSPECIFIED: Default value, should not be used.\n - DAILY: Daily granularity for spending data.\n - WEEKLY: Weekly granularity for spending data.\n - MONTHLY: Monthly granularity for spending data.\n - YEARLY: Yearly granularity for spending data.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "GRANULARITY_UNSPECIFIED",
+              "DAILY",
+              "WEEKLY",
+              "MONTHLY",
+              "YEARLY"
+            ],
+            "default": "GRANULARITY_UNSPECIFIED"
+          }
+        ],
+        "tags": [
+          "Insights"
         ]
       }
     },
@@ -1402,6 +1493,18 @@
       },
       "description": "Statistics related to the budget."
     },
+    "GetInsightsRequestGranularity": {
+      "type": "string",
+      "enum": [
+        "GRANULARITY_UNSPECIFIED",
+        "DAILY",
+        "WEEKLY",
+        "MONTHLY",
+        "YEARLY"
+      ],
+      "default": "GRANULARITY_UNSPECIFIED",
+      "description": "Granularity defines the time intervals for aggregating spending data.\n\n - GRANULARITY_UNSPECIFIED: Default value, should not be used.\n - DAILY: Daily granularity for spending data.\n - WEEKLY: Weekly granularity for spending data.\n - MONTHLY: Monthly granularity for spending data.\n - YEARLY: Yearly granularity for spending data."
+    },
     "IdentityUpdateUserBody": {
       "type": "object",
       "properties": {
@@ -1657,6 +1760,27 @@
         "amount"
       ]
     },
+    "v1BudgetSpendingBreakdown": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique identifier of the budget."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the budget."
+        },
+        "appearance": {
+          "$ref": "#/definitions/typeAppearance"
+        },
+        "metrics": {
+          "$ref": "#/definitions/v1SpendingMetrics",
+          "description": "Spending metrics specific to this budget."
+        }
+      },
+      "description": "BudgetSpendingBreakdown provides spending details for a specific budget."
+    },
     "v1BudgetStatus": {
       "type": "string",
       "enum": [
@@ -1667,6 +1791,20 @@
       ],
       "default": "STATUS_UNSPECIFIED",
       "description": " - STATUS_UNSPECIFIED: Default status.\n - ACTIVE: The budget is active and being tracked.\n - PAUSED: The budget is paused and not being tracked.\n - ARCHIVED: The budget has been archived and is read-only."
+    },
+    "v1BudgetTrendBreakdown": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique identifier of the budget."
+        },
+        "metrics": {
+          "$ref": "#/definitions/v1SpendingMetrics",
+          "description": "Spending metrics specific to this budget for the time period."
+        }
+      },
+      "title": "BudgetTrendBreakdown provides spending details for a specific budget"
     },
     "v1BudgetView": {
       "type": "string",
@@ -1825,6 +1963,16 @@
         "amount",
         "date"
       ]
+    },
+    "v1GetInsightsResponse": {
+      "type": "object",
+      "properties": {
+        "spending": {
+          "$ref": "#/definitions/v1SpendingInsights",
+          "description": "Comprehensive spending insights."
+        }
+      },
+      "description": "Response message for Insights.GetInsights."
     },
     "v1ListBudgetsResponse": {
       "type": "object",
@@ -2144,6 +2292,91 @@
       ],
       "default": "VIEW_UNSPECIFIED",
       "description": "Defines a view over a space's fields.\n\n - VIEW_UNSPECIFIED: Default value. The default view is BASIC.\n - NAME_ONLY: Only includes the space's ID, name, and alias.\n - BASIC: Includes basic information about the space.\n - FULL: Includes all information about the space."
+    },
+    "v1SpendingInsights": {
+      "type": "object",
+      "properties": {
+        "totalSummary": {
+          "$ref": "#/definitions/v1SpendingMetrics",
+          "description": "Summary of total spending metrics over the specified period."
+        },
+        "budgetBreakdown": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1BudgetSpendingBreakdown"
+          },
+          "description": "Breakdown of spending by budgets."
+        },
+        "trends": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SpendingTrendPoint"
+          },
+          "description": "Spending trends over time based on the specified granularity."
+        }
+      },
+      "description": "SpendingInsights encapsulates spending summaries, budget breakdowns,\nand spending trends over specified periods."
+    },
+    "v1SpendingMetrics": {
+      "type": "object",
+      "properties": {
+        "budgeted": {
+          "$ref": "#/definitions/typeMoney",
+          "description": "Total amount budgeted."
+        },
+        "spent": {
+          "$ref": "#/definitions/typeMoney",
+          "description": "Total amount spent."
+        },
+        "remaining": {
+          "$ref": "#/definitions/typeMoney",
+          "description": "Total amount remaining in the budget."
+        },
+        "overspent": {
+          "$ref": "#/definitions/typeMoney",
+          "description": "Total overspent amount."
+        },
+        "percentUsed": {
+          "type": "number",
+          "format": "double",
+          "description": "Percentage of the budget that has been spent.\nValue ranges from 0.0 to 100.0."
+        },
+        "transactionsCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total number of transactions considered in these metrics."
+        }
+      },
+      "description": "SpendingMetrics provides key metrics about spending."
+    },
+    "v1SpendingTrendPoint": {
+      "type": "object",
+      "properties": {
+        "periodLabel": {
+          "type": "string",
+          "description": "Label for the time period (e.g., \"2023-01\" for January 2023 or\n\"2023-W05\" for the 5th week of 2023)."
+        },
+        "startDate": {
+          "$ref": "#/definitions/typeDate"
+        },
+        "endDate": {
+          "$ref": "#/definitions/typeDate"
+        },
+        "totals": {
+          "$ref": "#/definitions/v1SpendingMetrics",
+          "description": "Spending metrics for this time period."
+        },
+        "budgetBreakdowns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1BudgetTrendBreakdown"
+          }
+        }
+      },
+      "description": "SpendingTrendPoint represents spending data at a specific point in time."
     },
     "v1TokenPair": {
       "type": "object",

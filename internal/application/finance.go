@@ -3,10 +3,12 @@ package application
 import (
 	"context"
 	"errors"
+	"log/slog"
 
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/foundation/access"
 	"github.com/masterkeysrd/saturn/internal/foundation/fieldmask"
+	"github.com/masterkeysrd/saturn/internal/pkg/deps"
 )
 
 // FinanceService defines the interface for finance-related operations.
@@ -37,17 +39,31 @@ type FinanceSearchService interface {
 	SearchTransactions(context.Context, access.Principal, *finance.SearchTransactionsInput) (*finance.TransactionPage, error)
 }
 
+type FinanceInsightsService interface {
+	GetInsights(context.Context, access.Principal, finance.GetInsightsInput) (*finance.Insights, error)
+}
+
+type FinanceAppParams struct {
+	deps.In
+
+	FinanceService         FinanceService
+	FinanceSearchService   FinanceSearchService
+	FinanceInsightsService FinanceInsightsService
+}
+
 // FinanceApp provides application-level operations for finance management.
 type FinanceApp struct {
-	financeService       FinanceService
-	financeSearchService FinanceSearchService
+	financeService         FinanceService
+	financeSearchService   FinanceSearchService
+	financeInsightsService FinanceInsightsService
 }
 
 // NewFinanceApp creates a new instance of FinanceApp.
-func NewFinanceApp(financeService FinanceService, financeSearchService FinanceSearchService) *FinanceApp {
+func NewFinanceApp(params FinanceAppParams) *FinanceApp {
 	return &FinanceApp{
-		financeService:       financeService,
-		financeSearchService: financeSearchService,
+		financeService:         params.FinanceService,
+		financeSearchService:   params.FinanceSearchService,
+		financeInsightsService: params.FinanceInsightsService,
 	}
 }
 
@@ -211,4 +227,14 @@ func (app *FinanceApp) ActivateSetting(ctx context.Context) (*finance.Setting, e
 	}
 
 	return setting, nil
+}
+
+func (app *FinanceApp) GetInsights(ctx context.Context, in finance.GetInsightsInput) (*finance.Insights, error) {
+	slog.DebugContext(ctx, "GetInsights called", slog.Any("input", in))
+	principal, ok := access.GetPrincipal(ctx)
+	if !ok {
+		return nil, errors.New("missing principal in context")
+	}
+
+	return app.financeInsightsService.GetInsights(ctx, principal, in)
 }

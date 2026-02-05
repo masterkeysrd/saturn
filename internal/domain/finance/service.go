@@ -517,28 +517,6 @@ func (s *Service) ListCurrencies(ctx context.Context) ([]Currency, error) {
 	return currencies, nil
 }
 
-func (s *Service) GetInsights(ctx context.Context, in *GetInsightsInput) (*Insights, error) {
-	if err := in.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid input: %w", err)
-	}
-
-	spendingSeries, err := s.insightsStore.GetSpendingSeries(ctx, SpendingSeriesFilter{
-		StartDate: in.StartDate,
-		EndState:  in.EndState,
-		Budgets:   in.Budgets,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("cannot get spending series: %w", err)
-	}
-
-	spendingInsights := NewSpendingInsights()
-	spendingInsights.Process(spendingSeries)
-
-	return &Insights{
-		Spending: spendingInsights,
-	}, nil
-}
-
 func (s *Service) CreateSetting(ctx context.Context, actor access.Principal, settings *Setting) error {
 	if !actor.IsSpaceOwner() {
 		return errors.New("only space owners can create settings")

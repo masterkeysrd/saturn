@@ -1,0 +1,136 @@
+syntax = "proto3";
+
+// Package saturn. finance.v1 provides the Finance API for personal finance
+// management, including budgeting, expense tracking, and financial goals.
+package saturn.finance.v1;
+
+import "google/api/annotations.proto";
+import "google/type/date.proto";
+import "saturn/type/appearance.proto";
+import "saturn/type/money.proto";
+
+option go_package = "github.com/masterkeysrd/saturn/gen/proto/go/saturn/finance/v1;financepb";
+
+// Insights service provides methods to retrieve financial insights and analytics.
+service Insights {
+  // GetInsights retrieves comprehensive financial insights, including spending
+  // summaries, budget allocations, and spending trends over time.
+  rpc GetInsights(GetInsightsRequest) returns (GetInsightsResponse) {
+    option (google.api.http) = {get: "/v1/finance/insights"};
+  }
+}
+
+// Request message for Insights.GetInsights.
+message GetInsightsRequest {
+  // Granularity defines the time intervals for aggregating spending data.
+  enum Granularity {
+    // Default value, should not be used.
+    GRANULARITY_UNSPECIFIED = 0;
+
+    // Daily granularity for spending data.
+    DAILY = 1;
+
+    // Weekly granularity for spending data.
+    WEEKLY = 2;
+
+    // Monthly granularity for spending data.
+    MONTHLY = 3;
+
+    // Yearly granularity for spending data.
+    YEARLY = 4;
+  }
+
+  // The start and end dates for the insights period.
+  google.type.Date start_date = 1;
+
+  // The end date for the insights period.
+  google.type.Date end_date = 2;
+
+  // The granularity of the spending data aggregation.
+  // Default is MONTHLY.
+  //
+  // The constrains are:
+  // - For DAILY granularity, the date range must not exceed 90 days.
+  // - For WEEKLY granularity, the date range must not exceed 1 year.
+  // - For MONTHLY granularity, the date range must not exceed 5 years.
+  // - For YEARLY granularity, the date range must not exceed 10 years.
+  Granularity granularity = 3;
+}
+
+// Response message for Insights.GetInsights.
+message GetInsightsResponse {
+  // Comprehensive spending insights.
+  SpendingInsights spending = 1;
+}
+
+// SpendingInsights encapsulates spending summaries, budget breakdowns,
+// and spending trends over specified periods.
+message SpendingInsights {
+  // Summary of total spending metrics over the specified period.
+  SpendingMetrics total_summary = 1;
+
+  // Breakdown of spending by budgets.
+  repeated BudgetSpendingBreakdown budget_breakdown = 2;
+
+  // Spending trends over time based on the specified granularity.
+  repeated SpendingTrendPoint trends = 3;
+}
+
+// BudgetSpendingBreakdown provides spending details for a specific budget.
+message BudgetSpendingBreakdown {
+  // The unique identifier of the budget.
+  string id = 1;
+
+  // The name of the budget.
+  string name = 2;
+
+  saturn.type.Appearance appearance = 3;
+
+  // Spending metrics specific to this budget.
+  SpendingMetrics metrics = 4;
+}
+
+// SpendingTrendPoint represents spending data at a specific point in time.
+message SpendingTrendPoint {
+  // Label for the time period (e.g., "2023-01" for January 2023 or
+  // "2023-W05" for the 5th week of 2023).
+  string period_label = 1;
+  google.type.Date start_date = 2;
+  google.type.Date end_date = 3;
+
+  // Spending metrics for this time period.
+  SpendingMetrics totals = 4;
+
+  repeated BudgetTrendBreakdown budget_breakdowns = 5;
+}
+
+// SpendingMetrics provides key metrics about spending.
+message SpendingMetrics {
+  // Total amount budgeted.
+  saturn.type.Money budgeted = 1;
+
+  // Total amount spent.
+  saturn.type.Money spent = 2;
+
+  // Total amount remaining in the budget.
+  saturn.type.Money remaining = 3;
+
+  // Total overspent amount.
+  saturn.type.Money overspent = 4;
+
+  // Percentage of the budget that has been spent.
+  // Value ranges from 0.0 to 100.0.
+  double percent_used = 5;
+
+  // Total number of transactions considered in these metrics.
+  int32 transactions_count = 6;
+}
+
+// BudgetTrendBreakdown provides spending details for a specific budget
+message BudgetTrendBreakdown {
+  // The unique identifier of the budget.
+  string id = 1;
+
+  // Spending metrics specific to this budget for the time period.
+  SpendingMetrics metrics = 2;
+}

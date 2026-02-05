@@ -27,9 +27,10 @@ type Server struct {
 type ServerParams struct {
 	deps.In
 
-	FinanceServer  financepb.FinanceServer
-	IdentityServer identitypb.IdentityServer
-	TenancyServer  tenancypb.TenancyServer
+	FinanceServer         financepb.FinanceServer
+	FinanceInsightsServer financepb.InsightsServer
+	IdentityServer        identitypb.IdentityServer
+	TenancyServer         tenancypb.TenancyServer
 
 	TokenManager     auth.TokenManager
 	TokenBlacklist   auth.TokenBlacklist
@@ -41,6 +42,8 @@ func NewServer(params ServerParams) *Server {
 	mux := runtime.NewServeMux()
 
 	financepb.RegisterFinanceHandlerServer(ctx, mux, params.FinanceServer)
+	financepb.RegisterInsightsHandlerServer(ctx, mux, params.FinanceInsightsServer)
+
 	identitypb.RegisterIdentityHandlerServer(ctx, mux, params.IdentityServer)
 	tenancypb.RegisterTenancyHandlerServer(ctx, mux, params.TenancyServer)
 

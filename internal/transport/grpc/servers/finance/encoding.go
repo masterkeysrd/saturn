@@ -439,3 +439,99 @@ func TransactionView(pb financepb.Transaction_View) finance.TransactionView {
 		return finance.TransactionViewBasic
 	}
 }
+
+func GetInsightsResponsePb(insights *finance.Insights) *financepb.GetInsightsResponse {
+	if insights == nil {
+		return &financepb.GetInsightsResponse{}
+	}
+
+	// return &financepb.GetInsightsResponse{}
+	return &financepb.GetInsightsResponse{
+		Spending: SpendingInsightsPb(insights.Spending),
+	}
+}
+
+func SpendingInsightsPb(insights *finance.SpendingInsights) *financepb.SpendingInsights {
+	if insights == nil {
+		return nil
+	}
+
+	return &financepb.SpendingInsights{
+		TotalSummary:    SpendingMetricsPb(insights.Summary),
+		BudgetBreakdown: BudgetSpendingBreakdownsPb(insights.Breakdown),
+		Trends:          SpendingTrendPointsPb(insights.Trends),
+	}
+}
+
+func BudgetSpendingBreakdownsPb(breakdowns []*finance.SpendingBreakdown) []*financepb.BudgetSpendingBreakdown {
+	pbs := make([]*financepb.BudgetSpendingBreakdown, 0, len(breakdowns))
+	for _, b := range breakdowns {
+		pbs = append(pbs, BudgetSpendingBreakdownPb(b))
+	}
+	return pbs
+}
+
+func BudgetSpendingBreakdownPb(b *finance.SpendingBreakdown) *financepb.BudgetSpendingBreakdown {
+	if b == nil {
+		return nil
+	}
+
+	return &financepb.BudgetSpendingBreakdown{
+		Id:      b.BudgetID.String(),
+		Metrics: SpendingMetricsPb(b.Metrics),
+	}
+}
+
+func SpendingTrendPointsPb(points []*finance.SpendingTrendPoint) []*financepb.SpendingTrendPoint {
+	pbs := make([]*financepb.SpendingTrendPoint, 0, len(points))
+	for _, p := range points {
+		pbs = append(pbs, SpendingTrendPointPb(p))
+	}
+	return pbs
+}
+
+func SpendingTrendPointPb(p *finance.SpendingTrendPoint) *financepb.SpendingTrendPoint {
+	if p == nil {
+		return nil
+	}
+
+	return &financepb.SpendingTrendPoint{
+		PeriodLabel:      p.Period,
+		Totals:           SpendingMetricsPb(p.Totals),
+		BudgetBreakdowns: BudgetTrendBreakdownsPb(p.Budgets),
+	}
+}
+
+func BudgetTrendBreakdownsPb(budgets []*finance.SpendingBreakdown) []*financepb.BudgetTrendBreakdown {
+	pbs := make([]*financepb.BudgetTrendBreakdown, 0, len(budgets))
+	for _, b := range budgets {
+		pbs = append(pbs, BudgetTrendBreakdownPb(b))
+	}
+	return pbs
+}
+
+func BudgetTrendBreakdownPb(b *finance.SpendingBreakdown) *financepb.BudgetTrendBreakdown {
+	if b == nil {
+		return nil
+	}
+
+	return &financepb.BudgetTrendBreakdown{
+		Id:      b.BudgetID.String(),
+		Metrics: SpendingMetricsPb(b.Metrics),
+	}
+}
+
+func SpendingMetricsPb(metrics *finance.SpendingMetrics) *financepb.SpendingMetrics {
+	if metrics == nil {
+		return nil
+	}
+
+	return &financepb.SpendingMetrics{
+		Budgeted:          encoding.MoneyPb(metrics.Budgeted),
+		Spent:             encoding.MoneyPb(metrics.Spent),
+		Remaining:         encoding.MoneyPb(metrics.Remaining()),
+		Overspent:         encoding.MoneyPb(metrics.Overspent()),
+		PercentUsed:       metrics.Usage(),
+		TransactionsCount: int32(metrics.TrxCount),
+	}
+}

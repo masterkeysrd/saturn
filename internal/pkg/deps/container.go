@@ -13,6 +13,7 @@ type In struct {
 type Container interface {
 	Injector
 	Invoke(fn any) error
+	String() string
 }
 
 func Register(inj Injector, providers ...Provider) error {
@@ -47,7 +48,7 @@ func (c *DigContainer) Provide(constructor any, opts ...ProvideOption) error {
 	}
 
 	if provOpts.as != nil {
-		digOpts = append(digOpts, dig.As(provOpts.as))
+		digOpts = append(digOpts, dig.As(provOpts.as...))
 	}
 
 	return c.container.Provide(constructor, digOpts...)
@@ -55,4 +56,8 @@ func (c *DigContainer) Provide(constructor any, opts ...ProvideOption) error {
 
 func (c *DigContainer) Invoke(fn any) error {
 	return c.container.Invoke(fn)
+}
+
+func (c *DigContainer) String() string {
+	return c.container.String()
 }

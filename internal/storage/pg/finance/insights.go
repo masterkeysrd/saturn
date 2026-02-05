@@ -7,16 +7,15 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
-	"github.com/masterkeysrd/saturn/internal/foundation/appearance"
 	"github.com/masterkeysrd/saturn/internal/pkg/money"
+	"github.com/masterkeysrd/saturn/internal/pkg/sqlexp"
 )
 
 var _ finance.InsightsStore = (*InsightsStore)(nil)
 
 // InsightsStore provides methods to query spending insights data.
 type InsightsStore struct {
-	db      *sqlx.DB
-	queries *InsightsQueries
+	db *sqlx.DB
 }
 
 // NewInsightsStore creates a new insights repository.
@@ -27,145 +26,80 @@ func NewInsightsStore(db *sqlx.DB) (*InsightsStore, error) {
 	}, nil
 }
 
-// GetSpendingSeries retrieves spending data aggregated by budget and period.
-// Returns flattened rows that can be grouped in memory using finance.SpendingInsights.
-func (i *InsightsStore) GetSpendingSeries(ctx context.Context, filter finance.SpendingSeriesFilter) ([]*finance.SpendingSeries, error) {
-	rows, err := i.queries.GetSpendingSeries(ctx, filter)
+func (s *InsightsStore) GetSpendingTrends(ctx context.Context, criteria finance.SpendingTrendPointCriteria) ([]*finance.SpendingTrendSerie, error) {
+	var expr sqlexp.SelectExpression = s.buildGetMonthlySpendingTrendsExpr()
+
+	fmt.Println("Debug: Successfully executed spending trends query", expr.ToSQL(), criteria)
+	rows, err := s.db.NamedQueryContext(ctx, expr.ToSQL(), GetSpendingTrendsParams{
+		SpaceID:   criteria.SpaceID.String(),
+		StartDate: criteria.StartDate,
+		EndDate:   criteria.EndState,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("cannot execute get spending series query: %w", err)
+		return nil, fmt.Errorf("cannot execute spending trends query: %w", err)
 	}
 	defer rows.Close()
 
-	var series []*finance.SpendingSeries
+	items := make([]*finance.SpendingTrendSerie, 0, 50)
 	for rows.Next() {
-		var entity SpendingSeriesEntity
-		if err := rows.StructScan(&entity); err != nil {
-			return nil, fmt.Errorf("cannot scan spending series: %w", err)
+		var row SpendingTrendRow
+		if err := rows.StructScan(&row); err != nil {
+			return nil, fmt.Errorf("cannot scan spending trend row: %w", err)
 		}
 
-		series = append(series, entityToSpendingSeries(&entity))
+		item := &finance.SpendingTrendSerie{
+			Period:        row.Period,
+			BudgetID:      finance.BudgetID(row.BudgetID),
+			BudgetedCents: money.Cents(row.BudgetedCents),
+			Currency:      money.CurrencyCode(row.Currency),
+			SpentCents:    money.Cents(row.SpentCents),
+			TrxCount:      row.TransactionCount,
+		}
+		items = append(items, item)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows iteration error: %w", err)
-	}
-
-	return series, nil
+	return items, nil
 }
 
-const getSpendingSeriesQuery = `
-WITH period_budgets AS (
-    SELECT
-	    bp.id,
-        bp.budget_id,
-        bp.start_date,
-        bp.end_date,
-        bp.base_amount_cents,
-        bp.base_amount_currency
-    FROM budget_periods bp
-    WHERE bp.start_date >= :start_date
-      AND bp.end_date <= :end_date
-)
-SELECT
-    b.id as budget_id,
-    b.name as budget_name,
-	b.color as budget_color,
-	b.icon_name as budget_icon_name,
-    TO_CHAR(DATE_TRUNC('month', pb.start_date), 'YYYY-MM') as period,
-    pb.start_date as period_start,
-    pb.end_date as period_end,
-    pb.base_amount_cents as budgeted_cents,
-    pb.base_amount_currency as budgeted_currency,
-    COALESCE(SUM(t.base_amount_cents), 0) as spent_cents,
-    COALESCE(MAX(t.base_amount_currency), pb.base_amount_currency) as spent_currency,
-    COUNT(t.id) as transaction_count
-FROM period_budgets pb
-JOIN budgets b ON pb.budget_id = b.id
-LEFT JOIN transactions t
-    ON t.budget_period_id = pb.id
-    AND t.type = 'expense'
-GROUP BY
-    b.id,
-    b.name,
-	b.color,
-	b.icon_name,
-    pb.start_date,
-    pb.end_date,
-    pb.base_amount_cents,
-    pb.base_amount_currency
-ORDER BY pb.start_date DESC, b.name`
-
-// InsightsQueries holds prepared statements for insights queries.
-type InsightsQueries struct {
-	getSpendingSeriesStmt *sqlx.NamedStmt
+func (s *InsightsStore) buildGetMonthlySpendingTrendsExpr() sqlexp.SelectExpression {
+	return sqlexp.Select(
+		"bp.budget_id",
+		"TO_CHAR(DATE_TRUNC('month', bp.start_date), 'YYYY-MM') AS period",
+		"COALESCE(SUM(bp.base_amount_cents), 0) AS budgeted_cents",
+		"bp.base_amount_currency AS currency",
+		"COALESCE(SUM(t.amount_cents), 0) AS spent_cents",
+		"COUNT(t.id) AS transaction_count",
+	).
+		From("finance.budget_periods bp").
+		Join("finance.budgets", "b",
+			sqlexp.Eq("bp.budget_id", "b.id"),
+			sqlexp.Eq("bp.space_id", "b.space_id"),
+		).
+		LeftJoin("finance.transactions", "t",
+			sqlexp.Eq("t.budget_period_id", "bp.id"),
+			sqlexp.Eq("t.budget_id", "bp.budget_id"),
+			sqlexp.Eq("t.space_id", "bp.space_id"),
+		).
+		Where(
+			sqlexp.Eq("bp.space_id", sqlexp.NamedParam("space_id")),
+			sqlexp.Gte("bp.start_date", sqlexp.NamedParam("start_date")),
+			sqlexp.Lte("bp.end_date", sqlexp.NamedParam("end_date")),
+		).
+		GroupBy("period", "bp.budget_id", "bp.base_amount_currency").
+		OrderBy("period ASC", "bp.budget_id ASC")
 }
 
-// NewInsightsQueries initializes prepared statements for insights queries.
-func NewInsightsQueries(db *sqlx.DB) (*InsightsQueries, error) {
-	getSpendingSeriesStmt, err := db.PrepareNamed(getSpendingSeriesQuery)
-	if err != nil {
-		return nil, fmt.Errorf("cannot prepare get spending series query: %w", err)
-	}
-
-	return &InsightsQueries{
-		getSpendingSeriesStmt: getSpendingSeriesStmt,
-	}, nil
+type SpendingTrendRow struct {
+	Period           string `db:"period"`
+	BudgetID         string `db:"budget_id"`
+	BudgetedCents    int64  `db:"budgeted_cents"`
+	Currency         string `db:"currency"`
+	SpentCents       int64  `db:"spent_cents"`
+	TransactionCount int64  `db:"transaction_count"`
 }
 
-// GetSpendingSeries executes the spending series query.
-func (q *InsightsQueries) GetSpendingSeries(ctx context.Context, filter finance.SpendingSeriesFilter) (*sqlx.Rows, error) {
-	return q.getSpendingSeriesStmt.QueryxContext(ctx, map[string]any{
-		"start_date": filter.StartDate,
-		"end_date":   filter.EndState,
-	})
-}
-
-// Close releases all prepared statements.
-func (q *InsightsQueries) Close() error {
-	if q.getSpendingSeriesStmt != nil {
-		return q.getSpendingSeriesStmt.Close()
-	}
-	return nil
-}
-
-// SpendingSeriesEntity represents a row from the spending series query.
-type SpendingSeriesEntity struct {
-	BudgetID         finance.BudgetID   `db:"budget_id"`
-	BudgetName       string             `db:"budget_name"`
-	BudgetColor      string             `db:"budget_color"`
-	BudgetIconName   string             `db:"budget_icon_name"`
-	Period           string             `db:"period"`
-	PeriodStart      time.Time          `db:"period_start"`
-	PeriodEnd        time.Time          `db:"period_end"`
-	BudgetedCents    money.Cents        `db:"budgeted_cents"`
-	BudgetedCurrency money.CurrencyCode `db:"budgeted_currency"`
-	SpentCents       money.Cents        `db:"spent_cents"`
-	SpentCurrency    money.CurrencyCode `db:"spent_currency"`
-	TransactionCount int                `db:"transaction_count"`
-}
-
-// entityToSpendingSeries converts a database entity to a domain model.
-func entityToSpendingSeries(e *SpendingSeriesEntity) *finance.SpendingSeries {
-	if e == nil {
-		return nil
-	}
-
-	return &finance.SpendingSeries{
-		BudgetID:       finance.BudgetID(e.BudgetID),
-		BudgetName:     e.BudgetName,
-		BudgetColor:    appearance.Color(e.BudgetColor),
-		BudgetIconName: appearance.Icon(e.BudgetIconName),
-		Period:         e.Period,
-		PeriodStart:    e.PeriodStart,
-		PeriodEnd:      e.PeriodEnd,
-		Budgeted: money.Money{
-			Cents:    e.BudgetedCents,
-			Currency: e.BudgetedCurrency,
-		},
-		Spent: money.Money{
-			Cents:    e.SpentCents,
-			Currency: e.SpentCurrency,
-		},
-		Count: e.TransactionCount,
-	}
+type GetSpendingTrendsParams struct {
+	SpaceID   string    `db:"space_id"`
+	StartDate time.Time `db:"start_date"`
+	EndDate   time.Time `db:"end_date"`
 }

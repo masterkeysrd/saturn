@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/application"
-	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/domain/tenancy"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
@@ -21,10 +20,8 @@ import (
 	"github.com/masterkeysrd/saturn/internal/pkg/sha256"
 	"github.com/masterkeysrd/saturn/internal/pkg/uuid"
 	"github.com/masterkeysrd/saturn/internal/storage/pg"
-	financepg "github.com/masterkeysrd/saturn/internal/storage/pg/finance"
 	identitypg "github.com/masterkeysrd/saturn/internal/storage/pg/identity"
 	tenancypg "github.com/masterkeysrd/saturn/internal/storage/pg/tenancy"
-	financegrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/servers/finance"
 	identitygrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/servers/identity"
 	tenancygrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/servers/tenancy"
 )
@@ -34,7 +31,12 @@ func init() {
 }
 
 func main() {
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	slog.SetDefault(
+		slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+			AddSource: true,
+			Level:     slog.LevelDebug,
+		})),
+	)
 	slog.Info("building DI container")
 	c, err := buildContainer()
 	if err != nil {
@@ -106,7 +108,6 @@ func buildContainer() (deps.Container, error) {
 	if err := deps.Register(container,
 		identitygrpc.RegisterDeps,
 		tenancygrpc.RegisterDeps,
-		financegrpc.RegisterDeps,
 	); err != nil {
 		return nil, fmt.Errorf("cannot register transport providers: %w", err)
 	}
@@ -121,7 +122,6 @@ func buildContainer() (deps.Container, error) {
 	// Domain Providers
 	if err := deps.Register(container,
 		tenancy.RegisterProviders,
-		finance.RegisterProviders,
 		identity.RegisterDeps,
 	); err != nil {
 		return nil, fmt.Errorf("cannot register domain providers: %w", err)
@@ -130,7 +130,6 @@ func buildContainer() (deps.Container, error) {
 	// Storage
 	err := deps.Register(container,
 		tenancypg.Provide,
-		financepg.Provide,
 		identitypg.Provide,
 	)
 	if err != nil {
@@ -208,12 +207,6 @@ func wireDeps(inj deps.Injector) error {
 		return b
 	}); err != nil {
 		return fmt.Errorf("cannot inject infra.auth.MnemoTokenBlacklist dep: %w", err)
-	}
-
-	if err := inj.Provide(func(s *finance.Service) application.FinanceService {
-		return s
-	}); err != nil {
-		return fmt.Errorf("cannot inject finance.Service dep: %w", err)
 	}
 
 	// Foundation Deps Wiring

@@ -11,10 +11,10 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-var _ financepb.FinanceServer = (*Server)(nil)
+var _ financepb.FinanceServer = (*FinanceServer)(nil)
 
-// Application represents the identity application.
-type Application interface {
+// FinanceApplication represents the identity application.
+type FinanceApplication interface {
 	CreateBudget(context.Context, *finance.Budget) error
 	SearchBudgets(context.Context, *finance.SearchBudgetsInput) (*finance.BudgetPage, error)
 	FindBudget(context.Context, *finance.FindBudgetInput) (*finance.BudgetItem, error)
@@ -32,19 +32,19 @@ type Application interface {
 	ActivateSetting(context.Context) (*finance.Setting, error)
 }
 
-type Server struct {
+type FinanceServer struct {
 	financepb.UnimplementedFinanceServer
 
-	app Application
+	app FinanceApplication
 }
 
-func NewServer(app Application) *Server {
-	return &Server{
+func NewFinanceServer(app FinanceApplication) *FinanceServer {
+	return &FinanceServer{
 		app: app,
 	}
 }
 
-func (s *Server) ListCurrencies(ctx context.Context, _ *emptypb.Empty) (*financepb.ListCurrenciesResponse, error) {
+func (s *FinanceServer) ListCurrencies(ctx context.Context, _ *emptypb.Empty) (*financepb.ListCurrenciesResponse, error) {
 	currencies, err := s.app.ListCurrencies(ctx)
 	if err != nil {
 		return nil, err
@@ -54,7 +54,7 @@ func (s *Server) ListCurrencies(ctx context.Context, _ *emptypb.Empty) (*finance
 	}, nil
 }
 
-func (s *Server) CreateBudget(ctx context.Context, req *financepb.CreateBudgetRequest) (*financepb.Budget, error) {
+func (s *FinanceServer) CreateBudget(ctx context.Context, req *financepb.CreateBudgetRequest) (*financepb.Budget, error) {
 	budget := Budget(req.GetBudget())
 	if err := s.app.CreateBudget(ctx, budget); err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func (s *Server) CreateBudget(ctx context.Context, req *financepb.CreateBudgetRe
 	return BudgetPb(budget), nil
 }
 
-func (s *Server) ListBudgets(ctx context.Context, req *financepb.ListBudgetsRequest) (*financepb.ListBudgetsResponse, error) {
+func (s *FinanceServer) ListBudgets(ctx context.Context, req *financepb.ListBudgetsRequest) (*financepb.ListBudgetsResponse, error) {
 	page, err := s.app.SearchBudgets(ctx, SearchBudgetsInput(req))
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func (s *Server) ListBudgets(ctx context.Context, req *financepb.ListBudgetsRequ
 	}, nil
 }
 
-func (s *Server) GetBudget(ctx context.Context, req *financepb.GetBudgetRequest) (*financepb.Budget, error) {
+func (s *FinanceServer) GetBudget(ctx context.Context, req *financepb.GetBudgetRequest) (*financepb.Budget, error) {
 	budget, err := s.app.FindBudget(ctx, FindBudgetInput(req))
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func (s *Server) GetBudget(ctx context.Context, req *financepb.GetBudgetRequest)
 	return BudgetItemPb(budget), nil
 }
 
-func (s *Server) UpdateBudget(ctx context.Context, req *financepb.UpdateBudgetRequest) (*financepb.Budget, error) {
+func (s *FinanceServer) UpdateBudget(ctx context.Context, req *financepb.UpdateBudgetRequest) (*financepb.Budget, error) {
 	input, err := UpdateBudgetInput(req)
 	if err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func (s *Server) UpdateBudget(ctx context.Context, req *financepb.UpdateBudgetRe
 	return BudgetPb(budget), nil
 }
 
-func (s *Server) CreateExchangeRate(ctx context.Context, req *financepb.CreateExchangeRateRequest) (*financepb.ExchangeRate, error) {
+func (s *FinanceServer) CreateExchangeRate(ctx context.Context, req *financepb.CreateExchangeRateRequest) (*financepb.ExchangeRate, error) {
 	exchangeRate, err := ExchangeRate(req.GetRate())
 	if err != nil {
 		return nil, err
@@ -108,7 +108,7 @@ func (s *Server) CreateExchangeRate(ctx context.Context, req *financepb.CreateEx
 	return ExchangeRatePb(exchangeRate), nil
 }
 
-func (s *Server) ListExchangeRates(ctx context.Context, req *financepb.ListExchangeRatesRequest) (*financepb.ListExchangeRatesResponse, error) {
+func (s *FinanceServer) ListExchangeRates(ctx context.Context, req *financepb.ListExchangeRatesRequest) (*financepb.ListExchangeRatesResponse, error) {
 	exchangeRates, err := s.app.ListExchangeRates(ctx)
 	if err != nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (s *Server) ListExchangeRates(ctx context.Context, req *financepb.ListExcha
 	}, nil
 }
 
-func (s *Server) GetExchangeRate(ctx context.Context, req *financepb.GetExchangeRateRequest) (*financepb.ExchangeRate, error) {
+func (s *FinanceServer) GetExchangeRate(ctx context.Context, req *financepb.GetExchangeRateRequest) (*financepb.ExchangeRate, error) {
 	exchangeRate, err := s.app.GetExchangeRate(ctx, finance.CurrencyCode(req.GetCurrencyCode()))
 	if err != nil {
 		return nil, err
@@ -126,7 +126,7 @@ func (s *Server) GetExchangeRate(ctx context.Context, req *financepb.GetExchange
 	return ExchangeRatePb(exchangeRate), nil
 }
 
-func (s *Server) UpdateExchangeRate(ctx context.Context, req *financepb.UpdateExchangeRateRequest) (*financepb.ExchangeRate, error) {
+func (s *FinanceServer) UpdateExchangeRate(ctx context.Context, req *financepb.UpdateExchangeRateRequest) (*financepb.ExchangeRate, error) {
 	slog.Info("UpdateExchangeRate called", slog.Any("request", req))
 	input, err := UpdateExchangeRateInput(req)
 	if err != nil {
@@ -141,7 +141,7 @@ func (s *Server) UpdateExchangeRate(ctx context.Context, req *financepb.UpdateEx
 	return ExchangeRatePb(rate), nil
 }
 
-func (s *Server) CreateExpense(ctx context.Context, req *financepb.CreateExpenseRequest) (*financepb.Transaction, error) {
+func (s *FinanceServer) CreateExpense(ctx context.Context, req *financepb.CreateExpenseRequest) (*financepb.Transaction, error) {
 	expense, err := Expense(req.GetExpense())
 	if err != nil {
 		return nil, err
@@ -155,7 +155,7 @@ func (s *Server) CreateExpense(ctx context.Context, req *financepb.CreateExpense
 	return TransactionPb(trx), nil
 }
 
-func (s *Server) GetTransaction(ctx context.Context, req *financepb.GetTransactionRequest) (*financepb.Transaction, error) {
+func (s *FinanceServer) GetTransaction(ctx context.Context, req *financepb.GetTransactionRequest) (*financepb.Transaction, error) {
 	trx, err := s.app.FindTransaction(ctx, FindTransactionInput(req))
 	if err != nil {
 		return nil, err
@@ -163,7 +163,7 @@ func (s *Server) GetTransaction(ctx context.Context, req *financepb.GetTransacti
 	return TransactionItemPb(trx), nil
 }
 
-func (s *Server) ListTransactions(ctx context.Context, req *financepb.ListTransactionsRequest) (*financepb.ListTransactionsResponse, error) {
+func (s *FinanceServer) ListTransactions(ctx context.Context, req *financepb.ListTransactionsRequest) (*financepb.ListTransactionsResponse, error) {
 	page, err := s.app.SearchTransactions(ctx, SearchTransactionsInput(req))
 	if err != nil {
 		return nil, err
@@ -173,7 +173,7 @@ func (s *Server) ListTransactions(ctx context.Context, req *financepb.ListTransa
 	}, nil
 }
 
-func (s *Server) GetSetting(ctx context.Context, _ *emptypb.Empty) (*financepb.Setting, error) {
+func (s *FinanceServer) GetSetting(ctx context.Context, _ *emptypb.Empty) (*financepb.Setting, error) {
 	settings, err := s.app.GetSetting(ctx)
 	if err != nil {
 		return nil, err
@@ -181,7 +181,7 @@ func (s *Server) GetSetting(ctx context.Context, _ *emptypb.Empty) (*financepb.S
 	return SettingPb(settings), nil
 }
 
-func (s *Server) UpdateSetting(ctx context.Context, req *financepb.UpdateSettingRequest) (*financepb.Setting, error) {
+func (s *FinanceServer) UpdateSetting(ctx context.Context, req *financepb.UpdateSettingRequest) (*financepb.Setting, error) {
 	settings, updateMask := Setting(req.GetSetting()), encoding.FieldMask(req.GetUpdateMask())
 	updatedSettings, err := s.app.UpdateSetting(ctx, settings, updateMask)
 	if err != nil {
@@ -190,7 +190,7 @@ func (s *Server) UpdateSetting(ctx context.Context, req *financepb.UpdateSetting
 	return SettingPb(updatedSettings), nil
 }
 
-func (s *Server) ActivateSetting(ctx context.Context, _ *emptypb.Empty) (*financepb.Setting, error) {
+func (s *FinanceServer) ActivateSetting(ctx context.Context, _ *emptypb.Empty) (*financepb.Setting, error) {
 	settings, err := s.app.ActivateSetting(ctx)
 	if err != nil {
 		return nil, err

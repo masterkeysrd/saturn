@@ -47,6 +47,17 @@ func (se SelectExpression) AndWhere(conditions ...ConditionExpression) SelectExp
 	return se
 }
 
+func (se SelectExpression) Join(table string, alias string, onCriteria ...ConditionExpression) SelectExpression {
+	join := JoinExpression{
+		joinType:   "INNER JOIN",
+		table:      table,
+		alias:      alias,
+		onCriteria: onCriteria,
+	}
+	se.joins = append(se.joins, join)
+	return se
+}
+
 func (se SelectExpression) LeftJoin(table string, alias string, onCriteria ...ConditionExpression) SelectExpression {
 	join := JoinExpression{
 		joinType:   "LEFT JOIN",
@@ -132,16 +143,16 @@ func (se SelectExpression) ToSQL() string {
 		sb.WriteString(strings.Join(whereConditions, " AND "))
 	}
 
-	// ORDER BY clause
-	if len(se.orderBy) > 0 {
-		sb.WriteString("\nORDER BY ")
-		sb.WriteString(strings.Join(se.orderBy, ", "))
-	}
-
 	// GROUP BY clause
 	if len(se.groupBy) > 0 {
 		sb.WriteString("\nGROUP BY ")
 		sb.WriteString(strings.Join(se.groupBy, ", "))
+	}
+
+	// ORDER BY clause
+	if len(se.orderBy) > 0 {
+		sb.WriteString("\nORDER BY ")
+		sb.WriteString(strings.Join(se.orderBy, ", "))
 	}
 
 	// LIMIT clause

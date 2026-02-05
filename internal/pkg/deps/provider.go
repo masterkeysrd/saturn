@@ -12,7 +12,7 @@ func (fn provideOptFn) apply(opts *provideOpts) {
 
 type provideOpts struct {
 	name string
-	as   any
+	as   []any
 }
 
 type Provider func(Injector) error
@@ -23,7 +23,7 @@ func Name(name string) ProvideOption {
 	})
 }
 
-func As(as any) ProvideOption {
+func As(as ...any) ProvideOption {
 	return provideOptFn(func(opts *provideOpts) {
 		opts.as = as
 	})
