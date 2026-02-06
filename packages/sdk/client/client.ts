@@ -33,6 +33,12 @@ function setupInterceptors() {
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    const spanSpaceId = localStore.load(SPACE_SELECTION_KEY);
+    if (spanSpaceId) {
+      config.headers["X-Saturn-Space-ID"] = spanSpaceId;
+    }
+
     return config;
   });
 

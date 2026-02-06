@@ -186,7 +186,7 @@ export default function TransactionsPage() {
 
   const [params, setParams] = useSearchParams<ListTransactionsParams>({
     page: 1,
-    size: 10,
+    pageSize: 10,
     search: "",
   });
   const searchProps = useSearchFilter(params.search, setParams);
@@ -238,13 +238,13 @@ export default function TransactionsPage() {
                 variant="filled"
                 icon={
                   <SelectedIcon
-                    name={row.budget?.icon_name ?? ""}
+                    name={row.budget?.appearance?.icon ?? ""}
                     size={16}
                     sx={{ ml: 1 }}
                   />
                 }
                 sx={{
-                  backgroundColor: row.budget.color,
+                  backgroundColor: row.budget?.appearance?.color,
                   color: "#fff",
                 }}
               />

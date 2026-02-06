@@ -1,25 +1,30 @@
 import type { CurrencyCode, Money } from "@/lib/money";
 import type { Pagination, Meta } from "@/lib/pagination";
+import type { MessageInitShape } from "@bufbuild/protobuf";
+import {
+  Budget_View,
+  BudgetSchema,
+  ListBudgetsRequestSchema,
+  ListExchangeRatesRequestSchema,
+} from "@saturn/gen/saturn/finance/v1/finance_pb";
+
+// Re-export Budget_View as BudgetView for naming consistency.
+export { Budget_View as BudgetView };
 
 export interface ListBudgetsResponse {
   budgets?: Budget[];
   meta?: Meta;
 }
 
-export interface ListBudgetParams extends Pagination {
-  search?: string;
-}
+export type ListBudgetParams = MessageInitShape<
+  typeof ListBudgetsRequestSchema
+>;
 
-export interface Budget {
-  id?: string;
-  name?: string;
-  color?: string;
-  icon_name?: string;
-  amount?: Money;
-  base_amount?: Money;
-  spent?: Money;
-  base_spent?: Money;
-}
+export type ListExchangeRatesParams = MessageInitShape<
+  typeof ListExchangeRatesRequestSchema
+>;
+
+export type Budget = MessageInitShape<typeof BudgetSchema>;
 
 export interface UpdateBudgetParams {
   update_mask?: string;

@@ -13,6 +13,7 @@ import {
   useBudget,
   useCreateBudget,
   useCurrencies,
+  useExchangeRates,
   useUpdateBudget,
 } from "../Finance.hooks";
 import type { Budget } from "../Finance.model";
@@ -31,6 +32,41 @@ interface BudgetForm {
   amount?: number;
 }
 
+const useExchangeRateDropdown = () => {
+  const { data: currenciesResp, isLoading: isLoadingCurrencies } =
+    useCurrencies();
+
+  const { data: exchangeRates, isLoading: isLoadingExchangeRates } =
+    useExchangeRates({});
+
+  const options = useMemo(() => {
+    if (!currenciesResp || !exchangeRates) return [];
+
+    return currenciesResp.currencies
+      ?.filter((currency) =>
+        exchangeRates.rates?.some(
+          (rate) => rate.currencyCode === currency.code,
+        ),
+      )
+      .map((currency) => {
+        const exchangeRate = exchangeRates.rates?.find(
+          (rate) => rate.currencyCode === currency.code,
+        );
+
+        return {
+          id: currency.code,
+          label: `${currency.name} (${currency.code})`,
+          rate: Number.parseFloat(exchangeRate?.rate?.value ?? "1"),
+        };
+      });
+  }, [currenciesResp, exchangeRates]);
+
+  return {
+    options,
+    isLoading: isLoadingCurrencies || isLoadingExchangeRates,
+  };
+};
+
 export default function BudgetFormModal() {
   const { id } = useParams<"id">();
   const notify = useNotify();
@@ -39,8 +75,9 @@ export default function BudgetFormModal() {
   const isNew = !id;
 
   const { data: budget, isLoading: isLoadingBudget } = useBudget(id);
-  const { data: currenciesResp, isLoading: isLoadingCurrencies } =
-    useCurrencies();
+
+  const { options: exchangeRateOptions, isLoading: isLoadingCurrencies } =
+    useExchangeRateDropdown();
 
   const handleClose = useCallback(() => {
     navigateBack("/finance/budgets");
@@ -52,7 +89,8 @@ export default function BudgetFormModal() {
   }, [notify, handleClose]);
 
   const handleSaveError = useCallback(
-    (_: unknown, defaultMessage: string) => {
+    (err: unknown, defaultMessage: string) => {
+      console.error("Error saving budget:", err);
       notify.error(defaultMessage);
     },
     [notify],
@@ -72,9 +110,9 @@ export default function BudgetFormModal() {
     if (!isNew && budget) {
       return {
         name: budget.name,
-        color: budget?.color,
-        icon_name: budget?.icon_name,
-        currency: budget.amount?.currency,
+        color: budget?.appearance?.color,
+        icon_name: budget?.appearance?.icon,
+        currency: budget.amount?.currencyCode as CurrencyCode,
         amount: money.toDecimal(budget?.amount?.cents ?? 0),
       };
     }
@@ -102,17 +140,21 @@ export default function BudgetFormModal() {
     name: "amount",
   });
 
-  const selectedCurrency = useMemo(() => {
-    return currenciesResp?.currencies?.find((b) => b.code === currentCurrency);
-  }, [currenciesResp, currentCurrency]);
+  const selectedExchangeRate = useMemo(() => {
+    return exchangeRateOptions.find((o) => o.id === currentCurrency);
+  }, [exchangeRateOptions, currentCurrency]);
 
   const handleFormSubmit = async (data: BudgetForm) => {
     const payload: Budget = {
       name: data.name,
-      color: data.color,
-      icon_name: data.icon_name,
+      appearance: {
+        color: data.color,
+        icon: data.icon_name,
+      },
       amount: {
-        currency: isNew ? data.currency! : (budget?.amount?.currency ?? "USD"),
+        currencyCode: isNew
+          ? data.currency!
+          : (budget?.amount?.currencyCode ?? "USD"),
         cents: money.toCents(data.amount ?? 0),
       },
     };
@@ -190,12 +232,7 @@ export default function BudgetFormModal() {
           control={control}
           required
           disabled={isLoading || !isNew}
-          options={
-            currenciesResp?.currencies?.map((currency) => ({
-              id: currency.code,
-              label: currency.name,
-            })) ?? []
-          }
+          options={exchangeRateOptions}
           helperText={!isNew ? "Budget cannot be changed after creation." : ""}
         />
 
@@ -215,17 +252,18 @@ export default function BudgetFormModal() {
         />
 
         {/* Converted Amount Preview */}
-        {selectedCurrency && (
+        {/* {selectedCurrency && ( */}
+        {selectedExchangeRate && (
           <ExchangeRateDisplayCard
             loading={isLoadingCurrencies}
             disabled={isLoading}
             amount={{
-              currency: selectedCurrency?.code ?? "USD",
+              currency: (selectedExchangeRate?.id ?? "USD") as CurrencyCode,
               value: currentAmount ?? 0,
             }}
             exchange={{
               currency: "USD",
-              rate: selectedCurrency.rate ?? 0,
+              rate: selectedExchangeRate.rate ?? 1,
             }}
           />
         )}
@@ -237,7 +275,7 @@ export default function BudgetFormModal() {
         <Button
           type="submit"
           variant="contained"
-          disabled={isLoading || isSaving || !selectedCurrency}
+          disabled={isLoading || isSaving || !selectedExchangeRate}
         >
           {isSaving ? "Saving..." : "Save"}
         </Button>

@@ -1,3 +1,6 @@
+import type { MessageInitShape } from "@bufbuild/protobuf";
+import { MoneySchema } from "@saturn/gen/saturn/type/money_pb";
+
 export type CurrencyCode = "USD" | "EUR" | "DOP";
 
 const CurrencySymbols = {
@@ -10,34 +13,29 @@ const CurrencySymbols = {
 /*
  * Uses cents to avoid floating-point precision issues.
  */
-export interface Money {
-  /** Amount in smallest currency unit (cents) */
-  cents: number;
-  /** ISO 4217 currency code */
-  currency: CurrencyCode;
-}
+export type Money = MessageInitShape<typeof MoneySchema>;
 
 /**
  * Format a Money value as a locale-aware currency string.
  */
 export function formatMoney(money: Money, locale = "en-US"): string {
-  if (!money.currency) {
-    return `$ ${money.cents.toFixed(2)}`;
+  if (!money.currencyCode) {
+    return `$ ${money.cents?.toLocaleString(locale)}`;
   }
 
   const text = new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: money.currency,
+    currency: money.currencyCode,
     currencyDisplay: "symbol",
     currencySign: "standard",
-  }).format(money.cents / 100);
+  }).format(toDecimalFromMoney(money));
 
-  const customSymbol = CurrencySymbols[money.currency];
+  const customSymbol = CurrencySymbols[money.currencyCode as CurrencyCode];
 
   // Replace only if needed
   if (customSymbol) {
     // Replace either a code or a default symbol
-    return text.replace(money.currency, customSymbol);
+    return text.replace(money.currencyCode, customSymbol);
   }
 
   return text;
@@ -56,10 +54,10 @@ export function formatCurrency(code: CurrencyCode): string {
 /**
  * Create zero money value.
  */
-export function zero(currency: CurrencyCode = "USD"): Money {
+export function zero(currencyCode: CurrencyCode = "USD"): Money {
   return {
-    currency,
-    cents: 0,
+    currencyCode,
+    cents: BigInt(0),
   };
 }
 
@@ -73,8 +71,8 @@ export function zero(currency: CurrencyCode = "USD"): Money {
  * toCents(0.00)  // 0
  * ```
  */
-export function toCents(amount: number): number {
-  return Math.round(amount * 100);
+export function toCents(amount: number): bigint {
+  return BigInt(Math.round(amount * 100));
 }
 
 /**
@@ -87,8 +85,8 @@ export function toCents(amount: number): number {
  * toDecimal(0)    // 0.00
  * ```
  */
-export function toDecimal(cents: number): number {
-  return cents / 100;
+export function toDecimal(cents: number | bigint): number {
+  return Number(cents) / 100;
 }
 
 /**
@@ -101,7 +99,8 @@ export function toDecimal(cents: number): number {
  * ```
  */
 export function toDecimalFromMoney(money: Money): number {
-  return money.cents / 100;
+  const cents = money.cents ?? BigInt(0);
+  return Number(cents) / 100;
 }
 
 export const money = {

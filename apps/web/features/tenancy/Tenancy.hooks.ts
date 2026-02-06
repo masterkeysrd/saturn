@@ -1,11 +1,6 @@
 import { useEffect, useState } from "react";
 import { SPACE_SELECTION_KEY } from "@saturn/sdk/client";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  type MutationOpts,
-} from "@/lib/react-query";
+import { useQuery } from "@/lib/react-query";
 import { listSpaces } from "@saturn/gen/saturn/tenancy/v1/tenancy.client";
 import { Space_View } from "@saturn/gen/saturn/tenancy/v1/tenancy_pb";
 import { localStore } from "@saturn/sdk/localstorage";

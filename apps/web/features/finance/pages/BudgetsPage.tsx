@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
+import { type Budget } from "@saturn/gen/saturn/finance/v1/finance_pb";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
@@ -18,7 +19,7 @@ import DataGrid, {
   Toolbar,
   type GridToolbarProps,
 } from "@/components/DataGrid";
-import { type ListBudgetParams, type Budget } from "../Finance.model";
+import { BudgetView, type ListBudgetParams } from "../Finance.model";
 import AmountCell from "../components/AmountCell";
 import { money } from "@/lib/money";
 import { useSearchParams } from "@/lib/search-params";
@@ -82,13 +83,16 @@ export default function BudgetsPage() {
 
   const [params, setParams] = useSearchParams<ListBudgetParams>({
     page: 1,
-    size: 10,
+    pageSize: 10,
     search: "",
   });
   const searchProps = useSearchFilter(params.search, setParams);
   const paginationProps = usePagination(params, setParams);
 
-  const { data: page, isLoading } = useBudgets(params);
+  const { data: page, isLoading } = useBudgets({
+    ...params,
+    view: BudgetView.FULL,
+  });
 
   const handleRowEdit = useCallback(
     (budget: Budget) => () => {
@@ -112,8 +116,12 @@ export default function BudgetsPage() {
         flex: 1,
         renderCell: ({ row }) => (
           <Stack direction="row" alignItems="center" gap={0.5}>
-            {row.icon_name && (
-              <SelectedIcon name={row.icon_name} color="secondary" size={24} />
+            {row?.appearance?.icon && (
+              <SelectedIcon
+                name={row?.appearance?.icon}
+                color="secondary"
+                size={24}
+              />
             )}
             <Typography variant="subtitle2">{row.name}</Typography>
           </Stack>
@@ -126,7 +134,7 @@ export default function BudgetsPage() {
         renderCell: ({ row }) => (
           <AmountCell
             amount={row?.amount ?? money.zero()}
-            baseAmount={row?.base_amount ?? money.zero()}
+            baseAmount={row?.baseAmount ?? money.zero()}
           />
         ),
       },
@@ -136,8 +144,8 @@ export default function BudgetsPage() {
         width: 150,
         renderCell: ({ row }) => (
           <AmountCell
-            amount={row?.spent ?? money.zero()}
-            baseAmount={row?.base_spent ?? money.zero()}
+            amount={row?.stats?.spentAmount ?? money.zero()}
+            baseAmount={row?.stats?.spentAmount ?? money.zero()}
           />
         ),
       },
@@ -145,7 +153,12 @@ export default function BudgetsPage() {
         field: "percentage",
         headerName: "Percentage",
         width: 90,
-        valueGetter: (value) => `${value}%`,
+        renderCell: ({ row }) => {
+          const percentage = row.stats?.usagePercentage || 0;
+          return (
+            <Typography variant="body2">{percentage.toFixed(2)}%</Typography>
+          );
+        },
       },
       {
         field: "actions",
@@ -190,7 +203,7 @@ export default function BudgetsPage() {
             columns={budgetColumns}
             rows={page?.budgets}
             loading={isLoading}
-            rowCount={page?.meta?.total_items}
+            rowCount={page?.totalSize ?? 0}
             pageSizeOptions={PAGE_SIZE_OPTS}
             slots={{
               toolbar: CustomToolbar,

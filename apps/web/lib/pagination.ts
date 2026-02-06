@@ -4,24 +4,24 @@ export const PAGE_SIZE_OPTS = [5, 10, 25] as const;
 
 export interface Pagination {
   page?: number;
-  size?: number;
+  pageSize?: number;
 }
 
 export interface Meta {
   has_next: boolean;
   has_previous: boolean;
   page: number;
-  size: number;
+  pageSize: number;
   total_items: number;
   total_pages: number;
 }
 
-export function usePagination<T extends Pagination>(
-  params: T,
-  setParams: (updates: Partial<T>) => void,
+export function usePagination(
+  params: Pagination,
+  setParams: (updates: Partial<Pagination>) => void,
 ) {
   const onPaginationChange = useCallback(
-    (pagination: Pagination) => setParams(pagination as Partial<T>),
+    (pagination: Pagination) => setParams(pagination as Partial<Pagination>),
     [setParams],
   );
 
@@ -29,7 +29,7 @@ export function usePagination<T extends Pagination>(
     // Props ready for ServerDataGrid component
     paginationState: {
       page: params.page, // 1-based page number
-      size: params.size,
+      size: params.pageSize, // number of items per page
     },
     // The handler that talks to DataGrid's event model
     onPaginationChange,

@@ -6,15 +6,18 @@ import {
 } from "@/lib/react-query";
 import {
   createBudget,
+  getBudget,
+  listBudgets,
+  listCurrencies,
+  listExchangeRates,
+} from "@saturn/gen/saturn/finance/v1/finance.client";
+import {
   createExpense,
   deleteBudget,
   deleteTransaction,
-  getBudget,
-  getCurrencies,
   getCurrency,
   getInsights,
   getTransaction,
-  listBudgets,
   listTransactions,
   updateBudget,
   updateExpense,
@@ -24,6 +27,7 @@ import type {
   Budget,
   Expense,
   ListBudgetParams,
+  ListExchangeRatesParams,
   ListTransactionsParams,
   Transaction,
   UpdateBudgetParams,
@@ -53,6 +57,11 @@ const queryKeys = {
     "end_date",
     req.end_date,
   ],
+  listExchangeRates: (params: ListExchangeRatesParams) => [
+    "exchange_rates",
+    "list",
+    { ...params },
+  ],
 } as const;
 
 export function useBudgets(params: ListBudgetParams) {
@@ -68,7 +77,7 @@ export function useCreateBudget({
 }: MutationOpts<Budget, Budget> = {}) {
   return useMutation({
     mutationKey: ["budget", "create"],
-    mutationFn: createBudget,
+    mutationFn: (budget) => createBudget({ budget: budget }),
     onSuccess: async (data, variables, result, context) => {
       await Promise.all([
         context.client.invalidateQueries({ queryKey: ["budgets", "list"] }),
@@ -115,7 +124,7 @@ export function useUpdateBudget({
 export function useBudget(id?: string) {
   return useQuery({
     queryKey: queryKeys.getBudget(id!),
-    queryFn: () => getBudget(id!),
+    queryFn: () => getBudget({ id: id! }),
     enabled: !!id,
   });
 }
@@ -161,7 +170,7 @@ export function useCurrency(currencyCode?: string) {
 export function useCurrencies() {
   return useQuery({
     queryKey: queryKeys.listCurrencies,
-    queryFn: () => getCurrencies(),
+    queryFn: () => listCurrencies(),
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 }
@@ -270,5 +279,13 @@ export const useInsights = (req: GetInsightsRequest) => {
   return useQuery({
     queryKey: queryKeys.getInsights(req),
     queryFn: () => getInsights(req),
+  });
+};
+
+export const useExchangeRates = (params: ListExchangeRatesParams) => {
+  return useQuery({
+    queryKey: queryKeys.listExchangeRates(params),
+    queryFn: () => listExchangeRates(params),
+    staleTime: 10 * 60 * 1000, // Cache for 10 minutes
   });
 };

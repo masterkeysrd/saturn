@@ -14,7 +14,7 @@ export default function AmountCell({
   exchangeRate?: number;
 }) {
   const sameCurrency =
-    amount?.currency === baseAmount?.currency || exchangeRate === 1;
+    amount?.currencyCode === baseAmount?.currencyCode || exchangeRate === 1;
 
   if (sameCurrency) {
     return <Typography variant="body2">{money.format(amount)}</Typography>;
