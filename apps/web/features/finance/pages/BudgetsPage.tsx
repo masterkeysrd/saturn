@@ -130,6 +130,8 @@ export default function BudgetsPage() {
       {
         field: "amount_display",
         headerName: "Amount",
+        headerAlign: "right",
+        align: "right",
         width: 150,
         renderCell: ({ row }) => (
           <AmountCell
@@ -141,7 +143,9 @@ export default function BudgetsPage() {
       {
         field: "spent_display",
         headerName: "Spent",
+        headerAlign: "right",
         width: 150,
+        align: "right",
         renderCell: ({ row }) => (
           <AmountCell
             amount={row?.stats?.spentAmount ?? money.zero()}
@@ -150,15 +154,52 @@ export default function BudgetsPage() {
         ),
       },
       {
+        field: "remaining_display",
+        headerName: "Remaining",
+        headerAlign: "right",
+        width: 150,
+        align: "right",
+        renderCell: ({ row }) => (
+          <AmountCell
+            amount={row?.stats?.remainingAmount ?? money.zero()}
+            baseAmount={row?.stats?.remainingAmount ?? money.zero()}
+          />
+        ),
+      },
+      {
         field: "percentage",
         headerName: "Percentage",
-        width: 90,
+        headerAlign: "right",
+        width: 100,
+        align: "right",
         renderCell: ({ row }) => {
           const percentage = row.stats?.usagePercentage || 0;
           return (
-            <Typography variant="body2">{percentage.toFixed(2)}%</Typography>
+            <Typography
+              variant="body2"
+              sx={{
+                textAlign: "right",
+                width: "100%",
+                fontVariantNumeric: "tabular-nums",
+                color: percentage >= 100 ? "error.main" : "text.primary",
+              }}
+            >
+              {percentage.toFixed(2)}%
+            </Typography>
           );
         },
+      },
+      {
+        field: "transactions_count",
+        headerName: "Transactions",
+        headerAlign: "right",
+        width: 130,
+        align: "right",
+        renderCell: ({ row }) => (
+          <Typography variant="body2">
+            {row.stats?.transactionCount ?? 0}
+          </Typography>
+        ),
       },
       {
         field: "actions",
@@ -203,7 +244,7 @@ export default function BudgetsPage() {
             columns={budgetColumns}
             rows={page?.budgets}
             loading={isLoading}
-            rowCount={page?.totalSize ?? 0}
+            rowCount={page?.totalSize}
             pageSizeOptions={PAGE_SIZE_OPTS}
             slots={{
               toolbar: CustomToolbar,

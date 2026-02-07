@@ -23,7 +23,16 @@ export default function AmountCell({
   return (
     <Stack spacing={0.25}>
       <Stack direction="row" spacing={0.5} alignItems="center">
-        <Typography variant="body2" fontWeight="medium">
+        <Typography
+          variant="body2"
+          fontWeight="medium"
+          sx={{
+            color: "text.primary",
+            width: "100%",
+            textAlign: "right",
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
           {money.format(amount)}
         </Typography>
         {exchangeRate ? (
@@ -37,7 +46,15 @@ export default function AmountCell({
           </Tooltip>
         ) : null}
       </Stack>
-      <Typography variant="caption" color="text.secondary">
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{
+          textAlign: "right",
+          width: "100%",
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
         ≈ {money.format(baseAmount)}
       </Typography>
     </Stack>
