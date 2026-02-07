@@ -8,19 +8,19 @@ import {
   createBudget,
   deleteBudget,
   getBudget,
+  getExchangeRate,
+  createExpense,
   listBudgets,
   listCurrencies,
   listExchangeRates,
+  getTransaction,
   listTransactions,
   updateBudget,
+  updateExpense,
 } from "@saturn/gen/saturn/finance/v1/finance.client";
 import {
-  createExpense,
   deleteTransaction,
-  getCurrency,
   getInsights,
-  getTransaction,
-  updateExpense,
   type GetInsightsRequest,
 } from "./Finance.api";
 import type {
@@ -30,7 +30,6 @@ import type {
   ListExchangeRatesParams,
   ListTransactionsParams,
   Transaction,
-  UpdateExpenseParams,
 } from "./Finance.model";
 import type { MutationOptions } from "@tanstack/react-query";
 
@@ -55,6 +54,11 @@ const queryKeys = {
     req.start_date,
     "end_date",
     req.end_date,
+  ],
+  getExchangeRate: (currencyCode: string) => [
+    "exchange_rates",
+    "detail",
+    currencyCode,
   ],
   listExchangeRates: (params: ListExchangeRatesParams) => [
     "exchange_rates",
@@ -150,15 +154,6 @@ export function useDeleteBudget({
   });
 }
 
-export function useCurrency(currencyCode?: string) {
-  return useQuery({
-    queryKey: queryKeys.getCurrency(currencyCode!),
-    queryFn: () => getCurrency(currencyCode!),
-    enabled: !!currencyCode,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-  });
-}
-
 export function useCurrencies() {
   return useQuery({
     queryKey: queryKeys.listCurrencies,
@@ -173,7 +168,7 @@ export function useCreateExpense({
 }: MutationOpts<Transaction, Expense> = {}) {
   return useMutation({
     mutationKey: ["expense", "create"],
-    mutationFn: createExpense,
+    mutationFn: (expense) => createExpense({ expense }),
     onSuccess: async (data, variables, result, context) => {
       await Promise.all([
         context.client.invalidateQueries({ queryKey: ["budgets", "list"] }),
@@ -194,15 +189,8 @@ export function useUpdateExpense({
 }: MutationOpts<Transaction, Expense> = {}) {
   return useMutation({
     mutationKey: ["expense", "update"],
-    mutationFn: ({
-      id,
-      data,
-      params,
-    }: {
-      id: string;
-      data: Expense;
-      params: UpdateExpenseParams;
-    }) => updateExpense(id, data, params),
+    mutationFn: ({ id, data }: { id: string; data: Expense }) =>
+      updateExpense({ id, expense: data }),
     onSuccess: async (data, variables, result, context) => {
       const client = context.client;
       await Promise.all([
@@ -224,7 +212,7 @@ export function useUpdateExpense({
 export function useTransaction(id?: string) {
   return useQuery({
     queryKey: queryKeys.getTransaction(id!),
-    queryFn: () => getTransaction(id!),
+    queryFn: () => getTransaction({ id: id! }),
     enabled: !!id,
   });
 }
@@ -271,6 +259,15 @@ export const useInsights = (req: GetInsightsRequest) => {
   return useQuery({
     queryKey: queryKeys.getInsights(req),
     queryFn: () => getInsights(req),
+  });
+};
+
+export const useExchangeRate = (currencyCode: string) => {
+  return useQuery({
+    queryKey: queryKeys.getExchangeRate(currencyCode),
+    queryFn: () => getExchangeRate({ currencyCode }),
+    enabled: !!currencyCode,
+    staleTime: 10 * 60 * 1000, // Cache for 10 minutes
   });
 };
 

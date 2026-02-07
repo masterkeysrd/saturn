@@ -455,6 +455,47 @@
         ]
       }
     },
+    "/v1/finance/expenses/{id}": {
+      "patch": {
+        "summary": "UpdateExpense modifies an existing expense transaction.",
+        "operationId": "Finance_UpdateExpense",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Transaction"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "The unique identifier of the expense transaction to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "expense",
+            "description": "The expense transaction data to update.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Expense"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/finance/insights": {
       "get": {
         "summary": "GetInsights retrieves comprehensive financial insights, including spending\nsummaries, budget allocations, and spending trends over time.",

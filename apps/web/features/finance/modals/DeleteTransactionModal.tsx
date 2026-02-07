@@ -12,6 +12,7 @@ import Typography from "@mui/material/Typography";
 import { useNotify } from "@/lib/notify";
 import { useNavigateBack } from "@/lib/navigate";
 import { useTransaction, useDeleteTransaction } from "../Finance.hooks";
+import { TransactionType } from "../Finance.model";
 
 export default function DeleteTransactionModal() {
   const { id } = useParams<{ id: string }>();
@@ -65,7 +66,7 @@ export default function DeleteTransactionModal() {
         <DialogContentText id="delete-dialog-description" component="div">
           <Typography variant="body1" gutterBottom>
             Are you sure you want to delete{" "}
-            <strong>{transaction?.name ?? "this transaction"}</strong>?
+            <strong>{transaction?.title ?? "this transaction"}</strong>?
           </Typography>
 
           <Typography variant="body2" color="text.secondary">
@@ -73,11 +74,13 @@ export default function DeleteTransactionModal() {
           </Typography>
 
           {/* DDD Context: Inform user about side effects */}
-          {transaction?.type === "expense" && (
+          {transaction?.type === TransactionType.EXPENSE && (
             <Alert severity="info" sx={{ mt: 2 }}>
-              The amount ({transaction.amount?.currency}{" "}
-              {transaction.amount?.cents ? transaction.amount.cents / 100 : 0})
-              will be returned to the budget.
+              The amount ({transaction.amount?.currencyCode}{" "}
+              {transaction.amount?.cents
+                ? transaction.amount.cents / BigInt(100)
+                : "0"}
+              ) will be returned to the budget.
             </Alert>
           )}
         </DialogContentText>

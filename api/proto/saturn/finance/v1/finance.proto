@@ -107,6 +107,15 @@ service Finance {
     };
   }
 
+  // UpdateExpense modifies an existing expense transaction.
+  rpc UpdateExpense(UpdateExpenseRequest) returns (Transaction) {
+    option (google.api.http) = {
+      patch: "/v1/finance/expenses/{id}"
+      body: "expense"
+    };
+    option (google.api.method_signature) = "id,expense,update_mask";
+  }
+
   // GetTransaction retrieves a specific transaction by its ID.
   rpc GetTransaction(GetTransactionRequest) returns (Transaction) {
     option (google.api.http) = {get: "/v1/finance/transactions/{id}"};
@@ -390,6 +399,19 @@ message Budget {
 message CreateExpenseRequest {
   // The expense transaction to create.
   Expense expense = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for Finance.UpdateExpense.
+message UpdateExpenseRequest {
+  // The unique identifier of the expense transaction to update.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The expense transaction data to update.
+  Expense expense = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // The fields to be updated. If empty, all non-output fields are updated.
+  // Use "*" to update all fields.
+  google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // Expense represents an expense transaction linked to a budget.

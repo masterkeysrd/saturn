@@ -120,6 +120,11 @@ const TYPE_CONFIG: Record<TransactionType, TypeConfig> = {
   },
 };
 
+const TYPE_TO_PATH: Record<TransactionType, string> = {
+  [TransactionType.EXPENSE]: "expenses",
+  [TransactionType.TYPE_UNSPECIFIED]: "transactions",
+};
+
 export function TransactionTypeCell({ type }: TransactionTypeCellProps) {
   const config = TYPE_CONFIG[type ?? "expense"];
 
@@ -190,7 +195,9 @@ export default function TransactionsPage() {
 
   const handleRowEdit = useCallback(
     (transaction: Transaction) => () => {
-      navigate(`${transaction.type}s/${transaction.id}/edit`);
+      navigate(
+        `${TYPE_TO_PATH[transaction.type ?? TransactionType.TYPE_UNSPECIFIED]}/${transaction.id}/edit`,
+      );
     },
     [navigate],
   );
@@ -252,7 +259,7 @@ export default function TransactionsPage() {
         width: 150,
         renderCell: ({ row }) => (
           <Typography variant="body2">
-            {row.date && date.fromPbDate(row.date).toLocaleDateString()}
+            {row.date && date.fromPbDate(row.date).toLocaleString()}
           </Typography>
         ),
       },

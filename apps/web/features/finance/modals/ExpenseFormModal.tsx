@@ -9,7 +9,8 @@ import FormNumberField from "@/components/FormNumberField";
 import ExchangeRateDisplayCard from "../components/ExchangeRateDisplayCard";
 import DatePickerElement from "@/components/FormDatePicker";
 import FormDialog from "@/components/FormDialog";
-import { money } from "@/lib/money";
+import { money, type CurrencyCode } from "@/lib/money";
+import { date } from "@/lib/date";
 import { useNotify } from "@/lib/notify";
 import { useNavigateBack } from "@/lib/navigate";
 import {
@@ -17,11 +18,21 @@ import {
   useTransaction,
   useCreateExpense,
   useUpdateExpense,
-  useCurrency,
+  useExchangeRate,
 } from "../Finance.hooks";
 import type { Expense } from "../Finance.model";
 import FormAmountField from "../components/FormAmountField";
 import { FieldMask } from "@/lib/fieldmask";
+import { decimal } from "@/lib/decimal";
+
+interface ExpenseForm {
+  budgetId?: string;
+  title?: string;
+  description?: string;
+  date?: string;
+  amount?: number;
+  exchangeRate?: number;
+}
 
 export function ExpenseFormModal() {
   const { id } = useParams<"id">();
@@ -40,7 +51,8 @@ export function ExpenseFormModal() {
   }, [navigateBack]);
 
   const handleSaveError = useCallback(
-    (_: unknown, defaultMsg: string) => {
+    (err: unknown, defaultMsg: string) => {
+      console.error("Error saving expense:", err);
       notify.error(defaultMsg);
     },
     [notify],
@@ -61,40 +73,41 @@ export function ExpenseFormModal() {
     onError: (error) => handleSaveError(error, "Failed to update expense."),
   });
 
-  const formValues = useMemo(() => {
+  const formValues = useMemo((): ExpenseForm => {
     if (!isNew && transaction) {
       return {
-        budget_id: transaction.budget_id,
-        name: transaction.name,
+        budgetId: transaction.budget?.budgetId,
+        title: transaction.title,
         description: transaction.description ?? "",
-        date: transaction.date,
-        amount: money.toDecimal(transaction.amount?.cents ?? 0),
-        exchange_rate: transaction.exchange_rate,
+        date: date.fromPbDate(transaction.date).toISO() ?? "",
+        amount: Number(transaction.amount?.cents),
+        exchangeRate:
+          decimal.fromPbDecimal(transaction.exchangeRate) || undefined,
       };
     }
 
     return {
-      budget_id: "",
-      name: "",
+      budgetId: "",
+      title: "",
       description: "",
       date: DateTime.now().toISO() ?? "",
       amount: 0,
-      exchange_rate: undefined,
+      exchangeRate: undefined,
     };
   }, [isNew, transaction]);
 
-  const { control, handleSubmit, setValue, formState } = useForm<Expense>({
+  const { control, handleSubmit, setValue, formState } = useForm<ExpenseForm>({
     values: formValues,
   });
 
   const selectedBudgetId = useWatch({
     control,
-    name: "budget_id",
+    name: "budgetId",
   });
 
   const customExchangeRate = useWatch({
     control,
-    name: "exchange_rate",
+    name: "exchangeRate",
   });
 
   const currentAmount = useWatch({
@@ -107,42 +120,70 @@ export function ExpenseFormModal() {
   }, [budgetsPage, selectedBudgetId]);
 
   const {
-    data: currencyData,
-    isLoading: isLoadingCurrency,
-    isError: isCurrencyError,
-  } = useCurrency(selectedBudget?.amount?.currency);
+    data: exchangeRateData,
+    isLoading: isLoadingExchangeRate,
+    isError: isErrorExchangeRate,
+  } = useExchangeRate(selectedBudget?.amount?.currencyCode ?? "USD");
 
   useEffect(() => {
-    if (currencyData?.rate && !customExchangeRate && !isEditingExchangeRate) {
-      setValue("exchange_rate", currencyData.rate);
+    const apiRate = exchangeRateData?.rate?.value
+      ? Number.parseFloat(exchangeRateData.rate.value)
+      : undefined;
+
+    if (
+      apiRate &&
+      exchangeRateData?.rate &&
+      !isEditingExchangeRate &&
+      !formState.dirtyFields.exchangeRate &&
+      customExchangeRate !== apiRate
+    ) {
+      setValue("exchangeRate", apiRate);
     }
-  }, [currencyData, customExchangeRate, isEditingExchangeRate, setValue]);
+  }, [
+    exchangeRateData,
+    customExchangeRate,
+    isEditingExchangeRate,
+    setValue,
+    formState.dirtyFields,
+  ]);
 
   const toggleExchangeRateEdit = () => {
-    if (currencyData?.rate && !customExchangeRate && !isEditingExchangeRate) {
-      setValue("exchange_rate", currencyData.rate);
+    if (
+      exchangeRateData?.rate?.value &&
+      !customExchangeRate &&
+      !isEditingExchangeRate
+    ) {
+      setValue("exchangeRate", Number.parseFloat(exchangeRateData.rate.value));
     }
 
     return setIsEditingExchangeRate(!isEditingExchangeRate);
   };
 
   const handleResetExchangeRate = () => {
-    if (currencyData?.rate) {
-      setValue("exchange_rate", currencyData.rate);
+    if (exchangeRateData?.rate?.value) {
+      setValue("exchangeRate", parseFloat(exchangeRateData.rate.value));
       setIsEditingExchangeRate(false);
     }
   };
 
-  const handleFormSubmit = async (data: Expense) => {
-    const date = data.date ? DateTime.fromISO(data.date) : DateTime.now();
+  const handleFormSubmit = async (data: ExpenseForm) => {
+    const selectedDate = data.date
+      ? DateTime.fromISO(data.date)
+      : DateTime.now();
 
     const payload: Expense = {
-      budget_id: data.budget_id,
-      name: data.name,
+      budgetId: data.budgetId ?? "",
+      title: data.title ?? "",
       description: data.description,
-      date: date.toISODate() || "",
-      amount: money.toCents(data.amount ?? 0),
-      exchange_rate: data.exchange_rate,
+      date: date.toPbDate(selectedDate),
+      effectiveDate: date.toPbDate(selectedDate),
+      amount: {
+        cents: money.toCents(data.amount ?? 0),
+        currencyCode: selectedBudget?.amount?.currencyCode ?? "USD",
+      },
+      exchangeRate: data.exchangeRate
+        ? { value: data.exchangeRate.toString() }
+        : undefined,
     };
 
     if (isNew) {
@@ -159,16 +200,19 @@ export function ExpenseFormModal() {
     updateMutation.mutate({
       id: transaction?.id ?? "",
       data: payload,
-      params: { update_mask: updatedFields.toString() },
     });
   };
 
-  const displayExchangeRate = customExchangeRate ?? currencyData?.rate;
+  const displayExchangeRate =
+    customExchangeRate ??
+    (exchangeRateData?.rate?.value
+      ? Number.parseFloat(exchangeRateData.rate.value)
+      : undefined);
 
   const isCustomRate =
-    currencyData?.rate &&
+    exchangeRateData?.rate?.value &&
     customExchangeRate &&
-    customExchangeRate !== currencyData.rate;
+    customExchangeRate !== Number.parseFloat(exchangeRateData.rate.value);
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
   const isLoading = isLoadingBudgets || isLoadingTransaction || isSaving;
@@ -183,7 +227,7 @@ export function ExpenseFormModal() {
       <FormDialog.Content>
         {/* Budget Selection */}
         <SelectElement
-          name="budget_id"
+          name="budgetId"
           label="Budget"
           control={control}
           required
@@ -191,23 +235,23 @@ export function ExpenseFormModal() {
           options={
             budgetsPage?.budgets?.map((budget) => ({
               id: budget.id,
-              label: `${budget.name} (${budget.amount?.currency})`,
+              label: `${budget.name} (${budget.amount?.currencyCode})`,
             })) ?? []
           }
           helperText={!isNew ? "Budget cannot be changed after creation." : ""}
         />
 
         {/* Currency alert */}
-        {isCurrencyError ? (
+        {isErrorExchangeRate ? (
           <Alert variant="filled" severity="error">
             Failed to get your currency. Check if is already created.
           </Alert>
         ) : null}
 
-        {/* Name */}
+        {/* Title */}
         <TextFieldElement
-          name="name"
-          label="Name"
+          name="title"
+          label="Title"
           control={control}
           required
           disabled={isLoading}
@@ -230,7 +274,7 @@ export function ExpenseFormModal() {
             name="amount"
             label="Amount"
             control={control}
-            currency={selectedBudget?.amount?.currency}
+            currency={selectedBudget?.amount?.currencyCode as CurrencyCode}
             min={1}
             step={1}
             disabled={isLoading}
@@ -244,15 +288,17 @@ export function ExpenseFormModal() {
         {/* Converted Amount Preview */}
         {selectedBudget && displayExchangeRate && (
           <ExchangeRateDisplayCard
-            loading={isLoadingCurrency}
+            loading={isLoadingExchangeRate}
             editing={isEditingExchangeRate}
             disabled={isLoading}
             amount={{
-              currency: selectedBudget?.amount?.currency ?? "USD",
+              currency: (selectedBudget?.amount?.currencyCode ??
+                "USD") as CurrencyCode,
               value: currentAmount ?? 0,
             }}
             exchange={{
-              currency: selectedBudget.base_amount?.currency ?? "USD",
+              currency: (selectedBudget.baseAmount?.currencyCode ??
+                "USD") as CurrencyCode,
               rate: displayExchangeRate,
             }}
             showEditButton
@@ -265,7 +311,7 @@ export function ExpenseFormModal() {
         {/*Exchange rate field*/}
         {isEditingExchangeRate && (
           <FormNumberField
-            name="exchange_rate"
+            name="exchangeRate"
             control={control}
             label="Custom Exchange Rate"
             min={0}

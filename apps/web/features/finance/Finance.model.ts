@@ -1,4 +1,4 @@
-import type { CurrencyCode, Money } from "@/lib/money";
+import type { Money } from "@/lib/money";
 import type { Meta } from "@/lib/pagination";
 import type { MessageInitShape } from "@bufbuild/protobuf";
 import {
@@ -11,6 +11,7 @@ import {
   TransactionSchema,
   Transaction_Type,
   Transaction_View,
+  ExpenseSchema,
 } from "@saturn/gen/saturn/finance/v1/finance_pb";
 
 // Re-export Budget_View as BudgetView for naming consistency.
@@ -35,35 +36,7 @@ export type ListExchangeRatesParams = MessageInitShape<
 
 export type Budget = MessageInitShape<typeof BudgetSchema>;
 
-export interface Expense {
-  id?: string;
-  budget_id?: string;
-  name?: string;
-  description?: string;
-  date?: string;
-  amount?: number; // cents
-  exchange_rate?: number;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface UpdateExpenseParams {
-  update_mask?: string;
-}
-
-export interface ListCurrenciesResponse {
-  currencies?: Currency[];
-}
-
-export interface Currency {
-  code?: CurrencyCode;
-  name?: string;
-  rate?: number;
-}
-
-export interface ListCurrenciesResponse {
-  currencies?: Currency[];
-}
+export type Expense = MessageInitShape<typeof ExpenseSchema>;
 
 export type ListTransactionsParams = MessageInitShape<
   typeof ListTransactionsRequestSchema

@@ -226,6 +226,28 @@ export async function createExpense(req: MessageInitShape<typeof Types.CreateExp
 }
 
 /**
+ * UpdateExpense modifies an existing expense transaction.
+ *
+ * @param req Types.UpdateExpenseRequest
+ * @returns Promise<Types.Transaction>
+ */
+export async function updateExpense(req: MessageInitShape<typeof Types.UpdateExpenseRequestSchema>): Promise<Types.Transaction> {
+  const msg = create(Types.UpdateExpenseRequestSchema, req);
+  const body = toJson(Types.UpdateExpenseRequestSchema, msg);
+
+  return getAxios().patch(`/api/v1/finance/expenses/${body.id}`
+    , body.expense
+    , {
+      params: {
+        updateMask:  body.updateMask,
+      }
+    }
+  ).then((resp) => {
+    return fromJson(Types.TransactionSchema, resp.data);
+  });
+}
+
+/**
  * GetTransaction retrieves a specific transaction by its ID.
  *
  * @param req Types.GetTransactionRequest
