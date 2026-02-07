@@ -1,5 +1,4 @@
 import type { Money } from "@/lib/money";
-import type { Meta } from "@/lib/pagination";
 import type { MessageInitShape } from "@bufbuild/protobuf";
 import {
   Budget_View,
@@ -20,11 +19,6 @@ export {
   Transaction_Type as TransactionType,
   Transaction_View as TransactionView,
 };
-
-export interface ListBudgetsResponse {
-  budgets?: Budget[];
-  meta?: Meta;
-}
 
 export type ListBudgetParams = MessageInitShape<
   typeof ListBudgetsRequestSchema
