@@ -27,13 +27,13 @@ export default function DataGrid({
 }: DataGridProps) {
   const paginationModel: GridPaginationModel = {
     page: (paginationState?.page ?? 1) - 1,
-    pageSize: paginationState?.size ?? 0,
+    pageSize: paginationState?.pageSize ?? 0,
   };
 
   const handlePaginationChange = (model: GridPaginationModel) => {
     onPaginationChange?.({
       page: model.page + 1,
-      size: model.pageSize,
+      pageSize: model.pageSize,
     });
   };
 

@@ -29,7 +29,7 @@ export function usePagination(
     // Props ready for ServerDataGrid component
     paginationState: {
       page: params.page, // 1-based page number
-      size: params.pageSize, // number of items per page
+      pageSize: params.pageSize, // number of items per page
     },
     // The handler that talks to DataGrid's event model
     onPaginationChange,
