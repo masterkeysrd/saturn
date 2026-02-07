@@ -80,7 +80,7 @@ export function ExpenseFormModal() {
         title: transaction.title,
         description: transaction.description ?? "",
         date: date.fromPbDate(transaction.date).toISO() ?? "",
-        amount: Number(transaction.amount?.cents),
+        amount: money.toDecimal(transaction.amount?.cents ?? 0),
         exchangeRate:
           decimal.fromPbDecimal(transaction.exchangeRate) || undefined,
       };

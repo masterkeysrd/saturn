@@ -26,9 +26,12 @@ type FinanceApplication interface {
 	ListExchangeRates(context.Context) ([]*finance.ExchangeRate, error)
 	GetExchangeRate(context.Context, finance.CurrencyCode) (*finance.ExchangeRate, error)
 	UpdateExchangeRate(context.Context, *finance.UpdateExchangeRateInput) (*finance.ExchangeRate, error)
+
 	CreateExpense(context.Context, *finance.Expense) (*finance.Transaction, error)
+	UpdateExpense(context.Context, *finance.UpdateExpenseInput) (*finance.Transaction, error)
 	FindTransaction(context.Context, *finance.FindTransactionInput) (*finance.TransactionItem, error)
 	SearchTransactions(context.Context, *finance.SearchTransactionsInput) (*finance.TransactionPage, error)
+
 	GetSetting(context.Context) (*finance.Setting, error)
 	UpdateSetting(context.Context, *finance.Setting, *fieldmask.FieldMask) (*finance.Setting, error)
 	ActivateSetting(context.Context) (*finance.Setting, error)
@@ -162,6 +165,20 @@ func (s *FinanceServer) CreateExpense(ctx context.Context, req *financepb.Create
 	}
 
 	return TransactionPb(trx), nil
+}
+
+func (s *FinanceServer) UpdateExpense(ctx context.Context, req *financepb.UpdateExpenseRequest) (*financepb.Transaction, error) {
+	input, err := UpdateExpenseInput(req)
+	if err != nil {
+		return nil, err
+	}
+
+	transaction, err := s.app.UpdateExpense(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	return TransactionPb(transaction), nil
 }
 
 func (s *FinanceServer) GetTransaction(ctx context.Context, req *financepb.GetTransactionRequest) (*financepb.Transaction, error) {

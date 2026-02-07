@@ -1,6 +1,9 @@
 package fieldmask
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 type FieldMask struct {
 	paths     []string            // To keep the order
@@ -79,26 +82,33 @@ func (fm *FieldMask) Paths() []string {
 	return result
 }
 
-// ReplacePath replaces an old path with a new path in the field mask
-func (fm *FieldMask) ReplacePath(oldPath, newPath string) {
-	if fm == nil {
+func (fm *FieldMask) ColapsePrefix(prefix string) {
+	if fm == nil || len(fm.pathsMask) == 0 {
 		return
 	}
 
-	if _, exists := fm.pathsMask[oldPath]; !exists {
-		return
-	}
+	prefixWithDot := prefix + "."
 
-	// Update paths slice
-	for i, path := range fm.paths {
-		if path == oldPath {
-			fm.paths[i] = newPath
+	newPaths := make([]string, 0, len(fm.paths))
+	foundPrefix := false
+
+	for _, path := range fm.paths {
+		if path == prefix || strings.HasPrefix(path, prefixWithDot) {
+			foundPrefix = true
+			continue
 		}
+		newPaths = append(newPaths, path)
 	}
 
-	// Update pathsMask
-	delete(fm.pathsMask, oldPath)
-	fm.pathsMask[newPath] = struct{}{}
+	if !foundPrefix {
+		return
+	}
+
+	fm.paths = slices.Clip(append(newPaths, prefix))
+	fm.pathsMask = make(map[string]struct{}, len(fm.paths))
+	for _, path := range fm.paths {
+		fm.pathsMask[path] = struct{}{}
+	}
 }
 
 // String returns a comma-separated string of paths

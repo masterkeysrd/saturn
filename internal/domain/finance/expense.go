@@ -14,8 +14,8 @@ import (
 
 // ExpenseUpdateSchema only includes updatable fields
 var ExpenseUpdateSchema = fieldmask.NewSchema("expense").
-	Field("name",
-		fieldmask.WithDescription("Expense name"),
+	Field("title",
+		fieldmask.WithDescription("Expense title"),
 		fieldmask.WithRequired(),
 	).
 	Field("description",
@@ -25,8 +25,11 @@ var ExpenseUpdateSchema = fieldmask.NewSchema("expense").
 		fieldmask.WithDescription("Expense date"),
 		fieldmask.WithRequired(),
 	).
-	Field("amount.currency",
-		fieldmask.WithDescription("Expense amount currency"),
+	Field("effective_date",
+		fieldmask.WithDescription("Expense effective date (day)"),
+	).
+	Field("amount.currency_code",
+		fieldmask.WithDescription("Expense amount currency code (ISO 4217)"),
 		fieldmask.WithRequired(),
 	).
 	Field("amount.cents",
@@ -94,7 +97,7 @@ func (e *Expense) ValidateForUpdate(mask *fieldmask.FieldMask) error {
 		return e.validate()
 	}
 
-	if mask.Contains("name") && e.Title == "" {
+	if mask.Contains("title") && e.Title == "" {
 		return errors.New("name is required")
 	}
 
@@ -233,7 +236,7 @@ func (e *Expense) UpdateTransaction(actor access.Principal, trx *Transaction, ma
 	trx.BaseAmount = baseAmount
 	trx.ExchangeRate = exchangeRate.Rate
 
-	if mask.Contains("name") {
+	if mask.Contains("title") {
 		trx.Title = e.Title
 	}
 

@@ -240,15 +240,37 @@ func UpdateExchangeRateInput(pb *financepb.UpdateExchangeRateRequest) (*finance.
 
 	mask := encoding.FieldMask(pb.GetUpdateMask())
 
-	// Remap "rate.value" to "rate" in the update mask,
-	// since the Rate field is represented as a Decimal struct
-	// in the domain model, not as a nested message. Also,
-	// this decouples the internal representation from the protobuf schema.
-	mask.ReplacePath("rate.value", "rate")
+	// Since the exchange rate is a single field inside the domain
+	// model from the mask fields comes the value "rate.value"
+	// so we need to colapse the prefix "rate" to ensure the update
+	// logic works correctly.
+	mask.ColapsePrefix("rate")
 
 	return &finance.UpdateExchangeRateInput{
 		ExchangeRate: exRate,
 		UpdateMask:   mask,
+	}, nil
+}
+
+func UpdateExpenseInput(pb *financepb.UpdateExpenseRequest) (*finance.UpdateExpenseInput, error) {
+	if pb == nil {
+		return nil, nil
+	}
+
+	expense, err := Expense(pb.GetExpense())
+	if err != nil {
+		return nil, err
+	}
+
+	mask := encoding.FieldMask(pb.GetUpdateMask())
+	mask.ColapsePrefix("date")
+	mask.ColapsePrefix("effective_date")
+	mask.ColapsePrefix("exchange_rate")
+
+	return &finance.UpdateExpenseInput{
+		ID:         finance.TransactionID(pb.GetId()),
+		Expense:    expense,
+		UpdateMask: mask,
 	}, nil
 }
 
