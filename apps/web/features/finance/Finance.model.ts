@@ -35,10 +35,6 @@ export type ListExchangeRatesParams = MessageInitShape<
 
 export type Budget = MessageInitShape<typeof BudgetSchema>;
 
-export interface UpdateBudgetParams {
-  update_mask?: string;
-}
-
 export interface Expense {
   id?: string;
   budget_id?: string;

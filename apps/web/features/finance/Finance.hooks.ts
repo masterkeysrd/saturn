@@ -6,20 +6,20 @@ import {
 } from "@/lib/react-query";
 import {
   createBudget,
+  deleteBudget,
   getBudget,
   listBudgets,
   listCurrencies,
   listExchangeRates,
   listTransactions,
+  updateBudget,
 } from "@saturn/gen/saturn/finance/v1/finance.client";
 import {
   createExpense,
-  deleteBudget,
   deleteTransaction,
   getCurrency,
   getInsights,
   getTransaction,
-  updateBudget,
   updateExpense,
   type GetInsightsRequest,
 } from "./Finance.api";
@@ -30,7 +30,6 @@ import type {
   ListExchangeRatesParams,
   ListTransactionsParams,
   Transaction,
-  UpdateBudgetParams,
   UpdateExpenseParams,
 } from "./Finance.model";
 import type { MutationOptions } from "@tanstack/react-query";
@@ -95,15 +94,8 @@ export function useUpdateBudget({
 }: MutationOpts<Budget, Budget> = {}) {
   return useMutation({
     mutationKey: ["budget", "update"],
-    mutationFn: ({
-      id,
-      data,
-      params,
-    }: {
-      id: string;
-      data: Budget;
-      params: UpdateBudgetParams;
-    }) => updateBudget(id, data, params),
+    mutationFn: ({ id, data }: { id: string; data: Budget }) =>
+      updateBudget({ id, budget: data }),
     onSuccess: async (data, variables, result, context) => {
       await Promise.all([
         context.client.invalidateQueries({ queryKey: ["budgets", "list"] }),
@@ -134,7 +126,7 @@ export function useDeleteBudget({
   ...rest
 }: MutationOptions<void, string, string> = {}) {
   return useMutation<void, string, string>({
-    mutationFn: (id) => deleteBudget(id),
+    mutationFn: (id) => deleteBudget({ id }),
     onSuccess: async (data, variables, result, context) => {
       const budgetKey = queryKeys.getBudget(variables);
       await context.client.cancelQueries({ queryKey: budgetKey });

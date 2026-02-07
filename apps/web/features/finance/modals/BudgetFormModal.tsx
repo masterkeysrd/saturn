@@ -174,7 +174,6 @@ export default function BudgetFormModal() {
     updateMutation.mutate({
       id: budget?.id ?? "",
       data: payload,
-      params: { update_mask: updatedFields.toString() },
     });
   };
 
