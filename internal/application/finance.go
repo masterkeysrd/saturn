@@ -15,6 +15,7 @@ import (
 type FinanceService interface {
 	CreateBudget(context.Context, access.Principal, *finance.Budget) error
 	UpdateBudget(context.Context, access.Principal, *finance.UpdateBudgetInput) (*finance.Budget, error)
+	DeleteBudget(context.Context, access.Principal, finance.BudgetID) error
 
 	ListCurrencies(context.Context) ([]finance.Currency, error)
 
@@ -104,6 +105,15 @@ func (app *FinanceApp) UpdateBudget(ctx context.Context, in *finance.UpdateBudge
 	}
 
 	return app.financeService.UpdateBudget(ctx, principal, in)
+}
+
+func (app *FinanceApp) DeleteBudget(ctx context.Context, budgetID finance.BudgetID) error {
+	principal, ok := access.GetPrincipal(ctx)
+	if !ok {
+		return errors.New("missing principal in context")
+	}
+
+	return app.financeService.DeleteBudget(ctx, principal, budgetID)
 }
 
 // ListCurrencies lists all available currencies.

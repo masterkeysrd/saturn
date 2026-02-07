@@ -19,6 +19,8 @@ type FinanceApplication interface {
 	SearchBudgets(context.Context, *finance.SearchBudgetsInput) (*finance.BudgetPage, error)
 	FindBudget(context.Context, *finance.FindBudgetInput) (*finance.BudgetItem, error)
 	UpdateBudget(context.Context, *finance.UpdateBudgetInput) (*finance.Budget, error)
+	DeleteBudget(context.Context, finance.BudgetID) error
+
 	ListCurrencies(context.Context) ([]finance.Currency, error)
 	CreateExchangeRate(context.Context, *finance.ExchangeRate) error
 	ListExchangeRates(context.Context) ([]*finance.ExchangeRate, error)
@@ -93,6 +95,13 @@ func (s *FinanceServer) UpdateBudget(ctx context.Context, req *financepb.UpdateB
 	}
 
 	return BudgetPb(budget), nil
+}
+
+func (s *FinanceServer) DeleteBudget(ctx context.Context, req *financepb.DeleteBudgetRequest) (*emptypb.Empty, error) {
+	if err := s.app.DeleteBudget(ctx, finance.BudgetID(req.GetId())); err != nil {
+		return nil, err
+	}
+	return &emptypb.Empty{}, nil
 }
 
 func (s *FinanceServer) CreateExchangeRate(ctx context.Context, req *financepb.CreateExchangeRateRequest) (*financepb.ExchangeRate, error) {

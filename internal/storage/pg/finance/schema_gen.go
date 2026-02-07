@@ -245,6 +245,13 @@ RETURNING
   update_time,
   update_by;`
 
+	// DeleteBudgetPeriodsByBudgetIDQuery is the SQL for the 'DeleteBudgetPeriodsByBudgetID' query.
+	DeleteBudgetPeriodsByBudgetIDQuery = `
+DELETE FROM finance.budget_periods
+WHERE
+  budget_id =:budget_id
+  AND space_id =:space_id;`
+
 	// GetExchangeRateQuery is the SQL for the 'GetExchangeRate' query.
 	GetExchangeRateQuery = `
 SELECT
@@ -619,6 +626,12 @@ type GetBudgetPeriodByDateParams struct {
 // UpsertBudgetPeriodParams is an alias of [BudgetPeriodEntity].
 type UpsertBudgetPeriodParams = BudgetPeriodEntity
 
+// DeleteBudgetPeriodsByBudgetIDParams represents the parameters for the 'DeleteBudgetPeriodsByBudgetID' query.
+type DeleteBudgetPeriodsByBudgetIDParams struct {
+	BudgetId string `db:"budget_id"`
+	SpaceId  string `db:"space_id"`
+}
+
 // GetExchangeRateParams represents the parameters for the 'GetExchangeRate' query.
 type GetExchangeRateParams struct {
 	SpaceId      string `db:"space_id"`
@@ -780,6 +793,11 @@ func UpsertBudgetPeriod(ctx context.Context, db sqlx.ExtContext, params *UpsertB
 	}
 
 	return &item, nil
+}
+
+// DeleteBudgetPeriodsByBudgetID executes the 'DeleteBudgetPeriodsByBudgetID' query.
+func DeleteBudgetPeriodsByBudgetID(ctx context.Context, e sqlx.ExtContext, params *DeleteBudgetPeriodsByBudgetIDParams) (sql.Result, error) {
+	return sqlx.NamedExecContext(ctx, e, DeleteBudgetPeriodsByBudgetIDQuery, params)
 }
 
 // GetExchangeRate executes the 'GetExchangeRate' query and returns a single row.

@@ -251,6 +251,13 @@ RETURNING
   update_time,
   update_by;
 
+-- name: DeleteBudgetPeriodsByBudgetID
+-- return: exec
+DELETE FROM finance.budget_periods
+WHERE
+  budget_id =:budget_id
+  AND space_id =:space_id;
+
 ----------------------------------------------------
 -- SQL Queries for Exchange Rates Management
 ----------------------------------------------------

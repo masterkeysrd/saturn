@@ -2,6 +2,7 @@ package financepg
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -72,31 +73,33 @@ func (b *BudgetPeriodStore) Store(ctx context.Context, period *finance.BudgetPer
 // DeleteBy handles the bulk deletion of BudgetPeriods based on specific criteria.
 // It returns the number of rows deleted (int).
 func (b *BudgetPeriodStore) DeleteBy(ctx context.Context, criteria finance.BudgetPeriodCriteria) (int, error) {
-	return 0, fmt.Errorf("DeleteBy method is not implemented yet")
-	// var result sql.Result
-	// var err error
-	//
-	// // Use a type switch to dispatch the correct SQL logic based on the criteria type.
-	// switch v := criteria.(type) {
-	// case *finance.ByBudgetID:
-	// 	// Delete all periods belonging to the given BudgetID.
-	// 	result, err = b.queries.DeleteByBudgetID(ctx, v.ID)
-	// default:
-	// 	return 0, fmt.Errorf("criteria %T is not supported for DeleteBy method", criteria)
-	// }
-	//
-	// if err != nil {
-	// 	return 0, fmt.Errorf("cannot execute delete query: %w", err)
-	// }
-	//
-	// // Return the count of affected rows. This is necessary for the Domain Service
-	// // to confirm the dependent records were removed successfully.
-	// affected, err := result.RowsAffected()
-	// if err != nil {
-	// 	return 0, fmt.Errorf("cannot get affected rows count: %w", err)
-	// }
-	//
-	// return int(affected), nil
+	var result sql.Result
+	var err error
+
+	// Use a type switch to dispatch the correct SQL logic based on the criteria type.
+	switch v := criteria.(type) {
+	case *finance.ByBudgetID:
+		// Delete all periods belonging to the given BudgetID.
+		result, err = DeleteBudgetPeriodsByBudgetID(ctx, b.db, &DeleteBudgetPeriodsByBudgetIDParams{
+			SpaceId:  v.SpaceID.String(),
+			BudgetId: v.ID.String(),
+		})
+	default:
+		return 0, fmt.Errorf("criteria %T is not supported for DeleteBy method", criteria)
+	}
+
+	if err != nil {
+		return 0, fmt.Errorf("cannot execute delete query: %w", err)
+	}
+
+	// Return the count of affected rows. This is necessary for the Domain Service
+	// to confirm the dependent records were removed successfully.
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("cannot get affected rows count: %w", err)
+	}
+
+	return int(affected), nil
 }
 
 const (
@@ -114,10 +117,6 @@ const (
 		created_at,
 		updated_at
 	FROM budget_periods`
-
-	deleteBudgetPeriodsByBudgetIDQuery = `
-DELETE FROM budget_periods
-WHERE budget_id = :budget_id`
 )
 
 func NewBudgetPeriodEntity(b *finance.BudgetPeriod) *BudgetPeriodEntity {
