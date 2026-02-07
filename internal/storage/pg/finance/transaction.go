@@ -69,6 +69,9 @@ func (t *TransactionsStore) Delete(ctx context.Context, key finance.TransactionK
 		Id:      key.ID.String(),
 		SpaceId: key.SpaceID.String(),
 	})
+	if err != nil {
+		return fmt.Errorf("cannot delete transaction by id: %w", err)
+	}
 
 	affected, err := result.RowsAffected()
 	if err != nil {

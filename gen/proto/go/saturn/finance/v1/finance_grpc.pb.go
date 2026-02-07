@@ -38,6 +38,7 @@ const (
 	Finance_UpdateExpense_FullMethodName      = "/saturn.finance.v1.Finance/UpdateExpense"
 	Finance_GetTransaction_FullMethodName     = "/saturn.finance.v1.Finance/GetTransaction"
 	Finance_ListTransactions_FullMethodName   = "/saturn.finance.v1.Finance/ListTransactions"
+	Finance_DeleteTransaction_FullMethodName  = "/saturn.finance.v1.Finance/DeleteTransaction"
 	Finance_GetSetting_FullMethodName         = "/saturn.finance.v1.Finance/GetSetting"
 	Finance_UpdateSetting_FullMethodName      = "/saturn.finance.v1.Finance/UpdateSetting"
 	Finance_ActivateSetting_FullMethodName    = "/saturn.finance.v1.Finance/ActivateSetting"
@@ -86,6 +87,8 @@ type FinanceClient interface {
 	GetTransaction(ctx context.Context, in *GetTransactionRequest, opts ...grpc.CallOption) (*Transaction, error)
 	// ListTransactions returns all transactions for the space.
 	ListTransactions(ctx context.Context, in *ListTransactionsRequest, opts ...grpc.CallOption) (*ListTransactionsResponse, error)
+	// DeleteTransaction removes a transaction by its ID.
+	DeleteTransaction(ctx context.Context, in *DeleteTransactionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// GetSetting retrieves the finance settings for the space.
 	GetSetting(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Setting, error)
 	// UpdateSetting modifies the finance settings for the space.
@@ -254,6 +257,16 @@ func (c *financeClient) ListTransactions(ctx context.Context, in *ListTransactio
 	return out, nil
 }
 
+func (c *financeClient) DeleteTransaction(ctx context.Context, in *DeleteTransactionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Finance_DeleteTransaction_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *financeClient) GetSetting(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Setting, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Setting)
@@ -327,6 +340,8 @@ type FinanceServer interface {
 	GetTransaction(context.Context, *GetTransactionRequest) (*Transaction, error)
 	// ListTransactions returns all transactions for the space.
 	ListTransactions(context.Context, *ListTransactionsRequest) (*ListTransactionsResponse, error)
+	// DeleteTransaction removes a transaction by its ID.
+	DeleteTransaction(context.Context, *DeleteTransactionRequest) (*emptypb.Empty, error)
 	// GetSetting retrieves the finance settings for the space.
 	GetSetting(context.Context, *emptypb.Empty) (*Setting, error)
 	// UpdateSetting modifies the finance settings for the space.
@@ -389,6 +404,9 @@ func (UnimplementedFinanceServer) GetTransaction(context.Context, *GetTransactio
 }
 func (UnimplementedFinanceServer) ListTransactions(context.Context, *ListTransactionsRequest) (*ListTransactionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListTransactions not implemented")
+}
+func (UnimplementedFinanceServer) DeleteTransaction(context.Context, *DeleteTransactionRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteTransaction not implemented")
 }
 func (UnimplementedFinanceServer) GetSetting(context.Context, *emptypb.Empty) (*Setting, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetSetting not implemented")
@@ -690,6 +708,24 @@ func _Finance_ListTransactions_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Finance_DeleteTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteTransactionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).DeleteTransaction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_DeleteTransaction_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).DeleteTransaction(ctx, req.(*DeleteTransactionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Finance_GetSetting_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
@@ -810,6 +846,10 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListTransactions",
 			Handler:    _Finance_ListTransactions_Handler,
+		},
+		{
+			MethodName: "DeleteTransaction",
+			Handler:    _Finance_DeleteTransaction_Handler,
 		},
 		{
 			MethodName: "GetSetting",

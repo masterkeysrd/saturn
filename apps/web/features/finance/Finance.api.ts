@@ -9,10 +9,6 @@ export interface GetInsightsRequest {
 
 const baseUrl = "http://localhost:3000/api/v1/finance";
 
-export async function deleteTransaction(id: string): Promise<void> {
-  await axios.delete(`${baseUrl}/transactions/${id}`);
-}
-
 export async function getInsights(req: GetInsightsRequest) {
   const query = URLQuery.build(req);
   return axios

@@ -127,6 +127,12 @@ service Finance {
     option (google.api.http) = {get: "/v1/finance/transactions"};
   }
 
+  // DeleteTransaction removes a transaction by its ID.
+  rpc DeleteTransaction(DeleteTransactionRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/finance/transactions/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+
   // GetSetting retrieves the finance settings for the space.
   rpc GetSetting(google.protobuf.Empty) returns (Setting) {
     option (google.api.http) = {get: "/v1/finance/setting"};
@@ -490,6 +496,12 @@ message ListTransactionsRequest {
 
   // The number of transactions to return per page.
   int32 page_size = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request message for Finance.DeleteTransaction.
+message DeleteTransactionRequest {
+  // The unique identifier of the transaction to delete.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 message ListTransactionsResponse {

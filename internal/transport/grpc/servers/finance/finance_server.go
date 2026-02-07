@@ -31,6 +31,7 @@ type FinanceApplication interface {
 	UpdateExpense(context.Context, *finance.UpdateExpenseInput) (*finance.Transaction, error)
 	FindTransaction(context.Context, *finance.FindTransactionInput) (*finance.TransactionItem, error)
 	SearchTransactions(context.Context, *finance.SearchTransactionsInput) (*finance.TransactionPage, error)
+	DeleteTransaction(context.Context, finance.TransactionID) error
 
 	GetSetting(context.Context) (*finance.Setting, error)
 	UpdateSetting(context.Context, *finance.Setting, *fieldmask.FieldMask) (*finance.Setting, error)
@@ -198,6 +199,14 @@ func (s *FinanceServer) ListTransactions(ctx context.Context, req *financepb.Lis
 		Transactions: TransactionsItemsPb(page.Items),
 		TotalSize:    int32(page.TotalCount),
 	}, nil
+}
+
+func (s *FinanceServer) DeleteTransaction(ctx context.Context, req *financepb.DeleteTransactionRequest) (*emptypb.Empty, error) {
+	if err := s.app.DeleteTransaction(ctx, finance.TransactionID(req.GetId())); err != nil {
+		return nil, err
+	}
+
+	return &emptypb.Empty{}, nil
 }
 
 func (s *FinanceServer) GetSetting(ctx context.Context, _ *emptypb.Empty) (*financepb.Setting, error) {

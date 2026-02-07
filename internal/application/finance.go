@@ -26,6 +26,7 @@ type FinanceService interface {
 
 	CreateExpense(context.Context, access.Principal, *finance.Expense) (*finance.Transaction, error)
 	UpdateExpense(context.Context, access.Principal, *finance.UpdateExpenseInput) (*finance.Transaction, error)
+	DeleteTransaction(context.Context, access.Principal, finance.TransactionID) error
 
 	CreateSetting(context.Context, access.Principal, *finance.Setting) error
 	GetSetting(context.Context, access.Principal) (*finance.Setting, error)
@@ -139,6 +140,15 @@ func (app *FinanceApp) UpdateExpense(ctx context.Context, in *finance.UpdateExpe
 	}
 
 	return app.financeService.UpdateExpense(ctx, principal, in)
+}
+
+func (app *FinanceApp) DeleteTransaction(ctx context.Context, transactionID finance.TransactionID) error {
+	principal, ok := access.GetPrincipal(ctx)
+	if !ok {
+		return errors.New("missing principal in context")
+	}
+
+	return app.financeService.DeleteTransaction(ctx, principal, transactionID)
 }
 
 // ListExchangeRates lists all exchange rates for the principal.

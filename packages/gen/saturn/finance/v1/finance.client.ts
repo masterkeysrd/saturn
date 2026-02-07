@@ -293,6 +293,22 @@ export async function listTransactions(req: MessageInitShape<typeof Types.ListTr
 }
 
 /**
+ * DeleteTransaction removes a transaction by its ID.
+ *
+ * @param req Types.DeleteTransactionRequest
+ * @returns Promise<void>
+ */
+export async function deleteTransaction(req: MessageInitShape<typeof Types.DeleteTransactionRequestSchema>): Promise<void> {
+  const msg = create(Types.DeleteTransactionRequestSchema, req);
+  const body = toJson(Types.DeleteTransactionRequestSchema, msg);
+
+  return getAxios().delete(`/api/v1/finance/transactions/${body.id}`
+  ).then(() => {
+    return;
+  });
+}
+
+/**
  * GetSetting retrieves the finance settings for the space.
  *
  * @returns Promise<Types.Setting>

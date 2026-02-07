@@ -767,6 +767,37 @@
         "tags": [
           "Finance"
         ]
+      },
+      "delete": {
+        "summary": "DeleteTransaction removes a transaction by its ID.",
+        "operationId": "Finance_DeleteTransaction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "The unique identifier of the transaction to delete.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
       }
     },
     "/v1/identity/sessions": {

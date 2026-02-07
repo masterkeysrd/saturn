@@ -15,14 +15,11 @@ import {
   listExchangeRates,
   getTransaction,
   listTransactions,
+  deleteTransaction,
   updateBudget,
   updateExpense,
 } from "@saturn/gen/saturn/finance/v1/finance.client";
-import {
-  deleteTransaction,
-  getInsights,
-  type GetInsightsRequest,
-} from "./Finance.api";
+import { getInsights, type GetInsightsRequest } from "./Finance.api";
 import type {
   Budget,
   Expense,
@@ -231,7 +228,7 @@ export function useDeleteTransaction({
   const queryClient = useQueryClient();
 
   return useMutation<void, string, string>({
-    mutationFn: (id) => deleteTransaction(id),
+    mutationFn: (id) => deleteTransaction({ id }),
     onSuccess: async (data, variables, result, context) => {
       const transactionKey = queryKeys.getTransaction(variables);
       await queryClient.cancelQueries({ queryKey: transactionKey });
