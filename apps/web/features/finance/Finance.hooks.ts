@@ -10,6 +10,7 @@ import {
   listBudgets,
   listCurrencies,
   listExchangeRates,
+  listTransactions,
 } from "@saturn/gen/saturn/finance/v1/finance.client";
 import {
   createExpense,
@@ -18,7 +19,6 @@ import {
   getCurrency,
   getInsights,
   getTransaction,
-  listTransactions,
   updateBudget,
   updateExpense,
   type GetInsightsRequest,

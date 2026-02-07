@@ -1,15 +1,24 @@
 import type { CurrencyCode, Money } from "@/lib/money";
-import type { Pagination, Meta } from "@/lib/pagination";
+import type { Meta } from "@/lib/pagination";
 import type { MessageInitShape } from "@bufbuild/protobuf";
 import {
   Budget_View,
   BudgetSchema,
   ListBudgetsRequestSchema,
   ListExchangeRatesRequestSchema,
+  ListTransactionsRequestSchema,
+  ListTransactionsResponseSchema,
+  TransactionSchema,
+  Transaction_Type,
+  Transaction_View,
 } from "@saturn/gen/saturn/finance/v1/finance_pb";
 
 // Re-export Budget_View as BudgetView for naming consistency.
-export { Budget_View as BudgetView };
+export {
+  Budget_View as BudgetView,
+  Transaction_Type as TransactionType,
+  Transaction_View as TransactionView,
+};
 
 export interface ListBudgetsResponse {
   budgets?: Budget[];
@@ -60,31 +69,15 @@ export interface ListCurrenciesResponse {
   currencies?: Currency[];
 }
 
-export interface ListTransactionsParams extends Pagination {
-  search?: string;
-}
+export type ListTransactionsParams = MessageInitShape<
+  typeof ListTransactionsRequestSchema
+>;
 
-export interface ListTransactionsResponse {
-  transactions?: Transaction[];
-  meta?: Meta;
-}
+export type ListTransactionsResponse = MessageInitShape<
+  typeof ListTransactionsResponseSchema
+>;
 
-export interface Transaction {
-  id?: string;
-  name?: string;
-  description?: string;
-  type?: TransactionType; // extend if needed
-  amount?: Money;
-  base_amount?: Money;
-  exchange_rate?: number;
-  budget_id?: string;
-  budget?: Budget;
-  date?: string; // ISO date (YYYY-MM-DD)
-  created_at?: string; // ISO timestamp
-  updated_at?: string; // ISO timestamp
-}
-
-export type TransactionType = "income" | "expense" | "transfer" | "unknown";
+export type Transaction = MessageInitShape<typeof TransactionSchema>;
 
 /**
  * FinanceInsights is the top-level response for insights queries.

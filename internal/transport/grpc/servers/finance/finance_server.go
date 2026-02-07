@@ -170,6 +170,7 @@ func (s *FinanceServer) ListTransactions(ctx context.Context, req *financepb.Lis
 	}
 	return &financepb.ListTransactionsResponse{
 		Transactions: TransactionsItemsPb(page.Items),
+		TotalSize:    int32(page.TotalCount),
 	}, nil
 }
 

@@ -23,6 +23,7 @@ import { FieldMask } from "@/lib/fieldmask";
 import { Box, Divider, InputAdornment } from "@mui/material";
 import { FormIconPicker } from "@/components/FormIconPicker";
 import { FormColorPicker } from "@/components/FormColorPicker";
+import { decimal } from "@/lib/decimal";
 
 interface BudgetForm {
   name?: string;
@@ -56,7 +57,7 @@ const useExchangeRateDropdown = () => {
         return {
           id: currency.code,
           label: `${currency.name} (${currency.code})`,
-          rate: Number.parseFloat(exchangeRate?.rate?.value ?? "1"),
+          rate: decimal.fromPbDecimal(exchangeRate?.rate) ?? 1,
         };
       });
   }, [currenciesResp, exchangeRates]);
@@ -263,7 +264,7 @@ export default function BudgetFormModal() {
             }}
             exchange={{
               currency: "USD",
-              rate: selectedExchangeRate.rate ?? 1,
+              rate: selectedExchangeRate?.rate ?? 1,
             }}
           />
         )}

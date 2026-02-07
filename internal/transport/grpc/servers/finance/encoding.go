@@ -377,6 +377,8 @@ func TransactionItemPb(t *finance.TransactionItem) *financepb.Transaction {
 	pb := &financepb.Transaction{
 		Id:            t.ID.String(),
 		Type:          TransactionTypePb(t.Type),
+		Title:         t.Title,
+		Description:   t.Description,
 		Date:          encoding.DatePb(t.Date),
 		EffectiveDate: encoding.DatePb(t.EffectiveDate),
 		Amount:        encoding.MoneyPb(t.Amount),

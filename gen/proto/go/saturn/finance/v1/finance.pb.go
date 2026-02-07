@@ -1616,7 +1616,10 @@ func (x *ListTransactionsRequest) GetPageSize() int32 {
 type ListTransactionsResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The list of transactions.
-	Transactions  []*Transaction `protobuf:"bytes,1,rep,name=transactions,proto3" json:"transactions,omitempty"`
+	Transactions []*Transaction `protobuf:"bytes,1,rep,name=transactions,proto3" json:"transactions,omitempty"`
+	// The total number of transactions available for the given request.
+	// Used for pagination.
+	TotalSize     int32 `protobuf:"varint,2,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1658,6 +1661,13 @@ func (x *ListTransactionsResponse) GetTransactions() []*Transaction {
 	return nil
 }
 
+func (x *ListTransactionsResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
+}
+
 // Transaction represents a financial transaction, such as an expense.
 type Transaction struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1666,33 +1676,37 @@ type Transaction struct {
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// The type of the transaction.
 	Type Transaction_Type `protobuf:"varint,2,opt,name=type,proto3,enum=saturn.finance.v1.Transaction_Type" json:"type,omitempty"`
+	// The title or short description of the transaction.
+	Title string `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	// The detailed description of the transaction.
+	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
 	// Information about the associated budget.
 	// Only populated for expense transactions.
-	Budget *Transaction_BudgetInfo `protobuf:"bytes,3,opt,name=budget,proto3" json:"budget,omitempty"`
+	Budget *Transaction_BudgetInfo `protobuf:"bytes,5,opt,name=budget,proto3" json:"budget,omitempty"`
 	// The amount of the transaction.
 	// Output only.
-	Amount *typepb.Money `protobuf:"bytes,4,opt,name=amount,proto3" json:"amount,omitempty"`
+	Amount *typepb.Money `protobuf:"bytes,6,opt,name=amount,proto3" json:"amount,omitempty"`
 	// The base amount of the transaction in space base currency.
 	// Output only.
-	BaseAmount *typepb.Money `protobuf:"bytes,5,opt,name=base_amount,json=baseAmount,proto3" json:"base_amount,omitempty"`
+	BaseAmount *typepb.Money `protobuf:"bytes,7,opt,name=base_amount,json=baseAmount,proto3" json:"base_amount,omitempty"`
 	// The exchange rate used for this transaction.
 	// Output only.
-	ExchangeRate *decimal.Decimal `protobuf:"bytes,6,opt,name=exchange_rate,json=exchangeRate,proto3" json:"exchange_rate,omitempty"`
+	ExchangeRate *decimal.Decimal `protobuf:"bytes,8,opt,name=exchange_rate,json=exchangeRate,proto3" json:"exchange_rate,omitempty"`
 	// The date when the transaction occurred.
 	// Output only.
-	Date *date.Date `protobuf:"bytes,7,opt,name=date,proto3" json:"date,omitempty"`
+	Date *date.Date `protobuf:"bytes,9,opt,name=date,proto3" json:"date,omitempty"`
 	// The effective date that the transaction affects budgets.
 	// Output only.
 	// Defaults to 'date' if not specified during creation.
-	EffectiveDate *date.Date `protobuf:"bytes,8,opt,name=effective_date,json=effectiveDate,proto3" json:"effective_date,omitempty"`
+	EffectiveDate *date.Date `protobuf:"bytes,10,opt,name=effective_date,json=effectiveDate,proto3" json:"effective_date,omitempty"`
 	// Creation timestamp of the transaction.
 	// Output only.
 	// Applies to all transaction types.
-	CreateTime *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
 	// Last update timestamp of the transaction.
 	// Output only.
-	// Applies to all transaction types.
-	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	// Applies to all transaction types.name
+	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1739,6 +1753,20 @@ func (x *Transaction) GetType() Transaction_Type {
 		return x.Type
 	}
 	return Transaction_TYPE_UNSPECIFIED
+}
+
+func (x *Transaction) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *Transaction) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
 }
 
 func (x *Transaction) GetBudget() *Transaction_BudgetInfo {
@@ -2217,23 +2245,27 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x04view\x18\x01 \x01(\x0e2#.saturn.finance.v1.Transaction.ViewB\x03\xe0A\x01R\x04view\x12\x1b\n" +
 	"\x06search\x18\x02 \x01(\tB\x03\xe0A\x01R\x06search\x12\x17\n" +
 	"\x04page\x18\x03 \x01(\x05B\x03\xe0A\x01R\x04page\x12 \n" +
-	"\tpage_size\x18\x04 \x01(\x05B\x03\xe0A\x01R\bpageSize\"^\n" +
+	"\tpage_size\x18\x04 \x01(\x05B\x03\xe0A\x01R\bpageSize\"}\n" +
 	"\x18ListTransactionsResponse\x12B\n" +
-	"\ftransactions\x18\x01 \x03(\v2\x1e.saturn.finance.v1.TransactionR\ftransactions\"\xcf\x06\n" +
+	"\ftransactions\x18\x01 \x03(\v2\x1e.saturn.finance.v1.TransactionR\ftransactions\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x02 \x01(\x05R\ttotalSize\"\x91\a\n" +
 	"\vTransaction\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12<\n" +
-	"\x04type\x18\x02 \x01(\x0e2#.saturn.finance.v1.Transaction.TypeB\x03\xe0A\x03R\x04type\x12F\n" +
-	"\x06budget\x18\x03 \x01(\v2).saturn.finance.v1.Transaction.BudgetInfoB\x03\xe0A\x03R\x06budget\x12/\n" +
-	"\x06amount\x18\x04 \x01(\v2\x12.saturn.type.MoneyB\x03\xe0A\x03R\x06amount\x128\n" +
-	"\vbase_amount\x18\x05 \x01(\v2\x12.saturn.type.MoneyB\x03\xe0A\x03R\n" +
+	"\x04type\x18\x02 \x01(\x0e2#.saturn.finance.v1.Transaction.TypeB\x03\xe0A\x03R\x04type\x12\x19\n" +
+	"\x05title\x18\x03 \x01(\tB\x03\xe0A\x03R\x05title\x12%\n" +
+	"\vdescription\x18\x04 \x01(\tB\x03\xe0A\x03R\vdescription\x12F\n" +
+	"\x06budget\x18\x05 \x01(\v2).saturn.finance.v1.Transaction.BudgetInfoB\x03\xe0A\x03R\x06budget\x12/\n" +
+	"\x06amount\x18\x06 \x01(\v2\x12.saturn.type.MoneyB\x03\xe0A\x03R\x06amount\x128\n" +
+	"\vbase_amount\x18\a \x01(\v2\x12.saturn.type.MoneyB\x03\xe0A\x03R\n" +
 	"baseAmount\x12>\n" +
-	"\rexchange_rate\x18\x06 \x01(\v2\x14.google.type.DecimalB\x03\xe0A\x03R\fexchangeRate\x12*\n" +
-	"\x04date\x18\a \x01(\v2\x11.google.type.DateB\x03\xe0A\x03R\x04date\x12=\n" +
-	"\x0eeffective_date\x18\b \x01(\v2\x11.google.type.DateB\x03\xe0A\x03R\reffectiveDate\x12@\n" +
-	"\vcreate_time\x18\t \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"\rexchange_rate\x18\b \x01(\v2\x14.google.type.DecimalB\x03\xe0A\x03R\fexchangeRate\x12*\n" +
+	"\x04date\x18\t \x01(\v2\x11.google.type.DateB\x03\xe0A\x03R\x04date\x12=\n" +
+	"\x0eeffective_date\x18\n" +
+	" \x01(\v2\x11.google.type.DateB\x03\xe0A\x03R\reffectiveDate\x12@\n" +
+	"\vcreate_time\x18\v \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"createTime\x12@\n" +
-	"\vupdate_time\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"\vupdate_time\x18\f \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"updateTime\x1a\xac\x01\n" +
 	"\n" +
 	"BudgetInfo\x12 \n" +

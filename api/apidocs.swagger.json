@@ -2087,6 +2087,11 @@
             "$ref": "#/definitions/v1Transaction"
           },
           "description": "The list of transactions."
+        },
+        "totalSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "The total number of transactions available for the given request.\nUsed for pagination."
         }
       }
     },
@@ -2411,6 +2416,16 @@
           "description": "The type of the transaction.",
           "readOnly": true
         },
+        "title": {
+          "type": "string",
+          "description": "The title or short description of the transaction.",
+          "readOnly": true
+        },
+        "description": {
+          "type": "string",
+          "description": "The detailed description of the transaction.",
+          "readOnly": true
+        },
         "budget": {
           "$ref": "#/definitions/TransactionBudgetInfo",
           "description": "Information about the associated budget.\nOnly populated for expense transactions.",
@@ -2450,7 +2465,7 @@
         "updateTime": {
           "type": "string",
           "format": "date-time",
-          "description": "Last update timestamp of the transaction.\nOutput only.\nApplies to all transaction types.",
+          "title": "Last update timestamp of the transaction.\nOutput only.\nApplies to all transaction types.name",
           "readOnly": true
         }
       },

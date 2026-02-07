@@ -473,6 +473,10 @@ message ListTransactionsRequest {
 message ListTransactionsResponse {
   // The list of transactions.
   repeated Transaction transactions = 1;
+
+  // The total number of transactions available for the given request.
+  // Used for pagination.
+  int32 total_size = 2;
 }
 
 // Transaction represents a financial transaction, such as an expense.
@@ -519,40 +523,46 @@ message Transaction {
   // The type of the transaction.
   Type type = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 
+  // The title or short description of the transaction.
+  string title = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The detailed description of the transaction.
+  string description = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
   // Information about the associated budget.
   // Only populated for expense transactions.
-  BudgetInfo budget = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  BudgetInfo budget = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // The amount of the transaction.
   // Output only.
-  saturn.type.Money amount = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  saturn.type.Money amount = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // The base amount of the transaction in space base currency.
   // Output only.
-  saturn.type.Money base_amount = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  saturn.type.Money base_amount = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // The exchange rate used for this transaction.
   // Output only.
-  google.type.Decimal exchange_rate = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.type.Decimal exchange_rate = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // The date when the transaction occurred.
   // Output only.
-  google.type.Date date = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.type.Date date = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // The effective date that the transaction affects budgets.
   // Output only.
   // Defaults to 'date' if not specified during creation.
-  google.type.Date effective_date = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.type.Date effective_date = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Creation timestamp of the transaction.
   // Output only.
   // Applies to all transaction types.
-  google.protobuf.Timestamp create_time = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp create_time = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Last update timestamp of the transaction.
   // Output only.
-  // Applies to all transaction types.
-  google.protobuf.Timestamp update_time = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Applies to all transaction types.name
+  google.protobuf.Timestamp update_time = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // Request message for Finance.UpdateSetting.

@@ -10,6 +10,10 @@
     "./saturn/*": {
       "import": "./saturn/*.ts",
       "types": "./saturn/*.ts"
+    },
+    "./google/*": {
+      "import": "./google/*.ts",
+      "types": "./google/*.ts"
     }
   },
   "dependencies": {

@@ -48,11 +48,9 @@ func (bs *TransactionSearcher) Find(ctx context.Context, criteria *finance.FindT
 }
 
 func (bs *TransactionSearcher) Search(ctx context.Context, criteria *finance.TransactionSearchCriteria) (*finance.TransactionPage, error) {
-	// 1. Generate the SQL and Arguments
 	exp := bs.buildSearchExpression(criteria)
 	params := NewTransactionSearchParams(criteria)
 
-	// 2. Execute Data Query
 	rows, err := bs.db.NamedQueryContext(ctx, exp.ToSQL(), params)
 	if err != nil {
 		return nil, fmt.Errorf("cannot execute transaction search query: %w", err)

@@ -15,10 +15,8 @@ import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import PaidIcon from "@mui/icons-material/Paid";
 import SearchIcon from "@mui/icons-material/Search";
-import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import TrendingDownIcon from "@mui/icons-material/TrendingDown";
 import DeleteIcon from "@mui/icons-material/Delete";
-import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import {
   usePopupState,
   bindTrigger,
@@ -36,17 +34,20 @@ import DataGrid, {
 } from "@/components/DataGrid";
 
 import { useTransactions } from "../Finance.hooks";
-import type {
-  ListTransactionsParams,
-  Transaction,
+import {
   TransactionType,
+  TransactionView,
+  type ListTransactionsParams,
+  type Transaction,
 } from "../Finance.model";
 import AmountCell from "../components/AmountCell";
+import { date } from "@/lib/date";
 import { useSearchParams } from "@/lib/search-params";
 import { useSearchFilter, type SearchFilterAPI } from "@/lib/search";
 import { PAGE_SIZE_OPTS, usePagination } from "@/lib/pagination";
 import { InputAdornment, TextField } from "@mui/material";
 import { SelectedIcon } from "@/components/SelectedIcon";
+import { decimal } from "@/lib/decimal";
 
 type SearchPropsType = ReturnType<typeof useSearchFilter>;
 
@@ -107,22 +108,12 @@ interface TypeConfig {
 }
 
 const TYPE_CONFIG: Record<TransactionType, TypeConfig> = {
-  income: {
-    label: "Income",
-    color: "success",
-    icon: <TrendingUpIcon fontSize="small" />,
-  },
-  expense: {
+  [TransactionType.EXPENSE]: {
     label: "Expense",
     color: "error",
     icon: <TrendingDownIcon fontSize="small" />,
   },
-  transfer: {
-    label: "Transfer",
-    color: "info",
-    icon: <SwapHorizIcon fontSize="small" />,
-  },
-  unknown: {
+  [TransactionType.TYPE_UNSPECIFIED]: {
     label: "Unknown",
     color: "default",
     icon: <HelpOutlineIcon fontSize="small" />,
@@ -192,7 +183,10 @@ export default function TransactionsPage() {
   const searchProps = useSearchFilter(params.search, setParams);
   const paginationProps = usePagination(params, setParams);
 
-  const { data: page, isLoading } = useTransactions(params);
+  const { data: page, isLoading } = useTransactions({
+    ...params,
+    view: TransactionView.FULL,
+  });
 
   const handleRowEdit = useCallback(
     (transaction: Transaction) => () => {
@@ -217,7 +211,7 @@ export default function TransactionsPage() {
         renderCell: ({ row }) => (
           <Stack direction="column">
             <Stack>
-              <Typography variant="body2">{row.name}</Typography>
+              <Typography variant="body2">{row.title}</Typography>
               <Typography variant="caption" color="textSecondary">
                 {row.description}
               </Typography>
@@ -258,7 +252,7 @@ export default function TransactionsPage() {
         width: 150,
         renderCell: ({ row }) => (
           <Typography variant="body2">
-            {row.date && new Date(row.date).toLocaleDateString()}
+            {row.date && date.fromPbDate(row.date).toLocaleDateString()}
           </Typography>
         ),
       },
@@ -269,8 +263,8 @@ export default function TransactionsPage() {
         renderCell: ({ row }) => (
           <AmountCell
             amount={row.amount ?? money.zero()}
-            baseAmount={row.base_amount ?? money.zero()}
-            exchangeRate={row.exchange_rate ?? 0}
+            baseAmount={row.baseAmount ?? money.zero()}
+            exchangeRate={decimal.fromPbDecimal(row.exchangeRate)}
           />
         ),
       },
@@ -279,7 +273,9 @@ export default function TransactionsPage() {
         headerName: "Type",
         width: 130,
         renderCell: ({ row }) => (
-          <TransactionTypeCell type={row.type ?? "unknown"} />
+          <TransactionTypeCell
+            type={row.type ?? TransactionType.TYPE_UNSPECIFIED}
+          />
         ),
       },
       {
@@ -323,7 +319,7 @@ export default function TransactionsPage() {
             rows={page?.transactions}
             columns={transactionColumns}
             loading={isLoading}
-            rowCount={page?.meta?.total_items}
+            rowCount={page?.totalSize}
             pageSizeOptions={PAGE_SIZE_OPTS}
             slots={{
               toolbar: CustomToolbar,
