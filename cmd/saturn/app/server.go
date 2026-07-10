@@ -8,13 +8,13 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"time"
 
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"golang.org/x/sync/errgroup"
 
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
+	"github.com/masterkeysrd/saturn/internal/shutdown"
 )
 
 const (
@@ -124,12 +124,16 @@ func (s *GRPCGatewayServer) Shutdown(ctx context.Context) error {
 
 // StartAll starts both gRPC and gRPC-Gateway servers and waits for a
 // shutdown signal before gracefully tearing them down.
-func StartAll(ctx context.Context) error {
+func StartAll(ctx context.Context, mgr *shutdown.Manager) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	grpcSrv := NewGRPCServer()
 	gwSrv := NewGRPCGatewayServer()
+
+	// Register shutdown callbacks (LIFO order: gateway first, then gRPC)
+	mgr.Register(grpcSrv.Shutdown)
+	mgr.Register(gwSrv.Shutdown)
 
 	if err := grpcSrv.Start(ctx); err != nil {
 		return fmt.Errorf("grpc: %w", err)
@@ -138,8 +142,7 @@ func StartAll(ctx context.Context) error {
 		return fmt.Errorf("gateway: %w", err)
 	}
 
-	g, ctx := errgroup.WithContext(ctx)
-
+	g, _ := errgroup.WithContext(ctx)
 	g.Go(func() error {
 		slog.Info("gRPC server starting", "socket", grpcUnixSocketPath)
 		if err := grpcSrv.grpc.Serve(grpcSrv.listener); err != nil && err != grpc.ErrServerStopped {
@@ -158,16 +161,6 @@ func StartAll(ctx context.Context) error {
 
 	if err := g.Wait(); err != nil {
 		slog.Error("server stopped", "err", err)
-	}
-
-	shutdownCtx, done := context.WithTimeout(context.Background(), 10*time.Second)
-	defer done()
-
-	if err := grpcSrv.Shutdown(shutdownCtx); err != nil {
-		slog.Error("grpc shutdown error", "err", err)
-	}
-	if err := gwSrv.Shutdown(shutdownCtx); err != nil {
-		slog.Error("gateway shutdown error", "err", err)
 	}
 	slog.Info("all servers stopped")
 	return nil
