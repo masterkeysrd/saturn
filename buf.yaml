@@ -1,0 +1,15 @@
+version: v2
+modules:
+   - path: api
+     name: buf.build/masterkeysrd/saturn
+     breaking:
+       use:
+         - FILE
+     lint:
+       use:
+         - DEFAULT
+         - COMMENTS
+         - ONEOF
+deps:
+   - buf.build/googleapis/googleapis
+   - buf.build/grpc-ecosystem/grpc-gateway

@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package saturn.identity.v1;
+
+option go_package = "github.com/masterkeysrd/saturn/apis/saturn/identity/v1;identityv1";
+
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+
+// Identity service provides user authentication and account management.
+service Identity {
+  // LoginUser authenticates a user and returns a session token.
+  rpc LoginUser(LoginUserRequest) returns (LoginUserResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/identity/login"
+      body: "*"
+    };
+  }
+}
+
+// LoginUserRequest contains user credentials for authentication.
+message LoginUserRequest {
+  // UserPassword authentication method.
+  message UserPassword {
+    // Username or email of the user.
+    string identifier = 1 [(google.api.field_behavior) = REQUIRED];
+    // Password of the user.
+    string password = 2 [(google.api.field_behavior) = REQUIRED];
+  }
+
+  oneof method {
+    // UserPassword authentication method.
+    UserPassword user_password = 1;
+  }
+}
+
+// LoginUserResponse contains the authentication result.
+message LoginUserResponse {
+  // The user's unique identifier.
+  string user_id = 1;
+  // The session token for authenticated requests.
+  string token = 2;
+  // Expiration time of the session token.
+  int64 expires_at = 3;
+}
