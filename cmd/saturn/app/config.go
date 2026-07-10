@@ -1,0 +1,101 @@
+package app
+
+import (
+	"log/slog"
+	"os"
+	"time"
+
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
+)
+
+const (
+	defaultGRPCSocket    = "/tmp/saturn-identity.sock"
+	defaultGatewayAddr   = ":8080"
+	defaultShutdownTime  = 10 * time.Second
+	defaultLogLevel      = "info"
+	defaultConfigName    = "saturn"
+	defaultConfigDir     = "."
+	defaultConfigHomeDir = "$HOME/.config/saturn"
+	defaultEnvPrefix     = "SATURN"
+)
+
+var logLevels = map[string]slog.Level{
+	"debug": slog.LevelDebug,
+	"info":  slog.LevelInfo,
+	"warn":  slog.LevelWarn,
+	"error": slog.LevelError,
+}
+
+// Config holds all application configuration, organized by subsystem.
+type Config struct {
+	GRPC     GRPCConfig
+	Gateway  GatewayConfig
+	Shutdown ShutdownConfig
+	Log      LogConfig
+}
+
+// GRPCConfig holds gRPC server settings.
+type GRPCConfig struct {
+	Socket string `mapstructure:"socket"`
+}
+
+// GatewayConfig holds the HTTP gateway server settings.
+type GatewayConfig struct {
+	Addr string `mapstructure:"addr"`
+}
+
+// ShutdownConfig holds shutdown behavior settings.
+type ShutdownConfig struct {
+	Timeout time.Duration `mapstructure:"timeout"`
+}
+
+// LogConfig holds logging settings.
+type LogConfig struct {
+	Level string `mapstructure:"level"`
+}
+
+// NewViper creates and configures a Viper instance with config file search
+// paths, env var prefixes, and sensible defaults.
+func NewViper() *viper.Viper {
+	v := viper.New()
+	v.SetConfigName(defaultConfigName)
+	v.SetConfigType("yaml")
+	v.AddConfigPath(defaultConfigDir)
+	v.AddConfigPath(defaultConfigHomeDir)
+	v.AutomaticEnv()
+	v.SetEnvPrefix(defaultEnvPrefix)
+
+	v.SetDefault("grpc.socket", defaultGRPCSocket)
+	v.SetDefault("gateway.addr", defaultGatewayAddr)
+	v.SetDefault("shutdown.timeout", defaultShutdownTime)
+	v.SetDefault("log.level", defaultLogLevel)
+
+	return v
+}
+
+// LoadConfig reads configuration from file, env vars, and flags, then
+// unmarshals it into a Config struct.
+func LoadConfig(v *viper.Viper) *Config {
+	if err := v.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			slog.Warn("failed to read config file", "err", err)
+		}
+	}
+
+	var cfg Config
+	if err := v.Unmarshal(&cfg); err != nil {
+		slog.Error("failed to parse config", "err", err)
+		os.Exit(1)
+	}
+
+	return &cfg
+}
+
+// BindFlags binds all pflags to Viper so that flag values override
+// env var and file defaults.
+func BindFlags(v *viper.Viper, flags *pflag.FlagSet) {
+	flags.VisitAll(func(f *pflag.Flag) {
+		v.BindPFlag(f.Name, f)
+	})
+}

@@ -56,7 +56,56 @@ Saturn follows a clean, modular architecture:
 - **Database**: PostgreSQL with row-level isolation per Space
 - **Clients**: Web (React/Vue TBD), CLI (Go), Mobile (native / Flutter TBD)
 
-## 📦 Getting Started
+## CLI
+
+Saturn ships with a CLI built on [Cobra](https://github.com/spf13/cobra) and [Viper](https://github.com/spf13/viper).
+
+### `saturn` — Root Command
+
+The entry point for managing and running the Saturn service.
+
+### `saturn serve` — Start the Service
+
+Starts the gRPC server and gRPC-Gateway HTTP REST API.
+
+```bash
+saturn serve [flags]
+```
+
+#### Flags
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--grpc-socket` | gRPC Unix socket path | `/tmp/saturn-identity.sock` |
+| `--gateway-addr` | HTTP gateway listen address | `:8080` |
+| `--shutdown-timeout` | Graceful shutdown timeout | `10s` |
+| `--log-level` | Log level (`debug`, `info`, `warn`, `error`) | `info` |
+
+#### Configuration
+
+Configuration is loaded in this priority order: **flags > env vars > config file > defaults**.
+
+**Environment Variables** (prefix: `SATURN_`):
+
+| Variable | Description | Default |
+| --- | --- | --- |
+| `SATURN_GRPC_SOCKET` | gRPC Unix socket path | `/tmp/saturn-identity.sock` |
+| `SATURN_GATEWAY_ADDR` | HTTP gateway listen address | `:8080` |
+| `SATURN_SHUTDOWN_TIMEOUT` | Graceful shutdown timeout | `10s` |
+| `SATURN_LOG_LEVEL` | Log level | `info` |
+
+**Config File**: `saturn.yaml` (current directory or `$HOME/.config/saturn/saturn.yaml`)
+
+```yaml
+grpc:
+  socket: /tmp/saturn-identity.sock
+gateway:
+  addr: ":8080"
+shutdown:
+  timeout: 10s
+log:
+  level: info
+```
 
 ### Prerequisites
 

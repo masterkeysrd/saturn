@@ -17,10 +17,6 @@ import (
 	"github.com/masterkeysrd/saturn/internal/shutdown"
 )
 
-const (
-	grpcUnixSocketPath = "/tmp/saturn-identity.sock"
-)
-
 // GRPCServer manages the standalone gRPC server listening on a Unix socket.
 type GRPCServer struct {
 	listener net.Listener
@@ -28,19 +24,19 @@ type GRPCServer struct {
 }
 
 // NewGRPCServer creates a new GRPCServer instance.
-func NewGRPCServer() *GRPCServer {
+func NewGRPCServer(cfg *Config) *GRPCServer {
 	return &GRPCServer{}
 }
 
 // Start initializes the gRPC server, registers the Identity service, and
 // begins listening on the configured Unix socket.
-func (s *GRPCServer) Start(ctx context.Context) error {
-	if err := os.Remove(grpcUnixSocketPath); err != nil && !os.IsNotExist(err) {
-		slog.Warn("failed to remove stale socket file", "path", grpcUnixSocketPath, "err", err)
+func (s *GRPCServer) Start(ctx context.Context, cfg *Config) error {
+	if err := os.Remove(cfg.GRPC.Socket); err != nil && !os.IsNotExist(err) {
+		slog.Warn("failed to remove stale socket file", "path", cfg.GRPC.Socket, "err", err)
 	}
 
 	var err error
-	s.listener, err = net.Listen("unix", grpcUnixSocketPath)
+	s.listener, err = net.Listen("unix", cfg.GRPC.Socket)
 	if err != nil {
 		return fmt.Errorf("listen unix: %w", err)
 	}
@@ -75,14 +71,14 @@ type GRPCGatewayServer struct {
 }
 
 // NewGRPCGatewayServer creates a new GRPCGatewayServer instance.
-func NewGRPCGatewayServer() *GRPCGatewayServer {
-	return &GRPCGatewayServer{addr: ":8080"}
+func NewGRPCGatewayServer(cfg *Config) *GRPCGatewayServer {
+	return &GRPCGatewayServer{addr: cfg.Gateway.Addr}
 }
 
 // Start connects to the gRPC backend via Unix socket, sets up the gateway
 // mux, and starts the HTTP server.
-func (s *GRPCGatewayServer) Start(ctx context.Context) error {
-	conn, err := grpc.NewClient("unix:"+grpcUnixSocketPath,
+func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
+	conn, err := grpc.NewClient("unix:"+cfg.GRPC.Socket,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
@@ -124,27 +120,27 @@ func (s *GRPCGatewayServer) Shutdown(ctx context.Context) error {
 
 // StartAll starts both gRPC and gRPC-Gateway servers and waits for a
 // shutdown signal before gracefully tearing them down.
-func StartAll(ctx context.Context, mgr *shutdown.Manager) error {
+func StartAll(ctx context.Context, mgr *shutdown.Manager, cfg *Config) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	grpcSrv := NewGRPCServer()
-	gwSrv := NewGRPCGatewayServer()
+	grpcSrv := NewGRPCServer(cfg)
+	gwSrv := NewGRPCGatewayServer(cfg)
 
-	// Register shutdown callbacks (LIFO order: gateway first, then gRPC)
+	// Register shutdown callbacks (LIFO order: gateway first, then gRPC).
 	mgr.Register(grpcSrv.Shutdown)
 	mgr.Register(gwSrv.Shutdown)
 
-	if err := grpcSrv.Start(ctx); err != nil {
+	if err := grpcSrv.Start(ctx, cfg); err != nil {
 		return fmt.Errorf("grpc: %w", err)
 	}
-	if err := gwSrv.Start(ctx); err != nil {
+	if err := gwSrv.Start(ctx, cfg); err != nil {
 		return fmt.Errorf("gateway: %w", err)
 	}
 
 	g, _ := errgroup.WithContext(ctx)
 	g.Go(func() error {
-		slog.Info("gRPC server starting", "socket", grpcUnixSocketPath)
+		slog.Info("gRPC server starting", "socket", cfg.GRPC.Socket)
 		if err := grpcSrv.grpc.Serve(grpcSrv.listener); err != nil && err != grpc.ErrServerStopped {
 			return fmt.Errorf("grpc: %w", err)
 		}
