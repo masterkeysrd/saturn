@@ -22,7 +22,7 @@ func main() {
 	// Defer shutdown execution — catches any panics during shutdown
 	defer mgr.Defer()
 
-	if err := app.StartAll(ctx, mgr); err != nil {
+	if err := app.Execute(ctx, mgr); err != nil {
 		slog.Error("server failed", "err", err)
 		os.Exit(1)
 	}

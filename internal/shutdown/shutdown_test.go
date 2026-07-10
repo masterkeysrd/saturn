@@ -150,7 +150,7 @@ func TestInitReturnsContext(t *testing.T) {
 	cancel()
 	select {
 	case <-ctx.Done():
-			// expected
+		// expected
 	case <-time.After(100 * time.Millisecond):
 		t.Fatal("context should be done after cancel")
 	}
