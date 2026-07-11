@@ -139,6 +139,29 @@ go run cmd/server/main.go
 go run cmd/saturn-cli/main.go
 ```
 
+### Docker
+
+A multi-stage Dockerfile is provided at `build/saturn/Dockerfile`. It produces a minimal, non-root runtime image with the `saturn` CLI pre-installed.
+
+```bash
+# Build the image
+docker build -t saturn -f build/saturn/Dockerfile .
+
+# Build with a version tag
+docker build -t saturn:v0.1.0 \
+   --build-arg VERSION=v0.1.0 \
+   -f build/saturn/Dockerfile .
+
+# Run (default: starts the service)
+docker run --name saturn -p 8080:8080 saturn
+
+# Override with a different command
+docker run saturn migrate up
+docker run saturn serve --log-level debug
+```
+
+The image exposes port **8080** (HTTP gateway). The gRPC server uses a Unix socket inside the container.
+
 ### Environment Variables
 
 | Variable | Description | Default |

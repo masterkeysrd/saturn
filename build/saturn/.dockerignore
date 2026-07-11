@@ -1,0 +1,45 @@
+# Build artifacts
+*.exe
+*.exe.*
+*.test
+*.out
+
+# Go build directory
+dist/
+bin/
+
+# Documentation
+docs/
+docs/**/*
+
+# Examples, tests, and vendor directory
+examples/
+testdata/
+vendor/
+
+# .git directory
+.git
+.gitignore
+
+# Docker files
+Dockerfile*
+docker-compose*
+*.dockerignore
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Misc
+README.md
+README.*
+Makefile
+buf.gen.yaml
+buf.lock
+buf.yaml
