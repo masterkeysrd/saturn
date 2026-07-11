@@ -10,6 +10,11 @@ import (
 )
 
 const (
+	defaultDBHost        = "localhost"
+	defaultDBPort        = 5432
+	defaultDBUser        = "saturn"
+	defaultDBPassword    = "saturn"
+	defaultDBName        = "saturn"
 	defaultGRPCSocket    = "/tmp/saturn-identity.sock"
 	defaultGatewayAddr   = ":8080"
 	defaultShutdownTime  = 10 * time.Second
@@ -29,10 +34,20 @@ var logLevels = map[string]slog.Level{
 
 // Config holds all application configuration, organized by subsystem.
 type Config struct {
+	DB       DBConfig
 	GRPC     GRPCConfig
 	Gateway  GatewayConfig
 	Shutdown ShutdownConfig
 	Log      LogConfig
+}
+
+// DBConfig holds database connection settings.
+type DBConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	User     string `mapstructure:"user"`
+	Password string `mapstructure:"password"`
+	Name     string `mapstructure:"name"`
 }
 
 // GRPCConfig holds gRPC server settings.
@@ -65,6 +80,12 @@ func NewViper() *viper.Viper {
 	v.AddConfigPath(defaultConfigHomeDir)
 	v.AutomaticEnv()
 	v.SetEnvPrefix(defaultEnvPrefix)
+
+	v.SetDefault("db.host", defaultDBHost)
+	v.SetDefault("db.port", defaultDBPort)
+	v.SetDefault("db.user", defaultDBUser)
+	v.SetDefault("db.password", defaultDBPassword)
+	v.SetDefault("db.name", defaultDBName)
 
 	v.SetDefault("grpc.socket", defaultGRPCSocket)
 	v.SetDefault("gateway.addr", defaultGatewayAddr)

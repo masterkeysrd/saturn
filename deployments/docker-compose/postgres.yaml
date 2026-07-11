@@ -1,0 +1,50 @@
+---
+name: saturn
+
+services:
+  db:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: saturn
+      POSTGRES_PASSWORD: saturn
+      POSTGRES_DB: saturn
+    ports:
+      - "5432:5432"
+    volumes:
+        - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U saturn -d saturn"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgweb:
+    image: sosedoff/pgweb:latest
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      PGWEB_DATABASE_URL: "postgres://saturn:saturn@db:5432/saturn?sslmode=disable"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  migrate:
+    build:
+      context: ../..
+      dockerfile: build/saturn/Dockerfile
+    restart: "no"
+    command: ["migrate", "up"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SATURN_DB_HOST: db
+      SATURN_DB_PORT: "5432"
+      SATURN_DB_USER: saturn
+      SATURN_DB_PASSWORD: saturn
+      SATURN_DB_NAME: saturn
+
+volumes:
+  db-data:

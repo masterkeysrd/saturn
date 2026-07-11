@@ -2,6 +2,21 @@
 name: saturn
 
 services:
+  db:
+    extends:
+      file: ./postgres.yaml
+      service: db
+
+  pgweb:
+    extends:
+      file: ./postgres.yaml
+      service: pgweb
+
+  migrate:
+    extends:
+      file: ./postgres.yaml
+      service: migrate
+
   saturn:
     build:
       context: ../..
@@ -9,12 +24,20 @@ services:
     image: saturn:latest
     restart: unless-stopped
     ports:
-         - "8080:8080"
+       - "8080:8080"
     environment:
+      SATURN_DB_HOST: db
+      SATURN_DB_PORT: "5432"
+      SATURN_DB_USER: saturn
+      SATURN_DB_PASSWORD: saturn
+      SATURN_DB_NAME: saturn
       SATURN_GATEWAY_ADDR: ":8080"
       SATURN_LOG_LEVEL: info
     volumes:
-         - saturn-data:/data
+       - saturn-data:/data
+    depends_on:
+      db:
+        condition: service_healthy
     develop:
       watch:
          - action: rebuild
@@ -28,4 +51,5 @@ services:
            target: /usr/local/bin/saturn
 
 volumes:
+  db-data:
   saturn-data:

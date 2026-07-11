@@ -1,10 +1,12 @@
 package app
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 
 	"github.com/masterkeysrd/saturn/internal/shutdown"
+	"github.com/masterkeysrd/saturn/migrations"
 	"github.com/spf13/cobra"
 )
 
@@ -34,6 +36,63 @@ func Execute() error {
 		},
 	}
 
+	migrateCmd := &cobra.Command{
+		Use:   "migrate",
+		Short: "Run database migrations",
+	}
+
+	migrateUpCmd := &cobra.Command{
+		Use:   "up",
+		Short: "Run all pending migrations",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			v := NewViper()
+			BindFlags(v, cmd.Flags())
+			cfg := LoadConfig(v)
+
+			db, err := OpenDB(cfg)
+			if err != nil {
+				return err
+			}
+			defer db.Close()
+
+			slog.Info("running migrations up")
+			if err := migrations.Migrate(db); err != nil {
+				return fmt.Errorf("migrate up: %w", err)
+			}
+			slog.Info("migrations applied")
+
+			return nil
+		},
+	}
+
+	migrateDownCmd := &cobra.Command{
+		Use:   "down",
+		Short: "Roll back all applied migrations",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			v := NewViper()
+			BindFlags(v, cmd.Flags())
+			cfg := LoadConfig(v)
+
+			db, err := OpenDB(cfg)
+			if err != nil {
+				return err
+			}
+			defer db.Close()
+
+			slog.Info("rolling back migrations")
+			if err := migrations.Down(db); err != nil {
+				return fmt.Errorf("migrate down: %w", err)
+			}
+			slog.Info("migrations rolled back")
+
+			return nil
+		},
+	}
+
+	migrateCmd.AddCommand(migrateUpCmd)
+	migrateCmd.AddCommand(migrateDownCmd)
+
 	rootCmd.AddCommand(serveCmd)
+	rootCmd.AddCommand(migrateCmd)
 	return rootCmd.Execute()
 }
