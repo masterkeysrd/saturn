@@ -24,6 +24,7 @@ func Execute() error {
 			v := NewViper()
 			BindFlags(v, cmd.Flags())
 			cfg := LoadConfig(v)
+			slog.Info("config loaded", "config", cfg)
 
 			mgr := shutdown.New(shutdown.WithTimeout(cfg.Shutdown.Timeout))
 			ctx, cancel := mgr.Init()

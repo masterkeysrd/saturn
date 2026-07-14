@@ -9,15 +9,7 @@ import (
 
 // OpenDB opens a connection to the configured database and pings it.
 func OpenDB(cfg *Config) (*sql.DB, error) {
-	dsn := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		cfg.DB.Host,
-		cfg.DB.Port,
-		cfg.DB.User,
-		cfg.DB.Password,
-		cfg.DB.Name,
-	)
-
+	dsn := cfg.DB.DSN()
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)

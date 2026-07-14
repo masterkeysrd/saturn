@@ -2,19 +2,25 @@ package app
 
 import (
 	"context"
-	"encoding/json"
+	"database/sql"
 	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
 	"os"
 
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/jmoiron/sqlx"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
+	"github.com/masterkeysrd/saturn/internal/application/iam"
+	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	identitystorage "github.com/masterkeysrd/saturn/internal/domain/identity/storage"
 	"github.com/masterkeysrd/saturn/internal/shutdown"
+	identitygrpc "github.com/masterkeysrd/saturn/internal/transport/identity"
 )
 
 // GRPCServer manages the standalone gRPC server listening on a Unix socket.
@@ -30,7 +36,7 @@ func NewGRPCServer(cfg *Config) *GRPCServer {
 
 // Start initializes the gRPC server, registers the Identity service, and
 // begins listening on the configured Unix socket.
-func (s *GRPCServer) Start(ctx context.Context, cfg *Config) error {
+func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	if err := os.Remove(cfg.GRPC.Socket); err != nil && !os.IsNotExist(err) {
 		slog.Warn("failed to remove stale socket file", "path", cfg.GRPC.Socket, "err", err)
 	}
@@ -41,8 +47,22 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config) error {
 		return fmt.Errorf("listen unix: %w", err)
 	}
 
+	// Wire IAM application
+	sqlxDB := sqlx.NewDb(db, "postgres")
+	userStore := identitystorage.NewUserStore(sqlxDB)
+	credentialStore := identitystorage.NewCredentialStore(sqlxDB)
+	identityService := identity.NewService(
+		identity.Dependencies{
+			UserStore:       userStore,
+			CredentialStore: credentialStore,
+		},
+	)
+	coordinator := iam.NewCoordinator(identityService)
+	iamApp := identitygrpc.NewIAMApplication(coordinator)
+	identityHandler := identitygrpc.NewHandler(iamApp)
+
 	s.grpc = grpc.NewServer()
-	identityv1.RegisterIdentityServer(s.grpc, &identityHandler{})
+	identityv1.RegisterIdentityServer(s.grpc, identityHandler)
 	return nil
 }
 
@@ -53,19 +73,11 @@ func (s *GRPCServer) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// identityHandler implements the IdentityServer interface.
-type identityHandler struct{}
-
-func (*identityHandler) LoginUser(ctx context.Context, req *identityv1.LoginUserRequest) (*identityv1.LoginUserResponse, error) {
-	return nil, nil
-}
-
 // GRPCGatewayServer manages the gRPC-Gateway HTTP server that proxies
 // REST calls into the gRPC backend over a Unix socket.
 type GRPCGatewayServer struct {
 	addr     string
-	mux      *http.ServeMux
-	client   identityv1.IdentityClient
+	mux      *runtime.ServeMux
 	grpcConn *grpc.ClientConn
 	server   *http.Server
 }
@@ -75,8 +87,8 @@ func NewGRPCGatewayServer(cfg *Config) *GRPCGatewayServer {
 	return &GRPCGatewayServer{addr: cfg.Gateway.Addr}
 }
 
-// Start connects to the gRPC backend via Unix socket, sets up the gateway
-// mux, and starts the HTTP server.
+// Start connects to the gRPC backend via Unix socket, registers the gRPC-Gateway
+// handlers, and starts the HTTP server.
 func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 	conn, err := grpc.NewClient("unix:"+cfg.GRPC.Socket,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -85,24 +97,11 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 		return fmt.Errorf("dial gRPC backend: %w", err)
 	}
 	s.grpcConn = conn
-	s.client = identityv1.NewIdentityClient(conn)
-	s.mux = http.NewServeMux()
+	s.mux = runtime.NewServeMux()
 
-	// Gateway handler: proxy identity calls to the gRPC backend.
-	s.mux.HandleFunc("POST /api/v1/identity/login", func(w http.ResponseWriter, r *http.Request) {
-		var req identityv1.LoginUserRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		resp, err := s.client.LoginUser(r.Context(), &req)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
-	})
+	if err := identityv1.RegisterIdentityHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
+		return fmt.Errorf("register gateway handler: %w", err)
+	}
 
 	s.server = &http.Server{Addr: s.addr, Handler: s.mux}
 	return nil
@@ -124,6 +123,13 @@ func StartAll(ctx context.Context, mgr *shutdown.Manager, cfg *Config) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	// Open database
+	db, err := OpenDB(cfg)
+	if err != nil {
+		return fmt.Errorf("open db: %w", err)
+	}
+	defer db.Close()
+
 	grpcSrv := NewGRPCServer(cfg)
 	gwSrv := NewGRPCGatewayServer(cfg)
 
@@ -131,7 +137,7 @@ func StartAll(ctx context.Context, mgr *shutdown.Manager, cfg *Config) error {
 	mgr.Register(grpcSrv.Shutdown)
 	mgr.Register(gwSrv.Shutdown)
 
-	if err := grpcSrv.Start(ctx, cfg); err != nil {
+	if err := grpcSrv.Start(ctx, cfg, db); err != nil {
 		return fmt.Errorf("grpc: %w", err)
 	}
 	if err := gwSrv.Start(ctx, cfg); err != nil {

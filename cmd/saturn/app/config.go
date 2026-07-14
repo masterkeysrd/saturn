@@ -1,8 +1,10 @@
 package app
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -17,6 +19,7 @@ const (
 	defaultDBName        = "saturn"
 	defaultGRPCSocket    = "/tmp/saturn-identity.sock"
 	defaultGatewayAddr   = ":8080"
+	defaultRoutePrefix   = "/api/v1"
 	defaultShutdownTime  = 10 * time.Second
 	defaultLogLevel      = "info"
 	defaultConfigName    = "saturn"
@@ -50,6 +53,11 @@ type DBConfig struct {
 	Name     string `mapstructure:"name"`
 }
 
+// DSN returns the PostgreSQL data source name for connecting to the database.
+func (c DBConfig) DSN() string {
+	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", c.User, c.Password, c.Host, c.Port, c.Name)
+}
+
 // GRPCConfig holds gRPC server settings.
 type GRPCConfig struct {
 	Socket string `mapstructure:"socket"`
@@ -57,7 +65,8 @@ type GRPCConfig struct {
 
 // GatewayConfig holds the HTTP gateway server settings.
 type GatewayConfig struct {
-	Addr string `mapstructure:"addr"`
+	Addr        string `mapstructure:"addr"`
+	RoutePrefix string `mapstructure:"route_prefix"`
 }
 
 // ShutdownConfig holds shutdown behavior settings.
@@ -78,8 +87,9 @@ func NewViper() *viper.Viper {
 	v.SetConfigType("yaml")
 	v.AddConfigPath(defaultConfigDir)
 	v.AddConfigPath(defaultConfigHomeDir)
-	v.AutomaticEnv()
 	v.SetEnvPrefix(defaultEnvPrefix)
+	v.AutomaticEnv()
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	v.SetDefault("db.host", defaultDBHost)
 	v.SetDefault("db.port", defaultDBPort)
@@ -89,6 +99,7 @@ func NewViper() *viper.Viper {
 
 	v.SetDefault("grpc.socket", defaultGRPCSocket)
 	v.SetDefault("gateway.addr", defaultGatewayAddr)
+	v.SetDefault("gateway.route_prefix", defaultRoutePrefix)
 	v.SetDefault("shutdown.timeout", defaultShutdownTime)
 	v.SetDefault("log.level", defaultLogLevel)
 

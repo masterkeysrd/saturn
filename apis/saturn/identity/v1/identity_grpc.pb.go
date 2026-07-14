@@ -19,7 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Identity_LoginUser_FullMethodName = "/saturn.identity.v1.Identity/LoginUser"
+	Identity_LoginUser_FullMethodName    = "/saturn.identity.v1.Identity/LoginUser"
+	Identity_RegisterUser_FullMethodName = "/saturn.identity.v1.Identity/RegisterUser"
 )
 
 // IdentityClient is the client API for Identity service.
@@ -30,6 +31,8 @@ const (
 type IdentityClient interface {
 	// LoginUser authenticates a user and returns a session token.
 	LoginUser(ctx context.Context, in *LoginUserRequest, opts ...grpc.CallOption) (*LoginUserResponse, error)
+	// RegisterUser creates a new user account.
+	RegisterUser(ctx context.Context, in *RegisterUserRequest, opts ...grpc.CallOption) (*User, error)
 }
 
 type identityClient struct {
@@ -50,6 +53,16 @@ func (c *identityClient) LoginUser(ctx context.Context, in *LoginUserRequest, op
 	return out, nil
 }
 
+func (c *identityClient) RegisterUser(ctx context.Context, in *RegisterUserRequest, opts ...grpc.CallOption) (*User, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(User)
+	err := c.cc.Invoke(ctx, Identity_RegisterUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // IdentityServer is the server API for Identity service.
 // All implementations should embed UnimplementedIdentityServer
 // for forward compatibility.
@@ -58,6 +71,8 @@ func (c *identityClient) LoginUser(ctx context.Context, in *LoginUserRequest, op
 type IdentityServer interface {
 	// LoginUser authenticates a user and returns a session token.
 	LoginUser(context.Context, *LoginUserRequest) (*LoginUserResponse, error)
+	// RegisterUser creates a new user account.
+	RegisterUser(context.Context, *RegisterUserRequest) (*User, error)
 }
 
 // UnimplementedIdentityServer should be embedded to have
@@ -69,6 +84,9 @@ type UnimplementedIdentityServer struct{}
 
 func (UnimplementedIdentityServer) LoginUser(context.Context, *LoginUserRequest) (*LoginUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method LoginUser not implemented")
+}
+func (UnimplementedIdentityServer) RegisterUser(context.Context, *RegisterUserRequest) (*User, error) {
+	return nil, status.Error(codes.Unimplemented, "method RegisterUser not implemented")
 }
 func (UnimplementedIdentityServer) testEmbeddedByValue() {}
 
@@ -108,6 +126,24 @@ func _Identity_LoginUser_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Identity_RegisterUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegisterUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).RegisterUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_RegisterUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).RegisterUser(ctx, req.(*RegisterUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Identity_ServiceDesc is the grpc.ServiceDesc for Identity service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -118,6 +154,10 @@ var Identity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "LoginUser",
 			Handler:    _Identity_LoginUser_Handler,
+		},
+		{
+			MethodName: "RegisterUser",
+			Handler:    _Identity_RegisterUser_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

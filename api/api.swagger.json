@@ -1,0 +1,242 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "saturn/identity/v1/identity.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "Identity"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/identity/login": {
+      "post": {
+        "summary": "LoginUser authenticates a user and returns a session token.",
+        "operationId": "Identity_LoginUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LoginUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "LoginUserRequest contains user credentials for authentication.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1LoginUserRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
+    "/v1/identity/users": {
+      "post": {
+        "summary": "RegisterUser creates a new user account.",
+        "operationId": "Identity_RegisterUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1User"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "RegisterUserRequest contains the fields for creating a new user account.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RegisterUserRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "LoginUserRequestUserPassword": {
+      "type": "object",
+      "properties": {
+        "identifier": {
+          "type": "string",
+          "description": "Username or email of the user."
+        },
+        "password": {
+          "type": "string",
+          "description": "Password of the user."
+        }
+      },
+      "description": "UserPassword authentication method.",
+      "required": [
+        "identifier",
+        "password"
+      ]
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1LoginUserRequest": {
+      "type": "object",
+      "properties": {
+        "userPassword": {
+          "$ref": "#/definitions/LoginUserRequestUserPassword",
+          "description": "UserPassword authentication method."
+        }
+      },
+      "description": "LoginUserRequest contains user credentials for authentication."
+    },
+    "v1LoginUserResponse": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The user's unique identifier."
+        },
+        "token": {
+          "type": "string",
+          "description": "The session token for authenticated requests."
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "int64",
+          "description": "Expiration time of the session token."
+        }
+      },
+      "description": "LoginUserResponse contains the authentication result."
+    },
+    "v1RegisterUserRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "The user's email address."
+        },
+        "username": {
+          "type": "string",
+          "description": "The user's chosen username."
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's display name."
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "The user's avatar URL (optional)."
+        },
+        "password": {
+          "type": "string",
+          "description": "The user's password for authentication."
+        }
+      },
+      "description": "RegisterUserRequest contains the fields for creating a new user account.",
+      "required": [
+        "email",
+        "username",
+        "name",
+        "password"
+      ]
+    },
+    "v1User": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The user's unique identifier."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address."
+        },
+        "username": {
+          "type": "string",
+          "description": "The user's chosen username."
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's display name."
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "The user's avatar URL."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the user account."
+        },
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "The optimistic locking version."
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The creation timestamp."
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The last update timestamp."
+        }
+      },
+      "description": "User represents a registered user in the system."
+    }
+  }
+}

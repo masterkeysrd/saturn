@@ -2,10 +2,11 @@ syntax = "proto3";
 
 package saturn.identity.v1;
 
-option go_package = "github.com/masterkeysrd/saturn/apis/saturn/identity/v1;identityv1";
-
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/masterkeysrd/saturn/apis/saturn/identity/v1;identityv1";
 
 // Identity service provides user authentication and account management.
 service Identity {
@@ -13,6 +14,14 @@ service Identity {
   rpc LoginUser(LoginUserRequest) returns (LoginUserResponse) {
     option (google.api.http) = {
       post: "/api/v1/identity/login"
+      body: "*"
+    };
+  }
+
+  // RegisterUser creates a new user account.
+  rpc RegisterUser(RegisterUserRequest) returns (User) {
+    option (google.api.http) = {
+      post: "/v1/identity/users"
       body: "*"
     };
   }
@@ -42,4 +51,40 @@ message LoginUserResponse {
   string token = 2;
   // Expiration time of the session token.
   int64 expires_at = 3;
+}
+
+// RegisterUserRequest contains the fields for creating a new user account.
+message RegisterUserRequest {
+  // The user's email address.
+  string email = 1 [(google.api.field_behavior) = REQUIRED];
+  // The user's chosen username.
+  string username = 2 [(google.api.field_behavior) = REQUIRED];
+  // The user's display name.
+  string name = 3 [(google.api.field_behavior) = REQUIRED];
+  // The user's avatar URL (optional).
+  string avatar_url = 4;
+  // The user's password for authentication.
+  string password = 5 [(google.api.field_behavior) = REQUIRED];
+}
+
+// User represents a registered user in the system.
+message User {
+  // The user's unique identifier.
+  string id = 1;
+  // The user's email address.
+  string email = 2;
+  // The user's chosen username.
+  string username = 3;
+  // The user's display name.
+  string name = 4;
+  // The user's avatar URL.
+  string avatar_url = 5;
+  // The current status of the user account.
+  string status = 6;
+  // The optimistic locking version.
+  int64 version = 9;
+   // The creation timestamp.
+  google.protobuf.Timestamp create_time = 7;
+   // The last update timestamp.
+  google.protobuf.Timestamp update_time = 8;
 }
