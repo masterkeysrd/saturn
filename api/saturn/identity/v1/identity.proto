@@ -83,8 +83,8 @@ message User {
   string status = 6;
   // The optimistic locking version.
   int64 version = 9;
-   // The creation timestamp.
+  // The creation timestamp.
   google.protobuf.Timestamp create_time = 7;
-   // The last update timestamp.
+  // The last update timestamp.
   google.protobuf.Timestamp update_time = 8;
 }

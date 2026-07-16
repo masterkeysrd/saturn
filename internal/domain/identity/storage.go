@@ -21,6 +21,9 @@ type UserStore interface {
 
 	// Delete removes a user by their unique ID.
 	Delete(ctx context.Context, id UserID) error
+
+	// GetUsers returns users with optional filtering and pagination.
+	GetUsers(ctx context.Context, filter *ListUsersFilter) ([]*User, string, error)
 }
 
 // UserCredentialStore defines the interface for user credential persistence operations.

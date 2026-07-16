@@ -9,10 +9,10 @@ import (
 
 // AdminCreateUserRequest represents the input for admin user creation.
 type AdminCreateUserRequest struct {
-	Email     string
-	Username  string
-	Name      string
-	Password  string
+	Email       string
+	Username    string
+	Name        string
+	Password    string
 	AccessLevel identity.AccessLevel
 }
 

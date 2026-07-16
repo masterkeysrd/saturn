@@ -22,4 +22,10 @@ func NewCoordinator(identityService IdentityService) *Coordinator {
 type IdentityService interface {
 	CreateUser(ctx context.Context, user *identity.User) error
 	CreateCredential(ctx context.Context, credential *identity.Credential) error
+	GetUserByID(ctx context.Context, id identity.UserID) (*identity.User, error)
+	UpdateUser(ctx context.Context, user *identity.User) error
+	ListUsers(ctx context.Context, filter *identity.ListUsersFilter) ([]*identity.User, string, error)
+	ApproveUser(ctx context.Context, userID identity.UserID) (*identity.User, error)
+	RejectUser(ctx context.Context, userID identity.UserID) (*identity.User, error)
+	UpdateUserRole(ctx context.Context, userID identity.UserID, accessLevel identity.AccessLevel) (*identity.User, error)
 }

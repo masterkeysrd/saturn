@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package saturn.identity.admin.v1;
+
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/masterkeysrd/saturn/apis/saturn/identity/admin/v1;adminidentityv1";
+
+// AdminIdentity provides administrative operations for user management.
+service AdminIdentity {
+  // ListUsers returns users with optional filtering by status or search query.
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {
+    option (google.api.http) = {get: "/v1/admin/identity/users"};
+  }
+
+  // ApproveUser activates a pending user account.
+  rpc ApproveUser(ApproveUserRequest) returns (ApproveUserResponse) {
+    option (google.api.http) = {
+      post: "/v1/admin/identity/users/{user_id}:approve"
+      body: "*"
+    };
+  }
+
+  // RejectUser deactivates a pending user account.
+  rpc RejectUser(RejectUserRequest) returns (ApproveUserResponse) {
+    option (google.api.http) = {
+      post: "/v1/admin/identity/users/{user_id}:reject"
+      body: "*"
+    };
+  }
+
+  // UpdateUserRole changes a user's access level.
+  rpc UpdateUserRole(UpdateUserRoleRequest) returns (UpdateUserRoleResponse) {
+    option (google.api.http) = {
+      patch: "/v1/admin/identity/users/{user_id}"
+      body: "*"
+    };
+  }
+}
+
+message ListUsersRequest {
+  enum StatusFilter {
+    STATUS_FILTER_UNSPECIFIED = 0;
+    ACTIVE = 1;
+    PENDING_APPROVAL = 2;
+    INACTIVE = 3;
+    SUSPENDED = 4;
+  }
+
+  int32 page_size = 1; // default 20, max 100
+  string next_page_token = 2; // cursor-based pagination token
+  StatusFilter status_filter = 3; // optional: filter by user status
+  string search_query = 4; // optional: search across email/username/name
+}
+
+message ListUsersResponse {
+  repeated User users = 1;
+  string next_page_token = 2; // empty if no more pages
+}
+
+message ApproveUserRequest {
+  string user_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message RejectUserRequest {
+  string user_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message UpdateUserRoleRequest {
+  string user_id = 1 [(google.api.field_behavior) = REQUIRED];
+  AccessLevel access_level = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+enum AccessLevel {
+  ACCESS_LEVEL_UNSPECIFIED = 0;
+  ACCESS_LEVEL_USER = 1;
+  ACCESS_LEVEL_ADMIN = 2;
+}
+
+message UpdateUserRoleResponse {
+  User user = 1;
+}
+
+message ApproveUserResponse {
+  User user = 1;
+}
+
+// Shared user message — mirrors the v1.User but scoped to admin context.
+message User {
+  string id = 1;
+  string email = 2;
+  string username = 3;
+  string name = 4;
+  string avatar_url = 5;
+  string status = 6;
+  AccessLevel access_level = 7;
+  int64 version = 8;
+  google.protobuf.Timestamp create_time = 9;
+  google.protobuf.Timestamp update_time = 10;
+}

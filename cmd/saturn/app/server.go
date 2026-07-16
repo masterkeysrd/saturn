@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
+	admingrpc "github.com/masterkeysrd/saturn/apis/saturn/identity/admin/v1"
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
 	"github.com/masterkeysrd/saturn/internal/application/iam"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
@@ -64,6 +65,10 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 
 	s.grpc = grpc.NewServer()
 	identityv1.RegisterIdentityServer(s.grpc, identityHandler)
+
+	// Wire admin identity service
+	adminHandler := identitygrpc.NewAdminHandler(coordinator)
+	admingrpc.RegisterAdminIdentityServer(s.grpc, adminHandler)
 	return nil
 }
 
@@ -110,16 +115,19 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 		return fmt.Errorf("register gateway handler: %w", err)
 	}
 
-	s.server = &http.Server{Addr: s.addr, Handler: s.mux}
+	if err := admingrpc.RegisterAdminIdentityHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
+		return fmt.Errorf("register admin gateway handler: %w", err)
+	}
+
+	handler := http.NewServeMux()
+	handler.Handle("/api/v1/", apiV1Handler(s.mux))
 	if s.swaggerEnabled {
 		swaggerPath := strings.TrimRight(s.swaggerPath, "/") + "/"
 		swaggerJSONPath := swaggerPath + "api.swagger.json"
-		swaggerUI := SwaggerHandler(swaggerJSONPath)
-		handler := http.NewServeMux()
-		handler.Handle(swaggerPath, swaggerUI)
-		handler.Handle("/", s.mux)
-		s.server.Handler = handler
+		handler.Handle(swaggerPath, SwaggerHandler(swaggerJSONPath))
 	}
+
+	s.server = &http.Server{Addr: s.addr, Handler: handler}
 	return nil
 }
 

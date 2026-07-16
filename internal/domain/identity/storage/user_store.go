@@ -3,7 +3,11 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
 
@@ -139,4 +143,82 @@ func (s *UserStore) Delete(ctx context.Context, id identity.UserID) error {
 		return errors.New("delete failed: user not found")
 	}
 	return nil
+}
+
+// GetUsers returns users with optional filtering by status and search query, using a filter struct for clarity.
+// Returns a slice of users, a next page token for cursor-based pagination, and any error.
+func (s *UserStore) GetUsers(ctx context.Context, filter *identity.ListUsersFilter) ([]*identity.User, string, error) {
+	if filter.PageSize <= 0 || filter.PageSize > 100 {
+		filter.PageSize = 20
+	}
+
+	conditions := []string{}
+	args := []any{}
+	argIndex := 1
+
+	if filter.StatusFilter != "" {
+		conditions = append(conditions, fmt.Sprintf("status = $%d", argIndex))
+		args = append(args, string(filter.StatusFilter))
+		argIndex++
+	}
+
+	if filter.SearchQuery != "" {
+		searchPattern := "%" + filter.SearchQuery + "%"
+		conditions = append(conditions, fmt.Sprintf("(email ILIKE $%d OR username ILIKE $%d OR name ILIKE $%d)", argIndex, argIndex+1, argIndex+2))
+		args = append(args, searchPattern, searchPattern, searchPattern)
+		argIndex += 3
+	}
+
+	if filter.NextPageToken != "" {
+		var cursor map[string]any
+		if err := json.Unmarshal([]byte(filter.NextPageToken), &cursor); err == nil {
+			if email, ok := cursor["email"].(string); ok && email != "" {
+				conditions = append(conditions, fmt.Sprintf("(email < $%d OR (email = $%d AND id < $%d))", argIndex, argIndex+1, argIndex+2))
+				args = append(args, email, email)
+				if userID, ok := cursor["id"].(string); ok && userID != "" {
+					args = append(args, userID)
+				} else {
+					args = append(args, "") // placeholder for id comparison
+				}
+				argIndex += 3
+			}
+		}
+	}
+
+	query := `SELECT * FROM identity.user`
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+	query += fmt.Sprintf(` ORDER BY create_time DESC LIMIT $%d`, argIndex)
+	args = append(args, filter.PageSize+1) // fetch one extra to detect if there are more pages
+
+	var dbUsers []userDB
+	if err := s.db.SelectContext(ctx, &dbUsers, query, args...); err != nil {
+		return nil, "", err
+	}
+
+	hasMore := len(dbUsers) > int(filter.PageSize)
+	if hasMore {
+		dbUsers = dbUsers[:filter.PageSize]
+	}
+
+	users := make([]*identity.User, 0, len(dbUsers))
+	for i := range dbUsers {
+		users = append(users, toDomainUser(&dbUsers[i]))
+	}
+
+	var nextToken string
+	if hasMore && len(dbUsers) > 0 {
+		lastUser := dbUsers[len(dbUsers)-1]
+		cursor := map[string]any{
+			"email": lastUser.Email,
+			"id":    lastUser.ID,
+		}
+		tokenBytes, err := json.Marshal(cursor)
+		if err == nil {
+			nextToken = base64.URLEncoding.EncodeToString(tokenBytes)
+		}
+	}
+
+	return users, nextToken, nil
 }

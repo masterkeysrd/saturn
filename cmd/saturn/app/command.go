@@ -5,12 +5,12 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/application/iam"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	identitystorage "github.com/masterkeysrd/saturn/internal/domain/identity/storage"
 	"github.com/masterkeysrd/saturn/internal/shutdown"
 	"github.com/masterkeysrd/saturn/migrations"
-	"github.com/jmoiron/sqlx"
 	"github.com/spf13/cobra"
 )
 

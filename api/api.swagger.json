@@ -1,10 +1,13 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "saturn/identity/v1/identity.proto",
+    "title": "saturn/identity/admin/v1/admin_identity.proto",
     "version": "version not set"
   },
   "tags": [
+    {
+      "name": "AdminIdentity"
+    },
     {
       "name": "Identity"
     }
@@ -50,6 +53,183 @@
         ]
       }
     },
+    "/v1/admin/identity/users": {
+      "get": {
+        "summary": "ListUsers returns users with optional filtering by status or search query.",
+        "operationId": "AdminIdentity_ListUsers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListUsersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pageSize",
+            "description": "default 20, max 100",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "nextPageToken",
+            "description": "cursor-based pagination token",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "statusFilter",
+            "description": "optional: filter by user status",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "PENDING_APPROVAL",
+              "INACTIVE",
+              "SUSPENDED"
+            ]
+          },
+          {
+            "name": "searchQuery",
+            "description": "optional: search across email/username/name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AdminIdentity"
+        ]
+      }
+    },
+    "/v1/admin/identity/users/{userId}": {
+      "patch": {
+        "summary": "UpdateUserRole changes a user's access level.",
+        "operationId": "AdminIdentity_UpdateUserRole",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateUserRoleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AdminIdentityUpdateUserRoleBody"
+            }
+          }
+        ],
+        "tags": [
+          "AdminIdentity"
+        ]
+      }
+    },
+    "/v1/admin/identity/users/{userId}:approve": {
+      "post": {
+        "summary": "ApproveUser activates a pending user account.",
+        "operationId": "AdminIdentity_ApproveUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ApproveUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AdminIdentityApproveUserBody"
+            }
+          }
+        ],
+        "tags": [
+          "AdminIdentity"
+        ]
+      }
+    },
+    "/v1/admin/identity/users/{userId}:reject": {
+      "post": {
+        "summary": "RejectUser deactivates a pending user account.",
+        "operationId": "AdminIdentity_RejectUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ApproveUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AdminIdentityRejectUserBody"
+            }
+          }
+        ],
+        "tags": [
+          "AdminIdentity"
+        ]
+      }
+    },
     "/v1/identity/users": {
       "post": {
         "summary": "RegisterUser creates a new user account.",
@@ -58,7 +238,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1User"
+              "$ref": "#/definitions/saturnIdentityV1User"
             }
           },
           "default": {
@@ -86,6 +266,32 @@
     }
   },
   "definitions": {
+    "AdminIdentityApproveUserBody": {
+      "type": "object"
+    },
+    "AdminIdentityRejectUserBody": {
+      "type": "object"
+    },
+    "AdminIdentityUpdateUserRoleBody": {
+      "type": "object",
+      "properties": {
+        "accessLevel": {
+          "$ref": "#/definitions/v1AccessLevel"
+        }
+      },
+      "required": [
+        "accessLevel"
+      ]
+    },
+    "ListUsersRequestStatusFilter": {
+      "type": "string",
+      "enum": [
+        "ACTIVE",
+        "PENDING_APPROVAL",
+        "INACTIVE",
+        "SUSPENDED"
+      ]
+    },
     "LoginUserRequestUserPassword": {
       "type": "object",
       "properties": {
@@ -103,6 +309,45 @@
         "identifier",
         "password"
       ]
+    },
+    "identityAdminV1User": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "avatarUrl": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "accessLevel": {
+          "$ref": "#/definitions/v1AccessLevel"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "Shared user message — mirrors the v1.User but scoped to admin context."
     },
     "protobufAny": {
       "type": "object",
@@ -129,6 +374,82 @@
             "type": "object",
             "$ref": "#/definitions/protobufAny"
           }
+        }
+      }
+    },
+    "saturnIdentityV1User": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The user's unique identifier."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address."
+        },
+        "username": {
+          "type": "string",
+          "description": "The user's chosen username."
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's display name."
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "The user's avatar URL."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the user account."
+        },
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "The optimistic locking version."
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The creation timestamp."
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The last update timestamp."
+        }
+      },
+      "description": "User represents a registered user in the system."
+    },
+    "v1AccessLevel": {
+      "type": "string",
+      "enum": [
+        "ACCESS_LEVEL_USER",
+        "ACCESS_LEVEL_ADMIN"
+      ]
+    },
+    "v1ApproveUserResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/identityAdminV1User"
+        }
+      }
+    },
+    "v1ListUsersResponse": {
+      "type": "object",
+      "properties": {
+        "users": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/identityAdminV1User"
+          }
+        },
+        "nextPageToken": {
+          "type": "string",
+          "title": "empty if no more pages"
         }
       }
     },
@@ -193,50 +514,13 @@
         "password"
       ]
     },
-    "v1User": {
+    "v1UpdateUserRoleResponse": {
       "type": "object",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "The user's unique identifier."
-        },
-        "email": {
-          "type": "string",
-          "description": "The user's email address."
-        },
-        "username": {
-          "type": "string",
-          "description": "The user's chosen username."
-        },
-        "name": {
-          "type": "string",
-          "description": "The user's display name."
-        },
-        "avatarUrl": {
-          "type": "string",
-          "description": "The user's avatar URL."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the user account."
-        },
-        "version": {
-          "type": "string",
-          "format": "int64",
-          "description": "The optimistic locking version."
-        },
-        "createTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The creation timestamp."
-        },
-        "updateTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The last update timestamp."
+        "user": {
+          "$ref": "#/definitions/identityAdminV1User"
         }
-      },
-      "description": "User represents a registered user in the system."
+      }
     }
   }
 }
