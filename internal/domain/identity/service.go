@@ -29,6 +29,7 @@ type CredentialStoreProvider interface {
 	GetByUserID(ctx context.Context, userID UserID) ([]*Credential, error)
 	GetByUserIDAndAuthType(ctx context.Context, userID UserID, authType string) (*Credential, error)
 	Delete(ctx context.Context, userID UserID, authType string) error
+	Update(ctx context.Context, credential *Credential) error
 }
 
 // Dependencies holds all storage interfaces required by the Service.
@@ -74,6 +75,11 @@ func (s *Service) CreateCredential(ctx context.Context, credential *Credential) 
 	}
 
 	return s.deps.CredentialStore.Create(ctx, credential)
+}
+
+// UpdateCredential replaces the secret_data for an existing credential.
+func (s *Service) UpdateCredential(ctx context.Context, credential *Credential) error {
+	return s.deps.CredentialStore.Update(ctx, credential)
 }
 
 // GetUserByID retrieves a user by their ID. Returns ErrUserNotFound if not found.

@@ -13,7 +13,7 @@ service Identity {
   // LoginUser authenticates a user and returns a session token.
   rpc LoginUser(LoginUserRequest) returns (LoginUserResponse) {
     option (google.api.http) = {
-      post: "/api/v1/identity/login"
+      post: "/v1/identity/login"
       body: "*"
     };
   }

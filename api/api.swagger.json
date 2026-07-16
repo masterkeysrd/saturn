@@ -19,40 +19,6 @@
     "application/json"
   ],
   "paths": {
-    "/api/v1/identity/login": {
-      "post": {
-        "summary": "LoginUser authenticates a user and returns a session token.",
-        "operationId": "Identity_LoginUser",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1LoginUserResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "description": "LoginUserRequest contains user credentials for authentication.",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1LoginUserRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Identity"
-        ]
-      }
-    },
     "/v1/admin/identity/users": {
       "get": {
         "summary": "ListUsers returns users with optional filtering by status or search query.",
@@ -227,6 +193,40 @@
         ],
         "tags": [
           "AdminIdentity"
+        ]
+      }
+    },
+    "/v1/identity/login": {
+      "post": {
+        "summary": "LoginUser authenticates a user and returns a session token.",
+        "operationId": "Identity_LoginUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LoginUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "LoginUserRequest contains user credentials for authentication.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1LoginUserRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Identity"
         ]
       }
     },

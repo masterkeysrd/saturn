@@ -21,6 +21,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/application/iam"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	identitystorage "github.com/masterkeysrd/saturn/internal/domain/identity/storage"
+	"github.com/masterkeysrd/saturn/internal/platform/password"
 	"github.com/masterkeysrd/saturn/internal/shutdown"
 	identitygrpc "github.com/masterkeysrd/saturn/internal/transport/identity"
 )
@@ -59,7 +60,11 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 			CredentialStore: credentialStore,
 		},
 	)
-	coordinator := iam.NewCoordinator(identityService)
+	passwordHasher, err := password.NewArgon2id(password.DefaultParams())
+	if err != nil {
+		return fmt.Errorf("create password hasher: %w", err)
+	}
+	coordinator := iam.NewCoordinator(identityService, passwordHasher)
 	iamApp := identitygrpc.NewIAMApplication(coordinator)
 	identityHandler := identitygrpc.NewHandler(iamApp)
 

@@ -2,6 +2,7 @@ package iam
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
@@ -38,12 +39,19 @@ func (c *Coordinator) AdminCreateUser(ctx context.Context, req *AdminCreateUserR
 		return nil, err
 	}
 
-	// 2. Determine status based on access level
+	// 2. Hash password before creating user
+	encodedHash, err := c.passwordHasher.Hash(req.Password)
+	if err != nil {
+		return nil, fmt.Errorf("hash password: %w", err)
+	}
+
+	// 3. Determine status based on access level
 	status := identity.UserStatusPendingApproval
 	if req.AccessLevel == identity.AccessLevelAdmin {
 		status = identity.UserStatusActive
 	}
 
+	// 4. Create user
 	user := &identity.User{
 		ID:          userID,
 		Email:       req.Email,
@@ -59,18 +67,18 @@ func (c *Coordinator) AdminCreateUser(ctx context.Context, req *AdminCreateUserR
 		return nil, err
 	}
 
-	// 3. Create credential (password)
+	// 5. Create credential with hashed password
 	credential := &identity.Credential{
 		UserID:     userID,
 		AuthType:   "password",
-		SecretData: req.Password,
+		SecretData: encodedHash,
 	}
 
 	if err := c.identityService.CreateCredential(ctx, credential); err != nil {
 		return nil, err
 	}
 
-	// 4. Return the response
+	// 6. Return the response
 	return &AdminCreateUserResponse{
 		UserID:      string(userID),
 		Email:       user.Email,

@@ -2,9 +2,13 @@ package identity
 
 import (
 	"context"
+	"errors"
 
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
 	"github.com/masterkeysrd/saturn/internal/application/iam"
+	"github.com/masterkeysrd/saturn/internal/platform/password"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -49,7 +53,10 @@ func (h *Handler) RegisterUser(ctx context.Context, req *identityv1.RegisterUser
 
 	appResp, err := h.IAM.Coordinator.Register(ctx, appReq)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, password.ErrInvalidPassword) {
+				return nil, status.Error(codes.InvalidArgument, "password must be at least 12 characters long")
+				}
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &identityv1.User{

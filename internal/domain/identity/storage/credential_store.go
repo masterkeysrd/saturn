@@ -93,3 +93,21 @@ func (s *CredentialStore) Delete(ctx context.Context, userID identity.UserID, au
 	}
 	return nil
 }
+
+// Update replaces the secret_data for an existing credential.
+func (s *CredentialStore) Update(ctx context.Context, credential *identity.Credential) error {
+	db := toDBCredential(credential)
+	query := `UPDATE identity.user_credentials SET secret_data = $3 WHERE user_id = $1 AND auth_type = $2`
+	result, err := s.db.ExecContext(ctx, query, db.UserID, db.AuthType, db.SecretData)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return errors.New("update failed: credential not found")
+	}
+	return nil
+}

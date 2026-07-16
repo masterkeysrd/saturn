@@ -9,6 +9,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/application/iam"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	identitystorage "github.com/masterkeysrd/saturn/internal/domain/identity/storage"
+	"github.com/masterkeysrd/saturn/internal/platform/password"
 	"github.com/masterkeysrd/saturn/internal/shutdown"
 	"github.com/masterkeysrd/saturn/migrations"
 	"github.com/spf13/cobra"
@@ -124,7 +125,11 @@ func Execute() error {
 				UserStore:       userStore,
 				CredentialStore: credentialStore,
 			})
-			coordinator := iam.NewCoordinator(identityService)
+			passwordHasher, err := password.NewArgon2id(password.DefaultParams())
+			if err != nil {
+				return fmt.Errorf("create password hasher: %w", err)
+			}
+			coordinator := iam.NewCoordinator(identityService, passwordHasher)
 
 			email, _ := cmd.Flags().GetString("email")
 			username, _ := cmd.Flags().GetString("username")

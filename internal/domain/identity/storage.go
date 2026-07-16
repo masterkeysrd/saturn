@@ -39,4 +39,7 @@ type UserCredentialStore interface {
 
 	// Delete removes a credential for a user.
 	Delete(ctx context.Context, userID UserID, authType string) error
+
+	// Update replaces the secret_data for an existing credential.
+	Update(ctx context.Context, credential *Credential) error
 }
