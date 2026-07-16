@@ -5,6 +5,7 @@ import (
 
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
 	"github.com/masterkeysrd/saturn/internal/application/iam"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // IAMApplication holds the identity application layer.
@@ -52,11 +53,14 @@ func (h *Handler) RegisterUser(ctx context.Context, req *identityv1.RegisterUser
 	}
 
 	return &identityv1.User{
-		Id:        appResp.UserID,
-		Email:     appResp.Email,
-		Username:  appResp.Username,
-		Name:      appResp.Name,
-		AvatarUrl: appResp.AvatarURL,
-		Status:    string(appResp.Status),
+		Id:         appResp.UserID,
+		Email:      appResp.Email,
+		Username:   appResp.Username,
+		Name:       appResp.Name,
+		AvatarUrl:  appResp.AvatarURL,
+		Status:     string(appResp.Status),
+		Version:    appResp.Version,
+		CreateTime: timestamppb.New(appResp.CreateTime),
+		UpdateTime: timestamppb.New(appResp.UpdateTime),
 	}, nil
 }

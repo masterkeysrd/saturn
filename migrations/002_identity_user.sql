@@ -1,8 +1,8 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE identity.user (
-    id          UUID PRIMARY KEY,
-    email       VARCHAR(255) NOT NULL,
+    id          TEXT         COLLATE "C" PRIMARY KEY,
+    email       VARCHAR(255) NOT NULL UNIQUE,
     username    VARCHAR(100) NOT NULL UNIQUE,
     name        VARCHAR(255) NOT NULL,
     avatar_url  TEXT,

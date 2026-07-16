@@ -68,7 +68,8 @@ func (s *UserStore) Create(ctx context.Context, user *identity.User) error {
 	db := toDBUser(user)
 	query := `INSERT INTO identity.user (id, email, username, name, avatar_url, status, version, create_time, update_time)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`
-	return s.db.GetContext(ctx, &db.ID, query, db.ID, db.Email, db.Username, db.Name, db.AvatarURL, db.Status, db.Version)
+	_, err := s.db.ExecContext(ctx, query, db.ID, db.Email, db.Username, db.Name, db.AvatarURL, db.Status, db.Version)
+	return err
 }
 
 // GetByID retrieves a user by their unique ID.

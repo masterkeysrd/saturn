@@ -18,12 +18,15 @@ type RegisterUserRequest struct {
 
 // RegisterUserResponse represents the output after user registration.
 type RegisterUserResponse struct {
-	UserID    string
-	Email     string
-	Username  string
-	Name      string
-	AvatarURL string
-	Status    identity.UserStatus
+	UserID     string
+	Email      string
+	Username   string
+	Name       string
+	AvatarURL  string
+	Status     identity.UserStatus
+	Version    int64
+	CreateTime time.Time
+	UpdateTime time.Time
 }
 
 // Register handles the registration flow: creates user, creates credential, returns response.
@@ -63,11 +66,14 @@ func (c *Coordinator) Register(ctx context.Context, req *RegisterUserRequest) (*
 
 	// 4. Return the response
 	return &RegisterUserResponse{
-		UserID:    string(userID),
-		Email:     user.Email,
-		Username:  user.Username,
-		Name:      user.Name,
-		AvatarURL: user.AvatarURL,
-		Status:    user.Status,
+		UserID:     string(userID),
+		Email:      user.Email,
+		Username:   user.Username,
+		Name:       user.Name,
+		AvatarURL:  user.AvatarURL,
+		Status:     user.Status,
+		Version:    user.Version,
+		CreateTime: user.CreateTime,
+		UpdateTime: user.UpdateTime,
 	}, nil
 }
