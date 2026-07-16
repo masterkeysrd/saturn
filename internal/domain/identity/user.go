@@ -11,22 +11,32 @@ import (
 type UserStatus string
 
 const (
-	UserStatusActive    UserStatus = "active"
-	UserStatusInactive  UserStatus = "inactive"
-	UserStatusSuspended UserStatus = "suspended"
+	UserStatusActive          UserStatus = "active"
+	UserStatusPendingApproval UserStatus = "pending_approval"
+	UserStatusInactive        UserStatus = "inactive"
+	UserStatusSuspended       UserStatus = "suspended"
+)
+
+// AccessLevel defines the level of access a user has within the system.
+type AccessLevel string
+
+const (
+	AccessLevelAdmin AccessLevel = "admin"
+	AccessLevelUser  AccessLevel = "user"
 )
 
 // User represents a registered user in the system.
 type User struct {
-	ID         UserID     `json:"id"`
-	Email      string     `json:"email"`
-	Username   string     `json:"username"`
-	Name       string     `json:"name"`
-	AvatarURL  string     `json:"avatar_url,omitempty"`
-	Status     UserStatus `json:"status"`
-	Version    int64      `json:"version"`
-	CreateTime time.Time  `json:"create_time"`
-	UpdateTime time.Time  `json:"update_time"`
+	ID          UserID     `json:"id"`
+	Email       string     `json:"email"`
+	Username    string     `json:"username"`
+	Name        string     `json:"name"`
+	AvatarURL   string     `json:"avatar_url,omitempty"`
+	Status      UserStatus `json:"status"`
+	AccessLevel AccessLevel `json:"access_level"`
+	Version     int64      `json:"version"`
+	CreateTime  time.Time  `json:"create_time"`
+	UpdateTime  time.Time  `json:"update_time"`
 }
 
 const userIDPrefix = "usr_"

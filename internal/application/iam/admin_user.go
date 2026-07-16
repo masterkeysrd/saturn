@@ -7,22 +7,21 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 )
 
-// RegisterUserRequest represents the input for user registration.
-type RegisterUserRequest struct {
+// AdminCreateUserRequest represents the input for admin user creation.
+type AdminCreateUserRequest struct {
 	Email     string
 	Username  string
 	Name      string
-	AvatarURL string
 	Password  string
+	AccessLevel identity.AccessLevel
 }
 
-// RegisterUserResponse represents the output after user registration.
-type RegisterUserResponse struct {
+// AdminCreateUserResponse represents the output after admin user creation.
+type AdminCreateUserResponse struct {
 	UserID      string               `json:"user_id"`
 	Email       string               `json:"email"`
 	Username    string               `json:"username"`
 	Name        string               `json:"name"`
-	AvatarURL   string               `json:"avatar_url,omitempty"`
 	Status      identity.UserStatus  `json:"status"`
 	AccessLevel identity.AccessLevel `json:"access_level"`
 	Version     int64                `json:"version"`
@@ -30,23 +29,28 @@ type RegisterUserResponse struct {
 	UpdateTime  time.Time            `json:"update_time"`
 }
 
-// Register handles the registration flow: creates user, creates credential, returns response.
-func (c *Coordinator) Register(ctx context.Context, req *RegisterUserRequest) (*RegisterUserResponse, error) {
+// AdminCreateUser creates a user by an admin. Users with admin access level are activated immediately,
+// while regular users start in pending_approval state.
+func (c *Coordinator) AdminCreateUser(ctx context.Context, req *AdminCreateUserRequest) (*AdminCreateUserResponse, error) {
 	// 1. Generate user ID
 	userID, err := identity.NewUserID()
 	if err != nil {
 		return nil, err
 	}
 
-	// 2. Create user
+	// 2. Determine status based on access level
+	status := identity.UserStatusPendingApproval
+	if req.AccessLevel == identity.AccessLevelAdmin {
+		status = identity.UserStatusActive
+	}
+
 	user := &identity.User{
 		ID:          userID,
 		Email:       req.Email,
 		Username:    req.Username,
 		Name:        req.Name,
-		AvatarURL:   req.AvatarURL,
-		Status:      identity.UserStatusPendingApproval,
-		AccessLevel: identity.AccessLevelUser,
+		Status:      status,
+		AccessLevel: req.AccessLevel,
 		CreateTime:  time.Now(),
 		UpdateTime:  time.Now(),
 	}
@@ -67,12 +71,11 @@ func (c *Coordinator) Register(ctx context.Context, req *RegisterUserRequest) (*
 	}
 
 	// 4. Return the response
-	return &RegisterUserResponse{
+	return &AdminCreateUserResponse{
 		UserID:      string(userID),
 		Email:       user.Email,
 		Username:    user.Username,
 		Name:        user.Name,
-		AvatarURL:   user.AvatarURL,
 		Status:      user.Status,
 		AccessLevel: user.AccessLevel,
 		Version:     user.Version,

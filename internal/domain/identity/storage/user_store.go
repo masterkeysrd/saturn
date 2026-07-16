@@ -12,15 +12,16 @@ import (
 
 // userDB is the internal DB record type for identity.user.
 type userDB struct {
-	ID         string       `db:"id"`
-	Email      string       `db:"email"`
-	Username   string       `db:"username"`
-	Name       string       `db:"name"`
-	AvatarURL  *string      `db:"avatar_url"`
-	Status     string       `db:"status"`
-	Version    int64        `db:"version"`
-	CreateTime sql.NullTime `db:"create_time"`
-	UpdateTime sql.NullTime `db:"update_time"`
+	ID          string       `db:"id"`
+	Email       string       `db:"email"`
+	Username    string       `db:"username"`
+	Name        string       `db:"name"`
+	AvatarURL   *string      `db:"avatar_url"`
+	Status      string       `db:"status"`
+	AccessLevel string       `db:"access_level"`
+	Version     int64        `db:"version"`
+	CreateTime  sql.NullTime `db:"create_time"`
+	UpdateTime  sql.NullTime `db:"update_time"`
 }
 
 // UserStore implements identity.UserStore using sqlx.
@@ -36,39 +37,41 @@ func NewUserStore(db *sqlx.DB) *UserStore {
 // toDomainUser converts a userDB to a domain User.
 func toDomainUser(u *userDB) *identity.User {
 	return &identity.User{
-		ID:         identity.UserID(u.ID),
-		Email:      u.Email,
-		Username:   u.Username,
-		Name:       u.Name,
-		AvatarURL:  ptrToString(u.AvatarURL),
-		Status:     identity.UserStatus(u.Status),
-		Version:    u.Version,
-		CreateTime: nullTimeToTime(u.CreateTime),
-		UpdateTime: nullTimeToTime(u.UpdateTime),
+		ID:          identity.UserID(u.ID),
+		Email:       u.Email,
+		Username:    u.Username,
+		Name:        u.Name,
+		AvatarURL:   ptrToString(u.AvatarURL),
+		Status:      identity.UserStatus(u.Status),
+		AccessLevel: identity.AccessLevel(u.AccessLevel),
+		Version:     u.Version,
+		CreateTime:  nullTimeToTime(u.CreateTime),
+		UpdateTime:  nullTimeToTime(u.UpdateTime),
 	}
 }
 
 // toDB converts a domain User to a userDB.
 func toDBUser(u *identity.User) *userDB {
 	return &userDB{
-		ID:         string(u.ID),
-		Email:      u.Email,
-		Username:   u.Username,
-		Name:       u.Name,
-		AvatarURL:  strToPtr(u.AvatarURL),
-		Status:     string(u.Status),
-		Version:    u.Version,
-		CreateTime: timeToNullTime(u.CreateTime),
-		UpdateTime: timeToNullTime(u.UpdateTime),
+		ID:          string(u.ID),
+		Email:       u.Email,
+		Username:    u.Username,
+		Name:        u.Name,
+		AvatarURL:   strToPtr(u.AvatarURL),
+		Status:      string(u.Status),
+		AccessLevel: string(u.AccessLevel),
+		Version:     u.Version,
+		CreateTime:  timeToNullTime(u.CreateTime),
+		UpdateTime:  timeToNullTime(u.UpdateTime),
 	}
 }
 
 // Create inserts a new user and returns the created record.
 func (s *UserStore) Create(ctx context.Context, user *identity.User) error {
 	db := toDBUser(user)
-	query := `INSERT INTO identity.user (id, email, username, name, avatar_url, status, version, create_time, update_time)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`
-	_, err := s.db.ExecContext(ctx, query, db.ID, db.Email, db.Username, db.Name, db.AvatarURL, db.Status, db.Version)
+	query := `INSERT INTO identity.user (id, email, username, name, avatar_url, status, access_level, version, create_time, update_time)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())`
+	_, err := s.db.ExecContext(ctx, query, db.ID, db.Email, db.Username, db.Name, db.AvatarURL, db.Status, db.AccessLevel, db.Version)
 	return err
 }
 
@@ -104,9 +107,9 @@ func (s *UserStore) GetByUsername(ctx context.Context, username string) (*identi
 
 // Update modifies an existing user with optimistic locking.
 func (s *UserStore) Update(ctx context.Context, user *identity.User) error {
-	query := `UPDATE identity.user SET email = $2, username = $3, name = $4, avatar_url = $5, status = $6, version = $7 + 1, update_time = NOW()
-		WHERE id = $1 AND version = $7`
-	result, err := s.db.ExecContext(ctx, query, user.ID, user.Email, user.Username, user.Name, user.AvatarURL, user.Status, user.Version)
+	query := `UPDATE identity.user SET email = $2, username = $3, name = $4, avatar_url = $5, status = $6, access_level = $7, version = $8 + 1, update_time = NOW()
+		WHERE id = $1 AND version = $8`
+	result, err := s.db.ExecContext(ctx, query, user.ID, user.Email, user.Username, user.Name, user.AvatarURL, user.Status, string(user.AccessLevel), user.Version)
 	if err != nil {
 		return err
 	}
