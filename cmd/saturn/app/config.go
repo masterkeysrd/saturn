@@ -26,6 +26,7 @@ const (
 	defaultConfigDir     = "."
 	defaultConfigHomeDir = "$HOME/.config/saturn"
 	defaultEnvPrefix     = "SATURN"
+	defaultSwaggerPath   = "/swagger"
 )
 
 var logLevels = map[string]slog.Level{
@@ -42,6 +43,13 @@ type Config struct {
 	Gateway  GatewayConfig
 	Shutdown ShutdownConfig
 	Log      LogConfig
+	Swagger  SwaggerConfig
+}
+
+// SwaggerConfig holds swagger UI settings.
+type SwaggerConfig struct {
+	Enabled bool   `mapstructure:"enabled"`
+	Path    string `mapstructure:"path"`
 }
 
 // DBConfig holds database connection settings.
@@ -88,8 +96,8 @@ func NewViper() *viper.Viper {
 	v.AddConfigPath(defaultConfigDir)
 	v.AddConfigPath(defaultConfigHomeDir)
 	v.SetEnvPrefix(defaultEnvPrefix)
-	v.AutomaticEnv()
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
 
 	v.SetDefault("db.host", defaultDBHost)
 	v.SetDefault("db.port", defaultDBPort)
@@ -102,6 +110,8 @@ func NewViper() *viper.Viper {
 	v.SetDefault("gateway.route_prefix", defaultRoutePrefix)
 	v.SetDefault("shutdown.timeout", defaultShutdownTime)
 	v.SetDefault("log.level", defaultLogLevel)
+	v.SetDefault("swagger.enabled", false)
+	v.SetDefault("swagger.path", defaultSwaggerPath)
 
 	return v
 }

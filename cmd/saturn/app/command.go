@@ -36,6 +36,7 @@ func Execute() error {
 			return StartAll(ctx, mgr, cfg)
 		},
 	}
+	serveCmd.Flags().Bool("swagger.enabled", false, "enable swagger UI")
 
 	migrateCmd := &cobra.Command{
 		Use:   "migrate",

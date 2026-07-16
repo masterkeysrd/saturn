@@ -33,6 +33,7 @@ services:
       SATURN_DB_NAME: saturn
       SATURN_GATEWAY_ADDR: ":8080"
       SATURN_LOG_LEVEL: info
+      SATURN_SWAGGER_ENABLED: true
     volumes:
        - saturn-data:/data
     depends_on:

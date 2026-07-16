@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/jmoiron/sqlx"
@@ -76,15 +77,21 @@ func (s *GRPCServer) Shutdown(ctx context.Context) error {
 // GRPCGatewayServer manages the gRPC-Gateway HTTP server that proxies
 // REST calls into the gRPC backend over a Unix socket.
 type GRPCGatewayServer struct {
-	addr     string
-	mux      *runtime.ServeMux
-	grpcConn *grpc.ClientConn
-	server   *http.Server
+	addr           string
+	mux            *runtime.ServeMux
+	grpcConn       *grpc.ClientConn
+	server         *http.Server
+	swaggerEnabled bool
+	swaggerPath    string
 }
 
 // NewGRPCGatewayServer creates a new GRPCGatewayServer instance.
 func NewGRPCGatewayServer(cfg *Config) *GRPCGatewayServer {
-	return &GRPCGatewayServer{addr: cfg.Gateway.Addr}
+	return &GRPCGatewayServer{
+		addr:           cfg.Gateway.Addr,
+		swaggerEnabled: cfg.Swagger.Enabled,
+		swaggerPath:    cfg.Swagger.Path,
+	}
 }
 
 // Start connects to the gRPC backend via Unix socket, registers the gRPC-Gateway
@@ -104,6 +111,15 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 	}
 
 	s.server = &http.Server{Addr: s.addr, Handler: s.mux}
+	if s.swaggerEnabled {
+		swaggerPath := strings.TrimRight(s.swaggerPath, "/") + "/"
+		swaggerJSONPath := swaggerPath + "api.swagger.json"
+		swaggerUI := SwaggerHandler(swaggerJSONPath)
+		handler := http.NewServeMux()
+		handler.Handle(swaggerPath, swaggerUI)
+		handler.Handle("/", s.mux)
+		s.server.Handler = handler
+	}
 	return nil
 }
 
