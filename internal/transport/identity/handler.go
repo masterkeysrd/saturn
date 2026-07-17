@@ -3,10 +3,13 @@ package identity
 import (
 	"context"
 	"errors"
+	"time"
 
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
 	"github.com/masterkeysrd/saturn/internal/application/iam"
+	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
+	"github.com/masterkeysrd/saturn/internal/platform/token"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -14,13 +17,15 @@ import (
 
 // IAMApplication holds the identity application layer.
 type IAMApplication struct {
-	Coordinator *iam.Coordinator
+	Coordinator  *iam.Coordinator
+	TokenService token.Service
 }
 
 // NewIAMApplication creates a new IAMApplication.
-func NewIAMApplication(coordinator *iam.Coordinator) *IAMApplication {
+func NewIAMApplication(coordinator *iam.Coordinator, ts token.Service) *IAMApplication {
 	return &IAMApplication{
-		Coordinator: coordinator,
+		Coordinator:  coordinator,
+		TokenService: ts,
 	}
 }
 
@@ -37,8 +42,37 @@ func NewHandler(iam *IAMApplication) *Handler {
 
 // LoginUser authenticates a user and returns a session token.
 func (h *Handler) LoginUser(ctx context.Context, req *identityv1.LoginUserRequest) (*identityv1.LoginUserResponse, error) {
-	// TODO: implement user authentication logic.
-	return nil, nil
+	ident := req.GetUserPassword().GetIdentifier()
+	password := req.GetUserPassword().GetPassword()
+
+	user, err := h.IAM.Coordinator.Authenticate(ctx, ident, password)
+	if err != nil {
+		if errors.Is(err, identity.ErrAccountPendingApproval) {
+			return nil, status.Error(codes.PermissionDenied, "account pending approval")
+		}
+		return nil, status.Error(codes.Unauthenticated, "invalid credentials")
+	}
+
+	authVersion, err := h.IAM.Coordinator.GetAuthVersion(ctx, identity.UserID(user.ID))
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to get auth version")
+	}
+
+	now := time.Now()
+	accessToken, _, err := h.IAM.TokenService.IssueAccessToken(token.IssueInput{
+		Subject:     string(user.ID),
+		AccessLevel: string(user.AccessLevel),
+		AuthVersion: authVersion,
+	}, now)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to issue token")
+	}
+
+	return &identityv1.LoginUserResponse{
+		UserId:               string(user.ID),
+		AccessToken:          accessToken,
+		AccessTokenExpiresAt: now.Add(15 * time.Minute).Unix(),
+	}, nil
 }
 
 // RegisterUser creates a new user account.
@@ -54,8 +88,8 @@ func (h *Handler) RegisterUser(ctx context.Context, req *identityv1.RegisterUser
 	appResp, err := h.IAM.Coordinator.Register(ctx, appReq)
 	if err != nil {
 		if errors.Is(err, password.ErrInvalidPassword) {
-				return nil, status.Error(codes.InvalidArgument, "password must be at least 12 characters long")
-				}
+			return nil, status.Error(codes.InvalidArgument, "password must be at least 12 characters long")
+		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 

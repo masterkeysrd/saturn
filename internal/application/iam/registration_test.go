@@ -75,6 +75,14 @@ func (f *fakeIdentityService) GetUserByID(ctx context.Context, id identity.UserI
 	return nil, nil
 }
 
+func (f *fakeIdentityService) GetUserByEmail(ctx context.Context, email string) (*identity.User, error) {
+	return nil, nil
+}
+
+func (f *fakeIdentityService) GetUserByUsername(ctx context.Context, username string) (*identity.User, error) {
+	return nil, nil
+}
+
 func (f *fakeIdentityService) UpdateUser(ctx context.Context, user *identity.User) error {
 	if f.updateUserFn != nil {
 		return f.updateUserFn(user)
@@ -90,6 +98,14 @@ func (f *fakeIdentityService) ApproveUser(ctx context.Context, userID identity.U
 	return nil, nil
 }
 
+func (f *fakeIdentityService) GetCredentialByUserIDAndAuthType(ctx context.Context, userID identity.UserID, authType string) (*identity.Credential, error) {
+	return nil, nil
+}
+
+func (f *fakeIdentityService) UpdateCredential(ctx context.Context, credential *identity.Credential) error {
+	return nil
+}
+
 func (f *fakeIdentityService) RejectUser(ctx context.Context, userID identity.UserID) (*identity.User, error) {
 	return nil, nil
 }
@@ -98,8 +114,20 @@ func (f *fakeIdentityService) UpdateUserRole(ctx context.Context, userID identit
 	return nil, nil
 }
 
-func (f *fakeIdentityService) UpdateCredential(ctx context.Context, credential *identity.Credential) error {
-	return nil
+func (f *fakeIdentityService) GetAuthVersion(ctx context.Context, id identity.UserID) (int64, error) {
+	return 0, nil
+}
+
+func (f *fakeIdentityService) IncrementAuthVersion(ctx context.Context, id identity.UserID) (int64, error) {
+	return 1, nil
+}
+
+func (f *fakeIdentityService) Authenticate(ctx context.Context, identifier string, password string) (*identity.User, error) {
+	return nil, nil
+}
+
+func (f *fakeIdentityService) RevokeAllSessions(ctx context.Context, userID identity.UserID) (int64, error) {
+	return 1, nil
 }
 
 func TestRegisterHashesPassword(t *testing.T) {

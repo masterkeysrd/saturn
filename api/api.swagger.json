@@ -196,9 +196,48 @@
         ]
       }
     },
+    "/v1/admin/identity/users/{userId}:revoke-sessions": {
+      "post": {
+        "summary": "RevokeAllSessions revokes all sessions for a user and increments auth_version.",
+        "operationId": "AdminIdentity_RevokeAllSessions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RevokeAllSessionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AdminIdentityRevokeAllSessionsBody"
+            }
+          }
+        ],
+        "tags": [
+          "AdminIdentity"
+        ]
+      }
+    },
     "/v1/identity/login": {
       "post": {
-        "summary": "LoginUser authenticates a user and returns a session token.",
+        "summary": "LoginUser authenticates a user and returns access and refresh tokens.",
         "operationId": "Identity_LoginUser",
         "responses": {
           "200": {
@@ -222,6 +261,74 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/v1LoginUserRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
+    "/v1/identity/sessions:logout": {
+      "post": {
+        "summary": "Logout revokes the presented refresh token.",
+        "operationId": "Identity_Logout",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LogoutResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "LogoutRequest contains the refresh token to revoke.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1LogoutRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
+    "/v1/identity/sessions:refresh": {
+      "post": {
+        "summary": "RefreshSession issues new tokens using a valid refresh token.",
+        "operationId": "Identity_RefreshSession",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RefreshSessionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "RefreshSessionRequest contains a valid refresh token.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RefreshSessionRequest"
             }
           }
         ],
@@ -270,6 +377,9 @@
       "type": "object"
     },
     "AdminIdentityRejectUserBody": {
+      "type": "object"
+    },
+    "AdminIdentityRevokeAllSessionsBody": {
       "type": "object"
     },
     "AdminIdentityUpdateUserRoleBody": {
@@ -470,17 +580,74 @@
           "type": "string",
           "description": "The user's unique identifier."
         },
-        "token": {
+        "accessToken": {
           "type": "string",
-          "description": "The session token for authenticated requests."
+          "description": "The access token for authenticated requests."
         },
-        "expiresAt": {
+        "accessTokenExpiresAt": {
           "type": "string",
           "format": "int64",
-          "description": "Expiration time of the session token."
+          "description": "Expiration time of the access token (Unix seconds)."
+        },
+        "refreshToken": {
+          "type": "string",
+          "description": "The opaque refresh token."
+        },
+        "refreshTokenExpiresAt": {
+          "type": "string",
+          "format": "int64",
+          "description": "Expiration time of the refresh token (Unix seconds)."
         }
       },
-      "description": "LoginUserResponse contains the authentication result."
+      "description": "LoginUserResponse contains the authentication result with both tokens."
+    },
+    "v1LogoutRequest": {
+      "type": "object",
+      "properties": {
+        "refreshToken": {
+          "type": "string"
+        }
+      },
+      "description": "LogoutRequest contains the refresh token to revoke.",
+      "required": [
+        "refreshToken"
+      ]
+    },
+    "v1LogoutResponse": {
+      "type": "object",
+      "description": "LogoutResponse is empty on success."
+    },
+    "v1RefreshSessionRequest": {
+      "type": "object",
+      "properties": {
+        "refreshToken": {
+          "type": "string"
+        }
+      },
+      "description": "RefreshSessionRequest contains a valid refresh token.",
+      "required": [
+        "refreshToken"
+      ]
+    },
+    "v1RefreshSessionResponse": {
+      "type": "object",
+      "properties": {
+        "accessToken": {
+          "type": "string"
+        },
+        "accessTokenExpiresAt": {
+          "type": "string",
+          "format": "int64"
+        },
+        "refreshToken": {
+          "type": "string"
+        },
+        "refreshTokenExpiresAt": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "RefreshSessionResponse contains newly issued tokens."
     },
     "v1RegisterUserRequest": {
       "type": "object",
@@ -513,6 +680,15 @@
         "name",
         "password"
       ]
+    },
+    "v1RevokeAllSessionsResponse": {
+      "type": "object",
+      "properties": {
+        "revokedCount": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
     },
     "v1UpdateUserRoleResponse": {
       "type": "object",

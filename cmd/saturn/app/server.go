@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"crypto/ed25519"
 	"database/sql"
 	"fmt"
 	"log/slog"
@@ -12,6 +13,8 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/jmoiron/sqlx"
+	"github.com/masterkeysrd/saturn/internal/platform/token"
+	transportauth "github.com/masterkeysrd/saturn/internal/transport/auth"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -54,21 +57,57 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	sqlxDB := sqlx.NewDb(db, "postgres")
 	userStore := identitystorage.NewUserStore(sqlxDB)
 	credentialStore := identitystorage.NewCredentialStore(sqlxDB)
-	identityService := identity.NewService(
-		identity.Dependencies{
-			UserStore:       userStore,
-			CredentialStore: credentialStore,
-		},
-	)
 	passwordHasher, err := password.NewArgon2id(password.DefaultParams())
 	if err != nil {
 		return fmt.Errorf("create password hasher: %w", err)
 	}
+	identityService := identity.NewService(
+		identity.Dependencies{
+			UserStore:       userStore,
+			CredentialStore: credentialStore,
+			Hasher:          passwordHasher,
+		},
+	)
 	coordinator := iam.NewCoordinator(identityService, passwordHasher)
-	iamApp := identitygrpc.NewIAMApplication(coordinator)
+
+	// Wire JWT token service
+	issuer, audience, accessTTL, clockSkew, activeKeyID := cfg.Auth.ToTokenConfig()
+	var activeKey ed25519.PrivateKey
+	if cfg.Auth.PrivateKeyPath != "" {
+		privKey, err := token.LoadPrivateKey(cfg.Auth.PrivateKeyPath)
+		if err != nil {
+			return fmt.Errorf("load private key: %w", err)
+		}
+		activeKey = privKey
+	}
+	publicKeys, err := token.LoadPublicKeys(cfg.Auth.PublicKeys)
+	if err != nil {
+		return fmt.Errorf("load public keys: %w", err)
+	}
+
+	tokenCfg := token.Config{
+		Issuer:      issuer,
+		Audience:    audience,
+		AccessTTL:   accessTTL,
+		ClockSkew:   clockSkew,
+		ActiveKeyID: activeKeyID,
+	}
+	tokenService, err := token.NewEd25519Service(tokenCfg, activeKey, publicKeys)
+	if err != nil {
+		return fmt.Errorf("create token service: %w", err)
+	}
+
+	iamApp := identitygrpc.NewIAMApplication(coordinator, tokenService)
 	identityHandler := identitygrpc.NewHandler(iamApp)
 
-	s.grpc = grpc.NewServer()
+	// Wire auth interceptor
+	authInterceptor := transportauth.NewAuthInterceptor(tokenService, userStore)
+
+	s.grpc = grpc.NewServer(
+		grpc.UnaryInterceptor(authInterceptor.UnaryServerInterceptor()),
+		grpc.StreamInterceptor(authInterceptor.StreamServerInterceptor()),
+	)
+
 	identityv1.RegisterIdentityServer(s.grpc, identityHandler)
 
 	// Wire admin identity service
@@ -79,6 +118,9 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 
 // Shutdown gracefully stops the gRPC server.
 func (s *GRPCServer) Shutdown(ctx context.Context) error {
+	if s.grpc == nil {
+		return nil
+	}
 	s.grpc.GracefulStop()
 	slog.Info("gRPC server stopped")
 	return nil
@@ -138,10 +180,15 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 
 // Shutdown gracefully stops the HTTP server and closes the gRPC connection.
 func (s *GRPCGatewayServer) Shutdown(ctx context.Context) error {
+	if s.server == nil {
+		return nil
+	}
 	if err := s.server.Shutdown(ctx); err != nil {
 		return err
 	}
-	s.grpcConn.Close()
+	if s.grpcConn != nil {
+		s.grpcConn.Close()
+	}
 	slog.Info("gRPC-Gateway server stopped")
 	return nil
 }

@@ -19,10 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AdminIdentity_ListUsers_FullMethodName      = "/saturn.identity.admin.v1.AdminIdentity/ListUsers"
-	AdminIdentity_ApproveUser_FullMethodName    = "/saturn.identity.admin.v1.AdminIdentity/ApproveUser"
-	AdminIdentity_RejectUser_FullMethodName     = "/saturn.identity.admin.v1.AdminIdentity/RejectUser"
-	AdminIdentity_UpdateUserRole_FullMethodName = "/saturn.identity.admin.v1.AdminIdentity/UpdateUserRole"
+	AdminIdentity_ListUsers_FullMethodName         = "/saturn.identity.admin.v1.AdminIdentity/ListUsers"
+	AdminIdentity_ApproveUser_FullMethodName       = "/saturn.identity.admin.v1.AdminIdentity/ApproveUser"
+	AdminIdentity_RejectUser_FullMethodName        = "/saturn.identity.admin.v1.AdminIdentity/RejectUser"
+	AdminIdentity_UpdateUserRole_FullMethodName    = "/saturn.identity.admin.v1.AdminIdentity/UpdateUserRole"
+	AdminIdentity_RevokeAllSessions_FullMethodName = "/saturn.identity.admin.v1.AdminIdentity/RevokeAllSessions"
 )
 
 // AdminIdentityClient is the client API for AdminIdentity service.
@@ -39,6 +40,8 @@ type AdminIdentityClient interface {
 	RejectUser(ctx context.Context, in *RejectUserRequest, opts ...grpc.CallOption) (*ApproveUserResponse, error)
 	// UpdateUserRole changes a user's access level.
 	UpdateUserRole(ctx context.Context, in *UpdateUserRoleRequest, opts ...grpc.CallOption) (*UpdateUserRoleResponse, error)
+	// RevokeAllSessions revokes all sessions for a user and increments auth_version.
+	RevokeAllSessions(ctx context.Context, in *RevokeAllSessionsRequest, opts ...grpc.CallOption) (*RevokeAllSessionsResponse, error)
 }
 
 type adminIdentityClient struct {
@@ -89,6 +92,16 @@ func (c *adminIdentityClient) UpdateUserRole(ctx context.Context, in *UpdateUser
 	return out, nil
 }
 
+func (c *adminIdentityClient) RevokeAllSessions(ctx context.Context, in *RevokeAllSessionsRequest, opts ...grpc.CallOption) (*RevokeAllSessionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevokeAllSessionsResponse)
+	err := c.cc.Invoke(ctx, AdminIdentity_RevokeAllSessions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminIdentityServer is the server API for AdminIdentity service.
 // All implementations should embed UnimplementedAdminIdentityServer
 // for forward compatibility.
@@ -103,6 +116,8 @@ type AdminIdentityServer interface {
 	RejectUser(context.Context, *RejectUserRequest) (*ApproveUserResponse, error)
 	// UpdateUserRole changes a user's access level.
 	UpdateUserRole(context.Context, *UpdateUserRoleRequest) (*UpdateUserRoleResponse, error)
+	// RevokeAllSessions revokes all sessions for a user and increments auth_version.
+	RevokeAllSessions(context.Context, *RevokeAllSessionsRequest) (*RevokeAllSessionsResponse, error)
 }
 
 // UnimplementedAdminIdentityServer should be embedded to have
@@ -123,6 +138,9 @@ func (UnimplementedAdminIdentityServer) RejectUser(context.Context, *RejectUserR
 }
 func (UnimplementedAdminIdentityServer) UpdateUserRole(context.Context, *UpdateUserRoleRequest) (*UpdateUserRoleResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateUserRole not implemented")
+}
+func (UnimplementedAdminIdentityServer) RevokeAllSessions(context.Context, *RevokeAllSessionsRequest) (*RevokeAllSessionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeAllSessions not implemented")
 }
 func (UnimplementedAdminIdentityServer) testEmbeddedByValue() {}
 
@@ -216,6 +234,24 @@ func _AdminIdentity_UpdateUserRole_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminIdentity_RevokeAllSessions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeAllSessionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminIdentityServer).RevokeAllSessions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminIdentity_RevokeAllSessions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminIdentityServer).RevokeAllSessions(ctx, req.(*RevokeAllSessionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminIdentity_ServiceDesc is the grpc.ServiceDesc for AdminIdentity service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -238,6 +274,10 @@ var AdminIdentity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateUserRole",
 			Handler:    _AdminIdentity_UpdateUserRole_Handler,
+		},
+		{
+			MethodName: "RevokeAllSessions",
+			Handler:    _AdminIdentity_RevokeAllSessions_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

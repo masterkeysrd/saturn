@@ -91,17 +91,21 @@ type LoginUserRequest_UserPassword_ struct {
 
 func (*LoginUserRequest_UserPassword_) isLoginUserRequest_Method() {}
 
-// LoginUserResponse contains the authentication result.
+// LoginUserResponse contains the authentication result with both tokens.
 type LoginUserResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The user's unique identifier.
 	UserId string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	// The session token for authenticated requests.
-	Token string `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
-	// Expiration time of the session token.
-	ExpiresAt     int64 `protobuf:"varint,3,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// The access token for authenticated requests.
+	AccessToken string `protobuf:"bytes,2,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	// Expiration time of the access token (Unix seconds).
+	AccessTokenExpiresAt int64 `protobuf:"varint,3,opt,name=access_token_expires_at,json=accessTokenExpiresAt,proto3" json:"access_token_expires_at,omitempty"`
+	// The opaque refresh token.
+	RefreshToken string `protobuf:"bytes,4,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	// Expiration time of the refresh token (Unix seconds).
+	RefreshTokenExpiresAt int64 `protobuf:"varint,5,opt,name=refresh_token_expires_at,json=refreshTokenExpiresAt,proto3" json:"refresh_token_expires_at,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *LoginUserResponse) Reset() {
@@ -141,16 +145,30 @@ func (x *LoginUserResponse) GetUserId() string {
 	return ""
 }
 
-func (x *LoginUserResponse) GetToken() string {
+func (x *LoginUserResponse) GetAccessToken() string {
 	if x != nil {
-		return x.Token
+		return x.AccessToken
 	}
 	return ""
 }
 
-func (x *LoginUserResponse) GetExpiresAt() int64 {
+func (x *LoginUserResponse) GetAccessTokenExpiresAt() int64 {
 	if x != nil {
-		return x.ExpiresAt
+		return x.AccessTokenExpiresAt
+	}
+	return 0
+}
+
+func (x *LoginUserResponse) GetRefreshToken() string {
+	if x != nil {
+		return x.RefreshToken
+	}
+	return ""
+}
+
+func (x *LoginUserResponse) GetRefreshTokenExpiresAt() int64 {
+	if x != nil {
+		return x.RefreshTokenExpiresAt
 	}
 	return 0
 }
@@ -355,6 +373,202 @@ func (x *User) GetUpdateTime() *timestamppb.Timestamp {
 	return nil
 }
 
+// RefreshSessionRequest contains a valid refresh token.
+type RefreshSessionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RefreshToken  string                 `protobuf:"bytes,1,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RefreshSessionRequest) Reset() {
+	*x = RefreshSessionRequest{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RefreshSessionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RefreshSessionRequest) ProtoMessage() {}
+
+func (x *RefreshSessionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RefreshSessionRequest.ProtoReflect.Descriptor instead.
+func (*RefreshSessionRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *RefreshSessionRequest) GetRefreshToken() string {
+	if x != nil {
+		return x.RefreshToken
+	}
+	return ""
+}
+
+// RefreshSessionResponse contains newly issued tokens.
+type RefreshSessionResponse struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	AccessToken           string                 `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	AccessTokenExpiresAt  int64                  `protobuf:"varint,2,opt,name=access_token_expires_at,json=accessTokenExpiresAt,proto3" json:"access_token_expires_at,omitempty"`
+	RefreshToken          string                 `protobuf:"bytes,3,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	RefreshTokenExpiresAt int64                  `protobuf:"varint,4,opt,name=refresh_token_expires_at,json=refreshTokenExpiresAt,proto3" json:"refresh_token_expires_at,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *RefreshSessionResponse) Reset() {
+	*x = RefreshSessionResponse{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RefreshSessionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RefreshSessionResponse) ProtoMessage() {}
+
+func (x *RefreshSessionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RefreshSessionResponse.ProtoReflect.Descriptor instead.
+func (*RefreshSessionResponse) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *RefreshSessionResponse) GetAccessToken() string {
+	if x != nil {
+		return x.AccessToken
+	}
+	return ""
+}
+
+func (x *RefreshSessionResponse) GetAccessTokenExpiresAt() int64 {
+	if x != nil {
+		return x.AccessTokenExpiresAt
+	}
+	return 0
+}
+
+func (x *RefreshSessionResponse) GetRefreshToken() string {
+	if x != nil {
+		return x.RefreshToken
+	}
+	return ""
+}
+
+func (x *RefreshSessionResponse) GetRefreshTokenExpiresAt() int64 {
+	if x != nil {
+		return x.RefreshTokenExpiresAt
+	}
+	return 0
+}
+
+// LogoutRequest contains the refresh token to revoke.
+type LogoutRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RefreshToken  string                 `protobuf:"bytes,1,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LogoutRequest) Reset() {
+	*x = LogoutRequest{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LogoutRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LogoutRequest) ProtoMessage() {}
+
+func (x *LogoutRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LogoutRequest.ProtoReflect.Descriptor instead.
+func (*LogoutRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *LogoutRequest) GetRefreshToken() string {
+	if x != nil {
+		return x.RefreshToken
+	}
+	return ""
+}
+
+// LogoutResponse is empty on success.
+type LogoutResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LogoutResponse) Reset() {
+	*x = LogoutResponse{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LogoutResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LogoutResponse) ProtoMessage() {}
+
+func (x *LogoutResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LogoutResponse.ProtoReflect.Descriptor instead.
+func (*LogoutResponse) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{7}
+}
+
 // UserPassword authentication method.
 type LoginUserRequest_UserPassword struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -368,7 +582,7 @@ type LoginUserRequest_UserPassword struct {
 
 func (x *LoginUserRequest_UserPassword) Reset() {
 	*x = LoginUserRequest_UserPassword{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[4]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -380,7 +594,7 @@ func (x *LoginUserRequest_UserPassword) String() string {
 func (*LoginUserRequest_UserPassword) ProtoMessage() {}
 
 func (x *LoginUserRequest_UserPassword) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[4]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -422,12 +636,13 @@ const file_saturn_identity_v1_identity_proto_rawDesc = "" +
 	"identifier\x18\x01 \x01(\tB\x03\xe0A\x02R\n" +
 	"identifier\x12\x1f\n" +
 	"\bpassword\x18\x02 \x01(\tB\x03\xe0A\x02R\bpasswordB\b\n" +
-	"\x06method\"a\n" +
+	"\x06method\"\xe4\x01\n" +
 	"\x11LoginUserResponse\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
-	"\x05token\x18\x02 \x01(\tR\x05token\x12\x1d\n" +
-	"\n" +
-	"expires_at\x18\x03 \x01(\x03R\texpiresAt\"\xaa\x01\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12!\n" +
+	"\faccess_token\x18\x02 \x01(\tR\vaccessToken\x125\n" +
+	"\x17access_token_expires_at\x18\x03 \x01(\x03R\x14accessTokenExpiresAt\x12#\n" +
+	"\rrefresh_token\x18\x04 \x01(\tR\frefreshToken\x127\n" +
+	"\x18refresh_token_expires_at\x18\x05 \x01(\x03R\x15refreshTokenExpiresAt\"\xaa\x01\n" +
 	"\x13RegisterUserRequest\x12\x19\n" +
 	"\x05email\x18\x01 \x01(\tB\x03\xe0A\x02R\x05email\x12\x1f\n" +
 	"\busername\x18\x02 \x01(\tB\x03\xe0A\x02R\busername\x12\x17\n" +
@@ -447,10 +662,22 @@ const file_saturn_identity_v1_identity_proto_rawDesc = "" +
 	"\vcreate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"createTime\x12;\n" +
 	"\vupdate_time\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime2\xf5\x01\n" +
+	"updateTime\"A\n" +
+	"\x15RefreshSessionRequest\x12(\n" +
+	"\rrefresh_token\x18\x01 \x01(\tB\x03\xe0A\x02R\frefreshToken\"\xd0\x01\n" +
+	"\x16RefreshSessionResponse\x12!\n" +
+	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x125\n" +
+	"\x17access_token_expires_at\x18\x02 \x01(\x03R\x14accessTokenExpiresAt\x12#\n" +
+	"\rrefresh_token\x18\x03 \x01(\tR\frefreshToken\x127\n" +
+	"\x18refresh_token_expires_at\x18\x04 \x01(\x03R\x15refreshTokenExpiresAt\"9\n" +
+	"\rLogoutRequest\x12(\n" +
+	"\rrefresh_token\x18\x01 \x01(\tB\x03\xe0A\x02R\frefreshToken\"\x10\n" +
+	"\x0eLogoutResponse2\x83\x04\n" +
 	"\bIdentity\x12w\n" +
 	"\tLoginUser\x12$.saturn.identity.v1.LoginUserRequest\x1a%.saturn.identity.v1.LoginUserResponse\"\x1d\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/v1/identity/login\x12p\n" +
-	"\fRegisterUser\x12'.saturn.identity.v1.RegisterUserRequest\x1a\x18.saturn.identity.v1.User\"\x1d\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/v1/identity/usersBCZAgithub.com/masterkeysrd/saturn/apis/saturn/identity/v1;identityv1b\x06proto3"
+	"\fRegisterUser\x12'.saturn.identity.v1.RegisterUserRequest\x1a\x18.saturn.identity.v1.User\"\x1d\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/v1/identity/users\x12\x91\x01\n" +
+	"\x0eRefreshSession\x12).saturn.identity.v1.RefreshSessionRequest\x1a*.saturn.identity.v1.RefreshSessionResponse\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/v1/identity/sessions:refresh\x12x\n" +
+	"\x06Logout\x12!.saturn.identity.v1.LogoutRequest\x1a\".saturn.identity.v1.LogoutResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/identity/sessions:logoutBCZAgithub.com/masterkeysrd/saturn/apis/saturn/identity/v1;identityv1b\x06proto3"
 
 var (
 	file_saturn_identity_v1_identity_proto_rawDescOnce sync.Once
@@ -464,25 +691,33 @@ func file_saturn_identity_v1_identity_proto_rawDescGZIP() []byte {
 	return file_saturn_identity_v1_identity_proto_rawDescData
 }
 
-var file_saturn_identity_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_saturn_identity_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_saturn_identity_v1_identity_proto_goTypes = []any{
 	(*LoginUserRequest)(nil),              // 0: saturn.identity.v1.LoginUserRequest
 	(*LoginUserResponse)(nil),             // 1: saturn.identity.v1.LoginUserResponse
 	(*RegisterUserRequest)(nil),           // 2: saturn.identity.v1.RegisterUserRequest
 	(*User)(nil),                          // 3: saturn.identity.v1.User
-	(*LoginUserRequest_UserPassword)(nil), // 4: saturn.identity.v1.LoginUserRequest.UserPassword
-	(*timestamppb.Timestamp)(nil),         // 5: google.protobuf.Timestamp
+	(*RefreshSessionRequest)(nil),         // 4: saturn.identity.v1.RefreshSessionRequest
+	(*RefreshSessionResponse)(nil),        // 5: saturn.identity.v1.RefreshSessionResponse
+	(*LogoutRequest)(nil),                 // 6: saturn.identity.v1.LogoutRequest
+	(*LogoutResponse)(nil),                // 7: saturn.identity.v1.LogoutResponse
+	(*LoginUserRequest_UserPassword)(nil), // 8: saturn.identity.v1.LoginUserRequest.UserPassword
+	(*timestamppb.Timestamp)(nil),         // 9: google.protobuf.Timestamp
 }
 var file_saturn_identity_v1_identity_proto_depIdxs = []int32{
-	4, // 0: saturn.identity.v1.LoginUserRequest.user_password:type_name -> saturn.identity.v1.LoginUserRequest.UserPassword
-	5, // 1: saturn.identity.v1.User.create_time:type_name -> google.protobuf.Timestamp
-	5, // 2: saturn.identity.v1.User.update_time:type_name -> google.protobuf.Timestamp
+	8, // 0: saturn.identity.v1.LoginUserRequest.user_password:type_name -> saturn.identity.v1.LoginUserRequest.UserPassword
+	9, // 1: saturn.identity.v1.User.create_time:type_name -> google.protobuf.Timestamp
+	9, // 2: saturn.identity.v1.User.update_time:type_name -> google.protobuf.Timestamp
 	0, // 3: saturn.identity.v1.Identity.LoginUser:input_type -> saturn.identity.v1.LoginUserRequest
 	2, // 4: saturn.identity.v1.Identity.RegisterUser:input_type -> saturn.identity.v1.RegisterUserRequest
-	1, // 5: saturn.identity.v1.Identity.LoginUser:output_type -> saturn.identity.v1.LoginUserResponse
-	3, // 6: saturn.identity.v1.Identity.RegisterUser:output_type -> saturn.identity.v1.User
-	5, // [5:7] is the sub-list for method output_type
-	3, // [3:5] is the sub-list for method input_type
+	4, // 5: saturn.identity.v1.Identity.RefreshSession:input_type -> saturn.identity.v1.RefreshSessionRequest
+	6, // 6: saturn.identity.v1.Identity.Logout:input_type -> saturn.identity.v1.LogoutRequest
+	1, // 7: saturn.identity.v1.Identity.LoginUser:output_type -> saturn.identity.v1.LoginUserResponse
+	3, // 8: saturn.identity.v1.Identity.RegisterUser:output_type -> saturn.identity.v1.User
+	5, // 9: saturn.identity.v1.Identity.RefreshSession:output_type -> saturn.identity.v1.RefreshSessionResponse
+	7, // 10: saturn.identity.v1.Identity.Logout:output_type -> saturn.identity.v1.LogoutResponse
+	7, // [7:11] is the sub-list for method output_type
+	3, // [3:7] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name
 	3, // [3:3] is the sub-list for extension extendee
 	0, // [0:3] is the sub-list for field type_name
@@ -502,7 +737,7 @@ func file_saturn_identity_v1_identity_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_identity_v1_identity_proto_rawDesc), len(file_saturn_identity_v1_identity_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

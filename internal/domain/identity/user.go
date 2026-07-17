@@ -35,6 +35,7 @@ type User struct {
 	Status      UserStatus  `json:"status"`
 	AccessLevel AccessLevel `json:"access_level"`
 	Version     int64       `json:"version"`
+	AuthVersion int64       `json:"auth_version"`
 	CreateTime  time.Time   `json:"create_time"`
 	UpdateTime  time.Time   `json:"update_time"`
 }

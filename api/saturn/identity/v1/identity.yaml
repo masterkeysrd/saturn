@@ -1,0 +1,25 @@
+# Identity service swagger overlay.
+#
+# Public endpoints (no auth required) and tagged operations.
+
+info:
+  title: "Saturn Identity API"
+
+authentication:
+  rules:
+     # Public: login
+    - selector: "Identity.LoginUser"
+      allow: true
+     # Public: register
+    - selector: "Identity.RegisterUser"
+      allow: true
+     # Public: refresh session (uses refresh token, not bearer)
+    - selector: "Identity.RefreshSession"
+      allow: true
+     # Public: logout (revokes refresh token)
+    - selector: "Identity.Logout"
+      allow: true
+     # Default for Identity service: require JWT Bearer
+    - selector: "Identity.*"
+      security:
+        - bearerAuth: []

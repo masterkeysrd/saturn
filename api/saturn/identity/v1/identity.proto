@@ -10,7 +10,7 @@ option go_package = "github.com/masterkeysrd/saturn/apis/saturn/identity/v1;iden
 
 // Identity service provides user authentication and account management.
 service Identity {
-  // LoginUser authenticates a user and returns a session token.
+  // LoginUser authenticates a user and returns access and refresh tokens.
   rpc LoginUser(LoginUserRequest) returns (LoginUserResponse) {
     option (google.api.http) = {
       post: "/v1/identity/login"
@@ -22,6 +22,22 @@ service Identity {
   rpc RegisterUser(RegisterUserRequest) returns (User) {
     option (google.api.http) = {
       post: "/v1/identity/users"
+      body: "*"
+    };
+  }
+
+  // RefreshSession issues new tokens using a valid refresh token.
+  rpc RefreshSession(RefreshSessionRequest) returns (RefreshSessionResponse) {
+    option (google.api.http) = {
+      post: "/v1/identity/sessions:refresh"
+      body: "*"
+    };
+  }
+
+  // Logout revokes the presented refresh token.
+  rpc Logout(LogoutRequest) returns (LogoutResponse) {
+    option (google.api.http) = {
+      post: "/v1/identity/sessions:logout"
       body: "*"
     };
   }
@@ -43,14 +59,18 @@ message LoginUserRequest {
   }
 }
 
-// LoginUserResponse contains the authentication result.
+// LoginUserResponse contains the authentication result with both tokens.
 message LoginUserResponse {
   // The user's unique identifier.
   string user_id = 1;
-  // The session token for authenticated requests.
-  string token = 2;
-  // Expiration time of the session token.
-  int64 expires_at = 3;
+  // The access token for authenticated requests.
+  string access_token = 2;
+  // Expiration time of the access token (Unix seconds).
+  int64 access_token_expires_at = 3;
+  // The opaque refresh token.
+  string refresh_token = 4;
+  // Expiration time of the refresh token (Unix seconds).
+  int64 refresh_token_expires_at = 5;
 }
 
 // RegisterUserRequest contains the fields for creating a new user account.
@@ -88,3 +108,24 @@ message User {
   // The last update timestamp.
   google.protobuf.Timestamp update_time = 8;
 }
+
+// RefreshSessionRequest contains a valid refresh token.
+message RefreshSessionRequest {
+  string refresh_token = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// RefreshSessionResponse contains newly issued tokens.
+message RefreshSessionResponse {
+  string access_token = 1;
+  int64 access_token_expires_at = 2;
+  string refresh_token = 3;
+  int64 refresh_token_expires_at = 4;
+}
+
+// LogoutRequest contains the refresh token to revoke.
+message LogoutRequest {
+  string refresh_token = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// LogoutResponse is empty on success.
+message LogoutResponse {}

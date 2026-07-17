@@ -24,6 +24,7 @@ type userDB struct {
 	Status      string       `db:"status"`
 	AccessLevel string       `db:"access_level"`
 	Version     int64        `db:"version"`
+	AuthVersion int64        `db:"auth_version"`
 	CreateTime  sql.NullTime `db:"create_time"`
 	UpdateTime  sql.NullTime `db:"update_time"`
 }
@@ -49,6 +50,7 @@ func toDomainUser(u *userDB) *identity.User {
 		Status:      identity.UserStatus(u.Status),
 		AccessLevel: identity.AccessLevel(u.AccessLevel),
 		Version:     u.Version,
+		AuthVersion: u.AuthVersion,
 		CreateTime:  nullTimeToTime(u.CreateTime),
 		UpdateTime:  nullTimeToTime(u.UpdateTime),
 	}
@@ -65,6 +67,7 @@ func toDBUser(u *identity.User) *userDB {
 		Status:      string(u.Status),
 		AccessLevel: string(u.AccessLevel),
 		Version:     u.Version,
+		AuthVersion: u.AuthVersion,
 		CreateTime:  timeToNullTime(u.CreateTime),
 		UpdateTime:  timeToNullTime(u.UpdateTime),
 	}
@@ -221,4 +224,26 @@ func (s *UserStore) GetUsers(ctx context.Context, filter *identity.ListUsersFilt
 	}
 
 	return users, nextToken, nil
+}
+
+// GetAuthVersion retrieves the auth_version for a user.
+func (s *UserStore) GetAuthVersion(ctx context.Context, id identity.UserID) (int64, error) {
+	var authVersion int64
+	query := `SELECT auth_version FROM identity.user WHERE id = $1`
+	err := s.db.GetContext(ctx, &authVersion, query, string(id))
+	if err != nil {
+		return 0, err
+	}
+	return authVersion, nil
+}
+
+// IncrementAuthVersion atomically increments the auth_version for a user.
+func (s *UserStore) IncrementAuthVersion(ctx context.Context, id identity.UserID) (int64, error) {
+	query := `UPDATE identity.user SET auth_version = auth_version + 1, update_time = NOW() WHERE id = $1 RETURNING auth_version`
+	var authVersion int64
+	err := s.db.GetContext(ctx, &authVersion, query, string(id))
+	if err != nil {
+		return 0, err
+	}
+	return authVersion, nil
 }

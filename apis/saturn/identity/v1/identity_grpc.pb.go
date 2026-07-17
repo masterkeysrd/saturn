@@ -19,8 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Identity_LoginUser_FullMethodName    = "/saturn.identity.v1.Identity/LoginUser"
-	Identity_RegisterUser_FullMethodName = "/saturn.identity.v1.Identity/RegisterUser"
+	Identity_LoginUser_FullMethodName      = "/saturn.identity.v1.Identity/LoginUser"
+	Identity_RegisterUser_FullMethodName   = "/saturn.identity.v1.Identity/RegisterUser"
+	Identity_RefreshSession_FullMethodName = "/saturn.identity.v1.Identity/RefreshSession"
+	Identity_Logout_FullMethodName         = "/saturn.identity.v1.Identity/Logout"
 )
 
 // IdentityClient is the client API for Identity service.
@@ -29,10 +31,14 @@ const (
 //
 // Identity service provides user authentication and account management.
 type IdentityClient interface {
-	// LoginUser authenticates a user and returns a session token.
+	// LoginUser authenticates a user and returns access and refresh tokens.
 	LoginUser(ctx context.Context, in *LoginUserRequest, opts ...grpc.CallOption) (*LoginUserResponse, error)
 	// RegisterUser creates a new user account.
 	RegisterUser(ctx context.Context, in *RegisterUserRequest, opts ...grpc.CallOption) (*User, error)
+	// RefreshSession issues new tokens using a valid refresh token.
+	RefreshSession(ctx context.Context, in *RefreshSessionRequest, opts ...grpc.CallOption) (*RefreshSessionResponse, error)
+	// Logout revokes the presented refresh token.
+	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
 }
 
 type identityClient struct {
@@ -63,16 +69,40 @@ func (c *identityClient) RegisterUser(ctx context.Context, in *RegisterUserReque
 	return out, nil
 }
 
+func (c *identityClient) RefreshSession(ctx context.Context, in *RefreshSessionRequest, opts ...grpc.CallOption) (*RefreshSessionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RefreshSessionResponse)
+	err := c.cc.Invoke(ctx, Identity_RefreshSession_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LogoutResponse)
+	err := c.cc.Invoke(ctx, Identity_Logout_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // IdentityServer is the server API for Identity service.
 // All implementations should embed UnimplementedIdentityServer
 // for forward compatibility.
 //
 // Identity service provides user authentication and account management.
 type IdentityServer interface {
-	// LoginUser authenticates a user and returns a session token.
+	// LoginUser authenticates a user and returns access and refresh tokens.
 	LoginUser(context.Context, *LoginUserRequest) (*LoginUserResponse, error)
 	// RegisterUser creates a new user account.
 	RegisterUser(context.Context, *RegisterUserRequest) (*User, error)
+	// RefreshSession issues new tokens using a valid refresh token.
+	RefreshSession(context.Context, *RefreshSessionRequest) (*RefreshSessionResponse, error)
+	// Logout revokes the presented refresh token.
+	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
 }
 
 // UnimplementedIdentityServer should be embedded to have
@@ -87,6 +117,12 @@ func (UnimplementedIdentityServer) LoginUser(context.Context, *LoginUserRequest)
 }
 func (UnimplementedIdentityServer) RegisterUser(context.Context, *RegisterUserRequest) (*User, error) {
 	return nil, status.Error(codes.Unimplemented, "method RegisterUser not implemented")
+}
+func (UnimplementedIdentityServer) RefreshSession(context.Context, *RefreshSessionRequest) (*RefreshSessionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RefreshSession not implemented")
+}
+func (UnimplementedIdentityServer) Logout(context.Context, *LogoutRequest) (*LogoutResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Logout not implemented")
 }
 func (UnimplementedIdentityServer) testEmbeddedByValue() {}
 
@@ -144,6 +180,42 @@ func _Identity_RegisterUser_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Identity_RefreshSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RefreshSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).RefreshSession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_RefreshSession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).RefreshSession(ctx, req.(*RefreshSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Identity_Logout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LogoutRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).Logout(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_Logout_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).Logout(ctx, req.(*LogoutRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Identity_ServiceDesc is the grpc.ServiceDesc for Identity service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -158,6 +230,14 @@ var Identity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RegisterUser",
 			Handler:    _Identity_RegisterUser_Handler,
+		},
+		{
+			MethodName: "RefreshSession",
+			Handler:    _Identity_RefreshSession_Handler,
+		},
+		{
+			MethodName: "Logout",
+			Handler:    _Identity_Logout_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

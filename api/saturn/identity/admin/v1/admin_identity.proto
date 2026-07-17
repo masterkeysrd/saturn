@@ -38,6 +38,14 @@ service AdminIdentity {
       body: "*"
     };
   }
+
+  // RevokeAllSessions revokes all sessions for a user and increments auth_version.
+  rpc RevokeAllSessions(RevokeAllSessionsRequest) returns (RevokeAllSessionsResponse) {
+    option (google.api.http) = {
+      post: "/v1/admin/identity/users/{user_id}:revoke-sessions"
+      body: "*"
+    };
+  }
 }
 
 message ListUsersRequest {
@@ -71,6 +79,14 @@ message RejectUserRequest {
 message UpdateUserRoleRequest {
   string user_id = 1 [(google.api.field_behavior) = REQUIRED];
   AccessLevel access_level = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message RevokeAllSessionsRequest {
+  string user_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message RevokeAllSessionsResponse {
+  int64 revoked_count = 1;
 }
 
 enum AccessLevel {

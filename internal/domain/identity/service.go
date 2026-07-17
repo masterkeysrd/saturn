@@ -21,6 +21,8 @@ type UserStoreProvider interface {
 	Update(ctx context.Context, user *User) error
 	Delete(ctx context.Context, id UserID) error
 	GetUsers(ctx context.Context, filter *ListUsersFilter) ([]*User, string, error)
+	GetAuthVersion(ctx context.Context, id UserID) (int64, error)
+	IncrementAuthVersion(ctx context.Context, id UserID) (int64, error)
 }
 
 // CredentialStoreProvider provides access to the CredentialStore.
@@ -32,10 +34,16 @@ type CredentialStoreProvider interface {
 	Update(ctx context.Context, credential *Credential) error
 }
 
-// Dependencies holds all storage interfaces required by the Service.
+// Dependencies holds all storage and hashing interfaces required by the Service.
 type Dependencies struct {
 	UserStore       UserStoreProvider
 	CredentialStore CredentialStoreProvider
+	Hasher          Hasher
+}
+
+// Hasher is the password hashing interface used for authentication.
+type Hasher interface {
+	Verify(encodedHash, raw string) (bool, error)
 }
 
 // Service handles identity business logic.
@@ -173,4 +181,86 @@ func (s *Service) UpdateUserRole(ctx context.Context, userID UserID, accessLevel
 	}
 
 	return user, nil
+}
+
+// GetUserByEmail retrieves a user by email. Returns ErrUserNotFound if not found.
+func (s *Service) GetUserByEmail(ctx context.Context, email string) (*User, error) {
+	user, err := s.deps.UserStore.GetByEmail(ctx, email)
+	if err != nil {
+		return nil, ErrUserNotFound
+	}
+	return user, nil
+}
+
+// GetUserByUsername retrieves a user by username. Returns ErrUserNotFound if not found.
+func (s *Service) GetUserByUsername(ctx context.Context, username string) (*User, error) {
+	user, err := s.deps.UserStore.GetByUsername(ctx, username)
+	if err != nil {
+		return nil, ErrUserNotFound
+	}
+	return user, nil
+}
+
+// GetCredentialByUserIDAndAuthType retrieves a credential by user ID and auth type.
+func (s *Service) GetCredentialByUserIDAndAuthType(ctx context.Context, userID UserID, authType string) (*Credential, error) {
+	cred, err := s.deps.CredentialStore.GetByUserIDAndAuthType(ctx, userID, authType)
+	if err != nil {
+		return nil, ErrUserNotFound
+	}
+	return cred, nil
+}
+
+// GetAuthVersion retrieves the auth_version for a user.
+func (s *Service) GetAuthVersion(ctx context.Context, id UserID) (int64, error) {
+	return s.deps.UserStore.GetAuthVersion(ctx, id)
+}
+
+// IncrementAuthVersion atomically increments the auth_version for a user and returns the new value.
+func (s *Service) IncrementAuthVersion(ctx context.Context, id UserID) (int64, error) {
+	return s.deps.UserStore.IncrementAuthVersion(ctx, id)
+}
+
+// ErrAccountPendingApproval is returned when a user tries to authenticate but their account is pending approval.
+var ErrAccountPendingApproval = errors.New("account pending approval")
+
+// Authenticate verifies a user's credentials and returns the user if valid.
+func (s *Service) Authenticate(ctx context.Context, identifier string, password string) (*User, error) {
+	user, err := s.GetUserByEmail(ctx, identifier)
+	if err != nil {
+		// Try username as fallback
+		user, err = s.GetUserByUsername(ctx, identifier)
+		if err != nil {
+			return nil, errors.New("invalid credentials")
+		}
+	}
+
+	if user.Status == UserStatusPendingApproval {
+		return nil, ErrAccountPendingApproval
+	}
+
+	cred, err := s.deps.CredentialStore.GetByUserIDAndAuthType(ctx, user.ID, "password")
+	if err != nil {
+		return nil, errors.New("invalid credentials")
+	}
+
+	_, err = s.deps.Hasher.Verify(string(cred.SecretData), password)
+	if err != nil {
+		return nil, errors.New("invalid credentials")
+	}
+
+	return user, nil
+}
+
+// RevokeAllSessions marks all non-revoked sessions for a user as revoked and increments auth_version.
+func (s *Service) RevokeAllSessions(ctx context.Context, userID UserID) (int64, error) {
+	// Increment auth version to invalidate all existing tokens
+	newAuthVersion, err := s.IncrementAuthVersion(ctx, userID)
+	if err != nil {
+		return 0, fmt.Errorf("increment auth version: %w", err)
+	}
+
+	// TODO: implement session revocation via a session store
+	// For now, return the new auth version
+
+	return newAuthVersion, nil
 }

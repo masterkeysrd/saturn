@@ -59,17 +59,26 @@ func SwaggerHandler(swaggerJSONPath string) http.Handler {
 }
 
 func apiSwaggerJSON(data []byte) ([]byte, error) {
+	data, err := api.ApplyConfig(data)
+	if err != nil {
+		return nil, err
+	}
+
+	// Strip /api prefix from paths
 	var document map[string]json.RawMessage
 	if err := json.Unmarshal(data, &document); err != nil {
 		return nil, err
 	}
 
+	document["basePath"] = json.RawMessage(`"/api"`)
+
 	var paths map[string]json.RawMessage
-	if err := json.Unmarshal(document["paths"], &paths); err != nil {
-		return nil, err
+	if pathsRaw, ok := document["paths"]; ok {
+		if err := json.Unmarshal(pathsRaw, &paths); err != nil {
+			return nil, err
+		}
 	}
 
-	document["basePath"] = json.RawMessage(`"/api"`)
 	apiPaths := make(map[string]json.RawMessage, len(paths))
 	for path, operation := range paths {
 		apiPaths[strings.TrimPrefix(path, "/api")] = operation

@@ -27,6 +27,13 @@ const (
 	defaultConfigHomeDir = "$HOME/.config/saturn"
 	defaultEnvPrefix     = "SATURN"
 	defaultSwaggerPath   = "/swagger"
+
+	defaultJWTIssuer      = "saturn"
+	defaultJWTAudience    = "saturn-api"
+	defaultJWTAccessTTL   = 15 * time.Minute
+	defaultJWTClockSkew   = 30 * time.Second
+	defaultJWTActiveKeyID = "key-1"
+	defaultJWTKeyDir      = "./keys"
 )
 
 var logLevels = map[string]slog.Level{
@@ -44,6 +51,7 @@ type Config struct {
 	Shutdown ShutdownConfig
 	Log      LogConfig
 	Swagger  SwaggerConfig
+	Auth     AuthConfig
 }
 
 // SwaggerConfig holds swagger UI settings.
@@ -87,6 +95,17 @@ type LogConfig struct {
 	Level string `mapstructure:"level"`
 }
 
+// AuthConfig holds JWT and authentication settings.
+type AuthConfig struct {
+	Issuer         string            `mapstructure:"issuer"`
+	Audience       string            `mapstructure:"audience"`
+	AccessTTL      time.Duration     `mapstructure:"access_ttl"`
+	ClockSkew      time.Duration     `mapstructure:"clock_skew"`
+	ActiveKeyID    string            `mapstructure:"active_key_id"`
+	PrivateKeyPath string            `mapstructure:"private_key_path"`
+	PublicKeys     map[string]string `mapstructure:"public_keys"`
+}
+
 // NewViper creates and configures a Viper instance with config file search
 // paths, env var prefixes, and sensible defaults.
 func NewViper() *viper.Viper {
@@ -112,6 +131,14 @@ func NewViper() *viper.Viper {
 	v.SetDefault("log.level", defaultLogLevel)
 	v.SetDefault("swagger.enabled", false)
 	v.SetDefault("swagger.path", defaultSwaggerPath)
+
+	v.SetDefault("auth.issuer", defaultJWTIssuer)
+	v.SetDefault("auth.audience", defaultJWTAudience)
+	v.SetDefault("auth.access_ttl", defaultJWTAccessTTL)
+	v.SetDefault("auth.clock_skew", defaultJWTClockSkew)
+	v.SetDefault("auth.active_key_id", defaultJWTActiveKeyID)
+	v.SetDefault("auth.private_key_path", defaultJWTKeyDir+"/private.pem")
+	v.SetDefault("auth.public_keys", map[string]string{})
 
 	return v
 }
@@ -140,4 +167,10 @@ func BindFlags(v *viper.Viper, flags *pflag.FlagSet) {
 	flags.VisitAll(func(f *pflag.Flag) {
 		v.BindPFlag(f.Name, f)
 	})
+}
+
+// ToTokenConfig converts the AuthConfig into a token.Config suitable
+// for passing to token.NewEd25519Service.
+func (c *AuthConfig) ToTokenConfig() (issuer, audience string, accessTTL, clockSkew time.Duration, activeKeyID string) {
+	return c.Issuer, c.Audience, c.AccessTTL, c.ClockSkew, c.ActiveKeyID
 }

@@ -19,21 +19,26 @@ RUN go mod download
 COPY . .
 ARG VERSION=dev
 RUN go build \
-    -ldflags="-s -w -X main.version=${VERSION}" \
-    -o /usr/local/bin/saturn \
-    ./cmd/saturn
+      -ldflags="-s -w -X main.version=${VERSION}" \
+      -o /usr/local/bin/saturn \
+      ./cmd/saturn
 
 # --- Stage 2: Runtime ---
 FROM alpine:3.21
 
 RUN apk add --no-cache \
     ca-certificates \
-    && addgroup -S saturn \
-    && adduser -S saturn -G saturn
+    openssl \
+ && addgroup -S saturn \
+ && adduser -S saturn -G saturn
 
-RUN mkdir -p /data /tmp /etc/saturn && chown -R saturn:saturn /data /tmp /etc/saturn
+RUN mkdir -p /data /tmp /etc/saturn/keys && chown -R saturn:saturn /data /tmp /etc/saturn
 
 COPY --from=builder --chown=saturn:saturn /usr/local/bin/saturn /usr/local/bin/saturn
+COPY --chmod=755 build/saturn/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
+# Configure the JWT signing key path for the running container.
+ENV SATURN_AUTH_PRIVATE_KEY_PATH=/etc/saturn/keys/private.pem
 
 USER saturn
 WORKDIR /data
@@ -41,5 +46,5 @@ WORKDIR /data
 # Expose the HTTP gateway port (gRPC is served over Unix socket)
 EXPOSE 8080
 
-ENTRYPOINT ["saturn"]
-CMD ["serve"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["/usr/local/bin/saturn", "serve"]

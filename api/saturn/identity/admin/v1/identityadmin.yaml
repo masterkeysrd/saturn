@@ -1,0 +1,13 @@
+# AdminIdentity service swagger overlay.
+#
+# All admin endpoints require JWT Bearer authentication.
+
+info:
+  title: "Saturn Admin Identity API"
+
+authentication:
+  rules:
+     # All admin endpoints require JWT Bearer
+    - selector: "AdminIdentity.*"
+      security:
+        - bearerAuth: []

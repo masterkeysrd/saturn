@@ -121,14 +121,15 @@ func Execute() error {
 			sqlxDB := sqlx.NewDb(db, "postgres")
 			userStore := identitystorage.NewUserStore(sqlxDB)
 			credentialStore := identitystorage.NewCredentialStore(sqlxDB)
-			identityService := identity.NewService(identity.Dependencies{
-				UserStore:       userStore,
-				CredentialStore: credentialStore,
-			})
 			passwordHasher, err := password.NewArgon2id(password.DefaultParams())
 			if err != nil {
 				return fmt.Errorf("create password hasher: %w", err)
 			}
+			identityService := identity.NewService(identity.Dependencies{
+				UserStore:       userStore,
+				CredentialStore: credentialStore,
+				Hasher:          passwordHasher,
+			})
 			coordinator := iam.NewCoordinator(identityService, passwordHasher)
 
 			email, _ := cmd.Flags().GetString("email")
