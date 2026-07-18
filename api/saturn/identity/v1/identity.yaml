@@ -1,22 +1,22 @@
 # Identity service API configuration.
 #
 # Public endpoints (no auth required) and default rules.
-
 name: saturn.identity.v1
 title: "Saturn Identity API"
 apis:
-       - saturn.identity.v1.Identity
+  - saturn.identity.v1.Identity
+
 documentation:
   summary: "Provides user authentication, registration, session management, and logout capabilities."
 
 authentication:
   rules:
-        # Public endpoints
-       - selector: "saturn.identity.v1.Identity.LoginUser"
-         auth_required: false
-       - selector: "saturn.identity.v1.Identity.RegisterUser"
-         auth_required: false
-       - selector: "saturn.identity.v1.Identity.RefreshSession"
-         auth_required: false
-       - selector: "saturn.identity.v1.Identity.Logout"
-         auth_required: false
+    # Public endpoints
+    - selector: "saturn.identity.v1.Identity.LoginUser"
+      auth_required: false
+    - selector: "saturn.identity.v1.Identity.RegisterUser"
+      auth_required: false
+    - selector: "saturn.identity.v1.Identity.RefreshSession"
+      auth_required: false
+    - selector: "saturn.identity.v1.Identity.Logout"
+      auth_required: false

@@ -31,6 +31,11 @@ func (c *Coordinator) GetAuthVersion(ctx context.Context, id identity.UserID) (i
 	return c.identityService.GetAuthVersion(ctx, id)
 }
 
+// GetCurrentUser retrieves the profile of the authenticated user by ID.
+func (c *Coordinator) GetCurrentUser(ctx context.Context, userID identity.UserID) (*identity.User, error) {
+	return c.identityService.GetUserByID(ctx, userID)
+}
+
 // IdentityService defines the interface for identity domain operations.
 type IdentityService interface {
 	CreateUser(ctx context.Context, user *identity.User) error

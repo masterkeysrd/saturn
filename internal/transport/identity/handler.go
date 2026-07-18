@@ -8,6 +8,7 @@ import (
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
 	"github.com/masterkeysrd/saturn/internal/application/iam"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
 	"github.com/masterkeysrd/saturn/internal/platform/token"
 	"google.golang.org/grpc/codes"
@@ -103,5 +104,30 @@ func (h *Handler) RegisterUser(ctx context.Context, req *identityv1.RegisterUser
 		Version:    appResp.Version,
 		CreateTime: timestamppb.New(appResp.CreateTime),
 		UpdateTime: timestamppb.New(appResp.UpdateTime),
+	}, nil
+}
+
+// GetCurrentUser retrieves the profile of the authenticated user.
+func (h *Handler) GetCurrentUser(ctx context.Context, req *identityv1.GetCurrentUserRequest) (*identityv1.User, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing principal")
+	}
+
+	user, err := h.IAM.Coordinator.GetCurrentUser(ctx, identity.UserID(principal.Subject))
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "user not found")
+	}
+
+	return &identityv1.User{
+		Id:         string(user.ID),
+		Email:      user.Email,
+		Username:   user.Username,
+		Name:       user.Name,
+		AvatarUrl:  user.AvatarURL,
+		Status:     string(user.Status),
+		Version:    user.Version,
+		CreateTime: timestamppb.New(user.CreateTime),
+		UpdateTime: timestamppb.New(user.UpdateTime),
 	}, nil
 }

@@ -3,59 +3,41 @@ import {
   loginUser,
   registerUser,
   logout,
+  useGetCurrentUserQuery,
 } from "@/gen/saturn/identity/v1/identity"
 import type {
   LoginUserRequest,
   RegisterUserRequest,
-  User,
 } from "@/gen/saturn/identity/v1/identity"
 import { AuthContext } from "./auth-context"
 import { authStorage } from "@/lib/auth-storage"
-import { decodeJwt } from "@/lib/jwt"
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(() => {
     return authStorage.getSession().accessToken
   })
 
-  const [user, setUser] = useState<Partial<User> | null>(() => {
-    const session = authStorage.getSession()
-    if (session.user) return session.user
-    if (session.accessToken) {
-      const decoded = decodeJwt(session.accessToken)
-      if (decoded) {
-        return {
-          id: decoded.sub,
-          email: decoded.email,
-          name: decoded.name || decoded.username,
-        }
-      }
-    }
-    return null
-  })
-
-  // Since we initialize state synchronously on load, we are never "loading" session on mount
   const [isLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Fetch user profile from API when accessToken is present
+  const { data: user } = useGetCurrentUserQuery(
+    {},
+    {
+      enabled: !!accessToken,
+      refetchOnWindowFocus: false,
+    }
+  )
 
   const login = async (req: LoginUserRequest) => {
     setError(null)
     try {
       const res = await loginUser(req)
 
-      // Construct user profile from token & response
-      const decoded = decodeJwt(res.accessToken)
-      const userProfile: Partial<User> = {
-        id: res.userId,
-        email: decoded?.email || "",
-        name: decoded?.name || decoded?.username || "User",
-      }
-
-      // Store using single authStorage gateway
-      authStorage.setSession(res.accessToken, res.refreshToken, userProfile)
+      // Store tokens only — user profile is fetched from API
+      authStorage.setSession(res.accessToken, res.refreshToken)
 
       setAccessToken(res.accessToken)
-      setUser(userProfile)
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to authenticate"
@@ -95,7 +77,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       authStorage.clearSession()
       setAccessToken(null)
-      setUser(null)
       setError(null)
     }
   }
@@ -103,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user,
+        user: user ?? null,
         accessToken,
         isAuthenticated: !!accessToken,
         isLoading,

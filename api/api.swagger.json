@@ -303,6 +303,29 @@
         ]
       }
     },
+    "/v1/identity/users/me": {
+      "get": {
+        "summary": "GetCurrentUser retrieves the profile of the authenticated user.",
+        "operationId": "Identity_GetCurrentUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/saturnIdentityV1User"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
     "/v1/identity/users:login": {
       "post": {
         "summary": "LoginUser authenticates a user and returns access and refresh tokens.",

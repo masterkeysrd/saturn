@@ -41,6 +41,11 @@ service Identity {
       body: "*"
     };
   }
+
+  // GetCurrentUser retrieves the profile of the authenticated user.
+  rpc GetCurrentUser(GetCurrentUserRequest) returns (User) {
+    option (google.api.http) = {get: "/v1/identity/users/me"};
+  }
 }
 
 // LoginUserRequest contains user credentials for authentication.
@@ -129,3 +134,6 @@ message LogoutRequest {
 
 // LogoutResponse is empty on success.
 message LogoutResponse {}
+
+// GetCurrentUserRequest is an empty request for fetching the current user's profile.
+message GetCurrentUserRequest {}

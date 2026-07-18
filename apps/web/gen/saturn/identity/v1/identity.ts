@@ -2,7 +2,12 @@
 // Source: identity.proto
 
 import { request } from "@/lib/api-client"
-import { useMutation, type UseMutationOptions } from "@tanstack/react-query"
+import {
+  useQuery,
+  type UseQueryOptions,
+  useMutation,
+  type UseMutationOptions,
+} from "@tanstack/react-query"
 
 /**
  * LoginUserRequest contains user credentials for authentication.
@@ -152,6 +157,11 @@ export interface LogoutRequest {
 export type LogoutResponse = Record<string, never>
 
 /**
+ * GetCurrentUserRequest is an empty request for fetching the current user's profile.
+ */
+export type GetCurrentUserRequest = Record<string, never>
+
+/**
  * Identity service provides user authentication and account management.
  */
 /**
@@ -238,6 +248,30 @@ export function useLogoutMutation(
 ) {
   return useMutation<LogoutResponse, Error, LogoutRequest>({
     mutationFn: (req) => logout(req),
+    ...options,
+  })
+}
+
+/**
+ * GetCurrentUser retrieves the profile of the authenticated user.
+ */
+export async function getCurrentUser(
+  req?: GetCurrentUserRequest
+): Promise<User> {
+  return request<User>({
+    method: "GET",
+    url: "/api/v1/identity/users/me",
+    params: req,
+  })
+}
+
+export function useGetCurrentUserQuery(
+  req: GetCurrentUserRequest,
+  options?: Omit<UseQueryOptions<User, Error>, "queryKey" | "queryFn">
+) {
+  return useQuery<User, Error>({
+    queryKey: ["/api/v1/identity/users/me", req],
+    queryFn: () => getCurrentUser(req),
     ...options,
   })
 }

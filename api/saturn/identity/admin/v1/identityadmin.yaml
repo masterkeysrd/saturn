@@ -11,8 +11,8 @@ documentation:
 
 authentication:
   rules:
-      # Restrict all admin endpoints to users with "admin" access level
-      - selector: "saturn.identity.admin.v1.AdminIdentity.*"
-        auth_required: true
-        access_levels:
-            - admin
+    # Restrict all admin endpoints to users with "admin" access level
+    - selector: "saturn.identity.admin.v1.AdminIdentity.*"
+      auth_required: true
+      access_levels:
+         - admin
