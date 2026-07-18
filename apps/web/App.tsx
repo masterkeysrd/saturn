@@ -5,10 +5,14 @@ import { RegisterView } from "@/features/auth/register-view"
 import { ProtectedRoute } from "@/components/protected-route"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
+import { useAuth } from "@/features/auth/use-auth"
 import { DashboardView } from "@/features/dashboard/dashboard-view"
 import { ProfileView } from "@/features/profile/profile-view"
+import { AdminView } from "@/features/admin/admin-view"
 
 export function App() {
+  const { user } = useAuth()
+
   return (
     <Routes>
       {/* Public Auth Routes */}
@@ -38,6 +42,26 @@ export function App() {
         >
           <Route path="/" element={<DashboardView />} />
           <Route path="/profile" element={<ProfileView />} />
+          <Route
+            path="/admin"
+            element={
+              user?.role === "admin" ? (
+                <Navigate to="/admin/users" replace />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              user?.role === "admin" ? (
+                <AdminView />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
         </Route>
       </Route>
 

@@ -5,8 +5,12 @@ import type {
   RegisterUserRequest,
 } from "@/gen/saturn/identity/v1/identity"
 
+export interface AuthUser extends Partial<User> {
+  role?: "admin" | "user"
+}
+
 export interface AuthContextType {
-  user: Partial<User> | null
+  user: AuthUser | null
   accessToken: string | null
   isAuthenticated: boolean
   isLoading: boolean

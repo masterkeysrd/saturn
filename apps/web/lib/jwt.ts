@@ -1,5 +1,6 @@
 export interface JwtClaims {
   sub: string
+  role?: "admin" | "user"
   email?: string
   name?: string
   username?: string

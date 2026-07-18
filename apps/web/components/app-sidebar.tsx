@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 import { useAuth } from "@/features/auth/use-auth"
 import { cn } from "@/lib/utils"
 import type { FeatureMenu } from "@/lib/navigation"
@@ -14,9 +14,17 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { UserIcon, ChevronUpIcon, LogOutIcon } from "lucide-react"
+import {
+  UserIcon,
+  ChevronUpIcon,
+  LogOutIcon,
+  ChevronRightIcon,
+} from "lucide-react"
 
 // Discover all menu configurations dynamically at compile time
 const menuModules = import.meta.glob<{ menu: FeatureMenu | FeatureMenu[] }>(
@@ -38,10 +46,89 @@ const docsItems = allMenus
   .filter((item) => item.group === "docs")
   .sort((a, b) => a.weight - b.weight)
 
+// Custom component to handle collapsible submenus
+function SidebarNavItem({
+  item,
+  currentPath,
+}: {
+  item: FeatureMenu
+  currentPath: string
+}) {
+  const [open, setOpen] = useState(() => {
+    // Auto-expand if the current path matches any nested submenu link
+    if (item.items) {
+      return item.items.some((sub) => currentPath.startsWith(sub.url))
+    }
+    return false
+  })
+
+  const hasSubmenu = !!item.items && item.items.length > 0
+
+  if (hasSubmenu) {
+    return (
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          onClick={() => setOpen(!open)}
+          className="cursor-pointer"
+          tooltip={item.title}
+        >
+          <item.icon />
+          <span>{item.title}</span>
+          <ChevronRightIcon
+            className={cn(
+              "ml-auto h-3.5 w-3.5 text-muted-foreground transition-transform duration-200",
+              open && "rotate-90"
+            )}
+          />
+        </SidebarMenuButton>
+
+        {open && (
+          <SidebarMenuSub>
+            {item.items?.map((subItem) => (
+              <SidebarMenuSubItem key={subItem.title}>
+                <SidebarMenuSubButton
+                  render={<Link to={subItem.url} />}
+                  isActive={subItem.url === currentPath}
+                >
+                  {subItem.icon && <subItem.icon />}
+                  <span>{subItem.title}</span>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            ))}
+          </SidebarMenuSub>
+        )}
+      </SidebarMenuItem>
+    )
+  }
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        render={<Link to={item.url || "/"} />}
+        tooltip={item.title}
+        isActive={item.url === currentPath}
+      >
+        <item.icon />
+        <span>{item.title}</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  )
+}
+
 export function AppSidebar() {
   const { user, logoutUser } = useAuth()
   const { state } = useSidebar()
+  const location = useLocation()
   const [profileOpen, setProfileOpen] = useState(false)
+
+  // Filter items inside the component based on role
+  const filteredMainNavItems = mainNavItems.filter(
+    (item) => !item.adminOnly || user?.role === "admin"
+  )
+
+  const filteredDocsItems = docsItems.filter(
+    (item) => !item.adminOnly || user?.role === "admin"
+  )
 
   // Get initials for the user avatar
   const initials = (user?.name || user?.username || "U")
@@ -60,44 +147,34 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {mainNavItems.length > 0 && (
+        {filteredMainNavItems.length > 0 && (
           <SidebarGroup>
             <SidebarGroupLabel>Main</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {mainNavItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      render={<Link to={item.url} />}
-                      tooltip={item.title}
-                      isActive={item.url === window.location.pathname}
-                    >
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                {filteredMainNavItems.map((item) => (
+                  <SidebarNavItem
+                    key={item.title}
+                    item={item}
+                    currentPath={location.pathname}
+                  />
                 ))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
         )}
 
-        {docsItems.length > 0 && (
+        {filteredDocsItems.length > 0 && (
           <SidebarGroup>
             <SidebarGroupLabel>Docs</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {docsItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      render={<Link to={item.url} />}
-                      tooltip={item.title}
-                      isActive={item.url === window.location.pathname}
-                    >
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                {filteredDocsItems.map((item) => (
+                  <SidebarNavItem
+                    key={item.title}
+                    item={item}
+                    currentPath={location.pathname}
+                  />
                 ))}
               </SidebarMenu>
             </SidebarGroupContent>
@@ -110,7 +187,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               tooltip="Profile"
-              isActive={window.location.pathname === "/profile"}
+              isActive={location.pathname === "/profile"}
               onClick={() => setProfileOpen(!profileOpen)}
               className="cursor-pointer"
             >
@@ -183,3 +260,4 @@ export function AppSidebar() {
     </Sidebar>
   )
 }
+export default AppSidebar

@@ -1,4 +1,10 @@
-import { useState, useEffect, useCallback, type ReactNode } from "react"
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  type ReactNode,
+} from "react"
 import {
   loginUser,
   registerUser,
@@ -9,8 +15,9 @@ import type {
   LoginUserRequest,
   RegisterUserRequest,
 } from "@/gen/saturn/identity/v1/identity"
-import { AuthContext } from "./auth-context"
+import { AuthContext, type AuthUser } from "./auth-context"
 import { authStorage } from "@/lib/auth-storage"
+import { decodeJwt } from "@/lib/jwt"
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(() => {
@@ -21,13 +28,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
 
   // Fetch user profile from API when accessToken is present
-  const { data: user } = useGetCurrentUserQuery(
+  const { data: apiUser } = useGetCurrentUserQuery(
     {},
     {
       enabled: !!accessToken,
       refetchOnWindowFocus: false,
     }
   )
+
+  // Extract role claim from token and combine with API profile details
+  const user = useMemo<AuthUser | null>(() => {
+    if (!accessToken) return null
+    const decoded = decodeJwt(accessToken)
+    const role = decoded?.role || "user"
+
+    if (apiUser) {
+      return {
+        ...apiUser,
+        role,
+      }
+    }
+
+    return {
+      id: decoded?.sub || "",
+      email: decoded?.email || "",
+      name: decoded?.name || decoded?.username || "User",
+      role,
+    }
+  }, [accessToken, apiUser])
 
   const login = async (req: LoginUserRequest) => {
     setError(null)
