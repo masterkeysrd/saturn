@@ -13,7 +13,7 @@ service Identity {
   // LoginUser authenticates a user and returns access and refresh tokens.
   rpc LoginUser(LoginUserRequest) returns (LoginUserResponse) {
     option (google.api.http) = {
-      post: "/v1/identity/login"
+      post: "/v1/identity/users:login"
       body: "*"
     };
   }
@@ -21,7 +21,7 @@ service Identity {
   // RegisterUser creates a new user account.
   rpc RegisterUser(RegisterUserRequest) returns (User) {
     option (google.api.http) = {
-      post: "/v1/identity/users"
+      post: "/v1/identity/users:register"
       body: "*"
     };
   }

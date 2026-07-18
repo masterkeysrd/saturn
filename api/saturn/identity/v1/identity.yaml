@@ -1,25 +1,22 @@
-# Identity service swagger overlay.
+# Identity service API configuration.
 #
-# Public endpoints (no auth required) and tagged operations.
+# Public endpoints (no auth required) and default rules.
 
-info:
-  title: "Saturn Identity API"
+name: saturn.identity.v1
+title: "Saturn Identity API"
+apis:
+    - saturn.identity.v1.Identity
+documentation:
+  summary: "Provides user authentication, registration, session management, and logout capabilities."
 
 authentication:
   rules:
-     # Public: login
-    - selector: "Identity.LoginUser"
-      allow: true
-     # Public: register
-    - selector: "Identity.RegisterUser"
-      allow: true
-     # Public: refresh session (uses refresh token, not bearer)
-    - selector: "Identity.RefreshSession"
-      allow: true
-     # Public: logout (revokes refresh token)
-    - selector: "Identity.Logout"
-      allow: true
-     # Default for Identity service: require JWT Bearer
-    - selector: "Identity.*"
-      security:
-        - bearerAuth: []
+      # Public endpoints
+      - selector: "saturn.identity.v1.Identity.LoginUser"
+        auth_required: false
+      - selector: "saturn.identity.v1.Identity.RegisterUser"
+        auth_required: false
+      - selector: "saturn.identity.v1.Identity.RefreshSession"
+        auth_required: false
+      - selector: "saturn.identity.v1.Identity.Logout"
+        auth_required: false

@@ -672,10 +672,10 @@ const file_saturn_identity_v1_identity_proto_rawDesc = "" +
 	"\x18refresh_token_expires_at\x18\x04 \x01(\x03R\x15refreshTokenExpiresAt\"9\n" +
 	"\rLogoutRequest\x12(\n" +
 	"\rrefresh_token\x18\x01 \x01(\tB\x03\xe0A\x02R\frefreshToken\"\x10\n" +
-	"\x0eLogoutResponse2\x83\x04\n" +
-	"\bIdentity\x12w\n" +
-	"\tLoginUser\x12$.saturn.identity.v1.LoginUserRequest\x1a%.saturn.identity.v1.LoginUserResponse\"\x1d\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/v1/identity/login\x12p\n" +
-	"\fRegisterUser\x12'.saturn.identity.v1.RegisterUserRequest\x1a\x18.saturn.identity.v1.User\"\x1d\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/v1/identity/users\x12\x91\x01\n" +
+	"\x0eLogoutResponse2\x92\x04\n" +
+	"\bIdentity\x12}\n" +
+	"\tLoginUser\x12$.saturn.identity.v1.LoginUserRequest\x1a%.saturn.identity.v1.LoginUserResponse\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/v1/identity/users:login\x12y\n" +
+	"\fRegisterUser\x12'.saturn.identity.v1.RegisterUserRequest\x1a\x18.saturn.identity.v1.User\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/v1/identity/users:register\x12\x91\x01\n" +
 	"\x0eRefreshSession\x12).saturn.identity.v1.RefreshSessionRequest\x1a*.saturn.identity.v1.RefreshSessionResponse\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/v1/identity/sessions:refresh\x12x\n" +
 	"\x06Logout\x12!.saturn.identity.v1.LogoutRequest\x1a\".saturn.identity.v1.LogoutResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/identity/sessions:logoutBCZAgithub.com/masterkeysrd/saturn/apis/saturn/identity/v1;identityv1b\x06proto3"
 

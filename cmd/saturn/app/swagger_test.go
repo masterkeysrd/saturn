@@ -14,15 +14,15 @@ func TestAPIV1HandlerStripsAPIPrefix(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	}))
 
-	request := httptest.NewRequest(http.MethodPost, "/api/v1/identity/users?source=swagger", nil)
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/identity/users:register?source=swagger", nil)
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, request)
 
 	if response.Code != http.StatusNoContent {
 		t.Fatalf("status = %d, want %d", response.Code, http.StatusNoContent)
 	}
-	if receivedPath != "/v1/identity/users" {
-		t.Fatalf("path = %q, want %q", receivedPath, "/v1/identity/users")
+	if receivedPath != "/v1/identity/users:register" {
+		t.Fatalf("path = %q, want %q", receivedPath, "/v1/identity/users:register")
 	}
 }
 
@@ -31,8 +31,8 @@ func TestAPISwaggerJSONAddsBasePathAndNormalizesPaths(t *testing.T) {
 		"swagger":"2.0",
 		"info":{"title":"Saturn"},
 		"paths":{
-			"/api/v1/identity/login":{"post":{}},
-			"/v1/identity/users":{"post":{}}
+			"/api/v1/identity/users:login":{"post":{}},
+			"/v1/identity/users:register":{"post":{}}
 		}
 	}`)
 
@@ -56,13 +56,13 @@ func TestAPISwaggerJSONAddsBasePathAndNormalizesPaths(t *testing.T) {
 	if document.Info == nil {
 		t.Fatal("info was removed from the Swagger document")
 	}
-	if _, ok := document.Paths["/v1/identity/login"]; !ok {
+	if _, ok := document.Paths["/v1/identity/users:login"]; !ok {
 		t.Fatal("normalized login path is missing")
 	}
-	if _, ok := document.Paths["/v1/identity/users"]; !ok {
+	if _, ok := document.Paths["/v1/identity/users:register"]; !ok {
 		t.Fatal("existing v1 path is missing")
 	}
-	if _, ok := document.Paths["/api/v1/identity/login"]; ok {
+	if _, ok := document.Paths["/api/v1/identity/users:login"]; ok {
 		t.Fatal("api-prefixed path was not normalized")
 	}
 }

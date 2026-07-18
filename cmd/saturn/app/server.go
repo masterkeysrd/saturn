@@ -13,6 +13,7 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/jmoiron/sqlx"
+	"github.com/masterkeysrd/saturn/api"
 	"github.com/masterkeysrd/saturn/internal/platform/token"
 	transportauth "github.com/masterkeysrd/saturn/internal/transport/auth"
 	"golang.org/x/sync/errgroup"
@@ -100,8 +101,15 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	iamApp := identitygrpc.NewIAMApplication(coordinator, tokenService)
 	identityHandler := identitygrpc.NewHandler(iamApp)
 
-	// Wire auth interceptor
-	authInterceptor := transportauth.NewAuthInterceptor(tokenService, userStore)
+	// Load service configs at startup
+	global, modules, err := api.LoadServiceConfigs()
+	if err != nil {
+		return fmt.Errorf("load service configs: %w", err)
+	}
+	rules := api.CompileAllRules(global, modules)
+
+	// Wire auth interceptor with loaded rules
+	authInterceptor := transportauth.NewAuthInterceptor(tokenService, userStore, rules)
 
 	s.grpc = grpc.NewServer(
 		grpc.UnaryInterceptor(authInterceptor.UnaryServerInterceptor()),

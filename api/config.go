@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"regexp"
 	"strings"
 
 	"go.yaml.in/yaml/v3"
@@ -15,35 +16,31 @@ import (
 //go:embed saturn/identity/admin/v1/identityadmin.yaml
 var configFS embed.FS
 
-// Overlay represents a parsed config YAML file.
-type Overlay struct {
-	Info struct {
-		Title string `yaml:"title"`
-	} `yaml:"info"`
-
-	SecurityDefinitions map[string]map[string]interface{} `yaml:"securityDefinitions"`
-
-	Authentication struct {
+// ServiceConfig represents a parsed API configuration YAML file.
+type ServiceConfig struct {
+	Name          string   `yaml:"name"`
+	Title         string   `yaml:"title"`
+	APIs          []string `yaml:"apis"`
+	Documentation struct {
+		Summary string `yaml:"summary"`
+	} `yaml:"documentation"`
+	SecurityDefinitions map[string]map[string]any `yaml:"securityDefinitions"`
+	Authentication      struct {
 		Rules []AuthRule `yaml:"rules"`
 	} `yaml:"authentication"`
 }
 
-// AuthRule represents a single authentication rule.
+// AuthRule defines the authentication and authorization policy for gRPC methods matching the selector.
 type AuthRule struct {
-	Selector string                `yaml:"selector"`
-	Allow    bool                  `yaml:"allow"`
-	Security []SecurityRequirement `yaml:"security"`
+	Selector     string   `yaml:"selector"`
+	AuthRequired bool     `yaml:"auth_required"`
+	AccessLevels []string `yaml:"access_levels,omitempty"`
 }
 
-// SecurityRequirement represents a security requirement entry.
-type SecurityRequirement struct {
-	Scopes []string `yaml:"scopes"`
-}
-
-// LoadOverlays reads all config YAML files from the embed.FS.
-// Returns the global overlay (api.yaml) and per-module overlays.
-func LoadOverlays() (global *Overlay, modules []*Overlay, err error) {
-	global = &Overlay{}
+// LoadServiceConfigs reads all config YAML files from the embed.FS.
+// Returns the global config and per-module configs.
+func LoadServiceConfigs() (global *ServiceConfig, modules []*ServiceConfig, err error) {
+	global = &ServiceConfig{}
 
 	globalData, err := configFS.ReadFile("api.yaml")
 	if err != nil {
@@ -53,7 +50,7 @@ func LoadOverlays() (global *Overlay, modules []*Overlay, err error) {
 		return nil, nil, fmt.Errorf("failed to parse api.yaml: %w", err)
 	}
 
-	modules = make([]*Overlay, 0)
+	modules = make([]*ServiceConfig, 0)
 	err = fs.WalkDir(configFS, "saturn", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -70,11 +67,11 @@ func LoadOverlays() (global *Overlay, modules []*Overlay, err error) {
 			return fmt.Errorf("failed to read %s: %w", path, err)
 		}
 
-		var overlay Overlay
-		if err := yaml.Unmarshal(data, &overlay); err != nil {
+		var config ServiceConfig
+		if err := yaml.Unmarshal(data, &config); err != nil {
 			return fmt.Errorf("failed to parse %s: %w", path, err)
 		}
-		modules = append(modules, &overlay)
+		modules = append(modules, &config)
 		return nil
 	})
 	if err != nil {
@@ -84,30 +81,130 @@ func LoadOverlays() (global *Overlay, modules []*Overlay, err error) {
 	return global, modules, nil
 }
 
-// ApplyConfig merges all overlays and applies them to the generated JSON spec.
+// CompileAllRules merges global and module auth rules into a single list.
+// Rules are evaluated in order: global first, then modules.
+// The last matching rule wins.
+func CompileAllRules(global *ServiceConfig, modules []*ServiceConfig) []AuthRule {
+	var allRules []AuthRule
+	if global != nil {
+		allRules = append(allRules, global.Authentication.Rules...)
+	}
+	for _, m := range modules {
+		allRules = append(allRules, m.Authentication.Rules...)
+	}
+	return allRules
+}
+
+// buildTagPrefixMap constructs a mapping from swagger tag name to its FQN package prefix.
+// For example, tag "Identity" → prefix "saturn.identity.v1" (derived from "saturn.identity.v1.Identity").
+func buildTagPrefixMap(modules []*ServiceConfig) map[string]string {
+	tagMap := make(map[string]string)
+	for _, m := range modules {
+		for _, svcFQN := range m.APIs {
+			// Extract tag name: last component after the final dot.
+			// e.g. "saturn.identity.v1.Identity" → tag "Identity"
+			lastDot := strings.LastIndex(svcFQN, ".")
+			if lastDot < 0 {
+				continue
+			}
+			tag := svcFQN[lastDot+1:]
+			prefix := svcFQN[:lastDot]
+			tagMap[tag] = prefix
+		}
+	}
+	return tagMap
+}
+
+// toFQN converts a swagger operationId (e.g. "Identity_LoginUser") to FQN format
+// (e.g. "saturn.identity.v1.Identity.LoginUser") using the tag→prefix map.
+func toFQN(tag, operationID string, tagPrefixMap map[string]string) string {
+	prefix, ok := tagPrefixMap[tag]
+	if !ok {
+		return ""
+	}
+	// Split operationId by underscore: "Identity_LoginUser" → method "LoginUser"
+	underscore := strings.Index(operationID, "_")
+	if underscore < 0 {
+		return prefix + "." + tag + "." + operationID
+	}
+	method := operationID[underscore+1:]
+	return prefix + "." + tag + "." + method
+}
+
+// ApplyConfig merges all service configs and applies them to the generated JSON spec.
+// Rules are matched against the fully-qualified operationId (e.g. "saturn.identity.v1.Identity.LoginUser").
 func ApplyConfig(specJSON []byte) ([]byte, error) {
 	var document map[string]json.RawMessage
 	if err := json.Unmarshal(specJSON, &document); err != nil {
 		return nil, fmt.Errorf("failed to parse spec JSON: %w", err)
 	}
 
-	overlay, _, err := LoadOverlays()
+	global, modules, err := LoadServiceConfigs()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load overlays: %w", err)
+		return nil, fmt.Errorf("failed to load service configs: %w", err)
 	}
 
+	rules := CompileAllRules(global, modules)
+
+	// Build tag→prefix map for FQN normalization
+	tagPrefixMap := buildTagPrefixMap(modules)
+
 	// Apply info
-	if overlay.Info.Title != "" {
-		document["info"] = json.RawMessage(fmt.Sprintf(`{"title":"%s","version":"1.0.0"}`, overlay.Info.Title))
+	if global != nil {
+		infoObj := map[string]string{
+			"title":   global.Title,
+			"version": "1.0.0",
+		}
+		if global.Documentation.Summary != "" {
+			infoObj["description"] = global.Documentation.Summary
+		}
+		infoJSON, _ := json.Marshal(infoObj)
+		document["info"] = infoJSON
 	}
 
 	// Apply securityDefinitions
-	if len(overlay.SecurityDefinitions) > 0 {
-		sdJSON, _ := json.Marshal(overlay.SecurityDefinitions)
+	if len(global.SecurityDefinitions) > 0 {
+		sdJSON, _ := json.Marshal(global.SecurityDefinitions)
 		document["securityDefinitions"] = sdJSON
 	}
 
-	// Apply rules to paths
+	// Apply tags descriptions
+	var tags []map[string]any
+	if tagsRaw, ok := document["tags"]; ok {
+		if err := json.Unmarshal(tagsRaw, &tags); err == nil {
+			for _, tagMap := range tags {
+				nameVal, ok := tagMap["name"]
+				if !ok {
+					continue
+				}
+				name, ok := nameVal.(string)
+				if !ok {
+					continue
+				}
+
+				// Find matching prefix in modules
+				prefix, ok := tagPrefixMap[name]
+				if !ok {
+					continue
+				}
+
+				// Find the module config
+				for _, m := range modules {
+					if m.Name == prefix {
+						if m.Documentation.Summary != "" {
+							tagMap["description"] = m.Documentation.Summary
+						} else if m.Title != "" {
+							tagMap["description"] = m.Title
+						}
+					}
+				}
+			}
+			tagsJSON, _ := json.Marshal(tags)
+			document["tags"] = tagsJSON
+		}
+	}
+
+	// Apply auth rules to each operation
 	var paths map[string]json.RawMessage
 	if pathsRaw, ok := document["paths"]; ok {
 		if err := json.Unmarshal(pathsRaw, &paths); err != nil {
@@ -127,12 +224,45 @@ func ApplyConfig(specJSON []byte) ([]byte, error) {
 				continue
 			}
 
-			normalizedPath := strings.TrimPrefix(path, "/")
+			// Extract the operationId from the operation
+			var operationID string
+			if opIDRaw, ok := op["operationId"]; ok {
+				json.Unmarshal(opIDRaw, &operationID)
+			}
 
-			if matchesPublicPath(normalizedPath) {
-				delete(op, "security")
-			} else {
+			// Extract the tag(s) from the operation to determine the service
+			var tags []string
+			if tagsRaw, ok := op["tags"]; ok {
+				json.Unmarshal(tagsRaw, &tags)
+			}
+			tag := ""
+			if len(tags) > 0 {
+				tag = tags[0]
+			}
+
+			// Normalize operationId to FQN format
+			fqn := toFQN(tag, operationID, tagPrefixMap)
+
+			// Find the last matching rule for this operation
+			var applySecurity bool
+			var accessLevels []string
+			for _, rule := range rules {
+				if matchMethodSelector(rule.Selector, fqn) {
+					applySecurity = rule.AuthRequired
+					accessLevels = rule.AccessLevels
+				}
+			}
+
+			if applySecurity {
 				op["security"] = json.RawMessage(`[{"bearerAuth":[]}]`)
+			} else {
+				delete(op, "security")
+			}
+
+			// Inject x-access-levels vendor extension for endpoints with access level restrictions
+			if len(accessLevels) > 0 {
+				alJSON, _ := json.Marshal(accessLevels)
+				op["x-access-levels"] = alJSON
 			}
 
 			updatedOp, _ := json.Marshal(op)
@@ -149,16 +279,17 @@ func ApplyConfig(specJSON []byte) ([]byte, error) {
 	return json.Marshal(document)
 }
 
-// matchesPublicPath checks if a path is a public (no-auth) endpoint.
-func matchesPublicPath(path string) bool {
-	publicPaths := []string{
-		"v1/identity/login",
-		"v1/identity/users",
-	}
-	for _, p := range publicPaths {
-		if path == p {
-			return true
-		}
-	}
-	return false
+// matchMethodSelector matches a fully-qualified method name against a YAML selector pattern.
+// Supports wildcards: "*" matches anything, ".*" matches suffix.
+func matchMethodSelector(selector, method string) bool {
+	// Convert selector to regex: "*" → ".*"
+	pattern := "^" + regexp.QuoteMeta(selector) + "$"
+	pattern = strings.ReplaceAll(pattern, `\*`, `.*`)
+	matched, _ := regexp.MatchString(pattern, method)
+	return matched
+}
+
+// Deprecated: Use LoadServiceConfigs instead.
+func LoadOverlays() (*ServiceConfig, []*ServiceConfig, error) {
+	return LoadServiceConfigs()
 }

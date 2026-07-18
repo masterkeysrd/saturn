@@ -155,7 +155,7 @@ func RegisterIdentityHandlerServer(ctx context.Context, mux *runtime.ServeMux, s
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.identity.v1.Identity/LoginUser", runtime.WithHTTPPathPattern("/v1/identity/login"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.identity.v1.Identity/LoginUser", runtime.WithHTTPPathPattern("/v1/identity/users:login"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -175,7 +175,7 @@ func RegisterIdentityHandlerServer(ctx context.Context, mux *runtime.ServeMux, s
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.identity.v1.Identity/RegisterUser", runtime.WithHTTPPathPattern("/v1/identity/users"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.identity.v1.Identity/RegisterUser", runtime.WithHTTPPathPattern("/v1/identity/users:register"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -273,7 +273,7 @@ func RegisterIdentityHandlerClient(ctx context.Context, mux *runtime.ServeMux, c
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.identity.v1.Identity/LoginUser", runtime.WithHTTPPathPattern("/v1/identity/login"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.identity.v1.Identity/LoginUser", runtime.WithHTTPPathPattern("/v1/identity/users:login"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -290,7 +290,7 @@ func RegisterIdentityHandlerClient(ctx context.Context, mux *runtime.ServeMux, c
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.identity.v1.Identity/RegisterUser", runtime.WithHTTPPathPattern("/v1/identity/users"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.identity.v1.Identity/RegisterUser", runtime.WithHTTPPathPattern("/v1/identity/users:register"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -341,8 +341,8 @@ func RegisterIdentityHandlerClient(ctx context.Context, mux *runtime.ServeMux, c
 }
 
 var (
-	pattern_Identity_LoginUser_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "identity", "login"}, ""))
-	pattern_Identity_RegisterUser_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "identity", "users"}, ""))
+	pattern_Identity_LoginUser_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "identity", "users"}, "login"))
+	pattern_Identity_RegisterUser_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "identity", "users"}, "register"))
 	pattern_Identity_RefreshSession_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "identity", "sessions"}, "refresh"))
 	pattern_Identity_Logout_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "identity", "sessions"}, "logout"))
 )

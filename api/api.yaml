@@ -1,12 +1,13 @@
-# Global swagger overlay — shared JWT security definitions and default rules.
+# Global API configuration — shared security definitions and default auth rules.
 #
 # This file lives at the api/ root and provides:
-#    - securityDefinitions (JWT Bearer scheme)
-#    - default authentication rules (applied to all modules)
+#   - securityDefinitions (JWT Bearer scheme)
+#   - default authentication rules (applied to all modules)
 
-info:
-  title: "Saturn API"
-  version: "1.0.0"
+name: saturn
+title: "Saturn API"
+documentation:
+  summary: "Your personal productivity suite — organized by space."
 
 securityDefinitions:
   bearerAuth:
@@ -17,7 +18,6 @@ securityDefinitions:
 
 authentication:
   rules:
-     # Default: require JWT Bearer for everything
-    - selector: "*.*"
-      security:
-        - bearerAuth: []
+    # Default fallback: require authentication for everything
+    - selector: "*"
+      auth_required: true

@@ -235,40 +235,6 @@
         ]
       }
     },
-    "/v1/identity/login": {
-      "post": {
-        "summary": "LoginUser authenticates a user and returns access and refresh tokens.",
-        "operationId": "Identity_LoginUser",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1LoginUserResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "description": "LoginUserRequest contains user credentials for authentication.",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1LoginUserRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Identity"
-        ]
-      }
-    },
     "/v1/identity/sessions:logout": {
       "post": {
         "summary": "Logout revokes the presented refresh token.",
@@ -337,7 +303,41 @@
         ]
       }
     },
-    "/v1/identity/users": {
+    "/v1/identity/users:login": {
+      "post": {
+        "summary": "LoginUser authenticates a user and returns access and refresh tokens.",
+        "operationId": "Identity_LoginUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LoginUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "LoginUserRequest contains user credentials for authentication.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1LoginUserRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
+    "/v1/identity/users:register": {
       "post": {
         "summary": "RegisterUser creates a new user account.",
         "operationId": "Identity_RegisterUser",

@@ -1,13 +1,18 @@
-# AdminIdentity service swagger overlay.
+# AdminIdentity service API configuration.
 #
-# All admin endpoints require JWT Bearer authentication.
+# All admin endpoints require JWT Bearer authentication and admin access level.
 
-info:
-  title: "Saturn Admin Identity API"
+name: saturn.identity.admin.v1
+title: "Saturn Admin Identity API"
+apis:
+    - saturn.identity.admin.v1.AdminIdentity
+documentation:
+  summary: "Provides user administration capabilities, including approving, rejecting, suspending, and role updates."
 
 authentication:
   rules:
-     # All admin endpoints require JWT Bearer
-    - selector: "AdminIdentity.*"
-      security:
-        - bearerAuth: []
+      # Restrict all admin endpoints to users with "admin" access level
+      - selector: "saturn.identity.admin.v1.AdminIdentity.*"
+        auth_required: true
+        access_levels:
+            - admin
