@@ -44,6 +44,14 @@ export async function request<TResponse, TData = unknown, TParams = unknown>({
   })
 
   if (!response.ok) {
+    if (response.status === 401) {
+      const isAuthEndpoint =
+        url.includes("/identity/users:login") ||
+        url.includes("/identity/users:register")
+      if (!isAuthEndpoint) {
+        window.dispatchEvent(new Event("auth:unauthorized"))
+      }
+    }
     const errorData = await response.json().catch(() => ({}))
     throw new Error(
       errorData.message || `Request failed with status ${response.status}`

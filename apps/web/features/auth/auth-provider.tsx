@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react"
+import { useState, useEffect, useCallback, type ReactNode } from "react"
 import {
   loginUser,
   registerUser,
@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const logoutUser = async () => {
+  const logoutUser = useCallback(async () => {
     const session = authStorage.getSession()
     try {
       if (session.refreshToken) {
@@ -79,7 +79,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAccessToken(null)
       setError(null)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      logoutUser()
+    }
+    window.addEventListener("auth:unauthorized", handleUnauthorized)
+    return () => {
+      window.removeEventListener("auth:unauthorized", handleUnauthorized)
+    }
+  }, [logoutUser])
 
   return (
     <AuthContext.Provider

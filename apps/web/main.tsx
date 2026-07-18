@@ -7,6 +7,7 @@ import "./index.css"
 import App from "./App.tsx"
 import { ThemeProvider } from "@/components/theme-provider.tsx"
 import { AuthProvider } from "@/features/auth/auth-provider.tsx"
+import { TooltipProvider } from "@/components/ui/tooltip"
 
 // Initialize the global React Query client
 const queryClient = new QueryClient({
@@ -24,7 +25,9 @@ createRoot(document.getElementById("root")!).render(
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <BrowserRouter>
-            <App />
+            <TooltipProvider>
+              <App />
+            </TooltipProvider>
           </BrowserRouter>
         </AuthProvider>
       </QueryClientProvider>
