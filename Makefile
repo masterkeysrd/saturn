@@ -10,6 +10,11 @@
 #   make compose-down Stop the compose stack
 #   make compose-watch Start the compose stack in watch mode
 #   make clean        Remove build artifacts
+#   make web-dev      Start the frontend development server
+#   make web-build    Build the frontend for production
+#   make web-lint     Lint the frontend codebase
+#   make web-format   Format frontend source files
+#   make codegen      Rebuild protobuf ts-simple plugin and generate api definitions
 #   make help         Show this help
 
 APP_NAME       := saturn
@@ -85,6 +90,32 @@ compose-down:
 clean:
 	@echo "→ Cleaning"
 	rm -rf bin
+
+## Start the frontend development server
+.PHONY: web-dev
+web-dev:
+	npm --prefix apps/web run dev
+
+## Build the frontend for production
+.PHONY: web-build
+web-build:
+	npm --prefix apps/web run build
+
+## Lint the frontend codebase
+.PHONY: web-lint
+web-lint:
+	npm --prefix apps/web run lint
+
+## Format frontend source files
+.PHONY: web-format
+web-format:
+	npm --prefix apps/web run format
+
+## Rebuild protoc ts-simple plugin and regenerate API bindings
+.PHONY: codegen
+codegen:
+	go build -o ./bin/protoc-gen-ts-simple ./tools/protoc-gen-ts-simple
+	buf generate
 
 ## Show this help
 .PHONY: help
