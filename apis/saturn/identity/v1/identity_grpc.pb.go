@@ -23,6 +23,7 @@ const (
 	Identity_RegisterUser_FullMethodName   = "/saturn.identity.v1.Identity/RegisterUser"
 	Identity_RefreshSession_FullMethodName = "/saturn.identity.v1.Identity/RefreshSession"
 	Identity_Logout_FullMethodName         = "/saturn.identity.v1.Identity/Logout"
+	Identity_GetCurrentUser_FullMethodName = "/saturn.identity.v1.Identity/GetCurrentUser"
 )
 
 // IdentityClient is the client API for Identity service.
@@ -39,6 +40,8 @@ type IdentityClient interface {
 	RefreshSession(ctx context.Context, in *RefreshSessionRequest, opts ...grpc.CallOption) (*RefreshSessionResponse, error)
 	// Logout revokes the presented refresh token.
 	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
+	// GetCurrentUser retrieves the profile of the authenticated user.
+	GetCurrentUser(ctx context.Context, in *GetCurrentUserRequest, opts ...grpc.CallOption) (*User, error)
 }
 
 type identityClient struct {
@@ -89,6 +92,16 @@ func (c *identityClient) Logout(ctx context.Context, in *LogoutRequest, opts ...
 	return out, nil
 }
 
+func (c *identityClient) GetCurrentUser(ctx context.Context, in *GetCurrentUserRequest, opts ...grpc.CallOption) (*User, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(User)
+	err := c.cc.Invoke(ctx, Identity_GetCurrentUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // IdentityServer is the server API for Identity service.
 // All implementations should embed UnimplementedIdentityServer
 // for forward compatibility.
@@ -103,6 +116,8 @@ type IdentityServer interface {
 	RefreshSession(context.Context, *RefreshSessionRequest) (*RefreshSessionResponse, error)
 	// Logout revokes the presented refresh token.
 	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
+	// GetCurrentUser retrieves the profile of the authenticated user.
+	GetCurrentUser(context.Context, *GetCurrentUserRequest) (*User, error)
 }
 
 // UnimplementedIdentityServer should be embedded to have
@@ -123,6 +138,9 @@ func (UnimplementedIdentityServer) RefreshSession(context.Context, *RefreshSessi
 }
 func (UnimplementedIdentityServer) Logout(context.Context, *LogoutRequest) (*LogoutResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Logout not implemented")
+}
+func (UnimplementedIdentityServer) GetCurrentUser(context.Context, *GetCurrentUserRequest) (*User, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCurrentUser not implemented")
 }
 func (UnimplementedIdentityServer) testEmbeddedByValue() {}
 
@@ -216,6 +234,24 @@ func _Identity_Logout_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Identity_GetCurrentUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCurrentUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).GetCurrentUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_GetCurrentUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).GetCurrentUser(ctx, req.(*GetCurrentUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Identity_ServiceDesc is the grpc.ServiceDesc for Identity service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -238,6 +274,10 @@ var Identity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Logout",
 			Handler:    _Identity_Logout_Handler,
+		},
+		{
+			MethodName: "GetCurrentUser",
+			Handler:    _Identity_GetCurrentUser_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

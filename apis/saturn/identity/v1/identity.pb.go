@@ -569,6 +569,43 @@ func (*LogoutResponse) Descriptor() ([]byte, []int) {
 	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{7}
 }
 
+// GetCurrentUserRequest is an empty request for fetching the current user's profile.
+type GetCurrentUserRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCurrentUserRequest) Reset() {
+	*x = GetCurrentUserRequest{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCurrentUserRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCurrentUserRequest) ProtoMessage() {}
+
+func (x *GetCurrentUserRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCurrentUserRequest.ProtoReflect.Descriptor instead.
+func (*GetCurrentUserRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{8}
+}
+
 // UserPassword authentication method.
 type LoginUserRequest_UserPassword struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -582,7 +619,7 @@ type LoginUserRequest_UserPassword struct {
 
 func (x *LoginUserRequest_UserPassword) Reset() {
 	*x = LoginUserRequest_UserPassword{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[8]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -594,7 +631,7 @@ func (x *LoginUserRequest_UserPassword) String() string {
 func (*LoginUserRequest_UserPassword) ProtoMessage() {}
 
 func (x *LoginUserRequest_UserPassword) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[8]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -672,12 +709,14 @@ const file_saturn_identity_v1_identity_proto_rawDesc = "" +
 	"\x18refresh_token_expires_at\x18\x04 \x01(\x03R\x15refreshTokenExpiresAt\"9\n" +
 	"\rLogoutRequest\x12(\n" +
 	"\rrefresh_token\x18\x01 \x01(\tB\x03\xe0A\x02R\frefreshToken\"\x10\n" +
-	"\x0eLogoutResponse2\x92\x04\n" +
+	"\x0eLogoutResponse\"\x17\n" +
+	"\x15GetCurrentUserRequest2\x88\x05\n" +
 	"\bIdentity\x12}\n" +
 	"\tLoginUser\x12$.saturn.identity.v1.LoginUserRequest\x1a%.saturn.identity.v1.LoginUserResponse\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/v1/identity/users:login\x12y\n" +
 	"\fRegisterUser\x12'.saturn.identity.v1.RegisterUserRequest\x1a\x18.saturn.identity.v1.User\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/v1/identity/users:register\x12\x91\x01\n" +
 	"\x0eRefreshSession\x12).saturn.identity.v1.RefreshSessionRequest\x1a*.saturn.identity.v1.RefreshSessionResponse\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/v1/identity/sessions:refresh\x12x\n" +
-	"\x06Logout\x12!.saturn.identity.v1.LogoutRequest\x1a\".saturn.identity.v1.LogoutResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/identity/sessions:logoutBCZAgithub.com/masterkeysrd/saturn/apis/saturn/identity/v1;identityv1b\x06proto3"
+	"\x06Logout\x12!.saturn.identity.v1.LogoutRequest\x1a\".saturn.identity.v1.LogoutResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/identity/sessions:logout\x12t\n" +
+	"\x0eGetCurrentUser\x12).saturn.identity.v1.GetCurrentUserRequest\x1a\x18.saturn.identity.v1.User\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/identity/users/meBCZAgithub.com/masterkeysrd/saturn/apis/saturn/identity/v1;identityv1b\x06proto3"
 
 var (
 	file_saturn_identity_v1_identity_proto_rawDescOnce sync.Once
@@ -691,7 +730,7 @@ func file_saturn_identity_v1_identity_proto_rawDescGZIP() []byte {
 	return file_saturn_identity_v1_identity_proto_rawDescData
 }
 
-var file_saturn_identity_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_saturn_identity_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_saturn_identity_v1_identity_proto_goTypes = []any{
 	(*LoginUserRequest)(nil),              // 0: saturn.identity.v1.LoginUserRequest
 	(*LoginUserResponse)(nil),             // 1: saturn.identity.v1.LoginUserResponse
@@ -701,26 +740,29 @@ var file_saturn_identity_v1_identity_proto_goTypes = []any{
 	(*RefreshSessionResponse)(nil),        // 5: saturn.identity.v1.RefreshSessionResponse
 	(*LogoutRequest)(nil),                 // 6: saturn.identity.v1.LogoutRequest
 	(*LogoutResponse)(nil),                // 7: saturn.identity.v1.LogoutResponse
-	(*LoginUserRequest_UserPassword)(nil), // 8: saturn.identity.v1.LoginUserRequest.UserPassword
-	(*timestamppb.Timestamp)(nil),         // 9: google.protobuf.Timestamp
+	(*GetCurrentUserRequest)(nil),         // 8: saturn.identity.v1.GetCurrentUserRequest
+	(*LoginUserRequest_UserPassword)(nil), // 9: saturn.identity.v1.LoginUserRequest.UserPassword
+	(*timestamppb.Timestamp)(nil),         // 10: google.protobuf.Timestamp
 }
 var file_saturn_identity_v1_identity_proto_depIdxs = []int32{
-	8, // 0: saturn.identity.v1.LoginUserRequest.user_password:type_name -> saturn.identity.v1.LoginUserRequest.UserPassword
-	9, // 1: saturn.identity.v1.User.create_time:type_name -> google.protobuf.Timestamp
-	9, // 2: saturn.identity.v1.User.update_time:type_name -> google.protobuf.Timestamp
-	0, // 3: saturn.identity.v1.Identity.LoginUser:input_type -> saturn.identity.v1.LoginUserRequest
-	2, // 4: saturn.identity.v1.Identity.RegisterUser:input_type -> saturn.identity.v1.RegisterUserRequest
-	4, // 5: saturn.identity.v1.Identity.RefreshSession:input_type -> saturn.identity.v1.RefreshSessionRequest
-	6, // 6: saturn.identity.v1.Identity.Logout:input_type -> saturn.identity.v1.LogoutRequest
-	1, // 7: saturn.identity.v1.Identity.LoginUser:output_type -> saturn.identity.v1.LoginUserResponse
-	3, // 8: saturn.identity.v1.Identity.RegisterUser:output_type -> saturn.identity.v1.User
-	5, // 9: saturn.identity.v1.Identity.RefreshSession:output_type -> saturn.identity.v1.RefreshSessionResponse
-	7, // 10: saturn.identity.v1.Identity.Logout:output_type -> saturn.identity.v1.LogoutResponse
-	7, // [7:11] is the sub-list for method output_type
-	3, // [3:7] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	9,  // 0: saturn.identity.v1.LoginUserRequest.user_password:type_name -> saturn.identity.v1.LoginUserRequest.UserPassword
+	10, // 1: saturn.identity.v1.User.create_time:type_name -> google.protobuf.Timestamp
+	10, // 2: saturn.identity.v1.User.update_time:type_name -> google.protobuf.Timestamp
+	0,  // 3: saturn.identity.v1.Identity.LoginUser:input_type -> saturn.identity.v1.LoginUserRequest
+	2,  // 4: saturn.identity.v1.Identity.RegisterUser:input_type -> saturn.identity.v1.RegisterUserRequest
+	4,  // 5: saturn.identity.v1.Identity.RefreshSession:input_type -> saturn.identity.v1.RefreshSessionRequest
+	6,  // 6: saturn.identity.v1.Identity.Logout:input_type -> saturn.identity.v1.LogoutRequest
+	8,  // 7: saturn.identity.v1.Identity.GetCurrentUser:input_type -> saturn.identity.v1.GetCurrentUserRequest
+	1,  // 8: saturn.identity.v1.Identity.LoginUser:output_type -> saturn.identity.v1.LoginUserResponse
+	3,  // 9: saturn.identity.v1.Identity.RegisterUser:output_type -> saturn.identity.v1.User
+	5,  // 10: saturn.identity.v1.Identity.RefreshSession:output_type -> saturn.identity.v1.RefreshSessionResponse
+	7,  // 11: saturn.identity.v1.Identity.Logout:output_type -> saturn.identity.v1.LogoutResponse
+	3,  // 12: saturn.identity.v1.Identity.GetCurrentUser:output_type -> saturn.identity.v1.User
+	8,  // [8:13] is the sub-list for method output_type
+	3,  // [3:8] is the sub-list for method input_type
+	3,  // [3:3] is the sub-list for extension type_name
+	3,  // [3:3] is the sub-list for extension extendee
+	0,  // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_saturn_identity_v1_identity_proto_init() }
@@ -737,7 +779,7 @@ func file_saturn_identity_v1_identity_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_identity_v1_identity_proto_rawDesc), len(file_saturn_identity_v1_identity_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
