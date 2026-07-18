@@ -19,3 +19,5 @@ plugins:
       - allow_merge=true
       - merge_file_name=api
       - omit_enum_default_value=true
+  - local: ./bin/protoc-gen-ts-simple
+    out: apps/web/gen
