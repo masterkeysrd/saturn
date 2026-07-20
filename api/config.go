@@ -14,6 +14,7 @@ import (
 //go:embed api.yaml
 //go:embed saturn/identity/v1/identity.yaml
 //go:embed saturn/identity/admin/v1/identityadmin.yaml
+//go:embed saturn/space/v1/space.yaml
 var configFS embed.FS
 
 // ServiceConfig represents a parsed API configuration YAML file.
@@ -28,6 +29,9 @@ type ServiceConfig struct {
 	Authentication      struct {
 		Rules []AuthRule `yaml:"rules"`
 	} `yaml:"authentication"`
+	Space struct {
+		Rules []SpaceRule `yaml:"rules"`
+	} `yaml:"space"`
 }
 
 // AuthRule defines the authentication and authorization policy for gRPC methods matching the selector.
@@ -35,6 +39,12 @@ type AuthRule struct {
 	Selector     string   `yaml:"selector"`
 	AuthRequired bool     `yaml:"auth_required"`
 	AccessLevels []string `yaml:"access_levels,omitempty"`
+}
+
+// SpaceRule defines the space-scoping policy for gRPC methods matching the selector.
+type SpaceRule struct {
+	Selector string `yaml:"selector"`
+	Scoped   bool   `yaml:"scoped"`
 }
 
 // LoadServiceConfigs reads all config YAML files from the embed.FS.
@@ -95,6 +105,20 @@ func CompileAllRules(global *ServiceConfig, modules []*ServiceConfig) []AuthRule
 	return allRules
 }
 
+// CompileAllSpaceRules merges global and module space rules into a single list.
+// Rules are evaluated in order: global first, then modules.
+// The last matching rule wins.
+func CompileAllSpaceRules(global *ServiceConfig, modules []*ServiceConfig) []SpaceRule {
+	var allRules []SpaceRule
+	if global != nil {
+		allRules = append(allRules, global.Space.Rules...)
+	}
+	for _, m := range modules {
+		allRules = append(allRules, m.Space.Rules...)
+	}
+	return allRules
+}
+
 // buildTagPrefixMap constructs a mapping from swagger tag name to its FQN package prefix.
 // For example, tag "Identity" → prefix "saturn.identity.v1" (derived from "saturn.identity.v1.Identity").
 func buildTagPrefixMap(modules []*ServiceConfig) map[string]string {
@@ -145,6 +169,7 @@ func ApplyConfig(specJSON []byte) ([]byte, error) {
 	}
 
 	rules := CompileAllRules(global, modules)
+	spaceRules := CompileAllSpaceRules(global, modules)
 
 	// Build tag→prefix map for FQN normalization
 	tagPrefixMap := buildTagPrefixMap(modules)
@@ -253,8 +278,20 @@ func ApplyConfig(specJSON []byte) ([]byte, error) {
 				}
 			}
 
+			// Find the last matching space rule for this operation
+			spaceScoped := true // secure-by-default fallback
+			for _, rule := range spaceRules {
+				if matchMethodSelector(rule.Selector, fqn) {
+					spaceScoped = rule.Scoped
+				}
+			}
+
 			if applySecurity {
-				op["security"] = json.RawMessage(`[{"bearerAuth":[]}]`)
+				if spaceScoped {
+					op["security"] = json.RawMessage(`[{"bearerAuth":[],"spaceIdAuth":[]}]`)
+				} else {
+					op["security"] = json.RawMessage(`[{"bearerAuth":[]}]`)
+				}
 			} else {
 				delete(op, "security")
 			}

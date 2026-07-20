@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	"github.com/masterkeysrd/saturn/internal/domain/space"
 )
 
 // ApproveUserRequest represents the input for approving a user.
@@ -25,6 +26,18 @@ func (c *Coordinator) ApproveUser(ctx context.Context, req *ApproveUserRequest) 
 	user, err := c.identityService.ApproveUser(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("approve user: %w", err)
+	}
+
+	// Create default workspace for approved user if space service is wired
+	if c.spaceService != nil {
+		defaultSpace := &space.Space{
+			Name:        fmt.Sprintf("%s's Workspace", user.Username),
+			Description: "My personal workspace",
+			OwnerID:     space.SpaceID(userID),
+		}
+		if _, err := c.spaceService.CreateSpace(ctx, defaultSpace); err != nil {
+			return nil, fmt.Errorf("create default workspace: %w", err)
+		}
 	}
 
 	return &ApproveUserResponse{

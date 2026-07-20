@@ -24,7 +24,9 @@ import {
   ChevronUpIcon,
   LogOutIcon,
   ChevronRightIcon,
+  SettingsIcon,
 } from "lucide-react"
+import { SpaceSelector } from "@/components/space-selector"
 
 // Discover all menu configurations dynamically at compile time
 const menuModules = import.meta.glob<{ menu: FeatureMenu | FeatureMenu[] }>(
@@ -138,11 +140,31 @@ export function AppSidebar() {
   return (
     <Sidebar side="left" variant="sidebar" collapsible="icon">
       <SidebarHeader>
-        <div className="flex flex-col items-center gap-2 px-2 py-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary to-accent text-white shadow-lg shadow-primary/20">
-            <span className="font-mono text-xl font-bold">S</span>
+        <div
+          className={cn(
+            "flex items-center gap-2.5 pt-3 pb-1 transition-all duration-200 select-none",
+            state === "collapsed" ? "justify-center" : "flex-row px-3"
+          )}
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-primary to-accent text-white shadow-md shadow-primary/25">
+            <span className="font-sans text-lg font-black tracking-tighter">
+              S
+            </span>
           </div>
-          <span className="text-sm font-semibold text-foreground">Saturn</span>
+          {state !== "collapsed" && (
+            <span className="animate-in text-base font-semibold tracking-tight text-foreground duration-200 fade-in">
+              Saturn
+            </span>
+          )}
+        </div>
+
+        <div
+          className={cn(
+            "flex flex-col pt-1 pb-2 transition-all duration-200",
+            state === "collapsed" ? "items-center" : "px-0"
+          )}
+        >
+          <SpaceSelector />
         </div>
       </SidebarHeader>
 
@@ -187,7 +209,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               tooltip="Profile"
-              isActive={location.pathname === "/profile"}
+              isActive={location.pathname === "/settings"}
               onClick={() => setProfileOpen(!profileOpen)}
               className="cursor-pointer"
             >
@@ -235,12 +257,21 @@ export function AppSidebar() {
 
               {/* Menu Items */}
               <Link
-                to="/profile"
+                to="/settings?tab=account"
                 onClick={() => setProfileOpen(false)}
                 className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted/60"
               >
                 <UserIcon className="h-4 w-4 text-muted-foreground" />
-                <span>Account Details</span>
+                <span>Account</span>
+              </Link>
+
+              <Link
+                to="/settings?tab=spaces"
+                onClick={() => setProfileOpen(false)}
+                className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted/60"
+              >
+                <SettingsIcon className="h-4 w-4 text-muted-foreground" />
+                <span>Spaces</span>
               </Link>
 
               <button

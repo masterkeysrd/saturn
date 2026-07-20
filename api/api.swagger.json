@@ -10,6 +10,9 @@
     },
     {
       "name": "Identity"
+    },
+    {
+      "name": "Spaces"
     }
   ],
   "consumes": [
@@ -393,6 +396,347 @@
           "Identity"
         ]
       }
+    },
+    "/v1/spaces": {
+      "get": {
+        "summary": "ListSpaces lists all spaces the authenticated user has access to.",
+        "operationId": "Spaces_ListSpaces",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSpacesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pageSize",
+            "description": "default 20, max 100",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "nextPageToken",
+            "description": "cursor-based pagination token",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      },
+      "post": {
+        "summary": "CreateSpace creates a new workspace.",
+        "operationId": "Spaces_CreateSpace",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Space"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateSpaceRequest contains the fields for creating a new workspace.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateSpaceRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}": {
+      "get": {
+        "summary": "GetSpace retrieves a workspace by ID.",
+        "operationId": "Spaces_GetSpace",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Space"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "The workspace ID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteSpace deletes a workspace.",
+        "operationId": "Spaces_DeleteSpace",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteSpaceResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "The workspace ID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      },
+      "patch": {
+        "summary": "UpdateSpace updates a workspace.",
+        "operationId": "Spaces_UpdateSpace",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Space"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "The workspace ID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SpacesUpdateSpaceBody"
+            }
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/members": {
+      "get": {
+        "summary": "ListSpaceMembers lists all members of a workspace.",
+        "operationId": "Spaces_ListSpaceMembers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSpaceMembersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "The workspace ID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "description": "default 20, max 100",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "nextPageToken",
+            "description": "cursor-based pagination token",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      },
+      "post": {
+        "summary": "AddSpaceMember adds a member to a workspace.",
+        "operationId": "Spaces_AddSpaceMember",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SpaceMember"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "The workspace ID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SpacesAddSpaceMemberBody"
+            }
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/members/{userId}": {
+      "delete": {
+        "summary": "RemoveSpaceMember removes a member from a workspace.",
+        "operationId": "Spaces_RemoveSpaceMember",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RemoveSpaceMemberResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "The workspace ID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userId",
+            "description": "The user ID to remove.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      },
+      "patch": {
+        "summary": "UpdateSpaceMemberRole updates a member's role in a workspace.",
+        "operationId": "Spaces_UpdateSpaceMemberRole",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SpaceMember"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "The workspace ID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userId",
+            "description": "The user ID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SpacesUpdateSpaceMemberRoleBody"
+            }
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      }
     }
   },
   "definitions": {
@@ -441,6 +785,69 @@
       "required": [
         "identifier",
         "password"
+      ]
+    },
+    "SpaceMemberProfile": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "avatarUrl": {
+          "type": "string"
+        }
+      },
+      "description": "The nested user profile details."
+    },
+    "SpacesAddSpaceMemberBody": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The user ID to add as a member."
+        },
+        "role": {
+          "type": "string",
+          "description": "The role to assign."
+        }
+      },
+      "description": "AddSpaceMemberRequest contains the fields for adding a member.",
+      "required": [
+        "userId",
+        "role"
+      ]
+    },
+    "SpacesUpdateSpaceBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The workspace's name."
+        },
+        "description": {
+          "type": "string",
+          "description": "The workspace's description."
+        }
+      },
+      "description": "UpdateSpaceRequest contains the fields for updating a workspace.",
+      "required": [
+        "name"
+      ]
+    },
+    "SpacesUpdateSpaceMemberRoleBody": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "type": "string",
+          "description": "The new role."
+        }
+      },
+      "description": "UpdateSpaceMemberRoleRequest contains the fields for updating a member's role.",
+      "required": [
+        "role"
       ]
     },
     "identityAdminV1User": {
@@ -569,6 +976,59 @@
           "$ref": "#/definitions/identityAdminV1User"
         }
       }
+    },
+    "v1CreateSpaceRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The workspace's name."
+        },
+        "description": {
+          "type": "string",
+          "description": "The workspace's description."
+        }
+      },
+      "description": "CreateSpaceRequest contains the fields for creating a new workspace.",
+      "required": [
+        "name"
+      ]
+    },
+    "v1DeleteSpaceResponse": {
+      "type": "object",
+      "description": "DeleteSpaceResponse is empty on success."
+    },
+    "v1ListSpaceMembersResponse": {
+      "type": "object",
+      "properties": {
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SpaceMember"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      },
+      "description": "ListSpaceMembersResponse contains the list of members and pagination token."
+    },
+    "v1ListSpacesResponse": {
+      "type": "object",
+      "properties": {
+        "spaces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Space"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      },
+      "description": "ListSpacesResponse contains the list of spaces and pagination token."
     },
     "v1ListUsersResponse": {
       "type": "object",
@@ -704,6 +1164,10 @@
         "password"
       ]
     },
+    "v1RemoveSpaceMemberResponse": {
+      "type": "object",
+      "description": "RemoveSpaceMemberResponse is empty on success."
+    },
     "v1RevokeAllSessionsResponse": {
       "type": "object",
       "properties": {
@@ -712,6 +1176,80 @@
           "format": "int64"
         }
       }
+    },
+    "v1Space": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The workspace's unique identifier.",
+          "readOnly": true
+        },
+        "name": {
+          "type": "string",
+          "description": "The workspace's name."
+        },
+        "description": {
+          "type": "string",
+          "description": "The workspace's description."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "The owner's user ID.",
+          "readOnly": true
+        },
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "The optimistic locking version.",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The creation timestamp."
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The last update timestamp."
+        }
+      },
+      "description": "Space represents a workspace.",
+      "required": [
+        "name"
+      ]
+    },
+    "v1SpaceMember": {
+      "type": "object",
+      "properties": {
+        "spaceId": {
+          "type": "string",
+          "description": "The workspace ID."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The member's user ID."
+        },
+        "role": {
+          "type": "string",
+          "description": "The member's role within the workspace."
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The creation timestamp."
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The last update timestamp."
+        },
+        "profile": {
+          "$ref": "#/definitions/SpaceMemberProfile"
+        }
+      },
+      "description": "SpaceMember represents a member of a workspace."
     },
     "v1UpdateUserRoleResponse": {
       "type": "object",

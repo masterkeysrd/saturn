@@ -16,3 +16,9 @@ authentication:
       auth_required: true
       access_levels:
          - admin
+
+space:
+  rules:
+    # Admin service operations are global (non space-scoped)
+    - selector: "saturn.identity.admin.v1.AdminIdentity.*"
+      scoped: false

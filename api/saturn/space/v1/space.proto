@@ -1,0 +1,199 @@
+syntax = "proto3";
+
+package saturn.space.v1;
+
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/masterkeysrd/saturn/apis/saturn/space/v1;spacev1";
+
+// Spaces provides workspace (space) management including CRUD operations and member management.
+service Spaces {
+  // CreateSpace creates a new workspace.
+  rpc CreateSpace(CreateSpaceRequest) returns (Space) {
+    option (google.api.http) = {
+      post: "/v1/spaces"
+      body: "*"
+    };
+  }
+
+  // GetSpace retrieves a workspace by ID.
+  rpc GetSpace(GetSpaceRequest) returns (Space) {
+    option (google.api.http) = {get: "/v1/spaces/{space_id}"};
+  }
+
+  // UpdateSpace updates a workspace.
+  rpc UpdateSpace(UpdateSpaceRequest) returns (Space) {
+    option (google.api.http) = {
+      patch: "/v1/spaces/{space_id}"
+      body: "*"
+    };
+  }
+
+  // DeleteSpace deletes a workspace.
+  rpc DeleteSpace(DeleteSpaceRequest) returns (DeleteSpaceResponse) {
+    option (google.api.http) = {delete: "/v1/spaces/{space_id}"};
+  }
+
+  // ListSpaces lists all spaces the authenticated user has access to.
+  rpc ListSpaces(ListSpacesRequest) returns (ListSpacesResponse) {
+    option (google.api.http) = {get: "/v1/spaces"};
+  }
+
+  // AddSpaceMember adds a member to a workspace.
+  rpc AddSpaceMember(AddSpaceMemberRequest) returns (SpaceMember) {
+    option (google.api.http) = {
+      post: "/v1/spaces/{space_id}/members"
+      body: "*"
+    };
+  }
+
+  // RemoveSpaceMember removes a member from a workspace.
+  rpc RemoveSpaceMember(RemoveSpaceMemberRequest) returns (RemoveSpaceMemberResponse) {
+    option (google.api.http) = {delete: "/v1/spaces/{space_id}/members/{user_id}"};
+  }
+
+  // UpdateSpaceMemberRole updates a member's role in a workspace.
+  rpc UpdateSpaceMemberRole(UpdateSpaceMemberRoleRequest) returns (SpaceMember) {
+    option (google.api.http) = {
+      patch: "/v1/spaces/{space_id}/members/{user_id}"
+      body: "*"
+    };
+  }
+
+  // ListSpaceMembers lists all members of a workspace.
+  rpc ListSpaceMembers(ListSpaceMembersRequest) returns (ListSpaceMembersResponse) {
+    option (google.api.http) = {get: "/v1/spaces/{space_id}/members"};
+  }
+}
+
+// Space represents a workspace.
+message Space {
+  // The workspace's unique identifier.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // The workspace's name.
+  string name = 2 [(google.api.field_behavior) = REQUIRED];
+  // The workspace's description.
+  string description = 3;
+  // The owner's user ID.
+  string owner_id = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // The optimistic locking version.
+  int64 version = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // The creation timestamp.
+  google.protobuf.Timestamp create_time = 6;
+  // The last update timestamp.
+  google.protobuf.Timestamp update_time = 7;
+}
+
+// SpaceMember represents a member of a workspace.
+message SpaceMember {
+  // The workspace ID.
+  string space_id = 1;
+  // The member's user ID.
+  string user_id = 2;
+  // The member's role within the workspace.
+  string role = 3;
+  // The creation timestamp.
+  google.protobuf.Timestamp create_time = 4;
+  // The last update timestamp.
+  google.protobuf.Timestamp update_time = 5;
+
+  // The nested user profile details.
+  message Profile {
+    string name = 1;
+    string username = 2;
+    string avatar_url = 3;
+  }
+  Profile profile = 6;
+}
+
+// CreateSpaceRequest contains the fields for creating a new workspace.
+message CreateSpaceRequest {
+  // The workspace's name.
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  // The workspace's description.
+  string description = 2;
+}
+
+// GetSpaceRequest contains the fields for retrieving a workspace.
+message GetSpaceRequest {
+  // The workspace ID.
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// UpdateSpaceRequest contains the fields for updating a workspace.
+message UpdateSpaceRequest {
+  // The workspace ID.
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  // The workspace's name.
+  string name = 2 [(google.api.field_behavior) = REQUIRED];
+  // The workspace's description.
+  string description = 3;
+}
+
+// DeleteSpaceRequest contains the fields for deleting a workspace.
+message DeleteSpaceRequest {
+  // The workspace ID.
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// DeleteSpaceResponse is empty on success.
+message DeleteSpaceResponse {}
+
+// ListSpacesRequest contains the fields for listing user workspaces.
+message ListSpacesRequest {
+  int32 page_size = 1; // default 20, max 100
+  string next_page_token = 2; // cursor-based pagination token
+}
+
+// ListSpacesResponse contains the list of spaces and pagination token.
+message ListSpacesResponse {
+  repeated Space spaces = 1;
+  string next_page_token = 2;
+}
+
+// AddSpaceMemberRequest contains the fields for adding a member.
+message AddSpaceMemberRequest {
+  // The workspace ID.
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  // The user ID to add as a member.
+  string user_id = 2 [(google.api.field_behavior) = REQUIRED];
+  // The role to assign.
+  string role = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+// RemoveSpaceMemberRequest contains the fields for removing a member.
+message RemoveSpaceMemberRequest {
+  // The workspace ID.
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  // The user ID to remove.
+  string user_id = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// RemoveSpaceMemberResponse is empty on success.
+message RemoveSpaceMemberResponse {}
+
+// UpdateSpaceMemberRoleRequest contains the fields for updating a member's role.
+message UpdateSpaceMemberRoleRequest {
+  // The workspace ID.
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  // The user ID.
+  string user_id = 2 [(google.api.field_behavior) = REQUIRED];
+  // The new role.
+  string role = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+// ListSpaceMembersRequest contains the fields for listing workspace members.
+message ListSpaceMembersRequest {
+  // The workspace ID.
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  int32 page_size = 2; // default 20, max 100
+  string next_page_token = 3; // cursor-based pagination token
+}
+
+// ListSpaceMembersResponse contains the list of members and pagination token.
+message ListSpaceMembersResponse {
+  repeated SpaceMember members = 1;
+  string next_page_token = 2;
+}

@@ -133,7 +133,10 @@ func (f *fakeIdentityService) RevokeAllSessions(ctx context.Context, userID iden
 func TestRegisterHashesPassword(t *testing.T) {
 	fakeSvc := newFakeIdentityService()
 	testH := newTestHasher(password.DefaultParams())
-	coord := NewCoordinator(fakeSvc, testH)
+	coord := NewCoordinator(Dependencies{
+		IdentityService: fakeSvc,
+		PasswordHasher:  testH,
+	})
 
 	req := &RegisterUserRequest{
 		Email:    "test@example.com",
@@ -164,7 +167,10 @@ func TestRegisterHashesPassword(t *testing.T) {
 func TestRegisterNeverSendsPlaintext(t *testing.T) {
 	fakeSvc := newFakeIdentityService()
 	testH := newTestHasher(password.DefaultParams())
-	coord := NewCoordinator(fakeSvc, testH)
+	coord := NewCoordinator(Dependencies{
+		IdentityService: fakeSvc,
+		PasswordHasher:  testH,
+	})
 
 	req := &RegisterUserRequest{
 		Email:    "test@example.com",
@@ -191,7 +197,10 @@ func TestRegisterNeverSendsPlaintext(t *testing.T) {
 func TestRegisterInvalidPasswordFails(t *testing.T) {
 	fakeSvc := newFakeIdentityService()
 	testH := newTestHasher(password.DefaultParams())
-	coord := NewCoordinator(fakeSvc, testH)
+	coord := NewCoordinator(Dependencies{
+		IdentityService: fakeSvc,
+		PasswordHasher:  testH,
+	})
 
 	// Use a very short password to trigger validation failure
 	req := &RegisterUserRequest{
@@ -211,7 +220,10 @@ func TestRegisterInvalidPasswordFails(t *testing.T) {
 func TestAdminCreateUserHashesPassword(t *testing.T) {
 	fakeSvc := newFakeIdentityService()
 	testH := newTestHasher(password.DefaultParams())
-	coord := NewCoordinator(fakeSvc, testH)
+	coord := NewCoordinator(Dependencies{
+		IdentityService: fakeSvc,
+		PasswordHasher:  testH,
+	})
 
 	req := &AdminCreateUserRequest{
 		Email:       "admin@example.com",
@@ -239,7 +251,10 @@ func TestAdminCreateUserHashesPassword(t *testing.T) {
 func TestAdminCreateUserInvalidPasswordFails(t *testing.T) {
 	fakeSvc := newFakeIdentityService()
 	testH := newTestHasher(password.DefaultParams())
-	coord := NewCoordinator(fakeSvc, testH)
+	coord := NewCoordinator(Dependencies{
+		IdentityService: fakeSvc,
+		PasswordHasher:  testH,
+	})
 
 	req := &AdminCreateUserRequest{
 		Password: "short",
@@ -258,7 +273,10 @@ func TestAdminCreateUserInvalidPasswordFails(t *testing.T) {
 func TestRegisterHasherErrorPropagated(t *testing.T) {
 	fakeSvc := newFakeIdentityService()
 	failH := &failHasher{}
-	coord := NewCoordinator(fakeSvc, failH)
+	coord := NewCoordinator(Dependencies{
+		IdentityService: fakeSvc,
+		PasswordHasher:  failH,
+	})
 
 	req := &RegisterUserRequest{
 		Password: "securepassword123",

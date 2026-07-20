@@ -9,6 +9,8 @@ import (
 	"github.com/masterkeysrd/saturn/internal/application/iam"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	identitystorage "github.com/masterkeysrd/saturn/internal/domain/identity/storage"
+	"github.com/masterkeysrd/saturn/internal/domain/space"
+	spacestorage "github.com/masterkeysrd/saturn/internal/domain/space/storage"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
 	"github.com/masterkeysrd/saturn/internal/shutdown"
 	"github.com/masterkeysrd/saturn/migrations"
@@ -130,7 +132,17 @@ func Execute() error {
 				CredentialStore: credentialStore,
 				Hasher:          passwordHasher,
 			})
-			coordinator := iam.NewCoordinator(identityService, passwordHasher)
+			spaceStore := spacestorage.NewSpaceStore(sqlxDB)
+			memberStore := spacestorage.NewMemberStore(sqlxDB)
+			spaceService := space.NewService(space.Dependencies{
+				SpaceStore:  spaceStore,
+				MemberStore: memberStore,
+			})
+			coordinator := iam.NewCoordinator(iam.Dependencies{
+				IdentityService: identityService,
+				PasswordHasher:  passwordHasher,
+				SpaceService:    spaceService,
+			})
 
 			email, _ := cmd.Flags().GetString("email")
 			username, _ := cmd.Flags().GetString("username")

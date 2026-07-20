@@ -7,8 +7,8 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { useAuth } from "@/features/auth/use-auth"
 import { DashboardView } from "@/features/dashboard/dashboard-view"
-import { ProfileView } from "@/features/profile/profile-view"
 import { AdminView } from "@/features/admin/admin-view"
+import { SettingsView } from "@/features/settings/settings-view"
 
 export function App() {
   const { user } = useAuth()
@@ -41,7 +41,15 @@ export function App() {
           }
         >
           <Route path="/" element={<DashboardView />} />
-          <Route path="/profile" element={<ProfileView />} />
+          <Route
+            path="/profile"
+            element={<Navigate to="/settings?tab=account" replace />}
+          />
+          <Route
+            path="/spaces"
+            element={<Navigate to="/settings?tab=spaces" replace />}
+          />
+          <Route path="/settings" element={<SettingsView />} />
           <Route
             path="/admin"
             element={

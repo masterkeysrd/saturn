@@ -15,9 +15,20 @@ securityDefinitions:
     in: "header"
     name: "Authorization"
     description: "Enter your JWT token: Bearer <token>"
+  spaceIdAuth:
+    type: "apiKey"
+    in: "header"
+    name: "space-id"
+    description: "Enter active workspace KSUID (e.g. spc_1234567890abcdef)"
 
 authentication:
   rules:
     # Default fallback: require authentication for everything
     - selector: "*"
       auth_required: true
+
+space:
+  rules:
+    # Default fallback: require space scoping for everything (secure-by-default)
+    - selector: "*"
+      scoped: true

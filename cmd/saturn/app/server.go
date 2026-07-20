@@ -22,12 +22,17 @@ import (
 
 	admingrpc "github.com/masterkeysrd/saturn/apis/saturn/identity/admin/v1"
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
+	spacev1 "github.com/masterkeysrd/saturn/apis/saturn/space/v1"
 	"github.com/masterkeysrd/saturn/internal/application/iam"
+	spaceapp "github.com/masterkeysrd/saturn/internal/application/space"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	identitystorage "github.com/masterkeysrd/saturn/internal/domain/identity/storage"
+	"github.com/masterkeysrd/saturn/internal/domain/space"
+	spacestorage "github.com/masterkeysrd/saturn/internal/domain/space/storage"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
 	"github.com/masterkeysrd/saturn/internal/shutdown"
 	identitygrpc "github.com/masterkeysrd/saturn/internal/transport/identity"
+	spacegrpc "github.com/masterkeysrd/saturn/internal/transport/space"
 )
 
 // GRPCServer manages the standalone gRPC server listening on a Unix socket.
@@ -69,7 +74,22 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 			Hasher:          passwordHasher,
 		},
 	)
-	coordinator := iam.NewCoordinator(identityService, passwordHasher)
+
+	// Wire Space stores
+	spaceStore := spacestorage.NewSpaceStore(sqlxDB)
+	memberStore := spacestorage.NewMemberStore(sqlxDB)
+
+	// Wire Space service
+	spaceService := space.NewService(space.Dependencies{
+		SpaceStore:  spaceStore,
+		MemberStore: memberStore,
+	})
+
+	coordinator := iam.NewCoordinator(iam.Dependencies{
+		IdentityService: identityService,
+		PasswordHasher:  passwordHasher,
+		SpaceService:    spaceService,
+	})
 
 	// Wire JWT token service
 	issuer, audience, accessTTL, clockSkew, activeKeyID := cfg.Auth.ToTokenConfig()
@@ -107,13 +127,23 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 		return fmt.Errorf("load service configs: %w", err)
 	}
 	rules := api.CompileAllRules(global, modules)
+	spaceRules := api.CompileAllSpaceRules(global, modules)
 
 	// Wire auth interceptor with loaded rules
 	authInterceptor := transportauth.NewAuthInterceptor(tokenService, userStore, rules)
 
+	// Wire space interceptor
+	spaceInterceptor := transportauth.NewSpaceInterceptor(memberStore, spaceRules)
+
 	s.grpc = grpc.NewServer(
-		grpc.UnaryInterceptor(authInterceptor.UnaryServerInterceptor()),
-		grpc.StreamInterceptor(authInterceptor.StreamServerInterceptor()),
+		grpc.ChainUnaryInterceptor(
+			authInterceptor.UnaryServerInterceptor(),
+			spaceInterceptor.UnaryServerInterceptor(),
+		),
+		grpc.ChainStreamInterceptor(
+			authInterceptor.StreamServerInterceptor(),
+			spaceInterceptor.StreamServerInterceptor(),
+		),
 	)
 
 	identityv1.RegisterIdentityServer(s.grpc, identityHandler)
@@ -121,6 +151,14 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	// Wire admin identity service
 	adminHandler := identitygrpc.NewAdminHandler(coordinator)
 	admingrpc.RegisterAdminIdentityServer(s.grpc, adminHandler)
+
+	// Wire Space service
+	spaceCoordinator := spaceapp.NewCoordinator(spaceapp.Dependencies{
+		SpaceService:    spaceService,
+		IdentityService: identityService,
+	})
+	spaceHandler := spacegrpc.NewHandler(spaceCoordinator)
+	spacev1.RegisterSpacesServer(s.grpc, spaceHandler)
 	return nil
 }
 
@@ -172,6 +210,10 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 
 	if err := admingrpc.RegisterAdminIdentityHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
 		return fmt.Errorf("register admin gateway handler: %w", err)
+	}
+
+	if err := spacev1.RegisterSpacesHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
+		return fmt.Errorf("register space gateway handler: %w", err)
 	}
 
 	handler := http.NewServeMux()

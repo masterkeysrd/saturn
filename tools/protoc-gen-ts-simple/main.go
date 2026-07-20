@@ -237,16 +237,47 @@ func generateMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 	g.P("}")
 	g.P()
 
+	// Map path parameters to their camelCased JSON name from the input message fields
+	var pathParamJSONNames []string
+	for _, p := range pathParams {
+		jsonName := p // fallback
+		for _, f := range method.Input.Fields {
+			if string(f.Desc.Name()) == p {
+				jsonName = f.Desc.JSONName()
+				break
+			}
+		}
+		pathParamJSONNames = append(pathParamJSONNames, jsonName)
+	}
+
 	// Generate TanStack React Query Hooks wrapper
 	if httpMethod == "GET" {
 		hookName := "use" + method.GoName + "Query"
+		var hookUrlStr string
+		var queryFnCall string
+		if len(pathParams) > 0 {
+			hPath := path
+			var args []string
+			for i, p := range pathParams {
+				jsonName := pathParamJSONNames[i]
+				hPath = strings.ReplaceAll(hPath, "{"+p+"}", "${req."+jsonName+"}")
+				args = append(args, "req."+jsonName)
+			}
+			args = append(args, "req")
+			hookUrlStr = "`" + "/api" + hPath + "`"
+			queryFnCall = methodName + "(" + strings.Join(args, ", ") + ")"
+		} else {
+			hookUrlStr = fmt.Sprintf("%q", "/api"+path)
+			queryFnCall = methodName + "(req)"
+		}
+
 		g.P("export function ", hookName, "(")
 		g.P("  req: ", reqType, ",")
 		g.P("  options?: Omit<UseQueryOptions<", resType, ", Error>, \"queryKey\" | \"queryFn\">")
 		g.P(") {")
 		g.P("  return useQuery<", resType, ", Error>({")
-		g.P("    queryKey: [", urlStr, ", req],")
-		g.P("    queryFn: () => ", methodName, "(req),")
+		g.P("    queryKey: [", hookUrlStr, ", req],")
+		g.P("    queryFn: () => ", queryFnCall, ",")
 		g.P("    ...options,")
 		g.P("  });")
 		g.P("}")

@@ -20,3 +20,9 @@ authentication:
       auth_required: false
     - selector: "saturn.identity.v1.Identity.Logout"
       auth_required: false
+
+space:
+  rules:
+    # Identity service operations are global (non space-scoped)
+    - selector: "saturn.identity.v1.Identity.*"
+      scoped: false

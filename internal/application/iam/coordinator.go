@@ -4,20 +4,30 @@ import (
 	"context"
 
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
 )
+
+// Dependencies defines the inputs for creating a new iam.Coordinator.
+type Dependencies struct {
+	IdentityService IdentityService
+	PasswordHasher  password.Hasher
+	SpaceService    SpaceService
+}
 
 // Coordinator orchestrates identity operations across multiple services.
 type Coordinator struct {
 	identityService IdentityService
 	passwordHasher  password.Hasher
+	spaceService    SpaceService
 }
 
 // NewCoordinator creates a new Coordinator.
-func NewCoordinator(identityService IdentityService, passwordHasher password.Hasher) *Coordinator {
+func NewCoordinator(deps Dependencies) *Coordinator {
 	return &Coordinator{
-		identityService: identityService,
-		passwordHasher:  passwordHasher,
+		identityService: deps.IdentityService,
+		passwordHasher:  deps.PasswordHasher,
+		spaceService:    deps.SpaceService,
 	}
 }
 
@@ -54,4 +64,9 @@ type IdentityService interface {
 	IncrementAuthVersion(ctx context.Context, id identity.UserID) (int64, error)
 	Authenticate(ctx context.Context, identifier string, password string) (*identity.User, error)
 	RevokeAllSessions(ctx context.Context, userID identity.UserID) (int64, error)
+}
+
+// SpaceService defines the interface for space operations required by IAM application.
+type SpaceService interface {
+	CreateSpace(ctx context.Context, space *space.Space) (*space.Space, error)
 }

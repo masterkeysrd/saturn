@@ -1,0 +1,25 @@
+# Space service API configuration.
+#
+# All space endpoints require JWT Bearer authentication.
+# Space-scoped endpoints require the Space-Id header.
+
+name: saturn.space.v1
+title: "Saturn Space API"
+apis:
+  - saturn.space.v1.Spaces
+
+documentation:
+  summary: "Provides workspace (space) management including CRUD operations and member management. Space-scoped endpoints require the 'space-id' header containing the workspace ID."
+
+authentication:
+  rules:
+    # All space endpoints require authentication
+    - selector: "saturn.space.v1.Spaces.*"
+      auth_required: true
+
+space:
+  rules:
+    # Disable metadata header space-scoping for all Spaces service endpoints.
+    # Authorization is handled explicitly inside the domain service using request payloads.
+    - selector: "saturn.space.v1.Spaces.*"
+      scoped: false

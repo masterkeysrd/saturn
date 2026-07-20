@@ -35,7 +35,7 @@ services:
       context: ../..
       dockerfile: build/saturn/Dockerfile
     restart: "no"
-    command: ["migrate", "up"]
+    command: ["saturn", "migrate", "up"]
     depends_on:
       db:
         condition: service_healthy
