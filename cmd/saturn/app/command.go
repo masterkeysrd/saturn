@@ -127,9 +127,11 @@ func Execute() error {
 			if err != nil {
 				return fmt.Errorf("create password hasher: %w", err)
 			}
+			sessionStore := identitystorage.NewSessionStore(sqlxDB)
 			identityService := identity.NewService(identity.Dependencies{
 				UserStore:       userStore,
 				CredentialStore: credentialStore,
+				SessionStore:    sessionStore,
 				Hasher:          passwordHasher,
 			})
 			spaceStore := spacestorage.NewSpaceStore(sqlxDB)

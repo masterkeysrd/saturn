@@ -46,6 +46,27 @@ service Identity {
   rpc GetCurrentUser(GetCurrentUserRequest) returns (User) {
     option (google.api.http) = {get: "/v1/identity/users/me"};
   }
+
+  // ListActiveSessions returns all non-expired, non-revoked sessions for the user.
+  rpc ListActiveSessions(ListActiveSessionsRequest) returns (ListActiveSessionsResponse) {
+    option (google.api.http) = {get: "/v1/identity/sessions"};
+  }
+
+  // RevokeSession invalidates a specific user session by ID.
+  rpc RevokeSession(RevokeSessionRequest) returns (RevokeSessionResponse) {
+    option (google.api.http) = {
+      post: "/v1/identity/sessions/{session_id}:revoke"
+      body: "*"
+    };
+  }
+
+  // RevokeAllSessions invalidates all sessions for the user globally.
+  rpc RevokeAllSessions(RevokeAllSessionsRequest) returns (RevokeAllSessionsResponse) {
+    option (google.api.http) = {
+      post: "/v1/identity/sessions:revoke-all"
+      body: "*"
+    };
+  }
 }
 
 // LoginUserRequest contains user credentials for authentication.
@@ -137,3 +158,40 @@ message LogoutResponse {}
 
 // GetCurrentUserRequest is an empty request for fetching the current user's profile.
 message GetCurrentUserRequest {}
+
+// UserSession represents an active user session.
+message UserSession {
+  // The session identifier.
+  string session_id = 1;
+  // User Agent string associated with the session.
+  string user_agent = 2;
+  // IP address of the client that created the session.
+  string ip_address = 3;
+  // When the session was initialized.
+  google.protobuf.Timestamp create_time = 4;
+  // When the session was last utilized.
+  google.protobuf.Timestamp last_used_at = 5;
+}
+
+// ListActiveSessionsRequest is an empty request for listing sessions.
+message ListActiveSessionsRequest {}
+
+// ListActiveSessionsResponse lists active sessions.
+message ListActiveSessionsResponse {
+  repeated UserSession sessions = 1;
+}
+
+// RevokeSessionRequest targets a specific session to invalidate.
+message RevokeSessionRequest {
+  string session_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// RevokeSessionResponse is empty on success.
+message RevokeSessionResponse {}
+
+// RevokeAllSessionsRequest is an empty request for global session invalidation.
+message RevokeAllSessionsRequest {}
+
+// RevokeAllSessionsResponse is empty on success.
+message RevokeAllSessionsResponse {}
+

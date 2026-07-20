@@ -72,10 +72,12 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	if err != nil {
 		return fmt.Errorf("create password hasher: %w", err)
 	}
+	sessionStore := identitystorage.NewSessionStore(sqlxDB)
 	identityService := identity.NewService(
 		identity.Dependencies{
 			UserStore:       userStore,
 			CredentialStore: credentialStore,
+			SessionStore:    sessionStore,
 			Hasher:          passwordHasher,
 		},
 	)
@@ -88,12 +90,6 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	spaceService := space.NewService(space.Dependencies{
 		SpaceStore:  spaceStore,
 		MemberStore: memberStore,
-	})
-
-	coordinator := iam.NewCoordinator(iam.Dependencies{
-		IdentityService: identityService,
-		PasswordHasher:  passwordHasher,
-		SpaceService:    spaceService,
 	})
 
 	// Wire JWT token service
@@ -123,7 +119,14 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 		return fmt.Errorf("create token service: %w", err)
 	}
 
-	iamApp := identitygrpc.NewIAMApplication(coordinator, tokenService)
+	coordinator := iam.NewCoordinator(iam.Dependencies{
+		IdentityService: identityService,
+		PasswordHasher:  passwordHasher,
+		SpaceService:    spaceService,
+		TokenService:    tokenService,
+	})
+
+	iamApp := identitygrpc.NewIAMApplication(coordinator)
 	identityHandler := identitygrpc.NewHandler(iamApp)
 
 	// Load service configs at startup

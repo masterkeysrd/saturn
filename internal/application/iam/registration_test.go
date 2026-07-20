@@ -130,6 +130,26 @@ func (f *fakeIdentityService) RevokeAllSessions(ctx context.Context, userID iden
 	return 1, nil
 }
 
+func (f *fakeIdentityService) CreateSession(ctx context.Context, req *identity.CreateSessionRequest) (*identity.Session, error) {
+	return nil, nil
+}
+
+func (f *fakeIdentityService) RotateSession(ctx context.Context, req *identity.RotateSessionRequest) (*identity.Session, error) {
+	return nil, nil
+}
+
+func (f *fakeIdentityService) RevokeSessionByHash(ctx context.Context, refreshTokenHash []byte) error {
+	return nil
+}
+
+func (f *fakeIdentityService) GetActiveSessions(ctx context.Context, userID identity.UserID) ([]*identity.Session, error) {
+	return nil, nil
+}
+
+func (f *fakeIdentityService) RevokeSessionByID(ctx context.Context, sessionID identity.SessionID, userID identity.UserID) error {
+	return nil
+}
+
 func TestRegisterHashesPassword(t *testing.T) {
 	fakeSvc := newFakeIdentityService()
 	testH := newTestHasher(password.DefaultParams())

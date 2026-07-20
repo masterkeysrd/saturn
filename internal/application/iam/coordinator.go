@@ -6,6 +6,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
+	"github.com/masterkeysrd/saturn/internal/platform/token"
 )
 
 // Dependencies defines the inputs for creating a new iam.Coordinator.
@@ -13,6 +14,7 @@ type Dependencies struct {
 	IdentityService IdentityService
 	PasswordHasher  password.Hasher
 	SpaceService    SpaceService
+	TokenService    token.Service
 }
 
 // Coordinator orchestrates identity operations across multiple services.
@@ -20,6 +22,7 @@ type Coordinator struct {
 	identityService IdentityService
 	passwordHasher  password.Hasher
 	spaceService    SpaceService
+	tokenService    token.Service
 }
 
 // NewCoordinator creates a new Coordinator.
@@ -28,6 +31,7 @@ func NewCoordinator(deps Dependencies) *Coordinator {
 		identityService: deps.IdentityService,
 		passwordHasher:  deps.PasswordHasher,
 		spaceService:    deps.SpaceService,
+		tokenService:    deps.TokenService,
 	}
 }
 
@@ -64,6 +68,11 @@ type IdentityService interface {
 	IncrementAuthVersion(ctx context.Context, id identity.UserID) (int64, error)
 	Authenticate(ctx context.Context, identifier string, password string) (*identity.User, error)
 	RevokeAllSessions(ctx context.Context, userID identity.UserID) (int64, error)
+	CreateSession(ctx context.Context, req *identity.CreateSessionRequest) (*identity.Session, error)
+	RotateSession(ctx context.Context, req *identity.RotateSessionRequest) (*identity.Session, error)
+	RevokeSessionByHash(ctx context.Context, refreshTokenHash []byte) error
+	GetActiveSessions(ctx context.Context, userID identity.UserID) ([]*identity.Session, error)
+	RevokeSessionByID(ctx context.Context, sessionID identity.SessionID, userID identity.UserID) error
 }
 
 // SpaceService defines the interface for space operations required by IAM application.

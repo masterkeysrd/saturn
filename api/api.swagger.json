@@ -210,7 +210,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1RevokeAllSessionsResponse"
+              "$ref": "#/definitions/identityAdminV1RevokeAllSessionsResponse"
             }
           },
           "default": {
@@ -232,12 +232,74 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/AdminIdentityRevokeAllSessionsBody"
+              "$ref": "#/definitions/v1AdminIdentityRevokeAllSessionsBody"
             }
           }
         ],
         "tags": [
           "AdminIdentity"
+        ]
+      }
+    },
+    "/v1/identity/sessions": {
+      "get": {
+        "summary": "ListActiveSessions returns all non-expired, non-revoked sessions for the user.",
+        "operationId": "Identity_ListActiveSessions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListActiveSessionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
+    "/v1/identity/sessions/{sessionId}:revoke": {
+      "post": {
+        "summary": "RevokeSession invalidates a specific user session by ID.",
+        "operationId": "Identity_RevokeSession",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RevokeSessionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/IdentityRevokeSessionBody"
+            }
+          }
+        ],
+        "tags": [
+          "Identity"
         ]
       }
     },
@@ -301,6 +363,40 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/v1RefreshSessionRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
+    "/v1/identity/sessions:revoke-all": {
+      "post": {
+        "summary": "RevokeAllSessions invalidates all sessions for the user globally.",
+        "operationId": "Identity_RevokeAllSessions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/saturnIdentityV1RevokeAllSessionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "RevokeAllSessionsRequest is an empty request for global session invalidation.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/saturnIdentityV1RevokeAllSessionsRequest"
             }
           }
         ],
@@ -1393,9 +1489,6 @@
     "AdminIdentityRejectUserBody": {
       "type": "object"
     },
-    "AdminIdentityRevokeAllSessionsBody": {
-      "type": "object"
-    },
     "AdminIdentityUpdateUserRoleBody": {
       "type": "object",
       "properties": {
@@ -1528,6 +1621,10 @@
       "required": [
         "expense"
       ]
+    },
+    "IdentityRevokeSessionBody": {
+      "type": "object",
+      "description": "RevokeSessionRequest targets a specific session to invalidate."
     },
     "ListUsersRequestStatusFilter": {
       "type": "string",
@@ -1736,6 +1833,15 @@
         }
       }
     },
+    "identityAdminV1RevokeAllSessionsResponse": {
+      "type": "object",
+      "properties": {
+        "revokedCount": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
     "identityAdminV1User": {
       "type": "object",
       "properties": {
@@ -1803,6 +1909,14 @@
         }
       }
     },
+    "saturnIdentityV1RevokeAllSessionsRequest": {
+      "type": "object",
+      "description": "RevokeAllSessionsRequest is an empty request for global session invalidation."
+    },
+    "saturnIdentityV1RevokeAllSessionsResponse": {
+      "type": "object",
+      "description": "RevokeAllSessionsResponse is empty on success."
+    },
     "saturnIdentityV1User": {
       "type": "object",
       "properties": {
@@ -1854,6 +1968,9 @@
         "ACCESS_LEVEL_USER",
         "ACCESS_LEVEL_ADMIN"
       ]
+    },
+    "v1AdminIdentityRevokeAllSessionsBody": {
+      "type": "object"
     },
     "v1ApproveUserResponse": {
       "type": "object",
@@ -2076,6 +2193,19 @@
         "LIMIT_PROPAGATION_CURRENT_PERIOD",
         "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
       ]
+    },
+    "v1ListActiveSessionsResponse": {
+      "type": "object",
+      "properties": {
+        "sessions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1UserSession"
+          }
+        }
+      },
+      "description": "ListActiveSessionsResponse lists active sessions."
     },
     "v1ListBudgetsResponse": {
       "type": "object",
@@ -2302,14 +2432,9 @@
       "type": "object",
       "description": "RemoveSpaceMemberResponse is empty on success."
     },
-    "v1RevokeAllSessionsResponse": {
+    "v1RevokeSessionResponse": {
       "type": "object",
-      "properties": {
-        "revokedCount": {
-          "type": "string",
-          "format": "int64"
-        }
-      }
+      "description": "RevokeSessionResponse is empty on success."
     },
     "v1Space": {
       "type": "object",
@@ -2487,6 +2612,34 @@
           "$ref": "#/definitions/identityAdminV1User"
         }
       }
+    },
+    "v1UserSession": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "description": "The session identifier."
+        },
+        "userAgent": {
+          "type": "string",
+          "description": "User Agent string associated with the session."
+        },
+        "ipAddress": {
+          "type": "string",
+          "description": "IP address of the client that created the session."
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the session was initialized."
+        },
+        "lastUsedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the session was last utilized."
+        }
+      },
+      "description": "UserSession represents an active user session."
     }
   }
 }

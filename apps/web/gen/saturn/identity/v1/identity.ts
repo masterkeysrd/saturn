@@ -162,6 +162,66 @@ export type LogoutResponse = Record<string, never>
 export type GetCurrentUserRequest = Record<string, never>
 
 /**
+ * UserSession represents an active user session.
+ */
+export interface UserSession {
+  /**
+   * The session identifier.
+   */
+  sessionId: string
+  /**
+   * User Agent string associated with the session.
+   */
+  userAgent: string
+  /**
+   * IP address of the client that created the session.
+   */
+  ipAddress: string
+  /**
+   * When the session was initialized.
+   */
+  createTime: string
+  /**
+   * When the session was last utilized.
+   */
+  lastUsedAt: string
+}
+
+/**
+ * ListActiveSessionsRequest is an empty request for listing sessions.
+ */
+export type ListActiveSessionsRequest = Record<string, never>
+
+/**
+ * ListActiveSessionsResponse lists active sessions.
+ */
+export interface ListActiveSessionsResponse {
+  sessions: UserSession[]
+}
+
+/**
+ * RevokeSessionRequest targets a specific session to invalidate.
+ */
+export interface RevokeSessionRequest {
+  sessionId: string
+}
+
+/**
+ * RevokeSessionResponse is empty on success.
+ */
+export type RevokeSessionResponse = Record<string, never>
+
+/**
+ * RevokeAllSessionsRequest is an empty request for global session invalidation.
+ */
+export type RevokeAllSessionsRequest = Record<string, never>
+
+/**
+ * RevokeAllSessionsResponse is empty on success.
+ */
+export type RevokeAllSessionsResponse = Record<string, never>
+
+/**
  * Identity service provides user authentication and account management.
  */
 /**
@@ -272,6 +332,94 @@ export function useGetCurrentUserQuery(
   return useQuery<User, Error>({
     queryKey: ["/api/v1/identity/users/me", req],
     queryFn: () => getCurrentUser(req),
+    ...options,
+  })
+}
+
+/**
+ * ListActiveSessions returns all non-expired, non-revoked sessions for the user.
+ */
+export async function listActiveSessions(
+  req?: ListActiveSessionsRequest
+): Promise<ListActiveSessionsResponse> {
+  return request<ListActiveSessionsResponse>({
+    method: "GET",
+    url: "/api/v1/identity/sessions",
+    params: req,
+  })
+}
+
+export function useListActiveSessionsQuery(
+  req: ListActiveSessionsRequest,
+  options?: Omit<
+    UseQueryOptions<ListActiveSessionsResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListActiveSessionsResponse, Error>({
+    queryKey: ["/api/v1/identity/sessions", req],
+    queryFn: () => listActiveSessions(req),
+    ...options,
+  })
+}
+
+/**
+ * RevokeSession invalidates a specific user session by ID.
+ */
+export async function revokeSession(
+  session_id: string,
+  req: RevokeSessionRequest
+): Promise<RevokeSessionResponse> {
+  return request<RevokeSessionResponse>({
+    method: "POST",
+    url: `/api/v1/identity/sessions/${session_id}:revoke`,
+    data: req,
+  })
+}
+
+export function useRevokeSessionMutation(
+  options?: UseMutationOptions<
+    RevokeSessionResponse,
+    Error,
+    { session_id: string; req: RevokeSessionRequest }
+  >
+) {
+  return useMutation<
+    RevokeSessionResponse,
+    Error,
+    { session_id: string; req: RevokeSessionRequest }
+  >({
+    mutationFn: ({ session_id, req }) => revokeSession(session_id, req),
+    ...options,
+  })
+}
+
+/**
+ * RevokeAllSessions invalidates all sessions for the user globally.
+ */
+export async function revokeAllSessions(
+  req?: RevokeAllSessionsRequest
+): Promise<RevokeAllSessionsResponse> {
+  return request<RevokeAllSessionsResponse>({
+    method: "POST",
+    url: "/api/v1/identity/sessions:revoke-all",
+    data: req,
+  })
+}
+
+export function useRevokeAllSessionsMutation(
+  options?: UseMutationOptions<
+    RevokeAllSessionsResponse,
+    Error,
+    RevokeAllSessionsRequest
+  >
+) {
+  return useMutation<
+    RevokeAllSessionsResponse,
+    Error,
+    RevokeAllSessionsRequest
+  >({
+    mutationFn: (req) => revokeAllSessions(req),
     ...options,
   })
 }

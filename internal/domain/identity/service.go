@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 )
 
 var (
@@ -38,6 +39,7 @@ type CredentialStoreProvider interface {
 type Dependencies struct {
 	UserStore       UserStoreProvider
 	CredentialStore CredentialStoreProvider
+	SessionStore    SessionStoreProvider
 	Hasher          Hasher
 }
 
@@ -259,8 +261,73 @@ func (s *Service) RevokeAllSessions(ctx context.Context, userID UserID) (int64, 
 		return 0, fmt.Errorf("increment auth version: %w", err)
 	}
 
-	// TODO: implement session revocation via a session store
-	// For now, return the new auth version
+	if err := s.deps.SessionStore.RevokeAllForUser(ctx, userID, time.Now()); err != nil {
+		return 0, fmt.Errorf("revoke all sessions for user: %w", err)
+	}
 
 	return newAuthVersion, nil
+}
+
+// CreateSession generates SessionID, TokenFamilyID, and stores the new session.
+func (s *Service) CreateSession(ctx context.Context, req *CreateSessionRequest) (*Session, error) {
+	sessionID, err := NewSessionID()
+	if err != nil {
+		return nil, fmt.Errorf("create session id: %w", err)
+	}
+
+	familyID, err := NewTokenFamilyID()
+	if err != nil {
+		return nil, fmt.Errorf("create token family id: %w", err)
+	}
+
+	session := &Session{
+		ID:                sessionID,
+		UserID:            req.UserID,
+		RefreshTokenHash:  req.RefreshTokenHash,
+		TokenFamilyID:     familyID,
+		ExpiresAt:         req.ExpiresAt,
+		AbsoluteExpiresAt: req.AbsoluteExpiresAt,
+		CreateTime:        time.Now(),
+		UserAgent:         req.UserAgent,
+		IPAddress:         req.IPAddress,
+	}
+
+	if err := s.deps.SessionStore.Create(ctx, session); err != nil {
+		return nil, err
+	}
+	return session, nil
+}
+
+// RotateSession generates a successor Session ID and rotates the session.
+func (s *Service) RotateSession(ctx context.Context, req *RotateSessionRequest) (*Session, error) {
+	successorID, err := NewSessionID()
+	if err != nil {
+		return nil, fmt.Errorf("create successor session id: %w", err)
+	}
+
+	successor := &Session{
+		ID:               successorID,
+		RefreshTokenHash: req.SuccessorHash,
+		ExpiresAt:        req.ExpiresAt,
+		CreateTime:       time.Now(),
+		UserAgent:        req.UserAgent,
+		IPAddress:        req.IPAddress,
+	}
+
+	return s.deps.SessionStore.Rotate(ctx, req.RefreshTokenHash, time.Now(), successor)
+}
+
+// RevokeSessionByHash delegates to the session store's RevokeByHash method.
+func (s *Service) RevokeSessionByHash(ctx context.Context, refreshTokenHash []byte) error {
+	return s.deps.SessionStore.RevokeByHash(ctx, refreshTokenHash, time.Now())
+}
+
+// GetActiveSessions returns all currently active sessions for the given user.
+func (s *Service) GetActiveSessions(ctx context.Context, userID UserID) ([]*Session, error) {
+	return s.deps.SessionStore.GetActiveSessions(ctx, userID)
+}
+
+// RevokeSessionByID invalidates a specific user session by its ID.
+func (s *Service) RevokeSessionByID(ctx context.Context, sessionID SessionID, userID UserID) error {
+	return s.deps.SessionStore.RevokeByID(ctx, sessionID, userID, time.Now())
 }

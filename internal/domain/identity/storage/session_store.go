@@ -148,6 +148,12 @@ func (s *SessionStore) Rotate(ctx context.Context, refreshTokenHash []byte, now 
 		return nil, fmt.Errorf("mark replaced: %w", err)
 	}
 
+	// Assign values from old session
+	successor.TokenFamilyID = identity.TokenFamilyID(old.TokenFamilyID)
+	parentID := identity.SessionID(old.ID)
+	successor.ParentSessionID = &parentID
+	successor.AbsoluteExpiresAt = old.AbsoluteExpiresAt
+
 	// Insert successor
 	dbSuccessor := toDBSession(successor)
 	insertQuery := `INSERT INTO identity.sessions
@@ -176,14 +182,22 @@ func (s *SessionStore) Rotate(ctx context.Context, refreshTokenHash []byte, now 
 	return toDomainSession(dbSuccessor), nil
 }
 
-// RevokeByID marks a session as revoked.
-func (s *SessionStore) RevokeByID(ctx context.Context, sessionID identity.SessionID, now time.Time) error {
-	query := `UPDATE identity.sessions SET revoked_at = $1 WHERE id = $2 AND (revoked_at IS NULL OR replaced_at IS NOT NULL)`
-	_, err := s.db.ExecContext(ctx, query, &now, string(sessionID))
-	if errors.Is(err, sql.ErrNoRows) {
+// RevokeByID marks a session as revoked for the specific user.
+func (s *SessionStore) RevokeByID(ctx context.Context, sessionID identity.SessionID, userID identity.UserID, now time.Time) error {
+	query := `UPDATE identity.sessions SET revoked_at = $1 
+		WHERE id = $2 AND user_id = $3 AND (revoked_at IS NULL OR replaced_at IS NOT NULL)`
+	res, err := s.db.ExecContext(ctx, query, &now, string(sessionID), string(userID))
+	if err != nil {
+		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
 		return identity.ErrSessionNotFound
 	}
-	return err
+	return nil
 }
 
 // RevokeFamily marks all active sessions in a family as revoked.
@@ -204,4 +218,33 @@ func (s *SessionStore) RevokeAllForUser(ctx context.Context, userID identity.Use
 		return nil // No sessions to revoke
 	}
 	return err
+}
+
+// RevokeByHash invalidates all sessions in the family matching the given refresh token hash.
+func (s *SessionStore) RevokeByHash(ctx context.Context, refreshTokenHash []byte, now time.Time) error {
+	query := `UPDATE identity.sessions SET revoked_at = $1 
+		WHERE token_family_id = (SELECT token_family_id FROM identity.sessions WHERE refresh_token_hash = $2) 
+		  AND (revoked_at IS NULL OR replaced_at IS NOT NULL)`
+	_, err := s.db.ExecContext(ctx, query, &now, refreshTokenHash)
+	return err
+}
+
+// GetActiveSessions returns all currently active sessions for the given user.
+func (s *SessionStore) GetActiveSessions(ctx context.Context, userID identity.UserID) ([]*identity.Session, error) {
+	var dbSessions []sessionDB
+	query := `SELECT * FROM identity.sessions 
+		WHERE user_id = $1 
+		  AND revoked_at IS NULL 
+		  AND replaced_at IS NULL 
+		  AND expires_at > NOW()
+		ORDER BY last_used_at DESC`
+	if err := s.db.SelectContext(ctx, &dbSessions, query, string(userID)); err != nil {
+		return nil, fmt.Errorf("select active sessions: %w", err)
+	}
+
+	sessions := make([]*identity.Session, len(dbSessions))
+	for i, dbSess := range dbSessions {
+		sessions[i] = toDomainSession(&dbSess)
+	}
+	return sessions, nil
 }
