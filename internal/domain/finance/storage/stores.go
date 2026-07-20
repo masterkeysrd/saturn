@@ -642,10 +642,27 @@ func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 
 	return txns, nextToken, nil
 }
+func (s *TransactionStore) AggregateSpent(ctx context.Context, periodID finance.PeriodID, budgetCurrency finance.Currency, exchangeRateToBase float64) (int64, int64, error) {
+	query := `SELECT 
+		COALESCE(SUM(amount_in_base), 0) as spent_in_base,
+		COALESCE(SUM(
+			CASE 
+				WHEN currency = $2 THEN amount 
+				WHEN $3 = 0.0 THEN 0
+				ELSE ROUND(amount_in_base::numeric / $3)::bigint 
+			END
+		), 0) as spent_amount
+	FROM finance.transaction 
+	WHERE period_id = $1`
 
-func (s *TransactionStore) AggregateSpentInBase(ctx context.Context, periodID finance.PeriodID) (int64, error) {
-	query := `SELECT COALESCE(SUM(amount_in_base), 0) FROM finance.transaction WHERE period_id = $1`
-	var total int64
-	err := s.db.GetContext(ctx, &total, query, string(periodID))
-	return total, err
+	var row struct {
+		SpentInBase int64 `db:"spent_in_base"`
+		SpentAmount int64 `db:"spent_amount"`
+	}
+
+	err := s.db.GetContext(ctx, &row, query, string(periodID), string(budgetCurrency), exchangeRateToBase)
+	if err != nil {
+		return 0, 0, err
+	}
+	return row.SpentInBase, row.SpentAmount, nil
 }

@@ -2,6 +2,7 @@ package finance
 
 import (
 	"context"
+	"math"
 	"testing"
 	"time"
 
@@ -202,14 +203,20 @@ func (m *mockTransactionStore) ListBySpace(ctx context.Context, spaceID SpaceID,
 	return list, "", nil
 }
 
-func (m *mockTransactionStore) AggregateSpentInBase(ctx context.Context, periodID PeriodID) (int64, error) {
-	var total int64
+func (m *mockTransactionStore) AggregateSpent(ctx context.Context, periodID PeriodID, budgetCurrency Currency, exchangeRateToBase float64) (int64, int64, error) {
+	var spentInBase int64
+	var spentAmount int64
 	for _, t := range m.txns {
 		if t.PeriodID != nil && *t.PeriodID == periodID {
-			total += t.AmountInBase
+			spentInBase += t.AmountInBase
+			if t.Currency == budgetCurrency {
+				spentAmount += t.Amount
+			} else if exchangeRateToBase > 0 {
+				spentAmount += int64(math.Round(float64(t.AmountInBase) / exchangeRateToBase))
+			}
 		}
 	}
-	return total, nil
+	return spentInBase, spentAmount, nil
 }
 
 // --- Test Cases ---

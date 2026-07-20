@@ -44,7 +44,7 @@ type TransactionStore interface {
 	Delete(ctx context.Context, id TransactionID) error
 	Update(ctx context.Context, txn *Transaction) error
 	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListTransactionsFilter) ([]*Transaction, string, error)
-	AggregateSpentInBase(ctx context.Context, periodID PeriodID) (int64, error)
+	AggregateSpent(ctx context.Context, periodID PeriodID, budgetCurrency Currency, exchangeRateToBase float64) (spentInBase int64, spentAmount int64, err error)
 }
 
 // ListBudgetsFilter encapsulates filtering parameters for listing budgets.

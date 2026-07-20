@@ -231,7 +231,9 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 		return fmt.Errorf("dial gRPC backend: %w", err)
 	}
 	s.grpcConn = conn
-	s.mux = runtime.NewServeMux()
+	s.mux = runtime.NewServeMux(
+		runtime.WithIncomingHeaderMatcher(customHeaderMatcher),
+	)
 
 	if err := identityv1.RegisterIdentityHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
 		return fmt.Errorf("register gateway handler: %w", err)
@@ -325,4 +327,13 @@ func StartAll(ctx context.Context, mgr *shutdown.Manager, cfg *Config) error {
 	}
 	slog.Info("all servers stopped")
 	return nil
+}
+
+func customHeaderMatcher(key string) (string, bool) {
+	switch strings.ToLower(key) {
+	case "space-id":
+		return "space-id", true
+	default:
+		return runtime.DefaultHeaderMatcher(key)
+	}
 }

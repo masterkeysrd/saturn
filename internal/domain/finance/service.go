@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"time"
 )
 
@@ -151,12 +150,10 @@ func (s *Service) GetOrCreatePeriod(ctx context.Context, budgetID BudgetID, date
 	period, err := s.deps.PeriodStore.GetByRange(ctx, budgetID, startDate, endDate)
 	if err == nil {
 		if s.deps.TransactionStore != nil {
-			spentInBase, aggErr := s.deps.TransactionStore.AggregateSpentInBase(ctx, period.ID)
+			spentInBase, spentAmount, aggErr := s.deps.TransactionStore.AggregateSpent(ctx, period.ID, period.Currency, period.ExchangeRateToBase)
 			if aggErr == nil {
 				period.SpentInBase = spentInBase
-				if period.ExchangeRateToBase > 0 {
-					period.SpentAmount = int64(math.Round(float64(spentInBase) / period.ExchangeRateToBase))
-				}
+				period.SpentAmount = spentAmount
 			}
 		}
 		return period, nil

@@ -113,9 +113,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const handleUnauthorized = () => {
       logoutUser()
     }
+    const handleRefreshed = (e: Event) => {
+      const customEvent = e as CustomEvent<{ accessToken: string }>
+      setAccessToken(customEvent.detail.accessToken)
+    }
     window.addEventListener("auth:unauthorized", handleUnauthorized)
+    window.addEventListener("auth:refreshed", handleRefreshed)
     return () => {
       window.removeEventListener("auth:unauthorized", handleUnauthorized)
+      window.removeEventListener("auth:refreshed", handleRefreshed)
     }
   }, [logoutUser])
 
