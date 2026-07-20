@@ -199,8 +199,8 @@ func generateMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 	// Build TypeScript function name (camelCase of Method Name)
 	methodName := strings.ToLower(method.GoName[:1]) + method.GoName[1:]
 
-	reqType := getNestedPrefix(method.Input) + string(method.Input.Desc.Name())
-	resType := getNestedPrefix(method.Output) + string(method.Output.Desc.Name())
+	reqType := mapMessageName(method.Input)
+	resType := mapMessageName(method.Output)
 
 	writeComments(g, method.Comments)
 
@@ -402,6 +402,17 @@ func mapType(field *protogen.Field) string {
 	return baseType
 }
 
+func mapMessageName(msg *protogen.Message) string {
+	fullName := string(msg.Desc.FullName())
+	if fullName == "google.protobuf.Timestamp" {
+		return "string"
+	}
+	if fullName == "google.protobuf.Empty" {
+		return "Record<string, never>"
+	}
+	return getNestedPrefix(msg) + string(msg.Desc.Name())
+}
+
 func mapBaseType(field *protogen.Field) string {
 	switch field.Desc.Kind() {
 	case protoreflect.EnumKind:
@@ -411,11 +422,7 @@ func mapBaseType(field *protogen.Field) string {
 		}
 		return parentPrefix + string(field.Enum.Desc.Name())
 	case protoreflect.MessageKind:
-		fullName := string(field.Message.Desc.FullName())
-		if fullName == "google.protobuf.Timestamp" {
-			return "string"
-		}
-		return getNestedPrefix(field.Message) + string(field.Message.Desc.Name())
+		return mapMessageName(field.Message)
 	default:
 		return mapBaseTypeForKind(field.Desc.Kind(), nil)
 	}
