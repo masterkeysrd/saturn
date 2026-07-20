@@ -9,6 +9,7 @@ import { useAuth } from "@/features/auth/use-auth"
 import { DashboardView } from "@/features/dashboard/dashboard-view"
 import { AdminView } from "@/features/admin/admin-view"
 import { SettingsView } from "@/features/settings/settings-view"
+import { FinanceView } from "@/features/finance/finance-view"
 
 export function App() {
   const { user } = useAuth()
@@ -41,6 +42,8 @@ export function App() {
           }
         >
           <Route path="/" element={<DashboardView />} />
+          <Route path="/finance" element={<FinanceView />} />
+          <Route path="/finance/:subview" element={<FinanceView />} />
           <Route
             path="/profile"
             element={<Navigate to="/settings?tab=account" replace />}

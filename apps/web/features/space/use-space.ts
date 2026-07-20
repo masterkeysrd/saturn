@@ -1,10 +1,19 @@
-import { useState, useCallback, useMemo } from "react"
+import {
+  useState,
+  useCallback,
+  useMemo,
+  createContext,
+  useContext,
+  createElement,
+  type ReactNode,
+} from "react"
 import { useListSpacesQuery } from "@/gen/saturn/space/v1/space"
+import { useAuth } from "@/features/auth/use-auth"
 
 const ACTIVE_SPACE_KEY = "active_space_id"
 const SPACE_META_KEY = "space_meta"
 
-interface SpaceMeta {
+export interface SpaceMeta {
   spaceId: string
   spaceName: string
   spaceRole: string
@@ -49,6 +58,26 @@ export function useActiveSpace() {
   return { spaceId, spaceName, spaceRole, switchSpace, clearActiveSpace }
 }
 
+// Global React Context for Active Workspace State
+interface ActiveSpaceContextType {
+  spaceId: string
+  spaceName: string
+  spaceRole: string
+  switchSpace: (newMeta: SpaceMeta) => void
+  clearActiveSpace: () => void
+}
+
+const ActiveSpaceContext = createContext<ActiveSpaceContextType | null>(null)
+
+export function ActiveSpaceProvider({ children }: { children: ReactNode }) {
+  const activeSpaceState = useActiveSpace()
+  return createElement(
+    ActiveSpaceContext.Provider,
+    { value: activeSpaceState },
+    children
+  )
+}
+
 export function useMySpaces() {
   const { data, isLoading, error } = useListSpacesQuery({
     pageSize: 100,
@@ -61,17 +90,28 @@ export function useMySpaces() {
 }
 
 export function useActiveSpaceContext() {
-  const { spaces, isLoading } = useMySpaces()
+  const context = useContext(ActiveSpaceContext)
+  if (!context) {
+    throw new Error(
+      "useActiveSpaceContext must be used within an ActiveSpaceProvider"
+    )
+  }
+
   const { spaceId, spaceName, spaceRole, switchSpace, clearActiveSpace } =
-    useActiveSpace()
+    context
+  const { spaces, isLoading } = useMySpaces()
+  const { user } = useAuth()
 
   const activeSpace = useMemo(() => {
     return spaces.find((s) => s.id === spaceId) ?? null
   }, [spaces, spaceId])
 
   const currentRole = useMemo(() => {
-    return spaceRole
-  }, [spaceRole])
+    if (activeSpace && user && activeSpace.ownerId === user.id) {
+      return "owner"
+    }
+    return spaceRole || "member"
+  }, [spaceRole, activeSpace, user])
 
   return {
     activeSpace,

@@ -1,0 +1,24 @@
+# Finance service API configuration.
+#
+# All finance endpoints require JWT Bearer authentication.
+# Workspace authorization is scoped via the request payload.
+
+name: saturn.finance.v1
+title: "Saturn Finance API"
+apis:
+  - saturn.finance.v1.Finance
+
+documentation:
+  summary: "Provides budgeting and currency configurations for a workspace."
+
+authentication:
+  rules:
+    # All finance endpoints require authentication
+    - selector: "saturn.finance.v1.Finance.*"
+      auth_required: true
+
+space:
+  rules:
+    # Authorization checks are handled explicitly inside the domain using space.Session
+    - selector: "saturn.finance.v1.Finance.*"
+      scoped: false

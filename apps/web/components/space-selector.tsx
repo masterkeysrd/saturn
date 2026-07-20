@@ -13,8 +13,10 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 import { useSidebar } from "@/components/ui/sidebar"
+import { useAuth } from "@/features/auth/use-auth"
 
 export function SpaceSelector() {
+  const { user } = useAuth()
   const { spaces, isLoading } = useMySpaces()
   const { spaceId, activeSpace, switchSpace } = useActiveSpaceContext()
   const [open, setOpen] = useState(false)
@@ -66,10 +68,12 @@ export function SpaceSelector() {
           <DropdownMenuItem
             key={space.id}
             onClick={() => {
+              const role =
+                user && space.ownerId === user.id ? "owner" : "member"
               switchSpace({
                 spaceId: space.id,
                 spaceName: space.name,
-                spaceRole: "member",
+                spaceRole: role,
               })
               setOpen(false)
             }}

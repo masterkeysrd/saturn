@@ -20,17 +20,22 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
+	financev1 "github.com/masterkeysrd/saturn/apis/saturn/finance/v1"
 	admingrpc "github.com/masterkeysrd/saturn/apis/saturn/identity/admin/v1"
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
 	spacev1 "github.com/masterkeysrd/saturn/apis/saturn/space/v1"
+	financeapp "github.com/masterkeysrd/saturn/internal/application/finance"
 	"github.com/masterkeysrd/saturn/internal/application/iam"
 	spaceapp "github.com/masterkeysrd/saturn/internal/application/space"
+	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	financestorage "github.com/masterkeysrd/saturn/internal/domain/finance/storage"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	identitystorage "github.com/masterkeysrd/saturn/internal/domain/identity/storage"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	spacestorage "github.com/masterkeysrd/saturn/internal/domain/space/storage"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
 	"github.com/masterkeysrd/saturn/internal/shutdown"
+	financegrpc "github.com/masterkeysrd/saturn/internal/transport/finance"
 	identitygrpc "github.com/masterkeysrd/saturn/internal/transport/identity"
 	spacegrpc "github.com/masterkeysrd/saturn/internal/transport/space"
 )
@@ -159,6 +164,28 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	})
 	spaceHandler := spacegrpc.NewHandler(spaceCoordinator)
 	spacev1.RegisterSpacesServer(s.grpc, spaceHandler)
+
+	// Wire Finance service
+	settingsStore := financestorage.NewSettingsStore(sqlxDB)
+	budgetStore := financestorage.NewBudgetStore(sqlxDB)
+	periodStore := financestorage.NewPeriodStore(sqlxDB)
+	rateStore := financestorage.NewExchangeRateStore(sqlxDB)
+
+	financeService := finance.NewService(finance.Dependencies{
+		SettingsStore:     settingsStore,
+		BudgetStore:       budgetStore,
+		PeriodStore:       periodStore,
+		ExchangeRateStore: rateStore,
+	})
+
+	financeCoordinator := financeapp.NewCoordinator(financeapp.Dependencies{
+		FinanceService: financeService,
+		SpaceService:   spaceService,
+	})
+
+	financeHandler := financegrpc.NewHandler(financeCoordinator)
+	financev1.RegisterFinanceServer(s.grpc, financeHandler)
+
 	return nil
 }
 
@@ -214,6 +241,10 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 
 	if err := spacev1.RegisterSpacesHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
 		return fmt.Errorf("register space gateway handler: %w", err)
+	}
+
+	if err := financev1.RegisterFinanceHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
+		return fmt.Errorf("register finance gateway handler: %w", err)
 	}
 
 	handler := http.NewServeMux()

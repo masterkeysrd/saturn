@@ -1,10 +1,13 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "saturn/identity/admin/v1/admin_identity.proto",
+    "title": "saturn/finance/v1/finance.proto",
     "version": "version not set"
   },
   "tags": [
+    {
+      "name": "Finance"
+    },
     {
       "name": "AdminIdentity"
     },
@@ -569,6 +572,411 @@
         ]
       }
     },
+    "/v1/spaces/{spaceId}/finance/budgets": {
+      "get": {
+        "summary": "ListBudgets lists all budget templates in a workspace.",
+        "operationId": "Finance_ListBudgets",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListBudgetsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "post": {
+        "summary": "CreateBudget creates a new budget template in a workspace.",
+        "operationId": "Finance_CreateBudget",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Budget"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceCreateBudgetBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/finance/budgets/{budgetId}/period": {
+      "get": {
+        "summary": "GetBudgetPeriod retrieves or generates the budget period for a specific date.",
+        "operationId": "Finance_GetBudgetPeriod",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BudgetPeriod"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "budgetId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "date",
+            "description": "Timestamp for calculation, defaults to current time if omitted",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/finance/budgets/{id}": {
+      "delete": {
+        "summary": "DeleteBudget deletes a budget template.",
+        "operationId": "Finance_DeleteBudget",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "patch": {
+        "summary": "UpdateBudget updates a budget template.",
+        "operationId": "Finance_UpdateBudget",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Budget"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceUpdateBudgetBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/finance/rates": {
+      "get": {
+        "summary": "ListExchangeRates lists all exchange rate rules in a workspace.",
+        "operationId": "Finance_ListExchangeRates",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListExchangeRatesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteExchangeRate deletes a specific daily rate conversion rule.",
+        "operationId": "Finance_DeleteExchangeRate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "fromCurrency",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "toCurrency",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "rateDate",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "format": "date-time"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "post": {
+        "summary": "CreateExchangeRate registers a new daily rate conversion rule.",
+        "operationId": "Finance_CreateExchangeRate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExchangeRate"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceCreateExchangeRateBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/finance/settings": {
+      "get": {
+        "summary": "GetFinanceSettings retrieves the finance settings for a workspace.",
+        "operationId": "Finance_GetFinanceSettings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1FinanceSettings"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "post": {
+        "summary": "ConfigureFinance sets up the default base currency for a workspace.",
+        "operationId": "Finance_ConfigureFinance",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1FinanceSettings"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceConfigureFinanceBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/spaces/{spaceId}/members": {
       "get": {
         "summary": "ListSpaceMembers lists all members of a workspace.",
@@ -759,6 +1167,106 @@
       "required": [
         "accessLevel"
       ]
+    },
+    "FinanceConfigureFinanceBody": {
+      "type": "object",
+      "properties": {
+        "baseCurrency": {
+          "type": "string"
+        }
+      },
+      "description": "ConfigureFinanceRequest contains fields for initial setup.",
+      "required": [
+        "baseCurrency"
+      ]
+    },
+    "FinanceCreateBudgetBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "limitAmount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "interval": {
+          "$ref": "#/definitions/v1RecurrenceInterval"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        }
+      },
+      "description": "CreateBudgetRequest contains fields to create budget.",
+      "required": [
+        "name",
+        "limitAmount",
+        "currency",
+        "interval"
+      ]
+    },
+    "FinanceCreateExchangeRateBody": {
+      "type": "object",
+      "properties": {
+        "fromCurrency": {
+          "type": "string"
+        },
+        "toCurrency": {
+          "type": "string"
+        },
+        "rate": {
+          "type": "number",
+          "format": "double"
+        },
+        "rateDate": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "CreateExchangeRateRequest registers a daily rate.",
+      "required": [
+        "fromCurrency",
+        "toCurrency",
+        "rate",
+        "rateDate"
+      ]
+    },
+    "FinanceUpdateBudgetBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "limitAmount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "interval": {
+          "$ref": "#/definitions/v1RecurrenceInterval"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "propagation": {
+          "$ref": "#/definitions/v1LimitPropagation"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        }
+      },
+      "description": "UpdateBudgetRequest contains update rules."
     },
     "ListUsersRequestStatusFilter": {
       "type": "string",
@@ -977,6 +1485,93 @@
         }
       }
     },
+    "v1Budget": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "spaceId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "limitAmount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "interval": {
+          "$ref": "#/definitions/v1RecurrenceInterval"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        }
+      },
+      "description": "Budget represents a budget template definition."
+    },
+    "v1BudgetPeriod": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "budgetId": {
+          "type": "string"
+        },
+        "spaceId": {
+          "type": "string"
+        },
+        "startDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "endDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "limitAmount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "baseCurrency": {
+          "type": "string"
+        },
+        "exchangeRateToBase": {
+          "type": "number",
+          "format": "double"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "BudgetPeriod represents an active instantiation of a budget."
+    },
     "v1CreateSpaceRequest": {
       "type": "object",
       "properties": {
@@ -997,6 +1592,92 @@
     "v1DeleteSpaceResponse": {
       "type": "object",
       "description": "DeleteSpaceResponse is empty on success."
+    },
+    "v1ExchangeRate": {
+      "type": "object",
+      "properties": {
+        "spaceId": {
+          "type": "string"
+        },
+        "fromCurrency": {
+          "type": "string"
+        },
+        "toCurrency": {
+          "type": "string"
+        },
+        "rate": {
+          "type": "number",
+          "format": "double"
+        },
+        "rateDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "ExchangeRate represents a daily rate record."
+    },
+    "v1FinanceSettings": {
+      "type": "object",
+      "properties": {
+        "spaceId": {
+          "type": "string"
+        },
+        "baseCurrency": {
+          "type": "string"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "FinanceSettings represents workspace configuration."
+    },
+    "v1LimitPropagation": {
+      "type": "string",
+      "enum": [
+        "LIMIT_PROPAGATION_CURRENT_PERIOD",
+        "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
+      ]
+    },
+    "v1ListBudgetsResponse": {
+      "type": "object",
+      "properties": {
+        "budgets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Budget"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      },
+      "description": "ListBudgetsResponse contains paginated budgets."
+    },
+    "v1ListExchangeRatesResponse": {
+      "type": "object",
+      "properties": {
+        "exchangeRates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ExchangeRate"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      },
+      "description": "ListExchangeRatesResponse contains paginated rates."
     },
     "v1ListSpaceMembersResponse": {
       "type": "object",
@@ -1099,6 +1780,14 @@
     "v1LogoutResponse": {
       "type": "object",
       "description": "LogoutResponse is empty on success."
+    },
+    "v1RecurrenceInterval": {
+      "type": "string",
+      "enum": [
+        "INTERVAL_WEEKLY",
+        "INTERVAL_MONTHLY",
+        "INTERVAL_YEARLY"
+      ]
     },
     "v1RefreshSessionRequest": {
       "type": "object",

@@ -1,0 +1,240 @@
+syntax = "proto3";
+
+package saturn.finance.v1;
+
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/masterkeysrd/saturn/apis/saturn/finance/v1;financev1";
+
+// Finance provides budgeting and currency management operations for a workspace.
+service Finance {
+  // ConfigureFinance sets up the default base currency for a workspace.
+  rpc ConfigureFinance(ConfigureFinanceRequest) returns (FinanceSettings) {
+    option (google.api.http) = {
+      post: "/v1/spaces/{space_id}/finance/settings"
+      body: "*"
+    };
+  }
+
+  // GetFinanceSettings retrieves the finance settings for a workspace.
+  rpc GetFinanceSettings(GetFinanceSettingsRequest) returns (FinanceSettings) {
+    option (google.api.http) = {
+      get: "/v1/spaces/{space_id}/finance/settings"
+    };
+  }
+
+  // CreateBudget creates a new budget template in a workspace.
+  rpc CreateBudget(CreateBudgetRequest) returns (Budget) {
+    option (google.api.http) = {
+      post: "/v1/spaces/{space_id}/finance/budgets"
+      body: "*"
+    };
+  }
+
+  // UpdateBudget updates a budget template.
+  rpc UpdateBudget(UpdateBudgetRequest) returns (Budget) {
+    option (google.api.http) = {
+      patch: "/v1/spaces/{space_id}/finance/budgets/{id}"
+      body: "*"
+    };
+  }
+
+  // DeleteBudget deletes a budget template.
+  rpc DeleteBudget(DeleteBudgetRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v1/spaces/{space_id}/finance/budgets/{id}"
+    };
+  }
+
+  // ListBudgets lists all budget templates in a workspace.
+  rpc ListBudgets(ListBudgetsRequest) returns (ListBudgetsResponse) {
+    option (google.api.http) = {
+      get: "/v1/spaces/{space_id}/finance/budgets"
+    };
+  }
+
+  // GetBudgetPeriod retrieves or generates the budget period for a specific date.
+  rpc GetBudgetPeriod(GetBudgetPeriodRequest) returns (BudgetPeriod) {
+    option (google.api.http) = {
+      get: "/v1/spaces/{space_id}/finance/budgets/{budget_id}/period"
+    };
+  }
+
+  // CreateExchangeRate registers a new daily rate conversion rule.
+  rpc CreateExchangeRate(CreateExchangeRateRequest) returns (ExchangeRate) {
+    option (google.api.http) = {
+      post: "/v1/spaces/{space_id}/finance/rates"
+      body: "*"
+    };
+  }
+
+  // ListExchangeRates lists all exchange rate rules in a workspace.
+  rpc ListExchangeRates(ListExchangeRatesRequest) returns (ListExchangeRatesResponse) {
+    option (google.api.http) = {
+      get: "/v1/spaces/{space_id}/finance/rates"
+    };
+  }
+
+  // DeleteExchangeRate deletes a specific daily rate conversion rule.
+  rpc DeleteExchangeRate(DeleteExchangeRateRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v1/spaces/{space_id}/finance/rates"
+    };
+  }
+}
+
+enum RecurrenceInterval {
+  RECURRENCE_INTERVAL_UNSPECIFIED = 0;
+  INTERVAL_WEEKLY = 1;
+  INTERVAL_MONTHLY = 2;
+  INTERVAL_YEARLY = 3;
+}
+
+// FinanceSettings represents workspace configuration.
+message FinanceSettings {
+  string space_id = 1;
+  string base_currency = 2;
+  google.protobuf.Timestamp create_time = 3;
+  google.protobuf.Timestamp update_time = 4;
+}
+
+// Budget represents a budget template definition.
+message Budget {
+  string id = 1;
+  string space_id = 2;
+  string name = 3;
+  int64 limit_amount = 4;
+  string currency = 5;
+  RecurrenceInterval interval = 6;
+  bool is_active = 7;
+  google.protobuf.Timestamp create_time = 8;
+  google.protobuf.Timestamp update_time = 9;
+  string icon = 10;
+  string color = 11;
+}
+
+// BudgetPeriod represents an active instantiation of a budget.
+message BudgetPeriod {
+  string id = 1;
+  string budget_id = 2;
+  string space_id = 3;
+  google.protobuf.Timestamp start_date = 4;
+  google.protobuf.Timestamp end_date = 5;
+  int64 limit_amount = 6;
+  string currency = 7;
+  string base_currency = 8;
+  double exchange_rate_to_base = 9;
+  google.protobuf.Timestamp create_time = 10;
+  google.protobuf.Timestamp update_time = 11;
+}
+
+// ConfigureFinanceRequest contains fields for initial setup.
+message ConfigureFinanceRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string base_currency = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// GetFinanceSettingsRequest contains fields to fetch config.
+message GetFinanceSettingsRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// CreateBudgetRequest contains fields to create budget.
+message CreateBudgetRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string name = 2 [(google.api.field_behavior) = REQUIRED];
+  int64 limit_amount = 3 [(google.api.field_behavior) = REQUIRED];
+  string currency = 4 [(google.api.field_behavior) = REQUIRED];
+  RecurrenceInterval interval = 5 [(google.api.field_behavior) = REQUIRED];
+  string icon = 6;
+  string color = 7;
+}
+
+enum LimitPropagation {
+  LIMIT_PROPAGATION_UNSPECIFIED = 0;
+  LIMIT_PROPAGATION_CURRENT_PERIOD = 1;
+  LIMIT_PROPAGATION_NEXT_PERIODS_ONLY = 2;
+}
+
+// UpdateBudgetRequest contains update rules.
+message UpdateBudgetRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string id = 2 [(google.api.field_behavior) = REQUIRED];
+  string name = 3;
+  int64 limit_amount = 4;
+  string currency = 5;
+  RecurrenceInterval interval = 6;
+  bool is_active = 7;
+  LimitPropagation propagation = 8;
+  string icon = 9;
+  string color = 10;
+}
+
+// DeleteBudgetRequest contains deletion target.
+message DeleteBudgetRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string id = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// ListBudgetsRequest contains listing parameters.
+message ListBudgetsRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+// ListBudgetsResponse contains paginated budgets.
+message ListBudgetsResponse {
+  repeated Budget budgets = 1;
+  string next_page_token = 2;
+}
+
+// GetBudgetPeriodRequest retrieves period for date.
+message GetBudgetPeriodRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string budget_id = 2 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.Timestamp date = 3; // Timestamp for calculation, defaults to current time if omitted
+}
+
+// ExchangeRate represents a daily rate record.
+message ExchangeRate {
+  string space_id = 1;
+  string from_currency = 2;
+  string to_currency = 3;
+  double rate = 4;
+  google.protobuf.Timestamp rate_date = 5;
+  google.protobuf.Timestamp create_time = 6;
+}
+
+// CreateExchangeRateRequest registers a daily rate.
+message CreateExchangeRateRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string from_currency = 2 [(google.api.field_behavior) = REQUIRED];
+  string to_currency = 3 [(google.api.field_behavior) = REQUIRED];
+  double rate = 4 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.Timestamp rate_date = 5 [(google.api.field_behavior) = REQUIRED];
+}
+
+// ListExchangeRatesRequest lists workspace rates.
+message ListExchangeRatesRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+// ListExchangeRatesResponse contains paginated rates.
+message ListExchangeRatesResponse {
+  repeated ExchangeRate exchange_rates = 1;
+  string next_page_token = 2;
+}
+
+// DeleteExchangeRateRequest contains identifiers for rate deletion.
+message DeleteExchangeRateRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string from_currency = 2 [(google.api.field_behavior) = REQUIRED];
+  string to_currency = 3 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.Timestamp rate_date = 4 [(google.api.field_behavior) = REQUIRED];
+}
