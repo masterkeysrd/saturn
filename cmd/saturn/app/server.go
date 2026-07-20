@@ -96,7 +96,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	issuer, audience, accessTTL, clockSkew, activeKeyID := cfg.Auth.ToTokenConfig()
 	var activeKey ed25519.PrivateKey
 	if cfg.Auth.PrivateKeyPath != "" {
-		privKey, err := token.LoadPrivateKey(cfg.Auth.PrivateKeyPath)
+		privKey, err := token.LoadOrGeneratePrivateKey(cfg.Auth.PrivateKeyPath)
 		if err != nil {
 			return fmt.Errorf("load private key: %w", err)
 		}

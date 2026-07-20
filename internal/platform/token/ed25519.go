@@ -11,7 +11,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -333,6 +335,38 @@ func LoadPrivateKey(path string) (ed25519.PrivateKey, error) {
 		return nil, fmt.Errorf("private key in %s is not Ed25519", path)
 	}
 	return key, nil
+}
+
+// LoadOrGeneratePrivateKey reads an Ed25519 private key from path, or generates one if it doesn't exist.
+func LoadOrGeneratePrivateKey(path string) (ed25519.PrivateKey, error) {
+	if _, err := os.Stat(path); err == nil {
+		return LoadPrivateKey(path)
+	} else if !os.IsNotExist(err) {
+		return nil, err
+	}
+
+	// Key does not exist; generate one
+	slog.Info("JWT private key not found; generating a new Ed25519 key pair", "path", path)
+	_, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		return nil, fmt.Errorf("generate private key: %w", err)
+	}
+
+	der, err := x509.MarshalPKCS8PrivateKey(priv)
+	if err != nil {
+		return nil, fmt.Errorf("marshal private key: %w", err)
+	}
+
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, fmt.Errorf("create key directory: %w", err)
+	}
+
+	if err := os.WriteFile(path, der, 0600); err != nil {
+		return nil, fmt.Errorf("write private key: %w", err)
+	}
+
+	return priv, nil
 }
 
 // loadPublicKey reads an Ed25519 public key from a PKIX-encoded file.
