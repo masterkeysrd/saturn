@@ -105,36 +105,29 @@ func (s *SessionStore) Create(ctx context.Context, session *identity.Session) er
 // Rotate atomically rotates a refresh token: marks the old session as replaced,
 // inserts the successor session, and revokes the entire token family if reuse was detected.
 func (s *SessionStore) Rotate(ctx context.Context, refreshTokenHash []byte, now time.Time, successor *identity.Session) (*identity.Session, error) {
-	// Pre-fetch the old session before beginning the transaction
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback()
+
 	var old sessionDB
 	query := `SELECT * FROM identity.sessions WHERE refresh_token_hash = $1 FOR UPDATE`
-	if err := s.db.GetContext(ctx, &old, query, refreshTokenHash); err != nil {
+	if err := tx.GetContext(ctx, &old, query, refreshTokenHash); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, identity.ErrSessionNotFound
 		}
 		return nil, fmt.Errorf("query session: %w", err)
 	}
 
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, fmt.Errorf("begin tx: %w", err)
-	}
-	defer tx.Rollback()
-
 	// Check if already replaced, revoked, or expired
 	if old.ReplacedAt != nil || old.RevokedAt != nil || (!old.ExpiresAt.IsZero() && now.After(old.ExpiresAt)) {
-		// If already replaced, revoke the family
+		// If already replaced, revoke the family (reuse attack prevention)
 		if old.ReplacedAt != nil {
 			revokeQuery := `UPDATE identity.sessions SET revoked_at = $1 WHERE token_family_id = $2 AND (revoked_at IS NULL OR replaced_at IS NOT NULL)`
 			if _, err := tx.ExecContext(ctx, revokeQuery, &now, old.TokenFamilyID); err != nil {
-				if rbErr := tx.Rollback(); rbErr != nil {
-					return nil, fmt.Errorf("rollback: %w", rbErr)
-				}
 				return nil, fmt.Errorf("revoke family on reuse: %w", err)
 			}
-		}
-		if err := tx.Rollback(); err != nil {
-			return nil, fmt.Errorf("rollback: %w", err)
 		}
 		return nil, identity.ErrSessionReused
 	}
@@ -142,13 +135,11 @@ func (s *SessionStore) Rotate(ctx context.Context, refreshTokenHash []byte, now 
 	// Mark old session as replaced
 	replaceQuery := `UPDATE identity.sessions SET replaced_at = $1, last_used_at = $2 WHERE id = $3`
 	if _, err := tx.ExecContext(ctx, replaceQuery, &now, &now, old.ID); err != nil {
-		if rbErr := tx.Rollback(); rbErr != nil {
-			return nil, fmt.Errorf("rollback: %w", rbErr)
-		}
 		return nil, fmt.Errorf("mark replaced: %w", err)
 	}
 
 	// Assign values from old session
+	successor.UserID = identity.UserID(old.UserID)
 	successor.TokenFamilyID = identity.TokenFamilyID(old.TokenFamilyID)
 	parentID := identity.SessionID(old.ID)
 	successor.ParentSessionID = &parentID
@@ -169,9 +160,6 @@ func (s *SessionStore) Rotate(ctx context.Context, refreshTokenHash []byte, now 
 		dbSuccessor.CreateTime, dbSuccessor.LastUsedAt,
 		dbSuccessor.UserAgent, dbSuccessor.IPAddress,
 	); err != nil {
-		if rbErr := tx.Rollback(); rbErr != nil {
-			return nil, fmt.Errorf("rollback: %w", rbErr)
-		}
 		return nil, fmt.Errorf("insert successor: %w", err)
 	}
 
