@@ -80,6 +80,17 @@ export function InsightsView() {
     )
   }
 
+  if (!settings) {
+    return (
+      <FinancePageLayout
+        title="Insights"
+        description="Configure finance to view insights"
+      >
+        <div className="flex min-h-[400px] items-center justify-center" />
+      </FinancePageLayout>
+    )
+  }
+
   if (insightsError || (isQueryEnabled && !spentInsights && !insightsPending)) {
     return (
       <FinancePageLayout title="Insights" description="Unable to load insights">
