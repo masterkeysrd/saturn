@@ -242,10 +242,11 @@ export function EditBudgetSheet({
             <Select
               value={currency}
               onValueChange={(val) => setCurrency(val || "")}
+              disabled
             >
               <SelectTrigger
                 id="editCurrency"
-                className="!h-11 w-full rounded-xl border-border/60 bg-background/50"
+                className="!h-11 w-full rounded-xl border-border/60 bg-background/50 opacity-70"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -257,6 +258,9 @@ export function EditBudgetSheet({
                 <SelectItem value="DOP">DOP</SelectItem>
               </SelectContent>
             </Select>
+            <span className="mt-1 block text-[10px] text-muted-foreground/75">
+              Currency cannot be modified after creation to protect historical calculations.
+            </span>
           </div>
 
           <div className="space-y-1.5">
@@ -271,10 +275,11 @@ export function EditBudgetSheet({
               onValueChange={(val) =>
                 val && setInterval(val as RecurrenceInterval)
               }
+              disabled
             >
               <SelectTrigger
                 id="editInterval"
-                className="!h-11 w-full rounded-xl border-border/60 bg-background/50"
+                className="!h-11 w-full rounded-xl border-border/60 bg-background/50 opacity-70"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -284,6 +289,9 @@ export function EditBudgetSheet({
                 <SelectItem value="INTERVAL_YEARLY">Yearly</SelectItem>
               </SelectContent>
             </Select>
+            <span className="mt-1 block text-[10px] text-muted-foreground/75">
+              Interval cannot be modified after creation to protect historical reports.
+            </span>
           </div>
 
           <div className="flex items-center space-x-2.5 py-2">

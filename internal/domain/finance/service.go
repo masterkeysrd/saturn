@@ -99,10 +99,15 @@ func (s *Service) UpdateBudget(ctx context.Context, budget *Budget) (*Budget, er
 		return nil, err
 	}
 
+	if existing.Currency != budget.Currency {
+		return nil, errors.New("budget currency is immutable after creation")
+	}
+	if existing.Interval != budget.Interval {
+		return nil, errors.New("budget interval is immutable after creation")
+	}
+
 	existing.Name = budget.Name
 	existing.LimitAmount = budget.LimitAmount
-	existing.Currency = budget.Currency
-	existing.Interval = budget.Interval
 	existing.IsActive = budget.IsActive
 	existing.Icon = budget.Icon
 	existing.Color = budget.Color
@@ -505,7 +510,10 @@ func (s *Service) GetSpentInsights(ctx context.Context, req *GetSpentInsightsReq
 
 	for _, r := range distRows {
 		totalSpent += r.SpentInBase
-		totalLimit += r.BudgetLimit
+
+		// Convert budget limit to base currency using the period's exchange rate
+		limitInBase := int64(float64(r.BudgetLimit) * r.ExchangeRateToBase)
+		totalLimit += limitInBase
 
 		var usagePct float64 = 0.0
 		if r.BudgetLimit > 0 {

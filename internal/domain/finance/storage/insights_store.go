@@ -80,14 +80,15 @@ func (s *InsightsStore) GetSpentTrend(ctx context.Context, filter *finance.Spent
 }
 
 type budgetDistributionRow struct {
-	BudgetID             string `db:"budget_id"`
-	BudgetName           string `db:"budget_name"`
-	BudgetColor          string `db:"budget_color"`
-	BudgetIcon           string `db:"budget_icon"`
-	BudgetLimit          int64  `db:"budget_limit"`
-	BudgetCurrency       string `db:"budget_currency"`
-	SpentInBase          int64  `db:"spent_in_base"`
-	SpentInLocalMatching int64  `db:"spent_in_local_matching"`
+	BudgetID             string  `db:"budget_id"`
+	BudgetName           string  `db:"budget_name"`
+	BudgetColor          string  `db:"budget_color"`
+	BudgetIcon           string  `db:"budget_icon"`
+	BudgetLimit          int64   `db:"budget_limit"`
+	BudgetCurrency       string  `db:"budget_currency"`
+	SpentInBase          int64   `db:"spent_in_base"`
+	SpentInLocalMatching int64   `db:"spent_in_local_matching"`
+	ExchangeRateToBase   float64 `db:"exchange_rate_to_base"`
 }
 
 func (s *InsightsStore) GetBudgetDistribution(ctx context.Context, filter *finance.BudgetDistributionFilter) ([]*finance.BudgetDistribution, error) {
@@ -98,12 +99,24 @@ func (s *InsightsStore) GetBudgetDistribution(ctx context.Context, filter *finan
 		b.icon as budget_icon,
 		b.limit_amount as budget_limit,
 		b.currency as budget_currency,
-		COALESCE(SUM(t.amount_in_base), 0) as spent_in_base,
-		COALESCE(SUM(CASE WHEN t.currency = b.currency THEN t.amount ELSE 0 END), 0) as spent_in_local_matching
+		t.spent_in_base,
+		t.spent_in_local_matching,
+		COALESCE(bp.exchange_rate_to_base, 1.0) as exchange_rate_to_base
 	FROM finance.budget b
-	LEFT JOIN finance.transaction t ON b.id = t.budget_id AND t.transaction_date >= $2 AND t.transaction_date <= $3
-	WHERE b.space_id = $1 AND b.is_active = true
-	GROUP BY b.id, b.name, b.color, b.icon, b.limit_amount, b.currency`
+	LEFT JOIN LATERAL (
+		SELECT 
+			COALESCE(SUM(amount_in_base), 0) as spent_in_base,
+			COALESCE(SUM(CASE WHEN currency = b.currency THEN amount ELSE 0 END), 0) as spent_in_local_matching
+		FROM finance.transaction
+		WHERE budget_id = b.id AND transaction_date >= $2 AND transaction_date <= $3
+	) t ON TRUE
+	LEFT JOIN LATERAL (
+		SELECT exchange_rate_to_base 
+		FROM finance.budget_period bp 
+		WHERE bp.budget_id = b.id AND bp.start_date <= $3 AND bp.end_date >= $2
+		ORDER BY bp.start_date DESC LIMIT 1
+	) bp ON TRUE
+	WHERE b.space_id = $1 AND b.is_active = true`
 
 	var rows []*budgetDistributionRow
 	if err := s.db.SelectContext(ctx, &rows, query, string(filter.SpaceID), filter.StartDate, filter.EndDate); err != nil {
@@ -121,6 +134,7 @@ func (s *InsightsStore) GetBudgetDistribution(ctx context.Context, filter *finan
 			BudgetCurrency:       r.BudgetCurrency,
 			SpentInBase:          r.SpentInBase,
 			SpentInLocalMatching: r.SpentInLocalMatching,
+			ExchangeRateToBase:   r.ExchangeRateToBase,
 		}
 	}
 	return results, nil

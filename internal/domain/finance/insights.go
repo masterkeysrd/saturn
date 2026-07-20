@@ -53,6 +53,7 @@ type BudgetDistribution struct {
 	BudgetCurrency       string
 	SpentInBase          int64
 	SpentInLocalMatching int64
+	ExchangeRateToBase   float64
 }
 
 // TopExpense represents a high-value transaction.
