@@ -129,19 +129,19 @@ func (b *Budget) CalculateBounds(t time.Time) (time.Time, time.Time) {
 			offset += 7
 		}
 		start := time.Date(t.Year(), t.Month(), t.Day()-offset, 0, 0, 0, 0, time.UTC)
-		end := start.AddDate(0, 0, 7).Add(-time.Nanosecond)
+		end := start.AddDate(0, 0, 7).Add(-time.Second)
 		return start, end
 
 	case IntervalYearly:
 		start := time.Date(t.Year(), 1, 1, 0, 0, 0, 0, time.UTC)
-		end := start.AddDate(1, 0, 0).Add(-time.Nanosecond)
+		end := start.AddDate(1, 0, 0).Add(-time.Second)
 		return start, end
 
 	case IntervalMonthly:
 		fallthrough
 	default:
 		start := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
-		end := start.AddDate(0, 1, 0).Add(-time.Nanosecond)
+		end := start.AddDate(0, 1, 0).Add(-time.Second)
 		return start, end
 	}
 }

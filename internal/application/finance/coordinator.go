@@ -32,6 +32,7 @@ type FinanceService interface {
 	UpdateExpense(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error)
 	DeleteTransaction(ctx context.Context, id finance.TransactionID) error
 	ListTransactions(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListTransactionsFilter) ([]*finance.Transaction, string, error)
+	GetSpentInsights(ctx context.Context, req *finance.GetSpentInsightsRequest) (*finance.SpentInsights, error)
 }
 
 // Dependencies contains all parameters for Coordinator initialization.

@@ -171,6 +171,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	periodStore := financestorage.NewPeriodStore(sqlxDB)
 	rateStore := financestorage.NewExchangeRateStore(sqlxDB)
 	transactionStore := financestorage.NewTransactionStore(sqlxDB)
+	insightsStore := financestorage.NewInsightsStore(sqlxDB)
 
 	financeService := finance.NewService(finance.Dependencies{
 		SettingsStore:     settingsStore,
@@ -178,6 +179,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 		PeriodStore:       periodStore,
 		ExchangeRateStore: rateStore,
 		TransactionStore:  transactionStore,
+		InsightsStore:     insightsStore,
 	})
 
 	financeCoordinator := financeapp.NewCoordinator(financeapp.Dependencies{

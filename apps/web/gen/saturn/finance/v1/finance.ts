@@ -23,6 +23,9 @@ export type LimitPropagation =
 export type TransactionType =
   "TRANSACTION_TYPE_UNSPECIFIED" | "EXPENSE" | "INCOME"
 
+export type InsightGranularity =
+  "INSIGHT_GRANULARITY_UNSPECIFIED" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY"
+
 /**
  * FinanceSettings represents workspace configuration.
  */
@@ -251,6 +254,66 @@ export interface ListTransactionsRequest {
 export interface ListTransactionsResponse {
   transactions: Transaction[]
   nextPageToken: string
+}
+
+export interface GetInsightsRequest {
+  spaceId: string
+  granularity: InsightGranularity
+  startDate: string
+  endDate: string
+}
+
+export interface GetInsightsResponse {
+  spent: SpentInsights
+}
+
+export interface SpentInsights {
+  totalLimit: string
+  totalSpent: string
+  remainingBudget: string
+  burnRate: number
+  trend: SpentInsights_TrendDataPoint[]
+  distributions: SpentInsights_BudgetUsage[]
+  topExpenses: SpentInsights_HighValueExpense[]
+}
+
+export interface SpentInsights_BudgetContribution {
+  budgetId: string
+  budgetName: string
+  budgetColor: string
+  amountInBase: string
+  amountInLocal: string
+  localCurrency: string
+  contributionPercentage: number
+}
+
+export interface SpentInsights_TrendDataPoint {
+  label: string
+  startDate: string
+  amountInBase: string
+  transactionCount: number
+  contributions: SpentInsights_BudgetContribution[]
+}
+
+export interface SpentInsights_BudgetUsage {
+  budgetId: string
+  budgetName: string
+  budgetColor: string
+  budgetIcon: string
+  limit: string
+  spent: string
+  spentInBase: string
+  usagePercentage: number
+}
+
+export interface SpentInsights_HighValueExpense {
+  transactionId: string
+  description: string
+  amount: string
+  currency: string
+  amountInBase: string
+  budgetName: string
+  transactionDate: string
 }
 
 /**
@@ -676,6 +739,34 @@ export function useListTransactionsQuery(
   return useQuery<ListTransactionsResponse, Error>({
     queryKey: [`/api/v1/spaces/${req.spaceId}/finance/transactions`, req],
     queryFn: () => listTransactions(req.spaceId, req),
+    ...options,
+  })
+}
+
+/**
+ * GetInsights aggregates workspace spent insights and statistics.
+ */
+export async function getInsights(
+  space_id: string,
+  req: GetInsightsRequest
+): Promise<GetInsightsResponse> {
+  return request<GetInsightsResponse>({
+    method: "GET",
+    url: `/api/v1/spaces/${space_id}/finance/insights`,
+    params: req,
+  })
+}
+
+export function useGetInsightsQuery(
+  req: GetInsightsRequest,
+  options?: Omit<
+    UseQueryOptions<GetInsightsResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<GetInsightsResponse, Error>({
+    queryKey: [`/api/v1/spaces/${req.spaceId}/finance/insights`, req],
+    queryFn: () => getInsights(req.spaceId, req),
     ...options,
   })
 }

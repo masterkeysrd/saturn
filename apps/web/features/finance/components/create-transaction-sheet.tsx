@@ -17,6 +17,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Info, Globe } from "lucide-react"
 import { toCentsString, formatCents } from "../utils"
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select"
 
 interface CreateTransactionSheetProps {
   open: boolean
@@ -182,23 +189,33 @@ export function CreateTransactionSheet({
               htmlFor="txBudget"
               className="text-xs font-bold tracking-wider text-muted-foreground uppercase"
             >
-              Budget Template
+              Budget
             </Label>
-            <select
-              id="txBudget"
+            <Select
               value={budgetId}
-              onChange={(e) => handleBudgetChange(e.target.value)}
-              className="flex h-12 w-full rounded-xl border border-border/60 bg-background/50 px-4 py-2 text-sm shadow-sm ring-offset-background transition-all placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none"
+              onValueChange={(val) => val && handleBudgetChange(val)}
             >
-              <option value="" disabled>
-                Select a budget...
-              </option>
-              {budgets.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name} ({b.currency})
-                </option>
-              ))}
-            </select>
+              <SelectTrigger
+                id="txBudget"
+                className="!h-12 w-full rounded-xl border-border/60 bg-background/50"
+              >
+                <SelectValue placeholder="Select a budget...">
+                  {(() => {
+                    const selected = budgets.find((b) => b.id === budgetId)
+                    return selected
+                      ? `${selected.name} (${selected.currency})`
+                      : undefined
+                  })()}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                {budgets.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.name} ({b.currency})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Description */}
@@ -235,16 +252,16 @@ export function CreateTransactionSheet({
             />
           </div>
 
-          {/* Amount & Currency */}
-          <div className="flex gap-4">
-            <div className="flex-1 space-y-2">
-              <Label
-                htmlFor="txAmount"
-                className="text-xs font-bold tracking-wider text-muted-foreground uppercase"
-              >
-                Amount
-              </Label>
-              <Input
+          {/* Amount & Currency Joined */}
+          <div className="space-y-2">
+            <Label
+              htmlFor="txAmount"
+              className="text-xs font-bold tracking-wider text-muted-foreground uppercase"
+            >
+              Amount
+            </Label>
+            <div className="flex h-12 items-center overflow-hidden rounded-xl border border-border/60 bg-background/50 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20">
+              <input
                 id="txAmount"
                 type="number"
                 step="0.01"
@@ -253,30 +270,30 @@ export function CreateTransactionSheet({
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 required
-                className="h-12 rounded-xl border-border/60 bg-background/50"
+                className="h-full w-full flex-1 bg-transparent px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
               />
-            </div>
 
-            <div className="w-28 space-y-2">
-              <Label
-                htmlFor="txCurrency"
-                className="text-xs font-bold tracking-wider text-muted-foreground uppercase"
-              >
-                Currency
-              </Label>
-              <select
-                id="txCurrency"
+              <div className="h-6 w-px shrink-0 bg-border/40" />
+
+              <Select
                 value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="flex h-12 w-full rounded-xl border border-border/60 bg-background/50 px-4 py-2 text-sm shadow-sm ring-offset-background transition-all placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none"
+                onValueChange={(val) => setCurrency(val || "")}
               >
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-                <option value="GBP">GBP</option>
-                <option value="CAD">CAD</option>
-                <option value="JPY">JPY</option>
-                <option value="DOP">DOP</option>
-              </select>
+                <SelectTrigger
+                  id="txCurrency"
+                  className="!h-full w-24 shrink-0 cursor-pointer rounded-none border-0 bg-transparent px-4 py-2 text-sm font-semibold transition-colors hover:bg-muted/10 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                  <SelectItem value="USD">USD</SelectItem>
+                  <SelectItem value="EUR">EUR</SelectItem>
+                  <SelectItem value="GBP">GBP</SelectItem>
+                  <SelectItem value="CAD">CAD</SelectItem>
+                  <SelectItem value="JPY">JPY</SelectItem>
+                  <SelectItem value="DOP">DOP</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

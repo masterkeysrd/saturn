@@ -47,6 +47,33 @@ type TransactionStore interface {
 	AggregateSpent(ctx context.Context, periodID PeriodID, budgetCurrency Currency, exchangeRateToBase float64) (spentInBase int64, spentAmount int64, err error)
 }
 
+// InsightsStore defines persistence for read-only aggregation queries.
+type InsightsStore interface {
+	GetSpentTrend(ctx context.Context, filter *SpentTrendFilter) ([]*SpentTrend, error)
+	GetBudgetDistribution(ctx context.Context, filter *BudgetDistributionFilter) ([]*BudgetDistribution, error)
+	GetTopExpenses(ctx context.Context, filter *TopExpensesFilter) ([]*TopExpense, error)
+}
+
+type SpentTrendFilter struct {
+	SpaceID     SpaceID
+	Granularity Granularity
+	StartDate   time.Time
+	EndDate     time.Time
+}
+
+type BudgetDistributionFilter struct {
+	SpaceID   SpaceID
+	StartDate time.Time
+	EndDate   time.Time
+}
+
+type TopExpensesFilter struct {
+	SpaceID   SpaceID
+	StartDate time.Time
+	EndDate   time.Time
+	Limit     int
+}
+
 // ListBudgetsFilter encapsulates filtering parameters for listing budgets.
 type ListBudgetsFilter struct {
 	PageSize      int32

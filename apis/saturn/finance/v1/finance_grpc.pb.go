@@ -34,6 +34,7 @@ const (
 	Finance_UpdateExpense_FullMethodName      = "/saturn.finance.v1.Finance/UpdateExpense"
 	Finance_DeleteTransaction_FullMethodName  = "/saturn.finance.v1.Finance/DeleteTransaction"
 	Finance_ListTransactions_FullMethodName   = "/saturn.finance.v1.Finance/ListTransactions"
+	Finance_GetInsights_FullMethodName        = "/saturn.finance.v1.Finance/GetInsights"
 )
 
 // FinanceClient is the client API for Finance service.
@@ -70,6 +71,8 @@ type FinanceClient interface {
 	DeleteTransaction(ctx context.Context, in *DeleteTransactionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// ListTransactions lists paginated transactions for a workspace.
 	ListTransactions(ctx context.Context, in *ListTransactionsRequest, opts ...grpc.CallOption) (*ListTransactionsResponse, error)
+	// GetInsights aggregates workspace spent insights and statistics.
+	GetInsights(ctx context.Context, in *GetInsightsRequest, opts ...grpc.CallOption) (*GetInsightsResponse, error)
 }
 
 type financeClient struct {
@@ -220,6 +223,16 @@ func (c *financeClient) ListTransactions(ctx context.Context, in *ListTransactio
 	return out, nil
 }
 
+func (c *financeClient) GetInsights(ctx context.Context, in *GetInsightsRequest, opts ...grpc.CallOption) (*GetInsightsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetInsightsResponse)
+	err := c.cc.Invoke(ctx, Finance_GetInsights_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FinanceServer is the server API for Finance service.
 // All implementations should embed UnimplementedFinanceServer
 // for forward compatibility.
@@ -254,6 +267,8 @@ type FinanceServer interface {
 	DeleteTransaction(context.Context, *DeleteTransactionRequest) (*emptypb.Empty, error)
 	// ListTransactions lists paginated transactions for a workspace.
 	ListTransactions(context.Context, *ListTransactionsRequest) (*ListTransactionsResponse, error)
+	// GetInsights aggregates workspace spent insights and statistics.
+	GetInsights(context.Context, *GetInsightsRequest) (*GetInsightsResponse, error)
 }
 
 // UnimplementedFinanceServer should be embedded to have
@@ -304,6 +319,9 @@ func (UnimplementedFinanceServer) DeleteTransaction(context.Context, *DeleteTran
 }
 func (UnimplementedFinanceServer) ListTransactions(context.Context, *ListTransactionsRequest) (*ListTransactionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListTransactions not implemented")
+}
+func (UnimplementedFinanceServer) GetInsights(context.Context, *GetInsightsRequest) (*GetInsightsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetInsights not implemented")
 }
 func (UnimplementedFinanceServer) testEmbeddedByValue() {}
 
@@ -577,6 +595,24 @@ func _Finance_ListTransactions_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Finance_GetInsights_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetInsightsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).GetInsights(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_GetInsights_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).GetInsights(ctx, req.(*GetInsightsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Finance_ServiceDesc is the grpc.ServiceDesc for Finance service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -639,6 +675,10 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListTransactions",
 			Handler:    _Finance_ListTransactions_Handler,
+		},
+		{
+			MethodName: "GetInsights",
+			Handler:    _Finance_GetInsights_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

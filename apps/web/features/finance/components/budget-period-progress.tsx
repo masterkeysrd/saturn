@@ -85,10 +85,12 @@ export function BudgetPeriodProgress({
   const startStr = new Date(period.startDate).toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
+    timeZone: "UTC",
   })
   const endStr = new Date(period.endDate).toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
+    timeZone: "UTC",
   })
 
   const baseLimit = limit * period.exchangeRateToBase

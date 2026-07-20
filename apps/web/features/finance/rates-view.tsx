@@ -19,7 +19,7 @@ export function RatesView() {
   const handleDeleteRate = async (rate: ExchangeRate) => {
     if (
       !confirm(
-        `Are you sure you want to delete exchange rate for ${rate.fromCurrency} to ${rate.toCurrency} on ${new Date(rate.rateDate).toLocaleDateString()}?`
+        `Are you sure you want to delete exchange rate for ${rate.fromCurrency} to ${rate.toCurrency} on ${new Date(rate.rateDate).toLocaleDateString(undefined, { timeZone: "UTC" })}?`
       )
     )
       return
@@ -120,6 +120,7 @@ export function RatesView() {
                         month: "short",
                         day: "numeric",
                         year: "numeric",
+                        timeZone: "UTC",
                       })}
                     </span>
                     {isWritable && (

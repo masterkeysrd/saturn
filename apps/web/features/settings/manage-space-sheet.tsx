@@ -11,6 +11,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select"
+import {
   Loader2,
   Plus,
   Trash2,
@@ -294,16 +301,20 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                           </div>
                         ) : (
                           <>
-                            <select
+                            <Select
                               value={member.role}
-                              onChange={(e) =>
-                                handleRoleChange(member.userId, e.target.value)
+                              onValueChange={(val) =>
+                                val && handleRoleChange(member.userId, val)
                               }
-                              className="cursor-pointer rounded-lg border border-border/40 bg-background px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-all outline-none focus:border-primary/50"
                             >
-                              <option value="admin">Admin</option>
-                              <option value="member">Member</option>
-                            </select>
+                              <SelectTrigger className="!h-7 w-24 rounded-lg border-border/40 bg-background px-2.5 py-1 text-[11px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                                <SelectItem value="admin">Admin</SelectItem>
+                                <SelectItem value="member">Member</SelectItem>
+                              </SelectContent>
+                            </Select>
                             <Button
                               variant="ghost"
                               size="icon-xs"
@@ -333,14 +344,18 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                   onChange={(e) => setNewUserId(e.target.value)}
                   className="h-9 flex-1 rounded-xl border-border/40 bg-muted/10 text-xs focus:ring-2 focus:ring-primary/20"
                 />
-                <select
+                <Select
                   value={newRole}
-                  onChange={(e) => setNewRole(e.target.value)}
-                  className="h-9 cursor-pointer rounded-xl border border-border/40 bg-background px-3 text-xs font-medium text-muted-foreground outline-none focus:border-primary/50"
+                  onValueChange={(val) => val && setNewRole(val)}
                 >
-                  <option value="admin">Admin</option>
-                  <option value="member">Member</option>
-                </select>
+                  <SelectTrigger className="!h-9 w-28 rounded-xl border-border/40 bg-background px-3 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="member">Member</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Button
                   type="submit"
                   size="sm"

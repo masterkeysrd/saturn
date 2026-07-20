@@ -20,6 +20,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
+import { cn } from "@/lib/utils"
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select"
 import {
   BUDGET_COLORS,
   BUDGET_ICONS,
@@ -96,23 +104,42 @@ export function CreateBudgetSheet({
           </SheetDescription>
         </SheetHeader>
         <form onSubmit={handleCreate} className="mt-8 space-y-5">
-          <div className="flex items-end gap-3">
-            {/* Category Icon dropdown trigger */}
-            <div className="flex shrink-0 flex-col items-start space-y-1.5">
-              <Label className="text-xs font-semibold tracking-wider text-muted-foreground/90 uppercase">
-                Icon
-              </Label>
+          {/* Budget Name and Category Icon Input */}
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="name"
+              className="text-xs font-semibold tracking-wider text-muted-foreground/90 uppercase"
+            >
+              Budget Name
+            </Label>
+            <div className="flex h-11 items-center overflow-hidden rounded-xl border border-border/60 bg-background/50 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20">
+              <input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Dining Out, Groceries"
+                className="order-2 h-full w-full flex-1 bg-transparent px-3.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+                required
+              />
+
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
-                    <button
+                    <Button
                       type="button"
-                      className={`flex h-full shrink-0 cursor-pointer items-center justify-center border-r border-border/30 px-3.5 transition-colors hover:bg-muted/30 ${getBudgetColors(color).text} ${getBudgetColors(color).bg}`}
+                      variant="ghost"
+                      className={cn(
+                        "order-1 flex h-full shrink-0 cursor-pointer items-center justify-center rounded-none border-y-0 border-r border-l-0 border-border/30 px-4 transition-all hover:bg-muted/20 focus:border-r-primary/50 focus:bg-muted/40 focus:outline-none",
+                        getBudgetColors(color).text,
+                        getBudgetColors(color).bg
+                      )}
+                      title="Choose category icon"
                     >
                       {createElement(getBudgetIcon(icon), {
-                        className: "h-5 w-5",
+                        className:
+                          "h-5 w-5 transition-transform duration-200 group-focus/button:scale-110",
                       })}
-                    </button>
+                    </Button>
                   }
                 />
                 <DropdownMenuContent
@@ -135,24 +162,6 @@ export function CreateBudgetSheet({
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
-
-            {/* Budget Name field */}
-            <div className="flex-1 space-y-1.5">
-              <Label
-                htmlFor="name"
-                className="text-xs font-semibold tracking-wider text-muted-foreground/90 uppercase"
-              >
-                Budget Name
-              </Label>
-              <input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Dining Out, Groceries"
-                className="h-11 w-full flex-1 rounded-xl border border-border/60 bg-background/50 px-3.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
-                required
-              />
             </div>
           </div>
 
@@ -209,18 +218,24 @@ export function CreateBudgetSheet({
             >
               Currency
             </Label>
-            <select
-              id="currency"
+            <Select
               value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              className="flex h-11 w-full rounded-xl border border-border/60 bg-background/50 px-3 py-2 text-sm shadow-sm ring-offset-background focus-visible:outline-none"
+              onValueChange={(val) => setCurrency(val || "")}
             >
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-              <option value="GBP">GBP</option>
-              <option value="CAD">CAD</option>
-              <option value="DOP">DOP</option>
-            </select>
+              <SelectTrigger
+                id="currency"
+                className="!h-11 w-full rounded-xl border-border/60 bg-background/50"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                <SelectItem value="USD">USD</SelectItem>
+                <SelectItem value="EUR">EUR</SelectItem>
+                <SelectItem value="GBP">GBP</SelectItem>
+                <SelectItem value="CAD">CAD</SelectItem>
+                <SelectItem value="DOP">DOP</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-1.5">
@@ -230,18 +245,24 @@ export function CreateBudgetSheet({
             >
               Interval
             </Label>
-            <select
-              id="interval"
+            <Select
               value={interval}
-              onChange={(e) =>
-                setInterval(e.target.value as RecurrenceInterval)
+              onValueChange={(val) =>
+                val && setInterval(val as RecurrenceInterval)
               }
-              className="flex h-11 w-full rounded-xl border border-border/60 bg-background/50 px-3 py-2 text-sm shadow-sm ring-offset-background focus-visible:outline-none"
             >
-              <option value="INTERVAL_WEEKLY">Weekly</option>
-              <option value="INTERVAL_MONTHLY">Monthly</option>
-              <option value="INTERVAL_YEARLY">Yearly</option>
-            </select>
+              <SelectTrigger
+                id="interval"
+                className="!h-11 w-full rounded-xl border-border/60 bg-background/50"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                <SelectItem value="INTERVAL_WEEKLY">Weekly</SelectItem>
+                <SelectItem value="INTERVAL_MONTHLY">Monthly</SelectItem>
+                <SelectItem value="INTERVAL_YEARLY">Yearly</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-1.5">

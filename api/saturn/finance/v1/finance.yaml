@@ -19,6 +19,6 @@ authentication:
 
 space:
   rules:
-    # Authorization checks are handled explicitly inside the domain using space.Session
+    # Finance endpoints require workspace scope validation from metadata space-id header
     - selector: "saturn.finance.v1.Finance.*"
-      scoped: false
+      scoped: true

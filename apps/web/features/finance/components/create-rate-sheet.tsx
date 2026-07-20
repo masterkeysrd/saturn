@@ -14,6 +14,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select"
 
 interface CreateRateSheetProps {
   open: boolean
@@ -95,18 +102,24 @@ export function CreateRateSheet({
             >
               From Currency
             </Label>
-            <select
-              id="rateFrom"
+            <Select
               value={rateFrom}
-              onChange={(e) => setRateFrom(e.target.value)}
-              className="flex h-11 w-full rounded-xl border border-border/60 bg-background/50 px-3 py-2 text-sm shadow-sm ring-offset-background focus-visible:outline-none"
+              onValueChange={(val) => setRateFrom(val || "")}
             >
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-              <option value="GBP">GBP</option>
-              <option value="CAD">CAD</option>
-              <option value="DOP">DOP</option>
-            </select>
+              <SelectTrigger
+                id="rateFrom"
+                className="!h-11 w-full rounded-xl border-border/60 bg-background/50"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                <SelectItem value="USD">USD</SelectItem>
+                <SelectItem value="EUR">EUR</SelectItem>
+                <SelectItem value="GBP">GBP</SelectItem>
+                <SelectItem value="CAD">CAD</SelectItem>
+                <SelectItem value="DOP">DOP</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-1.5">
@@ -116,17 +129,23 @@ export function CreateRateSheet({
             >
               To Base Currency
             </Label>
-            <select
-              id="rateTo"
+            <Select
               value={rateTo}
-              onChange={(e) => setRateTo(e.target.value)}
-              className="flex h-11 w-full cursor-not-allowed rounded-xl border border-border/60 bg-background/50 px-3 py-2 text-sm opacity-80 shadow-sm ring-offset-background focus-visible:outline-none"
+              onValueChange={(val) => setRateTo(val || "")}
               disabled
             >
-              <option value={settings?.baseCurrency}>
-                {settings?.baseCurrency}
-              </option>
-            </select>
+              <SelectTrigger
+                id="rateTo"
+                className="!h-11 w-full cursor-not-allowed rounded-xl border-border/60 bg-background/50 opacity-80"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                <SelectItem value={settings?.baseCurrency || "USD"}>
+                  {settings?.baseCurrency || "USD"}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">

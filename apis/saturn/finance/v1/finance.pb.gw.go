@@ -767,6 +767,59 @@ func local_request_Finance_ListTransactions_0(ctx context.Context, marshaler run
 	return msg, metadata, err
 }
 
+var filter_Finance_GetInsights_0 = &utilities.DoubleArray{Encoding: map[string]int{"space_id": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
+
+func request_Finance_GetInsights_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetInsightsRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["space_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
+	}
+	protoReq.SpaceId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Finance_GetInsights_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := client.GetInsights(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_Finance_GetInsights_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetInsightsRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["space_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
+	}
+	protoReq.SpaceId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Finance_GetInsights_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.GetInsights(ctx, &protoReq)
+	return msg, metadata, err
+}
+
 // RegisterFinanceHandlerServer registers the http handlers for service Finance to "mux".
 // UnaryRPC     :call FinanceServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
@@ -1053,6 +1106,26 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		}
 		forward_Finance_ListTransactions_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodGet, pattern_Finance_GetInsights_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetInsights", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/insights"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_Finance_GetInsights_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Finance_GetInsights_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 
 	return nil
 }
@@ -1331,6 +1404,23 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		}
 		forward_Finance_ListTransactions_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodGet, pattern_Finance_GetInsights_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetInsights", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/insights"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_Finance_GetInsights_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Finance_GetInsights_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	return nil
 }
 
@@ -1349,6 +1439,7 @@ var (
 	pattern_Finance_UpdateExpense_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "spaces", "space_id", "finance", "expenses", "id"}, ""))
 	pattern_Finance_DeleteTransaction_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "spaces", "space_id", "finance", "transactions", "id"}, ""))
 	pattern_Finance_ListTransactions_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4}, []string{"v1", "spaces", "space_id", "finance", "transactions"}, ""))
+	pattern_Finance_GetInsights_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4}, []string{"v1", "spaces", "space_id", "finance", "insights"}, ""))
 )
 
 var (
@@ -1366,4 +1457,5 @@ var (
 	forward_Finance_UpdateExpense_0      = runtime.ForwardResponseMessage
 	forward_Finance_DeleteTransaction_0  = runtime.ForwardResponseMessage
 	forward_Finance_ListTransactions_0   = runtime.ForwardResponseMessage
+	forward_Finance_GetInsights_0        = runtime.ForwardResponseMessage
 )

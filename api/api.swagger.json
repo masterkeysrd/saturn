@@ -863,6 +863,63 @@
         ]
       }
     },
+    "/v1/spaces/{spaceId}/finance/insights": {
+      "get": {
+        "summary": "GetInsights aggregates workspace spent insights and statistics.",
+        "operationId": "Finance_GetInsights",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetInsightsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "granularity",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "DAILY",
+              "WEEKLY",
+              "MONTHLY",
+              "YEARLY"
+            ]
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/spaces/{spaceId}/finance/rates": {
       "get": {
         "summary": "ListExchangeRates lists all exchange rate rules in a workspace.",
@@ -1562,6 +1619,123 @@
         "role"
       ]
     },
+    "SpentInsightsBudgetContribution": {
+      "type": "object",
+      "properties": {
+        "budgetId": {
+          "type": "string"
+        },
+        "budgetName": {
+          "type": "string"
+        },
+        "budgetColor": {
+          "type": "string"
+        },
+        "amountInBase": {
+          "type": "string",
+          "format": "int64"
+        },
+        "amountInLocal": {
+          "type": "string",
+          "format": "int64"
+        },
+        "localCurrency": {
+          "type": "string"
+        },
+        "contributionPercentage": {
+          "type": "number",
+          "format": "double"
+        }
+      }
+    },
+    "SpentInsightsBudgetUsage": {
+      "type": "object",
+      "properties": {
+        "budgetId": {
+          "type": "string"
+        },
+        "budgetName": {
+          "type": "string"
+        },
+        "budgetColor": {
+          "type": "string"
+        },
+        "budgetIcon": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "string",
+          "format": "int64"
+        },
+        "spent": {
+          "type": "string",
+          "format": "int64"
+        },
+        "spentInBase": {
+          "type": "string",
+          "format": "int64"
+        },
+        "usagePercentage": {
+          "type": "number",
+          "format": "double"
+        }
+      }
+    },
+    "SpentInsightsHighValueExpense": {
+      "type": "object",
+      "properties": {
+        "transactionId": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "amountInBase": {
+          "type": "string",
+          "format": "int64"
+        },
+        "budgetName": {
+          "type": "string"
+        },
+        "transactionDate": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "SpentInsightsTrendDataPoint": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "startDate": {
+          "type": "string"
+        },
+        "amountInBase": {
+          "type": "string",
+          "format": "int64"
+        },
+        "transactionCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "contributions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/SpentInsightsBudgetContribution"
+          }
+        }
+      }
+    },
     "identityAdminV1User": {
       "type": "object",
       "properties": {
@@ -1879,6 +2053,23 @@
       },
       "description": "FinanceSettings represents workspace configuration."
     },
+    "v1GetInsightsResponse": {
+      "type": "object",
+      "properties": {
+        "spent": {
+          "$ref": "#/definitions/v1SpentInsights"
+        }
+      }
+    },
+    "v1InsightGranularity": {
+      "type": "string",
+      "enum": [
+        "DAILY",
+        "WEEKLY",
+        "MONTHLY",
+        "YEARLY"
+      ]
+    },
     "v1LimitPropagation": {
       "type": "string",
       "enum": [
@@ -2193,6 +2384,48 @@
         }
       },
       "description": "SpaceMember represents a member of a workspace."
+    },
+    "v1SpentInsights": {
+      "type": "object",
+      "properties": {
+        "totalLimit": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalSpent": {
+          "type": "string",
+          "format": "int64"
+        },
+        "remainingBudget": {
+          "type": "string",
+          "format": "int64"
+        },
+        "burnRate": {
+          "type": "number",
+          "format": "double"
+        },
+        "trend": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/SpentInsightsTrendDataPoint"
+          }
+        },
+        "distributions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/SpentInsightsBudgetUsage"
+          }
+        },
+        "topExpenses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/SpentInsightsHighValueExpense"
+          }
+        }
+      }
     },
     "v1Transaction": {
       "type": "object",

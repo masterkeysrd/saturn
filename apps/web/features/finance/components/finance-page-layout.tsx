@@ -4,6 +4,13 @@ import { Button } from "@/components/ui/button"
 import { Coins, Loader2, PiggyBank } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { useConfigureFinanceMutation } from "@/gen/saturn/finance/v1/finance"
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select"
 
 interface FinancePageLayoutProps {
   title: string
@@ -69,20 +76,26 @@ export function FinancePageLayout({
               >
                 Base Currency
               </Label>
-              <select
-                id="baseCurrency"
+              <Select
                 value={setupCurrency}
-                onChange={(e) => setSetupCurrency(e.target.value)}
+                onValueChange={(val) => setSetupCurrency(val || "USD")}
                 disabled={!isWritable}
-                className="flex h-12 w-full rounded-xl border border-border/60 bg-background/50 px-4 py-2 text-sm shadow-sm ring-offset-background transition-all placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <option value="USD">USD - US Dollar</option>
-                <option value="EUR">EUR - Euro</option>
-                <option value="GBP">GBP - British Pound</option>
-                <option value="CAD">CAD - Canadian Dollar</option>
-                <option value="JPY">JPY - Japanese Yen</option>
-                <option value="DOP">DOP - Dominican Peso</option>
-              </select>
+                <SelectTrigger
+                  id="baseCurrency"
+                  className="!h-12 w-full rounded-xl border-border/60 bg-background/50"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                  <SelectItem value="USD">USD - US Dollar</SelectItem>
+                  <SelectItem value="EUR">EUR - Euro</SelectItem>
+                  <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                  <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
+                  <SelectItem value="JPY">JPY - Japanese Yen</SelectItem>
+                  <SelectItem value="DOP">DOP - Dominican Peso</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <Button

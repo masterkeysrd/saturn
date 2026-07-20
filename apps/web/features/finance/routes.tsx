@@ -1,4 +1,4 @@
-import { Navigate } from "react-router-dom"
+import { InsightsView } from "./insights-view"
 import { BudgetsView } from "./budgets-view"
 import { RatesView } from "./rates-view"
 import { TransactionsView } from "./transactions-view"
@@ -8,7 +8,7 @@ import type { RouteObject } from "react-router-dom"
 export const routes: RouteObject[] = [
   {
     path: "/finance",
-    element: <Navigate to="/finance/budgets" replace />,
+    element: <InsightsView />,
   },
   {
     path: "/finance/budgets",

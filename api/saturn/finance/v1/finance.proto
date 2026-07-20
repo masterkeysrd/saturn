@@ -98,6 +98,11 @@ service Finance {
   rpc ListTransactions(ListTransactionsRequest) returns (ListTransactionsResponse) {
     option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/transactions"};
   }
+
+  // GetInsights aggregates workspace spent insights and statistics.
+  rpc GetInsights(GetInsightsRequest) returns (GetInsightsResponse) {
+    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/insights"};
+  }
 }
 
 enum RecurrenceInterval {
@@ -311,4 +316,75 @@ message ListTransactionsRequest {
 message ListTransactionsResponse {
   repeated Transaction transactions = 1;
   string next_page_token = 2;
+}
+
+enum InsightGranularity {
+  INSIGHT_GRANULARITY_UNSPECIFIED = 0;
+  DAILY = 1;
+  WEEKLY = 2;
+  MONTHLY = 3;
+  YEARLY = 4;
+}
+
+message GetInsightsRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  InsightGranularity granularity = 2;
+  google.protobuf.Timestamp start_date = 3;
+  google.protobuf.Timestamp end_date = 4;
+}
+
+message GetInsightsResponse {
+  SpentInsights spent = 1;
+}
+
+message SpentInsights {
+  int64 total_limit = 1;
+  int64 total_spent = 2;
+  int64 remaining_budget = 3;
+  double burn_rate = 4;
+
+  message BudgetContribution {
+    string budget_id = 1;
+    string budget_name = 2;
+    string budget_color = 3;
+    int64 amount_in_base = 4;
+    int64 amount_in_local = 5;
+    string local_currency = 6;
+    double contribution_percentage = 7;
+  }
+
+  message TrendDataPoint {
+    string label = 1;
+    string start_date = 2;
+    int64 amount_in_base = 3;
+    int32 transaction_count = 4;
+    repeated BudgetContribution contributions = 5;
+  }
+
+  repeated TrendDataPoint trend = 5;
+
+  message BudgetUsage {
+    string budget_id = 1;
+    string budget_name = 2;
+    string budget_color = 3;
+    string budget_icon = 4;
+    int64 limit = 5;
+    int64 spent = 6;
+    int64 spent_in_base = 7;
+    double usage_percentage = 8;
+  }
+
+  repeated BudgetUsage distributions = 6;
+
+  message HighValueExpense {
+    string transaction_id = 1;
+    string description = 2;
+    int64 amount = 3;
+    string currency = 4;
+    int64 amount_in_base = 5;
+    string budget_name = 6;
+    google.protobuf.Timestamp transaction_date = 7;
+  }
+
+  repeated HighValueExpense top_expenses = 7;
 }

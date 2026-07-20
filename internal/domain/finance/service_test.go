@@ -219,6 +219,25 @@ func (m *mockTransactionStore) AggregateSpent(ctx context.Context, periodID Peri
 	return spentInBase, spentAmount, nil
 }
 
+type mockInsightsStore struct {
+	spentTrend         []*SpentTrend
+	budgetDistribution []*BudgetDistribution
+	topExpenses        []*TopExpense
+	err                error
+}
+
+func (m *mockInsightsStore) GetSpentTrend(ctx context.Context, filter *SpentTrendFilter) ([]*SpentTrend, error) {
+	return m.spentTrend, m.err
+}
+
+func (m *mockInsightsStore) GetBudgetDistribution(ctx context.Context, filter *BudgetDistributionFilter) ([]*BudgetDistribution, error) {
+	return m.budgetDistribution, m.err
+}
+
+func (m *mockInsightsStore) GetTopExpenses(ctx context.Context, filter *TopExpensesFilter) ([]*TopExpense, error) {
+	return m.topExpenses, m.err
+}
+
 // --- Test Cases ---
 
 func TestCalculateBounds(t *testing.T) {
@@ -234,21 +253,21 @@ func TestCalculateBounds(t *testing.T) {
 			interval:  IntervalMonthly,
 			date:      time.Date(2026, 2, 15, 12, 30, 0, 0, time.UTC),
 			wantStart: time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC),
-			wantEnd:   time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC).Add(-time.Nanosecond),
+			wantEnd:   time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC).Add(-time.Second),
 		},
 		{
 			name:      "yearly bounds calculation",
 			interval:  IntervalYearly,
 			date:      time.Date(2026, 5, 20, 10, 0, 0, 0, time.UTC),
 			wantStart: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
-			wantEnd:   time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC).Add(-time.Nanosecond),
+			wantEnd:   time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC).Add(-time.Second),
 		},
 		{
 			name:      "weekly bounds calculation (Wednesday mid-week)",
 			interval:  IntervalWeekly,
 			date:      time.Date(2026, 2, 18, 15, 0, 0, 0, time.UTC), // Feb 18 is Wednesday
 			wantStart: time.Date(2026, 2, 16, 0, 0, 0, 0, time.UTC),  // Monday is Feb 16
-			wantEnd:   time.Date(2026, 2, 23, 0, 0, 0, 0, time.UTC).Add(-time.Nanosecond),
+			wantEnd:   time.Date(2026, 2, 23, 0, 0, 0, 0, time.UTC).Add(-time.Second),
 		},
 	}
 
@@ -324,6 +343,7 @@ func TestGetOrCreatePeriod(t *testing.T) {
 		PeriodStore:       periodStore,
 		ExchangeRateStore: rateStore,
 		TransactionStore:  txnStore,
+		InsightsStore:     &mockInsightsStore{},
 	})
 
 	ctx := context.Background()
@@ -404,6 +424,7 @@ func TestTransactions(t *testing.T) {
 		PeriodStore:       periodStore,
 		ExchangeRateStore: rateStore,
 		TransactionStore:  txnStore,
+		InsightsStore:     &mockInsightsStore{},
 	})
 
 	ctx := context.Background()

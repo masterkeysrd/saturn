@@ -518,3 +518,109 @@ func toProtoTransaction(t *finance.Transaction) *financev1.Transaction {
 		UpdateTime:      timestamppb.New(t.UpdateTime),
 	}
 }
+
+func (h *Handler) GetInsights(ctx context.Context, req *financev1.GetInsightsRequest) (*financev1.GetInsightsResponse, error) {
+	var start, end time.Time
+	if req.GetStartDate() != nil {
+		start = req.GetStartDate().AsTime()
+	}
+	if req.GetEndDate() != nil {
+		end = req.GetEndDate().AsTime()
+	}
+
+	appReq := &financeapp.GetInsightsRequest{
+		Granularity: mapGranularity(req.GetGranularity()),
+		StartDate:   start,
+		EndDate:     end,
+	}
+
+	insights, err := h.Coordinator.GetInsights(ctx, appReq)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoInsightsResponse(insights), nil
+}
+
+func mapGranularity(g financev1.InsightGranularity) string {
+	switch g {
+	case financev1.InsightGranularity_DAILY:
+		return "daily"
+	case financev1.InsightGranularity_WEEKLY:
+		return "weekly"
+	case financev1.InsightGranularity_MONTHLY:
+		return "monthly"
+	case financev1.InsightGranularity_YEARLY:
+		return "yearly"
+	default:
+		return "monthly"
+	}
+}
+
+func toProtoInsightsResponse(in *finance.SpentInsights) *financev1.GetInsightsResponse {
+	if in == nil {
+		return &financev1.GetInsightsResponse{}
+	}
+
+	trendPoints := make([]*financev1.SpentInsights_TrendDataPoint, 0, len(in.Trend))
+	for _, pt := range in.Trend {
+		contribs := make([]*financev1.SpentInsights_BudgetContribution, 0, len(pt.Contributions))
+		for _, c := range pt.Contributions {
+			contribs = append(contribs, &financev1.SpentInsights_BudgetContribution{
+				BudgetId:               c.BudgetID,
+				BudgetName:             c.BudgetName,
+				BudgetColor:            c.BudgetColor,
+				AmountInBase:           c.AmountInBase,
+				AmountInLocal:          c.AmountInLocal,
+				LocalCurrency:          c.LocalCurrency,
+				ContributionPercentage: c.ContributionPercentage,
+			})
+		}
+		trendPoints = append(trendPoints, &financev1.SpentInsights_TrendDataPoint{
+			Label:            pt.Label,
+			StartDate:        pt.StartDate,
+			AmountInBase:     pt.AmountInBase,
+			TransactionCount: pt.TransactionCount,
+			Contributions:    contribs,
+		})
+	}
+
+	dists := make([]*financev1.SpentInsights_BudgetUsage, 0, len(in.Distributions))
+	for _, d := range in.Distributions {
+		dists = append(dists, &financev1.SpentInsights_BudgetUsage{
+			BudgetId:        d.BudgetID,
+			BudgetName:      d.BudgetName,
+			BudgetColor:     d.BudgetColor,
+			BudgetIcon:      d.BudgetIcon,
+			Limit:           d.Limit,
+			Spent:           d.Spent,
+			SpentInBase:     d.SpentInBase,
+			UsagePercentage: d.UsagePercentage,
+		})
+	}
+
+	tops := make([]*financev1.SpentInsights_HighValueExpense, 0, len(in.TopExpenses))
+	for _, t := range in.TopExpenses {
+		tops = append(tops, &financev1.SpentInsights_HighValueExpense{
+			TransactionId:   t.TransactionID,
+			Description:     t.Description,
+			Amount:          t.Amount,
+			Currency:        t.Currency,
+			AmountInBase:    t.AmountInBase,
+			BudgetName:      t.BudgetName,
+			TransactionDate: timestamppb.New(t.TransactionDate),
+		})
+	}
+
+	return &financev1.GetInsightsResponse{
+		Spent: &financev1.SpentInsights{
+			TotalLimit:      in.TotalLimit,
+			TotalSpent:      in.TotalSpent,
+			RemainingBudget: in.RemainingBudget,
+			BurnRate:        in.BurnRate,
+			Trend:           trendPoints,
+			Distributions:   dists,
+			TopExpenses:     tops,
+		},
+	}
+}

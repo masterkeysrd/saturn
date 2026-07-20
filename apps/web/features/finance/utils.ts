@@ -85,11 +85,13 @@ export function getBudgetIcon(iconName: string) {
   return BUDGET_ICONS.find((i) => i.value === iconName)?.icon || PiggyBank
 }
 
-export function formatCents(centsStr: string): number {
-  return parseFloat(centsStr) / 100
+export function formatCents(cents: string | number | undefined | null): number {
+  if (cents === undefined || cents === null) return 0
+  const val = typeof cents === "number" ? cents : parseFloat(cents)
+  return isNaN(val) ? 0 : val / 100
 }
 
-export function toCentsString(amountStr: string): string {
-  const val = parseFloat(amountStr)
+export function toCentsString(amountStr: string | number): string {
+  const val = typeof amountStr === "number" ? amountStr : parseFloat(amountStr)
   return isNaN(val) ? "0" : Math.round(val * 100).toString()
 }

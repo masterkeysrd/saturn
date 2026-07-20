@@ -9,16 +9,20 @@ export const menu: FeatureMenu = {
   group: "main",
   items: [
     {
+      title: "Insights",
+      url: "/finance",
+    },
+    {
+      title: "Transactions",
+      url: "/finance/transactions",
+    },
+    {
       title: "Budgets",
       url: "/finance/budgets",
     },
     {
       title: "Exchange Rates",
       url: "/finance/rates",
-    },
-    {
-      title: "Transactions",
-      url: "/finance/transactions",
     },
     {
       title: "Settings",

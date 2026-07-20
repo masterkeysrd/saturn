@@ -14,6 +14,7 @@ type Dependencies struct {
 	PeriodStore       PeriodStore
 	ExchangeRateStore ExchangeRateStore
 	TransactionStore  TransactionStore
+	InsightsStore     InsightsStore
 }
 
 // Service implements the domain-level finance operations.
@@ -103,6 +104,8 @@ func (s *Service) UpdateBudget(ctx context.Context, budget *Budget) (*Budget, er
 	existing.Currency = budget.Currency
 	existing.Interval = budget.Interval
 	existing.IsActive = budget.IsActive
+	existing.Icon = budget.Icon
+	existing.Color = budget.Color
 	existing.UpdateTime = time.Now().UTC()
 
 	if err := existing.Validate(); err != nil {
@@ -382,4 +385,174 @@ func (s *Service) ListTransactions(ctx context.Context, spaceID SpaceID, filter 
 		return nil, "", fmt.Errorf("validate space ID: %w", err)
 	}
 	return s.deps.TransactionStore.ListBySpace(ctx, spaceID, filter)
+}
+
+// GetSpentInsights computes aggregated outflow analytics and trends for a space.
+func (s *Service) GetSpentInsights(ctx context.Context, req *GetSpentInsightsRequest) (*SpentInsights, error) {
+	if err := req.SpaceID.Validate(); err != nil {
+		return nil, fmt.Errorf("validate space ID: %w", err)
+	}
+
+	g, err := ParseGranularity(req.Granularity)
+	if err != nil {
+		return nil, fmt.Errorf("invalid granularity: %w", err)
+	}
+
+	start := req.StartDate
+	if start.IsZero() {
+		switch g {
+		case GranularityDaily:
+			start = time.Now().AddDate(0, 0, -30)
+		case GranularityWeekly:
+			start = time.Now().AddDate(0, 0, -84) // 12 weeks
+		case GranularityMonthly:
+			start = time.Now().AddDate(-1, 0, 0) // 12 months
+		case GranularityYearly:
+			start = time.Now().AddDate(-5, 0, 0) // 5 years
+		}
+	}
+	end := req.EndDate
+	if end.IsZero() {
+		end = time.Now()
+	}
+
+	// Fetch trend, distributions, and top expenses from storage
+	trendRows, err := s.deps.InsightsStore.GetSpentTrend(ctx, &SpentTrendFilter{
+		SpaceID:     req.SpaceID,
+		Granularity: g,
+		StartDate:   start,
+		EndDate:     end,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("fetch spent trend: %w", err)
+	}
+
+	distRows, err := s.deps.InsightsStore.GetBudgetDistribution(ctx, &BudgetDistributionFilter{
+		SpaceID:   req.SpaceID,
+		StartDate: start,
+		EndDate:   end,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("fetch budget distributions: %w", err)
+	}
+
+	topRows, err := s.deps.InsightsStore.GetTopExpenses(ctx, &TopExpensesFilter{
+		SpaceID:   req.SpaceID,
+		StartDate: start,
+		EndDate:   end,
+		Limit:     5,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("fetch top expenses: %w", err)
+	}
+
+	// 1. Group raw trend rows by interval_start
+	trendPoints := make([]*TrendDataPoint, 0)
+	var currentPoint *TrendDataPoint
+	var lastStart time.Time
+
+	for _, row := range trendRows {
+		if currentPoint == nil || !row.IntervalStart.Equal(lastStart) {
+			var label string
+			switch g {
+			case GranularityDaily:
+				label = row.IntervalStart.Format("02 Jan")
+			case GranularityWeekly:
+				_, w := row.IntervalStart.ISOWeek()
+				label = fmt.Sprintf("Wk %d", w)
+			case GranularityMonthly:
+				label = row.IntervalStart.Format("Jan 06")
+			case GranularityYearly:
+				label = row.IntervalStart.Format("2006")
+			}
+
+			currentPoint = &TrendDataPoint{
+				Label:     label,
+				StartDate: row.IntervalStart.Format(time.RFC3339),
+			}
+			trendPoints = append(trendPoints, currentPoint)
+			lastStart = row.IntervalStart
+		}
+
+		currentPoint.AmountInBase += row.SpentInBase
+		currentPoint.TransactionCount += row.TxnCount
+
+		if row.BudgetID != "" {
+			currentPoint.Contributions = append(currentPoint.Contributions, &BudgetContribution{
+				BudgetID:      row.BudgetID,
+				BudgetName:    row.BudgetName,
+				BudgetColor:   row.BudgetColor,
+				AmountInBase:  row.SpentInBase,
+				AmountInLocal: row.SpentInLocal,
+				LocalCurrency: row.BudgetCurrency,
+			})
+		}
+	}
+
+	// Calculate contribution percentages
+	for _, pt := range trendPoints {
+		if pt.AmountInBase > 0 {
+			for _, c := range pt.Contributions {
+				c.ContributionPercentage = (float64(c.AmountInBase) / float64(pt.AmountInBase)) * 100.0
+			}
+		}
+	}
+
+	// 2. Map budget distributions
+	var totalSpent int64
+	var totalLimit int64
+	distributions := make([]*BudgetUsage, 0, len(distRows))
+
+	for _, r := range distRows {
+		totalSpent += r.SpentInBase
+		totalLimit += r.BudgetLimit
+
+		var usagePct float64 = 0.0
+		if r.BudgetLimit > 0 {
+			usagePct = (float64(r.SpentInLocalMatching) / float64(r.BudgetLimit)) * 100.0
+		}
+
+		distributions = append(distributions, &BudgetUsage{
+			BudgetID:        r.BudgetID,
+			BudgetName:      r.BudgetName,
+			BudgetColor:     r.BudgetColor,
+			BudgetIcon:      r.BudgetIcon,
+			Limit:           r.BudgetLimit,
+			Spent:           r.SpentInLocalMatching,
+			SpentInBase:     r.SpentInBase,
+			UsagePercentage: usagePct,
+		})
+	}
+
+	// 3. Overall calculation stats
+	remaining := totalLimit - totalSpent
+	var burnRate float64 = 0.0
+	days := end.Sub(start).Hours() / 24.0
+	if days > 0 {
+		burnRate = float64(totalSpent) / days
+	}
+
+	// 4. Map top expenses
+	topExpenses := make([]*HighValueExpense, 0, len(topRows))
+	for _, r := range topRows {
+		topExpenses = append(topExpenses, &HighValueExpense{
+			TransactionID:   r.TransactionID,
+			Description:     r.Description,
+			Amount:          r.Amount,
+			Currency:        r.Currency,
+			AmountInBase:    r.AmountInBase,
+			BudgetName:      r.BudgetName,
+			TransactionDate: r.TransactionDate,
+		})
+	}
+
+	return &SpentInsights{
+		TotalLimit:      totalLimit,
+		TotalSpent:      totalSpent,
+		RemainingBudget: remaining,
+		BurnRate:        burnRate,
+		Trend:           trendPoints,
+		Distributions:   distributions,
+		TopExpenses:     topExpenses,
+	}, nil
 }
