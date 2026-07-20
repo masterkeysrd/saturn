@@ -21,9 +21,7 @@ service Finance {
 
   // GetFinanceSettings retrieves the finance settings for a workspace.
   rpc GetFinanceSettings(GetFinanceSettingsRequest) returns (FinanceSettings) {
-    option (google.api.http) = {
-      get: "/v1/spaces/{space_id}/finance/settings"
-    };
+    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/settings"};
   }
 
   // CreateBudget creates a new budget template in a workspace.
@@ -44,23 +42,17 @@ service Finance {
 
   // DeleteBudget deletes a budget template.
   rpc DeleteBudget(DeleteBudgetRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      delete: "/v1/spaces/{space_id}/finance/budgets/{id}"
-    };
+    option (google.api.http) = {delete: "/v1/spaces/{space_id}/finance/budgets/{id}"};
   }
 
   // ListBudgets lists all budget templates in a workspace.
   rpc ListBudgets(ListBudgetsRequest) returns (ListBudgetsResponse) {
-    option (google.api.http) = {
-      get: "/v1/spaces/{space_id}/finance/budgets"
-    };
+    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/budgets"};
   }
 
   // GetBudgetPeriod retrieves or generates the budget period for a specific date.
   rpc GetBudgetPeriod(GetBudgetPeriodRequest) returns (BudgetPeriod) {
-    option (google.api.http) = {
-      get: "/v1/spaces/{space_id}/finance/budgets/{budget_id}/period"
-    };
+    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/budgets/{budget_id}/period"};
   }
 
   // CreateExchangeRate registers a new daily rate conversion rule.
@@ -73,16 +65,38 @@ service Finance {
 
   // ListExchangeRates lists all exchange rate rules in a workspace.
   rpc ListExchangeRates(ListExchangeRatesRequest) returns (ListExchangeRatesResponse) {
-    option (google.api.http) = {
-      get: "/v1/spaces/{space_id}/finance/rates"
-    };
+    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/rates"};
   }
 
   // DeleteExchangeRate deletes a specific daily rate conversion rule.
   rpc DeleteExchangeRate(DeleteExchangeRateRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/spaces/{space_id}/finance/rates"};
+  }
+
+  // CreateExpense logs a new expense transaction.
+  rpc CreateExpense(CreateExpenseRequest) returns (Transaction) {
     option (google.api.http) = {
-      delete: "/v1/spaces/{space_id}/finance/rates"
+      post: "/v1/spaces/{space_id}/finance/expenses"
+      body: "*"
     };
+  }
+
+  // UpdateExpense modifies an existing expense.
+  rpc UpdateExpense(UpdateExpenseRequest) returns (Transaction) {
+    option (google.api.http) = {
+      put: "/v1/spaces/{space_id}/finance/expenses/{id}"
+      body: "*"
+    };
+  }
+
+  // DeleteTransaction deletes any type of transaction.
+  rpc DeleteTransaction(DeleteTransactionRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/spaces/{space_id}/finance/transactions/{id}"};
+  }
+
+  // ListTransactions lists paginated transactions for a workspace.
+  rpc ListTransactions(ListTransactionsRequest) returns (ListTransactionsResponse) {
+    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/transactions"};
   }
 }
 
@@ -129,6 +143,8 @@ message BudgetPeriod {
   double exchange_rate_to_base = 9;
   google.protobuf.Timestamp create_time = 10;
   google.protobuf.Timestamp update_time = 11;
+  int64 spent_amount = 12;
+  int64 spent_in_base = 13;
 }
 
 // ConfigureFinanceRequest contains fields for initial setup.
@@ -237,4 +253,62 @@ message DeleteExchangeRateRequest {
   string from_currency = 2 [(google.api.field_behavior) = REQUIRED];
   string to_currency = 3 [(google.api.field_behavior) = REQUIRED];
   google.protobuf.Timestamp rate_date = 4 [(google.api.field_behavior) = REQUIRED];
+}
+
+enum TransactionType {
+  TRANSACTION_TYPE_UNSPECIFIED = 0;
+  EXPENSE = 1;
+  INCOME = 2;
+}
+
+message Transaction {
+  string id = 1;
+  string space_id = 2;
+  TransactionType type = 3;
+  string budget_id = 4;
+  string period_id = 5;
+  int64 amount = 6;
+  string currency = 7;
+  int64 amount_in_base = 8;
+  string description = 9;
+  google.protobuf.Timestamp transaction_date = 10;
+  google.protobuf.Timestamp create_time = 11;
+  google.protobuf.Timestamp update_time = 12;
+}
+
+message ExpenseInput {
+  string budget_id = 1 [(google.api.field_behavior) = REQUIRED];
+  int64 amount = 2 [(google.api.field_behavior) = REQUIRED];
+  string currency = 3 [(google.api.field_behavior) = REQUIRED];
+  string description = 4;
+  google.protobuf.Timestamp transaction_date = 5;
+}
+
+message CreateExpenseRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  ExpenseInput expense = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message UpdateExpenseRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string id = 2 [(google.api.field_behavior) = REQUIRED];
+  ExpenseInput expense = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DeleteTransactionRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string id = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message ListTransactionsRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string budget_id = 2;
+  TransactionType type = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+}
+
+message ListTransactionsResponse {
+  repeated Transaction transactions = 1;
+  string next_page_token = 2;
 }

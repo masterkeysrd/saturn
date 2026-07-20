@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 )
 
@@ -13,6 +14,7 @@ type Dependencies struct {
 	BudgetStore       BudgetStore
 	PeriodStore       PeriodStore
 	ExchangeRateStore ExchangeRateStore
+	TransactionStore  TransactionStore
 }
 
 // Service implements the domain-level finance operations.
@@ -148,6 +150,15 @@ func (s *Service) GetOrCreatePeriod(ctx context.Context, budgetID BudgetID, date
 	// Try lookup
 	period, err := s.deps.PeriodStore.GetByRange(ctx, budgetID, startDate, endDate)
 	if err == nil {
+		if s.deps.TransactionStore != nil {
+			spentInBase, aggErr := s.deps.TransactionStore.AggregateSpentInBase(ctx, period.ID)
+			if aggErr == nil {
+				period.SpentInBase = spentInBase
+				if period.ExchangeRateToBase > 0 {
+					period.SpentAmount = int64(math.Round(float64(spentInBase) / period.ExchangeRateToBase))
+				}
+			}
+		}
 		return period, nil
 	}
 	if !errors.Is(err, ErrPeriodNotFound) {
@@ -190,6 +201,9 @@ func (s *Service) GetOrCreatePeriod(ctx context.Context, budgetID BudgetID, date
 	if err := s.deps.PeriodStore.Create(ctx, newPeriod); err != nil {
 		return nil, err
 	}
+
+	newPeriod.SpentInBase = 0
+	newPeriod.SpentAmount = 0
 
 	return newPeriod, nil
 }
@@ -238,4 +252,137 @@ func (s *Service) DeleteExchangeRate(ctx context.Context, spaceID SpaceID, fromC
 		return errors.New("rate date is required")
 	}
 	return s.deps.ExchangeRateStore.Delete(ctx, spaceID, fromCurrency, toCurrency, rateDate)
+}
+
+// CreateExpense logs a new expense transaction.
+func (s *Service) CreateExpense(ctx context.Context, txn *Transaction) (*Transaction, error) {
+	txn.Type = TransactionTypeExpense
+	if txn.BudgetID == nil {
+		return nil, errors.New("expense transaction requires a budget ID")
+	}
+
+	// Verify workspace settings exist
+	settings, err := s.deps.SettingsStore.GetByID(ctx, txn.SpaceID)
+	if err != nil {
+		return nil, fmt.Errorf("verify workspace settings: %w", err)
+	}
+
+	// Fetch budget template
+	budget, err := s.deps.BudgetStore.GetByID(ctx, *txn.BudgetID)
+	if err != nil {
+		return nil, fmt.Errorf("fetch budget template: %w", err)
+	}
+
+	// Find/generate the corresponding budget period
+	period, err := s.GetOrCreatePeriod(ctx, budget.ID, txn.TransactionDate)
+	if err != nil {
+		return nil, fmt.Errorf("resolve active budget period: %w", err)
+	}
+	txn.PeriodID = &period.ID
+
+	// Determine transaction conversion rate to base currency
+	var rate float64 = 1.0
+	if txn.Currency != settings.BaseCurrency {
+		rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, txn.SpaceID, txn.Currency, settings.BaseCurrency, txn.TransactionDate)
+		if err != nil {
+			return nil, fmt.Errorf("fetch exchange rate from %s to %s for date %s: %w", txn.Currency, settings.BaseCurrency, txn.TransactionDate.Format("2006-01-02"), err)
+		}
+		rate = rateRecord.Rate
+	}
+
+	txn.AmountInBase = int64(float64(txn.Amount) * rate)
+
+	if txn.ID == "" {
+		tID, err := NewTransactionID()
+		if err != nil {
+			return nil, err
+		}
+		txn.ID = tID
+	}
+
+	txn.CreateTime = time.Now().UTC()
+	txn.UpdateTime = time.Now().UTC()
+
+	if err := txn.Validate(); err != nil {
+		return nil, err
+	}
+
+	if err := s.deps.TransactionStore.Create(ctx, txn); err != nil {
+		return nil, err
+	}
+
+	return txn, nil
+}
+
+// DeleteTransaction removes any logged transaction.
+func (s *Service) DeleteTransaction(ctx context.Context, id TransactionID) error {
+	if err := id.Validate(); err != nil {
+		return fmt.Errorf("validate transaction ID: %w", err)
+	}
+	return s.deps.TransactionStore.Delete(ctx, id)
+}
+
+// UpdateExpense modifies an existing expense transaction.
+func (s *Service) UpdateExpense(ctx context.Context, txn *Transaction) (*Transaction, error) {
+	txn.Type = TransactionTypeExpense
+	if txn.BudgetID == nil {
+		return nil, errors.New("expense transaction requires a budget ID")
+	}
+
+	// Verify the existing transaction exists
+	existing, err := s.deps.TransactionStore.GetByID(ctx, txn.ID)
+	if err != nil {
+		return nil, fmt.Errorf("fetch existing transaction: %w", err)
+	}
+
+	// Verify workspace settings exist
+	settings, err := s.deps.SettingsStore.GetByID(ctx, txn.SpaceID)
+	if err != nil {
+		return nil, fmt.Errorf("verify workspace settings: %w", err)
+	}
+
+	// Fetch budget template
+	budget, err := s.deps.BudgetStore.GetByID(ctx, *txn.BudgetID)
+	if err != nil {
+		return nil, fmt.Errorf("fetch budget template: %w", err)
+	}
+
+	// Find/generate the corresponding budget period
+	period, err := s.GetOrCreatePeriod(ctx, budget.ID, txn.TransactionDate)
+	if err != nil {
+		return nil, fmt.Errorf("resolve active budget period: %w", err)
+	}
+	txn.PeriodID = &period.ID
+
+	// Determine transaction conversion rate to base currency
+	var rate float64 = 1.0
+	if txn.Currency != settings.BaseCurrency {
+		rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, txn.SpaceID, txn.Currency, settings.BaseCurrency, txn.TransactionDate)
+		if err != nil {
+			return nil, fmt.Errorf("fetch exchange rate from %s to %s for date %s: %w", txn.Currency, settings.BaseCurrency, txn.TransactionDate.Format("2006-01-02"), err)
+		}
+		rate = rateRecord.Rate
+	}
+
+	txn.AmountInBase = int64(float64(txn.Amount) * rate)
+	txn.CreateTime = existing.CreateTime
+	txn.UpdateTime = time.Now().UTC()
+
+	if err := txn.Validate(); err != nil {
+		return nil, err
+	}
+
+	if err := s.deps.TransactionStore.Update(ctx, txn); err != nil {
+		return nil, err
+	}
+
+	return txn, nil
+}
+
+// ListTransactions retrieves paginated transactions.
+func (s *Service) ListTransactions(ctx context.Context, spaceID SpaceID, filter *ListTransactionsFilter) ([]*Transaction, string, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, "", fmt.Errorf("validate space ID: %w", err)
+	}
+	return s.deps.TransactionStore.ListBySpace(ctx, spaceID, filter)
 }

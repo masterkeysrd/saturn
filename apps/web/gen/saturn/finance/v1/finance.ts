@@ -20,6 +20,9 @@ export type LimitPropagation =
   | "LIMIT_PROPAGATION_CURRENT_PERIOD"
   | "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
 
+export type TransactionType =
+  "TRANSACTION_TYPE_UNSPECIFIED" | "EXPENSE" | "INCOME"
+
 /**
  * FinanceSettings represents workspace configuration.
  */
@@ -62,6 +65,8 @@ export interface BudgetPeriod {
   exchangeRateToBase: number
   createTime: string
   updateTime: string
+  spentAmount: string
+  spentInBase: string
 }
 
 /**
@@ -194,6 +199,58 @@ export interface DeleteExchangeRateRequest {
   fromCurrency: string
   toCurrency: string
   rateDate: string
+}
+
+export interface Transaction {
+  id: string
+  spaceId: string
+  type: TransactionType
+  budgetId: string
+  periodId: string
+  amount: string
+  currency: string
+  amountInBase: string
+  description: string
+  transactionDate: string
+  createTime: string
+  updateTime: string
+}
+
+export interface ExpenseInput {
+  budgetId: string
+  amount: string
+  currency: string
+  description: string
+  transactionDate: string
+}
+
+export interface CreateExpenseRequest {
+  spaceId: string
+  expense: ExpenseInput
+}
+
+export interface UpdateExpenseRequest {
+  spaceId: string
+  id: string
+  expense: ExpenseInput
+}
+
+export interface DeleteTransactionRequest {
+  spaceId: string
+  id: string
+}
+
+export interface ListTransactionsRequest {
+  spaceId: string
+  budgetId: string
+  type: TransactionType
+  pageSize: number
+  pageToken: string
+}
+
+export interface ListTransactionsResponse {
+  transactions: Transaction[]
+  nextPageToken: string
 }
 
 /**
@@ -496,6 +553,129 @@ export function useDeleteExchangeRateMutation(
     { space_id: string; req: DeleteExchangeRateRequest }
   >({
     mutationFn: ({ space_id, req }) => deleteExchangeRate(space_id, req),
+    ...options,
+  })
+}
+
+/**
+ * CreateExpense logs a new expense transaction.
+ */
+export async function createExpense(
+  space_id: string,
+  req: CreateExpenseRequest
+): Promise<Transaction> {
+  return request<Transaction>({
+    method: "POST",
+    url: `/api/v1/spaces/${space_id}/finance/expenses`,
+    data: req,
+  })
+}
+
+export function useCreateExpenseMutation(
+  options?: UseMutationOptions<
+    Transaction,
+    Error,
+    { space_id: string; req: CreateExpenseRequest }
+  >
+) {
+  return useMutation<
+    Transaction,
+    Error,
+    { space_id: string; req: CreateExpenseRequest }
+  >({
+    mutationFn: ({ space_id, req }) => createExpense(space_id, req),
+    ...options,
+  })
+}
+
+/**
+ * UpdateExpense modifies an existing expense.
+ */
+export async function updateExpense(
+  space_id: string,
+  id: string,
+  req: UpdateExpenseRequest
+): Promise<Transaction> {
+  return request<Transaction>({
+    method: "PUT",
+    url: `/api/v1/spaces/${space_id}/finance/expenses/${id}`,
+    data: req,
+  })
+}
+
+export function useUpdateExpenseMutation(
+  options?: UseMutationOptions<
+    Transaction,
+    Error,
+    { space_id: string; id: string; req: UpdateExpenseRequest }
+  >
+) {
+  return useMutation<
+    Transaction,
+    Error,
+    { space_id: string; id: string; req: UpdateExpenseRequest }
+  >({
+    mutationFn: ({ space_id, id, req }) => updateExpense(space_id, id, req),
+    ...options,
+  })
+}
+
+/**
+ * DeleteTransaction deletes any type of transaction.
+ */
+export async function deleteTransaction(
+  space_id: string,
+  id: string,
+  req: DeleteTransactionRequest
+): Promise<Record<string, never>> {
+  return request<Record<string, never>>({
+    method: "DELETE",
+    url: `/api/v1/spaces/${space_id}/finance/transactions/${id}`,
+    params: req,
+  })
+}
+
+export function useDeleteTransactionMutation(
+  options?: UseMutationOptions<
+    Record<string, never>,
+    Error,
+    { space_id: string; id: string; req: DeleteTransactionRequest }
+  >
+) {
+  return useMutation<
+    Record<string, never>,
+    Error,
+    { space_id: string; id: string; req: DeleteTransactionRequest }
+  >({
+    mutationFn: ({ space_id, id, req }) => deleteTransaction(space_id, id, req),
+    ...options,
+  })
+}
+
+/**
+ * ListTransactions lists paginated transactions for a workspace.
+ */
+export async function listTransactions(
+  space_id: string,
+  req: ListTransactionsRequest
+): Promise<ListTransactionsResponse> {
+  return request<ListTransactionsResponse>({
+    method: "GET",
+    url: `/api/v1/spaces/${space_id}/finance/transactions`,
+    params: req,
+  })
+}
+
+export function useListTransactionsQuery(
+  req: ListTransactionsRequest,
+  options?: Omit<
+    UseQueryOptions<ListTransactionsResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListTransactionsResponse, Error>({
+    queryKey: [`/api/v1/spaces/${req.spaceId}/finance/transactions`, req],
+    queryFn: () => listTransactions(req.spaceId, req),
     ...options,
   })
 }

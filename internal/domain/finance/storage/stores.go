@@ -420,3 +420,232 @@ func (s *ExchangeRateStore) Delete(ctx context.Context, spaceID finance.SpaceID,
 	_, err := s.db.ExecContext(ctx, query, string(spaceID), string(fromCurrency), string(toCurrency), rateDate.Format("2006-01-02"))
 	return err
 }
+
+// --- Transaction Store ---
+
+type transactionDB struct {
+	ID              string         `db:"id"`
+	SpaceID         string         `db:"space_id"`
+	Type            string         `db:"type"`
+	BudgetID        sql.NullString `db:"budget_id"`
+	PeriodID        sql.NullString `db:"period_id"`
+	Amount          int64          `db:"amount"`
+	Currency        string         `db:"currency"`
+	AmountInBase    int64          `db:"amount_in_base"`
+	Description     string         `db:"description"`
+	TransactionDate sql.NullTime   `db:"transaction_date"`
+	CreateTime      sql.NullTime   `db:"create_time"`
+	UpdateTime      sql.NullTime   `db:"update_time"`
+}
+
+type TransactionStore struct {
+	db *sqlx.DB
+}
+
+func NewTransactionStore(db *sqlx.DB) *TransactionStore {
+	return &TransactionStore{db: db}
+}
+
+func (s *TransactionStore) Create(ctx context.Context, t *finance.Transaction) error {
+	query := `INSERT INTO finance.transaction (id, space_id, type, budget_id, period_id, amount, currency, amount_in_base, description, transaction_date, create_time, update_time)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
+
+	var budgetID, periodID sql.NullString
+	if t.BudgetID != nil {
+		budgetID = sql.NullString{String: string(*t.BudgetID), Valid: true}
+	}
+	if t.PeriodID != nil {
+		periodID = sql.NullString{String: string(*t.PeriodID), Valid: true}
+	}
+
+	_, err := s.db.ExecContext(ctx, query,
+		string(t.ID), string(t.SpaceID), string(t.Type), budgetID, periodID,
+		t.Amount, string(t.Currency), t.AmountInBase, t.Description,
+		t.TransactionDate, t.CreateTime, t.UpdateTime,
+	)
+	return err
+}
+
+func (s *TransactionStore) GetByID(ctx context.Context, id finance.TransactionID) (*finance.Transaction, error) {
+	var row transactionDB
+	query := `SELECT * FROM finance.transaction WHERE id = $1`
+	if err := s.db.GetContext(ctx, &row, query, string(id)); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, finance.ErrTransactionNotFound
+		}
+		return nil, err
+	}
+
+	var budgetIDPtr *finance.BudgetID
+	if row.BudgetID.Valid {
+		bID := finance.BudgetID(row.BudgetID.String)
+		budgetIDPtr = &bID
+	}
+	var periodIDPtr *finance.PeriodID
+	if row.PeriodID.Valid {
+		pID := finance.PeriodID(row.PeriodID.String)
+		periodIDPtr = &pID
+	}
+
+	return &finance.Transaction{
+		ID:              finance.TransactionID(row.ID),
+		SpaceID:         finance.SpaceID(row.SpaceID),
+		Type:            finance.TransactionType(row.Type),
+		BudgetID:        budgetIDPtr,
+		PeriodID:        periodIDPtr,
+		Amount:          row.Amount,
+		Currency:        finance.Currency(row.Currency),
+		AmountInBase:    row.AmountInBase,
+		Description:     row.Description,
+		TransactionDate: nullTimeToTime(row.TransactionDate),
+		CreateTime:      nullTimeToTime(row.CreateTime),
+		UpdateTime:      nullTimeToTime(row.UpdateTime),
+	}, nil
+}
+
+func (s *TransactionStore) Delete(ctx context.Context, id finance.TransactionID) error {
+	query := `DELETE FROM finance.transaction WHERE id = $1`
+	res, err := s.db.ExecContext(ctx, query, string(id))
+	if err != nil {
+		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return finance.ErrTransactionNotFound
+	}
+	return nil
+}
+
+func (s *TransactionStore) Update(ctx context.Context, t *finance.Transaction) error {
+	query := `UPDATE finance.transaction SET 
+		budget_id = $2, 
+		period_id = $3, 
+		amount = $4, 
+		currency = $5, 
+		amount_in_base = $6, 
+		description = $7, 
+		transaction_date = $8, 
+		update_time = $9 
+		WHERE id = $1`
+
+	var budgetID, periodID sql.NullString
+	if t.BudgetID != nil {
+		budgetID = sql.NullString{String: string(*t.BudgetID), Valid: true}
+	}
+	if t.PeriodID != nil {
+		periodID = sql.NullString{String: string(*t.PeriodID), Valid: true}
+	}
+
+	res, err := s.db.ExecContext(ctx, query,
+		string(t.ID), budgetID, periodID,
+		t.Amount, string(t.Currency), t.AmountInBase, t.Description,
+		t.TransactionDate, t.UpdateTime,
+	)
+	if err != nil {
+		return err
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return finance.ErrTransactionNotFound
+	}
+	return nil
+}
+
+func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListTransactionsFilter) ([]*finance.Transaction, string, error) {
+	if filter.PageSize <= 0 || filter.PageSize > 100 {
+		filter.PageSize = 20
+	}
+
+	var cursorID string
+	if filter.NextPageToken != "" {
+		if decoded, err := base64.URLEncoding.DecodeString(filter.NextPageToken); err == nil {
+			cursorID = string(decoded)
+		}
+	}
+
+	conditions := []string{"space_id = $1"}
+	args := []any{string(spaceID)}
+	argIndex := 2
+
+	if filter.BudgetID != nil {
+		conditions = append(conditions, fmt.Sprintf("budget_id = $%d", argIndex))
+		args = append(args, string(*filter.BudgetID))
+		argIndex++
+	}
+
+	if filter.Type != nil {
+		conditions = append(conditions, fmt.Sprintf("type = $%d", argIndex))
+		args = append(args, string(*filter.Type))
+		argIndex++
+	}
+
+	if cursorID != "" {
+		conditions = append(conditions, fmt.Sprintf("id < $%d", argIndex))
+		args = append(args, cursorID)
+		argIndex++
+	}
+
+	query := fmt.Sprintf(`SELECT * FROM finance.transaction WHERE %s ORDER BY transaction_date DESC, id DESC LIMIT $%d`, strings.Join(conditions, " AND "), argIndex)
+	args = append(args, filter.PageSize+1)
+
+	var rows []transactionDB
+	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
+		return nil, "", err
+	}
+
+	hasMore := len(rows) > int(filter.PageSize)
+	if hasMore {
+		rows = rows[:filter.PageSize]
+	}
+
+	txns := make([]*finance.Transaction, 0, len(rows))
+	for i := range rows {
+		var budgetIDPtr *finance.BudgetID
+		if rows[i].BudgetID.Valid {
+			bID := finance.BudgetID(rows[i].BudgetID.String)
+			budgetIDPtr = &bID
+		}
+		var periodIDPtr *finance.PeriodID
+		if rows[i].PeriodID.Valid {
+			pID := finance.PeriodID(rows[i].PeriodID.String)
+			periodIDPtr = &pID
+		}
+
+		txns = append(txns, &finance.Transaction{
+			ID:              finance.TransactionID(rows[i].ID),
+			SpaceID:         finance.SpaceID(rows[i].SpaceID),
+			Type:            finance.TransactionType(rows[i].Type),
+			BudgetID:        budgetIDPtr,
+			PeriodID:        periodIDPtr,
+			Amount:          rows[i].Amount,
+			Currency:        finance.Currency(rows[i].Currency),
+			AmountInBase:    rows[i].AmountInBase,
+			Description:     rows[i].Description,
+			TransactionDate: nullTimeToTime(rows[i].TransactionDate),
+			CreateTime:      nullTimeToTime(rows[i].CreateTime),
+			UpdateTime:      nullTimeToTime(rows[i].UpdateTime),
+		})
+	}
+
+	var nextToken string
+	if hasMore && len(rows) > 0 {
+		lastTxn := rows[len(rows)-1]
+		nextToken = base64.URLEncoding.EncodeToString([]byte(lastTxn.ID))
+	}
+
+	return txns, nextToken, nil
+}
+
+func (s *TransactionStore) AggregateSpentInBase(ctx context.Context, periodID finance.PeriodID) (int64, error) {
+	query := `SELECT COALESCE(SUM(amount_in_base), 0) FROM finance.transaction WHERE period_id = $1`
+	var total int64
+	err := s.db.GetContext(ctx, &total, query, string(periodID))
+	return total, err
+}

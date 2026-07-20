@@ -78,8 +78,8 @@ export function BudgetPeriodProgress({
   if (!period) return null
 
   const limit = formatCents(period.limitAmount)
-  const spent = 0 // Transactions out of scope for MVP
-  const progressPercent = Math.min((spent / limit) * 100, 100)
+  const spent = formatCents(period.spentAmount || "0")
+  const progressPercent = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0
 
   // Bounds display formatting
   const startStr = new Date(period.startDate).toLocaleDateString(undefined, {

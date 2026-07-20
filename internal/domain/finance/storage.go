@@ -37,6 +37,16 @@ type ExchangeRateStore interface {
 	Delete(ctx context.Context, spaceID SpaceID, fromCurrency, toCurrency Currency, rateDate time.Time) error
 }
 
+// TransactionStore defines persistence for transactions.
+type TransactionStore interface {
+	Create(ctx context.Context, txn *Transaction) error
+	GetByID(ctx context.Context, id TransactionID) (*Transaction, error)
+	Delete(ctx context.Context, id TransactionID) error
+	Update(ctx context.Context, txn *Transaction) error
+	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListTransactionsFilter) ([]*Transaction, string, error)
+	AggregateSpentInBase(ctx context.Context, periodID PeriodID) (int64, error)
+}
+
 // ListBudgetsFilter encapsulates filtering parameters for listing budgets.
 type ListBudgetsFilter struct {
 	PageSize      int32
@@ -45,6 +55,14 @@ type ListBudgetsFilter struct {
 
 // ListExchangeRatesFilter encapsulates filtering parameters for exchange rates.
 type ListExchangeRatesFilter struct {
+	PageSize      int32
+	NextPageToken string
+}
+
+// ListTransactionsFilter encapsulates filtering parameters for transactions.
+type ListTransactionsFilter struct {
+	BudgetID      *BudgetID
+	Type          *TransactionType
 	PageSize      int32
 	NextPageToken string
 }

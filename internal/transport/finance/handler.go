@@ -14,7 +14,6 @@ import (
 	financev1 "github.com/masterkeysrd/saturn/apis/saturn/finance/v1"
 	financeapp "github.com/masterkeysrd/saturn/internal/application/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
-	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 )
 
 // Handler implements the financev1.FinanceServer interface.
@@ -105,35 +104,20 @@ func toProtoBudgetPeriod(p *finance.BudgetPeriod) *financev1.BudgetPeriod {
 		ExchangeRateToBase: p.ExchangeRateToBase,
 		CreateTime:         timestamppb.New(p.CreateTime),
 		UpdateTime:         timestamppb.New(p.UpdateTime),
+		SpentAmount:        p.SpentAmount,
+		SpentInBase:        p.SpentInBase,
 	}
-}
-
-// --- Context Helpers ---
-
-func (h *Handler) getSpaceUserID(ctx context.Context) (string, error) {
-	principal, ok := auth.PrincipalFromContext(ctx)
-	if !ok {
-		return "", status.Error(codes.Unauthenticated, "missing principal")
-	}
-	return principal.Subject, nil
 }
 
 // --- gRPC Service Methods ---
 
 func (h *Handler) ConfigureFinance(ctx context.Context, req *financev1.ConfigureFinanceRequest) (*financev1.FinanceSettings, error) {
-	userID, err := h.getSpaceUserID(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	baseCurrency, err := finance.ParseCurrency(req.GetBaseCurrency())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	appReq := &financeapp.ConfigureFinanceRequest{
-		SpaceID:      finance.SpaceID(req.GetSpaceId()),
-		UserID:       userID,
 		BaseCurrency: baseCurrency,
 	}
 
@@ -146,17 +130,7 @@ func (h *Handler) ConfigureFinance(ctx context.Context, req *financev1.Configure
 }
 
 func (h *Handler) GetFinanceSettings(ctx context.Context, req *financev1.GetFinanceSettingsRequest) (*financev1.FinanceSettings, error) {
-	userID, err := h.getSpaceUserID(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	appReq := &financeapp.GetFinanceSettingsRequest{
-		SpaceID: finance.SpaceID(req.GetSpaceId()),
-		UserID:  userID,
-	}
-
-	settings, err := h.Coordinator.GetFinanceSettings(ctx, appReq)
+	settings, err := h.Coordinator.GetFinanceSettings(ctx)
 	if err != nil {
 		return nil, h.mapError(err)
 	}
@@ -165,19 +139,12 @@ func (h *Handler) GetFinanceSettings(ctx context.Context, req *financev1.GetFina
 }
 
 func (h *Handler) CreateBudget(ctx context.Context, req *financev1.CreateBudgetRequest) (*financev1.Budget, error) {
-	userID, err := h.getSpaceUserID(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	currency, err := finance.ParseCurrency(req.GetCurrency())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	appReq := &financeapp.CreateBudgetRequest{
-		SpaceID:     finance.SpaceID(req.GetSpaceId()),
-		UserID:      userID,
 		Name:        req.GetName(),
 		LimitAmount: req.GetLimitAmount(),
 		Currency:    currency,
@@ -195,11 +162,6 @@ func (h *Handler) CreateBudget(ctx context.Context, req *financev1.CreateBudgetR
 }
 
 func (h *Handler) UpdateBudget(ctx context.Context, req *financev1.UpdateBudgetRequest) (*financev1.Budget, error) {
-	userID, err := h.getSpaceUserID(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	currency, err := finance.ParseCurrency(req.GetCurrency())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -207,8 +169,6 @@ func (h *Handler) UpdateBudget(ctx context.Context, req *financev1.UpdateBudgetR
 
 	appReq := &financeapp.UpdateBudgetRequest{
 		ID:          finance.BudgetID(req.GetId()),
-		SpaceID:     finance.SpaceID(req.GetSpaceId()),
-		UserID:      userID,
 		Name:        req.GetName(),
 		LimitAmount: req.GetLimitAmount(),
 		Currency:    currency,
@@ -228,18 +188,7 @@ func (h *Handler) UpdateBudget(ctx context.Context, req *financev1.UpdateBudgetR
 }
 
 func (h *Handler) DeleteBudget(ctx context.Context, req *financev1.DeleteBudgetRequest) (*emptypb.Empty, error) {
-	userID, err := h.getSpaceUserID(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	appReq := &financeapp.DeleteBudgetRequest{
-		ID:      finance.BudgetID(req.GetId()),
-		SpaceID: finance.SpaceID(req.GetSpaceId()),
-		UserID:  userID,
-	}
-
-	if err := h.Coordinator.DeleteBudget(ctx, appReq); err != nil {
+	if err := h.Coordinator.DeleteBudget(ctx, finance.BudgetID(req.GetId())); err != nil {
 		return nil, h.mapError(err)
 	}
 
@@ -247,14 +196,7 @@ func (h *Handler) DeleteBudget(ctx context.Context, req *financev1.DeleteBudgetR
 }
 
 func (h *Handler) ListBudgets(ctx context.Context, req *financev1.ListBudgetsRequest) (*financev1.ListBudgetsResponse, error) {
-	userID, err := h.getSpaceUserID(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	appReq := &financeapp.ListBudgetsRequest{
-		SpaceID:   finance.SpaceID(req.GetSpaceId()),
-		UserID:    userID,
 		PageSize:  req.GetPageSize(),
 		PageToken: req.GetPageToken(),
 	}
@@ -276,11 +218,6 @@ func (h *Handler) ListBudgets(ctx context.Context, req *financev1.ListBudgetsReq
 }
 
 func (h *Handler) GetBudgetPeriod(ctx context.Context, req *financev1.GetBudgetPeriodRequest) (*financev1.BudgetPeriod, error) {
-	userID, err := h.getSpaceUserID(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	var targetDate time.Time
 	if req.GetDate() != nil {
 		targetDate = req.GetDate().AsTime()
@@ -288,8 +225,6 @@ func (h *Handler) GetBudgetPeriod(ctx context.Context, req *financev1.GetBudgetP
 
 	appReq := &financeapp.GetBudgetPeriodRequest{
 		BudgetID: finance.BudgetID(req.GetBudgetId()),
-		SpaceID:  finance.SpaceID(req.GetSpaceId()),
-		UserID:   userID,
 		Date:     targetDate,
 	}
 
@@ -302,11 +237,6 @@ func (h *Handler) GetBudgetPeriod(ctx context.Context, req *financev1.GetBudgetP
 }
 
 func (h *Handler) CreateExchangeRate(ctx context.Context, req *financev1.CreateExchangeRateRequest) (*financev1.ExchangeRate, error) {
-	userID, err := h.getSpaceUserID(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	if req.GetRateDate() == nil {
 		return nil, status.Error(codes.InvalidArgument, "rate date is required")
 	}
@@ -321,8 +251,6 @@ func (h *Handler) CreateExchangeRate(ctx context.Context, req *financev1.CreateE
 	}
 
 	appReq := &financeapp.CreateExchangeRateRequest{
-		SpaceID:      finance.SpaceID(req.GetSpaceId()),
-		UserID:       userID,
 		FromCurrency: fromCurrency,
 		ToCurrency:   toCurrency,
 		Rate:         req.GetRate(),
@@ -338,14 +266,7 @@ func (h *Handler) CreateExchangeRate(ctx context.Context, req *financev1.CreateE
 }
 
 func (h *Handler) ListExchangeRates(ctx context.Context, req *financev1.ListExchangeRatesRequest) (*financev1.ListExchangeRatesResponse, error) {
-	userID, err := h.getSpaceUserID(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	appReq := &financeapp.ListExchangeRatesRequest{
-		SpaceID:   finance.SpaceID(req.GetSpaceId()),
-		UserID:    userID,
 		PageSize:  req.GetPageSize(),
 		PageToken: req.GetPageToken(),
 	}
@@ -367,11 +288,6 @@ func (h *Handler) ListExchangeRates(ctx context.Context, req *financev1.ListExch
 }
 
 func (h *Handler) DeleteExchangeRate(ctx context.Context, req *financev1.DeleteExchangeRateRequest) (*emptypb.Empty, error) {
-	userID, err := h.getSpaceUserID(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	if req.GetRateDate() == nil {
 		return nil, status.Error(codes.InvalidArgument, "rate date is required")
 	}
@@ -386,8 +302,6 @@ func (h *Handler) DeleteExchangeRate(ctx context.Context, req *financev1.DeleteE
 	}
 
 	appReq := &financeapp.DeleteExchangeRateRequest{
-		SpaceID:      finance.SpaceID(req.GetSpaceId()),
-		UserID:       userID,
 		FromCurrency: fromCurrency,
 		ToCurrency:   toCurrency,
 		RateDate:     req.GetRateDate().AsTime(),
@@ -434,7 +348,173 @@ func (h *Handler) mapError(err error) error {
 		return status.Error(codes.NotFound, "budget period not found")
 	case errors.Is(err, finance.ErrExchangeRateNotFound):
 		return status.Error(codes.FailedPrecondition, "exchange rate not found")
+	case errors.Is(err, finance.ErrTransactionNotFound):
+		return status.Error(codes.NotFound, "transaction not found")
 	}
 
 	return status.Error(codes.InvalidArgument, err.Error())
+}
+
+func (h *Handler) CreateExpense(ctx context.Context, req *financev1.CreateExpenseRequest) (*financev1.Transaction, error) {
+	expense := req.GetExpense()
+	if expense == nil {
+		return nil, status.Error(codes.InvalidArgument, "expense details are required")
+	}
+
+	currency, err := finance.ParseCurrency(expense.GetCurrency())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	var transactionDate time.Time
+	if expense.GetTransactionDate() != nil {
+		transactionDate = expense.GetTransactionDate().AsTime()
+	}
+
+	appReq := &financeapp.CreateExpenseRequest{
+		BudgetID:        finance.BudgetID(expense.GetBudgetId()),
+		Amount:          expense.GetAmount(),
+		Currency:        currency,
+		Description:     expense.GetDescription(),
+		TransactionDate: transactionDate,
+	}
+
+	txn, err := h.Coordinator.CreateExpense(ctx, appReq)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoTransaction(txn), nil
+}
+
+func (h *Handler) UpdateExpense(ctx context.Context, req *financev1.UpdateExpenseRequest) (*financev1.Transaction, error) {
+	expense := req.GetExpense()
+	if expense == nil {
+		return nil, status.Error(codes.InvalidArgument, "expense details are required")
+	}
+
+	currency, err := finance.ParseCurrency(expense.GetCurrency())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	var transactionDate time.Time
+	if expense.GetTransactionDate() != nil {
+		transactionDate = expense.GetTransactionDate().AsTime()
+	}
+
+	tID, err := finance.ParseTransactionID(req.GetId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	appReq := &financeapp.UpdateExpenseRequest{
+		TransactionID:   tID,
+		BudgetID:        finance.BudgetID(expense.GetBudgetId()),
+		Amount:          expense.GetAmount(),
+		Currency:        currency,
+		Description:     expense.GetDescription(),
+		TransactionDate: transactionDate,
+	}
+
+	txn, err := h.Coordinator.UpdateExpense(ctx, appReq)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoTransaction(txn), nil
+}
+
+func (h *Handler) DeleteTransaction(ctx context.Context, req *financev1.DeleteTransactionRequest) (*emptypb.Empty, error) {
+	tID, err := finance.ParseTransactionID(req.GetId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	err = h.Coordinator.DeleteTransaction(ctx, tID)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTransactionsRequest) (*financev1.ListTransactionsResponse, error) {
+	var budgetID *finance.BudgetID
+	if req.GetBudgetId() != "" {
+		bID := finance.BudgetID(req.GetBudgetId())
+		budgetID = &bID
+	}
+
+	var txnType *finance.TransactionType
+	if req.GetType() != financev1.TransactionType_TRANSACTION_TYPE_UNSPECIFIED {
+		var t finance.TransactionType
+		switch req.GetType() {
+		case financev1.TransactionType_EXPENSE:
+			t = finance.TransactionTypeExpense
+		case financev1.TransactionType_INCOME:
+			t = finance.TransactionTypeIncome
+		}
+		txnType = &t
+	}
+
+	appReq := &financeapp.ListTransactionsRequest{
+		BudgetID:      budgetID,
+		Type:          txnType,
+		PageSize:      req.GetPageSize(),
+		NextPageToken: req.GetPageToken(),
+	}
+
+	txns, nextToken, err := h.Coordinator.ListTransactions(ctx, appReq)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	protoTxns := make([]*financev1.Transaction, 0, len(txns))
+	for _, t := range txns {
+		protoTxns = append(protoTxns, toProtoTransaction(t))
+	}
+
+	return &financev1.ListTransactionsResponse{
+		Transactions:  protoTxns,
+		NextPageToken: nextToken,
+	}, nil
+}
+
+func toProtoTransaction(t *finance.Transaction) *financev1.Transaction {
+	if t == nil {
+		return nil
+	}
+	var protoType financev1.TransactionType
+	switch t.Type {
+	case finance.TransactionTypeExpense:
+		protoType = financev1.TransactionType_EXPENSE
+	case finance.TransactionTypeIncome:
+		protoType = financev1.TransactionType_INCOME
+	default:
+		protoType = financev1.TransactionType_TRANSACTION_TYPE_UNSPECIFIED
+	}
+
+	var budgetID, periodID string
+	if t.BudgetID != nil {
+		budgetID = string(*t.BudgetID)
+	}
+	if t.PeriodID != nil {
+		periodID = string(*t.PeriodID)
+	}
+
+	return &financev1.Transaction{
+		Id:              string(t.ID),
+		SpaceId:         string(t.SpaceID),
+		Type:            protoType,
+		BudgetId:        budgetID,
+		PeriodId:        periodID,
+		Amount:          t.Amount,
+		Currency:        string(t.Currency),
+		AmountInBase:    t.AmountInBase,
+		Description:     t.Description,
+		TransactionDate: timestamppb.New(t.TransactionDate),
+		CreateTime:      timestamppb.New(t.CreateTime),
+		UpdateTime:      timestamppb.New(t.UpdateTime),
+	}
 }

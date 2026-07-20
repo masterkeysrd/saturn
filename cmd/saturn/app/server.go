@@ -170,12 +170,14 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	budgetStore := financestorage.NewBudgetStore(sqlxDB)
 	periodStore := financestorage.NewPeriodStore(sqlxDB)
 	rateStore := financestorage.NewExchangeRateStore(sqlxDB)
+	transactionStore := financestorage.NewTransactionStore(sqlxDB)
 
 	financeService := finance.NewService(finance.Dependencies{
 		SettingsStore:     settingsStore,
 		BudgetStore:       budgetStore,
 		PeriodStore:       periodStore,
 		ExchangeRateStore: rateStore,
+		TransactionStore:  transactionStore,
 	})
 
 	financeCoordinator := financeapp.NewCoordinator(financeapp.Dependencies{

@@ -1,75 +1,24 @@
 import { useState } from "react"
-import { useParams } from "react-router-dom"
-import { useActiveSpaceContext } from "@/features/space/use-space"
-import {
-  useGetFinanceSettingsQuery,
-  useConfigureFinanceMutation,
-  useListBudgetsQuery,
-  useListExchangeRatesQuery,
-  type ExchangeRate,
-} from "@/gen/saturn/finance/v1/finance"
+import { useWorkspaceFinance } from "../use-workspace-finance"
 import { Button } from "@/components/ui/button"
 import { Coins, Loader2, PiggyBank } from "lucide-react"
 import { Label } from "@/components/ui/label"
+import { useConfigureFinanceMutation } from "@/gen/saturn/finance/v1/finance"
 
-// Import Modular Tab Sub-Views
-import { BudgetsView } from "./budgets-view"
-import { RatesView } from "./rates-view"
-import { SettingsView } from "./settings-view"
+interface FinancePageLayoutProps {
+  title: string
+  description: string
+  children: React.ReactNode
+}
 
-export function FinanceView() {
-  const { spaceId, spaceRole } = useActiveSpaceContext()
-  const isWritable =
-    spaceRole === "owner" ||
-    spaceRole === "admin" ||
-    spaceRole === "finance_manager"
+export function FinancePageLayout({
+  title,
+  description,
+  children,
+}: FinancePageLayoutProps) {
+  const { spaceId, isWritable, isLoading, isNotConfigured, refetchSettings } =
+    useWorkspaceFinance()
 
-  const { subview } = useParams()
-  const activeTab = subview || "budgets"
-
-  console.log("FinanceView Render Diagnostic:", {
-    subview,
-    activeTab,
-    isWritable,
-    spaceRole,
-    spaceId,
-  })
-
-  // 1. Fetch settings
-  const {
-    data: settings,
-    isLoading: settingsLoading,
-    error: settingsError,
-    refetch: refetchSettings,
-  } = useGetFinanceSettingsQuery(
-    { spaceId },
-    {
-      enabled: !!spaceId,
-      retry: false,
-    }
-  )
-
-  // 2. Fetch budgets
-  const {
-    data: budgetsData,
-    isLoading: budgetsLoading,
-    refetch: refetchBudgets,
-  } = useListBudgetsQuery(
-    { spaceId, pageSize: 100, pageToken: "" },
-    { enabled: !!settings }
-  )
-
-  // 3. Fetch Exchange Rates
-  const {
-    data: ratesData,
-    isLoading: ratesLoading,
-    refetch: refetchRates,
-  } = useListExchangeRatesQuery(
-    { spaceId, pageSize: 100, pageToken: "" },
-    { enabled: !!settings }
-  )
-
-  // Settings Setup Form State
   const [setupCurrency, setSetupCurrency] = useState("USD")
   const configureMutation = useConfigureFinanceMutation()
 
@@ -85,36 +34,7 @@ export function FinanceView() {
     refetchSettings()
   }
 
-  // Real-Time currency conversion helper passed down to form sheets
-  const getConversionPreview = (amountStr: string, fromCurr: string) => {
-    const amount = parseFloat(amountStr)
-    if (isNaN(amount) || amount <= 0) return null
-    if (!settings?.baseCurrency || fromCurr === settings.baseCurrency)
-      return null
-
-    const matchingRates =
-      ratesData?.exchangeRates?.filter(
-        (r: ExchangeRate) =>
-          r.fromCurrency === fromCurr && r.toCurrency === settings.baseCurrency
-      ) || []
-
-    if (matchingRates.length === 0) {
-      return {
-        error: `No exchange rate configured from ${fromCurr} to ${settings.baseCurrency}.`,
-      }
-    }
-
-    const latestRate = [...matchingRates].sort(
-      (a, b) => new Date(b.rateDate).getTime() - new Date(a.rateDate).getTime()
-    )[0]
-    return {
-      amount: amount * latestRate.rate,
-      rate: latestRate.rate,
-      currency: settings.baseCurrency,
-    }
-  }
-
-  if (settingsLoading) {
+  if (isLoading) {
     return (
       <div className="flex min-h-[400px] flex-1 items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -122,13 +42,10 @@ export function FinanceView() {
     )
   }
 
-  const isNotConfigured = !!settingsError
-
   if (isNotConfigured) {
     return (
       <div className="flex min-h-[500px] flex-1 items-center justify-center p-6">
         <div className="relative w-full max-w-lg animate-in overflow-hidden rounded-3xl border border-border/40 bg-card/40 p-8 shadow-2xl backdrop-blur-xl duration-500 fade-in slide-in-from-bottom-6 md:p-10">
-          {/* Accent decoration */}
           <div className="absolute top-0 right-0 -mt-16 -mr-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl"></div>
 
           <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary to-accent text-white shadow-xl">
@@ -185,57 +102,21 @@ export function FinanceView() {
   }
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-1 animate-in flex-col gap-8 p-4 duration-500 fade-in md:p-8">
+    <div className="mx-auto flex w-full max-w-6xl flex-1 animate-in flex-col gap-8 duration-500 fade-in">
       {/* Header section */}
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="flex items-center gap-3 text-3xl font-extrabold tracking-tight text-foreground md:text-4xl">
             <PiggyBank className="h-8 w-8 shrink-0 text-primary" />
-            {activeTab === "settings"
-              ? "Finance Settings"
-              : activeTab === "rates"
-                ? "Exchange Rates"
-                : "Budgeting"}
+            {title}
           </h1>
           <p className="mt-2 text-sm font-medium text-muted-foreground">
-            {activeTab === "settings"
-              ? "Configure currency rules, view currency exchanges, and check service status."
-              : activeTab === "rates"
-                ? "Configure daily conversions to Reporting Currency."
-                : "Manage your template limits, recurrence tracking, and cross-currency allocation."}
+            {description}
           </p>
         </div>
       </div>
 
-      {/* Render modular tab views */}
-      {activeTab === "budgets" && (
-        <BudgetsView
-          spaceId={spaceId}
-          isWritable={isWritable}
-          settings={settings}
-          budgetsData={budgetsData}
-          budgetsLoading={budgetsLoading}
-          refetchBudgets={refetchBudgets}
-          getConversionPreview={getConversionPreview}
-        />
-      )}
-
-      {activeTab === "rates" && (
-        <RatesView
-          spaceId={spaceId}
-          isWritable={isWritable}
-          settings={settings}
-          ratesData={ratesData}
-          ratesLoading={ratesLoading}
-          refetchRates={refetchRates}
-        />
-      )}
-
-      {activeTab === "settings" && (
-        <SettingsView settings={settings} ratesData={ratesData} />
-      )}
+      {children}
     </div>
   )
 }
-
-export default FinanceView

@@ -1,31 +1,18 @@
 import { useState } from "react"
 import {
-  type FinanceSettings,
-  type ListExchangeRatesResponse,
   type ExchangeRate,
   useDeleteExchangeRateMutation,
 } from "@/gen/saturn/finance/v1/finance"
+import { useWorkspaceFinance } from "./use-workspace-finance"
+import { FinancePageLayout } from "./components/finance-page-layout"
 import { Button } from "@/components/ui/button"
 import { Globe, ArrowRight, Trash2 } from "lucide-react"
 import { CreateRateSheet } from "./components/create-rate-sheet"
 
-interface RatesViewProps {
-  spaceId: string
-  isWritable: boolean
-  settings: FinanceSettings | undefined
-  ratesData: ListExchangeRatesResponse | undefined
-  ratesLoading: boolean
-  refetchRates: () => void
-}
+export function RatesView() {
+  const { spaceId, isWritable, settings, ratesData, refetchRates } =
+    useWorkspaceFinance()
 
-export function RatesView({
-  spaceId,
-  isWritable,
-  settings,
-  ratesData,
-  ratesLoading,
-  refetchRates,
-}: RatesViewProps) {
   const [rateCreateOpen, setRateCreateOpen] = useState(false)
   const deleteRateMutation = useDeleteExchangeRateMutation()
 
@@ -49,107 +36,118 @@ export function RatesView({
   }
 
   return (
-    <div className="animate-in space-y-6 duration-300 fade-in">
-      {isWritable && (
-        <div className="mb-6 flex justify-end">
-          <CreateRateSheet
-            open={rateCreateOpen}
-            onOpenChange={setRateCreateOpen}
-            spaceId={spaceId}
-            settings={settings}
-            refetchRates={refetchRates}
-          />
-        </div>
-      )}
-
-      <div className="rounded-3xl border border-border/40 bg-card/45 p-6 shadow-lg backdrop-blur-xl md:p-8">
-        <h3 className="text-lg font-bold text-foreground">
-          Active Exchange Rates
-        </h3>
-        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-          These rates define currency conversions on specific dates. Saturn will
-          use these values to compute budget periods limits dynamically.
-        </p>
-
-        {ratesLoading ? (
-          <div className="mt-6 space-y-3">
-            <div className="h-12 animate-pulse rounded-xl bg-muted/20"></div>
-            <div className="h-12 animate-pulse rounded-xl bg-muted/20"></div>
-          </div>
-        ) : !ratesData?.exchangeRates ||
-          ratesData.exchangeRates.length === 0 ? (
-          <div className="mt-6 flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/40 bg-card/15 py-16 text-center shadow-inner">
-            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-muted/40 text-muted-foreground/80">
-              <Globe className="h-6 w-6" />
-            </div>
-            <h4 className="text-md font-bold text-foreground">
-              No Exchange Rates Found
-            </h4>
-            <p className="mt-1 max-w-xs px-4 text-xs leading-relaxed text-muted-foreground">
-              Register conversion rates to allow Saturn to resolve
-              multi-currency budgeting templates.
-            </p>
-          </div>
-        ) : (
-          <div className="mt-6 overflow-hidden rounded-2xl border border-border/30 bg-background/25 shadow-inner">
-            <table className="w-full border-collapse text-left text-sm select-none">
-              <thead>
-                <tr className="border-b border-border/30 bg-secondary/40 font-semibold text-muted-foreground/90">
-                  <th className="p-4">Date</th>
-                  <th className="p-4">Conversion Rule</th>
-                  <th className="p-4">Rate</th>
-                  {isWritable && <th className="p-4 text-right">Actions</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/20 text-foreground/80">
-                {ratesData.exchangeRates.map((rate, idx) => {
-                  const formattedDate = new Date(
-                    rate.rateDate
-                  ).toLocaleDateString(undefined, {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                    timeZone: "UTC",
-                  })
-                  return (
-                    <tr
-                      key={idx}
-                      className="font-medium transition-colors hover:bg-muted/15"
-                    >
-                      <td className="p-4 font-mono text-xs">{formattedDate}</td>
-                      <td className="mt-0.5 flex items-center gap-1.5 p-4">
-                        <span className="rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
-                          {rate.fromCurrency}
-                        </span>
-                        <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/60" />
-                        <span className="rounded-lg bg-muted px-2.5 py-1 text-xs font-bold text-muted-foreground">
-                          {rate.toCurrency}
-                        </span>
-                      </td>
-                      <td className="p-4 font-mono">
-                        1 {rate.fromCurrency} = {rate.rate.toFixed(4)}{" "}
-                        {rate.toCurrency}
-                      </td>
-                      {isWritable && (
-                        <td className="p-4 text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteRate(rate)}
-                            className="h-8 w-8 rounded-full text-destructive hover:bg-destructive/15"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </td>
-                      )}
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+    <FinancePageLayout
+      title="Exchange Rates"
+      description="Configure daily conversions to Reporting Currency."
+    >
+      <div className="mt-2 animate-in space-y-6 duration-300 fade-in">
+        {isWritable && (
+          <div className="mb-6 flex justify-end">
+            <Button
+              onClick={() => setRateCreateOpen(true)}
+              className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent pt-0.5 font-semibold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.02] hover:opacity-95"
+            >
+              Add Conversion Rate
+            </Button>
           </div>
         )}
+
+        <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/45 p-6 shadow-lg backdrop-blur-xl md:p-8">
+          <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-primary/5 blur-2xl"></div>
+          <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Globe className="h-6 w-6" />
+          </div>
+          <h3 className="text-lg font-bold text-foreground">
+            Currency Configuration
+          </h3>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Workspace Base Reporting Currency:{" "}
+            <span className="font-bold text-foreground">
+              {settings?.baseCurrency}
+            </span>
+            . To record expenses or set budget limits in foreign currencies, you
+            must first specify the conversion rate for that day below.
+          </p>
+        </div>
+
+        <div className="overflow-hidden rounded-3xl border border-border/40 bg-card/45 shadow-lg backdrop-blur-xl">
+          <div className="border-b border-border/40 bg-muted/20 px-6 py-4">
+            <h3 className="text-md font-bold text-foreground">
+              Conversion Rules
+            </h3>
+          </div>
+
+          {!ratesData?.exchangeRates || ratesData.exchangeRates.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-muted/40 text-muted-foreground/80 shadow-sm">
+                <Globe className="h-6 w-6" />
+              </div>
+              <h4 className="text-sm font-bold text-foreground">
+                No Rates Registered
+              </h4>
+              <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+                Add conversion rates to start allocating budgets in other
+                currencies.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border/20">
+              {ratesData.exchangeRates.map((r, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-muted/10"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-background/50 px-2.5 py-1 text-xs font-bold text-foreground">
+                      {r.fromCurrency}
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-background/50 px-2.5 py-1 text-xs font-bold text-foreground">
+                      {r.toCurrency}
+                    </div>
+                    <div className="text-sm font-semibold text-foreground">
+                      Multiplier:{" "}
+                      <span className="font-extrabold text-primary">
+                        {r.rate.toFixed(6)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <span className="font-mono text-xs text-muted-foreground/80">
+                      Rate Date:{" "}
+                      {new Date(r.rateDate).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </span>
+                    {isWritable && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        disabled={deleteRateMutation.isPending}
+                        onClick={() => handleDeleteRate(r)}
+                        className="h-8 w-8 shrink-0 cursor-pointer rounded-lg text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      <CreateRateSheet
+        open={rateCreateOpen}
+        onOpenChange={setRateCreateOpen}
+        spaceId={spaceId}
+        settings={settings}
+        refetchRates={refetchRates}
+      />
+    </FinancePageLayout>
   )
 }

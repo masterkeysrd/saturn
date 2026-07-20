@@ -5,7 +5,6 @@ import {
 } from "@/gen/saturn/finance/v1/finance"
 import {
   Sheet,
-  SheetTrigger,
   SheetContent,
   SheetHeader,
   SheetTitle,
@@ -14,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Plus, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 
 interface CreateRateSheetProps {
   open: boolean
@@ -78,14 +77,6 @@ export function CreateRateSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetTrigger
-        render={
-          <Button className="flex h-11 cursor-pointer items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent px-5 font-semibold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.02] hover:opacity-95">
-            <Plus className="h-4 w-4" />
-            Add Rate
-          </Button>
-        }
-      />
       <SheetContent className="rounded-l-3xl border-l border-border/40 bg-card/95 p-6 shadow-2xl backdrop-blur-xl md:p-8">
         <SheetHeader className="p-0">
           <SheetTitle className="text-xl font-bold">

@@ -9,8 +9,6 @@ import (
 
 // Request & Response structures
 type CreateBudgetRequest struct {
-	SpaceID     finance.SpaceID
-	UserID      string
 	Name        string
 	LimitAmount int64
 	Currency    finance.Currency
@@ -21,8 +19,6 @@ type CreateBudgetRequest struct {
 
 type UpdateBudgetRequest struct {
 	ID          finance.BudgetID
-	SpaceID     finance.SpaceID
-	UserID      string
 	Name        string
 	LimitAmount int64
 	Currency    finance.Currency
@@ -33,35 +29,25 @@ type UpdateBudgetRequest struct {
 	Color       string
 }
 
-type DeleteBudgetRequest struct {
-	ID      finance.BudgetID
-	SpaceID finance.SpaceID
-	UserID  string
-}
-
 type ListBudgetsRequest struct {
-	SpaceID   finance.SpaceID
-	UserID    string
 	PageSize  int32
 	PageToken string
 }
 
 type GetBudgetPeriodRequest struct {
 	BudgetID finance.BudgetID
-	SpaceID  finance.SpaceID
-	UserID   string
 	Date     time.Time
 }
 
 // CreateBudget orchestrates budget template creation.
 func (c *Coordinator) CreateBudget(ctx context.Context, req *CreateBudgetRequest) (*finance.Budget, error) {
-	spaceID, err := c.authorize(ctx, req.SpaceID, req.UserID)
+	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	budget := &finance.Budget{
-		SpaceID:     spaceID,
+		SpaceID:     rCtx.SpaceID,
 		Name:        req.Name,
 		LimitAmount: req.LimitAmount,
 		Currency:    req.Currency,
@@ -75,7 +61,7 @@ func (c *Coordinator) CreateBudget(ctx context.Context, req *CreateBudgetRequest
 
 // UpdateBudget orchestrates budget template updates.
 func (c *Coordinator) UpdateBudget(ctx context.Context, req *UpdateBudgetRequest) (*finance.Budget, error) {
-	_, err := c.authorize(ctx, req.SpaceID, req.UserID)
+	_, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -109,18 +95,18 @@ func (c *Coordinator) UpdateBudget(ctx context.Context, req *UpdateBudgetRequest
 }
 
 // DeleteBudget orchestrates budget template deletion.
-func (c *Coordinator) DeleteBudget(ctx context.Context, req *DeleteBudgetRequest) error {
-	_, err := c.authorize(ctx, req.SpaceID, req.UserID)
+func (c *Coordinator) DeleteBudget(ctx context.Context, id finance.BudgetID) error {
+	_, err := c.resolveContext(ctx)
 	if err != nil {
 		return err
 	}
 
-	return c.financeService.DeleteBudget(ctx, req.ID)
+	return c.financeService.DeleteBudget(ctx, id)
 }
 
 // ListBudgets orchestrates listing workspace budget templates.
 func (c *Coordinator) ListBudgets(ctx context.Context, req *ListBudgetsRequest) ([]*finance.Budget, string, error) {
-	spaceID, err := c.authorize(ctx, req.SpaceID, req.UserID)
+	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, "", err
 	}
@@ -130,12 +116,12 @@ func (c *Coordinator) ListBudgets(ctx context.Context, req *ListBudgetsRequest) 
 		NextPageToken: req.PageToken,
 	}
 
-	return c.financeService.ListBudgets(ctx, spaceID, filter)
+	return c.financeService.ListBudgets(ctx, rCtx.SpaceID, filter)
 }
 
 // GetBudgetPeriod orchestrates retrieving or lazily creating a period.
 func (c *Coordinator) GetBudgetPeriod(ctx context.Context, req *GetBudgetPeriodRequest) (*finance.BudgetPeriod, error) {
-	_, err := c.authorize(ctx, req.SpaceID, req.UserID)
+	_, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}

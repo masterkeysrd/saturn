@@ -3,12 +3,11 @@ package financeapp
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
-	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 )
 
 // SpaceService defines the decoupled interface for workspace accessibility check.
@@ -29,6 +28,10 @@ type FinanceService interface {
 	CreateExchangeRate(ctx context.Context, rate *finance.ExchangeRate) (*finance.ExchangeRate, error)
 	ListExchangeRates(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListExchangeRatesFilter) ([]*finance.ExchangeRate, string, error)
 	DeleteExchangeRate(ctx context.Context, spaceID finance.SpaceID, fromCurrency, toCurrency finance.Currency, rateDate time.Time) error
+	CreateExpense(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error)
+	UpdateExpense(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error)
+	DeleteTransaction(ctx context.Context, id finance.TransactionID) error
+	ListTransactions(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListTransactionsFilter) ([]*finance.Transaction, string, error)
 }
 
 // Dependencies contains all parameters for Coordinator initialization.
@@ -51,51 +54,44 @@ func NewCoordinator(deps Dependencies) *Coordinator {
 	}
 }
 
-// ConfigureFinanceRequest represents settings setup inputs.
-type ConfigureFinanceRequest struct {
-	SpaceID      finance.SpaceID
-	UserID       string // The requestor's user ID
-	BaseCurrency finance.Currency
-}
-
-// GetFinanceSettingsRequest represents settings retrieval inputs.
-type GetFinanceSettingsRequest struct {
+// RequestContext encapsulates the active request context properties.
+type RequestContext struct {
 	SpaceID finance.SpaceID
 	UserID  string
 }
 
-// authorize checks if the user is a member of the workspace.
-func (c *Coordinator) authorize(ctx context.Context, spaceID finance.SpaceID, userID string) (finance.SpaceID, error) {
-	spID, err := space.ParseSpaceID(string(spaceID))
-	if err != nil {
-		return "", fmt.Errorf("invalid space ID: %w", err)
-	}
-	usrID, err := identity.ParseUserID(userID)
-	if err != nil {
-		return "", fmt.Errorf("invalid user ID: %w", err)
+// resolveContext extracts space and user identity safely into a RequestContext struct.
+func (c *Coordinator) resolveContext(ctx context.Context) (*RequestContext, error) {
+	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
+	if !ok {
+		return nil, errors.New("access denied: missing space-id context")
 	}
 
-	session := space.Session{
-		SpaceID: spID,
-		UserID:  space.SpaceID(usrID),
-	}
-	_, err = c.spaceService.GetSpace(ctx, session)
-	if err != nil {
-		return "", errors.New("access denied: user is not a member of this workspace")
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, errors.New("access denied: missing user principal")
 	}
 
-	return spaceID, nil
+	return &RequestContext{
+		SpaceID: finance.SpaceID(spaceIDStr),
+		UserID:  principal.Subject,
+	}, nil
+}
+
+// ConfigureFinanceRequest represents settings setup inputs.
+type ConfigureFinanceRequest struct {
+	BaseCurrency finance.Currency
 }
 
 // ConfigureFinance sets up base currency preferences for a workspace.
 func (c *Coordinator) ConfigureFinance(ctx context.Context, req *ConfigureFinanceRequest) (*finance.FinanceSettings, error) {
-	spaceID, err := c.authorize(ctx, req.SpaceID, req.UserID)
+	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	settings := &finance.FinanceSettings{
-		SpaceID:      spaceID,
+		SpaceID:      rCtx.SpaceID,
 		BaseCurrency: req.BaseCurrency,
 	}
 
@@ -103,11 +99,11 @@ func (c *Coordinator) ConfigureFinance(ctx context.Context, req *ConfigureFinanc
 }
 
 // GetFinanceSettings fetches workspace configuration.
-func (c *Coordinator) GetFinanceSettings(ctx context.Context, req *GetFinanceSettingsRequest) (*finance.FinanceSettings, error) {
-	spaceID, err := c.authorize(ctx, req.SpaceID, req.UserID)
+func (c *Coordinator) GetFinanceSettings(ctx context.Context) (*finance.FinanceSettings, error) {
+	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.financeService.GetFinanceSettings(ctx, spaceID)
+	return c.financeService.GetFinanceSettings(ctx, rCtx.SpaceID)
 }

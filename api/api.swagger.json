@@ -779,6 +779,90 @@
         ]
       }
     },
+    "/v1/spaces/{spaceId}/finance/expenses": {
+      "post": {
+        "summary": "CreateExpense logs a new expense transaction.",
+        "operationId": "Finance_CreateExpense",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Transaction"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceCreateExpenseBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/finance/expenses/{id}": {
+      "put": {
+        "summary": "UpdateExpense modifies an existing expense.",
+        "operationId": "Finance_UpdateExpense",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Transaction"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceUpdateExpenseBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/spaces/{spaceId}/finance/rates": {
       "get": {
         "summary": "ListExchangeRates lists all exchange rate rules in a workspace.",
@@ -970,6 +1054,104 @@
             "schema": {
               "$ref": "#/definitions/FinanceConfigureFinanceBody"
             }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/finance/transactions": {
+      "get": {
+        "summary": "ListTransactions lists paginated transactions for a workspace.",
+        "operationId": "Finance_ListTransactions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListTransactionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "budgetId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "EXPENSE",
+              "INCOME"
+            ]
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/finance/transactions/{id}": {
+      "delete": {
+        "summary": "DeleteTransaction deletes any type of transaction.",
+        "operationId": "Finance_DeleteTransaction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -1237,6 +1419,17 @@
         "rateDate"
       ]
     },
+    "FinanceCreateExpenseBody": {
+      "type": "object",
+      "properties": {
+        "expense": {
+          "$ref": "#/definitions/v1ExpenseInput"
+        }
+      },
+      "required": [
+        "expense"
+      ]
+    },
     "FinanceUpdateBudgetBody": {
       "type": "object",
       "properties": {
@@ -1267,6 +1460,17 @@
         }
       },
       "description": "UpdateBudgetRequest contains update rules."
+    },
+    "FinanceUpdateExpenseBody": {
+      "type": "object",
+      "properties": {
+        "expense": {
+          "$ref": "#/definitions/v1ExpenseInput"
+        }
+      },
+      "required": [
+        "expense"
+      ]
     },
     "ListUsersRequestStatusFilter": {
       "type": "string",
@@ -1568,6 +1772,14 @@
         "updateTime": {
           "type": "string",
           "format": "date-time"
+        },
+        "spentAmount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "spentInBase": {
+          "type": "string",
+          "format": "int64"
         }
       },
       "description": "BudgetPeriod represents an active instantiation of a budget."
@@ -1619,6 +1831,33 @@
         }
       },
       "description": "ExchangeRate represents a daily rate record."
+    },
+    "v1ExpenseInput": {
+      "type": "object",
+      "properties": {
+        "budgetId": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "transactionDate": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "budgetId",
+        "amount",
+        "currency"
+      ]
     },
     "v1FinanceSettings": {
       "type": "object",
@@ -1710,6 +1949,21 @@
         }
       },
       "description": "ListSpacesResponse contains the list of spaces and pagination token."
+    },
+    "v1ListTransactionsResponse": {
+      "type": "object",
+      "properties": {
+        "transactions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Transaction"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
     },
     "v1ListUsersResponse": {
       "type": "object",
@@ -1939,6 +2193,59 @@
         }
       },
       "description": "SpaceMember represents a member of a workspace."
+    },
+    "v1Transaction": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "spaceId": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/v1TransactionType"
+        },
+        "budgetId": {
+          "type": "string"
+        },
+        "periodId": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "amountInBase": {
+          "type": "string",
+          "format": "int64"
+        },
+        "description": {
+          "type": "string"
+        },
+        "transactionDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1TransactionType": {
+      "type": "string",
+      "enum": [
+        "EXPENSE",
+        "INCOME"
+      ]
     },
     "v1UpdateUserRoleResponse": {
       "type": "object",

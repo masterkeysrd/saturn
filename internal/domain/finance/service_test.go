@@ -153,6 +153,65 @@ func (m *mockExchangeRateStore) Delete(ctx context.Context, spaceID SpaceID, fro
 	return nil
 }
 
+type mockTransactionStore struct {
+	txns map[TransactionID]*Transaction
+}
+
+func (m *mockTransactionStore) Create(ctx context.Context, t *Transaction) error {
+	m.txns[t.ID] = t
+	return nil
+}
+
+func (m *mockTransactionStore) GetByID(ctx context.Context, id TransactionID) (*Transaction, error) {
+	t, ok := m.txns[id]
+	if !ok {
+		return nil, ErrTransactionNotFound
+	}
+	return t, nil
+}
+
+func (m *mockTransactionStore) Delete(ctx context.Context, id TransactionID) error {
+	if _, ok := m.txns[id]; !ok {
+		return ErrTransactionNotFound
+	}
+	delete(m.txns, id)
+	return nil
+}
+
+func (m *mockTransactionStore) Update(ctx context.Context, t *Transaction) error {
+	if _, ok := m.txns[t.ID]; !ok {
+		return ErrTransactionNotFound
+	}
+	m.txns[t.ID] = t
+	return nil
+}
+
+func (m *mockTransactionStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListTransactionsFilter) ([]*Transaction, string, error) {
+	var list []*Transaction
+	for _, t := range m.txns {
+		if t.SpaceID == spaceID {
+			if filter.BudgetID != nil && (t.BudgetID == nil || *t.BudgetID != *filter.BudgetID) {
+				continue
+			}
+			if filter.Type != nil && t.Type != *filter.Type {
+				continue
+			}
+			list = append(list, t)
+		}
+	}
+	return list, "", nil
+}
+
+func (m *mockTransactionStore) AggregateSpentInBase(ctx context.Context, periodID PeriodID) (int64, error) {
+	var total int64
+	for _, t := range m.txns {
+		if t.PeriodID != nil && *t.PeriodID == periodID {
+			total += t.AmountInBase
+		}
+	}
+	return total, nil
+}
+
 // --- Test Cases ---
 
 func TestCalculateBounds(t *testing.T) {
@@ -250,11 +309,14 @@ func TestGetOrCreatePeriod(t *testing.T) {
 	periodStore := &mockPeriodStore{data: make(map[string]*BudgetPeriod)}
 	rateStore := &mockExchangeRateStore{rates: make(map[string]*ExchangeRate)}
 
+	txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
+
 	svc := NewService(Dependencies{
 		SettingsStore:     settingsStore,
 		BudgetStore:       budgetStore,
 		PeriodStore:       periodStore,
 		ExchangeRateStore: rateStore,
+		TransactionStore:  txnStore,
 	})
 
 	ctx := context.Background()
@@ -319,5 +381,126 @@ func TestGetOrCreatePeriod(t *testing.T) {
 	}
 	if period2.ID != period.ID {
 		t.Errorf("re-queried period ID = %s, want %s", period2.ID, period.ID)
+	}
+}
+
+func TestTransactions(t *testing.T) {
+	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+	budgetStore := &mockBudgetStore{data: make(map[BudgetID]*Budget)}
+	periodStore := &mockPeriodStore{data: make(map[string]*BudgetPeriod)}
+	rateStore := &mockExchangeRateStore{rates: make(map[string]*ExchangeRate)}
+	txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
+
+	svc := NewService(Dependencies{
+		SettingsStore:     settingsStore,
+		BudgetStore:       budgetStore,
+		PeriodStore:       periodStore,
+		ExchangeRateStore: rateStore,
+		TransactionStore:  txnStore,
+	})
+
+	ctx := context.Background()
+	spIDStr, _ := id.Generate("spc_")
+	spID := SpaceID(spIDStr)
+
+	// 1. Setup settings
+	_, err := svc.ConfigureFinance(ctx, &FinanceSettings{SpaceID: spID, BaseCurrency: Currency("USD")})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 2. Setup budget
+	bgtIDStr, _ := id.Generate("bgt_")
+	budget, err := svc.CreateBudget(ctx, &Budget{
+		ID:          BudgetID(bgtIDStr),
+		SpaceID:     spID,
+		Name:        "Food",
+		LimitAmount: 20000,
+		Currency:    Currency("EUR"),
+		Interval:    IntervalMonthly,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 3. Setup exchange rate (EUR to USD = 1.10)
+	rateDate := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	err = rateStore.Create(ctx, &ExchangeRate{
+		SpaceID:      spID,
+		FromCurrency: Currency("EUR"),
+		ToCurrency:   Currency("USD"),
+		Rate:         1.10,
+		RateDate:     rateDate,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 4. Create an expense of 10.00 EUR (1000 cents) on Feb 15
+	targetDate := time.Date(2026, 2, 15, 12, 0, 0, 0, time.UTC)
+	txn := &Transaction{
+		SpaceID:         spID,
+		BudgetID:        &budget.ID,
+		Amount:          1000,
+		Currency:        Currency("EUR"),
+		Description:     "Dinner",
+		TransactionDate: targetDate,
+	}
+
+	createdTxn, err := svc.CreateExpense(ctx, txn)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if createdTxn.AmountInBase != 1100 { // 1000 * 1.10 = 1100
+		t.Errorf("AmountInBase = %d, want 1100", createdTxn.AmountInBase)
+	}
+
+	// Verify the period updated its spent aggregates
+	period, err := svc.GetOrCreatePeriod(ctx, budget.ID, targetDate)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if period.SpentInBase != 1100 {
+		t.Errorf("Period SpentInBase = %d, want 1100", period.SpentInBase)
+	}
+	if period.SpentAmount != 1000 { // 1100 / 1.10 = 1000
+		t.Errorf("Period SpentAmount = %d, want 1000", period.SpentAmount)
+	}
+
+	// Update the expense to 15.00 EUR (1500 cents)
+	createdTxn.Amount = 1500
+	updatedTxn, err := svc.UpdateExpense(ctx, createdTxn)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if updatedTxn.AmountInBase != 1650 { // 1500 * 1.10 = 1650
+		t.Errorf("Updated AmountInBase = %d, want 1650", updatedTxn.AmountInBase)
+	}
+
+	// Verify the period updated its spent aggregates to reflect new amount
+	periodUpdated, err := svc.GetOrCreatePeriod(ctx, budget.ID, targetDate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if periodUpdated.SpentInBase != 1650 {
+		t.Errorf("Period SpentInBase = %d, want 1650", periodUpdated.SpentInBase)
+	}
+
+	// 5. Delete transaction
+	err = svc.DeleteTransaction(ctx, createdTxn.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify period spent is back to 0
+	period2, err := svc.GetOrCreatePeriod(ctx, budget.ID, targetDate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if period2.SpentInBase != 0 {
+		t.Errorf("After delete, SpentInBase = %d, want 0", period2.SpentInBase)
 	}
 }

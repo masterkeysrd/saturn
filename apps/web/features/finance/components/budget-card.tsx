@@ -7,7 +7,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { PauseCircle, MoreVertical, Edit2, Trash2 } from "lucide-react"
+import { PauseCircle, MoreVertical, Edit2, Trash2, Plus } from "lucide-react"
 import { getBudgetColors, getBudgetIcon, formatCents } from "../utils"
 import { BudgetPeriodProgress } from "./budget-period-progress"
 
@@ -18,6 +18,7 @@ interface BudgetCardProps {
   onEdit: (budget: Budget) => void
   onDelete: (id: string) => void
   onPeriodLoaded: (budgetId: string, limitInBase: number) => void
+  onAddExpense?: (budget: Budget) => void
 }
 
 export function BudgetCard({
@@ -27,6 +28,7 @@ export function BudgetCard({
   onEdit,
   onDelete,
   onPeriodLoaded,
+  onAddExpense,
 }: BudgetCardProps) {
   const intervalColorClass =
     budget.interval === "INTERVAL_WEEKLY"
@@ -95,6 +97,15 @@ export function BudgetCard({
                 }
               />
               <DropdownMenuContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                {onAddExpense && (
+                  <DropdownMenuItem
+                    onClick={() => onAddExpense(budget)}
+                    className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm hover:bg-muted/60"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Record Expense
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   onClick={() => onEdit(budget)}
                   className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm hover:bg-muted/60"

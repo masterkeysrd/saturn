@@ -5,15 +5,18 @@ import { RegisterView } from "@/features/auth/register-view"
 import { ProtectedRoute } from "@/components/protected-route"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
-import { useAuth } from "@/features/auth/use-auth"
-import { DashboardView } from "@/features/dashboard/dashboard-view"
-import { AdminView } from "@/features/admin/admin-view"
-import { SettingsView } from "@/features/settings/settings-view"
-import { FinanceView } from "@/features/finance/finance-view"
+import type { RouteObject } from "react-router-dom"
+
+const routeModules = import.meta.glob<{ routes: RouteObject[] }>(
+  "./features/**/routes.tsx",
+  { eager: true }
+)
+
+const featureRoutes = Object.values(routeModules).flatMap(
+  (module) => module.routes || []
+)
 
 export function App() {
-  const { user } = useAuth()
-
   return (
     <Routes>
       {/* Public Auth Routes */}
@@ -41,38 +44,10 @@ export function App() {
             </SidebarProvider>
           }
         >
-          <Route path="/" element={<DashboardView />} />
-          <Route path="/finance" element={<FinanceView />} />
-          <Route path="/finance/:subview" element={<FinanceView />} />
-          <Route
-            path="/profile"
-            element={<Navigate to="/settings?tab=account" replace />}
-          />
-          <Route
-            path="/spaces"
-            element={<Navigate to="/settings?tab=spaces" replace />}
-          />
-          <Route path="/settings" element={<SettingsView />} />
-          <Route
-            path="/admin"
-            element={
-              user?.role === "admin" ? (
-                <Navigate to="/admin/users" replace />
-              ) : (
-                <Navigate to="/" replace />
-              )
-            }
-          />
-          <Route
-            path="/admin/users"
-            element={
-              user?.role === "admin" ? (
-                <AdminView />
-              ) : (
-                <Navigate to="/" replace />
-              )
-            }
-          />
+          {/* Dynamically registered feature routes */}
+          {featureRoutes.map((route, i) => (
+            <Route key={i} path={route.path} element={route.element} />
+          ))}
         </Route>
       </Route>
 

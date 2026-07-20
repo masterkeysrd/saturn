@@ -8,8 +8,6 @@ import (
 )
 
 type CreateExchangeRateRequest struct {
-	SpaceID      finance.SpaceID
-	UserID       string
 	FromCurrency finance.Currency
 	ToCurrency   finance.Currency
 	Rate         float64
@@ -17,28 +15,24 @@ type CreateExchangeRateRequest struct {
 }
 
 type ListExchangeRatesRequest struct {
-	SpaceID   finance.SpaceID
-	UserID    string
 	PageSize  int32
 	PageToken string
 }
 
 type DeleteExchangeRateRequest struct {
-	SpaceID      finance.SpaceID
-	UserID       string
 	FromCurrency finance.Currency
 	ToCurrency   finance.Currency
 	RateDate     time.Time
 }
 
 func (c *Coordinator) CreateExchangeRate(ctx context.Context, req *CreateExchangeRateRequest) (*finance.ExchangeRate, error) {
-	spaceID, err := c.authorize(ctx, req.SpaceID, req.UserID)
+	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	rate := &finance.ExchangeRate{
-		SpaceID:      spaceID,
+		SpaceID:      rCtx.SpaceID,
 		FromCurrency: req.FromCurrency,
 		ToCurrency:   req.ToCurrency,
 		Rate:         req.Rate,
@@ -49,7 +43,7 @@ func (c *Coordinator) CreateExchangeRate(ctx context.Context, req *CreateExchang
 }
 
 func (c *Coordinator) ListExchangeRates(ctx context.Context, req *ListExchangeRatesRequest) ([]*finance.ExchangeRate, string, error) {
-	spaceID, err := c.authorize(ctx, req.SpaceID, req.UserID)
+	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, "", err
 	}
@@ -59,14 +53,14 @@ func (c *Coordinator) ListExchangeRates(ctx context.Context, req *ListExchangeRa
 		NextPageToken: req.PageToken,
 	}
 
-	return c.financeService.ListExchangeRates(ctx, spaceID, filter)
+	return c.financeService.ListExchangeRates(ctx, rCtx.SpaceID, filter)
 }
 
 func (c *Coordinator) DeleteExchangeRate(ctx context.Context, req *DeleteExchangeRateRequest) error {
-	spaceID, err := c.authorize(ctx, req.SpaceID, req.UserID)
+	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return err
 	}
 
-	return c.financeService.DeleteExchangeRate(ctx, spaceID, req.FromCurrency, req.ToCurrency, req.RateDate)
+	return c.financeService.DeleteExchangeRate(ctx, rCtx.SpaceID, req.FromCurrency, req.ToCurrency, req.RateDate)
 }
