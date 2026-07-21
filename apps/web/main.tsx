@@ -16,6 +16,7 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false, // Prevents aggressive refetching on focus in dev mode
       retry: 1, // Number of retry attempts on request failure
+      staleTime: 1000 * 15, // 15 seconds default cache staleTime
     },
   },
 })

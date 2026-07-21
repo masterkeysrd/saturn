@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils"
 import {
   useGetInsightsQuery,
   type InsightGranularity,
-  type GetInsightsRequest,
 } from "@/gen/saturn/finance/v1/finance"
 import {
   TrendingDownIcon,
@@ -33,9 +32,10 @@ export function InsightsView() {
     error: insightsError,
   } = useGetInsightsQuery(
     {
-      spaceId,
       granularity,
-    } as unknown as GetInsightsRequest,
+      startDate: "",
+      endDate: "",
+    },
     {
       enabled: !!spaceId && !!settings,
       refetchOnWindowFocus: false,
@@ -341,7 +341,10 @@ export function InsightsView() {
                     <CalendarIcon className="h-2.5 w-2.5 text-primary" />
                     <span className="text-[8px] font-bold tracking-wide text-muted-foreground uppercase">
                       {activeTooltip.label} • {baseCurrency}{" "}
-                      {formatCents(activeTooltip.total).toFixed(2)}
+                      {formatCents(activeTooltip.total).toLocaleString(
+                        undefined,
+                        { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                      )}
                     </span>
                   </div>
                   <div className="space-y-1">
@@ -363,7 +366,10 @@ export function InsightsView() {
                           {activeTooltip.contrib.localCurrency}{" "}
                           {formatCents(
                             activeTooltip.contrib.amountInLocal
-                          ).toFixed(2)}
+                          ).toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
                         </span>
                       </div>
                       {activeTooltip.contrib.localCurrency !== baseCurrency && (
@@ -373,7 +379,10 @@ export function InsightsView() {
                             {baseCurrency}{" "}
                             {formatCents(
                               activeTooltip.contrib.amountInBase
-                            ).toFixed(2)}
+                            ).toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
                           </span>
                         </div>
                       )}
@@ -411,6 +420,20 @@ export function InsightsView() {
                     const Icon = getBudgetIcon(dist.budgetIcon)
                     const colors = getBudgetColors(dist.budgetColor)
 
+                    const isOver = dist.usagePercentage >= 100
+                    const isNear =
+                      dist.usagePercentage >= 85 && dist.usagePercentage < 100
+                    const barColor = isOver
+                      ? "bg-rose-500 animate-pulse"
+                      : isNear
+                        ? "bg-amber-500"
+                        : colors.bar
+                    const textColor = isOver
+                      ? "text-rose-500 font-extrabold"
+                      : isNear
+                        ? "text-amber-500 font-extrabold"
+                        : colors.text
+
                     return (
                       <div
                         key={dist.budgetId}
@@ -422,7 +445,11 @@ export function InsightsView() {
                               className={cn(
                                 "rounded-lg p-2",
                                 colors.bg,
-                                colors.text
+                                isOver
+                                  ? "border border-rose-500/20 text-rose-500"
+                                  : isNear
+                                    ? "border border-amber-500/20 text-amber-500"
+                                    : colors.text
                               )}
                             >
                               <Icon className="h-3.5 w-3.5" />
@@ -441,7 +468,16 @@ export function InsightsView() {
                           </div>
 
                           <div className="text-right">
-                            <span className="text-xs font-bold text-foreground">
+                            <span
+                              className={cn(
+                                "text-xs font-bold",
+                                isOver
+                                  ? "text-rose-500"
+                                  : isNear
+                                    ? "text-amber-500"
+                                    : "text-foreground"
+                              )}
+                            >
                               {formatCents(dist.spent).toLocaleString()}
                             </span>
                             <span className="block text-[9px] text-muted-foreground">
@@ -456,7 +492,7 @@ export function InsightsView() {
                           <div
                             className={cn(
                               "h-full rounded-full transition-all duration-550",
-                              colors.bar
+                              barColor
                             )}
                             style={{
                               width: `${Math.min(dist.usagePercentage, 100)}%`,
@@ -467,9 +503,7 @@ export function InsightsView() {
                           <span className="text-[8px] font-bold text-muted-foreground uppercase">
                             Usage Pacing
                           </span>
-                          <span
-                            className={cn("text-[8px] font-black", colors.text)}
-                          >
+                          <span className={cn("text-[8px]", textColor)}>
                             {dist.usagePercentage.toFixed(1)}%
                           </span>
                         </div>
@@ -524,12 +558,22 @@ export function InsightsView() {
 
                       <div className="text-right">
                         <span className="text-xs font-bold text-rose-500">
-                          -{exp.currency} {formatCents(exp.amount).toFixed(2)}
+                          -{exp.currency}{" "}
+                          {formatCents(exp.amount).toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
                         </span>
                         {exp.currency !== baseCurrency && (
                           <span className="block text-[9px] text-muted-foreground">
                             {baseCurrency}{" "}
-                            {formatCents(exp.amountInBase).toFixed(2)}
+                            {formatCents(exp.amountInBase).toLocaleString(
+                              undefined,
+                              {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              }
+                            )}
                           </span>
                         )}
                       </div>

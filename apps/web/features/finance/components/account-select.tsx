@@ -24,7 +24,7 @@ interface AccountSelectProps {
   allowNone?: boolean
 }
 
-export function getAccountTypeIcon(type: AccountType) {
+function getAccountTypeIcon(type: AccountType) {
   switch (type) {
     case "CREDIT_CARD":
       return CreditCard
@@ -37,7 +37,7 @@ export function getAccountTypeIcon(type: AccountType) {
   }
 }
 
-export function getAccountColorClasses(colorName: string) {
+function getAccountColorClasses(colorName: string) {
   const c = colorName.toLowerCase()
   switch (c) {
     case "rose":

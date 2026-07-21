@@ -12,6 +12,7 @@ import { BudgetCard } from "./components/budget-card"
 import { CreateBudgetSheet } from "./components/create-budget-sheet"
 import { EditBudgetSheet } from "./components/edit-budget-sheet"
 import { CreateTransactionSheet } from "./components/create-transaction-sheet"
+import { BudgetHistorySheet } from "./components/budget-history-sheet"
 
 export function BudgetsView() {
   const {
@@ -25,6 +26,7 @@ export function BudgetsView() {
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [activeBudget, setActiveBudget] = useState<Budget | null>(null)
   const [txOpen, setTxOpen] = useState(false)
   const [selectedBudgetId, setSelectedBudgetId] = useState("")
@@ -32,6 +34,11 @@ export function BudgetsView() {
   const handleAddExpenseTrigger = (budget: Budget) => {
     setSelectedBudgetId(budget.id)
     setTxOpen(true)
+  }
+
+  const handleViewHistoryTrigger = (budget: Budget) => {
+    setActiveBudget(budget)
+    setHistoryOpen(true)
   }
 
   // Track aggregated base currency budget total in client memory
@@ -168,6 +175,7 @@ export function BudgetsView() {
                 onDelete={handleDelete}
                 onAddExpense={handleAddExpenseTrigger}
                 onPeriodLoaded={handlePeriodLoaded}
+                onViewHistory={handleViewHistoryTrigger}
               />
             ))}
           </div>
@@ -204,6 +212,13 @@ export function BudgetsView() {
           refetchTransactions={() => {}} // No transactions list on this view to refetch
           refetchBudgets={refetchBudgets}
           getConversionPreview={getConversionPreview}
+        />
+
+        {/* Budget History Ledger Sheet */}
+        <BudgetHistorySheet
+          open={historyOpen}
+          onOpenChange={setHistoryOpen}
+          budget={activeBudget}
         />
       </div>
     </FinancePageLayout>

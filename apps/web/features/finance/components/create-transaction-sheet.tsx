@@ -21,6 +21,7 @@ import { Loader2 } from "lucide-react"
 import { CurrencyConversionPreview } from "./currency-conversion-preview"
 import { toCentsString, formatCents } from "../utils"
 import { AccountSelect } from "./account-select"
+import { BudgetSelect } from "./budget-select"
 import {
   Select,
   SelectTrigger,
@@ -265,31 +266,12 @@ export function CreateTransactionSheet({
             >
               Budget
             </Label>
-            <Select
+            <BudgetSelect
+              budgets={budgets}
               value={budgetId}
-              onValueChange={(val) => val && handleBudgetChange(val)}
-            >
-              <SelectTrigger
-                id="txBudget"
-                className="!h-12 w-full rounded-xl border-border/60 bg-background/50"
-              >
-                <SelectValue placeholder="Select a budget...">
-                  {(() => {
-                    const selected = budgets.find((b) => b.id === budgetId)
-                    return selected
-                      ? `${selected.name} (${selected.currency})`
-                      : undefined
-                  })()}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                {budgets.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>
-                    {b.name} ({b.currency})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onValueChange={handleBudgetChange}
+              placeholder="Select a budget..."
+            />
           </div>
 
           {/* Account selector */}

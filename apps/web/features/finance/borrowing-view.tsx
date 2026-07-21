@@ -147,7 +147,10 @@ export function BorrowingView() {
                   Owed to Me (Lent)
                 </span>
                 <h3 className="mt-0.5 text-2xl font-black tracking-tight text-foreground">
-                  {formatCents(totalLent).toFixed(2)}{" "}
+                  {formatCents(totalLent).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}{" "}
                   <span className="text-xs font-normal text-muted-foreground uppercase">
                     {baseCurrency}
                   </span>
@@ -167,7 +170,10 @@ export function BorrowingView() {
                   I Owe to Others (Borrowed)
                 </span>
                 <h3 className="mt-0.5 text-2xl font-black tracking-tight text-foreground">
-                  {formatCents(totalBorrowed).toFixed(2)}{" "}
+                  {formatCents(totalBorrowed).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}{" "}
                   <span className="text-xs font-normal text-muted-foreground uppercase">
                     {baseCurrency}
                   </span>
@@ -333,7 +339,13 @@ export function BorrowingView() {
                         Remaining Balance
                       </span>
                       <p className="mt-0.5 truncate text-lg font-black text-foreground">
-                        {formatCents(b.remainingAmount).toFixed(2)}{" "}
+                        {formatCents(b.remainingAmount).toLocaleString(
+                          undefined,
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }
+                        )}{" "}
                         <span className="text-[10px] font-medium text-muted-foreground uppercase">
                           {b.currency}
                         </span>
@@ -344,7 +356,10 @@ export function BorrowingView() {
                         Original Total
                       </span>
                       <p className="mt-1 truncate text-sm font-semibold text-muted-foreground">
-                        {formatCents(b.totalAmount).toFixed(2)}{" "}
+                        {formatCents(b.totalAmount).toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}{" "}
                         <span className="text-[9px] uppercase">
                           {b.currency}
                         </span>

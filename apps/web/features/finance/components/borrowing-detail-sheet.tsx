@@ -180,7 +180,13 @@ export function BorrowingDetailSheet({
                     Remaining Balance
                   </span>
                   <span className="text-2xl font-black text-primary">
-                    {formatCents(borrowing.remainingAmount).toFixed(2)}{" "}
+                    {formatCents(borrowing.remainingAmount).toLocaleString(
+                      undefined,
+                      {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }
+                    )}{" "}
                     <span className="font-sans text-xs font-normal text-muted-foreground">
                       {currency}
                     </span>
@@ -191,7 +197,13 @@ export function BorrowingDetailSheet({
                     Total Agreement
                   </span>
                   <span className="text-lg font-bold text-foreground/80">
-                    {formatCents(borrowing.totalAmount).toFixed(2)}{" "}
+                    {formatCents(borrowing.totalAmount).toLocaleString(
+                      undefined,
+                      {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }
+                    )}{" "}
                     <span className="font-sans text-xs font-normal text-muted-foreground">
                       {currency}
                     </span>
@@ -261,7 +273,11 @@ export function BorrowingDetailSheet({
                       <div className="min-w-0 flex-1 pr-3">
                         <div className="flex items-baseline gap-2">
                           <span className="font-mono text-xs font-bold text-foreground">
-                            {formatCents(r.amount).toFixed(2)} {currency}
+                            {formatCents(r.amount).toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}{" "}
+                            {currency}
                           </span>
                           <span className="text-[10px] text-muted-foreground">
                             {new Date(r.paymentDate).toLocaleDateString(

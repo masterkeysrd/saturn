@@ -313,7 +313,13 @@ export function RecurringView() {
                             <div className="flex shrink-0 items-center gap-4">
                               <div className="text-right">
                                 <span className="block text-xs font-bold text-foreground">
-                                  {formatCents(exp.amount).toFixed(2)}{" "}
+                                  {formatCents(exp.amount).toLocaleString(
+                                    undefined,
+                                    {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    }
+                                  )}{" "}
                                   <span className="text-[10px] font-medium text-muted-foreground uppercase">
                                     {exp.currency}
                                   </span>
@@ -476,7 +482,13 @@ export function RecurringView() {
                             <div className="flex shrink-0 items-center gap-2">
                               <div className="text-right">
                                 <span className="block text-xs font-bold text-foreground">
-                                  {formatCents(pay.amount).toFixed(2)}
+                                  {formatCents(pay.amount).toLocaleString(
+                                    undefined,
+                                    {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    }
+                                  )}
                                 </span>
                                 <span className="block text-[8px] font-semibold text-muted-foreground uppercase">
                                   {pay.currency}
@@ -608,7 +620,13 @@ export function RecurringView() {
                           <div className="flex items-center gap-4">
                             <div className="text-right">
                               <span className="block text-xs font-bold text-foreground">
-                                {formatCents(txn.amount).toFixed(2)}{" "}
+                                {formatCents(txn.amount).toLocaleString(
+                                  undefined,
+                                  {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  }
+                                )}{" "}
                                 <span className="text-[10px] font-medium text-muted-foreground uppercase">
                                   {txn.currency}
                                 </span>
@@ -617,7 +635,13 @@ export function RecurringView() {
                                 <span className="mt-0.5 flex items-center justify-end gap-1 text-[9px] font-medium text-muted-foreground">
                                   <ArrowRight className="h-3 w-3" />
                                   {baseCurrency}{" "}
-                                  {formatCents(txn.amountInBase).toFixed(2)}
+                                  {formatCents(txn.amountInBase).toLocaleString(
+                                    undefined,
+                                    {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    }
+                                  )}
                                 </span>
                               )}
                             </div>

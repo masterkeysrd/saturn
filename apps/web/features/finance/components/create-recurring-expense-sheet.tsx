@@ -19,6 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { DatePicker } from "@/components/ui/date-picker"
 import { Loader2 } from "lucide-react"
 import { CurrencyConversionPreview } from "./currency-conversion-preview"
+import { BudgetSelect } from "./budget-select"
 import {
   Select,
   SelectTrigger,
@@ -179,29 +180,12 @@ export function CreateRecurringExpenseSheet({
             >
               Budget
             </Label>
-            <Select
+            <BudgetSelect
+              budgets={budgets}
               value={budgetId}
-              onValueChange={(val) => val && handleBudgetChange(val)}
-            >
-              <SelectTrigger
-                id="budgetId"
-                className="!h-12 w-full rounded-xl border-border/60 bg-background/50"
-              >
-                <SelectValue placeholder="Select a budget...">
-                  {(() => {
-                    const selected = budgets.find((b) => b.id === budgetId)
-                    return selected ? selected.name : undefined
-                  })()}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                {budgets.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onValueChange={handleBudgetChange}
+              placeholder="Select a budget..."
+            />
           </div>
 
           <div className="space-y-2">
@@ -284,7 +268,11 @@ export function CreateRecurringExpenseSheet({
                 id="interval"
                 className="!h-12 w-full rounded-xl border-border/60 bg-background/50"
               >
-                <SelectValue placeholder="Monthly" />
+                <SelectValue placeholder="Monthly">
+                  {interval
+                    ? interval.charAt(0).toUpperCase() + interval.slice(1)
+                    : undefined}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
                 <SelectItem value="weekly">Weekly</SelectItem>

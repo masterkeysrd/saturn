@@ -2,6 +2,7 @@ import { useState, useMemo } from "react"
 import {
   type Account,
   type AccountType,
+  type ExchangeRate,
   useListAccountsQuery,
   useCreateAccountMutation,
   useUpdateAccountMutation,
@@ -11,6 +12,8 @@ import {
 } from "@/gen/saturn/finance/v1/finance"
 import { useWorkspaceFinance } from "./use-workspace-finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
+import { AccountSelect } from "./components/account-select"
+import { AccountHistorySheet } from "./components/account-history-sheet"
 import {
   Landmark,
   CreditCard,
@@ -25,6 +28,7 @@ import {
   AlertTriangle,
   Info,
   ChevronRight,
+  History,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -54,7 +58,7 @@ import {
 import { formatCents, toCentsString } from "./utils"
 import { cn } from "@/lib/utils"
 
-export const ACCOUNT_COLORS = [
+const ACCOUNT_COLORS = [
   {
     name: "Indigo",
     value: "indigo",
@@ -111,11 +115,11 @@ export const ACCOUNT_COLORS = [
   },
 ]
 
-export function getAccountColors(colorName: string) {
+function getAccountColors(colorName: string) {
   return ACCOUNT_COLORS.find((c) => c.value === colorName) || ACCOUNT_COLORS[0]
 }
 
-export function getAccountTypeIcon(type: AccountType) {
+function getAccountTypeIcon(type: AccountType) {
   switch (type) {
     case "BANK":
       return Landmark
@@ -130,7 +134,7 @@ export function getAccountTypeIcon(type: AccountType) {
   }
 }
 
-export function getAccountTypeLabel(type: AccountType) {
+function getAccountTypeLabel(type: AccountType) {
   switch (type) {
     case "BANK":
       return "Bank / Checking"
@@ -164,8 +168,10 @@ export function AccountsView() {
   const [createOpen, setCreateOpen] = useState(false)
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
   const [transferOpen, setTransferOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [historyAccount, setHistoryAccount] = useState<Account | null>(null)
 
-  const accounts = accountsData?.accounts || []
+  const accounts = useMemo(() => accountsData?.accounts || [], [accountsData])
   const transfers = transfersData?.transfers || []
 
   // Convert accounts to base currency and calculate metrics
@@ -200,8 +206,8 @@ export function AccountsView() {
           }
         }
 
-        if (acc.type === "CREDIT_CARD") {
-          totalLiabilities += baseValue
+        if (baseValue < 0) {
+          totalLiabilities += Math.abs(baseValue)
         } else {
           totalAssets += baseValue
         }
@@ -246,8 +252,8 @@ export function AccountsView() {
         req: { id },
       })
       refetchAccounts()
-    } catch (e: any) {
-      alert(e?.message || "Failed to delete account.")
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Failed to delete account.")
     }
   }
 
@@ -440,40 +446,53 @@ export function AccountsView() {
                               Default
                             </span>
                           )}
-                          {isWritable && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger
-                                render={
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 rounded-full hover:bg-muted"
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              render={
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-full hover:bg-muted"
+                                >
+                                  <MoreVertical className="h-4.5 w-4.5 text-muted-foreground" />
+                                </Button>
+                              }
+                            />
+                            <DropdownMenuContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setHistoryAccount(acc)
+                                  setHistoryOpen(true)
+                                }}
+                                className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold"
+                              >
+                                <History className="h-3.5 w-3.5" />
+                                View Ledger
+                              </DropdownMenuItem>
+
+                              {isWritable && (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setEditingAccount(acc)
+                                      setCreateOpen(true)
+                                    }}
+                                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold"
                                   >
-                                    <MoreVertical className="h-4.5 w-4.5 text-muted-foreground" />
-                                  </Button>
-                                }
-                              />
-                              <DropdownMenuContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setEditingAccount(acc)
-                                    setCreateOpen(true)
-                                  }}
-                                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold"
-                                >
-                                  <Edit2 className="h-3.5 w-3.5" />
-                                  Edit Account
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDeleteAccount(acc.id)}
-                                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-rose-500 hover:bg-rose-500/10"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                  Delete Account
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
+                                    <Edit2 className="h-3.5 w-3.5" />
+                                    Edit Account
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleDeleteAccount(acc.id)}
+                                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-rose-500 hover:bg-rose-500/10"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                    Delete Account
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
 
@@ -686,6 +705,12 @@ export function AccountsView() {
         refetchAccounts={refetchAccounts}
         refetchTransfers={refetchTransfers}
       />
+
+      <AccountHistorySheet
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        account={historyAccount}
+      />
     </FinancePageLayout>
   )
 }
@@ -734,8 +759,14 @@ function CreateAccountSheet({
   const createMutation = useCreateAccountMutation()
   const updateMutation = useUpdateAccountMutation()
 
-  // Reset or fill values when open state changes
-  useMemo(() => {
+  const [prevEditAccountId, setPrevEditAccountId] = useState<string | null>(
+    null
+  )
+  const [prevOpen, setPrevOpen] = useState(false)
+
+  if (open !== prevOpen || (editAccount?.id || null) !== prevEditAccountId) {
+    setPrevOpen(open)
+    setPrevEditAccountId(editAccount?.id || null)
     if (open) {
       if (editAccount) {
         setName(editAccount.name)
@@ -765,7 +796,7 @@ function CreateAccountSheet({
         setNotes("")
       }
     }
-  }, [open, editAccount, baseCurrency])
+  }
 
   const isPending = createMutation.isPending || updateMutation.isPending
 
@@ -818,8 +849,8 @@ function CreateAccountSheet({
       }
       onOpenChange(false)
       refetchAccounts()
-    } catch (err: any) {
-      alert(err?.message || "Operation failed.")
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Operation failed.")
     }
   }
 
@@ -1060,7 +1091,7 @@ interface CreateTransferSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   accounts: Account[]
-  rates: any[]
+  rates: ExchangeRate[]
   refetchAccounts: () => void
   refetchTransfers: () => void
 }
@@ -1088,21 +1119,22 @@ function CreateTransferSheet({
   const dstAcc = activeAccounts.find((a) => a.id === dstId)
 
   // Autocalculate target amount if currencies match, or apply exchange rate
-  useMemo(() => {
-    if (!srcAcc || !dstAcc || !srcAmount) return
+  const updateTargetAmount = (amountStr: string, sId: string, dId: string) => {
+    const sAcc = activeAccounts.find((a) => a.id === sId)
+    const dAcc = activeAccounts.find((a) => a.id === dId)
+    if (!sAcc || !dAcc || !amountStr) return
 
-    const srcVal = parseFloat(srcAmount)
+    const srcVal = parseFloat(amountStr)
     if (isNaN(srcVal) || srcVal <= 0) return
 
-    if (srcAcc.currency === dstAcc.currency) {
-      setDstAmount(srcAmount)
+    if (sAcc.currency === dAcc.currency) {
+      setDstAmount(amountStr)
     } else {
       // Find exchange rate: src -> dst
       const rate = rates
         .filter(
           (r) =>
-            r.fromCurrency === srcAcc.currency &&
-            r.toCurrency === dstAcc.currency
+            r.fromCurrency === sAcc.currency && r.toCurrency === dAcc.currency
         )
         .sort(
           (a, b) =>
@@ -1113,7 +1145,7 @@ function CreateTransferSheet({
         setDstAmount((srcVal * rate.rate).toFixed(2))
       }
     }
-  }, [srcAmount, srcId, dstId, rates])
+  }
 
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -1141,8 +1173,8 @@ function CreateTransferSheet({
       setNotes("")
       refetchAccounts()
       refetchTransfers()
-    } catch (err: any) {
-      alert(err?.message || "Transfer failed.")
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Transfer failed.")
     }
   }
 
@@ -1164,52 +1196,30 @@ function CreateTransferSheet({
             <Label className="text-xs font-bold tracking-wider text-foreground uppercase">
               Source Account (Withdraw From)
             </Label>
-            <Select value={srcId} onValueChange={(val) => setSrcId(val || "")}>
-              <SelectTrigger className="!h-11 w-full rounded-xl text-left">
-                <SelectValue placeholder="Choose source account">
-                  {srcId &&
-                    (() => {
-                      const a = activeAccounts.find((acc) => acc.id === srcId)
-                      return a
-                        ? `${a.name} (${formatCents(a.currentBalance)} ${a.currency})`
-                        : ""
-                    })()}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                {activeAccounts.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.name} ({formatCents(a.currentBalance)} {a.currency})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <AccountSelect
+              value={srcId}
+              onValueChange={(val) => {
+                setSrcId(val)
+                updateTargetAmount(srcAmount, val, dstId)
+              }}
+              accounts={activeAccounts.filter((a) => a.id !== dstId)}
+              placeholder="Choose source account"
+            />
           </div>
 
           <div className="space-y-2">
             <Label className="text-xs font-bold tracking-wider text-foreground uppercase">
               Destination Account (Deposit To)
             </Label>
-            <Select value={dstId} onValueChange={(val) => setDstId(val || "")}>
-              <SelectTrigger className="!h-11 w-full rounded-xl text-left">
-                <SelectValue placeholder="Choose target account">
-                  {dstId &&
-                    (() => {
-                      const a = activeAccounts.find((acc) => acc.id === dstId)
-                      return a
-                        ? `${a.name} (${formatCents(a.currentBalance)} ${a.currency})`
-                        : ""
-                    })()}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                {activeAccounts.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.name} ({formatCents(a.currentBalance)} {a.currency})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <AccountSelect
+              value={dstId}
+              onValueChange={(val) => {
+                setDstId(val)
+                updateTargetAmount(srcAmount, srcId, val)
+              }}
+              accounts={activeAccounts.filter((a) => a.id !== srcId)}
+              placeholder="Choose target account"
+            />
           </div>
 
           <div className="space-y-2">
@@ -1221,7 +1231,11 @@ function CreateTransferSheet({
               step="0.01"
               placeholder="0.00"
               value={srcAmount}
-              onChange={(e) => setSrcAmount(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value
+                setSrcAmount(val)
+                updateTargetAmount(val, srcId, dstId)
+              }}
               className="h-11 rounded-xl"
               required
             />

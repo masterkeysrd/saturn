@@ -101,11 +101,12 @@ export function RatesView() {
                     <div className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-background/50 px-2.5 py-1 text-xs font-bold text-foreground">
                       {r.toCurrency}
                     </div>
-                    <div className="text-sm font-semibold text-foreground">
-                      Multiplier:{" "}
-                      <span className="font-extrabold text-primary">
-                        {r.rate.toFixed(6)}
-                      </span>
+                    <div className="text-sm font-medium text-muted-foreground">
+                      1 {r.fromCurrency} ={" "}
+                      <span className="font-black text-primary">
+                        {Number(r.rate.toFixed(6))}
+                      </span>{" "}
+                      {r.toCurrency}
                     </div>
                   </div>
 

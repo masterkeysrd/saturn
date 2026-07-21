@@ -25,6 +25,7 @@ export function useWorkspaceFinance() {
     {
       enabled: !!spaceId,
       retry: false,
+      staleTime: 1000 * 60 * 30, // 30 minutes cache staleTime
     }
   )
 
@@ -50,7 +51,13 @@ export function useWorkspaceFinance() {
 
   // 4. Fetch Supported Currencies
   const { data: currenciesData, isLoading: currenciesLoading } =
-    useListCurrenciesQuery({}, { enabled: !!spaceId })
+    useListCurrenciesQuery(
+      {},
+      {
+        enabled: !!spaceId,
+        staleTime: 1000 * 60 * 30, // 30 minutes cache staleTime
+      }
+    )
 
   // Real-Time currency conversion helper
   const getConversionPreview = (amountStr: string, fromCurr: string) => {

@@ -79,10 +79,15 @@ export function ActiveSpaceProvider({ children }: { children: ReactNode }) {
 }
 
 export function useMySpaces() {
-  const { data, isLoading, error } = useListSpacesQuery({
-    pageSize: 100,
-    nextPageToken: "",
-  })
+  const { data, isLoading, error } = useListSpacesQuery(
+    {
+      pageSize: 100,
+      nextPageToken: "",
+    },
+    {
+      staleTime: 1000 * 60 * 30, // 30 minutes cache stale time
+    }
+  )
 
   const spaces = useMemo(() => data?.spaces ?? [], [data?.spaces])
 

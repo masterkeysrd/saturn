@@ -7,7 +7,14 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { PauseCircle, MoreVertical, Edit2, Trash2, Plus } from "lucide-react"
+import {
+  PauseCircle,
+  MoreVertical,
+  Edit2,
+  Trash2,
+  Plus,
+  History,
+} from "lucide-react"
 import { getBudgetColors, getBudgetIcon, formatCents } from "../utils"
 import { BudgetPeriodProgress } from "./budget-period-progress"
 
@@ -18,6 +25,7 @@ interface BudgetCardProps {
   onDelete: (id: string) => void
   onPeriodLoaded: (budgetId: string, limitInBase: number) => void
   onAddExpense?: (budget: Budget) => void
+  onViewHistory: (budget: Budget) => void
 }
 
 export function BudgetCard({
@@ -27,6 +35,7 @@ export function BudgetCard({
   onDelete,
   onPeriodLoaded,
   onAddExpense,
+  onViewHistory,
 }: BudgetCardProps) {
   const intervalColorClass =
     budget.interval === "INTERVAL_WEEKLY"
@@ -81,46 +90,56 @@ export function BudgetCard({
             {budget.currency}
           </span>
 
-          {isWritable && (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="ml-2 h-8 w-8 cursor-pointer rounded-full hover:bg-muted/80"
-                  >
-                    <MoreVertical className="h-4.5 w-4.5 text-muted-foreground" />
-                  </Button>
-                }
-              />
-              <DropdownMenuContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                {onAddExpense && (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="ml-2 h-8 w-8 cursor-pointer rounded-full hover:bg-muted/80"
+                >
+                  <MoreVertical className="h-4.5 w-4.5 text-muted-foreground" />
+                </Button>
+              }
+            />
+            <DropdownMenuContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+              <DropdownMenuItem
+                onClick={() => onViewHistory(budget)}
+                className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm hover:bg-muted/60"
+              >
+                <History className="h-3.5 w-3.5" />
+                View History
+              </DropdownMenuItem>
+
+              {isWritable && (
+                <>
+                  {onAddExpense && (
+                    <DropdownMenuItem
+                      onClick={() => onAddExpense(budget)}
+                      className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm hover:bg-muted/60"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Record Expense
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem
-                    onClick={() => onAddExpense(budget)}
+                    onClick={() => onEdit(budget)}
                     className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm hover:bg-muted/60"
                   >
-                    <Plus className="h-3.5 w-3.5" />
-                    Record Expense
+                    <Edit2 className="h-3.5 w-3.5" />
+                    Edit Template
                   </DropdownMenuItem>
-                )}
-                <DropdownMenuItem
-                  onClick={() => onEdit(budget)}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm hover:bg-muted/60"
-                >
-                  <Edit2 className="h-3.5 w-3.5" />
-                  Edit Template
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => onDelete(budget.id)}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-destructive hover:bg-destructive/10"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+                  <DropdownMenuItem
+                    onClick={() => onDelete(budget.id)}
+                    className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
