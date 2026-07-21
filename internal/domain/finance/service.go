@@ -9,12 +9,14 @@ import (
 
 // Dependencies defines the required persistence adapters for the service.
 type Dependencies struct {
-	SettingsStore     SettingsStore
-	BudgetStore       BudgetStore
-	PeriodStore       PeriodStore
-	ExchangeRateStore ExchangeRateStore
-	TransactionStore  TransactionStore
-	InsightsStore     InsightsStore
+	SettingsStore         SettingsStore
+	BudgetStore           BudgetStore
+	PeriodStore           PeriodStore
+	ExchangeRateStore     ExchangeRateStore
+	TransactionStore      TransactionStore
+	InsightsStore         InsightsStore
+	RecurringExpenseStore RecurringExpenseStore
+	ScheduledPaymentStore ScheduledPaymentStore
 }
 
 // Service implements the domain-level finance operations.
@@ -570,4 +572,221 @@ func (s *Service) GetSpentInsights(ctx context.Context, req *GetSpentInsightsReq
 		Distributions:   distributions,
 		TopExpenses:     topExpenses,
 	}, nil
+}
+
+// CreateRecurringExpense configures a new recurring expense rule.
+func (s *Service) CreateRecurringExpense(ctx context.Context, re *RecurringExpense) (*RecurringExpense, error) {
+	if re.ID == "" {
+		id, err := NewRecurringExpenseID()
+		if err != nil {
+			return nil, err
+		}
+		re.ID = id
+	}
+
+	re.Status = RecurringExpenseActive
+	re.CreateTime = time.Now().UTC()
+	re.UpdateTime = time.Now().UTC()
+
+	if err := re.Validate(); err != nil {
+		return nil, err
+	}
+
+	if err := s.deps.RecurringExpenseStore.Create(ctx, re); err != nil {
+		return nil, err
+	}
+	return re, nil
+}
+
+// GetRecurringExpense retrieves a recurring expense by ID.
+func (s *Service) GetRecurringExpense(ctx context.Context, id RecurringExpenseID) (*RecurringExpense, error) {
+	if err := id.Validate(); err != nil {
+		return nil, err
+	}
+	return s.deps.RecurringExpenseStore.GetByID(ctx, id)
+}
+
+// UpdateRecurringExpense modifies an existing recurring expense rule.
+func (s *Service) UpdateRecurringExpense(ctx context.Context, re *RecurringExpense) (*RecurringExpense, error) {
+	existing, err := s.deps.RecurringExpenseStore.GetByID(ctx, re.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	re.CreateTime = existing.CreateTime
+	re.UpdateTime = time.Now().UTC()
+
+	if err := re.Validate(); err != nil {
+		return nil, err
+	}
+
+	if err := s.deps.RecurringExpenseStore.Update(ctx, re); err != nil {
+		return nil, err
+	}
+	return re, nil
+}
+
+// DeleteRecurringExpense deletes a recurring expense rule.
+func (s *Service) DeleteRecurringExpense(ctx context.Context, id RecurringExpenseID) error {
+	if err := id.Validate(); err != nil {
+		return err
+	}
+	return s.deps.RecurringExpenseStore.Delete(ctx, id)
+}
+
+// ListRecurringExpenses lists recurring expenses for a workspace.
+func (s *Service) ListRecurringExpenses(ctx context.Context, spaceID SpaceID, filter *ListRecurringExpensesFilter) ([]*RecurringExpense, string, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, "", err
+	}
+	return s.deps.RecurringExpenseStore.ListBySpace(ctx, spaceID, filter)
+}
+
+// ListScheduledPayments lists scheduled payments for a workspace.
+func (s *Service) ListScheduledPayments(ctx context.Context, spaceID SpaceID, filter *ListScheduledPaymentsFilter) ([]*ScheduledPayment, string, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, "", err
+	}
+	return s.deps.ScheduledPaymentStore.ListBySpace(ctx, spaceID, filter)
+}
+
+// ConfirmScheduledPayment clears a scheduled payment by promoting it to a permanent transaction.
+func (s *Service) ConfirmScheduledPayment(ctx context.Context, paymentID ScheduledPaymentID, transactionDate time.Time, effectiveDate time.Time, actualAmount int64) (*Transaction, error) {
+	payment, err := s.deps.ScheduledPaymentStore.GetByID(ctx, paymentID)
+	if err != nil {
+		return nil, err
+	}
+
+	settings, err := s.deps.SettingsStore.GetByID(ctx, payment.SpaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	budget, err := s.deps.BudgetStore.GetByID(ctx, payment.BudgetID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Resolve budget period for the transaction based on effectiveDate
+	period, err := s.GetOrCreatePeriod(ctx, budget.ID, effectiveDate)
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate base currency conversion
+	var rate float64 = 1.0
+	if payment.Currency != settings.BaseCurrency {
+		rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, payment.SpaceID, payment.Currency, settings.BaseCurrency, transactionDate)
+		if err != nil {
+			return nil, err
+		}
+		rate = rateRecord.Rate
+	}
+
+	amountInBase := int64(float64(actualAmount) * rate)
+
+	description := "Scheduled Payment"
+	if payment.SourceType == "recurrent_expense" {
+		if exp, err := s.deps.RecurringExpenseStore.GetByID(ctx, RecurringExpenseID(payment.SourceID)); err == nil {
+			description = exp.Name
+		}
+	}
+
+	tID, err := NewTransactionID()
+	if err != nil {
+		return nil, err
+	}
+
+	txn := &Transaction{
+		ID:              tID,
+		SpaceID:         payment.SpaceID,
+		Type:            TransactionTypeExpense,
+		BudgetID:        &payment.BudgetID,
+		PeriodID:        &period.ID,
+		Amount:          actualAmount,
+		Currency:        payment.Currency,
+		AmountInBase:    amountInBase,
+		Description:     description,
+		TransactionDate: transactionDate,
+		EffectiveDate:   effectiveDate,
+		SourceType:      &payment.SourceType,
+		SourceID:        &payment.SourceID,
+		CreateTime:      time.Now().UTC(),
+		UpdateTime:      time.Now().UTC(),
+	}
+
+	if err := txn.Validate(); err != nil {
+		return nil, err
+	}
+
+	if err := s.deps.TransactionStore.Create(ctx, txn); err != nil {
+		return nil, err
+	}
+
+	if err := s.deps.ScheduledPaymentStore.Delete(ctx, paymentID); err != nil {
+		return nil, err
+	}
+
+	return txn, nil
+}
+
+// GenerateScheduledPayments performs bulk generation of pending scheduled payments for recurring expenses.
+func (s *Service) GenerateScheduledPayments(ctx context.Context) error {
+	// Query templates due in next 10 days
+	maxDueDate := time.Now().AddDate(0, 0, 10)
+	expenses, err := s.deps.RecurringExpenseStore.ListPendingGeneration(ctx, maxDueDate)
+	if err != nil {
+		return err
+	}
+
+	for _, re := range expenses {
+		// Generate all scheduled payments up to 10 days in the future
+		for re.NextDueDate.Before(maxDueDate) || re.NextDueDate.Equal(maxDueDate) {
+			spID, err := NewScheduledPaymentID()
+			if err != nil {
+				return err
+			}
+
+			payment := &ScheduledPayment{
+				ID:         spID,
+				SpaceID:    re.SpaceID,
+				BudgetID:   re.BudgetID,
+				SourceType: "recurrent_expense",
+				SourceID:   string(re.ID),
+				Amount:     re.Amount,
+				Currency:   re.Currency,
+				DueDate:    re.NextDueDate,
+				Status:     ScheduledPaymentPending,
+				CreateTime: time.Now().UTC(),
+				UpdateTime: time.Now().UTC(),
+			}
+
+			if err := payment.Validate(); err != nil {
+				return err
+			}
+
+			if err := s.deps.ScheduledPaymentStore.Create(ctx, payment); err != nil {
+				return err
+			}
+
+			// Advance the template next due date
+			switch re.Interval {
+			case "weekly":
+				re.NextDueDate = re.NextDueDate.AddDate(0, 0, 7)
+			case "monthly":
+				re.NextDueDate = re.NextDueDate.AddDate(0, 1, 0)
+			case "yearly":
+				re.NextDueDate = re.NextDueDate.AddDate(1, 0, 0)
+			default:
+				return fmt.Errorf("unsupported interval for recurring expense %s: %s", re.ID, re.Interval)
+			}
+		}
+
+		re.UpdateTime = time.Now().UTC()
+		if err := s.deps.RecurringExpenseStore.Update(ctx, re); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

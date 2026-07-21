@@ -9,8 +9,7 @@ import (
 
 // HandleGenerateScheduledPayments processes the system-wide generation of scheduled payments.
 func (h *Handler) HandleGenerateScheduledPayments(ctx context.Context, payload *financev1.GenerateScheduledPaymentsPayload) error {
-	// Placeholders for underlying domain actions
-	return nil
+	return h.Coordinator.GenerateScheduledPayments(ctx)
 }
 
 // RegisterSchedules seeds the cron triggers/templates into the platform database.

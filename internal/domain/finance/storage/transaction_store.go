@@ -24,6 +24,8 @@ type transactionDB struct {
 	Description     string         `db:"description"`
 	TransactionDate sql.NullTime   `db:"transaction_date"`
 	EffectiveDate   sql.NullTime   `db:"effective_date"`
+	SourceType      sql.NullString `db:"source_type"`
+	SourceID        sql.NullString `db:"source_id"`
 	CreateTime      sql.NullTime   `db:"create_time"`
 	UpdateTime      sql.NullTime   `db:"update_time"`
 }
@@ -37,8 +39,8 @@ func NewTransactionStore(db *sqlx.DB) *TransactionStore {
 }
 
 func (s *TransactionStore) Create(ctx context.Context, t *finance.Transaction) error {
-	query := `INSERT INTO finance.transaction (id, space_id, type, budget_id, period_id, amount, currency, amount_in_base, description, transaction_date, effective_date, create_time, update_time)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`
+	query := `INSERT INTO finance.transaction (id, space_id, type, budget_id, period_id, amount, currency, amount_in_base, description, transaction_date, effective_date, source_type, source_id, create_time, update_time)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`
 
 	var budgetID, periodID sql.NullString
 	if t.BudgetID != nil {
@@ -47,11 +49,18 @@ func (s *TransactionStore) Create(ctx context.Context, t *finance.Transaction) e
 	if t.PeriodID != nil {
 		periodID = sql.NullString{String: string(*t.PeriodID), Valid: true}
 	}
+	var sourceType, sourceID sql.NullString
+	if t.SourceType != nil {
+		sourceType = sql.NullString{String: *t.SourceType, Valid: true}
+	}
+	if t.SourceID != nil {
+		sourceID = sql.NullString{String: *t.SourceID, Valid: true}
+	}
 
 	_, err := s.db.ExecContext(ctx, query,
 		string(t.ID), string(t.SpaceID), string(t.Type), budgetID, periodID,
 		t.Amount, string(t.Currency), t.AmountInBase, t.Description,
-		t.TransactionDate, t.EffectiveDate, t.CreateTime, t.UpdateTime,
+		t.TransactionDate, t.EffectiveDate, sourceType, sourceID, t.CreateTime, t.UpdateTime,
 	)
 	return err
 }
@@ -76,6 +85,16 @@ func (s *TransactionStore) GetByID(ctx context.Context, id finance.TransactionID
 		pID := finance.PeriodID(row.PeriodID.String)
 		periodIDPtr = &pID
 	}
+	var sourceTypePtr *string
+	if row.SourceType.Valid {
+		sT := row.SourceType.String
+		sourceTypePtr = &sT
+	}
+	var sourceIDPtr *string
+	if row.SourceID.Valid {
+		sI := row.SourceID.String
+		sourceIDPtr = &sI
+	}
 
 	return &finance.Transaction{
 		ID:              finance.TransactionID(row.ID),
@@ -89,6 +108,8 @@ func (s *TransactionStore) GetByID(ctx context.Context, id finance.TransactionID
 		Description:     row.Description,
 		TransactionDate: nullTimeToTime(row.TransactionDate),
 		EffectiveDate:   nullTimeToTime(row.EffectiveDate),
+		SourceType:      sourceTypePtr,
+		SourceID:        sourceIDPtr,
 		CreateTime:      nullTimeToTime(row.CreateTime),
 		UpdateTime:      nullTimeToTime(row.UpdateTime),
 	}, nil
@@ -177,6 +198,18 @@ func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 		argIndex++
 	}
 
+	if filter.SourceType != nil {
+		conditions = append(conditions, fmt.Sprintf("source_type = $%d", argIndex))
+		args = append(args, *filter.SourceType)
+		argIndex++
+	}
+
+	if filter.SourceID != nil {
+		conditions = append(conditions, fmt.Sprintf("source_id = $%d", argIndex))
+		args = append(args, *filter.SourceID)
+		argIndex++
+	}
+
 	if cursorID != "" {
 		conditions = append(conditions, fmt.Sprintf("id < $%d", argIndex))
 		args = append(args, cursorID)
@@ -208,6 +241,16 @@ func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 			pID := finance.PeriodID(rows[i].PeriodID.String)
 			periodIDPtr = &pID
 		}
+		var sourceTypePtr *string
+		if rows[i].SourceType.Valid {
+			sT := rows[i].SourceType.String
+			sourceTypePtr = &sT
+		}
+		var sourceIDPtr *string
+		if rows[i].SourceID.Valid {
+			sI := rows[i].SourceID.String
+			sourceIDPtr = &sI
+		}
 
 		txns = append(txns, &finance.Transaction{
 			ID:              finance.TransactionID(rows[i].ID),
@@ -221,6 +264,8 @@ func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 			Description:     rows[i].Description,
 			TransactionDate: nullTimeToTime(rows[i].TransactionDate),
 			EffectiveDate:   nullTimeToTime(rows[i].EffectiveDate),
+			SourceType:      sourceTypePtr,
+			SourceID:        sourceIDPtr,
 			CreateTime:      nullTimeToTime(rows[i].CreateTime),
 			UpdateTime:      nullTimeToTime(rows[i].UpdateTime),
 		})

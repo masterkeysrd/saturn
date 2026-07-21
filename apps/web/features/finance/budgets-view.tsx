@@ -81,19 +81,18 @@ export function BudgetsView() {
     <FinancePageLayout
       title="Budgeting"
       description="Manage your template limits, recurrence tracking, and cross-currency allocation."
+      actions={
+        isWritable && (
+          <Button
+            onClick={() => setCreateOpen(true)}
+            className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent pt-0.5 font-semibold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.02] hover:opacity-95"
+          >
+            Create Budget Template
+          </Button>
+        )
+      }
     >
       <div className="mt-2 animate-in space-y-8 duration-300 fade-in">
-        {isWritable && (
-          <div className="mb-6 flex justify-end">
-            <Button
-              onClick={() => setCreateOpen(true)}
-              className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent pt-0.5 font-semibold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.02] hover:opacity-95"
-            >
-              Create Budget Template
-            </Button>
-          </div>
-        )}
-
         {/* Modern Dashboard Stats Grid */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
           <div className="relative flex items-center gap-4 overflow-hidden rounded-3xl border border-border/40 bg-card/30 p-6 shadow-sm backdrop-blur-sm select-none">

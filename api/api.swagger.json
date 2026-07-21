@@ -1419,6 +1419,283 @@
         ]
       }
     },
+    "/v1/spaces/{spaceId}/finance/recurring-expenses": {
+      "get": {
+        "summary": "ListRecurringExpenses lists recurring expenses for a workspace.",
+        "operationId": "Finance_ListRecurringExpenses",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListRecurringExpensesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "post": {
+        "summary": "CreateRecurringExpense configures a new recurring expense rule.",
+        "operationId": "Finance_CreateRecurringExpense",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RecurringExpense"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceCreateRecurringExpenseBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/finance/recurring-expenses/{id}": {
+      "delete": {
+        "summary": "DeleteRecurringExpense deletes a recurring expense rule.",
+        "operationId": "Finance_DeleteRecurringExpense",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "put": {
+        "summary": "UpdateRecurringExpense modifies an existing recurring expense rule.",
+        "operationId": "Finance_UpdateRecurringExpense",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RecurringExpense"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceUpdateRecurringExpenseBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/finance/scheduled-payments": {
+      "get": {
+        "summary": "ListScheduledPayments lists scheduled payments for a workspace.",
+        "operationId": "Finance_ListScheduledPayments",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListScheduledPaymentsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/finance/scheduled-payments/{paymentId}/confirm": {
+      "post": {
+        "summary": "ConfirmScheduledPayment clears a scheduled payment by promoting it to a permanent transaction.",
+        "operationId": "Finance_ConfirmScheduledPayment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Transaction"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "paymentId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceConfirmScheduledPaymentBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/spaces/{spaceId}/finance/settings": {
       "get": {
         "summary": "GetFinanceSettings retrieves the finance settings for a workspace.",
@@ -1537,6 +1814,18 @@
           },
           {
             "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sourceType",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sourceId",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1785,6 +2074,28 @@
         "baseCurrency"
       ]
     },
+    "FinanceConfirmScheduledPaymentBody": {
+      "type": "object",
+      "properties": {
+        "transactionDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "effectiveDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "actualAmount": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "required": [
+        "transactionDate",
+        "effectiveDate",
+        "actualAmount"
+      ]
+    },
     "FinanceCreateBudgetBody": {
       "type": "object",
       "properties": {
@@ -1853,6 +2164,46 @@
         "expense"
       ]
     },
+    "FinanceCreateRecurringExpenseBody": {
+      "type": "object",
+      "properties": {
+        "budgetId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "interval": {
+          "type": "string"
+        },
+        "nextDueDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "isVariable": {
+          "type": "boolean"
+        },
+        "gracePeriodDays": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "required": [
+        "budgetId",
+        "name",
+        "amount",
+        "currency",
+        "interval",
+        "nextDueDate"
+      ]
+    },
     "FinanceUpdateBudgetBody": {
       "type": "object",
       "properties": {
@@ -1893,6 +2244,50 @@
       },
       "required": [
         "expense"
+      ]
+    },
+    "FinanceUpdateRecurringExpenseBody": {
+      "type": "object",
+      "properties": {
+        "budgetId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "interval": {
+          "type": "string"
+        },
+        "nextDueDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "isVariable": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string"
+        },
+        "gracePeriodDays": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "required": [
+        "budgetId",
+        "name",
+        "amount",
+        "currency",
+        "interval",
+        "nextDueDate",
+        "status"
       ]
     },
     "IdentityRevokeSessionBody": {
@@ -2601,6 +2996,36 @@
         }
       }
     },
+    "v1ListRecurringExpensesResponse": {
+      "type": "object",
+      "properties": {
+        "recurringExpenses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RecurringExpense"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListScheduledPaymentsResponse": {
+      "type": "object",
+      "properties": {
+        "scheduledPayments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ScheduledPayment"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
     "v1ListSchedulesResponse": {
       "type": "object",
       "properties": {
@@ -2738,6 +3163,55 @@
         "INTERVAL_YEARLY"
       ]
     },
+    "v1RecurringExpense": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "spaceId": {
+          "type": "string"
+        },
+        "budgetId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "interval": {
+          "type": "string"
+        },
+        "nextDueDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "isVariable": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string"
+        },
+        "gracePeriodDays": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
     "v1RefreshSessionRequest": {
       "type": "object",
       "properties": {
@@ -2832,6 +3306,52 @@
         },
         "status": {
           "type": "string"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1ScheduledPayment": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "spaceId": {
+          "type": "string"
+        },
+        "budgetId": {
+          "type": "string"
+        },
+        "sourceType": {
+          "type": "string"
+        },
+        "sourceId": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "dueDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "string",
+          "format": "byte"
         },
         "createTime": {
           "type": "string",
@@ -3006,6 +3526,12 @@
         "effectiveDate": {
           "type": "string",
           "format": "date-time"
+        },
+        "sourceType": {
+          "type": "string"
+        },
+        "sourceId": {
+          "type": "string"
         }
       }
     },

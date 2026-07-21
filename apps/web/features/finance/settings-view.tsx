@@ -1,6 +1,6 @@
 import { useWorkspaceFinance } from "./use-workspace-finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
-import { AlertTriangle, CheckCircle2 } from "lucide-react"
+import { AlertTriangle, CheckCircle2, Settings } from "lucide-react"
 
 export function SettingsView() {
   const { settings, ratesData } = useWorkspaceFinance()
@@ -9,6 +9,7 @@ export function SettingsView() {
     <FinancePageLayout
       title="Finance Settings"
       description="Configure currency rules, view currency exchanges, and check service status."
+      icon={Settings}
     >
       <div className="mt-2 animate-in space-y-6 duration-300 fade-in">
         <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/45 p-6 shadow-lg backdrop-blur-xl md:p-8">

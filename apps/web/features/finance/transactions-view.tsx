@@ -20,6 +20,7 @@ import {
   Plus,
   Loader2,
   Edit2,
+  Repeat,
 } from "lucide-react"
 import { useWorkspaceFinance } from "./use-workspace-finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
@@ -114,6 +115,7 @@ export function TransactionsView() {
     <FinancePageLayout
       title="Workspace Transactions"
       description="View your ledger history, check exchange conversions, and manage expenses."
+      icon={Receipt}
     >
       <div className="mt-2 animate-in duration-300 fade-in">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
@@ -179,7 +181,12 @@ export function TransactionsView() {
                     <SelectTrigger className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold">
                       <span className="flex items-center gap-2">
                         <Filter className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        <SelectValue placeholder="All Budgets" />
+                        <SelectValue placeholder="All Budgets">
+                          {selectedBudgetFilter
+                            ? budgets.find((b) => b.id === selectedBudgetFilter)
+                                ?.name || "All Budgets"
+                            : "All Budgets"}
+                        </SelectValue>
                       </span>
                     </SelectTrigger>
                     <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
@@ -266,10 +273,16 @@ export function TransactionsView() {
 
                         {/* Middle: Details */}
                         <div>
-                          <span className="block text-sm font-bold text-foreground transition-colors group-hover:text-primary">
+                          <span className="flex items-center gap-2 text-sm font-bold text-foreground transition-colors group-hover:text-primary">
                             {t.description || (
                               <span className="text-xs font-normal text-muted-foreground/50 italic">
                                 No description
+                              </span>
+                            )}
+                            {t.sourceType === "recurrent_expense" && (
+                              <span className="inline-flex items-center gap-1 rounded bg-indigo-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-indigo-500 uppercase select-none">
+                                <Repeat className="h-2.5 w-2.5" />
+                                Recurring
                               </span>
                             )}
                           </span>

@@ -39,19 +39,19 @@ export function RatesView() {
     <FinancePageLayout
       title="Exchange Rates"
       description="Configure daily conversions to Reporting Currency."
+      icon={Globe}
+      actions={
+        isWritable && (
+          <Button
+            onClick={() => setRateCreateOpen(true)}
+            className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent pt-0.5 font-semibold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.02] hover:opacity-95"
+          >
+            Add Conversion Rate
+          </Button>
+        )
+      }
     >
       <div className="mt-2 animate-in space-y-6 duration-300 fade-in">
-        {isWritable && (
-          <div className="mb-6 flex justify-end">
-            <Button
-              onClick={() => setRateCreateOpen(true)}
-              className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent pt-0.5 font-semibold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.02] hover:opacity-95"
-            >
-              Add Conversion Rate
-            </Button>
-          </div>
-        )}
-
         <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/45 p-6 shadow-lg backdrop-blur-xl md:p-8">
           <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-primary/5 blur-2xl"></div>
           <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">

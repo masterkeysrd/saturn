@@ -104,6 +104,45 @@ service Finance {
   rpc GetInsights(GetInsightsRequest) returns (GetInsightsResponse) {
     option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/insights"};
   }
+
+  // CreateRecurringExpense configures a new recurring expense rule.
+  rpc CreateRecurringExpense(CreateRecurringExpenseRequest) returns (RecurringExpense) {
+    option (google.api.http) = {
+      post: "/v1/spaces/{space_id}/finance/recurring-expenses"
+      body: "*"
+    };
+  }
+
+  // UpdateRecurringExpense modifies an existing recurring expense rule.
+  rpc UpdateRecurringExpense(UpdateRecurringExpenseRequest) returns (RecurringExpense) {
+    option (google.api.http) = {
+      put: "/v1/spaces/{space_id}/finance/recurring-expenses/{id}"
+      body: "*"
+    };
+  }
+
+  // DeleteRecurringExpense deletes a recurring expense rule.
+  rpc DeleteRecurringExpense(DeleteRecurringExpenseRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/spaces/{space_id}/finance/recurring-expenses/{id}"};
+  }
+
+  // ListRecurringExpenses lists recurring expenses for a workspace.
+  rpc ListRecurringExpenses(ListRecurringExpensesRequest) returns (ListRecurringExpensesResponse) {
+    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/recurring-expenses"};
+  }
+
+  // ListScheduledPayments lists scheduled payments for a workspace.
+  rpc ListScheduledPayments(ListScheduledPaymentsRequest) returns (ListScheduledPaymentsResponse) {
+    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/scheduled-payments"};
+  }
+
+  // ConfirmScheduledPayment clears a scheduled payment by promoting it to a permanent transaction.
+  rpc ConfirmScheduledPayment(ConfirmScheduledPaymentRequest) returns (Transaction) {
+    option (google.api.http) = {
+      post: "/v1/spaces/{space_id}/finance/scheduled-payments/{payment_id}/confirm"
+      body: "*"
+    };
+  }
 }
 
 enum RecurrenceInterval {
@@ -281,6 +320,8 @@ message Transaction {
   google.protobuf.Timestamp create_time = 11;
   google.protobuf.Timestamp update_time = 12;
   google.protobuf.Timestamp effective_date = 13;
+  optional string source_type = 14;
+  optional string source_id = 15;
 }
 
 message ExpenseInput {
@@ -314,6 +355,8 @@ message ListTransactionsRequest {
   TransactionType type = 3;
   int32 page_size = 4;
   string page_token = 5;
+  optional string source_type = 6;
+  optional string source_id = 7;
 }
 
 message ListTransactionsResponse {
@@ -395,4 +438,100 @@ message SpentInsights {
 
 message GenerateScheduledPaymentsPayload {
   option (saturn.platform.scheduler.v1.job_type) = "finance.GenerateScheduledPayments";
+}
+
+message RecurringExpense {
+  string id = 1;
+  string space_id = 2;
+  string budget_id = 3;
+  string name = 4;
+  int64 amount = 5;
+  string currency = 6;
+  string interval = 7;
+  google.protobuf.Timestamp next_due_date = 8;
+  bool is_variable = 9;
+  string status = 10;
+  int32 grace_period_days = 11;
+  google.protobuf.Timestamp create_time = 12;
+  google.protobuf.Timestamp update_time = 13;
+}
+
+message ScheduledPayment {
+  string id = 1;
+  string space_id = 2;
+  string budget_id = 3;
+  string source_type = 4;
+  string source_id = 5;
+  int64 amount = 6;
+  string currency = 7;
+  google.protobuf.Timestamp due_date = 8;
+  string status = 9;
+  bytes metadata = 10;
+  google.protobuf.Timestamp create_time = 11;
+  google.protobuf.Timestamp update_time = 12;
+}
+
+message CreateRecurringExpenseRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string budget_id = 2 [(google.api.field_behavior) = REQUIRED];
+  string name = 3 [(google.api.field_behavior) = REQUIRED];
+  int64 amount = 4 [(google.api.field_behavior) = REQUIRED];
+  string currency = 5 [(google.api.field_behavior) = REQUIRED];
+  string interval = 6 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.Timestamp next_due_date = 7 [(google.api.field_behavior) = REQUIRED];
+  bool is_variable = 8;
+  int32 grace_period_days = 9;
+}
+
+message UpdateRecurringExpenseRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  string space_id = 2 [(google.api.field_behavior) = REQUIRED];
+  string budget_id = 3 [(google.api.field_behavior) = REQUIRED];
+  string name = 4 [(google.api.field_behavior) = REQUIRED];
+  int64 amount = 5 [(google.api.field_behavior) = REQUIRED];
+  string currency = 6 [(google.api.field_behavior) = REQUIRED];
+  string interval = 7 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.Timestamp next_due_date = 8 [(google.api.field_behavior) = REQUIRED];
+  bool is_variable = 9;
+  string status = 10 [(google.api.field_behavior) = REQUIRED];
+  int32 grace_period_days = 11;
+}
+
+message DeleteRecurringExpenseRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string id = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message ListRecurringExpensesRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string status = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListRecurringExpensesResponse {
+  repeated RecurringExpense recurring_expenses = 1;
+  string next_page_token = 2;
+}
+
+message ListScheduledPaymentsRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string status = 2;
+  google.protobuf.Timestamp start_date = 3;
+  google.protobuf.Timestamp end_date = 4;
+  int32 page_size = 5;
+  string page_token = 6;
+}
+
+message ListScheduledPaymentsResponse {
+  repeated ScheduledPayment scheduled_payments = 1;
+  string next_page_token = 2;
+}
+
+message ConfirmScheduledPaymentRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string payment_id = 2 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.Timestamp transaction_date = 3 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.Timestamp effective_date = 4 [(google.api.field_behavior) = REQUIRED];
+  int64 actual_amount = 5 [(google.api.field_behavior) = REQUIRED];
 }

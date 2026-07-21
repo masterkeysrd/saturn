@@ -90,6 +90,43 @@ type ListExchangeRatesFilter struct {
 type ListTransactionsFilter struct {
 	BudgetID      *BudgetID
 	Type          *TransactionType
+	SourceType    *string
+	SourceID      *string
+	PageSize      int32
+	NextPageToken string
+}
+
+// RecurringExpenseStore defines persistence for recurring expense templates.
+type RecurringExpenseStore interface {
+	Create(ctx context.Context, expense *RecurringExpense) error
+	GetByID(ctx context.Context, id RecurringExpenseID) (*RecurringExpense, error)
+	Update(ctx context.Context, expense *RecurringExpense) error
+	Delete(ctx context.Context, id RecurringExpenseID) error
+	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListRecurringExpensesFilter) ([]*RecurringExpense, string, error)
+	ListPendingGeneration(ctx context.Context, maxDueDate time.Time) ([]*RecurringExpense, error)
+}
+
+// ScheduledPaymentStore defines persistence for scheduled payment instances.
+type ScheduledPaymentStore interface {
+	Create(ctx context.Context, payment *ScheduledPayment) error
+	GetByID(ctx context.Context, id ScheduledPaymentID) (*ScheduledPayment, error)
+	UpdateStatus(ctx context.Context, id ScheduledPaymentID, status ScheduledPaymentStatus) error
+	Delete(ctx context.Context, id ScheduledPaymentID) error
+	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListScheduledPaymentsFilter) ([]*ScheduledPayment, string, error)
+}
+
+// ListRecurringExpensesFilter encapsulates filtering parameters for recurring expenses.
+type ListRecurringExpensesFilter struct {
+	Status        *RecurringExpenseStatus
+	PageSize      int32
+	NextPageToken string
+}
+
+// ListScheduledPaymentsFilter encapsulates filtering parameters for scheduled payments.
+type ListScheduledPaymentsFilter struct {
+	Status        *ScheduledPaymentStatus
+	StartDate     *time.Time
+	EndDate       *time.Time
 	PageSize      int32
 	NextPageToken string
 }

@@ -1,4 +1,5 @@
 import { useState } from "react"
+import type { ElementType } from "react"
 import { useWorkspaceFinance } from "../use-workspace-finance"
 import { Button } from "@/components/ui/button"
 import { Coins, Loader2, PiggyBank } from "lucide-react"
@@ -11,17 +12,22 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select"
+import { PageLayout } from "@/components/ui/page-layout"
 
 interface FinancePageLayoutProps {
   title: string
   description: string
   children: React.ReactNode
+  actions?: React.ReactNode
+  icon?: ElementType
 }
 
 export function FinancePageLayout({
   title,
   description,
   children,
+  actions,
+  icon = PiggyBank,
 }: FinancePageLayoutProps) {
   const { spaceId, isWritable, isLoading, isNotConfigured, refetchSettings } =
     useWorkspaceFinance()
@@ -115,21 +121,13 @@ export function FinancePageLayout({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-1 animate-in flex-col gap-8 duration-500 fade-in">
-      {/* Header section */}
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="flex items-center gap-3 text-3xl font-extrabold tracking-tight text-foreground md:text-4xl">
-            <PiggyBank className="h-8 w-8 shrink-0 text-primary" />
-            {title}
-          </h1>
-          <p className="mt-2 text-sm font-medium text-muted-foreground">
-            {description}
-          </p>
-        </div>
-      </div>
-
+    <PageLayout
+      title={title}
+      description={description}
+      icon={icon}
+      actions={actions}
+    >
       {children}
-    </div>
+    </PageLayout>
   )
 }

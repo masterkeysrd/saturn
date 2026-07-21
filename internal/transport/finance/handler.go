@@ -473,6 +473,8 @@ func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTrans
 	appReq := &financeapp.ListTransactionsRequest{
 		BudgetID:      budgetID,
 		Type:          txnType,
+		SourceType:    req.SourceType,
+		SourceID:      req.SourceId,
 		PageSize:      req.GetPageSize(),
 		NextPageToken: req.GetPageToken(),
 	}
@@ -527,6 +529,8 @@ func toProtoTransaction(t *finance.Transaction) *financev1.Transaction {
 		Description:     t.Description,
 		TransactionDate: timestamppb.New(t.TransactionDate),
 		EffectiveDate:   timestamppb.New(t.EffectiveDate),
+		SourceType:      t.SourceType,
+		SourceId:        t.SourceID,
 		CreateTime:      timestamppb.New(t.CreateTime),
 		UpdateTime:      timestamppb.New(t.UpdateTime),
 	}

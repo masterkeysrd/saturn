@@ -57,7 +57,7 @@ export async function request<TResponse, TData = unknown, TParams = unknown>({
     const searchParams = new URLSearchParams()
     Object.entries(params as Record<string, unknown>).forEach(
       ([key, value]) => {
-        if (value !== undefined && value !== null) {
+        if (value !== undefined && value !== null && value !== "") {
           searchParams.append(key, String(value))
         }
       }

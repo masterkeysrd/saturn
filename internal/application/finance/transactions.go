@@ -19,6 +19,8 @@ type CreateExpenseRequest struct {
 type ListTransactionsRequest struct {
 	BudgetID      *finance.BudgetID
 	Type          *finance.TransactionType
+	SourceType    *string
+	SourceID      *string
 	PageSize      int32
 	NextPageToken string
 }
@@ -69,6 +71,8 @@ func (c *Coordinator) ListTransactions(ctx context.Context, req *ListTransaction
 	filter := &finance.ListTransactionsFilter{
 		BudgetID:      req.BudgetID,
 		Type:          req.Type,
+		SourceType:    req.SourceType,
+		SourceID:      req.SourceID,
 		PageSize:      req.PageSize,
 		NextPageToken: req.NextPageToken,
 	}

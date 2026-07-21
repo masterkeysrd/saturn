@@ -69,6 +69,8 @@ type Transaction struct {
 	Description     string
 	TransactionDate time.Time
 	EffectiveDate   time.Time
+	SourceType      *string // Nullable
+	SourceID        *string // Nullable
 	CreateTime      time.Time
 	UpdateTime      time.Time
 }

@@ -10,6 +10,7 @@ import {
 } from "@/gen/saturn/finance/v1/finance"
 import {
   TrendingDownIcon,
+  TrendingUp,
   DollarSignIcon,
   CalendarIcon,
   PercentIcon,
@@ -68,6 +69,7 @@ export function InsightsView() {
       <FinancePageLayout
         title="Insights"
         description="Loading financial insights"
+        icon={TrendingUp}
       >
         <div className="flex h-[400px] items-center justify-center">
           <div className="flex flex-col items-center gap-3">
@@ -86,6 +88,7 @@ export function InsightsView() {
       <FinancePageLayout
         title="Insights"
         description="Configure finance to view insights"
+        icon={TrendingUp}
       >
         <div className="flex min-h-[400px] items-center justify-center" />
       </FinancePageLayout>
@@ -94,7 +97,11 @@ export function InsightsView() {
 
   if (insightsError || (isQueryEnabled && !spentInsights && !insightsPending)) {
     return (
-      <FinancePageLayout title="Insights" description="Unable to load insights">
+      <FinancePageLayout
+        title="Insights"
+        description="Unable to load insights"
+        icon={TrendingUp}
+      >
         <div className="flex h-[300px] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-muted/30 bg-muted/10 p-8 text-center">
           <TrendingDownIcon className="h-10 w-10 text-muted-foreground/60" />
           <h3 className="text-sm font-semibold">Could not load insights</h3>
@@ -121,6 +128,7 @@ export function InsightsView() {
     <FinancePageLayout
       title="Insights"
       description="Financial trends and overview"
+      icon={TrendingUp}
     >
       <div className="animate-in space-y-6 pb-6 duration-500 fade-in">
         {/* Top Half split layout: 1/3 Metrics Sidebar, 2/3 Stacked Trend Chart */}
@@ -397,77 +405,79 @@ export function InsightsView() {
                 No active budget configurations found.
               </div>
             ) : (
-              <div className="max-h-[260px] scrollbar-thin space-y-2.5 overflow-y-auto pr-1.5">
-                {spentInsights.distributions.map((dist) => {
-                  const Icon = getBudgetIcon(dist.budgetIcon)
-                  const colors = getBudgetColors(dist.budgetColor)
+              <ScrollArea className="h-[260px]">
+                <div className="space-y-3 pr-3">
+                  {spentInsights.distributions.map((dist) => {
+                    const Icon = getBudgetIcon(dist.budgetIcon)
+                    const colors = getBudgetColors(dist.budgetColor)
 
-                  return (
-                    <div
-                      key={dist.budgetId}
-                      className="group rounded-xl border border-muted/10 bg-muted/5 p-3 transition-all duration-300 hover:bg-muted/10"
-                    >
-                      <div className="mb-1.5 flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className={cn(
-                              "rounded-lg p-2",
-                              colors.bg,
-                              colors.text
-                            )}
-                          >
-                            <Icon className="h-3.5 w-3.5" />
-                          </div>
-                          <div>
-                            <span className="text-xs font-bold text-foreground">
-                              {dist.budgetName}
-                            </span>
-                            <div className="text-[9px] text-muted-foreground">
-                              Limit:{" "}
-                              {Number(dist.limit) > 0
-                                ? `${formatCents(dist.limit).toLocaleString()}`
-                                : "No limit"}
+                    return (
+                      <div
+                        key={dist.budgetId}
+                        className="group rounded-xl border border-muted/10 bg-muted/5 p-3 transition-all duration-300 hover:bg-muted/10"
+                      >
+                        <div className="mb-1.5 flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <div
+                              className={cn(
+                                "rounded-lg p-2",
+                                colors.bg,
+                                colors.text
+                              )}
+                            >
+                              <Icon className="h-3.5 w-3.5" />
+                            </div>
+                            <div>
+                              <span className="text-xs font-bold text-foreground">
+                                {dist.budgetName}
+                              </span>
+                              <div className="text-[9px] text-muted-foreground">
+                                Limit:{" "}
+                                {Number(dist.limit) > 0
+                                  ? `${formatCents(dist.limit).toLocaleString()}`
+                                  : "No limit"}
+                              </div>
                             </div>
                           </div>
+
+                          <div className="text-right">
+                            <span className="text-xs font-bold text-foreground">
+                              {formatCents(dist.spent).toLocaleString()}
+                            </span>
+                            <span className="block text-[9px] text-muted-foreground">
+                              {baseCurrency}{" "}
+                              {formatCents(dist.spentInBase).toLocaleString()}
+                            </span>
+                          </div>
                         </div>
 
-                        <div className="text-right">
-                          <span className="text-xs font-bold text-foreground">
-                            {formatCents(dist.spent).toLocaleString()}
+                        {/* Distribution progress bar */}
+                        <div className="h-1 w-full overflow-hidden rounded-full bg-muted/20">
+                          <div
+                            className={cn(
+                              "h-full rounded-full transition-all duration-550",
+                              colors.bar
+                            )}
+                            style={{
+                              width: `${Math.min(dist.usagePercentage, 100)}%`,
+                            }}
+                          />
+                        </div>
+                        <div className="mt-1 flex items-center justify-between">
+                          <span className="text-[8px] font-bold text-muted-foreground uppercase">
+                            Usage Pacing
                           </span>
-                          <span className="block text-[9px] text-muted-foreground">
-                            {baseCurrency}{" "}
-                            {formatCents(dist.spentInBase).toLocaleString()}
+                          <span
+                            className={cn("text-[8px] font-black", colors.text)}
+                          >
+                            {dist.usagePercentage.toFixed(1)}%
                           </span>
                         </div>
                       </div>
-
-                      {/* Distribution progress bar */}
-                      <div className="h-1 w-full overflow-hidden rounded-full bg-muted/20">
-                        <div
-                          className={cn(
-                            "h-full rounded-full transition-all duration-550",
-                            colors.bar
-                          )}
-                          style={{
-                            width: `${Math.min(dist.usagePercentage, 100)}%`,
-                          }}
-                        />
-                      </div>
-                      <div className="mt-1 flex items-center justify-between">
-                        <span className="text-[8px] font-bold text-muted-foreground uppercase">
-                          Usage Pacing
-                        </span>
-                        <span
-                          className={cn("text-[8px] font-black", colors.text)}
-                        >
-                          {dist.usagePercentage.toFixed(1)}%
-                        </span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+                    )
+                  })}
+                </div>
+              </ScrollArea>
             )}
           </div>
 

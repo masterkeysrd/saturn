@@ -218,6 +218,8 @@ export interface Transaction {
   createTime: string
   updateTime: string
   effectiveDate: string
+  sourceType?: string
+  sourceId?: string
 }
 
 export interface ExpenseInput {
@@ -251,6 +253,8 @@ export interface ListTransactionsRequest {
   type: TransactionType
   pageSize: number
   pageToken: string
+  sourceType?: string
+  sourceId?: string
 }
 
 export interface ListTransactionsResponse {
@@ -320,6 +324,102 @@ export interface SpentInsights_HighValueExpense {
 }
 
 export type GenerateScheduledPaymentsPayload = Record<string, never>
+
+export interface RecurringExpense {
+  id: string
+  spaceId: string
+  budgetId: string
+  name: string
+  amount: string
+  currency: string
+  interval: string
+  nextDueDate: string
+  isVariable: boolean
+  status: string
+  gracePeriodDays: number
+  createTime: string
+  updateTime: string
+}
+
+export interface ScheduledPayment {
+  id: string
+  spaceId: string
+  budgetId: string
+  sourceType: string
+  sourceId: string
+  amount: string
+  currency: string
+  dueDate: string
+  status: string
+  metadata: string
+  createTime: string
+  updateTime: string
+}
+
+export interface CreateRecurringExpenseRequest {
+  spaceId: string
+  budgetId: string
+  name: string
+  amount: string
+  currency: string
+  interval: string
+  nextDueDate: string
+  isVariable: boolean
+  gracePeriodDays: number
+}
+
+export interface UpdateRecurringExpenseRequest {
+  id: string
+  spaceId: string
+  budgetId: string
+  name: string
+  amount: string
+  currency: string
+  interval: string
+  nextDueDate: string
+  isVariable: boolean
+  status: string
+  gracePeriodDays: number
+}
+
+export interface DeleteRecurringExpenseRequest {
+  spaceId: string
+  id: string
+}
+
+export interface ListRecurringExpensesRequest {
+  spaceId: string
+  status: string
+  pageSize: number
+  pageToken: string
+}
+
+export interface ListRecurringExpensesResponse {
+  recurringExpenses: RecurringExpense[]
+  nextPageToken: string
+}
+
+export interface ListScheduledPaymentsRequest {
+  spaceId: string
+  status: string
+  startDate: string
+  endDate: string
+  pageSize: number
+  pageToken: string
+}
+
+export interface ListScheduledPaymentsResponse {
+  scheduledPayments: ScheduledPayment[]
+  nextPageToken: string
+}
+
+export interface ConfirmScheduledPaymentRequest {
+  spaceId: string
+  paymentId: string
+  transactionDate: string
+  effectiveDate: string
+  actualAmount: string
+}
 
 /**
  * Finance provides budgeting and currency management operations for a workspace.
@@ -772,6 +872,200 @@ export function useGetInsightsQuery(
   return useQuery<GetInsightsResponse, Error>({
     queryKey: [`/api/v1/spaces/${req.spaceId}/finance/insights`, req],
     queryFn: () => getInsights(req.spaceId, req),
+    ...options,
+  })
+}
+
+/**
+ * CreateRecurringExpense configures a new recurring expense rule.
+ */
+export async function createRecurringExpense(
+  space_id: string,
+  req: CreateRecurringExpenseRequest
+): Promise<RecurringExpense> {
+  return request<RecurringExpense>({
+    method: "POST",
+    url: `/api/v1/spaces/${space_id}/finance/recurring-expenses`,
+    data: req,
+  })
+}
+
+export function useCreateRecurringExpenseMutation(
+  options?: UseMutationOptions<
+    RecurringExpense,
+    Error,
+    { space_id: string; req: CreateRecurringExpenseRequest }
+  >
+) {
+  return useMutation<
+    RecurringExpense,
+    Error,
+    { space_id: string; req: CreateRecurringExpenseRequest }
+  >({
+    mutationFn: ({ space_id, req }) => createRecurringExpense(space_id, req),
+    ...options,
+  })
+}
+
+/**
+ * UpdateRecurringExpense modifies an existing recurring expense rule.
+ */
+export async function updateRecurringExpense(
+  space_id: string,
+  id: string,
+  req: UpdateRecurringExpenseRequest
+): Promise<RecurringExpense> {
+  return request<RecurringExpense>({
+    method: "PUT",
+    url: `/api/v1/spaces/${space_id}/finance/recurring-expenses/${id}`,
+    data: req,
+  })
+}
+
+export function useUpdateRecurringExpenseMutation(
+  options?: UseMutationOptions<
+    RecurringExpense,
+    Error,
+    { space_id: string; id: string; req: UpdateRecurringExpenseRequest }
+  >
+) {
+  return useMutation<
+    RecurringExpense,
+    Error,
+    { space_id: string; id: string; req: UpdateRecurringExpenseRequest }
+  >({
+    mutationFn: ({ space_id, id, req }) =>
+      updateRecurringExpense(space_id, id, req),
+    ...options,
+  })
+}
+
+/**
+ * DeleteRecurringExpense deletes a recurring expense rule.
+ */
+export async function deleteRecurringExpense(
+  space_id: string,
+  id: string,
+  req: DeleteRecurringExpenseRequest
+): Promise<Record<string, never>> {
+  return request<Record<string, never>>({
+    method: "DELETE",
+    url: `/api/v1/spaces/${space_id}/finance/recurring-expenses/${id}`,
+    params: req,
+  })
+}
+
+export function useDeleteRecurringExpenseMutation(
+  options?: UseMutationOptions<
+    Record<string, never>,
+    Error,
+    { space_id: string; id: string; req: DeleteRecurringExpenseRequest }
+  >
+) {
+  return useMutation<
+    Record<string, never>,
+    Error,
+    { space_id: string; id: string; req: DeleteRecurringExpenseRequest }
+  >({
+    mutationFn: ({ space_id, id, req }) =>
+      deleteRecurringExpense(space_id, id, req),
+    ...options,
+  })
+}
+
+/**
+ * ListRecurringExpenses lists recurring expenses for a workspace.
+ */
+export async function listRecurringExpenses(
+  space_id: string,
+  req: ListRecurringExpensesRequest
+): Promise<ListRecurringExpensesResponse> {
+  return request<ListRecurringExpensesResponse>({
+    method: "GET",
+    url: `/api/v1/spaces/${space_id}/finance/recurring-expenses`,
+    params: req,
+  })
+}
+
+export function useListRecurringExpensesQuery(
+  req: ListRecurringExpensesRequest,
+  options?: Omit<
+    UseQueryOptions<ListRecurringExpensesResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListRecurringExpensesResponse, Error>({
+    queryKey: [`/api/v1/spaces/${req.spaceId}/finance/recurring-expenses`, req],
+    queryFn: () => listRecurringExpenses(req.spaceId, req),
+    ...options,
+  })
+}
+
+/**
+ * ListScheduledPayments lists scheduled payments for a workspace.
+ */
+export async function listScheduledPayments(
+  space_id: string,
+  req: ListScheduledPaymentsRequest
+): Promise<ListScheduledPaymentsResponse> {
+  return request<ListScheduledPaymentsResponse>({
+    method: "GET",
+    url: `/api/v1/spaces/${space_id}/finance/scheduled-payments`,
+    params: req,
+  })
+}
+
+export function useListScheduledPaymentsQuery(
+  req: ListScheduledPaymentsRequest,
+  options?: Omit<
+    UseQueryOptions<ListScheduledPaymentsResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListScheduledPaymentsResponse, Error>({
+    queryKey: [`/api/v1/spaces/${req.spaceId}/finance/scheduled-payments`, req],
+    queryFn: () => listScheduledPayments(req.spaceId, req),
+    ...options,
+  })
+}
+
+/**
+ * ConfirmScheduledPayment clears a scheduled payment by promoting it to a permanent transaction.
+ */
+export async function confirmScheduledPayment(
+  space_id: string,
+  payment_id: string,
+  req: ConfirmScheduledPaymentRequest
+): Promise<Transaction> {
+  return request<Transaction>({
+    method: "POST",
+    url: `/api/v1/spaces/${space_id}/finance/scheduled-payments/${payment_id}/confirm`,
+    data: req,
+  })
+}
+
+export function useConfirmScheduledPaymentMutation(
+  options?: UseMutationOptions<
+    Transaction,
+    Error,
+    {
+      space_id: string
+      payment_id: string
+      req: ConfirmScheduledPaymentRequest
+    }
+  >
+) {
+  return useMutation<
+    Transaction,
+    Error,
+    {
+      space_id: string
+      payment_id: string
+      req: ConfirmScheduledPaymentRequest
+    }
+  >({
+    mutationFn: ({ space_id, payment_id, req }) =>
+      confirmScheduledPayment(space_id, payment_id, req),
     ...options,
   })
 }

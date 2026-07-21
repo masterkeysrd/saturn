@@ -33,6 +33,15 @@ type FinanceService interface {
 	DeleteTransaction(ctx context.Context, id finance.TransactionID) error
 	ListTransactions(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListTransactionsFilter) ([]*finance.Transaction, string, error)
 	GetSpentInsights(ctx context.Context, req *finance.GetSpentInsightsRequest) (*finance.SpentInsights, error)
+
+	CreateRecurringExpense(ctx context.Context, expense *finance.RecurringExpense) (*finance.RecurringExpense, error)
+	GetRecurringExpense(ctx context.Context, id finance.RecurringExpenseID) (*finance.RecurringExpense, error)
+	UpdateRecurringExpense(ctx context.Context, expense *finance.RecurringExpense) (*finance.RecurringExpense, error)
+	DeleteRecurringExpense(ctx context.Context, id finance.RecurringExpenseID) error
+	ListRecurringExpenses(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListRecurringExpensesFilter) ([]*finance.RecurringExpense, string, error)
+	ListScheduledPayments(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListScheduledPaymentsFilter) ([]*finance.ScheduledPayment, string, error)
+	ConfirmScheduledPayment(ctx context.Context, paymentID finance.ScheduledPaymentID, transactionDate time.Time, effectiveDate time.Time, actualAmount int64) (*finance.Transaction, error)
+	GenerateScheduledPayments(ctx context.Context) error
 }
 
 // Dependencies contains all parameters for Coordinator initialization.
