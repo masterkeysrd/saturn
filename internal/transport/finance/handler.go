@@ -371,12 +371,18 @@ func (h *Handler) CreateExpense(ctx context.Context, req *financev1.CreateExpens
 		transactionDate = expense.GetTransactionDate().AsTime()
 	}
 
+	var effectiveDate time.Time
+	if expense.GetEffectiveDate() != nil {
+		effectiveDate = expense.GetEffectiveDate().AsTime()
+	}
+
 	appReq := &financeapp.CreateExpenseRequest{
 		BudgetID:        finance.BudgetID(expense.GetBudgetId()),
 		Amount:          expense.GetAmount(),
 		Currency:        currency,
 		Description:     expense.GetDescription(),
 		TransactionDate: transactionDate,
+		EffectiveDate:   effectiveDate,
 	}
 
 	txn, err := h.Coordinator.CreateExpense(ctx, appReq)
@@ -403,6 +409,11 @@ func (h *Handler) UpdateExpense(ctx context.Context, req *financev1.UpdateExpens
 		transactionDate = expense.GetTransactionDate().AsTime()
 	}
 
+	var effectiveDate time.Time
+	if expense.GetEffectiveDate() != nil {
+		effectiveDate = expense.GetEffectiveDate().AsTime()
+	}
+
 	tID, err := finance.ParseTransactionID(req.GetId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -415,6 +426,7 @@ func (h *Handler) UpdateExpense(ctx context.Context, req *financev1.UpdateExpens
 		Currency:        currency,
 		Description:     expense.GetDescription(),
 		TransactionDate: transactionDate,
+		EffectiveDate:   effectiveDate,
 	}
 
 	txn, err := h.Coordinator.UpdateExpense(ctx, appReq)
@@ -514,6 +526,7 @@ func toProtoTransaction(t *finance.Transaction) *financev1.Transaction {
 		AmountInBase:    t.AmountInBase,
 		Description:     t.Description,
 		TransactionDate: timestamppb.New(t.TransactionDate),
+		EffectiveDate:   timestamppb.New(t.EffectiveDate),
 		CreateTime:      timestamppb.New(t.CreateTime),
 		UpdateTime:      timestamppb.New(t.UpdateTime),
 	}
@@ -609,6 +622,7 @@ func toProtoInsightsResponse(in *finance.SpentInsights) *financev1.GetInsightsRe
 			AmountInBase:    t.AmountInBase,
 			BudgetName:      t.BudgetName,
 			TransactionDate: timestamppb.New(t.TransactionDate),
+			EffectiveDate:   timestamppb.New(t.EffectiveDate),
 		})
 	}
 

@@ -13,6 +13,7 @@ type CreateExpenseRequest struct {
 	Currency        finance.Currency
 	Description     string
 	TransactionDate time.Time
+	EffectiveDate   time.Time
 }
 
 type ListTransactionsRequest struct {
@@ -33,6 +34,11 @@ func (c *Coordinator) CreateExpense(ctx context.Context, req *CreateExpenseReque
 		date = time.Now().UTC()
 	}
 
+	effectiveDate := req.EffectiveDate
+	if effectiveDate.IsZero() {
+		effectiveDate = date
+	}
+
 	txn := &finance.Transaction{
 		SpaceID:         rCtx.SpaceID,
 		BudgetID:        &req.BudgetID,
@@ -40,6 +46,7 @@ func (c *Coordinator) CreateExpense(ctx context.Context, req *CreateExpenseReque
 		Currency:        req.Currency,
 		Description:     req.Description,
 		TransactionDate: date.UTC(),
+		EffectiveDate:   effectiveDate.UTC(),
 	}
 
 	return c.financeService.CreateExpense(ctx, txn)
@@ -76,6 +83,7 @@ type UpdateExpenseRequest struct {
 	Currency        finance.Currency
 	Description     string
 	TransactionDate time.Time
+	EffectiveDate   time.Time
 }
 
 func (c *Coordinator) UpdateExpense(ctx context.Context, req *UpdateExpenseRequest) (*finance.Transaction, error) {
@@ -89,6 +97,11 @@ func (c *Coordinator) UpdateExpense(ctx context.Context, req *UpdateExpenseReque
 		date = time.Now().UTC()
 	}
 
+	effectiveDate := req.EffectiveDate
+	if effectiveDate.IsZero() {
+		effectiveDate = date
+	}
+
 	txn := &finance.Transaction{
 		ID:              req.TransactionID,
 		SpaceID:         rCtx.SpaceID,
@@ -97,6 +110,7 @@ func (c *Coordinator) UpdateExpense(ctx context.Context, req *UpdateExpenseReque
 		Currency:        req.Currency,
 		Description:     req.Description,
 		TransactionDate: date.UTC(),
+		EffectiveDate:   effectiveDate.UTC(),
 	}
 
 	return c.financeService.UpdateExpense(ctx, txn)

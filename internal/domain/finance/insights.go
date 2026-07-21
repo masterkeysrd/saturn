@@ -65,6 +65,7 @@ type TopExpense struct {
 	AmountInBase    int64
 	BudgetName      string
 	TransactionDate time.Time
+	EffectiveDate   time.Time
 }
 
 // SpentInsights aggregates all calculated outflow analytics.
@@ -115,6 +116,7 @@ type HighValueExpense struct {
 	AmountInBase    int64
 	BudgetName      string
 	TransactionDate time.Time
+	EffectiveDate   time.Time
 }
 
 // GetSpentInsightsRequest encapsulates parameter options for retrieving spent insights.

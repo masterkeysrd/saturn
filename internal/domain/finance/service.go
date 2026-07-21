@@ -262,6 +262,9 @@ func (s *Service) DeleteExchangeRate(ctx context.Context, spaceID SpaceID, fromC
 // CreateExpense logs a new expense transaction.
 func (s *Service) CreateExpense(ctx context.Context, txn *Transaction) (*Transaction, error) {
 	txn.Type = TransactionTypeExpense
+	if txn.EffectiveDate.IsZero() {
+		txn.EffectiveDate = txn.TransactionDate
+	}
 	if txn.BudgetID == nil {
 		return nil, errors.New("expense transaction requires a budget ID")
 	}
@@ -279,7 +282,7 @@ func (s *Service) CreateExpense(ctx context.Context, txn *Transaction) (*Transac
 	}
 
 	// Find/generate the corresponding budget period
-	period, err := s.GetOrCreatePeriod(ctx, budget.ID, txn.TransactionDate)
+	period, err := s.GetOrCreatePeriod(ctx, budget.ID, txn.EffectiveDate)
 	if err != nil {
 		return nil, fmt.Errorf("resolve active budget period: %w", err)
 	}
@@ -330,6 +333,9 @@ func (s *Service) DeleteTransaction(ctx context.Context, id TransactionID) error
 // UpdateExpense modifies an existing expense transaction.
 func (s *Service) UpdateExpense(ctx context.Context, txn *Transaction) (*Transaction, error) {
 	txn.Type = TransactionTypeExpense
+	if txn.EffectiveDate.IsZero() {
+		txn.EffectiveDate = txn.TransactionDate
+	}
 	if txn.BudgetID == nil {
 		return nil, errors.New("expense transaction requires a budget ID")
 	}
@@ -353,7 +359,7 @@ func (s *Service) UpdateExpense(ctx context.Context, txn *Transaction) (*Transac
 	}
 
 	// Find/generate the corresponding budget period
-	period, err := s.GetOrCreatePeriod(ctx, budget.ID, txn.TransactionDate)
+	period, err := s.GetOrCreatePeriod(ctx, budget.ID, txn.EffectiveDate)
 	if err != nil {
 		return nil, fmt.Errorf("resolve active budget period: %w", err)
 	}
@@ -551,6 +557,7 @@ func (s *Service) GetSpentInsights(ctx context.Context, req *GetSpentInsightsReq
 			AmountInBase:    r.AmountInBase,
 			BudgetName:      r.BudgetName,
 			TransactionDate: r.TransactionDate,
+			EffectiveDate:   r.EffectiveDate,
 		})
 	}
 

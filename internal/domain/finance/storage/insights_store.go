@@ -44,7 +44,7 @@ func (s *InsightsStore) GetSpentTrend(ctx context.Context, filter *finance.Spent
 	}
 
 	query := fmt.Sprintf(`SELECT 
-		date_trunc('%s', t.transaction_date) as interval_start,
+		date_trunc('%s', t.effective_date) as interval_start,
 		COALESCE(t.budget_id, '') as budget_id,
 		COALESCE(b.name, '') as budget_name,
 		COALESCE(b.color, '') as budget_color,
@@ -54,7 +54,7 @@ func (s *InsightsStore) GetSpentTrend(ctx context.Context, filter *finance.Spent
 		SUM(t.amount) as spent_in_local
 	FROM finance.transaction t
 	LEFT JOIN finance.budget b ON t.budget_id = b.id
-	WHERE t.space_id = $1 AND t.transaction_date >= $2 AND t.transaction_date <= $3
+	WHERE t.space_id = $1 AND t.effective_date >= $2 AND t.effective_date <= $3
 	GROUP BY interval_start, t.budget_id, b.name, b.color, b.currency
 	ORDER BY interval_start ASC`, trunc)
 
@@ -108,7 +108,7 @@ func (s *InsightsStore) GetBudgetDistribution(ctx context.Context, filter *finan
 			COALESCE(SUM(amount_in_base), 0) as spent_in_base,
 			COALESCE(SUM(CASE WHEN currency = b.currency THEN amount ELSE 0 END), 0) as spent_in_local_matching
 		FROM finance.transaction
-		WHERE budget_id = b.id AND transaction_date >= $2 AND transaction_date <= $3
+		WHERE budget_id = b.id AND effective_date >= $2 AND effective_date <= $3
 	) t ON TRUE
 	LEFT JOIN LATERAL (
 		SELECT exchange_rate_to_base 
@@ -148,6 +148,7 @@ type topExpenseRow struct {
 	AmountInBase    int64     `db:"amount_in_base"`
 	BudgetName      string    `db:"budget_name"`
 	TransactionDate time.Time `db:"transaction_date"`
+	EffectiveDate   time.Time `db:"effective_date"`
 }
 
 func (s *InsightsStore) GetTopExpenses(ctx context.Context, filter *finance.TopExpensesFilter) ([]*finance.TopExpense, error) {
@@ -158,10 +159,11 @@ func (s *InsightsStore) GetTopExpenses(ctx context.Context, filter *finance.TopE
 		t.currency,
 		t.amount_in_base,
 		COALESCE(b.name, '') as budget_name,
-		t.transaction_date
+		t.transaction_date,
+		t.effective_date
 	FROM finance.transaction t
 	LEFT JOIN finance.budget b ON t.budget_id = b.id
-	WHERE t.space_id = $1 AND t.transaction_date >= $2 AND t.transaction_date <= $3
+	WHERE t.space_id = $1 AND t.effective_date >= $2 AND t.effective_date <= $3
 	ORDER BY t.amount_in_base DESC
 	LIMIT $4`
 
@@ -180,6 +182,7 @@ func (s *InsightsStore) GetTopExpenses(ctx context.Context, filter *finance.TopE
 			AmountInBase:    r.AmountInBase,
 			BudgetName:      r.BudgetName,
 			TransactionDate: r.TransactionDate,
+			EffectiveDate:   r.EffectiveDate,
 		}
 	}
 	return results, nil

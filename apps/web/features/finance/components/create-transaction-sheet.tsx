@@ -24,6 +24,8 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select"
+import { DatePicker } from "@/components/ui/date-picker"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface CreateTransactionSheetProps {
   open: boolean
@@ -56,12 +58,14 @@ export function CreateTransactionSheet({
   refetchBudgets,
   getConversionPreview,
 }: CreateTransactionSheetProps) {
+  const [transactionDate, setTransactionDate] = useState<Date>(new Date())
+  const [effectiveDate, setEffectiveDate] = useState<Date>(new Date())
+  const [hasCustomEffectiveDate, setHasCustomEffectiveDate] = useState(false)
+
   const [budgetId, setBudgetId] = useState(preselectedBudgetId || "")
   const [description, setDescription] = useState("")
   const [amount, setAmount] = useState("")
   const [currency, setCurrency] = useState(baseCurrency || "USD")
-  const [dateStr, setDateStr] = useState(new Date().toISOString().split("T")[0])
-
   const [prevOpen, setPrevOpen] = useState(false)
   const [prevPreselectedBudgetId, setPrevPreselectedBudgetId] = useState<
     string | undefined
@@ -85,8 +89,19 @@ export function CreateTransactionSheet({
       setDescription(editTransaction.description)
       setAmount(formatCents(editTransaction.amount).toString())
       setCurrency(editTransaction.currency)
-      setDateStr(
+      setTransactionDate(new Date(editTransaction.transactionDate))
+      const isCustomEff =
+        new Date(
+          editTransaction.effectiveDate || editTransaction.transactionDate
+        )
+          .toISOString()
+          .split("T")[0] !==
         new Date(editTransaction.transactionDate).toISOString().split("T")[0]
+      setHasCustomEffectiveDate(isCustomEff)
+      setEffectiveDate(
+        new Date(
+          editTransaction.effectiveDate || editTransaction.transactionDate
+        )
       )
     } else {
       const selected =
@@ -94,7 +109,9 @@ export function CreateTransactionSheet({
       setBudgetId(selected)
       setDescription("")
       setAmount("")
-      setDateStr(new Date().toISOString().split("T")[0])
+      setTransactionDate(new Date())
+      setEffectiveDate(new Date())
+      setHasCustomEffectiveDate(false)
 
       const b = budgets.find((x) => x.id === selected)
       if (b) {
@@ -126,8 +143,18 @@ export function CreateTransactionSheet({
     e.preventDefault()
     if (!budgetId) return
 
-    // Convert date string to ISO timestamp
-    const dateObj = new Date(dateStr + "T12:00:00Z")
+    // Format dates to stable ISO-8601 without local timezone shift
+    const toLocalISODate = (d: Date): string => {
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, "0")
+      const date = String(d.getDate()).padStart(2, "0")
+      return `${y}-${m}-${date}T12:00:00Z`
+    }
+
+    const txDateStr = toLocalISODate(transactionDate)
+    const effDateStr = toLocalISODate(
+      hasCustomEffectiveDate ? effectiveDate : transactionDate
+    )
 
     if (editTransaction) {
       await updateExpenseMutation.mutateAsync({
@@ -141,7 +168,8 @@ export function CreateTransactionSheet({
             amount: toCentsString(amount),
             currency,
             description,
-            transactionDate: dateObj.toISOString(),
+            transactionDate: txDateStr,
+            effectiveDate: effDateStr,
           },
         },
       })
@@ -155,7 +183,8 @@ export function CreateTransactionSheet({
             amount: toCentsString(amount),
             currency,
             description,
-            transactionDate: dateObj.toISOString(),
+            transactionDate: txDateStr,
+            effectiveDate: effDateStr,
           },
         },
       })
@@ -235,21 +264,69 @@ export function CreateTransactionSheet({
             />
           </div>
 
-          {/* Date */}
-          <div className="space-y-2">
-            <Label
-              htmlFor="txDate"
-              className="text-xs font-bold tracking-wider text-muted-foreground uppercase"
-            >
-              Transaction Date
-            </Label>
-            <Input
-              id="txDate"
-              type="date"
-              value={dateStr}
-              onChange={(e) => setDateStr(e.target.value)}
-              className="h-12 rounded-xl border-border/60 bg-background/50"
-            />
+          {/* Date Configurations Grouped */}
+          <div className="space-y-3.5">
+            {/* Transaction Date (Full Width) */}
+            <div className="space-y-2">
+              <Label
+                htmlFor="txDate"
+                className="text-xs font-bold tracking-wider text-muted-foreground uppercase"
+              >
+                Transaction Date
+              </Label>
+              <DatePicker
+                date={transactionDate}
+                setDate={(newDate) => {
+                  if (newDate) {
+                    setTransactionDate(newDate)
+                    // Keep effective date aligned unless they manually customized it
+                    if (!hasCustomEffectiveDate) {
+                      setEffectiveDate(newDate)
+                    }
+                  }
+                }}
+              />
+            </div>
+
+            {/* Ask user if effective date is different */}
+            <div className="flex items-center gap-2.5 py-1 select-none">
+              <Checkbox
+                id="txCustomEffective"
+                checked={hasCustomEffectiveDate}
+                onCheckedChange={(checked) => {
+                  setHasCustomEffectiveDate(!!checked)
+                  if (!checked) {
+                    setEffectiveDate(transactionDate)
+                  }
+                }}
+              />
+              <Label
+                htmlFor="txCustomEffective"
+                className="cursor-pointer text-xs font-semibold text-foreground/80"
+              >
+                Is this payment effective on a different date?
+              </Label>
+            </div>
+
+            {/* Conditional Effective Date Picker */}
+            {hasCustomEffectiveDate && (
+              <div className="slide-in-from-top-1.5 animate-in space-y-2 duration-200">
+                <Label
+                  htmlFor="txEffectiveDate"
+                  className="text-xs font-bold tracking-wider text-muted-foreground uppercase"
+                >
+                  Effective Date
+                </Label>
+                <DatePicker
+                  date={effectiveDate}
+                  setDate={(newDate) => {
+                    if (newDate) {
+                      setEffectiveDate(newDate)
+                    }
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           {/* Amount & Currency Joined */}

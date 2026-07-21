@@ -68,12 +68,16 @@ type Transaction struct {
 	AmountInBase    int64 // Unsigned in workspace base currency cents
 	Description     string
 	TransactionDate time.Time
+	EffectiveDate   time.Time
 	CreateTime      time.Time
 	UpdateTime      time.Time
 }
 
 // Validate checks basic properties of a transaction.
 func (t *Transaction) Validate() error {
+	if t.EffectiveDate.IsZero() {
+		t.EffectiveDate = t.TransactionDate
+	}
 	if err := t.ID.Validate(); err != nil {
 		return fmt.Errorf("validate transaction ID: %w", err)
 	}

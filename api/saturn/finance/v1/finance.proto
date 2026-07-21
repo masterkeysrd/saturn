@@ -280,6 +280,7 @@ message Transaction {
   google.protobuf.Timestamp transaction_date = 10;
   google.protobuf.Timestamp create_time = 11;
   google.protobuf.Timestamp update_time = 12;
+  google.protobuf.Timestamp effective_date = 13;
 }
 
 message ExpenseInput {
@@ -288,6 +289,7 @@ message ExpenseInput {
   string currency = 3 [(google.api.field_behavior) = REQUIRED];
   string description = 4;
   google.protobuf.Timestamp transaction_date = 5;
+  google.protobuf.Timestamp effective_date = 6;
 }
 
 message CreateExpenseRequest {
@@ -385,6 +387,7 @@ message SpentInsights {
     int64 amount_in_base = 5;
     string budget_name = 6;
     google.protobuf.Timestamp transaction_date = 7;
+    google.protobuf.Timestamp effective_date = 8;
   }
 
   repeated HighValueExpense top_expenses = 7;

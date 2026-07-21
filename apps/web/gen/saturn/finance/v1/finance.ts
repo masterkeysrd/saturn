@@ -217,6 +217,7 @@ export interface Transaction {
   transactionDate: string
   createTime: string
   updateTime: string
+  effectiveDate: string
 }
 
 export interface ExpenseInput {
@@ -225,6 +226,7 @@ export interface ExpenseInput {
   currency: string
   description: string
   transactionDate: string
+  effectiveDate: string
 }
 
 export interface CreateExpenseRequest {
@@ -314,6 +316,7 @@ export interface SpentInsights_HighValueExpense {
   amountInBase: string
   budgetName: string
   transactionDate: string
+  effectiveDate: string
 }
 
 export type GenerateScheduledPaymentsPayload = Record<string, never>

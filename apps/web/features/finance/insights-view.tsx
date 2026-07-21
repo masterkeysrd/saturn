@@ -18,6 +18,7 @@ import {
   CoinsIcon,
   Loader2,
 } from "lucide-react"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 export function InsightsView() {
   const { spaceId, settings } = useWorkspaceFinance()
@@ -482,44 +483,50 @@ export function InsightsView() {
                 No purchases logged in this period.
               </div>
             ) : (
-              <div className="max-h-[260px] scrollbar-thin space-y-3 overflow-y-auto pr-1.5">
-                {spentInsights.topExpenses.map((exp, idx) => (
-                  <div
-                    key={exp.transactionId}
-                    className="flex items-center justify-between border-b border-muted/10 pb-2.5 last:border-0 last:pb-0"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-500/10 font-mono text-[9px] font-black text-rose-500">
-                        #{idx + 1}
+              <ScrollArea className="h-[260px]">
+                <div className="space-y-3 pr-3">
+                  {spentInsights.topExpenses.map((exp, idx) => (
+                    <div
+                      key={exp.transactionId}
+                      className="flex items-center justify-between border-b border-muted/10 pb-2.5 last:border-0 last:pb-0"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-500/10 font-mono text-[9px] font-black text-rose-500">
+                          #{idx + 1}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="block max-w-[150px] truncate text-xs font-semibold text-foreground sm:max-w-none">
+                            {exp.description || "Unspecified Expense"}
+                          </span>
+                          <span className="block text-[9px] text-muted-foreground">
+                            {exp.budgetName} •{" "}
+                            {new Date(exp.transactionDate).toLocaleDateString(
+                              undefined,
+                              {
+                                month: "short",
+                                day: "numeric",
+                                timeZone: "UTC",
+                              }
+                            )}
+                          </span>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <span className="block max-w-[150px] truncate text-xs font-semibold text-foreground sm:max-w-none">
-                          {exp.description || "Unspecified Expense"}
-                        </span>
-                        <span className="block text-[9px] text-muted-foreground">
-                          {exp.budgetName} •{" "}
-                          {new Date(exp.transactionDate).toLocaleDateString(
-                            undefined,
-                            { month: "short", day: "numeric", timeZone: "UTC" }
-                          )}
-                        </span>
-                      </div>
-                    </div>
 
-                    <div className="text-right">
-                      <span className="text-xs font-bold text-rose-500">
-                        -{exp.currency} {formatCents(exp.amount).toFixed(2)}
-                      </span>
-                      {exp.currency !== baseCurrency && (
-                        <span className="block text-[9px] text-muted-foreground">
-                          {baseCurrency}{" "}
-                          {formatCents(exp.amountInBase).toFixed(2)}
+                      <div className="text-right">
+                        <span className="text-xs font-bold text-rose-500">
+                          -{exp.currency} {formatCents(exp.amount).toFixed(2)}
                         </span>
-                      )}
+                        {exp.currency !== baseCurrency && (
+                          <span className="block text-[9px] text-muted-foreground">
+                            {baseCurrency}{" "}
+                            {formatCents(exp.amountInBase).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </ScrollArea>
             )}
           </div>
         </div>

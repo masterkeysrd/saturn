@@ -23,6 +23,7 @@ type transactionDB struct {
 	AmountInBase    int64          `db:"amount_in_base"`
 	Description     string         `db:"description"`
 	TransactionDate sql.NullTime   `db:"transaction_date"`
+	EffectiveDate   sql.NullTime   `db:"effective_date"`
 	CreateTime      sql.NullTime   `db:"create_time"`
 	UpdateTime      sql.NullTime   `db:"update_time"`
 }
@@ -36,8 +37,8 @@ func NewTransactionStore(db *sqlx.DB) *TransactionStore {
 }
 
 func (s *TransactionStore) Create(ctx context.Context, t *finance.Transaction) error {
-	query := `INSERT INTO finance.transaction (id, space_id, type, budget_id, period_id, amount, currency, amount_in_base, description, transaction_date, create_time, update_time)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
+	query := `INSERT INTO finance.transaction (id, space_id, type, budget_id, period_id, amount, currency, amount_in_base, description, transaction_date, effective_date, create_time, update_time)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`
 
 	var budgetID, periodID sql.NullString
 	if t.BudgetID != nil {
@@ -50,7 +51,7 @@ func (s *TransactionStore) Create(ctx context.Context, t *finance.Transaction) e
 	_, err := s.db.ExecContext(ctx, query,
 		string(t.ID), string(t.SpaceID), string(t.Type), budgetID, periodID,
 		t.Amount, string(t.Currency), t.AmountInBase, t.Description,
-		t.TransactionDate, t.CreateTime, t.UpdateTime,
+		t.TransactionDate, t.EffectiveDate, t.CreateTime, t.UpdateTime,
 	)
 	return err
 }
@@ -87,6 +88,7 @@ func (s *TransactionStore) GetByID(ctx context.Context, id finance.TransactionID
 		AmountInBase:    row.AmountInBase,
 		Description:     row.Description,
 		TransactionDate: nullTimeToTime(row.TransactionDate),
+		EffectiveDate:   nullTimeToTime(row.EffectiveDate),
 		CreateTime:      nullTimeToTime(row.CreateTime),
 		UpdateTime:      nullTimeToTime(row.UpdateTime),
 	}, nil
@@ -117,7 +119,8 @@ func (s *TransactionStore) Update(ctx context.Context, t *finance.Transaction) e
 		amount_in_base = $6, 
 		description = $7, 
 		transaction_date = $8, 
-		update_time = $9 
+		effective_date = $9,
+		update_time = $10 
 		WHERE id = $1`
 
 	var budgetID, periodID sql.NullString
@@ -131,7 +134,7 @@ func (s *TransactionStore) Update(ctx context.Context, t *finance.Transaction) e
 	res, err := s.db.ExecContext(ctx, query,
 		string(t.ID), budgetID, periodID,
 		t.Amount, string(t.Currency), t.AmountInBase, t.Description,
-		t.TransactionDate, t.UpdateTime,
+		t.TransactionDate, t.EffectiveDate, t.UpdateTime,
 	)
 	if err != nil {
 		return err
@@ -180,7 +183,7 @@ func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 		argIndex++
 	}
 
-	query := fmt.Sprintf(`SELECT * FROM finance.transaction WHERE %s ORDER BY transaction_date DESC, id DESC LIMIT $%d`, strings.Join(conditions, " AND "), argIndex)
+	query := fmt.Sprintf(`SELECT * FROM finance.transaction WHERE %s ORDER BY effective_date DESC, transaction_date DESC, id DESC LIMIT $%d`, strings.Join(conditions, " AND "), argIndex)
 	args = append(args, filter.PageSize+1)
 
 	var rows []transactionDB
@@ -217,6 +220,7 @@ func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 			AmountInBase:    rows[i].AmountInBase,
 			Description:     rows[i].Description,
 			TransactionDate: nullTimeToTime(rows[i].TransactionDate),
+			EffectiveDate:   nullTimeToTime(rows[i].EffectiveDate),
 			CreateTime:      nullTimeToTime(rows[i].CreateTime),
 			UpdateTime:      nullTimeToTime(rows[i].UpdateTime),
 		})

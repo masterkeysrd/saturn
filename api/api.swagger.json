@@ -2089,6 +2089,10 @@
         "transactionDate": {
           "type": "string",
           "format": "date-time"
+        },
+        "effectiveDate": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },
@@ -2425,6 +2429,10 @@
           "type": "string"
         },
         "transactionDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "effectiveDate": {
           "type": "string",
           "format": "date-time"
         }
@@ -2992,6 +3000,10 @@
           "format": "date-time"
         },
         "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "effectiveDate": {
           "type": "string",
           "format": "date-time"
         }
