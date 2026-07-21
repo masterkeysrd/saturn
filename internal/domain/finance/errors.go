@@ -9,4 +9,6 @@ var (
 	ErrPeriodNotFound       = errors.New("budget period not found")
 	ErrExchangeRateNotFound = errors.New("exchange rate not found")
 	ErrTransactionNotFound  = errors.New("transaction not found")
+	ErrBorrowingNotFound    = errors.New("borrowing not found")
+	ErrRepaymentNotFound    = errors.New("borrowing repayment not found")
 )

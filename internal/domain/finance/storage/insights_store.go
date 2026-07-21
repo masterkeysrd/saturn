@@ -54,7 +54,7 @@ func (s *InsightsStore) GetSpentTrend(ctx context.Context, filter *finance.Spent
 		SUM(t.amount) as spent_in_local
 	FROM finance.transaction t
 	LEFT JOIN finance.budget b ON t.budget_id = b.id
-	WHERE t.space_id = $1 AND t.effective_date >= $2 AND t.effective_date <= $3
+	WHERE t.space_id = $1 AND t.type = 'EXPENSE' AND t.effective_date >= $2 AND t.effective_date <= $3
 	GROUP BY interval_start, t.budget_id, b.name, b.color, b.currency
 	ORDER BY interval_start ASC`, trunc)
 
@@ -108,7 +108,7 @@ func (s *InsightsStore) GetBudgetDistribution(ctx context.Context, filter *finan
 			COALESCE(SUM(amount_in_base), 0) as spent_in_base,
 			COALESCE(SUM(CASE WHEN currency = b.currency THEN amount ELSE 0 END), 0) as spent_in_local_matching
 		FROM finance.transaction
-		WHERE budget_id = b.id AND effective_date >= $2 AND effective_date <= $3
+		WHERE budget_id = b.id AND type = 'EXPENSE' AND effective_date >= $2 AND effective_date <= $3
 	) t ON TRUE
 	LEFT JOIN LATERAL (
 		SELECT exchange_rate_to_base 
@@ -163,7 +163,7 @@ func (s *InsightsStore) GetTopExpenses(ctx context.Context, filter *finance.TopE
 		t.effective_date
 	FROM finance.transaction t
 	LEFT JOIN finance.budget b ON t.budget_id = b.id
-	WHERE t.space_id = $1 AND t.effective_date >= $2 AND t.effective_date <= $3
+	WHERE t.space_id = $1 AND t.type = 'EXPENSE' AND t.effective_date >= $2 AND t.effective_date <= $3
 	ORDER BY t.amount_in_base DESC
 	LIMIT $4`
 

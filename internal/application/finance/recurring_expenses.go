@@ -154,7 +154,12 @@ func (c *Coordinator) ConfirmScheduledPayment(ctx context.Context, req *ConfirmS
 		return nil, err
 	}
 
-	return c.financeService.ConfirmScheduledPayment(ctx, req.PaymentID, req.TransactionDate, req.EffectiveDate, req.ActualAmount)
+	return c.financeService.ConfirmScheduledPayment(ctx, finance.ConfirmScheduledPaymentRequest{
+		PaymentID:       req.PaymentID,
+		TransactionDate: req.TransactionDate,
+		EffectiveDate:   req.EffectiveDate,
+		ActualAmount:    req.ActualAmount,
+	})
 }
 
 func (c *Coordinator) GenerateScheduledPayments(ctx context.Context) error {

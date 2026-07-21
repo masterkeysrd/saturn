@@ -143,6 +143,60 @@ service Finance {
       body: "*"
     };
   }
+
+  // CreateBorrowing logs a new personal lent/borrowed debt agreement.
+  rpc CreateBorrowing(CreateBorrowingRequest) returns (Borrowing) {
+    option (google.api.http) = {
+      post: "/v1/spaces/{space_id}/finance/borrowings"
+      body: "*"
+    };
+  }
+
+  // GetBorrowing retrieves a single borrowing record.
+  rpc GetBorrowing(GetBorrowingRequest) returns (Borrowing) {
+    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/borrowings/{id}"};
+  }
+
+  // ListBorrowings returns borrowings for a space, optionally filtered.
+  rpc ListBorrowings(ListBorrowingsRequest) returns (ListBorrowingsResponse) {
+    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/borrowings"};
+  }
+
+  // UpdateBorrowing updates basic details of a borrowing record.
+  rpc UpdateBorrowing(UpdateBorrowingRequest) returns (Borrowing) {
+    option (google.api.http) = {
+      put: "/v1/spaces/{space_id}/finance/borrowings/{id}"
+      body: "*"
+    };
+  }
+
+  // DeleteBorrowing removes a borrowing and all its repayments.
+  rpc DeleteBorrowing(DeleteBorrowingRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/spaces/{space_id}/finance/borrowings/{id}"};
+  }
+
+  // CreateBorrowingRepayment records an installment payment towards a borrowing.
+  rpc CreateBorrowingRepayment(CreateBorrowingRepaymentRequest) returns (BorrowingRepayment) {
+    option (google.api.http) = {
+      post: "/v1/spaces/{space_id}/finance/borrowings/{borrowing_id}/repayments"
+      body: "*"
+    };
+  }
+
+  // ListBorrowingRepayments returns all repayments for a specific borrowing.
+  rpc ListBorrowingRepayments(ListBorrowingRepaymentsRequest) returns (ListBorrowingRepaymentsResponse) {
+    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/borrowings/{borrowing_id}/repayments"};
+  }
+
+  // DeleteBorrowingRepayment deletes a specific installment and restores the balance.
+  rpc DeleteBorrowingRepayment(DeleteBorrowingRepaymentRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/spaces/{space_id}/finance/borrowings/{borrowing_id}/repayments/{id}"};
+  }
+
+  // ListCurrencies returns the list of supported currencies.
+  rpc ListCurrencies(ListCurrenciesRequest) returns (ListCurrenciesResponse) {
+    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/currencies"};
+  }
 }
 
 enum RecurrenceInterval {
@@ -534,4 +588,131 @@ message ConfirmScheduledPaymentRequest {
   google.protobuf.Timestamp transaction_date = 3 [(google.api.field_behavior) = REQUIRED];
   google.protobuf.Timestamp effective_date = 4 [(google.api.field_behavior) = REQUIRED];
   int64 actual_amount = 5 [(google.api.field_behavior) = REQUIRED];
+}
+
+enum BorrowingDirection {
+  BORROWING_DIRECTION_UNSPECIFIED = 0;
+  BORROWING_DIRECTION_BORROWED = 1;
+  BORROWING_DIRECTION_LENT = 2;
+}
+
+enum BorrowingStatus {
+  BORROWING_STATUS_UNSPECIFIED = 0;
+  BORROWING_STATUS_ACTIVE = 1;
+  BORROWING_STATUS_PAID_OFF = 2;
+}
+
+message Borrowing {
+  string id = 1;
+  string space_id = 2;
+  BorrowingDirection direction = 3;
+  string counterparty = 4;
+  string contact_info = 5;
+  int64 total_amount = 6;
+  int64 remaining_amount = 7;
+  string currency = 8;
+  BorrowingStatus status = 9;
+  google.protobuf.Timestamp established_at = 10;
+  google.protobuf.Timestamp due_at = 11;
+  bool create_as_transaction = 12;
+  string notes = 13;
+  google.protobuf.Timestamp create_time = 14;
+  google.protobuf.Timestamp update_time = 15;
+}
+
+message BorrowingRepayment {
+  string id = 1;
+  string borrowing_id = 2;
+  string space_id = 3;
+  int64 amount = 4;
+  google.protobuf.Timestamp payment_date = 5;
+  string notes = 6;
+  google.protobuf.Timestamp create_time = 7;
+  google.protobuf.Timestamp update_time = 8;
+}
+
+message BorrowingInput {
+  BorrowingDirection direction = 1 [(google.api.field_behavior) = REQUIRED];
+  string counterparty = 2 [(google.api.field_behavior) = REQUIRED];
+  string contact_info = 3;
+  int64 total_amount = 4 [(google.api.field_behavior) = REQUIRED];
+  string currency = 5 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.Timestamp established_at = 6 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.Timestamp due_at = 7;
+  string notes = 8;
+  bool create_as_transaction = 9;
+}
+
+message CreateBorrowingRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  BorrowingInput borrowing = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message GetBorrowingRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string id = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message ListBorrowingsRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  optional BorrowingStatus status = 2;
+  optional BorrowingDirection direction = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+}
+
+message ListBorrowingsResponse {
+  repeated Borrowing borrowings = 1;
+  string next_page_token = 2;
+}
+
+message UpdateBorrowingRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string id = 2 [(google.api.field_behavior) = REQUIRED];
+  BorrowingInput borrowing = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DeleteBorrowingRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string id = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message BorrowingRepaymentInput {
+  int64 amount = 1 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.Timestamp payment_date = 2 [(google.api.field_behavior) = REQUIRED];
+  string notes = 3;
+}
+
+message CreateBorrowingRepaymentRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string borrowing_id = 2 [(google.api.field_behavior) = REQUIRED];
+  BorrowingRepaymentInput repayment = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+message ListBorrowingRepaymentsRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string borrowing_id = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message ListBorrowingRepaymentsResponse {
+  repeated BorrowingRepayment repayments = 1;
+}
+
+message DeleteBorrowingRepaymentRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string borrowing_id = 2 [(google.api.field_behavior) = REQUIRED];
+  string id = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+message CurrencyInfo {
+  string code = 1;
+  string name = 2;
+}
+
+message ListCurrenciesRequest {
+  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message ListCurrenciesResponse {
+  repeated CurrencyInfo currencies = 1;
 }

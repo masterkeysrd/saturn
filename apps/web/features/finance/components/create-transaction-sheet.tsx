@@ -5,6 +5,7 @@ import {
   type Budget,
   type Transaction,
 } from "@/gen/saturn/finance/v1/finance"
+import { useWorkspaceFinance } from "../use-workspace-finance"
 import {
   Sheet,
   SheetContent,
@@ -59,6 +60,17 @@ export function CreateTransactionSheet({
   refetchBudgets,
   getConversionPreview,
 }: CreateTransactionSheetProps) {
+  const { currencies } = useWorkspaceFinance()
+  const fallbackCurrencies = [
+    { code: "USD" },
+    { code: "EUR" },
+    { code: "GBP" },
+    { code: "CAD" },
+    { code: "JPY" },
+    { code: "DOP" },
+  ]
+  const currencyList =
+    currencies && currencies.length > 0 ? currencies : fallbackCurrencies
   const [transactionDate, setTransactionDate] = useState<Date>(new Date())
   const [effectiveDate, setEffectiveDate] = useState<Date>(new Date())
   const [hasCustomEffectiveDate, setHasCustomEffectiveDate] = useState(false)
@@ -364,12 +376,11 @@ export function CreateTransactionSheet({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="EUR">EUR</SelectItem>
-                  <SelectItem value="GBP">GBP</SelectItem>
-                  <SelectItem value="CAD">CAD</SelectItem>
-                  <SelectItem value="JPY">JPY</SelectItem>
-                  <SelectItem value="DOP">DOP</SelectItem>
+                  {currencyList.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.code}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

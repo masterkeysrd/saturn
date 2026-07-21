@@ -13,6 +13,10 @@ type TransactionType string
 const (
 	TransactionTypeExpense TransactionType = "EXPENSE"
 	TransactionTypeIncome  TransactionType = "INCOME"
+
+	SourceTypeBorrowing          = "borrowing"
+	SourceTypeBorrowingRepayment = "borrowing_repayment"
+	SourceTypeRecurrentExpense   = "recurrent_expense"
 )
 
 // TransactionID is a custom string type representing a transaction's unique identifier (KSUID).
@@ -99,17 +103,20 @@ func (t *Transaction) Validate() error {
 		return errors.New("transaction amount in base currency must be greater than zero")
 	}
 	if t.Type == TransactionTypeExpense {
-		if t.BudgetID == nil {
-			return errors.New("expense transaction requires a budget ID")
-		}
-		if err := t.BudgetID.Validate(); err != nil {
-			return fmt.Errorf("validate budget ID: %w", err)
-		}
-		if t.PeriodID == nil {
-			return errors.New("expense transaction requires a period ID")
-		}
-		if err := t.PeriodID.Validate(); err != nil {
-			return fmt.Errorf("validate period ID: %w", err)
+		isBorrowing := t.SourceType != nil && (*t.SourceType == SourceTypeBorrowing || *t.SourceType == SourceTypeBorrowingRepayment)
+		if !isBorrowing {
+			if t.BudgetID == nil {
+				return errors.New("expense transaction requires a budget ID")
+			}
+			if err := t.BudgetID.Validate(); err != nil {
+				return fmt.Errorf("validate budget ID: %w", err)
+			}
+			if t.PeriodID == nil {
+				return errors.New("expense transaction requires a period ID")
+			}
+			if err := t.PeriodID.Validate(); err != nil {
+				return fmt.Errorf("validate period ID: %w", err)
+			}
 		}
 	}
 	return nil

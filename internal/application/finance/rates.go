@@ -62,5 +62,10 @@ func (c *Coordinator) DeleteExchangeRate(ctx context.Context, req *DeleteExchang
 		return err
 	}
 
-	return c.financeService.DeleteExchangeRate(ctx, rCtx.SpaceID, req.FromCurrency, req.ToCurrency, req.RateDate)
+	return c.financeService.DeleteExchangeRate(ctx, finance.DeleteExchangeRateRequest{
+		SpaceID:      rCtx.SpaceID,
+		FromCurrency: req.FromCurrency,
+		ToCurrency:   req.ToCurrency,
+		RateDate:     req.RateDate,
+	})
 }

@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/select"
 import {
   ArrowUpRight,
+  ArrowDownLeft,
+  Coins,
   Trash2,
   Filter,
   Receipt,
@@ -21,7 +23,14 @@ import {
   Loader2,
   Edit2,
   Repeat,
+  MoreVertical,
 } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
 import { useWorkspaceFinance } from "./use-workspace-finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import { formatCents, getBudgetColors, getBudgetIcon } from "./utils"
@@ -261,19 +270,17 @@ export function TransactionsView() {
                   return (
                     <div
                       key={t.id}
-                      className="group relative flex items-center justify-between rounded-2xl border border-border/40 bg-card/25 p-4 shadow-sm backdrop-blur-sm transition-all duration-300 hover:scale-[1.005] hover:bg-card/35 hover:shadow-md"
+                      className="group relative grid grid-cols-12 items-center gap-4 rounded-2xl border border-border/40 bg-card/25 p-4 shadow-sm backdrop-blur-sm transition-all duration-300 hover:scale-[1.005] hover:bg-card/35 hover:shadow-md"
                     >
-                      {/* Left: Avatar with dynamic colors/icons */}
-                      <div className="flex items-center gap-4">
+                      {/* Column 1: Icon & Description (col-span-5) */}
+                      <div className="col-span-5 flex min-w-0 items-center gap-4">
                         <div
                           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${colors.bg} ${colors.text} border ${colors.border}`}
                         >
                           {createElement(iconComp, { className: "h-5 w-5" })}
                         </div>
-
-                        {/* Middle: Details */}
-                        <div>
-                          <span className="flex items-center gap-2 text-sm font-bold text-foreground transition-colors group-hover:text-primary">
+                        <div className="min-w-0">
+                          <span className="flex flex-wrap items-center gap-2 truncate text-sm font-bold text-foreground transition-colors group-hover:text-primary">
                             {t.description || (
                               <span className="text-xs font-normal text-muted-foreground/50 italic">
                                 No description
@@ -285,6 +292,26 @@ export function TransactionsView() {
                                 Recurring
                               </span>
                             )}
+                            {t.sourceType === "borrowing" &&
+                              t.type === "EXPENSE" && (
+                                <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-amber-500 uppercase select-none">
+                                  <ArrowUpRight className="h-2.5 w-2.5" />
+                                  Lend
+                                </span>
+                              )}
+                            {t.sourceType === "borrowing" &&
+                              t.type === "INCOME" && (
+                                <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-emerald-500 uppercase select-none">
+                                  <ArrowDownLeft className="h-2.5 w-2.5" />
+                                  Borrow
+                                </span>
+                              )}
+                            {t.sourceType === "borrowing_repayment" && (
+                              <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-blue-500 uppercase select-none">
+                                <Coins className="h-2.5 w-2.5" />
+                                Repayment
+                              </span>
+                            )}
                           </span>
                           <div className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
                             <span
@@ -292,66 +319,101 @@ export function TransactionsView() {
                             >
                               {details.name}
                             </span>
-                            <span>•</span>
-                            <span className="font-mono text-[11px] text-muted-foreground/80">
-                              {new Date(t.transactionDate).toLocaleDateString(
-                                undefined,
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                  timeZone: "UTC",
-                                }
-                              )}
-                            </span>
                           </div>
                         </div>
                       </div>
 
-                      {/* Right: Amounts & Delete Actions */}
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <span className="block text-base font-extrabold tracking-tight text-foreground">
-                            {amtLocal.toLocaleString(undefined, {
+                      {/* Column 2: Transaction Type Badge (col-span-2) */}
+                      <div className="col-span-2">
+                        <span
+                          className={`inline-flex items-center rounded border px-2 py-0.5 text-[9px] font-extrabold uppercase select-none ${
+                            t.type === "INCOME"
+                              ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
+                              : t.type === "EXPENSE"
+                                ? "border-rose-500/20 bg-rose-500/10 text-rose-500"
+                                : "border-border/30 bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {t.type}
+                        </span>
+                      </div>
+
+                      {/* Column 3: Date (col-span-2) */}
+                      <div className="col-span-2 font-mono text-xs text-muted-foreground/80">
+                        {new Date(t.transactionDate).toLocaleDateString(
+                          undefined,
+                          {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                            timeZone: "UTC",
+                          }
+                        )}
+                      </div>
+
+                      {/* Column 4: Amount (col-span-2 text-right) */}
+                      <div className="col-span-2 min-w-0 pr-2 text-right">
+                        <span
+                          className={`block text-base font-extrabold tracking-tight ${
+                            t.type === "INCOME"
+                              ? "text-emerald-500"
+                              : "text-foreground"
+                          } truncate`}
+                        >
+                          {t.type === "INCOME" ? "+" : "-"}
+                          {amtLocal.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                          <span className="ml-1 text-[10px] font-bold text-muted-foreground uppercase">
+                            {t.currency}
+                          </span>
+                        </span>
+                        {isCrossCurrency && (
+                          <span className="mt-0.5 flex items-center justify-end gap-0.5 truncate font-mono text-[10px] text-muted-foreground">
+                            {t.type === "INCOME" ? "+" : "-"}
+                            {amtBase.toLocaleString(undefined, {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2,
-                            })}
-                            <span className="ml-1 text-[10px] font-bold text-muted-foreground uppercase">
-                              {t.currency}
-                            </span>
+                            })}{" "}
+                            {settings?.baseCurrency}
                           </span>
-                          {isCrossCurrency && (
-                            <span className="mt-0.5 flex items-center justify-end gap-0.5 font-mono text-[10px] text-muted-foreground">
-                              <ArrowUpRight className="h-3 w-3 shrink-0 text-muted-foreground/60" />
-                              {amtBase.toLocaleString(undefined, {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}{" "}
-                              {settings?.baseCurrency}
-                            </span>
-                          )}
-                        </div>
+                        )}
+                      </div>
 
+                      {/* Column 5: Actions (col-span-1 text-right) */}
+                      <div className="col-span-1 flex justify-end">
                         {isWritable && (
-                          <div className="flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEditTrigger(t)}
-                              className="h-8 w-8 shrink-0 cursor-pointer rounded-lg text-muted-foreground hover:bg-muted/40"
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              disabled={deleteMutation.isPending}
-                              onClick={() => handleDelete(t.id)}
-                              className="h-8 w-8 shrink-0 cursor-pointer rounded-lg text-destructive hover:bg-destructive/10"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              render={
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 shrink-0 cursor-pointer rounded-lg text-muted-foreground hover:bg-muted/40"
+                                >
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              }
+                            />
+                            <DropdownMenuContent align="end" className="w-36">
+                              <DropdownMenuItem
+                                onClick={() => handleEditTrigger(t)}
+                                className="flex cursor-pointer items-center gap-2"
+                              >
+                                <Edit2 className="h-4 w-4" />
+                                <span>Edit</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(t.id)}
+                                disabled={deleteMutation.isPending}
+                                className="flex cursor-pointer items-center gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                <span>Delete</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         )}
                       </div>
                     </div>

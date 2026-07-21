@@ -120,12 +120,12 @@ func (m *mockExchangeRateStore) Create(ctx context.Context, r *ExchangeRate) err
 	return nil
 }
 
-func (m *mockExchangeRateStore) GetRate(ctx context.Context, spaceID SpaceID, fromCurrency, toCurrency Currency, rateDate time.Time) (*ExchangeRate, error) {
+func (m *mockExchangeRateStore) GetRate(ctx context.Context, query ExchangeRateKey) (*ExchangeRate, error) {
 	// Look up rate exactly, or fallback to the closest date before
 	var best *ExchangeRate
 	for _, r := range m.rates {
-		if r.SpaceID == spaceID && r.FromCurrency == fromCurrency && r.ToCurrency == toCurrency {
-			if !r.RateDate.After(rateDate) {
+		if r.SpaceID == query.SpaceID && r.FromCurrency == query.FromCurrency && r.ToCurrency == query.ToCurrency {
+			if !r.RateDate.After(query.RateDate) {
 				if best == nil || r.RateDate.After(best.RateDate) {
 					best = r
 				}
@@ -148,8 +148,8 @@ func (m *mockExchangeRateStore) ListBySpace(ctx context.Context, spaceID SpaceID
 	return results, "", nil
 }
 
-func (m *mockExchangeRateStore) Delete(ctx context.Context, spaceID SpaceID, fromCurrency, toCurrency Currency, rateDate time.Time) error {
-	key := string(spaceID) + "_" + string(fromCurrency) + "_" + string(toCurrency) + "_" + rateDate.Format("2006-01-02")
+func (m *mockExchangeRateStore) Delete(ctx context.Context, query ExchangeRateKey) error {
+	key := string(query.SpaceID) + "_" + string(query.FromCurrency) + "_" + string(query.ToCurrency) + "_" + query.RateDate.Format("2006-01-02")
 	delete(m.rates, key)
 	return nil
 }

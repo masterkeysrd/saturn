@@ -941,6 +941,347 @@
         ]
       }
     },
+    "/v1/spaces/{spaceId}/finance/borrowings": {
+      "get": {
+        "summary": "ListBorrowings returns borrowings for a space, optionally filtered.",
+        "operationId": "Finance_ListBorrowings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListBorrowingsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "BORROWING_STATUS_ACTIVE",
+              "BORROWING_STATUS_PAID_OFF"
+            ]
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "BORROWING_DIRECTION_BORROWED",
+              "BORROWING_DIRECTION_LENT"
+            ]
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "post": {
+        "summary": "CreateBorrowing logs a new personal lent/borrowed debt agreement.",
+        "operationId": "Finance_CreateBorrowing",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Borrowing"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceCreateBorrowingBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/finance/borrowings/{borrowingId}/repayments": {
+      "get": {
+        "summary": "ListBorrowingRepayments returns all repayments for a specific borrowing.",
+        "operationId": "Finance_ListBorrowingRepayments",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListBorrowingRepaymentsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "borrowingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "post": {
+        "summary": "CreateBorrowingRepayment records an installment payment towards a borrowing.",
+        "operationId": "Finance_CreateBorrowingRepayment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BorrowingRepayment"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "borrowingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceCreateBorrowingRepaymentBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/finance/borrowings/{borrowingId}/repayments/{id}": {
+      "delete": {
+        "summary": "DeleteBorrowingRepayment deletes a specific installment and restores the balance.",
+        "operationId": "Finance_DeleteBorrowingRepayment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "borrowingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/finance/borrowings/{id}": {
+      "get": {
+        "summary": "GetBorrowing retrieves a single borrowing record.",
+        "operationId": "Finance_GetBorrowing",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Borrowing"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteBorrowing removes a borrowing and all its repayments.",
+        "operationId": "Finance_DeleteBorrowing",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "put": {
+        "summary": "UpdateBorrowing updates basic details of a borrowing record.",
+        "operationId": "Finance_UpdateBorrowing",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Borrowing"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceUpdateBorrowingBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/spaces/{spaceId}/finance/budgets": {
       "get": {
         "summary": "ListBudgets lists all budget templates in a workspace.",
@@ -1141,6 +1482,37 @@
             "schema": {
               "$ref": "#/definitions/FinanceUpdateBudgetBody"
             }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/finance/currencies": {
+      "get": {
+        "summary": "ListCurrencies returns the list of supported currencies.",
+        "operationId": "Finance_ListCurrencies",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCurrenciesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -2096,6 +2468,28 @@
         "actualAmount"
       ]
     },
+    "FinanceCreateBorrowingBody": {
+      "type": "object",
+      "properties": {
+        "borrowing": {
+          "$ref": "#/definitions/v1BorrowingInput"
+        }
+      },
+      "required": [
+        "borrowing"
+      ]
+    },
+    "FinanceCreateBorrowingRepaymentBody": {
+      "type": "object",
+      "properties": {
+        "repayment": {
+          "$ref": "#/definitions/v1BorrowingRepaymentInput"
+        }
+      },
+      "required": [
+        "repayment"
+      ]
+    },
     "FinanceCreateBudgetBody": {
       "type": "object",
       "properties": {
@@ -2202,6 +2596,17 @@
         "currency",
         "interval",
         "nextDueDate"
+      ]
+    },
+    "FinanceUpdateBorrowingBody": {
+      "type": "object",
+      "properties": {
+        "borrowing": {
+          "$ref": "#/definitions/v1BorrowingInput"
+        }
+      },
+      "required": [
+        "borrowing"
       ]
     },
     "FinanceUpdateBudgetBody": {
@@ -2664,6 +3069,171 @@
         }
       }
     },
+    "v1Borrowing": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "spaceId": {
+          "type": "string"
+        },
+        "direction": {
+          "$ref": "#/definitions/v1BorrowingDirection"
+        },
+        "counterparty": {
+          "type": "string"
+        },
+        "contactInfo": {
+          "type": "string"
+        },
+        "totalAmount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "remainingAmount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1BorrowingStatus"
+        },
+        "establishedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "dueAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createAsTransaction": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1BorrowingDirection": {
+      "type": "string",
+      "enum": [
+        "BORROWING_DIRECTION_BORROWED",
+        "BORROWING_DIRECTION_LENT"
+      ]
+    },
+    "v1BorrowingInput": {
+      "type": "object",
+      "properties": {
+        "direction": {
+          "$ref": "#/definitions/v1BorrowingDirection"
+        },
+        "counterparty": {
+          "type": "string"
+        },
+        "contactInfo": {
+          "type": "string"
+        },
+        "totalAmount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "establishedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "dueAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "createAsTransaction": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "direction",
+        "counterparty",
+        "totalAmount",
+        "currency",
+        "establishedAt"
+      ]
+    },
+    "v1BorrowingRepayment": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "borrowingId": {
+          "type": "string"
+        },
+        "spaceId": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "paymentDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1BorrowingRepaymentInput": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "paymentDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "amount",
+        "paymentDate"
+      ]
+    },
+    "v1BorrowingStatus": {
+      "type": "string",
+      "enum": [
+        "BORROWING_STATUS_ACTIVE",
+        "BORROWING_STATUS_PAID_OFF"
+      ]
+    },
     "v1Budget": {
       "type": "object",
       "properties": {
@@ -2775,6 +3345,17 @@
       "required": [
         "name"
       ]
+    },
+    "v1CurrencyInfo": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
     },
     "v1DeleteSpaceResponse": {
       "type": "object",
@@ -2952,6 +3533,33 @@
       },
       "description": "ListActiveSessionsResponse lists active sessions."
     },
+    "v1ListBorrowingRepaymentsResponse": {
+      "type": "object",
+      "properties": {
+        "repayments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1BorrowingRepayment"
+          }
+        }
+      }
+    },
+    "v1ListBorrowingsResponse": {
+      "type": "object",
+      "properties": {
+        "borrowings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Borrowing"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
     "v1ListBudgetsResponse": {
       "type": "object",
       "properties": {
@@ -2967,6 +3575,18 @@
         }
       },
       "description": "ListBudgetsResponse contains paginated budgets."
+    },
+    "v1ListCurrenciesResponse": {
+      "type": "object",
+      "properties": {
+        "currencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CurrencyInfo"
+          }
+        }
+      }
     },
     "v1ListExchangeRatesResponse": {
       "type": "object",

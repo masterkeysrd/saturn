@@ -180,16 +180,20 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	insightsStore := financestorage.NewInsightsStore(sqlxDB)
 	recurringExpenseStore := financestorage.NewRecurringExpenseStore(sqlxDB)
 	scheduledPaymentStore := financestorage.NewScheduledPaymentStore(sqlxDB)
+	borrowingStore := financestorage.NewBorrowingStore(sqlxDB)
+	borrowingRepaymentStore := financestorage.NewBorrowingRepaymentStore(sqlxDB)
 
 	financeService := finance.NewService(finance.Dependencies{
-		SettingsStore:         settingsStore,
-		BudgetStore:           budgetStore,
-		PeriodStore:           periodStore,
-		ExchangeRateStore:     rateStore,
-		TransactionStore:      transactionStore,
-		InsightsStore:         insightsStore,
-		RecurringExpenseStore: recurringExpenseStore,
-		ScheduledPaymentStore: scheduledPaymentStore,
+		SettingsStore:           settingsStore,
+		BudgetStore:             budgetStore,
+		PeriodStore:             periodStore,
+		ExchangeRateStore:       rateStore,
+		TransactionStore:        transactionStore,
+		InsightsStore:           insightsStore,
+		RecurringExpenseStore:   recurringExpenseStore,
+		ScheduledPaymentStore:   scheduledPaymentStore,
+		BorrowingStore:          borrowingStore,
+		BorrowingRepaymentStore: borrowingRepaymentStore,
 	})
 
 	financeCoordinator := financeapp.NewCoordinator(financeapp.Dependencies{

@@ -37,13 +37,13 @@ func (s *ExchangeRateStore) Create(ctx context.Context, r *finance.ExchangeRate)
 	return err
 }
 
-func (s *ExchangeRateStore) GetRate(ctx context.Context, spaceID finance.SpaceID, fromCurrency, toCurrency finance.Currency, rateDate time.Time) (*finance.ExchangeRate, error) {
+func (s *ExchangeRateStore) GetRate(ctx context.Context, key finance.ExchangeRateKey) (*finance.ExchangeRate, error) {
 	var row exchangeRateDB
 	// Lookup the rate on the closest date <= target date.
-	query := `SELECT * FROM finance.exchange_rate 
+	q := `SELECT * FROM finance.exchange_rate 
 		WHERE space_id = $1 AND from_currency = $2 AND to_currency = $3 AND rate_date <= $4 
 		ORDER BY rate_date DESC LIMIT 1`
-	if err := s.db.GetContext(ctx, &row, query, string(spaceID), string(fromCurrency), string(toCurrency), rateDate.Format("2006-01-02")); err != nil {
+	if err := s.db.GetContext(ctx, &row, q, string(key.SpaceID), string(key.FromCurrency), string(key.ToCurrency), key.RateDate.Format("2006-01-02")); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, finance.ErrExchangeRateNotFound
 		}
@@ -125,8 +125,8 @@ func (s *ExchangeRateStore) ListBySpace(ctx context.Context, spaceID finance.Spa
 	return rates, nextToken, nil
 }
 
-func (s *ExchangeRateStore) Delete(ctx context.Context, spaceID finance.SpaceID, fromCurrency, toCurrency finance.Currency, rateDate time.Time) error {
-	query := `DELETE FROM finance.exchange_rate WHERE space_id = $1 AND from_currency = $2 AND to_currency = $3 AND rate_date = $4`
-	_, err := s.db.ExecContext(ctx, query, string(spaceID), string(fromCurrency), string(toCurrency), rateDate.Format("2006-01-02"))
+func (s *ExchangeRateStore) Delete(ctx context.Context, key finance.ExchangeRateKey) error {
+	q := `DELETE FROM finance.exchange_rate WHERE space_id = $1 AND from_currency = $2 AND to_currency = $3 AND rate_date = $4`
+	_, err := s.db.ExecContext(ctx, q, string(key.SpaceID), string(key.FromCurrency), string(key.ToCurrency), key.RateDate.Format("2006-01-02"))
 	return err
 }

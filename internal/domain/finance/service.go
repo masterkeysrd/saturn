@@ -9,14 +9,16 @@ import (
 
 // Dependencies defines the required persistence adapters for the service.
 type Dependencies struct {
-	SettingsStore         SettingsStore
-	BudgetStore           BudgetStore
-	PeriodStore           PeriodStore
-	ExchangeRateStore     ExchangeRateStore
-	TransactionStore      TransactionStore
-	InsightsStore         InsightsStore
-	RecurringExpenseStore RecurringExpenseStore
-	ScheduledPaymentStore ScheduledPaymentStore
+	SettingsStore           SettingsStore
+	BudgetStore             BudgetStore
+	PeriodStore             PeriodStore
+	ExchangeRateStore       ExchangeRateStore
+	TransactionStore        TransactionStore
+	InsightsStore           InsightsStore
+	RecurringExpenseStore   RecurringExpenseStore
+	ScheduledPaymentStore   ScheduledPaymentStore
+	BorrowingStore          BorrowingStore
+	BorrowingRepaymentStore BorrowingRepaymentStore
 }
 
 // Service implements the domain-level finance operations.
@@ -175,7 +177,12 @@ func (s *Service) GetOrCreatePeriod(ctx context.Context, budgetID BudgetID, date
 	// Determine exchange rate to base currency
 	var rate float64 = 1.0
 	if budget.Currency != settings.BaseCurrency {
-		rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, budget.SpaceID, budget.Currency, settings.BaseCurrency, date)
+		rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, ExchangeRateKey{
+			SpaceID:      budget.SpaceID,
+			FromCurrency: Currency(budget.Currency),
+			ToCurrency:   Currency(settings.BaseCurrency),
+			RateDate:     date,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("fetch exchange rate from %s to %s for date %s: %w", budget.Currency, settings.BaseCurrency, date.Format("2006-01-02"), err)
 		}
@@ -244,21 +251,34 @@ func (s *Service) ListExchangeRates(ctx context.Context, spaceID SpaceID, filter
 	return s.deps.ExchangeRateStore.ListBySpace(ctx, spaceID, filter)
 }
 
+// DeleteExchangeRateRequest represents parameters to delete an exchange rate conversion rule.
+type DeleteExchangeRateRequest struct {
+	SpaceID      SpaceID
+	FromCurrency Currency
+	ToCurrency   Currency
+	RateDate     time.Time
+}
+
 // DeleteExchangeRate removes a daily rate conversion rule.
-func (s *Service) DeleteExchangeRate(ctx context.Context, spaceID SpaceID, fromCurrency, toCurrency Currency, rateDate time.Time) error {
-	if err := spaceID.Validate(); err != nil {
+func (s *Service) DeleteExchangeRate(ctx context.Context, req DeleteExchangeRateRequest) error {
+	if err := req.SpaceID.Validate(); err != nil {
 		return fmt.Errorf("validate space ID: %w", err)
 	}
-	if err := fromCurrency.Validate(); err != nil {
+	if err := req.FromCurrency.Validate(); err != nil {
 		return fmt.Errorf("validate from currency: %w", err)
 	}
-	if err := toCurrency.Validate(); err != nil {
+	if err := req.ToCurrency.Validate(); err != nil {
 		return fmt.Errorf("validate to currency: %w", err)
 	}
-	if rateDate.IsZero() {
+	if req.RateDate.IsZero() {
 		return errors.New("rate date is required")
 	}
-	return s.deps.ExchangeRateStore.Delete(ctx, spaceID, fromCurrency, toCurrency, rateDate)
+	return s.deps.ExchangeRateStore.Delete(ctx, ExchangeRateKey{
+		SpaceID:      req.SpaceID,
+		FromCurrency: req.FromCurrency,
+		ToCurrency:   req.ToCurrency,
+		RateDate:     req.RateDate,
+	})
 }
 
 // CreateExpense logs a new expense transaction.
@@ -293,7 +313,12 @@ func (s *Service) CreateExpense(ctx context.Context, txn *Transaction) (*Transac
 	// Determine transaction conversion rate to base currency
 	var rate float64 = 1.0
 	if txn.Currency != settings.BaseCurrency {
-		rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, txn.SpaceID, txn.Currency, settings.BaseCurrency, txn.TransactionDate)
+		rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, ExchangeRateKey{
+			SpaceID:      txn.SpaceID,
+			FromCurrency: txn.Currency,
+			ToCurrency:   settings.BaseCurrency,
+			RateDate:     txn.TransactionDate,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("fetch exchange rate from %s to %s for date %s: %w", txn.Currency, settings.BaseCurrency, txn.TransactionDate.Format("2006-01-02"), err)
 		}
@@ -370,7 +395,12 @@ func (s *Service) UpdateExpense(ctx context.Context, txn *Transaction) (*Transac
 	// Determine transaction conversion rate to base currency
 	var rate float64 = 1.0
 	if txn.Currency != settings.BaseCurrency {
-		rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, txn.SpaceID, txn.Currency, settings.BaseCurrency, txn.TransactionDate)
+		rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, ExchangeRateKey{
+			SpaceID:      txn.SpaceID,
+			FromCurrency: txn.Currency,
+			ToCurrency:   settings.BaseCurrency,
+			RateDate:     txn.TransactionDate,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("fetch exchange rate from %s to %s for date %s: %w", txn.Currency, settings.BaseCurrency, txn.TransactionDate.Format("2006-01-02"), err)
 		}
@@ -404,6 +434,11 @@ func (s *Service) ListTransactions(ctx context.Context, spaceID SpaceID, filter 
 func (s *Service) GetSpentInsights(ctx context.Context, req *GetSpentInsightsRequest) (*SpentInsights, error) {
 	if err := req.SpaceID.Validate(); err != nil {
 		return nil, fmt.Errorf("validate space ID: %w", err)
+	}
+
+	settings, err := s.deps.SettingsStore.GetByID(ctx, req.SpaceID)
+	if err != nil {
+		return nil, fmt.Errorf("verify workspace settings: %w", err)
 	}
 
 	g, err := ParseGranularity(req.Granularity)
@@ -499,6 +534,15 @@ func (s *Service) GetSpentInsights(ctx context.Context, req *GetSpentInsightsReq
 				AmountInLocal: row.SpentInLocal,
 				LocalCurrency: row.BudgetCurrency,
 			})
+		} else {
+			currentPoint.Contributions = append(currentPoint.Contributions, &BudgetContribution{
+				BudgetID:      "unbudgeted",
+				BudgetName:    "Unbudgeted",
+				BudgetColor:   "#94a3b8",
+				AmountInBase:  row.SpentInBase,
+				AmountInLocal: row.SpentInLocal,
+				LocalCurrency: string(settings.BaseCurrency),
+			})
 		}
 	}
 
@@ -511,10 +555,17 @@ func (s *Service) GetSpentInsights(ctx context.Context, req *GetSpentInsightsReq
 		}
 	}
 
+	var unbudgetedSpentInBase int64
+	for _, row := range trendRows {
+		if row.BudgetID == "" {
+			unbudgetedSpentInBase += row.SpentInBase
+		}
+	}
+
 	// 2. Map budget distributions
 	var totalSpent int64
 	var totalLimit int64
-	distributions := make([]*BudgetUsage, 0, len(distRows))
+	distributions := make([]*BudgetUsage, 0, len(distRows)+1)
 
 	for _, r := range distRows {
 		totalSpent += r.SpentInBase
@@ -537,6 +588,20 @@ func (s *Service) GetSpentInsights(ctx context.Context, req *GetSpentInsightsReq
 			Spent:           r.SpentInLocalMatching,
 			SpentInBase:     r.SpentInBase,
 			UsagePercentage: usagePct,
+		})
+	}
+
+	if unbudgetedSpentInBase > 0 {
+		totalSpent += unbudgetedSpentInBase
+		distributions = append(distributions, &BudgetUsage{
+			BudgetID:        "unbudgeted",
+			BudgetName:      "Unbudgeted",
+			BudgetColor:     "#94a3b8",
+			BudgetIcon:      "Coins",
+			Limit:           0,
+			Spent:           unbudgetedSpentInBase,
+			SpentInBase:     unbudgetedSpentInBase,
+			UsagePercentage: 0.0,
 		})
 	}
 
@@ -650,9 +715,17 @@ func (s *Service) ListScheduledPayments(ctx context.Context, spaceID SpaceID, fi
 	return s.deps.ScheduledPaymentStore.ListBySpace(ctx, spaceID, filter)
 }
 
+// ConfirmScheduledPaymentRequest represents parameters to confirm a scheduled payment.
+type ConfirmScheduledPaymentRequest struct {
+	PaymentID       ScheduledPaymentID
+	TransactionDate time.Time
+	EffectiveDate   time.Time
+	ActualAmount    int64
+}
+
 // ConfirmScheduledPayment clears a scheduled payment by promoting it to a permanent transaction.
-func (s *Service) ConfirmScheduledPayment(ctx context.Context, paymentID ScheduledPaymentID, transactionDate time.Time, effectiveDate time.Time, actualAmount int64) (*Transaction, error) {
-	payment, err := s.deps.ScheduledPaymentStore.GetByID(ctx, paymentID)
+func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmScheduledPaymentRequest) (*Transaction, error) {
+	payment, err := s.deps.ScheduledPaymentStore.GetByID(ctx, req.PaymentID)
 	if err != nil {
 		return nil, err
 	}
@@ -668,7 +741,7 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, paymentID Schedul
 	}
 
 	// Resolve budget period for the transaction based on effectiveDate
-	period, err := s.GetOrCreatePeriod(ctx, budget.ID, effectiveDate)
+	period, err := s.GetOrCreatePeriod(ctx, budget.ID, req.EffectiveDate)
 	if err != nil {
 		return nil, err
 	}
@@ -676,17 +749,22 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, paymentID Schedul
 	// Calculate base currency conversion
 	var rate float64 = 1.0
 	if payment.Currency != settings.BaseCurrency {
-		rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, payment.SpaceID, payment.Currency, settings.BaseCurrency, transactionDate)
+		rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, ExchangeRateKey{
+			SpaceID:      payment.SpaceID,
+			FromCurrency: payment.Currency,
+			ToCurrency:   settings.BaseCurrency,
+			RateDate:     req.TransactionDate,
+		})
 		if err != nil {
 			return nil, err
 		}
 		rate = rateRecord.Rate
 	}
 
-	amountInBase := int64(float64(actualAmount) * rate)
+	amountInBase := int64(float64(req.ActualAmount) * rate)
 
 	description := "Scheduled Payment"
-	if payment.SourceType == "recurrent_expense" {
+	if payment.SourceType == SourceTypeRecurrentExpense {
 		if exp, err := s.deps.RecurringExpenseStore.GetByID(ctx, RecurringExpenseID(payment.SourceID)); err == nil {
 			description = exp.Name
 		}
@@ -703,12 +781,12 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, paymentID Schedul
 		Type:            TransactionTypeExpense,
 		BudgetID:        &payment.BudgetID,
 		PeriodID:        &period.ID,
-		Amount:          actualAmount,
+		Amount:          req.ActualAmount,
 		Currency:        payment.Currency,
 		AmountInBase:    amountInBase,
 		Description:     description,
-		TransactionDate: transactionDate,
-		EffectiveDate:   effectiveDate,
+		TransactionDate: req.TransactionDate,
+		EffectiveDate:   req.EffectiveDate,
 		SourceType:      &payment.SourceType,
 		SourceID:        &payment.SourceID,
 		CreateTime:      time.Now().UTC(),
@@ -723,7 +801,7 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, paymentID Schedul
 		return nil, err
 	}
 
-	if err := s.deps.ScheduledPaymentStore.Delete(ctx, paymentID); err != nil {
+	if err := s.deps.ScheduledPaymentStore.Delete(ctx, req.PaymentID); err != nil {
 		return nil, err
 	}
 
@@ -751,7 +829,7 @@ func (s *Service) GenerateScheduledPayments(ctx context.Context) error {
 				ID:         spID,
 				SpaceID:    re.SpaceID,
 				BudgetID:   re.BudgetID,
-				SourceType: "recurrent_expense",
+				SourceType: SourceTypeRecurrentExpense,
 				SourceID:   string(re.ID),
 				Amount:     re.Amount,
 				Currency:   re.Currency,
@@ -789,4 +867,473 @@ func (s *Service) GenerateScheduledPayments(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+type syncTransactionParams struct {
+	SpaceID         SpaceID
+	SourceID        string
+	SourceType      string
+	Amount          int64
+	Currency        Currency
+	TransactionDate time.Time
+	Description     string
+	Type            TransactionType
+}
+
+// Helper to create or update associated transaction
+func (s *Service) syncTransaction(ctx context.Context, params syncTransactionParams) error {
+	// Find if transaction already exists
+	st := params.SourceType
+	si := params.SourceID
+	existingTxs, _, err := s.deps.TransactionStore.ListBySpace(ctx, params.SpaceID, &ListTransactionsFilter{
+		SourceType: &st,
+		SourceID:   &si,
+		PageSize:   1,
+	})
+	if err != nil {
+		return fmt.Errorf("list existing transactions: %w", err)
+	}
+
+	settings, err := s.deps.SettingsStore.GetByID(ctx, params.SpaceID)
+	if err != nil {
+		return fmt.Errorf("verify workspace settings: %w", err)
+	}
+
+	var rate float64 = 1.0
+	if params.Currency != settings.BaseCurrency {
+		rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, ExchangeRateKey{
+			SpaceID:      params.SpaceID,
+			FromCurrency: params.Currency,
+			ToCurrency:   settings.BaseCurrency,
+			RateDate:     params.TransactionDate,
+		})
+		if err != nil {
+			return fmt.Errorf("fetch exchange rate from %s to %s for date %s: %w", params.Currency, settings.BaseCurrency, params.TransactionDate.Format("2006-01-02"), err)
+		}
+		rate = rateRecord.Rate
+	}
+	amountInBase := int64(float64(params.Amount) * rate)
+
+	if len(existingTxs) > 0 {
+		txn := existingTxs[0]
+		txn.Amount = params.Amount
+		txn.Currency = params.Currency
+		txn.AmountInBase = amountInBase
+		txn.Description = params.Description
+		txn.TransactionDate = params.TransactionDate
+		txn.EffectiveDate = params.TransactionDate
+		txn.Type = params.Type
+		txn.UpdateTime = time.Now().UTC()
+		if err := txn.Validate(); err != nil {
+			return err
+		}
+		if err := s.deps.TransactionStore.Update(ctx, txn); err != nil {
+			return fmt.Errorf("update transaction: %w", err)
+		}
+	} else {
+		tID, err := NewTransactionID()
+		if err != nil {
+			return err
+		}
+		txn := &Transaction{
+			ID:              tID,
+			SpaceID:         params.SpaceID,
+			Type:            params.Type,
+			Amount:          params.Amount,
+			Currency:        params.Currency,
+			AmountInBase:    amountInBase,
+			Description:     params.Description,
+			TransactionDate: params.TransactionDate,
+			EffectiveDate:   params.TransactionDate,
+			SourceType:      &params.SourceType,
+			SourceID:        &params.SourceID,
+			CreateTime:      time.Now().UTC(),
+			UpdateTime:      time.Now().UTC(),
+		}
+		if err := txn.Validate(); err != nil {
+			return err
+		}
+		if err := s.deps.TransactionStore.Create(ctx, txn); err != nil {
+			return fmt.Errorf("create transaction: %w", err)
+		}
+	}
+	return nil
+}
+
+func (s *Service) deleteTransactionBySource(ctx context.Context, spaceID SpaceID, sourceID string, sourceType string) error {
+	st := sourceType
+	si := sourceID
+	existingTxs, _, err := s.deps.TransactionStore.ListBySpace(ctx, spaceID, &ListTransactionsFilter{
+		SourceType: &st,
+		SourceID:   &si,
+		PageSize:   1,
+	})
+	if err != nil {
+		return err
+	}
+	for _, txn := range existingTxs {
+		if err := s.deps.TransactionStore.Delete(ctx, txn.ID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// CreateBorrowing creates a new borrowing record and syncs a transaction.
+func (s *Service) CreateBorrowing(ctx context.Context, b *Borrowing, createAsTransaction bool) (*Borrowing, error) {
+	if b.ID == "" {
+		bID, err := NewBorrowingID()
+		if err != nil {
+			return nil, err
+		}
+		b.ID = bID
+	}
+	b.RemainingAmount = b.TotalAmount
+	b.Status = BorrowingStatusActive
+	b.CreateTime = time.Now().UTC()
+	b.UpdateTime = time.Now().UTC()
+
+	if err := b.Validate(); err != nil {
+		return nil, err
+	}
+
+	settings, err := s.deps.SettingsStore.GetByID(ctx, b.SpaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	if createAsTransaction && b.Currency != settings.BaseCurrency {
+		_, err := s.deps.ExchangeRateStore.GetRate(ctx, ExchangeRateKey{
+			SpaceID:      b.SpaceID,
+			FromCurrency: b.Currency,
+			ToCurrency:   settings.BaseCurrency,
+			RateDate:     b.EstablishedAt,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("exchange rate not configured from %s to %s for date %s: %w", b.Currency, settings.BaseCurrency, b.EstablishedAt.Format("2006-01-02"), err)
+		}
+	}
+
+	if err := s.deps.BorrowingStore.Create(ctx, b); err != nil {
+		return nil, err
+	}
+
+	if createAsTransaction {
+		// Sync transaction
+		var txnType TransactionType = TransactionTypeExpense
+		var desc string
+		if b.Direction == BorrowingDirectionLent {
+			txnType = TransactionTypeExpense
+			desc = fmt.Sprintf("Lent to %s", b.Counterparty)
+		} else {
+			txnType = TransactionTypeIncome
+			desc = fmt.Sprintf("Borrowed from %s", b.Counterparty)
+		}
+
+		err = s.syncTransaction(ctx, syncTransactionParams{
+			SpaceID:         b.SpaceID,
+			SourceID:        string(b.ID),
+			SourceType:      SourceTypeBorrowing,
+			Amount:          b.TotalAmount,
+			Currency:        b.Currency,
+			TransactionDate: b.EstablishedAt,
+			Description:     desc,
+			Type:            txnType,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return b, nil
+}
+
+// GetBorrowing retrieves a borrowing record.
+func (s *Service) GetBorrowing(ctx context.Context, id BorrowingID) (*Borrowing, error) {
+	if err := id.Validate(); err != nil {
+		return nil, err
+	}
+	return s.deps.BorrowingStore.GetByID(ctx, id)
+}
+
+// ListBorrowings lists borrowing records with filters.
+func (s *Service) ListBorrowings(ctx context.Context, spaceID SpaceID, filter *ListBorrowingsFilter) ([]*Borrowing, string, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, "", err
+	}
+	return s.deps.BorrowingStore.ListBySpace(ctx, spaceID, filter)
+}
+
+// UpdateBorrowing updates a borrowing record and its associated transaction.
+func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing) (*Borrowing, error) {
+	existing, err := s.deps.BorrowingStore.GetByID(ctx, b.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Keep internal fields
+	b.RemainingAmount = existing.RemainingAmount
+	b.Status = existing.Status
+	b.CreateTime = existing.CreateTime
+	b.UpdateTime = time.Now().UTC()
+
+	if err := b.Validate(); err != nil {
+		return nil, err
+	}
+
+	settings, err := s.deps.SettingsStore.GetByID(ctx, b.SpaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if a transaction already exists for this borrowing
+	st := SourceTypeBorrowing
+	si := string(b.ID)
+	existingTxs, _, err := s.deps.TransactionStore.ListBySpace(ctx, b.SpaceID, &ListTransactionsFilter{
+		SourceType: &st,
+		SourceID:   &si,
+		PageSize:   1,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("check existing transaction: %w", err)
+	}
+	hasTransaction := len(existingTxs) > 0
+
+	if hasTransaction && b.Currency != settings.BaseCurrency {
+		_, err := s.deps.ExchangeRateStore.GetRate(ctx, ExchangeRateKey{
+			SpaceID:      b.SpaceID,
+			FromCurrency: b.Currency,
+			ToCurrency:   settings.BaseCurrency,
+			RateDate:     b.EstablishedAt,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("exchange rate not configured from %s to %s for date %s: %w", b.Currency, settings.BaseCurrency, b.EstablishedAt.Format("2006-01-02"), err)
+		}
+	}
+
+	if err := s.deps.BorrowingStore.Update(ctx, b); err != nil {
+		return nil, err
+	}
+
+	if hasTransaction {
+		// Update associated transaction
+		var txnType TransactionType = TransactionTypeExpense
+		var desc string
+		if b.Direction == BorrowingDirectionLent {
+			txnType = TransactionTypeExpense
+			desc = fmt.Sprintf("Lent to %s", b.Counterparty)
+		} else {
+			txnType = TransactionTypeIncome
+			desc = fmt.Sprintf("Borrowed from %s", b.Counterparty)
+		}
+
+		err = s.syncTransaction(ctx, syncTransactionParams{
+			SpaceID:         b.SpaceID,
+			SourceID:        string(b.ID),
+			SourceType:      SourceTypeBorrowing,
+			Amount:          b.TotalAmount,
+			Currency:        b.Currency,
+			TransactionDate: b.EstablishedAt,
+			Description:     desc,
+			Type:            txnType,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return b, nil
+}
+
+// DeleteBorrowing removes a borrowing, its repayments, and their transactions.
+func (s *Service) DeleteBorrowing(ctx context.Context, spaceID SpaceID, id BorrowingID) error {
+	b, err := s.deps.BorrowingStore.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if b.SpaceID != spaceID {
+		return errors.New("borrowing does not belong to space")
+	}
+
+	// 1. Delete associated parent transaction
+	_ = s.deleteTransactionBySource(ctx, spaceID, string(id), SourceTypeBorrowing)
+
+	// 2. Fetch and delete repayments + their transactions
+	repayments, err := s.deps.BorrowingRepaymentStore.ListByBorrowing(ctx, spaceID, id)
+	if err == nil {
+		for _, r := range repayments {
+			_ = s.deleteTransactionBySource(ctx, spaceID, string(r.ID), SourceTypeBorrowingRepayment)
+		}
+	}
+
+	// 3. Delete from DB (foreign key cascade deletes repayments in db)
+	return s.deps.BorrowingStore.Delete(ctx, id)
+}
+
+// CreateBorrowingRepayment logs an installment repayment towards a borrowing.
+func (s *Service) CreateBorrowingRepayment(ctx context.Context, r *BorrowingRepayment) (*BorrowingRepayment, error) {
+	b, err := s.deps.BorrowingStore.GetByID(ctx, r.BorrowingID)
+	if err != nil {
+		return nil, err
+	}
+
+	if r.SpaceID != b.SpaceID {
+		return nil, errors.New("repayment space ID does not match borrowing space ID")
+	}
+
+	if r.Amount <= 0 {
+		return nil, errors.New("repayment amount must be greater than zero")
+	}
+
+	if r.Amount > b.RemainingAmount {
+		return nil, fmt.Errorf("repayment amount %d exceeds remaining borrowing balance %d", r.Amount, b.RemainingAmount)
+	}
+
+	if r.ID == "" {
+		rID, err := NewBorrowingRepaymentID()
+		if err != nil {
+			return nil, err
+		}
+		r.ID = rID
+	}
+	r.CreateTime = time.Now().UTC()
+	r.UpdateTime = time.Now().UTC()
+
+	if err := r.Validate(); err != nil {
+		return nil, err
+	}
+
+	settings, err := s.deps.SettingsStore.GetByID(ctx, r.SpaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	if b.Currency != settings.BaseCurrency {
+		_, err := s.deps.ExchangeRateStore.GetRate(ctx, ExchangeRateKey{
+			SpaceID:      r.SpaceID,
+			FromCurrency: b.Currency,
+			ToCurrency:   settings.BaseCurrency,
+			RateDate:     r.PaymentDate,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("exchange rate not configured from %s to %s for date %s: %w", b.Currency, settings.BaseCurrency, r.PaymentDate.Format("2006-01-02"), err)
+		}
+	}
+
+	// Create repayment
+	if err := s.deps.BorrowingRepaymentStore.Create(ctx, r); err != nil {
+		return nil, err
+	}
+
+	// Update borrowing balance
+	b.RemainingAmount -= r.Amount
+	if b.RemainingAmount == 0 {
+		b.Status = BorrowingStatusPaidOff
+	}
+	b.UpdateTime = time.Now().UTC()
+	if err := s.deps.BorrowingStore.Update(ctx, b); err != nil {
+		return nil, fmt.Errorf("failed to update borrowing balance: %w", err)
+	}
+
+	// Sync transaction for repayment
+	var txnType TransactionType = TransactionTypeIncome
+	var desc string
+	if b.Direction == BorrowingDirectionLent {
+		txnType = TransactionTypeIncome // paid back to us
+		desc = fmt.Sprintf("Repayment from %s", b.Counterparty)
+	} else {
+		txnType = TransactionTypeExpense // we paid them back
+		desc = fmt.Sprintf("Repayment to %s", b.Counterparty)
+	}
+
+	err = s.syncTransaction(ctx, syncTransactionParams{
+		SpaceID:         r.SpaceID,
+		SourceID:        string(r.ID),
+		SourceType:      SourceTypeBorrowingRepayment,
+		Amount:          r.Amount,
+		Currency:        b.Currency,
+		TransactionDate: r.PaymentDate,
+		Description:     desc,
+		Type:            txnType,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
+}
+
+// ListBorrowingRepayments returns repayments for a borrowing.
+func (s *Service) ListBorrowingRepayments(ctx context.Context, spaceID SpaceID, borrowingID BorrowingID) ([]*BorrowingRepayment, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, err
+	}
+	if err := borrowingID.Validate(); err != nil {
+		return nil, err
+	}
+	return s.deps.BorrowingRepaymentStore.ListByBorrowing(ctx, spaceID, borrowingID)
+}
+
+// DeleteBorrowingRepaymentRequest represents parameters to delete a repayment installment.
+type DeleteBorrowingRepaymentRequest struct {
+	SpaceID     SpaceID
+	BorrowingID BorrowingID
+	ID          BorrowingRepaymentID
+}
+
+// DeleteBorrowingRepayment deletes a repayment installment, restoring balance.
+func (s *Service) DeleteBorrowingRepayment(ctx context.Context, req DeleteBorrowingRepaymentRequest) error {
+	b, err := s.deps.BorrowingStore.GetByID(ctx, req.BorrowingID)
+	if err != nil {
+		return err
+	}
+
+	if b.SpaceID != req.SpaceID {
+		return errors.New("borrowing does not belong to space")
+	}
+
+	r, err := s.deps.BorrowingRepaymentStore.GetByID(ctx, req.ID)
+	if err != nil {
+		return err
+	}
+
+	if r.BorrowingID != req.BorrowingID {
+		return errors.New("repayment does not belong to this borrowing")
+	}
+
+	// Delete repayment transaction
+	_ = s.deleteTransactionBySource(ctx, req.SpaceID, string(req.ID), SourceTypeBorrowingRepayment)
+
+	// Delete repayment
+	if err := s.deps.BorrowingRepaymentStore.Delete(ctx, req.ID); err != nil {
+		return err
+	}
+
+	// Restore borrowing balance
+	b.RemainingAmount += r.Amount
+	if b.RemainingAmount > 0 {
+		b.Status = BorrowingStatusActive
+	}
+	b.UpdateTime = time.Now().UTC()
+
+	return s.deps.BorrowingStore.Update(ctx, b)
+}
+
+// CurrencyInfo represents basic currency details.
+type CurrencyInfo struct {
+	Code string
+	Name string
+}
+
+// ListCurrencies returns the list of supported currencies.
+func (s *Service) ListCurrencies(ctx context.Context) ([]CurrencyInfo, error) {
+	return []CurrencyInfo{
+		{Code: "USD", Name: "US Dollar"},
+		{Code: "EUR", Name: "Euro"},
+		{Code: "GBP", Name: "British Pound"},
+		{Code: "CAD", Name: "Canadian Dollar"},
+		{Code: "JPY", Name: "Japanese Yen"},
+		{Code: "DOP", Name: "Dominican Peso"},
+	}, nil
 }

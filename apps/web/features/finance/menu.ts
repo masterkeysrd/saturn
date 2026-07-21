@@ -29,6 +29,10 @@ export const menu: FeatureMenu = {
       url: "/finance/rates",
     },
     {
+      title: "Borrowings",
+      url: "/finance/borrowings",
+    },
+    {
       title: "Settings",
       url: "/finance/settings",
     },

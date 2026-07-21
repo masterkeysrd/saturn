@@ -3,6 +3,7 @@ import {
   useGetFinanceSettingsQuery,
   useListBudgetsQuery,
   useListExchangeRatesQuery,
+  useListCurrenciesQuery,
   type ExchangeRate,
 } from "@/gen/saturn/finance/v1/finance"
 
@@ -47,6 +48,10 @@ export function useWorkspaceFinance() {
     { enabled: !!settings }
   )
 
+  // 4. Fetch Supported Currencies
+  const { data: currenciesData, isLoading: currenciesLoading } =
+    useListCurrenciesQuery({ spaceId }, { enabled: !!spaceId })
+
   // Real-Time currency conversion helper
   const getConversionPreview = (amountStr: string, fromCurr: string) => {
     const amount = parseFloat(amountStr)
@@ -76,7 +81,8 @@ export function useWorkspaceFinance() {
     }
   }
 
-  const isLoading = settingsLoading || budgetsLoading || ratesLoading
+  const isLoading =
+    settingsLoading || budgetsLoading || ratesLoading || currenciesLoading
   const isNotConfigured = !!settingsError && !settingsLoading
 
   return {
@@ -87,6 +93,7 @@ export function useWorkspaceFinance() {
     ratesData,
     budgets: budgetsData?.budgets || [],
     rates: ratesData?.exchangeRates || [],
+    currencies: currenciesData?.currencies || [],
     isLoading,
     isNotConfigured,
     refetchSettings,

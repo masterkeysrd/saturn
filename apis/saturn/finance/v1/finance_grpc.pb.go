@@ -20,27 +20,36 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Finance_ConfigureFinance_FullMethodName        = "/saturn.finance.v1.Finance/ConfigureFinance"
-	Finance_GetFinanceSettings_FullMethodName      = "/saturn.finance.v1.Finance/GetFinanceSettings"
-	Finance_CreateBudget_FullMethodName            = "/saturn.finance.v1.Finance/CreateBudget"
-	Finance_UpdateBudget_FullMethodName            = "/saturn.finance.v1.Finance/UpdateBudget"
-	Finance_DeleteBudget_FullMethodName            = "/saturn.finance.v1.Finance/DeleteBudget"
-	Finance_ListBudgets_FullMethodName             = "/saturn.finance.v1.Finance/ListBudgets"
-	Finance_GetBudgetPeriod_FullMethodName         = "/saturn.finance.v1.Finance/GetBudgetPeriod"
-	Finance_CreateExchangeRate_FullMethodName      = "/saturn.finance.v1.Finance/CreateExchangeRate"
-	Finance_ListExchangeRates_FullMethodName       = "/saturn.finance.v1.Finance/ListExchangeRates"
-	Finance_DeleteExchangeRate_FullMethodName      = "/saturn.finance.v1.Finance/DeleteExchangeRate"
-	Finance_CreateExpense_FullMethodName           = "/saturn.finance.v1.Finance/CreateExpense"
-	Finance_UpdateExpense_FullMethodName           = "/saturn.finance.v1.Finance/UpdateExpense"
-	Finance_DeleteTransaction_FullMethodName       = "/saturn.finance.v1.Finance/DeleteTransaction"
-	Finance_ListTransactions_FullMethodName        = "/saturn.finance.v1.Finance/ListTransactions"
-	Finance_GetInsights_FullMethodName             = "/saturn.finance.v1.Finance/GetInsights"
-	Finance_CreateRecurringExpense_FullMethodName  = "/saturn.finance.v1.Finance/CreateRecurringExpense"
-	Finance_UpdateRecurringExpense_FullMethodName  = "/saturn.finance.v1.Finance/UpdateRecurringExpense"
-	Finance_DeleteRecurringExpense_FullMethodName  = "/saturn.finance.v1.Finance/DeleteRecurringExpense"
-	Finance_ListRecurringExpenses_FullMethodName   = "/saturn.finance.v1.Finance/ListRecurringExpenses"
-	Finance_ListScheduledPayments_FullMethodName   = "/saturn.finance.v1.Finance/ListScheduledPayments"
-	Finance_ConfirmScheduledPayment_FullMethodName = "/saturn.finance.v1.Finance/ConfirmScheduledPayment"
+	Finance_ConfigureFinance_FullMethodName         = "/saturn.finance.v1.Finance/ConfigureFinance"
+	Finance_GetFinanceSettings_FullMethodName       = "/saturn.finance.v1.Finance/GetFinanceSettings"
+	Finance_CreateBudget_FullMethodName             = "/saturn.finance.v1.Finance/CreateBudget"
+	Finance_UpdateBudget_FullMethodName             = "/saturn.finance.v1.Finance/UpdateBudget"
+	Finance_DeleteBudget_FullMethodName             = "/saturn.finance.v1.Finance/DeleteBudget"
+	Finance_ListBudgets_FullMethodName              = "/saturn.finance.v1.Finance/ListBudgets"
+	Finance_GetBudgetPeriod_FullMethodName          = "/saturn.finance.v1.Finance/GetBudgetPeriod"
+	Finance_CreateExchangeRate_FullMethodName       = "/saturn.finance.v1.Finance/CreateExchangeRate"
+	Finance_ListExchangeRates_FullMethodName        = "/saturn.finance.v1.Finance/ListExchangeRates"
+	Finance_DeleteExchangeRate_FullMethodName       = "/saturn.finance.v1.Finance/DeleteExchangeRate"
+	Finance_CreateExpense_FullMethodName            = "/saturn.finance.v1.Finance/CreateExpense"
+	Finance_UpdateExpense_FullMethodName            = "/saturn.finance.v1.Finance/UpdateExpense"
+	Finance_DeleteTransaction_FullMethodName        = "/saturn.finance.v1.Finance/DeleteTransaction"
+	Finance_ListTransactions_FullMethodName         = "/saturn.finance.v1.Finance/ListTransactions"
+	Finance_GetInsights_FullMethodName              = "/saturn.finance.v1.Finance/GetInsights"
+	Finance_CreateRecurringExpense_FullMethodName   = "/saturn.finance.v1.Finance/CreateRecurringExpense"
+	Finance_UpdateRecurringExpense_FullMethodName   = "/saturn.finance.v1.Finance/UpdateRecurringExpense"
+	Finance_DeleteRecurringExpense_FullMethodName   = "/saturn.finance.v1.Finance/DeleteRecurringExpense"
+	Finance_ListRecurringExpenses_FullMethodName    = "/saturn.finance.v1.Finance/ListRecurringExpenses"
+	Finance_ListScheduledPayments_FullMethodName    = "/saturn.finance.v1.Finance/ListScheduledPayments"
+	Finance_ConfirmScheduledPayment_FullMethodName  = "/saturn.finance.v1.Finance/ConfirmScheduledPayment"
+	Finance_CreateBorrowing_FullMethodName          = "/saturn.finance.v1.Finance/CreateBorrowing"
+	Finance_GetBorrowing_FullMethodName             = "/saturn.finance.v1.Finance/GetBorrowing"
+	Finance_ListBorrowings_FullMethodName           = "/saturn.finance.v1.Finance/ListBorrowings"
+	Finance_UpdateBorrowing_FullMethodName          = "/saturn.finance.v1.Finance/UpdateBorrowing"
+	Finance_DeleteBorrowing_FullMethodName          = "/saturn.finance.v1.Finance/DeleteBorrowing"
+	Finance_CreateBorrowingRepayment_FullMethodName = "/saturn.finance.v1.Finance/CreateBorrowingRepayment"
+	Finance_ListBorrowingRepayments_FullMethodName  = "/saturn.finance.v1.Finance/ListBorrowingRepayments"
+	Finance_DeleteBorrowingRepayment_FullMethodName = "/saturn.finance.v1.Finance/DeleteBorrowingRepayment"
+	Finance_ListCurrencies_FullMethodName           = "/saturn.finance.v1.Finance/ListCurrencies"
 )
 
 // FinanceClient is the client API for Finance service.
@@ -91,6 +100,24 @@ type FinanceClient interface {
 	ListScheduledPayments(ctx context.Context, in *ListScheduledPaymentsRequest, opts ...grpc.CallOption) (*ListScheduledPaymentsResponse, error)
 	// ConfirmScheduledPayment clears a scheduled payment by promoting it to a permanent transaction.
 	ConfirmScheduledPayment(ctx context.Context, in *ConfirmScheduledPaymentRequest, opts ...grpc.CallOption) (*Transaction, error)
+	// CreateBorrowing logs a new personal lent/borrowed debt agreement.
+	CreateBorrowing(ctx context.Context, in *CreateBorrowingRequest, opts ...grpc.CallOption) (*Borrowing, error)
+	// GetBorrowing retrieves a single borrowing record.
+	GetBorrowing(ctx context.Context, in *GetBorrowingRequest, opts ...grpc.CallOption) (*Borrowing, error)
+	// ListBorrowings returns borrowings for a space, optionally filtered.
+	ListBorrowings(ctx context.Context, in *ListBorrowingsRequest, opts ...grpc.CallOption) (*ListBorrowingsResponse, error)
+	// UpdateBorrowing updates basic details of a borrowing record.
+	UpdateBorrowing(ctx context.Context, in *UpdateBorrowingRequest, opts ...grpc.CallOption) (*Borrowing, error)
+	// DeleteBorrowing removes a borrowing and all its repayments.
+	DeleteBorrowing(ctx context.Context, in *DeleteBorrowingRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// CreateBorrowingRepayment records an installment payment towards a borrowing.
+	CreateBorrowingRepayment(ctx context.Context, in *CreateBorrowingRepaymentRequest, opts ...grpc.CallOption) (*BorrowingRepayment, error)
+	// ListBorrowingRepayments returns all repayments for a specific borrowing.
+	ListBorrowingRepayments(ctx context.Context, in *ListBorrowingRepaymentsRequest, opts ...grpc.CallOption) (*ListBorrowingRepaymentsResponse, error)
+	// DeleteBorrowingRepayment deletes a specific installment and restores the balance.
+	DeleteBorrowingRepayment(ctx context.Context, in *DeleteBorrowingRepaymentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// ListCurrencies returns the list of supported currencies.
+	ListCurrencies(ctx context.Context, in *ListCurrenciesRequest, opts ...grpc.CallOption) (*ListCurrenciesResponse, error)
 }
 
 type financeClient struct {
@@ -311,6 +338,96 @@ func (c *financeClient) ConfirmScheduledPayment(ctx context.Context, in *Confirm
 	return out, nil
 }
 
+func (c *financeClient) CreateBorrowing(ctx context.Context, in *CreateBorrowingRequest, opts ...grpc.CallOption) (*Borrowing, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Borrowing)
+	err := c.cc.Invoke(ctx, Finance_CreateBorrowing_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) GetBorrowing(ctx context.Context, in *GetBorrowingRequest, opts ...grpc.CallOption) (*Borrowing, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Borrowing)
+	err := c.cc.Invoke(ctx, Finance_GetBorrowing_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) ListBorrowings(ctx context.Context, in *ListBorrowingsRequest, opts ...grpc.CallOption) (*ListBorrowingsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListBorrowingsResponse)
+	err := c.cc.Invoke(ctx, Finance_ListBorrowings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) UpdateBorrowing(ctx context.Context, in *UpdateBorrowingRequest, opts ...grpc.CallOption) (*Borrowing, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Borrowing)
+	err := c.cc.Invoke(ctx, Finance_UpdateBorrowing_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) DeleteBorrowing(ctx context.Context, in *DeleteBorrowingRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Finance_DeleteBorrowing_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) CreateBorrowingRepayment(ctx context.Context, in *CreateBorrowingRepaymentRequest, opts ...grpc.CallOption) (*BorrowingRepayment, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BorrowingRepayment)
+	err := c.cc.Invoke(ctx, Finance_CreateBorrowingRepayment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) ListBorrowingRepayments(ctx context.Context, in *ListBorrowingRepaymentsRequest, opts ...grpc.CallOption) (*ListBorrowingRepaymentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListBorrowingRepaymentsResponse)
+	err := c.cc.Invoke(ctx, Finance_ListBorrowingRepayments_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) DeleteBorrowingRepayment(ctx context.Context, in *DeleteBorrowingRepaymentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Finance_DeleteBorrowingRepayment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) ListCurrencies(ctx context.Context, in *ListCurrenciesRequest, opts ...grpc.CallOption) (*ListCurrenciesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCurrenciesResponse)
+	err := c.cc.Invoke(ctx, Finance_ListCurrencies_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FinanceServer is the server API for Finance service.
 // All implementations should embed UnimplementedFinanceServer
 // for forward compatibility.
@@ -359,6 +476,24 @@ type FinanceServer interface {
 	ListScheduledPayments(context.Context, *ListScheduledPaymentsRequest) (*ListScheduledPaymentsResponse, error)
 	// ConfirmScheduledPayment clears a scheduled payment by promoting it to a permanent transaction.
 	ConfirmScheduledPayment(context.Context, *ConfirmScheduledPaymentRequest) (*Transaction, error)
+	// CreateBorrowing logs a new personal lent/borrowed debt agreement.
+	CreateBorrowing(context.Context, *CreateBorrowingRequest) (*Borrowing, error)
+	// GetBorrowing retrieves a single borrowing record.
+	GetBorrowing(context.Context, *GetBorrowingRequest) (*Borrowing, error)
+	// ListBorrowings returns borrowings for a space, optionally filtered.
+	ListBorrowings(context.Context, *ListBorrowingsRequest) (*ListBorrowingsResponse, error)
+	// UpdateBorrowing updates basic details of a borrowing record.
+	UpdateBorrowing(context.Context, *UpdateBorrowingRequest) (*Borrowing, error)
+	// DeleteBorrowing removes a borrowing and all its repayments.
+	DeleteBorrowing(context.Context, *DeleteBorrowingRequest) (*emptypb.Empty, error)
+	// CreateBorrowingRepayment records an installment payment towards a borrowing.
+	CreateBorrowingRepayment(context.Context, *CreateBorrowingRepaymentRequest) (*BorrowingRepayment, error)
+	// ListBorrowingRepayments returns all repayments for a specific borrowing.
+	ListBorrowingRepayments(context.Context, *ListBorrowingRepaymentsRequest) (*ListBorrowingRepaymentsResponse, error)
+	// DeleteBorrowingRepayment deletes a specific installment and restores the balance.
+	DeleteBorrowingRepayment(context.Context, *DeleteBorrowingRepaymentRequest) (*emptypb.Empty, error)
+	// ListCurrencies returns the list of supported currencies.
+	ListCurrencies(context.Context, *ListCurrenciesRequest) (*ListCurrenciesResponse, error)
 }
 
 // UnimplementedFinanceServer should be embedded to have
@@ -430,6 +565,33 @@ func (UnimplementedFinanceServer) ListScheduledPayments(context.Context, *ListSc
 }
 func (UnimplementedFinanceServer) ConfirmScheduledPayment(context.Context, *ConfirmScheduledPaymentRequest) (*Transaction, error) {
 	return nil, status.Error(codes.Unimplemented, "method ConfirmScheduledPayment not implemented")
+}
+func (UnimplementedFinanceServer) CreateBorrowing(context.Context, *CreateBorrowingRequest) (*Borrowing, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateBorrowing not implemented")
+}
+func (UnimplementedFinanceServer) GetBorrowing(context.Context, *GetBorrowingRequest) (*Borrowing, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetBorrowing not implemented")
+}
+func (UnimplementedFinanceServer) ListBorrowings(context.Context, *ListBorrowingsRequest) (*ListBorrowingsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListBorrowings not implemented")
+}
+func (UnimplementedFinanceServer) UpdateBorrowing(context.Context, *UpdateBorrowingRequest) (*Borrowing, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateBorrowing not implemented")
+}
+func (UnimplementedFinanceServer) DeleteBorrowing(context.Context, *DeleteBorrowingRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteBorrowing not implemented")
+}
+func (UnimplementedFinanceServer) CreateBorrowingRepayment(context.Context, *CreateBorrowingRepaymentRequest) (*BorrowingRepayment, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateBorrowingRepayment not implemented")
+}
+func (UnimplementedFinanceServer) ListBorrowingRepayments(context.Context, *ListBorrowingRepaymentsRequest) (*ListBorrowingRepaymentsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListBorrowingRepayments not implemented")
+}
+func (UnimplementedFinanceServer) DeleteBorrowingRepayment(context.Context, *DeleteBorrowingRepaymentRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteBorrowingRepayment not implemented")
+}
+func (UnimplementedFinanceServer) ListCurrencies(context.Context, *ListCurrenciesRequest) (*ListCurrenciesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCurrencies not implemented")
 }
 func (UnimplementedFinanceServer) testEmbeddedByValue() {}
 
@@ -829,6 +991,168 @@ func _Finance_ConfirmScheduledPayment_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Finance_CreateBorrowing_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateBorrowingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).CreateBorrowing(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_CreateBorrowing_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).CreateBorrowing(ctx, req.(*CreateBorrowingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_GetBorrowing_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBorrowingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).GetBorrowing(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_GetBorrowing_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).GetBorrowing(ctx, req.(*GetBorrowingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_ListBorrowings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListBorrowingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).ListBorrowings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_ListBorrowings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).ListBorrowings(ctx, req.(*ListBorrowingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_UpdateBorrowing_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateBorrowingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).UpdateBorrowing(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_UpdateBorrowing_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).UpdateBorrowing(ctx, req.(*UpdateBorrowingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_DeleteBorrowing_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteBorrowingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).DeleteBorrowing(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_DeleteBorrowing_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).DeleteBorrowing(ctx, req.(*DeleteBorrowingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_CreateBorrowingRepayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateBorrowingRepaymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).CreateBorrowingRepayment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_CreateBorrowingRepayment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).CreateBorrowingRepayment(ctx, req.(*CreateBorrowingRepaymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_ListBorrowingRepayments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListBorrowingRepaymentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).ListBorrowingRepayments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_ListBorrowingRepayments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).ListBorrowingRepayments(ctx, req.(*ListBorrowingRepaymentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_DeleteBorrowingRepayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteBorrowingRepaymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).DeleteBorrowingRepayment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_DeleteBorrowingRepayment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).DeleteBorrowingRepayment(ctx, req.(*DeleteBorrowingRepaymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_ListCurrencies_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCurrenciesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).ListCurrencies(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_ListCurrencies_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).ListCurrencies(ctx, req.(*ListCurrenciesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Finance_ServiceDesc is the grpc.ServiceDesc for Finance service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -919,6 +1243,42 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ConfirmScheduledPayment",
 			Handler:    _Finance_ConfirmScheduledPayment_Handler,
+		},
+		{
+			MethodName: "CreateBorrowing",
+			Handler:    _Finance_CreateBorrowing_Handler,
+		},
+		{
+			MethodName: "GetBorrowing",
+			Handler:    _Finance_GetBorrowing_Handler,
+		},
+		{
+			MethodName: "ListBorrowings",
+			Handler:    _Finance_ListBorrowings_Handler,
+		},
+		{
+			MethodName: "UpdateBorrowing",
+			Handler:    _Finance_UpdateBorrowing_Handler,
+		},
+		{
+			MethodName: "DeleteBorrowing",
+			Handler:    _Finance_DeleteBorrowing_Handler,
+		},
+		{
+			MethodName: "CreateBorrowingRepayment",
+			Handler:    _Finance_CreateBorrowingRepayment_Handler,
+		},
+		{
+			MethodName: "ListBorrowingRepayments",
+			Handler:    _Finance_ListBorrowingRepayments_Handler,
+		},
+		{
+			MethodName: "DeleteBorrowingRepayment",
+			Handler:    _Finance_DeleteBorrowingRepayment_Handler,
+		},
+		{
+			MethodName: "ListCurrencies",
+			Handler:    _Finance_ListCurrencies_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

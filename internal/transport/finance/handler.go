@@ -138,6 +138,25 @@ func (h *Handler) GetFinanceSettings(ctx context.Context, req *financev1.GetFina
 	return toProtoSettings(settings), nil
 }
 
+func (h *Handler) ListCurrencies(ctx context.Context, req *financev1.ListCurrenciesRequest) (*financev1.ListCurrenciesResponse, error) {
+	list, err := h.Coordinator.ListCurrencies(ctx)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	currencies := make([]*financev1.CurrencyInfo, len(list))
+	for i, c := range list {
+		currencies[i] = &financev1.CurrencyInfo{
+			Code: c.Code,
+			Name: c.Name,
+		}
+	}
+
+	return &financev1.ListCurrenciesResponse{
+		Currencies: currencies,
+	}, nil
+}
+
 func (h *Handler) CreateBudget(ctx context.Context, req *financev1.CreateBudgetRequest) (*financev1.Budget, error) {
 	currency, err := finance.ParseCurrency(req.GetCurrency())
 	if err != nil {
@@ -350,6 +369,10 @@ func (h *Handler) mapError(err error) error {
 		return status.Error(codes.FailedPrecondition, "exchange rate not found")
 	case errors.Is(err, finance.ErrTransactionNotFound):
 		return status.Error(codes.NotFound, "transaction not found")
+	case errors.Is(err, finance.ErrBorrowingNotFound):
+		return status.Error(codes.NotFound, "borrowing not found")
+	case errors.Is(err, finance.ErrRepaymentNotFound):
+		return status.Error(codes.NotFound, "borrowing repayment not found")
 	}
 
 	return status.Error(codes.InvalidArgument, err.Error())

@@ -28,13 +28,20 @@ type PeriodStore interface {
 	ListByBudget(ctx context.Context, budgetID BudgetID) ([]*BudgetPeriod, error)
 }
 
+type ExchangeRateKey struct {
+	SpaceID      SpaceID
+	FromCurrency Currency
+	ToCurrency   Currency
+	RateDate     time.Time
+}
+
 // ExchangeRateStore defines persistence for exchange rates.
 type ExchangeRateStore interface {
 	Create(ctx context.Context, rate *ExchangeRate) error
 	// GetRate retrieves the rate from fromCurrency to toCurrency on the closest date <= rateDate.
-	GetRate(ctx context.Context, spaceID SpaceID, fromCurrency, toCurrency Currency, rateDate time.Time) (*ExchangeRate, error)
+	GetRate(ctx context.Context, key ExchangeRateKey) (*ExchangeRate, error)
 	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListExchangeRatesFilter) ([]*ExchangeRate, string, error)
-	Delete(ctx context.Context, spaceID SpaceID, fromCurrency, toCurrency Currency, rateDate time.Time) error
+	Delete(ctx context.Context, key ExchangeRateKey) error
 }
 
 // TransactionStore defines persistence for transactions.
@@ -129,4 +136,21 @@ type ListScheduledPaymentsFilter struct {
 	EndDate       *time.Time
 	PageSize      int32
 	NextPageToken string
+}
+
+// BorrowingStore defines persistence for personal borrowing/lending agreements.
+type BorrowingStore interface {
+	Create(ctx context.Context, b *Borrowing) error
+	GetByID(ctx context.Context, id BorrowingID) (*Borrowing, error)
+	Update(ctx context.Context, b *Borrowing) error
+	Delete(ctx context.Context, id BorrowingID) error
+	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListBorrowingsFilter) ([]*Borrowing, string, error)
+}
+
+// BorrowingRepaymentStore defines persistence for repayments.
+type BorrowingRepaymentStore interface {
+	Create(ctx context.Context, r *BorrowingRepayment) error
+	GetByID(ctx context.Context, id BorrowingRepaymentID) (*BorrowingRepayment, error)
+	Delete(ctx context.Context, id BorrowingRepaymentID) error
+	ListByBorrowing(ctx context.Context, spaceID SpaceID, borrowingID BorrowingID) ([]*BorrowingRepayment, error)
 }

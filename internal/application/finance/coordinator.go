@@ -27,7 +27,7 @@ type FinanceService interface {
 	UpdatePeriodLimit(ctx context.Context, id finance.PeriodID, limit int64) error
 	CreateExchangeRate(ctx context.Context, rate *finance.ExchangeRate) (*finance.ExchangeRate, error)
 	ListExchangeRates(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListExchangeRatesFilter) ([]*finance.ExchangeRate, string, error)
-	DeleteExchangeRate(ctx context.Context, spaceID finance.SpaceID, fromCurrency, toCurrency finance.Currency, rateDate time.Time) error
+	DeleteExchangeRate(ctx context.Context, req finance.DeleteExchangeRateRequest) error
 	CreateExpense(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error)
 	UpdateExpense(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error)
 	DeleteTransaction(ctx context.Context, id finance.TransactionID) error
@@ -40,8 +40,18 @@ type FinanceService interface {
 	DeleteRecurringExpense(ctx context.Context, id finance.RecurringExpenseID) error
 	ListRecurringExpenses(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListRecurringExpensesFilter) ([]*finance.RecurringExpense, string, error)
 	ListScheduledPayments(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListScheduledPaymentsFilter) ([]*finance.ScheduledPayment, string, error)
-	ConfirmScheduledPayment(ctx context.Context, paymentID finance.ScheduledPaymentID, transactionDate time.Time, effectiveDate time.Time, actualAmount int64) (*finance.Transaction, error)
+	ConfirmScheduledPayment(ctx context.Context, req finance.ConfirmScheduledPaymentRequest) (*finance.Transaction, error)
 	GenerateScheduledPayments(ctx context.Context) error
+
+	CreateBorrowing(ctx context.Context, b *finance.Borrowing, createAsTransaction bool) (*finance.Borrowing, error)
+	GetBorrowing(ctx context.Context, id finance.BorrowingID) (*finance.Borrowing, error)
+	ListBorrowings(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBorrowingsFilter) ([]*finance.Borrowing, string, error)
+	UpdateBorrowing(ctx context.Context, b *finance.Borrowing) (*finance.Borrowing, error)
+	DeleteBorrowing(ctx context.Context, spaceID finance.SpaceID, id finance.BorrowingID) error
+	CreateBorrowingRepayment(ctx context.Context, r *finance.BorrowingRepayment) (*finance.BorrowingRepayment, error)
+	ListBorrowingRepayments(ctx context.Context, spaceID finance.SpaceID, borrowingID finance.BorrowingID) ([]*finance.BorrowingRepayment, error)
+	DeleteBorrowingRepayment(ctx context.Context, req finance.DeleteBorrowingRepaymentRequest) error
+	ListCurrencies(ctx context.Context) ([]finance.CurrencyInfo, error)
 }
 
 // Dependencies contains all parameters for Coordinator initialization.
@@ -116,4 +126,13 @@ func (c *Coordinator) GetFinanceSettings(ctx context.Context) (*finance.FinanceS
 	}
 
 	return c.financeService.GetFinanceSettings(ctx, rCtx.SpaceID)
+}
+
+// ListCurrencies returns the list of supported currencies.
+func (c *Coordinator) ListCurrencies(ctx context.Context) ([]finance.CurrencyInfo, error) {
+	_, err := c.resolveContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return c.financeService.ListCurrencies(ctx)
 }

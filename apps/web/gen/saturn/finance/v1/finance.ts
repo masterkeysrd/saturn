@@ -26,6 +26,16 @@ export type TransactionType =
 export type InsightGranularity =
   "INSIGHT_GRANULARITY_UNSPECIFIED" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY"
 
+export type BorrowingDirection =
+  | "BORROWING_DIRECTION_UNSPECIFIED"
+  | "BORROWING_DIRECTION_BORROWED"
+  | "BORROWING_DIRECTION_LENT"
+
+export type BorrowingStatus =
+  | "BORROWING_STATUS_UNSPECIFIED"
+  | "BORROWING_STATUS_ACTIVE"
+  | "BORROWING_STATUS_PAID_OFF"
+
 /**
  * FinanceSettings represents workspace configuration.
  */
@@ -419,6 +429,121 @@ export interface ConfirmScheduledPaymentRequest {
   transactionDate: string
   effectiveDate: string
   actualAmount: string
+}
+
+export interface Borrowing {
+  id: string
+  spaceId: string
+  direction: BorrowingDirection
+  counterparty: string
+  contactInfo: string
+  totalAmount: string
+  remainingAmount: string
+  currency: string
+  status: BorrowingStatus
+  establishedAt: string
+  dueAt: string
+  notes: string
+  createTime: string
+  updateTime: string
+  createAsTransaction: boolean
+}
+
+export interface BorrowingRepayment {
+  id: string
+  borrowingId: string
+  spaceId: string
+  amount: string
+  paymentDate: string
+  notes: string
+  createTime: string
+  updateTime: string
+}
+
+export interface BorrowingInput {
+  direction: BorrowingDirection
+  counterparty: string
+  contactInfo: string
+  totalAmount: string
+  currency: string
+  establishedAt: string
+  dueAt: string
+  notes: string
+  createAsTransaction: boolean
+}
+
+export interface CreateBorrowingRequest {
+  spaceId: string
+  borrowing: BorrowingInput
+}
+
+export interface GetBorrowingRequest {
+  spaceId: string
+  id: string
+}
+
+export interface ListBorrowingsRequest {
+  spaceId: string
+  status?: BorrowingStatus
+  direction?: BorrowingDirection
+  pageSize: number
+  pageToken: string
+}
+
+export interface ListBorrowingsResponse {
+  borrowings: Borrowing[]
+  nextPageToken: string
+}
+
+export interface UpdateBorrowingRequest {
+  spaceId: string
+  id: string
+  borrowing: BorrowingInput
+}
+
+export interface DeleteBorrowingRequest {
+  spaceId: string
+  id: string
+}
+
+export interface BorrowingRepaymentInput {
+  amount: string
+  paymentDate: string
+  notes: string
+}
+
+export interface CreateBorrowingRepaymentRequest {
+  spaceId: string
+  borrowingId: string
+  repayment: BorrowingRepaymentInput
+}
+
+export interface ListBorrowingRepaymentsRequest {
+  spaceId: string
+  borrowingId: string
+}
+
+export interface ListBorrowingRepaymentsResponse {
+  repayments: BorrowingRepayment[]
+}
+
+export interface DeleteBorrowingRepaymentRequest {
+  spaceId: string
+  borrowingId: string
+  id: string
+}
+
+export interface CurrencyInfo {
+  code: string
+  name: string
+}
+
+export interface ListCurrenciesRequest {
+  spaceId: string
+}
+
+export interface ListCurrenciesResponse {
+  currencies: CurrencyInfo[]
 }
 
 /**
@@ -1066,6 +1191,303 @@ export function useConfirmScheduledPaymentMutation(
   >({
     mutationFn: ({ space_id, payment_id, req }) =>
       confirmScheduledPayment(space_id, payment_id, req),
+    ...options,
+  })
+}
+
+/**
+ * CreateBorrowing logs a new personal lent/borrowed debt agreement.
+ */
+export async function createBorrowing(
+  space_id: string,
+  req: CreateBorrowingRequest
+): Promise<Borrowing> {
+  return request<Borrowing>({
+    method: "POST",
+    url: `/api/v1/spaces/${space_id}/finance/borrowings`,
+    data: req,
+  })
+}
+
+export function useCreateBorrowingMutation(
+  options?: UseMutationOptions<
+    Borrowing,
+    Error,
+    { space_id: string; req: CreateBorrowingRequest }
+  >
+) {
+  return useMutation<
+    Borrowing,
+    Error,
+    { space_id: string; req: CreateBorrowingRequest }
+  >({
+    mutationFn: ({ space_id, req }) => createBorrowing(space_id, req),
+    ...options,
+  })
+}
+
+/**
+ * GetBorrowing retrieves a single borrowing record.
+ */
+export async function getBorrowing(
+  space_id: string,
+  id: string,
+  req: GetBorrowingRequest
+): Promise<Borrowing> {
+  return request<Borrowing>({
+    method: "GET",
+    url: `/api/v1/spaces/${space_id}/finance/borrowings/${id}`,
+    params: req,
+  })
+}
+
+export function useGetBorrowingQuery(
+  req: GetBorrowingRequest,
+  options?: Omit<UseQueryOptions<Borrowing, Error>, "queryKey" | "queryFn">
+) {
+  return useQuery<Borrowing, Error>({
+    queryKey: [
+      `/api/v1/spaces/${req.spaceId}/finance/borrowings/${req.id}`,
+      req,
+    ],
+    queryFn: () => getBorrowing(req.spaceId, req.id, req),
+    ...options,
+  })
+}
+
+/**
+ * ListBorrowings returns borrowings for a space, optionally filtered.
+ */
+export async function listBorrowings(
+  space_id: string,
+  req: ListBorrowingsRequest
+): Promise<ListBorrowingsResponse> {
+  return request<ListBorrowingsResponse>({
+    method: "GET",
+    url: `/api/v1/spaces/${space_id}/finance/borrowings`,
+    params: req,
+  })
+}
+
+export function useListBorrowingsQuery(
+  req: ListBorrowingsRequest,
+  options?: Omit<
+    UseQueryOptions<ListBorrowingsResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListBorrowingsResponse, Error>({
+    queryKey: [`/api/v1/spaces/${req.spaceId}/finance/borrowings`, req],
+    queryFn: () => listBorrowings(req.spaceId, req),
+    ...options,
+  })
+}
+
+/**
+ * UpdateBorrowing updates basic details of a borrowing record.
+ */
+export async function updateBorrowing(
+  space_id: string,
+  id: string,
+  req: UpdateBorrowingRequest
+): Promise<Borrowing> {
+  return request<Borrowing>({
+    method: "PUT",
+    url: `/api/v1/spaces/${space_id}/finance/borrowings/${id}`,
+    data: req,
+  })
+}
+
+export function useUpdateBorrowingMutation(
+  options?: UseMutationOptions<
+    Borrowing,
+    Error,
+    { space_id: string; id: string; req: UpdateBorrowingRequest }
+  >
+) {
+  return useMutation<
+    Borrowing,
+    Error,
+    { space_id: string; id: string; req: UpdateBorrowingRequest }
+  >({
+    mutationFn: ({ space_id, id, req }) => updateBorrowing(space_id, id, req),
+    ...options,
+  })
+}
+
+/**
+ * DeleteBorrowing removes a borrowing and all its repayments.
+ */
+export async function deleteBorrowing(
+  space_id: string,
+  id: string,
+  req: DeleteBorrowingRequest
+): Promise<Record<string, never>> {
+  return request<Record<string, never>>({
+    method: "DELETE",
+    url: `/api/v1/spaces/${space_id}/finance/borrowings/${id}`,
+    params: req,
+  })
+}
+
+export function useDeleteBorrowingMutation(
+  options?: UseMutationOptions<
+    Record<string, never>,
+    Error,
+    { space_id: string; id: string; req: DeleteBorrowingRequest }
+  >
+) {
+  return useMutation<
+    Record<string, never>,
+    Error,
+    { space_id: string; id: string; req: DeleteBorrowingRequest }
+  >({
+    mutationFn: ({ space_id, id, req }) => deleteBorrowing(space_id, id, req),
+    ...options,
+  })
+}
+
+/**
+ * CreateBorrowingRepayment records an installment payment towards a borrowing.
+ */
+export async function createBorrowingRepayment(
+  space_id: string,
+  borrowing_id: string,
+  req: CreateBorrowingRepaymentRequest
+): Promise<BorrowingRepayment> {
+  return request<BorrowingRepayment>({
+    method: "POST",
+    url: `/api/v1/spaces/${space_id}/finance/borrowings/${borrowing_id}/repayments`,
+    data: req,
+  })
+}
+
+export function useCreateBorrowingRepaymentMutation(
+  options?: UseMutationOptions<
+    BorrowingRepayment,
+    Error,
+    {
+      space_id: string
+      borrowing_id: string
+      req: CreateBorrowingRepaymentRequest
+    }
+  >
+) {
+  return useMutation<
+    BorrowingRepayment,
+    Error,
+    {
+      space_id: string
+      borrowing_id: string
+      req: CreateBorrowingRepaymentRequest
+    }
+  >({
+    mutationFn: ({ space_id, borrowing_id, req }) =>
+      createBorrowingRepayment(space_id, borrowing_id, req),
+    ...options,
+  })
+}
+
+/**
+ * ListBorrowingRepayments returns all repayments for a specific borrowing.
+ */
+export async function listBorrowingRepayments(
+  space_id: string,
+  borrowing_id: string,
+  req: ListBorrowingRepaymentsRequest
+): Promise<ListBorrowingRepaymentsResponse> {
+  return request<ListBorrowingRepaymentsResponse>({
+    method: "GET",
+    url: `/api/v1/spaces/${space_id}/finance/borrowings/${borrowing_id}/repayments`,
+    params: req,
+  })
+}
+
+export function useListBorrowingRepaymentsQuery(
+  req: ListBorrowingRepaymentsRequest,
+  options?: Omit<
+    UseQueryOptions<ListBorrowingRepaymentsResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListBorrowingRepaymentsResponse, Error>({
+    queryKey: [
+      `/api/v1/spaces/${req.spaceId}/finance/borrowings/${req.borrowingId}/repayments`,
+      req,
+    ],
+    queryFn: () => listBorrowingRepayments(req.spaceId, req.borrowingId, req),
+    ...options,
+  })
+}
+
+/**
+ * DeleteBorrowingRepayment deletes a specific installment and restores the balance.
+ */
+export async function deleteBorrowingRepayment(
+  space_id: string,
+  borrowing_id: string,
+  id: string,
+  req: DeleteBorrowingRepaymentRequest
+): Promise<Record<string, never>> {
+  return request<Record<string, never>>({
+    method: "DELETE",
+    url: `/api/v1/spaces/${space_id}/finance/borrowings/${borrowing_id}/repayments/${id}`,
+    params: req,
+  })
+}
+
+export function useDeleteBorrowingRepaymentMutation(
+  options?: UseMutationOptions<
+    Record<string, never>,
+    Error,
+    {
+      space_id: string
+      borrowing_id: string
+      id: string
+      req: DeleteBorrowingRepaymentRequest
+    }
+  >
+) {
+  return useMutation<
+    Record<string, never>,
+    Error,
+    {
+      space_id: string
+      borrowing_id: string
+      id: string
+      req: DeleteBorrowingRepaymentRequest
+    }
+  >({
+    mutationFn: ({ space_id, borrowing_id, id, req }) =>
+      deleteBorrowingRepayment(space_id, borrowing_id, id, req),
+    ...options,
+  })
+}
+
+/**
+ * ListCurrencies returns the list of supported currencies.
+ */
+export async function listCurrencies(
+  space_id: string,
+  req: ListCurrenciesRequest
+): Promise<ListCurrenciesResponse> {
+  return request<ListCurrenciesResponse>({
+    method: "GET",
+    url: `/api/v1/spaces/${space_id}/finance/currencies`,
+    params: req,
+  })
+}
+
+export function useListCurrenciesQuery(
+  req: ListCurrenciesRequest,
+  options?: Omit<
+    UseQueryOptions<ListCurrenciesResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListCurrenciesResponse, Error>({
+    queryKey: [`/api/v1/spaces/${req.spaceId}/finance/currencies`, req],
+    queryFn: () => listCurrencies(req.spaceId, req),
     ...options,
   })
 }
