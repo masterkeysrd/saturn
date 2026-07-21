@@ -76,18 +76,24 @@ func toDomainPropagation(p financev1.LimitPropagation) finance.LimitPropagation 
 }
 
 func toProtoBudget(b *finance.Budget) *financev1.Budget {
+	var defaultAccountID *string
+	if b.DefaultAccountID != nil {
+		idStr := string(*b.DefaultAccountID)
+		defaultAccountID = &idStr
+	}
 	return &financev1.Budget{
-		Id:          string(b.ID),
-		SpaceId:     string(b.SpaceID),
-		Name:        b.Name,
-		LimitAmount: b.LimitAmount,
-		Currency:    string(b.Currency),
-		Interval:    toProtoInterval(b.Interval),
-		IsActive:    b.IsActive,
-		CreateTime:  timestamppb.New(b.CreateTime),
-		UpdateTime:  timestamppb.New(b.UpdateTime),
-		Icon:        b.Icon,
-		Color:       b.Color,
+		Id:               string(b.ID),
+		SpaceId:          string(b.SpaceID),
+		Name:             b.Name,
+		LimitAmount:      b.LimitAmount,
+		Currency:         string(b.Currency),
+		Interval:         toProtoInterval(b.Interval),
+		IsActive:         b.IsActive,
+		CreateTime:       timestamppb.New(b.CreateTime),
+		UpdateTime:       timestamppb.New(b.UpdateTime),
+		Icon:             b.Icon,
+		Color:            b.Color,
+		DefaultAccountId: defaultAccountID,
 	}
 }
 
@@ -163,13 +169,20 @@ func (h *Handler) CreateBudget(ctx context.Context, req *financev1.CreateBudgetR
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
+	var defaultAccountID *finance.AccountID
+	if req.DefaultAccountId != nil {
+		idVal := finance.AccountID(*req.DefaultAccountId)
+		defaultAccountID = &idVal
+	}
+
 	appReq := &financeapp.CreateBudgetRequest{
-		Name:        req.GetName(),
-		LimitAmount: req.GetLimitAmount(),
-		Currency:    currency,
-		Interval:    toDomainInterval(req.GetInterval()),
-		Icon:        req.GetIcon(),
-		Color:       req.GetColor(),
+		Name:             req.GetName(),
+		LimitAmount:      req.GetLimitAmount(),
+		Currency:         currency,
+		Interval:         toDomainInterval(req.GetInterval()),
+		Icon:             req.GetIcon(),
+		Color:            req.GetColor(),
+		DefaultAccountID: defaultAccountID,
 	}
 
 	budget, err := h.Coordinator.CreateBudget(ctx, appReq)
@@ -186,16 +199,23 @@ func (h *Handler) UpdateBudget(ctx context.Context, req *financev1.UpdateBudgetR
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
+	var defaultAccountID *finance.AccountID
+	if req.DefaultAccountId != nil {
+		idVal := finance.AccountID(*req.DefaultAccountId)
+		defaultAccountID = &idVal
+	}
+
 	appReq := &financeapp.UpdateBudgetRequest{
-		ID:          finance.BudgetID(req.GetId()),
-		Name:        req.GetName(),
-		LimitAmount: req.GetLimitAmount(),
-		Currency:    currency,
-		Interval:    toDomainInterval(req.GetInterval()),
-		IsActive:    req.GetIsActive(),
-		Propagation: toDomainPropagation(req.GetPropagation()),
-		Icon:        req.GetIcon(),
-		Color:       req.GetColor(),
+		ID:               finance.BudgetID(req.GetId()),
+		Name:             req.GetName(),
+		LimitAmount:      req.GetLimitAmount(),
+		Currency:         currency,
+		Interval:         toDomainInterval(req.GetInterval()),
+		IsActive:         req.GetIsActive(),
+		Propagation:      toDomainPropagation(req.GetPropagation()),
+		Icon:             req.GetIcon(),
+		Color:            req.GetColor(),
+		DefaultAccountID: defaultAccountID,
 	}
 
 	budget, err := h.Coordinator.UpdateBudget(ctx, appReq)
@@ -399,6 +419,12 @@ func (h *Handler) CreateExpense(ctx context.Context, req *financev1.CreateExpens
 		effectiveDate = expense.GetEffectiveDate().AsTime()
 	}
 
+	var accountID *finance.AccountID
+	if expense.AccountId != nil {
+		idVal := finance.AccountID(*expense.AccountId)
+		accountID = &idVal
+	}
+
 	appReq := &financeapp.CreateExpenseRequest{
 		BudgetID:        finance.BudgetID(expense.GetBudgetId()),
 		Amount:          expense.GetAmount(),
@@ -406,6 +432,7 @@ func (h *Handler) CreateExpense(ctx context.Context, req *financev1.CreateExpens
 		Description:     expense.GetDescription(),
 		TransactionDate: transactionDate,
 		EffectiveDate:   effectiveDate,
+		AccountID:       accountID,
 	}
 
 	txn, err := h.Coordinator.CreateExpense(ctx, appReq)
@@ -442,6 +469,12 @@ func (h *Handler) UpdateExpense(ctx context.Context, req *financev1.UpdateExpens
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
+	var accountID *finance.AccountID
+	if expense.AccountId != nil {
+		idVal := finance.AccountID(*expense.AccountId)
+		accountID = &idVal
+	}
+
 	appReq := &financeapp.UpdateExpenseRequest{
 		TransactionID:   tID,
 		BudgetID:        finance.BudgetID(expense.GetBudgetId()),
@@ -450,6 +483,7 @@ func (h *Handler) UpdateExpense(ctx context.Context, req *financev1.UpdateExpens
 		Description:     expense.GetDescription(),
 		TransactionDate: transactionDate,
 		EffectiveDate:   effectiveDate,
+		AccountID:       accountID,
 	}
 
 	txn, err := h.Coordinator.UpdateExpense(ctx, appReq)
@@ -493,11 +527,18 @@ func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTrans
 		txnType = &t
 	}
 
+	var accountID *finance.AccountID
+	if req.AccountId != nil {
+		idVal := finance.AccountID(*req.AccountId)
+		accountID = &idVal
+	}
+
 	appReq := &financeapp.ListTransactionsRequest{
 		BudgetID:      budgetID,
 		Type:          txnType,
 		SourceType:    req.SourceType,
 		SourceID:      req.SourceId,
+		AccountID:     accountID,
 		PageSize:      req.GetPageSize(),
 		NextPageToken: req.GetPageToken(),
 	}
@@ -528,16 +569,34 @@ func toProtoTransaction(t *finance.Transaction) *financev1.Transaction {
 		protoType = financev1.TransactionType_EXPENSE
 	case finance.TransactionTypeIncome:
 		protoType = financev1.TransactionType_INCOME
+	case finance.TransactionTypeTransferOut:
+		protoType = financev1.TransactionType_TRANSFER_OUT
+	case finance.TransactionTypeTransferIn:
+		protoType = financev1.TransactionType_TRANSFER_IN
 	default:
 		protoType = financev1.TransactionType_TRANSACTION_TYPE_UNSPECIFIED
 	}
 
-	var budgetID, periodID string
+	var budgetID, periodID, accountID, transferID string
 	if t.BudgetID != nil {
 		budgetID = string(*t.BudgetID)
 	}
 	if t.PeriodID != nil {
 		periodID = string(*t.PeriodID)
+	}
+	if t.AccountID != nil {
+		accountID = string(*t.AccountID)
+	}
+	if t.TransferID != nil {
+		transferID = string(*t.TransferID)
+	}
+
+	var accountIDPtr, transferIDPtr *string
+	if accountID != "" {
+		accountIDPtr = &accountID
+	}
+	if transferID != "" {
+		transferIDPtr = &transferID
 	}
 
 	return &financev1.Transaction{
@@ -554,6 +613,8 @@ func toProtoTransaction(t *finance.Transaction) *financev1.Transaction {
 		EffectiveDate:   timestamppb.New(t.EffectiveDate),
 		SourceType:      t.SourceType,
 		SourceId:        t.SourceID,
+		AccountId:       accountIDPtr,
+		TransferId:      transferIDPtr,
 		CreateTime:      timestamppb.New(t.CreateTime),
 		UpdateTime:      timestamppb.New(t.UpdateTime),
 	}
@@ -664,4 +725,221 @@ func toProtoInsightsResponse(in *finance.SpentInsights) *financev1.GetInsightsRe
 			TopExpenses:     tops,
 		},
 	}
+}
+
+func toProtoAccountType(t finance.AccountType) financev1.AccountType {
+	switch t {
+	case finance.AccountTypeBank:
+		return financev1.AccountType_BANK
+	case finance.AccountTypeCreditCard:
+		return financev1.AccountType_CREDIT_CARD
+	case finance.AccountTypeCash:
+		return financev1.AccountType_CASH
+	case finance.AccountTypeDigitalAccount:
+		return financev1.AccountType_DIGITAL_ACCOUNT
+	default:
+		return financev1.AccountType_ACCOUNT_TYPE_UNSPECIFIED
+	}
+}
+
+func toDomainAccountType(t financev1.AccountType) finance.AccountType {
+	switch t {
+	case financev1.AccountType_BANK:
+		return finance.AccountTypeBank
+	case financev1.AccountType_CREDIT_CARD:
+		return finance.AccountTypeCreditCard
+	case financev1.AccountType_CASH:
+		return finance.AccountTypeCash
+	case financev1.AccountType_DIGITAL_ACCOUNT:
+		fallthrough
+	default:
+		return finance.AccountTypeDigitalAccount
+	}
+}
+
+func toProtoAccount(a *finance.Account) *financev1.Account {
+	if a == nil {
+		return nil
+	}
+	return &financev1.Account{
+		Id:             string(a.ID),
+		SpaceId:        string(a.SpaceID),
+		Name:           a.Name,
+		Type:           toProtoAccountType(a.Type),
+		Currency:       string(a.Currency),
+		InitialBalance: a.InitialBalance,
+		CurrentBalance: a.CurrentBalance,
+		CreditLimit:    a.CreditLimit,
+		IsDefault:      a.IsDefault,
+		IsActive:       a.IsActive,
+		Color:          a.Color,
+		Notes:          a.Notes,
+		LastFour:       a.LastFour,
+		CreateTime:     timestamppb.New(a.CreateTime),
+		UpdateTime:     timestamppb.New(a.UpdateTime),
+	}
+}
+
+func toProtoTransfer(t *finance.Transfer) *financev1.Transfer {
+	if t == nil {
+		return nil
+	}
+	return &financev1.Transfer{
+		Id:                   string(t.ID),
+		SpaceId:              string(t.SpaceID),
+		SourceAccountId:      string(t.SourceAccountID),
+		DestinationAccountId: string(t.DestinationAccountID),
+		SourceAmount:         t.SourceAmount,
+		DestinationAmount:    t.DestinationAmount,
+		TransferDate:         timestamppb.New(t.TransferDate),
+		Notes:                t.Notes,
+		CreateTime:           timestamppb.New(t.CreateTime),
+		UpdateTime:           timestamppb.New(t.UpdateTime),
+	}
+}
+
+func (h *Handler) CreateAccount(ctx context.Context, req *financev1.CreateAccountRequest) (*financev1.Account, error) {
+	account := req.GetAccount()
+	if account == nil {
+		return nil, status.Error(codes.InvalidArgument, "account resource is required")
+	}
+
+	appReq := &financeapp.CreateAccountRequest{
+		Name:           account.GetName(),
+		Type:           string(toDomainAccountType(account.GetType())),
+		Currency:       account.GetCurrency(),
+		InitialBalance: account.GetInitialBalance(),
+		CreditLimit:    account.GetCreditLimit(),
+		IsDefault:      account.GetIsDefault(),
+		Color:          account.GetColor(),
+		Notes:          account.GetNotes(),
+		LastFour:       account.GetLastFour(),
+	}
+
+	acc, err := h.Coordinator.CreateAccount(ctx, appReq)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoAccount(acc), nil
+}
+
+func (h *Handler) GetAccount(ctx context.Context, req *financev1.GetAccountRequest) (*financev1.Account, error) {
+	aID, err := finance.ParseAccountID(req.GetId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	acc, err := h.Coordinator.GetAccount(ctx, aID)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoAccount(acc), nil
+}
+
+func (h *Handler) UpdateAccount(ctx context.Context, req *financev1.UpdateAccountRequest) (*financev1.Account, error) {
+	account := req.GetAccount()
+	if account == nil {
+		return nil, status.Error(codes.InvalidArgument, "account resource is required")
+	}
+
+	aID, err := finance.ParseAccountID(account.GetId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	appReq := &financeapp.UpdateAccountRequest{
+		ID:          aID,
+		Name:        account.GetName(),
+		CreditLimit: account.GetCreditLimit(),
+		IsDefault:   account.GetIsDefault(),
+		IsActive:    account.GetIsActive(),
+		Color:       account.GetColor(),
+		Notes:       account.GetNotes(),
+		LastFour:    account.GetLastFour(),
+	}
+
+	acc, err := h.Coordinator.UpdateAccount(ctx, appReq)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoAccount(acc), nil
+}
+
+func (h *Handler) DeleteAccount(ctx context.Context, req *financev1.DeleteAccountRequest) (*emptypb.Empty, error) {
+	aID, err := finance.ParseAccountID(req.GetId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	if err := h.Coordinator.DeleteAccount(ctx, aID); err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (h *Handler) ListAccounts(ctx context.Context, req *financev1.ListAccountsRequest) (*financev1.ListAccountsResponse, error) {
+	list, err := h.Coordinator.ListAccounts(ctx)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	protoAccounts := make([]*financev1.Account, 0, len(list))
+	for _, a := range list {
+		protoAccounts = append(protoAccounts, toProtoAccount(a))
+	}
+
+	return &financev1.ListAccountsResponse{
+		Accounts: protoAccounts,
+	}, nil
+}
+
+func (h *Handler) CreateTransfer(ctx context.Context, req *financev1.CreateTransferRequest) (*financev1.Transfer, error) {
+	var transferDate time.Time
+	if req.GetTransferDate() != nil {
+		transferDate = req.GetTransferDate().AsTime()
+	} else {
+		transferDate = time.Now().UTC()
+	}
+
+	appReq := &financeapp.CreateTransferRequest{
+		SourceAccountID:      req.GetSourceAccountId(),
+		DestinationAccountID: req.GetDestinationAccountId(),
+		SourceAmount:         req.GetSourceAmount(),
+		DestinationAmount:    req.GetDestinationAmount(),
+		TransferDate:         transferDate,
+		Notes:                req.GetNotes(),
+	}
+
+	trsf, err := h.Coordinator.CreateTransfer(ctx, appReq)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoTransfer(trsf), nil
+}
+
+func (h *Handler) ListTransfers(ctx context.Context, req *financev1.ListTransfersRequest) (*financev1.ListTransfersResponse, error) {
+	appReq := &financeapp.ListTransfersRequest{
+		Limit:     req.GetPageSize(),
+		PageToken: req.GetPageToken(),
+	}
+
+	list, nextToken, err := h.Coordinator.ListTransfers(ctx, appReq)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	protoTransfers := make([]*financev1.Transfer, 0, len(list))
+	for _, t := range list {
+		protoTransfers = append(protoTransfers, toProtoTransfer(t))
+	}
+
+	return &financev1.ListTransfersResponse{
+		Transfers:     protoTransfers,
+		NextPageToken: nextToken,
+	}, nil
 }

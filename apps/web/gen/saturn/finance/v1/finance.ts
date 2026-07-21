@@ -21,7 +21,11 @@ export type LimitPropagation =
   | "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
 
 export type TransactionType =
-  "TRANSACTION_TYPE_UNSPECIFIED" | "EXPENSE" | "INCOME"
+  | "TRANSACTION_TYPE_UNSPECIFIED"
+  | "EXPENSE"
+  | "INCOME"
+  | "TRANSFER_OUT"
+  | "TRANSFER_IN"
 
 export type InsightGranularity =
   "INSIGHT_GRANULARITY_UNSPECIFIED" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY"
@@ -35,6 +39,13 @@ export type BorrowingStatus =
   | "BORROWING_STATUS_UNSPECIFIED"
   | "BORROWING_STATUS_ACTIVE"
   | "BORROWING_STATUS_PAID_OFF"
+
+export type AccountType =
+  | "ACCOUNT_TYPE_UNSPECIFIED"
+  | "BANK"
+  | "CREDIT_CARD"
+  | "CASH"
+  | "DIGITAL_ACCOUNT"
 
 /**
  * FinanceSettings represents workspace configuration.
@@ -61,6 +72,7 @@ export interface Budget {
   updateTime: string
   icon: string
   color: string
+  defaultAccountId?: string
 }
 
 /**
@@ -86,35 +98,31 @@ export interface BudgetPeriod {
  * ConfigureFinanceRequest contains fields for initial setup.
  */
 export interface ConfigureFinanceRequest {
-  spaceId: string
   baseCurrency: string
 }
 
 /**
  * GetFinanceSettingsRequest contains fields to fetch config.
  */
-export interface GetFinanceSettingsRequest {
-  spaceId: string
-}
+export type GetFinanceSettingsRequest = Record<string, never>
 
 /**
  * CreateBudgetRequest contains fields to create budget.
  */
 export interface CreateBudgetRequest {
-  spaceId: string
   name: string
   limitAmount: string
   currency: string
   interval: RecurrenceInterval
   icon: string
   color: string
+  defaultAccountId?: string
 }
 
 /**
  * UpdateBudgetRequest contains update rules.
  */
 export interface UpdateBudgetRequest {
-  spaceId: string
   id: string
   name: string
   limitAmount: string
@@ -124,13 +132,13 @@ export interface UpdateBudgetRequest {
   propagation: LimitPropagation
   icon: string
   color: string
+  defaultAccountId?: string
 }
 
 /**
  * DeleteBudgetRequest contains deletion target.
  */
 export interface DeleteBudgetRequest {
-  spaceId: string
   id: string
 }
 
@@ -138,7 +146,6 @@ export interface DeleteBudgetRequest {
  * ListBudgetsRequest contains listing parameters.
  */
 export interface ListBudgetsRequest {
-  spaceId: string
   pageSize: number
   pageToken: string
 }
@@ -155,7 +162,6 @@ export interface ListBudgetsResponse {
  * GetBudgetPeriodRequest retrieves period for date.
  */
 export interface GetBudgetPeriodRequest {
-  spaceId: string
   budgetId: string
   /**
    *
@@ -180,7 +186,6 @@ export interface ExchangeRate {
  * CreateExchangeRateRequest registers a daily rate.
  */
 export interface CreateExchangeRateRequest {
-  spaceId: string
   fromCurrency: string
   toCurrency: string
   rate: number
@@ -191,7 +196,6 @@ export interface CreateExchangeRateRequest {
  * ListExchangeRatesRequest lists workspace rates.
  */
 export interface ListExchangeRatesRequest {
-  spaceId: string
   pageSize: number
   pageToken: string
 }
@@ -208,7 +212,6 @@ export interface ListExchangeRatesResponse {
  * DeleteExchangeRateRequest contains identifiers for rate deletion.
  */
 export interface DeleteExchangeRateRequest {
-  spaceId: string
   fromCurrency: string
   toCurrency: string
   rateDate: string
@@ -230,6 +233,8 @@ export interface Transaction {
   effectiveDate: string
   sourceType?: string
   sourceId?: string
+  accountId?: string
+  transferId?: string
 }
 
 export interface ExpenseInput {
@@ -239,32 +244,30 @@ export interface ExpenseInput {
   description: string
   transactionDate: string
   effectiveDate: string
+  accountId?: string
 }
 
 export interface CreateExpenseRequest {
-  spaceId: string
   expense: ExpenseInput
 }
 
 export interface UpdateExpenseRequest {
-  spaceId: string
   id: string
   expense: ExpenseInput
 }
 
 export interface DeleteTransactionRequest {
-  spaceId: string
   id: string
 }
 
 export interface ListTransactionsRequest {
-  spaceId: string
   budgetId: string
   type: TransactionType
   pageSize: number
   pageToken: string
   sourceType?: string
   sourceId?: string
+  accountId?: string
 }
 
 export interface ListTransactionsResponse {
@@ -273,7 +276,6 @@ export interface ListTransactionsResponse {
 }
 
 export interface GetInsightsRequest {
-  spaceId: string
   granularity: InsightGranularity
   startDate: string
   endDate: string
@@ -367,7 +369,6 @@ export interface ScheduledPayment {
 }
 
 export interface CreateRecurringExpenseRequest {
-  spaceId: string
   budgetId: string
   name: string
   amount: string
@@ -380,7 +381,6 @@ export interface CreateRecurringExpenseRequest {
 
 export interface UpdateRecurringExpenseRequest {
   id: string
-  spaceId: string
   budgetId: string
   name: string
   amount: string
@@ -393,12 +393,10 @@ export interface UpdateRecurringExpenseRequest {
 }
 
 export interface DeleteRecurringExpenseRequest {
-  spaceId: string
   id: string
 }
 
 export interface ListRecurringExpensesRequest {
-  spaceId: string
   status: string
   pageSize: number
   pageToken: string
@@ -410,7 +408,6 @@ export interface ListRecurringExpensesResponse {
 }
 
 export interface ListScheduledPaymentsRequest {
-  spaceId: string
   status: string
   startDate: string
   endDate: string
@@ -424,7 +421,6 @@ export interface ListScheduledPaymentsResponse {
 }
 
 export interface ConfirmScheduledPaymentRequest {
-  spaceId: string
   paymentId: string
   transactionDate: string
   effectiveDate: string
@@ -443,10 +439,10 @@ export interface Borrowing {
   status: BorrowingStatus
   establishedAt: string
   dueAt: string
+  createAsTransaction: boolean
   notes: string
   createTime: string
   updateTime: string
-  createAsTransaction: boolean
 }
 
 export interface BorrowingRepayment {
@@ -458,6 +454,7 @@ export interface BorrowingRepayment {
   notes: string
   createTime: string
   updateTime: string
+  accountId: string
 }
 
 export interface BorrowingInput {
@@ -470,20 +467,18 @@ export interface BorrowingInput {
   dueAt: string
   notes: string
   createAsTransaction: boolean
+  accountId?: string
 }
 
 export interface CreateBorrowingRequest {
-  spaceId: string
   borrowing: BorrowingInput
 }
 
 export interface GetBorrowingRequest {
-  spaceId: string
   id: string
 }
 
 export interface ListBorrowingsRequest {
-  spaceId: string
   status?: BorrowingStatus
   direction?: BorrowingDirection
   pageSize: number
@@ -496,13 +491,11 @@ export interface ListBorrowingsResponse {
 }
 
 export interface UpdateBorrowingRequest {
-  spaceId: string
   id: string
   borrowing: BorrowingInput
 }
 
 export interface DeleteBorrowingRequest {
-  spaceId: string
   id: string
 }
 
@@ -510,16 +503,15 @@ export interface BorrowingRepaymentInput {
   amount: string
   paymentDate: string
   notes: string
+  accountId: string
 }
 
 export interface CreateBorrowingRepaymentRequest {
-  spaceId: string
   borrowingId: string
   repayment: BorrowingRepaymentInput
 }
 
 export interface ListBorrowingRepaymentsRequest {
-  spaceId: string
   borrowingId: string
 }
 
@@ -528,7 +520,6 @@ export interface ListBorrowingRepaymentsResponse {
 }
 
 export interface DeleteBorrowingRepaymentRequest {
-  spaceId: string
   borrowingId: string
   id: string
 }
@@ -538,12 +529,83 @@ export interface CurrencyInfo {
   name: string
 }
 
-export interface ListCurrenciesRequest {
-  spaceId: string
-}
+export type ListCurrenciesRequest = Record<string, never>
 
 export interface ListCurrenciesResponse {
   currencies: CurrencyInfo[]
+}
+
+export interface Account {
+  id: string
+  spaceId: string
+  name: string
+  type: AccountType
+  currency: string
+  initialBalance: string
+  currentBalance: string
+  creditLimit: string
+  isDefault: boolean
+  isActive: boolean
+  color: string
+  notes: string
+  lastFour: string
+  createTime: string
+  updateTime: string
+}
+
+export interface CreateAccountRequest {
+  account: Account
+}
+
+export interface GetAccountRequest {
+  id: string
+}
+
+export interface UpdateAccountRequest {
+  id: string
+  account: Account
+}
+
+export interface DeleteAccountRequest {
+  id: string
+}
+
+export type ListAccountsRequest = Record<string, never>
+
+export interface ListAccountsResponse {
+  accounts: Account[]
+}
+
+export interface Transfer {
+  id: string
+  spaceId: string
+  sourceAccountId: string
+  destinationAccountId: string
+  sourceAmount: string
+  destinationAmount: string
+  transferDate: string
+  notes: string
+  createTime: string
+  updateTime: string
+}
+
+export interface CreateTransferRequest {
+  sourceAccountId: string
+  destinationAccountId: string
+  sourceAmount: string
+  destinationAmount: string
+  transferDate: string
+  notes: string
+}
+
+export interface ListTransfersRequest {
+  pageSize: number
+  pageToken: string
+}
+
+export interface ListTransfersResponse {
+  transfers: Transfer[]
+  nextPageToken: string
 }
 
 /**
@@ -553,29 +615,20 @@ export interface ListCurrenciesResponse {
  * ConfigureFinance sets up the default base currency for a workspace.
  */
 export async function configureFinance(
-  space_id: string,
   req: ConfigureFinanceRequest
 ): Promise<FinanceSettings> {
   return request<FinanceSettings>({
     method: "POST",
-    url: `/api/v1/spaces/${space_id}/finance/settings`,
+    url: "/api/v1/finance/settings",
     data: req,
   })
 }
 
 export function useConfigureFinanceMutation(
-  options?: UseMutationOptions<
-    FinanceSettings,
-    Error,
-    { space_id: string; req: ConfigureFinanceRequest }
-  >
+  options?: UseMutationOptions<FinanceSettings, Error, ConfigureFinanceRequest>
 ) {
-  return useMutation<
-    FinanceSettings,
-    Error,
-    { space_id: string; req: ConfigureFinanceRequest }
-  >({
-    mutationFn: ({ space_id, req }) => configureFinance(space_id, req),
+  return useMutation<FinanceSettings, Error, ConfigureFinanceRequest>({
+    mutationFn: (req) => configureFinance(req),
     ...options,
   })
 }
@@ -584,12 +637,11 @@ export function useConfigureFinanceMutation(
  * GetFinanceSettings retrieves the finance settings for a workspace.
  */
 export async function getFinanceSettings(
-  space_id: string,
-  req: GetFinanceSettingsRequest
+  req?: GetFinanceSettingsRequest
 ): Promise<FinanceSettings> {
   return request<FinanceSettings>({
     method: "GET",
-    url: `/api/v1/spaces/${space_id}/finance/settings`,
+    url: "/api/v1/finance/settings",
     params: req,
   })
 }
@@ -602,8 +654,8 @@ export function useGetFinanceSettingsQuery(
   >
 ) {
   return useQuery<FinanceSettings, Error>({
-    queryKey: [`/api/v1/spaces/${req.spaceId}/finance/settings`, req],
-    queryFn: () => getFinanceSettings(req.spaceId, req),
+    queryKey: ["/api/v1/finance/settings", req],
+    queryFn: () => getFinanceSettings(req),
     ...options,
   })
 }
@@ -611,30 +663,19 @@ export function useGetFinanceSettingsQuery(
 /**
  * CreateBudget creates a new budget template in a workspace.
  */
-export async function createBudget(
-  space_id: string,
-  req: CreateBudgetRequest
-): Promise<Budget> {
+export async function createBudget(req: CreateBudgetRequest): Promise<Budget> {
   return request<Budget>({
     method: "POST",
-    url: `/api/v1/spaces/${space_id}/finance/budgets`,
+    url: "/api/v1/finance/budgets",
     data: req,
   })
 }
 
 export function useCreateBudgetMutation(
-  options?: UseMutationOptions<
-    Budget,
-    Error,
-    { space_id: string; req: CreateBudgetRequest }
-  >
+  options?: UseMutationOptions<Budget, Error, CreateBudgetRequest>
 ) {
-  return useMutation<
-    Budget,
-    Error,
-    { space_id: string; req: CreateBudgetRequest }
-  >({
-    mutationFn: ({ space_id, req }) => createBudget(space_id, req),
+  return useMutation<Budget, Error, CreateBudgetRequest>({
+    mutationFn: (req) => createBudget(req),
     ...options,
   })
 }
@@ -643,13 +684,12 @@ export function useCreateBudgetMutation(
  * UpdateBudget updates a budget template.
  */
 export async function updateBudget(
-  space_id: string,
   id: string,
   req: UpdateBudgetRequest
 ): Promise<Budget> {
   return request<Budget>({
     method: "PATCH",
-    url: `/api/v1/spaces/${space_id}/finance/budgets/${id}`,
+    url: `/api/v1/finance/budgets/${id}`,
     data: req,
   })
 }
@@ -658,15 +698,11 @@ export function useUpdateBudgetMutation(
   options?: UseMutationOptions<
     Budget,
     Error,
-    { space_id: string; id: string; req: UpdateBudgetRequest }
+    { id: string; req: UpdateBudgetRequest }
   >
 ) {
-  return useMutation<
-    Budget,
-    Error,
-    { space_id: string; id: string; req: UpdateBudgetRequest }
-  >({
-    mutationFn: ({ space_id, id, req }) => updateBudget(space_id, id, req),
+  return useMutation<Budget, Error, { id: string; req: UpdateBudgetRequest }>({
+    mutationFn: ({ id, req }) => updateBudget(id, req),
     ...options,
   })
 }
@@ -675,13 +711,12 @@ export function useUpdateBudgetMutation(
  * DeleteBudget deletes a budget template.
  */
 export async function deleteBudget(
-  space_id: string,
   id: string,
   req: DeleteBudgetRequest
 ): Promise<Record<string, never>> {
   return request<Record<string, never>>({
     method: "DELETE",
-    url: `/api/v1/spaces/${space_id}/finance/budgets/${id}`,
+    url: `/api/v1/finance/budgets/${id}`,
     params: req,
   })
 }
@@ -690,15 +725,15 @@ export function useDeleteBudgetMutation(
   options?: UseMutationOptions<
     Record<string, never>,
     Error,
-    { space_id: string; id: string; req: DeleteBudgetRequest }
+    { id: string; req: DeleteBudgetRequest }
   >
 ) {
   return useMutation<
     Record<string, never>,
     Error,
-    { space_id: string; id: string; req: DeleteBudgetRequest }
+    { id: string; req: DeleteBudgetRequest }
   >({
-    mutationFn: ({ space_id, id, req }) => deleteBudget(space_id, id, req),
+    mutationFn: ({ id, req }) => deleteBudget(id, req),
     ...options,
   })
 }
@@ -707,12 +742,11 @@ export function useDeleteBudgetMutation(
  * ListBudgets lists all budget templates in a workspace.
  */
 export async function listBudgets(
-  space_id: string,
   req: ListBudgetsRequest
 ): Promise<ListBudgetsResponse> {
   return request<ListBudgetsResponse>({
     method: "GET",
-    url: `/api/v1/spaces/${space_id}/finance/budgets`,
+    url: "/api/v1/finance/budgets",
     params: req,
   })
 }
@@ -725,8 +759,8 @@ export function useListBudgetsQuery(
   >
 ) {
   return useQuery<ListBudgetsResponse, Error>({
-    queryKey: [`/api/v1/spaces/${req.spaceId}/finance/budgets`, req],
-    queryFn: () => listBudgets(req.spaceId, req),
+    queryKey: ["/api/v1/finance/budgets", req],
+    queryFn: () => listBudgets(req),
     ...options,
   })
 }
@@ -735,13 +769,12 @@ export function useListBudgetsQuery(
  * GetBudgetPeriod retrieves or generates the budget period for a specific date.
  */
 export async function getBudgetPeriod(
-  space_id: string,
   budget_id: string,
   req: GetBudgetPeriodRequest
 ): Promise<BudgetPeriod> {
   return request<BudgetPeriod>({
     method: "GET",
-    url: `/api/v1/spaces/${space_id}/finance/budgets/${budget_id}/period`,
+    url: `/api/v1/finance/budgets/${budget_id}/period`,
     params: req,
   })
 }
@@ -751,11 +784,8 @@ export function useGetBudgetPeriodQuery(
   options?: Omit<UseQueryOptions<BudgetPeriod, Error>, "queryKey" | "queryFn">
 ) {
   return useQuery<BudgetPeriod, Error>({
-    queryKey: [
-      `/api/v1/spaces/${req.spaceId}/finance/budgets/${req.budgetId}/period`,
-      req,
-    ],
-    queryFn: () => getBudgetPeriod(req.spaceId, req.budgetId, req),
+    queryKey: [`/api/v1/finance/budgets/${req.budgetId}/period`, req],
+    queryFn: () => getBudgetPeriod(req.budgetId, req),
     ...options,
   })
 }
@@ -764,29 +794,20 @@ export function useGetBudgetPeriodQuery(
  * CreateExchangeRate registers a new daily rate conversion rule.
  */
 export async function createExchangeRate(
-  space_id: string,
   req: CreateExchangeRateRequest
 ): Promise<ExchangeRate> {
   return request<ExchangeRate>({
     method: "POST",
-    url: `/api/v1/spaces/${space_id}/finance/rates`,
+    url: "/api/v1/finance/rates",
     data: req,
   })
 }
 
 export function useCreateExchangeRateMutation(
-  options?: UseMutationOptions<
-    ExchangeRate,
-    Error,
-    { space_id: string; req: CreateExchangeRateRequest }
-  >
+  options?: UseMutationOptions<ExchangeRate, Error, CreateExchangeRateRequest>
 ) {
-  return useMutation<
-    ExchangeRate,
-    Error,
-    { space_id: string; req: CreateExchangeRateRequest }
-  >({
-    mutationFn: ({ space_id, req }) => createExchangeRate(space_id, req),
+  return useMutation<ExchangeRate, Error, CreateExchangeRateRequest>({
+    mutationFn: (req) => createExchangeRate(req),
     ...options,
   })
 }
@@ -795,12 +816,11 @@ export function useCreateExchangeRateMutation(
  * ListExchangeRates lists all exchange rate rules in a workspace.
  */
 export async function listExchangeRates(
-  space_id: string,
   req: ListExchangeRatesRequest
 ): Promise<ListExchangeRatesResponse> {
   return request<ListExchangeRatesResponse>({
     method: "GET",
-    url: `/api/v1/spaces/${space_id}/finance/rates`,
+    url: "/api/v1/finance/rates",
     params: req,
   })
 }
@@ -813,8 +833,8 @@ export function useListExchangeRatesQuery(
   >
 ) {
   return useQuery<ListExchangeRatesResponse, Error>({
-    queryKey: [`/api/v1/spaces/${req.spaceId}/finance/rates`, req],
-    queryFn: () => listExchangeRates(req.spaceId, req),
+    queryKey: ["/api/v1/finance/rates", req],
+    queryFn: () => listExchangeRates(req),
     ...options,
   })
 }
@@ -823,12 +843,11 @@ export function useListExchangeRatesQuery(
  * DeleteExchangeRate deletes a specific daily rate conversion rule.
  */
 export async function deleteExchangeRate(
-  space_id: string,
   req: DeleteExchangeRateRequest
 ): Promise<Record<string, never>> {
   return request<Record<string, never>>({
     method: "DELETE",
-    url: `/api/v1/spaces/${space_id}/finance/rates`,
+    url: "/api/v1/finance/rates",
     params: req,
   })
 }
@@ -837,15 +856,11 @@ export function useDeleteExchangeRateMutation(
   options?: UseMutationOptions<
     Record<string, never>,
     Error,
-    { space_id: string; req: DeleteExchangeRateRequest }
+    DeleteExchangeRateRequest
   >
 ) {
-  return useMutation<
-    Record<string, never>,
-    Error,
-    { space_id: string; req: DeleteExchangeRateRequest }
-  >({
-    mutationFn: ({ space_id, req }) => deleteExchangeRate(space_id, req),
+  return useMutation<Record<string, never>, Error, DeleteExchangeRateRequest>({
+    mutationFn: (req) => deleteExchangeRate(req),
     ...options,
   })
 }
@@ -854,29 +869,20 @@ export function useDeleteExchangeRateMutation(
  * CreateExpense logs a new expense transaction.
  */
 export async function createExpense(
-  space_id: string,
   req: CreateExpenseRequest
 ): Promise<Transaction> {
   return request<Transaction>({
     method: "POST",
-    url: `/api/v1/spaces/${space_id}/finance/expenses`,
+    url: "/api/v1/finance/expenses",
     data: req,
   })
 }
 
 export function useCreateExpenseMutation(
-  options?: UseMutationOptions<
-    Transaction,
-    Error,
-    { space_id: string; req: CreateExpenseRequest }
-  >
+  options?: UseMutationOptions<Transaction, Error, CreateExpenseRequest>
 ) {
-  return useMutation<
-    Transaction,
-    Error,
-    { space_id: string; req: CreateExpenseRequest }
-  >({
-    mutationFn: ({ space_id, req }) => createExpense(space_id, req),
+  return useMutation<Transaction, Error, CreateExpenseRequest>({
+    mutationFn: (req) => createExpense(req),
     ...options,
   })
 }
@@ -885,13 +891,12 @@ export function useCreateExpenseMutation(
  * UpdateExpense modifies an existing expense.
  */
 export async function updateExpense(
-  space_id: string,
   id: string,
   req: UpdateExpenseRequest
 ): Promise<Transaction> {
   return request<Transaction>({
     method: "PUT",
-    url: `/api/v1/spaces/${space_id}/finance/expenses/${id}`,
+    url: `/api/v1/finance/expenses/${id}`,
     data: req,
   })
 }
@@ -900,15 +905,15 @@ export function useUpdateExpenseMutation(
   options?: UseMutationOptions<
     Transaction,
     Error,
-    { space_id: string; id: string; req: UpdateExpenseRequest }
+    { id: string; req: UpdateExpenseRequest }
   >
 ) {
   return useMutation<
     Transaction,
     Error,
-    { space_id: string; id: string; req: UpdateExpenseRequest }
+    { id: string; req: UpdateExpenseRequest }
   >({
-    mutationFn: ({ space_id, id, req }) => updateExpense(space_id, id, req),
+    mutationFn: ({ id, req }) => updateExpense(id, req),
     ...options,
   })
 }
@@ -917,13 +922,12 @@ export function useUpdateExpenseMutation(
  * DeleteTransaction deletes any type of transaction.
  */
 export async function deleteTransaction(
-  space_id: string,
   id: string,
   req: DeleteTransactionRequest
 ): Promise<Record<string, never>> {
   return request<Record<string, never>>({
     method: "DELETE",
-    url: `/api/v1/spaces/${space_id}/finance/transactions/${id}`,
+    url: `/api/v1/finance/transactions/${id}`,
     params: req,
   })
 }
@@ -932,15 +936,15 @@ export function useDeleteTransactionMutation(
   options?: UseMutationOptions<
     Record<string, never>,
     Error,
-    { space_id: string; id: string; req: DeleteTransactionRequest }
+    { id: string; req: DeleteTransactionRequest }
   >
 ) {
   return useMutation<
     Record<string, never>,
     Error,
-    { space_id: string; id: string; req: DeleteTransactionRequest }
+    { id: string; req: DeleteTransactionRequest }
   >({
-    mutationFn: ({ space_id, id, req }) => deleteTransaction(space_id, id, req),
+    mutationFn: ({ id, req }) => deleteTransaction(id, req),
     ...options,
   })
 }
@@ -949,12 +953,11 @@ export function useDeleteTransactionMutation(
  * ListTransactions lists paginated transactions for a workspace.
  */
 export async function listTransactions(
-  space_id: string,
   req: ListTransactionsRequest
 ): Promise<ListTransactionsResponse> {
   return request<ListTransactionsResponse>({
     method: "GET",
-    url: `/api/v1/spaces/${space_id}/finance/transactions`,
+    url: "/api/v1/finance/transactions",
     params: req,
   })
 }
@@ -967,8 +970,8 @@ export function useListTransactionsQuery(
   >
 ) {
   return useQuery<ListTransactionsResponse, Error>({
-    queryKey: [`/api/v1/spaces/${req.spaceId}/finance/transactions`, req],
-    queryFn: () => listTransactions(req.spaceId, req),
+    queryKey: ["/api/v1/finance/transactions", req],
+    queryFn: () => listTransactions(req),
     ...options,
   })
 }
@@ -977,12 +980,11 @@ export function useListTransactionsQuery(
  * GetInsights aggregates workspace spent insights and statistics.
  */
 export async function getInsights(
-  space_id: string,
   req: GetInsightsRequest
 ): Promise<GetInsightsResponse> {
   return request<GetInsightsResponse>({
     method: "GET",
-    url: `/api/v1/spaces/${space_id}/finance/insights`,
+    url: "/api/v1/finance/insights",
     params: req,
   })
 }
@@ -995,8 +997,8 @@ export function useGetInsightsQuery(
   >
 ) {
   return useQuery<GetInsightsResponse, Error>({
-    queryKey: [`/api/v1/spaces/${req.spaceId}/finance/insights`, req],
-    queryFn: () => getInsights(req.spaceId, req),
+    queryKey: ["/api/v1/finance/insights", req],
+    queryFn: () => getInsights(req),
     ...options,
   })
 }
@@ -1005,12 +1007,11 @@ export function useGetInsightsQuery(
  * CreateRecurringExpense configures a new recurring expense rule.
  */
 export async function createRecurringExpense(
-  space_id: string,
   req: CreateRecurringExpenseRequest
 ): Promise<RecurringExpense> {
   return request<RecurringExpense>({
     method: "POST",
-    url: `/api/v1/spaces/${space_id}/finance/recurring-expenses`,
+    url: "/api/v1/finance/recurring-expenses",
     data: req,
   })
 }
@@ -1019,15 +1020,11 @@ export function useCreateRecurringExpenseMutation(
   options?: UseMutationOptions<
     RecurringExpense,
     Error,
-    { space_id: string; req: CreateRecurringExpenseRequest }
+    CreateRecurringExpenseRequest
   >
 ) {
-  return useMutation<
-    RecurringExpense,
-    Error,
-    { space_id: string; req: CreateRecurringExpenseRequest }
-  >({
-    mutationFn: ({ space_id, req }) => createRecurringExpense(space_id, req),
+  return useMutation<RecurringExpense, Error, CreateRecurringExpenseRequest>({
+    mutationFn: (req) => createRecurringExpense(req),
     ...options,
   })
 }
@@ -1036,13 +1033,12 @@ export function useCreateRecurringExpenseMutation(
  * UpdateRecurringExpense modifies an existing recurring expense rule.
  */
 export async function updateRecurringExpense(
-  space_id: string,
   id: string,
   req: UpdateRecurringExpenseRequest
 ): Promise<RecurringExpense> {
   return request<RecurringExpense>({
     method: "PUT",
-    url: `/api/v1/spaces/${space_id}/finance/recurring-expenses/${id}`,
+    url: `/api/v1/finance/recurring-expenses/${id}`,
     data: req,
   })
 }
@@ -1051,16 +1047,15 @@ export function useUpdateRecurringExpenseMutation(
   options?: UseMutationOptions<
     RecurringExpense,
     Error,
-    { space_id: string; id: string; req: UpdateRecurringExpenseRequest }
+    { id: string; req: UpdateRecurringExpenseRequest }
   >
 ) {
   return useMutation<
     RecurringExpense,
     Error,
-    { space_id: string; id: string; req: UpdateRecurringExpenseRequest }
+    { id: string; req: UpdateRecurringExpenseRequest }
   >({
-    mutationFn: ({ space_id, id, req }) =>
-      updateRecurringExpense(space_id, id, req),
+    mutationFn: ({ id, req }) => updateRecurringExpense(id, req),
     ...options,
   })
 }
@@ -1069,13 +1064,12 @@ export function useUpdateRecurringExpenseMutation(
  * DeleteRecurringExpense deletes a recurring expense rule.
  */
 export async function deleteRecurringExpense(
-  space_id: string,
   id: string,
   req: DeleteRecurringExpenseRequest
 ): Promise<Record<string, never>> {
   return request<Record<string, never>>({
     method: "DELETE",
-    url: `/api/v1/spaces/${space_id}/finance/recurring-expenses/${id}`,
+    url: `/api/v1/finance/recurring-expenses/${id}`,
     params: req,
   })
 }
@@ -1084,16 +1078,15 @@ export function useDeleteRecurringExpenseMutation(
   options?: UseMutationOptions<
     Record<string, never>,
     Error,
-    { space_id: string; id: string; req: DeleteRecurringExpenseRequest }
+    { id: string; req: DeleteRecurringExpenseRequest }
   >
 ) {
   return useMutation<
     Record<string, never>,
     Error,
-    { space_id: string; id: string; req: DeleteRecurringExpenseRequest }
+    { id: string; req: DeleteRecurringExpenseRequest }
   >({
-    mutationFn: ({ space_id, id, req }) =>
-      deleteRecurringExpense(space_id, id, req),
+    mutationFn: ({ id, req }) => deleteRecurringExpense(id, req),
     ...options,
   })
 }
@@ -1102,12 +1095,11 @@ export function useDeleteRecurringExpenseMutation(
  * ListRecurringExpenses lists recurring expenses for a workspace.
  */
 export async function listRecurringExpenses(
-  space_id: string,
   req: ListRecurringExpensesRequest
 ): Promise<ListRecurringExpensesResponse> {
   return request<ListRecurringExpensesResponse>({
     method: "GET",
-    url: `/api/v1/spaces/${space_id}/finance/recurring-expenses`,
+    url: "/api/v1/finance/recurring-expenses",
     params: req,
   })
 }
@@ -1120,8 +1112,8 @@ export function useListRecurringExpensesQuery(
   >
 ) {
   return useQuery<ListRecurringExpensesResponse, Error>({
-    queryKey: [`/api/v1/spaces/${req.spaceId}/finance/recurring-expenses`, req],
-    queryFn: () => listRecurringExpenses(req.spaceId, req),
+    queryKey: ["/api/v1/finance/recurring-expenses", req],
+    queryFn: () => listRecurringExpenses(req),
     ...options,
   })
 }
@@ -1130,12 +1122,11 @@ export function useListRecurringExpensesQuery(
  * ListScheduledPayments lists scheduled payments for a workspace.
  */
 export async function listScheduledPayments(
-  space_id: string,
   req: ListScheduledPaymentsRequest
 ): Promise<ListScheduledPaymentsResponse> {
   return request<ListScheduledPaymentsResponse>({
     method: "GET",
-    url: `/api/v1/spaces/${space_id}/finance/scheduled-payments`,
+    url: "/api/v1/finance/scheduled-payments",
     params: req,
   })
 }
@@ -1148,8 +1139,8 @@ export function useListScheduledPaymentsQuery(
   >
 ) {
   return useQuery<ListScheduledPaymentsResponse, Error>({
-    queryKey: [`/api/v1/spaces/${req.spaceId}/finance/scheduled-payments`, req],
-    queryFn: () => listScheduledPayments(req.spaceId, req),
+    queryKey: ["/api/v1/finance/scheduled-payments", req],
+    queryFn: () => listScheduledPayments(req),
     ...options,
   })
 }
@@ -1158,13 +1149,12 @@ export function useListScheduledPaymentsQuery(
  * ConfirmScheduledPayment clears a scheduled payment by promoting it to a permanent transaction.
  */
 export async function confirmScheduledPayment(
-  space_id: string,
   payment_id: string,
   req: ConfirmScheduledPaymentRequest
 ): Promise<Transaction> {
   return request<Transaction>({
     method: "POST",
-    url: `/api/v1/spaces/${space_id}/finance/scheduled-payments/${payment_id}/confirm`,
+    url: `/api/v1/finance/scheduled-payments/${payment_id}/confirm`,
     data: req,
   })
 }
@@ -1173,24 +1163,16 @@ export function useConfirmScheduledPaymentMutation(
   options?: UseMutationOptions<
     Transaction,
     Error,
-    {
-      space_id: string
-      payment_id: string
-      req: ConfirmScheduledPaymentRequest
-    }
+    { payment_id: string; req: ConfirmScheduledPaymentRequest }
   >
 ) {
   return useMutation<
     Transaction,
     Error,
-    {
-      space_id: string
-      payment_id: string
-      req: ConfirmScheduledPaymentRequest
-    }
+    { payment_id: string; req: ConfirmScheduledPaymentRequest }
   >({
-    mutationFn: ({ space_id, payment_id, req }) =>
-      confirmScheduledPayment(space_id, payment_id, req),
+    mutationFn: ({ payment_id, req }) =>
+      confirmScheduledPayment(payment_id, req),
     ...options,
   })
 }
@@ -1199,29 +1181,20 @@ export function useConfirmScheduledPaymentMutation(
  * CreateBorrowing logs a new personal lent/borrowed debt agreement.
  */
 export async function createBorrowing(
-  space_id: string,
   req: CreateBorrowingRequest
 ): Promise<Borrowing> {
   return request<Borrowing>({
     method: "POST",
-    url: `/api/v1/spaces/${space_id}/finance/borrowings`,
+    url: "/api/v1/finance/borrowings",
     data: req,
   })
 }
 
 export function useCreateBorrowingMutation(
-  options?: UseMutationOptions<
-    Borrowing,
-    Error,
-    { space_id: string; req: CreateBorrowingRequest }
-  >
+  options?: UseMutationOptions<Borrowing, Error, CreateBorrowingRequest>
 ) {
-  return useMutation<
-    Borrowing,
-    Error,
-    { space_id: string; req: CreateBorrowingRequest }
-  >({
-    mutationFn: ({ space_id, req }) => createBorrowing(space_id, req),
+  return useMutation<Borrowing, Error, CreateBorrowingRequest>({
+    mutationFn: (req) => createBorrowing(req),
     ...options,
   })
 }
@@ -1230,13 +1203,12 @@ export function useCreateBorrowingMutation(
  * GetBorrowing retrieves a single borrowing record.
  */
 export async function getBorrowing(
-  space_id: string,
   id: string,
   req: GetBorrowingRequest
 ): Promise<Borrowing> {
   return request<Borrowing>({
     method: "GET",
-    url: `/api/v1/spaces/${space_id}/finance/borrowings/${id}`,
+    url: `/api/v1/finance/borrowings/${id}`,
     params: req,
   })
 }
@@ -1246,11 +1218,8 @@ export function useGetBorrowingQuery(
   options?: Omit<UseQueryOptions<Borrowing, Error>, "queryKey" | "queryFn">
 ) {
   return useQuery<Borrowing, Error>({
-    queryKey: [
-      `/api/v1/spaces/${req.spaceId}/finance/borrowings/${req.id}`,
-      req,
-    ],
-    queryFn: () => getBorrowing(req.spaceId, req.id, req),
+    queryKey: [`/api/v1/finance/borrowings/${req.id}`, req],
+    queryFn: () => getBorrowing(req.id, req),
     ...options,
   })
 }
@@ -1259,12 +1228,11 @@ export function useGetBorrowingQuery(
  * ListBorrowings returns borrowings for a space, optionally filtered.
  */
 export async function listBorrowings(
-  space_id: string,
   req: ListBorrowingsRequest
 ): Promise<ListBorrowingsResponse> {
   return request<ListBorrowingsResponse>({
     method: "GET",
-    url: `/api/v1/spaces/${space_id}/finance/borrowings`,
+    url: "/api/v1/finance/borrowings",
     params: req,
   })
 }
@@ -1277,8 +1245,8 @@ export function useListBorrowingsQuery(
   >
 ) {
   return useQuery<ListBorrowingsResponse, Error>({
-    queryKey: [`/api/v1/spaces/${req.spaceId}/finance/borrowings`, req],
-    queryFn: () => listBorrowings(req.spaceId, req),
+    queryKey: ["/api/v1/finance/borrowings", req],
+    queryFn: () => listBorrowings(req),
     ...options,
   })
 }
@@ -1287,13 +1255,12 @@ export function useListBorrowingsQuery(
  * UpdateBorrowing updates basic details of a borrowing record.
  */
 export async function updateBorrowing(
-  space_id: string,
   id: string,
   req: UpdateBorrowingRequest
 ): Promise<Borrowing> {
   return request<Borrowing>({
     method: "PUT",
-    url: `/api/v1/spaces/${space_id}/finance/borrowings/${id}`,
+    url: `/api/v1/finance/borrowings/${id}`,
     data: req,
   })
 }
@@ -1302,15 +1269,15 @@ export function useUpdateBorrowingMutation(
   options?: UseMutationOptions<
     Borrowing,
     Error,
-    { space_id: string; id: string; req: UpdateBorrowingRequest }
+    { id: string; req: UpdateBorrowingRequest }
   >
 ) {
   return useMutation<
     Borrowing,
     Error,
-    { space_id: string; id: string; req: UpdateBorrowingRequest }
+    { id: string; req: UpdateBorrowingRequest }
   >({
-    mutationFn: ({ space_id, id, req }) => updateBorrowing(space_id, id, req),
+    mutationFn: ({ id, req }) => updateBorrowing(id, req),
     ...options,
   })
 }
@@ -1319,13 +1286,12 @@ export function useUpdateBorrowingMutation(
  * DeleteBorrowing removes a borrowing and all its repayments.
  */
 export async function deleteBorrowing(
-  space_id: string,
   id: string,
   req: DeleteBorrowingRequest
 ): Promise<Record<string, never>> {
   return request<Record<string, never>>({
     method: "DELETE",
-    url: `/api/v1/spaces/${space_id}/finance/borrowings/${id}`,
+    url: `/api/v1/finance/borrowings/${id}`,
     params: req,
   })
 }
@@ -1334,15 +1300,15 @@ export function useDeleteBorrowingMutation(
   options?: UseMutationOptions<
     Record<string, never>,
     Error,
-    { space_id: string; id: string; req: DeleteBorrowingRequest }
+    { id: string; req: DeleteBorrowingRequest }
   >
 ) {
   return useMutation<
     Record<string, never>,
     Error,
-    { space_id: string; id: string; req: DeleteBorrowingRequest }
+    { id: string; req: DeleteBorrowingRequest }
   >({
-    mutationFn: ({ space_id, id, req }) => deleteBorrowing(space_id, id, req),
+    mutationFn: ({ id, req }) => deleteBorrowing(id, req),
     ...options,
   })
 }
@@ -1351,13 +1317,12 @@ export function useDeleteBorrowingMutation(
  * CreateBorrowingRepayment records an installment payment towards a borrowing.
  */
 export async function createBorrowingRepayment(
-  space_id: string,
   borrowing_id: string,
   req: CreateBorrowingRepaymentRequest
 ): Promise<BorrowingRepayment> {
   return request<BorrowingRepayment>({
     method: "POST",
-    url: `/api/v1/spaces/${space_id}/finance/borrowings/${borrowing_id}/repayments`,
+    url: `/api/v1/finance/borrowings/${borrowing_id}/repayments`,
     data: req,
   })
 }
@@ -1366,24 +1331,16 @@ export function useCreateBorrowingRepaymentMutation(
   options?: UseMutationOptions<
     BorrowingRepayment,
     Error,
-    {
-      space_id: string
-      borrowing_id: string
-      req: CreateBorrowingRepaymentRequest
-    }
+    { borrowing_id: string; req: CreateBorrowingRepaymentRequest }
   >
 ) {
   return useMutation<
     BorrowingRepayment,
     Error,
-    {
-      space_id: string
-      borrowing_id: string
-      req: CreateBorrowingRepaymentRequest
-    }
+    { borrowing_id: string; req: CreateBorrowingRepaymentRequest }
   >({
-    mutationFn: ({ space_id, borrowing_id, req }) =>
-      createBorrowingRepayment(space_id, borrowing_id, req),
+    mutationFn: ({ borrowing_id, req }) =>
+      createBorrowingRepayment(borrowing_id, req),
     ...options,
   })
 }
@@ -1392,13 +1349,12 @@ export function useCreateBorrowingRepaymentMutation(
  * ListBorrowingRepayments returns all repayments for a specific borrowing.
  */
 export async function listBorrowingRepayments(
-  space_id: string,
   borrowing_id: string,
   req: ListBorrowingRepaymentsRequest
 ): Promise<ListBorrowingRepaymentsResponse> {
   return request<ListBorrowingRepaymentsResponse>({
     method: "GET",
-    url: `/api/v1/spaces/${space_id}/finance/borrowings/${borrowing_id}/repayments`,
+    url: `/api/v1/finance/borrowings/${borrowing_id}/repayments`,
     params: req,
   })
 }
@@ -1411,11 +1367,8 @@ export function useListBorrowingRepaymentsQuery(
   >
 ) {
   return useQuery<ListBorrowingRepaymentsResponse, Error>({
-    queryKey: [
-      `/api/v1/spaces/${req.spaceId}/finance/borrowings/${req.borrowingId}/repayments`,
-      req,
-    ],
-    queryFn: () => listBorrowingRepayments(req.spaceId, req.borrowingId, req),
+    queryKey: [`/api/v1/finance/borrowings/${req.borrowingId}/repayments`, req],
+    queryFn: () => listBorrowingRepayments(req.borrowingId, req),
     ...options,
   })
 }
@@ -1424,14 +1377,13 @@ export function useListBorrowingRepaymentsQuery(
  * DeleteBorrowingRepayment deletes a specific installment and restores the balance.
  */
 export async function deleteBorrowingRepayment(
-  space_id: string,
   borrowing_id: string,
   id: string,
   req: DeleteBorrowingRepaymentRequest
 ): Promise<Record<string, never>> {
   return request<Record<string, never>>({
     method: "DELETE",
-    url: `/api/v1/spaces/${space_id}/finance/borrowings/${borrowing_id}/repayments/${id}`,
+    url: `/api/v1/finance/borrowings/${borrowing_id}/repayments/${id}`,
     params: req,
   })
 }
@@ -1440,26 +1392,199 @@ export function useDeleteBorrowingRepaymentMutation(
   options?: UseMutationOptions<
     Record<string, never>,
     Error,
-    {
-      space_id: string
-      borrowing_id: string
-      id: string
-      req: DeleteBorrowingRepaymentRequest
-    }
+    { borrowing_id: string; id: string; req: DeleteBorrowingRepaymentRequest }
   >
 ) {
   return useMutation<
     Record<string, never>,
     Error,
-    {
-      space_id: string
-      borrowing_id: string
-      id: string
-      req: DeleteBorrowingRepaymentRequest
-    }
+    { borrowing_id: string; id: string; req: DeleteBorrowingRepaymentRequest }
   >({
-    mutationFn: ({ space_id, borrowing_id, id, req }) =>
-      deleteBorrowingRepayment(space_id, borrowing_id, id, req),
+    mutationFn: ({ borrowing_id, id, req }) =>
+      deleteBorrowingRepayment(borrowing_id, id, req),
+    ...options,
+  })
+}
+
+/**
+ * CreateAccount registers a new payment/liquidity account.
+ */
+export async function createAccount(
+  req: CreateAccountRequest
+): Promise<Account> {
+  return request<Account>({
+    method: "POST",
+    url: "/api/v1/finance/accounts",
+    data: req,
+  })
+}
+
+export function useCreateAccountMutation(
+  options?: UseMutationOptions<Account, Error, CreateAccountRequest>
+) {
+  return useMutation<Account, Error, CreateAccountRequest>({
+    mutationFn: (req) => createAccount(req),
+    ...options,
+  })
+}
+
+/**
+ * GetAccount retrieves details of an account.
+ */
+export async function getAccount(
+  id: string,
+  req: GetAccountRequest
+): Promise<Account> {
+  return request<Account>({
+    method: "GET",
+    url: `/api/v1/finance/accounts/${id}`,
+    params: req,
+  })
+}
+
+export function useGetAccountQuery(
+  req: GetAccountRequest,
+  options?: Omit<UseQueryOptions<Account, Error>, "queryKey" | "queryFn">
+) {
+  return useQuery<Account, Error>({
+    queryKey: [`/api/v1/finance/accounts/${req.id}`, req],
+    queryFn: () => getAccount(req.id, req),
+    ...options,
+  })
+}
+
+/**
+ * UpdateAccount updates details of an account.
+ */
+export async function updateAccount(
+  id: string,
+  req: UpdateAccountRequest
+): Promise<Account> {
+  return request<Account>({
+    method: "PUT",
+    url: `/api/v1/finance/accounts/${id}`,
+    data: req,
+  })
+}
+
+export function useUpdateAccountMutation(
+  options?: UseMutationOptions<
+    Account,
+    Error,
+    { id: string; req: UpdateAccountRequest }
+  >
+) {
+  return useMutation<Account, Error, { id: string; req: UpdateAccountRequest }>(
+    {
+      mutationFn: ({ id, req }) => updateAccount(id, req),
+      ...options,
+    }
+  )
+}
+
+/**
+ * DeleteAccount deletes an account.
+ */
+export async function deleteAccount(
+  id: string,
+  req: DeleteAccountRequest
+): Promise<Record<string, never>> {
+  return request<Record<string, never>>({
+    method: "DELETE",
+    url: `/api/v1/finance/accounts/${id}`,
+    params: req,
+  })
+}
+
+export function useDeleteAccountMutation(
+  options?: UseMutationOptions<
+    Record<string, never>,
+    Error,
+    { id: string; req: DeleteAccountRequest }
+  >
+) {
+  return useMutation<
+    Record<string, never>,
+    Error,
+    { id: string; req: DeleteAccountRequest }
+  >({
+    mutationFn: ({ id, req }) => deleteAccount(id, req),
+    ...options,
+  })
+}
+
+/**
+ * ListAccounts lists all accounts in a workspace.
+ */
+export async function listAccounts(
+  req?: ListAccountsRequest
+): Promise<ListAccountsResponse> {
+  return request<ListAccountsResponse>({
+    method: "GET",
+    url: "/api/v1/finance/accounts",
+    params: req,
+  })
+}
+
+export function useListAccountsQuery(
+  req: ListAccountsRequest,
+  options?: Omit<
+    UseQueryOptions<ListAccountsResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListAccountsResponse, Error>({
+    queryKey: ["/api/v1/finance/accounts", req],
+    queryFn: () => listAccounts(req),
+    ...options,
+  })
+}
+
+/**
+ * CreateTransfer logs a new transfer between accounts.
+ */
+export async function createTransfer(
+  req: CreateTransferRequest
+): Promise<Transfer> {
+  return request<Transfer>({
+    method: "POST",
+    url: "/api/v1/finance/transfers",
+    data: req,
+  })
+}
+
+export function useCreateTransferMutation(
+  options?: UseMutationOptions<Transfer, Error, CreateTransferRequest>
+) {
+  return useMutation<Transfer, Error, CreateTransferRequest>({
+    mutationFn: (req) => createTransfer(req),
+    ...options,
+  })
+}
+
+/**
+ * ListTransfers lists all transfers in a workspace.
+ */
+export async function listTransfers(
+  req: ListTransfersRequest
+): Promise<ListTransfersResponse> {
+  return request<ListTransfersResponse>({
+    method: "GET",
+    url: "/api/v1/finance/transfers",
+    params: req,
+  })
+}
+
+export function useListTransfersQuery(
+  req: ListTransfersRequest,
+  options?: Omit<
+    UseQueryOptions<ListTransfersResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListTransfersResponse, Error>({
+    queryKey: ["/api/v1/finance/transfers", req],
+    queryFn: () => listTransfers(req),
     ...options,
   })
 }
@@ -1468,12 +1593,11 @@ export function useDeleteBorrowingRepaymentMutation(
  * ListCurrencies returns the list of supported currencies.
  */
 export async function listCurrencies(
-  space_id: string,
-  req: ListCurrenciesRequest
+  req?: ListCurrenciesRequest
 ): Promise<ListCurrenciesResponse> {
   return request<ListCurrenciesResponse>({
     method: "GET",
-    url: `/api/v1/spaces/${space_id}/finance/currencies`,
+    url: "/api/v1/finance/currencies",
     params: req,
   })
 }
@@ -1486,8 +1610,8 @@ export function useListCurrenciesQuery(
   >
 ) {
   return useQuery<ListCurrenciesResponse, Error>({
-    queryKey: [`/api/v1/spaces/${req.spaceId}/finance/currencies`, req],
-    queryFn: () => listCurrencies(req.spaceId, req),
+    queryKey: ["/api/v1/finance/currencies", req],
+    queryFn: () => listCurrencies(req),
     ...options,
   })
 }

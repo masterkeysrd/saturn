@@ -11,8 +11,10 @@ import (
 type TransactionType string
 
 const (
-	TransactionTypeExpense TransactionType = "EXPENSE"
-	TransactionTypeIncome  TransactionType = "INCOME"
+	TransactionTypeExpense     TransactionType = "EXPENSE"
+	TransactionTypeIncome      TransactionType = "INCOME"
+	TransactionTypeTransferOut TransactionType = "TRANSFER_OUT"
+	TransactionTypeTransferIn  TransactionType = "TRANSFER_IN"
 
 	SourceTypeBorrowing          = "borrowing"
 	SourceTypeBorrowingRepayment = "borrowing_repayment"
@@ -65,9 +67,11 @@ type Transaction struct {
 	ID              TransactionID
 	SpaceID         SpaceID
 	Type            TransactionType
-	BudgetID        *BudgetID // Nullable
-	PeriodID        *PeriodID // Nullable
-	Amount          int64     // Unsigned in local currency cents
+	BudgetID        *BudgetID   // Nullable
+	PeriodID        *PeriodID   // Nullable
+	AccountID       *AccountID  // Nullable
+	TransferID      *TransferID // Nullable
+	Amount          int64       // Unsigned in local currency cents
 	Currency        Currency
 	AmountInBase    int64 // Unsigned in workspace base currency cents
 	Description     string
@@ -90,7 +94,7 @@ func (t *Transaction) Validate() error {
 	if err := t.SpaceID.Validate(); err != nil {
 		return fmt.Errorf("validate space ID: %w", err)
 	}
-	if t.Type != TransactionTypeExpense && t.Type != TransactionTypeIncome {
+	if t.Type != TransactionTypeExpense && t.Type != TransactionTypeIncome && t.Type != TransactionTypeTransferOut && t.Type != TransactionTypeTransferIn {
 		return fmt.Errorf("invalid transaction type: %s", t.Type)
 	}
 	if t.Amount <= 0 {
@@ -101,6 +105,16 @@ func (t *Transaction) Validate() error {
 	}
 	if t.AmountInBase <= 0 {
 		return errors.New("transaction amount in base currency must be greater than zero")
+	}
+	if t.AccountID != nil {
+		if err := t.AccountID.Validate(); err != nil {
+			return fmt.Errorf("validate account ID: %w", err)
+		}
+	}
+	if t.TransferID != nil {
+		if err := t.TransferID.Validate(); err != nil {
+			return fmt.Errorf("validate transfer ID: %w", err)
+		}
 	}
 	if t.Type == TransactionTypeExpense {
 		isBorrowing := t.SourceType != nil && (*t.SourceType == SourceTypeBorrowing || *t.SourceType == SourceTypeBorrowingRepayment)

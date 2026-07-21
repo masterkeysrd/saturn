@@ -53,7 +53,6 @@ export function RecurringView() {
     isLoading: expensesLoading,
     refetch: refetchExpenses,
   } = useListRecurringExpensesQuery({
-    spaceId,
     pageSize: 100,
     pageToken: "",
     status: "",
@@ -64,7 +63,6 @@ export function RecurringView() {
     isLoading: paymentsLoading,
     refetch: refetchPayments,
   } = useListScheduledPaymentsQuery({
-    spaceId,
     pageSize: 100,
     pageToken: "",
     status: "",
@@ -84,7 +82,6 @@ export function RecurringView() {
     refetch: refetchHistory,
   } = useListTransactionsQuery(
     {
-      spaceId,
       budgetId: "",
       type: "TRANSACTION_TYPE_UNSPECIFIED",
       pageSize: 50,
@@ -104,10 +101,8 @@ export function RecurringView() {
       )
     ) {
       await deleteMutation.mutateAsync({
-        space_id: spaceId,
         id: id,
         req: {
-          spaceId: spaceId,
           id: id,
         },
       })
@@ -642,7 +637,6 @@ export function RecurringView() {
       <CreateRecurringExpenseSheet
         open={expenseSheetOpen}
         onOpenChange={setExpenseSheetOpen}
-        spaceId={spaceId}
         budgets={budgets}
         baseCurrency={baseCurrency}
         editExpense={editExpense}
@@ -653,7 +647,6 @@ export function RecurringView() {
       <ConfirmPaymentSheet
         open={confirmDialogOpen}
         onOpenChange={setConfirmDialogOpen}
-        spaceId={spaceId}
         payment={selectedPayment}
         refetchPayments={() => {
           refetchPayments()

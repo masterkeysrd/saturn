@@ -118,6 +118,7 @@ type Borrowing struct {
 	EstablishedAt   time.Time
 	DueAt           *time.Time
 	Notes           string
+	AccountID       *AccountID // Transient: used to link a transaction on creation/update
 	CreateTime      time.Time
 	UpdateTime      time.Time
 }
@@ -138,6 +139,11 @@ func (b *Borrowing) Validate() error {
 	}
 	if b.TotalAmount <= 0 {
 		return errors.New("total amount must be greater than zero")
+	}
+	if b.AccountID != nil {
+		if err := b.AccountID.Validate(); err != nil {
+			return fmt.Errorf("validate account ID: %w", err)
+		}
 	}
 	if b.RemainingAmount < 0 || b.RemainingAmount > b.TotalAmount {
 		return errors.New("invalid remaining amount")
@@ -162,6 +168,7 @@ type BorrowingRepayment struct {
 	Amount      int64
 	PaymentDate time.Time
 	Notes       string
+	AccountID   *AccountID // Nullable reference to the source/destination account
 	CreateTime  time.Time
 	UpdateTime  time.Time
 }
@@ -182,6 +189,11 @@ func (r *BorrowingRepayment) Validate() error {
 	}
 	if r.PaymentDate.IsZero() {
 		return errors.New("payment date is required")
+	}
+	if r.AccountID != nil {
+		if err := r.AccountID.Validate(); err != nil {
+			return fmt.Errorf("validate account ID: %w", err)
+		}
 	}
 	return nil
 }

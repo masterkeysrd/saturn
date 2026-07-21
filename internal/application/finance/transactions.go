@@ -14,6 +14,7 @@ type CreateExpenseRequest struct {
 	Description     string
 	TransactionDate time.Time
 	EffectiveDate   time.Time
+	AccountID       *finance.AccountID
 }
 
 type ListTransactionsRequest struct {
@@ -21,6 +22,7 @@ type ListTransactionsRequest struct {
 	Type          *finance.TransactionType
 	SourceType    *string
 	SourceID      *string
+	AccountID     *finance.AccountID
 	PageSize      int32
 	NextPageToken string
 }
@@ -49,6 +51,7 @@ func (c *Coordinator) CreateExpense(ctx context.Context, req *CreateExpenseReque
 		Description:     req.Description,
 		TransactionDate: date.UTC(),
 		EffectiveDate:   effectiveDate.UTC(),
+		AccountID:       req.AccountID,
 	}
 
 	return c.financeService.CreateExpense(ctx, txn)
@@ -73,6 +76,7 @@ func (c *Coordinator) ListTransactions(ctx context.Context, req *ListTransaction
 		Type:          req.Type,
 		SourceType:    req.SourceType,
 		SourceID:      req.SourceID,
+		AccountID:     req.AccountID,
 		PageSize:      req.PageSize,
 		NextPageToken: req.NextPageToken,
 	}
@@ -88,6 +92,7 @@ type UpdateExpenseRequest struct {
 	Description     string
 	TransactionDate time.Time
 	EffectiveDate   time.Time
+	AccountID       *finance.AccountID
 }
 
 func (c *Coordinator) UpdateExpense(ctx context.Context, req *UpdateExpenseRequest) (*finance.Transaction, error) {
@@ -115,6 +120,7 @@ func (c *Coordinator) UpdateExpense(ctx context.Context, req *UpdateExpenseReque
 		Description:     req.Description,
 		TransactionDate: date.UTC(),
 		EffectiveDate:   effectiveDate.UTC(),
+		AccountID:       req.AccountID,
 	}
 
 	return c.financeService.UpdateExpense(ctx, txn)

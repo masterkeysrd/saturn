@@ -38,6 +38,12 @@ func (h *Handler) CreateBorrowing(ctx context.Context, req *financev1.CreateBorr
 		dueAt = &t
 	}
 
+	var accountID *finance.AccountID
+	if input.AccountId != nil {
+		idVal := finance.AccountID(*input.AccountId)
+		accountID = &idVal
+	}
+
 	appReq := &financeapp.CreateBorrowingRequest{
 		Direction:           toDomainBorrowingDirection(input.GetDirection()),
 		Counterparty:        input.GetCounterparty(),
@@ -48,6 +54,7 @@ func (h *Handler) CreateBorrowing(ctx context.Context, req *financev1.CreateBorr
 		DueAt:               dueAt,
 		Notes:               input.GetNotes(),
 		CreateAsTransaction: input.GetCreateAsTransaction(),
+		AccountID:           accountID,
 	}
 
 	b, err := h.Coordinator.CreateBorrowing(ctx, appReq)
@@ -148,6 +155,12 @@ func (h *Handler) UpdateBorrowing(ctx context.Context, req *financev1.UpdateBorr
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
+	var accountID *finance.AccountID
+	if input.AccountId != nil {
+		idVal := finance.AccountID(*input.AccountId)
+		accountID = &idVal
+	}
+
 	appReq := &financeapp.UpdateBorrowingRequest{
 		ID:            bID,
 		Direction:     toDomainBorrowingDirection(input.GetDirection()),
@@ -158,6 +171,7 @@ func (h *Handler) UpdateBorrowing(ctx context.Context, req *financev1.UpdateBorr
 		EstablishedAt: establishedAt,
 		DueAt:         dueAt,
 		Notes:         input.GetNotes(),
+		AccountID:     accountID,
 	}
 
 	b, err := h.Coordinator.UpdateBorrowing(ctx, appReq)
@@ -200,11 +214,17 @@ func (h *Handler) CreateBorrowingRepayment(ctx context.Context, req *financev1.C
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
+	aID, err := finance.ParseAccountID(input.GetAccountId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	appReq := &financeapp.CreateBorrowingRepaymentRequest{
 		BorrowingID: bID,
 		Amount:      input.GetAmount(),
 		PaymentDate: paymentDate,
 		Notes:       input.GetNotes(),
+		AccountID:   aID,
 	}
 
 	r, err := h.Coordinator.CreateBorrowingRepayment(ctx, appReq)
@@ -326,6 +346,11 @@ func toProtoBorrowingRepayment(r *finance.BorrowingRepayment) *financev1.Borrowi
 		return nil
 	}
 
+	var accountID string
+	if r.AccountID != nil {
+		accountID = string(*r.AccountID)
+	}
+
 	return &financev1.BorrowingRepayment{
 		Id:          string(r.ID),
 		BorrowingId: string(r.BorrowingID),
@@ -333,6 +358,7 @@ func toProtoBorrowingRepayment(r *finance.BorrowingRepayment) *financev1.Borrowi
 		Amount:      r.Amount,
 		PaymentDate: timestamppb.New(r.PaymentDate),
 		Notes:       r.Notes,
+		AccountId:   accountID,
 		CreateTime:  timestamppb.New(r.CreateTime),
 		UpdateTime:  timestamppb.New(r.UpdateTime),
 	}

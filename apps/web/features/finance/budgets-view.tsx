@@ -65,9 +65,8 @@ export function BudgetsView() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this budget?")) return
     await deleteMutation.mutateAsync({
-      space_id: spaceId,
       id,
-      req: { spaceId, id },
+      req: { id },
     })
     refetchBudgets()
   }
@@ -165,7 +164,6 @@ export function BudgetsView() {
                 key={b.id}
                 budget={b}
                 isWritable={isWritable}
-                spaceId={spaceId}
                 onEdit={handleEditTrigger}
                 onDelete={handleDelete}
                 onAddExpense={handleAddExpenseTrigger}

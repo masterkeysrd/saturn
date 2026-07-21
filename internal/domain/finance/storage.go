@@ -99,6 +99,8 @@ type ListTransactionsFilter struct {
 	Type          *TransactionType
 	SourceType    *string
 	SourceID      *string
+	AccountID     *AccountID
+	TransferID    *TransferID
 	PageSize      int32
 	NextPageToken string
 }
@@ -153,4 +155,21 @@ type BorrowingRepaymentStore interface {
 	GetByID(ctx context.Context, id BorrowingRepaymentID) (*BorrowingRepayment, error)
 	Delete(ctx context.Context, id BorrowingRepaymentID) error
 	ListByBorrowing(ctx context.Context, spaceID SpaceID, borrowingID BorrowingID) ([]*BorrowingRepayment, error)
+}
+
+// AccountStore defines persistence for physical or digital payment accounts.
+type AccountStore interface {
+	Create(ctx context.Context, account *Account) error
+	GetByID(ctx context.Context, id AccountID) (*Account, error)
+	Update(ctx context.Context, account *Account) error
+	Delete(ctx context.Context, id AccountID) error
+	ListBySpace(ctx context.Context, spaceID SpaceID) ([]*Account, error)
+}
+
+// TransferStore defines persistence for parent transfer logs.
+type TransferStore interface {
+	Create(ctx context.Context, transfer *Transfer) error
+	GetByID(ctx context.Context, id TransferID) (*Transfer, error)
+	Delete(ctx context.Context, id TransferID) error
+	ListBySpace(ctx context.Context, spaceID SpaceID, limit int32, pageToken string) ([]*Transfer, string, error)
 }

@@ -13,6 +13,10 @@ export const menu: FeatureMenu = {
       url: "/finance",
     },
     {
+      title: "Accounts",
+      url: "/finance/accounts",
+    },
+    {
       title: "Transactions",
       url: "/finance/transactions",
     },

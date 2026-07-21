@@ -48,7 +48,6 @@ export function BorrowingView() {
 
   const { data, refetch: refetchBorrowings } = useListBorrowingsQuery(
     {
-      spaceId,
       status:
         statusFilter === "ALL" ? undefined : (statusFilter as BorrowingStatus),
       direction:
@@ -74,10 +73,8 @@ export function BorrowingView() {
 
     try {
       await deleteBorrowingMutation.mutateAsync({
-        space_id: spaceId,
         id: b.id,
         req: {
-          spaceId,
           id: b.id,
         },
       })
@@ -436,7 +433,6 @@ export function BorrowingView() {
       <CreateBorrowingSheet
         open={createOpen}
         onOpenChange={setCreateOpen}
-        spaceId={spaceId}
         baseCurrency={baseCurrency}
         editBorrowing={editBorrowing}
         refetchBorrowings={refetchBorrowings}

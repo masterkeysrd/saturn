@@ -31,7 +31,6 @@ import { toCentsString, formatCents } from "../utils"
 interface CreateRecurringExpenseSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  spaceId: string
   budgets: Budget[]
   baseCurrency: string
   editExpense?: RecurringExpense | null
@@ -48,7 +47,6 @@ interface CreateRecurringExpenseSheetProps {
 export function CreateRecurringExpenseSheet({
   open,
   onOpenChange,
-  spaceId,
   budgets,
   baseCurrency,
   editExpense,
@@ -123,10 +121,8 @@ export function CreateRecurringExpenseSheet({
     if (editExpense) {
       await updateMutation.mutateAsync({
         id: editExpense.id,
-        space_id: spaceId,
         req: {
           id: editExpense.id,
-          spaceId,
           budgetId,
           name,
           amount: centsAmount,
@@ -140,18 +136,14 @@ export function CreateRecurringExpenseSheet({
       })
     } else {
       await createMutation.mutateAsync({
-        space_id: spaceId,
-        req: {
-          spaceId,
-          budgetId,
-          name,
-          amount: centsAmount,
-          currency,
-          interval,
-          nextDueDate: nextDueDateStr,
-          isVariable,
-          gracePeriodDays,
-        },
+        budgetId,
+        name,
+        amount: centsAmount,
+        currency,
+        interval,
+        nextDueDate: nextDueDateStr,
+        isVariable,
+        gracePeriodDays,
       })
     }
 

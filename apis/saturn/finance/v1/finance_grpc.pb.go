@@ -49,6 +49,13 @@ const (
 	Finance_CreateBorrowingRepayment_FullMethodName = "/saturn.finance.v1.Finance/CreateBorrowingRepayment"
 	Finance_ListBorrowingRepayments_FullMethodName  = "/saturn.finance.v1.Finance/ListBorrowingRepayments"
 	Finance_DeleteBorrowingRepayment_FullMethodName = "/saturn.finance.v1.Finance/DeleteBorrowingRepayment"
+	Finance_CreateAccount_FullMethodName            = "/saturn.finance.v1.Finance/CreateAccount"
+	Finance_GetAccount_FullMethodName               = "/saturn.finance.v1.Finance/GetAccount"
+	Finance_UpdateAccount_FullMethodName            = "/saturn.finance.v1.Finance/UpdateAccount"
+	Finance_DeleteAccount_FullMethodName            = "/saturn.finance.v1.Finance/DeleteAccount"
+	Finance_ListAccounts_FullMethodName             = "/saturn.finance.v1.Finance/ListAccounts"
+	Finance_CreateTransfer_FullMethodName           = "/saturn.finance.v1.Finance/CreateTransfer"
+	Finance_ListTransfers_FullMethodName            = "/saturn.finance.v1.Finance/ListTransfers"
 	Finance_ListCurrencies_FullMethodName           = "/saturn.finance.v1.Finance/ListCurrencies"
 )
 
@@ -116,6 +123,20 @@ type FinanceClient interface {
 	ListBorrowingRepayments(ctx context.Context, in *ListBorrowingRepaymentsRequest, opts ...grpc.CallOption) (*ListBorrowingRepaymentsResponse, error)
 	// DeleteBorrowingRepayment deletes a specific installment and restores the balance.
 	DeleteBorrowingRepayment(ctx context.Context, in *DeleteBorrowingRepaymentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// CreateAccount registers a new payment/liquidity account.
+	CreateAccount(ctx context.Context, in *CreateAccountRequest, opts ...grpc.CallOption) (*Account, error)
+	// GetAccount retrieves details of an account.
+	GetAccount(ctx context.Context, in *GetAccountRequest, opts ...grpc.CallOption) (*Account, error)
+	// UpdateAccount updates details of an account.
+	UpdateAccount(ctx context.Context, in *UpdateAccountRequest, opts ...grpc.CallOption) (*Account, error)
+	// DeleteAccount deletes an account.
+	DeleteAccount(ctx context.Context, in *DeleteAccountRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// ListAccounts lists all accounts in a workspace.
+	ListAccounts(ctx context.Context, in *ListAccountsRequest, opts ...grpc.CallOption) (*ListAccountsResponse, error)
+	// CreateTransfer logs a new transfer between accounts.
+	CreateTransfer(ctx context.Context, in *CreateTransferRequest, opts ...grpc.CallOption) (*Transfer, error)
+	// ListTransfers lists all transfers in a workspace.
+	ListTransfers(ctx context.Context, in *ListTransfersRequest, opts ...grpc.CallOption) (*ListTransfersResponse, error)
 	// ListCurrencies returns the list of supported currencies.
 	ListCurrencies(ctx context.Context, in *ListCurrenciesRequest, opts ...grpc.CallOption) (*ListCurrenciesResponse, error)
 }
@@ -418,6 +439,76 @@ func (c *financeClient) DeleteBorrowingRepayment(ctx context.Context, in *Delete
 	return out, nil
 }
 
+func (c *financeClient) CreateAccount(ctx context.Context, in *CreateAccountRequest, opts ...grpc.CallOption) (*Account, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Account)
+	err := c.cc.Invoke(ctx, Finance_CreateAccount_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) GetAccount(ctx context.Context, in *GetAccountRequest, opts ...grpc.CallOption) (*Account, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Account)
+	err := c.cc.Invoke(ctx, Finance_GetAccount_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) UpdateAccount(ctx context.Context, in *UpdateAccountRequest, opts ...grpc.CallOption) (*Account, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Account)
+	err := c.cc.Invoke(ctx, Finance_UpdateAccount_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) DeleteAccount(ctx context.Context, in *DeleteAccountRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Finance_DeleteAccount_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) ListAccounts(ctx context.Context, in *ListAccountsRequest, opts ...grpc.CallOption) (*ListAccountsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAccountsResponse)
+	err := c.cc.Invoke(ctx, Finance_ListAccounts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) CreateTransfer(ctx context.Context, in *CreateTransferRequest, opts ...grpc.CallOption) (*Transfer, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Transfer)
+	err := c.cc.Invoke(ctx, Finance_CreateTransfer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) ListTransfers(ctx context.Context, in *ListTransfersRequest, opts ...grpc.CallOption) (*ListTransfersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListTransfersResponse)
+	err := c.cc.Invoke(ctx, Finance_ListTransfers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *financeClient) ListCurrencies(ctx context.Context, in *ListCurrenciesRequest, opts ...grpc.CallOption) (*ListCurrenciesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListCurrenciesResponse)
@@ -492,6 +583,20 @@ type FinanceServer interface {
 	ListBorrowingRepayments(context.Context, *ListBorrowingRepaymentsRequest) (*ListBorrowingRepaymentsResponse, error)
 	// DeleteBorrowingRepayment deletes a specific installment and restores the balance.
 	DeleteBorrowingRepayment(context.Context, *DeleteBorrowingRepaymentRequest) (*emptypb.Empty, error)
+	// CreateAccount registers a new payment/liquidity account.
+	CreateAccount(context.Context, *CreateAccountRequest) (*Account, error)
+	// GetAccount retrieves details of an account.
+	GetAccount(context.Context, *GetAccountRequest) (*Account, error)
+	// UpdateAccount updates details of an account.
+	UpdateAccount(context.Context, *UpdateAccountRequest) (*Account, error)
+	// DeleteAccount deletes an account.
+	DeleteAccount(context.Context, *DeleteAccountRequest) (*emptypb.Empty, error)
+	// ListAccounts lists all accounts in a workspace.
+	ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error)
+	// CreateTransfer logs a new transfer between accounts.
+	CreateTransfer(context.Context, *CreateTransferRequest) (*Transfer, error)
+	// ListTransfers lists all transfers in a workspace.
+	ListTransfers(context.Context, *ListTransfersRequest) (*ListTransfersResponse, error)
 	// ListCurrencies returns the list of supported currencies.
 	ListCurrencies(context.Context, *ListCurrenciesRequest) (*ListCurrenciesResponse, error)
 }
@@ -589,6 +694,27 @@ func (UnimplementedFinanceServer) ListBorrowingRepayments(context.Context, *List
 }
 func (UnimplementedFinanceServer) DeleteBorrowingRepayment(context.Context, *DeleteBorrowingRepaymentRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteBorrowingRepayment not implemented")
+}
+func (UnimplementedFinanceServer) CreateAccount(context.Context, *CreateAccountRequest) (*Account, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateAccount not implemented")
+}
+func (UnimplementedFinanceServer) GetAccount(context.Context, *GetAccountRequest) (*Account, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAccount not implemented")
+}
+func (UnimplementedFinanceServer) UpdateAccount(context.Context, *UpdateAccountRequest) (*Account, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateAccount not implemented")
+}
+func (UnimplementedFinanceServer) DeleteAccount(context.Context, *DeleteAccountRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteAccount not implemented")
+}
+func (UnimplementedFinanceServer) ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListAccounts not implemented")
+}
+func (UnimplementedFinanceServer) CreateTransfer(context.Context, *CreateTransferRequest) (*Transfer, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateTransfer not implemented")
+}
+func (UnimplementedFinanceServer) ListTransfers(context.Context, *ListTransfersRequest) (*ListTransfersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListTransfers not implemented")
 }
 func (UnimplementedFinanceServer) ListCurrencies(context.Context, *ListCurrenciesRequest) (*ListCurrenciesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListCurrencies not implemented")
@@ -1135,6 +1261,132 @@ func _Finance_DeleteBorrowingRepayment_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Finance_CreateAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateAccountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).CreateAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_CreateAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).CreateAccount(ctx, req.(*CreateAccountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_GetAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAccountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).GetAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_GetAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).GetAccount(ctx, req.(*GetAccountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_UpdateAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateAccountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).UpdateAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_UpdateAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).UpdateAccount(ctx, req.(*UpdateAccountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_DeleteAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteAccountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).DeleteAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_DeleteAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).DeleteAccount(ctx, req.(*DeleteAccountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_ListAccounts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAccountsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).ListAccounts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_ListAccounts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).ListAccounts(ctx, req.(*ListAccountsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_CreateTransfer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateTransferRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).CreateTransfer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_CreateTransfer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).CreateTransfer(ctx, req.(*CreateTransferRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_ListTransfers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListTransfersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).ListTransfers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_ListTransfers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).ListTransfers(ctx, req.(*ListTransfersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Finance_ListCurrencies_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListCurrenciesRequest)
 	if err := dec(in); err != nil {
@@ -1275,6 +1527,34 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteBorrowingRepayment",
 			Handler:    _Finance_DeleteBorrowingRepayment_Handler,
+		},
+		{
+			MethodName: "CreateAccount",
+			Handler:    _Finance_CreateAccount_Handler,
+		},
+		{
+			MethodName: "GetAccount",
+			Handler:    _Finance_GetAccount_Handler,
+		},
+		{
+			MethodName: "UpdateAccount",
+			Handler:    _Finance_UpdateAccount_Handler,
+		},
+		{
+			MethodName: "DeleteAccount",
+			Handler:    _Finance_DeleteAccount_Handler,
+		},
+		{
+			MethodName: "ListAccounts",
+			Handler:    _Finance_ListAccounts_Handler,
+		},
+		{
+			MethodName: "CreateTransfer",
+			Handler:    _Finance_CreateTransfer_Handler,
+		},
+		{
+			MethodName: "ListTransfers",
+			Handler:    _Finance_ListTransfers_Handler,
 		},
 		{
 			MethodName: "ListCurrencies",

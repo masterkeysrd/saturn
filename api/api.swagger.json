@@ -514,6 +514,1359 @@
         ]
       }
     },
+    "/v1/finance/accounts": {
+      "get": {
+        "summary": "ListAccounts lists all accounts in a workspace.",
+        "operationId": "Finance_ListAccounts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListAccountsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Finance"
+        ]
+      },
+      "post": {
+        "summary": "CreateAccount registers a new payment/liquidity account.",
+        "operationId": "Finance_CreateAccount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Account"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "account",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Account"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/accounts/{id}": {
+      "get": {
+        "summary": "GetAccount retrieves details of an account.",
+        "operationId": "Finance_GetAccount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Account"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteAccount deletes an account.",
+        "operationId": "Finance_DeleteAccount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "put": {
+        "summary": "UpdateAccount updates details of an account.",
+        "operationId": "Finance_UpdateAccount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Account"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "account",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Account"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/borrowings": {
+      "get": {
+        "summary": "ListBorrowings returns borrowings for a space, optionally filtered.",
+        "operationId": "Finance_ListBorrowings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListBorrowingsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "BORROWING_STATUS_ACTIVE",
+              "BORROWING_STATUS_PAID_OFF"
+            ]
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "BORROWING_DIRECTION_BORROWED",
+              "BORROWING_DIRECTION_LENT"
+            ]
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "post": {
+        "summary": "CreateBorrowing logs a new personal lent/borrowed debt agreement.",
+        "operationId": "Finance_CreateBorrowing",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Borrowing"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateBorrowingRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/borrowings/{borrowingId}/repayments": {
+      "get": {
+        "summary": "ListBorrowingRepayments returns all repayments for a specific borrowing.",
+        "operationId": "Finance_ListBorrowingRepayments",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListBorrowingRepaymentsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "borrowingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "post": {
+        "summary": "CreateBorrowingRepayment records an installment payment towards a borrowing.",
+        "operationId": "Finance_CreateBorrowingRepayment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BorrowingRepayment"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "borrowingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceCreateBorrowingRepaymentBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/borrowings/{borrowingId}/repayments/{id}": {
+      "delete": {
+        "summary": "DeleteBorrowingRepayment deletes a specific installment and restores the balance.",
+        "operationId": "Finance_DeleteBorrowingRepayment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "borrowingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/borrowings/{id}": {
+      "get": {
+        "summary": "GetBorrowing retrieves a single borrowing record.",
+        "operationId": "Finance_GetBorrowing",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Borrowing"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteBorrowing removes a borrowing and all its repayments.",
+        "operationId": "Finance_DeleteBorrowing",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "put": {
+        "summary": "UpdateBorrowing updates basic details of a borrowing record.",
+        "operationId": "Finance_UpdateBorrowing",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Borrowing"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceUpdateBorrowingBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/budgets": {
+      "get": {
+        "summary": "ListBudgets lists all budget templates in a workspace.",
+        "operationId": "Finance_ListBudgets",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListBudgetsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "post": {
+        "summary": "CreateBudget creates a new budget template in a workspace.",
+        "operationId": "Finance_CreateBudget",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Budget"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateBudgetRequest contains fields to create budget.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateBudgetRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/budgets/{budgetId}/period": {
+      "get": {
+        "summary": "GetBudgetPeriod retrieves or generates the budget period for a specific date.",
+        "operationId": "Finance_GetBudgetPeriod",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BudgetPeriod"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "budgetId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "date",
+            "description": "Timestamp for calculation, defaults to current time if omitted",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/budgets/{id}": {
+      "delete": {
+        "summary": "DeleteBudget deletes a budget template.",
+        "operationId": "Finance_DeleteBudget",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "patch": {
+        "summary": "UpdateBudget updates a budget template.",
+        "operationId": "Finance_UpdateBudget",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Budget"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceUpdateBudgetBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/currencies": {
+      "get": {
+        "summary": "ListCurrencies returns the list of supported currencies.",
+        "operationId": "Finance_ListCurrencies",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCurrenciesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/expenses": {
+      "post": {
+        "summary": "CreateExpense logs a new expense transaction.",
+        "operationId": "Finance_CreateExpense",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Transaction"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateExpenseRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/expenses/{id}": {
+      "put": {
+        "summary": "UpdateExpense modifies an existing expense.",
+        "operationId": "Finance_UpdateExpense",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Transaction"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceUpdateExpenseBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/insights": {
+      "get": {
+        "summary": "GetInsights aggregates workspace spent insights and statistics.",
+        "operationId": "Finance_GetInsights",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetInsightsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "granularity",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "DAILY",
+              "WEEKLY",
+              "MONTHLY",
+              "YEARLY"
+            ]
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/rates": {
+      "get": {
+        "summary": "ListExchangeRates lists all exchange rate rules in a workspace.",
+        "operationId": "Finance_ListExchangeRates",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListExchangeRatesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteExchangeRate deletes a specific daily rate conversion rule.",
+        "operationId": "Finance_DeleteExchangeRate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "fromCurrency",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "toCurrency",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "rateDate",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "format": "date-time"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "post": {
+        "summary": "CreateExchangeRate registers a new daily rate conversion rule.",
+        "operationId": "Finance_CreateExchangeRate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExchangeRate"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateExchangeRateRequest registers a daily rate.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateExchangeRateRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/recurring-expenses": {
+      "get": {
+        "summary": "ListRecurringExpenses lists recurring expenses for a workspace.",
+        "operationId": "Finance_ListRecurringExpenses",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListRecurringExpensesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "post": {
+        "summary": "CreateRecurringExpense configures a new recurring expense rule.",
+        "operationId": "Finance_CreateRecurringExpense",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RecurringExpense"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateRecurringExpenseRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/recurring-expenses/{id}": {
+      "delete": {
+        "summary": "DeleteRecurringExpense deletes a recurring expense rule.",
+        "operationId": "Finance_DeleteRecurringExpense",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "put": {
+        "summary": "UpdateRecurringExpense modifies an existing recurring expense rule.",
+        "operationId": "Finance_UpdateRecurringExpense",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RecurringExpense"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceUpdateRecurringExpenseBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/scheduled-payments": {
+      "get": {
+        "summary": "ListScheduledPayments lists scheduled payments for a workspace.",
+        "operationId": "Finance_ListScheduledPayments",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListScheduledPaymentsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/scheduled-payments/{paymentId}/confirm": {
+      "post": {
+        "summary": "ConfirmScheduledPayment clears a scheduled payment by promoting it to a permanent transaction.",
+        "operationId": "Finance_ConfirmScheduledPayment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Transaction"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "paymentId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceConfirmScheduledPaymentBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/settings": {
+      "get": {
+        "summary": "GetFinanceSettings retrieves the finance settings for a workspace.",
+        "operationId": "Finance_GetFinanceSettings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1FinanceSettings"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Finance"
+        ]
+      },
+      "post": {
+        "summary": "ConfigureFinance sets up the default base currency for a workspace.",
+        "operationId": "Finance_ConfigureFinance",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1FinanceSettings"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "ConfigureFinanceRequest contains fields for initial setup.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ConfigureFinanceRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/transactions": {
+      "get": {
+        "summary": "ListTransactions lists paginated transactions for a workspace.",
+        "operationId": "Finance_ListTransactions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListTransactionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "budgetId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "EXPENSE",
+              "INCOME",
+              "TRANSFER_OUT",
+              "TRANSFER_IN"
+            ]
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sourceType",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sourceId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "accountId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/transactions/{id}": {
+      "delete": {
+        "summary": "DeleteTransaction deletes any type of transaction.",
+        "operationId": "Finance_DeleteTransaction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/transfers": {
+      "get": {
+        "summary": "ListTransfers lists all transfers in a workspace.",
+        "operationId": "Finance_ListTransfers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListTransfersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "post": {
+        "summary": "CreateTransfer logs a new transfer between accounts.",
+        "operationId": "Finance_CreateTransfer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Transfer"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateTransferRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/identity/sessions": {
       "get": {
         "summary": "ListActiveSessions returns all non-expired, non-revoked sessions for the user.",
@@ -941,1311 +2294,6 @@
         ]
       }
     },
-    "/v1/spaces/{spaceId}/finance/borrowings": {
-      "get": {
-        "summary": "ListBorrowings returns borrowings for a space, optionally filtered.",
-        "operationId": "Finance_ListBorrowings",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListBorrowingsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "enum": [
-              "BORROWING_STATUS_ACTIVE",
-              "BORROWING_STATUS_PAID_OFF"
-            ]
-          },
-          {
-            "name": "direction",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "enum": [
-              "BORROWING_DIRECTION_BORROWED",
-              "BORROWING_DIRECTION_LENT"
-            ]
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "pageToken",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      },
-      "post": {
-        "summary": "CreateBorrowing logs a new personal lent/borrowed debt agreement.",
-        "operationId": "Finance_CreateBorrowing",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Borrowing"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/FinanceCreateBorrowingBody"
-            }
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/spaces/{spaceId}/finance/borrowings/{borrowingId}/repayments": {
-      "get": {
-        "summary": "ListBorrowingRepayments returns all repayments for a specific borrowing.",
-        "operationId": "Finance_ListBorrowingRepayments",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListBorrowingRepaymentsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "borrowingId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      },
-      "post": {
-        "summary": "CreateBorrowingRepayment records an installment payment towards a borrowing.",
-        "operationId": "Finance_CreateBorrowingRepayment",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1BorrowingRepayment"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "borrowingId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/FinanceCreateBorrowingRepaymentBody"
-            }
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/spaces/{spaceId}/finance/borrowings/{borrowingId}/repayments/{id}": {
-      "delete": {
-        "summary": "DeleteBorrowingRepayment deletes a specific installment and restores the balance.",
-        "operationId": "Finance_DeleteBorrowingRepayment",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "type": "object",
-              "properties": {}
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "borrowingId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/spaces/{spaceId}/finance/borrowings/{id}": {
-      "get": {
-        "summary": "GetBorrowing retrieves a single borrowing record.",
-        "operationId": "Finance_GetBorrowing",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Borrowing"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      },
-      "delete": {
-        "summary": "DeleteBorrowing removes a borrowing and all its repayments.",
-        "operationId": "Finance_DeleteBorrowing",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "type": "object",
-              "properties": {}
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      },
-      "put": {
-        "summary": "UpdateBorrowing updates basic details of a borrowing record.",
-        "operationId": "Finance_UpdateBorrowing",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Borrowing"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/FinanceUpdateBorrowingBody"
-            }
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/spaces/{spaceId}/finance/budgets": {
-      "get": {
-        "summary": "ListBudgets lists all budget templates in a workspace.",
-        "operationId": "Finance_ListBudgets",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListBudgetsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "pageToken",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      },
-      "post": {
-        "summary": "CreateBudget creates a new budget template in a workspace.",
-        "operationId": "Finance_CreateBudget",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Budget"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/FinanceCreateBudgetBody"
-            }
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/spaces/{spaceId}/finance/budgets/{budgetId}/period": {
-      "get": {
-        "summary": "GetBudgetPeriod retrieves or generates the budget period for a specific date.",
-        "operationId": "Finance_GetBudgetPeriod",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1BudgetPeriod"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "budgetId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "date",
-            "description": "Timestamp for calculation, defaults to current time if omitted",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "format": "date-time"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/spaces/{spaceId}/finance/budgets/{id}": {
-      "delete": {
-        "summary": "DeleteBudget deletes a budget template.",
-        "operationId": "Finance_DeleteBudget",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "type": "object",
-              "properties": {}
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      },
-      "patch": {
-        "summary": "UpdateBudget updates a budget template.",
-        "operationId": "Finance_UpdateBudget",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Budget"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/FinanceUpdateBudgetBody"
-            }
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/spaces/{spaceId}/finance/currencies": {
-      "get": {
-        "summary": "ListCurrencies returns the list of supported currencies.",
-        "operationId": "Finance_ListCurrencies",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListCurrenciesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/spaces/{spaceId}/finance/expenses": {
-      "post": {
-        "summary": "CreateExpense logs a new expense transaction.",
-        "operationId": "Finance_CreateExpense",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Transaction"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/FinanceCreateExpenseBody"
-            }
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/spaces/{spaceId}/finance/expenses/{id}": {
-      "put": {
-        "summary": "UpdateExpense modifies an existing expense.",
-        "operationId": "Finance_UpdateExpense",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Transaction"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/FinanceUpdateExpenseBody"
-            }
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/spaces/{spaceId}/finance/insights": {
-      "get": {
-        "summary": "GetInsights aggregates workspace spent insights and statistics.",
-        "operationId": "Finance_GetInsights",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1GetInsightsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "granularity",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "enum": [
-              "DAILY",
-              "WEEKLY",
-              "MONTHLY",
-              "YEARLY"
-            ]
-          },
-          {
-            "name": "startDate",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "format": "date-time"
-          },
-          {
-            "name": "endDate",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "format": "date-time"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/spaces/{spaceId}/finance/rates": {
-      "get": {
-        "summary": "ListExchangeRates lists all exchange rate rules in a workspace.",
-        "operationId": "Finance_ListExchangeRates",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListExchangeRatesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "pageToken",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      },
-      "delete": {
-        "summary": "DeleteExchangeRate deletes a specific daily rate conversion rule.",
-        "operationId": "Finance_DeleteExchangeRate",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "type": "object",
-              "properties": {}
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "fromCurrency",
-            "in": "query",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "toCurrency",
-            "in": "query",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "rateDate",
-            "in": "query",
-            "required": true,
-            "type": "string",
-            "format": "date-time"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      },
-      "post": {
-        "summary": "CreateExchangeRate registers a new daily rate conversion rule.",
-        "operationId": "Finance_CreateExchangeRate",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ExchangeRate"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/FinanceCreateExchangeRateBody"
-            }
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/spaces/{spaceId}/finance/recurring-expenses": {
-      "get": {
-        "summary": "ListRecurringExpenses lists recurring expenses for a workspace.",
-        "operationId": "Finance_ListRecurringExpenses",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListRecurringExpensesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "pageToken",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      },
-      "post": {
-        "summary": "CreateRecurringExpense configures a new recurring expense rule.",
-        "operationId": "Finance_CreateRecurringExpense",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1RecurringExpense"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/FinanceCreateRecurringExpenseBody"
-            }
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/spaces/{spaceId}/finance/recurring-expenses/{id}": {
-      "delete": {
-        "summary": "DeleteRecurringExpense deletes a recurring expense rule.",
-        "operationId": "Finance_DeleteRecurringExpense",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "type": "object",
-              "properties": {}
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      },
-      "put": {
-        "summary": "UpdateRecurringExpense modifies an existing recurring expense rule.",
-        "operationId": "Finance_UpdateRecurringExpense",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1RecurringExpense"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/FinanceUpdateRecurringExpenseBody"
-            }
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/spaces/{spaceId}/finance/scheduled-payments": {
-      "get": {
-        "summary": "ListScheduledPayments lists scheduled payments for a workspace.",
-        "operationId": "Finance_ListScheduledPayments",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListScheduledPaymentsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "startDate",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "format": "date-time"
-          },
-          {
-            "name": "endDate",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "format": "date-time"
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "pageToken",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/spaces/{spaceId}/finance/scheduled-payments/{paymentId}/confirm": {
-      "post": {
-        "summary": "ConfirmScheduledPayment clears a scheduled payment by promoting it to a permanent transaction.",
-        "operationId": "Finance_ConfirmScheduledPayment",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Transaction"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "paymentId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/FinanceConfirmScheduledPaymentBody"
-            }
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/spaces/{spaceId}/finance/settings": {
-      "get": {
-        "summary": "GetFinanceSettings retrieves the finance settings for a workspace.",
-        "operationId": "Finance_GetFinanceSettings",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1FinanceSettings"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      },
-      "post": {
-        "summary": "ConfigureFinance sets up the default base currency for a workspace.",
-        "operationId": "Finance_ConfigureFinance",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1FinanceSettings"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/FinanceConfigureFinanceBody"
-            }
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/spaces/{spaceId}/finance/transactions": {
-      "get": {
-        "summary": "ListTransactions lists paginated transactions for a workspace.",
-        "operationId": "Finance_ListTransactions",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListTransactionsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "budgetId",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "type",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "enum": [
-              "EXPENSE",
-              "INCOME"
-            ]
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "pageToken",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "sourceType",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "sourceId",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/spaces/{spaceId}/finance/transactions/{id}": {
-      "delete": {
-        "summary": "DeleteTransaction deletes any type of transaction.",
-        "operationId": "Finance_DeleteTransaction",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "type": "object",
-              "properties": {}
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
     "/v1/spaces/{spaceId}/members": {
       "get": {
         "summary": "ListSpaceMembers lists all members of a workspace.",
@@ -2434,18 +2482,6 @@
         "accessLevel"
       ]
     },
-    "FinanceConfigureFinanceBody": {
-      "type": "object",
-      "properties": {
-        "baseCurrency": {
-          "type": "string"
-        }
-      },
-      "description": "ConfigureFinanceRequest contains fields for initial setup.",
-      "required": [
-        "baseCurrency"
-      ]
-    },
     "FinanceConfirmScheduledPaymentBody": {
       "type": "object",
       "properties": {
@@ -2468,17 +2504,6 @@
         "actualAmount"
       ]
     },
-    "FinanceCreateBorrowingBody": {
-      "type": "object",
-      "properties": {
-        "borrowing": {
-          "$ref": "#/definitions/v1BorrowingInput"
-        }
-      },
-      "required": [
-        "borrowing"
-      ]
-    },
     "FinanceCreateBorrowingRepaymentBody": {
       "type": "object",
       "properties": {
@@ -2488,114 +2513,6 @@
       },
       "required": [
         "repayment"
-      ]
-    },
-    "FinanceCreateBudgetBody": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "limitAmount": {
-          "type": "string",
-          "format": "int64"
-        },
-        "currency": {
-          "type": "string"
-        },
-        "interval": {
-          "$ref": "#/definitions/v1RecurrenceInterval"
-        },
-        "icon": {
-          "type": "string"
-        },
-        "color": {
-          "type": "string"
-        }
-      },
-      "description": "CreateBudgetRequest contains fields to create budget.",
-      "required": [
-        "name",
-        "limitAmount",
-        "currency",
-        "interval"
-      ]
-    },
-    "FinanceCreateExchangeRateBody": {
-      "type": "object",
-      "properties": {
-        "fromCurrency": {
-          "type": "string"
-        },
-        "toCurrency": {
-          "type": "string"
-        },
-        "rate": {
-          "type": "number",
-          "format": "double"
-        },
-        "rateDate": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      "description": "CreateExchangeRateRequest registers a daily rate.",
-      "required": [
-        "fromCurrency",
-        "toCurrency",
-        "rate",
-        "rateDate"
-      ]
-    },
-    "FinanceCreateExpenseBody": {
-      "type": "object",
-      "properties": {
-        "expense": {
-          "$ref": "#/definitions/v1ExpenseInput"
-        }
-      },
-      "required": [
-        "expense"
-      ]
-    },
-    "FinanceCreateRecurringExpenseBody": {
-      "type": "object",
-      "properties": {
-        "budgetId": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "amount": {
-          "type": "string",
-          "format": "int64"
-        },
-        "currency": {
-          "type": "string"
-        },
-        "interval": {
-          "type": "string"
-        },
-        "nextDueDate": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "isVariable": {
-          "type": "boolean"
-        },
-        "gracePeriodDays": {
-          "type": "integer",
-          "format": "int32"
-        }
-      },
-      "required": [
-        "budgetId",
-        "name",
-        "amount",
-        "currency",
-        "interval",
-        "nextDueDate"
       ]
     },
     "FinanceUpdateBorrowingBody": {
@@ -2635,6 +2552,9 @@
           "type": "string"
         },
         "color": {
+          "type": "string"
+        },
+        "defaultAccountId": {
           "type": "string"
         }
       },
@@ -3058,6 +2978,74 @@
         "ACCESS_LEVEL_ADMIN"
       ]
     },
+    "v1Account": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "readOnly": true
+        },
+        "spaceId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/v1AccountType"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "initialBalance": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currentBalance": {
+          "type": "string",
+          "format": "int64",
+          "readOnly": true
+        },
+        "creditLimit": {
+          "type": "string",
+          "format": "int64"
+        },
+        "isDefault": {
+          "type": "boolean"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "color": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "lastFour": {
+          "type": "string"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        }
+      }
+    },
+    "v1AccountType": {
+      "type": "string",
+      "enum": [
+        "BANK",
+        "CREDIT_CARD",
+        "CASH",
+        "DIGITAL_ACCOUNT"
+      ]
+    },
     "v1AdminIdentityRevokeAllSessionsBody": {
       "type": "object"
     },
@@ -3109,6 +3097,9 @@
           "type": "string",
           "format": "date-time"
         },
+        "createAsTransaction": {
+          "type": "boolean"
+        },
         "notes": {
           "type": "string"
         },
@@ -3119,9 +3110,6 @@
         "updateTime": {
           "type": "string",
           "format": "date-time"
-        },
-        "createAsTransaction": {
-          "type": "boolean"
         }
       }
     },
@@ -3164,6 +3152,9 @@
         },
         "createAsTransaction": {
           "type": "boolean"
+        },
+        "accountId": {
+          "type": "string"
         }
       },
       "required": [
@@ -3204,6 +3195,9 @@
         "updateTime": {
           "type": "string",
           "format": "date-time"
+        },
+        "accountId": {
+          "type": "string"
         }
       }
     },
@@ -3220,11 +3214,15 @@
         },
         "notes": {
           "type": "string"
+        },
+        "accountId": {
+          "type": "string"
         }
       },
       "required": [
         "amount",
-        "paymentDate"
+        "paymentDate",
+        "accountId"
       ]
     },
     "v1BorrowingStatus": {
@@ -3271,6 +3269,9 @@
           "type": "string"
         },
         "color": {
+          "type": "string"
+        },
+        "defaultAccountId": {
           "type": "string"
         }
       },
@@ -3329,6 +3330,140 @@
       },
       "description": "BudgetPeriod represents an active instantiation of a budget."
     },
+    "v1ConfigureFinanceRequest": {
+      "type": "object",
+      "properties": {
+        "baseCurrency": {
+          "type": "string"
+        }
+      },
+      "description": "ConfigureFinanceRequest contains fields for initial setup.",
+      "required": [
+        "baseCurrency"
+      ]
+    },
+    "v1CreateBorrowingRequest": {
+      "type": "object",
+      "properties": {
+        "borrowing": {
+          "$ref": "#/definitions/v1BorrowingInput"
+        }
+      },
+      "required": [
+        "borrowing"
+      ]
+    },
+    "v1CreateBudgetRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "limitAmount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "interval": {
+          "$ref": "#/definitions/v1RecurrenceInterval"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        },
+        "defaultAccountId": {
+          "type": "string"
+        }
+      },
+      "description": "CreateBudgetRequest contains fields to create budget.",
+      "required": [
+        "name",
+        "limitAmount",
+        "currency",
+        "interval"
+      ]
+    },
+    "v1CreateExchangeRateRequest": {
+      "type": "object",
+      "properties": {
+        "fromCurrency": {
+          "type": "string"
+        },
+        "toCurrency": {
+          "type": "string"
+        },
+        "rate": {
+          "type": "number",
+          "format": "double"
+        },
+        "rateDate": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "CreateExchangeRateRequest registers a daily rate.",
+      "required": [
+        "fromCurrency",
+        "toCurrency",
+        "rate",
+        "rateDate"
+      ]
+    },
+    "v1CreateExpenseRequest": {
+      "type": "object",
+      "properties": {
+        "expense": {
+          "$ref": "#/definitions/v1ExpenseInput"
+        }
+      },
+      "required": [
+        "expense"
+      ]
+    },
+    "v1CreateRecurringExpenseRequest": {
+      "type": "object",
+      "properties": {
+        "budgetId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "interval": {
+          "type": "string"
+        },
+        "nextDueDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "isVariable": {
+          "type": "boolean"
+        },
+        "gracePeriodDays": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "required": [
+        "budgetId",
+        "name",
+        "amount",
+        "currency",
+        "interval",
+        "nextDueDate"
+      ]
+    },
     "v1CreateSpaceRequest": {
       "type": "object",
       "properties": {
@@ -3344,6 +3479,39 @@
       "description": "CreateSpaceRequest contains the fields for creating a new workspace.",
       "required": [
         "name"
+      ]
+    },
+    "v1CreateTransferRequest": {
+      "type": "object",
+      "properties": {
+        "sourceAccountId": {
+          "type": "string"
+        },
+        "destinationAccountId": {
+          "type": "string"
+        },
+        "sourceAmount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "destinationAmount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "transferDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "sourceAccountId",
+        "destinationAccountId",
+        "sourceAmount",
+        "destinationAmount",
+        "transferDate"
       ]
     },
     "v1CurrencyInfo": {
@@ -3411,6 +3579,9 @@
         "effectiveDate": {
           "type": "string",
           "format": "date-time"
+        },
+        "accountId": {
+          "type": "string"
         }
       },
       "required": [
@@ -3519,6 +3690,18 @@
         "LIMIT_PROPAGATION_CURRENT_PERIOD",
         "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
       ]
+    },
+    "v1ListAccountsResponse": {
+      "type": "object",
+      "properties": {
+        "accounts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Account"
+          }
+        }
+      }
     },
     "v1ListActiveSessionsResponse": {
       "type": "object",
@@ -3698,6 +3881,21 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1Transaction"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListTransfersResponse": {
+      "type": "object",
+      "properties": {
+        "transfers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Transfer"
           }
         },
         "nextPageToken": {
@@ -4152,6 +4350,12 @@
         },
         "sourceId": {
           "type": "string"
+        },
+        "accountId": {
+          "type": "string"
+        },
+        "transferId": {
+          "type": "string"
         }
       }
     },
@@ -4159,8 +4363,50 @@
       "type": "string",
       "enum": [
         "EXPENSE",
-        "INCOME"
+        "INCOME",
+        "TRANSFER_OUT",
+        "TRANSFER_IN"
       ]
+    },
+    "v1Transfer": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "spaceId": {
+          "type": "string"
+        },
+        "sourceAccountId": {
+          "type": "string"
+        },
+        "destinationAccountId": {
+          "type": "string"
+        },
+        "sourceAmount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "destinationAmount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "transferDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
     },
     "v1UpdateUserRoleResponse": {
       "type": "object",

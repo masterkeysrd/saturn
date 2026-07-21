@@ -22,7 +22,6 @@ import { toCentsString, formatCents } from "../utils"
 interface ConfirmPaymentSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  spaceId: string
   payment: ScheduledPayment | null
   refetchPayments: () => void
   getConversionPreview: (
@@ -37,7 +36,6 @@ interface ConfirmPaymentSheetProps {
 export function ConfirmPaymentSheet({
   open,
   onOpenChange,
-  spaceId,
   payment,
   refetchPayments,
   getConversionPreview,
@@ -81,10 +79,8 @@ export function ConfirmPaymentSheet({
     const effDateStr = toLocalISODate(effectiveDate)
 
     const res = await confirmMutation.mutateAsync({
-      space_id: spaceId,
       payment_id: payment.id,
       req: {
-        spaceId,
         paymentId: payment.id,
         transactionDate: txDateStr,
         effectiveDate: effDateStr,

@@ -21,7 +21,7 @@ export function useWorkspaceFinance() {
     error: settingsError,
     refetch: refetchSettings,
   } = useGetFinanceSettingsQuery(
-    { spaceId },
+    {},
     {
       enabled: !!spaceId,
       retry: false,
@@ -34,7 +34,7 @@ export function useWorkspaceFinance() {
     isLoading: budgetsLoading,
     refetch: refetchBudgets,
   } = useListBudgetsQuery(
-    { spaceId, pageSize: 100, pageToken: "" },
+    { pageSize: 100, pageToken: "" },
     { enabled: !!settings }
   )
 
@@ -44,13 +44,13 @@ export function useWorkspaceFinance() {
     isLoading: ratesLoading,
     refetch: refetchRates,
   } = useListExchangeRatesQuery(
-    { spaceId, pageSize: 100, pageToken: "" },
+    { pageSize: 100, pageToken: "" },
     { enabled: !!settings }
   )
 
   // 4. Fetch Supported Currencies
   const { data: currenciesData, isLoading: currenciesLoading } =
-    useListCurrenciesQuery({ spaceId }, { enabled: !!spaceId })
+    useListCurrenciesQuery({}, { enabled: !!spaceId })
 
   // Real-Time currency conversion helper
   const getConversionPreview = (amountStr: string, fromCurr: string) => {

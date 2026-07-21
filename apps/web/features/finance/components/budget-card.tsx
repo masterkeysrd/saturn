@@ -14,7 +14,6 @@ import { BudgetPeriodProgress } from "./budget-period-progress"
 interface BudgetCardProps {
   budget: Budget
   isWritable: boolean
-  spaceId: string
   onEdit: (budget: Budget) => void
   onDelete: (id: string) => void
   onPeriodLoaded: (budgetId: string, limitInBase: number) => void
@@ -24,7 +23,6 @@ interface BudgetCardProps {
 export function BudgetCard({
   budget,
   isWritable,
-  spaceId,
   onEdit,
   onDelete,
   onPeriodLoaded,
@@ -129,7 +127,6 @@ export function BudgetCard({
       {/* Spawned period details wrapper */}
       {budget.isActive && (
         <BudgetPeriodProgress
-          spaceId={spaceId}
           budget={budget}
           onPeriodLoaded={(limitInBase) =>
             onPeriodLoaded(budget.id, limitInBase)

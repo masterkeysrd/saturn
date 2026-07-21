@@ -2,6 +2,7 @@ import { useState, createElement } from "react"
 import {
   useCreateBudgetMutation,
   type RecurrenceInterval,
+  useListAccountsQuery,
 } from "@/gen/saturn/finance/v1/finance"
 import {
   Sheet,
@@ -21,6 +22,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { AccountSelect } from "./account-select"
 import {
   Select,
   SelectTrigger,
@@ -66,28 +68,33 @@ export function CreateBudgetSheet({
     useState<RecurrenceInterval>("INTERVAL_MONTHLY")
   const [icon, setIcon] = useState("piggy-bank")
   const [color, setColor] = useState("indigo")
+  const [defaultAccountId, setDefaultAccountId] = useState("")
+
+  const { data: accountsData } = useListAccountsQuery(
+    {},
+    { enabled: open && !!spaceId }
+  )
+  const activeAccounts = accountsData?.accounts?.filter((a) => a.isActive) || []
 
   const createMutation = useCreateBudgetMutation()
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     await createMutation.mutateAsync({
-      space_id: spaceId,
-      req: {
-        spaceId,
-        name,
-        limitAmount: toCentsString(limit),
-        currency,
-        interval,
-        icon,
-        color,
-      },
+      name,
+      limitAmount: toCentsString(limit),
+      currency,
+      interval,
+      icon,
+      color,
+      defaultAccountId: defaultAccountId || undefined,
     })
     onOpenChange(false)
     setName("")
     setLimit("")
     setIcon("piggy-bank")
     setColor("indigo")
+    setDefaultAccountId("")
     refetchBudgets()
   }
 
@@ -263,6 +270,22 @@ export function CreateBudgetSheet({
                 <SelectItem value="INTERVAL_YEARLY">Yearly</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="default-account"
+              className="text-xs font-semibold tracking-wider text-muted-foreground/90 uppercase"
+            >
+              Default Account (Optional)
+            </Label>
+            <AccountSelect
+              value={defaultAccountId}
+              onValueChange={setDefaultAccountId}
+              accounts={activeAccounts}
+              placeholder="Pre-fills forms with this account"
+              allowNone
+            />
           </div>
 
           <div className="space-y-1.5">

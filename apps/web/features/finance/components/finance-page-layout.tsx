@@ -29,7 +29,7 @@ export function FinancePageLayout({
   actions,
   icon = PiggyBank,
 }: FinancePageLayoutProps) {
-  const { spaceId, isWritable, isLoading, isNotConfigured, refetchSettings } =
+  const { isWritable, isLoading, isNotConfigured, refetchSettings } =
     useWorkspaceFinance()
 
   const [setupCurrency, setSetupCurrency] = useState("USD")
@@ -38,11 +38,7 @@ export function FinancePageLayout({
   const handleSetup = async (e: React.FormEvent) => {
     e.preventDefault()
     await configureMutation.mutateAsync({
-      space_id: spaceId,
-      req: {
-        spaceId,
-        baseCurrency: setupCurrency,
-      },
+      baseCurrency: setupCurrency,
     })
     refetchSettings()
   }

@@ -3,6 +3,7 @@ import {
   useListTransactionsQuery,
   useDeleteTransactionMutation,
   type Transaction,
+  useListAccountsQuery,
 } from "@/gen/saturn/finance/v1/finance"
 import { Button } from "@/components/ui/button"
 import {
@@ -45,6 +46,11 @@ export function TransactionsView() {
     getConversionPreview,
     refetchBudgets,
   } = useWorkspaceFinance()
+  const { data: accountsData } = useListAccountsQuery(
+    {},
+    { enabled: !!spaceId }
+  )
+  const accounts = accountsData?.accounts || []
   const [selectedBudgetFilter, setSelectedBudgetFilter] = useState("")
   const [createOpen, setCreateOpen] = useState(false)
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(
@@ -68,7 +74,6 @@ export function TransactionsView() {
     refetch: refetchTransactions,
   } = useListTransactionsQuery(
     {
-      spaceId,
       budgetId: selectedBudgetFilter || "",
       type: "TRANSACTION_TYPE_UNSPECIFIED",
       pageSize: 100,
@@ -88,9 +93,8 @@ export function TransactionsView() {
       return
     }
     await deleteMutation.mutateAsync({
-      space_id: spaceId,
       id,
-      req: { spaceId, id },
+      req: { id },
     })
     refetchTransactions()
     refetchBudgets()
@@ -313,12 +317,23 @@ export function TransactionsView() {
                               </span>
                             )}
                           </span>
-                          <div className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs font-semibold text-muted-foreground">
                             <span
                               className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${colors.bg} ${colors.text}`}
                             >
                               {details.name}
                             </span>
+                            {(() => {
+                              const acc = accounts.find(
+                                (a) => a.id === t.accountId
+                              )
+                              if (!acc) return null
+                              return (
+                                <span className="inline-flex items-center gap-1 rounded border border-border/40 bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+                                  {acc.name}
+                                </span>
+                              )
+                            })()}
                           </div>
                         </div>
                       </div>

@@ -4,6 +4,7 @@ import {
   useCreateBorrowingRepaymentMutation,
   useDeleteBorrowingRepaymentMutation,
   type Borrowing,
+  useListAccountsQuery,
 } from "@/gen/saturn/finance/v1/finance"
 import {
   Sheet,
@@ -20,6 +21,7 @@ import { formatCents, toCentsString } from "../utils"
 import { DatePicker } from "@/components/ui/date-picker"
 import { useWorkspaceFinance } from "../use-workspace-finance"
 import { CurrencyConversionPreview } from "./currency-conversion-preview"
+import { AccountSelect } from "./account-select"
 
 interface BorrowingDetailSheetProps {
   open: boolean
@@ -40,6 +42,13 @@ export function BorrowingDetailSheet({
   const [amount, setAmount] = useState("")
   const [paymentDate, setPaymentDate] = useState<Date>(new Date())
   const [notes, setNotes] = useState("")
+  const [accountId, setAccountId] = useState("")
+
+  const { data: accountsData } = useListAccountsQuery(
+    {},
+    { enabled: open && !!spaceId }
+  )
+  const activeAccounts = accountsData?.accounts?.filter((a) => a.isActive) || []
 
   const {
     data: repaymentsData,
@@ -47,7 +56,6 @@ export function BorrowingDetailSheet({
     refetch: refetchRepayments,
   } = useListBorrowingRepaymentsQuery(
     {
-      spaceId,
       borrowingId: borrowing?.id || "",
     },
     { enabled: open && !!borrowing?.id }
@@ -69,15 +77,14 @@ export function BorrowingDetailSheet({
 
     try {
       await createRepaymentMutation.mutateAsync({
-        space_id: spaceId,
         borrowing_id: borrowing.id,
         req: {
-          spaceId,
           borrowingId: borrowing.id,
           repayment: {
             amount: cents.toString(),
             paymentDate: paymentDate.toISOString(),
             notes,
+            accountId,
           },
         },
       })
@@ -94,11 +101,9 @@ export function BorrowingDetailSheet({
     if (!borrowing) return
     try {
       await deleteRepaymentMutation.mutateAsync({
-        space_id: spaceId,
         borrowing_id: borrowing.id,
         id: repaymentId,
         req: {
-          spaceId,
           borrowingId: borrowing.id,
           id: repaymentId,
         },
@@ -329,6 +334,15 @@ export function BorrowingDetailSheet({
                     <DatePicker
                       date={paymentDate}
                       setDate={(d) => d && setPaymentDate(d)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="mb-1">Payment Account</Label>
+                    <AccountSelect
+                      value={accountId}
+                      onValueChange={setAccountId}
+                      accounts={activeAccounts}
+                      placeholder="Choose account for transaction"
                     />
                   </div>
                 </div>

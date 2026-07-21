@@ -31,7 +31,6 @@ export function RecurringExpenseHistorySheet({
   // Fetch transaction history for this template
   const { data, isLoading } = useListTransactionsQuery(
     {
-      spaceId,
       budgetId: "",
       type: "TRANSACTION_TYPE_UNSPECIFIED",
       pageSize: 50,

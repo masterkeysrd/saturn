@@ -4,6 +4,7 @@ import {
   useUpdateExpenseMutation,
   type Budget,
   type Transaction,
+  useListAccountsQuery,
 } from "@/gen/saturn/finance/v1/finance"
 import { useWorkspaceFinance } from "../use-workspace-finance"
 import {
@@ -19,6 +20,7 @@ import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
 import { CurrencyConversionPreview } from "./currency-conversion-preview"
 import { toCentsString, formatCents } from "../utils"
+import { AccountSelect } from "./account-select"
 import {
   Select,
   SelectTrigger,
@@ -79,6 +81,8 @@ export function CreateTransactionSheet({
   const [description, setDescription] = useState("")
   const [amount, setAmount] = useState("")
   const [currency, setCurrency] = useState(baseCurrency || "USD")
+  const [accountId, setAccountId] = useState("")
+  const [hasPrefilledAccount, setHasPrefilledAccount] = useState(false)
   const [prevOpen, setPrevOpen] = useState(false)
   const [prevPreselectedBudgetId, setPrevPreselectedBudgetId] = useState<
     string | undefined
@@ -86,6 +90,12 @@ export function CreateTransactionSheet({
   const [prevEditTransaction, setPrevEditTransaction] = useState<
     Transaction | null | undefined
   >(undefined)
+
+  const { data: accountsData } = useListAccountsQuery(
+    {},
+    { enabled: open && !!spaceId }
+  )
+  const activeAccounts = accountsData?.accounts?.filter((a) => a.isActive) || []
 
   if (
     open &&
@@ -102,6 +112,7 @@ export function CreateTransactionSheet({
       setDescription(editTransaction.description)
       setAmount(formatCents(editTransaction.amount).toString())
       setCurrency(editTransaction.currency)
+      setAccountId(editTransaction.accountId || "")
       setTransactionDate(new Date(editTransaction.transactionDate))
       const isCustomEff =
         new Date(
@@ -129,12 +140,35 @@ export function CreateTransactionSheet({
       const b = budgets.find((x) => x.id === selected)
       if (b) {
         setCurrency(b.currency)
+        const globalDefault = activeAccounts.find((a) => a.isDefault)
+        setAccountId(b.defaultAccountId || globalDefault?.id || "")
+        setHasPrefilledAccount(false)
       } else {
         setCurrency(baseCurrency || "USD")
+        setAccountId("")
+        setHasPrefilledAccount(false)
       }
     }
   } else if (!open && open !== prevOpen) {
     setPrevOpen(open)
+    setHasPrefilledAccount(false)
+  }
+
+  // Prefill default account once accountsData loads (async safe)
+  if (
+    open &&
+    !editTransaction &&
+    !accountId &&
+    !hasPrefilledAccount &&
+    activeAccounts.length > 0
+  ) {
+    const b = budgets.find((x) => x.id === budgetId)
+    const globalDefault = activeAccounts.find((a) => a.isDefault)
+    const defaultAcc = b?.defaultAccountId || globalDefault?.id || ""
+    if (defaultAcc) {
+      setAccountId(defaultAcc)
+      setHasPrefilledAccount(true)
+    }
   }
 
   // Sync currency when selected budget changes
@@ -143,6 +177,8 @@ export function CreateTransactionSheet({
     const b = budgets.find((x) => x.id === newBudgetId)
     if (b) {
       setCurrency(b.currency)
+      const globalDefault = activeAccounts.find((a) => a.isDefault)
+      setAccountId(b.defaultAccountId || globalDefault?.id || "")
     }
   }
 
@@ -171,10 +207,8 @@ export function CreateTransactionSheet({
 
     if (editTransaction) {
       await updateExpenseMutation.mutateAsync({
-        space_id: spaceId,
         id: editTransaction.id,
         req: {
-          spaceId,
           id: editTransaction.id,
           expense: {
             budgetId,
@@ -183,22 +217,20 @@ export function CreateTransactionSheet({
             description,
             transactionDate: txDateStr,
             effectiveDate: effDateStr,
+            accountId: accountId || undefined,
           },
         },
       })
     } else {
       await createExpenseMutation.mutateAsync({
-        space_id: spaceId,
-        req: {
-          spaceId,
-          expense: {
-            budgetId,
-            amount: toCentsString(amount),
-            currency,
-            description,
-            transactionDate: txDateStr,
-            effectiveDate: effDateStr,
-          },
+        expense: {
+          budgetId,
+          amount: toCentsString(amount),
+          currency,
+          description,
+          transactionDate: txDateStr,
+          effectiveDate: effDateStr,
+          accountId: accountId || undefined,
         },
       })
     }
@@ -258,6 +290,23 @@ export function CreateTransactionSheet({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Account selector */}
+          <div className="space-y-2">
+            <Label
+              htmlFor="txAccount"
+              className="text-xs font-bold tracking-wider text-muted-foreground uppercase"
+            >
+              Account / Payment Method (Optional)
+            </Label>
+            <AccountSelect
+              value={accountId}
+              onValueChange={setAccountId}
+              accounts={activeAccounts}
+              placeholder="Choose account to impact balance"
+              allowNone
+            />
           </div>
 
           {/* Description */}

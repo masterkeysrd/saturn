@@ -11,4 +11,6 @@ var (
 	ErrTransactionNotFound  = errors.New("transaction not found")
 	ErrBorrowingNotFound    = errors.New("borrowing not found")
 	ErrRepaymentNotFound    = errors.New("borrowing repayment not found")
+	ErrAccountNotFound      = errors.New("account not found")
+	ErrTransferNotFound     = errors.New("transfer not found")
 )

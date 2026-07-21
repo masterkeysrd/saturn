@@ -5,12 +5,17 @@ import { TransactionsView } from "./transactions-view"
 import { SettingsView as FinanceSettingsView } from "./settings-view"
 import { RecurringView } from "./recurring-view"
 import { BorrowingView } from "./borrowing-view"
+import { AccountsView } from "./accounts-view"
 import type { RouteObject } from "react-router-dom"
 
 export const routes: RouteObject[] = [
   {
     path: "/finance",
     element: <InsightsView />,
+  },
+  {
+    path: "/finance/accounts",
+    element: <AccountsView />,
   },
   {
     path: "/finance/recurring",

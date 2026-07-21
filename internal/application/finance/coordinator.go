@@ -52,6 +52,16 @@ type FinanceService interface {
 	ListBorrowingRepayments(ctx context.Context, spaceID finance.SpaceID, borrowingID finance.BorrowingID) ([]*finance.BorrowingRepayment, error)
 	DeleteBorrowingRepayment(ctx context.Context, req finance.DeleteBorrowingRepaymentRequest) error
 	ListCurrencies(ctx context.Context) ([]finance.CurrencyInfo, error)
+
+	CreateAccount(ctx context.Context, account *finance.Account) (*finance.Account, error)
+	GetAccount(ctx context.Context, id finance.AccountID) (*finance.Account, error)
+	UpdateAccount(ctx context.Context, account *finance.Account) (*finance.Account, error)
+	DeleteAccount(ctx context.Context, id finance.AccountID) error
+	ListAccounts(ctx context.Context, spaceID finance.SpaceID) ([]*finance.Account, error)
+	CreateTransfer(ctx context.Context, transfer *finance.Transfer) (*finance.Transfer, error)
+	GetTransfer(ctx context.Context, id finance.TransferID) (*finance.Transfer, error)
+	DeleteTransfer(ctx context.Context, id finance.TransferID) error
+	ListTransfers(ctx context.Context, spaceID finance.SpaceID, limit int32, pageToken string) ([]*finance.Transfer, string, error)
 }
 
 // Dependencies contains all parameters for Coordinator initialization.

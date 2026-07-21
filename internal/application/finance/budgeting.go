@@ -9,24 +9,26 @@ import (
 
 // Request & Response structures
 type CreateBudgetRequest struct {
-	Name        string
-	LimitAmount int64
-	Currency    finance.Currency
-	Interval    finance.RecurrenceInterval
-	Icon        string
-	Color       string
+	Name             string
+	LimitAmount      int64
+	Currency         finance.Currency
+	Interval         finance.RecurrenceInterval
+	Icon             string
+	Color            string
+	DefaultAccountID *finance.AccountID
 }
 
 type UpdateBudgetRequest struct {
-	ID          finance.BudgetID
-	Name        string
-	LimitAmount int64
-	Currency    finance.Currency
-	Interval    finance.RecurrenceInterval
-	IsActive    bool
-	Propagation finance.LimitPropagation
-	Icon        string
-	Color       string
+	ID               finance.BudgetID
+	Name             string
+	LimitAmount      int64
+	Currency         finance.Currency
+	Interval         finance.RecurrenceInterval
+	IsActive         bool
+	Propagation      finance.LimitPropagation
+	Icon             string
+	Color            string
+	DefaultAccountID *finance.AccountID
 }
 
 type ListBudgetsRequest struct {
@@ -47,13 +49,14 @@ func (c *Coordinator) CreateBudget(ctx context.Context, req *CreateBudgetRequest
 	}
 
 	budget := &finance.Budget{
-		SpaceID:     rCtx.SpaceID,
-		Name:        req.Name,
-		LimitAmount: req.LimitAmount,
-		Currency:    req.Currency,
-		Interval:    req.Interval,
-		Icon:        req.Icon,
-		Color:       req.Color,
+		SpaceID:          rCtx.SpaceID,
+		Name:             req.Name,
+		LimitAmount:      req.LimitAmount,
+		Currency:         req.Currency,
+		Interval:         req.Interval,
+		Icon:             req.Icon,
+		Color:            req.Color,
+		DefaultAccountID: req.DefaultAccountID,
 	}
 
 	return c.financeService.CreateBudget(ctx, budget)
@@ -67,14 +70,15 @@ func (c *Coordinator) UpdateBudget(ctx context.Context, req *UpdateBudgetRequest
 	}
 
 	budget := &finance.Budget{
-		ID:          req.ID,
-		Name:        req.Name,
-		LimitAmount: req.LimitAmount,
-		Currency:    req.Currency,
-		Interval:    req.Interval,
-		IsActive:    req.IsActive,
-		Icon:        req.Icon,
-		Color:       req.Color,
+		ID:               req.ID,
+		Name:             req.Name,
+		LimitAmount:      req.LimitAmount,
+		Currency:         req.Currency,
+		Interval:         req.Interval,
+		IsActive:         req.IsActive,
+		Icon:             req.Icon,
+		Color:            req.Color,
+		DefaultAccountID: req.DefaultAccountID,
 	}
 
 	updated, err := c.financeService.UpdateBudget(ctx, budget)

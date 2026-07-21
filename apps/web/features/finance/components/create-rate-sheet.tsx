@@ -26,7 +26,6 @@ import {
 interface CreateRateSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  spaceId: string
   settings: FinanceSettings | undefined
   refetchRates: () => void
 }
@@ -34,7 +33,6 @@ interface CreateRateSheetProps {
 export function CreateRateSheet({
   open,
   onOpenChange,
-  spaceId,
   settings,
   refetchRates,
 }: CreateRateSheetProps) {
@@ -79,14 +77,10 @@ export function CreateRateSheet({
     const dateObj = new Date(rateDateStr + "T00:00:00Z")
 
     await createRateMutation.mutateAsync({
-      space_id: spaceId,
-      req: {
-        spaceId,
-        fromCurrency: rateFrom,
-        toCurrency: rateTo,
-        rate: finalRate,
-        rateDate: dateObj.toISOString(),
-      },
+      fromCurrency: rateFrom,
+      toCurrency: rateTo,
+      rate: finalRate,
+      rateDate: dateObj.toISOString(),
     })
 
     onOpenChange(false)

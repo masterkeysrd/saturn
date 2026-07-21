@@ -182,6 +182,8 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	scheduledPaymentStore := financestorage.NewScheduledPaymentStore(sqlxDB)
 	borrowingStore := financestorage.NewBorrowingStore(sqlxDB)
 	borrowingRepaymentStore := financestorage.NewBorrowingRepaymentStore(sqlxDB)
+	accountStore := financestorage.NewAccountStore(sqlxDB)
+	transferStore := financestorage.NewTransferStore(sqlxDB)
 
 	financeService := finance.NewService(finance.Dependencies{
 		SettingsStore:           settingsStore,
@@ -194,6 +196,8 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 		ScheduledPaymentStore:   scheduledPaymentStore,
 		BorrowingStore:          borrowingStore,
 		BorrowingRepaymentStore: borrowingRepaymentStore,
+		AccountStore:            accountStore,
+		TransferStore:           transferStore,
 	})
 
 	financeCoordinator := financeapp.NewCoordinator(financeapp.Dependencies{

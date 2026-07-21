@@ -67,17 +67,18 @@ const budgetPrefix = "bgt_"
 
 // Budget represents a budget template definition.
 type Budget struct {
-	ID          BudgetID
-	SpaceID     SpaceID
-	Name        string
-	LimitAmount int64
-	Currency    Currency
-	Interval    RecurrenceInterval
-	IsActive    bool
-	Icon        string
-	Color       string
-	CreateTime  time.Time
-	UpdateTime  time.Time
+	ID               BudgetID
+	SpaceID          SpaceID
+	Name             string
+	LimitAmount      int64
+	Currency         Currency
+	Interval         RecurrenceInterval
+	IsActive         bool
+	Icon             string
+	Color            string
+	DefaultAccountID *AccountID // Nullable default account for spending
+	CreateTime       time.Time
+	UpdateTime       time.Time
 }
 
 // Validate checks the budget's business rules.
@@ -114,6 +115,11 @@ func (b *Budget) Validate() error {
 	}
 	if err := b.SpaceID.Validate(); err != nil {
 		return fmt.Errorf("validate space ID: %w", err)
+	}
+	if b.DefaultAccountID != nil {
+		if err := b.DefaultAccountID.Validate(); err != nil {
+			return fmt.Errorf("validate default account ID: %w", err)
+		}
 	}
 	return nil
 }

@@ -18,6 +18,8 @@ type transactionDB struct {
 	Type            string         `db:"type"`
 	BudgetID        sql.NullString `db:"budget_id"`
 	PeriodID        sql.NullString `db:"period_id"`
+	AccountID       sql.NullString `db:"account_id"`
+	TransferID      sql.NullString `db:"transfer_id"`
 	Amount          int64          `db:"amount"`
 	Currency        string         `db:"currency"`
 	AmountInBase    int64          `db:"amount_in_base"`
@@ -39,8 +41,8 @@ func NewTransactionStore(db *sqlx.DB) *TransactionStore {
 }
 
 func (s *TransactionStore) Create(ctx context.Context, t *finance.Transaction) error {
-	query := `INSERT INTO finance.transaction (id, space_id, type, budget_id, period_id, amount, currency, amount_in_base, description, transaction_date, effective_date, source_type, source_id, create_time, update_time)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`
+	query := `INSERT INTO finance.transaction (id, space_id, type, budget_id, period_id, account_id, transfer_id, amount, currency, amount_in_base, description, transaction_date, effective_date, source_type, source_id, create_time, update_time)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`
 
 	var budgetID, periodID sql.NullString
 	if t.BudgetID != nil {
@@ -48,6 +50,13 @@ func (s *TransactionStore) Create(ctx context.Context, t *finance.Transaction) e
 	}
 	if t.PeriodID != nil {
 		periodID = sql.NullString{String: string(*t.PeriodID), Valid: true}
+	}
+	var accountID, transferID sql.NullString
+	if t.AccountID != nil {
+		accountID = sql.NullString{String: string(*t.AccountID), Valid: true}
+	}
+	if t.TransferID != nil {
+		transferID = sql.NullString{String: string(*t.TransferID), Valid: true}
 	}
 	var sourceType, sourceID sql.NullString
 	if t.SourceType != nil {
@@ -58,7 +67,7 @@ func (s *TransactionStore) Create(ctx context.Context, t *finance.Transaction) e
 	}
 
 	_, err := s.db.ExecContext(ctx, query,
-		string(t.ID), string(t.SpaceID), string(t.Type), budgetID, periodID,
+		string(t.ID), string(t.SpaceID), string(t.Type), budgetID, periodID, accountID, transferID,
 		t.Amount, string(t.Currency), t.AmountInBase, t.Description,
 		t.TransactionDate, t.EffectiveDate, sourceType, sourceID, t.CreateTime, t.UpdateTime,
 	)
@@ -85,6 +94,16 @@ func (s *TransactionStore) GetByID(ctx context.Context, id finance.TransactionID
 		pID := finance.PeriodID(row.PeriodID.String)
 		periodIDPtr = &pID
 	}
+	var accountIDPtr *finance.AccountID
+	if row.AccountID.Valid {
+		aID := finance.AccountID(row.AccountID.String)
+		accountIDPtr = &aID
+	}
+	var transferIDPtr *finance.TransferID
+	if row.TransferID.Valid {
+		tID := finance.TransferID(row.TransferID.String)
+		transferIDPtr = &tID
+	}
 	var sourceTypePtr *string
 	if row.SourceType.Valid {
 		sT := row.SourceType.String
@@ -102,6 +121,8 @@ func (s *TransactionStore) GetByID(ctx context.Context, id finance.TransactionID
 		Type:            finance.TransactionType(row.Type),
 		BudgetID:        budgetIDPtr,
 		PeriodID:        periodIDPtr,
+		AccountID:       accountIDPtr,
+		TransferID:      transferIDPtr,
 		Amount:          row.Amount,
 		Currency:        finance.Currency(row.Currency),
 		AmountInBase:    row.AmountInBase,
@@ -135,13 +156,15 @@ func (s *TransactionStore) Update(ctx context.Context, t *finance.Transaction) e
 	query := `UPDATE finance.transaction SET 
 		budget_id = $2, 
 		period_id = $3, 
-		amount = $4, 
-		currency = $5, 
-		amount_in_base = $6, 
-		description = $7, 
-		transaction_date = $8, 
-		effective_date = $9,
-		update_time = $10 
+		account_id = $4,
+		transfer_id = $5,
+		amount = $6, 
+		currency = $7, 
+		amount_in_base = $8, 
+		description = $9, 
+		transaction_date = $10, 
+		effective_date = $11,
+		update_time = $12 
 		WHERE id = $1`
 
 	var budgetID, periodID sql.NullString
@@ -151,9 +174,16 @@ func (s *TransactionStore) Update(ctx context.Context, t *finance.Transaction) e
 	if t.PeriodID != nil {
 		periodID = sql.NullString{String: string(*t.PeriodID), Valid: true}
 	}
+	var accountID, transferID sql.NullString
+	if t.AccountID != nil {
+		accountID = sql.NullString{String: string(*t.AccountID), Valid: true}
+	}
+	if t.TransferID != nil {
+		transferID = sql.NullString{String: string(*t.TransferID), Valid: true}
+	}
 
 	res, err := s.db.ExecContext(ctx, query,
-		string(t.ID), budgetID, periodID,
+		string(t.ID), budgetID, periodID, accountID, transferID,
 		t.Amount, string(t.Currency), t.AmountInBase, t.Description,
 		t.TransactionDate, t.EffectiveDate, t.UpdateTime,
 	)
@@ -210,6 +240,18 @@ func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 		argIndex++
 	}
 
+	if filter.AccountID != nil {
+		conditions = append(conditions, fmt.Sprintf("account_id = $%d", argIndex))
+		args = append(args, string(*filter.AccountID))
+		argIndex++
+	}
+
+	if filter.TransferID != nil {
+		conditions = append(conditions, fmt.Sprintf("transfer_id = $%d", argIndex))
+		args = append(args, string(*filter.TransferID))
+		argIndex++
+	}
+
 	if cursorID != "" {
 		conditions = append(conditions, fmt.Sprintf("id < $%d", argIndex))
 		args = append(args, cursorID)
@@ -241,6 +283,16 @@ func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 			pID := finance.PeriodID(rows[i].PeriodID.String)
 			periodIDPtr = &pID
 		}
+		var accountIDPtr *finance.AccountID
+		if rows[i].AccountID.Valid {
+			aID := finance.AccountID(rows[i].AccountID.String)
+			accountIDPtr = &aID
+		}
+		var transferIDPtr *finance.TransferID
+		if rows[i].TransferID.Valid {
+			tID := finance.TransferID(rows[i].TransferID.String)
+			transferIDPtr = &tID
+		}
 		var sourceTypePtr *string
 		if rows[i].SourceType.Valid {
 			sT := rows[i].SourceType.String
@@ -258,6 +310,8 @@ func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 			Type:            finance.TransactionType(rows[i].Type),
 			BudgetID:        budgetIDPtr,
 			PeriodID:        periodIDPtr,
+			AccountID:       accountIDPtr,
+			TransferID:      transferIDPtr,
 			Amount:          rows[i].Amount,
 			Currency:        finance.Currency(rows[i].Currency),
 			AmountInBase:    rows[i].AmountInBase,

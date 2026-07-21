@@ -15,20 +15,20 @@ service Finance {
   // ConfigureFinance sets up the default base currency for a workspace.
   rpc ConfigureFinance(ConfigureFinanceRequest) returns (FinanceSettings) {
     option (google.api.http) = {
-      post: "/v1/spaces/{space_id}/finance/settings"
+      post: "/v1/finance/settings"
       body: "*"
     };
   }
 
   // GetFinanceSettings retrieves the finance settings for a workspace.
   rpc GetFinanceSettings(GetFinanceSettingsRequest) returns (FinanceSettings) {
-    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/settings"};
+    option (google.api.http) = {get: "/v1/finance/settings"};
   }
 
   // CreateBudget creates a new budget template in a workspace.
   rpc CreateBudget(CreateBudgetRequest) returns (Budget) {
     option (google.api.http) = {
-      post: "/v1/spaces/{space_id}/finance/budgets"
+      post: "/v1/finance/budgets"
       body: "*"
     };
   }
@@ -36,48 +36,48 @@ service Finance {
   // UpdateBudget updates a budget template.
   rpc UpdateBudget(UpdateBudgetRequest) returns (Budget) {
     option (google.api.http) = {
-      patch: "/v1/spaces/{space_id}/finance/budgets/{id}"
+      patch: "/v1/finance/budgets/{id}"
       body: "*"
     };
   }
 
   // DeleteBudget deletes a budget template.
   rpc DeleteBudget(DeleteBudgetRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {delete: "/v1/spaces/{space_id}/finance/budgets/{id}"};
+    option (google.api.http) = {delete: "/v1/finance/budgets/{id}"};
   }
 
   // ListBudgets lists all budget templates in a workspace.
   rpc ListBudgets(ListBudgetsRequest) returns (ListBudgetsResponse) {
-    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/budgets"};
+    option (google.api.http) = {get: "/v1/finance/budgets"};
   }
 
   // GetBudgetPeriod retrieves or generates the budget period for a specific date.
   rpc GetBudgetPeriod(GetBudgetPeriodRequest) returns (BudgetPeriod) {
-    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/budgets/{budget_id}/period"};
+    option (google.api.http) = {get: "/v1/finance/budgets/{budget_id}/period"};
   }
 
   // CreateExchangeRate registers a new daily rate conversion rule.
   rpc CreateExchangeRate(CreateExchangeRateRequest) returns (ExchangeRate) {
     option (google.api.http) = {
-      post: "/v1/spaces/{space_id}/finance/rates"
+      post: "/v1/finance/rates"
       body: "*"
     };
   }
 
   // ListExchangeRates lists all exchange rate rules in a workspace.
   rpc ListExchangeRates(ListExchangeRatesRequest) returns (ListExchangeRatesResponse) {
-    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/rates"};
+    option (google.api.http) = {get: "/v1/finance/rates"};
   }
 
   // DeleteExchangeRate deletes a specific daily rate conversion rule.
   rpc DeleteExchangeRate(DeleteExchangeRateRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {delete: "/v1/spaces/{space_id}/finance/rates"};
+    option (google.api.http) = {delete: "/v1/finance/rates"};
   }
 
   // CreateExpense logs a new expense transaction.
   rpc CreateExpense(CreateExpenseRequest) returns (Transaction) {
     option (google.api.http) = {
-      post: "/v1/spaces/{space_id}/finance/expenses"
+      post: "/v1/finance/expenses"
       body: "*"
     };
   }
@@ -85,30 +85,30 @@ service Finance {
   // UpdateExpense modifies an existing expense.
   rpc UpdateExpense(UpdateExpenseRequest) returns (Transaction) {
     option (google.api.http) = {
-      put: "/v1/spaces/{space_id}/finance/expenses/{id}"
+      put: "/v1/finance/expenses/{id}"
       body: "*"
     };
   }
 
   // DeleteTransaction deletes any type of transaction.
   rpc DeleteTransaction(DeleteTransactionRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {delete: "/v1/spaces/{space_id}/finance/transactions/{id}"};
+    option (google.api.http) = {delete: "/v1/finance/transactions/{id}"};
   }
 
   // ListTransactions lists paginated transactions for a workspace.
   rpc ListTransactions(ListTransactionsRequest) returns (ListTransactionsResponse) {
-    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/transactions"};
+    option (google.api.http) = {get: "/v1/finance/transactions"};
   }
 
   // GetInsights aggregates workspace spent insights and statistics.
   rpc GetInsights(GetInsightsRequest) returns (GetInsightsResponse) {
-    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/insights"};
+    option (google.api.http) = {get: "/v1/finance/insights"};
   }
 
   // CreateRecurringExpense configures a new recurring expense rule.
   rpc CreateRecurringExpense(CreateRecurringExpenseRequest) returns (RecurringExpense) {
     option (google.api.http) = {
-      post: "/v1/spaces/{space_id}/finance/recurring-expenses"
+      post: "/v1/finance/recurring-expenses"
       body: "*"
     };
   }
@@ -116,30 +116,30 @@ service Finance {
   // UpdateRecurringExpense modifies an existing recurring expense rule.
   rpc UpdateRecurringExpense(UpdateRecurringExpenseRequest) returns (RecurringExpense) {
     option (google.api.http) = {
-      put: "/v1/spaces/{space_id}/finance/recurring-expenses/{id}"
+      put: "/v1/finance/recurring-expenses/{id}"
       body: "*"
     };
   }
 
   // DeleteRecurringExpense deletes a recurring expense rule.
   rpc DeleteRecurringExpense(DeleteRecurringExpenseRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {delete: "/v1/spaces/{space_id}/finance/recurring-expenses/{id}"};
+    option (google.api.http) = {delete: "/v1/finance/recurring-expenses/{id}"};
   }
 
   // ListRecurringExpenses lists recurring expenses for a workspace.
   rpc ListRecurringExpenses(ListRecurringExpensesRequest) returns (ListRecurringExpensesResponse) {
-    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/recurring-expenses"};
+    option (google.api.http) = {get: "/v1/finance/recurring-expenses"};
   }
 
   // ListScheduledPayments lists scheduled payments for a workspace.
   rpc ListScheduledPayments(ListScheduledPaymentsRequest) returns (ListScheduledPaymentsResponse) {
-    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/scheduled-payments"};
+    option (google.api.http) = {get: "/v1/finance/scheduled-payments"};
   }
 
   // ConfirmScheduledPayment clears a scheduled payment by promoting it to a permanent transaction.
   rpc ConfirmScheduledPayment(ConfirmScheduledPaymentRequest) returns (Transaction) {
     option (google.api.http) = {
-      post: "/v1/spaces/{space_id}/finance/scheduled-payments/{payment_id}/confirm"
+      post: "/v1/finance/scheduled-payments/{payment_id}/confirm"
       body: "*"
     };
   }
@@ -147,55 +147,99 @@ service Finance {
   // CreateBorrowing logs a new personal lent/borrowed debt agreement.
   rpc CreateBorrowing(CreateBorrowingRequest) returns (Borrowing) {
     option (google.api.http) = {
-      post: "/v1/spaces/{space_id}/finance/borrowings"
+      post: "/v1/finance/borrowings"
       body: "*"
     };
   }
 
   // GetBorrowing retrieves a single borrowing record.
   rpc GetBorrowing(GetBorrowingRequest) returns (Borrowing) {
-    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/borrowings/{id}"};
+    option (google.api.http) = {get: "/v1/finance/borrowings/{id}"};
   }
 
   // ListBorrowings returns borrowings for a space, optionally filtered.
   rpc ListBorrowings(ListBorrowingsRequest) returns (ListBorrowingsResponse) {
-    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/borrowings"};
+    option (google.api.http) = {get: "/v1/finance/borrowings"};
   }
 
   // UpdateBorrowing updates basic details of a borrowing record.
   rpc UpdateBorrowing(UpdateBorrowingRequest) returns (Borrowing) {
     option (google.api.http) = {
-      put: "/v1/spaces/{space_id}/finance/borrowings/{id}"
+      put: "/v1/finance/borrowings/{id}"
       body: "*"
     };
   }
 
   // DeleteBorrowing removes a borrowing and all its repayments.
   rpc DeleteBorrowing(DeleteBorrowingRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {delete: "/v1/spaces/{space_id}/finance/borrowings/{id}"};
+    option (google.api.http) = {delete: "/v1/finance/borrowings/{id}"};
   }
 
   // CreateBorrowingRepayment records an installment payment towards a borrowing.
   rpc CreateBorrowingRepayment(CreateBorrowingRepaymentRequest) returns (BorrowingRepayment) {
     option (google.api.http) = {
-      post: "/v1/spaces/{space_id}/finance/borrowings/{borrowing_id}/repayments"
+      post: "/v1/finance/borrowings/{borrowing_id}/repayments"
       body: "*"
     };
   }
 
   // ListBorrowingRepayments returns all repayments for a specific borrowing.
   rpc ListBorrowingRepayments(ListBorrowingRepaymentsRequest) returns (ListBorrowingRepaymentsResponse) {
-    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/borrowings/{borrowing_id}/repayments"};
+    option (google.api.http) = {get: "/v1/finance/borrowings/{borrowing_id}/repayments"};
   }
 
   // DeleteBorrowingRepayment deletes a specific installment and restores the balance.
   rpc DeleteBorrowingRepayment(DeleteBorrowingRepaymentRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {delete: "/v1/spaces/{space_id}/finance/borrowings/{borrowing_id}/repayments/{id}"};
+    option (google.api.http) = {delete: "/v1/finance/borrowings/{borrowing_id}/repayments/{id}"};
+  }
+
+  // CreateAccount registers a new payment/liquidity account.
+  rpc CreateAccount(CreateAccountRequest) returns (Account) {
+    option (google.api.http) = {
+      post: "/v1/finance/accounts"
+      body: "account"
+    };
+  }
+
+  // GetAccount retrieves details of an account.
+  rpc GetAccount(GetAccountRequest) returns (Account) {
+    option (google.api.http) = {get: "/v1/finance/accounts/{id}"};
+  }
+
+  // UpdateAccount updates details of an account.
+  rpc UpdateAccount(UpdateAccountRequest) returns (Account) {
+    option (google.api.http) = {
+      put: "/v1/finance/accounts/{id}"
+      body: "account"
+    };
+  }
+
+  // DeleteAccount deletes an account.
+  rpc DeleteAccount(DeleteAccountRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/finance/accounts/{id}"};
+  }
+
+  // ListAccounts lists all accounts in a workspace.
+  rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse) {
+    option (google.api.http) = {get: "/v1/finance/accounts"};
+  }
+
+  // CreateTransfer logs a new transfer between accounts.
+  rpc CreateTransfer(CreateTransferRequest) returns (Transfer) {
+    option (google.api.http) = {
+      post: "/v1/finance/transfers"
+      body: "*"
+    };
+  }
+
+  // ListTransfers lists all transfers in a workspace.
+  rpc ListTransfers(ListTransfersRequest) returns (ListTransfersResponse) {
+    option (google.api.http) = {get: "/v1/finance/transfers"};
   }
 
   // ListCurrencies returns the list of supported currencies.
   rpc ListCurrencies(ListCurrenciesRequest) returns (ListCurrenciesResponse) {
-    option (google.api.http) = {get: "/v1/spaces/{space_id}/finance/currencies"};
+    option (google.api.http) = {get: "/v1/finance/currencies"};
   }
 }
 
@@ -227,6 +271,7 @@ message Budget {
   google.protobuf.Timestamp update_time = 9;
   string icon = 10;
   string color = 11;
+  optional string default_account_id = 12;
 }
 
 // BudgetPeriod represents an active instantiation of a budget.
@@ -248,24 +293,21 @@ message BudgetPeriod {
 
 // ConfigureFinanceRequest contains fields for initial setup.
 message ConfigureFinanceRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string base_currency = 2 [(google.api.field_behavior) = REQUIRED];
+  string base_currency = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 // GetFinanceSettingsRequest contains fields to fetch config.
-message GetFinanceSettingsRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-}
+message GetFinanceSettingsRequest {}
 
 // CreateBudgetRequest contains fields to create budget.
 message CreateBudgetRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string name = 2 [(google.api.field_behavior) = REQUIRED];
-  int64 limit_amount = 3 [(google.api.field_behavior) = REQUIRED];
-  string currency = 4 [(google.api.field_behavior) = REQUIRED];
-  RecurrenceInterval interval = 5 [(google.api.field_behavior) = REQUIRED];
-  string icon = 6;
-  string color = 7;
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  int64 limit_amount = 2 [(google.api.field_behavior) = REQUIRED];
+  string currency = 3 [(google.api.field_behavior) = REQUIRED];
+  RecurrenceInterval interval = 4 [(google.api.field_behavior) = REQUIRED];
+  string icon = 5;
+  string color = 6;
+  optional string default_account_id = 7;
 }
 
 enum LimitPropagation {
@@ -276,29 +318,27 @@ enum LimitPropagation {
 
 // UpdateBudgetRequest contains update rules.
 message UpdateBudgetRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string id = 2 [(google.api.field_behavior) = REQUIRED];
-  string name = 3;
-  int64 limit_amount = 4;
-  string currency = 5;
-  RecurrenceInterval interval = 6;
-  bool is_active = 7;
-  LimitPropagation propagation = 8;
-  string icon = 9;
-  string color = 10;
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  string name = 2;
+  int64 limit_amount = 3;
+  string currency = 4;
+  RecurrenceInterval interval = 5;
+  bool is_active = 6;
+  LimitPropagation propagation = 7;
+  string icon = 8;
+  string color = 9;
+  optional string default_account_id = 10;
 }
 
 // DeleteBudgetRequest contains deletion target.
 message DeleteBudgetRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string id = 2 [(google.api.field_behavior) = REQUIRED];
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 // ListBudgetsRequest contains listing parameters.
 message ListBudgetsRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  int32 page_size = 2;
-  string page_token = 3;
+  int32 page_size = 1;
+  string page_token = 2;
 }
 
 // ListBudgetsResponse contains paginated budgets.
@@ -309,9 +349,8 @@ message ListBudgetsResponse {
 
 // GetBudgetPeriodRequest retrieves period for date.
 message GetBudgetPeriodRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string budget_id = 2 [(google.api.field_behavior) = REQUIRED];
-  google.protobuf.Timestamp date = 3; // Timestamp for calculation, defaults to current time if omitted
+  string budget_id = 1 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.Timestamp date = 2; // Timestamp for calculation, defaults to current time if omitted
 }
 
 // ExchangeRate represents a daily rate record.
@@ -326,18 +365,16 @@ message ExchangeRate {
 
 // CreateExchangeRateRequest registers a daily rate.
 message CreateExchangeRateRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string from_currency = 2 [(google.api.field_behavior) = REQUIRED];
-  string to_currency = 3 [(google.api.field_behavior) = REQUIRED];
-  double rate = 4 [(google.api.field_behavior) = REQUIRED];
-  google.protobuf.Timestamp rate_date = 5 [(google.api.field_behavior) = REQUIRED];
+  string from_currency = 1 [(google.api.field_behavior) = REQUIRED];
+  string to_currency = 2 [(google.api.field_behavior) = REQUIRED];
+  double rate = 3 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.Timestamp rate_date = 4 [(google.api.field_behavior) = REQUIRED];
 }
 
 // ListExchangeRatesRequest lists workspace rates.
 message ListExchangeRatesRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  int32 page_size = 2;
-  string page_token = 3;
+  int32 page_size = 1;
+  string page_token = 2;
 }
 
 // ListExchangeRatesResponse contains paginated rates.
@@ -348,16 +385,17 @@ message ListExchangeRatesResponse {
 
 // DeleteExchangeRateRequest contains identifiers for rate deletion.
 message DeleteExchangeRateRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string from_currency = 2 [(google.api.field_behavior) = REQUIRED];
-  string to_currency = 3 [(google.api.field_behavior) = REQUIRED];
-  google.protobuf.Timestamp rate_date = 4 [(google.api.field_behavior) = REQUIRED];
+  string from_currency = 1 [(google.api.field_behavior) = REQUIRED];
+  string to_currency = 2 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.Timestamp rate_date = 3 [(google.api.field_behavior) = REQUIRED];
 }
 
 enum TransactionType {
   TRANSACTION_TYPE_UNSPECIFIED = 0;
   EXPENSE = 1;
   INCOME = 2;
+  TRANSFER_OUT = 3;
+  TRANSFER_IN = 4;
 }
 
 message Transaction {
@@ -376,6 +414,8 @@ message Transaction {
   google.protobuf.Timestamp effective_date = 13;
   optional string source_type = 14;
   optional string source_id = 15;
+  optional string account_id = 16;
+  optional string transfer_id = 17;
 }
 
 message ExpenseInput {
@@ -385,32 +425,30 @@ message ExpenseInput {
   string description = 4;
   google.protobuf.Timestamp transaction_date = 5;
   google.protobuf.Timestamp effective_date = 6;
+  optional string account_id = 7;
 }
 
 message CreateExpenseRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  ExpenseInput expense = 2 [(google.api.field_behavior) = REQUIRED];
+  ExpenseInput expense = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 message UpdateExpenseRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string id = 2 [(google.api.field_behavior) = REQUIRED];
-  ExpenseInput expense = 3 [(google.api.field_behavior) = REQUIRED];
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  ExpenseInput expense = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 message DeleteTransactionRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string id = 2 [(google.api.field_behavior) = REQUIRED];
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 message ListTransactionsRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string budget_id = 2;
-  TransactionType type = 3;
-  int32 page_size = 4;
-  string page_token = 5;
-  optional string source_type = 6;
-  optional string source_id = 7;
+  string budget_id = 1;
+  TransactionType type = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+  optional string source_type = 5;
+  optional string source_id = 6;
+  optional string account_id = 7;
 }
 
 message ListTransactionsResponse {
@@ -427,10 +465,9 @@ enum InsightGranularity {
 }
 
 message GetInsightsRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  InsightGranularity granularity = 2;
-  google.protobuf.Timestamp start_date = 3;
-  google.protobuf.Timestamp end_date = 4;
+  InsightGranularity granularity = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
 }
 
 message GetInsightsResponse {
@@ -526,7 +563,18 @@ message ScheduledPayment {
 }
 
 message CreateRecurringExpenseRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string budget_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string name = 2 [(google.api.field_behavior) = REQUIRED];
+  int64 amount = 3 [(google.api.field_behavior) = REQUIRED];
+  string currency = 4 [(google.api.field_behavior) = REQUIRED];
+  string interval = 5 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.Timestamp next_due_date = 6 [(google.api.field_behavior) = REQUIRED];
+  bool is_variable = 7;
+  int32 grace_period_days = 8;
+}
+
+message UpdateRecurringExpenseRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
   string budget_id = 2 [(google.api.field_behavior) = REQUIRED];
   string name = 3 [(google.api.field_behavior) = REQUIRED];
   int64 amount = 4 [(google.api.field_behavior) = REQUIRED];
@@ -534,33 +582,18 @@ message CreateRecurringExpenseRequest {
   string interval = 6 [(google.api.field_behavior) = REQUIRED];
   google.protobuf.Timestamp next_due_date = 7 [(google.api.field_behavior) = REQUIRED];
   bool is_variable = 8;
-  int32 grace_period_days = 9;
-}
-
-message UpdateRecurringExpenseRequest {
-  string id = 1 [(google.api.field_behavior) = REQUIRED];
-  string space_id = 2 [(google.api.field_behavior) = REQUIRED];
-  string budget_id = 3 [(google.api.field_behavior) = REQUIRED];
-  string name = 4 [(google.api.field_behavior) = REQUIRED];
-  int64 amount = 5 [(google.api.field_behavior) = REQUIRED];
-  string currency = 6 [(google.api.field_behavior) = REQUIRED];
-  string interval = 7 [(google.api.field_behavior) = REQUIRED];
-  google.protobuf.Timestamp next_due_date = 8 [(google.api.field_behavior) = REQUIRED];
-  bool is_variable = 9;
-  string status = 10 [(google.api.field_behavior) = REQUIRED];
-  int32 grace_period_days = 11;
+  string status = 9 [(google.api.field_behavior) = REQUIRED];
+  int32 grace_period_days = 10;
 }
 
 message DeleteRecurringExpenseRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string id = 2 [(google.api.field_behavior) = REQUIRED];
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 message ListRecurringExpensesRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string status = 2;
-  int32 page_size = 3;
-  string page_token = 4;
+  string status = 1;
+  int32 page_size = 2;
+  string page_token = 3;
 }
 
 message ListRecurringExpensesResponse {
@@ -569,12 +602,11 @@ message ListRecurringExpensesResponse {
 }
 
 message ListScheduledPaymentsRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string status = 2;
-  google.protobuf.Timestamp start_date = 3;
-  google.protobuf.Timestamp end_date = 4;
-  int32 page_size = 5;
-  string page_token = 6;
+  string status = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+  int32 page_size = 4;
+  string page_token = 5;
 }
 
 message ListScheduledPaymentsResponse {
@@ -583,11 +615,10 @@ message ListScheduledPaymentsResponse {
 }
 
 message ConfirmScheduledPaymentRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string payment_id = 2 [(google.api.field_behavior) = REQUIRED];
-  google.protobuf.Timestamp transaction_date = 3 [(google.api.field_behavior) = REQUIRED];
-  google.protobuf.Timestamp effective_date = 4 [(google.api.field_behavior) = REQUIRED];
-  int64 actual_amount = 5 [(google.api.field_behavior) = REQUIRED];
+  string payment_id = 1 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.Timestamp transaction_date = 2 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.Timestamp effective_date = 3 [(google.api.field_behavior) = REQUIRED];
+  int64 actual_amount = 4 [(google.api.field_behavior) = REQUIRED];
 }
 
 enum BorrowingDirection {
@@ -629,6 +660,7 @@ message BorrowingRepayment {
   string notes = 6;
   google.protobuf.Timestamp create_time = 7;
   google.protobuf.Timestamp update_time = 8;
+  string account_id = 9;
 }
 
 message BorrowingInput {
@@ -641,24 +673,22 @@ message BorrowingInput {
   google.protobuf.Timestamp due_at = 7;
   string notes = 8;
   bool create_as_transaction = 9;
+  optional string account_id = 10;
 }
 
 message CreateBorrowingRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  BorrowingInput borrowing = 2 [(google.api.field_behavior) = REQUIRED];
+  BorrowingInput borrowing = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 message GetBorrowingRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string id = 2 [(google.api.field_behavior) = REQUIRED];
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 message ListBorrowingsRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  optional BorrowingStatus status = 2;
-  optional BorrowingDirection direction = 3;
-  int32 page_size = 4;
-  string page_token = 5;
+  optional BorrowingStatus status = 1;
+  optional BorrowingDirection direction = 2;
+  int32 page_size = 3;
+  string page_token = 4;
 }
 
 message ListBorrowingsResponse {
@@ -667,31 +697,28 @@ message ListBorrowingsResponse {
 }
 
 message UpdateBorrowingRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string id = 2 [(google.api.field_behavior) = REQUIRED];
-  BorrowingInput borrowing = 3 [(google.api.field_behavior) = REQUIRED];
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  BorrowingInput borrowing = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 message DeleteBorrowingRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string id = 2 [(google.api.field_behavior) = REQUIRED];
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 message BorrowingRepaymentInput {
   int64 amount = 1 [(google.api.field_behavior) = REQUIRED];
   google.protobuf.Timestamp payment_date = 2 [(google.api.field_behavior) = REQUIRED];
   string notes = 3;
+  string account_id = 4 [(google.api.field_behavior) = REQUIRED];
 }
 
 message CreateBorrowingRepaymentRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string borrowing_id = 2 [(google.api.field_behavior) = REQUIRED];
-  BorrowingRepaymentInput repayment = 3 [(google.api.field_behavior) = REQUIRED];
+  string borrowing_id = 1 [(google.api.field_behavior) = REQUIRED];
+  BorrowingRepaymentInput repayment = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 message ListBorrowingRepaymentsRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string borrowing_id = 2 [(google.api.field_behavior) = REQUIRED];
+  string borrowing_id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 message ListBorrowingRepaymentsResponse {
@@ -699,9 +726,8 @@ message ListBorrowingRepaymentsResponse {
 }
 
 message DeleteBorrowingRepaymentRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string borrowing_id = 2 [(google.api.field_behavior) = REQUIRED];
-  string id = 3 [(google.api.field_behavior) = REQUIRED];
+  string borrowing_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string id = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 message CurrencyInfo {
@@ -709,10 +735,93 @@ message CurrencyInfo {
   string name = 2;
 }
 
-message ListCurrenciesRequest {
-  string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-}
+message ListCurrenciesRequest {}
 
 message ListCurrenciesResponse {
   repeated CurrencyInfo currencies = 1;
+}
+
+// --- Account Messages ---
+
+enum AccountType {
+  ACCOUNT_TYPE_UNSPECIFIED = 0;
+  BANK = 1;
+  CREDIT_CARD = 2;
+  CASH = 3;
+  DIGITAL_ACCOUNT = 4;
+}
+
+message Account {
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string space_id = 2;
+  string name = 3;
+  AccountType type = 4;
+  string currency = 5;
+  int64 initial_balance = 6;
+  int64 current_balance = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+  int64 credit_limit = 8;
+  bool is_default = 9;
+  bool is_active = 10;
+  string color = 11;
+  string notes = 12;
+  string last_four = 13;
+  google.protobuf.Timestamp create_time = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp update_time = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message CreateAccountRequest {
+  Account account = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message GetAccountRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message UpdateAccountRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  Account account = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DeleteAccountRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message ListAccountsRequest {}
+
+message ListAccountsResponse {
+  repeated Account accounts = 1;
+}
+
+// --- Transfer Messages ---
+
+message Transfer {
+  string id = 1;
+  string space_id = 2;
+  string source_account_id = 3;
+  string destination_account_id = 4;
+  int64 source_amount = 5;
+  int64 destination_amount = 6;
+  google.protobuf.Timestamp transfer_date = 7;
+  string notes = 8;
+  google.protobuf.Timestamp create_time = 9;
+  google.protobuf.Timestamp update_time = 10;
+}
+
+message CreateTransferRequest {
+  string source_account_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string destination_account_id = 2 [(google.api.field_behavior) = REQUIRED];
+  int64 source_amount = 3 [(google.api.field_behavior) = REQUIRED];
+  int64 destination_amount = 4 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.Timestamp transfer_date = 5 [(google.api.field_behavior) = REQUIRED];
+  string notes = 6;
+}
+
+message ListTransfersRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListTransfersResponse {
+  repeated Transfer transfers = 1;
+  string next_page_token = 2;
 }

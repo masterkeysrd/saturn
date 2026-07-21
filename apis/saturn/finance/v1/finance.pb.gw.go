@@ -39,21 +39,12 @@ func request_Finance_ConfigureFinance_0(ctx context.Context, marshaler runtime.M
 	var (
 		protoReq ConfigureFinanceRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
-	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
 	}
 	msg, err := client.ConfigureFinance(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -63,18 +54,9 @@ func local_request_Finance_ConfigureFinance_0(ctx context.Context, marshaler run
 	var (
 		protoReq ConfigureFinanceRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
 	}
 	msg, err := server.ConfigureFinance(ctx, &protoReq)
 	return msg, metadata, err
@@ -84,18 +66,9 @@ func request_Finance_GetFinanceSettings_0(ctx context.Context, marshaler runtime
 	var (
 		protoReq GetFinanceSettingsRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
-	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
 	}
 	msg, err := client.GetFinanceSettings(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -105,16 +78,7 @@ func local_request_Finance_GetFinanceSettings_0(ctx context.Context, marshaler r
 	var (
 		protoReq GetFinanceSettingsRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
 	msg, err := server.GetFinanceSettings(ctx, &protoReq)
 	return msg, metadata, err
 }
@@ -123,21 +87,12 @@ func request_Finance_CreateBudget_0(ctx context.Context, marshaler runtime.Marsh
 	var (
 		protoReq CreateBudgetRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
-	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
 	}
 	msg, err := client.CreateBudget(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -147,18 +102,9 @@ func local_request_Finance_CreateBudget_0(ctx context.Context, marshaler runtime
 	var (
 		protoReq CreateBudgetRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
 	}
 	msg, err := server.CreateBudget(ctx, &protoReq)
 	return msg, metadata, err
@@ -176,15 +122,7 @@ func request_Finance_UpdateBudget_0(ctx context.Context, marshaler runtime.Marsh
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["id"]
+	val, ok := pathParams["id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
@@ -205,15 +143,7 @@ func local_request_Finance_UpdateBudget_0(ctx context.Context, marshaler runtime
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["id"]
+	val, ok := pathParams["id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
@@ -234,15 +164,7 @@ func request_Finance_DeleteBudget_0(ctx context.Context, marshaler runtime.Marsh
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["id"]
+	val, ok := pathParams["id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
@@ -260,15 +182,7 @@ func local_request_Finance_DeleteBudget_0(ctx context.Context, marshaler runtime
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["id"]
+	val, ok := pathParams["id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
@@ -280,24 +194,15 @@ func local_request_Finance_DeleteBudget_0(ctx context.Context, marshaler runtime
 	return msg, metadata, err
 }
 
-var filter_Finance_ListBudgets_0 = &utilities.DoubleArray{Encoding: map[string]int{"space_id": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
+var filter_Finance_ListBudgets_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 
 func request_Finance_ListBudgets_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq ListBudgetsRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
-	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
 	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
@@ -313,16 +218,7 @@ func local_request_Finance_ListBudgets_0(ctx context.Context, marshaler runtime.
 	var (
 		protoReq ListBudgetsRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
@@ -333,7 +229,7 @@ func local_request_Finance_ListBudgets_0(ctx context.Context, marshaler runtime.
 	return msg, metadata, err
 }
 
-var filter_Finance_GetBudgetPeriod_0 = &utilities.DoubleArray{Encoding: map[string]int{"space_id": 0, "budget_id": 1}, Base: []int{1, 1, 2, 0, 0}, Check: []int{0, 1, 1, 2, 3}}
+var filter_Finance_GetBudgetPeriod_0 = &utilities.DoubleArray{Encoding: map[string]int{"budget_id": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
 
 func request_Finance_GetBudgetPeriod_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
@@ -344,15 +240,7 @@ func request_Finance_GetBudgetPeriod_0(ctx context.Context, marshaler runtime.Ma
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["budget_id"]
+	val, ok := pathParams["budget_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "budget_id")
 	}
@@ -376,15 +264,7 @@ func local_request_Finance_GetBudgetPeriod_0(ctx context.Context, marshaler runt
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["budget_id"]
+	val, ok := pathParams["budget_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "budget_id")
 	}
@@ -406,21 +286,12 @@ func request_Finance_CreateExchangeRate_0(ctx context.Context, marshaler runtime
 	var (
 		protoReq CreateExchangeRateRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
-	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
 	}
 	msg, err := client.CreateExchangeRate(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -430,41 +301,23 @@ func local_request_Finance_CreateExchangeRate_0(ctx context.Context, marshaler r
 	var (
 		protoReq CreateExchangeRateRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
 	}
 	msg, err := server.CreateExchangeRate(ctx, &protoReq)
 	return msg, metadata, err
 }
 
-var filter_Finance_ListExchangeRates_0 = &utilities.DoubleArray{Encoding: map[string]int{"space_id": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
+var filter_Finance_ListExchangeRates_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 
 func request_Finance_ListExchangeRates_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq ListExchangeRatesRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
-	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
 	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
@@ -480,16 +333,7 @@ func local_request_Finance_ListExchangeRates_0(ctx context.Context, marshaler ru
 	var (
 		protoReq ListExchangeRatesRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
@@ -500,24 +344,15 @@ func local_request_Finance_ListExchangeRates_0(ctx context.Context, marshaler ru
 	return msg, metadata, err
 }
 
-var filter_Finance_DeleteExchangeRate_0 = &utilities.DoubleArray{Encoding: map[string]int{"space_id": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
+var filter_Finance_DeleteExchangeRate_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 
 func request_Finance_DeleteExchangeRate_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq DeleteExchangeRateRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
-	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
 	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
@@ -533,16 +368,7 @@ func local_request_Finance_DeleteExchangeRate_0(ctx context.Context, marshaler r
 	var (
 		protoReq DeleteExchangeRateRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
@@ -557,21 +383,12 @@ func request_Finance_CreateExpense_0(ctx context.Context, marshaler runtime.Mars
 	var (
 		protoReq CreateExpenseRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
-	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
 	}
 	msg, err := client.CreateExpense(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -581,18 +398,9 @@ func local_request_Finance_CreateExpense_0(ctx context.Context, marshaler runtim
 	var (
 		protoReq CreateExpenseRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
 	}
 	msg, err := server.CreateExpense(ctx, &protoReq)
 	return msg, metadata, err
@@ -610,15 +418,7 @@ func request_Finance_UpdateExpense_0(ctx context.Context, marshaler runtime.Mars
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["id"]
+	val, ok := pathParams["id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
@@ -639,15 +439,7 @@ func local_request_Finance_UpdateExpense_0(ctx context.Context, marshaler runtim
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["id"]
+	val, ok := pathParams["id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
@@ -668,15 +460,7 @@ func request_Finance_DeleteTransaction_0(ctx context.Context, marshaler runtime.
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["id"]
+	val, ok := pathParams["id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
@@ -694,15 +478,7 @@ func local_request_Finance_DeleteTransaction_0(ctx context.Context, marshaler ru
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["id"]
+	val, ok := pathParams["id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
@@ -714,24 +490,15 @@ func local_request_Finance_DeleteTransaction_0(ctx context.Context, marshaler ru
 	return msg, metadata, err
 }
 
-var filter_Finance_ListTransactions_0 = &utilities.DoubleArray{Encoding: map[string]int{"space_id": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
+var filter_Finance_ListTransactions_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 
 func request_Finance_ListTransactions_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq ListTransactionsRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
-	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
 	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
@@ -747,16 +514,7 @@ func local_request_Finance_ListTransactions_0(ctx context.Context, marshaler run
 	var (
 		protoReq ListTransactionsRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
@@ -767,24 +525,15 @@ func local_request_Finance_ListTransactions_0(ctx context.Context, marshaler run
 	return msg, metadata, err
 }
 
-var filter_Finance_GetInsights_0 = &utilities.DoubleArray{Encoding: map[string]int{"space_id": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
+var filter_Finance_GetInsights_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 
 func request_Finance_GetInsights_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq GetInsightsRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
-	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
 	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
@@ -800,16 +549,7 @@ func local_request_Finance_GetInsights_0(ctx context.Context, marshaler runtime.
 	var (
 		protoReq GetInsightsRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
@@ -824,21 +564,12 @@ func request_Finance_CreateRecurringExpense_0(ctx context.Context, marshaler run
 	var (
 		protoReq CreateRecurringExpenseRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
-	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
 	}
 	msg, err := client.CreateRecurringExpense(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -848,18 +579,9 @@ func local_request_Finance_CreateRecurringExpense_0(ctx context.Context, marshal
 	var (
 		protoReq CreateRecurringExpenseRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
 	}
 	msg, err := server.CreateRecurringExpense(ctx, &protoReq)
 	return msg, metadata, err
@@ -877,15 +599,7 @@ func request_Finance_UpdateRecurringExpense_0(ctx context.Context, marshaler run
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["id"]
+	val, ok := pathParams["id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
@@ -906,15 +620,7 @@ func local_request_Finance_UpdateRecurringExpense_0(ctx context.Context, marshal
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["id"]
+	val, ok := pathParams["id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
@@ -935,15 +641,7 @@ func request_Finance_DeleteRecurringExpense_0(ctx context.Context, marshaler run
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["id"]
+	val, ok := pathParams["id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
@@ -961,15 +659,7 @@ func local_request_Finance_DeleteRecurringExpense_0(ctx context.Context, marshal
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["id"]
+	val, ok := pathParams["id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
@@ -981,24 +671,15 @@ func local_request_Finance_DeleteRecurringExpense_0(ctx context.Context, marshal
 	return msg, metadata, err
 }
 
-var filter_Finance_ListRecurringExpenses_0 = &utilities.DoubleArray{Encoding: map[string]int{"space_id": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
+var filter_Finance_ListRecurringExpenses_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 
 func request_Finance_ListRecurringExpenses_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq ListRecurringExpensesRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
-	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
 	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
@@ -1014,16 +695,7 @@ func local_request_Finance_ListRecurringExpenses_0(ctx context.Context, marshale
 	var (
 		protoReq ListRecurringExpensesRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
@@ -1034,24 +706,15 @@ func local_request_Finance_ListRecurringExpenses_0(ctx context.Context, marshale
 	return msg, metadata, err
 }
 
-var filter_Finance_ListScheduledPayments_0 = &utilities.DoubleArray{Encoding: map[string]int{"space_id": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
+var filter_Finance_ListScheduledPayments_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 
 func request_Finance_ListScheduledPayments_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq ListScheduledPaymentsRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
-	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
 	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
@@ -1067,16 +730,7 @@ func local_request_Finance_ListScheduledPayments_0(ctx context.Context, marshale
 	var (
 		protoReq ListScheduledPaymentsRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
@@ -1099,15 +753,7 @@ func request_Finance_ConfirmScheduledPayment_0(ctx context.Context, marshaler ru
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["payment_id"]
+	val, ok := pathParams["payment_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "payment_id")
 	}
@@ -1128,15 +774,7 @@ func local_request_Finance_ConfirmScheduledPayment_0(ctx context.Context, marsha
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["payment_id"]
+	val, ok := pathParams["payment_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "payment_id")
 	}
@@ -1152,21 +790,12 @@ func request_Finance_CreateBorrowing_0(ctx context.Context, marshaler runtime.Ma
 	var (
 		protoReq CreateBorrowingRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
-	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
 	}
 	msg, err := client.CreateBorrowing(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -1176,18 +805,9 @@ func local_request_Finance_CreateBorrowing_0(ctx context.Context, marshaler runt
 	var (
 		protoReq CreateBorrowingRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
 	}
 	msg, err := server.CreateBorrowing(ctx, &protoReq)
 	return msg, metadata, err
@@ -1202,15 +822,7 @@ func request_Finance_GetBorrowing_0(ctx context.Context, marshaler runtime.Marsh
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["id"]
+	val, ok := pathParams["id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
@@ -1228,15 +840,7 @@ func local_request_Finance_GetBorrowing_0(ctx context.Context, marshaler runtime
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["id"]
+	val, ok := pathParams["id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
@@ -1248,24 +852,15 @@ func local_request_Finance_GetBorrowing_0(ctx context.Context, marshaler runtime
 	return msg, metadata, err
 }
 
-var filter_Finance_ListBorrowings_0 = &utilities.DoubleArray{Encoding: map[string]int{"space_id": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
+var filter_Finance_ListBorrowings_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 
 func request_Finance_ListBorrowings_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq ListBorrowingsRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
-	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
 	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
@@ -1281,16 +876,7 @@ func local_request_Finance_ListBorrowings_0(ctx context.Context, marshaler runti
 	var (
 		protoReq ListBorrowingsRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
@@ -1313,15 +899,7 @@ func request_Finance_UpdateBorrowing_0(ctx context.Context, marshaler runtime.Ma
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["id"]
+	val, ok := pathParams["id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
@@ -1342,15 +920,7 @@ func local_request_Finance_UpdateBorrowing_0(ctx context.Context, marshaler runt
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["id"]
+	val, ok := pathParams["id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
@@ -1371,15 +941,7 @@ func request_Finance_DeleteBorrowing_0(ctx context.Context, marshaler runtime.Ma
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["id"]
+	val, ok := pathParams["id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
@@ -1397,15 +959,7 @@ func local_request_Finance_DeleteBorrowing_0(ctx context.Context, marshaler runt
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["id"]
+	val, ok := pathParams["id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
@@ -1429,15 +983,7 @@ func request_Finance_CreateBorrowingRepayment_0(ctx context.Context, marshaler r
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["borrowing_id"]
+	val, ok := pathParams["borrowing_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "borrowing_id")
 	}
@@ -1458,15 +1004,7 @@ func local_request_Finance_CreateBorrowingRepayment_0(ctx context.Context, marsh
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["borrowing_id"]
+	val, ok := pathParams["borrowing_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "borrowing_id")
 	}
@@ -1487,15 +1025,7 @@ func request_Finance_ListBorrowingRepayments_0(ctx context.Context, marshaler ru
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["borrowing_id"]
+	val, ok := pathParams["borrowing_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "borrowing_id")
 	}
@@ -1513,15 +1043,7 @@ func local_request_Finance_ListBorrowingRepayments_0(ctx context.Context, marsha
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["borrowing_id"]
+	val, ok := pathParams["borrowing_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "borrowing_id")
 	}
@@ -1542,15 +1064,7 @@ func request_Finance_DeleteBorrowingRepayment_0(ctx context.Context, marshaler r
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["borrowing_id"]
+	val, ok := pathParams["borrowing_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "borrowing_id")
 	}
@@ -1576,15 +1090,7 @@ func local_request_Finance_DeleteBorrowingRepayment_0(ctx context.Context, marsh
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["borrowing_id"]
+	val, ok := pathParams["borrowing_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "borrowing_id")
 	}
@@ -1604,22 +1110,246 @@ func local_request_Finance_DeleteBorrowingRepayment_0(ctx context.Context, marsh
 	return msg, metadata, err
 }
 
-func request_Finance_ListCurrencies_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Finance_CreateAccount_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq ListCurrenciesRequest
+		protoReq CreateAccountRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq.Account); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	msg, err := client.CreateAccount(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_Finance_CreateAccount_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq CreateAccountRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq.Account); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.CreateAccount(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_Finance_GetAccount_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetAccountRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	val, ok := pathParams["space_id"]
+	val, ok := pathParams["id"]
 	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
 	}
-	protoReq.SpaceId, err = runtime.String(val)
+	protoReq.Id, err = runtime.String(val)
 	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
+	}
+	msg, err := client.GetAccount(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_Finance_GetAccount_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetAccountRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
+	}
+	protoReq.Id, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
+	}
+	msg, err := server.GetAccount(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_Finance_UpdateAccount_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq UpdateAccountRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq.Account); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
+	}
+	protoReq.Id, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
+	}
+	msg, err := client.UpdateAccount(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_Finance_UpdateAccount_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq UpdateAccountRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq.Account); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	val, ok := pathParams["id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
+	}
+	protoReq.Id, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
+	}
+	msg, err := server.UpdateAccount(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_Finance_DeleteAccount_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq DeleteAccountRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
+	}
+	protoReq.Id, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
+	}
+	msg, err := client.DeleteAccount(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_Finance_DeleteAccount_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq DeleteAccountRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
+	}
+	protoReq.Id, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
+	}
+	msg, err := server.DeleteAccount(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_Finance_ListAccounts_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ListAccountsRequest
+		metadata runtime.ServerMetadata
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	msg, err := client.ListAccounts(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_Finance_ListAccounts_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ListAccountsRequest
+		metadata runtime.ServerMetadata
+	)
+	msg, err := server.ListAccounts(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_Finance_CreateTransfer_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq CreateTransferRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	msg, err := client.CreateTransfer(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_Finance_CreateTransfer_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq CreateTransferRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.CreateTransfer(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+var filter_Finance_ListTransfers_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+
+func request_Finance_ListTransfers_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ListTransfersRequest
+		metadata runtime.ServerMetadata
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Finance_ListTransfers_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := client.ListTransfers(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_Finance_ListTransfers_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ListTransfersRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Finance_ListTransfers_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.ListTransfers(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_Finance_ListCurrencies_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq ListCurrenciesRequest
+		metadata runtime.ServerMetadata
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
 	}
 	msg, err := client.ListCurrencies(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -1629,16 +1359,7 @@ func local_request_Finance_ListCurrencies_0(ctx context.Context, marshaler runti
 	var (
 		protoReq ListCurrenciesRequest
 		metadata runtime.ServerMetadata
-		err      error
 	)
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
 	msg, err := server.ListCurrencies(ctx, &protoReq)
 	return msg, metadata, err
 }
@@ -1655,7 +1376,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ConfigureFinance", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/settings"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ConfigureFinance", runtime.WithHTTPPathPattern("/v1/finance/settings"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1675,7 +1396,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetFinanceSettings", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/settings"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetFinanceSettings", runtime.WithHTTPPathPattern("/v1/finance/settings"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1695,7 +1416,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateBudget", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/budgets"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateBudget", runtime.WithHTTPPathPattern("/v1/finance/budgets"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1715,7 +1436,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateBudget", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/budgets/{id}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateBudget", runtime.WithHTTPPathPattern("/v1/finance/budgets/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1735,7 +1456,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteBudget", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/budgets/{id}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteBudget", runtime.WithHTTPPathPattern("/v1/finance/budgets/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1755,7 +1476,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListBudgets", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/budgets"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListBudgets", runtime.WithHTTPPathPattern("/v1/finance/budgets"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1775,7 +1496,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetBudgetPeriod", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/budgets/{budget_id}/period"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetBudgetPeriod", runtime.WithHTTPPathPattern("/v1/finance/budgets/{budget_id}/period"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1795,7 +1516,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateExchangeRate", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/rates"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateExchangeRate", runtime.WithHTTPPathPattern("/v1/finance/rates"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1815,7 +1536,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListExchangeRates", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/rates"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListExchangeRates", runtime.WithHTTPPathPattern("/v1/finance/rates"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1835,7 +1556,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteExchangeRate", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/rates"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteExchangeRate", runtime.WithHTTPPathPattern("/v1/finance/rates"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1855,7 +1576,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateExpense", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/expenses"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateExpense", runtime.WithHTTPPathPattern("/v1/finance/expenses"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1875,7 +1596,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateExpense", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/expenses/{id}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateExpense", runtime.WithHTTPPathPattern("/v1/finance/expenses/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1895,7 +1616,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteTransaction", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/transactions/{id}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteTransaction", runtime.WithHTTPPathPattern("/v1/finance/transactions/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1915,7 +1636,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListTransactions", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/transactions"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListTransactions", runtime.WithHTTPPathPattern("/v1/finance/transactions"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1935,7 +1656,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetInsights", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/insights"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetInsights", runtime.WithHTTPPathPattern("/v1/finance/insights"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1955,7 +1676,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateRecurringExpense", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/recurring-expenses"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateRecurringExpense", runtime.WithHTTPPathPattern("/v1/finance/recurring-expenses"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1975,7 +1696,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateRecurringExpense", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/recurring-expenses/{id}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateRecurringExpense", runtime.WithHTTPPathPattern("/v1/finance/recurring-expenses/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1995,7 +1716,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteRecurringExpense", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/recurring-expenses/{id}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteRecurringExpense", runtime.WithHTTPPathPattern("/v1/finance/recurring-expenses/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2015,7 +1736,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListRecurringExpenses", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/recurring-expenses"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListRecurringExpenses", runtime.WithHTTPPathPattern("/v1/finance/recurring-expenses"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2035,7 +1756,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListScheduledPayments", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/scheduled-payments"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListScheduledPayments", runtime.WithHTTPPathPattern("/v1/finance/scheduled-payments"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2055,7 +1776,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ConfirmScheduledPayment", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/scheduled-payments/{payment_id}/confirm"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ConfirmScheduledPayment", runtime.WithHTTPPathPattern("/v1/finance/scheduled-payments/{payment_id}/confirm"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2075,7 +1796,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateBorrowing", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/borrowings"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateBorrowing", runtime.WithHTTPPathPattern("/v1/finance/borrowings"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2095,7 +1816,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetBorrowing", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/borrowings/{id}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetBorrowing", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2115,7 +1836,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListBorrowings", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/borrowings"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListBorrowings", runtime.WithHTTPPathPattern("/v1/finance/borrowings"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2135,7 +1856,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateBorrowing", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/borrowings/{id}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateBorrowing", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2155,7 +1876,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteBorrowing", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/borrowings/{id}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteBorrowing", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2175,7 +1896,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateBorrowingRepayment", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/borrowings/{borrowing_id}/repayments"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateBorrowingRepayment", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}/repayments"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2195,7 +1916,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListBorrowingRepayments", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/borrowings/{borrowing_id}/repayments"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListBorrowingRepayments", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}/repayments"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2215,7 +1936,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteBorrowingRepayment", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/borrowings/{borrowing_id}/repayments/{id}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteBorrowingRepayment", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}/repayments/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2229,13 +1950,153 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		}
 		forward_Finance_DeleteBorrowingRepayment_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodPost, pattern_Finance_CreateAccount_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateAccount", runtime.WithHTTPPathPattern("/v1/finance/accounts"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_Finance_CreateAccount_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Finance_CreateAccount_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_Finance_GetAccount_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetAccount", runtime.WithHTTPPathPattern("/v1/finance/accounts/{id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_Finance_GetAccount_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Finance_GetAccount_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPut, pattern_Finance_UpdateAccount_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateAccount", runtime.WithHTTPPathPattern("/v1/finance/accounts/{id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_Finance_UpdateAccount_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Finance_UpdateAccount_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodDelete, pattern_Finance_DeleteAccount_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteAccount", runtime.WithHTTPPathPattern("/v1/finance/accounts/{id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_Finance_DeleteAccount_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Finance_DeleteAccount_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_Finance_ListAccounts_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListAccounts", runtime.WithHTTPPathPattern("/v1/finance/accounts"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_Finance_ListAccounts_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Finance_ListAccounts_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_Finance_CreateTransfer_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateTransfer", runtime.WithHTTPPathPattern("/v1/finance/transfers"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_Finance_CreateTransfer_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Finance_CreateTransfer_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_Finance_ListTransfers_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListTransfers", runtime.WithHTTPPathPattern("/v1/finance/transfers"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_Finance_ListTransfers_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Finance_ListTransfers_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodGet, pattern_Finance_ListCurrencies_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListCurrencies", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/currencies"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListCurrencies", runtime.WithHTTPPathPattern("/v1/finance/currencies"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2293,7 +2154,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ConfigureFinance", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/settings"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ConfigureFinance", runtime.WithHTTPPathPattern("/v1/finance/settings"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2310,7 +2171,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetFinanceSettings", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/settings"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetFinanceSettings", runtime.WithHTTPPathPattern("/v1/finance/settings"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2327,7 +2188,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateBudget", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/budgets"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateBudget", runtime.WithHTTPPathPattern("/v1/finance/budgets"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2344,7 +2205,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateBudget", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/budgets/{id}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateBudget", runtime.WithHTTPPathPattern("/v1/finance/budgets/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2361,7 +2222,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteBudget", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/budgets/{id}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteBudget", runtime.WithHTTPPathPattern("/v1/finance/budgets/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2378,7 +2239,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListBudgets", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/budgets"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListBudgets", runtime.WithHTTPPathPattern("/v1/finance/budgets"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2395,7 +2256,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetBudgetPeriod", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/budgets/{budget_id}/period"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetBudgetPeriod", runtime.WithHTTPPathPattern("/v1/finance/budgets/{budget_id}/period"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2412,7 +2273,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateExchangeRate", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/rates"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateExchangeRate", runtime.WithHTTPPathPattern("/v1/finance/rates"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2429,7 +2290,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListExchangeRates", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/rates"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListExchangeRates", runtime.WithHTTPPathPattern("/v1/finance/rates"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2446,7 +2307,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteExchangeRate", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/rates"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteExchangeRate", runtime.WithHTTPPathPattern("/v1/finance/rates"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2463,7 +2324,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateExpense", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/expenses"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateExpense", runtime.WithHTTPPathPattern("/v1/finance/expenses"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2480,7 +2341,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateExpense", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/expenses/{id}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateExpense", runtime.WithHTTPPathPattern("/v1/finance/expenses/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2497,7 +2358,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteTransaction", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/transactions/{id}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteTransaction", runtime.WithHTTPPathPattern("/v1/finance/transactions/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2514,7 +2375,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListTransactions", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/transactions"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListTransactions", runtime.WithHTTPPathPattern("/v1/finance/transactions"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2531,7 +2392,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetInsights", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/insights"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetInsights", runtime.WithHTTPPathPattern("/v1/finance/insights"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2548,7 +2409,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateRecurringExpense", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/recurring-expenses"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateRecurringExpense", runtime.WithHTTPPathPattern("/v1/finance/recurring-expenses"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2565,7 +2426,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateRecurringExpense", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/recurring-expenses/{id}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateRecurringExpense", runtime.WithHTTPPathPattern("/v1/finance/recurring-expenses/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2582,7 +2443,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteRecurringExpense", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/recurring-expenses/{id}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteRecurringExpense", runtime.WithHTTPPathPattern("/v1/finance/recurring-expenses/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2599,7 +2460,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListRecurringExpenses", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/recurring-expenses"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListRecurringExpenses", runtime.WithHTTPPathPattern("/v1/finance/recurring-expenses"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2616,7 +2477,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListScheduledPayments", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/scheduled-payments"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListScheduledPayments", runtime.WithHTTPPathPattern("/v1/finance/scheduled-payments"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2633,7 +2494,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ConfirmScheduledPayment", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/scheduled-payments/{payment_id}/confirm"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ConfirmScheduledPayment", runtime.WithHTTPPathPattern("/v1/finance/scheduled-payments/{payment_id}/confirm"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2650,7 +2511,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateBorrowing", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/borrowings"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateBorrowing", runtime.WithHTTPPathPattern("/v1/finance/borrowings"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2667,7 +2528,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetBorrowing", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/borrowings/{id}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetBorrowing", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2684,7 +2545,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListBorrowings", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/borrowings"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListBorrowings", runtime.WithHTTPPathPattern("/v1/finance/borrowings"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2701,7 +2562,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateBorrowing", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/borrowings/{id}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateBorrowing", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2718,7 +2579,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteBorrowing", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/borrowings/{id}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteBorrowing", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2735,7 +2596,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateBorrowingRepayment", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/borrowings/{borrowing_id}/repayments"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateBorrowingRepayment", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}/repayments"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2752,7 +2613,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListBorrowingRepayments", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/borrowings/{borrowing_id}/repayments"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListBorrowingRepayments", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}/repayments"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2769,7 +2630,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteBorrowingRepayment", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/borrowings/{borrowing_id}/repayments/{id}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteBorrowingRepayment", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}/repayments/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2782,11 +2643,130 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		}
 		forward_Finance_DeleteBorrowingRepayment_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodPost, pattern_Finance_CreateAccount_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateAccount", runtime.WithHTTPPathPattern("/v1/finance/accounts"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_Finance_CreateAccount_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Finance_CreateAccount_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_Finance_GetAccount_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetAccount", runtime.WithHTTPPathPattern("/v1/finance/accounts/{id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_Finance_GetAccount_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Finance_GetAccount_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPut, pattern_Finance_UpdateAccount_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateAccount", runtime.WithHTTPPathPattern("/v1/finance/accounts/{id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_Finance_UpdateAccount_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Finance_UpdateAccount_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodDelete, pattern_Finance_DeleteAccount_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteAccount", runtime.WithHTTPPathPattern("/v1/finance/accounts/{id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_Finance_DeleteAccount_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Finance_DeleteAccount_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_Finance_ListAccounts_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListAccounts", runtime.WithHTTPPathPattern("/v1/finance/accounts"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_Finance_ListAccounts_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Finance_ListAccounts_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_Finance_CreateTransfer_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateTransfer", runtime.WithHTTPPathPattern("/v1/finance/transfers"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_Finance_CreateTransfer_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Finance_CreateTransfer_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_Finance_ListTransfers_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListTransfers", runtime.WithHTTPPathPattern("/v1/finance/transfers"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_Finance_ListTransfers_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Finance_ListTransfers_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodGet, pattern_Finance_ListCurrencies_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListCurrencies", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/finance/currencies"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListCurrencies", runtime.WithHTTPPathPattern("/v1/finance/currencies"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2803,36 +2783,43 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 }
 
 var (
-	pattern_Finance_ConfigureFinance_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4}, []string{"v1", "spaces", "space_id", "finance", "settings"}, ""))
-	pattern_Finance_GetFinanceSettings_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4}, []string{"v1", "spaces", "space_id", "finance", "settings"}, ""))
-	pattern_Finance_CreateBudget_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4}, []string{"v1", "spaces", "space_id", "finance", "budgets"}, ""))
-	pattern_Finance_UpdateBudget_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "spaces", "space_id", "finance", "budgets", "id"}, ""))
-	pattern_Finance_DeleteBudget_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "spaces", "space_id", "finance", "budgets", "id"}, ""))
-	pattern_Finance_ListBudgets_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4}, []string{"v1", "spaces", "space_id", "finance", "budgets"}, ""))
-	pattern_Finance_GetBudgetPeriod_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"v1", "spaces", "space_id", "finance", "budgets", "budget_id", "period"}, ""))
-	pattern_Finance_CreateExchangeRate_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4}, []string{"v1", "spaces", "space_id", "finance", "rates"}, ""))
-	pattern_Finance_ListExchangeRates_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4}, []string{"v1", "spaces", "space_id", "finance", "rates"}, ""))
-	pattern_Finance_DeleteExchangeRate_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4}, []string{"v1", "spaces", "space_id", "finance", "rates"}, ""))
-	pattern_Finance_CreateExpense_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4}, []string{"v1", "spaces", "space_id", "finance", "expenses"}, ""))
-	pattern_Finance_UpdateExpense_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "spaces", "space_id", "finance", "expenses", "id"}, ""))
-	pattern_Finance_DeleteTransaction_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "spaces", "space_id", "finance", "transactions", "id"}, ""))
-	pattern_Finance_ListTransactions_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4}, []string{"v1", "spaces", "space_id", "finance", "transactions"}, ""))
-	pattern_Finance_GetInsights_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4}, []string{"v1", "spaces", "space_id", "finance", "insights"}, ""))
-	pattern_Finance_CreateRecurringExpense_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4}, []string{"v1", "spaces", "space_id", "finance", "recurring-expenses"}, ""))
-	pattern_Finance_UpdateRecurringExpense_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "spaces", "space_id", "finance", "recurring-expenses", "id"}, ""))
-	pattern_Finance_DeleteRecurringExpense_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "spaces", "space_id", "finance", "recurring-expenses", "id"}, ""))
-	pattern_Finance_ListRecurringExpenses_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4}, []string{"v1", "spaces", "space_id", "finance", "recurring-expenses"}, ""))
-	pattern_Finance_ListScheduledPayments_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4}, []string{"v1", "spaces", "space_id", "finance", "scheduled-payments"}, ""))
-	pattern_Finance_ConfirmScheduledPayment_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"v1", "spaces", "space_id", "finance", "scheduled-payments", "payment_id", "confirm"}, ""))
-	pattern_Finance_CreateBorrowing_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4}, []string{"v1", "spaces", "space_id", "finance", "borrowings"}, ""))
-	pattern_Finance_GetBorrowing_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "spaces", "space_id", "finance", "borrowings", "id"}, ""))
-	pattern_Finance_ListBorrowings_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4}, []string{"v1", "spaces", "space_id", "finance", "borrowings"}, ""))
-	pattern_Finance_UpdateBorrowing_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "spaces", "space_id", "finance", "borrowings", "id"}, ""))
-	pattern_Finance_DeleteBorrowing_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "spaces", "space_id", "finance", "borrowings", "id"}, ""))
-	pattern_Finance_CreateBorrowingRepayment_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"v1", "spaces", "space_id", "finance", "borrowings", "borrowing_id", "repayments"}, ""))
-	pattern_Finance_ListBorrowingRepayments_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"v1", "spaces", "space_id", "finance", "borrowings", "borrowing_id", "repayments"}, ""))
-	pattern_Finance_DeleteBorrowingRepayment_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6, 1, 0, 4, 1, 5, 7}, []string{"v1", "spaces", "space_id", "finance", "borrowings", "borrowing_id", "repayments", "id"}, ""))
-	pattern_Finance_ListCurrencies_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 2, 4}, []string{"v1", "spaces", "space_id", "finance", "currencies"}, ""))
+	pattern_Finance_ConfigureFinance_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "settings"}, ""))
+	pattern_Finance_GetFinanceSettings_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "settings"}, ""))
+	pattern_Finance_CreateBudget_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "budgets"}, ""))
+	pattern_Finance_UpdateBudget_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "budgets", "id"}, ""))
+	pattern_Finance_DeleteBudget_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "budgets", "id"}, ""))
+	pattern_Finance_ListBudgets_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "budgets"}, ""))
+	pattern_Finance_GetBudgetPeriod_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "budgets", "budget_id", "period"}, ""))
+	pattern_Finance_CreateExchangeRate_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "rates"}, ""))
+	pattern_Finance_ListExchangeRates_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "rates"}, ""))
+	pattern_Finance_DeleteExchangeRate_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "rates"}, ""))
+	pattern_Finance_CreateExpense_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "expenses"}, ""))
+	pattern_Finance_UpdateExpense_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "expenses", "id"}, ""))
+	pattern_Finance_DeleteTransaction_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "transactions", "id"}, ""))
+	pattern_Finance_ListTransactions_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "transactions"}, ""))
+	pattern_Finance_GetInsights_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "insights"}, ""))
+	pattern_Finance_CreateRecurringExpense_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "recurring-expenses"}, ""))
+	pattern_Finance_UpdateRecurringExpense_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "recurring-expenses", "id"}, ""))
+	pattern_Finance_DeleteRecurringExpense_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "recurring-expenses", "id"}, ""))
+	pattern_Finance_ListRecurringExpenses_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "recurring-expenses"}, ""))
+	pattern_Finance_ListScheduledPayments_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "scheduled-payments"}, ""))
+	pattern_Finance_ConfirmScheduledPayment_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "scheduled-payments", "payment_id", "confirm"}, ""))
+	pattern_Finance_CreateBorrowing_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "borrowings"}, ""))
+	pattern_Finance_GetBorrowing_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "borrowings", "id"}, ""))
+	pattern_Finance_ListBorrowings_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "borrowings"}, ""))
+	pattern_Finance_UpdateBorrowing_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "borrowings", "id"}, ""))
+	pattern_Finance_DeleteBorrowing_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "borrowings", "id"}, ""))
+	pattern_Finance_CreateBorrowingRepayment_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "borrowings", "borrowing_id", "repayments"}, ""))
+	pattern_Finance_ListBorrowingRepayments_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "borrowings", "borrowing_id", "repayments"}, ""))
+	pattern_Finance_DeleteBorrowingRepayment_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "finance", "borrowings", "borrowing_id", "repayments", "id"}, ""))
+	pattern_Finance_CreateAccount_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "accounts"}, ""))
+	pattern_Finance_GetAccount_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "accounts", "id"}, ""))
+	pattern_Finance_UpdateAccount_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "accounts", "id"}, ""))
+	pattern_Finance_DeleteAccount_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "accounts", "id"}, ""))
+	pattern_Finance_ListAccounts_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "accounts"}, ""))
+	pattern_Finance_CreateTransfer_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "transfers"}, ""))
+	pattern_Finance_ListTransfers_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "transfers"}, ""))
+	pattern_Finance_ListCurrencies_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "currencies"}, ""))
 )
 
 var (
@@ -2865,5 +2852,12 @@ var (
 	forward_Finance_CreateBorrowingRepayment_0 = runtime.ForwardResponseMessage
 	forward_Finance_ListBorrowingRepayments_0  = runtime.ForwardResponseMessage
 	forward_Finance_DeleteBorrowingRepayment_0 = runtime.ForwardResponseMessage
+	forward_Finance_CreateAccount_0            = runtime.ForwardResponseMessage
+	forward_Finance_GetAccount_0               = runtime.ForwardResponseMessage
+	forward_Finance_UpdateAccount_0            = runtime.ForwardResponseMessage
+	forward_Finance_DeleteAccount_0            = runtime.ForwardResponseMessage
+	forward_Finance_ListAccounts_0             = runtime.ForwardResponseMessage
+	forward_Finance_CreateTransfer_0           = runtime.ForwardResponseMessage
+	forward_Finance_ListTransfers_0            = runtime.ForwardResponseMessage
 	forward_Finance_ListCurrencies_0           = runtime.ForwardResponseMessage
 )

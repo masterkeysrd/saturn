@@ -238,6 +238,84 @@ func (m *mockInsightsStore) GetTopExpenses(ctx context.Context, filter *TopExpen
 	return m.topExpenses, m.err
 }
 
+type mockAccountStore struct {
+	data map[AccountID]*Account
+}
+
+func (m *mockAccountStore) Create(ctx context.Context, a *Account) error {
+	m.data[a.ID] = a
+	return nil
+}
+
+func (m *mockAccountStore) GetByID(ctx context.Context, id AccountID) (*Account, error) {
+	a, ok := m.data[id]
+	if !ok {
+		return nil, ErrAccountNotFound
+	}
+	return a, nil
+}
+
+func (m *mockAccountStore) Update(ctx context.Context, a *Account) error {
+	if _, ok := m.data[a.ID]; !ok {
+		return ErrAccountNotFound
+	}
+	m.data[a.ID] = a
+	return nil
+}
+
+func (m *mockAccountStore) Delete(ctx context.Context, id AccountID) error {
+	if _, ok := m.data[id]; !ok {
+		return ErrAccountNotFound
+	}
+	delete(m.data, id)
+	return nil
+}
+
+func (m *mockAccountStore) ListBySpace(ctx context.Context, spaceID SpaceID) ([]*Account, error) {
+	var list []*Account
+	for _, a := range m.data {
+		if a.SpaceID == spaceID {
+			list = append(list, a)
+		}
+	}
+	return list, nil
+}
+
+type mockTransferStore struct {
+	data map[TransferID]*Transfer
+}
+
+func (m *mockTransferStore) Create(ctx context.Context, t *Transfer) error {
+	m.data[t.ID] = t
+	return nil
+}
+
+func (m *mockTransferStore) GetByID(ctx context.Context, id TransferID) (*Transfer, error) {
+	t, ok := m.data[id]
+	if !ok {
+		return nil, ErrTransferNotFound
+	}
+	return t, nil
+}
+
+func (m *mockTransferStore) Delete(ctx context.Context, id TransferID) error {
+	if _, ok := m.data[id]; !ok {
+		return ErrTransferNotFound
+	}
+	delete(m.data, id)
+	return nil
+}
+
+func (m *mockTransferStore) ListBySpace(ctx context.Context, spaceID SpaceID, limit int32, pageToken string) ([]*Transfer, string, error) {
+	var list []*Transfer
+	for _, t := range m.data {
+		if t.SpaceID == spaceID {
+			list = append(list, t)
+		}
+	}
+	return list, "", nil
+}
+
 // --- Test Cases ---
 
 func TestCalculateBounds(t *testing.T) {
@@ -287,7 +365,11 @@ func TestCalculateBounds(t *testing.T) {
 
 func TestConfigureFinance(t *testing.T) {
 	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
-	svc := NewService(Dependencies{SettingsStore: settingsStore})
+	svc := NewService(Dependencies{
+		SettingsStore: settingsStore,
+		AccountStore:  &mockAccountStore{data: make(map[AccountID]*Account)},
+		TransferStore: &mockTransferStore{data: make(map[TransferID]*Transfer)},
+	})
 
 	spIDStr, _ := id.Generate("spc_")
 	spID := SpaceID(spIDStr)
@@ -344,6 +426,8 @@ func TestGetOrCreatePeriod(t *testing.T) {
 		ExchangeRateStore: rateStore,
 		TransactionStore:  txnStore,
 		InsightsStore:     &mockInsightsStore{},
+		AccountStore:      &mockAccountStore{data: make(map[AccountID]*Account)},
+		TransferStore:     &mockTransferStore{data: make(map[TransferID]*Transfer)},
 	})
 
 	ctx := context.Background()
@@ -425,6 +509,8 @@ func TestTransactions(t *testing.T) {
 		ExchangeRateStore: rateStore,
 		TransactionStore:  txnStore,
 		InsightsStore:     &mockInsightsStore{},
+		AccountStore:      &mockAccountStore{data: make(map[AccountID]*Account)},
+		TransferStore:     &mockTransferStore{data: make(map[TransferID]*Transfer)},
 	})
 
 	ctx := context.Background()

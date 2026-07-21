@@ -17,6 +17,7 @@ type CreateBorrowingRequest struct {
 	DueAt               *time.Time
 	Notes               string
 	CreateAsTransaction bool
+	AccountID           *finance.AccountID
 }
 
 func (c *Coordinator) CreateBorrowing(ctx context.Context, req *CreateBorrowingRequest) (*finance.Borrowing, error) {
@@ -35,6 +36,7 @@ func (c *Coordinator) CreateBorrowing(ctx context.Context, req *CreateBorrowingR
 		EstablishedAt: req.EstablishedAt,
 		DueAt:         req.DueAt,
 		Notes:         req.Notes,
+		AccountID:     req.AccountID,
 	}
 
 	return c.financeService.CreateBorrowing(ctx, b, req.CreateAsTransaction)
@@ -97,6 +99,7 @@ type UpdateBorrowingRequest struct {
 	EstablishedAt time.Time
 	DueAt         *time.Time
 	Notes         string
+	AccountID     *finance.AccountID
 }
 
 func (c *Coordinator) UpdateBorrowing(ctx context.Context, req *UpdateBorrowingRequest) (*finance.Borrowing, error) {
@@ -116,6 +119,7 @@ func (c *Coordinator) UpdateBorrowing(ctx context.Context, req *UpdateBorrowingR
 		EstablishedAt: req.EstablishedAt,
 		DueAt:         req.DueAt,
 		Notes:         req.Notes,
+		AccountID:     req.AccountID,
 	}
 
 	return c.financeService.UpdateBorrowing(ctx, b)
@@ -135,6 +139,7 @@ type CreateBorrowingRepaymentRequest struct {
 	Amount      int64
 	PaymentDate time.Time
 	Notes       string
+	AccountID   finance.AccountID
 }
 
 func (c *Coordinator) CreateBorrowingRepayment(ctx context.Context, req *CreateBorrowingRepaymentRequest) (*finance.BorrowingRepayment, error) {
@@ -149,6 +154,7 @@ func (c *Coordinator) CreateBorrowingRepayment(ctx context.Context, req *CreateB
 		Amount:      req.Amount,
 		PaymentDate: req.PaymentDate,
 		Notes:       req.Notes,
+		AccountID:   &req.AccountID,
 	}
 
 	return c.financeService.CreateBorrowingRepayment(ctx, r)

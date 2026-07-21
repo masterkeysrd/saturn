@@ -7,13 +7,11 @@ import { AlertTriangle, Calendar } from "lucide-react"
 import { formatCents, getBudgetColors } from "../utils"
 
 interface BudgetPeriodProgressProps {
-  spaceId: string
   budget: Budget
   onPeriodLoaded?: (limitInBase: number) => void
 }
 
 export function BudgetPeriodProgress({
-  spaceId,
   budget,
   onPeriodLoaded,
 }: BudgetPeriodProgressProps) {
@@ -25,7 +23,6 @@ export function BudgetPeriodProgress({
     error,
   } = useGetBudgetPeriodQuery(
     {
-      spaceId,
       budgetId: budget.id,
       date: currentDate,
     },

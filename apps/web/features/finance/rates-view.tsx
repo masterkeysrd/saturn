@@ -10,7 +10,7 @@ import { Globe, ArrowRight, Trash2 } from "lucide-react"
 import { CreateRateSheet } from "./components/create-rate-sheet"
 
 export function RatesView() {
-  const { spaceId, isWritable, settings, ratesData, refetchRates } =
+  const { isWritable, settings, ratesData, refetchRates } =
     useWorkspaceFinance()
 
   const [rateCreateOpen, setRateCreateOpen] = useState(false)
@@ -24,13 +24,9 @@ export function RatesView() {
     )
       return
     await deleteRateMutation.mutateAsync({
-      space_id: spaceId,
-      req: {
-        spaceId,
-        fromCurrency: rate.fromCurrency,
-        toCurrency: rate.toCurrency,
-        rateDate: rate.rateDate,
-      },
+      fromCurrency: rate.fromCurrency,
+      toCurrency: rate.toCurrency,
+      rateDate: rate.rateDate,
     })
     refetchRates()
   }
@@ -145,7 +141,6 @@ export function RatesView() {
       <CreateRateSheet
         open={rateCreateOpen}
         onOpenChange={setRateCreateOpen}
-        spaceId={spaceId}
         settings={settings}
         refetchRates={refetchRates}
       />

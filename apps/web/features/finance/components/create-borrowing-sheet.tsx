@@ -31,7 +31,6 @@ import { CurrencyConversionPreview } from "./currency-conversion-preview"
 interface CreateBorrowingSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  spaceId: string
   baseCurrency: string
   editBorrowing?: Borrowing | null
   refetchBorrowings: () => void
@@ -40,7 +39,6 @@ interface CreateBorrowingSheetProps {
 export function CreateBorrowingSheet({
   open,
   onOpenChange,
-  spaceId,
   baseCurrency,
   editBorrowing,
   refetchBorrowings,
@@ -116,21 +114,15 @@ export function CreateBorrowingSheet({
     try {
       if (editBorrowing) {
         await updateBorrowingMutation.mutateAsync({
-          space_id: spaceId,
           id: editBorrowing.id,
           req: {
-            spaceId,
             id: editBorrowing.id,
             borrowing: borrowingInput,
           },
         })
       } else {
         await createBorrowingMutation.mutateAsync({
-          space_id: spaceId,
-          req: {
-            spaceId,
-            borrowing: borrowingInput,
-          },
+          borrowing: borrowingInput,
         })
       }
       refetchBorrowings()

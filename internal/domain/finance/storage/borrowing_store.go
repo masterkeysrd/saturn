@@ -197,14 +197,15 @@ func (s *BorrowingStore) ListBySpace(ctx context.Context, spaceID finance.SpaceI
 }
 
 type borrowingRepaymentDB struct {
-	ID          string       `db:"id"`
-	BorrowingID string       `db:"borrowing_id"`
-	SpaceID     string       `db:"space_id"`
-	Amount      int64        `db:"amount"`
-	PaymentDate sql.NullTime `db:"payment_date"`
-	Notes       string       `db:"notes"`
-	CreateTime  sql.NullTime `db:"create_time"`
-	UpdateTime  sql.NullTime `db:"update_time"`
+	ID          string         `db:"id"`
+	BorrowingID string         `db:"borrowing_id"`
+	SpaceID     string         `db:"space_id"`
+	Amount      int64          `db:"amount"`
+	PaymentDate sql.NullTime   `db:"payment_date"`
+	Notes       string         `db:"notes"`
+	AccountID   sql.NullString `db:"account_id"`
+	CreateTime  sql.NullTime   `db:"create_time"`
+	UpdateTime  sql.NullTime   `db:"update_time"`
 }
 
 type BorrowingRepaymentStore struct {
@@ -216,11 +217,15 @@ func NewBorrowingRepaymentStore(db *sqlx.DB) *BorrowingRepaymentStore {
 }
 
 func (s *BorrowingRepaymentStore) Create(ctx context.Context, r *finance.BorrowingRepayment) error {
-	query := `INSERT INTO finance.borrowing_repayment (id, borrowing_id, space_id, amount, payment_date, notes, create_time, update_time)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+	query := `INSERT INTO finance.borrowing_repayment (id, borrowing_id, space_id, amount, payment_date, notes, account_id, create_time, update_time)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+	var accountID sql.NullString
+	if r.AccountID != nil {
+		accountID = sql.NullString{String: string(*r.AccountID), Valid: true}
+	}
 	_, err := s.db.ExecContext(ctx, query,
 		string(r.ID), string(r.BorrowingID), string(r.SpaceID), r.Amount,
-		timeToNullTime(r.PaymentDate), r.Notes, r.CreateTime, r.UpdateTime)
+		timeToNullTime(r.PaymentDate), r.Notes, accountID, r.CreateTime, r.UpdateTime)
 	return err
 }
 
@@ -234,6 +239,12 @@ func (s *BorrowingRepaymentStore) GetByID(ctx context.Context, id finance.Borrow
 		return nil, err
 	}
 
+	var accountIDPtr *finance.AccountID
+	if row.AccountID.Valid {
+		aID := finance.AccountID(row.AccountID.String)
+		accountIDPtr = &aID
+	}
+
 	return &finance.BorrowingRepayment{
 		ID:          finance.BorrowingRepaymentID(row.ID),
 		BorrowingID: finance.BorrowingID(row.BorrowingID),
@@ -241,6 +252,7 @@ func (s *BorrowingRepaymentStore) GetByID(ctx context.Context, id finance.Borrow
 		Amount:      row.Amount,
 		PaymentDate: nullTimeToTime(row.PaymentDate),
 		Notes:       row.Notes,
+		AccountID:   accountIDPtr,
 		CreateTime:  nullTimeToTime(row.CreateTime),
 		UpdateTime:  nullTimeToTime(row.UpdateTime),
 	}, nil
@@ -271,6 +283,11 @@ func (s *BorrowingRepaymentStore) ListByBorrowing(ctx context.Context, spaceID f
 
 	repayments := make([]*finance.BorrowingRepayment, 0, len(rows))
 	for i := range rows {
+		var accountIDPtr *finance.AccountID
+		if rows[i].AccountID.Valid {
+			aID := finance.AccountID(rows[i].AccountID.String)
+			accountIDPtr = &aID
+		}
 		repayments = append(repayments, &finance.BorrowingRepayment{
 			ID:          finance.BorrowingRepaymentID(rows[i].ID),
 			BorrowingID: finance.BorrowingID(rows[i].BorrowingID),
@@ -278,6 +295,7 @@ func (s *BorrowingRepaymentStore) ListByBorrowing(ctx context.Context, spaceID f
 			Amount:      rows[i].Amount,
 			PaymentDate: nullTimeToTime(rows[i].PaymentDate),
 			Notes:       rows[i].Notes,
+			AccountID:   accountIDPtr,
 			CreateTime:  nullTimeToTime(rows[i].CreateTime),
 			UpdateTime:  nullTimeToTime(rows[i].UpdateTime),
 		})

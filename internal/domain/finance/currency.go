@@ -1,12 +1,21 @@
 package finance
 
 import (
-	"errors"
+	"fmt"
 	"strings"
 )
 
 // Currency represents a 3-letter ISO currency code.
 type Currency string
+
+var supportedCurrencies = map[Currency]bool{
+	"USD": true,
+	"EUR": true,
+	"GBP": true,
+	"CAD": true,
+	"JPY": true,
+	"DOP": true,
+}
 
 // ParseCurrency parses, trims, and validates a string into a Currency type.
 func ParseCurrency(s string) (Currency, error) {
@@ -17,10 +26,10 @@ func ParseCurrency(s string) (Currency, error) {
 	return c, nil
 }
 
-// Validate checks if the currency code conforms to the 3-letter ISO standard.
+// Validate checks if the currency code is one of the supported codes.
 func (c Currency) Validate() error {
-	if len(c) != 3 {
-		return errors.New("currency must be a 3-letter ISO code")
+	if !supportedCurrencies[c] {
+		return fmt.Errorf("currency '%s' is not supported", c)
 	}
 	return nil
 }
