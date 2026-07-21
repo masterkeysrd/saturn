@@ -23,6 +23,7 @@ import (
 	financev1 "github.com/masterkeysrd/saturn/apis/saturn/finance/v1"
 	admingrpc "github.com/masterkeysrd/saturn/apis/saturn/identity/admin/v1"
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
+	schedulerv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/scheduler/v1"
 	spacev1 "github.com/masterkeysrd/saturn/apis/saturn/space/v1"
 	financeapp "github.com/masterkeysrd/saturn/internal/application/finance"
 	"github.com/masterkeysrd/saturn/internal/application/iam"
@@ -34,9 +35,11 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	spacestorage "github.com/masterkeysrd/saturn/internal/domain/space/storage"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
+	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
 	"github.com/masterkeysrd/saturn/internal/shutdown"
 	financegrpc "github.com/masterkeysrd/saturn/internal/transport/finance"
 	identitygrpc "github.com/masterkeysrd/saturn/internal/transport/identity"
+	schedulergrpc "github.com/masterkeysrd/saturn/internal/transport/scheduler"
 	spacegrpc "github.com/masterkeysrd/saturn/internal/transport/space"
 )
 
@@ -193,6 +196,20 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	financeHandler := financegrpc.NewHandler(financeCoordinator)
 	financev1.RegisterFinanceServer(s.grpc, financeHandler)
 
+	// Wire Scheduler service & start workers
+	schedulerEngine := scheduler.NewEngine(sqlxDB)
+	schedulerEngine.Start(ctx)
+	schedulerHandler := schedulergrpc.NewHandler(schedulerEngine)
+	schedulerv1.RegisterSchedulerAdminServer(s.grpc, schedulerHandler)
+
+	// Register background task handler execution callbacks
+	financev1.RegisterGenerateScheduledPaymentsPayload(schedulerEngine, financeHandler.HandleGenerateScheduledPayments)
+
+	// Seed cron schedules / triggers
+	if err := financeHandler.RegisterSchedules(ctx, schedulerEngine); err != nil {
+		return fmt.Errorf("register finance schedules: %w", err)
+	}
+
 	return nil
 }
 
@@ -254,6 +271,10 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 
 	if err := financev1.RegisterFinanceHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
 		return fmt.Errorf("register finance gateway handler: %w", err)
+	}
+
+	if err := schedulerv1.RegisterSchedulerAdminHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
+		return fmt.Errorf("register scheduler admin gateway handler: %w", err)
 	}
 
 	handler := http.NewServeMux()

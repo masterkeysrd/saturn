@@ -194,4 +194,3 @@ message RevokeAllSessionsRequest {}
 
 // RevokeAllSessionsResponse is empty on success.
 message RevokeAllSessionsResponse {}
-

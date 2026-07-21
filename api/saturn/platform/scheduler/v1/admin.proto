@@ -1,0 +1,131 @@
+syntax = "proto3";
+
+package saturn.platform.scheduler.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/masterkeysrd/saturn/apis/saturn/platform/scheduler/v1;schedulerv1";
+
+// SchedulerAdmin service provides endpoints for operations monitoring,
+// scheduling manual runs, and retrying/killing queued jobs.
+service SchedulerAdmin {
+  // ListSchedules lists all recurring schedules currently defined in the system.
+  rpc ListSchedules(ListSchedulesRequest) returns (ListSchedulesResponse) {
+    option (google.api.http) = {get: "/v1/admin/scheduler/schedules"};
+  }
+
+  // ListJobs lists all job instances in the queue (pending, processing, failed).
+  rpc ListJobs(ListJobsRequest) returns (ListJobsResponse) {
+    option (google.api.http) = {get: "/v1/admin/scheduler/jobs"};
+  }
+
+  // GetSchedulerStatus retrieves the current scheduler engine configuration and status.
+  rpc GetSchedulerStatus(GetSchedulerStatusRequest) returns (GetSchedulerStatusResponse) {
+    option (google.api.http) = {get: "/v1/admin/scheduler/status"};
+  }
+
+  // TriggerSchedule manually spawns a job instance from a schedule template immediately.
+  rpc TriggerSchedule(TriggerScheduleRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/admin/scheduler/schedules/{id}/trigger"
+      body: "*"
+    };
+  }
+
+  // PauseSchedule pauses a recurring schedule template.
+  rpc PauseSchedule(PauseScheduleRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/admin/scheduler/schedules/{id}/pause"
+      body: "*"
+    };
+  }
+
+  // ResumeSchedule resumes a paused recurring schedule template.
+  rpc ResumeSchedule(ResumeScheduleRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/admin/scheduler/schedules/{id}/resume"
+      body: "*"
+    };
+  }
+
+  // RetryJob resets a failed job's attempt count and sets it to run immediately.
+  rpc RetryJob(RetryJobRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/admin/scheduler/jobs/{id}/retry"
+      body: "*"
+    };
+  }
+
+  // DeleteJob removes a job instance from the queue.
+  rpc DeleteJob(DeleteJobRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/admin/scheduler/jobs/{id}"};
+  }
+}
+
+message ListSchedulesRequest {}
+
+message ScheduleInfo {
+  string id = 1;
+  string job_type = 2;
+  string payload = 3; // JSON representation of the payload
+  string cron_expression = 4;
+  google.protobuf.Timestamp next_run_at = 5;
+  string status = 6;
+  google.protobuf.Timestamp create_time = 7;
+  google.protobuf.Timestamp update_time = 8;
+}
+
+message ListSchedulesResponse {
+  repeated ScheduleInfo schedules = 1;
+}
+
+message ListJobsRequest {
+  string status = 1; // Optional filter: pending, processing, failed
+}
+
+message JobInfo {
+  string id = 1;
+  string schedule_id = 2;
+  string job_type = 3;
+  string payload = 4; // JSON representation of the payload
+  google.protobuf.Timestamp run_at = 5;
+  string status = 6;
+  int32 attempts = 7;
+  int32 max_attempts = 8;
+  string last_error = 9;
+  google.protobuf.Timestamp create_time = 10;
+  google.protobuf.Timestamp update_time = 11;
+}
+
+message ListJobsResponse {
+  repeated JobInfo jobs = 1;
+}
+
+message TriggerScheduleRequest {
+  string id = 1;
+}
+
+message PauseScheduleRequest {
+  string id = 1;
+}
+
+message ResumeScheduleRequest {
+  string id = 1;
+}
+
+message RetryJobRequest {
+  string id = 1;
+}
+
+message DeleteJobRequest {
+  string id = 1;
+}
+
+message GetSchedulerStatusRequest {}
+
+message GetSchedulerStatusResponse {
+  int32 worker_count = 1;
+  int32 queue_size = 2;
+}

@@ -1,0 +1,25 @@
+# SchedulerAdmin service API configuration overlay.
+#
+# Scheduler admin operations are global (non space-scoped) and require authorization.
+
+name: saturn.platform.scheduler.v1
+title: "Platform Scheduler Admin API"
+apis:
+  - saturn.platform.scheduler.v1.SchedulerAdmin
+
+documentation:
+  summary: "Provides monitoring and control operations for the background scheduler."
+
+authentication:
+  rules:
+    # All scheduler admin operations require authentication and admin access level
+    - selector: "saturn.platform.scheduler.v1.SchedulerAdmin.*"
+      auth_required: true
+      access_levels:
+        - admin
+
+space:
+  rules:
+    # Scheduler admin operations are global (non space-scoped)
+    - selector: "saturn.platform.scheduler.v1.SchedulerAdmin.*"
+      scoped: false

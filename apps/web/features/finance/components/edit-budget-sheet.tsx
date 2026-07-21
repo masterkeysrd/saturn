@@ -259,7 +259,8 @@ export function EditBudgetSheet({
               </SelectContent>
             </Select>
             <span className="mt-1 block text-[10px] text-muted-foreground/75">
-              Currency cannot be modified after creation to protect historical calculations.
+              Currency cannot be modified after creation to protect historical
+              calculations.
             </span>
           </div>
 
@@ -290,7 +291,8 @@ export function EditBudgetSheet({
               </SelectContent>
             </Select>
             <span className="mt-1 block text-[10px] text-muted-foreground/75">
-              Interval cannot be modified after creation to protect historical reports.
+              Interval cannot be modified after creation to protect historical
+              reports.
             </span>
           </div>
 

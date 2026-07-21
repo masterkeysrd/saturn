@@ -316,6 +316,8 @@ export interface SpentInsights_HighValueExpense {
   transactionDate: string
 }
 
+export type GenerateScheduledPaymentsPayload = Record<string, never>
+
 /**
  * Finance provides budgeting and currency management operations for a workspace.
  */

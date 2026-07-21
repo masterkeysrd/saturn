@@ -12,5 +12,9 @@ export const menu: FeatureMenu = {
       title: "Users Management",
       url: "/admin/users",
     },
+    {
+      title: "Scheduler Panel",
+      url: "/admin/scheduler",
+    },
   ],
 }

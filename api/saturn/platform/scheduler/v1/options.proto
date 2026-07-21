@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package saturn.platform.scheduler.v1;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/masterkeysrd/saturn/apis/saturn/platform/scheduler/v1;schedulerv1";
+
+extend google.protobuf.MessageOptions {
+  // Binds this message payload to a specific job type key
+  string job_type = 50001;
+}

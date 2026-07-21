@@ -1,7 +1,7 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "saturn/finance/v1/finance.proto",
+    "title": "saturn/platform/scheduler/v1/options.proto",
     "version": "version not set"
   },
   "tags": [
@@ -13,6 +13,9 @@
     },
     {
       "name": "Identity"
+    },
+    {
+      "name": "SchedulerAdmin"
     },
     {
       "name": "Spaces"
@@ -238,6 +241,276 @@
         ],
         "tags": [
           "AdminIdentity"
+        ]
+      }
+    },
+    "/v1/admin/scheduler/jobs": {
+      "get": {
+        "summary": "ListJobs lists all job instances in the queue (pending, processing, failed).",
+        "operationId": "SchedulerAdmin_ListJobs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListJobsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "status",
+            "description": "Optional filter: pending, processing, failed",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SchedulerAdmin"
+        ]
+      }
+    },
+    "/v1/admin/scheduler/jobs/{id}": {
+      "delete": {
+        "summary": "DeleteJob removes a job instance from the queue.",
+        "operationId": "SchedulerAdmin_DeleteJob",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SchedulerAdmin"
+        ]
+      }
+    },
+    "/v1/admin/scheduler/jobs/{id}/retry": {
+      "post": {
+        "summary": "RetryJob resets a failed job's attempt count and sets it to run immediately.",
+        "operationId": "SchedulerAdmin_RetryJob",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SchedulerAdminRetryJobBody"
+            }
+          }
+        ],
+        "tags": [
+          "SchedulerAdmin"
+        ]
+      }
+    },
+    "/v1/admin/scheduler/schedules": {
+      "get": {
+        "summary": "ListSchedules lists all recurring schedules currently defined in the system.",
+        "operationId": "SchedulerAdmin_ListSchedules",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSchedulesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "SchedulerAdmin"
+        ]
+      }
+    },
+    "/v1/admin/scheduler/schedules/{id}/pause": {
+      "post": {
+        "summary": "PauseSchedule pauses a recurring schedule template.",
+        "operationId": "SchedulerAdmin_PauseSchedule",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SchedulerAdminPauseScheduleBody"
+            }
+          }
+        ],
+        "tags": [
+          "SchedulerAdmin"
+        ]
+      }
+    },
+    "/v1/admin/scheduler/schedules/{id}/resume": {
+      "post": {
+        "summary": "ResumeSchedule resumes a paused recurring schedule template.",
+        "operationId": "SchedulerAdmin_ResumeSchedule",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SchedulerAdminResumeScheduleBody"
+            }
+          }
+        ],
+        "tags": [
+          "SchedulerAdmin"
+        ]
+      }
+    },
+    "/v1/admin/scheduler/schedules/{id}/trigger": {
+      "post": {
+        "summary": "TriggerSchedule manually spawns a job instance from a schedule template immediately.",
+        "operationId": "SchedulerAdmin_TriggerSchedule",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SchedulerAdminTriggerScheduleBody"
+            }
+          }
+        ],
+        "tags": [
+          "SchedulerAdmin"
+        ]
+      }
+    },
+    "/v1/admin/scheduler/status": {
+      "get": {
+        "summary": "GetSchedulerStatus retrieves the current scheduler engine configuration and status.",
+        "operationId": "SchedulerAdmin_GetSchedulerStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetSchedulerStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "SchedulerAdmin"
         ]
       }
     },
@@ -1653,6 +1926,18 @@
         "password"
       ]
     },
+    "SchedulerAdminPauseScheduleBody": {
+      "type": "object"
+    },
+    "SchedulerAdminResumeScheduleBody": {
+      "type": "object"
+    },
+    "SchedulerAdminRetryJobBody": {
+      "type": "object"
+    },
+    "SchedulerAdminTriggerScheduleBody": {
+      "type": "object"
+    },
     "SpaceMemberProfile": {
       "type": "object",
       "properties": {
@@ -2178,6 +2463,19 @@
         }
       }
     },
+    "v1GetSchedulerStatusResponse": {
+      "type": "object",
+      "properties": {
+        "workerCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "queueSize": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
     "v1InsightGranularity": {
       "type": "string",
       "enum": [
@@ -2186,6 +2484,50 @@
         "MONTHLY",
         "YEARLY"
       ]
+    },
+    "v1JobInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "scheduleId": {
+          "type": "string"
+        },
+        "jobType": {
+          "type": "string"
+        },
+        "payload": {
+          "type": "string",
+          "title": "JSON representation of the payload"
+        },
+        "runAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string"
+        },
+        "attempts": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "maxAttempts": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "lastError": {
+          "type": "string"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
     },
     "v1LimitPropagation": {
       "type": "string",
@@ -2238,6 +2580,30 @@
         }
       },
       "description": "ListExchangeRatesResponse contains paginated rates."
+    },
+    "v1ListJobsResponse": {
+      "type": "object",
+      "properties": {
+        "jobs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1JobInfo"
+          }
+        }
+      }
+    },
+    "v1ListSchedulesResponse": {
+      "type": "object",
+      "properties": {
+        "schedules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ScheduleInfo"
+          }
+        }
+      }
     },
     "v1ListSpaceMembersResponse": {
       "type": "object",
@@ -2435,6 +2801,39 @@
     "v1RevokeSessionResponse": {
       "type": "object",
       "description": "RevokeSessionResponse is empty on success."
+    },
+    "v1ScheduleInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "jobType": {
+          "type": "string"
+        },
+        "payload": {
+          "type": "string",
+          "title": "JSON representation of the payload"
+        },
+        "cronExpression": {
+          "type": "string"
+        },
+        "nextRunAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
     },
     "v1Space": {
       "type": "object",

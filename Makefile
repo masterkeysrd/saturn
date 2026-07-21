@@ -111,10 +111,11 @@ web-lint:
 web-format:
 	npm --prefix apps/web run format
 
-## Rebuild protoc ts-simple plugin and regenerate API bindings
+## Rebuild protoc plugins and regenerate API bindings
 .PHONY: codegen
 codegen:
 	go build -o ./bin/protoc-gen-ts-simple ./tools/protoc-gen-ts-simple
+	go build -o ./bin/protoc-gen-go-scheduler ./tools/protoc-gen-go-scheduler
 	buf generate
 
 ## Show this help

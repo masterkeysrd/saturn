@@ -6,6 +6,7 @@ import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
+import "saturn/platform/scheduler/v1/options.proto";
 
 option go_package = "github.com/masterkeysrd/saturn/apis/saturn/finance/v1;financev1";
 
@@ -387,4 +388,8 @@ message SpentInsights {
   }
 
   repeated HighValueExpense top_expenses = 7;
+}
+
+message GenerateScheduledPaymentsPayload {
+  option (saturn.platform.scheduler.v1.job_type) = "finance.GenerateScheduledPayments";
 }
