@@ -234,7 +234,6 @@ export function SchedulerAdminView() {
       icon={ActivityIcon}
       actions={schedulerActions}
     >
-
       {/* Operational Stats Cards */}
       <div className="grid grid-cols-1 gap-4 select-none sm:grid-cols-4">
         <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/35 p-6 shadow-md backdrop-blur-md">

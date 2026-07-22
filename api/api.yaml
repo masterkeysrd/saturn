@@ -7,7 +7,7 @@
 name: saturn
 title: "Saturn API"
 documentation:
-  summary: "Your personal productivity suite — organized by space."
+  summary: "Saturn personal life operating system"
 
 securityDefinitions:
   bearerAuth:

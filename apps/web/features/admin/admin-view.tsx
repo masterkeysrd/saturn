@@ -85,7 +85,6 @@ export function AdminView() {
       icon={UserIcon}
       actions={refreshButton}
     >
-
       {/* Filters and Search toolbar */}
       <div className="flex flex-col gap-4 select-none sm:flex-row sm:items-center">
         <div className="flex w-fit items-center gap-1.5 rounded-2xl border border-border/50 bg-muted/20 p-1">

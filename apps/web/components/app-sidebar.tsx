@@ -146,11 +146,11 @@ export function AppSidebar() {
             state === "collapsed" ? "justify-center" : "flex-row px-3"
           )}
         >
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-primary to-accent text-white shadow-md shadow-primary/25">
-            <span className="font-sans text-lg font-black tracking-tighter">
-              S
-            </span>
-          </div>
+          <img
+            src="/saturn_logo.jpg"
+            alt="Saturn Logo"
+            className="h-9 w-9 shrink-0 rounded-xl object-cover shadow-md shadow-primary/25"
+          />
           {state !== "collapsed" && (
             <span className="animate-in text-base font-semibold tracking-tight text-foreground duration-200 fade-in">
               Saturn

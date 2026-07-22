@@ -1,8 +1,8 @@
 # Saturn
 
-**Your personal productivity suite — organized by space.**
+**Saturn personal life operating system**
 
-Saturn is a multi-tenant personal productivity platform that helps you manage finances, habits, calendar events, focus sessions (Pomodoros), tasks, and notes — all organized around the concept of **Spaces**. Whether you're managing work, personal life, or side projects, Saturn keeps everything in its place.
+Saturn is a multi-tenant personal Life Operating System (Life OS) that helps you manage finances, habits, calendar events, focus sessions (Pomodoros), tasks, and notes — all organized around the concept of **Spaces**. Whether you're managing work, personal life, or side projects, Saturn keeps everything in its place.
 
 <div align="center">
 

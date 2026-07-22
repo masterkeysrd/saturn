@@ -26,16 +26,18 @@ export function DashboardView() {
   return (
     <PageLayout
       title="Dashboard"
-      description="Welcome to your Saturn workspace."
+      description="Welcome to your Saturn Life OS."
       icon={Home}
     >
       <div className="flex flex-1 flex-col items-center justify-center py-12 text-center">
         <div className="max-w-md animate-in duration-500 select-none zoom-in-95 fade-in">
           {/* Branding badge */}
-          <div className="mb-8 flex justify-center">
-            <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-tr from-primary to-accent text-white shadow-xl shadow-primary/20">
-              <span className="font-mono text-4xl font-extrabold">S</span>
-            </div>
+          <div className="mb-8 flex animate-in justify-center duration-700 zoom-in-75">
+            <img
+              src="/saturn_logo.jpg"
+              alt="Saturn Logo"
+              className="h-20 w-20 rounded-3xl object-cover shadow-xl shadow-primary/20"
+            />
           </div>
 
           <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
@@ -47,7 +49,8 @@ export function DashboardView() {
           </p>
 
           <p className="mx-auto mt-8 max-w-xs text-sm text-muted-foreground/60">
-            Navigate features from the sidebar menu to manage your accounts, transactions, and budgets.
+            Navigate features from the sidebar menu to manage your finances,
+            schedules, and spaces.
           </p>
         </div>
       </div>

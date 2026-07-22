@@ -145,7 +145,7 @@ func TestApplyConfig(t *testing.T) {
 	}
 
 	// Verify description is overridden
-	expectedDesc := "Your personal productivity suite — organized by space."
+	expectedDesc := "Saturn personal life operating system"
 	if doc.Info.Description != expectedDesc {
 		t.Errorf("expected info.description %q, got %q", expectedDesc, doc.Info.Description)
 	}

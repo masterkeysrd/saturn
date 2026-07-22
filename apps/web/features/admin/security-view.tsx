@@ -82,7 +82,6 @@ export function AdminSecurityView() {
       icon={ShieldIcon}
       actions={refreshButton}
     >
-
       {/* Filters and Search toolbar */}
       <div className="flex flex-col gap-4 select-none sm:flex-row sm:items-center">
         {/* Email Search input */}

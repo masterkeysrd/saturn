@@ -31,7 +31,6 @@ export function SettingsView() {
       icon={Settings}
       className="max-w-4xl py-4"
     >
-
       <Tabs
         value={activeTab}
         onValueChange={(val) => setActiveTab(val as SettingsTab)}
