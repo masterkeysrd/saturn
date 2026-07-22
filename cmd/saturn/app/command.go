@@ -34,14 +34,13 @@ func Execute() error {
 			v := NewViper()
 			BindFlags(v, cmd.Flags())
 			cfg := LoadConfig(v)
+			initLogging(cfg)
 			slog.Info("config loaded", "config", cfg)
 
 			mgr := shutdown.New(shutdown.WithTimeout(cfg.Shutdown.Timeout))
 			ctx, cancel := mgr.Init()
 			defer cancel()
 			defer mgr.Defer()
-
-			slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: logLevels[cfg.Log.Level]})))
 
 			return StartAll(ctx, mgr, cfg)
 		},
@@ -203,8 +202,7 @@ func Execute() error {
 			v := NewViper()
 			BindFlags(v, cmd.Flags())
 			cfg := LoadConfig(v)
-
-			slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: logLevels[cfg.Log.Level]})))
+			initLogging(cfg)
 
 			store, err := initBackupStorage(cmd.Context(), cfg)
 			if err != nil {
@@ -253,4 +251,15 @@ func initBackupStorage(ctx context.Context, cfg *Config) (backup.Storage, error)
 	default:
 		return backup.NewLocalStorage(cfg.Backup.LocalDir)
 	}
+}
+
+func initLogging(cfg *Config) {
+	var handler slog.Handler
+	level := logLevels[cfg.Log.Level]
+	if cfg.Log.Format == "json" {
+		handler = slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: level})
+	} else {
+		handler = slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level})
+	}
+	slog.SetDefault(slog.New(handler))
 }

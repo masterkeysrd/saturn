@@ -103,7 +103,8 @@ type ShutdownConfig struct {
 
 // LogConfig holds logging settings.
 type LogConfig struct {
-	Level string `mapstructure:"level"`
+	Level  string `mapstructure:"level"`
+	Format string `mapstructure:"format"`
 }
 
 // AuthConfig holds JWT and authentication settings.
@@ -141,6 +142,7 @@ func NewViper() *viper.Viper {
 	v.SetDefault("gateway.cookie_secure", true)
 	v.SetDefault("shutdown.timeout", defaultShutdownTime)
 	v.SetDefault("log.level", defaultLogLevel)
+	v.SetDefault("log.format", "text")
 	v.SetDefault("swagger.enabled", false)
 	v.SetDefault("swagger.path", defaultSwaggerPath)
 
