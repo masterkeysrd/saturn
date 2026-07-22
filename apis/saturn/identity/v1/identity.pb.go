@@ -926,6 +926,194 @@ func (*RevokeAllSessionsResponse) Descriptor() ([]byte, []int) {
 	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{15}
 }
 
+type SecurityEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Email         string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+	EventType     string                 `protobuf:"bytes,3,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
+	IpAddress     string                 `protobuf:"bytes,4,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`
+	UserAgent     string                 `protobuf:"bytes,5,opt,name=user_agent,json=userAgent,proto3" json:"user_agent,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SecurityEvent) Reset() {
+	*x = SecurityEvent{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SecurityEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SecurityEvent) ProtoMessage() {}
+
+func (x *SecurityEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SecurityEvent.ProtoReflect.Descriptor instead.
+func (*SecurityEvent) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *SecurityEvent) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *SecurityEvent) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *SecurityEvent) GetEventType() string {
+	if x != nil {
+		return x.EventType
+	}
+	return ""
+}
+
+func (x *SecurityEvent) GetIpAddress() string {
+	if x != nil {
+		return x.IpAddress
+	}
+	return ""
+}
+
+func (x *SecurityEvent) GetUserAgent() string {
+	if x != nil {
+		return x.UserAgent
+	}
+	return ""
+}
+
+func (x *SecurityEvent) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+type ListMySecurityEventsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMySecurityEventsRequest) Reset() {
+	*x = ListMySecurityEventsRequest{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMySecurityEventsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMySecurityEventsRequest) ProtoMessage() {}
+
+func (x *ListMySecurityEventsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMySecurityEventsRequest.ProtoReflect.Descriptor instead.
+func (*ListMySecurityEventsRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ListMySecurityEventsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListMySecurityEventsRequest) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+type ListMySecurityEventsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Events        []*SecurityEvent       `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMySecurityEventsResponse) Reset() {
+	*x = ListMySecurityEventsResponse{}
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMySecurityEventsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMySecurityEventsResponse) ProtoMessage() {}
+
+func (x *ListMySecurityEventsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMySecurityEventsResponse.ProtoReflect.Descriptor instead.
+func (*ListMySecurityEventsResponse) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ListMySecurityEventsResponse) GetEvents() []*SecurityEvent {
+	if x != nil {
+		return x.Events
+	}
+	return nil
+}
+
+func (x *ListMySecurityEventsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
 // UserPassword authentication method.
 type LoginUserRequest_UserPassword struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -939,7 +1127,7 @@ type LoginUserRequest_UserPassword struct {
 
 func (x *LoginUserRequest_UserPassword) Reset() {
 	*x = LoginUserRequest_UserPassword{}
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[16]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -951,7 +1139,7 @@ func (x *LoginUserRequest_UserPassword) String() string {
 func (*LoginUserRequest_UserPassword) ProtoMessage() {}
 
 func (x *LoginUserRequest_UserPassword) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_v1_identity_proto_msgTypes[16]
+	mi := &file_saturn_identity_v1_identity_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1050,7 +1238,25 @@ const file_saturn_identity_v1_identity_proto_rawDesc = "" +
 	"session_id\x18\x01 \x01(\tB\x03\xe0A\x02R\tsessionId\"\x17\n" +
 	"\x15RevokeSessionResponse\"\x1a\n" +
 	"\x18RevokeAllSessionsRequest\"\x1b\n" +
-	"\x19RevokeAllSessionsResponse2\xda\b\n" +
+	"\x19RevokeAllSessionsResponse\"\xcd\x01\n" +
+	"\rSecurityEvent\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05email\x18\x02 \x01(\tR\x05email\x12\x1d\n" +
+	"\n" +
+	"event_type\x18\x03 \x01(\tR\teventType\x12\x1d\n" +
+	"\n" +
+	"ip_address\x18\x04 \x01(\tR\tipAddress\x12\x1d\n" +
+	"\n" +
+	"user_agent\x18\x05 \x01(\tR\tuserAgent\x129\n" +
+	"\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"[\n" +
+	"\x1bListMySecurityEventsRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\x81\x01\n" +
+	"\x1cListMySecurityEventsResponse\x129\n" +
+	"\x06events\x18\x01 \x03(\v2!.saturn.identity.v1.SecurityEventR\x06events\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken2\x85\n" +
+	"\n" +
 	"\bIdentity\x12}\n" +
 	"\tLoginUser\x12$.saturn.identity.v1.LoginUserRequest\x1a%.saturn.identity.v1.LoginUserResponse\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/v1/identity/users:login\x12y\n" +
 	"\fRegisterUser\x12'.saturn.identity.v1.RegisterUserRequest\x1a\x18.saturn.identity.v1.User\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/v1/identity/users:register\x12\x91\x01\n" +
@@ -1059,7 +1265,8 @@ const file_saturn_identity_v1_identity_proto_rawDesc = "" +
 	"\x0eGetCurrentUser\x12).saturn.identity.v1.GetCurrentUserRequest\x1a\x18.saturn.identity.v1.User\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/identity/users/me\x12\x92\x01\n" +
 	"\x12ListActiveSessions\x12-.saturn.identity.v1.ListActiveSessionsRequest\x1a..saturn.identity.v1.ListActiveSessionsResponse\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/identity/sessions\x12\x9a\x01\n" +
 	"\rRevokeSession\x12(.saturn.identity.v1.RevokeSessionRequest\x1a).saturn.identity.v1.RevokeSessionResponse\"4\x82\xd3\xe4\x93\x02.:\x01*\")/v1/identity/sessions/{session_id}:revoke\x12\x9d\x01\n" +
-	"\x11RevokeAllSessions\x12,.saturn.identity.v1.RevokeAllSessionsRequest\x1a-.saturn.identity.v1.RevokeAllSessionsResponse\"+\x82\xd3\xe4\x93\x02%:\x01*\" /v1/identity/sessions:revoke-allBCZAgithub.com/masterkeysrd/saturn/apis/saturn/identity/v1;identityv1b\x06proto3"
+	"\x11RevokeAllSessions\x12,.saturn.identity.v1.RevokeAllSessionsRequest\x1a-.saturn.identity.v1.RevokeAllSessionsResponse\"+\x82\xd3\xe4\x93\x02%:\x01*\" /v1/identity/sessions:revoke-all\x12\xa8\x01\n" +
+	"\x14ListMySecurityEvents\x12/.saturn.identity.v1.ListMySecurityEventsRequest\x1a0.saturn.identity.v1.ListMySecurityEventsResponse\"-\x82\xd3\xe4\x93\x02'\x12%/v1/identity/users/me/security-eventsBCZAgithub.com/masterkeysrd/saturn/apis/saturn/identity/v1;identityv1b\x06proto3"
 
 var (
 	file_saturn_identity_v1_identity_proto_rawDescOnce sync.Once
@@ -1073,7 +1280,7 @@ func file_saturn_identity_v1_identity_proto_rawDescGZIP() []byte {
 	return file_saturn_identity_v1_identity_proto_rawDescData
 }
 
-var file_saturn_identity_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_saturn_identity_v1_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_saturn_identity_v1_identity_proto_goTypes = []any{
 	(*LoginUserRequest)(nil),              // 0: saturn.identity.v1.LoginUserRequest
 	(*LoginUserResponse)(nil),             // 1: saturn.identity.v1.LoginUserResponse
@@ -1091,37 +1298,44 @@ var file_saturn_identity_v1_identity_proto_goTypes = []any{
 	(*RevokeSessionResponse)(nil),         // 13: saturn.identity.v1.RevokeSessionResponse
 	(*RevokeAllSessionsRequest)(nil),      // 14: saturn.identity.v1.RevokeAllSessionsRequest
 	(*RevokeAllSessionsResponse)(nil),     // 15: saturn.identity.v1.RevokeAllSessionsResponse
-	(*LoginUserRequest_UserPassword)(nil), // 16: saturn.identity.v1.LoginUserRequest.UserPassword
-	(*timestamppb.Timestamp)(nil),         // 17: google.protobuf.Timestamp
+	(*SecurityEvent)(nil),                 // 16: saturn.identity.v1.SecurityEvent
+	(*ListMySecurityEventsRequest)(nil),   // 17: saturn.identity.v1.ListMySecurityEventsRequest
+	(*ListMySecurityEventsResponse)(nil),  // 18: saturn.identity.v1.ListMySecurityEventsResponse
+	(*LoginUserRequest_UserPassword)(nil), // 19: saturn.identity.v1.LoginUserRequest.UserPassword
+	(*timestamppb.Timestamp)(nil),         // 20: google.protobuf.Timestamp
 }
 var file_saturn_identity_v1_identity_proto_depIdxs = []int32{
-	16, // 0: saturn.identity.v1.LoginUserRequest.user_password:type_name -> saturn.identity.v1.LoginUserRequest.UserPassword
-	17, // 1: saturn.identity.v1.User.create_time:type_name -> google.protobuf.Timestamp
-	17, // 2: saturn.identity.v1.User.update_time:type_name -> google.protobuf.Timestamp
-	17, // 3: saturn.identity.v1.UserSession.create_time:type_name -> google.protobuf.Timestamp
-	17, // 4: saturn.identity.v1.UserSession.last_used_at:type_name -> google.protobuf.Timestamp
+	19, // 0: saturn.identity.v1.LoginUserRequest.user_password:type_name -> saturn.identity.v1.LoginUserRequest.UserPassword
+	20, // 1: saturn.identity.v1.User.create_time:type_name -> google.protobuf.Timestamp
+	20, // 2: saturn.identity.v1.User.update_time:type_name -> google.protobuf.Timestamp
+	20, // 3: saturn.identity.v1.UserSession.create_time:type_name -> google.protobuf.Timestamp
+	20, // 4: saturn.identity.v1.UserSession.last_used_at:type_name -> google.protobuf.Timestamp
 	9,  // 5: saturn.identity.v1.ListActiveSessionsResponse.sessions:type_name -> saturn.identity.v1.UserSession
-	0,  // 6: saturn.identity.v1.Identity.LoginUser:input_type -> saturn.identity.v1.LoginUserRequest
-	2,  // 7: saturn.identity.v1.Identity.RegisterUser:input_type -> saturn.identity.v1.RegisterUserRequest
-	4,  // 8: saturn.identity.v1.Identity.RefreshSession:input_type -> saturn.identity.v1.RefreshSessionRequest
-	6,  // 9: saturn.identity.v1.Identity.Logout:input_type -> saturn.identity.v1.LogoutRequest
-	8,  // 10: saturn.identity.v1.Identity.GetCurrentUser:input_type -> saturn.identity.v1.GetCurrentUserRequest
-	10, // 11: saturn.identity.v1.Identity.ListActiveSessions:input_type -> saturn.identity.v1.ListActiveSessionsRequest
-	12, // 12: saturn.identity.v1.Identity.RevokeSession:input_type -> saturn.identity.v1.RevokeSessionRequest
-	14, // 13: saturn.identity.v1.Identity.RevokeAllSessions:input_type -> saturn.identity.v1.RevokeAllSessionsRequest
-	1,  // 14: saturn.identity.v1.Identity.LoginUser:output_type -> saturn.identity.v1.LoginUserResponse
-	3,  // 15: saturn.identity.v1.Identity.RegisterUser:output_type -> saturn.identity.v1.User
-	5,  // 16: saturn.identity.v1.Identity.RefreshSession:output_type -> saturn.identity.v1.RefreshSessionResponse
-	7,  // 17: saturn.identity.v1.Identity.Logout:output_type -> saturn.identity.v1.LogoutResponse
-	3,  // 18: saturn.identity.v1.Identity.GetCurrentUser:output_type -> saturn.identity.v1.User
-	11, // 19: saturn.identity.v1.Identity.ListActiveSessions:output_type -> saturn.identity.v1.ListActiveSessionsResponse
-	13, // 20: saturn.identity.v1.Identity.RevokeSession:output_type -> saturn.identity.v1.RevokeSessionResponse
-	15, // 21: saturn.identity.v1.Identity.RevokeAllSessions:output_type -> saturn.identity.v1.RevokeAllSessionsResponse
-	14, // [14:22] is the sub-list for method output_type
-	6,  // [6:14] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	20, // 6: saturn.identity.v1.SecurityEvent.created_at:type_name -> google.protobuf.Timestamp
+	16, // 7: saturn.identity.v1.ListMySecurityEventsResponse.events:type_name -> saturn.identity.v1.SecurityEvent
+	0,  // 8: saturn.identity.v1.Identity.LoginUser:input_type -> saturn.identity.v1.LoginUserRequest
+	2,  // 9: saturn.identity.v1.Identity.RegisterUser:input_type -> saturn.identity.v1.RegisterUserRequest
+	4,  // 10: saturn.identity.v1.Identity.RefreshSession:input_type -> saturn.identity.v1.RefreshSessionRequest
+	6,  // 11: saturn.identity.v1.Identity.Logout:input_type -> saturn.identity.v1.LogoutRequest
+	8,  // 12: saturn.identity.v1.Identity.GetCurrentUser:input_type -> saturn.identity.v1.GetCurrentUserRequest
+	10, // 13: saturn.identity.v1.Identity.ListActiveSessions:input_type -> saturn.identity.v1.ListActiveSessionsRequest
+	12, // 14: saturn.identity.v1.Identity.RevokeSession:input_type -> saturn.identity.v1.RevokeSessionRequest
+	14, // 15: saturn.identity.v1.Identity.RevokeAllSessions:input_type -> saturn.identity.v1.RevokeAllSessionsRequest
+	17, // 16: saturn.identity.v1.Identity.ListMySecurityEvents:input_type -> saturn.identity.v1.ListMySecurityEventsRequest
+	1,  // 17: saturn.identity.v1.Identity.LoginUser:output_type -> saturn.identity.v1.LoginUserResponse
+	3,  // 18: saturn.identity.v1.Identity.RegisterUser:output_type -> saturn.identity.v1.User
+	5,  // 19: saturn.identity.v1.Identity.RefreshSession:output_type -> saturn.identity.v1.RefreshSessionResponse
+	7,  // 20: saturn.identity.v1.Identity.Logout:output_type -> saturn.identity.v1.LogoutResponse
+	3,  // 21: saturn.identity.v1.Identity.GetCurrentUser:output_type -> saturn.identity.v1.User
+	11, // 22: saturn.identity.v1.Identity.ListActiveSessions:output_type -> saturn.identity.v1.ListActiveSessionsResponse
+	13, // 23: saturn.identity.v1.Identity.RevokeSession:output_type -> saturn.identity.v1.RevokeSessionResponse
+	15, // 24: saturn.identity.v1.Identity.RevokeAllSessions:output_type -> saturn.identity.v1.RevokeAllSessionsResponse
+	18, // 25: saturn.identity.v1.Identity.ListMySecurityEvents:output_type -> saturn.identity.v1.ListMySecurityEventsResponse
+	17, // [17:26] is the sub-list for method output_type
+	8,  // [8:17] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_saturn_identity_v1_identity_proto_init() }
@@ -1138,7 +1352,7 @@ func file_saturn_identity_v1_identity_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_identity_v1_identity_proto_rawDesc), len(file_saturn_identity_v1_identity_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   17,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

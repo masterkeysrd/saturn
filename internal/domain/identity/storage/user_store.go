@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 
@@ -16,17 +17,19 @@ import (
 
 // userDB is the internal DB record type for identity.user.
 type userDB struct {
-	ID          string       `db:"id"`
-	Email       string       `db:"email"`
-	Username    string       `db:"username"`
-	Name        string       `db:"name"`
-	AvatarURL   *string      `db:"avatar_url"`
-	Status      string       `db:"status"`
-	AccessLevel string       `db:"access_level"`
-	Version     int64        `db:"version"`
-	AuthVersion int64        `db:"auth_version"`
-	CreateTime  sql.NullTime `db:"create_time"`
-	UpdateTime  sql.NullTime `db:"update_time"`
+	ID                  string       `db:"id"`
+	Email               string       `db:"email"`
+	Username            string       `db:"username"`
+	Name                string       `db:"name"`
+	AvatarURL           *string      `db:"avatar_url"`
+	Status              string       `db:"status"`
+	AccessLevel         string       `db:"access_level"`
+	Version             int64        `db:"version"`
+	AuthVersion         int64        `db:"auth_version"`
+	FailedLoginAttempts int          `db:"failed_login_attempts"`
+	LockedUntil         sql.NullTime `db:"locked_until"`
+	CreateTime          sql.NullTime `db:"create_time"`
+	UpdateTime          sql.NullTime `db:"update_time"`
 }
 
 // UserStore implements identity.UserStore using sqlx.
@@ -42,34 +45,38 @@ func NewUserStore(db *sqlx.DB) *UserStore {
 // toDomainUser converts a userDB to a domain User.
 func toDomainUser(u *userDB) *identity.User {
 	return &identity.User{
-		ID:          identity.UserID(u.ID),
-		Email:       u.Email,
-		Username:    u.Username,
-		Name:        u.Name,
-		AvatarURL:   ptrToString(u.AvatarURL),
-		Status:      identity.UserStatus(u.Status),
-		AccessLevel: identity.AccessLevel(u.AccessLevel),
-		Version:     u.Version,
-		AuthVersion: u.AuthVersion,
-		CreateTime:  nullTimeToTime(u.CreateTime),
-		UpdateTime:  nullTimeToTime(u.UpdateTime),
+		ID:                  identity.UserID(u.ID),
+		Email:               u.Email,
+		Username:            u.Username,
+		Name:                u.Name,
+		AvatarURL:           ptrToString(u.AvatarURL),
+		Status:              identity.UserStatus(u.Status),
+		AccessLevel:         identity.AccessLevel(u.AccessLevel),
+		Version:             u.Version,
+		AuthVersion:         u.AuthVersion,
+		FailedLoginAttempts: u.FailedLoginAttempts,
+		LockedUntil:         nullTimeToTimePtr(u.LockedUntil),
+		CreateTime:          nullTimeToTime(u.CreateTime),
+		UpdateTime:          nullTimeToTime(u.UpdateTime),
 	}
 }
 
 // toDB converts a domain User to a userDB.
 func toDBUser(u *identity.User) *userDB {
 	return &userDB{
-		ID:          string(u.ID),
-		Email:       u.Email,
-		Username:    u.Username,
-		Name:        u.Name,
-		AvatarURL:   strToPtr(u.AvatarURL),
-		Status:      string(u.Status),
-		AccessLevel: string(u.AccessLevel),
-		Version:     u.Version,
-		AuthVersion: u.AuthVersion,
-		CreateTime:  timeToNullTime(u.CreateTime),
-		UpdateTime:  timeToNullTime(u.UpdateTime),
+		ID:                  string(u.ID),
+		Email:               u.Email,
+		Username:            u.Username,
+		Name:                u.Name,
+		AvatarURL:           strToPtr(u.AvatarURL),
+		Status:              string(u.Status),
+		AccessLevel:         string(u.AccessLevel),
+		Version:             u.Version,
+		AuthVersion:         u.AuthVersion,
+		FailedLoginAttempts: u.FailedLoginAttempts,
+		LockedUntil:         timePtrToNullTime(u.LockedUntil),
+		CreateTime:          timeToNullTime(u.CreateTime),
+		UpdateTime:          timeToNullTime(u.UpdateTime),
 	}
 }
 
@@ -246,4 +253,30 @@ func (s *UserStore) IncrementAuthVersion(ctx context.Context, id identity.UserID
 		return 0, err
 	}
 	return authVersion, nil
+}
+
+// UpdateLockoutState updates only the failed login attempts and lockout expiration for a user.
+func (s *UserStore) UpdateLockoutState(ctx context.Context, req identity.UpdateLockoutRequest) error {
+	var nullTime sql.NullTime
+	if req.LockedUntil != nil {
+		nullTime = sql.NullTime{Time: *req.LockedUntil, Valid: true}
+	}
+	query := `UPDATE identity.user SET failed_login_attempts = $2, locked_until = $3, update_time = NOW() WHERE id = $1`
+	_, err := s.db.ExecContext(ctx, query, string(req.UserID), req.Attempts, nullTime)
+	return err
+}
+
+func nullTimeToTimePtr(nt sql.NullTime) *time.Time {
+	if !nt.Valid {
+		return nil
+	}
+	t := nt.Time
+	return &t
+}
+
+func timePtrToNullTime(t *time.Time) sql.NullTime {
+	if t == nil {
+		return sql.NullTime{}
+	}
+	return sql.NullTime{Time: *t, Valid: true}
 }

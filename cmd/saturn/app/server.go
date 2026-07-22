@@ -85,12 +85,14 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 		return fmt.Errorf("create password hasher: %w", err)
 	}
 	sessionStore := identitystorage.NewSessionStore(sqlxDB)
+	securityEventStore := identitystorage.NewSecurityEventStore(sqlxDB)
 	identityService := identity.NewService(
 		identity.Dependencies{
-			UserStore:       userStore,
-			CredentialStore: credentialStore,
-			SessionStore:    sessionStore,
-			Hasher:          passwordHasher,
+			UserStore:          userStore,
+			CredentialStore:    credentialStore,
+			SessionStore:       sessionStore,
+			SecurityEventStore: securityEventStore,
+			Hasher:             passwordHasher,
 		},
 	)
 

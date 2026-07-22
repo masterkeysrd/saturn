@@ -27,17 +27,19 @@ const (
 
 // User represents a registered user in the system.
 type User struct {
-	ID          UserID      `json:"id"`
-	Email       string      `json:"email"`
-	Username    string      `json:"username"`
-	Name        string      `json:"name"`
-	AvatarURL   string      `json:"avatar_url,omitempty"`
-	Status      UserStatus  `json:"status"`
-	AccessLevel AccessLevel `json:"access_level"`
-	Version     int64       `json:"version"`
-	AuthVersion int64       `json:"auth_version"`
-	CreateTime  time.Time   `json:"create_time"`
-	UpdateTime  time.Time   `json:"update_time"`
+	ID                  UserID      `json:"id"`
+	Email               string      `json:"email"`
+	Username            string      `json:"username"`
+	Name                string      `json:"name"`
+	AvatarURL           string      `json:"avatar_url,omitempty"`
+	Status              UserStatus  `json:"status"`
+	AccessLevel         AccessLevel `json:"access_level"`
+	Version             int64       `json:"version"`
+	AuthVersion         int64       `json:"auth_version"`
+	FailedLoginAttempts int         `json:"failed_login_attempts"`
+	LockedUntil         *time.Time  `json:"locked_until,omitempty"`
+	CreateTime          time.Time   `json:"create_time"`
+	UpdateTime          time.Time   `json:"update_time"`
 }
 
 const userIDPrefix = "usr_"

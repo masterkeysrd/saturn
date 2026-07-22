@@ -19,14 +19,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Identity_LoginUser_FullMethodName          = "/saturn.identity.v1.Identity/LoginUser"
-	Identity_RegisterUser_FullMethodName       = "/saturn.identity.v1.Identity/RegisterUser"
-	Identity_RefreshSession_FullMethodName     = "/saturn.identity.v1.Identity/RefreshSession"
-	Identity_Logout_FullMethodName             = "/saturn.identity.v1.Identity/Logout"
-	Identity_GetCurrentUser_FullMethodName     = "/saturn.identity.v1.Identity/GetCurrentUser"
-	Identity_ListActiveSessions_FullMethodName = "/saturn.identity.v1.Identity/ListActiveSessions"
-	Identity_RevokeSession_FullMethodName      = "/saturn.identity.v1.Identity/RevokeSession"
-	Identity_RevokeAllSessions_FullMethodName  = "/saturn.identity.v1.Identity/RevokeAllSessions"
+	Identity_LoginUser_FullMethodName            = "/saturn.identity.v1.Identity/LoginUser"
+	Identity_RegisterUser_FullMethodName         = "/saturn.identity.v1.Identity/RegisterUser"
+	Identity_RefreshSession_FullMethodName       = "/saturn.identity.v1.Identity/RefreshSession"
+	Identity_Logout_FullMethodName               = "/saturn.identity.v1.Identity/Logout"
+	Identity_GetCurrentUser_FullMethodName       = "/saturn.identity.v1.Identity/GetCurrentUser"
+	Identity_ListActiveSessions_FullMethodName   = "/saturn.identity.v1.Identity/ListActiveSessions"
+	Identity_RevokeSession_FullMethodName        = "/saturn.identity.v1.Identity/RevokeSession"
+	Identity_RevokeAllSessions_FullMethodName    = "/saturn.identity.v1.Identity/RevokeAllSessions"
+	Identity_ListMySecurityEvents_FullMethodName = "/saturn.identity.v1.Identity/ListMySecurityEvents"
 )
 
 // IdentityClient is the client API for Identity service.
@@ -51,6 +52,8 @@ type IdentityClient interface {
 	RevokeSession(ctx context.Context, in *RevokeSessionRequest, opts ...grpc.CallOption) (*RevokeSessionResponse, error)
 	// RevokeAllSessions invalidates all sessions for the user globally.
 	RevokeAllSessions(ctx context.Context, in *RevokeAllSessionsRequest, opts ...grpc.CallOption) (*RevokeAllSessionsResponse, error)
+	// ListMySecurityEvents retrieves the security audit logs for the authenticated user.
+	ListMySecurityEvents(ctx context.Context, in *ListMySecurityEventsRequest, opts ...grpc.CallOption) (*ListMySecurityEventsResponse, error)
 }
 
 type identityClient struct {
@@ -141,6 +144,16 @@ func (c *identityClient) RevokeAllSessions(ctx context.Context, in *RevokeAllSes
 	return out, nil
 }
 
+func (c *identityClient) ListMySecurityEvents(ctx context.Context, in *ListMySecurityEventsRequest, opts ...grpc.CallOption) (*ListMySecurityEventsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListMySecurityEventsResponse)
+	err := c.cc.Invoke(ctx, Identity_ListMySecurityEvents_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // IdentityServer is the server API for Identity service.
 // All implementations should embed UnimplementedIdentityServer
 // for forward compatibility.
@@ -163,6 +176,8 @@ type IdentityServer interface {
 	RevokeSession(context.Context, *RevokeSessionRequest) (*RevokeSessionResponse, error)
 	// RevokeAllSessions invalidates all sessions for the user globally.
 	RevokeAllSessions(context.Context, *RevokeAllSessionsRequest) (*RevokeAllSessionsResponse, error)
+	// ListMySecurityEvents retrieves the security audit logs for the authenticated user.
+	ListMySecurityEvents(context.Context, *ListMySecurityEventsRequest) (*ListMySecurityEventsResponse, error)
 }
 
 // UnimplementedIdentityServer should be embedded to have
@@ -195,6 +210,9 @@ func (UnimplementedIdentityServer) RevokeSession(context.Context, *RevokeSession
 }
 func (UnimplementedIdentityServer) RevokeAllSessions(context.Context, *RevokeAllSessionsRequest) (*RevokeAllSessionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokeAllSessions not implemented")
+}
+func (UnimplementedIdentityServer) ListMySecurityEvents(context.Context, *ListMySecurityEventsRequest) (*ListMySecurityEventsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListMySecurityEvents not implemented")
 }
 func (UnimplementedIdentityServer) testEmbeddedByValue() {}
 
@@ -360,6 +378,24 @@ func _Identity_RevokeAllSessions_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Identity_ListMySecurityEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMySecurityEventsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).ListMySecurityEvents(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_ListMySecurityEvents_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).ListMySecurityEvents(ctx, req.(*ListMySecurityEventsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Identity_ServiceDesc is the grpc.ServiceDesc for Identity service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -398,6 +434,10 @@ var Identity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RevokeAllSessions",
 			Handler:    _Identity_RevokeAllSessions_Handler,
+		},
+		{
+			MethodName: "ListMySecurityEvents",
+			Handler:    _Identity_ListMySecurityEvents_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

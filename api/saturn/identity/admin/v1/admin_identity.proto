@@ -46,6 +46,11 @@ service AdminIdentity {
       body: "*"
     };
   }
+
+  // ListSecurityEvents returns a list of security audit logs.
+  rpc ListSecurityEvents(ListSecurityEventsRequest) returns (ListSecurityEventsResponse) {
+    option (google.api.http) = {get: "/v1/admin/identity/security-events"};
+  }
 }
 
 message ListUsersRequest {
@@ -115,4 +120,26 @@ message User {
   int64 version = 8;
   google.protobuf.Timestamp create_time = 9;
   google.protobuf.Timestamp update_time = 10;
+}
+
+message SecurityEvent {
+  string id = 1;
+  string user_id = 2;
+  string email = 3;
+  string event_type = 4;
+  string ip_address = 5;
+  string user_agent = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message ListSecurityEventsRequest {
+  string email = 1;
+  string event_type = 2;
+  int32 limit = 3;
+  string next_page_token = 4;
+}
+
+message ListSecurityEventsResponse {
+  repeated SecurityEvent events = 1;
+  string next_page_token = 2;
 }

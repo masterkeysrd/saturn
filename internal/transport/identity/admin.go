@@ -142,3 +142,50 @@ func (h *AdminHandler) UpdateUserRole(ctx context.Context, req *adminidentityv1.
 		User: toAdminUser(resp.User),
 	}, nil
 }
+
+// RevokeAllSessions revokes all sessions for a user globally.
+func (h *AdminHandler) RevokeAllSessions(ctx context.Context, req *adminidentityv1.RevokeAllSessionsRequest) (*adminidentityv1.RevokeAllSessionsResponse, error) {
+	_, err := h.Coordinator.RevokeAllSessions(ctx, &iam.RevokeAllSessionsRequest{
+		UserID: req.GetUserId(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &adminidentityv1.RevokeAllSessionsResponse{}, nil
+}
+
+// ListSecurityEvents lists security audit logs.
+func (h *AdminHandler) ListSecurityEvents(ctx context.Context, req *adminidentityv1.ListSecurityEventsRequest) (*adminidentityv1.ListSecurityEventsResponse, error) {
+	events, nextToken, err := h.Coordinator.ListSecurityEvents(ctx, identity.SecurityEventFilter{
+		Email:         req.GetEmail(),
+		EventType:     req.GetEventType(),
+		Limit:         int(req.GetLimit()),
+		NextPageToken: req.GetNextPageToken(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	pbEvents := make([]*adminidentityv1.SecurityEvent, 0, len(events))
+	for _, ev := range events {
+		var uID string
+		if ev.UserID != nil {
+			uID = string(*ev.UserID)
+		}
+		pbEvents = append(pbEvents, &adminidentityv1.SecurityEvent{
+			Id:        ev.ID,
+			UserId:    uID,
+			Email:     ev.Email,
+			EventType: string(ev.EventType),
+			IpAddress: ev.IPAddress,
+			UserAgent: ev.UserAgent,
+			CreatedAt: timestamppb.New(ev.CreatedAt),
+		})
+	}
+
+	return &adminidentityv1.ListSecurityEventsResponse{
+		Events:        pbEvents,
+		NextPageToken: nextToken,
+	}, nil
+}

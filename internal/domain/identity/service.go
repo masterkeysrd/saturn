@@ -24,6 +24,7 @@ type UserStoreProvider interface {
 	GetUsers(ctx context.Context, filter *ListUsersFilter) ([]*User, string, error)
 	GetAuthVersion(ctx context.Context, id UserID) (int64, error)
 	IncrementAuthVersion(ctx context.Context, id UserID) (int64, error)
+	UpdateLockoutState(ctx context.Context, req UpdateLockoutRequest) error
 }
 
 // CredentialStoreProvider provides access to the CredentialStore.
@@ -37,10 +38,11 @@ type CredentialStoreProvider interface {
 
 // Dependencies holds all storage and hashing interfaces required by the Service.
 type Dependencies struct {
-	UserStore       UserStoreProvider
-	CredentialStore CredentialStoreProvider
-	SessionStore    SessionStoreProvider
-	Hasher          Hasher
+	UserStore          UserStoreProvider
+	CredentialStore    CredentialStoreProvider
+	SessionStore       SessionStoreProvider
+	SecurityEventStore SecurityEventStore
+	Hasher             Hasher
 }
 
 // Hasher is the password hashing interface used for authentication.
@@ -330,4 +332,19 @@ func (s *Service) GetActiveSessions(ctx context.Context, userID UserID) ([]*Sess
 // RevokeSessionByID invalidates a specific user session by its ID.
 func (s *Service) RevokeSessionByID(ctx context.Context, sessionID SessionID, userID UserID) error {
 	return s.deps.SessionStore.RevokeByID(ctx, sessionID, userID, time.Now())
+}
+
+// UpdateLockoutState modifies the failed login attempts and lockout timestamps for a user.
+func (s *Service) UpdateLockoutState(ctx context.Context, req UpdateLockoutRequest) error {
+	return s.deps.UserStore.UpdateLockoutState(ctx, req)
+}
+
+// CreateSecurityEvent records a security audit log event.
+func (s *Service) CreateSecurityEvent(ctx context.Context, event *SecurityEvent) error {
+	return s.deps.SecurityEventStore.Create(ctx, event)
+}
+
+// ListSecurityEvents queries security logs satisfying the given criteria.
+func (s *Service) ListSecurityEvents(ctx context.Context, filter SecurityEventFilter) ([]*SecurityEvent, string, error) {
+	return s.deps.SecurityEventStore.List(ctx, filter)
 }

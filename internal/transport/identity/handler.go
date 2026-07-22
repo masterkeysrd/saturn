@@ -55,6 +55,9 @@ func (h *Handler) LoginUser(ctx context.Context, req *identityv1.LoginUserReques
 		if errors.Is(err, identity.ErrAccountPendingApproval) {
 			return nil, status.Error(codes.PermissionDenied, "account pending approval")
 		}
+		if strings.Contains(err.Error(), "temporarily locked") {
+			return nil, status.Error(codes.ResourceExhausted, err.Error())
+		}
 		return nil, status.Error(codes.Unauthenticated, "invalid credentials")
 	}
 
@@ -256,6 +259,41 @@ func (h *Handler) RevokeAllSessions(ctx context.Context, req *identityv1.RevokeA
 	}
 
 	return &identityv1.RevokeAllSessionsResponse{}, nil
+}
+
+// ListMySecurityEvents retrieves security audit logs for the currently authenticated user.
+func (h *Handler) ListMySecurityEvents(ctx context.Context, req *identityv1.ListMySecurityEventsRequest) (*identityv1.ListMySecurityEventsResponse, error) {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing principal")
+	}
+
+	userID := identity.UserID(principal.Subject)
+	events, nextToken, err := h.IAM.Coordinator.ListSecurityEvents(ctx, identity.SecurityEventFilter{
+		UserID:        &userID,
+		Limit:         int(req.GetLimit()),
+		NextPageToken: req.GetNextPageToken(),
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	pbEvents := make([]*identityv1.SecurityEvent, 0, len(events))
+	for _, ev := range events {
+		pbEvents = append(pbEvents, &identityv1.SecurityEvent{
+			Id:        ev.ID,
+			Email:     ev.Email,
+			EventType: string(ev.EventType),
+			IpAddress: ev.IPAddress,
+			UserAgent: ev.UserAgent,
+			CreatedAt: timestamppb.New(ev.CreatedAt),
+		})
+	}
+
+	return &identityv1.ListMySecurityEventsResponse{
+		Events:        pbEvents,
+		NextPageToken: nextToken,
+	}, nil
 }
 
 func extractClientInfo(ctx context.Context) (userAgent, ipAddress string) {

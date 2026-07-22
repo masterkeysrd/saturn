@@ -221,6 +221,25 @@ export type RevokeAllSessionsRequest = Record<string, never>
  */
 export type RevokeAllSessionsResponse = Record<string, never>
 
+export interface SecurityEvent {
+  id: string
+  email: string
+  eventType: string
+  ipAddress: string
+  userAgent: string
+  createdAt: string
+}
+
+export interface ListMySecurityEventsRequest {
+  limit: number
+  nextPageToken: string
+}
+
+export interface ListMySecurityEventsResponse {
+  events: SecurityEvent[]
+  nextPageToken: string
+}
+
 /**
  * Identity service provides user authentication and account management.
  */
@@ -420,6 +439,33 @@ export function useRevokeAllSessionsMutation(
     RevokeAllSessionsRequest
   >({
     mutationFn: (req) => revokeAllSessions(req),
+    ...options,
+  })
+}
+
+/**
+ * ListMySecurityEvents retrieves the security audit logs for the authenticated user.
+ */
+export async function listMySecurityEvents(
+  req: ListMySecurityEventsRequest
+): Promise<ListMySecurityEventsResponse> {
+  return request<ListMySecurityEventsResponse>({
+    method: "GET",
+    url: "/api/v1/identity/users/me/security-events",
+    params: req,
+  })
+}
+
+export function useListMySecurityEventsQuery(
+  req: ListMySecurityEventsRequest,
+  options?: Omit<
+    UseQueryOptions<ListMySecurityEventsResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListMySecurityEventsResponse, Error>({
+    queryKey: ["/api/v1/identity/users/me/security-events", req],
+    queryFn: () => listMySecurityEvents(req),
     ...options,
   })
 }

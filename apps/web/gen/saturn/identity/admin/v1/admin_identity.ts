@@ -96,6 +96,28 @@ export interface User {
   updateTime: string
 }
 
+export interface SecurityEvent {
+  id: string
+  userId: string
+  email: string
+  eventType: string
+  ipAddress: string
+  userAgent: string
+  createdAt: string
+}
+
+export interface ListSecurityEventsRequest {
+  email: string
+  eventType: string
+  limit: number
+  nextPageToken: string
+}
+
+export interface ListSecurityEventsResponse {
+  events: SecurityEvent[]
+  nextPageToken: string
+}
+
 /**
  * AdminIdentity provides administrative operations for user management.
  */
@@ -246,6 +268,33 @@ export function useRevokeAllSessionsMutation(
     { user_id: string; req: RevokeAllSessionsRequest }
   >({
     mutationFn: ({ user_id, req }) => revokeAllSessions(user_id, req),
+    ...options,
+  })
+}
+
+/**
+ * ListSecurityEvents returns a list of security audit logs.
+ */
+export async function listSecurityEvents(
+  req: ListSecurityEventsRequest
+): Promise<ListSecurityEventsResponse> {
+  return request<ListSecurityEventsResponse>({
+    method: "GET",
+    url: "/api/v1/admin/identity/security-events",
+    params: req,
+  })
+}
+
+export function useListSecurityEventsQuery(
+  req: ListSecurityEventsRequest,
+  options?: Omit<
+    UseQueryOptions<ListSecurityEventsResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListSecurityEventsResponse, Error>({
+    queryKey: ["/api/v1/admin/identity/security-events", req],
+    queryFn: () => listSecurityEvents(req),
     ...options,
   })
 }

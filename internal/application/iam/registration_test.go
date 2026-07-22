@@ -150,6 +150,18 @@ func (f *fakeIdentityService) RevokeSessionByID(ctx context.Context, sessionID i
 	return nil
 }
 
+func (f *fakeIdentityService) UpdateLockoutState(ctx context.Context, req identity.UpdateLockoutRequest) error {
+	return nil
+}
+
+func (f *fakeIdentityService) CreateSecurityEvent(ctx context.Context, event *identity.SecurityEvent) error {
+	return nil
+}
+
+func (f *fakeIdentityService) ListSecurityEvents(ctx context.Context, filter identity.SecurityEventFilter) ([]*identity.SecurityEvent, string, error) {
+	return nil, "", nil
+}
+
 func TestRegisterHashesPassword(t *testing.T) {
 	fakeSvc := newFakeIdentityService()
 	testH := newTestHasher(password.DefaultParams())

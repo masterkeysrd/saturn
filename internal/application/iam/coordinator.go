@@ -50,6 +50,11 @@ func (c *Coordinator) GetCurrentUser(ctx context.Context, userID identity.UserID
 	return c.identityService.GetUserByID(ctx, userID)
 }
 
+// ListSecurityEvents queries audit logs based on the given filter.
+func (c *Coordinator) ListSecurityEvents(ctx context.Context, filter identity.SecurityEventFilter) ([]*identity.SecurityEvent, string, error) {
+	return c.identityService.ListSecurityEvents(ctx, filter)
+}
+
 // IdentityService defines the interface for identity domain operations.
 type IdentityService interface {
 	CreateUser(ctx context.Context, user *identity.User) error
@@ -73,6 +78,9 @@ type IdentityService interface {
 	RevokeSessionByHash(ctx context.Context, refreshTokenHash []byte) error
 	GetActiveSessions(ctx context.Context, userID identity.UserID) ([]*identity.Session, error)
 	RevokeSessionByID(ctx context.Context, sessionID identity.SessionID, userID identity.UserID) error
+	UpdateLockoutState(ctx context.Context, req identity.UpdateLockoutRequest) error
+	CreateSecurityEvent(ctx context.Context, event *identity.SecurityEvent) error
+	ListSecurityEvents(ctx context.Context, filter identity.SecurityEventFilter) ([]*identity.SecurityEvent, string, error)
 }
 
 // SpaceService defines the interface for space operations required by IAM application.

@@ -20,5 +20,9 @@ export const menu: FeatureMenu = {
       title: "Database Backups",
       url: "/admin/backups",
     },
+    {
+      title: "Security Audit",
+      url: "/admin/security",
+    },
   ],
 }

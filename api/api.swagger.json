@@ -85,6 +85,56 @@
         ]
       }
     },
+    "/v1/admin/identity/security-events": {
+      "get": {
+        "summary": "ListSecurityEvents returns a list of security audit logs.",
+        "operationId": "AdminIdentity_ListSecurityEvents",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSecurityEventsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "eventType",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "nextPageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AdminIdentity"
+        ]
+      }
+    },
     "/v1/admin/identity/users": {
       "get": {
         "summary": "ListUsers returns users with optional filtering by status or search query.",
@@ -2111,6 +2161,44 @@
         ]
       }
     },
+    "/v1/identity/users/me/security-events": {
+      "get": {
+        "summary": "ListMySecurityEvents retrieves the security audit logs for the authenticated user.",
+        "operationId": "Identity_ListMySecurityEvents",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListMySecurityEventsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "nextPageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Identity"
+        ]
+      }
+    },
     "/v1/identity/users:login": {
       "post": {
         "summary": "LoginUser authenticates a user and returns access and refresh tokens.",
@@ -2908,6 +2996,33 @@
         }
       }
     },
+    "identityAdminV1SecurityEvent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "eventType": {
+          "type": "string"
+        },
+        "ipAddress": {
+          "type": "string"
+        },
+        "userAgent": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
     "identityAdminV1User": {
       "type": "object",
       "properties": {
@@ -2982,6 +3097,30 @@
     "saturnIdentityV1RevokeAllSessionsResponse": {
       "type": "object",
       "description": "RevokeAllSessionsResponse is empty on success."
+    },
+    "saturnIdentityV1SecurityEvent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "eventType": {
+          "type": "string"
+        },
+        "ipAddress": {
+          "type": "string"
+        },
+        "userAgent": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
     },
     "saturnIdentityV1User": {
       "type": "object",
@@ -3900,6 +4039,21 @@
         }
       }
     },
+    "v1ListMySecurityEventsResponse": {
+      "type": "object",
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/saturnIdentityV1SecurityEvent"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
+    },
     "v1ListRecurringExpensesResponse": {
       "type": "object",
       "properties": {
@@ -3939,6 +4093,21 @@
             "type": "object",
             "$ref": "#/definitions/v1ScheduleInfo"
           }
+        }
+      }
+    },
+    "v1ListSecurityEventsResponse": {
+      "type": "object",
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/identityAdminV1SecurityEvent"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
         }
       }
     },

@@ -2,15 +2,17 @@ import { useSearchParams } from "react-router-dom"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { AccountSettings } from "./account-settings"
 import { SpaceSettings } from "./space-settings"
+import { SecuritySettings } from "./security-settings"
+
+type SettingsTab = "account" | "spaces" | "security"
 
 export function SettingsView() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   // Get active tab from URL query params, default to "account"
-  const activeTab =
-    (searchParams.get("tab") as "account" | "spaces") || "account"
+  const activeTab = (searchParams.get("tab") as SettingsTab) || "account"
 
-  const setActiveTab = (tab: "account" | "spaces") => {
+  const setActiveTab = (tab: SettingsTab) => {
     // Keep 'create' query parameter if present when switching to spaces tab
     const createVal = searchParams.get("create")
     const newParams: Record<string, string> = { tab }
@@ -28,13 +30,13 @@ export function SettingsView() {
           Settings
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Manage your personal account details and spaces.
+          Manage your personal account details, spaces, and login security.
         </p>
       </div>
 
       <Tabs
         value={activeTab}
-        onValueChange={(val) => setActiveTab(val as "account" | "spaces")}
+        onValueChange={(val) => setActiveTab(val as SettingsTab)}
       >
         <TabsList
           variant="line"
@@ -45,6 +47,9 @@ export function SettingsView() {
           </TabsTrigger>
           <TabsTrigger value="spaces" className="cursor-pointer">
             Spaces
+          </TabsTrigger>
+          <TabsTrigger value="security" className="cursor-pointer">
+            Security & Logins
           </TabsTrigger>
         </TabsList>
 
@@ -60,6 +65,13 @@ export function SettingsView() {
           className="mt-6 animate-in duration-200 fade-in"
         >
           <SpaceSettings />
+        </TabsContent>
+
+        <TabsContent
+          value="security"
+          className="mt-6 animate-in duration-200 fade-in"
+        >
+          <SecuritySettings />
         </TabsContent>
       </Tabs>
     </div>

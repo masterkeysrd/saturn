@@ -1,6 +1,9 @@
 package identity
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // UserStore defines the interface for user persistence operations.
 type UserStore interface {
@@ -24,6 +27,16 @@ type UserStore interface {
 
 	// GetUsers returns users with optional filtering and pagination.
 	GetUsers(ctx context.Context, filter *ListUsersFilter) ([]*User, string, error)
+
+	// UpdateLockoutState modifies the failed login attempts and lockout timestamps.
+	UpdateLockoutState(ctx context.Context, req UpdateLockoutRequest) error
+}
+
+// UpdateLockoutRequest contains parameters for modifying a user's lockout state.
+type UpdateLockoutRequest struct {
+	UserID      UserID
+	Attempts    int
+	LockedUntil *time.Time
 }
 
 // UserCredentialStore defines the interface for user credential persistence operations.

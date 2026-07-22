@@ -67,6 +67,11 @@ service Identity {
       body: "*"
     };
   }
+
+  // ListMySecurityEvents retrieves the security audit logs for the authenticated user.
+  rpc ListMySecurityEvents(ListMySecurityEventsRequest) returns (ListMySecurityEventsResponse) {
+    option (google.api.http) = {get: "/v1/identity/users/me/security-events"};
+  }
 }
 
 // LoginUserRequest contains user credentials for authentication.
@@ -194,3 +199,22 @@ message RevokeAllSessionsRequest {}
 
 // RevokeAllSessionsResponse is empty on success.
 message RevokeAllSessionsResponse {}
+
+message SecurityEvent {
+  string id = 1;
+  string email = 2;
+  string event_type = 3;
+  string ip_address = 4;
+  string user_agent = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message ListMySecurityEventsRequest {
+  int32 limit = 1;
+  string next_page_token = 2;
+}
+
+message ListMySecurityEventsResponse {
+  repeated SecurityEvent events = 1;
+  string next_page_token = 2;
+}
