@@ -1,0 +1,61 @@
+---
+name: saturn-app
+
+services:
+  migrate:
+    image: ${SATURN_IMAGE:-saturn:latest}
+    restart: "no"
+    command: ["saturn", "migrate", "up"]
+    networks:
+      - saturn-network
+    environment:
+      SATURN_DB_HOST: db
+      SATURN_DB_PORT: "5432"
+      SATURN_DB_USER: ${POSTGRES_USER:-saturn}
+      SATURN_DB_PASSWORD: ${POSTGRES_PASSWORD:-saturn}
+      SATURN_DB_NAME: ${POSTGRES_DB:-saturn}
+
+  saturn:
+    image: ${SATURN_IMAGE:-saturn:latest}
+    restart: unless-stopped
+    expose:
+      - "8080"
+    environment:
+      SATURN_DB_HOST: db
+      SATURN_DB_PORT: "5432"
+      SATURN_DB_USER: ${POSTGRES_USER:-saturn}
+      SATURN_DB_PASSWORD: ${POSTGRES_PASSWORD:-saturn}
+      SATURN_DB_NAME: ${POSTGRES_DB:-saturn}
+      SATURN_GATEWAY_ADDR: ":8080"
+      SATURN_LOG_LEVEL: info
+      SATURN_LOG_FORMAT: json
+      SATURN_SWAGGER_ENABLED: false
+      GOMEMLIMIT: 128MiB
+      SATURN_GATEWAY_COOKIE_SECURE: "true"
+      # S3 Backups Settings
+      SATURN_BACKUP_DRIVER: ${SATURN_BACKUP_DRIVER:-local}
+      SATURN_BACKUP_LOCAL_DIR: ${SATURN_BACKUP_LOCAL_DIR:-/data/backups}
+      SATURN_BACKUP_S3_BUCKET: ${SATURN_BACKUP_S3_BUCKET:-}
+      SATURN_BACKUP_S3_REGION: ${SATURN_BACKUP_S3_REGION:-us-east-1}
+      SATURN_BACKUP_S3_ENDPOINT: ${SATURN_BACKUP_S3_ENDPOINT:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+    volumes:
+       - saturn-data:/data
+    networks:
+      - saturn-network
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          memory: 192M
+
+networks:
+  saturn-network:
+    name: saturn-network
+    external: true
+
+volumes:
+  saturn-data:
