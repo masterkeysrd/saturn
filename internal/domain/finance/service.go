@@ -1594,6 +1594,11 @@ func (s *Service) CreateTransfer(ctx context.Context, t *Transfer) (*Transfer, e
 		return nil, errors.New("accounts do not belong to the same space as the transfer")
 	}
 
+	// Double-entry validation: same currency transfers must have matching source and destination amounts
+	if srcAcc.Currency == destAcc.Currency && t.SourceAmount != t.DestinationAmount {
+		return nil, errors.New("source and destination amounts must match for single-currency transfers")
+	}
+
 	// 1. Insert Transfer parent record
 	if err := s.deps.TransferStore.Create(ctx, t); err != nil {
 		return nil, err
