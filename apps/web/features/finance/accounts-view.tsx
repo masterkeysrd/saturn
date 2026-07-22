@@ -483,7 +483,9 @@ export function AccountsView() {
                                     Edit Account
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
-                                    onClick={() => handleDeleteAccount(acc.id)}
+                                    onClick={() =>
+                                      handleDeleteAccount(acc.id || "")
+                                    }
                                     className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-rose-500 hover:bg-rose-500/10"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
@@ -802,9 +804,9 @@ function CreateAccountSheet({
     try {
       if (editAccount) {
         await updateMutation.mutateAsync({
-          id: editAccount.id,
+          id: editAccount.id || "",
           req: {
-            id: editAccount.id,
+            id: editAccount.id || "",
             account: {
               ...editAccount,
               name,
@@ -833,8 +835,6 @@ function CreateAccountSheet({
             color,
             notes,
             lastFour: lastFour || "",
-            createTime: "",
-            updateTime: "",
           },
         })
       }

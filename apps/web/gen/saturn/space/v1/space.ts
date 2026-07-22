@@ -16,7 +16,7 @@ export interface Space {
   /**
    * The workspace's unique identifier.
    */
-  id: string
+  id?: string
   /**
    * The workspace's name.
    */
@@ -28,11 +28,11 @@ export interface Space {
   /**
    * The owner's user ID.
    */
-  ownerId: string
+  ownerId?: string
   /**
    * The optimistic locking version.
    */
-  version: string
+  version?: string
   /**
    * The creation timestamp.
    */

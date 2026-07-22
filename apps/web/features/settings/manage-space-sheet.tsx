@@ -52,7 +52,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
   const [prevSpaceId, setPrevSpaceId] = useState<string | null>(null)
 
   if (space && space.id !== prevSpaceId) {
-    setPrevSpaceId(space.id)
+    setPrevSpaceId(space.id || null)
     setName(space.name)
     setDescription(space.description || "")
     setGeneralError("")

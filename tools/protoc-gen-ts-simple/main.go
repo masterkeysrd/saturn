@@ -137,7 +137,7 @@ func generateMessage(g *protogen.GeneratedFile, msg *protogen.Message) {
 			fieldName := field.Desc.JSONName()
 			tsType := mapType(field)
 
-			isOptional := field.Desc.HasOptionalKeyword() || field.Oneof != nil
+			isOptional := field.Desc.HasOptionalKeyword() || field.Oneof != nil || isOutputOnly(field)
 
 			writeFieldComments(g, field.Comments)
 			suffix := ""
@@ -464,4 +464,21 @@ func mapBaseTypeForKind(kind protoreflect.Kind, msg protoreflect.MessageDescript
 	default:
 		return "any"
 	}
+}
+
+func isOutputOnly(field *protogen.Field) bool {
+	options := field.Desc.Options()
+	if !proto.HasExtension(options, annotations.E_FieldBehavior) {
+		return false
+	}
+	behaviors, ok := proto.GetExtension(options, annotations.E_FieldBehavior).([]annotations.FieldBehavior)
+	if !ok {
+		return false
+	}
+	for _, b := range behaviors {
+		if b == annotations.FieldBehavior_OUTPUT_ONLY {
+			return true
+		}
+	}
+	return false
 }

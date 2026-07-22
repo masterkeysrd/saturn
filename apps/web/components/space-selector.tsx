@@ -71,7 +71,7 @@ export function SpaceSelector() {
               const role =
                 user && space.ownerId === user.id ? "owner" : "member"
               switchSpace({
-                spaceId: space.id,
+                spaceId: space.id || "",
                 spaceName: space.name,
                 spaceRole: role,
               })

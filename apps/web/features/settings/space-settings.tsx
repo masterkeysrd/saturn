@@ -57,7 +57,7 @@ export function SpaceSettings() {
       setNewName("")
       setNewDesc("")
       switchSpace({
-        spaceId: space.id,
+        spaceId: space.id || "",
         spaceName: space.name,
         spaceRole: "owner",
       })
@@ -174,7 +174,7 @@ export function SpaceSettings() {
                         size="xs"
                         onClick={() =>
                           switchSpace({
-                            spaceId: space.id,
+                            spaceId: space.id || "",
                             spaceName: space.name,
                             spaceRole: "owner",
                           })
@@ -194,7 +194,7 @@ export function SpaceSettings() {
                       variant="ghost"
                       size="icon-xs"
                       className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => setDeleteTarget(space.id)}
+                      onClick={() => setDeleteTarget(space.id || null)}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>

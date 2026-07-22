@@ -536,21 +536,21 @@ export interface ListCurrenciesResponse {
 }
 
 export interface Account {
-  id: string
+  id?: string
   spaceId: string
   name: string
   type: AccountType
   currency: string
   initialBalance: string
-  currentBalance: string
+  currentBalance?: string
   creditLimit: string
   isDefault: boolean
   isActive: boolean
   color: string
   notes: string
   lastFour: string
-  createTime: string
-  updateTime: string
+  createTime?: string
+  updateTime?: string
 }
 
 export interface CreateAccountRequest {
