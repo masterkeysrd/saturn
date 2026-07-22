@@ -3,6 +3,7 @@ package identity
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"strings"
 
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
@@ -57,6 +58,9 @@ func (h *Handler) LoginUser(ctx context.Context, req *identityv1.LoginUserReques
 		}
 		if strings.Contains(err.Error(), "temporarily locked") {
 			return nil, status.Error(codes.ResourceExhausted, err.Error())
+		}
+		if err.Error() != "invalid credentials" {
+			slog.Error("login failed with internal system error", "identifier", ident, "error", err)
 		}
 		return nil, status.Error(codes.Unauthenticated, "invalid credentials")
 	}
