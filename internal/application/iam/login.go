@@ -78,6 +78,12 @@ func (c *Coordinator) Login(ctx context.Context, req *LoginRequest) (*LoginRespo
 	// 3. Authenticate
 	authUser, err := c.identityService.Authenticate(ctx, req.Identifier, req.Password)
 	if err != nil {
+		if errors.Is(err, identity.ErrAccountPendingApproval) ||
+			errors.Is(err, identity.ErrAccountSuspended) ||
+			errors.Is(err, identity.ErrAccountInactive) {
+			return nil, err
+		}
+
 		// Increment failed attempts
 		attempts := user.FailedLoginAttempts + 1
 		var lockedUntil *time.Time

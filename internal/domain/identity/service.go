@@ -227,6 +227,12 @@ func (s *Service) IncrementAuthVersion(ctx context.Context, id UserID) (int64, e
 // ErrAccountPendingApproval is returned when a user tries to authenticate but their account is pending approval.
 var ErrAccountPendingApproval = errors.New("account pending approval")
 
+// ErrAccountSuspended is returned when a user tries to authenticate but their account is suspended.
+var ErrAccountSuspended = errors.New("account is suspended")
+
+// ErrAccountInactive is returned when a user tries to authenticate but their account is inactive.
+var ErrAccountInactive = errors.New("account is inactive")
+
 // Authenticate verifies a user's credentials and returns the user if valid.
 func (s *Service) Authenticate(ctx context.Context, identifier string, password string) (*User, error) {
 	user, err := s.GetUserByEmail(ctx, identifier)
@@ -240,6 +246,12 @@ func (s *Service) Authenticate(ctx context.Context, identifier string, password 
 
 	if user.Status == UserStatusPendingApproval {
 		return nil, ErrAccountPendingApproval
+	}
+	if user.Status == UserStatusSuspended {
+		return nil, ErrAccountSuspended
+	}
+	if user.Status == UserStatusInactive {
+		return nil, ErrAccountInactive
 	}
 
 	cred, err := s.deps.CredentialStore.GetByUserIDAndAuthType(ctx, user.ID, "password")

@@ -56,6 +56,12 @@ func (h *Handler) LoginUser(ctx context.Context, req *identityv1.LoginUserReques
 		if errors.Is(err, identity.ErrAccountPendingApproval) {
 			return nil, status.Error(codes.PermissionDenied, "account pending approval")
 		}
+		if errors.Is(err, identity.ErrAccountSuspended) {
+			return nil, status.Error(codes.PermissionDenied, "account is suspended")
+		}
+		if errors.Is(err, identity.ErrAccountInactive) {
+			return nil, status.Error(codes.PermissionDenied, "account is inactive")
+		}
 		if strings.Contains(err.Error(), "temporarily locked") {
 			return nil, status.Error(codes.ResourceExhausted, err.Error())
 		}
