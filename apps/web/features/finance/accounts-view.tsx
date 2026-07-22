@@ -734,16 +734,7 @@ function CreateAccountSheet({
   refetchAccounts,
 }: CreateAccountSheetProps) {
   const { currencies } = useWorkspaceFinance()
-  const fallbackCurrencies = [
-    { code: "USD" },
-    { code: "EUR" },
-    { code: "GBP" },
-    { code: "CAD" },
-    { code: "JPY" },
-    { code: "DOP" },
-  ]
-  const currencyList =
-    currencies && currencies.length > 0 ? currencies : fallbackCurrencies
+  const currencyList = currencies || []
 
   const [name, setName] = useState("")
   const [type, setType] = useState<AccountType>("BANK")

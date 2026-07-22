@@ -31,8 +31,15 @@ import { RecurringExpenseHistorySheet } from "./components/recurring-expense-his
 import { formatCents, getBudgetColors, getBudgetIcon } from "./utils"
 import { cn } from "@/lib/utils"
 
+// Constants for time conversions and pagination
+const WEEKS_IN_YEAR = 52
+const MONTHS_IN_YEAR = 12
+const FORECAST_DAYS_WINDOW = 7
+const DEFAULT_PAGE_SIZE = 100
+const HISTORY_PAGE_SIZE = 50
+
 export function RecurringView() {
-  const { spaceId, settings, getConversionPreview, budgets } =
+  const { spaceId, settings, getConversionPreview, budgets, currencies } =
     useWorkspaceFinance()
   const baseCurrency = settings?.baseCurrency || "USD"
 
@@ -53,7 +60,7 @@ export function RecurringView() {
     isLoading: expensesLoading,
     refetch: refetchExpenses,
   } = useListRecurringExpensesQuery({
-    pageSize: 100,
+    pageSize: DEFAULT_PAGE_SIZE,
     pageToken: "",
     status: "",
   })
@@ -63,7 +70,7 @@ export function RecurringView() {
     isLoading: paymentsLoading,
     refetch: refetchPayments,
   } = useListScheduledPaymentsQuery({
-    pageSize: 100,
+    pageSize: DEFAULT_PAGE_SIZE,
     pageToken: "",
     status: "",
     startDate: "",
@@ -84,7 +91,7 @@ export function RecurringView() {
     {
       budgetId: "",
       type: "TRANSACTION_TYPE_UNSPECIFIED",
-      pageSize: 50,
+      pageSize: HISTORY_PAGE_SIZE,
       pageToken: "",
       sourceType: "recurrent_expense",
       sourceId: "",
@@ -110,30 +117,45 @@ export function RecurringView() {
     }
   }
 
-  // Calculate Normalized Monthly Recurring Overhead
+  // Convert amount to base currency using exchange rates
+  const convertToBase = (amountVal: number, fromCurrency: string) => {
+    if (!settings?.baseCurrency || fromCurrency === settings.baseCurrency) {
+      return amountVal
+    }
+    const preview = getConversionPreview(amountVal.toString(), fromCurrency)
+    if (preview && typeof preview.amount === "number") {
+      return preview.amount
+    }
+    return amountVal // Fallback if rate not configured yet
+  }
+
+  // Calculate Normalized Monthly Recurring Overhead in base currency
   const monthlyOverhead = expenses.reduce((acc, exp) => {
     if (exp.status !== "active") return acc
 
     const amountVal = formatCents(exp.amount)
-    let normalizedAmount = amountVal
+    const convertedAmount = convertToBase(amountVal, exp.currency)
+    let normalizedAmount = convertedAmount
 
     if (exp.interval === "weekly") {
-      normalizedAmount = amountVal * (52 / 12)
+      normalizedAmount = convertedAmount * (WEEKS_IN_YEAR / MONTHS_IN_YEAR)
     } else if (exp.interval === "yearly") {
-      normalizedAmount = amountVal / 12
+      normalizedAmount = convertedAmount / MONTHS_IN_YEAR
     }
 
     return acc + normalizedAmount
   }, 0)
 
-  // Calculate Next 7 Days Outflows
+  // Calculate Next 7 Days Outflows in base currency
   const next7Days = new Date()
-  next7Days.setDate(next7Days.getDate() + 7)
+  next7Days.setDate(next7Days.getDate() + FORECAST_DAYS_WINDOW)
 
   const upcomingOutflows = payments.reduce((acc, pay) => {
     const dueDate = new Date(pay.dueDate)
     if (dueDate <= next7Days) {
-      return acc + formatCents(pay.amount)
+      const amountVal = formatCents(pay.amount)
+      const convertedAmount = convertToBase(amountVal, pay.currency)
+      return acc + convertedAmount
     }
     return acc
   }, 0)
@@ -666,6 +688,7 @@ export function RecurringView() {
         editExpense={editExpense}
         refetchExpenses={refetchExpenses}
         getConversionPreview={getConversionPreview}
+        currencies={currencies}
       />
 
       <ConfirmPaymentSheet

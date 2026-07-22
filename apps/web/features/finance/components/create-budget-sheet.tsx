@@ -3,6 +3,7 @@ import {
   useCreateBudgetMutation,
   type RecurrenceInterval,
   useListAccountsQuery,
+  type CurrencyInfo,
 } from "@/gen/saturn/finance/v1/finance"
 import {
   Sheet,
@@ -51,6 +52,7 @@ interface CreateBudgetSheetProps {
     | { amount: number; rate: number; currency: string }
     | { error: string }
     | null
+  currencies?: CurrencyInfo[]
 }
 
 export function CreateBudgetSheet({
@@ -60,6 +62,7 @@ export function CreateBudgetSheet({
   baseCurrency,
   refetchBudgets,
   getConversionPreview,
+  currencies = [],
 }: CreateBudgetSheetProps) {
   const [name, setName] = useState("")
   const [limit, setLimit] = useState("")
@@ -236,11 +239,11 @@ export function CreateBudgetSheet({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                <SelectItem value="USD">USD</SelectItem>
-                <SelectItem value="EUR">EUR</SelectItem>
-                <SelectItem value="GBP">GBP</SelectItem>
-                <SelectItem value="CAD">CAD</SelectItem>
-                <SelectItem value="DOP">DOP</SelectItem>
+                {currencies.map((cur) => (
+                  <SelectItem key={cur.code} value={cur.code}>
+                    {cur.code} {cur.name ? `(${cur.name})` : ""}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

@@ -1415,7 +1415,7 @@ export async function createAccount(
   return request<Account>({
     method: "POST",
     url: "/api/v1/finance/accounts",
-    data: req,
+    data: req.account,
   })
 }
 
@@ -1463,7 +1463,7 @@ export async function updateAccount(
   return request<Account>({
     method: "PUT",
     url: `/api/v1/finance/accounts/${id}`,
-    data: req,
+    data: req.account,
   })
 }
 

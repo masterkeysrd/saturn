@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react"
 import {
   type Budget,
-  type ListBudgetsResponse,
   useDeleteBudgetMutation,
 } from "@/gen/saturn/finance/v1/finance"
 import { useWorkspaceFinance } from "./use-workspace-finance"
@@ -13,6 +12,7 @@ import { CreateBudgetSheet } from "./components/create-budget-sheet"
 import { EditBudgetSheet } from "./components/edit-budget-sheet"
 import { CreateTransactionSheet } from "./components/create-transaction-sheet"
 import { BudgetHistorySheet } from "./components/budget-history-sheet"
+import { formatCents } from "./utils"
 
 export function BudgetsView() {
   const {
@@ -22,6 +22,7 @@ export function BudgetsView() {
     budgetsData,
     refetchBudgets,
     getConversionPreview,
+    currencies,
   } = useWorkspaceFinance()
 
   const [createOpen, setCreateOpen] = useState(false)
@@ -41,31 +42,24 @@ export function BudgetsView() {
     setHistoryOpen(true)
   }
 
-  // Track aggregated base currency budget total in client memory
-  const [aggregatedLimits, setAggregatedLimits] = useState<
-    Record<string, number>
-  >({})
-
-  const [prevBudgetsData, setPrevBudgetsData] = useState<
-    ListBudgetsResponse | undefined
-  >(undefined)
-
-  if (budgetsData !== prevBudgetsData) {
-    setPrevBudgetsData(budgetsData)
-    setAggregatedLimits({})
-  }
-
-  // Aggregate limits total in base currency
+  // Aggregate limits total in base currency synchronously
   const totalLimitBudgeted = useMemo(() => {
-    return Object.values(aggregatedLimits).reduce((acc, curr) => acc + curr, 0)
-  }, [aggregatedLimits])
+    const budgets = budgetsData?.budgets || []
+    return budgets.reduce((acc, b) => {
+      if (!b.isActive) return acc
+      const limit = formatCents(b.limitAmount)
+      if (!settings?.baseCurrency || b.currency === settings.baseCurrency) {
+        return acc + limit
+      }
+      const preview = getConversionPreview(limit.toString(), b.currency)
+      if (preview && typeof preview.amount === "number") {
+        return acc + preview.amount
+      }
+      return acc + limit
+    }, 0)
+  }, [budgetsData, settings, getConversionPreview])
 
-  const handlePeriodLoaded = (budgetId: string, limitInBase: number) => {
-    setAggregatedLimits((prev) => {
-      if (prev[budgetId] === limitInBase) return prev
-      return { ...prev, [budgetId]: limitInBase }
-    })
-  }
+  const handlePeriodLoaded = () => {}
 
   const deleteMutation = useDeleteBudgetMutation()
 
@@ -189,6 +183,7 @@ export function BudgetsView() {
           baseCurrency={settings?.baseCurrency || "USD"}
           refetchBudgets={refetchBudgets}
           getConversionPreview={getConversionPreview}
+          currencies={currencies}
         />
 
         {/* Modal Sheet triggers */}
@@ -199,6 +194,7 @@ export function BudgetsView() {
           spaceId={spaceId}
           refetchBudgets={refetchBudgets}
           getConversionPreview={getConversionPreview}
+          currencies={currencies}
         />
 
         {/* Quick transaction recording slider sheet */}

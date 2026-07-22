@@ -4,6 +4,7 @@ import {
   useUpdateRecurringExpenseMutation,
   type RecurringExpense,
   type Budget,
+  type CurrencyInfo,
 } from "@/gen/saturn/finance/v1/finance"
 import {
   Sheet,
@@ -43,6 +44,7 @@ interface CreateRecurringExpenseSheetProps {
     | { amount: number; rate: number; currency: string }
     | { error: string }
     | null
+  currencies?: CurrencyInfo[]
 }
 
 export function CreateRecurringExpenseSheet({
@@ -53,6 +55,7 @@ export function CreateRecurringExpenseSheet({
   editExpense,
   refetchExpenses,
   getConversionPreview,
+  currencies = [],
 }: CreateRecurringExpenseSheetProps) {
   const [budgetId, setBudgetId] = useState("")
   const [name, setName] = useState("")
@@ -238,9 +241,9 @@ export function CreateRecurringExpenseSheet({
                   <SelectValue placeholder="USD" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                  {["USD", "EUR", "GBP", "CAD", "AUD", "JPY"].map((cur) => (
-                    <SelectItem key={cur} value={cur}>
-                      {cur}
+                  {currencies.map((cur) => (
+                    <SelectItem key={cur.code} value={cur.code}>
+                      {cur.code} {cur.name ? `(${cur.name})` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>

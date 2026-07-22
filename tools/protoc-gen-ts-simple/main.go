@@ -231,7 +231,19 @@ func generateMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 	if httpMethod == "GET" || httpMethod == "DELETE" {
 		g.P("    params: req,")
 	} else {
-		g.P("    data: req,")
+		bodyField := httpRule.GetBody()
+		if bodyField != "" && bodyField != "*" {
+			jsonBodyField := bodyField
+			for _, f := range method.Input.Fields {
+				if string(f.Desc.Name()) == bodyField {
+					jsonBodyField = f.Desc.JSONName()
+					break
+				}
+			}
+			g.P("    data: req.", jsonBodyField, ",")
+		} else {
+			g.P("    data: req,")
+		}
 	}
 	g.P("  });")
 	g.P("}")
