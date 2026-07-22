@@ -125,3 +125,15 @@ func (c *Coordinator) UpdateExpense(ctx context.Context, req *UpdateExpenseReque
 
 	return c.financeService.UpdateExpense(ctx, txn)
 }
+
+type ListTransactionEventsRequest struct {
+	TransactionID finance.TransactionID
+}
+
+func (c *Coordinator) ListTransactionEvents(ctx context.Context, req *ListTransactionEventsRequest) ([]*finance.TransactionEvent, error) {
+	rCtx, err := c.resolveContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return c.financeService.ListTransactionEvents(ctx, rCtx.SpaceID, req.TransactionID)
+}

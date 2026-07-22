@@ -608,6 +608,27 @@ export interface ListTransfersResponse {
   nextPageToken: string
 }
 
+export interface ListTransactionEventsRequest {
+  txnId: string
+}
+
+export interface TransactionEvent {
+  id: string
+  spaceId: string
+  txnId: string
+  eventType: string
+  /**
+   *
+   * @description JSON string representing event details
+   */
+  metadata: string
+  createTime: string
+}
+
+export interface ListTransactionEventsResponse {
+  events: TransactionEvent[]
+}
+
 /**
  * Finance provides budgeting and currency management operations for a workspace.
  */
@@ -714,10 +735,12 @@ export async function deleteBudget(
   id: string,
   req: DeleteBudgetRequest
 ): Promise<Record<string, never>> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
   return request<Record<string, never>>({
     method: "DELETE",
     url: `/api/v1/finance/budgets/${id}`,
-    params: req,
+    params: params,
   })
 }
 
@@ -772,10 +795,12 @@ export async function getBudgetPeriod(
   budget_id: string,
   req: GetBudgetPeriodRequest
 ): Promise<BudgetPeriod> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).budgetId
   return request<BudgetPeriod>({
     method: "GET",
     url: `/api/v1/finance/budgets/${budget_id}/period`,
-    params: req,
+    params: params,
   })
 }
 
@@ -925,10 +950,12 @@ export async function deleteTransaction(
   id: string,
   req: DeleteTransactionRequest
 ): Promise<Record<string, never>> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
   return request<Record<string, never>>({
     method: "DELETE",
     url: `/api/v1/finance/transactions/${id}`,
-    params: req,
+    params: params,
   })
 }
 
@@ -972,6 +999,36 @@ export function useListTransactionsQuery(
   return useQuery<ListTransactionsResponse, Error>({
     queryKey: ["/api/v1/finance/transactions", req],
     queryFn: () => listTransactions(req),
+    ...options,
+  })
+}
+
+/**
+ * ListTransactionEvents lists the historical lifecycle events of a transaction.
+ */
+export async function listTransactionEvents(
+  txn_id: string,
+  req: ListTransactionEventsRequest
+): Promise<ListTransactionEventsResponse> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).txnId
+  return request<ListTransactionEventsResponse>({
+    method: "GET",
+    url: `/api/v1/finance/transactions/${txn_id}/events`,
+    params: params,
+  })
+}
+
+export function useListTransactionEventsQuery(
+  req: ListTransactionEventsRequest,
+  options?: Omit<
+    UseQueryOptions<ListTransactionEventsResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListTransactionEventsResponse, Error>({
+    queryKey: [`/api/v1/finance/transactions/${req.txnId}/events`, req],
+    queryFn: () => listTransactionEvents(req.txnId, req),
     ...options,
   })
 }
@@ -1067,10 +1124,12 @@ export async function deleteRecurringExpense(
   id: string,
   req: DeleteRecurringExpenseRequest
 ): Promise<Record<string, never>> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
   return request<Record<string, never>>({
     method: "DELETE",
     url: `/api/v1/finance/recurring-expenses/${id}`,
-    params: req,
+    params: params,
   })
 }
 
@@ -1206,10 +1265,12 @@ export async function getBorrowing(
   id: string,
   req: GetBorrowingRequest
 ): Promise<Borrowing> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
   return request<Borrowing>({
     method: "GET",
     url: `/api/v1/finance/borrowings/${id}`,
-    params: req,
+    params: params,
   })
 }
 
@@ -1289,10 +1350,12 @@ export async function deleteBorrowing(
   id: string,
   req: DeleteBorrowingRequest
 ): Promise<Record<string, never>> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
   return request<Record<string, never>>({
     method: "DELETE",
     url: `/api/v1/finance/borrowings/${id}`,
-    params: req,
+    params: params,
   })
 }
 
@@ -1352,10 +1415,12 @@ export async function listBorrowingRepayments(
   borrowing_id: string,
   req: ListBorrowingRepaymentsRequest
 ): Promise<ListBorrowingRepaymentsResponse> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).borrowingId
   return request<ListBorrowingRepaymentsResponse>({
     method: "GET",
     url: `/api/v1/finance/borrowings/${borrowing_id}/repayments`,
-    params: req,
+    params: params,
   })
 }
 
@@ -1381,10 +1446,13 @@ export async function deleteBorrowingRepayment(
   id: string,
   req: DeleteBorrowingRepaymentRequest
 ): Promise<Record<string, never>> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).borrowingId
+  delete (params as Record<string, unknown>).id
   return request<Record<string, never>>({
     method: "DELETE",
     url: `/api/v1/finance/borrowings/${borrowing_id}/repayments/${id}`,
-    params: req,
+    params: params,
   })
 }
 
@@ -1435,10 +1503,12 @@ export async function getAccount(
   id: string,
   req: GetAccountRequest
 ): Promise<Account> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
   return request<Account>({
     method: "GET",
     url: `/api/v1/finance/accounts/${id}`,
-    params: req,
+    params: params,
   })
 }
 
@@ -1489,10 +1559,12 @@ export async function deleteAccount(
   id: string,
   req: DeleteAccountRequest
 ): Promise<Record<string, never>> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
   return request<Record<string, never>>({
     method: "DELETE",
     url: `/api/v1/finance/accounts/${id}`,
-    params: req,
+    params: params,
   })
 }
 

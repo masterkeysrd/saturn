@@ -100,6 +100,11 @@ service Finance {
     option (google.api.http) = {get: "/v1/finance/transactions"};
   }
 
+  // ListTransactionEvents lists the historical lifecycle events of a transaction.
+  rpc ListTransactionEvents(ListTransactionEventsRequest) returns (ListTransactionEventsResponse) {
+    option (google.api.http) = {get: "/v1/finance/transactions/{txn_id}/events"};
+  }
+
   // GetInsights aggregates workspace spent insights and statistics.
   rpc GetInsights(GetInsightsRequest) returns (GetInsightsResponse) {
     option (google.api.http) = {get: "/v1/finance/insights"};
@@ -824,4 +829,21 @@ message ListTransfersRequest {
 message ListTransfersResponse {
   repeated Transfer transfers = 1;
   string next_page_token = 2;
+}
+
+message ListTransactionEventsRequest {
+  string txn_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message TransactionEvent {
+  string id = 1;
+  string space_id = 2;
+  string txn_id = 3;
+  string event_type = 4;
+  string metadata = 5; // JSON string representing event details
+  google.protobuf.Timestamp create_time = 6;
+}
+
+message ListTransactionEventsResponse {
+  repeated TransactionEvent events = 1;
 }

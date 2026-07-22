@@ -54,6 +54,12 @@ type TransactionStore interface {
 	AggregateSpent(ctx context.Context, periodID PeriodID, budgetCurrency Currency, exchangeRateToBase float64) (spentInBase int64, spentAmount int64, err error)
 }
 
+// TransactionEventStore defines persistence for transaction events.
+type TransactionEventStore interface {
+	Create(ctx context.Context, event *TransactionEvent) error
+	ListByTransaction(ctx context.Context, spaceID SpaceID, txnID TransactionID) ([]*TransactionEvent, error)
+}
+
 // InsightsStore defines persistence for read-only aggregation queries.
 type InsightsStore interface {
 	GetSpentTrend(ctx context.Context, filter *SpentTrendFilter) ([]*SpentTrend, error)

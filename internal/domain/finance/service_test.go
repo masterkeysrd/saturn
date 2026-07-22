@@ -316,6 +316,25 @@ func (m *mockTransferStore) ListBySpace(ctx context.Context, spaceID SpaceID, li
 	return list, "", nil
 }
 
+type mockTransactionEventStore struct {
+	events map[TransactionEventID]*TransactionEvent
+}
+
+func (m *mockTransactionEventStore) Create(ctx context.Context, e *TransactionEvent) error {
+	m.events[e.ID] = e
+	return nil
+}
+
+func (m *mockTransactionEventStore) ListByTransaction(ctx context.Context, spaceID SpaceID, txnID TransactionID) ([]*TransactionEvent, error) {
+	var list []*TransactionEvent
+	for _, e := range m.events {
+		if e.SpaceID == spaceID && e.TransactionID == txnID {
+			list = append(list, e)
+		}
+	}
+	return list, nil
+}
+
 // --- Test Cases ---
 
 func TestCalculateBounds(t *testing.T) {
@@ -366,9 +385,10 @@ func TestCalculateBounds(t *testing.T) {
 func TestConfigureFinance(t *testing.T) {
 	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
 	svc := NewService(Dependencies{
-		SettingsStore: settingsStore,
-		AccountStore:  &mockAccountStore{data: make(map[AccountID]*Account)},
-		TransferStore: &mockTransferStore{data: make(map[TransferID]*Transfer)},
+		SettingsStore:         settingsStore,
+		AccountStore:          &mockAccountStore{data: make(map[AccountID]*Account)},
+		TransferStore:         &mockTransferStore{data: make(map[TransferID]*Transfer)},
+		TransactionEventStore: &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)},
 	})
 
 	spIDStr, _ := id.Generate("spc_")
@@ -420,14 +440,15 @@ func TestGetOrCreatePeriod(t *testing.T) {
 	txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
 
 	svc := NewService(Dependencies{
-		SettingsStore:     settingsStore,
-		BudgetStore:       budgetStore,
-		PeriodStore:       periodStore,
-		ExchangeRateStore: rateStore,
-		TransactionStore:  txnStore,
-		InsightsStore:     &mockInsightsStore{},
-		AccountStore:      &mockAccountStore{data: make(map[AccountID]*Account)},
-		TransferStore:     &mockTransferStore{data: make(map[TransferID]*Transfer)},
+		SettingsStore:         settingsStore,
+		BudgetStore:           budgetStore,
+		PeriodStore:           periodStore,
+		ExchangeRateStore:     rateStore,
+		TransactionStore:      txnStore,
+		InsightsStore:         &mockInsightsStore{},
+		AccountStore:          &mockAccountStore{data: make(map[AccountID]*Account)},
+		TransferStore:         &mockTransferStore{data: make(map[TransferID]*Transfer)},
+		TransactionEventStore: &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)},
 	})
 
 	ctx := context.Background()
@@ -503,14 +524,15 @@ func TestTransactions(t *testing.T) {
 	txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
 
 	svc := NewService(Dependencies{
-		SettingsStore:     settingsStore,
-		BudgetStore:       budgetStore,
-		PeriodStore:       periodStore,
-		ExchangeRateStore: rateStore,
-		TransactionStore:  txnStore,
-		InsightsStore:     &mockInsightsStore{},
-		AccountStore:      &mockAccountStore{data: make(map[AccountID]*Account)},
-		TransferStore:     &mockTransferStore{data: make(map[TransferID]*Transfer)},
+		SettingsStore:         settingsStore,
+		BudgetStore:           budgetStore,
+		PeriodStore:           periodStore,
+		ExchangeRateStore:     rateStore,
+		TransactionStore:      txnStore,
+		InsightsStore:         &mockInsightsStore{},
+		AccountStore:          &mockAccountStore{data: make(map[AccountID]*Account)},
+		TransferStore:         &mockTransferStore{data: make(map[TransferID]*Transfer)},
+		TransactionEventStore: &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)},
 	})
 
 	ctx := context.Background()

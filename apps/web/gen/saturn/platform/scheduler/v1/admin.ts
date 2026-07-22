@@ -303,10 +303,12 @@ export async function deleteJob(
   id: string,
   req: DeleteJobRequest
 ): Promise<Record<string, never>> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
   return request<Record<string, never>>({
     method: "DELETE",
     url: `/api/v1/admin/scheduler/jobs/${id}`,
-    params: req,
+    params: params,
   })
 }
 

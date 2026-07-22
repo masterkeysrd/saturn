@@ -1905,6 +1905,37 @@
         ]
       }
     },
+    "/v1/finance/transactions/{txnId}/events": {
+      "get": {
+        "summary": "ListTransactionEvents lists the historical lifecycle events of a transaction.",
+        "operationId": "Finance_ListTransactionEvents",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListTransactionEventsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "txnId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/finance/transfers": {
       "get": {
         "summary": "ListTransfers lists all transfers in a workspace.",
@@ -4143,6 +4174,18 @@
       },
       "description": "ListSpacesResponse contains the list of spaces and pagination token."
     },
+    "v1ListTransactionEventsResponse": {
+      "type": "object",
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1TransactionEvent"
+          }
+        }
+      }
+    },
     "v1ListTransactionsResponse": {
       "type": "object",
       "properties": {
@@ -4626,6 +4669,31 @@
         },
         "transferId": {
           "type": "string"
+        }
+      }
+    },
+    "v1TransactionEvent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "spaceId": {
+          "type": "string"
+        },
+        "txnId": {
+          "type": "string"
+        },
+        "eventType": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "string",
+          "title": "JSON string representing event details"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },

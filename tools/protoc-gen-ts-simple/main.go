@@ -215,6 +215,19 @@ func generateMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 	}
 	paramsList = append(paramsList, fmt.Sprintf("req%s: %s", reqSuffix, reqType))
 
+	// Map path parameters to their camelCased JSON name from the input message fields
+	var pathParamJSONNames []string
+	for _, p := range pathParams {
+		jsonName := p // fallback
+		for _, f := range method.Input.Fields {
+			if string(f.Desc.Name()) == p {
+				jsonName = f.Desc.JSONName()
+				break
+			}
+		}
+		pathParamJSONNames = append(pathParamJSONNames, jsonName)
+	}
+
 	// Generate plain fetch wrapper function
 	g.P("export async function ", methodName, "(", strings.Join(paramsList, ", "), "): Promise<", resType, "> {")
 
@@ -225,11 +238,20 @@ func generateMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 		urlStr = fmt.Sprintf("%q", "/api"+path)
 	}
 
+	paramsVal := "req"
+	if len(pathParamJSONNames) > 0 && (httpMethod == "GET" || httpMethod == "DELETE") {
+		g.P("  const params = { ...req };")
+		for _, name := range pathParamJSONNames {
+			g.P("  delete (params as Record<string, unknown>).", name, ";")
+		}
+		paramsVal = "params"
+	}
+
 	g.P("  return request<", resType, ">({")
 	g.P("    method: ", fmt.Sprintf("%q", httpMethod), ",")
 	g.P("    url: ", urlStr, ",")
 	if httpMethod == "GET" || httpMethod == "DELETE" {
-		g.P("    params: req,")
+		g.P("    params: ", paramsVal, ",")
 	} else {
 		bodyField := httpRule.GetBody()
 		if bodyField != "" && bodyField != "*" {
@@ -248,19 +270,6 @@ func generateMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 	g.P("  });")
 	g.P("}")
 	g.P()
-
-	// Map path parameters to their camelCased JSON name from the input message fields
-	var pathParamJSONNames []string
-	for _, p := range pathParams {
-		jsonName := p // fallback
-		for _, f := range method.Input.Fields {
-			if string(f.Desc.Name()) == p {
-				jsonName = f.Desc.JSONName()
-				break
-			}
-		}
-		pathParamJSONNames = append(pathParamJSONNames, jsonName)
-	}
 
 	// Generate TanStack React Query Hooks wrapper
 	if httpMethod == "GET" {

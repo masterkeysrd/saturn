@@ -32,12 +32,20 @@ import {
   LayersIcon,
 } from "lucide-react"
 import { PageLayout } from "@/components/ui/page-layout"
+import { formatRelativeTime } from "@/lib/utils"
 
 export function SchedulerAdminView() {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<"schedules" | "jobs">("schedules")
   const [jobStatusFilter, setJobStatusFilter] = useState<string>("")
   const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(0)
+  const [now, setNow] = useState(() => Date.now())
+
+  // Force relative countdown timer re-render every 10s
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 10000)
+    return () => clearInterval(timer)
+  }, [])
 
   // Queries
   const {
@@ -465,7 +473,14 @@ export function SchedulerAdminView() {
 
                         {/* Next Run */}
                         <td className="px-6 py-4.5 font-mono text-xs text-foreground/90">
-                          {formatTime(s.nextRunAt)}
+                          <div className="flex flex-col">
+                            <span>{formatTime(s.nextRunAt)}</span>
+                            {isActive && s.nextRunAt && (
+                              <span className="mt-0.5 text-[10px] font-semibold text-primary">
+                                {formatRelativeTime(s.nextRunAt, now)}
+                              </span>
+                            )}
+                          </div>
                         </td>
 
                         {/* Status */}
@@ -614,7 +629,24 @@ export function SchedulerAdminView() {
 
                       {/* Run At */}
                       <td className="px-6 py-4.5 font-mono text-xs text-foreground/90">
-                        {formatTime(j.runAt)}
+                        <div className="flex flex-col">
+                          <span>{formatTime(j.runAt)}</span>
+                          {j.runAt && (
+                            <span
+                              className={`mt-0.5 text-[10px] font-semibold ${
+                                j.status === "completed"
+                                  ? "text-green-500"
+                                  : j.status === "failed"
+                                    ? "text-rose-500"
+                                    : j.status === "processing"
+                                      ? "animate-pulse text-blue-500"
+                                      : "text-amber-500"
+                              }`}
+                            >
+                              {formatRelativeTime(j.runAt, now)}
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Status */}

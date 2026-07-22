@@ -34,6 +34,7 @@ const (
 	Finance_UpdateExpense_FullMethodName            = "/saturn.finance.v1.Finance/UpdateExpense"
 	Finance_DeleteTransaction_FullMethodName        = "/saturn.finance.v1.Finance/DeleteTransaction"
 	Finance_ListTransactions_FullMethodName         = "/saturn.finance.v1.Finance/ListTransactions"
+	Finance_ListTransactionEvents_FullMethodName    = "/saturn.finance.v1.Finance/ListTransactionEvents"
 	Finance_GetInsights_FullMethodName              = "/saturn.finance.v1.Finance/GetInsights"
 	Finance_CreateRecurringExpense_FullMethodName   = "/saturn.finance.v1.Finance/CreateRecurringExpense"
 	Finance_UpdateRecurringExpense_FullMethodName   = "/saturn.finance.v1.Finance/UpdateRecurringExpense"
@@ -93,6 +94,8 @@ type FinanceClient interface {
 	DeleteTransaction(ctx context.Context, in *DeleteTransactionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// ListTransactions lists paginated transactions for a workspace.
 	ListTransactions(ctx context.Context, in *ListTransactionsRequest, opts ...grpc.CallOption) (*ListTransactionsResponse, error)
+	// ListTransactionEvents lists the historical lifecycle events of a transaction.
+	ListTransactionEvents(ctx context.Context, in *ListTransactionEventsRequest, opts ...grpc.CallOption) (*ListTransactionEventsResponse, error)
 	// GetInsights aggregates workspace spent insights and statistics.
 	GetInsights(ctx context.Context, in *GetInsightsRequest, opts ...grpc.CallOption) (*GetInsightsResponse, error)
 	// CreateRecurringExpense configures a new recurring expense rule.
@@ -283,6 +286,16 @@ func (c *financeClient) ListTransactions(ctx context.Context, in *ListTransactio
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListTransactionsResponse)
 	err := c.cc.Invoke(ctx, Finance_ListTransactions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) ListTransactionEvents(ctx context.Context, in *ListTransactionEventsRequest, opts ...grpc.CallOption) (*ListTransactionEventsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListTransactionEventsResponse)
+	err := c.cc.Invoke(ctx, Finance_ListTransactionEvents_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -553,6 +566,8 @@ type FinanceServer interface {
 	DeleteTransaction(context.Context, *DeleteTransactionRequest) (*emptypb.Empty, error)
 	// ListTransactions lists paginated transactions for a workspace.
 	ListTransactions(context.Context, *ListTransactionsRequest) (*ListTransactionsResponse, error)
+	// ListTransactionEvents lists the historical lifecycle events of a transaction.
+	ListTransactionEvents(context.Context, *ListTransactionEventsRequest) (*ListTransactionEventsResponse, error)
 	// GetInsights aggregates workspace spent insights and statistics.
 	GetInsights(context.Context, *GetInsightsRequest) (*GetInsightsResponse, error)
 	// CreateRecurringExpense configures a new recurring expense rule.
@@ -649,6 +664,9 @@ func (UnimplementedFinanceServer) DeleteTransaction(context.Context, *DeleteTran
 }
 func (UnimplementedFinanceServer) ListTransactions(context.Context, *ListTransactionsRequest) (*ListTransactionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListTransactions not implemented")
+}
+func (UnimplementedFinanceServer) ListTransactionEvents(context.Context, *ListTransactionEventsRequest) (*ListTransactionEventsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListTransactionEvents not implemented")
 }
 func (UnimplementedFinanceServer) GetInsights(context.Context, *GetInsightsRequest) (*GetInsightsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetInsights not implemented")
@@ -987,6 +1005,24 @@ func _Finance_ListTransactions_Handler(srv interface{}, ctx context.Context, dec
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(FinanceServer).ListTransactions(ctx, req.(*ListTransactionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_ListTransactionEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListTransactionEventsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).ListTransactionEvents(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_ListTransactionEvents_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).ListTransactionEvents(ctx, req.(*ListTransactionEventsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1467,6 +1503,10 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListTransactions",
 			Handler:    _Finance_ListTransactions_Handler,
+		},
+		{
+			MethodName: "ListTransactionEvents",
+			Handler:    _Finance_ListTransactionEvents_Handler,
 		},
 		{
 			MethodName: "GetInsights",

@@ -21,6 +21,7 @@ type Dependencies struct {
 	BorrowingRepaymentStore BorrowingRepaymentStore
 	AccountStore            AccountStore
 	TransferStore           TransferStore
+	TransactionEventStore   TransactionEventStore
 }
 
 // Service implements the domain-level finance operations.
@@ -331,6 +332,45 @@ func (s *Service) UpdateExpense(ctx context.Context, txn *Transaction) (*Transac
 	if err := s.updateTransaction(ctx, txn, existing); err != nil {
 		return nil, err
 	}
+
+	// Log manual edit transaction event with field diff
+	metadata := map[string]interface{}{}
+	if existing.Amount != txn.Amount {
+		metadata["old_amount"] = existing.Amount
+		metadata["new_amount"] = txn.Amount
+	}
+	if existing.Description != txn.Description {
+		metadata["old_description"] = existing.Description
+		metadata["new_description"] = txn.Description
+	}
+	if existing.Currency != txn.Currency {
+		metadata["old_currency"] = string(existing.Currency)
+		metadata["new_currency"] = string(txn.Currency)
+	}
+	if existing.BudgetID != nil && txn.BudgetID != nil && *existing.BudgetID != *txn.BudgetID {
+		metadata["old_budget_id"] = string(*existing.BudgetID)
+		metadata["new_budget_id"] = string(*txn.BudgetID)
+	}
+	if (existing.AccountID == nil && txn.AccountID != nil) ||
+		(existing.AccountID != nil && txn.AccountID == nil) ||
+		(existing.AccountID != nil && txn.AccountID != nil && *existing.AccountID != *txn.AccountID) {
+		if existing.AccountID != nil {
+			metadata["old_account_id"] = string(*existing.AccountID)
+		}
+		if txn.AccountID != nil {
+			metadata["new_account_id"] = string(*txn.AccountID)
+		}
+	}
+
+	if len(metadata) > 0 {
+		_, _ = s.LogTransactionEvent(ctx, &TransactionEvent{
+			SpaceID:       txn.SpaceID,
+			TransactionID: txn.ID,
+			EventType:     "MANUAL_EDIT",
+			Metadata:      metadata,
+		})
+	}
+
 	return txn, nil
 }
 
@@ -711,6 +751,30 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 
 	if err := s.deps.TransactionStore.Create(ctx, txn); err != nil {
 		return nil, err
+	}
+
+	// Log the historical scheduled event with the deferred creation date
+	_, err = s.LogTransactionEvent(ctx, &TransactionEvent{
+		SpaceID:       payment.SpaceID,
+		TransactionID: txn.ID,
+		EventType:     "EXPENSE_SCHEDULED",
+		CreateTime:    payment.CreateTime,
+		Metadata:      map[string]interface{}{"scheduled_payment_id": string(payment.ID)},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to log scheduled event: %w", err)
+	}
+
+	// Log the actual payment confirmation event with the transaction date
+	_, err = s.LogTransactionEvent(ctx, &TransactionEvent{
+		SpaceID:       payment.SpaceID,
+		TransactionID: txn.ID,
+		EventType:     "BANK_CONFIRM_RECEIVED",
+		CreateTime:    req.TransactionDate,
+		Metadata:      map[string]interface{}{"actual_amount": req.ActualAmount},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to log payment confirmation event: %w", err)
 	}
 
 	if err := s.deps.ScheduledPaymentStore.Delete(ctx, req.PaymentID); err != nil {
@@ -1694,4 +1758,36 @@ func (s *Service) ListTransfers(ctx context.Context, spaceID SpaceID, limit int3
 		return nil, "", err
 	}
 	return s.deps.TransferStore.ListBySpace(ctx, spaceID, limit, pageToken)
+}
+
+// LogTransactionEvent inserts a new lifecycle event for a transaction.
+func (s *Service) LogTransactionEvent(ctx context.Context, e *TransactionEvent) (*TransactionEvent, error) {
+	if e.ID == "" {
+		id, err := NewTransactionEventID()
+		if err != nil {
+			return nil, err
+		}
+		e.ID = id
+	}
+	if e.CreateTime.IsZero() {
+		e.CreateTime = time.Now().UTC()
+	}
+	if err := e.Validate(); err != nil {
+		return nil, err
+	}
+	if err := s.deps.TransactionEventStore.Create(ctx, e); err != nil {
+		return nil, err
+	}
+	return e, nil
+}
+
+// ListTransactionEvents retrieves all lifecycle events for a specific transaction in a space.
+func (s *Service) ListTransactionEvents(ctx context.Context, spaceID SpaceID, txnID TransactionID) ([]*TransactionEvent, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, fmt.Errorf("validate space ID: %w", err)
+	}
+	if err := txnID.Validate(); err != nil {
+		return nil, fmt.Errorf("validate transaction ID: %w", err)
+	}
+	return s.deps.TransactionEventStore.ListByTransaction(ctx, spaceID, txnID)
 }

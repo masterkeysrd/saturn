@@ -25,6 +25,7 @@ import {
   Edit2,
   Repeat,
   MoreVertical,
+  History,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -36,6 +37,7 @@ import { useWorkspaceFinance } from "./use-workspace-finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import { formatCents, getBudgetColors, getBudgetIcon } from "./utils"
 import { CreateTransactionSheet } from "./components/create-transaction-sheet"
+import { TransactionEventsSheet } from "./components/transaction-events-sheet"
 
 export function TransactionsView() {
   const {
@@ -56,6 +58,11 @@ export function TransactionsView() {
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(
     null
   )
+  const [eventsOpen, setEventsOpen] = useState(false)
+  const [eventsTxnId, setEventsTxnId] = useState<string | null>(null)
+  const [eventsTxnDescription, setEventsTxnDescription] = useState<
+    string | null
+  >(null)
 
   const handleCreateTrigger = () => {
     setEditTransaction(null)
@@ -65,6 +72,12 @@ export function TransactionsView() {
   const handleEditTrigger = (t: Transaction) => {
     setEditTransaction(t)
     setCreateOpen(true)
+  }
+
+  const handleViewEventsTrigger = (t: Transaction) => {
+    setEventsTxnId(t.id)
+    setEventsTxnDescription(t.description)
+    setEventsOpen(true)
   }
 
   // Fetch transactions
@@ -426,6 +439,13 @@ export function TransactionsView() {
                             />
                             <DropdownMenuContent align="end" className="w-36">
                               <DropdownMenuItem
+                                onClick={() => handleViewEventsTrigger(t)}
+                                className="flex cursor-pointer items-center gap-2"
+                              >
+                                <History className="h-4 w-4" />
+                                <span>Timeline</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
                                 onClick={() => handleEditTrigger(t)}
                                 className="flex cursor-pointer items-center gap-2"
                               >
@@ -463,6 +483,12 @@ export function TransactionsView() {
           refetchTransactions={refetchTransactions}
           refetchBudgets={refetchBudgets}
           getConversionPreview={getConversionPreview}
+        />
+        <TransactionEventsSheet
+          open={eventsOpen}
+          onOpenChange={setEventsOpen}
+          txnId={eventsTxnId}
+          txnDescription={eventsTxnDescription}
         />
       </div>
     </FinancePageLayout>

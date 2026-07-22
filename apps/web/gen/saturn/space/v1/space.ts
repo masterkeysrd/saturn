@@ -273,10 +273,12 @@ export async function getSpace(
   space_id: string,
   req: GetSpaceRequest
 ): Promise<Space> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).spaceId
   return request<Space>({
     method: "GET",
     url: `/api/v1/spaces/${space_id}`,
-    params: req,
+    params: params,
   })
 }
 
@@ -329,10 +331,12 @@ export async function deleteSpace(
   space_id: string,
   req: DeleteSpaceRequest
 ): Promise<DeleteSpaceResponse> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).spaceId
   return request<DeleteSpaceResponse>({
     method: "DELETE",
     url: `/api/v1/spaces/${space_id}`,
-    params: req,
+    params: params,
   })
 }
 
@@ -419,10 +423,13 @@ export async function removeSpaceMember(
   user_id: string,
   req: RemoveSpaceMemberRequest
 ): Promise<RemoveSpaceMemberResponse> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).spaceId
+  delete (params as Record<string, unknown>).userId
   return request<RemoveSpaceMemberResponse>({
     method: "DELETE",
     url: `/api/v1/spaces/${space_id}/members/${user_id}`,
-    params: req,
+    params: params,
   })
 }
 
@@ -484,10 +491,12 @@ export async function listSpaceMembers(
   space_id: string,
   req: ListSpaceMembersRequest
 ): Promise<ListSpaceMembersResponse> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).spaceId
   return request<ListSpaceMembersResponse>({
     method: "GET",
     url: `/api/v1/spaces/${space_id}/members`,
-    params: req,
+    params: params,
   })
 }
 

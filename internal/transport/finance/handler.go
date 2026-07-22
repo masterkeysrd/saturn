@@ -620,6 +620,46 @@ func toProtoTransaction(t *finance.Transaction) *financev1.Transaction {
 	}
 }
 
+func (h *Handler) ListTransactionEvents(ctx context.Context, req *financev1.ListTransactionEventsRequest) (*financev1.ListTransactionEventsResponse, error) {
+	txnID, err := finance.ParseTransactionID(req.GetTxnId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid transaction ID: %v", err)
+	}
+
+	appReq := &financeapp.ListTransactionEventsRequest{
+		TransactionID: txnID,
+	}
+
+	events, err := h.Coordinator.ListTransactionEvents(ctx, appReq)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	protoEvents := make([]*financev1.TransactionEvent, 0, len(events))
+	for _, e := range events {
+		protoEvents = append(protoEvents, toProtoTransactionEvent(e))
+	}
+
+	return &financev1.ListTransactionEventsResponse{
+		Events: protoEvents,
+	}, nil
+}
+
+func toProtoTransactionEvent(e *finance.TransactionEvent) *financev1.TransactionEvent {
+	if e == nil {
+		return nil
+	}
+	metadataBytes, _ := e.MetadataJSON()
+	return &financev1.TransactionEvent{
+		Id:         string(e.ID),
+		SpaceId:    string(e.SpaceID),
+		TxnId:      string(e.TransactionID),
+		EventType:  e.EventType,
+		Metadata:   string(metadataBytes),
+		CreateTime: timestamppb.New(e.CreateTime),
+	}
+}
+
 func (h *Handler) GetInsights(ctx context.Context, req *financev1.GetInsightsRequest) (*financev1.GetInsightsResponse, error) {
 	var start, end time.Time
 	if req.GetStartDate() != nil {
