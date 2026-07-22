@@ -1,4 +1,4 @@
-import { useState, type SyntheticEvent } from "react"
+import { useState, useEffect, type SyntheticEvent } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "./use-auth"
 import { AuthCard } from "./components/auth-card"
@@ -6,6 +6,10 @@ import { FormInput } from "./components/form-input"
 import { Button } from "@/components/ui/button"
 
 export function LoginView() {
+  useEffect(() => {
+    document.title = "Login | Saturn"
+  }, [])
+
   const { login, error, setError } = useAuth()
   const navigate = useNavigate()
   const [identifier, setIdentifier] = useState("")

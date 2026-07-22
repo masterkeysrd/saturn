@@ -14,6 +14,7 @@ import {
   RefreshCwIcon,
   UserIcon,
 } from "lucide-react"
+import { PageLayout } from "@/components/ui/page-layout"
 
 export function AdminView() {
   const queryClient = useQueryClient()
@@ -62,31 +63,28 @@ export function AdminView() {
     }
   }
 
+  const refreshButton = (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => refetch()}
+      disabled={isLoading}
+      className="cursor-pointer self-start rounded-xl"
+    >
+      <RefreshCwIcon
+        className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+      />
+      Refresh
+    </Button>
+  )
+
   return (
-    <div className="flex flex-1 flex-col space-y-6">
-      {/* Header section */}
-      <div className="flex flex-col space-y-2 select-none sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
-            User Administration
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Approve, deny, and manage Saturn user accounts.
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch()}
-          disabled={isLoading}
-          className="cursor-pointer self-start rounded-xl"
-        >
-          <RefreshCwIcon
-            className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-          />
-          Refresh
-        </Button>
-      </div>
+    <PageLayout
+      title="User Administration"
+      description="Approve, deny, and manage Saturn user accounts."
+      icon={UserIcon}
+      actions={refreshButton}
+    >
 
       {/* Filters and Search toolbar */}
       <div className="flex flex-col gap-4 select-none sm:flex-row sm:items-center">
@@ -286,7 +284,7 @@ export function AdminView() {
           </div>
         )}
       </div>
-    </div>
+    </PageLayout>
   )
 }
 export default AdminView

@@ -11,6 +11,7 @@ import {
   SearchIcon,
 } from "lucide-react"
 import { parseUserAgent } from "@/lib/utils"
+import { PageLayout } from "@/components/ui/page-layout"
 
 export function AdminSecurityView() {
   const [emailFilter, setEmailFilter] = useState("")
@@ -59,32 +60,28 @@ export function AdminSecurityView() {
     }
   }
 
+  const refreshButton = (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => refetch()}
+      disabled={isLoading}
+      className="cursor-pointer self-start rounded-xl"
+    >
+      <RefreshCwIcon
+        className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+      />
+      Refresh
+    </Button>
+  )
+
   return (
-    <div className="flex flex-1 flex-col space-y-6">
-      {/* Header section */}
-      <div className="flex flex-col space-y-2 select-none sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
-            Security & Login Audits
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Monitor real-time workspace access attempts, failed logins, and
-            system lockouts.
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch()}
-          disabled={isLoading}
-          className="cursor-pointer self-start rounded-xl"
-        >
-          <RefreshCwIcon
-            className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-          />
-          Refresh
-        </Button>
-      </div>
+    <PageLayout
+      title="Security & Login Audits"
+      description="Monitor real-time workspace access attempts, failed logins, and system lockouts."
+      icon={ShieldIcon}
+      actions={refreshButton}
+    >
 
       {/* Filters and Search toolbar */}
       <div className="flex flex-col gap-4 select-none sm:flex-row sm:items-center">
@@ -228,6 +225,6 @@ export function AdminSecurityView() {
           </div>
         )}
       </div>
-    </div>
+    </PageLayout>
   )
 }

@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import type { ElementType, ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
@@ -22,6 +23,10 @@ export function PageLayout({
   isEmpty = false,
   className,
 }: PageLayoutProps) {
+  useEffect(() => {
+    document.title = title ? `${title} | Saturn` : "Saturn"
+  }, [title])
+
   return (
     <div
       className={cn(

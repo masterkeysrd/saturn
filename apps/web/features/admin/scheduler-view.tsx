@@ -31,6 +31,7 @@ import {
   ActivityIcon,
   LayersIcon,
 } from "lucide-react"
+import { PageLayout } from "@/components/ui/page-layout"
 
 export function SchedulerAdminView() {
   const queryClient = useQueryClient()
@@ -59,17 +60,18 @@ export function SchedulerAdminView() {
     refetch: refetchStatus,
   } = useGetSchedulerStatusQuery({})
 
-  // Auto-Refresh Effect
+  // Auto-refresh polling effect
   useEffect(() => {
-    if (autoRefreshInterval === 0) return
-    const interval = setInterval(() => {
+    if (autoRefreshInterval <= 0) return
+
+    const timer = setInterval(() => {
       refetchSchedules()
       refetchJobs()
       refetchStatus()
     }, autoRefreshInterval)
-    return () => clearInterval(interval)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoRefreshInterval])
+
+    return () => clearInterval(timer)
+  }, [autoRefreshInterval, refetchSchedules, refetchJobs, refetchStatus])
 
   // Mutations
   const triggerMutation = useTriggerScheduleMutation({
@@ -174,69 +176,64 @@ export function SchedulerAdminView() {
     scheduleData?.schedules?.filter((s) => s.status === "active").length || 0
   const pausedSchedules = totalSchedules - activeSchedules
 
+  const schedulerActions = (
+    <div className="flex items-center gap-3">
+      {autoRefreshInterval > 0 && (
+        <div className="flex items-center gap-1.5 rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-1 text-[10px] font-semibold text-green-400">
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-500" />
+          </span>
+          Live
+        </div>
+      )}
+
+      <Select
+        value={autoRefreshInterval.toString()}
+        onValueChange={(val) => setAutoRefreshInterval(Number(val))}
+      >
+        <SelectTrigger className="w-[160px] cursor-pointer rounded-xl border border-border/60 bg-muted/30 text-xs font-semibold hover:bg-muted/50 dark:bg-muted/10">
+          <SelectValue>
+            {autoRefreshInterval === 0 && "Manual Refresh"}
+            {autoRefreshInterval === 5000 && "Auto Update (5s)"}
+            {autoRefreshInterval === 10000 && "Auto Update (10s)"}
+            {autoRefreshInterval === 15000 && "Auto Update (15s)"}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+          <SelectItem value="0">Manual Refresh</SelectItem>
+          <SelectItem value="5000">Auto Update (5s)</SelectItem>
+          <SelectItem value="10000">Auto Update (10s)</SelectItem>
+          <SelectItem value="15000">Auto Update (15s)</SelectItem>
+        </SelectContent>
+      </Select>
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => {
+          refetchSchedules()
+          refetchJobs()
+          refetchStatus()
+        }}
+        disabled={schedulesLoading || jobsLoading || statusLoading}
+        className="cursor-pointer rounded-xl"
+      >
+        <RefreshCwIcon
+          className={`mr-2 h-4 w-4 ${schedulesLoading || jobsLoading || statusLoading ? "animate-spin" : ""}`}
+        />
+        Refresh
+      </Button>
+    </div>
+  )
+
   return (
-    <div className="flex flex-1 flex-col space-y-6">
-      {/* Header section */}
-      <div className="flex flex-col space-y-4 select-none sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-        <div>
-          <h1 className="bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-3xl font-extrabold tracking-tight text-foreground">
-            Platform Scheduler Panel
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Monitor, run, and manage background cron jobs and execution queues.
-          </p>
-        </div>
-        <div className="flex items-center gap-3 self-start">
-          {/* Pulsating Live indicator */}
-          {autoRefreshInterval > 0 && (
-            <div className="flex items-center gap-1.5 rounded-full border border-green-500/20 bg-green-500/10 px-2.5 py-1 text-[10px] font-semibold text-green-400">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-500" />
-              </span>
-              Live
-            </div>
-          )}
-
-          {/* Auto-Refresh selection dropdown */}
-          <Select
-            value={autoRefreshInterval.toString()}
-            onValueChange={(val) => setAutoRefreshInterval(Number(val))}
-          >
-            <SelectTrigger className="w-[160px] cursor-pointer rounded-xl border border-border/60 bg-muted/30 text-xs font-semibold hover:bg-muted/50 dark:bg-muted/10">
-              <SelectValue>
-                {autoRefreshInterval === 0 && "Manual Refresh"}
-                {autoRefreshInterval === 5000 && "Auto Update (5s)"}
-                {autoRefreshInterval === 10000 && "Auto Update (10s)"}
-                {autoRefreshInterval === 15000 && "Auto Update (15s)"}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-              <SelectItem value="0">Manual Refresh</SelectItem>
-              <SelectItem value="5000">Auto Update (5s)</SelectItem>
-              <SelectItem value="10000">Auto Update (10s)</SelectItem>
-              <SelectItem value="15000">Auto Update (15s)</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              refetchSchedules()
-              refetchJobs()
-              refetchStatus()
-            }}
-            disabled={schedulesLoading || jobsLoading || statusLoading}
-            className="cursor-pointer rounded-xl"
-          >
-            <RefreshCwIcon
-              className={`mr-2 h-4 w-4 ${schedulesLoading || jobsLoading || statusLoading ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </Button>
-        </div>
-      </div>
+    <PageLayout
+      title="Platform Scheduler Panel"
+      description="Monitor, run, and manage background cron jobs and execution queues."
+      icon={ActivityIcon}
+      actions={schedulerActions}
+    >
 
       {/* Operational Stats Cards */}
       <div className="grid grid-cols-1 gap-4 select-none sm:grid-cols-4">
@@ -682,7 +679,7 @@ export function SchedulerAdminView() {
           </div>
         )}
       </div>
-    </div>
+    </PageLayout>
   )
 }
 export default SchedulerAdminView

@@ -15,6 +15,7 @@ import {
   ClipboardIcon,
   CheckIcon,
 } from "lucide-react"
+import { PageLayout } from "@/components/ui/page-layout"
 
 export function BackupAdminView() {
   const queryClient = useQueryClient()
@@ -72,49 +73,44 @@ export function BackupAdminView() {
     : "Never"
   const successBackups = backups.filter((b) => b.status === "success")
 
+  const backupActions = (
+    <div className="flex items-center gap-2">
+      <Button
+        variant="outline"
+        onClick={() => refetch()}
+        disabled={isLoading}
+        className="cursor-pointer rounded-xl border-border/50 bg-background/50 hover:bg-muted/80"
+      >
+        <RefreshCwIcon
+          className={`mr-2 h-4 w-4 text-muted-foreground ${
+            isLoading ? "animate-spin" : ""
+          }`}
+        />
+        Sync Index
+      </Button>
+
+      <Button
+        onClick={() => triggerMutation.mutate({})}
+        disabled={triggerMutation.isPending}
+        className="cursor-pointer rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 font-semibold text-white shadow-md transition-all hover:from-emerald-500 hover:to-teal-500 focus:ring-2 focus:ring-emerald-500/20"
+      >
+        <PlayIcon
+          className={`mr-2 h-4 w-4 ${
+            triggerMutation.isPending ? "animate-spin" : ""
+          }`}
+        />
+        Backup Now
+      </Button>
+    </div>
+  )
+
   return (
-    <div className="flex flex-1 flex-col gap-6">
-      {/* Header section */}
-      <div className="flex flex-col justify-between gap-4 select-none sm:flex-row sm:items-center">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            Database Backups
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Manage your Postgres database snapshots, track logs, and verify
-            storage backups.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => refetch()}
-            disabled={isLoading}
-            className="cursor-pointer rounded-xl border-border/50 bg-background/50 hover:bg-muted/80"
-          >
-            <RefreshCwIcon
-              className={`mr-2 h-4 w-4 text-muted-foreground ${
-                isLoading ? "animate-spin" : ""
-              }`}
-            />
-            Sync Index
-          </Button>
-
-          <Button
-            onClick={() => triggerMutation.mutate({})}
-            disabled={triggerMutation.isPending}
-            className="cursor-pointer rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 font-semibold text-white shadow-md transition-all hover:from-emerald-500 hover:to-teal-500 focus:ring-2 focus:ring-emerald-500/20"
-          >
-            <PlayIcon
-              className={`mr-2 h-4 w-4 ${
-                triggerMutation.isPending ? "animate-spin" : ""
-              }`}
-            />
-            Backup Now
-          </Button>
-        </div>
-      </div>
+    <PageLayout
+      title="Database Backups"
+      description="Manage your Postgres database snapshots, track logs, and verify storage backups."
+      icon={DatabaseIcon}
+      actions={backupActions}
+    >
 
       {/* Info Stats Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -283,6 +279,6 @@ export function BackupAdminView() {
           </table>
         </div>
       </div>
-    </div>
+    </PageLayout>
   )
 }

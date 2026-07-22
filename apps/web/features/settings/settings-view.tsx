@@ -3,6 +3,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { AccountSettings } from "./account-settings"
 import { SpaceSettings } from "./space-settings"
 import { SecuritySettings } from "./security-settings"
+import { PageLayout } from "@/components/ui/page-layout"
+import { Settings } from "lucide-react"
 
 type SettingsTab = "account" | "spaces" | "security"
 
@@ -23,16 +25,12 @@ export function SettingsView() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-8 py-4">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">
-          Settings
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Manage your personal account details, spaces, and login security.
-        </p>
-      </div>
+    <PageLayout
+      title="Settings"
+      description="Manage your personal account details, spaces, and login security."
+      icon={Settings}
+      className="max-w-4xl py-4"
+    >
 
       <Tabs
         value={activeTab}
@@ -74,6 +72,6 @@ export function SettingsView() {
           <SecuritySettings />
         </TabsContent>
       </Tabs>
-    </div>
+    </PageLayout>
   )
 }
