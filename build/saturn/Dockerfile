@@ -4,7 +4,7 @@
 # -----------------------------------------------
 
 # --- Stage 1: Builder ---
-FROM golang:1.26-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS builder
 
 # Install git (required by Go modules for VCS resolution)
 RUN apk add --no-cache git
@@ -18,7 +18,9 @@ RUN go mod download
 # Copy source and build the binary
 COPY . .
 ARG VERSION=dev
-RUN go build \
+ARG TARGETOS
+ARG TARGETARCH
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
       -ldflags="-s -w -X main.version=${VERSION}" \
       -o /usr/local/bin/saturn \
       ./cmd/saturn
