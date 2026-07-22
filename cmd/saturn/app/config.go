@@ -91,8 +91,9 @@ type GRPCConfig struct {
 
 // GatewayConfig holds the HTTP gateway server settings.
 type GatewayConfig struct {
-	Addr        string `mapstructure:"addr"`
-	RoutePrefix string `mapstructure:"route_prefix"`
+	Addr         string `mapstructure:"addr"`
+	RoutePrefix  string `mapstructure:"route_prefix"`
+	CookieSecure bool   `mapstructure:"cookie_secure"`
 }
 
 // ShutdownConfig holds shutdown behavior settings.
@@ -137,6 +138,7 @@ func NewViper() *viper.Viper {
 	v.SetDefault("grpc.socket", defaultGRPCSocket)
 	v.SetDefault("gateway.addr", defaultGatewayAddr)
 	v.SetDefault("gateway.route_prefix", defaultRoutePrefix)
+	v.SetDefault("gateway.cookie_secure", true)
 	v.SetDefault("shutdown.timeout", defaultShutdownTime)
 	v.SetDefault("log.level", defaultLogLevel)
 	v.SetDefault("swagger.enabled", false)

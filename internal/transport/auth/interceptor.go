@@ -126,15 +126,22 @@ func (ai *AuthInterceptor) authenticate(ctx context.Context, accessLevels []stri
 		return ctx, status.Error(codes.Unauthenticated, "missing metadata")
 	}
 
+	var tokenStr string
 	tokens := md["authorization"]
-	if len(tokens) == 0 {
-		return ctx, status.Error(codes.Unauthenticated, "missing authorization header")
+	if len(tokens) > 0 {
+		tokenStr = tokens[0]
+		tokenStr = strings.TrimPrefix(tokenStr, "Bearer ")
 	}
 
-	tokenStr := tokens[0]
-	tokenStr = strings.TrimPrefix(tokenStr, "Bearer ")
 	if len(strings.TrimSpace(tokenStr)) == 0 {
-		return ctx, status.Error(codes.Unauthenticated, "invalid authorization scheme")
+		// Fallback: Check if cookie is set (passed by gRPC-Gateway proxy)
+		if cookies := md["grpcgateway-cookie"]; len(cookies) > 0 {
+			tokenStr = extractCookieValue(cookies[0], "access_token")
+		}
+	}
+
+	if len(strings.TrimSpace(tokenStr)) == 0 {
+		return ctx, status.Error(codes.Unauthenticated, "missing or invalid authorization credentials")
 	}
 
 	claims, err := ai.validator.ValidateAccessToken(tokenStr, timeNow())
@@ -189,4 +196,15 @@ func matchSelector(selector, method string) bool {
 
 func timeNow() time.Time {
 	return time.Now()
+}
+
+func extractCookieValue(cookieHeader string, name string) string {
+	parts := strings.Split(cookieHeader, ";")
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if strings.HasPrefix(part, name+"=") {
+			return strings.TrimPrefix(part, name+"=")
+		}
+	}
+	return ""
 }

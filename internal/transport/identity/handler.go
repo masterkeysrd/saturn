@@ -3,6 +3,7 @@ package identity
 import (
 	"context"
 	"errors"
+	"strings"
 
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
 	"github.com/masterkeysrd/saturn/internal/application/iam"
@@ -125,8 +126,13 @@ func (h *Handler) GetCurrentUser(ctx context.Context, req *identityv1.GetCurrent
 // RefreshSession rotates refresh tokens and issues new access/refresh tokens.
 func (h *Handler) RefreshSession(ctx context.Context, req *identityv1.RefreshSessionRequest) (*identityv1.RefreshSessionResponse, error) {
 	ua, ip := extractClientInfo(ctx)
+	refreshToken := req.GetRefreshToken()
+	if refreshToken == "" {
+		refreshToken = extractCookie(ctx, "refresh_token")
+	}
+
 	resp, err := h.IAM.Coordinator.RefreshSession(ctx, &iam.RefreshSessionRequest{
-		RefreshToken: req.GetRefreshToken(),
+		RefreshToken: refreshToken,
 		UserAgent:    ua,
 		IPAddress:    ip,
 	})
@@ -153,13 +159,37 @@ func (h *Handler) RefreshSession(ctx context.Context, req *identityv1.RefreshSes
 
 // Logout invalidates the active refresh token session.
 func (h *Handler) Logout(ctx context.Context, req *identityv1.LogoutRequest) (*identityv1.LogoutResponse, error) {
+	refreshToken := req.GetRefreshToken()
+	if refreshToken == "" {
+		refreshToken = extractCookie(ctx, "refresh_token")
+	}
+
 	_, err := h.IAM.Coordinator.Logout(ctx, &iam.LogoutRequest{
-		RefreshToken: req.GetRefreshToken(),
+		RefreshToken: refreshToken,
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to logout")
 	}
 	return &identityv1.LogoutResponse{}, nil
+}
+
+func extractCookie(ctx context.Context, name string) string {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return ""
+	}
+	cookies := md["grpcgateway-cookie"]
+	if len(cookies) == 0 {
+		return ""
+	}
+	parts := strings.Split(cookies[0], ";")
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if strings.HasPrefix(part, name+"=") {
+			return strings.TrimPrefix(part, name+"=")
+		}
+	}
+	return ""
 }
 
 // ListActiveSessions returns all non-expired, non-revoked sessions for the user.

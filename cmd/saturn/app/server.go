@@ -321,6 +321,7 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 	s.grpcConn = conn
 	s.mux = runtime.NewServeMux(
 		runtime.WithIncomingHeaderMatcher(customHeaderMatcher),
+		runtime.WithForwardResponseOption(transportauth.CookieResponseForwarder(s.config.Gateway.CookieSecure)),
 	)
 
 	if err := identityv1.RegisterIdentityHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {

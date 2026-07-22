@@ -34,6 +34,7 @@ services:
       SATURN_GATEWAY_ADDR: ":8080"
       SATURN_LOG_LEVEL: info
       SATURN_SWAGGER_ENABLED: true
+      SATURN_GATEWAY_COOKIE_SECURE: "false"
     volumes:
        - saturn-data:/data
     depends_on:

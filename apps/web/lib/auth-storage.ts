@@ -1,33 +1,35 @@
+let inMemoryAccessToken: string | null = null
+
 const KEYS = {
-  AUTH_TOKEN: "auth_token",
-  REFRESH_TOKEN: "refresh_token",
+  HAS_SESSION: "has_session",
 } as const
 
 export interface AuthSession {
   accessToken: string | null
-  refreshToken: string | null
+  hasSession: boolean
 }
 
 export const authStorage = {
-  setSession(accessToken: string, refreshToken: string): void {
+  setSession(accessToken: string): void {
     if (typeof window === "undefined") return
-    localStorage.setItem(KEYS.AUTH_TOKEN, accessToken)
-    localStorage.setItem(KEYS.REFRESH_TOKEN, refreshToken)
+    inMemoryAccessToken = accessToken
+    localStorage.setItem(KEYS.HAS_SESSION, "true")
   },
 
   getSession(): AuthSession {
     if (typeof window === "undefined") {
-      return { accessToken: null, refreshToken: null }
+      return { accessToken: null, hasSession: false }
     }
-    const accessToken = localStorage.getItem(KEYS.AUTH_TOKEN)
-    const refreshToken = localStorage.getItem(KEYS.REFRESH_TOKEN)
-
-    return { accessToken, refreshToken }
+    const hasSession = localStorage.getItem(KEYS.HAS_SESSION) === "true"
+    return {
+      accessToken: inMemoryAccessToken,
+      hasSession,
+    }
   },
 
   clearSession(): void {
+    inMemoryAccessToken = null
     if (typeof window === "undefined") return
-    localStorage.removeItem(KEYS.AUTH_TOKEN)
-    localStorage.removeItem(KEYS.REFRESH_TOKEN)
+    localStorage.removeItem(KEYS.HAS_SESSION)
   },
 }

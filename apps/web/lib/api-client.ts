@@ -11,8 +11,8 @@ let refreshPromise: Promise<string> | null = null
 
 async function performRefresh(): Promise<string> {
   const session = authStorage.getSession()
-  if (!session.refreshToken) {
-    throw new Error("No refresh token available")
+  if (!session.hasSession) {
+    throw new Error("No session available")
   }
 
   const response = await fetch("/api/v1/identity/sessions:refresh", {
@@ -20,7 +20,7 @@ async function performRefresh(): Promise<string> {
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ refreshToken: session.refreshToken }),
+    credentials: "same-origin",
   })
 
   if (!response.ok) {
@@ -32,7 +32,7 @@ async function performRefresh(): Promise<string> {
     throw new Error("Invalid refresh response")
   }
 
-  authStorage.setSession(data.accessToken, data.refreshToken)
+  authStorage.setSession(data.accessToken)
   window.dispatchEvent(
     new CustomEvent("auth:refreshed", {
       detail: { accessToken: data.accessToken },
@@ -76,6 +76,7 @@ export async function request<TResponse, TData = unknown, TParams = unknown>({
       ...(spaceId && { "Space-Id": spaceId }),
     },
     ...(data && { body: JSON.stringify(data) }),
+    credentials: "same-origin",
   })
 
   if (!response.ok) {
@@ -101,6 +102,7 @@ export async function request<TResponse, TData = unknown, TParams = unknown>({
               ...(spaceId && { "Space-Id": spaceId }),
             },
             ...(data && { body: JSON.stringify(data) }),
+            credentials: "same-origin",
           })
 
           if (retryResponse.ok) {

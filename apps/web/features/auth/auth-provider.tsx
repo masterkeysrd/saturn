@@ -9,6 +9,7 @@ import {
   loginUser,
   registerUser,
   logout,
+  refreshSession,
   useGetCurrentUserQuery,
 } from "@/gen/saturn/identity/v1/identity"
 import type {
@@ -20,12 +21,33 @@ import { authStorage } from "@/lib/auth-storage"
 import { decodeJwt } from "@/lib/jwt"
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [accessToken, setAccessToken] = useState<string | null>(() => {
-    return authStorage.getSession().accessToken
+  const [accessToken, setAccessToken] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(() => {
+    if (typeof window === "undefined") return false
+    return authStorage.getSession().hasSession
   })
-
-  const [isLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Silent refresh session initialization on boot
+  useEffect(() => {
+    const initSession = async () => {
+      const session = authStorage.getSession()
+      if (session.hasSession) {
+        try {
+          const res = await refreshSession({ refreshToken: "" })
+          authStorage.setSession(res.accessToken)
+          setAccessToken(res.accessToken)
+        } catch {
+          authStorage.clearSession()
+        } finally {
+          setIsLoading(false)
+        }
+      } else {
+        setIsLoading(false)
+      }
+    }
+    initSession()
+  }, [])
 
   // Fetch user profile from API when accessToken is present
   const { data: apiUser } = useGetCurrentUserQuery(
@@ -63,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await loginUser(req)
 
       // Store tokens only — user profile is fetched from API
-      authStorage.setSession(res.accessToken, res.refreshToken)
+      authStorage.setSession(res.accessToken)
 
       setAccessToken(res.accessToken)
     } catch (err) {
@@ -97,8 +119,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logoutUser = useCallback(async () => {
     const session = authStorage.getSession()
     try {
-      if (session.refreshToken) {
-        await logout({ refreshToken: session.refreshToken })
+      if (session.hasSession) {
+        await logout({ refreshToken: "" })
       }
     } catch {
       // Proceed with local logout even if server revocation fails
