@@ -21,7 +21,7 @@ export function SpaceSelector() {
   const { spaceId, activeSpace, switchSpace } = useActiveSpaceContext()
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
-  const { state } = useSidebar()
+  const { state, isMobile, setOpenMobile } = useSidebar()
   const isCollapsed = state === "collapsed"
 
   if (isLoading) {
@@ -76,6 +76,7 @@ export function SpaceSelector() {
                 spaceRole: role,
               })
               setOpen(false)
+              if (isMobile) setOpenMobile(false)
             }}
             className={cn(
               "justify-between",
@@ -98,6 +99,7 @@ export function SpaceSelector() {
           onClick={() => {
             setOpen(false)
             navigate("/settings?tab=spaces")
+            if (isMobile) setOpenMobile(false)
           }}
           className="justify-between"
         >

@@ -22,9 +22,16 @@ import {
   AlertCircleIcon,
   History,
   ArrowRight,
+  MoreVertical,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
 import { CreateRecurringExpenseSheet } from "./components/create-recurring-expense-sheet"
 import { ConfirmPaymentSheet } from "./components/confirm-payment-sheet"
 import { RecurringExpenseHistorySheet } from "./components/recurring-expense-history-sheet"
@@ -39,8 +46,14 @@ const DEFAULT_PAGE_SIZE = 100
 const HISTORY_PAGE_SIZE = 50
 
 export function RecurringView() {
-  const { spaceId, settings, getConversionPreview, budgets, currencies } =
-    useWorkspaceFinance()
+  const {
+    spaceId,
+    settings,
+    getConversionPreview,
+    budgets,
+    currencies,
+    isWritable,
+  } = useWorkspaceFinance()
   const baseCurrency = settings?.baseCurrency || "USD"
 
   // Sheets and Dialogs state
@@ -173,7 +186,7 @@ export function RecurringView() {
             setEditExpense(null)
             setExpenseSheetOpen(true)
           }}
-          className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent pt-0.5 font-semibold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.02] hover:opacity-95"
+          className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent pt-0.5 font-semibold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.02] hover:opacity-95 sm:w-auto"
         >
           <PlusIcon className="h-4 w-4" />
           Create Recurrent Expense
@@ -272,9 +285,9 @@ export function RecurringView() {
                         return (
                           <div
                             key={exp.id}
-                            className="group flex items-center justify-between border-b border-border/20 px-6 py-4 transition-colors last:border-0 hover:bg-muted/10"
+                            className="group flex items-center justify-between border-b border-border/20 px-3.5 py-3.5 transition-colors last:border-0 hover:bg-muted/10 sm:px-6 sm:py-4"
                           >
-                            <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex min-w-0 flex-1 items-center gap-3">
                               <div
                                 className={cn(
                                   "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-sm",
@@ -284,14 +297,14 @@ export function RecurringView() {
                               >
                                 <Icon className="h-5 w-5" />
                               </div>
-                              <div className="min-w-0">
+                              <div className="min-w-0 flex-1">
                                 <h4
-                                  className="max-w-[180px] truncate text-xs font-bold text-foreground sm:max-w-[350px]"
+                                  className="max-w-[130px] truncate text-sm font-bold text-foreground min-[375px]:max-w-[170px] min-[420px]:max-w-[210px] sm:max-w-[350px]"
                                   title={exp.name}
                                 >
                                   {exp.name}
                                 </h4>
-                                <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[9px] text-muted-foreground">
+                                <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] font-medium text-muted-foreground">
                                   <span className="font-semibold text-muted-foreground uppercase">
                                     {exp.interval}
                                   </span>
@@ -334,7 +347,7 @@ export function RecurringView() {
 
                             <div className="flex shrink-0 items-center gap-4">
                               <div className="text-right">
-                                <span className="block text-xs font-bold text-foreground">
+                                <span className="block text-sm font-extrabold tracking-tight text-foreground sm:text-base">
                                   {formatCents(exp.amount).toLocaleString(
                                     undefined,
                                     {
@@ -342,13 +355,13 @@ export function RecurringView() {
                                       maximumFractionDigits: 2,
                                     }
                                   )}{" "}
-                                  <span className="text-[10px] font-medium text-muted-foreground uppercase">
+                                  <span className="text-[9px] font-bold text-muted-foreground uppercase sm:text-[10px]">
                                     {exp.currency}
                                   </span>
                                 </span>
                                 <span
                                   className={cn(
-                                    "mt-0.5 block text-[8px] font-black tracking-wider uppercase",
+                                    "mt-0.5 block text-[8px] font-black tracking-wider uppercase sm:text-[9px]",
                                     exp.status === "active"
                                       ? "text-emerald-500"
                                       : exp.status === "paused"
@@ -360,38 +373,56 @@ export function RecurringView() {
                                 </span>
                               </div>
 
-                              <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 cursor-pointer rounded-lg text-muted-foreground hover:bg-muted/20"
-                                  title="View payment history"
-                                  onClick={() => {
-                                    setHistoryExpense(exp)
-                                    setHistoryOpen(true)
-                                  }}
-                                >
-                                  <History className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 cursor-pointer rounded-lg text-muted-foreground hover:bg-muted/20"
-                                  onClick={() => {
-                                    setEditExpense(exp)
-                                    setExpenseSheetOpen(true)
-                                  }}
-                                >
-                                  <Edit2Icon className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 cursor-pointer rounded-lg text-rose-500 hover:bg-rose-500/10 hover:text-rose-600"
-                                  onClick={() => handleDeleteExpense(exp.id)}
-                                >
-                                  <Trash2Icon className="h-4 w-4" />
-                                </Button>
+                              <div>
+                                {isWritable && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger
+                                      render={
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8 shrink-0 cursor-pointer rounded-lg text-muted-foreground hover:bg-muted/40"
+                                        >
+                                          <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                      }
+                                    />
+                                    <DropdownMenuContent
+                                      align="end"
+                                      className="w-40"
+                                    >
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          setHistoryExpense(exp)
+                                          setHistoryOpen(true)
+                                        }}
+                                        className="flex cursor-pointer items-center gap-2"
+                                      >
+                                        <History className="h-4 w-4 text-muted-foreground" />
+                                        <span>Payment History</span>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          setEditExpense(exp)
+                                          setExpenseSheetOpen(true)
+                                        }}
+                                        className="flex cursor-pointer items-center gap-2"
+                                      >
+                                        <Edit2Icon className="h-4 w-4 text-muted-foreground" />
+                                        <span>Edit</span>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          handleDeleteExpense(exp.id)
+                                        }
+                                        className="flex cursor-pointer items-center gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                      >
+                                        <Trash2Icon className="h-4 w-4" />
+                                        <span>Delete</span>
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
                               </div>
                             </div>
                           </div>

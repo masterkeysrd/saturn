@@ -99,7 +99,7 @@ export function ConfirmPaymentSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full rounded-l-3xl border-l border-border/40 bg-card/95 p-6 shadow-2xl backdrop-blur-xl sm:!max-w-xl md:p-8">
+      <SheetContent className="w-full rounded-none border-none border-border/40 bg-card/95 p-6 shadow-2xl backdrop-blur-xl sm:!max-w-xl sm:rounded-l-3xl sm:border-l md:p-8">
         {confirmedTxn ? (
           // Success State Screen
           <div className="flex h-full flex-col justify-between pt-8">

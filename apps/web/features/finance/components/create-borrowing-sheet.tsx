@@ -134,7 +134,7 @@ export function CreateBorrowingSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto rounded-l-3xl border-l border-border/40 bg-card/95 p-6 shadow-2xl backdrop-blur-xl sm:max-w-lg md:p-8">
+      <SheetContent className="overflow-y-auto rounded-none border-none border-border/40 bg-card/95 p-6 shadow-2xl backdrop-blur-xl sm:max-w-lg sm:rounded-l-3xl sm:border-l md:p-8">
         <SheetHeader className="p-0">
           <SheetTitle className="text-xl font-bold">
             {editBorrowing ? "Edit Borrowing" : "Record Borrowing"}

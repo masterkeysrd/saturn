@@ -57,6 +57,7 @@ function SidebarNavItem({
   item: FeatureMenu
   currentPath: string
 }) {
+  const { isMobile, setOpenMobile } = useSidebar()
   const [open, setOpen] = useState(() => {
     // Auto-expand if the current path matches any nested submenu link
     if (item.items) {
@@ -92,6 +93,11 @@ function SidebarNavItem({
                 <SidebarMenuSubButton
                   render={<Link to={subItem.url} />}
                   isActive={subItem.url === currentPath}
+                  onClick={() => {
+                    if (isMobile) {
+                      setOpenMobile(false)
+                    }
+                  }}
                 >
                   {subItem.icon && <subItem.icon />}
                   <span>{subItem.title}</span>
@@ -110,6 +116,11 @@ function SidebarNavItem({
         render={<Link to={item.url || "/"} />}
         tooltip={item.title}
         isActive={item.url === currentPath}
+        onClick={() => {
+          if (isMobile) {
+            setOpenMobile(false)
+          }
+        }}
       >
         <item.icon />
         <span>{item.title}</span>
@@ -120,7 +131,7 @@ function SidebarNavItem({
 
 export function AppSidebar() {
   const { user, logoutUser } = useAuth()
-  const { state } = useSidebar()
+  const { state, isMobile, setOpenMobile } = useSidebar()
   const location = useLocation()
   const { spaceId } = useActiveSpaceContext()
   const [profileOpen, setProfileOpen] = useState(false)
@@ -264,7 +275,10 @@ export function AppSidebar() {
               {/* Menu Items */}
               <Link
                 to="/settings?tab=account"
-                onClick={() => setProfileOpen(false)}
+                onClick={() => {
+                  setProfileOpen(false)
+                  if (isMobile) setOpenMobile(false)
+                }}
                 className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted/60"
               >
                 <UserIcon className="h-4 w-4 text-muted-foreground" />
@@ -273,7 +287,10 @@ export function AppSidebar() {
 
               <Link
                 to="/settings?tab=spaces"
-                onClick={() => setProfileOpen(false)}
+                onClick={() => {
+                  setProfileOpen(false)
+                  if (isMobile) setOpenMobile(false)
+                }}
                 className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted/60"
               >
                 <SettingsIcon className="h-4 w-4 text-muted-foreground" />
@@ -284,6 +301,7 @@ export function AppSidebar() {
                 onClick={() => {
                   setProfileOpen(false)
                   logoutUser()
+                  if (isMobile) setOpenMobile(false)
                 }}
                 className="mt-1 flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
               >

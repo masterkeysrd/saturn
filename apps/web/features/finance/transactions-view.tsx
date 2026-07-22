@@ -126,7 +126,7 @@ export function TransactionsView() {
 
   return (
     <FinancePageLayout
-      title="Workspace Transactions"
+      title="Transactions"
       description="View your ledger history, check exchange conversions, and manage expenses."
       icon={Receipt}
     >
@@ -148,12 +148,12 @@ export function TransactionsView() {
                   <span className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                     Total Outflow
                   </span>
-                  <span className="mt-1 block text-3xl font-black tracking-tight text-foreground">
+                  <span className="mt-1 block text-2xl font-black tracking-tight whitespace-nowrap text-foreground sm:text-3xl">
                     {totalSpent.toLocaleString(undefined, {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}{" "}
-                    <span className="text-sm font-bold text-muted-foreground uppercase">
+                    <span className="text-xs font-bold text-muted-foreground uppercase sm:text-sm">
                       {settings?.baseCurrency}
                     </span>
                   </span>
@@ -165,7 +165,7 @@ export function TransactionsView() {
                     <span className="block text-[9px] font-bold text-muted-foreground uppercase">
                       Average Cost
                     </span>
-                    <span className="mt-0.5 block text-sm font-extrabold text-foreground">
+                    <span className="mt-0.5 block text-sm font-extrabold whitespace-nowrap text-foreground">
                       {avgSpent.toLocaleString(undefined, {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
@@ -176,7 +176,7 @@ export function TransactionsView() {
                     <span className="block text-[9px] font-bold text-muted-foreground uppercase">
                       Total Transactions
                     </span>
-                    <span className="mt-0.5 block text-sm font-extrabold text-foreground">
+                    <span className="mt-0.5 block text-sm font-extrabold whitespace-nowrap text-foreground">
                       {txCount}
                     </span>
                   </div>
@@ -238,7 +238,7 @@ export function TransactionsView() {
                   Chronological record of space-wide expenses.
                 </p>
               </div>
-              <span className="rounded-full border border-border/30 bg-muted/40 px-2.5 py-1 text-xs font-bold text-muted-foreground">
+              <span className="rounded-full border border-border/30 bg-muted/40 px-2.5 py-1 text-xs font-bold whitespace-nowrap text-muted-foreground">
                 {txCount} total
               </span>
             </div>
@@ -274,22 +274,24 @@ export function TransactionsView() {
                   return (
                     <div
                       key={t.id}
-                      className="group relative grid grid-cols-12 items-center gap-4 rounded-2xl border border-border/40 bg-card/25 p-4 shadow-sm backdrop-blur-sm transition-all duration-300 hover:scale-[1.005] hover:bg-card/35 hover:shadow-md"
+                      className="group relative flex items-center justify-between gap-4 rounded-2xl border border-border/40 bg-card/25 p-4 shadow-sm backdrop-blur-sm transition-all duration-300 hover:scale-[1.005] hover:bg-card/35 hover:shadow-md sm:grid sm:grid-cols-12 sm:gap-4"
                     >
                       {/* Column 1: Icon & Description (col-span-5) */}
-                      <div className="col-span-5 flex min-w-0 items-center gap-4">
+                      <div className="flex min-w-0 flex-1 items-center gap-3 sm:col-span-5 sm:gap-4">
                         <div
-                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${colors.bg} ${colors.text} border ${colors.border}`}
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 ${colors.bg} ${colors.text} border ${colors.border}`}
                         >
                           {createElement(iconComp, { className: "h-5 w-5" })}
                         </div>
-                        <div className="min-w-0">
-                          <span className="flex flex-wrap items-center gap-2 truncate text-sm font-bold text-foreground transition-colors group-hover:text-primary">
-                            {t.description || (
-                              <span className="text-xs font-normal text-muted-foreground/50 italic">
-                                No description
-                              </span>
-                            )}
+                        <div className="min-w-0 flex-1">
+                          <span className="flex flex-wrap items-center gap-1.5 text-sm font-bold text-foreground transition-colors group-hover:text-primary">
+                            <span className="max-w-[100px] truncate min-[375px]:max-w-[140px] min-[420px]:max-w-[180px] sm:max-w-none">
+                              {t.description || (
+                                <span className="text-xs font-normal text-muted-foreground/50 italic">
+                                  No description
+                                </span>
+                              )}
+                            </span>
                             {t.sourceType === "recurrent_expense" && (
                               <span className="inline-flex items-center gap-1 rounded bg-indigo-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-indigo-500 uppercase select-none">
                                 <Repeat className="h-2.5 w-2.5" />
@@ -334,12 +336,23 @@ export function TransactionsView() {
                                 </span>
                               )
                             })()}
+                            <span className="font-mono text-[10px] text-muted-foreground/80 sm:hidden">
+                              {new Date(t.transactionDate).toLocaleDateString(
+                                undefined,
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                  timeZone: "UTC",
+                                }
+                              )}
+                            </span>
                           </div>
                         </div>
                       </div>
 
                       {/* Column 2: Transaction Type Badge (col-span-2) */}
-                      <div className="col-span-2">
+                      <div className="hidden sm:col-span-2 sm:block">
                         <span
                           className={`inline-flex items-center rounded border px-2 py-0.5 text-[9px] font-extrabold uppercase select-none ${
                             t.type === "INCOME"
@@ -354,7 +367,7 @@ export function TransactionsView() {
                       </div>
 
                       {/* Column 3: Date (col-span-2) */}
-                      <div className="col-span-2 font-mono text-xs text-muted-foreground/80">
+                      <div className="hidden font-mono text-xs text-muted-foreground/80 sm:col-span-2 sm:block">
                         {new Date(t.transactionDate).toLocaleDateString(
                           undefined,
                           {
@@ -367,9 +380,9 @@ export function TransactionsView() {
                       </div>
 
                       {/* Column 4: Amount (col-span-2 text-right) */}
-                      <div className="col-span-2 min-w-0 pr-2 text-right">
+                      <div className="min-w-0 shrink-0 pr-1 text-right sm:col-span-2 sm:pr-2">
                         <span
-                          className={`block text-base font-extrabold tracking-tight ${
+                          className={`block text-sm font-extrabold tracking-tight sm:text-base ${
                             t.type === "INCOME"
                               ? "text-emerald-500"
                               : "text-foreground"
@@ -380,12 +393,12 @@ export function TransactionsView() {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           })}
-                          <span className="ml-1 text-[10px] font-bold text-muted-foreground uppercase">
+                          <span className="ml-1 text-[9px] font-bold text-muted-foreground uppercase sm:text-[10px]">
                             {t.currency}
                           </span>
                         </span>
                         {isCrossCurrency && (
-                          <span className="mt-0.5 flex items-center justify-end gap-0.5 truncate font-mono text-[10px] text-muted-foreground">
+                          <span className="mt-0.5 flex items-center justify-end gap-0.5 truncate font-mono text-[9px] text-muted-foreground sm:text-[10px]">
                             {t.type === "INCOME" ? "+" : "-"}
                             {amtBase.toLocaleString(undefined, {
                               minimumFractionDigits: 2,
@@ -397,7 +410,7 @@ export function TransactionsView() {
                       </div>
 
                       {/* Column 5: Actions (col-span-1 text-right) */}
-                      <div className="col-span-1 flex justify-end">
+                      <div className="flex shrink-0 justify-end sm:col-span-1">
                         {isWritable && (
                           <DropdownMenu>
                             <DropdownMenuTrigger

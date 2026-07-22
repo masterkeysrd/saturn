@@ -161,7 +161,7 @@ export function CreateRecurringExpenseSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full rounded-l-3xl border-l border-border/40 bg-card/95 p-6 shadow-2xl backdrop-blur-xl sm:max-w-md md:p-8">
+      <SheetContent className="w-full rounded-none border-none border-border/40 bg-card/95 p-6 shadow-2xl backdrop-blur-xl sm:max-w-md sm:rounded-l-3xl sm:border-l md:p-8">
         <SheetHeader className="p-0">
           <SheetTitle className="text-xl font-bold">
             {editExpense

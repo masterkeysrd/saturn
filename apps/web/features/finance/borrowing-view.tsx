@@ -125,7 +125,7 @@ export function BorrowingView() {
         isWritable && (
           <Button
             onClick={handleOpenCreate}
-            className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent px-4 pt-0.5 font-semibold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.02] hover:opacity-95"
+            className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent px-4 pt-0.5 font-semibold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.02] hover:opacity-95 sm:w-auto"
           >
             <Plus className="h-4.5 w-4.5" />
             Record Borrowing
@@ -214,7 +214,7 @@ export function BorrowingView() {
                   }`}
                 >
                   {status === "ALL"
-                    ? "All Statuses"
+                    ? "All"
                     : status === "BORROWING_STATUS_ACTIVE"
                       ? "Active"
                       : "Paid Off"}
@@ -239,7 +239,7 @@ export function BorrowingView() {
                   }`}
                 >
                   {dir === "ALL"
-                    ? "All types"
+                    ? "All"
                     : dir === "BORROWING_DIRECTION_LENT"
                       ? "Lent"
                       : "Borrowed"}

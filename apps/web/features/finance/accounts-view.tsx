@@ -847,10 +847,10 @@ function CreateAccountSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="rounded-l-3xl border-l border-border/40 bg-card/95 p-6 shadow-2xl backdrop-blur-xl md:p-8">
+      <SheetContent className="rounded-none border-none border-border/40 bg-card/95 p-6 shadow-2xl backdrop-blur-xl sm:rounded-l-3xl sm:border-l md:p-8">
         <SheetHeader className="p-0">
           <SheetTitle className="text-xl font-bold">
-            {editAccount ? "Edit Account" : "Add Workspace Account"}
+            {editAccount ? "Edit Account" : "Create Account"}
           </SheetTitle>
           <SheetDescription className="text-xs">
             Configure ledger entities for liquidity balance adjustments.
@@ -1171,7 +1171,7 @@ function CreateTransferSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="rounded-l-3xl border-l border-border/40 bg-card/95 p-6 shadow-2xl backdrop-blur-xl md:p-8">
+      <SheetContent className="rounded-none border-none border-border/40 bg-card/95 p-6 shadow-2xl backdrop-blur-xl sm:rounded-l-3xl sm:border-l md:p-8">
         <SheetHeader className="p-0">
           <SheetTitle className="flex items-center gap-2 text-xl font-bold">
             <ArrowRightLeft className="h-5 w-5 text-primary" />

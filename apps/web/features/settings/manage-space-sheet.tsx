@@ -151,7 +151,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
 
   return (
     <Sheet open={!!space} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="w-[500px] overflow-y-auto border-l border-border/40 bg-background/95 p-0 shadow-2xl backdrop-blur-xl sm:max-w-lg">
+      <SheetContent className="w-full overflow-y-auto border-none border-border/40 bg-background/95 p-0 shadow-2xl backdrop-blur-xl sm:w-[500px] sm:max-w-lg sm:border-l">
         {/* Header Section */}
         <SheetHeader className="space-y-2 border-b border-border/40 p-6 select-none">
           <div className="flex items-center gap-3">

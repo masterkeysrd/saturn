@@ -40,7 +40,7 @@ export function RatesView() {
         isWritable && (
           <Button
             onClick={() => setRateCreateOpen(true)}
-            className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent pt-0.5 font-semibold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.02] hover:opacity-95"
+            className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent pt-0.5 font-semibold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.02] hover:opacity-95 sm:w-auto"
           >
             Add Conversion Rate
           </Button>
@@ -91,28 +91,20 @@ export function RatesView() {
               {ratesData.exchangeRates.map((r, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-muted/10"
+                  className="flex items-center justify-between gap-4 px-4 py-3.5 transition-colors hover:bg-muted/10 sm:px-6 sm:py-4"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-background/50 px-2.5 py-1 text-xs font-bold text-foreground">
-                      {r.fromCurrency}
+                  {/* Left part: Currencies & Date */}
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-black tracking-tight text-foreground">
+                        {r.fromCurrency}
+                      </span>
+                      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <span className="text-sm font-black tracking-tight text-foreground">
+                        {r.toCurrency}
+                      </span>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                    <div className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-background/50 px-2.5 py-1 text-xs font-bold text-foreground">
-                      {r.toCurrency}
-                    </div>
-                    <div className="text-sm font-medium text-muted-foreground">
-                      1 {r.fromCurrency} ={" "}
-                      <span className="font-black text-primary">
-                        {Number(r.rate.toFixed(6))}
-                      </span>{" "}
-                      {r.toCurrency}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <span className="font-mono text-xs text-muted-foreground/80">
-                      Rate Date:{" "}
+                    <span className="font-mono text-[10px] text-muted-foreground/80">
                       {new Date(r.rateDate).toLocaleDateString(undefined, {
                         month: "short",
                         day: "numeric",
@@ -120,18 +112,30 @@ export function RatesView() {
                         timeZone: "UTC",
                       })}
                     </span>
-                    {isWritable && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        disabled={deleteRateMutation.isPending}
-                        onClick={() => handleDeleteRate(r)}
-                        className="h-8 w-8 shrink-0 cursor-pointer rounded-lg text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
                   </div>
+
+                  {/* Right part: Conversion rate */}
+                  <div className="min-w-0 shrink-0 pr-1 text-right">
+                    <span className="block text-sm font-extrabold tracking-tight text-primary sm:text-base">
+                      {Number(r.rate.toFixed(6))}
+                    </span>
+                    <span className="block text-[8px] font-black tracking-wider text-muted-foreground/75 uppercase">
+                      Per 1 {r.fromCurrency}
+                    </span>
+                  </div>
+
+                  {/* Actions: Delete */}
+                  {isWritable && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      disabled={deleteRateMutation.isPending}
+                      onClick={() => handleDeleteRate(r)}
+                      className="h-8 w-8 shrink-0 cursor-pointer rounded-lg text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>

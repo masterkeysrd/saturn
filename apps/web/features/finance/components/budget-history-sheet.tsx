@@ -61,7 +61,7 @@ export function BudgetHistorySheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full border-l border-border/40 bg-card/95 p-6 shadow-2xl backdrop-blur-xl sm:!max-w-xl">
+      <SheetContent className="w-full border-none border-border/40 bg-card/95 p-6 shadow-2xl backdrop-blur-xl sm:!max-w-xl sm:border-l">
         <SheetHeader className="mb-6 text-left">
           <SheetTitle className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground">
             <History className="h-5 w-5 text-primary" />

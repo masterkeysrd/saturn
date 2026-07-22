@@ -124,7 +124,7 @@ export function BorrowingDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex h-full flex-col overflow-hidden rounded-l-3xl border-l border-border/40 bg-card/95 p-6 shadow-2xl backdrop-blur-xl sm:max-w-2xl md:p-8">
+      <SheetContent className="flex h-full flex-col overflow-hidden rounded-none border-none border-border/40 bg-card/95 p-6 shadow-2xl backdrop-blur-xl sm:max-w-2xl sm:rounded-l-3xl sm:border-l md:p-8">
         <SheetHeader className="mb-4">
           <SheetTitle className="flex items-center gap-2">
             <HandCoins className="h-5 w-5 text-primary" />
