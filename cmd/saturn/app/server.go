@@ -14,6 +14,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/api"
+	"github.com/masterkeysrd/saturn/apps/web"
 	"github.com/masterkeysrd/saturn/internal/platform/token"
 	transportauth "github.com/masterkeysrd/saturn/internal/transport/auth"
 	"golang.org/x/sync/errgroup"
@@ -296,6 +297,32 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 		swaggerJSONPath := swaggerPath + "api.swagger.json"
 		handler.Handle(swaggerPath, SwaggerHandler(swaggerJSONPath))
 	}
+
+	// Serve static files from embedded React UI assets with client-routing fallback
+	uiFS := web.GetUIFS()
+	fileServer := http.FileServer(http.FS(uiFS))
+	handler.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		if path == "/" {
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+
+		// Clean the path to prevent directory traversal
+		cleaned := strings.TrimPrefix(path, "/")
+
+		// Check if file exists in the embedded filesystem
+		f, err := uiFS.Open(cleaned)
+		if err == nil {
+			f.Close()
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+
+		// File does not exist, fall back to index.html for client-side routing
+		r.URL.Path = "/index.html"
+		fileServer.ServeHTTP(w, r)
+	}))
 
 	s.server = &http.Server{Addr: s.addr, Handler: handler}
 	return nil

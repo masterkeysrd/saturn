@@ -4,9 +4,13 @@
 *.test
 *.out
 
-# Go build directory
-dist/
-bin/
+# Go build directory (anchor to root to protect apps/web/dist)
+/dist
+/bin
+
+# Node dependencies
+**/node_modules
+.npm
 
 # Documentation
 docs/
