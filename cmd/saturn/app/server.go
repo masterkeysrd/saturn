@@ -1,20 +1,25 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"crypto/ed25519"
 	"database/sql"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/api"
 	"github.com/masterkeysrd/saturn/apps/web"
+	"github.com/masterkeysrd/saturn/internal/platform/backup"
 	"github.com/masterkeysrd/saturn/internal/platform/token"
 	transportauth "github.com/masterkeysrd/saturn/internal/transport/auth"
 	"golang.org/x/sync/errgroup"
@@ -24,6 +29,7 @@ import (
 	financev1 "github.com/masterkeysrd/saturn/apis/saturn/finance/v1"
 	admingrpc "github.com/masterkeysrd/saturn/apis/saturn/identity/admin/v1"
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
+	backupv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/backup/v1"
 	schedulerv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/scheduler/v1"
 	spacev1 "github.com/masterkeysrd/saturn/apis/saturn/space/v1"
 	financeapp "github.com/masterkeysrd/saturn/internal/application/finance"
@@ -38,6 +44,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/password"
 	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
 	"github.com/masterkeysrd/saturn/internal/shutdown"
+	backupgrpc "github.com/masterkeysrd/saturn/internal/transport/backup"
 	financegrpc "github.com/masterkeysrd/saturn/internal/transport/finance"
 	identitygrpc "github.com/masterkeysrd/saturn/internal/transport/identity"
 	schedulergrpc "github.com/masterkeysrd/saturn/internal/transport/scheduler"
@@ -46,8 +53,9 @@ import (
 
 // GRPCServer manages the standalone gRPC server listening on a Unix socket.
 type GRPCServer struct {
-	listener net.Listener
-	grpc     *grpc.Server
+	listener     net.Listener
+	grpc         *grpc.Server
+	TokenService token.Service
 }
 
 // NewGRPCServer creates a new GRPCServer instance.
@@ -122,6 +130,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	if err != nil {
 		return fmt.Errorf("create token service: %w", err)
 	}
+	s.TokenService = tokenService
 
 	coordinator := iam.NewCoordinator(iam.Dependencies{
 		IdentityService: identityService,
@@ -149,10 +158,12 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 
 	s.grpc = grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
+			transportauth.PanicUnaryInterceptor(),
 			authInterceptor.UnaryServerInterceptor(),
 			spaceInterceptor.UnaryServerInterceptor(),
 		),
 		grpc.ChainStreamInterceptor(
+			transportauth.PanicStreamInterceptor(),
 			authInterceptor.StreamServerInterceptor(),
 			spaceInterceptor.StreamServerInterceptor(),
 		),
@@ -223,6 +234,44 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 		return fmt.Errorf("register finance schedules: %w", err)
 	}
 
+	// Wire Backup service
+	backupPgConfig := backup.PostgresConfig{
+		Host:     cfg.DB.Host,
+		Port:     strconv.Itoa(cfg.DB.Port),
+		User:     cfg.DB.User,
+		Password: cfg.DB.Password,
+		Database: cfg.DB.Name,
+	}
+
+	var store backup.Storage
+	switch cfg.Backup.Driver {
+	case "s3":
+		if cfg.Backup.S3Bucket == "" {
+			return fmt.Errorf("backup.s3_bucket must be set when driver is s3")
+		}
+		var err error
+		store, err = backup.NewS3Storage(ctx, cfg.Backup.S3Bucket, cfg.Backup.S3Region, cfg.Backup.S3Endpoint)
+		if err != nil {
+			return fmt.Errorf("init backup storage failed: %w", err)
+		}
+	default:
+		var err error
+		store, err = backup.NewLocalStorage(cfg.Backup.LocalDir)
+		if err != nil {
+			return fmt.Errorf("init backup storage failed: %w", err)
+		}
+	}
+
+	backupManager := backup.NewPostgresBackupManager(store, backupPgConfig, cfg.Backup.LocalDir)
+	backupHandler := backupgrpc.NewHandler(backupManager)
+	backupv1.RegisterBackupAdminServer(s.grpc, backupHandler)
+
+	// Bind backup execution callback to scheduler and seed daily schedule
+	backupv1.RegisterRunDatabaseBackupPayload(schedulerEngine, backupHandler.HandleRunDatabaseBackup)
+	if err := backupHandler.RegisterSchedules(ctx, schedulerEngine); err != nil {
+		return fmt.Errorf("register backup schedules: %w", err)
+	}
+
 	return nil
 }
 
@@ -245,14 +294,18 @@ type GRPCGatewayServer struct {
 	server         *http.Server
 	swaggerEnabled bool
 	swaggerPath    string
+	tokenService   token.Service
+	config         *Config
 }
 
 // NewGRPCGatewayServer creates a new GRPCGatewayServer instance.
-func NewGRPCGatewayServer(cfg *Config) *GRPCGatewayServer {
+func NewGRPCGatewayServer(cfg *Config, tokenService token.Service) *GRPCGatewayServer {
 	return &GRPCGatewayServer{
 		addr:           cfg.Gateway.Addr,
 		swaggerEnabled: cfg.Swagger.Enabled,
 		swaggerPath:    cfg.Swagger.Path,
+		tokenService:   tokenService,
+		config:         cfg,
 	}
 }
 
@@ -290,6 +343,10 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 		return fmt.Errorf("register scheduler admin gateway handler: %w", err)
 	}
 
+	if err := backupv1.RegisterBackupAdminHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
+		return fmt.Errorf("register backup admin gateway handler: %w", err)
+	}
+
 	handler := http.NewServeMux()
 	handler.Handle("/api/v1/", apiV1Handler(s.mux))
 	if s.swaggerEnabled {
@@ -320,8 +377,12 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 		}
 
 		// File does not exist, fall back to index.html for client-side routing
-		r.URL.Path = "/index.html"
-		fileServer.ServeHTTP(w, r)
+		indexContent, err := fs.ReadFile(uiFS, "index.html")
+		if err != nil {
+			http.Error(w, "index.html not found", http.StatusNotFound)
+			return
+		}
+		http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(indexContent))
 	}))
 
 	s.server = &http.Server{Addr: s.addr, Handler: handler}
@@ -357,15 +418,17 @@ func StartAll(ctx context.Context, mgr *shutdown.Manager, cfg *Config) error {
 	defer db.Close()
 
 	grpcSrv := NewGRPCServer(cfg)
-	gwSrv := NewGRPCGatewayServer(cfg)
+
+	if err := grpcSrv.Start(ctx, cfg, db); err != nil {
+		return fmt.Errorf("grpc: %w", err)
+	}
+
+	gwSrv := NewGRPCGatewayServer(cfg, grpcSrv.TokenService)
 
 	// Register shutdown callbacks (LIFO order: gateway first, then gRPC).
 	mgr.Register(grpcSrv.Shutdown)
 	mgr.Register(gwSrv.Shutdown)
 
-	if err := grpcSrv.Start(ctx, cfg, db); err != nil {
-		return fmt.Errorf("grpc: %w", err)
-	}
 	if err := gwSrv.Start(ctx, cfg); err != nil {
 		return fmt.Errorf("gateway: %w", err)
 	}

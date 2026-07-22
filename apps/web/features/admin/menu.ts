@@ -16,5 +16,9 @@ export const menu: FeatureMenu = {
       title: "Scheduler Panel",
       url: "/admin/scheduler",
     },
+    {
+      title: "Database Backups",
+      url: "/admin/backups",
+    },
   ],
 }

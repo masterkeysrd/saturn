@@ -15,6 +15,9 @@
       "name": "Identity"
     },
     {
+      "name": "BackupAdmin"
+    },
+    {
       "name": "SchedulerAdmin"
     },
     {
@@ -28,6 +31,60 @@
     "application/json"
   ],
   "paths": {
+    "/v1/admin/backups": {
+      "get": {
+        "summary": "ListBackups returns a list of database backup entries from the index.",
+        "operationId": "BackupAdmin_ListBackups",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListBackupsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "BackupAdmin"
+        ]
+      },
+      "post": {
+        "summary": "TriggerBackup runs a database backup immediately.",
+        "operationId": "BackupAdmin_TriggerBackup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TriggerBackupResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1TriggerBackupRequest"
+            }
+          }
+        ],
+        "tags": [
+          "BackupAdmin"
+        ]
+      }
+    },
     "/v1/admin/identity/users": {
       "get": {
         "summary": "ListUsers returns users with optional filtering by status or search query.",
@@ -3057,6 +3114,34 @@
         }
       }
     },
+    "v1BackupEntry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "sizeBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "triggeredBy": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
     "v1Borrowing": {
       "type": "object",
       "properties": {
@@ -3715,6 +3800,22 @@
         }
       },
       "description": "ListActiveSessionsResponse lists active sessions."
+    },
+    "v1ListBackupsResponse": {
+      "type": "object",
+      "properties": {
+        "lastUpdated": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "backups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1BackupEntry"
+          }
+        }
+      }
     },
     "v1ListBorrowingRepaymentsResponse": {
       "type": "object",
@@ -4405,6 +4506,17 @@
         "updateTime": {
           "type": "string",
           "format": "date-time"
+        }
+      }
+    },
+    "v1TriggerBackupRequest": {
+      "type": "object"
+    },
+    "v1TriggerBackupResponse": {
+      "type": "object",
+      "properties": {
+        "backup": {
+          "$ref": "#/definitions/v1BackupEntry"
         }
       }
     },

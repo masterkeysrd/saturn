@@ -52,6 +52,16 @@ type Config struct {
 	Log      LogConfig
 	Swagger  SwaggerConfig
 	Auth     AuthConfig
+	Backup   BackupConfig
+}
+
+// BackupConfig holds database backup and sync configurations.
+type BackupConfig struct {
+	Driver     string `mapstructure:"driver"`
+	LocalDir   string `mapstructure:"local_dir"`
+	S3Bucket   string `mapstructure:"s3_bucket"`
+	S3Region   string `mapstructure:"s3_region"`
+	S3Endpoint string `mapstructure:"s3_endpoint"`
 }
 
 // SwaggerConfig holds swagger UI settings.
@@ -139,6 +149,12 @@ func NewViper() *viper.Viper {
 	v.SetDefault("auth.active_key_id", defaultJWTActiveKeyID)
 	v.SetDefault("auth.private_key_path", defaultJWTKeyDir+"/private.pem")
 	v.SetDefault("auth.public_keys", map[string]string{})
+
+	v.SetDefault("backup.driver", "local")
+	v.SetDefault("backup.local_dir", "./backups")
+	v.SetDefault("backup.s3_bucket", "")
+	v.SetDefault("backup.s3_region", "us-east-1")
+	v.SetDefault("backup.s3_endpoint", "")
 
 	return v
 }

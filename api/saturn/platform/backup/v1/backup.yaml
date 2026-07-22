@@ -1,0 +1,22 @@
+# BackupAdmin service API configuration.
+
+name: saturn.platform.backup.v1
+title: "Saturn Backup Admin API"
+apis:
+    - saturn.platform.backup.v1.BackupAdmin
+documentation:
+  summary: "Provides database backup administration capabilities, including manual runs and log indexing."
+
+authentication:
+  rules:
+    # Restrict all backup endpoints to users with "admin" access level
+    - selector: "saturn.platform.backup.v1.BackupAdmin.*"
+      auth_required: true
+      access_levels:
+         - admin
+
+space:
+  rules:
+    # Backup operations are global (non space-scoped)
+    - selector: "saturn.platform.backup.v1.BackupAdmin.*"
+      scoped: false

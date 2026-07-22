@@ -1,9 +1,11 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/application/iam"
@@ -11,6 +13,7 @@ import (
 	identitystorage "github.com/masterkeysrd/saturn/internal/domain/identity/storage"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	spacestorage "github.com/masterkeysrd/saturn/internal/domain/space/storage"
+	"github.com/masterkeysrd/saturn/internal/platform/backup"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
 	"github.com/masterkeysrd/saturn/internal/shutdown"
 	"github.com/masterkeysrd/saturn/migrations"
@@ -192,5 +195,62 @@ func Execute() error {
 	rootCmd.AddCommand(serveCmd)
 	rootCmd.AddCommand(migrateCmd)
 	rootCmd.AddCommand(adminCmd)
+
+	backupCmd := &cobra.Command{
+		Use:   "backup",
+		Short: "Trigger a database backup snapshot and sync metadata",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			v := NewViper()
+			BindFlags(v, cmd.Flags())
+			cfg := LoadConfig(v)
+
+			slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: logLevels[cfg.Log.Level]})))
+
+			store, err := initBackupStorage(cmd.Context(), cfg)
+			if err != nil {
+				return fmt.Errorf("init storage: %w", err)
+			}
+
+			pgConfig := backup.PostgresConfig{
+				Host:     cfg.DB.Host,
+				Port:     strconv.Itoa(cfg.DB.Port),
+				User:     cfg.DB.User,
+				Password: cfg.DB.Password,
+				Database: cfg.DB.Name,
+			}
+
+			mgr := backup.NewPostgresBackupManager(store, pgConfig, cfg.Backup.LocalDir)
+
+			slog.Info("starting database backup snapshot")
+			entry, err := mgr.RunBackup(cmd.Context(), "cli_manual")
+			if err != nil {
+				return fmt.Errorf("backup execution failed: %w", err)
+			}
+
+			slog.Info("database backup completed successfully",
+				"filename", entry.Filename,
+				"size_bytes", entry.SizeBytes,
+				"sha256", entry.Sha256,
+			)
+			fmt.Printf("Backup successful!\nFile: %s\nSize: %d bytes\nSHA256: %s\n",
+				entry.Filename, entry.SizeBytes, entry.Sha256)
+
+			return nil
+		},
+	}
+	rootCmd.AddCommand(backupCmd)
+
 	return rootCmd.Execute()
+}
+
+func initBackupStorage(ctx context.Context, cfg *Config) (backup.Storage, error) {
+	switch cfg.Backup.Driver {
+	case "s3":
+		if cfg.Backup.S3Bucket == "" {
+			return nil, fmt.Errorf("backup.s3_bucket must be set when driver is s3")
+		}
+		return backup.NewS3Storage(ctx, cfg.Backup.S3Bucket, cfg.Backup.S3Region, cfg.Backup.S3Endpoint)
+	default:
+		return backup.NewLocalStorage(cfg.Backup.LocalDir)
+	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"runtime/debug"
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/id"
@@ -185,6 +186,28 @@ func (e *Engine) executePendingJobs(ctx context.Context) error {
 }
 
 func (e *Engine) executeJobInstance(ctx context.Context, j jobInstance) {
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("panic recovered during scheduler job execution",
+				"job_id", j.ID,
+				"job_type", j.JobType,
+				"panic", r,
+				"stack", string(debug.Stack()),
+			)
+			nextAttempt := j.Attempts + 1
+			status := "pending"
+			if nextAttempt >= j.MaxAttempts {
+				status = "failed"
+			}
+			backoffMinutes := nextAttempt * 5
+			runAt := time.Now().Add(time.Duration(backoffMinutes) * time.Minute).UTC()
+			panicErr := fmt.Sprintf("panic: %v", r)
+			_, _ = e.db.ExecContext(ctx, `UPDATE platform.job 
+				SET status = $1, attempts = $2, run_at = $3, last_error = $4, update_time = NOW() 
+				WHERE id = $5`, status, nextAttempt, runAt, panicErr, j.ID)
+		}
+	}()
+
 	handler, exists := e.getHandler(j.JobType)
 	if !exists {
 		errMsg := fmt.Sprintf("no handler registered for job type %q", j.JobType)

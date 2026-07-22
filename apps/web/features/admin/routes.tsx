@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom"
 import { AdminView } from "./admin-view"
 import { SchedulerAdminView } from "./scheduler-view"
+import { BackupAdminView } from "./backup-view"
 import { AdminGuard } from "./admin-guard"
 import type { RouteObject } from "react-router-dom"
 
@@ -26,6 +27,14 @@ export const routes: RouteObject[] = [
     element: (
       <AdminGuard>
         <SchedulerAdminView />
+      </AdminGuard>
+    ),
+  },
+  {
+    path: "/admin/backups",
+    element: (
+      <AdminGuard>
+        <BackupAdminView />
       </AdminGuard>
     ),
   },

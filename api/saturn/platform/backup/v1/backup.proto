@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package saturn.platform.backup.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+import "saturn/platform/scheduler/v1/options.proto";
+
+option go_package = "github.com/masterkeysrd/saturn/apis/saturn/platform/backup/v1;backupv1";
+
+// BackupAdmin service handles manual backup runs and logs list monitoring.
+service BackupAdmin {
+  // ListBackups returns a list of database backup entries from the index.
+  rpc ListBackups(ListBackupsRequest) returns (ListBackupsResponse) {
+    option (google.api.http) = {get: "/v1/admin/backups"};
+  }
+
+  // TriggerBackup runs a database backup immediately.
+  rpc TriggerBackup(TriggerBackupRequest) returns (TriggerBackupResponse) {
+    option (google.api.http) = {
+      post: "/v1/admin/backups"
+      body: "*"
+    };
+  }
+}
+
+message ListBackupsRequest {}
+
+message BackupEntry {
+  string id = 1;
+  string filename = 2;
+  int64 size_bytes = 3;
+  string triggered_by = 4;
+  string status = 5;
+  string sha256 = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message ListBackupsResponse {
+  google.protobuf.Timestamp last_updated = 1;
+  repeated BackupEntry backups = 2;
+}
+
+message TriggerBackupRequest {}
+
+message TriggerBackupResponse {
+  BackupEntry backup = 1;
+}
+
+message RunDatabaseBackupPayload {
+  option (saturn.platform.scheduler.v1.job_type) = "backup.RunDatabaseBackup";
+}

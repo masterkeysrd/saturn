@@ -12,10 +12,12 @@ import (
 )
 
 //go:embed api.yaml
-//go:embed saturn/identity/v1/identity.yaml
-//go:embed saturn/identity/admin/v1/identityadmin.yaml
-//go:embed saturn/space/v1/space.yaml
-//go:embed saturn/finance/v1/finance.yaml
+//go:embed saturn/identity/v1/*.yaml
+//go:embed saturn/identity/admin/v1/*.yaml
+//go:embed saturn/space/v1/*.yaml
+//go:embed saturn/finance/v1/*.yaml
+//go:embed saturn/platform/backup/v1/*.yaml
+//go:embed saturn/platform/scheduler/v1/*.yaml
 var configFS embed.FS
 
 // ServiceConfig represents a parsed API configuration YAML file.
