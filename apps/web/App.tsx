@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { Routes, Route, Navigate, Outlet } from "react-router-dom"
 import { AuthLayout } from "@/layouts/auth-layout"
 import { LoginView } from "@/features/auth/login-view"
@@ -8,9 +9,30 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { useTheme } from "@/components/theme-provider"
 import { Sun, Moon } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import type { RouteObject } from "react-router-dom"
+import type { SaturnRouteObject } from "@/lib/navigation"
+import { useActiveSpaceContext } from "@/features/space/use-space"
+import { NoSpaceActiveScreen } from "@/components/no-space-active"
 
-const routeModules = import.meta.glob<{ routes: RouteObject[] }>(
+function SpaceGuard({ children }: { children: ReactNode }) {
+  const { spaceId, isLoading } = useActiveSpaceContext()
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-1 items-center justify-center p-6">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    )
+  }
+
+  // Display custom empty-state page if no active space is selected
+  if (!spaceId) {
+    return <NoSpaceActiveScreen />
+  }
+
+  return <>{children}</>
+}
+
+const routeModules = import.meta.glob<{ routes: SaturnRouteObject[] }>(
   "./features/**/routes.tsx",
   { eager: true }
 )
@@ -70,7 +92,17 @@ export function App() {
         >
           {/* Dynamically registered feature routes */}
           {featureRoutes.map((route, i) => (
-            <Route key={i} path={route.path} element={route.element} />
+            <Route
+              key={i}
+              path={route.path}
+              element={
+                route.requiresSpace ? (
+                  <SpaceGuard>{route.element}</SpaceGuard>
+                ) : (
+                  route.element
+                )
+              }
+            />
           ))}
         </Route>
       </Route>

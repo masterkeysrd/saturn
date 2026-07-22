@@ -27,6 +27,7 @@ import {
   SettingsIcon,
 } from "lucide-react"
 import { SpaceSelector } from "@/components/space-selector"
+import { useActiveSpaceContext } from "@/features/space/use-space"
 
 // Discover all menu configurations dynamically at compile time
 const menuModules = import.meta.glob<{ menu: FeatureMenu | FeatureMenu[] }>(
@@ -121,15 +122,20 @@ export function AppSidebar() {
   const { user, logoutUser } = useAuth()
   const { state } = useSidebar()
   const location = useLocation()
+  const { spaceId } = useActiveSpaceContext()
   const [profileOpen, setProfileOpen] = useState(false)
 
-  // Filter items inside the component based on role
+  // Filter items inside the component based on role and active space requirements
   const filteredMainNavItems = mainNavItems.filter(
-    (item) => !item.adminOnly || user?.role === "admin"
+    (item) =>
+      (!item.adminOnly || user?.role === "admin") &&
+      (!item.requiresSpace || !!spaceId)
   )
 
   const filteredDocsItems = docsItems.filter(
-    (item) => !item.adminOnly || user?.role === "admin"
+    (item) =>
+      (!item.adminOnly || user?.role === "admin") &&
+      (!item.requiresSpace || !!spaceId)
   )
 
   // Get initials for the user avatar

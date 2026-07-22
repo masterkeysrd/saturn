@@ -7,6 +7,7 @@ export const menu: FeatureMenu = {
   icon: PiggyBankIcon,
   weight: 20,
   group: "main",
+  requiresSpace: true,
   items: [
     {
       title: "Insights",

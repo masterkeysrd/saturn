@@ -11,6 +11,7 @@ export interface PageLayoutProps {
   emptyNode?: ReactNode
   isEmpty?: boolean
   className?: string
+  hideHeader?: boolean
 }
 
 export function PageLayout({
@@ -22,6 +23,7 @@ export function PageLayout({
   emptyNode,
   isEmpty = false,
   className,
+  hideHeader = false,
 }: PageLayoutProps) {
   useEffect(() => {
     document.title = title ? `${title} | Saturn` : "Saturn"
@@ -35,20 +37,22 @@ export function PageLayout({
       )}
     >
       {/* Header section */}
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div className="space-y-1.5">
-          <h1 className="flex items-center gap-3 text-3xl font-extrabold tracking-tight text-foreground md:text-4xl">
-            {Icon && <Icon className="h-8 w-8 shrink-0 text-primary" />}
-            {title}
-          </h1>
-          <p className="text-sm font-medium text-muted-foreground">
-            {description}
-          </p>
+      {!hideHeader && (
+        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+          <div className="space-y-1.5">
+            <h1 className="flex items-center gap-3 text-3xl font-extrabold tracking-tight text-foreground md:text-4xl">
+              {Icon && <Icon className="h-8 w-8 shrink-0 text-primary" />}
+              {title}
+            </h1>
+            <p className="text-sm font-medium text-muted-foreground">
+              {description}
+            </p>
+          </div>
+          {actions && (
+            <div className="flex shrink-0 items-center gap-3">{actions}</div>
+          )}
         </div>
-        {actions && (
-          <div className="flex shrink-0 items-center gap-3">{actions}</div>
-        )}
-      </div>
+      )}
 
       {/* Main Content Area */}
       {isEmpty && emptyNode ? (
