@@ -304,7 +304,10 @@ func extractClientInfo(ctx context.Context) (userAgent, ipAddress string) {
 			userAgent = ua[0]
 		}
 		if ip := md.Get("x-forwarded-for"); len(ip) > 0 {
-			ipAddress = ip[0]
+			rawIP := ip[0]
+			if parts := strings.Split(rawIP, ","); len(parts) > 0 {
+				ipAddress = strings.TrimSpace(parts[0])
+			}
 		}
 	}
 	return
