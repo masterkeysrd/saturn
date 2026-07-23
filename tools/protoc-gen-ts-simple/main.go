@@ -431,6 +431,9 @@ func mapMessageName(msg *protogen.Message) string {
 	if fullName == "google.protobuf.Empty" {
 		return "Record<string, never>"
 	}
+	if fullName == "google.protobuf.Struct" {
+		return "Record<string, any>"
+	}
 	return getNestedPrefix(msg) + string(msg.Desc.Name())
 }
 
