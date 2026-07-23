@@ -53,7 +53,11 @@ func ExtractText(pdfData []byte) (string, error) {
 
 	var buf bytes.Buffer
 	numPages := r.NumPage()
-	for i := 1; i <= numPages; i++ {
+	maxPages := numPages
+	if maxPages > 5 {
+		maxPages = 5
+	}
+	for i := 1; i <= maxPages; i++ {
 		page := r.Page(i)
 		if page.V.IsNull() {
 			continue

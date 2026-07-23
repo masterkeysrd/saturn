@@ -1,0 +1,24 @@
+# Platform Agent service API configuration.
+#
+# All platform agent endpoints require JWT Bearer authentication.
+# Space-scoped endpoints require the Space-Id header.
+
+name: saturn.platform.agent.v1
+title: "Saturn Platform Agent API"
+apis:
+  - saturn.platform.agent.v1.AgentService
+
+documentation:
+  summary: "Provides platform agents configuration and execution pipeline. Space-scoped endpoints require the 'space-id' header containing the workspace ID."
+
+authentication:
+  rules:
+    # All agent endpoints require authentication
+    - selector: "saturn.platform.agent.v1.AgentService.*"
+      auth_required: true
+
+space:
+  rules:
+    # Agent endpoints require workspace scope validation from metadata space-id header
+    - selector: "saturn.platform.agent.v1.AgentService.*"
+      scoped: true

@@ -205,14 +205,29 @@ func readPartData(r io.Reader, encoding string) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
+		// Clean base64 payload of any whitespace, newlines, or copy-paste artifacts
+		// Whitelist valid base64 alphabet characters, excluding padding '=' (which we normalize below)
+		cleanBytes := make([]byte, 0, len(rawBytes))
+		for _, b := range rawBytes {
+			if (b >= 'A' && b <= 'Z') || (b >= 'a' && b <= 'z') || (b >= '0' && b <= '9') || b == '+' || b == '/' {
+				cleanBytes = append(cleanBytes, b)
+			}
+		}
+		// Add correct padding based on modulo 4
+		switch len(cleanBytes) % 4 {
+		case 2:
+			cleanBytes = append(cleanBytes, '=', '=')
+		case 3:
+			cleanBytes = append(cleanBytes, '=')
+		}
 		// Try padded standard base64 first
-		dec := base64.NewDecoder(base64.StdEncoding, bytes.NewReader(rawBytes))
+		dec := base64.NewDecoder(base64.StdEncoding, bytes.NewReader(cleanBytes))
 		buf, err := io.ReadAll(dec)
 		if err == nil {
 			return buf, nil
 		}
 		// Fallback to unpadded raw base64
-		dec = base64.NewDecoder(base64.RawStdEncoding, bytes.NewReader(rawBytes))
+		dec = base64.NewDecoder(base64.RawStdEncoding, bytes.NewReader(cleanBytes))
 		return io.ReadAll(dec)
 	}
 	return io.ReadAll(decoded)
