@@ -73,17 +73,7 @@ export interface SimulateWebhookRequest {
 export interface SimulateWebhookResponse {
   success: boolean
   message: string
-  pendingTransaction: PendingTransactionDetails
-}
-
-export interface PendingTransactionDetails {
-  id: string
-  suggestedVendor: string
-  amount: string
-  currency: string
-  suggestedAccountId: string
-  suggestedBudgetId: string
-  suggestedPaymentId: string
+  result: Record<string, any>
 }
 
 export interface CatalogDescriptor {

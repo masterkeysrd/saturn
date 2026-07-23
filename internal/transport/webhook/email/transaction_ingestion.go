@@ -18,7 +18,7 @@ import (
 
 // FinanceService interface outlines the business logic dependencies.
 type FinanceService interface {
-	IngestEmail(ctx context.Context, spaceID string, integrationID string, sender, subject, body string) (*finance.PendingTransaction, error)
+	IngestEmail(ctx context.Context, spaceID string, integrationID string, sender, subject, body string) (*finance.InboxItem, error)
 }
 
 // TransactionIngestionProvider implements integration.Provider for email forwarding.
@@ -185,6 +185,11 @@ func (p *TransactionIngestionProvider) Process(ctx context.Context, spaceID stri
 		}
 	}
 
+	// Safeguard: truncate extremely large email bodies before sending to LLM
+	if len(fullBody) > 50000 {
+		fullBody = fullBody[:50000] + "\n\n[Truncated due to length]"
+	}
+
 	// Trigger core finance ingestion logic
 	_, err = p.financeService.IngestEmail(ctx, integrationRecord.SpaceID, integrationRecord.ID, fromLower, parsedEmail.Subject, fullBody)
 	if err != nil {
@@ -195,7 +200,7 @@ func (p *TransactionIngestionProvider) Process(ctx context.Context, spaceID stri
 }
 
 // Simulate simulates parsing a mock payload (either JSON or multipart) and triggers ingestion.
-func (p *TransactionIngestionProvider) Simulate(ctx context.Context, spaceID string, headers map[string][]string, body []byte) (*finance.PendingTransaction, error) {
+func (p *TransactionIngestionProvider) Simulate(ctx context.Context, spaceID string, headers map[string][]string, body []byte) (any, error) {
 	contentType := headers["Content-Type"]
 	var sender, subject, text string
 
@@ -280,18 +285,19 @@ func (p *TransactionIngestionProvider) Simulate(ctx context.Context, spaceID str
 	// run it through our MIME parser to extract headers, body text, and decrypt PDF attachments.
 	if strings.Contains(text, "Content-Type:") || strings.HasPrefix(text, "From:") || strings.HasPrefix(text, "Received:") {
 		parsedEmail, err := email.Parse(strings.NewReader(text), cfg.PDFPasswords)
+		if err != nil {
+			return nil, fmt.Errorf("parse raw SMTP email: %w", err)
+		}
+		sender = parsedEmail.Sender
+		senderAddr, err := mail.ParseAddress(parsedEmail.Sender)
 		if err == nil {
-			sender = parsedEmail.Sender
-			senderAddr, err := mail.ParseAddress(parsedEmail.Sender)
-			if err == nil {
-				sender = senderAddr.Address
-			}
-			subject = parsedEmail.Subject
-			text = parsedEmail.Body
-			for _, att := range parsedEmail.Attachments {
-				if att.Text != "" {
-					text += "\n\n--- Attachment: " + att.Filename + " ---\n" + att.Text
-				}
+			sender = senderAddr.Address
+		}
+		subject = parsedEmail.Subject
+		text = parsedEmail.Body
+		for _, att := range parsedEmail.Attachments {
+			if att.Text != "" {
+				text += "\n\n--- Attachment: " + att.Filename + " ---\n" + att.Text
 			}
 		}
 	}
@@ -307,6 +313,11 @@ func (p *TransactionIngestionProvider) Simulate(ctx context.Context, spaceID str
 
 	if !allowed {
 		return nil, fmt.Errorf("sender %q is not whitelisted for this space integration", sender)
+	}
+
+	// Safeguard: truncate extremely large email bodies before sending to LLM
+	if len(text) > 50000 {
+		text = text[:50000] + "\n\n[Truncated due to length]"
 	}
 
 	return p.financeService.IngestEmail(ctx, spaceID, integrationRecord.ID, sender, subject, text)

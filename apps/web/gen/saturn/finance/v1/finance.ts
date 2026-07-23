@@ -629,61 +629,49 @@ export interface ListTransactionEventsResponse {
   events: TransactionEvent[]
 }
 
-export interface PendingTransaction {
+export interface InboxItem {
   id: string
   spaceId: string
   integrationId: string
-  rawVendor: string
-  suggestedVendor: string
-  amount: string
-  currency: string
-  suggestedAccountId: string
-  suggestedBudgetId: string
-  suggestedPaymentId: string
   /**
    *
-   * @description JSON representation of source metadata (sender, subject, etc.)
+   * @description pending, processing, resolved, archived
    */
+  status: string
+  /**
+   *
+   * @description invoice, receipt, bank_notification, unknown
+   */
+  docType: string
+  amount: string
+  currency: string
+  vendorName: string
+  transactionDate: string
+  accountId: string
+  budgetId: string
+  scheduledPaymentId: string
+  transactionId: string
+  rawPayload: string
   metadataJson: string
   createTime: string
 }
 
-export type ListPendingTransactionsRequest = Record<string, never>
+export type ListInboxItemsRequest = Record<string, never>
 
-export interface ListPendingTransactionsResponse {
-  pendingTransactions: PendingTransaction[]
+export interface ListInboxItemsResponse {
+  inboxItems: InboxItem[]
 }
 
-export interface ApprovePendingTransactionRequest {
+export interface ApproveInboxItemRequest {
   id: string
-  /**
-   *
-   * @description Override account
-   */
   accountId: string
-  /**
-   *
-   * @description Override budget category
-   */
   budgetId: string
-  /**
-   *
-   * @description Link to a scheduled payment
-   */
   scheduledPaymentId: string
-  /**
-   *
-   * @description Override amount if needed
-   */
   amount: string
-  /**
-   *
-   * @description Custom description
-   */
   description: string
 }
 
-export interface DiscardPendingTransactionRequest {
+export interface DiscardInboxItemRequest {
   id: string
 }
 
@@ -1747,92 +1735,92 @@ export function useListCurrenciesQuery(
 }
 
 /**
- * ListPendingTransactions lists all pending transactions staging in the queue for a space.
+ * ListInboxItems lists all inbox items staging in the queue for a space.
  */
-export async function listPendingTransactions(
-  req?: ListPendingTransactionsRequest
-): Promise<ListPendingTransactionsResponse> {
-  return request<ListPendingTransactionsResponse>({
+export async function listInboxItems(
+  req?: ListInboxItemsRequest
+): Promise<ListInboxItemsResponse> {
+  return request<ListInboxItemsResponse>({
     method: "GET",
-    url: "/api/v1/finance/pending-transactions",
+    url: "/api/v1/finance/inbox-items",
     params: req,
   })
 }
 
-export function useListPendingTransactionsQuery(
-  req: ListPendingTransactionsRequest,
+export function useListInboxItemsQuery(
+  req: ListInboxItemsRequest,
   options?: Omit<
-    UseQueryOptions<ListPendingTransactionsResponse, Error>,
+    UseQueryOptions<ListInboxItemsResponse, Error>,
     "queryKey" | "queryFn"
   >
 ) {
-  return useQuery<ListPendingTransactionsResponse, Error>({
-    queryKey: ["/api/v1/finance/pending-transactions", req],
-    queryFn: () => listPendingTransactions(req),
+  return useQuery<ListInboxItemsResponse, Error>({
+    queryKey: ["/api/v1/finance/inbox-items", req],
+    queryFn: () => listInboxItems(req),
     ...options,
   })
 }
 
 /**
- * ApprovePendingTransaction approves and commits a pending transaction to the main transaction ledger.
+ * ApproveInboxItem approves and commits a pending inbox item to the main transaction ledger.
  */
-export async function approvePendingTransaction(
+export async function approveInboxItem(
   id: string,
-  req: ApprovePendingTransactionRequest
+  req: ApproveInboxItemRequest
 ): Promise<Transaction> {
   return request<Transaction>({
     method: "POST",
-    url: `/api/v1/finance/pending-transactions/${id}:approve`,
+    url: `/api/v1/finance/inbox-items/${id}:approve`,
     data: req,
   })
 }
 
-export function useApprovePendingTransactionMutation(
+export function useApproveInboxItemMutation(
   options?: UseMutationOptions<
     Transaction,
     Error,
-    { id: string; req: ApprovePendingTransactionRequest }
+    { id: string; req: ApproveInboxItemRequest }
   >
 ) {
   return useMutation<
     Transaction,
     Error,
-    { id: string; req: ApprovePendingTransactionRequest }
+    { id: string; req: ApproveInboxItemRequest }
   >({
-    mutationFn: ({ id, req }) => approvePendingTransaction(id, req),
+    mutationFn: ({ id, req }) => approveInboxItem(id, req),
     ...options,
   })
 }
 
 /**
- * DiscardPendingTransaction discards a pending transaction from the staging queue.
+ * DiscardInboxItem discards an inbox item from the staging queue.
  */
-export async function discardPendingTransaction(
+export async function discardInboxItem(
   id: string,
-  req: DiscardPendingTransactionRequest
+  req: DiscardInboxItemRequest
 ): Promise<Record<string, never>> {
   const params = { ...req }
   delete (params as Record<string, unknown>).id
   return request<Record<string, never>>({
     method: "DELETE",
-    url: `/api/v1/finance/pending-transactions/${id}`,
+    url: `/api/v1/finance/inbox-items/${id}`,
     params: params,
   })
 }
 
-export function useDiscardPendingTransactionMutation(
+export function useDiscardInboxItemMutation(
   options?: UseMutationOptions<
     Record<string, never>,
     Error,
-    { id: string; req: DiscardPendingTransactionRequest }
+    { id: string; req: DiscardInboxItemRequest }
   >
 ) {
   return useMutation<
     Record<string, never>,
     Error,
-    { id: string; req: DiscardPendingTransactionRequest }
+    { id: string; req: DiscardInboxItemRequest }
   >({
-    mutationFn: ({ id, req }) => discardPendingTransaction(id, req),
+    mutationFn: ({ id, req }) => discardInboxItem(id, req),
     ...options,
   })
 }

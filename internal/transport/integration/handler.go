@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 
 	integrationv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/integration/v1"
 	integrationapp "github.com/masterkeysrd/saturn/internal/application/integration"
@@ -10,6 +11,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -114,34 +116,26 @@ func (h *Handler) SimulateWebhook(ctx context.Context, req *integrationv1.Simula
 		processHeaders[k] = []string{v}
 	}
 
-	pt, err := h.coordinator.SimulateWebhook(ctx, spaceID, req.GetProvider(), req.GetKind(), processHeaders, []byte(req.GetPayload()))
+	ibx, err := h.coordinator.SimulateWebhook(ctx, spaceID, req.GetProvider(), req.GetKind(), processHeaders, []byte(req.GetPayload()))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "simulation failed: %v", err)
 	}
 
-	var accountID, budgetID, paymentID string
-	if pt.SuggestedAccountID != nil {
-		accountID = *pt.SuggestedAccountID
-	}
-	if pt.SuggestedBudgetID != nil {
-		budgetID = *pt.SuggestedBudgetID
-	}
-	if pt.SuggestedPaymentID != nil {
-		paymentID = *pt.SuggestedPaymentID
+	var resultStruct *structpb.Struct
+	if ibx != nil {
+		jsonBytes, err := json.Marshal(ibx)
+		if err == nil {
+			var m map[string]any
+			if json.Unmarshal(jsonBytes, &m) == nil {
+				resultStruct, _ = structpb.NewStruct(m)
+			}
+		}
 	}
 
 	return &integrationv1.SimulateWebhookResponse{
 		Success: true,
 		Message: "Simulation successfully processed",
-		PendingTransaction: &integrationv1.PendingTransactionDetails{
-			Id:                 pt.ID,
-			SuggestedVendor:    pt.SuggestedVendor,
-			Amount:             pt.Amount,
-			Currency:           pt.Currency,
-			SuggestedAccountId: accountID,
-			SuggestedBudgetId:  budgetID,
-			SuggestedPaymentId: paymentID,
-		},
+		Result:  resultStruct,
 	}, nil
 }
 

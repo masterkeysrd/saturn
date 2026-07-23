@@ -11,6 +11,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -501,12 +502,12 @@ func (x *SimulateWebhookRequest) GetKind() string {
 }
 
 type SimulateWebhookResponse struct {
-	state              protoimpl.MessageState     `protogen:"open.v1"`
-	Success            bool                       `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	Message            string                     `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
-	PendingTransaction *PendingTransactionDetails `protobuf:"bytes,3,opt,name=pending_transaction,json=pendingTransaction,proto3" json:"pending_transaction,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Result        *structpb.Struct       `protobuf:"bytes,3,opt,name=result,proto3" json:"result,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SimulateWebhookResponse) Reset() {
@@ -553,103 +554,11 @@ func (x *SimulateWebhookResponse) GetMessage() string {
 	return ""
 }
 
-func (x *SimulateWebhookResponse) GetPendingTransaction() *PendingTransactionDetails {
+func (x *SimulateWebhookResponse) GetResult() *structpb.Struct {
 	if x != nil {
-		return x.PendingTransaction
+		return x.Result
 	}
 	return nil
-}
-
-type PendingTransactionDetails struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	SuggestedVendor    string                 `protobuf:"bytes,2,opt,name=suggested_vendor,json=suggestedVendor,proto3" json:"suggested_vendor,omitempty"`
-	Amount             int64                  `protobuf:"varint,3,opt,name=amount,proto3" json:"amount,omitempty"`
-	Currency           string                 `protobuf:"bytes,4,opt,name=currency,proto3" json:"currency,omitempty"`
-	SuggestedAccountId string                 `protobuf:"bytes,5,opt,name=suggested_account_id,json=suggestedAccountId,proto3" json:"suggested_account_id,omitempty"`
-	SuggestedBudgetId  string                 `protobuf:"bytes,6,opt,name=suggested_budget_id,json=suggestedBudgetId,proto3" json:"suggested_budget_id,omitempty"`
-	SuggestedPaymentId string                 `protobuf:"bytes,7,opt,name=suggested_payment_id,json=suggestedPaymentId,proto3" json:"suggested_payment_id,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
-}
-
-func (x *PendingTransactionDetails) Reset() {
-	*x = PendingTransactionDetails{}
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PendingTransactionDetails) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PendingTransactionDetails) ProtoMessage() {}
-
-func (x *PendingTransactionDetails) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PendingTransactionDetails.ProtoReflect.Descriptor instead.
-func (*PendingTransactionDetails) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *PendingTransactionDetails) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *PendingTransactionDetails) GetSuggestedVendor() string {
-	if x != nil {
-		return x.SuggestedVendor
-	}
-	return ""
-}
-
-func (x *PendingTransactionDetails) GetAmount() int64 {
-	if x != nil {
-		return x.Amount
-	}
-	return 0
-}
-
-func (x *PendingTransactionDetails) GetCurrency() string {
-	if x != nil {
-		return x.Currency
-	}
-	return ""
-}
-
-func (x *PendingTransactionDetails) GetSuggestedAccountId() string {
-	if x != nil {
-		return x.SuggestedAccountId
-	}
-	return ""
-}
-
-func (x *PendingTransactionDetails) GetSuggestedBudgetId() string {
-	if x != nil {
-		return x.SuggestedBudgetId
-	}
-	return ""
-}
-
-func (x *PendingTransactionDetails) GetSuggestedPaymentId() string {
-	if x != nil {
-		return x.SuggestedPaymentId
-	}
-	return ""
 }
 
 type CatalogDescriptor struct {
@@ -669,7 +578,7 @@ type CatalogDescriptor struct {
 
 func (x *CatalogDescriptor) Reset() {
 	*x = CatalogDescriptor{}
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[9]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -681,7 +590,7 @@ func (x *CatalogDescriptor) String() string {
 func (*CatalogDescriptor) ProtoMessage() {}
 
 func (x *CatalogDescriptor) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[9]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -694,7 +603,7 @@ func (x *CatalogDescriptor) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CatalogDescriptor.ProtoReflect.Descriptor instead.
 func (*CatalogDescriptor) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{9}
+	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *CatalogDescriptor) GetProvider() string {
@@ -769,7 +678,7 @@ type ListCatalogResponse struct {
 
 func (x *ListCatalogResponse) Reset() {
 	*x = ListCatalogResponse{}
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[10]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -781,7 +690,7 @@ func (x *ListCatalogResponse) String() string {
 func (*ListCatalogResponse) ProtoMessage() {}
 
 func (x *ListCatalogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[10]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -794,7 +703,7 @@ func (x *ListCatalogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCatalogResponse.ProtoReflect.Descriptor instead.
 func (*ListCatalogResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{10}
+	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListCatalogResponse) GetCatalog() []*CatalogDescriptor {
@@ -813,7 +722,7 @@ type ListIntegrationsResponse struct {
 
 func (x *ListIntegrationsResponse) Reset() {
 	*x = ListIntegrationsResponse{}
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[11]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -825,7 +734,7 @@ func (x *ListIntegrationsResponse) String() string {
 func (*ListIntegrationsResponse) ProtoMessage() {}
 
 func (x *ListIntegrationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[11]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -838,7 +747,7 @@ func (x *ListIntegrationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListIntegrationsResponse.ProtoReflect.Descriptor instead.
 func (*ListIntegrationsResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{11}
+	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ListIntegrationsResponse) GetIntegrations() []*Integration {
@@ -859,7 +768,7 @@ type CreateIntegrationTokenRequest struct {
 
 func (x *CreateIntegrationTokenRequest) Reset() {
 	*x = CreateIntegrationTokenRequest{}
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[12]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -871,7 +780,7 @@ func (x *CreateIntegrationTokenRequest) String() string {
 func (*CreateIntegrationTokenRequest) ProtoMessage() {}
 
 func (x *CreateIntegrationTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[12]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -884,7 +793,7 @@ func (x *CreateIntegrationTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateIntegrationTokenRequest.ProtoReflect.Descriptor instead.
 func (*CreateIntegrationTokenRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{12}
+	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *CreateIntegrationTokenRequest) GetProvider() string {
@@ -918,7 +827,7 @@ type CreateIntegrationTokenResponse struct {
 
 func (x *CreateIntegrationTokenResponse) Reset() {
 	*x = CreateIntegrationTokenResponse{}
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[13]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -930,7 +839,7 @@ func (x *CreateIntegrationTokenResponse) String() string {
 func (*CreateIntegrationTokenResponse) ProtoMessage() {}
 
 func (x *CreateIntegrationTokenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[13]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -943,7 +852,7 @@ func (x *CreateIntegrationTokenResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateIntegrationTokenResponse.ProtoReflect.Descriptor instead.
 func (*CreateIntegrationTokenResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{13}
+	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *CreateIntegrationTokenResponse) GetToken() *IntegrationToken {
@@ -970,7 +879,7 @@ type ListIntegrationTokensRequest struct {
 
 func (x *ListIntegrationTokensRequest) Reset() {
 	*x = ListIntegrationTokensRequest{}
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[14]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -982,7 +891,7 @@ func (x *ListIntegrationTokensRequest) String() string {
 func (*ListIntegrationTokensRequest) ProtoMessage() {}
 
 func (x *ListIntegrationTokensRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[14]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -995,7 +904,7 @@ func (x *ListIntegrationTokensRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListIntegrationTokensRequest.ProtoReflect.Descriptor instead.
 func (*ListIntegrationTokensRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{14}
+	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ListIntegrationTokensRequest) GetProvider() string {
@@ -1021,7 +930,7 @@ type ListIntegrationTokensResponse struct {
 
 func (x *ListIntegrationTokensResponse) Reset() {
 	*x = ListIntegrationTokensResponse{}
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[15]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1033,7 +942,7 @@ func (x *ListIntegrationTokensResponse) String() string {
 func (*ListIntegrationTokensResponse) ProtoMessage() {}
 
 func (x *ListIntegrationTokensResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[15]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1046,7 +955,7 @@ func (x *ListIntegrationTokensResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListIntegrationTokensResponse.ProtoReflect.Descriptor instead.
 func (*ListIntegrationTokensResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{15}
+	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ListIntegrationTokensResponse) GetTokens() []*IntegrationToken {
@@ -1067,7 +976,7 @@ type DeleteIntegrationTokenRequest struct {
 
 func (x *DeleteIntegrationTokenRequest) Reset() {
 	*x = DeleteIntegrationTokenRequest{}
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[16]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1079,7 +988,7 @@ func (x *DeleteIntegrationTokenRequest) String() string {
 func (*DeleteIntegrationTokenRequest) ProtoMessage() {}
 
 func (x *DeleteIntegrationTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[16]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1092,7 +1001,7 @@ func (x *DeleteIntegrationTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteIntegrationTokenRequest.ProtoReflect.Descriptor instead.
 func (*DeleteIntegrationTokenRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{16}
+	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *DeleteIntegrationTokenRequest) GetProvider() string {
@@ -1120,7 +1029,7 @@ var File_saturn_platform_integration_v1_integration_proto protoreflect.FileDescr
 
 const file_saturn_platform_integration_v1_integration_proto_rawDesc = "" +
 	"\n" +
-	"0saturn/platform/integration/v1/integration.proto\x12\x1esaturn.platform.integration.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb8\x02\n" +
+	"0saturn/platform/integration/v1/integration.proto\x12\x1esaturn.platform.integration.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\"\xb8\x02\n" +
 	"\vIntegration\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bspace_id\x18\x02 \x01(\tR\aspaceId\x12\x12\n" +
@@ -1166,19 +1075,11 @@ const file_saturn_platform_integration_v1_integration_proto_rawDesc = "" +
 	"\x04kind\x18\x04 \x01(\tR\x04kind\x1a:\n" +
 	"\fHeadersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb9\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"~\n" +
 	"\x17SimulateWebhookResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\x12j\n" +
-	"\x13pending_transaction\x18\x03 \x01(\v29.saturn.platform.integration.v1.PendingTransactionDetailsR\x12pendingTransaction\"\x9e\x02\n" +
-	"\x19PendingTransactionDetails\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12)\n" +
-	"\x10suggested_vendor\x18\x02 \x01(\tR\x0fsuggestedVendor\x12\x16\n" +
-	"\x06amount\x18\x03 \x01(\x03R\x06amount\x12\x1a\n" +
-	"\bcurrency\x18\x04 \x01(\tR\bcurrency\x120\n" +
-	"\x14suggested_account_id\x18\x05 \x01(\tR\x12suggestedAccountId\x12.\n" +
-	"\x13suggested_budget_id\x18\x06 \x01(\tR\x11suggestedBudgetId\x120\n" +
-	"\x14suggested_payment_id\x18\a \x01(\tR\x12suggestedPaymentId\"\xa9\x02\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12/\n" +
+	"\x06result\x18\x03 \x01(\v2\x17.google.protobuf.StructR\x06result\"\xa9\x02\n" +
 	"\x11CatalogDescriptor\x12\x1a\n" +
 	"\bprovider\x18\x01 \x01(\tR\bprovider\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x12\n" +
@@ -1232,7 +1133,7 @@ func file_saturn_platform_integration_v1_integration_proto_rawDescGZIP() []byte 
 	return file_saturn_platform_integration_v1_integration_proto_rawDescData
 }
 
-var file_saturn_platform_integration_v1_integration_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_saturn_platform_integration_v1_integration_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_saturn_platform_integration_v1_integration_proto_goTypes = []any{
 	(*Integration)(nil),                    // 0: saturn.platform.integration.v1.Integration
 	(*IntegrationToken)(nil),               // 1: saturn.platform.integration.v1.IntegrationToken
@@ -1242,27 +1143,27 @@ var file_saturn_platform_integration_v1_integration_proto_goTypes = []any{
 	(*RotateIntegrationTokenResponse)(nil), // 5: saturn.platform.integration.v1.RotateIntegrationTokenResponse
 	(*SimulateWebhookRequest)(nil),         // 6: saturn.platform.integration.v1.SimulateWebhookRequest
 	(*SimulateWebhookResponse)(nil),        // 7: saturn.platform.integration.v1.SimulateWebhookResponse
-	(*PendingTransactionDetails)(nil),      // 8: saturn.platform.integration.v1.PendingTransactionDetails
-	(*CatalogDescriptor)(nil),              // 9: saturn.platform.integration.v1.CatalogDescriptor
-	(*ListCatalogResponse)(nil),            // 10: saturn.platform.integration.v1.ListCatalogResponse
-	(*ListIntegrationsResponse)(nil),       // 11: saturn.platform.integration.v1.ListIntegrationsResponse
-	(*CreateIntegrationTokenRequest)(nil),  // 12: saturn.platform.integration.v1.CreateIntegrationTokenRequest
-	(*CreateIntegrationTokenResponse)(nil), // 13: saturn.platform.integration.v1.CreateIntegrationTokenResponse
-	(*ListIntegrationTokensRequest)(nil),   // 14: saturn.platform.integration.v1.ListIntegrationTokensRequest
-	(*ListIntegrationTokensResponse)(nil),  // 15: saturn.platform.integration.v1.ListIntegrationTokensResponse
-	(*DeleteIntegrationTokenRequest)(nil),  // 16: saturn.platform.integration.v1.DeleteIntegrationTokenRequest
-	nil,                                    // 17: saturn.platform.integration.v1.SimulateWebhookRequest.HeadersEntry
-	(*timestamppb.Timestamp)(nil),          // 18: google.protobuf.Timestamp
+	(*CatalogDescriptor)(nil),              // 8: saturn.platform.integration.v1.CatalogDescriptor
+	(*ListCatalogResponse)(nil),            // 9: saturn.platform.integration.v1.ListCatalogResponse
+	(*ListIntegrationsResponse)(nil),       // 10: saturn.platform.integration.v1.ListIntegrationsResponse
+	(*CreateIntegrationTokenRequest)(nil),  // 11: saturn.platform.integration.v1.CreateIntegrationTokenRequest
+	(*CreateIntegrationTokenResponse)(nil), // 12: saturn.platform.integration.v1.CreateIntegrationTokenResponse
+	(*ListIntegrationTokensRequest)(nil),   // 13: saturn.platform.integration.v1.ListIntegrationTokensRequest
+	(*ListIntegrationTokensResponse)(nil),  // 14: saturn.platform.integration.v1.ListIntegrationTokensResponse
+	(*DeleteIntegrationTokenRequest)(nil),  // 15: saturn.platform.integration.v1.DeleteIntegrationTokenRequest
+	nil,                                    // 16: saturn.platform.integration.v1.SimulateWebhookRequest.HeadersEntry
+	(*timestamppb.Timestamp)(nil),          // 17: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),                // 18: google.protobuf.Struct
 	(*emptypb.Empty)(nil),                  // 19: google.protobuf.Empty
 }
 var file_saturn_platform_integration_v1_integration_proto_depIdxs = []int32{
-	18, // 0: saturn.platform.integration.v1.Integration.create_time:type_name -> google.protobuf.Timestamp
-	18, // 1: saturn.platform.integration.v1.Integration.update_time:type_name -> google.protobuf.Timestamp
-	18, // 2: saturn.platform.integration.v1.IntegrationToken.create_time:type_name -> google.protobuf.Timestamp
-	18, // 3: saturn.platform.integration.v1.IntegrationToken.last_used_time:type_name -> google.protobuf.Timestamp
-	17, // 4: saturn.platform.integration.v1.SimulateWebhookRequest.headers:type_name -> saturn.platform.integration.v1.SimulateWebhookRequest.HeadersEntry
-	8,  // 5: saturn.platform.integration.v1.SimulateWebhookResponse.pending_transaction:type_name -> saturn.platform.integration.v1.PendingTransactionDetails
-	9,  // 6: saturn.platform.integration.v1.ListCatalogResponse.catalog:type_name -> saturn.platform.integration.v1.CatalogDescriptor
+	17, // 0: saturn.platform.integration.v1.Integration.create_time:type_name -> google.protobuf.Timestamp
+	17, // 1: saturn.platform.integration.v1.Integration.update_time:type_name -> google.protobuf.Timestamp
+	17, // 2: saturn.platform.integration.v1.IntegrationToken.create_time:type_name -> google.protobuf.Timestamp
+	17, // 3: saturn.platform.integration.v1.IntegrationToken.last_used_time:type_name -> google.protobuf.Timestamp
+	16, // 4: saturn.platform.integration.v1.SimulateWebhookRequest.headers:type_name -> saturn.platform.integration.v1.SimulateWebhookRequest.HeadersEntry
+	18, // 5: saturn.platform.integration.v1.SimulateWebhookResponse.result:type_name -> google.protobuf.Struct
+	8,  // 6: saturn.platform.integration.v1.ListCatalogResponse.catalog:type_name -> saturn.platform.integration.v1.CatalogDescriptor
 	0,  // 7: saturn.platform.integration.v1.ListIntegrationsResponse.integrations:type_name -> saturn.platform.integration.v1.Integration
 	1,  // 8: saturn.platform.integration.v1.CreateIntegrationTokenResponse.token:type_name -> saturn.platform.integration.v1.IntegrationToken
 	1,  // 9: saturn.platform.integration.v1.ListIntegrationTokensResponse.tokens:type_name -> saturn.platform.integration.v1.IntegrationToken
@@ -1272,17 +1173,17 @@ var file_saturn_platform_integration_v1_integration_proto_depIdxs = []int32{
 	6,  // 13: saturn.platform.integration.v1.IntegrationService.SimulateWebhook:input_type -> saturn.platform.integration.v1.SimulateWebhookRequest
 	19, // 14: saturn.platform.integration.v1.IntegrationService.ListCatalog:input_type -> google.protobuf.Empty
 	19, // 15: saturn.platform.integration.v1.IntegrationService.ListIntegrations:input_type -> google.protobuf.Empty
-	12, // 16: saturn.platform.integration.v1.IntegrationService.CreateIntegrationToken:input_type -> saturn.platform.integration.v1.CreateIntegrationTokenRequest
-	14, // 17: saturn.platform.integration.v1.IntegrationService.ListIntegrationTokens:input_type -> saturn.platform.integration.v1.ListIntegrationTokensRequest
-	16, // 18: saturn.platform.integration.v1.IntegrationService.DeleteIntegrationToken:input_type -> saturn.platform.integration.v1.DeleteIntegrationTokenRequest
+	11, // 16: saturn.platform.integration.v1.IntegrationService.CreateIntegrationToken:input_type -> saturn.platform.integration.v1.CreateIntegrationTokenRequest
+	13, // 17: saturn.platform.integration.v1.IntegrationService.ListIntegrationTokens:input_type -> saturn.platform.integration.v1.ListIntegrationTokensRequest
+	15, // 18: saturn.platform.integration.v1.IntegrationService.DeleteIntegrationToken:input_type -> saturn.platform.integration.v1.DeleteIntegrationTokenRequest
 	0,  // 19: saturn.platform.integration.v1.IntegrationService.GetIntegration:output_type -> saturn.platform.integration.v1.Integration
 	0,  // 20: saturn.platform.integration.v1.IntegrationService.ConfigureIntegration:output_type -> saturn.platform.integration.v1.Integration
 	5,  // 21: saturn.platform.integration.v1.IntegrationService.RotateIntegrationToken:output_type -> saturn.platform.integration.v1.RotateIntegrationTokenResponse
 	7,  // 22: saturn.platform.integration.v1.IntegrationService.SimulateWebhook:output_type -> saturn.platform.integration.v1.SimulateWebhookResponse
-	10, // 23: saturn.platform.integration.v1.IntegrationService.ListCatalog:output_type -> saturn.platform.integration.v1.ListCatalogResponse
-	11, // 24: saturn.platform.integration.v1.IntegrationService.ListIntegrations:output_type -> saturn.platform.integration.v1.ListIntegrationsResponse
-	13, // 25: saturn.platform.integration.v1.IntegrationService.CreateIntegrationToken:output_type -> saturn.platform.integration.v1.CreateIntegrationTokenResponse
-	15, // 26: saturn.platform.integration.v1.IntegrationService.ListIntegrationTokens:output_type -> saturn.platform.integration.v1.ListIntegrationTokensResponse
+	9,  // 23: saturn.platform.integration.v1.IntegrationService.ListCatalog:output_type -> saturn.platform.integration.v1.ListCatalogResponse
+	10, // 24: saturn.platform.integration.v1.IntegrationService.ListIntegrations:output_type -> saturn.platform.integration.v1.ListIntegrationsResponse
+	12, // 25: saturn.platform.integration.v1.IntegrationService.CreateIntegrationToken:output_type -> saturn.platform.integration.v1.CreateIntegrationTokenResponse
+	14, // 26: saturn.platform.integration.v1.IntegrationService.ListIntegrationTokens:output_type -> saturn.platform.integration.v1.ListIntegrationTokensResponse
 	19, // 27: saturn.platform.integration.v1.IntegrationService.DeleteIntegrationToken:output_type -> google.protobuf.Empty
 	19, // [19:28] is the sub-list for method output_type
 	10, // [10:19] is the sub-list for method input_type
@@ -1302,7 +1203,7 @@ func file_saturn_platform_integration_v1_integration_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_platform_integration_v1_integration_proto_rawDesc), len(file_saturn_platform_integration_v1_integration_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   18,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

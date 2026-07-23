@@ -8,7 +8,6 @@ import {
   useCreateIntegrationTokenMutation,
   useListIntegrationTokensQuery,
   useDeleteIntegrationTokenMutation,
-  type PendingTransactionDetails,
 } from "@/gen/saturn/platform/integration/v1/integration"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -170,8 +169,7 @@ export function IntegrationSettings() {
     '{\n  "event": "transaction.created",\n  "amount": 4500,\n  "currency": "USD"\n}'
   )
 
-  const [simulationResult, setSimulationResult] =
-    useState<PendingTransactionDetails | null>(null)
+  const [simulationResult, setSimulationResult] = useState<any | null>(null)
 
   // Sync config parameters from selected integration record
   useEffect(() => {
@@ -378,7 +376,7 @@ export function IntegrationSettings() {
           kind: activeKind || "",
         },
       })
-      setSimulationResult(res.pendingTransaction || null)
+      setSimulationResult(res.result || null)
     } catch (err) {
       console.error("Simulation failed", err)
     }
@@ -973,7 +971,7 @@ export function IntegrationSettings() {
                             Vendor
                           </span>
                           <span className="font-extrabold text-foreground">
-                            {simulationResult.suggestedVendor}
+                            {simulationResult.vendorName}
                           </span>
                         </div>
                         <div>
@@ -981,7 +979,7 @@ export function IntegrationSettings() {
                             Amount
                           </span>
                           <span className="font-extrabold text-foreground">
-                            {simulationResult.currency}{" "}
+                            {simulationResult.currency || "USD"}{" "}
                             {(Number(simulationResult.amount) / 100).toFixed(2)}
                           </span>
                         </div>
@@ -990,7 +988,7 @@ export function IntegrationSettings() {
                             Budget ID
                           </span>
                           <span className="font-mono text-[9px] text-muted-foreground">
-                            {simulationResult.suggestedBudgetId || "General"}
+                            {simulationResult.budgetId || "General"}
                           </span>
                         </div>
                         <div>
@@ -998,7 +996,7 @@ export function IntegrationSettings() {
                             Account ID
                           </span>
                           <span className="font-mono text-[9px] text-muted-foreground">
-                            {simulationResult.suggestedAccountId || "Manual"}
+                            {simulationResult.accountId || "Manual"}
                           </span>
                         </div>
                       </div>

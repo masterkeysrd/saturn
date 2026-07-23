@@ -29,10 +29,12 @@ import (
 	financev1 "github.com/masterkeysrd/saturn/apis/saturn/finance/v1"
 	admingrpc "github.com/masterkeysrd/saturn/apis/saturn/identity/admin/v1"
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
+	agentv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/agent/v1"
 	backupv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/backup/v1"
 	integrationv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/integration/v1"
 	schedulerv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/scheduler/v1"
 	spacev1 "github.com/masterkeysrd/saturn/apis/saturn/space/v1"
+	agentapp "github.com/masterkeysrd/saturn/internal/application/agent"
 	financeapp "github.com/masterkeysrd/saturn/internal/application/finance"
 	"github.com/masterkeysrd/saturn/internal/application/iam"
 	integrationapp "github.com/masterkeysrd/saturn/internal/application/integration"
@@ -43,11 +45,12 @@ import (
 	identitystorage "github.com/masterkeysrd/saturn/internal/domain/identity/storage"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	spacestorage "github.com/masterkeysrd/saturn/internal/domain/space/storage"
-	"github.com/masterkeysrd/saturn/internal/platform/gemini"
+	"github.com/masterkeysrd/saturn/internal/platform/agent"
 	"github.com/masterkeysrd/saturn/internal/platform/integration"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
 	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
 	"github.com/masterkeysrd/saturn/internal/shutdown"
+	agentgrpc "github.com/masterkeysrd/saturn/internal/transport/agent"
 	backupgrpc "github.com/masterkeysrd/saturn/internal/transport/backup"
 	financegrpc "github.com/masterkeysrd/saturn/internal/transport/finance"
 	identitygrpc "github.com/masterkeysrd/saturn/internal/transport/identity"
@@ -207,9 +210,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	accountStore := financestorage.NewAccountStore(sqlxDB)
 	transferStore := financestorage.NewTransferStore(sqlxDB)
 	transactionEventStore := financestorage.NewTransactionEventStore(sqlxDB)
-	pendingTransactionStore := financestorage.NewPendingTransactionStore(sqlxDB)
-
-	geminiClient := gemini.NewClient()
+	inboxItemStore := financestorage.NewInboxItemStore(sqlxDB)
 
 	financeService := finance.NewService(finance.Dependencies{
 		SettingsStore:           settingsStore,
@@ -225,15 +226,25 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 		AccountStore:            accountStore,
 		TransferStore:           transferStore,
 		TransactionEventStore:   transactionEventStore,
-		PendingTransactionStore: pendingTransactionStore,
+		InboxItemStore:          inboxItemStore,
 	})
 
 	integrationRegistry := integration.NewRegistry(sqlxDB)
 
+	agentStore := agent.NewStore(sqlxDB)
+	agentClient := agent.NewClient()
+	agentCoordinator := agentapp.NewCoordinator(agentStore, agentClient)
+
+	classifier := financeapp.NewAgentDocumentClassifier(agentCoordinator)
+	parser := financeapp.NewAgentIngestionParser(agentCoordinator)
+	deduplicator := financeapp.NewAgentIngestionDeduplicator(agentCoordinator)
+
 	financeCoordinator := financeapp.NewCoordinator(financeapp.Dependencies{
 		FinanceService: financeService,
 		SpaceService:   spaceService,
-		GeminiClient:   geminiClient,
+		Classifier:     classifier,
+		Parser:         parser,
+		Deduplicator:   deduplicator,
 	})
 
 	// Register email forwarding provider
@@ -246,6 +257,9 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 
 	financeHandler := financegrpc.NewHandler(financeCoordinator)
 	financev1.RegisterFinanceServer(s.grpc, financeHandler)
+
+	agentHandler := agentgrpc.NewHandler(agentCoordinator)
+	agentv1.RegisterAgentServiceServer(s.grpc, agentHandler)
 
 	integrationCoordinator := integrationapp.NewCoordinator(integrationapp.Dependencies{
 		Registry: integrationRegistry,
@@ -389,6 +403,10 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 
 	if err := integrationv1.RegisterIntegrationServiceHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
 		return fmt.Errorf("register platform integration gateway handler: %w", err)
+	}
+
+	if err := agentv1.RegisterAgentServiceHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
+		return fmt.Errorf("register platform agent gateway handler: %w", err)
 	}
 
 	handler := http.NewServeMux()
