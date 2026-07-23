@@ -22,6 +22,7 @@ type Dependencies struct {
 	AccountStore            AccountStore
 	TransferStore           TransferStore
 	TransactionEventStore   TransactionEventStore
+	PendingTransactionStore PendingTransactionStore
 }
 
 // Service implements the domain-level finance operations.
@@ -1790,4 +1791,30 @@ func (s *Service) ListTransactionEvents(ctx context.Context, spaceID SpaceID, tx
 		return nil, fmt.Errorf("validate transaction ID: %w", err)
 	}
 	return s.deps.TransactionEventStore.ListByTransaction(ctx, spaceID, txnID)
+}
+
+// StageTransaction resolves suggested accounts, budgets, and bill links, and stages a pending transaction in the queue.
+func (s *Service) StageTransaction(ctx context.Context, spaceID string, req *StageTransaction) (*PendingTransaction, error) {
+	return nil, errors.New("not implemented")
+}
+
+// ListPendingTransactions lists all staging transactions in a space.
+func (s *Service) ListPendingTransactions(ctx context.Context, spaceID string) ([]*PendingTransaction, error) {
+	if err := SpaceID(spaceID).Validate(); err != nil {
+		return nil, err
+	}
+	return s.deps.PendingTransactionStore.ListBySpace(ctx, spaceID)
+}
+
+// DiscardPendingTransaction deletes a staging transaction without ledger modification.
+func (s *Service) DiscardPendingTransaction(ctx context.Context, spaceID, id string) error {
+	if err := SpaceID(spaceID).Validate(); err != nil {
+		return err
+	}
+	return s.deps.PendingTransactionStore.Delete(ctx, spaceID, id)
+}
+
+// ApprovePendingTransaction commits a staged pending transaction to the ledger, and deletes the pending staging row.
+func (s *Service) ApprovePendingTransaction(ctx context.Context, spaceID string, req *ApprovePendingTransaction) (*Transaction, error) {
+	return nil, errors.New("not implemented")
 }

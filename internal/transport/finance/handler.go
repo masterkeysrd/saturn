@@ -983,3 +983,82 @@ func (h *Handler) ListTransfers(ctx context.Context, req *financev1.ListTransfer
 		NextPageToken: nextToken,
 	}, nil
 }
+
+// --- Integrations & Pending Transactions Endpoints ---
+
+func toProtoPendingTransaction(pt *finance.PendingTransaction) *financev1.PendingTransaction {
+	var accountID, budgetID, paymentID string
+	if pt.SuggestedAccountID != nil {
+		accountID = *pt.SuggestedAccountID
+	}
+	if pt.SuggestedBudgetID != nil {
+		budgetID = *pt.SuggestedBudgetID
+	}
+	if pt.SuggestedPaymentID != nil {
+		paymentID = *pt.SuggestedPaymentID
+	}
+
+	return &financev1.PendingTransaction{
+		Id:                 pt.ID,
+		SpaceId:            pt.SpaceID,
+		IntegrationId:      pt.IntegrationID,
+		RawVendor:          pt.RawVendor,
+		SuggestedVendor:    pt.SuggestedVendor,
+		Amount:             pt.Amount,
+		Currency:           pt.Currency,
+		SuggestedAccountId: accountID,
+		SuggestedBudgetId:  budgetID,
+		SuggestedPaymentId: paymentID,
+		MetadataJson:       pt.MetadataJSON,
+		CreateTime:         timestamppb.New(pt.CreateTime),
+	}
+}
+
+func (h *Handler) ListPendingTransactions(ctx context.Context, req *financev1.ListPendingTransactionsRequest) (*financev1.ListPendingTransactionsResponse, error) {
+	list, err := h.Coordinator.ListPendingTransactions(ctx)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	protoList := make([]*financev1.PendingTransaction, len(list))
+	for idx, pt := range list {
+		protoList[idx] = toProtoPendingTransaction(pt)
+	}
+
+	return &financev1.ListPendingTransactionsResponse{PendingTransactions: protoList}, nil
+}
+
+func (h *Handler) ApprovePendingTransaction(ctx context.Context, req *financev1.ApprovePendingTransactionRequest) (*financev1.Transaction, error) {
+	if req.GetId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "id is required")
+	}
+
+	params := &finance.ApprovePendingTransaction{
+		ID:                 req.GetId(),
+		AccountID:          req.GetAccountId(),
+		BudgetID:           req.GetBudgetId(),
+		ScheduledPaymentID: req.GetScheduledPaymentId(),
+		Amount:             req.GetAmount(),
+		Description:        req.GetDescription(),
+	}
+
+	tx, err := h.Coordinator.ApprovePendingTransaction(ctx, params)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoTransaction(tx), nil
+}
+
+func (h *Handler) DiscardPendingTransaction(ctx context.Context, req *financev1.DiscardPendingTransactionRequest) (*emptypb.Empty, error) {
+	if req.GetId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "id is required")
+	}
+
+	err := h.Coordinator.DiscardPendingTransaction(ctx, req.GetId())
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return &emptypb.Empty{}, nil
+}

@@ -8,6 +8,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
+	"github.com/masterkeysrd/saturn/internal/platform/gemini"
 )
 
 // SpaceService defines the decoupled interface for workspace accessibility check.
@@ -63,18 +64,30 @@ type FinanceService interface {
 	GetTransfer(ctx context.Context, id finance.TransferID) (*finance.Transfer, error)
 	DeleteTransfer(ctx context.Context, id finance.TransferID) error
 	ListTransfers(ctx context.Context, spaceID finance.SpaceID, limit int32, pageToken string) ([]*finance.Transfer, string, error)
+
+	StageTransaction(ctx context.Context, spaceID string, req *finance.StageTransaction) (*finance.PendingTransaction, error)
+	ListPendingTransactions(ctx context.Context, spaceID string) ([]*finance.PendingTransaction, error)
+	DiscardPendingTransaction(ctx context.Context, spaceID, id string) error
+	ApprovePendingTransaction(ctx context.Context, spaceID string, req *finance.ApprovePendingTransaction) (*finance.Transaction, error)
+}
+
+// GeminiClient outlines the interface for parsing raw unstructured text payloads via LLMs.
+type GeminiClient interface {
+	ParseEmail(ctx context.Context, emailBody string, activeBudgets []string) (*gemini.ParsedEmailMetadata, error)
 }
 
 // Dependencies contains all parameters for Coordinator initialization.
 type Dependencies struct {
 	FinanceService FinanceService
 	SpaceService   SpaceService
+	GeminiClient   GeminiClient
 }
 
 // Coordinator orchestrates requests across workspace and finance boundaries.
 type Coordinator struct {
 	financeService FinanceService
 	spaceService   SpaceService
+	geminiClient   GeminiClient
 }
 
 // NewCoordinator instantiates a new Coordinator.
@@ -82,6 +95,7 @@ func NewCoordinator(deps Dependencies) *Coordinator {
 	return &Coordinator{
 		financeService: deps.FinanceService,
 		spaceService:   deps.SpaceService,
+		geminiClient:   deps.GeminiClient,
 	}
 }
 

@@ -413,8 +413,8 @@ func compareRefreshTokenDigest(stored, computed []byte) bool {
 
 // generateRefreshToken generates a cryptographically random opaque refresh token.
 func generateRefreshToken() (string, error) {
-	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
+	b, err := GenerateRandomBytes(32)
+	if err != nil {
 		return "", err
 	}
 	return base64.RawURLEncoding.EncodeToString(b), nil

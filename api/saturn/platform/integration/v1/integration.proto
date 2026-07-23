@@ -1,0 +1,181 @@
+syntax = "proto3";
+
+package saturn.platform.integration.v1;
+
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/masterkeysrd/saturn/apis/saturn/platform/integration/v1;integrationv1";
+
+// IntegrationService handles configuring, getting, and managing active integrations and their keys.
+service IntegrationService {
+  // GetIntegration retrieves the configuration details for a specific provider.
+  rpc GetIntegration(GetIntegrationRequest) returns (Integration) {
+    option (google.api.http) = {get: "/v1/platform/integrations/{provider}"};
+  }
+
+  // ConfigureIntegration registers or updates an integration for a Space.
+  rpc ConfigureIntegration(ConfigureIntegrationRequest) returns (Integration) {
+    option (google.api.http) = {
+      post: "/v1/platform/integrations"
+      body: "*"
+    };
+  }
+
+  // RotateIntegrationToken rotates the hashed token for a specific integration (backwards-compatible single key helper).
+  rpc RotateIntegrationToken(RotateIntegrationTokenRequest) returns (RotateIntegrationTokenResponse) {
+    option (google.api.http) = {
+      post: "/v1/platform/integrations/{provider}:rotate-token"
+      body: "*"
+    };
+  }
+
+  // SimulateWebhook runs a developer simulation parsing a mock webhook payload.
+  rpc SimulateWebhook(SimulateWebhookRequest) returns (SimulateWebhookResponse) {
+    option (google.api.http) = {
+      post: "/v1/platform/integrations/{provider}:simulate"
+      body: "*"
+    };
+  }
+
+  // ListCatalog returns the metadata of all available integrations in the catalog.
+  rpc ListCatalog(google.protobuf.Empty) returns (ListCatalogResponse) {
+    option (google.api.http) = {get: "/v1/platform/integrations/catalog"};
+  }
+
+  // ListIntegrations retrieves all configured integrations for the active Space.
+  rpc ListIntegrations(google.protobuf.Empty) returns (ListIntegrationsResponse) {
+    option (google.api.http) = {get: "/v1/platform/integrations"};
+  }
+
+  // CreateIntegrationToken generates a new named token for an integration.
+  rpc CreateIntegrationToken(CreateIntegrationTokenRequest) returns (CreateIntegrationTokenResponse) {
+    option (google.api.http) = {
+      post: "/v1/platform/integrations/{provider}/tokens"
+      body: "*"
+    };
+  }
+
+  // ListIntegrationTokens retrieves all active tokens for an integration.
+  rpc ListIntegrationTokens(ListIntegrationTokensRequest) returns (ListIntegrationTokensResponse) {
+    option (google.api.http) = {get: "/v1/platform/integrations/{provider}/tokens"};
+  }
+
+  // DeleteIntegrationToken revokes/deletes a specific token by its ID.
+  rpc DeleteIntegrationToken(DeleteIntegrationTokenRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/platform/integrations/{provider}/tokens/{id}"};
+  }
+}
+
+message Integration {
+  string id = 1;
+  string space_id = 2;
+  string kind = 3;
+  string provider = 4;
+  string token = 5; // Only returned on Create/Rotate/Get, raw unhashed token shown to the user once
+  string config_json = 6; // JSON string representing the config settings (allowed_senders, secrets, etc.)
+  bool is_enabled = 7;
+  google.protobuf.Timestamp create_time = 8;
+  google.protobuf.Timestamp update_time = 9;
+}
+
+message IntegrationToken {
+  string id = 1;
+  string integration_id = 2;
+  string name = 3;
+  string token_hash = 4;
+  google.protobuf.Timestamp create_time = 5;
+  google.protobuf.Timestamp last_used_time = 6;
+}
+
+message GetIntegrationRequest {
+  string provider = 1 [(google.api.field_behavior) = REQUIRED];
+  string kind = 2;
+}
+
+message ConfigureIntegrationRequest {
+  string provider = 1 [(google.api.field_behavior) = REQUIRED];
+  string kind = 2 [(google.api.field_behavior) = REQUIRED];
+  string config_json = 3 [(google.api.field_behavior) = REQUIRED];
+  bool is_enabled = 4;
+}
+
+message RotateIntegrationTokenRequest {
+  string provider = 1 [(google.api.field_behavior) = REQUIRED];
+  string kind = 2;
+}
+
+message RotateIntegrationTokenResponse {
+  string token = 1; // The newly generated raw unhashed token
+}
+
+message SimulateWebhookRequest {
+  string provider = 1 [(google.api.field_behavior) = REQUIRED];
+  string payload = 2 [(google.api.field_behavior) = REQUIRED];
+  map<string, string> headers = 3;
+  string kind = 4;
+}
+
+message SimulateWebhookResponse {
+  bool success = 1;
+  string message = 2;
+  PendingTransactionDetails pending_transaction = 3;
+}
+
+message PendingTransactionDetails {
+  string id = 1;
+  string suggested_vendor = 2;
+  int64 amount = 3;
+  string currency = 4;
+  string suggested_account_id = 5;
+  string suggested_budget_id = 6;
+  string suggested_payment_id = 7;
+}
+
+message CatalogDescriptor {
+  string provider = 1;
+  string kind = 2;
+  string name = 3;
+  string description = 4;
+  string icon = 5;
+  string config_schema = 6;
+  string request_schema = 7;
+  string response_schema = 8;
+  string sample_payload = 9;
+}
+
+message ListCatalogResponse {
+  repeated CatalogDescriptor catalog = 1;
+}
+
+message ListIntegrationsResponse {
+  repeated Integration integrations = 2;
+}
+
+message CreateIntegrationTokenRequest {
+  string provider = 1 [(google.api.field_behavior) = REQUIRED];
+  string name = 2 [(google.api.field_behavior) = REQUIRED];
+  string kind = 3;
+}
+
+message CreateIntegrationTokenResponse {
+  IntegrationToken token = 1;
+  string raw_token = 2; // Raw unhashed token shown once
+}
+
+message ListIntegrationTokensRequest {
+  string provider = 1 [(google.api.field_behavior) = REQUIRED];
+  string kind = 2;
+}
+
+message ListIntegrationTokensResponse {
+  repeated IntegrationToken tokens = 1;
+}
+
+message DeleteIntegrationTokenRequest {
+  string provider = 1 [(google.api.field_behavior) = REQUIRED];
+  string id = 2 [(google.api.field_behavior) = REQUIRED];
+  string kind = 3;
+}

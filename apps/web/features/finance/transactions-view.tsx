@@ -1,10 +1,14 @@
-import { useState, createElement } from "react"
+import { useState, useEffect, createElement } from "react"
+import { useSearchParams } from "react-router-dom"
 import {
   useListTransactionsQuery,
   useDeleteTransactionMutation,
   type Transaction,
   useListAccountsQuery,
+  useListPendingTransactionsQuery,
 } from "@/gen/saturn/finance/v1/finance"
+import { Inbox } from "lucide-react"
+import { PendingTransactionsSheet } from "./components/pending-transactions-sheet"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -63,6 +67,33 @@ export function TransactionsView() {
   const [eventsTxnDescription, setEventsTxnDescription] = useState<
     string | null
   >(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const reviewParam = searchParams.get("review") === "true"
+  const [pendingOpen, setPendingOpen] = useState(reviewParam)
+
+  useEffect(() => {
+    if (reviewParam) {
+      setTimeout(() => {
+        setPendingOpen(true)
+      }, 0)
+    }
+  }, [reviewParam])
+
+  const handlePendingOpenChange = (open: boolean) => {
+    setPendingOpen(open)
+    if (!open && searchParams.get("review") === "true") {
+      const nextParams = new URLSearchParams(searchParams)
+      nextParams.delete("review")
+      setSearchParams(nextParams, { replace: true })
+    }
+  }
+
+  // Query pending transactions staged for review
+  const { data: pendingData } = useListPendingTransactionsQuery(
+    {},
+    { enabled: !!spaceId }
+  )
+  const pendingCount = pendingData?.pendingTransactions?.length || 0
 
   const handleCreateTrigger = () => {
     setEditTransaction(null)
@@ -147,6 +178,31 @@ export function TransactionsView() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Left Column: Analytics & Controls (Sticky) */}
           <div className="space-y-6 self-start lg:sticky lg:top-6 lg:col-span-1">
+            {pendingCount > 0 && (
+              <div className="overflow-hidden rounded-3xl border border-indigo-500/30 bg-indigo-500/5 p-6 shadow-lg backdrop-blur-xl">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-indigo-500/20 bg-indigo-500/10 text-indigo-400">
+                    <Inbox className="h-5 w-5 animate-pulse" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-foreground">
+                      Staging Review Queue
+                    </h4>
+                    <p className="mt-0.5 text-[10px] text-muted-foreground">
+                      {pendingCount} transaction{pendingCount > 1 ? "s" : ""}{" "}
+                      staged for review
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  className="mt-4 w-full cursor-pointer rounded-2xl bg-indigo-500 font-semibold text-white shadow-md hover:bg-indigo-600"
+                  onClick={() => setPendingOpen(true)}
+                >
+                  Review Staged Expenses
+                </Button>
+              </div>
+            )}
             <div className="overflow-hidden rounded-3xl border border-border/40 bg-card/45 p-6 shadow-xl backdrop-blur-xl md:p-8">
               <h3 className="text-lg font-bold text-foreground">
                 Ledger Overview
@@ -489,6 +545,14 @@ export function TransactionsView() {
           onOpenChange={setEventsOpen}
           txnId={eventsTxnId}
           txnDescription={eventsTxnDescription}
+        />
+        <PendingTransactionsSheet
+          open={pendingOpen}
+          onOpenChange={handlePendingOpenChange}
+          spaceId={spaceId}
+          budgets={budgets}
+          refetchTransactions={refetchTransactions}
+          refetchBudgets={refetchBudgets}
         />
       </div>
     </FinancePageLayout>

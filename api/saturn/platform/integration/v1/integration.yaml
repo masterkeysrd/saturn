@@ -1,0 +1,24 @@
+# Platform Integration service API configuration.
+#
+# All platform integration endpoints require JWT Bearer authentication.
+# Space-scoped endpoints require the Space-Id header.
+
+name: saturn.platform.integration.v1
+title: "Saturn Platform Integration API"
+apis:
+  - saturn.platform.integration.v1.IntegrationService
+
+documentation:
+  summary: "Provides platform integrations configuration and simulation sandbox utilities. Space-scoped endpoints require the 'space-id' header containing the workspace ID."
+
+authentication:
+  rules:
+    # All integration endpoints require authentication
+    - selector: "saturn.platform.integration.v1.IntegrationService.*"
+      auth_required: true
+
+space:
+  rules:
+    # Integration endpoints require workspace scope validation from metadata space-id header
+    - selector: "saturn.platform.integration.v1.IntegrationService.*"
+      scoped: true

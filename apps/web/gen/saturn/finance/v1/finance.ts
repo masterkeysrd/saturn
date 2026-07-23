@@ -629,6 +629,64 @@ export interface ListTransactionEventsResponse {
   events: TransactionEvent[]
 }
 
+export interface PendingTransaction {
+  id: string
+  spaceId: string
+  integrationId: string
+  rawVendor: string
+  suggestedVendor: string
+  amount: string
+  currency: string
+  suggestedAccountId: string
+  suggestedBudgetId: string
+  suggestedPaymentId: string
+  /**
+   *
+   * @description JSON representation of source metadata (sender, subject, etc.)
+   */
+  metadataJson: string
+  createTime: string
+}
+
+export type ListPendingTransactionsRequest = Record<string, never>
+
+export interface ListPendingTransactionsResponse {
+  pendingTransactions: PendingTransaction[]
+}
+
+export interface ApprovePendingTransactionRequest {
+  id: string
+  /**
+   *
+   * @description Override account
+   */
+  accountId: string
+  /**
+   *
+   * @description Override budget category
+   */
+  budgetId: string
+  /**
+   *
+   * @description Link to a scheduled payment
+   */
+  scheduledPaymentId: string
+  /**
+   *
+   * @description Override amount if needed
+   */
+  amount: string
+  /**
+   *
+   * @description Custom description
+   */
+  description: string
+}
+
+export interface DiscardPendingTransactionRequest {
+  id: string
+}
+
 /**
  * Finance provides budgeting and currency management operations for a workspace.
  */
@@ -1684,6 +1742,97 @@ export function useListCurrenciesQuery(
   return useQuery<ListCurrenciesResponse, Error>({
     queryKey: ["/api/v1/finance/currencies", req],
     queryFn: () => listCurrencies(req),
+    ...options,
+  })
+}
+
+/**
+ * ListPendingTransactions lists all pending transactions staging in the queue for a space.
+ */
+export async function listPendingTransactions(
+  req?: ListPendingTransactionsRequest
+): Promise<ListPendingTransactionsResponse> {
+  return request<ListPendingTransactionsResponse>({
+    method: "GET",
+    url: "/api/v1/finance/pending-transactions",
+    params: req,
+  })
+}
+
+export function useListPendingTransactionsQuery(
+  req: ListPendingTransactionsRequest,
+  options?: Omit<
+    UseQueryOptions<ListPendingTransactionsResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListPendingTransactionsResponse, Error>({
+    queryKey: ["/api/v1/finance/pending-transactions", req],
+    queryFn: () => listPendingTransactions(req),
+    ...options,
+  })
+}
+
+/**
+ * ApprovePendingTransaction approves and commits a pending transaction to the main transaction ledger.
+ */
+export async function approvePendingTransaction(
+  id: string,
+  req: ApprovePendingTransactionRequest
+): Promise<Transaction> {
+  return request<Transaction>({
+    method: "POST",
+    url: `/api/v1/finance/pending-transactions/${id}:approve`,
+    data: req,
+  })
+}
+
+export function useApprovePendingTransactionMutation(
+  options?: UseMutationOptions<
+    Transaction,
+    Error,
+    { id: string; req: ApprovePendingTransactionRequest }
+  >
+) {
+  return useMutation<
+    Transaction,
+    Error,
+    { id: string; req: ApprovePendingTransactionRequest }
+  >({
+    mutationFn: ({ id, req }) => approvePendingTransaction(id, req),
+    ...options,
+  })
+}
+
+/**
+ * DiscardPendingTransaction discards a pending transaction from the staging queue.
+ */
+export async function discardPendingTransaction(
+  id: string,
+  req: DiscardPendingTransactionRequest
+): Promise<Record<string, never>> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
+  return request<Record<string, never>>({
+    method: "DELETE",
+    url: `/api/v1/finance/pending-transactions/${id}`,
+    params: params,
+  })
+}
+
+export function useDiscardPendingTransactionMutation(
+  options?: UseMutationOptions<
+    Record<string, never>,
+    Error,
+    { id: string; req: DiscardPendingTransactionRequest }
+  >
+) {
+  return useMutation<
+    Record<string, never>,
+    Error,
+    { id: string; req: DiscardPendingTransactionRequest }
+  >({
+    mutationFn: ({ id, req }) => discardPendingTransaction(id, req),
     ...options,
   })
 }

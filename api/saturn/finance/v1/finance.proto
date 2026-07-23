@@ -246,6 +246,24 @@ service Finance {
   rpc ListCurrencies(ListCurrenciesRequest) returns (ListCurrenciesResponse) {
     option (google.api.http) = {get: "/v1/finance/currencies"};
   }
+
+  // ListPendingTransactions lists all pending transactions staging in the queue for a space.
+  rpc ListPendingTransactions(ListPendingTransactionsRequest) returns (ListPendingTransactionsResponse) {
+    option (google.api.http) = {get: "/v1/finance/pending-transactions"};
+  }
+
+  // ApprovePendingTransaction approves and commits a pending transaction to the main transaction ledger.
+  rpc ApprovePendingTransaction(ApprovePendingTransactionRequest) returns (Transaction) {
+    option (google.api.http) = {
+      post: "/v1/finance/pending-transactions/{id}:approve"
+      body: "*"
+    };
+  }
+
+  // DiscardPendingTransaction discards a pending transaction from the staging queue.
+  rpc DiscardPendingTransaction(DiscardPendingTransactionRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/finance/pending-transactions/{id}"};
+  }
 }
 
 enum RecurrenceInterval {
@@ -846,4 +864,40 @@ message TransactionEvent {
 
 message ListTransactionEventsResponse {
   repeated TransactionEvent events = 1;
+}
+
+// --- Integration & Ingest Messages ---
+
+message PendingTransaction {
+  string id = 1;
+  string space_id = 2;
+  string integration_id = 3;
+  string raw_vendor = 4;
+  string suggested_vendor = 5;
+  int64 amount = 6;
+  string currency = 7;
+  string suggested_account_id = 8;
+  string suggested_budget_id = 9;
+  string suggested_payment_id = 10;
+  string metadata_json = 11; // JSON representation of source metadata (sender, subject, etc.)
+  google.protobuf.Timestamp create_time = 12;
+}
+
+message ListPendingTransactionsRequest {}
+
+message ListPendingTransactionsResponse {
+  repeated PendingTransaction pending_transactions = 1;
+}
+
+message ApprovePendingTransactionRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  string account_id = 2; // Override account
+  string budget_id = 3; // Override budget category
+  string scheduled_payment_id = 4; // Link to a scheduled payment
+  int64 amount = 5; // Override amount if needed
+  string description = 6; // Custom description
+}
+
+message DiscardPendingTransactionRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
 }

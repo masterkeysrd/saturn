@@ -18,6 +18,9 @@
       "name": "BackupAdmin"
     },
     {
+      "name": "IntegrationService"
+    },
+    {
       "name": "SchedulerAdmin"
     },
     {
@@ -1390,6 +1393,100 @@
         ]
       }
     },
+    "/v1/finance/pending-transactions": {
+      "get": {
+        "summary": "ListPendingTransactions lists all pending transactions staging in the queue for a space.",
+        "operationId": "Finance_ListPendingTransactions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListPendingTransactionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/pending-transactions/{id}": {
+      "delete": {
+        "summary": "DiscardPendingTransaction discards a pending transaction from the staging queue.",
+        "operationId": "Finance_DiscardPendingTransaction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/pending-transactions/{id}:approve": {
+      "post": {
+        "summary": "ApprovePendingTransaction approves and commits a pending transaction to the main transaction ledger.",
+        "operationId": "Finance_ApprovePendingTransaction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Transaction"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceApprovePendingTransactionBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/finance/rates": {
       "get": {
         "summary": "ListExchangeRates lists all exchange rate rules in a workspace.",
@@ -2298,6 +2395,316 @@
         ]
       }
     },
+    "/v1/platform/integrations": {
+      "get": {
+        "summary": "ListIntegrations retrieves all configured integrations for the active Space.",
+        "operationId": "IntegrationService_ListIntegrations",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListIntegrationsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "IntegrationService"
+        ]
+      },
+      "post": {
+        "summary": "ConfigureIntegration registers or updates an integration for a Space.",
+        "operationId": "IntegrationService_ConfigureIntegration",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Integration"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ConfigureIntegrationRequest"
+            }
+          }
+        ],
+        "tags": [
+          "IntegrationService"
+        ]
+      }
+    },
+    "/v1/platform/integrations/catalog": {
+      "get": {
+        "summary": "ListCatalog returns the metadata of all available integrations in the catalog.",
+        "operationId": "IntegrationService_ListCatalog",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCatalogResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "IntegrationService"
+        ]
+      }
+    },
+    "/v1/platform/integrations/{provider}": {
+      "get": {
+        "summary": "GetIntegration retrieves the configuration details for a specific provider.",
+        "operationId": "IntegrationService_GetIntegration",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Integration"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "IntegrationService"
+        ]
+      }
+    },
+    "/v1/platform/integrations/{provider}/tokens": {
+      "get": {
+        "summary": "ListIntegrationTokens retrieves all active tokens for an integration.",
+        "operationId": "IntegrationService_ListIntegrationTokens",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListIntegrationTokensResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "IntegrationService"
+        ]
+      },
+      "post": {
+        "summary": "CreateIntegrationToken generates a new named token for an integration.",
+        "operationId": "IntegrationService_CreateIntegrationToken",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateIntegrationTokenResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/IntegrationServiceCreateIntegrationTokenBody"
+            }
+          }
+        ],
+        "tags": [
+          "IntegrationService"
+        ]
+      }
+    },
+    "/v1/platform/integrations/{provider}/tokens/{id}": {
+      "delete": {
+        "summary": "DeleteIntegrationToken revokes/deletes a specific token by its ID.",
+        "operationId": "IntegrationService_DeleteIntegrationToken",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "IntegrationService"
+        ]
+      }
+    },
+    "/v1/platform/integrations/{provider}:rotate-token": {
+      "post": {
+        "summary": "RotateIntegrationToken rotates the hashed token for a specific integration (backwards-compatible single key helper).",
+        "operationId": "IntegrationService_RotateIntegrationToken",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RotateIntegrationTokenResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/IntegrationServiceRotateIntegrationTokenBody"
+            }
+          }
+        ],
+        "tags": [
+          "IntegrationService"
+        ]
+      }
+    },
+    "/v1/platform/integrations/{provider}:simulate": {
+      "post": {
+        "summary": "SimulateWebhook runs a developer simulation parsing a mock webhook payload.",
+        "operationId": "IntegrationService_SimulateWebhook",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SimulateWebhookResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/IntegrationServiceSimulateWebhookBody"
+            }
+          }
+        ],
+        "tags": [
+          "IntegrationService"
+        ]
+      }
+    },
     "/v1/spaces": {
       "get": {
         "summary": "ListSpaces lists all spaces the authenticated user has access to.",
@@ -2658,6 +3065,32 @@
         "accessLevel"
       ]
     },
+    "FinanceApprovePendingTransactionBody": {
+      "type": "object",
+      "properties": {
+        "accountId": {
+          "type": "string",
+          "title": "Override account"
+        },
+        "budgetId": {
+          "type": "string",
+          "title": "Override budget category"
+        },
+        "scheduledPaymentId": {
+          "type": "string",
+          "title": "Link to a scheduled payment"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64",
+          "title": "Override amount if needed"
+        },
+        "description": {
+          "type": "string",
+          "title": "Custom description"
+        }
+      }
+    },
     "FinanceConfirmScheduledPaymentBody": {
       "type": "object",
       "properties": {
@@ -2794,6 +3227,48 @@
     "IdentityRevokeSessionBody": {
       "type": "object",
       "description": "RevokeSessionRequest targets a specific session to invalidate."
+    },
+    "IntegrationServiceCreateIntegrationTokenBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "IntegrationServiceRotateIntegrationTokenBody": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        }
+      }
+    },
+    "IntegrationServiceSimulateWebhookBody": {
+      "type": "object",
+      "properties": {
+        "payload": {
+          "type": "string"
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "kind": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "payload"
+      ]
     },
     "ListUsersRequestStatusFilter": {
       "type": "string",
@@ -3585,6 +4060,38 @@
       },
       "description": "BudgetPeriod represents an active instantiation of a budget."
     },
+    "v1CatalogDescriptor": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "configSchema": {
+          "type": "string"
+        },
+        "requestSchema": {
+          "type": "string"
+        },
+        "responseSchema": {
+          "type": "string"
+        },
+        "samplePayload": {
+          "type": "string"
+        }
+      }
+    },
     "v1ConfigureFinanceRequest": {
       "type": "object",
       "properties": {
@@ -3595,6 +4102,28 @@
       "description": "ConfigureFinanceRequest contains fields for initial setup.",
       "required": [
         "baseCurrency"
+      ]
+    },
+    "v1ConfigureIntegrationRequest": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "configJson": {
+          "type": "string"
+        },
+        "isEnabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "provider",
+        "kind",
+        "configJson"
       ]
     },
     "v1CreateBorrowingRequest": {
@@ -3678,6 +4207,18 @@
       "required": [
         "expense"
       ]
+    },
+    "v1CreateIntegrationTokenResponse": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "$ref": "#/definitions/v1IntegrationToken"
+        },
+        "rawToken": {
+          "type": "string",
+          "title": "Raw unhashed token shown once"
+        }
+      }
     },
     "v1CreateRecurringExpenseRequest": {
       "type": "object",
@@ -3895,6 +4436,67 @@
         "YEARLY"
       ]
     },
+    "v1Integration": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "spaceId": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "token": {
+          "type": "string",
+          "title": "Only returned on Create/Rotate/Get, raw unhashed token shown to the user once"
+        },
+        "configJson": {
+          "type": "string",
+          "title": "JSON string representing the config settings (allowed_senders, secrets, etc.)"
+        },
+        "isEnabled": {
+          "type": "boolean"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1IntegrationToken": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "integrationId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "tokenHash": {
+          "type": "string"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastUsedTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
     "v1JobInfo": {
       "type": "object",
       "properties": {
@@ -4030,6 +4632,18 @@
       },
       "description": "ListBudgetsResponse contains paginated budgets."
     },
+    "v1ListCatalogResponse": {
+      "type": "object",
+      "properties": {
+        "catalog": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CatalogDescriptor"
+          }
+        }
+      }
+    },
     "v1ListCurrenciesResponse": {
       "type": "object",
       "properties": {
@@ -4058,6 +4672,30 @@
       },
       "description": "ListExchangeRatesResponse contains paginated rates."
     },
+    "v1ListIntegrationTokensResponse": {
+      "type": "object",
+      "properties": {
+        "tokens": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1IntegrationToken"
+          }
+        }
+      }
+    },
+    "v1ListIntegrationsResponse": {
+      "type": "object",
+      "properties": {
+        "integrations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Integration"
+          }
+        }
+      }
+    },
     "v1ListJobsResponse": {
       "type": "object",
       "properties": {
@@ -4082,6 +4720,18 @@
         },
         "nextPageToken": {
           "type": "string"
+        }
+      }
+    },
+    "v1ListPendingTransactionsResponse": {
+      "type": "object",
+      "properties": {
+        "pendingTransactions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PendingTransaction"
+          }
         }
       }
     },
@@ -4286,6 +4936,77 @@
       "type": "object",
       "description": "LogoutResponse is empty on success."
     },
+    "v1PendingTransaction": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "spaceId": {
+          "type": "string"
+        },
+        "integrationId": {
+          "type": "string"
+        },
+        "rawVendor": {
+          "type": "string"
+        },
+        "suggestedVendor": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "suggestedAccountId": {
+          "type": "string"
+        },
+        "suggestedBudgetId": {
+          "type": "string"
+        },
+        "suggestedPaymentId": {
+          "type": "string"
+        },
+        "metadataJson": {
+          "type": "string",
+          "title": "JSON representation of source metadata (sender, subject, etc.)"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1PendingTransactionDetails": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "suggestedVendor": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "suggestedAccountId": {
+          "type": "string"
+        },
+        "suggestedBudgetId": {
+          "type": "string"
+        },
+        "suggestedPaymentId": {
+          "type": "string"
+        }
+      }
+    },
     "v1RecurrenceInterval": {
       "type": "string",
       "enum": [
@@ -4415,6 +5136,15 @@
       "type": "object",
       "description": "RevokeSessionResponse is empty on success."
     },
+    "v1RotateIntegrationTokenResponse": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "title": "The newly generated raw unhashed token"
+        }
+      }
+    },
     "v1ScheduleInfo": {
       "type": "object",
       "properties": {
@@ -4491,6 +5221,20 @@
         "updateTime": {
           "type": "string",
           "format": "date-time"
+        }
+      }
+    },
+    "v1SimulateWebhookResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        },
+        "pendingTransaction": {
+          "$ref": "#/definitions/v1PendingTransactionDetails"
         }
       }
     },

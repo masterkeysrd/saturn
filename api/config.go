@@ -17,6 +17,7 @@ import (
 //go:embed saturn/space/v1/*.yaml
 //go:embed saturn/finance/v1/*.yaml
 //go:embed saturn/platform/backup/v1/*.yaml
+//go:embed saturn/platform/integration/v1/*.yaml
 //go:embed saturn/platform/scheduler/v1/*.yaml
 var configFS embed.FS
 
