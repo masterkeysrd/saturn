@@ -149,6 +149,10 @@ export function IntegrationSettings() {
   const [newSender, setNewSender] = useState("")
   const [allowedSenders, setAllowedSenders] = useState<string[]>([])
 
+  // PDF Passwords state
+  const [newPassword, setNewPassword] = useState("")
+  const [pdfPasswords, setPdfPasswords] = useState<string[]>([])
+
   // Sandbox Form State
   const [sandboxSender, setSandboxSender] = useState("alerts@chase.com")
   const [sandboxSubject, setSandboxSubject] = useState(
@@ -178,6 +182,19 @@ export function IntegrationSettings() {
           setTimeout(() => {
             setAllowedSenders(parsed.allowed_senders)
           }, 0)
+        } else {
+          setTimeout(() => {
+            setAllowedSenders([])
+          }, 0)
+        }
+        if (Array.isArray(parsed.pdf_passwords)) {
+          setTimeout(() => {
+            setPdfPasswords(parsed.pdf_passwords)
+          }, 0)
+        } else {
+          setTimeout(() => {
+            setPdfPasswords([])
+          }, 0)
         }
       } catch (err) {
         console.error("Failed to parse configJson", err)
@@ -185,6 +202,7 @@ export function IntegrationSettings() {
     } else {
       setTimeout(() => {
         setAllowedSenders([])
+        setPdfPasswords([])
       }, 0)
     }
   }, [integration])
@@ -273,19 +291,25 @@ export function IntegrationSettings() {
     }
   }
 
-  const handleSaveSenders = async (updatedSenders: string[]) => {
+  const handleSaveConfig = async (
+    updatedSenders: string[],
+    updatedPasswords: string[]
+  ) => {
     if (!activeProviderId || !activeDescriptor) return
     try {
       await configureMutation.mutateAsync({
         provider: activeProviderId,
         kind: activeDescriptor.kind,
-        configJson: JSON.stringify({ allowed_senders: updatedSenders }),
+        configJson: JSON.stringify({
+          allowed_senders: updatedSenders,
+          pdf_passwords: updatedPasswords,
+        }),
         isEnabled: true,
       })
       refetchDetail()
       refetchIntegrations()
     } catch (err) {
-      console.error("Failed to save whitelist senders", err)
+      console.error("Failed to save integration config", err)
     }
   }
 
@@ -294,14 +318,29 @@ export function IntegrationSettings() {
     if (!trimmed || allowedSenders.includes(trimmed)) return
     const list = [...allowedSenders, trimmed]
     setAllowedSenders(list)
-    handleSaveSenders(list)
+    handleSaveConfig(list, pdfPasswords)
     setNewSender("")
   }
 
   const handleDeleteSender = (sender: string) => {
     const list = allowedSenders.filter((x) => x !== sender)
     setAllowedSenders(list)
-    handleSaveSenders(list)
+    handleSaveConfig(list, pdfPasswords)
+  }
+
+  const handleAddPassword = () => {
+    const trimmed = newPassword.trim()
+    if (!trimmed || pdfPasswords.includes(trimmed)) return
+    const list = [...pdfPasswords, trimmed]
+    setPdfPasswords(list)
+    handleSaveConfig(allowedSenders, list)
+    setNewPassword("")
+  }
+
+  const handleDeletePassword = (pw: string) => {
+    const list = pdfPasswords.filter((x) => x !== pw)
+    setPdfPasswords(list)
+    handleSaveConfig(allowedSenders, list)
   }
 
   const handleSimulate = async () => {
@@ -714,6 +753,67 @@ export function IntegrationSettings() {
                   </div>
                 )}
 
+                {/* PDF Decryption Passwords (Dynamically rendered based on Schema) */}
+                {activeDescriptor?.configSchema?.includes("pdf_passwords") && (
+                  <div className="space-y-4 border-t border-border/20 pt-6">
+                    <div>
+                      <h4 className="text-sm font-bold text-foreground">
+                        PDF Decryption Passwords
+                      </h4>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Passwords used to automatically decrypt statement
+                        attachments (e.g. birth dates, tax IDs, pin codes).
+                      </p>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Input
+                        type="password"
+                        placeholder="e.g. your_pin_code"
+                        className="bg-background/40 text-xs"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleAddPassword()
+                        }}
+                      />
+                      <Button
+                        className="shrink-0 cursor-pointer bg-indigo-500 font-semibold text-white hover:bg-indigo-600"
+                        onClick={handleAddPassword}
+                      >
+                        <Plus className="mr-1 h-4 w-4" /> Add
+                      </Button>
+                    </div>
+
+                    {pdfPasswords.length === 0 ? (
+                      <p className="rounded-xl bg-muted/10 p-3 text-center text-xs text-muted-foreground italic">
+                        No decryption passwords configured.
+                      </p>
+                    ) : (
+                      <div className="no-scrollbar max-h-48 space-y-2 overflow-y-auto rounded-2xl border border-border/10 bg-background/25 p-2 pr-1">
+                        {pdfPasswords.map((pw) => (
+                          <div
+                            key={pw}
+                            className="flex items-center justify-between rounded-xl border border-border/20 bg-card/30 px-3 py-1.5 text-xs transition-colors hover:border-indigo-500/10"
+                          >
+                            <span className="font-mono text-muted-foreground">
+                              •••••••• (Length: {pw.length})
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 cursor-pointer text-muted-foreground hover:text-red-400"
+                              onClick={() => handleDeletePassword(pw)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Ingestion Simulator Sandbox */}
                 <div className="space-y-4 border-t border-border/20 pt-6">
                   <div className="flex items-center gap-2">
@@ -794,7 +894,7 @@ export function IntegrationSettings() {
                                 ) {
                                   const updated = [...allowedSenders, trimmed]
                                   setAllowedSenders(updated)
-                                  handleSaveSenders(updated)
+                                  handleSaveConfig(updated, pdfPasswords)
                                 }
                               }}
                               className="cursor-pointer rounded-lg border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-500 transition-colors hover:bg-amber-500/20"

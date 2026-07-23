@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"mime"
 	"mime/multipart"
+	"net/mail"
 	"strings"
 
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/platform/email"
 	"github.com/masterkeysrd/saturn/internal/platform/integration"
 )
 
@@ -51,6 +53,11 @@ func (p *TransactionIngestionProvider) Descriptor() integration.Descriptor {
 					"type": "array",
 					"items": { "type": "string", "format": "email" },
 					"title": "Allowed Sender Email Addresses"
+				},
+				"pdf_passwords": {
+					"type": "array",
+					"items": { "type": "string" },
+					"title": "PDF Decryption Passwords"
 				}
 			},
 			"required": ["allowed_senders"]
@@ -101,54 +108,18 @@ func (p *TransactionIngestionProvider) Verify(ctx context.Context, headers map[s
 
 // Process parses the raw multipart SMTP message, resolves the Space, and triggers ingestion.
 func (p *TransactionIngestionProvider) Process(ctx context.Context, spaceID string, headers map[string][]string, body []byte) error {
-	contentType := headers["Content-Type"]
-	if len(contentType) == 0 {
-		return errors.New("missing Content-Type header")
-	}
-
-	mediaType, params, err := mime.ParseMediaType(contentType[0])
+	// Parse the top-level SMTP headers first to locate the recipient address
+	msg, err := mail.ReadMessage(bytes.NewReader(body))
 	if err != nil {
-		return fmt.Errorf("parse media type: %w", err)
+		return fmt.Errorf("read email message headers: %w", err)
 	}
 
-	if !strings.HasPrefix(mediaType, "multipart/") {
-		return errors.New("request must be multipart/form-data")
-	}
-
-	boundary, ok := params["boundary"]
-	if !ok {
-		return errors.New("missing multipart boundary")
-	}
-
-	mr := multipart.NewReader(bytes.NewReader(body), boundary)
-	form, err := mr.ReadForm(32 << 20) // max 32MB in memory
+	toHeader := msg.Header.Get("To")
+	toAddr, err := mail.ParseAddress(toHeader)
 	if err != nil {
-		return fmt.Errorf("read multipart form: %w", err)
+		return fmt.Errorf("parse recipient address: %w", err)
 	}
-	defer form.RemoveAll()
-
-	toValues := form.Value["to"]
-	fromValues := form.Value["from"]
-	subjectValues := form.Value["subject"]
-	textValues := form.Value["text"]
-
-	if len(toValues) == 0 || toValues[0] == "" {
-		return errors.New("missing 'to' field in form")
-	}
-	if len(fromValues) == 0 || fromValues[0] == "" {
-		return errors.New("missing 'from' field in form")
-	}
-
-	toEmail := toValues[0]
-	fromEmail := fromValues[0]
-	subject := ""
-	if len(subjectValues) > 0 {
-		subject = subjectValues[0]
-	}
-	textBody := ""
-	if len(textValues) > 0 {
-		textBody = textValues[0]
-	}
+	toEmail := toAddr.Address
 
 	// Extract integration token from the suffix recipient address (e.g. alerts+saturn_int_xxx@yourdomain.com)
 	plusIdx := strings.Index(toEmail, "+")
@@ -177,13 +148,24 @@ func (p *TransactionIngestionProvider) Process(ctx context.Context, spaceID stri
 	// Unmarshal config and verify sender is in the whitelist
 	var cfg struct {
 		AllowedSenders []string `json:"allowed_senders"`
+		PDFPasswords   []string `json:"pdf_passwords"`
 	}
 	if err := json.Unmarshal([]byte(integrationRecord.Config), &cfg); err != nil {
 		return fmt.Errorf("unmarshal integration config: %w", err)
 	}
 
+	// Parse the email body and decrypt attachments using configured keys
+	parsedEmail, err := email.Parse(bytes.NewReader(body), cfg.PDFPasswords)
+	if err != nil {
+		return fmt.Errorf("parse email: %w", err)
+	}
+
 	allowed := false
-	fromLower := strings.ToLower(fromEmail)
+	fromLower := strings.ToLower(parsedEmail.Sender)
+	senderAddr, err := mail.ParseAddress(parsedEmail.Sender)
+	if err == nil {
+		fromLower = strings.ToLower(senderAddr.Address)
+	}
 	for _, allowedEmail := range cfg.AllowedSenders {
 		if strings.ToLower(allowedEmail) == fromLower {
 			allowed = true
@@ -192,11 +174,19 @@ func (p *TransactionIngestionProvider) Process(ctx context.Context, spaceID stri
 	}
 
 	if !allowed {
-		return fmt.Errorf("sender %q is not whitelisted for this space integration", fromEmail)
+		return fmt.Errorf("sender %q is not whitelisted for this space integration", parsedEmail.Sender)
+	}
+
+	// Append any decrypted PDF text contents to the main body payload for LLM extraction
+	fullBody := parsedEmail.Body
+	for _, att := range parsedEmail.Attachments {
+		if att.Text != "" {
+			fullBody += "\n\n--- Attachment: " + att.Filename + " ---\n" + att.Text
+		}
 	}
 
 	// Trigger core finance ingestion logic
-	_, err = p.financeService.IngestEmail(ctx, integrationRecord.SpaceID, integrationRecord.ID, fromEmail, subject, textBody)
+	_, err = p.financeService.IngestEmail(ctx, integrationRecord.SpaceID, integrationRecord.ID, fromLower, parsedEmail.Subject, fullBody)
 	if err != nil {
 		return fmt.Errorf("ingest email transaction: %w", err)
 	}
@@ -280,9 +270,30 @@ func (p *TransactionIngestionProvider) Simulate(ctx context.Context, spaceID str
 	// Verify whitelisted sender from active integration config
 	var cfg struct {
 		AllowedSenders []string `json:"allowed_senders"`
+		PDFPasswords   []string `json:"pdf_passwords"`
 	}
 	if err := json.Unmarshal([]byte(integrationRecord.Config), &cfg); err != nil {
 		return nil, fmt.Errorf("unmarshal integration config: %w", err)
+	}
+
+	// If the body looks like a raw SMTP email (pasted directly into the sandbox body text area),
+	// run it through our MIME parser to extract headers, body text, and decrypt PDF attachments.
+	if strings.Contains(text, "Content-Type:") || strings.HasPrefix(text, "From:") || strings.HasPrefix(text, "Received:") {
+		parsedEmail, err := email.Parse(strings.NewReader(text), cfg.PDFPasswords)
+		if err == nil {
+			sender = parsedEmail.Sender
+			senderAddr, err := mail.ParseAddress(parsedEmail.Sender)
+			if err == nil {
+				sender = senderAddr.Address
+			}
+			subject = parsedEmail.Subject
+			text = parsedEmail.Body
+			for _, att := range parsedEmail.Attachments {
+				if att.Text != "" {
+					text += "\n\n--- Attachment: " + att.Filename + " ---\n" + att.Text
+				}
+			}
+		}
 	}
 
 	allowed := false
