@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/masterkeysrd/saturn/internal/platform/id"
 )
 
 // Dependencies defines the required persistence adapters for the service.
@@ -22,7 +24,7 @@ type Dependencies struct {
 	AccountStore            AccountStore
 	TransferStore           TransferStore
 	TransactionEventStore   TransactionEventStore
-	PendingTransactionStore PendingTransactionStore
+	InboxItemStore          InboxItemStore
 }
 
 // Service implements the domain-level finance operations.
@@ -1793,28 +1795,262 @@ func (s *Service) ListTransactionEvents(ctx context.Context, spaceID SpaceID, tx
 	return s.deps.TransactionEventStore.ListByTransaction(ctx, spaceID, txnID)
 }
 
-// StageTransaction resolves suggested accounts, budgets, and bill links, and stages a pending transaction in the queue.
-func (s *Service) StageTransaction(ctx context.Context, spaceID string, req *StageTransaction) (*PendingTransaction, error) {
-	return nil, errors.New("not implemented")
-}
-
-// ListPendingTransactions lists all staging transactions in a space.
-func (s *Service) ListPendingTransactions(ctx context.Context, spaceID string) ([]*PendingTransaction, error) {
+// StageInboxItem parses extraction suggestions and inserts a new draft entry into the inbox queue.
+func (s *Service) StageInboxItem(ctx context.Context, spaceID string, req *StageInboxItem) (*InboxItem, error) {
 	if err := SpaceID(spaceID).Validate(); err != nil {
 		return nil, err
 	}
-	return s.deps.PendingTransactionStore.ListBySpace(ctx, spaceID)
+
+	// 1. Generate unique inbox item ID using "ibx_" prefix
+	ibxID, err := id.Generate("ibx_")
+	if err != nil {
+		return nil, fmt.Errorf("generate inbox item ID: %w", err)
+	}
+
+	// 2. Resolve matching account by card last four digits
+	var accountID *string
+	if req.CardLastFour != "" {
+		accounts, err := s.deps.AccountStore.ListBySpace(ctx, SpaceID(spaceID))
+		if err == nil {
+			for _, acc := range accounts {
+				if acc.LastFour == req.CardLastFour && acc.IsActive {
+					accIDStr := string(acc.ID)
+					accountID = &accIDStr
+					break
+				}
+			}
+		}
+	}
+
+	// 3. Resolve and validate matching budget ID
+	var budgetID *string
+	if req.SuggestedBudget != "" {
+		bID, err := ParseBudgetID(req.SuggestedBudget)
+		if err == nil {
+			budget, err := s.deps.BudgetStore.GetByID(ctx, bID)
+			if err == nil && budget != nil && string(budget.SpaceID) == spaceID {
+				bIDStr := string(budget.ID)
+				budgetID = &bIDStr
+			}
+		}
+	}
+
+	// 4. Parse transaction timestamp
+	txDate := time.Now().UTC()
+	if req.Date != "" {
+		if t, err := time.Parse(time.RFC3339, req.Date); err == nil {
+			txDate = t.UTC()
+		}
+	}
+
+	// 5. Create and insert InboxItem
+	item := &InboxItem{
+		ID:              ibxID,
+		SpaceID:         spaceID,
+		IntegrationID:   req.IntegrationID,
+		Status:          InboxItemPending,
+		DocType:         InboxItemDocType(req.DocType),
+		Amount:          req.Amount,
+		Currency:        req.Currency,
+		VendorName:      req.Vendor,
+		TransactionDate: txDate,
+		AccountID:       accountID,
+		BudgetID:        budgetID,
+		RawPayload:      req.RawPayload,
+		MetadataJSON:    req.MetadataJSON,
+		CreateTime:      time.Now().UTC(),
+	}
+
+	if err := s.deps.InboxItemStore.Insert(ctx, item); err != nil {
+		return nil, fmt.Errorf("insert inbox item: %w", err)
+	}
+
+	return item, nil
 }
 
-// DiscardPendingTransaction deletes a staging transaction without ledger modification.
-func (s *Service) DiscardPendingTransaction(ctx context.Context, spaceID, id string) error {
+// ListInboxItems lists all pending/staged items in the space inbox.
+func (s *Service) ListInboxItems(ctx context.Context, spaceID string) ([]*InboxItem, error) {
+	if err := SpaceID(spaceID).Validate(); err != nil {
+		return nil, err
+	}
+	return s.deps.InboxItemStore.ListBySpace(ctx, spaceID)
+}
+
+// DiscardInboxItem deletes an item from the inbox without ledger changes.
+func (s *Service) DiscardInboxItem(ctx context.Context, spaceID, id string) error {
 	if err := SpaceID(spaceID).Validate(); err != nil {
 		return err
 	}
-	return s.deps.PendingTransactionStore.Delete(ctx, spaceID, id)
+	return s.deps.InboxItemStore.Delete(ctx, spaceID, id)
 }
 
-// ApprovePendingTransaction commits a staged pending transaction to the ledger, and deletes the pending staging row.
-func (s *Service) ApprovePendingTransaction(ctx context.Context, spaceID string, req *ApprovePendingTransaction) (*Transaction, error) {
-	return nil, errors.New("not implemented")
+// ApproveInboxItem promotes an inbox item to the ledger or updates a scheduled payment.
+func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, req *ApproveInboxItem) (*Transaction, error) {
+	if err := SpaceID(spaceID).Validate(); err != nil {
+		return nil, err
+	}
+
+	// 1. Fetch current staging inbox item
+	item, err := s.deps.InboxItemStore.Get(ctx, spaceID, req.ID)
+	if err != nil {
+		return nil, fmt.Errorf("get inbox item: %w", err)
+	}
+
+	var txn *Transaction
+
+	// 2. If it is linked to a bill/scheduled payment:
+	if req.ScheduledPaymentID != "" {
+		if item.DocType == InboxItemDocInvoice {
+			// A. If it's an unpaid INVOICE: do NOT create a transaction.
+			// Just update the scheduled payment amount and metadata to the actual values.
+			payID := ScheduledPaymentID(req.ScheduledPaymentID)
+			payment, err := s.deps.ScheduledPaymentStore.GetByID(ctx, payID)
+			if err != nil {
+				return nil, fmt.Errorf("get scheduled payment: %w", err)
+			}
+			payment.Amount = req.Amount
+			if req.Description != "" {
+				payment.SourceType = req.Description
+			}
+			if err := s.deps.ScheduledPaymentStore.UpdateStatus(ctx, payID, payment.Status); err != nil {
+				return nil, fmt.Errorf("update scheduled payment: %w", err)
+			}
+
+			// Mark inbox item as resolved and link it
+			item.Status = InboxItemResolved
+			pIDStr := string(payID)
+			item.ScheduledPaymentID = &pIDStr
+			if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
+				return nil, fmt.Errorf("resolve inbox item: %w", err)
+			}
+			return nil, nil
+		} else {
+			// B. If it's a RECEIPT or other: promote the scheduled payment to a finished transaction.
+			txn, err = s.ConfirmScheduledPayment(ctx, ConfirmScheduledPaymentRequest{
+				PaymentID:       ScheduledPaymentID(req.ScheduledPaymentID),
+				TransactionDate: item.TransactionDate,
+				EffectiveDate:   time.Now().UTC(),
+				ActualAmount:    req.Amount,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("confirm scheduled payment: %w", err)
+			}
+
+			// Mark inbox item as resolved and link it
+			item.Status = InboxItemResolved
+			pIDStr := string(req.ScheduledPaymentID)
+			tIDStr := string(txn.ID)
+			item.ScheduledPaymentID = &pIDStr
+			item.TransactionID = &tIDStr
+			if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
+				return nil, fmt.Errorf("resolve inbox item: %w", err)
+			}
+		}
+	} else {
+		// 3. Otherwise: create a standalone ledger transaction
+		settings, err := s.deps.SettingsStore.GetByID(ctx, SpaceID(spaceID))
+		if err != nil {
+			return nil, err
+		}
+
+		txnType := TransactionTypeExpense
+		var budgetID *BudgetID
+		var periodID *PeriodID
+
+		if req.BudgetID != "" {
+			bID, err := ParseBudgetID(req.BudgetID)
+			if err != nil {
+				return nil, fmt.Errorf("parse budget ID: %w", err)
+			}
+			budget, err := s.deps.BudgetStore.GetByID(ctx, bID)
+			if err != nil {
+				return nil, fmt.Errorf("get budget: %w", err)
+			}
+
+			period, err := s.GetOrCreatePeriod(ctx, budget.ID, item.TransactionDate)
+			if err != nil {
+				return nil, fmt.Errorf("get or create period: %w", err)
+			}
+
+			budgetID = &budget.ID
+			periodID = &period.ID
+			txnType = TransactionTypeExpense
+		} else {
+			txnType = TransactionTypeIncome
+		}
+
+		// Calculate base currency conversion
+		var rate float64 = 1.0
+		if item.Currency != string(settings.BaseCurrency) {
+			rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, ExchangeRateKey{
+				SpaceID:      SpaceID(spaceID),
+				FromCurrency: Currency(item.Currency),
+				ToCurrency:   settings.BaseCurrency,
+				RateDate:     item.TransactionDate,
+			})
+			if err == nil {
+				rate = rateRecord.Rate
+			}
+		}
+		amountInBase := int64(float64(req.Amount) * rate)
+
+		tID, err := NewTransactionID()
+		if err != nil {
+			return nil, err
+		}
+
+		var accountID *AccountID
+		if req.AccountID != "" {
+			accID, err := ParseAccountID(req.AccountID)
+			if err == nil {
+				accountID = &accID
+			}
+		}
+
+		txn = &Transaction{
+			ID:              tID,
+			SpaceID:         SpaceID(spaceID),
+			Type:            txnType,
+			BudgetID:        budgetID,
+			PeriodID:        periodID,
+			AccountID:       accountID,
+			Amount:          req.Amount,
+			Currency:        Currency(item.Currency),
+			AmountInBase:    amountInBase,
+			Description:     req.Description,
+			TransactionDate: item.TransactionDate,
+			EffectiveDate:   time.Now().UTC(),
+			CreateTime:      time.Now().UTC(),
+			UpdateTime:      time.Now().UTC(),
+		}
+
+		if err := txn.Validate(); err != nil {
+			return nil, err
+		}
+
+		if err := s.deps.TransactionStore.Create(ctx, txn); err != nil {
+			return nil, err
+		}
+
+		// Mark inbox item as resolved and link it
+		item.Status = InboxItemResolved
+		tIDStr := string(txn.ID)
+		item.TransactionID = &tIDStr
+		if req.AccountID != "" {
+			item.AccountID = &req.AccountID
+		}
+		if req.BudgetID != "" {
+			item.BudgetID = &req.BudgetID
+		}
+		if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
+			return nil, fmt.Errorf("resolve inbox item: %w", err)
+		}
+	}
+
+	return txn, nil
+}
+
+// GetBudget retrieves a budget by its unique identifier.
+func (s *Service) GetBudget(ctx context.Context, id BudgetID) (*Budget, error) {
+	return s.deps.BudgetStore.GetByID(ctx, id)
 }

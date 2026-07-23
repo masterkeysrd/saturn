@@ -1,8 +1,8 @@
 import { useState } from "react"
 import {
-  useListPendingTransactionsQuery,
-  useApprovePendingTransactionMutation,
-  useDiscardPendingTransactionMutation,
+  useListInboxItemsQuery,
+  useApproveInboxItemMutation,
+  useDiscardInboxItemMutation,
   useListScheduledPaymentsQuery,
   useListAccountsQuery,
   type Budget,
@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/select"
 import { formatCents } from "../utils"
 
-interface PendingTransactionsSheetProps {
+interface InboxItemsSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   spaceId: string
@@ -38,22 +38,22 @@ interface PendingTransactionsSheetProps {
   refetchBudgets: () => void
 }
 
-export function PendingTransactionsSheet({
+export function InboxItemsSheet({
   open,
   onOpenChange,
   spaceId,
   budgets,
   refetchTransactions,
   refetchBudgets,
-}: PendingTransactionsSheetProps) {
-  // 1. Fetch pending transactions
+}: InboxItemsSheetProps) {
+  // 1. Fetch inbox items
   const {
-    data: pendingData,
-    isLoading: pendingLoading,
-    refetch: refetchPending,
-  } = useListPendingTransactionsQuery({}, { enabled: open && !!spaceId })
+    data: inboxData,
+    isLoading: inboxLoading,
+    refetch: refetchInbox,
+  } = useListInboxItemsQuery({}, { enabled: open && !!spaceId })
 
-  const pendingTransactions = pendingData?.pendingTransactions || []
+  const inboxItems = inboxData?.inboxItems || []
 
   // 2. Fetch active accounts
   const { data: accountsData } = useListAccountsQuery(
@@ -76,10 +76,10 @@ export function PendingTransactionsSheet({
   const payments = paymentsData?.scheduledPayments || []
 
   // Mutations
-  const approveMutation = useApprovePendingTransactionMutation()
-  const discardMutation = useDiscardPendingTransactionMutation()
+  const approveMutation = useApproveInboxItemMutation()
+  const discardMutation = useDiscardInboxItemMutation()
 
-  // Manage overrides state for each pending transaction item
+  // Manage overrides state for each inbox item
   const [overrides, setOverrides] = useState<
     Record<
       string,
@@ -156,18 +156,16 @@ export function PendingTransactionsSheet({
           description: desc || originalVendor,
         },
       })
-      refetchPending()
+      refetchInbox()
       refetchTransactions()
       refetchBudgets()
     } catch (err) {
-      console.error("Failed to approve transaction", err)
+      console.error("Failed to approve inbox item", err)
     }
   }
 
   const handleDiscard = async (id: string) => {
-    if (
-      !confirm("Are you sure you want to discard this pending transaction?")
-    ) {
+    if (!confirm("Are you sure you want to discard this inbox item?")) {
       return
     }
     try {
@@ -175,9 +173,9 @@ export function PendingTransactionsSheet({
         id,
         req: { id },
       })
-      refetchPending()
+      refetchInbox()
     } catch (err) {
-      console.error("Failed to discard transaction", err)
+      console.error("Failed to discard inbox item", err)
     }
   }
 
@@ -190,47 +188,47 @@ export function PendingTransactionsSheet({
             Inbound Ingestion Queue
           </SheetTitle>
           <SheetDescription className="text-xs text-muted-foreground">
-            Review transactions extracted from your forwarded bank alert emails.
-            Review suggestions before committing them to the ledger.
+            Review receipts, bank alerts, and invoices parsed from your
+            integrations. Verify details before reconciling them to the ledger.
           </SheetDescription>
         </SheetHeader>
 
-        {pendingLoading ? (
+        {inboxLoading ? (
           <div className="flex flex-col items-center justify-center gap-3 py-20">
             <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
             <span className="text-xs text-muted-foreground">
-              Retrieving pending pipeline...
+              Retrieving inbox pipeline...
             </span>
           </div>
-        ) : pendingTransactions.length === 0 ? (
+        ) : inboxItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-border/40 bg-card/20 px-6 py-20 text-center">
             <Inbox className="mb-4 h-12 w-12 text-muted-foreground/30" />
             <h4 className="text-sm font-semibold text-foreground">
               Inbox is Empty
             </h4>
             <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">
-              Forward bank confirmation emails to your Saturn address. They will
-              appear here for review.
+              Forward bank alerts or invoices to your Saturn email integration.
+              They will appear here for audit and reconciliation.
             </p>
           </div>
         ) : (
           <div className="space-y-6">
-            {pendingTransactions.map((tx) => {
+            {inboxItems.map((tx) => {
               const txId = tx.id || ""
               const currentAccountId = getVal(
                 txId,
                 "accountId",
-                tx.suggestedAccountId || ""
+                tx.accountId || ""
               )
               const currentBudgetId = getVal(
                 txId,
                 "budgetId",
-                tx.suggestedBudgetId || ""
+                tx.budgetId || ""
               )
               const currentPaymentId = getVal(
                 txId,
                 "scheduledPaymentId",
-                tx.suggestedPaymentId || ""
+                tx.scheduledPaymentId || ""
               )
               const currentAmountStr = getVal(
                 txId,
@@ -240,7 +238,7 @@ export function PendingTransactionsSheet({
               const currentDescription = getVal(
                 txId,
                 "description",
-                tx.suggestedVendor || ""
+                tx.vendorName || ""
               )
 
               // Parse metadata details
@@ -269,10 +267,10 @@ export function PendingTransactionsSheet({
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-0.5 text-[10px] font-bold text-indigo-400">
-                        AI Parsed
+                        {tx.docType ? tx.docType.toUpperCase() : "AI PARSED"}
                       </span>
                       <h4 className="mt-1.5 text-sm font-bold text-foreground">
-                        {tx.rawVendor}
+                        {tx.vendorName}
                       </h4>
                       {meta.sender && (
                         <span className="mt-0.5 block text-[10px] text-muted-foreground">
@@ -282,16 +280,18 @@ export function PendingTransactionsSheet({
                     </div>
                     <div className="text-right">
                       <span className="block text-sm font-black text-foreground">
-                        {tx.currency}{" "}
+                        {tx.currency || "USD"}{" "}
                         {(Number(tx.amount || 0) / 100).toLocaleString(
                           undefined,
                           { minimumFractionDigits: 2 }
                         )}
                       </span>
                       <span className="mt-0.5 block text-[9px] text-muted-foreground">
-                        {tx.createTime
-                          ? new Date(tx.createTime).toLocaleDateString()
-                          : ""}
+                        {tx.transactionDate
+                          ? new Date(tx.transactionDate).toLocaleDateString()
+                          : tx.createTime
+                            ? new Date(tx.createTime).toLocaleDateString()
+                            : ""}
                       </span>
                     </div>
                   </div>
@@ -313,7 +313,7 @@ export function PendingTransactionsSheet({
 
                     <div className="space-y-1.5">
                       <Label className="text-[10px] font-bold text-muted-foreground uppercase">
-                        Amount Override ({tx.currency})
+                        Amount Override ({tx.currency || "USD"})
                       </Label>
                       <Input
                         type="number"
@@ -413,11 +413,13 @@ export function PendingTransactionsSheet({
                         handleApprove(
                           txId,
                           tx.amount || "0",
-                          tx.rawVendor || ""
+                          tx.vendorName || ""
                         )
                       }
                       disabled={
-                        isApproving || isDiscarding || !currentAccountId
+                        isApproving ||
+                        isDiscarding ||
+                        (tx.docType !== "invoice" && !currentAccountId)
                       }
                     >
                       {isApproving ? (

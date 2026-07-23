@@ -247,22 +247,22 @@ service Finance {
     option (google.api.http) = {get: "/v1/finance/currencies"};
   }
 
-  // ListPendingTransactions lists all pending transactions staging in the queue for a space.
-  rpc ListPendingTransactions(ListPendingTransactionsRequest) returns (ListPendingTransactionsResponse) {
-    option (google.api.http) = {get: "/v1/finance/pending-transactions"};
+  // ListInboxItems lists all inbox items staging in the queue for a space.
+  rpc ListInboxItems(ListInboxItemsRequest) returns (ListInboxItemsResponse) {
+    option (google.api.http) = {get: "/v1/finance/inbox-items"};
   }
 
-  // ApprovePendingTransaction approves and commits a pending transaction to the main transaction ledger.
-  rpc ApprovePendingTransaction(ApprovePendingTransactionRequest) returns (Transaction) {
+  // ApproveInboxItem approves and commits a pending inbox item to the main transaction ledger.
+  rpc ApproveInboxItem(ApproveInboxItemRequest) returns (Transaction) {
     option (google.api.http) = {
-      post: "/v1/finance/pending-transactions/{id}:approve"
+      post: "/v1/finance/inbox-items/{id}:approve"
       body: "*"
     };
   }
 
-  // DiscardPendingTransaction discards a pending transaction from the staging queue.
-  rpc DiscardPendingTransaction(DiscardPendingTransactionRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {delete: "/v1/finance/pending-transactions/{id}"};
+  // DiscardInboxItem discards an inbox item from the staging queue.
+  rpc DiscardInboxItem(DiscardInboxItemRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/finance/inbox-items/{id}"};
   }
 }
 
@@ -868,36 +868,40 @@ message ListTransactionEventsResponse {
 
 // --- Integration & Ingest Messages ---
 
-message PendingTransaction {
+message InboxItem {
   string id = 1;
   string space_id = 2;
   string integration_id = 3;
-  string raw_vendor = 4;
-  string suggested_vendor = 5;
+  string status = 4; // pending, processing, resolved, archived
+  string doc_type = 5; // invoice, receipt, bank_notification, unknown
   int64 amount = 6;
   string currency = 7;
-  string suggested_account_id = 8;
-  string suggested_budget_id = 9;
-  string suggested_payment_id = 10;
-  string metadata_json = 11; // JSON representation of source metadata (sender, subject, etc.)
-  google.protobuf.Timestamp create_time = 12;
+  string vendor_name = 8;
+  google.protobuf.Timestamp transaction_date = 9;
+  string account_id = 10;
+  string budget_id = 11;
+  string scheduled_payment_id = 12;
+  string transaction_id = 13;
+  string raw_payload = 14;
+  string metadata_json = 15;
+  google.protobuf.Timestamp create_time = 16;
 }
 
-message ListPendingTransactionsRequest {}
+message ListInboxItemsRequest {}
 
-message ListPendingTransactionsResponse {
-  repeated PendingTransaction pending_transactions = 1;
+message ListInboxItemsResponse {
+  repeated InboxItem inbox_items = 1;
 }
 
-message ApprovePendingTransactionRequest {
+message ApproveInboxItemRequest {
   string id = 1 [(google.api.field_behavior) = REQUIRED];
-  string account_id = 2; // Override account
-  string budget_id = 3; // Override budget category
-  string scheduled_payment_id = 4; // Link to a scheduled payment
-  int64 amount = 5; // Override amount if needed
-  string description = 6; // Custom description
+  string account_id = 2;
+  string budget_id = 3;
+  string scheduled_payment_id = 4;
+  int64 amount = 5;
+  string description = 6;
 }
 
-message DiscardPendingTransactionRequest {
+message DiscardInboxItemRequest {
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 }

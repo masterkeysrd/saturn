@@ -984,56 +984,68 @@ func (h *Handler) ListTransfers(ctx context.Context, req *financev1.ListTransfer
 	}, nil
 }
 
-// --- Integrations & Pending Transactions Endpoints ---
+// --- Integrations & Inbox Items Endpoints ---
 
-func toProtoPendingTransaction(pt *finance.PendingTransaction) *financev1.PendingTransaction {
-	var accountID, budgetID, paymentID string
-	if pt.SuggestedAccountID != nil {
-		accountID = *pt.SuggestedAccountID
+func toProtoInboxItem(pt *finance.InboxItem) *financev1.InboxItem {
+	var accountID, budgetID, paymentID, transactionID string
+	if pt.AccountID != nil {
+		accountID = *pt.AccountID
 	}
-	if pt.SuggestedBudgetID != nil {
-		budgetID = *pt.SuggestedBudgetID
+	if pt.BudgetID != nil {
+		budgetID = *pt.BudgetID
 	}
-	if pt.SuggestedPaymentID != nil {
-		paymentID = *pt.SuggestedPaymentID
+	if pt.ScheduledPaymentID != nil {
+		paymentID = *pt.ScheduledPaymentID
+	}
+	if pt.TransactionID != nil {
+		transactionID = *pt.TransactionID
 	}
 
-	return &financev1.PendingTransaction{
+	var txDate *timestamppb.Timestamp
+	if !pt.TransactionDate.IsZero() {
+		txDate = timestamppb.New(pt.TransactionDate)
+	}
+
+	return &financev1.InboxItem{
 		Id:                 pt.ID,
 		SpaceId:            pt.SpaceID,
 		IntegrationId:      pt.IntegrationID,
-		RawVendor:          pt.RawVendor,
-		SuggestedVendor:    pt.SuggestedVendor,
+		Status:             string(pt.Status),
+		DocType:            string(pt.DocType),
 		Amount:             pt.Amount,
 		Currency:           pt.Currency,
-		SuggestedAccountId: accountID,
-		SuggestedBudgetId:  budgetID,
-		SuggestedPaymentId: paymentID,
+		VendorName:         pt.VendorName,
+		TransactionDate:    txDate,
+		AccountId:          accountID,
+		BudgetId:           budgetID,
+		ScheduledPaymentId: paymentID,
+		TransactionId:      transactionID,
+		RawPayload:         pt.RawPayload,
 		MetadataJson:       pt.MetadataJSON,
 		CreateTime:         timestamppb.New(pt.CreateTime),
 	}
 }
 
-func (h *Handler) ListPendingTransactions(ctx context.Context, req *financev1.ListPendingTransactionsRequest) (*financev1.ListPendingTransactionsResponse, error) {
-	list, err := h.Coordinator.ListPendingTransactions(ctx)
+func (h *Handler) ListInboxItems(ctx context.Context, req *financev1.ListInboxItemsRequest) (*financev1.ListInboxItemsResponse, error) {
+	list, err := h.Coordinator.ListInboxItems(ctx)
 	if err != nil {
 		return nil, h.mapError(err)
 	}
 
-	protoList := make([]*financev1.PendingTransaction, len(list))
+	protoList := make([]*financev1.InboxItem, len(list))
 	for idx, pt := range list {
-		protoList[idx] = toProtoPendingTransaction(pt)
+		protoList[idx] = toProtoInboxItem(pt)
 	}
 
-	return &financev1.ListPendingTransactionsResponse{PendingTransactions: protoList}, nil
+	return &financev1.ListInboxItemsResponse{InboxItems: protoList}, nil
 }
 
-func (h *Handler) ApprovePendingTransaction(ctx context.Context, req *financev1.ApprovePendingTransactionRequest) (*financev1.Transaction, error) {
+func (h *Handler) ApproveInboxItem(ctx context.Context, req *financev1.ApproveInboxItemRequest) (*financev1.Transaction, error) {
 	if req.GetId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "id is required")
 	}
 
-	params := &finance.ApprovePendingTransaction{
+	params := &finance.ApproveInboxItem{
 		ID:                 req.GetId(),
 		AccountID:          req.GetAccountId(),
 		BudgetID:           req.GetBudgetId(),
@@ -1042,20 +1054,24 @@ func (h *Handler) ApprovePendingTransaction(ctx context.Context, req *financev1.
 		Description:        req.GetDescription(),
 	}
 
-	tx, err := h.Coordinator.ApprovePendingTransaction(ctx, params)
+	tx, err := h.Coordinator.ApproveInboxItem(ctx, params)
 	if err != nil {
 		return nil, h.mapError(err)
+	}
+
+	if tx == nil {
+		return &financev1.Transaction{}, nil
 	}
 
 	return toProtoTransaction(tx), nil
 }
 
-func (h *Handler) DiscardPendingTransaction(ctx context.Context, req *financev1.DiscardPendingTransactionRequest) (*emptypb.Empty, error) {
+func (h *Handler) DiscardInboxItem(ctx context.Context, req *financev1.DiscardInboxItemRequest) (*emptypb.Empty, error) {
 	if req.GetId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "id is required")
 	}
 
-	err := h.Coordinator.DiscardPendingTransaction(ctx, req.GetId())
+	err := h.Coordinator.DiscardInboxItem(ctx, req.GetId())
 	if err != nil {
 		return nil, h.mapError(err)
 	}

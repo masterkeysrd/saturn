@@ -4,14 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/platform/integration"
 )
 
 // WebhookSimulator defines the interface that an integration provider can implement
 // if it supports webhook simulation.
 type WebhookSimulator interface {
-	Simulate(ctx context.Context, spaceID string, headers map[string][]string, body []byte) (*finance.PendingTransaction, error)
+	Simulate(ctx context.Context, spaceID string, headers map[string][]string, body []byte) (any, error)
 }
 
 // Dependencies wraps the required resources for the integrations application.
@@ -89,7 +88,7 @@ func (c *Coordinator) DeleteToken(ctx context.Context, query integration.GetInte
 }
 
 // SimulateWebhook simulates webhook payload verification and ingestion.
-func (c *Coordinator) SimulateWebhook(ctx context.Context, spaceID, providerName, kind string, headers map[string][]string, body []byte) (*finance.PendingTransaction, error) {
+func (c *Coordinator) SimulateWebhook(ctx context.Context, spaceID, providerName, kind string, headers map[string][]string, body []byte) (any, error) {
 	prov, exists := c.registry.GetProvider(providerName)
 	if !exists {
 		return nil, fmt.Errorf("provider %s not found", providerName)

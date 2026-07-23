@@ -180,10 +180,11 @@ type TransferStore interface {
 	ListBySpace(ctx context.Context, spaceID SpaceID, limit int32, pageToken string) ([]*Transfer, string, error)
 }
 
-// PendingTransactionStore defines repository operations for pending staging transactions.
-type PendingTransactionStore interface {
-	Insert(ctx context.Context, tx *PendingTransaction) error
-	Get(ctx context.Context, spaceID, id string) (*PendingTransaction, error)
-	ListBySpace(ctx context.Context, spaceID string) ([]*PendingTransaction, error)
+// InboxItemStore defines repository operations for staged inbox items.
+type InboxItemStore interface {
+	Insert(ctx context.Context, item *InboxItem) error
+	Get(ctx context.Context, spaceID, id string) (*InboxItem, error)
+	ListBySpace(ctx context.Context, spaceID string) ([]*InboxItem, error)
+	Update(ctx context.Context, item *InboxItem) error
 	Delete(ctx context.Context, spaceID, id string) error
 }

@@ -15,6 +15,9 @@
       "name": "Identity"
     },
     {
+      "name": "AgentService"
+    },
+    {
       "name": "BackupAdmin"
     },
     {
@@ -1342,6 +1345,100 @@
         ]
       }
     },
+    "/v1/finance/inbox-items": {
+      "get": {
+        "summary": "ListInboxItems lists all inbox items staging in the queue for a space.",
+        "operationId": "Finance_ListInboxItems",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListInboxItemsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/inbox-items/{id}": {
+      "delete": {
+        "summary": "DiscardInboxItem discards an inbox item from the staging queue.",
+        "operationId": "Finance_DiscardInboxItem",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/inbox-items/{id}:approve": {
+      "post": {
+        "summary": "ApproveInboxItem approves and commits a pending inbox item to the main transaction ledger.",
+        "operationId": "Finance_ApproveInboxItem",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Transaction"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceApproveInboxItemBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/finance/insights": {
       "get": {
         "summary": "GetInsights aggregates workspace spent insights and statistics.",
@@ -1386,100 +1483,6 @@
             "required": false,
             "type": "string",
             "format": "date-time"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/finance/pending-transactions": {
-      "get": {
-        "summary": "ListPendingTransactions lists all pending transactions staging in the queue for a space.",
-        "operationId": "Finance_ListPendingTransactions",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListPendingTransactionsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/finance/pending-transactions/{id}": {
-      "delete": {
-        "summary": "DiscardPendingTransaction discards a pending transaction from the staging queue.",
-        "operationId": "Finance_DiscardPendingTransaction",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "type": "object",
-              "properties": {}
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/finance/pending-transactions/{id}:approve": {
-      "post": {
-        "summary": "ApprovePendingTransaction approves and commits a pending transaction to the main transaction ledger.",
-        "operationId": "Finance_ApprovePendingTransaction",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1Transaction"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/FinanceApprovePendingTransactionBody"
-            }
           }
         ],
         "tags": [
@@ -2395,6 +2398,387 @@
         ]
       }
     },
+    "/v1/platform/agent/agents": {
+      "get": {
+        "summary": "ListAgents lists all active AI Agent instances in the workspace.",
+        "operationId": "AgentService_ListAgents",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListAgentsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentService"
+        ]
+      },
+      "post": {
+        "summary": "CreateAgent creates a new AI Agent configured with prompt instructions.",
+        "operationId": "AgentService_CreateAgent",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Agent"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateAgentRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentService"
+        ]
+      }
+    },
+    "/v1/platform/agent/agents-catalog": {
+      "get": {
+        "summary": "GetAgentCatalog retrieves standard agent purpose blueprints (descriptors).",
+        "operationId": "AgentService_GetAgentCatalog",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetAgentCatalogResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentService"
+        ]
+      }
+    },
+    "/v1/platform/agent/agents/{agentId}/runs": {
+      "get": {
+        "summary": "ListAgentRuns retrieves execution history logs for a specific agent.",
+        "operationId": "AgentService_ListAgentRuns",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListAgentRunsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "agentId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentService"
+        ]
+      }
+    },
+    "/v1/platform/agent/agents/{id}": {
+      "get": {
+        "summary": "GetAgent retrieves a configured Agent's parameters.",
+        "operationId": "AgentService_GetAgent",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Agent"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteAgent deletes an AI Agent configuration.",
+        "operationId": "AgentService_DeleteAgent",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateAgent modifies agent prompt directives or model settings.",
+        "operationId": "AgentService_UpdateAgent",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Agent"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentServiceUpdateAgentBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentService"
+        ]
+      }
+    },
+    "/v1/platform/agent/providers": {
+      "get": {
+        "summary": "ListProviders lists all configured LLM providers in the workspace.",
+        "operationId": "AgentService_ListProviders",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListProvidersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentService"
+        ]
+      },
+      "post": {
+        "summary": "CreateProvider registers a new LLM provider connection in the workspace.",
+        "operationId": "AgentService_CreateProvider",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LLMProvider"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateProviderRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentService"
+        ]
+      }
+    },
+    "/v1/platform/agent/providers-catalog": {
+      "get": {
+        "summary": "GetProviderCatalog retrieves standard connection type templates.",
+        "operationId": "AgentService_GetProviderCatalog",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetProviderCatalogResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentService"
+        ]
+      }
+    },
+    "/v1/platform/agent/providers/{id}": {
+      "get": {
+        "summary": "GetProvider retrieves a single LLM provider configuration.",
+        "operationId": "AgentService_GetProvider",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LLMProvider"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentService"
+        ]
+      },
+      "delete": {
+        "summary": "DeleteProvider deletes an LLM provider connection.",
+        "operationId": "AgentService_DeleteProvider",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentService"
+        ]
+      },
+      "put": {
+        "summary": "UpdateProvider modifies LLM provider details (rotates API keys, etc.).",
+        "operationId": "AgentService_UpdateProvider",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LLMProvider"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentServiceUpdateProviderBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentService"
+        ]
+      }
+    },
     "/v1/platform/integrations": {
       "get": {
         "summary": "ListIntegrations retrieves all configured integrations for the active Space.",
@@ -3065,29 +3449,78 @@
         "accessLevel"
       ]
     },
-    "FinanceApprovePendingTransactionBody": {
+    "AgentServiceUpdateAgentBody": {
+      "type": "object",
+      "properties": {
+        "llmProviderId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "modelName": {
+          "type": "string"
+        },
+        "systemInstruction": {
+          "type": "string"
+        },
+        "temperature": {
+          "type": "number",
+          "format": "double"
+        },
+        "isEnabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "modelName"
+      ]
+    },
+    "AgentServiceUpdateProviderBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "apiUrl": {
+          "type": "string"
+        },
+        "apiKey": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "FinanceApproveInboxItemBody": {
       "type": "object",
       "properties": {
         "accountId": {
-          "type": "string",
-          "title": "Override account"
+          "type": "string"
         },
         "budgetId": {
-          "type": "string",
-          "title": "Override budget category"
+          "type": "string"
         },
         "scheduledPaymentId": {
-          "type": "string",
-          "title": "Link to a scheduled payment"
+          "type": "string"
         },
         "amount": {
           "type": "string",
-          "format": "int64",
-          "title": "Override amount if needed"
+          "format": "int64"
         },
         "description": {
-          "type": "string",
-          "title": "Custom description"
+          "type": "string"
         }
       }
     },
@@ -3577,6 +4010,10 @@
       },
       "additionalProperties": {}
     },
+    "protobufNullValue": {
+      "type": "string",
+      "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\nThe JSON representation for `NullValue` is JSON `null`."
+    },
     "rpcStatus": {
       "type": "object",
       "properties": {
@@ -3750,6 +4187,116 @@
     },
     "v1AdminIdentityRevokeAllSessionsBody": {
       "type": "object"
+    },
+    "v1Agent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "spaceId": {
+          "type": "string"
+        },
+        "llmProviderId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "modelName": {
+          "type": "string"
+        },
+        "systemInstruction": {
+          "type": "string"
+        },
+        "temperature": {
+          "type": "number",
+          "format": "double"
+        },
+        "isEnabled": {
+          "type": "boolean"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1AgentBlueprintDescriptor": {
+      "type": "object",
+      "properties": {
+        "purpose": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "defaultTags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "defaultSystemInstruction": {
+          "type": "string"
+        },
+        "requiredResponseSchema": {
+          "type": "string"
+        }
+      }
+    },
+    "v1AgentRun": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "agentId": {
+          "type": "string"
+        },
+        "spaceId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "inputRaw": {
+          "type": "string"
+        },
+        "outputRaw": {
+          "type": "string"
+        },
+        "errorMessage": {
+          "type": "string"
+        },
+        "tokensUsed": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
     },
     "v1ApproveUserResponse": {
       "type": "object",
@@ -4126,6 +4673,44 @@
         "configJson"
       ]
     },
+    "v1CreateAgentRequest": {
+      "type": "object",
+      "properties": {
+        "llmProviderId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "modelName": {
+          "type": "string"
+        },
+        "systemInstruction": {
+          "type": "string"
+        },
+        "temperature": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "required": [
+        "name",
+        "purpose",
+        "modelName"
+      ]
+    },
     "v1CreateBorrowingRequest": {
       "type": "object",
       "properties": {
@@ -4219,6 +4804,27 @@
           "title": "Raw unhashed token shown once"
         }
       }
+    },
+    "v1CreateProviderRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "compatibilityMode": {
+          "type": "string"
+        },
+        "apiUrl": {
+          "type": "string"
+        },
+        "apiKey": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "compatibilityMode"
+      ]
     },
     "v1CreateRecurringExpenseRequest": {
       "type": "object",
@@ -4406,11 +5012,35 @@
       },
       "description": "FinanceSettings represents workspace configuration."
     },
+    "v1GetAgentCatalogResponse": {
+      "type": "object",
+      "properties": {
+        "blueprints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AgentBlueprintDescriptor"
+          }
+        }
+      }
+    },
     "v1GetInsightsResponse": {
       "type": "object",
       "properties": {
         "spent": {
           "$ref": "#/definitions/v1SpentInsights"
+        }
+      }
+    },
+    "v1GetProviderCatalogResponse": {
+      "type": "object",
+      "properties": {
+        "blueprints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ProviderBlueprintDescriptor"
+          }
         }
       }
     },
@@ -4424,6 +5054,64 @@
         "queueSize": {
           "type": "integer",
           "format": "int32"
+        }
+      }
+    },
+    "v1InboxItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "spaceId": {
+          "type": "string"
+        },
+        "integrationId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "title": "pending, processing, resolved, archived"
+        },
+        "docType": {
+          "type": "string",
+          "title": "invoice, receipt, bank_notification, unknown"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "vendorName": {
+          "type": "string"
+        },
+        "transactionDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "accountId": {
+          "type": "string"
+        },
+        "budgetId": {
+          "type": "string"
+        },
+        "scheduledPaymentId": {
+          "type": "string"
+        },
+        "transactionId": {
+          "type": "string"
+        },
+        "rawPayload": {
+          "type": "string"
+        },
+        "metadataJson": {
+          "type": "string"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },
@@ -4541,6 +5229,37 @@
         }
       }
     },
+    "v1LLMProvider": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "spaceId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "compatibilityMode": {
+          "type": "string"
+        },
+        "apiUrl": {
+          "type": "string"
+        },
+        "apiKey": {
+          "type": "string"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
     "v1LimitPropagation": {
       "type": "string",
       "enum": [
@@ -4572,6 +5291,30 @@
         }
       },
       "description": "ListActiveSessionsResponse lists active sessions."
+    },
+    "v1ListAgentRunsResponse": {
+      "type": "object",
+      "properties": {
+        "runs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AgentRun"
+          }
+        }
+      }
+    },
+    "v1ListAgentsResponse": {
+      "type": "object",
+      "properties": {
+        "agents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Agent"
+          }
+        }
+      }
     },
     "v1ListBackupsResponse": {
       "type": "object",
@@ -4672,6 +5415,18 @@
       },
       "description": "ListExchangeRatesResponse contains paginated rates."
     },
+    "v1ListInboxItemsResponse": {
+      "type": "object",
+      "properties": {
+        "inboxItems": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1InboxItem"
+          }
+        }
+      }
+    },
     "v1ListIntegrationTokensResponse": {
       "type": "object",
       "properties": {
@@ -4723,14 +5478,14 @@
         }
       }
     },
-    "v1ListPendingTransactionsResponse": {
+    "v1ListProvidersResponse": {
       "type": "object",
       "properties": {
-        "pendingTransactions": {
+        "providers": {
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1PendingTransaction"
+            "$ref": "#/definitions/v1LLMProvider"
           }
         }
       }
@@ -4936,73 +5691,28 @@
       "type": "object",
       "description": "LogoutResponse is empty on success."
     },
-    "v1PendingTransaction": {
+    "v1ProviderBlueprintDescriptor": {
       "type": "object",
       "properties": {
         "id": {
           "type": "string"
         },
-        "spaceId": {
+        "displayName": {
           "type": "string"
         },
-        "integrationId": {
+        "description": {
           "type": "string"
         },
-        "rawVendor": {
+        "compatibilityMode": {
           "type": "string"
         },
-        "suggestedVendor": {
+        "defaultApiUrl": {
           "type": "string"
         },
-        "amount": {
-          "type": "string",
-          "format": "int64"
+        "isApiKeyRequired": {
+          "type": "boolean"
         },
-        "currency": {
-          "type": "string"
-        },
-        "suggestedAccountId": {
-          "type": "string"
-        },
-        "suggestedBudgetId": {
-          "type": "string"
-        },
-        "suggestedPaymentId": {
-          "type": "string"
-        },
-        "metadataJson": {
-          "type": "string",
-          "title": "JSON representation of source metadata (sender, subject, etc.)"
-        },
-        "createTime": {
-          "type": "string",
-          "format": "date-time"
-        }
-      }
-    },
-    "v1PendingTransactionDetails": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "suggestedVendor": {
-          "type": "string"
-        },
-        "amount": {
-          "type": "string",
-          "format": "int64"
-        },
-        "currency": {
-          "type": "string"
-        },
-        "suggestedAccountId": {
-          "type": "string"
-        },
-        "suggestedBudgetId": {
-          "type": "string"
-        },
-        "suggestedPaymentId": {
+        "logoIcon": {
           "type": "string"
         }
       }
@@ -5233,8 +5943,8 @@
         "message": {
           "type": "string"
         },
-        "pendingTransaction": {
-          "$ref": "#/definitions/v1PendingTransactionDetails"
+        "result": {
+          "type": "object"
         }
       }
     },

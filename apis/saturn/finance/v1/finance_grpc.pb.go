@@ -20,47 +20,47 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Finance_ConfigureFinance_FullMethodName          = "/saturn.finance.v1.Finance/ConfigureFinance"
-	Finance_GetFinanceSettings_FullMethodName        = "/saturn.finance.v1.Finance/GetFinanceSettings"
-	Finance_CreateBudget_FullMethodName              = "/saturn.finance.v1.Finance/CreateBudget"
-	Finance_UpdateBudget_FullMethodName              = "/saturn.finance.v1.Finance/UpdateBudget"
-	Finance_DeleteBudget_FullMethodName              = "/saturn.finance.v1.Finance/DeleteBudget"
-	Finance_ListBudgets_FullMethodName               = "/saturn.finance.v1.Finance/ListBudgets"
-	Finance_GetBudgetPeriod_FullMethodName           = "/saturn.finance.v1.Finance/GetBudgetPeriod"
-	Finance_CreateExchangeRate_FullMethodName        = "/saturn.finance.v1.Finance/CreateExchangeRate"
-	Finance_ListExchangeRates_FullMethodName         = "/saturn.finance.v1.Finance/ListExchangeRates"
-	Finance_DeleteExchangeRate_FullMethodName        = "/saturn.finance.v1.Finance/DeleteExchangeRate"
-	Finance_CreateExpense_FullMethodName             = "/saturn.finance.v1.Finance/CreateExpense"
-	Finance_UpdateExpense_FullMethodName             = "/saturn.finance.v1.Finance/UpdateExpense"
-	Finance_DeleteTransaction_FullMethodName         = "/saturn.finance.v1.Finance/DeleteTransaction"
-	Finance_ListTransactions_FullMethodName          = "/saturn.finance.v1.Finance/ListTransactions"
-	Finance_ListTransactionEvents_FullMethodName     = "/saturn.finance.v1.Finance/ListTransactionEvents"
-	Finance_GetInsights_FullMethodName               = "/saturn.finance.v1.Finance/GetInsights"
-	Finance_CreateRecurringExpense_FullMethodName    = "/saturn.finance.v1.Finance/CreateRecurringExpense"
-	Finance_UpdateRecurringExpense_FullMethodName    = "/saturn.finance.v1.Finance/UpdateRecurringExpense"
-	Finance_DeleteRecurringExpense_FullMethodName    = "/saturn.finance.v1.Finance/DeleteRecurringExpense"
-	Finance_ListRecurringExpenses_FullMethodName     = "/saturn.finance.v1.Finance/ListRecurringExpenses"
-	Finance_ListScheduledPayments_FullMethodName     = "/saturn.finance.v1.Finance/ListScheduledPayments"
-	Finance_ConfirmScheduledPayment_FullMethodName   = "/saturn.finance.v1.Finance/ConfirmScheduledPayment"
-	Finance_CreateBorrowing_FullMethodName           = "/saturn.finance.v1.Finance/CreateBorrowing"
-	Finance_GetBorrowing_FullMethodName              = "/saturn.finance.v1.Finance/GetBorrowing"
-	Finance_ListBorrowings_FullMethodName            = "/saturn.finance.v1.Finance/ListBorrowings"
-	Finance_UpdateBorrowing_FullMethodName           = "/saturn.finance.v1.Finance/UpdateBorrowing"
-	Finance_DeleteBorrowing_FullMethodName           = "/saturn.finance.v1.Finance/DeleteBorrowing"
-	Finance_CreateBorrowingRepayment_FullMethodName  = "/saturn.finance.v1.Finance/CreateBorrowingRepayment"
-	Finance_ListBorrowingRepayments_FullMethodName   = "/saturn.finance.v1.Finance/ListBorrowingRepayments"
-	Finance_DeleteBorrowingRepayment_FullMethodName  = "/saturn.finance.v1.Finance/DeleteBorrowingRepayment"
-	Finance_CreateAccount_FullMethodName             = "/saturn.finance.v1.Finance/CreateAccount"
-	Finance_GetAccount_FullMethodName                = "/saturn.finance.v1.Finance/GetAccount"
-	Finance_UpdateAccount_FullMethodName             = "/saturn.finance.v1.Finance/UpdateAccount"
-	Finance_DeleteAccount_FullMethodName             = "/saturn.finance.v1.Finance/DeleteAccount"
-	Finance_ListAccounts_FullMethodName              = "/saturn.finance.v1.Finance/ListAccounts"
-	Finance_CreateTransfer_FullMethodName            = "/saturn.finance.v1.Finance/CreateTransfer"
-	Finance_ListTransfers_FullMethodName             = "/saturn.finance.v1.Finance/ListTransfers"
-	Finance_ListCurrencies_FullMethodName            = "/saturn.finance.v1.Finance/ListCurrencies"
-	Finance_ListPendingTransactions_FullMethodName   = "/saturn.finance.v1.Finance/ListPendingTransactions"
-	Finance_ApprovePendingTransaction_FullMethodName = "/saturn.finance.v1.Finance/ApprovePendingTransaction"
-	Finance_DiscardPendingTransaction_FullMethodName = "/saturn.finance.v1.Finance/DiscardPendingTransaction"
+	Finance_ConfigureFinance_FullMethodName         = "/saturn.finance.v1.Finance/ConfigureFinance"
+	Finance_GetFinanceSettings_FullMethodName       = "/saturn.finance.v1.Finance/GetFinanceSettings"
+	Finance_CreateBudget_FullMethodName             = "/saturn.finance.v1.Finance/CreateBudget"
+	Finance_UpdateBudget_FullMethodName             = "/saturn.finance.v1.Finance/UpdateBudget"
+	Finance_DeleteBudget_FullMethodName             = "/saturn.finance.v1.Finance/DeleteBudget"
+	Finance_ListBudgets_FullMethodName              = "/saturn.finance.v1.Finance/ListBudgets"
+	Finance_GetBudgetPeriod_FullMethodName          = "/saturn.finance.v1.Finance/GetBudgetPeriod"
+	Finance_CreateExchangeRate_FullMethodName       = "/saturn.finance.v1.Finance/CreateExchangeRate"
+	Finance_ListExchangeRates_FullMethodName        = "/saturn.finance.v1.Finance/ListExchangeRates"
+	Finance_DeleteExchangeRate_FullMethodName       = "/saturn.finance.v1.Finance/DeleteExchangeRate"
+	Finance_CreateExpense_FullMethodName            = "/saturn.finance.v1.Finance/CreateExpense"
+	Finance_UpdateExpense_FullMethodName            = "/saturn.finance.v1.Finance/UpdateExpense"
+	Finance_DeleteTransaction_FullMethodName        = "/saturn.finance.v1.Finance/DeleteTransaction"
+	Finance_ListTransactions_FullMethodName         = "/saturn.finance.v1.Finance/ListTransactions"
+	Finance_ListTransactionEvents_FullMethodName    = "/saturn.finance.v1.Finance/ListTransactionEvents"
+	Finance_GetInsights_FullMethodName              = "/saturn.finance.v1.Finance/GetInsights"
+	Finance_CreateRecurringExpense_FullMethodName   = "/saturn.finance.v1.Finance/CreateRecurringExpense"
+	Finance_UpdateRecurringExpense_FullMethodName   = "/saturn.finance.v1.Finance/UpdateRecurringExpense"
+	Finance_DeleteRecurringExpense_FullMethodName   = "/saturn.finance.v1.Finance/DeleteRecurringExpense"
+	Finance_ListRecurringExpenses_FullMethodName    = "/saturn.finance.v1.Finance/ListRecurringExpenses"
+	Finance_ListScheduledPayments_FullMethodName    = "/saturn.finance.v1.Finance/ListScheduledPayments"
+	Finance_ConfirmScheduledPayment_FullMethodName  = "/saturn.finance.v1.Finance/ConfirmScheduledPayment"
+	Finance_CreateBorrowing_FullMethodName          = "/saturn.finance.v1.Finance/CreateBorrowing"
+	Finance_GetBorrowing_FullMethodName             = "/saturn.finance.v1.Finance/GetBorrowing"
+	Finance_ListBorrowings_FullMethodName           = "/saturn.finance.v1.Finance/ListBorrowings"
+	Finance_UpdateBorrowing_FullMethodName          = "/saturn.finance.v1.Finance/UpdateBorrowing"
+	Finance_DeleteBorrowing_FullMethodName          = "/saturn.finance.v1.Finance/DeleteBorrowing"
+	Finance_CreateBorrowingRepayment_FullMethodName = "/saturn.finance.v1.Finance/CreateBorrowingRepayment"
+	Finance_ListBorrowingRepayments_FullMethodName  = "/saturn.finance.v1.Finance/ListBorrowingRepayments"
+	Finance_DeleteBorrowingRepayment_FullMethodName = "/saturn.finance.v1.Finance/DeleteBorrowingRepayment"
+	Finance_CreateAccount_FullMethodName            = "/saturn.finance.v1.Finance/CreateAccount"
+	Finance_GetAccount_FullMethodName               = "/saturn.finance.v1.Finance/GetAccount"
+	Finance_UpdateAccount_FullMethodName            = "/saturn.finance.v1.Finance/UpdateAccount"
+	Finance_DeleteAccount_FullMethodName            = "/saturn.finance.v1.Finance/DeleteAccount"
+	Finance_ListAccounts_FullMethodName             = "/saturn.finance.v1.Finance/ListAccounts"
+	Finance_CreateTransfer_FullMethodName           = "/saturn.finance.v1.Finance/CreateTransfer"
+	Finance_ListTransfers_FullMethodName            = "/saturn.finance.v1.Finance/ListTransfers"
+	Finance_ListCurrencies_FullMethodName           = "/saturn.finance.v1.Finance/ListCurrencies"
+	Finance_ListInboxItems_FullMethodName           = "/saturn.finance.v1.Finance/ListInboxItems"
+	Finance_ApproveInboxItem_FullMethodName         = "/saturn.finance.v1.Finance/ApproveInboxItem"
+	Finance_DiscardInboxItem_FullMethodName         = "/saturn.finance.v1.Finance/DiscardInboxItem"
 )
 
 // FinanceClient is the client API for Finance service.
@@ -145,12 +145,12 @@ type FinanceClient interface {
 	ListTransfers(ctx context.Context, in *ListTransfersRequest, opts ...grpc.CallOption) (*ListTransfersResponse, error)
 	// ListCurrencies returns the list of supported currencies.
 	ListCurrencies(ctx context.Context, in *ListCurrenciesRequest, opts ...grpc.CallOption) (*ListCurrenciesResponse, error)
-	// ListPendingTransactions lists all pending transactions staging in the queue for a space.
-	ListPendingTransactions(ctx context.Context, in *ListPendingTransactionsRequest, opts ...grpc.CallOption) (*ListPendingTransactionsResponse, error)
-	// ApprovePendingTransaction approves and commits a pending transaction to the main transaction ledger.
-	ApprovePendingTransaction(ctx context.Context, in *ApprovePendingTransactionRequest, opts ...grpc.CallOption) (*Transaction, error)
-	// DiscardPendingTransaction discards a pending transaction from the staging queue.
-	DiscardPendingTransaction(ctx context.Context, in *DiscardPendingTransactionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// ListInboxItems lists all inbox items staging in the queue for a space.
+	ListInboxItems(ctx context.Context, in *ListInboxItemsRequest, opts ...grpc.CallOption) (*ListInboxItemsResponse, error)
+	// ApproveInboxItem approves and commits a pending inbox item to the main transaction ledger.
+	ApproveInboxItem(ctx context.Context, in *ApproveInboxItemRequest, opts ...grpc.CallOption) (*Transaction, error)
+	// DiscardInboxItem discards an inbox item from the staging queue.
+	DiscardInboxItem(ctx context.Context, in *DiscardInboxItemRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type financeClient struct {
@@ -541,30 +541,30 @@ func (c *financeClient) ListCurrencies(ctx context.Context, in *ListCurrenciesRe
 	return out, nil
 }
 
-func (c *financeClient) ListPendingTransactions(ctx context.Context, in *ListPendingTransactionsRequest, opts ...grpc.CallOption) (*ListPendingTransactionsResponse, error) {
+func (c *financeClient) ListInboxItems(ctx context.Context, in *ListInboxItemsRequest, opts ...grpc.CallOption) (*ListInboxItemsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListPendingTransactionsResponse)
-	err := c.cc.Invoke(ctx, Finance_ListPendingTransactions_FullMethodName, in, out, cOpts...)
+	out := new(ListInboxItemsResponse)
+	err := c.cc.Invoke(ctx, Finance_ListInboxItems_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *financeClient) ApprovePendingTransaction(ctx context.Context, in *ApprovePendingTransactionRequest, opts ...grpc.CallOption) (*Transaction, error) {
+func (c *financeClient) ApproveInboxItem(ctx context.Context, in *ApproveInboxItemRequest, opts ...grpc.CallOption) (*Transaction, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Transaction)
-	err := c.cc.Invoke(ctx, Finance_ApprovePendingTransaction_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Finance_ApproveInboxItem_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *financeClient) DiscardPendingTransaction(ctx context.Context, in *DiscardPendingTransactionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *financeClient) DiscardInboxItem(ctx context.Context, in *DiscardInboxItemRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, Finance_DiscardPendingTransaction_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Finance_DiscardInboxItem_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -653,12 +653,12 @@ type FinanceServer interface {
 	ListTransfers(context.Context, *ListTransfersRequest) (*ListTransfersResponse, error)
 	// ListCurrencies returns the list of supported currencies.
 	ListCurrencies(context.Context, *ListCurrenciesRequest) (*ListCurrenciesResponse, error)
-	// ListPendingTransactions lists all pending transactions staging in the queue for a space.
-	ListPendingTransactions(context.Context, *ListPendingTransactionsRequest) (*ListPendingTransactionsResponse, error)
-	// ApprovePendingTransaction approves and commits a pending transaction to the main transaction ledger.
-	ApprovePendingTransaction(context.Context, *ApprovePendingTransactionRequest) (*Transaction, error)
-	// DiscardPendingTransaction discards a pending transaction from the staging queue.
-	DiscardPendingTransaction(context.Context, *DiscardPendingTransactionRequest) (*emptypb.Empty, error)
+	// ListInboxItems lists all inbox items staging in the queue for a space.
+	ListInboxItems(context.Context, *ListInboxItemsRequest) (*ListInboxItemsResponse, error)
+	// ApproveInboxItem approves and commits a pending inbox item to the main transaction ledger.
+	ApproveInboxItem(context.Context, *ApproveInboxItemRequest) (*Transaction, error)
+	// DiscardInboxItem discards an inbox item from the staging queue.
+	DiscardInboxItem(context.Context, *DiscardInboxItemRequest) (*emptypb.Empty, error)
 }
 
 // UnimplementedFinanceServer should be embedded to have
@@ -782,14 +782,14 @@ func (UnimplementedFinanceServer) ListTransfers(context.Context, *ListTransfersR
 func (UnimplementedFinanceServer) ListCurrencies(context.Context, *ListCurrenciesRequest) (*ListCurrenciesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListCurrencies not implemented")
 }
-func (UnimplementedFinanceServer) ListPendingTransactions(context.Context, *ListPendingTransactionsRequest) (*ListPendingTransactionsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ListPendingTransactions not implemented")
+func (UnimplementedFinanceServer) ListInboxItems(context.Context, *ListInboxItemsRequest) (*ListInboxItemsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListInboxItems not implemented")
 }
-func (UnimplementedFinanceServer) ApprovePendingTransaction(context.Context, *ApprovePendingTransactionRequest) (*Transaction, error) {
-	return nil, status.Error(codes.Unimplemented, "method ApprovePendingTransaction not implemented")
+func (UnimplementedFinanceServer) ApproveInboxItem(context.Context, *ApproveInboxItemRequest) (*Transaction, error) {
+	return nil, status.Error(codes.Unimplemented, "method ApproveInboxItem not implemented")
 }
-func (UnimplementedFinanceServer) DiscardPendingTransaction(context.Context, *DiscardPendingTransactionRequest) (*emptypb.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method DiscardPendingTransaction not implemented")
+func (UnimplementedFinanceServer) DiscardInboxItem(context.Context, *DiscardInboxItemRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DiscardInboxItem not implemented")
 }
 func (UnimplementedFinanceServer) testEmbeddedByValue() {}
 
@@ -1495,56 +1495,56 @@ func _Finance_ListCurrencies_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Finance_ListPendingTransactions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListPendingTransactionsRequest)
+func _Finance_ListInboxItems_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListInboxItemsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FinanceServer).ListPendingTransactions(ctx, in)
+		return srv.(FinanceServer).ListInboxItems(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Finance_ListPendingTransactions_FullMethodName,
+		FullMethod: Finance_ListInboxItems_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FinanceServer).ListPendingTransactions(ctx, req.(*ListPendingTransactionsRequest))
+		return srv.(FinanceServer).ListInboxItems(ctx, req.(*ListInboxItemsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Finance_ApprovePendingTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ApprovePendingTransactionRequest)
+func _Finance_ApproveInboxItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ApproveInboxItemRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FinanceServer).ApprovePendingTransaction(ctx, in)
+		return srv.(FinanceServer).ApproveInboxItem(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Finance_ApprovePendingTransaction_FullMethodName,
+		FullMethod: Finance_ApproveInboxItem_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FinanceServer).ApprovePendingTransaction(ctx, req.(*ApprovePendingTransactionRequest))
+		return srv.(FinanceServer).ApproveInboxItem(ctx, req.(*ApproveInboxItemRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Finance_DiscardPendingTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DiscardPendingTransactionRequest)
+func _Finance_DiscardInboxItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DiscardInboxItemRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FinanceServer).DiscardPendingTransaction(ctx, in)
+		return srv.(FinanceServer).DiscardInboxItem(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Finance_DiscardPendingTransaction_FullMethodName,
+		FullMethod: Finance_DiscardInboxItem_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FinanceServer).DiscardPendingTransaction(ctx, req.(*DiscardPendingTransactionRequest))
+		return srv.(FinanceServer).DiscardInboxItem(ctx, req.(*DiscardInboxItemRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1709,16 +1709,16 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Finance_ListCurrencies_Handler,
 		},
 		{
-			MethodName: "ListPendingTransactions",
-			Handler:    _Finance_ListPendingTransactions_Handler,
+			MethodName: "ListInboxItems",
+			Handler:    _Finance_ListInboxItems_Handler,
 		},
 		{
-			MethodName: "ApprovePendingTransaction",
-			Handler:    _Finance_ApprovePendingTransaction_Handler,
+			MethodName: "ApproveInboxItem",
+			Handler:    _Finance_ApproveInboxItem_Handler,
 		},
 		{
-			MethodName: "DiscardPendingTransaction",
-			Handler:    _Finance_DiscardPendingTransaction_Handler,
+			MethodName: "DiscardInboxItem",
+			Handler:    _Finance_DiscardInboxItem_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

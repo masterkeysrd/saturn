@@ -5,10 +5,10 @@ import {
   useDeleteTransactionMutation,
   type Transaction,
   useListAccountsQuery,
-  useListPendingTransactionsQuery,
+  useListInboxItemsQuery,
 } from "@/gen/saturn/finance/v1/finance"
 import { Inbox } from "lucide-react"
-import { PendingTransactionsSheet } from "./components/pending-transactions-sheet"
+import { InboxItemsSheet } from "./components/inbox-items-sheet"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -88,12 +88,12 @@ export function TransactionsView() {
     }
   }
 
-  // Query pending transactions staged for review
-  const { data: pendingData } = useListPendingTransactionsQuery(
+  // Query inbox items staged for review
+  const { data: pendingData } = useListInboxItemsQuery(
     {},
     { enabled: !!spaceId }
   )
-  const pendingCount = pendingData?.pendingTransactions?.length || 0
+  const pendingCount = pendingData?.inboxItems?.length || 0
 
   const handleCreateTrigger = () => {
     setEditTransaction(null)
@@ -546,7 +546,7 @@ export function TransactionsView() {
           txnId={eventsTxnId}
           txnDescription={eventsTxnDescription}
         />
-        <PendingTransactionsSheet
+        <InboxItemsSheet
           open={pendingOpen}
           onOpenChange={handlePendingOpenChange}
           spaceId={spaceId}

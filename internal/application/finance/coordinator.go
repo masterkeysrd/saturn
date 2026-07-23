@@ -8,7 +8,6 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
-	"github.com/masterkeysrd/saturn/internal/platform/gemini"
 )
 
 // SpaceService defines the decoupled interface for workspace accessibility check.
@@ -24,6 +23,7 @@ type FinanceService interface {
 	UpdateBudget(ctx context.Context, budget *finance.Budget) (*finance.Budget, error)
 	DeleteBudget(ctx context.Context, id finance.BudgetID) error
 	ListBudgets(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBudgetsFilter) ([]*finance.Budget, string, error)
+	GetBudget(ctx context.Context, id finance.BudgetID) (*finance.Budget, error)
 	GetOrCreatePeriod(ctx context.Context, budgetID finance.BudgetID, date time.Time) (*finance.BudgetPeriod, error)
 	UpdatePeriodLimit(ctx context.Context, id finance.PeriodID, limit int64) error
 	CreateExchangeRate(ctx context.Context, rate *finance.ExchangeRate) (*finance.ExchangeRate, error)
@@ -65,38 +65,104 @@ type FinanceService interface {
 	DeleteTransfer(ctx context.Context, id finance.TransferID) error
 	ListTransfers(ctx context.Context, spaceID finance.SpaceID, limit int32, pageToken string) ([]*finance.Transfer, string, error)
 
-	StageTransaction(ctx context.Context, spaceID string, req *finance.StageTransaction) (*finance.PendingTransaction, error)
-	ListPendingTransactions(ctx context.Context, spaceID string) ([]*finance.PendingTransaction, error)
-	DiscardPendingTransaction(ctx context.Context, spaceID, id string) error
-	ApprovePendingTransaction(ctx context.Context, spaceID string, req *finance.ApprovePendingTransaction) (*finance.Transaction, error)
+	StageInboxItem(ctx context.Context, spaceID string, req *finance.StageInboxItem) (*finance.InboxItem, error)
+	ListInboxItems(ctx context.Context, spaceID string) ([]*finance.InboxItem, error)
+	DiscardInboxItem(ctx context.Context, spaceID, id string) error
+	ApproveInboxItem(ctx context.Context, spaceID string, req *finance.ApproveInboxItem) (*finance.Transaction, error)
 }
 
-// GeminiClient outlines the interface for parsing raw unstructured text payloads via LLMs.
-type GeminiClient interface {
-	ParseEmail(ctx context.Context, emailBody string, activeBudgets []string) (*gemini.ParsedEmailMetadata, error)
+// ParsedTransaction represents structured transaction data parsed by an ingestion agent.
+type ParsedTransaction struct {
+	ReferenceNumber    string
+	TransactionType    string
+	Date               string
+	Amount             int64 // In minor units
+	Currency           string
+	Counterparty       string
+	CardLastFour       string
+	SuggestedBudget    string
+	SuggestedBorrowing string
+	RawOutput          string
+}
+
+// IngestionContext provides workspace entity context to guide the polymorphic ingestion agent suggestions.
+type IngestionContext struct {
+	Budgets           []*finance.Budget
+	Accounts          []*finance.Account
+	ScheduledPayments []*finance.ScheduledPayment
+	RecurringExpenses []*finance.RecurringExpense
+	Borrowings        []*finance.Borrowing
+	ReferenceDate     time.Time
+}
+
+// DocumentClassifier defines the interface for running document-type classification.
+type DocumentClassifier interface {
+	Classify(ctx context.Context, spaceID string, doc string) (string, error)
+}
+
+// IngestionParser defines the interface for running transaction metadata extraction.
+type IngestionParser interface {
+	Parse(ctx context.Context, spaceID string, doc string, context IngestionContext) (*ParsedTransaction, error)
+}
+
+// DeduplicationResult represents semantic duplicate checking output from the agent.
+type DeduplicationResult struct {
+	IsDuplicate            bool
+	DuplicateTransactionID string
+	Reason                 string
+}
+
+// IngestionDeduplicator defines the interface for running semantic transaction deduplication.
+type IngestionDeduplicator interface {
+	Deduplicate(ctx context.Context, spaceID string, tx *ParsedTransaction, recent []*finance.Transaction) (*DeduplicationResult, error)
 }
 
 // Dependencies contains all parameters for Coordinator initialization.
 type Dependencies struct {
 	FinanceService FinanceService
 	SpaceService   SpaceService
-	GeminiClient   GeminiClient
+	Classifier     DocumentClassifier
+	Parser         IngestionParser
+	Deduplicator   IngestionDeduplicator
 }
 
 // Coordinator orchestrates requests across workspace and finance boundaries.
 type Coordinator struct {
-	financeService FinanceService
+	financeService financeServiceWrapper
 	spaceService   SpaceService
-	geminiClient   GeminiClient
+	classifier     DocumentClassifier
+	parser         IngestionParser
+	deduplicator   IngestionDeduplicator
 }
 
 // NewCoordinator instantiates a new Coordinator.
 func NewCoordinator(deps Dependencies) *Coordinator {
 	return &Coordinator{
-		financeService: deps.FinanceService,
+		financeService: &financeServiceAdapter{deps.FinanceService},
 		spaceService:   deps.SpaceService,
-		geminiClient:   deps.GeminiClient,
+		classifier:     deps.Classifier,
+		parser:         deps.Parser,
+		deduplicator:   deps.Deduplicator,
 	}
+}
+
+// financeServiceWrapper lets coordinator call underlying domain methods including GetBudget
+type financeServiceWrapper interface {
+	FinanceService
+	GetBudget(ctx context.Context, id finance.BudgetID) (*finance.Budget, error)
+}
+
+type financeServiceAdapter struct {
+	FinanceService
+}
+
+func (a *financeServiceAdapter) GetBudget(ctx context.Context, id finance.BudgetID) (*finance.Budget, error) {
+	if s, ok := a.FinanceService.(interface {
+		GetBudget(ctx context.Context, id finance.BudgetID) (*finance.Budget, error)
+	}); ok {
+		return s.GetBudget(ctx, id)
+	}
+	return nil, errors.New("underlying service does not support GetBudget")
 }
 
 // RequestContext encapsulates the active request context properties.
