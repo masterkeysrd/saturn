@@ -23,7 +23,7 @@ export const menu: FeatureMenu = {
     },
     {
       title: "Review Queue",
-      url: "/finance/transactions?review=true",
+      url: "/finance/inbox",
     },
     {
       title: "Recurring Expenses",

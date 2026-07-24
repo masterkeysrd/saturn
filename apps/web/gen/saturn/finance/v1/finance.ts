@@ -425,6 +425,7 @@ export interface ConfirmScheduledPaymentRequest {
   transactionDate: string
   effectiveDate: string
   actualAmount: string
+  description?: string
 }
 
 export interface Borrowing {
@@ -669,6 +670,13 @@ export interface ApproveInboxItemRequest {
   scheduledPaymentId: string
   amount: string
   description: string
+  docType?: string
+  destinationAccountId?: string
+  transactionType?: string
+  transactionId?: string
+  overwriteLinkedTransaction?: boolean
+  transferLeg?: string
+  currency?: string
 }
 
 export interface DiscardInboxItemRequest {

@@ -45,6 +45,21 @@ const FORECAST_DAYS_WINDOW = 7
 const DEFAULT_PAGE_SIZE = 100
 const HISTORY_PAGE_SIZE = 50
 
+function decodeBase64Utf8(base64: string): string {
+  try {
+    const binStr = atob(base64)
+    const len = binStr.length
+    const bytes = new Uint8Array(len)
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binStr.charCodeAt(i)
+    }
+    return new TextDecoder().decode(bytes)
+  } catch (e) {
+    console.error("Base64 UTF-8 decoding failed", e)
+    return ""
+  }
+}
+
 export function RecurringView() {
   const {
     spaceId,
@@ -474,6 +489,31 @@ export function RecurringView() {
                         graceDueDate.setDate(graceDueDate.getDate() + graceDays)
                         const isOverdue = graceDueDate < new Date()
 
+                        const displayName = (() => {
+                          if (pay.sourceType === "recurrent_expense") {
+                            return (
+                              expenses.find((e) => e.id === pay.sourceId)
+                                ?.name || "Recurring Bill"
+                            )
+                          }
+                          if (pay.sourceType === "invoice") {
+                            try {
+                              if (pay.metadata && pay.metadata.length > 0) {
+                                const decoded = JSON.parse(
+                                  decodeBase64Utf8(pay.metadata)
+                                )
+                                if (decoded && decoded.vendor_name) {
+                                  return decoded.vendor_name
+                                }
+                              }
+                            } catch (e) {
+                              console.error("failed to decode metadata", e)
+                            }
+                            return "Scheduled Invoice"
+                          }
+                          return "Scheduled Outflow"
+                        })()
+
                         return (
                           <div
                             key={pay.id}
@@ -492,19 +532,9 @@ export function RecurringView() {
                               <div className="min-w-0">
                                 <h4
                                   className="max-w-[90px] truncate text-xs font-bold text-foreground sm:max-w-[120px]"
-                                  title={
-                                    pay.sourceType === "recurrent_expense"
-                                      ? expenses.find(
-                                          (e) => e.id === pay.sourceId
-                                        )?.name || "Recurring Bill"
-                                      : "Scheduled Outflow"
-                                  }
+                                  title={displayName}
                                 >
-                                  {pay.sourceType === "recurrent_expense"
-                                    ? expenses.find(
-                                        (e) => e.id === pay.sourceId
-                                      )?.name || "Recurring Bill"
-                                    : "Scheduled Outflow"}
+                                  {displayName}
                                 </h4>
                                 <div className="mt-0.5 flex flex-wrap items-center gap-x-1 text-[9px]">
                                   <span

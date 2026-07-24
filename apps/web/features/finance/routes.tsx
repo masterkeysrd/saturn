@@ -6,12 +6,18 @@ import { SettingsView as FinanceSettingsView } from "./settings-view"
 import { RecurringView } from "./recurring-view"
 import { BorrowingView } from "./borrowing-view"
 import { AccountsView } from "./accounts-view"
+import { InboxView } from "./inbox-view"
 import type { SaturnRouteObject } from "@/lib/navigation"
 
 export const routes: SaturnRouteObject[] = [
   {
     path: "/finance",
     element: <InsightsView />,
+    requiresSpace: true,
+  },
+  {
+    path: "/finance/inbox",
+    element: <InboxView />,
     requiresSpace: true,
   },
   {
