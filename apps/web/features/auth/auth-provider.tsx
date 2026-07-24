@@ -20,6 +20,9 @@ import { AuthContext, type AuthUser } from "./auth-context"
 import { authStorage } from "@/lib/auth-storage"
 import { decodeJwt } from "@/lib/jwt"
 
+// Global promise cache to deduplicate silent refresh calls on mount (e.g. under React Strict Mode)
+let initialRefreshPromise: Promise<{ accessToken: string }> | null = null
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(() => {
@@ -34,7 +37,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const session = authStorage.getSession()
       if (session.hasSession) {
         try {
-          const res = await refreshSession({ refreshToken: "" })
+          if (!initialRefreshPromise) {
+            initialRefreshPromise = refreshSession({
+              refreshToken: "",
+            }).finally(() => {
+              initialRefreshPromise = null
+            })
+          }
+          const res = await initialRefreshPromise
           authStorage.setSession(res.accessToken)
           setAccessToken(res.accessToken)
         } catch {
