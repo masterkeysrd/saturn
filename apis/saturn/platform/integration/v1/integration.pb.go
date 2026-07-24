@@ -1029,7 +1029,7 @@ var File_saturn_platform_integration_v1_integration_proto protoreflect.FileDescr
 
 const file_saturn_platform_integration_v1_integration_proto_rawDesc = "" +
 	"\n" +
-	"0saturn/platform/integration/v1/integration.proto\x12\x1esaturn.platform.integration.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\"\xb8\x02\n" +
+	"0saturn/platform/integration/v1/integration.proto\x12\x1esaturn.platform.integration.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb8\x02\n" +
 	"\vIntegration\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bspace_id\x18\x02 \x01(\tR\aspaceId\x12\x12\n" +

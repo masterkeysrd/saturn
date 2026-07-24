@@ -69,4 +69,6 @@ type ApproveInboxItem struct {
 	TransactionType            string
 	TransactionID              string
 	OverwriteLinkedTransaction bool
+	TransferLeg                string
+	Currency                   string
 }

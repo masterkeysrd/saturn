@@ -1919,6 +1919,10 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, req *App
 		}
 	}
 
+	if req.Currency != "" {
+		item.Currency = req.Currency
+	}
+
 	var txn *Transaction
 
 	// 2. If it is linked to an existing transaction:
@@ -2148,14 +2152,20 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, req *App
 				return nil, fmt.Errorf("create transfer: %w", err)
 			}
 
+			targetLeg := TransactionTypeTransferOut
+			targetAccID := srcAccID
+			if req.TransferLeg == "DESTINATION" {
+				targetLeg = TransactionTypeTransferIn
+				targetAccID = destAccID
+			}
+
 			txs, _, err := s.deps.TransactionStore.ListBySpace(ctx, SpaceID(spaceID), &ListTransactionsFilter{
-				AccountID:  &srcAccID,
 				TransferID: &newT.ID,
 			})
 			var matchedTx *Transaction
 			if err == nil {
 				for _, tx := range txs {
-					if tx.Type == TransactionTypeTransferOut {
+					if tx.Type == targetLeg {
 						matchedTx = tx
 						break
 					}
@@ -2168,9 +2178,9 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, req *App
 				tIDStr := string(matchedTx.ID)
 				item.TransactionID = &tIDStr
 			}
-			if req.AccountID != "" {
-				item.AccountID = &req.AccountID
-			}
+			targetAccIDStr := string(targetAccID)
+			item.AccountID = &targetAccIDStr
+
 			if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
 				return nil, fmt.Errorf("resolve inbox item: %w", err)
 			}

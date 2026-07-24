@@ -28,6 +28,11 @@ EXTRACTION RULES:
    - destination_account: The card/account that received the inflow (only populated for TRANSFERS or INCOMES).
 
 7. Suggest a borrowing record ONLY from the active list inside the <borrowings> XML block. Match based on whether the transaction represents a loan repayment or disbursement associated with the counterparty name. If a match is found, return the borrowing's exact "id" attribute value (e.g., "brw_...") in the "suggested_borrowing" field. Otherwise, set "suggested_borrowing" to null.
+
+8. For TRANSFER transactions, identify which leg of the transfer the document represents:
+   - "SOURCE": The document is a debit confirmation, withdrawal alert, or card charge from the sending account.
+   - "DESTINATION": The document is a deposit confirmation, credit alert, or wire incoming receipt on the receiving account.
+   Set the "suggested_transfer_leg" field to either "SOURCE" or "DESTINATION" based on this context if the transaction is a TRANSFER. Otherwise, set "suggested_transfer_leg" to null.
 {{else if .dedup}}Your task is to perform semantic deduplication:
 Compare the newly extracted transaction details in <extracted_transaction> with the list of recent ledger transactions in the <recent_transactions> XML block. Determine if this document represents a duplicate entry (e.g., credit card alert matching a receipt, or a duplicate invoice that was already registered).
 

@@ -3536,6 +3536,12 @@
         },
         "overwriteLinkedTransaction": {
           "type": "boolean"
+        },
+        "transferLeg": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
         }
       }
     },

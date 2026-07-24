@@ -73,16 +73,17 @@ type FinanceService interface {
 
 // ParsedTransaction represents structured transaction data parsed by an ingestion agent.
 type ParsedTransaction struct {
-	ReferenceNumber    string
-	TransactionType    string
-	Date               string
-	Amount             int64 // In minor units
-	Currency           string
-	Counterparty       string
-	CardLastFour       string
-	SuggestedBudget    string
-	SuggestedBorrowing string
-	RawOutput          string
+	ReferenceNumber      string
+	TransactionType      string
+	Date                 string
+	Amount               int64 // In minor units
+	Currency             string
+	Counterparty         string
+	CardLastFour         string
+	SuggestedBudget      string
+	SuggestedBorrowing   string
+	SuggestedTransferLeg string
+	RawOutput            string
 }
 
 // IngestionContext provides workspace entity context to guide the polymorphic ingestion agent suggestions.

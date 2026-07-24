@@ -57,7 +57,8 @@ func init() {
       }
     },
     "suggested_budget": { "type": ["string", "null"] },
-    "suggested_borrowing": { "type": ["string", "null"] }
+    "suggested_borrowing": { "type": ["string", "null"] },
+    "suggested_transfer_leg": { "type": ["string", "null"], "enum": ["SOURCE", "DESTINATION", null] }
   },
   "required": ["transaction_type", "date", "amount", "currency", "counterparty", "source_account"]
 }{{else if .dedup}}{
@@ -224,8 +225,9 @@ func (a *AgentIngestionParser) Parse(ctx context.Context, spaceID string, doc st
 			RawName  string `json:"raw_name"`
 			LastFour string `json:"last_four"`
 		} `json:"source_account"`
-		SuggestedBudget    *string `json:"suggested_budget"`
-		SuggestedBorrowing *string `json:"suggested_borrowing"`
+		SuggestedBudget      *string `json:"suggested_budget"`
+		SuggestedBorrowing   *string `json:"suggested_borrowing"`
+		SuggestedTransferLeg *string `json:"suggested_transfer_leg"`
 	}
 
 	if err := json.Unmarshal([]byte(cleanedJSON), &extracted); err != nil {
@@ -242,17 +244,23 @@ func (a *AgentIngestionParser) Parse(ctx context.Context, spaceID string, doc st
 		suggestedBorrowing = *extracted.SuggestedBorrowing
 	}
 
+	suggestedTransferLeg := "SOURCE"
+	if extracted.SuggestedTransferLeg != nil {
+		suggestedTransferLeg = *extracted.SuggestedTransferLeg
+	}
+
 	return &ParsedTransaction{
-		ReferenceNumber:    extracted.ReferenceNumber,
-		TransactionType:    extracted.TransactionType,
-		Date:               extracted.Date,
-		Amount:             int64(extracted.Amount * 100),
-		Currency:           extracted.Currency,
-		Counterparty:       extracted.Counterparty,
-		CardLastFour:       extracted.SourceAccount.LastFour,
-		SuggestedBudget:    suggestedBudget,
-		SuggestedBorrowing: suggestedBorrowing,
-		RawOutput:          rawJSON,
+		ReferenceNumber:      extracted.ReferenceNumber,
+		TransactionType:      extracted.TransactionType,
+		Date:                 extracted.Date,
+		Amount:               int64(extracted.Amount * 100),
+		Currency:             extracted.Currency,
+		Counterparty:         extracted.Counterparty,
+		CardLastFour:         extracted.SourceAccount.LastFour,
+		SuggestedBudget:      suggestedBudget,
+		SuggestedBorrowing:   suggestedBorrowing,
+		SuggestedTransferLeg: suggestedTransferLeg,
+		RawOutput:            rawJSON,
 	}, nil
 }
 

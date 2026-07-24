@@ -5406,6 +5406,8 @@ type ApproveInboxItemRequest struct {
 	TransactionType            *string                `protobuf:"bytes,9,opt,name=transaction_type,json=transactionType,proto3,oneof" json:"transaction_type,omitempty"`
 	TransactionId              *string                `protobuf:"bytes,10,opt,name=transaction_id,json=transactionId,proto3,oneof" json:"transaction_id,omitempty"`
 	OverwriteLinkedTransaction *bool                  `protobuf:"varint,11,opt,name=overwrite_linked_transaction,json=overwriteLinkedTransaction,proto3,oneof" json:"overwrite_linked_transaction,omitempty"`
+	TransferLeg                *string                `protobuf:"bytes,12,opt,name=transfer_leg,json=transferLeg,proto3,oneof" json:"transfer_leg,omitempty"`
+	Currency                   *string                `protobuf:"bytes,13,opt,name=currency,proto3,oneof" json:"currency,omitempty"`
 	unknownFields              protoimpl.UnknownFields
 	sizeCache                  protoimpl.SizeCache
 }
@@ -5515,6 +5517,20 @@ func (x *ApproveInboxItemRequest) GetOverwriteLinkedTransaction() bool {
 		return *x.OverwriteLinkedTransaction
 	}
 	return false
+}
+
+func (x *ApproveInboxItemRequest) GetTransferLeg() string {
+	if x != nil && x.TransferLeg != nil {
+		return *x.TransferLeg
+	}
+	return ""
+}
+
+func (x *ApproveInboxItemRequest) GetCurrency() string {
+	if x != nil && x.Currency != nil {
+		return *x.Currency
+	}
+	return ""
 }
 
 type DiscardInboxItemRequest struct {
@@ -6439,7 +6455,7 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x15ListInboxItemsRequest\"W\n" +
 	"\x16ListInboxItemsResponse\x12=\n" +
 	"\vinbox_items\x18\x01 \x03(\v2\x1c.saturn.finance.v1.InboxItemR\n" +
-	"inboxItems\"\xc5\x04\n" +
+	"inboxItems\"\xac\x05\n" +
 	"\x17ApproveInboxItemRequest\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x12\x1d\n" +
 	"\n" +
@@ -6453,12 +6469,16 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x10transaction_type\x18\t \x01(\tH\x02R\x0ftransactionType\x88\x01\x01\x12*\n" +
 	"\x0etransaction_id\x18\n" +
 	" \x01(\tH\x03R\rtransactionId\x88\x01\x01\x12E\n" +
-	"\x1coverwrite_linked_transaction\x18\v \x01(\bH\x04R\x1aoverwriteLinkedTransaction\x88\x01\x01B\v\n" +
+	"\x1coverwrite_linked_transaction\x18\v \x01(\bH\x04R\x1aoverwriteLinkedTransaction\x88\x01\x01\x12&\n" +
+	"\ftransfer_leg\x18\f \x01(\tH\x05R\vtransferLeg\x88\x01\x01\x12\x1f\n" +
+	"\bcurrency\x18\r \x01(\tH\x06R\bcurrency\x88\x01\x01B\v\n" +
 	"\t_doc_typeB\x19\n" +
 	"\x17_destination_account_idB\x13\n" +
 	"\x11_transaction_typeB\x11\n" +
 	"\x0f_transaction_idB\x1f\n" +
-	"\x1d_overwrite_linked_transaction\".\n" +
+	"\x1d_overwrite_linked_transactionB\x0f\n" +
+	"\r_transfer_legB\v\n" +
+	"\t_currency\".\n" +
 	"\x17DiscardInboxItemRequest\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id*y\n" +
 	"\x12RecurrenceInterval\x12#\n" +

@@ -906,6 +906,8 @@ message ApproveInboxItemRequest {
   optional string transaction_type = 9;
   optional string transaction_id = 10;
   optional bool overwrite_linked_transaction = 11;
+  optional string transfer_leg = 12;
+  optional string currency = 13;
 }
 
 message DiscardInboxItemRequest {

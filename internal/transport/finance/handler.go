@@ -1057,6 +1057,8 @@ func (h *Handler) ApproveInboxItem(ctx context.Context, req *financev1.ApproveIn
 		TransactionType:            req.GetTransactionType(),
 		TransactionID:              req.GetTransactionId(),
 		OverwriteLinkedTransaction: req.GetOverwriteLinkedTransaction(),
+		TransferLeg:                req.GetTransferLeg(),
+		Currency:                   req.GetCurrency(),
 	}
 
 	tx, err := h.Coordinator.ApproveInboxItem(ctx, params)
