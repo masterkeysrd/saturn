@@ -11,6 +11,14 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 )
 
+const (
+	// Deduplication thresholds
+	dedupAmountMinFactor = 0.70 // 30% lower tolerance bound to account for tax-exclusive subtotals
+	dedupAmountMaxFactor = 1.30 // 30% upper tolerance bound to account for tax-inclusive totals
+	dedupDateRangeDays   = 10   // ±10 days window to account for delays in settlement
+	dedupMaxCandidates   = 10   // Maximum candidate transactions to send to the deduplication agent
+)
+
 // IngestionState maintains context across the financial document ingestion stages.
 type IngestionState struct {
 	SpaceID       string
@@ -260,9 +268,40 @@ func (c *Coordinator) pipelineResolveNode(ctx context.Context, state *IngestionS
 
 // 4. Deduplicate Node: Audits recently logged transactions to flag double-entries.
 func (c *Coordinator) pipelineDeduplicateNode(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
-	transactions, _, err := c.financeService.ListTransactions(ctx, finance.SpaceID(state.SpaceID), &finance.ListTransactionsFilter{
-		PageSize: 100,
-	})
+	var parsedDate time.Time
+	if state.Date != "" {
+		if t, err := time.Parse(time.RFC3339, state.Date); err == nil {
+			parsedDate = t
+		} else if t, err := time.Parse("2006-01-02", state.Date); err == nil {
+			parsedDate = t
+		}
+	}
+	if parsedDate.IsZero() {
+		parsedDate = time.Now()
+	}
+
+	minAmt := int64(float64(state.Amount) * dedupAmountMinFactor)
+	maxAmt := int64(float64(state.Amount) * dedupAmountMaxFactor)
+	startDate := parsedDate.AddDate(0, 0, -dedupDateRangeDays)
+	endDate := parsedDate.AddDate(0, 0, dedupDateRangeDays)
+
+	var searchQuery *string
+	if state.Vendor != "" {
+		searchQuery = &state.Vendor
+	}
+
+	filter := &finance.ListTransactionsFilter{
+		PageSize:  dedupMaxCandidates,
+		MinAmount: &minAmt,
+		MaxAmount: &maxAmt,
+		StartDate: &startDate,
+		EndDate:   &endDate,
+	}
+	if searchQuery != nil {
+		filter.SearchQuery = searchQuery
+	}
+
+	transactions, _, err := c.financeService.ListTransactions(ctx, finance.SpaceID(state.SpaceID), filter)
 	if err != nil {
 		return nil, fmt.Errorf("list transactions: %w", err)
 	}

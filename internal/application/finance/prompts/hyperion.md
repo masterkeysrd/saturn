@@ -38,8 +38,10 @@ Compare the newly extracted transaction details in <extracted_transaction> with 
 
 Return a JSON object with:
 - "is_duplicate": boolean.
-- "duplicate_transaction_id": string (the duplicate transaction's ID if is_duplicate is true, otherwise null).
+- "duplicate_transaction_id": string (the exact "id" attribute of the duplicate transaction from the <recent_transactions> list if is_duplicate is true, otherwise null. Do not leave this null if you found the ID).
 - "reason": string (brief explanation of why it is or is not a duplicate).
+
+CRITICAL: If a duplicate is found, you MUST extract and output the exact "id" attribute value (e.g. "txn_...") of that transaction in the "duplicate_transaction_id" field. Do not only put it in the "reason" text.
 {{end}}
 
 <context>

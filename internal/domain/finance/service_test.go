@@ -3,6 +3,7 @@ package finance
 import (
 	"context"
 	"math"
+	"strings"
 	"testing"
 	"time"
 
@@ -214,6 +215,25 @@ func (m *mockTransactionStore) ListBySpace(ctx context.Context, spaceID SpaceID,
 			}
 			if filter.Type != nil && t.Type != *filter.Type {
 				continue
+			}
+			if filter.MinAmount != nil && t.Amount < *filter.MinAmount {
+				continue
+			}
+			if filter.MaxAmount != nil && t.Amount > *filter.MaxAmount {
+				continue
+			}
+			if filter.StartDate != nil && t.TransactionDate.Before(*filter.StartDate) {
+				continue
+			}
+			if filter.EndDate != nil && t.TransactionDate.After(*filter.EndDate) {
+				continue
+			}
+			if filter.SearchQuery != nil && *filter.SearchQuery != "" {
+				descLower := strings.ToLower(t.Description)
+				queryLower := strings.ToLower(*filter.SearchQuery)
+				if !strings.Contains(descLower, queryLower) {
+					continue
+				}
 			}
 			list = append(list, t)
 		}

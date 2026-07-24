@@ -252,6 +252,36 @@ func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 		argIndex++
 	}
 
+	if filter.MinAmount != nil {
+		conditions = append(conditions, fmt.Sprintf("amount >= $%d", argIndex))
+		args = append(args, *filter.MinAmount)
+		argIndex++
+	}
+
+	if filter.MaxAmount != nil {
+		conditions = append(conditions, fmt.Sprintf("amount <= $%d", argIndex))
+		args = append(args, *filter.MaxAmount)
+		argIndex++
+	}
+
+	if filter.StartDate != nil {
+		conditions = append(conditions, fmt.Sprintf("transaction_date >= $%d", argIndex))
+		args = append(args, *filter.StartDate)
+		argIndex++
+	}
+
+	if filter.EndDate != nil {
+		conditions = append(conditions, fmt.Sprintf("transaction_date <= $%d", argIndex))
+		args = append(args, *filter.EndDate)
+		argIndex++
+	}
+
+	if filter.SearchQuery != nil && *filter.SearchQuery != "" {
+		conditions = append(conditions, fmt.Sprintf("description ILIKE $%d", argIndex))
+		args = append(args, "%"+*filter.SearchQuery+"%")
+		argIndex++
+	}
+
 	if cursorID != "" {
 		conditions = append(conditions, fmt.Sprintf("id < $%d", argIndex))
 		args = append(args, cursorID)

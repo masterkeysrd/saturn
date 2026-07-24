@@ -68,7 +68,7 @@ func init() {
     "duplicate_transaction_id": { "type": ["string", "null"] },
     "reason": { "type": "string" }
   },
-  "required": ["is_duplicate"]
+  "required": ["is_duplicate", "duplicate_transaction_id", "reason"]
 }{{end}}`,
 	})
 }

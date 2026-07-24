@@ -111,6 +111,13 @@ type ListTransactionsFilter struct {
 	TransferID    *TransferID
 	PageSize      int32
 	NextPageToken string
+
+	// Deduplication / search filters
+	MinAmount   *int64
+	MaxAmount   *int64
+	StartDate   *time.Time
+	EndDate     *time.Time
+	SearchQuery *string
 }
 
 // RecurringExpenseStore defines persistence for recurring expense templates.
