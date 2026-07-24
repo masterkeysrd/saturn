@@ -61,6 +61,24 @@ func (s *Service) ConfigureFinance(ctx context.Context, settings *FinanceSetting
 		return nil, err
 	}
 
+	// Automatically initialize a default Cash Account for this space
+	cashAccID, err := NewAccountID()
+	if err == nil {
+		defaultCashAcc := &Account{
+			ID:             cashAccID,
+			SpaceID:        settings.SpaceID,
+			Name:           "Cash",
+			Type:           AccountTypeCash,
+			Currency:       settings.BaseCurrency,
+			IsActive:       true,
+			InitialBalance: 0,
+			CurrentBalance: 0,
+		}
+		if _, err := s.CreateAccount(ctx, defaultCashAcc); err != nil {
+			fmt.Printf("[Finance Service] Warning: failed to create default Cash Account: %v\n", err)
+		}
+	}
+
 	return settings, nil
 }
 
@@ -184,7 +202,7 @@ func (s *Service) GetOrCreatePeriod(ctx context.Context, budgetID BudgetID, date
 	// Determine exchange rate to base currency
 	rate := 1.0
 	if budget.Currency != settings.BaseCurrency {
-		rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, ExchangeRateKey{
+		rateRecord, err := s.getExchangeRate(ctx, ExchangeRateKey{
 			SpaceID:      budget.SpaceID,
 			FromCurrency: Currency(budget.Currency),
 			ToCurrency:   Currency(settings.BaseCurrency),
@@ -281,6 +299,21 @@ func (s *Service) DeleteExchangeRate(ctx context.Context, req DeleteExchangeRate
 		return errors.New("rate date is required")
 	}
 	return s.deps.ExchangeRateStore.Delete(ctx, ExchangeRateKey(req))
+}
+
+// getExchangeRate resolves the exchange rate for the given key.
+// It first looks for the closest rate on or before the target date (backward).
+// If no such rate exists, it falls back to the closest rate after the target date (forward fallback).
+func (s *Service) getExchangeRate(ctx context.Context, key ExchangeRateKey) (*ExchangeRate, error) {
+	rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, key)
+	if err == nil {
+		return rateRecord, nil
+	}
+	if !errors.Is(err, ErrExchangeRateNotFound) {
+		return nil, err
+	}
+
+	return s.deps.ExchangeRateStore.GetNextRate(ctx, key)
 }
 
 // CreateExpense logs a new expense transaction.
@@ -701,7 +734,7 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 	// Calculate base currency conversion
 	rate := 1.0
 	if payment.Currency != settings.BaseCurrency {
-		rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, ExchangeRateKey{
+		rateRecord, err := s.getExchangeRate(ctx, ExchangeRateKey{
 			SpaceID:      payment.SpaceID,
 			FromCurrency: payment.Currency,
 			ToCurrency:   settings.BaseCurrency,
@@ -887,7 +920,7 @@ func (s *Service) createTransaction(ctx context.Context, txn *Transaction) error
 	if txn.AmountInBase == 0 || txn.Currency != settings.BaseCurrency {
 		rate := 1.0
 		if txn.Currency != settings.BaseCurrency {
-			rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, ExchangeRateKey{
+			rateRecord, err := s.getExchangeRate(ctx, ExchangeRateKey{
 				SpaceID:      txn.SpaceID,
 				FromCurrency: txn.Currency,
 				ToCurrency:   settings.BaseCurrency,
@@ -951,7 +984,7 @@ func (s *Service) updateTransaction(ctx context.Context, txn *Transaction, exist
 
 	// 4. Centralized Base Currency Exchange Rate Calculation
 	if txn.Currency != settings.BaseCurrency {
-		rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, ExchangeRateKey{
+		rateRecord, err := s.getExchangeRate(ctx, ExchangeRateKey{
 			SpaceID:      txn.SpaceID,
 			FromCurrency: txn.Currency,
 			ToCurrency:   settings.BaseCurrency,
@@ -1142,7 +1175,7 @@ func (s *Service) CreateBorrowing(ctx context.Context, b *Borrowing, createAsTra
 	}
 
 	if createAsTransaction && b.Currency != settings.BaseCurrency {
-		_, err := s.deps.ExchangeRateStore.GetRate(ctx, ExchangeRateKey{
+		_, err := s.getExchangeRate(ctx, ExchangeRateKey{
 			SpaceID:      b.SpaceID,
 			FromCurrency: b.Currency,
 			ToCurrency:   settings.BaseCurrency,
@@ -1240,7 +1273,7 @@ func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing) (*Borrowing
 	hasTransaction := len(existingTxs) > 0
 
 	if hasTransaction && b.Currency != settings.BaseCurrency {
-		_, err := s.deps.ExchangeRateStore.GetRate(ctx, ExchangeRateKey{
+		_, err := s.getExchangeRate(ctx, ExchangeRateKey{
 			SpaceID:      b.SpaceID,
 			FromCurrency: b.Currency,
 			ToCurrency:   settings.BaseCurrency,
@@ -1351,7 +1384,7 @@ func (s *Service) CreateBorrowingRepayment(ctx context.Context, r *BorrowingRepa
 	}
 
 	if b.Currency != settings.BaseCurrency {
-		_, err := s.deps.ExchangeRateStore.GetRate(ctx, ExchangeRateKey{
+		_, err := s.getExchangeRate(ctx, ExchangeRateKey{
 			SpaceID:      r.SpaceID,
 			FromCurrency: b.Currency,
 			ToCurrency:   settings.BaseCurrency,
@@ -2238,7 +2271,7 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, req *App
 		// Calculate base currency conversion
 		var rate = 1.0
 		if item.Currency != string(settings.BaseCurrency) {
-			rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, ExchangeRateKey{
+			rateRecord, err := s.getExchangeRate(ctx, ExchangeRateKey{
 				SpaceID:      SpaceID(spaceID),
 				FromCurrency: Currency(item.Currency),
 				ToCurrency:   settings.BaseCurrency,

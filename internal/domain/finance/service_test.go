@@ -138,6 +138,24 @@ func (m *mockExchangeRateStore) GetRate(ctx context.Context, query ExchangeRateK
 	return best, nil
 }
 
+func (m *mockExchangeRateStore) GetNextRate(ctx context.Context, query ExchangeRateKey) (*ExchangeRate, error) {
+	// Look up the closest date after query.RateDate
+	var best *ExchangeRate
+	for _, r := range m.rates {
+		if r.SpaceID == query.SpaceID && r.FromCurrency == query.FromCurrency && r.ToCurrency == query.ToCurrency {
+			if r.RateDate.After(query.RateDate) {
+				if best == nil || r.RateDate.Before(best.RateDate) {
+					best = r
+				}
+			}
+		}
+	}
+	if best == nil {
+		return nil, ErrExchangeRateNotFound
+	}
+	return best, nil
+}
+
 func (m *mockExchangeRateStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListExchangeRatesFilter) ([]*ExchangeRate, string, error) {
 	var results []*ExchangeRate
 	for _, r := range m.rates {
@@ -638,5 +656,88 @@ func TestTransactions(t *testing.T) {
 	}
 	if period2.SpentInBase != 0 {
 		t.Errorf("After delete, SpentInBase = %d, want 0", period2.SpentInBase)
+	}
+}
+
+func TestExchangeRateFallback(t *testing.T) {
+	ctx := context.Background()
+	spaceID := SpaceID("test-space")
+
+	rateStore := &mockExchangeRateStore{rates: make(map[string]*ExchangeRate)}
+	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+
+	// Create service
+	svc := NewService(Dependencies{
+		ExchangeRateStore: rateStore,
+		SettingsStore:     settingsStore,
+	})
+
+	// Configure finance settings
+	_ = settingsStore.Create(ctx, &FinanceSettings{
+		SpaceID:      spaceID,
+		BaseCurrency: "USD",
+	})
+
+	// Set an exchange rate for 2026-07-24 (today) and 2026-07-28 (future)
+	rate1 := &ExchangeRate{
+		SpaceID:      spaceID,
+		FromCurrency: "EUR",
+		ToCurrency:   "USD",
+		Rate:         1.10,
+		RateDate:     time.Date(2026, 7, 24, 0, 0, 0, 0, time.UTC),
+	}
+	_ = rateStore.Create(ctx, rate1)
+
+	rate2 := &ExchangeRate{
+		SpaceID:      spaceID,
+		FromCurrency: "EUR",
+		ToCurrency:   "USD",
+		Rate:         1.20,
+		RateDate:     time.Date(2026, 7, 28, 0, 0, 0, 0, time.UTC),
+	}
+	_ = rateStore.Create(ctx, rate2)
+
+	// Test Case 1: Exact date lookup (2026-07-24)
+	r, err := svc.getExchangeRate(ctx, ExchangeRateKey{
+		SpaceID:      spaceID,
+		FromCurrency: "EUR",
+		ToCurrency:   "USD",
+		RateDate:     time.Date(2026, 7, 24, 0, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("Test Case 1 failed: %v", err)
+	}
+	if r.Rate != 1.10 {
+		t.Errorf("Test Case 1: rate = %f, want 1.10", r.Rate)
+	}
+
+	// Test Case 2: Past date before any rates exist (e.g., 2026-07-20)
+	// It should fall back to the oldest future rate (which is Rate 1 on 2026-07-24)
+	r, err = svc.getExchangeRate(ctx, ExchangeRateKey{
+		SpaceID:      spaceID,
+		FromCurrency: "EUR",
+		ToCurrency:   "USD",
+		RateDate:     time.Date(2026, 7, 20, 0, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("Test Case 2 failed: %v", err)
+	}
+	if r.Rate != 1.10 {
+		t.Errorf("Test Case 2: rate = %f, want 1.10 (oldest future rate)", r.Rate)
+	}
+
+	// Test Case 3: Future date (e.g., 2026-07-26)
+	// It should find the closest rate in the past (which is Rate 1 on 2026-07-24)
+	r, err = svc.getExchangeRate(ctx, ExchangeRateKey{
+		SpaceID:      spaceID,
+		FromCurrency: "EUR",
+		ToCurrency:   "USD",
+		RateDate:     time.Date(2026, 7, 26, 0, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("Test Case 3 failed: %v", err)
+	}
+	if r.Rate != 1.10 {
+		t.Errorf("Test Case 3: rate = %f, want 1.10 (most recent past rate)", r.Rate)
 	}
 }

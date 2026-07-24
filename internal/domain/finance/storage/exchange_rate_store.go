@@ -59,6 +59,28 @@ func (s *ExchangeRateStore) GetRate(ctx context.Context, key finance.ExchangeRat
 	}, nil
 }
 
+func (s *ExchangeRateStore) GetNextRate(ctx context.Context, key finance.ExchangeRateKey) (*finance.ExchangeRate, error) {
+	var row exchangeRateDB
+	// Lookup the rate on the closest date > target date.
+	q := `SELECT * FROM finance.exchange_rate 
+		WHERE space_id = $1 AND from_currency = $2 AND to_currency = $3 AND rate_date > $4 
+		ORDER BY rate_date ASC LIMIT 1`
+	if err := s.db.GetContext(ctx, &row, q, string(key.SpaceID), string(key.FromCurrency), string(key.ToCurrency), key.RateDate.Format("2006-01-02")); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, finance.ErrExchangeRateNotFound
+		}
+		return nil, err
+	}
+	return &finance.ExchangeRate{
+		SpaceID:      finance.SpaceID(row.SpaceID),
+		FromCurrency: finance.Currency(row.FromCurrency),
+		ToCurrency:   finance.Currency(row.ToCurrency),
+		Rate:         row.Rate,
+		RateDate:     row.RateDate,
+		CreateTime:   row.CreateTime,
+	}, nil
+}
+
 func (s *ExchangeRateStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListExchangeRatesFilter) ([]*finance.ExchangeRate, string, error) {
 	var rows []exchangeRateDB
 	var err error

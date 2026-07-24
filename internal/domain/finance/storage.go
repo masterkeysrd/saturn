@@ -40,6 +40,8 @@ type ExchangeRateStore interface {
 	Create(ctx context.Context, rate *ExchangeRate) error
 	// GetRate retrieves the rate from fromCurrency to toCurrency on the closest date <= rateDate.
 	GetRate(ctx context.Context, key ExchangeRateKey) (*ExchangeRate, error)
+	// GetNextRate retrieves the rate from fromCurrency to toCurrency on the closest date > rateDate.
+	GetNextRate(ctx context.Context, key ExchangeRateKey) (*ExchangeRate, error)
 	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListExchangeRatesFilter) ([]*ExchangeRate, string, error)
 	Delete(ctx context.Context, key ExchangeRateKey) error
 }
