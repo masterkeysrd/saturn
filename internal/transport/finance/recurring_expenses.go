@@ -185,6 +185,7 @@ func (h *Handler) ConfirmScheduledPayment(ctx context.Context, req *financev1.Co
 		TransactionDate: transactionDate,
 		EffectiveDate:   effectiveDate,
 		ActualAmount:    req.GetActualAmount(),
+		Description:     req.GetDescription(),
 	}
 
 	txn, err := h.Coordinator.ConfirmScheduledPayment(ctx, appReq)

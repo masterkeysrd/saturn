@@ -50,6 +50,7 @@ type ConfirmScheduledPaymentRequest struct {
 	TransactionDate time.Time
 	EffectiveDate   time.Time
 	ActualAmount    int64
+	Description     string
 }
 
 func (c *Coordinator) CreateRecurringExpense(ctx context.Context, req *CreateRecurringExpenseRequest) (*finance.RecurringExpense, error) {
@@ -159,6 +160,7 @@ func (c *Coordinator) ConfirmScheduledPayment(ctx context.Context, req *ConfirmS
 		TransactionDate: req.TransactionDate,
 		EffectiveDate:   req.EffectiveDate,
 		ActualAmount:    req.ActualAmount,
+		Description:     req.Description,
 	})
 }
 

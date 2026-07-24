@@ -3521,6 +3521,21 @@
         },
         "description": {
           "type": "string"
+        },
+        "docType": {
+          "type": "string"
+        },
+        "destinationAccountId": {
+          "type": "string"
+        },
+        "transactionType": {
+          "type": "string"
+        },
+        "transactionId": {
+          "type": "string"
+        },
+        "overwriteLinkedTransaction": {
+          "type": "boolean"
         }
       }
     },
@@ -3538,6 +3553,9 @@
         "actualAmount": {
           "type": "string",
           "format": "int64"
+        },
+        "description": {
+          "type": "string"
         }
       },
       "required": [

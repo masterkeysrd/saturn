@@ -2,6 +2,7 @@ package finance
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -181,7 +182,7 @@ func (s *Service) GetOrCreatePeriod(ctx context.Context, budgetID BudgetID, date
 	}
 
 	// Determine exchange rate to base currency
-	var rate float64 = 1.0
+	rate := 1.0
 	if budget.Currency != settings.BaseCurrency {
 		rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, ExchangeRateKey{
 			SpaceID:      budget.SpaceID,
@@ -279,12 +280,7 @@ func (s *Service) DeleteExchangeRate(ctx context.Context, req DeleteExchangeRate
 	if req.RateDate.IsZero() {
 		return errors.New("rate date is required")
 	}
-	return s.deps.ExchangeRateStore.Delete(ctx, ExchangeRateKey{
-		SpaceID:      req.SpaceID,
-		FromCurrency: req.FromCurrency,
-		ToCurrency:   req.ToCurrency,
-		RateDate:     req.RateDate,
-	})
+	return s.deps.ExchangeRateStore.Delete(ctx, ExchangeRateKey(req))
 }
 
 // CreateExpense logs a new expense transaction.
@@ -337,7 +333,7 @@ func (s *Service) UpdateExpense(ctx context.Context, txn *Transaction) (*Transac
 	}
 
 	// Log manual edit transaction event with field diff
-	metadata := map[string]interface{}{}
+	metadata := map[string]any{}
 	if existing.Amount != txn.Amount {
 		metadata["old_amount"] = existing.Amount
 		metadata["new_amount"] = txn.Amount
@@ -529,7 +525,7 @@ func (s *Service) GetSpentInsights(ctx context.Context, req *GetSpentInsightsReq
 		limitInBase := int64(float64(r.BudgetLimit) * r.ExchangeRateToBase)
 		totalLimit += limitInBase
 
-		var usagePct float64 = 0.0
+		usagePct := 0.0
 		if r.BudgetLimit > 0 {
 			usagePct = (float64(r.SpentInLocalMatching) / float64(r.BudgetLimit)) * 100.0
 		}
@@ -562,7 +558,7 @@ func (s *Service) GetSpentInsights(ctx context.Context, req *GetSpentInsightsReq
 
 	// 3. Overall calculation stats
 	remaining := totalLimit - totalSpent
-	var burnRate float64 = 0.0
+	burnRate := 0.0
 	days := end.Sub(start).Hours() / 24.0
 	if days > 0 {
 		burnRate = float64(totalSpent) / days
@@ -676,6 +672,7 @@ type ConfirmScheduledPaymentRequest struct {
 	TransactionDate time.Time
 	EffectiveDate   time.Time
 	ActualAmount    int64
+	Description     string
 }
 
 // ConfirmScheduledPayment clears a scheduled payment by promoting it to a permanent transaction.
@@ -702,7 +699,7 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 	}
 
 	// Calculate base currency conversion
-	var rate float64 = 1.0
+	rate := 1.0
 	if payment.Currency != settings.BaseCurrency {
 		rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, ExchangeRateKey{
 			SpaceID:      payment.SpaceID,
@@ -719,9 +716,17 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 	amountInBase := int64(float64(req.ActualAmount) * rate)
 
 	description := "Scheduled Payment"
-	if payment.SourceType == SourceTypeRecurrentExpense {
+	if req.Description != "" {
+		description = req.Description
+	} else if payment.SourceType == SourceTypeRecurrentExpense {
 		if exp, err := s.deps.RecurringExpenseStore.GetByID(ctx, RecurringExpenseID(payment.SourceID)); err == nil {
 			description = exp.Name
+		}
+	} else if payment.SourceType == "invoice" {
+		if item, err := s.deps.InboxItemStore.Get(ctx, string(payment.SpaceID), payment.SourceID); err == nil {
+			if item.VendorName != "" {
+				description = item.VendorName
+			}
 		}
 	}
 
@@ -762,7 +767,7 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 		TransactionID: txn.ID,
 		EventType:     "EXPENSE_SCHEDULED",
 		CreateTime:    payment.CreateTime,
-		Metadata:      map[string]interface{}{"scheduled_payment_id": string(payment.ID)},
+		Metadata:      map[string]any{"scheduled_payment_id": string(payment.ID)},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to log scheduled event: %w", err)
@@ -774,7 +779,7 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 		TransactionID: txn.ID,
 		EventType:     "BANK_CONFIRM_RECEIVED",
 		CreateTime:    req.TransactionDate,
-		Metadata:      map[string]interface{}{"actual_amount": req.ActualAmount},
+		Metadata:      map[string]any{"actual_amount": req.ActualAmount},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to log payment confirmation event: %w", err)
@@ -880,7 +885,7 @@ func (s *Service) createTransaction(ctx context.Context, txn *Transaction) error
 
 	// 4. Centralized Base Currency Exchange Rate Calculation
 	if txn.AmountInBase == 0 || txn.Currency != settings.BaseCurrency {
-		var rate float64 = 1.0
+		rate := 1.0
 		if txn.Currency != settings.BaseCurrency {
 			rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, ExchangeRateKey{
 				SpaceID:      txn.SpaceID,
@@ -1154,7 +1159,7 @@ func (s *Service) CreateBorrowing(ctx context.Context, b *Borrowing, createAsTra
 
 	if createAsTransaction {
 		// Sync transaction
-		var txnType TransactionType = TransactionTypeExpense
+		txnType := TransactionTypeExpense
 		var desc string
 		if b.Direction == BorrowingDirectionLent {
 			txnType = TransactionTypeExpense
@@ -1252,7 +1257,7 @@ func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing) (*Borrowing
 
 	if hasTransaction {
 		// Update associated transaction
-		var txnType TransactionType = TransactionTypeExpense
+		txnType := TransactionTypeExpense
 		var desc string
 		if b.Direction == BorrowingDirectionLent {
 			txnType = TransactionTypeExpense
@@ -1373,7 +1378,7 @@ func (s *Service) CreateBorrowingRepayment(ctx context.Context, r *BorrowingRepa
 	}
 
 	// Sync transaction for repayment
-	var txnType TransactionType = TransactionTypeIncome
+	var txnType = TransactionTypeIncome
 	var desc string
 	if b.Direction == BorrowingDirectionLent {
 		txnType = TransactionTypeIncome // paid back to us
@@ -1873,7 +1878,11 @@ func (s *Service) ListInboxItems(ctx context.Context, spaceID string) ([]*InboxI
 	if err := SpaceID(spaceID).Validate(); err != nil {
 		return nil, err
 	}
-	return s.deps.InboxItemStore.ListBySpace(ctx, spaceID)
+	statusPending := InboxItemPending
+	filter := &ListInboxItemsFilter{
+		Status: &statusPending,
+	}
+	return s.deps.InboxItemStore.ListBySpace(ctx, spaceID, filter)
 }
 
 // DiscardInboxItem deletes an item from the inbox without ledger changes.
@@ -1896,9 +1905,108 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, req *App
 		return nil, fmt.Errorf("get inbox item: %w", err)
 	}
 
+	if req.DocType != "" {
+		dt := req.DocType
+		switch dt {
+		case "INVOICE", "invoice":
+			item.DocType = InboxItemDocInvoice
+		case "RECEIPT", "receipt":
+			item.DocType = InboxItemDocReceipt
+		case "BANK_NOTIFICATION", "bank_notification":
+			item.DocType = InboxItemDocBankNotification
+		default:
+			item.DocType = InboxItemDocType(dt)
+		}
+	}
+
 	var txn *Transaction
 
-	// 2. If it is linked to a bill/scheduled payment:
+	// 2. If it is linked to an existing transaction:
+	if req.TransactionID != "" {
+		txnID, err := ParseTransactionID(req.TransactionID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid transaction ID: %w", err)
+		}
+		txn, err = s.deps.TransactionStore.GetByID(ctx, txnID)
+		if err != nil {
+			return nil, fmt.Errorf("get transaction: %w", err)
+		}
+		if txn.SpaceID != SpaceID(spaceID) {
+			return nil, fmt.Errorf("transaction does not belong to this space")
+		}
+
+		// If overwrite option is selected, update the ledger transaction to match receipt details
+		if req.OverwriteLinkedTransaction {
+			updatedTxn := *txn
+			updatedTxn.Amount = item.Amount
+			updatedTxn.Currency = Currency(item.Currency)
+			if item.VendorName != "" {
+				updatedTxn.Description = item.VendorName
+			}
+
+			if err := s.updateTransaction(ctx, &updatedTxn, txn); err != nil {
+				return nil, fmt.Errorf("failed to update linked transaction: %w", err)
+			}
+			txn = &updatedTxn
+		}
+
+		// Mark inbox item as resolved and link it
+		item.Status = InboxItemResolved
+		tIDStr := string(txn.ID)
+		item.TransactionID = &tIDStr
+		if req.AccountID != "" {
+			item.AccountID = &req.AccountID
+		}
+		if req.BudgetID != "" {
+			item.BudgetID = &req.BudgetID
+		}
+		if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
+			return nil, fmt.Errorf("resolve inbox item: %w", err)
+		}
+
+		// Event 1: Receipt/Document Ingested (historically at item creation time)
+		evtIngested := &TransactionEvent{
+			SpaceID:       SpaceID(spaceID),
+			TransactionID: txn.ID,
+			EventType:     "RECEIPT_INGESTED",
+			Metadata: map[string]interface{}{
+				"amount_cents": item.Amount,
+				"currency":     item.Currency,
+				"vendor_name":  item.VendorName,
+				"description":  "Receipt/Document ingested into staging queue",
+			},
+			CreateTime: item.CreateTime,
+		}
+		if _, err := s.LogTransactionEvent(ctx, evtIngested); err != nil {
+			// Log non-fatal error
+			fmt.Printf("warning: failed to log receipt ingested event: %v\n", err)
+		}
+
+		// Event 2: Staging item linked to this transaction
+		linkedDesc := "Staged document linked to existing ledger entry"
+		if req.OverwriteLinkedTransaction {
+			linkedDesc = "Staged document linked to existing ledger entry and updated transaction details"
+		}
+		evtLinked := &TransactionEvent{
+			SpaceID:       SpaceID(spaceID),
+			TransactionID: txn.ID,
+			EventType:     "TRANSACTION_LINKED",
+			Metadata: map[string]interface{}{
+				"inbox_item_id":                string(item.ID),
+				"overwrite_linked_transaction": req.OverwriteLinkedTransaction,
+				"description":                  linkedDesc,
+			},
+			CreateTime: time.Now(),
+		}
+		if _, err := s.LogTransactionEvent(ctx, evtLinked); err != nil {
+			// Log non-fatal error
+			fmt.Printf("warning: failed to log transaction linked event: %v\n", err)
+		}
+
+		return txn, nil
+	}
+
+	// 3. If it is linked to a bill/scheduled payment:
 	if req.ScheduledPaymentID != "" {
 		if item.DocType == InboxItemDocInvoice {
 			// A. If it's an unpaid INVOICE: do NOT create a transaction.
@@ -1931,6 +2039,7 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, req *App
 				TransactionDate: item.TransactionDate,
 				EffectiveDate:   time.Now().UTC(),
 				ActualAmount:    req.Amount,
+				Description:     req.Description,
 			})
 			if err != nil {
 				return nil, fmt.Errorf("confirm scheduled payment: %w", err)
@@ -1946,41 +2055,178 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, req *App
 				return nil, fmt.Errorf("resolve inbox item: %w", err)
 			}
 		}
+	} else if item.DocType == InboxItemDocInvoice {
+		spID, err := NewScheduledPaymentID()
+		if err != nil {
+			return nil, err
+		}
+		bID, err := ParseBudgetID(req.BudgetID)
+		if err != nil {
+			return nil, fmt.Errorf("parse budget ID: %w", err)
+		}
+
+		dueDate := item.TransactionDate
+		if dueDate.IsZero() {
+			dueDate = time.Now().UTC()
+		}
+
+		desc := req.Description
+		if desc == "" {
+			desc = item.VendorName
+		}
+		metaMap := map[string]any{
+			"vendor_name": desc,
+		}
+		var metaBytes []byte
+		if b, err := json.Marshal(metaMap); err == nil {
+			metaBytes = b
+		}
+
+		payment := &ScheduledPayment{
+			ID:         spID,
+			SpaceID:    SpaceID(spaceID),
+			BudgetID:   bID,
+			SourceType: "invoice",
+			SourceID:   item.ID,
+			Amount:     req.Amount,
+			Currency:   Currency(item.Currency),
+			DueDate:    dueDate,
+			Status:     ScheduledPaymentPending,
+			Metadata:   metaBytes,
+			CreateTime: time.Now().UTC(),
+			UpdateTime: time.Now().UTC(),
+		}
+
+		if err := payment.Validate(); err != nil {
+			return nil, fmt.Errorf("validate new scheduled payment: %w", err)
+		}
+
+		if err := s.deps.ScheduledPaymentStore.Create(ctx, payment); err != nil {
+			return nil, fmt.Errorf("create scheduled payment: %w", err)
+		}
+
+		// Mark inbox item as resolved and link it
+		item.Status = InboxItemResolved
+		pIDStr := string(payment.ID)
+		item.ScheduledPaymentID = &pIDStr
+		if req.BudgetID != "" {
+			item.BudgetID = &req.BudgetID
+		}
+		if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
+			return nil, fmt.Errorf("resolve inbox item: %w", err)
+		}
+
+		return nil, nil
 	} else {
-		// 3. Otherwise: create a standalone ledger transaction
+		// 3. Otherwise: create a standalone ledger transaction or a transfer
 		settings, err := s.deps.SettingsStore.GetByID(ctx, SpaceID(spaceID))
 		if err != nil {
 			return nil, err
+		}
+
+		if req.TransactionType == "TRANSFER" {
+			srcAccID, err := ParseAccountID(req.AccountID)
+			if err != nil {
+				return nil, fmt.Errorf("invalid source account: %w", err)
+			}
+			destAccID, err := ParseAccountID(req.DestinationAccountID)
+			if err != nil {
+				return nil, fmt.Errorf("invalid destination account: %w", err)
+			}
+
+			t := &Transfer{
+				SpaceID:              SpaceID(spaceID),
+				SourceAccountID:      srcAccID,
+				DestinationAccountID: destAccID,
+				SourceAmount:         req.Amount,
+				DestinationAmount:    req.Amount,
+				TransferDate:         item.TransactionDate,
+				Notes:                req.Description,
+			}
+			newT, err := s.CreateTransfer(ctx, t)
+			if err != nil {
+				return nil, fmt.Errorf("create transfer: %w", err)
+			}
+
+			txs, _, err := s.deps.TransactionStore.ListBySpace(ctx, SpaceID(spaceID), &ListTransactionsFilter{
+				AccountID:  &srcAccID,
+				TransferID: &newT.ID,
+			})
+			var matchedTx *Transaction
+			if err == nil {
+				for _, tx := range txs {
+					if tx.Type == TransactionTypeTransferOut {
+						matchedTx = tx
+						break
+					}
+				}
+			}
+
+			// Mark inbox item as resolved and link it
+			item.Status = InboxItemResolved
+			if matchedTx != nil {
+				tIDStr := string(matchedTx.ID)
+				item.TransactionID = &tIDStr
+			}
+			if req.AccountID != "" {
+				item.AccountID = &req.AccountID
+			}
+			if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
+				return nil, fmt.Errorf("resolve inbox item: %w", err)
+			}
+
+			return matchedTx, nil
 		}
 
 		txnType := TransactionTypeExpense
 		var budgetID *BudgetID
 		var periodID *PeriodID
 
-		if req.BudgetID != "" {
-			bID, err := ParseBudgetID(req.BudgetID)
-			if err != nil {
-				return nil, fmt.Errorf("parse budget ID: %w", err)
-			}
-			budget, err := s.deps.BudgetStore.GetByID(ctx, bID)
-			if err != nil {
-				return nil, fmt.Errorf("get budget: %w", err)
-			}
-
-			period, err := s.GetOrCreatePeriod(ctx, budget.ID, item.TransactionDate)
-			if err != nil {
-				return nil, fmt.Errorf("get or create period: %w", err)
-			}
-
-			budgetID = &budget.ID
-			periodID = &period.ID
+		switch req.TransactionType {
+		case "EXPENSE":
 			txnType = TransactionTypeExpense
-		} else {
+			if req.BudgetID != "" {
+				bID, err := ParseBudgetID(req.BudgetID)
+				if err != nil {
+					return nil, fmt.Errorf("parse budget ID: %w", err)
+				}
+				budget, err := s.deps.BudgetStore.GetByID(ctx, bID)
+				if err != nil {
+					return nil, fmt.Errorf("get budget: %w", err)
+				}
+				period, err := s.GetOrCreatePeriod(ctx, budget.ID, item.TransactionDate)
+				if err != nil {
+					return nil, fmt.Errorf("get or create period: %w", err)
+				}
+				budgetID = &budget.ID
+				periodID = &period.ID
+			}
+		case "INCOME":
 			txnType = TransactionTypeIncome
+		default:
+			if req.BudgetID != "" {
+				bID, err := ParseBudgetID(req.BudgetID)
+				if err != nil {
+					return nil, fmt.Errorf("parse budget ID: %w", err)
+				}
+				budget, err := s.deps.BudgetStore.GetByID(ctx, bID)
+				if err != nil {
+					return nil, fmt.Errorf("get budget: %w", err)
+				}
+				period, err := s.GetOrCreatePeriod(ctx, budget.ID, item.TransactionDate)
+				if err != nil {
+					return nil, fmt.Errorf("get or create period: %w", err)
+				}
+				budgetID = &budget.ID
+				periodID = &period.ID
+				txnType = TransactionTypeExpense
+			} else {
+				txnType = TransactionTypeIncome
+			}
 		}
 
 		// Calculate base currency conversion
-		var rate float64 = 1.0
+		var rate = 1.0
 		if item.Currency != string(settings.BaseCurrency) {
 			rateRecord, err := s.deps.ExchangeRateStore.GetRate(ctx, ExchangeRateKey{
 				SpaceID:      SpaceID(spaceID),

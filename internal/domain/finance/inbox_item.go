@@ -58,10 +58,15 @@ type StageInboxItem struct {
 
 // ApproveInboxItem holds fields mapping override values during inbox confirmation.
 type ApproveInboxItem struct {
-	ID                 string
-	AccountID          string
-	BudgetID           string
-	ScheduledPaymentID string
-	Amount             int64
-	Description        string
+	ID                         string
+	AccountID                  string
+	BudgetID                   string
+	ScheduledPaymentID         string
+	Amount                     int64
+	Description                string
+	DocType                    string
+	DestinationAccountID       string
+	TransactionType            string
+	TransactionID              string
+	OverwriteLinkedTransaction bool
 }

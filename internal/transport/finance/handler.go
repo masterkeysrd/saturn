@@ -1046,12 +1046,17 @@ func (h *Handler) ApproveInboxItem(ctx context.Context, req *financev1.ApproveIn
 	}
 
 	params := &finance.ApproveInboxItem{
-		ID:                 req.GetId(),
-		AccountID:          req.GetAccountId(),
-		BudgetID:           req.GetBudgetId(),
-		ScheduledPaymentID: req.GetScheduledPaymentId(),
-		Amount:             req.GetAmount(),
-		Description:        req.GetDescription(),
+		ID:                         req.GetId(),
+		AccountID:                  req.GetAccountId(),
+		BudgetID:                   req.GetBudgetId(),
+		ScheduledPaymentID:         req.GetScheduledPaymentId(),
+		Amount:                     req.GetAmount(),
+		Description:                req.GetDescription(),
+		DocType:                    req.GetDocType(),
+		DestinationAccountID:       req.GetDestinationAccountId(),
+		TransactionType:            req.GetTransactionType(),
+		TransactionID:              req.GetTransactionId(),
+		OverwriteLinkedTransaction: req.GetOverwriteLinkedTransaction(),
 	}
 
 	tx, err := h.Coordinator.ApproveInboxItem(ctx, params)

@@ -642,6 +642,7 @@ message ConfirmScheduledPaymentRequest {
   google.protobuf.Timestamp transaction_date = 2 [(google.api.field_behavior) = REQUIRED];
   google.protobuf.Timestamp effective_date = 3 [(google.api.field_behavior) = REQUIRED];
   int64 actual_amount = 4 [(google.api.field_behavior) = REQUIRED];
+  optional string description = 5;
 }
 
 enum BorrowingDirection {
@@ -900,6 +901,11 @@ message ApproveInboxItemRequest {
   string scheduled_payment_id = 4;
   int64 amount = 5;
   string description = 6;
+  optional string doc_type = 7;
+  optional string destination_account_id = 8;
+  optional string transaction_type = 9;
+  optional string transaction_id = 10;
+  optional bool overwrite_linked_transaction = 11;
 }
 
 message DiscardInboxItemRequest {

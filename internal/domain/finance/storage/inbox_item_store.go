@@ -149,15 +149,24 @@ func (s *InboxItemStore) Get(ctx context.Context, spaceID, id string) (*finance.
 	return toInboxItemDomain(db), nil
 }
 
-func (s *InboxItemStore) ListBySpace(ctx context.Context, spaceID string) ([]*finance.InboxItem, error) {
+func (s *InboxItemStore) ListBySpace(ctx context.Context, spaceID string, filter *finance.ListInboxItemsFilter) ([]*finance.InboxItem, error) {
 	query := `SELECT id, space_id, integration_id, status, doc_type, 
 	                 amount, currency, vendor_name, transaction_date, 
 	                 account_id, budget_id, scheduled_payment_id, transaction_id, 
 	                 raw_payload, metadata, create_time 
-	          FROM finance.inbox_item WHERE space_id = $1 ORDER BY create_time DESC`
+	          FROM finance.inbox_item WHERE space_id = $1`
+
+	args := []interface{}{spaceID}
+
+	if filter != nil && filter.Status != nil {
+		query += " AND status = $2"
+		args = append(args, string(*filter.Status))
+	}
+
+	query += " ORDER BY create_time DESC"
 
 	var dbList []inboxItemDB
-	err := s.db.SelectContext(ctx, &dbList, query, spaceID)
+	err := s.db.SelectContext(ctx, &dbList, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("select inbox items: %w", err)
 	}

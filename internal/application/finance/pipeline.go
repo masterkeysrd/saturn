@@ -216,6 +216,7 @@ func (c *Coordinator) pipelineExtractNode(ctx context.Context, state *IngestionS
 
 		s.Metadata["reference_number"] = result.ReferenceNumber
 		s.Metadata["suggested_borrowing_id"] = result.SuggestedBorrowing
+		s.Metadata["transaction_type"] = result.TransactionType
 		s.Metadata["raw_agent_output"] = result.RawOutput
 		return s
 	}), nil

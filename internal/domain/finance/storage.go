@@ -180,11 +180,15 @@ type TransferStore interface {
 	ListBySpace(ctx context.Context, spaceID SpaceID, limit int32, pageToken string) ([]*Transfer, string, error)
 }
 
+type ListInboxItemsFilter struct {
+	Status *InboxItemStatus
+}
+
 // InboxItemStore defines repository operations for staged inbox items.
 type InboxItemStore interface {
 	Insert(ctx context.Context, item *InboxItem) error
 	Get(ctx context.Context, spaceID, id string) (*InboxItem, error)
-	ListBySpace(ctx context.Context, spaceID string) ([]*InboxItem, error)
+	ListBySpace(ctx context.Context, spaceID string, filter *ListInboxItemsFilter) ([]*InboxItem, error)
 	Update(ctx context.Context, item *InboxItem) error
 	Delete(ctx context.Context, spaceID, id string) error
 }
