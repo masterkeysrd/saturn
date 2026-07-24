@@ -26,7 +26,10 @@ import {
   ChevronRightIcon,
 } from "lucide-react"
 import { SpaceSelector } from "@/components/space-selector"
-import { useActiveSpaceContext } from "@/features/space/use-space"
+import {
+  useActiveSpaceContext,
+  resolveSpacePath,
+} from "@/features/space/use-space"
 
 // Discover all menu configurations dynamically at compile time
 const menuModules = import.meta.glob<{ menu: FeatureMenu | FeatureMenu[] }>(
@@ -56,11 +59,20 @@ function SidebarNavItem({
   item: FeatureMenu
   currentPath: string
 }) {
+  const { spaceId } = useActiveSpaceContext()
   const { isMobile, setOpenMobile } = useSidebar()
   const [open, setOpen] = useState(() => {
     // Auto-expand if the current path matches any nested submenu link
     if (item.items) {
-      return item.items.some((sub) => currentPath.startsWith(sub.url))
+      return item.items.some((sub) =>
+        currentPath.startsWith(
+          resolveSpacePath(
+            sub.url,
+            spaceId,
+            sub.requiresSpace ?? item.requiresSpace
+          )
+        )
+      )
     }
     return false
   })
@@ -87,34 +99,47 @@ function SidebarNavItem({
 
         {open && (
           <SidebarMenuSub>
-            {item.items?.map((subItem) => (
-              <SidebarMenuSubItem key={subItem.title}>
-                <SidebarMenuSubButton
-                  render={<Link to={subItem.url} />}
-                  isActive={subItem.url === currentPath}
-                  onClick={() => {
-                    if (isMobile) {
-                      setOpenMobile(false)
-                    }
-                  }}
-                >
-                  {subItem.icon && <subItem.icon />}
-                  <span>{subItem.title}</span>
-                </SidebarMenuSubButton>
-              </SidebarMenuSubItem>
-            ))}
+            {item.items?.map((subItem) => {
+              const resolvedUrl = resolveSpacePath(
+                subItem.url,
+                spaceId,
+                subItem.requiresSpace ?? item.requiresSpace
+              )
+              return (
+                <SidebarMenuSubItem key={subItem.title}>
+                  <SidebarMenuSubButton
+                    render={<Link to={resolvedUrl} />}
+                    isActive={resolvedUrl === currentPath}
+                    onClick={() => {
+                      if (isMobile) {
+                        setOpenMobile(false)
+                      }
+                    }}
+                  >
+                    {subItem.icon && <subItem.icon />}
+                    <span>{subItem.title}</span>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              )
+            })}
           </SidebarMenuSub>
         )}
       </SidebarMenuItem>
     )
   }
 
+  const resolvedItemUrl = resolveSpacePath(
+    item.url || "/",
+    spaceId,
+    item.requiresSpace
+  )
+
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
-        render={<Link to={item.url || "/"} />}
+        render={<Link to={resolvedItemUrl} />}
         tooltip={item.title}
-        isActive={item.url === currentPath}
+        isActive={resolvedItemUrl === currentPath}
         onClick={() => {
           if (isMobile) {
             setOpenMobile(false)

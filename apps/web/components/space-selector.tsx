@@ -1,5 +1,9 @@
 import { useState } from "react"
-import { useMySpaces, useActiveSpaceContext } from "@/features/space/use-space"
+import {
+  useMySpaces,
+  useActiveSpaceContext,
+  resolveSpacePath,
+} from "@/features/space/use-space"
 import { useNavigate } from "react-router-dom"
 import { ChevronDownIcon, Loader2, SettingsIcon } from "lucide-react"
 import {
@@ -77,6 +81,7 @@ export function SpaceSelector() {
               })
               setOpen(false)
               if (isMobile) setOpenMobile(false)
+              navigate(`/space/${space.id}/finance`)
             }}
             className={cn(
               "justify-between",
@@ -98,7 +103,7 @@ export function SpaceSelector() {
         <DropdownMenuItem
           onClick={() => {
             setOpen(false)
-            navigate("/settings?tab=spaces")
+            navigate(resolveSpacePath("/space/settings", spaceId, true))
             if (isMobile) setOpenMobile(false)
           }}
           className="justify-between"

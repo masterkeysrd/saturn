@@ -13,6 +13,7 @@ export interface FeatureMenu {
     title: string
     url: string
     icon?: ComponentType
+    requiresSpace?: boolean
   }[]
 }
 

@@ -128,3 +128,25 @@ export function useActiveSpaceContext() {
     isLoading,
   }
 }
+
+export function resolveSpacePath(
+  url: string,
+  spaceId: string,
+  requiresSpace = false
+) {
+  if (!spaceId || !requiresSpace) return url
+
+  // If the path already has the correct space prefix, return it as is
+  if (url.startsWith(`/space/${spaceId}`)) {
+    return url
+  }
+
+  // If it starts with /space/ (e.g. /space/settings or /space/agents)
+  if (url.startsWith("/space/")) {
+    const rest = url.slice(7)
+    return `/space/${spaceId}/${rest}`
+  }
+
+  const rest = url.startsWith("/") ? url.slice(1) : url
+  return `/space/${spaceId}/${rest}`
+}
