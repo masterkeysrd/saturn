@@ -13,6 +13,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/dynamicpb"
+	"google.golang.org/protobuf/types/pluginpb"
 )
 
 // Declare packages used in generated code (avoids unused imports if none generated)
@@ -24,6 +25,7 @@ var (
 
 func main() {
 	protogen.Options{}.Run(func(gen *protogen.Plugin) error {
+		gen.SupportedFeatures = uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL)
 		// Build the extension registry dynamically from all files
 		var types protoregistry.Types
 		for _, f := range gen.Files {
