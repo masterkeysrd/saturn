@@ -303,10 +303,11 @@ func (c *Coordinator) pipelineDeduplicateNode(ctx context.Context, state *Ingest
 		filter.SearchQuery = searchQuery
 	}
 
-	transactions, _, err := c.financeService.ListTransactions(ctx, finance.SpaceID(state.SpaceID), filter)
+	page, err := c.financeService.ListTransactions(ctx, finance.SpaceID(state.SpaceID), filter)
 	if err != nil {
 		return nil, fmt.Errorf("list transactions: %w", err)
 	}
+	transactions := page.Items
 
 	parsedTx := &ParsedTransaction{
 		Counterparty:    state.Vendor,

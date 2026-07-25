@@ -30,6 +30,26 @@ type accountDB struct {
 	UpdateTime     sql.NullTime `db:"update_time"`
 }
 
+func (row *accountDB) toDomain() *finance.Account {
+	return &finance.Account{
+		ID:             finance.AccountID(row.ID),
+		SpaceID:        finance.SpaceID(row.SpaceID),
+		Name:           row.Name,
+		Type:           finance.AccountType(row.Type),
+		Currency:       finance.Currency(row.Currency),
+		InitialBalance: row.InitialBalance,
+		CurrentBalance: row.CurrentBalance,
+		CreditLimit:    row.CreditLimit,
+		IsDefault:      row.IsDefault,
+		IsActive:       row.IsActive,
+		Color:          row.Color,
+		Notes:          row.Notes,
+		LastFour:       row.LastFour,
+		CreateTime:     nullTimeToTime(row.CreateTime),
+		UpdateTime:     nullTimeToTime(row.UpdateTime),
+	}
+}
+
 type AccountStore struct {
 	db *sqlx.DB
 }
@@ -77,23 +97,7 @@ func (s *AccountStore) GetByID(ctx context.Context, id finance.AccountID) (*fina
 		}
 		return nil, err
 	}
-	return &finance.Account{
-		ID:             finance.AccountID(row.ID),
-		SpaceID:        finance.SpaceID(row.SpaceID),
-		Name:           row.Name,
-		Type:           finance.AccountType(row.Type),
-		Currency:       finance.Currency(row.Currency),
-		InitialBalance: row.InitialBalance,
-		CurrentBalance: row.CurrentBalance,
-		CreditLimit:    row.CreditLimit,
-		IsDefault:      row.IsDefault,
-		IsActive:       row.IsActive,
-		Color:          row.Color,
-		Notes:          row.Notes,
-		LastFour:       row.LastFour,
-		CreateTime:     nullTimeToTime(row.CreateTime),
-		UpdateTime:     nullTimeToTime(row.UpdateTime),
-	}, nil
+	return row.toDomain(), nil
 }
 
 func (s *AccountStore) Update(ctx context.Context, a *finance.Account) error {
@@ -192,23 +196,7 @@ func (s *AccountStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID,
 
 	accounts := make([]*finance.Account, len(rows))
 	for i := range rows {
-		accounts[i] = &finance.Account{
-			ID:             finance.AccountID(rows[i].ID),
-			SpaceID:        finance.SpaceID(rows[i].SpaceID),
-			Name:           rows[i].Name,
-			Type:           finance.AccountType(rows[i].Type),
-			Currency:       finance.Currency(rows[i].Currency),
-			InitialBalance: rows[i].InitialBalance,
-			CurrentBalance: rows[i].CurrentBalance,
-			CreditLimit:    rows[i].CreditLimit,
-			IsDefault:      rows[i].IsDefault,
-			IsActive:       rows[i].IsActive,
-			Color:          rows[i].Color,
-			Notes:          rows[i].Notes,
-			LastFour:       rows[i].LastFour,
-			CreateTime:     nullTimeToTime(rows[i].CreateTime),
-			UpdateTime:     nullTimeToTime(rows[i].UpdateTime),
-		}
+		accounts[i] = rows[i].toDomain()
 	}
 
 	page := paging.NewPage(accounts, int(filter.PageSize), func(a *finance.Account) paging.Cursor {
@@ -271,4 +259,33 @@ func (s *AccountStore) HasAny(ctx context.Context, spaceID finance.SpaceID) (boo
 		return false, err
 	}
 	return true, nil
+}
+
+func (s *AccountStore) GetByIDs(ctx context.Context, ids []finance.AccountID) ([]*finance.Account, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	idStrings := make([]string, len(ids))
+	for i, id := range ids {
+		idStrings[i] = string(id)
+	}
+
+	ds := pgDialect.From(goqu.S("finance").Table("account")).
+		Select("*").
+		Where(goqu.Ex{"id": idStrings})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, err
+	}
+
+	var rows []accountDB
+	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
+		return nil, err
+	}
+
+	accounts := make([]*finance.Account, len(rows))
+	for i := range rows {
+		accounts[i] = rows[i].toDomain()
+	}
+	return accounts, nil
 }

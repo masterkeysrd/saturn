@@ -10,9 +10,11 @@ import "saturn/platform/scheduler/v1/options.proto";
 
 option go_package = "github.com/masterkeysrd/saturn/apis/saturn/finance/v1;financev1";
 
-// Finance provides budgeting and currency management operations for a workspace.
+// Finance service provides APIs for budgeting, accounts management, transaction
+// recording, daily exchange rate configurations, and analytics insights.
 service Finance {
-  // ConfigureFinance sets up the default base currency for a workspace.
+  // Configures the base currency of a space. The base currency acts as the unified
+  // currency in which financial insights and multi-currency conversions are performed.
   rpc ConfigureFinance(ConfigureFinanceRequest) returns (FinanceSettings) {
     option (google.api.http) = {
       post: "/v1/finance/settings"
@@ -20,12 +22,12 @@ service Finance {
     };
   }
 
-  // GetFinanceSettings retrieves the finance settings for a workspace.
+  // Retrieves the current finance settings, including the configured base currency.
   rpc GetFinanceSettings(GetFinanceSettingsRequest) returns (FinanceSettings) {
     option (google.api.http) = {get: "/v1/finance/settings"};
   }
 
-  // CreateBudget creates a new budget template in a workspace.
+  // Creates a budget category template. Budgets track spent thresholds over repeating intervals.
   rpc CreateBudget(CreateBudgetRequest) returns (Budget) {
     option (google.api.http) = {
       post: "/v1/finance/budgets"
@@ -33,7 +35,7 @@ service Finance {
     };
   }
 
-  // UpdateBudget updates a budget template.
+  // Updates an existing budget template's properties, such as visual parameters or limit propagation policies.
   rpc UpdateBudget(UpdateBudgetRequest) returns (Budget) {
     option (google.api.http) = {
       patch: "/v1/finance/budgets/{id}"
@@ -41,22 +43,22 @@ service Finance {
     };
   }
 
-  // DeleteBudget deletes a budget template.
+  // Deletes a budget template. Only inactive budgets or budgets without active transactions can be deleted.
   rpc DeleteBudget(DeleteBudgetRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {delete: "/v1/finance/budgets/{id}"};
   }
 
-  // ListBudgets lists all budget templates in a workspace.
+  // Lists budget templates inside the space, supporting paginated, sorted, and text-based filter views.
   rpc ListBudgets(ListBudgetsRequest) returns (ListBudgetsResponse) {
     option (google.api.http) = {get: "/v1/finance/budgets"};
   }
 
-  // GetBudgetPeriod retrieves or generates the budget period for a specific date.
+  // Retrieves or automatically spawns the active budget period containing current spend limits for a target date.
   rpc GetBudgetPeriod(GetBudgetPeriodRequest) returns (BudgetPeriod) {
     option (google.api.http) = {get: "/v1/finance/budgets/{budget_id}/period"};
   }
 
-  // CreateExchangeRate registers a new daily rate conversion rule.
+  // Registers a daily exchange rate conversion coefficient between two currencies.
   rpc CreateExchangeRate(CreateExchangeRateRequest) returns (ExchangeRate) {
     option (google.api.http) = {
       post: "/v1/finance/rates"
@@ -64,17 +66,17 @@ service Finance {
     };
   }
 
-  // ListExchangeRates lists all exchange rate rules in a workspace.
+  // Lists historical exchange rate conversion coefficients.
   rpc ListExchangeRates(ListExchangeRatesRequest) returns (ListExchangeRatesResponse) {
     option (google.api.http) = {get: "/v1/finance/rates"};
   }
 
-  // DeleteExchangeRate deletes a specific daily rate conversion rule.
+  // Deletes a registered daily exchange rate conversion rule.
   rpc DeleteExchangeRate(DeleteExchangeRateRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {delete: "/v1/finance/rates"};
   }
 
-  // CreateExpense logs a new expense transaction.
+  // Logs a new expense transaction, updating target budget periods and reducing account balances.
   rpc CreateExpense(CreateExpenseRequest) returns (Transaction) {
     option (google.api.http) = {
       post: "/v1/finance/expenses"
@@ -82,7 +84,7 @@ service Finance {
     };
   }
 
-  // UpdateExpense modifies an existing expense.
+  // Modifies properties of a logged expense transaction. Re-calculates budget and currency conversions.
   rpc UpdateExpense(UpdateExpenseRequest) returns (Transaction) {
     option (google.api.http) = {
       put: "/v1/finance/expenses/{id}"
@@ -90,27 +92,27 @@ service Finance {
     };
   }
 
-  // DeleteTransaction deletes any type of transaction.
+  // Deletes a transaction, reversing all changes to budget period consumption and account balances.
   rpc DeleteTransaction(DeleteTransactionRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {delete: "/v1/finance/transactions/{id}"};
   }
 
-  // ListTransactions lists paginated transactions for a workspace.
+  // Lists paginated transaction records matching specific budget, account, source, or text queries.
   rpc ListTransactions(ListTransactionsRequest) returns (ListTransactionsResponse) {
     option (google.api.http) = {get: "/v1/finance/transactions"};
   }
 
-  // ListTransactionEvents lists the historical lifecycle events of a transaction.
+  // Lists historical lifecycle events tracking mutations and updates applied to a transaction.
   rpc ListTransactionEvents(ListTransactionEventsRequest) returns (ListTransactionEventsResponse) {
     option (google.api.http) = {get: "/v1/finance/transactions/{txn_id}/events"};
   }
 
-  // GetInsights aggregates workspace spent insights and statistics.
+  // Aggregates space spend patterns, limits, remaining budgets, burn rates, and budget category distributions.
   rpc GetInsights(GetInsightsRequest) returns (GetInsightsResponse) {
     option (google.api.http) = {get: "/v1/finance/insights"};
   }
 
-  // CreateRecurringExpense configures a new recurring expense rule.
+  // Registers a recurring expense template, generating repeating payment obligations periodically.
   rpc CreateRecurringExpense(CreateRecurringExpenseRequest) returns (RecurringExpense) {
     option (google.api.http) = {
       post: "/v1/finance/recurring-expenses"
@@ -118,7 +120,7 @@ service Finance {
     };
   }
 
-  // UpdateRecurringExpense modifies an existing recurring expense rule.
+  // Updates an active recurring expense template.
   rpc UpdateRecurringExpense(UpdateRecurringExpenseRequest) returns (RecurringExpense) {
     option (google.api.http) = {
       put: "/v1/finance/recurring-expenses/{id}"
@@ -126,22 +128,22 @@ service Finance {
     };
   }
 
-  // DeleteRecurringExpense deletes a recurring expense rule.
+  // Deletes a recurring template, preventing any future payment instances from spawning.
   rpc DeleteRecurringExpense(DeleteRecurringExpenseRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {delete: "/v1/finance/recurring-expenses/{id}"};
   }
 
-  // ListRecurringExpenses lists recurring expenses for a workspace.
+  // Lists all configured recurring templates in the space.
   rpc ListRecurringExpenses(ListRecurringExpensesRequest) returns (ListRecurringExpensesResponse) {
     option (google.api.http) = {get: "/v1/finance/recurring-expenses"};
   }
 
-  // ListScheduledPayments lists scheduled payments for a workspace.
+  // Lists scheduled payment instances spawned by recurring templates.
   rpc ListScheduledPayments(ListScheduledPaymentsRequest) returns (ListScheduledPaymentsResponse) {
     option (google.api.http) = {get: "/v1/finance/scheduled-payments"};
   }
 
-  // ConfirmScheduledPayment clears a scheduled payment by promoting it to a permanent transaction.
+  // Clears a scheduled payment instance, converting it into a permanent, reconciled ledger transaction.
   rpc ConfirmScheduledPayment(ConfirmScheduledPaymentRequest) returns (Transaction) {
     option (google.api.http) = {
       post: "/v1/finance/scheduled-payments/{payment_id}/confirm"
@@ -149,7 +151,7 @@ service Finance {
     };
   }
 
-  // CreateBorrowing logs a new personal lent/borrowed debt agreement.
+  // Logs a new personal debt agreement (lent or borrowed money).
   rpc CreateBorrowing(CreateBorrowingRequest) returns (Borrowing) {
     option (google.api.http) = {
       post: "/v1/finance/borrowings"
@@ -157,17 +159,17 @@ service Finance {
     };
   }
 
-  // GetBorrowing retrieves a single borrowing record.
+  // Retrieves detail metrics of a borrowing record.
   rpc GetBorrowing(GetBorrowingRequest) returns (Borrowing) {
     option (google.api.http) = {get: "/v1/finance/borrowings/{id}"};
   }
 
-  // ListBorrowings returns borrowings for a space, optionally filtered.
+  // Lists active or paid-off personal debt agreements.
   rpc ListBorrowings(ListBorrowingsRequest) returns (ListBorrowingsResponse) {
     option (google.api.http) = {get: "/v1/finance/borrowings"};
   }
 
-  // UpdateBorrowing updates basic details of a borrowing record.
+  // Updates properties of a borrowing record (such as counterparty contact details).
   rpc UpdateBorrowing(UpdateBorrowingRequest) returns (Borrowing) {
     option (google.api.http) = {
       put: "/v1/finance/borrowings/{id}"
@@ -175,12 +177,12 @@ service Finance {
     };
   }
 
-  // DeleteBorrowing removes a borrowing and all its repayments.
+  // Deletes a borrowing record and all corresponding repayments.
   rpc DeleteBorrowing(DeleteBorrowingRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {delete: "/v1/finance/borrowings/{id}"};
   }
 
-  // CreateBorrowingRepayment records an installment payment towards a borrowing.
+  // Logs a repayment installment reducing the remaining amount of an active debt agreement.
   rpc CreateBorrowingRepayment(CreateBorrowingRepaymentRequest) returns (BorrowingRepayment) {
     option (google.api.http) = {
       post: "/v1/finance/borrowings/{borrowing_id}/repayments"
@@ -188,17 +190,17 @@ service Finance {
     };
   }
 
-  // ListBorrowingRepayments returns all repayments for a specific borrowing.
+  // Lists all repayment installments registered under a debt agreement.
   rpc ListBorrowingRepayments(ListBorrowingRepaymentsRequest) returns (ListBorrowingRepaymentsResponse) {
     option (google.api.http) = {get: "/v1/finance/borrowings/{borrowing_id}/repayments"};
   }
 
-  // DeleteBorrowingRepayment deletes a specific installment and restores the balance.
+  // Deletes a borrowing repayment, restoring the debt balance of the borrowing agreement.
   rpc DeleteBorrowingRepayment(DeleteBorrowingRepaymentRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {delete: "/v1/finance/borrowings/{borrowing_id}/repayments/{id}"};
   }
 
-  // CreateAccount registers a new payment/liquidity account.
+  // Registers a new payment or liquidity account (such as cash, bank, or credit card).
   rpc CreateAccount(CreateAccountRequest) returns (Account) {
     option (google.api.http) = {
       post: "/v1/finance/accounts"
@@ -206,12 +208,12 @@ service Finance {
     };
   }
 
-  // GetAccount retrieves details of an account.
+  // Retrieves details of a specific payment account.
   rpc GetAccount(GetAccountRequest) returns (Account) {
     option (google.api.http) = {get: "/v1/finance/accounts/{id}"};
   }
 
-  // UpdateAccount updates details of an account.
+  // Updates details of a payment account (such as notes, active flags, or default overrides).
   rpc UpdateAccount(UpdateAccountRequest) returns (Account) {
     option (google.api.http) = {
       put: "/v1/finance/accounts/{id}"
@@ -219,17 +221,17 @@ service Finance {
     };
   }
 
-  // DeleteAccount deletes an account.
+  // Deletes a payment account. Default accounts cannot be deleted until another default is nominated.
   rpc DeleteAccount(DeleteAccountRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {delete: "/v1/finance/accounts/{id}"};
   }
 
-  // ListAccounts lists all accounts in a workspace.
+  // Lists payment accounts in the workspace, supporting optional currency conversion hydration.
   rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse) {
     option (google.api.http) = {get: "/v1/finance/accounts"};
   }
 
-  // CreateTransfer logs a new transfer between accounts.
+  // Logs a transfer transaction, shifting funds between a source and destination account.
   rpc CreateTransfer(CreateTransferRequest) returns (Transfer) {
     option (google.api.http) = {
       post: "/v1/finance/transfers"
@@ -237,22 +239,22 @@ service Finance {
     };
   }
 
-  // ListTransfers lists all transfers in a workspace.
+  // Lists all transfer transactions registered in the workspace.
   rpc ListTransfers(ListTransfersRequest) returns (ListTransfersResponse) {
     option (google.api.http) = {get: "/v1/finance/transfers"};
   }
 
-  // ListCurrencies returns the list of supported currencies.
+  // Retrieves a static list of supported currencies.
   rpc ListCurrencies(ListCurrenciesRequest) returns (ListCurrenciesResponse) {
     option (google.api.http) = {get: "/v1/finance/currencies"};
   }
 
-  // ListInboxItems lists all inbox items staging in the queue for a space.
+  // Lists staging inbox items queue awaiting manual approval or transaction matching.
   rpc ListInboxItems(ListInboxItemsRequest) returns (ListInboxItemsResponse) {
     option (google.api.http) = {get: "/v1/finance/inbox-items"};
   }
 
-  // ApproveInboxItem approves and commits a pending inbox item to the main transaction ledger.
+  // Approves and promotes an ingested inbox item into a ledger transaction entry.
   rpc ApproveInboxItem(ApproveInboxItemRequest) returns (Transaction) {
     option (google.api.http) = {
       post: "/v1/finance/inbox-items/{id}:approve"
@@ -260,701 +262,1633 @@ service Finance {
     };
   }
 
-  // DiscardInboxItem discards an inbox item from the staging queue.
+  // Discards an ingested inbox item from the staging queue, preventing classification.
   rpc DiscardInboxItem(DiscardInboxItemRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {delete: "/v1/finance/inbox-items/{id}"};
   }
 }
 
+// RecurrenceInterval defines the frequency of budgeting or transaction execution rules.
 enum RecurrenceInterval {
+  // Default unspecified value. Invalid fallback.
   RECURRENCE_INTERVAL_UNSPECIFIED = 0;
+  // Budget resets or templates trigger every calendar week.
   INTERVAL_WEEKLY = 1;
+  // Budget resets or templates trigger every calendar month.
   INTERVAL_MONTHLY = 2;
+  // Budget resets or templates trigger every calendar year.
   INTERVAL_YEARLY = 3;
 }
 
-// FinanceSettings represents workspace configuration.
+// FinanceSettings represents the workspace configuration.
 message FinanceSettings {
-  string space_id = 1;
-  string base_currency = 2;
-  google.protobuf.Timestamp create_time = 3;
-  google.protobuf.Timestamp update_time = 4;
+  // Output only. Associated space identifier.
+  string space_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. Base currency for conversions and insights (e.g. "USD").
+  // Analytics calculations and overall spend views default to this currency.
+  string base_currency = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Output only. Creation time of the settings.
+  google.protobuf.Timestamp create_time = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Last update time of the settings.
+  google.protobuf.Timestamp update_time = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // Budget represents a budget template definition.
 message Budget {
-  // Scoped resource view options
+  // Scoped resource view options.
   enum View {
+    // Default view. Resolves only basic configuration fields.
     VIEW_UNSPECIFIED = 0;
+    // Returns basic configuration details without period calculations.
     BASIC = 1;
+    // Hydrates complete structure including active period spent statistics.
     FULL = 2;
   }
 
   // Represents the computed details of the active/current period.
   message ActivePeriod {
-    google.protobuf.Timestamp start_date = 1;
-    google.protobuf.Timestamp end_date = 2;
-    int64 spent_amount = 3;
-    int64 spent_in_base = 4;
-    double exchange_rate_to_base = 5;
-    string base_currency = 6;
-    int64 limit_in_base = 7;
+    // Output only. Start date boundary of the current period.
+    google.protobuf.Timestamp start_date = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. End date boundary of the current period.
+    google.protobuf.Timestamp end_date = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Amount spent in local currency cents within this period.
+    int64 spent_amount = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Amount spent converted to base currency cents.
+    int64 spent_in_base = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Exchange rate to base currency used during conversion.
+    double exchange_rate_to_base = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Base currency identifier.
+    string base_currency = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Limit in base currency cents.
+    int64 limit_in_base = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
   }
 
-  string id = 1;
-  string space_id = 2;
-  string name = 3;
-  int64 limit_amount = 4;
-  string currency = 5;
-  RecurrenceInterval interval = 6;
-  bool is_active = 7;
-  string icon = 8;
-  string color = 9;
-  optional string default_account_id = 10;
-  ActivePeriod current_period = 11;
-  google.protobuf.Timestamp create_time = 12;
-  google.protobuf.Timestamp update_time = 13;
+  // Output only. Budget template identifier.
+  // Values are of the form `bud_[a-zA-Z0-9]+`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Space identifier.
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. User-friendly name of the budget template.
+  string name = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Limit amount in cents (e.g. 50000 for $500.00).
+  int64 limit_amount = 4 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. ISO Currency code of the budget limit.
+  string currency = 5 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Recurrence interval frequency.
+  RecurrenceInterval interval = 6 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Indicates if the budget is active and accepting transaction logging.
+  bool is_active = 7 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Icon identifier for UI rendering.
+  string icon = 8 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. HEX Color code for UI categorization.
+  string color = 9 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Default payment/liquidity account associated with this budget.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
+  optional string default_account_id = 10 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Metrics of the current budget period.
+  ActivePeriod current_period = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Creation time of the budget.
+  google.protobuf.Timestamp create_time = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Last update time of the budget.
+  google.protobuf.Timestamp update_time = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // BudgetPeriod represents an active instantiation of a budget.
 message BudgetPeriod {
-  string id = 1;
-  string budget_id = 2;
-  string space_id = 3;
-  google.protobuf.Timestamp start_date = 4;
-  google.protobuf.Timestamp end_date = 5;
-  int64 limit_amount = 6;
-  string currency = 7;
-  string base_currency = 8;
-  double exchange_rate_to_base = 9;
-  google.protobuf.Timestamp create_time = 10;
-  google.protobuf.Timestamp update_time = 11;
-  int64 spent_amount = 12;
-  int64 spent_in_base = 13;
+  // Output only. Period identifier.
+  // Values are of the form `per_[a-zA-Z0-9]+`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Parent budget template identifier.
+  // Values are of the form `bud_[a-zA-Z0-9]+`.
+  string budget_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Space identifier.
+  string space_id = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Period start date.
+  google.protobuf.Timestamp start_date = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Period end date.
+  google.protobuf.Timestamp end_date = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Limit amount allocated to this period in local currency cents.
+  int64 limit_amount = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Local currency code.
+  string currency = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Workspace base currency code.
+  string base_currency = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Exchange rate to base currency used during conversion.
+  double exchange_rate_to_base = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Creation time of the budget period.
+  google.protobuf.Timestamp create_time = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Last update time of the budget period.
+  google.protobuf.Timestamp update_time = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Spent amount in cents within this period.
+  int64 spent_amount = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Spent amount converted to base currency cents.
+  int64 spent_in_base = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
-// ConfigureFinanceRequest contains fields for initial setup.
+// The request for
+// [ConfigureFinance][saturn.finance.v1.Finance.ConfigureFinance].
 message ConfigureFinanceRequest {
+  // Required. Base currency for conversions and insights (e.g. "USD").
+  // Conversions and aggregated spent statistics will default to this currency.
   string base_currency = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
-// GetFinanceSettingsRequest contains fields to fetch config.
+// The request for
+// [GetFinanceSettings][saturn.finance.v1.Finance.GetFinanceSettings].
 message GetFinanceSettingsRequest {}
 
-// CreateBudgetRequest contains fields to create budget.
+// The request for
+// [CreateBudget][saturn.finance.v1.Finance.CreateBudget].
 message CreateBudgetRequest {
+  // Required. User-friendly name of the budget template.
   string name = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Limit amount in cents (e.g. 50000 for $500.00).
   int64 limit_amount = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. ISO currency code of the budget limit.
   string currency = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Recurrence interval frequency.
   RecurrenceInterval interval = 4 [(google.api.field_behavior) = REQUIRED];
-  string icon = 5;
-  string color = 6;
-  optional string default_account_id = 7;
+
+  // Optional. Icon identifier for UI rendering.
+  string icon = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. HEX Color code used for visual categorization.
+  string color = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Unique identifier of the default account associated with this budget.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
+  optional string default_account_id = 7 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// LimitPropagation defines how changes in budget limits propagate to future periods.
 enum LimitPropagation {
+  // Default unspecified value.
   LIMIT_PROPAGATION_UNSPECIFIED = 0;
+  // Apply the limit modification only to the current active period.
   LIMIT_PROPAGATION_CURRENT_PERIOD = 1;
+  // Propagate limits to all future budget periods without modifying history.
   LIMIT_PROPAGATION_NEXT_PERIODS_ONLY = 2;
 }
 
-// UpdateBudgetRequest contains update rules.
+// The request for
+// [UpdateBudget][saturn.finance.v1.Finance.UpdateBudget].
 message UpdateBudgetRequest {
+  // Required. ID of the budget to update.
+  // Values are of the form `bud_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
-  string name = 2;
-  int64 limit_amount = 3;
-  string currency = 4;
-  RecurrenceInterval interval = 5;
-  bool is_active = 6;
-  LimitPropagation propagation = 7;
-  string icon = 8;
-  string color = 9;
-  optional string default_account_id = 10;
+
+  // Optional. User-friendly name.
+  string name = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Limit amount in cents.
+  int64 limit_amount = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Currency code.
+  string currency = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Recurrence interval.
+  RecurrenceInterval interval = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Indicates if the budget is active.
+  bool is_active = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Limit propagation logic determining how future periods are affected.
+  LimitPropagation propagation = 7 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Icon identifier.
+  string icon = 8 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Color code.
+  string color = 9 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Unique identifier of the default account associated with this budget.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
+  optional string default_account_id = 10 [(google.api.field_behavior) = OPTIONAL];
 }
 
-// DeleteBudgetRequest contains deletion target.
+// The request for
+// [DeleteBudget][saturn.finance.v1.Finance.DeleteBudget].
 message DeleteBudgetRequest {
+  // Required. ID of the budget to delete.
+  // Values are of the form `bud_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
-// ListBudgetsRequest contains listing parameters.
+// The request for
+// [ListBudgets][saturn.finance.v1.Finance.ListBudgets].
 message ListBudgetsRequest {
-  int32 page_size = 1;
-  string page_token = 2;
-  optional bool active_only = 3;
-  optional string search_query = 4;
-  optional string sort = 5;
-  optional Budget.View view = 6;
-  optional google.protobuf.Timestamp target_date = 7;
+  // Optional. Maximum number of items to return in a single page.
+  int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Keyset page token returned by a previous call.
+  string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter only active budgets.
+  optional bool active_only = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Text search query matching budget names.
+  optional string search_query = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Sorting rules specifying field name and optional ordering suffix.
+  optional string sort = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Scoped budget representation view type.
+  optional Budget.View view = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Specific calculation target date for periods. Defaults to current time if omitted.
+  optional google.protobuf.Timestamp target_date = 7 [(google.api.field_behavior) = OPTIONAL];
 }
 
-// ListBudgetsResponse contains paginated budgets.
+// The response for
+// [ListBudgets][saturn.finance.v1.Finance.ListBudgets].
 message ListBudgetsResponse {
+  // List of budgets matching filter rules.
   repeated Budget budgets = 1;
+
+  // Keyset token to fetch the next page of results. Empty if no more pages are available.
   string next_page_token = 2;
 }
 
-// GetBudgetPeriodRequest retrieves period for date.
+// The request for
+// [GetBudgetPeriod][saturn.finance.v1.Finance.GetBudgetPeriod].
 message GetBudgetPeriodRequest {
+  // Required. Target parent budget ID.
+  // Values are of the form `bud_[a-zA-Z0-9]+`.
   string budget_id = 1 [(google.api.field_behavior) = REQUIRED];
-  google.protobuf.Timestamp date = 2; // Timestamp for calculation, defaults to current time if omitted
+
+  // Optional. Target calculation date, defaults to current time if omitted.
+  google.protobuf.Timestamp date = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // ExchangeRate represents a daily rate record.
 message ExchangeRate {
-  string space_id = 1;
-  string from_currency = 2;
-  string to_currency = 3;
-  double rate = 4;
-  google.protobuf.Timestamp rate_date = 5;
-  google.protobuf.Timestamp create_time = 6;
+  // Output only. Associated space identifier.
+  string space_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. Source currency code (e.g. "EUR").
+  string from_currency = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Target currency code (e.g. "USD").
+  string to_currency = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Conversion rate multiplier (e.g. 1.12).
+  double rate = 4 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Target date for this rate.
+  google.protobuf.Timestamp rate_date = 5 [(google.api.field_behavior) = REQUIRED];
+
+  // Output only. Record creation timestamp.
+  google.protobuf.Timestamp create_time = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
-// CreateExchangeRateRequest registers a daily rate.
+// The request for
+// [CreateExchangeRate][saturn.finance.v1.Finance.CreateExchangeRate].
 message CreateExchangeRateRequest {
+  // Required. Source currency code.
   string from_currency = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Target currency code.
   string to_currency = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Conversion rate multiplier.
   double rate = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Target date.
   google.protobuf.Timestamp rate_date = 4 [(google.api.field_behavior) = REQUIRED];
 }
 
-// ListExchangeRatesRequest lists workspace rates.
+// The request for
+// [ListExchangeRates][saturn.finance.v1.Finance.ListExchangeRates].
 message ListExchangeRatesRequest {
-  int32 page_size = 1;
-  string page_token = 2;
+  // Optional. Maximum number of items to return.
+  int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Keyset page token.
+  string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 
-// ListExchangeRatesResponse contains paginated rates.
+// The response for
+// [ListExchangeRates][saturn.finance.v1.Finance.ListExchangeRates].
 message ListExchangeRatesResponse {
+  // List of matching exchange rate records.
   repeated ExchangeRate exchange_rates = 1;
+
+  // Keyset token to fetch the next page of results. Empty if no more pages are available.
   string next_page_token = 2;
 }
 
-// DeleteExchangeRateRequest contains identifiers for rate deletion.
+// The request for
+// [DeleteExchangeRate][saturn.finance.v1.Finance.DeleteExchangeRate].
 message DeleteExchangeRateRequest {
+  // Required. Source currency code.
   string from_currency = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Target currency code.
   string to_currency = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Target date.
   google.protobuf.Timestamp rate_date = 3 [(google.api.field_behavior) = REQUIRED];
 }
 
-enum TransactionType {
-  TRANSACTION_TYPE_UNSPECIFIED = 0;
-  EXPENSE = 1;
-  INCOME = 2;
-  TRANSFER_OUT = 3;
-  TRANSFER_IN = 4;
-}
-
+// Transaction represents a financial record in the space ledger.
 message Transaction {
-  string id = 1;
-  string space_id = 2;
-  TransactionType type = 3;
-  string budget_id = 4;
-  string period_id = 5;
-  int64 amount = 6;
-  string currency = 7;
-  int64 amount_in_base = 8;
-  string description = 9;
-  google.protobuf.Timestamp transaction_date = 10;
-  google.protobuf.Timestamp create_time = 11;
-  google.protobuf.Timestamp update_time = 12;
-  google.protobuf.Timestamp effective_date = 13;
-  optional string source_type = 14;
-  optional string source_id = 15;
-  optional string account_id = 16;
-  optional string transfer_id = 17;
+  // Type defines the direction and flow of funds.
+  enum Type {
+    // Default unspecified type.
+    TYPE_UNSPECIFIED = 0;
+    // Expense transaction, subtracting from the account balance.
+    EXPENSE = 1;
+    // Income transaction, adding to the account balance.
+    INCOME = 2;
+    // Transfer out transaction, moving funds to another account.
+    TRANSFER_OUT = 3;
+    // Transfer in transaction, receiving funds from another account.
+    TRANSFER_IN = 4;
+  }
+
+  // View controls the hydration of related metadata.
+  enum View {
+    // Default view. Returns only basic properties.
+    VIEW_UNSPECIFIED = 0;
+    // Returns transaction details without related account or budget info.
+    BASIC = 1;
+    // Hydrates complete structure including account and budget details.
+    FULL = 2;
+  }
+
+  // AccountInfo wraps minimal account details required for UI listing.
+  message AccountInfo {
+    // Output only. Unique identifier of the account.
+    string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. User-friendly name of the account.
+    string name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Color hex code for display.
+    string color = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Account type.
+    string type = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  }
+
+  // BudgetInfo wraps minimal budget details required for UI listing.
+  message BudgetInfo {
+    // Output only. Unique identifier of the budget.
+    string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. User-friendly name of the budget.
+    string name = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  }
+
+  // Output only. Unique identifier of the transaction.
+  // Values are of the form `txn_[a-zA-Z0-9]+`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Associated space identifier.
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. Fund movement flow type.
+  Type type = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Associated budget identifier.
+  // Values are of the form `bud_[a-zA-Z0-9]+`.
+  string budget_id = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Associated period identifier.
+  // Values are of the form `per_[a-zA-Z0-9]+`.
+  string period_id = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Required. Absolute value of transaction in local currency cents (e.g. 10000 for $100.00).
+  int64 amount = 6 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Currency code.
+  string currency = 7 [(google.api.field_behavior) = REQUIRED];
+
+  // Output only. Value converted to base currency cents.
+  int64 amount_in_base = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. Narration notes.
+  string description = 9 [(google.api.field_behavior) = OPTIONAL];
+
+  // Required. Time transaction occurred.
+  google.protobuf.Timestamp transaction_date = 10 [(google.api.field_behavior) = REQUIRED];
+
+  // Output only. System create timestamp.
+  google.protobuf.Timestamp create_time = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. System update timestamp.
+  google.protobuf.Timestamp update_time = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. Execution/posting date (when funds reconcile in account balance).
+  google.protobuf.Timestamp effective_date = 13 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Integration source type (e.g. "plaid").
+  optional string source_type = 14 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Integration source record ID.
+  optional string source_id = 15 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Associated account ID.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
+  optional string account_id = 16 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Associated transfer transaction ID.
+  // Values are of the form `txn_[a-zA-Z0-9]+`.
+  optional string transfer_id = 17 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Hydrated minimal account info. Available only on FULL view.
+  optional AccountInfo account = 18 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Hydrated minimal budget info. Available only on FULL view.
+  optional BudgetInfo budget = 19 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// ExpenseInput encapsulates fields representing an expense record payload.
 message ExpenseInput {
+  // Required. Budget category identifier.
+  // Values are of the form `bud_[a-zA-Z0-9]+`.
   string budget_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Absolute value of transaction in local currency cents (e.g. 10000 for $100.00).
   int64 amount = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Currency code.
   string currency = 3 [(google.api.field_behavior) = REQUIRED];
-  string description = 4;
-  google.protobuf.Timestamp transaction_date = 5;
-  google.protobuf.Timestamp effective_date = 6;
-  optional string account_id = 7;
+
+  // Optional. Narration notes.
+  string description = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Time transaction occurred.
+  google.protobuf.Timestamp transaction_date = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Execution/posting date.
+  google.protobuf.Timestamp effective_date = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Target account identifier.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
+  optional string account_id = 7 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// The request for
+// [CreateExpense][saturn.finance.v1.Finance.CreateExpense].
 message CreateExpenseRequest {
+  // Required. Target expense transaction parameters.
   ExpenseInput expense = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
+// The request for
+// [UpdateExpense][saturn.finance.v1.Finance.UpdateExpense].
 message UpdateExpenseRequest {
+  // Required. Unique identifier of the transaction to update.
+  // Values are of the form `txn_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Updated expense transaction parameters.
   ExpenseInput expense = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
+// The request for
+// [DeleteTransaction][saturn.finance.v1.Finance.DeleteTransaction].
 message DeleteTransactionRequest {
+  // Required. Unique identifier of the transaction to delete.
+  // Values are of the form `txn_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
+// The request for
+// [ListTransactions][saturn.finance.v1.Finance.ListTransactions].
 message ListTransactionsRequest {
-  string budget_id = 1;
-  TransactionType type = 2;
-  int32 page_size = 3;
-  string page_token = 4;
-  optional string source_type = 5;
-  optional string source_id = 6;
-  optional string account_id = 7;
+  // Optional. Scoped budget representation view type.
+  optional Transaction.View view = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Target parent budget ID filter.
+  // Values are of the form `bud_[a-zA-Z0-9]+`.
+  string budget_id = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Target transaction flow type filter.
+  Transaction.Type type = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Integration source type.
+  optional string source_type = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Integration source record ID.
+  optional string source_id = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Target account identifier.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
+  optional string account_id = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Text search query matching transaction description notes.
+  optional string search_query = 7 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Maximum number of items to return.
+  int32 page_size = 8 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Keyset page token.
+  string page_token = 9 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Sort order string.
+  optional string sort = 10 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// The response for
+// [ListTransactions][saturn.finance.v1.Finance.ListTransactions].
 message ListTransactionsResponse {
+  // List of transactions matching filter rules.
   repeated Transaction transactions = 1;
+
+  // Next page keyset token. Empty if no more pages are available.
   string next_page_token = 2;
 }
 
+// InsightGranularity defines the grouping interval of aggregated statistical data.
 enum InsightGranularity {
+  // Default unspecified granularity.
   INSIGHT_GRANULARITY_UNSPECIFIED = 0;
+  // Group metrics by calendar day.
   DAILY = 1;
+  // Group metrics by calendar week.
   WEEKLY = 2;
+  // Group metrics by calendar month.
   MONTHLY = 3;
+  // Group metrics by calendar year.
   YEARLY = 4;
 }
 
+// The request for
+// [GetInsights][saturn.finance.v1.Finance.GetInsights].
 message GetInsightsRequest {
-  InsightGranularity granularity = 1;
-  google.protobuf.Timestamp start_date = 2;
-  google.protobuf.Timestamp end_date = 3;
+  // Required. Statistical grouping granularity.
+  InsightGranularity granularity = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Target start date window.
+  google.protobuf.Timestamp start_date = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Target end date window.
+  google.protobuf.Timestamp end_date = 3 [(google.api.field_behavior) = REQUIRED];
 }
 
+// The response for
+// [GetInsights][saturn.finance.v1.Finance.GetInsights].
 message GetInsightsResponse {
+  // Spent insights statistics.
   SpentInsights spent = 1;
 }
 
+// SpentInsights aggregates workspace statistics.
 message SpentInsights {
-  int64 total_limit = 1;
-  int64 total_spent = 2;
-  int64 remaining_budget = 3;
-  double burn_rate = 4;
-
+  // Detailed contribution metrics of a single budget.
   message BudgetContribution {
+    // Unique identifier of the budget.
     string budget_id = 1;
+
+    // User-friendly name.
     string budget_name = 2;
+
+    // Color hex code.
     string budget_color = 3;
+
+    // Amount spent in base currency cents.
     int64 amount_in_base = 4;
+
+    // Amount spent in local currency cents.
     int64 amount_in_local = 5;
+
+    // Local currency code.
     string local_currency = 6;
+
+    // Contribution percentage relative to total spent.
     double contribution_percentage = 7;
   }
 
+  // TrendDataPoint tracks spend patterns grouped by granular interval.
   message TrendDataPoint {
+    // Dynamic grouping label (e.g. Month name, date string).
     string label = 1;
+
+    // Interval start date boundary.
     string start_date = 2;
+
+    // Spent amount converted to base currency cents.
     int64 amount_in_base = 3;
+
+    // Total transactions within this interval.
     int32 transaction_count = 4;
+
+    // List of budget category contributions within this interval.
     repeated BudgetContribution contributions = 5;
   }
 
-  repeated TrendDataPoint trend = 5;
-
+  // BudgetUsage represents progress against budget limits.
   message BudgetUsage {
+    // Unique identifier of the budget.
     string budget_id = 1;
+
+    // User-friendly name.
     string budget_name = 2;
+
+    // Color hex code.
     string budget_color = 3;
+
+    // Icon identifier.
     string budget_icon = 4;
+
+    // Budget limit in cents.
     int64 limit = 5;
+
+    // Spent amount in cents.
     int64 spent = 6;
+
+    // Spent amount converted to base currency cents.
     int64 spent_in_base = 7;
+
+    // Limit consumption percentage.
     double usage_percentage = 8;
   }
 
-  repeated BudgetUsage distributions = 6;
-
+  // HighValueExpense tracks outlier transactions exceeding typical limits.
   message HighValueExpense {
+    // Unique identifier of the transaction.
     string transaction_id = 1;
+
+    // Narration notes.
     string description = 2;
+
+    // Absolute value in local currency cents.
     int64 amount = 3;
+
+    // Local currency code.
     string currency = 4;
+
+    // Value converted to base currency cents.
     int64 amount_in_base = 5;
+
+    // Parent budget name.
     string budget_name = 6;
+
+    // Time transaction occurred.
     google.protobuf.Timestamp transaction_date = 7;
+
+    // Execution/posting date.
     google.protobuf.Timestamp effective_date = 8;
   }
 
+  // Total configured budget limits in base currency cents.
+  int64 total_limit = 1;
+
+  // Total spent in base currency cents.
+  int64 total_spent = 2;
+
+  // Remaining space budget in base currency cents.
+  int64 remaining_budget = 3;
+
+  // Average spend speed rate relative to elapsed time.
+  double burn_rate = 4;
+
+  // List of granular interval trend points.
+  repeated TrendDataPoint trend = 5;
+
+  // Distribution breakdown by budget category.
+  repeated BudgetUsage distributions = 6;
+
+  // List of largest expense transactions.
   repeated HighValueExpense top_expenses = 7;
 }
 
+// GenerateScheduledPaymentsPayload defines the cron scheduling payload.
 message GenerateScheduledPaymentsPayload {
   option (saturn.platform.scheduler.v1.job_type) = "finance.GenerateScheduledPayments";
 }
 
+// RecurringExpense represents a template rule to repeat payments.
 message RecurringExpense {
-  string id = 1;
-  string space_id = 2;
-  string budget_id = 3;
-  string name = 4;
-  int64 amount = 5;
-  string currency = 6;
-  string interval = 7;
-  google.protobuf.Timestamp next_due_date = 8;
-  bool is_variable = 9;
-  string status = 10;
-  int32 grace_period_days = 11;
-  google.protobuf.Timestamp create_time = 12;
-  google.protobuf.Timestamp update_time = 13;
+  // Output only. Unique identifier.
+  // Values are of the form `rec_[a-zA-Z0-9]+`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Space identifier.
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. Budget category identifier.
+  // Values are of the form `bud_[a-zA-Z0-9]+`.
+  string budget_id = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. User-friendly name.
+  string name = 4 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Base payment amount in cents.
+  int64 amount = 5 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Currency code.
+  string currency = 6 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Execution interval rule string.
+  string interval = 7 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Next execution due date.
+  google.protobuf.Timestamp next_due_date = 8 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Indicates if the payment amount is variable.
+  bool is_variable = 9 [(google.api.field_behavior) = OPTIONAL];
+
+  // Required. Active template status (e.g. "active", "paused").
+  string status = 10 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Days allowed past due date before triggering warning events.
+  int32 grace_period_days = 11 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Creation timestamp.
+  google.protobuf.Timestamp create_time = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Last update timestamp.
+  google.protobuf.Timestamp update_time = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// ScheduledPayment represents a spawned pending payment instance.
 message ScheduledPayment {
-  string id = 1;
-  string space_id = 2;
-  string budget_id = 3;
-  string source_type = 4;
-  string source_id = 5;
-  int64 amount = 6;
-  string currency = 7;
-  google.protobuf.Timestamp due_date = 8;
-  string status = 9;
-  bytes metadata = 10;
-  google.protobuf.Timestamp create_time = 11;
-  google.protobuf.Timestamp update_time = 12;
-}
+  // Output only. Unique identifier.
+  // Values are of the form `sch_[a-zA-Z0-9]+`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
 
-message CreateRecurringExpenseRequest {
-  string budget_id = 1 [(google.api.field_behavior) = REQUIRED];
-  string name = 2 [(google.api.field_behavior) = REQUIRED];
-  int64 amount = 3 [(google.api.field_behavior) = REQUIRED];
-  string currency = 4 [(google.api.field_behavior) = REQUIRED];
-  string interval = 5 [(google.api.field_behavior) = REQUIRED];
-  google.protobuf.Timestamp next_due_date = 6 [(google.api.field_behavior) = REQUIRED];
-  bool is_variable = 7;
-  int32 grace_period_days = 8;
-}
+  // Output only. Space identifier.
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 
-message UpdateRecurringExpenseRequest {
-  string id = 1 [(google.api.field_behavior) = REQUIRED];
-  string budget_id = 2 [(google.api.field_behavior) = REQUIRED];
-  string name = 3 [(google.api.field_behavior) = REQUIRED];
-  int64 amount = 4 [(google.api.field_behavior) = REQUIRED];
-  string currency = 5 [(google.api.field_behavior) = REQUIRED];
-  string interval = 6 [(google.api.field_behavior) = REQUIRED];
-  google.protobuf.Timestamp next_due_date = 7 [(google.api.field_behavior) = REQUIRED];
-  bool is_variable = 8;
+  // Required. Budget category identifier.
+  // Values are of the form `bud_[a-zA-Z0-9]+`.
+  string budget_id = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Parent template source type.
+  string source_type = 4 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Parent template source ID.
+  string source_id = 5 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Target payment amount in cents.
+  int64 amount = 6 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Currency code.
+  string currency = 7 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Scheduled execution due date.
+  google.protobuf.Timestamp due_date = 8 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Instance execution status (e.g. "pending", "confirmed").
   string status = 9 [(google.api.field_behavior) = REQUIRED];
-  int32 grace_period_days = 10;
+
+  // Optional. Metadata binary payload.
+  bytes metadata = 10 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Creation timestamp.
+  google.protobuf.Timestamp create_time = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Last update timestamp.
+  google.protobuf.Timestamp update_time = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// The request for
+// [CreateRecurringExpense][saturn.finance.v1.Finance.CreateRecurringExpense].
+message CreateRecurringExpenseRequest {
+  // Required. Budget category identifier.
+  // Values are of the form `bud_[a-zA-Z0-9]+`.
+  string budget_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. User-friendly name of the recurring expense rule.
+  string name = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Base payment amount in cents.
+  int64 amount = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Currency code.
+  string currency = 4 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Execution interval rule string (cron expression or interval descriptor).
+  string interval = 5 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Initial execution due date.
+  google.protobuf.Timestamp next_due_date = 6 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Indicates if the payment amount is variable.
+  bool is_variable = 7 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Days allowed past due date before triggering warning events.
+  int32 grace_period_days = 8 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// The request for
+// [UpdateRecurringExpense][saturn.finance.v1.Finance.UpdateRecurringExpense].
+message UpdateRecurringExpenseRequest {
+  // Required. Unique identifier of the template to update.
+  // Values are of the form `rec_[a-zA-Z0-9]+`.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Budget category identifier.
+  // Values are of the form `bud_[a-zA-Z0-9]+`.
+  string budget_id = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. User-friendly name.
+  string name = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Base payment amount in cents.
+  int64 amount = 4 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Currency code.
+  string currency = 5 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Execution interval rule string.
+  string interval = 6 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Next execution due date.
+  google.protobuf.Timestamp next_due_date = 7 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Indicates if the payment amount is variable.
+  bool is_variable = 8 [(google.api.field_behavior) = OPTIONAL];
+
+  // Required. Template status string.
+  string status = 9 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Days allowed past due date before triggering warning events.
+  int32 grace_period_days = 10 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// The request for
+// [DeleteRecurringExpense][saturn.finance.v1.Finance.DeleteRecurringExpense].
 message DeleteRecurringExpenseRequest {
+  // Required. Unique identifier of the template to delete.
+  // Values are of the form `rec_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
+// The request for
+// [ListRecurringExpenses][saturn.finance.v1.Finance.ListRecurringExpenses].
 message ListRecurringExpensesRequest {
-  string status = 1;
-  int32 page_size = 2;
-  string page_token = 3;
+  // Optional. Filter templates by active status.
+  string status = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Maximum number of items to return.
+  int32 page_size = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Keyset page token.
+  string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// The response for
+// [ListRecurringExpenses][saturn.finance.v1.Finance.ListRecurringExpenses].
 message ListRecurringExpensesResponse {
+  // List of recurring expense templates matching filters.
   repeated RecurringExpense recurring_expenses = 1;
+
+  // Next page keyset token. Empty if no more pages are available.
   string next_page_token = 2;
 }
 
+// The request for
+// [ListScheduledPayments][saturn.finance.v1.Finance.ListScheduledPayments].
 message ListScheduledPaymentsRequest {
-  string status = 1;
-  google.protobuf.Timestamp start_date = 2;
-  google.protobuf.Timestamp end_date = 3;
-  int32 page_size = 4;
-  string page_token = 5;
+  // Optional. Filter instances by payment status.
+  string status = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Target start date of execution window.
+  google.protobuf.Timestamp start_date = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Target end date of execution window.
+  google.protobuf.Timestamp end_date = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Maximum number of items to return.
+  int32 page_size = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Keyset page token.
+  string page_token = 5 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// The response for
+// [ListScheduledPayments][saturn.finance.v1.Finance.ListScheduledPayments].
 message ListScheduledPaymentsResponse {
+  // List of scheduled payment instances matching filters.
   repeated ScheduledPayment scheduled_payments = 1;
+
+  // Next page keyset token. Empty if no more pages are available.
   string next_page_token = 2;
 }
 
+// The request for
+// [ConfirmScheduledPayment][saturn.finance.v1.Finance.ConfirmScheduledPayment].
 message ConfirmScheduledPaymentRequest {
+  // Required. Unique identifier of the scheduled payment to confirm.
+  // Values are of the form `sch_[a-zA-Z0-9]+`.
   string payment_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Time transaction occurred.
   google.protobuf.Timestamp transaction_date = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Execution/posting date.
   google.protobuf.Timestamp effective_date = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Actual amount cleared in local currency cents.
   int64 actual_amount = 4 [(google.api.field_behavior) = REQUIRED];
-  optional string description = 5;
+
+  // Optional. Narration notes.
+  optional string description = 5 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// BorrowingDirection defines the type/direction of personal debt agreements.
 enum BorrowingDirection {
+  // Default unspecified value. Invalid fallback.
   BORROWING_DIRECTION_UNSPECIFIED = 0;
+  // Funds borrowed from an external entity (payable liability).
   BORROWING_DIRECTION_BORROWED = 1;
+  // Funds lent to an external entity (receivable asset).
   BORROWING_DIRECTION_LENT = 2;
 }
 
+// BorrowingStatus defines the lifecycle status of debt agreements.
 enum BorrowingStatus {
+  // Default unspecified value. Invalid fallback.
   BORROWING_STATUS_UNSPECIFIED = 0;
+  // Active borrowing with pending outstanding balances.
   BORROWING_STATUS_ACTIVE = 1;
+  // Paid-off borrowing with zero remaining balance.
   BORROWING_STATUS_PAID_OFF = 2;
 }
 
+// Borrowing represents a personal lent/borrowed debt agreement.
 message Borrowing {
-  string id = 1;
-  string space_id = 2;
-  BorrowingDirection direction = 3;
-  string counterparty = 4;
-  string contact_info = 5;
-  int64 total_amount = 6;
-  int64 remaining_amount = 7;
-  string currency = 8;
-  BorrowingStatus status = 9;
-  google.protobuf.Timestamp established_at = 10;
-  google.protobuf.Timestamp due_at = 11;
-  bool create_as_transaction = 12;
-  string notes = 13;
-  google.protobuf.Timestamp create_time = 14;
-  google.protobuf.Timestamp update_time = 15;
+  // Output only. Unique identifier.
+  // Values are of the form `bor_[a-zA-Z0-9]+`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Space identifier.
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. Direction flow of the debt.
+  BorrowingDirection direction = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Name of the counterparty entity.
+  string counterparty = 4 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Contact information.
+  string contact_info = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Required. Initial loan principal amount in cents.
+  int64 total_amount = 6 [(google.api.field_behavior) = REQUIRED];
+
+  // Output only. Remaining balance amount in cents.
+  int64 remaining_amount = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. Currency code.
+  string currency = 8 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Lifecycle status.
+  BorrowingStatus status = 9 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Date established.
+  google.protobuf.Timestamp established_at = 10 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Target repayment due date.
+  google.protobuf.Timestamp due_at = 11 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Automatically create a parallel transaction entry in the ledger.
+  bool create_as_transaction = 12 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Narration notes.
+  string notes = 13 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Creation timestamp.
+  google.protobuf.Timestamp create_time = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Last update timestamp.
+  google.protobuf.Timestamp update_time = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// BorrowingRepayment represents an installment payment towards a borrowing.
 message BorrowingRepayment {
-  string id = 1;
-  string borrowing_id = 2;
-  string space_id = 3;
-  int64 amount = 4;
-  google.protobuf.Timestamp payment_date = 5;
-  string notes = 6;
-  google.protobuf.Timestamp create_time = 7;
-  google.protobuf.Timestamp update_time = 8;
-  string account_id = 9;
+  // Output only. Unique identifier.
+  // Values are of the form `rep_[a-zA-Z0-9]+`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. Parent borrowing identifier.
+  // Values are of the form `bor_[a-zA-Z0-9]+`.
+  string borrowing_id = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Output only. Space identifier.
+  string space_id = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. Installment amount in cents.
+  int64 amount = 4 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Installment payment date.
+  google.protobuf.Timestamp payment_date = 5 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Narration notes.
+  string notes = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Creation timestamp.
+  google.protobuf.Timestamp create_time = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Last update timestamp.
+  google.protobuf.Timestamp update_time = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. Source account identifier.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
+  string account_id = 9 [(google.api.field_behavior) = REQUIRED];
 }
 
+// BorrowingInput encapsulates fields for configuring borrowing records.
 message BorrowingInput {
+  // Required. Direction flow of the debt.
   BorrowingDirection direction = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Name of the counterparty.
   string counterparty = 2 [(google.api.field_behavior) = REQUIRED];
-  string contact_info = 3;
+
+  // Optional. Contact information.
+  string contact_info = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Required. Initial loan amount in cents.
   int64 total_amount = 4 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Currency code.
   string currency = 5 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Date established.
   google.protobuf.Timestamp established_at = 6 [(google.api.field_behavior) = REQUIRED];
-  google.protobuf.Timestamp due_at = 7;
-  string notes = 8;
-  bool create_as_transaction = 9;
-  optional string account_id = 10;
+
+  // Optional. Target repayment due date.
+  google.protobuf.Timestamp due_at = 7 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Narration notes.
+  string notes = 8 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Automatically create a parallel transaction entry in the ledger.
+  bool create_as_transaction = 9 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Source account identifier.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
+  optional string account_id = 10 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// The request for
+// [CreateBorrowing][saturn.finance.v1.Finance.CreateBorrowing].
 message CreateBorrowingRequest {
+  // Required. Target borrowing parameters.
   BorrowingInput borrowing = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
+// The request for
+// [GetBorrowing][saturn.finance.v1.Finance.GetBorrowing].
 message GetBorrowingRequest {
+  // Required. ID of the borrowing record to retrieve.
+  // Values are of the form `bor_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
+// The request for
+// [ListBorrowings][saturn.finance.v1.Finance.ListBorrowings].
 message ListBorrowingsRequest {
-  optional BorrowingStatus status = 1;
-  optional BorrowingDirection direction = 2;
-  int32 page_size = 3;
-  string page_token = 4;
+  // Optional. Filter by debt status.
+  optional BorrowingStatus status = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter by debt flow direction.
+  optional BorrowingDirection direction = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Maximum number of items to return.
+  int32 page_size = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Keyset page token.
+  string page_token = 4 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// The response for
+// [ListBorrowings][saturn.finance.v1.Finance.ListBorrowings].
 message ListBorrowingsResponse {
+  // List of borrowing records matching filters.
   repeated Borrowing borrowings = 1;
+
+  // Next page keyset token. Empty if no more pages are available.
   string next_page_token = 2;
 }
 
+// The request for
+// [UpdateBorrowing][saturn.finance.v1.Finance.UpdateBorrowing].
 message UpdateBorrowingRequest {
+  // Required. Unique identifier of the borrowing record to update.
+  // Values are of the form `bor_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Updated borrowing parameters.
   BorrowingInput borrowing = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
+// The request for
+// [DeleteBorrowing][saturn.finance.v1.Finance.DeleteBorrowing].
 message DeleteBorrowingRequest {
+  // Required. Unique identifier of the borrowing record to delete.
+  // Values are of the form `bor_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
+// BorrowingRepaymentInput encapsulates fields for configuring installment payments.
 message BorrowingRepaymentInput {
+  // Required. Repayment amount in cents.
   int64 amount = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Repayment date.
   google.protobuf.Timestamp payment_date = 2 [(google.api.field_behavior) = REQUIRED];
-  string notes = 3;
+
+  // Optional. Narration notes.
+  string notes = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Required. Target account identifier.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
   string account_id = 4 [(google.api.field_behavior) = REQUIRED];
 }
 
+// The request for
+// [CreateBorrowingRepayment][saturn.finance.v1.Finance.CreateBorrowingRepayment].
 message CreateBorrowingRepaymentRequest {
+  // Required. Target parent borrowing identifier.
+  // Values are of the form `bor_[a-zA-Z0-9]+`.
   string borrowing_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Updated repayment parameters.
   BorrowingRepaymentInput repayment = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
+// The request for
+// [ListBorrowingRepayments][saturn.finance.v1.Finance.ListBorrowingRepayments].
 message ListBorrowingRepaymentsRequest {
+  // Required. Target parent borrowing identifier.
+  // Values are of the form `bor_[a-zA-Z0-9]+`.
   string borrowing_id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
+// The response for
+// [ListBorrowingRepayments][saturn.finance.v1.Finance.ListBorrowingRepayments].
 message ListBorrowingRepaymentsResponse {
+  // List of installment repayments.
   repeated BorrowingRepayment repayments = 1;
 }
 
+// The request for
+// [DeleteBorrowingRepayment][saturn.finance.v1.Finance.DeleteBorrowingRepayment].
 message DeleteBorrowingRepaymentRequest {
+  // Required. Target parent borrowing identifier.
+  // Values are of the form `bor_[a-zA-Z0-9]+`.
   string borrowing_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Unique identifier of the installment repayment to delete.
+  // Values are of the form `rep_[a-zA-Z0-9]+`.
   string id = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
+// CurrencyInfo encapsulates currency code metadata.
 message CurrencyInfo {
-  string code = 1;
-  string name = 2;
+  // Required. ISO currency code (e.g. USD).
+  string code = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. User-friendly currency name.
+  string name = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
+// The request for
+// [ListCurrencies][saturn.finance.v1.Finance.ListCurrencies].
 message ListCurrenciesRequest {}
 
+// The response for
+// [ListCurrencies][saturn.finance.v1.Finance.ListCurrencies].
 message ListCurrenciesResponse {
+  // List of currency codes and details.
   repeated CurrencyInfo currencies = 1;
 }
 
-// --- Account Messages ---
-
+// Account represents a physical or digital payment account.
 message Account {
+  // Type defines the classification of payment accounts.
   enum Type {
+    // Default unspecified type. Invalid fallback.
     TYPE_UNSPECIFIED = 0;
+    // Checking or savings bank account.
     BANK = 1;
+    // Credit card account. Credit accounts support negative balances.
     CREDIT_CARD = 2;
+    // Cash balance.
     CASH = 3;
+    // Digital wallet or virtual balance.
     DIGITAL_ACCOUNT = 4;
   }
 
+  // View controls the hydration of related metadata.
   enum View {
+    // Default view. Resolves only basic configuration fields.
     VIEW_UNSPECIFIED = 0;
+    // Returns account details without base currency conversion calculations.
     BASIC = 1;
+    // Hydrates complete structure including exchange rate conversion metrics.
     FULL = 2;
   }
 
+  // Output only. Unique identifier of the account.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
-  string space_id = 2;
-  string name = 3;
-  Type type = 4;
-  string currency = 5;
-  int64 initial_balance = 6;
+
+  // Output only. Space identifier.
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. User-friendly account name (e.g. "Chase Checking").
+  string name = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Account classification type.
+  Type type = 4 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Account currency (e.g. "USD").
+  string currency = 5 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Initial balance amount in cents (e.g. 500000 for $5,000.00).
+  int64 initial_balance = 6 [(google.api.field_behavior) = REQUIRED];
+
+  // Output only. Computed current balance amount in cents.
+  // Calculated dynamically as `InitialBalance + Sum(Income/TransferIn) - Sum(Expense/TransferOut)`.
   int64 current_balance = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
-  int64 credit_limit = 8;
-  bool is_default = 9;
-  bool is_active = 10;
-  string color = 11;
-  string notes = 12;
-  string last_four = 13;
+
+  // Optional. Credit limit amount in cents (applicable only if CREDIT_CARD type).
+  int64 credit_limit = 8 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Indicates if the account is the workspace default. Default accounts receive
+  // transactions if no explicit account is nominated.
+  bool is_default = 9 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Indicates if the account is active.
+  bool is_active = 10 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Color HEX code for visual UI identification.
+  string color = 11 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Narration notes.
+  string notes = 12 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Last four digits of card or account number.
+  string last_four = 13 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Creation timestamp.
   google.protobuf.Timestamp create_time = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Last update timestamp.
   google.protobuf.Timestamp update_time = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
 
+  // Conversion contains hydrated conversion metrics relative to the workspace base currency.
   message Conversion {
-    int64 balance = 1;
-    double rate = 2;
+    // Output only. Converted balance in base currency cents.
+    int64 balance = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Exchange rate multiplier used.
+    double rate = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
   }
+  // Output only. Currency conversion statistics.
   Conversion conversion = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// The request for
+// [CreateAccount][saturn.finance.v1.Finance.CreateAccount].
 message CreateAccountRequest {
+  // Required. Account configuration parameters.
   Account account = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
+// The request for
+// [GetAccount][saturn.finance.v1.Finance.GetAccount].
 message GetAccountRequest {
+  // Required. Target account identifier.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
-  optional Account.View view = 2;
+
+  // Optional. Account view details level.
+  optional Account.View view = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// The request for
+// [UpdateAccount][saturn.finance.v1.Finance.UpdateAccount].
 message UpdateAccountRequest {
+  // Required. Target account identifier to update.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Updated account parameters.
   Account account = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
+// The request for
+// [DeleteAccount][saturn.finance.v1.Finance.DeleteAccount].
 message DeleteAccountRequest {
+  // Required. Target account identifier to delete.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
+// The request for
+// [ListAccounts][saturn.finance.v1.Finance.ListAccounts].
 message ListAccountsRequest {
-  optional Account.View view = 1;
-  optional bool active_only = 2;
-  optional string search_query = 3;
-  optional int32 page_size = 4;
-  optional string page_token = 5;
-  optional string sort = 6;
+  // Optional. Account view details level.
+  optional Account.View view = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter only active accounts.
+  optional bool active_only = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Search text filter matching account name or notes.
+  optional string search_query = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Maximum number of items to return in a single page.
+  optional int32 page_size = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Keyset page token returned by a previous call.
+  optional string page_token = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Sort order string specifying column and optional ordering suffix.
+  optional string sort = 6 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// The response for
+// [ListAccounts][saturn.finance.v1.Finance.ListAccounts].
 message ListAccountsResponse {
+  // List of accounts matching filters.
   repeated Account accounts = 1;
+
+  // Next page keyset token. Empty if no more pages are available.
   string next_page_token = 2;
 }
 
-// --- Transfer Messages ---
-
+// Transfer represents a new transfer between accounts.
 message Transfer {
-  string id = 1;
-  string space_id = 2;
-  string source_account_id = 3;
-  string destination_account_id = 4;
-  int64 source_amount = 5;
-  int64 destination_amount = 6;
-  google.protobuf.Timestamp transfer_date = 7;
-  string notes = 8;
-  google.protobuf.Timestamp create_time = 9;
-  google.protobuf.Timestamp update_time = 10;
+  // Output only. Unique identifier.
+  // Values are of the form `txn_[a-zA-Z0-9]+`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Space identifier.
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. Source account ID.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
+  string source_account_id = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Destination account ID.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
+  string destination_account_id = 4 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Source amount in source account currency cents.
+  int64 source_amount = 5 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Destination amount in destination account currency cents.
+  int64 destination_amount = 6 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Transfer date.
+  google.protobuf.Timestamp transfer_date = 7 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Narration notes.
+  string notes = 8 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Creation timestamp.
+  google.protobuf.Timestamp create_time = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Last update timestamp.
+  google.protobuf.Timestamp update_time = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// The request for
+// [CreateTransfer][saturn.finance.v1.Finance.CreateTransfer].
 message CreateTransferRequest {
+  // Required. Source account ID.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
   string source_account_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Destination account ID.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
   string destination_account_id = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Source amount in source account currency cents.
   int64 source_amount = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Destination amount in destination account currency cents.
   int64 destination_amount = 4 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Transfer date.
   google.protobuf.Timestamp transfer_date = 5 [(google.api.field_behavior) = REQUIRED];
-  string notes = 6;
+
+  // Optional. Narration notes.
+  string notes = 6 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// The request for
+// [ListTransfers][saturn.finance.v1.Finance.ListTransfers].
 message ListTransfersRequest {
-  int32 page_size = 1;
-  string page_token = 2;
+  // Optional. Maximum number of items to return.
+  int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Keyset page token.
+  string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// The response for
+// [ListTransfers][saturn.finance.v1.Finance.ListTransfers].
 message ListTransfersResponse {
+  // List of transfer records.
   repeated Transfer transfers = 1;
+
+  // Next page keyset token. Empty if no more pages are available.
   string next_page_token = 2;
 }
 
+// The request for
+// [ListTransactionEvents][saturn.finance.v1.Finance.ListTransactionEvents].
 message ListTransactionEventsRequest {
+  // Required. Target transaction ID.
+  // Values are of the form `txn_[a-zA-Z0-9]+`.
   string txn_id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
+// TransactionEvent represents a historical transaction lifecycle change.
 message TransactionEvent {
-  string id = 1;
-  string space_id = 2;
-  string txn_id = 3;
-  string event_type = 4;
-  string metadata = 5; // JSON string representing event details
-  google.protobuf.Timestamp create_time = 6;
+  // Output only. Unique identifier.
+  // Values are of the form `evt_[a-zA-Z0-9]+`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Space identifier.
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. Associated transaction ID.
+  // Values are of the form `txn_[a-zA-Z0-9]+`.
+  string txn_id = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Lifecycle change event type (e.g. "created", "updated").
+  string event_type = 4 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. JSON metadata describing the change details (e.g. diff properties).
+  string metadata = 5 [(google.api.field_behavior) = REQUIRED];
+
+  // Output only. Event registration timestamp.
+  google.protobuf.Timestamp create_time = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// The response for
+// [ListTransactionEvents][saturn.finance.v1.Finance.ListTransactionEvents].
 message ListTransactionEventsResponse {
+  // List of transaction lifecycle history events.
   repeated TransactionEvent events = 1;
 }
 
-// --- Integration & Ingest Messages ---
-
+// InboxItem represents an ingested invoice, receipt, or notification in processing staging.
 message InboxItem {
-  string id = 1;
-  string space_id = 2;
-  string integration_id = 3;
-  string status = 4; // pending, processing, resolved, archived
-  string doc_type = 5; // invoice, receipt, bank_notification, unknown
-  int64 amount = 6;
-  string currency = 7;
-  string vendor_name = 8;
-  google.protobuf.Timestamp transaction_date = 9;
-  string account_id = 10;
-  string budget_id = 11;
-  string scheduled_payment_id = 12;
-  string transaction_id = 13;
-  string raw_payload = 14;
-  string metadata_json = 15;
-  google.protobuf.Timestamp create_time = 16;
+  // Output only. Unique identifier.
+  // Values are of the form `inb_[a-zA-Z0-9]+`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Space identifier.
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Ingestion integration channel identifier.
+  string integration_id = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Staging lifecycle status (e.g. "pending", "approved", "discarded").
+  string status = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Extracted document classification category (e.g. "receipt").
+  string doc_type = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Extracted transaction amount in cents.
+  int64 amount = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Extracted currency code.
+  string currency = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Extracted vendor counterparty name.
+  string vendor_name = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Extracted transaction transaction date.
+  google.protobuf.Timestamp transaction_date = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Suggested account ID for categorization.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
+  string account_id = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Suggested budget category ID.
+  // Values are of the form `bud_[a-zA-Z0-9]+`.
+  string budget_id = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Associated scheduled payment identifier to clear.
+  // Values are of the form `sch_[a-zA-Z0-9]+`.
+  string scheduled_payment_id = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Associated completed transaction ledger ID.
+  // Values are of the form `txn_[a-zA-Z0-9]+`.
+  string transaction_id = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Ingestion raw notification payload details.
+  string raw_payload = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Additional extracted metadata payload (JSON format).
+  string metadata_json = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Ingestion stage timestamp.
+  google.protobuf.Timestamp create_time = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// The request for
+// [ListInboxItems][saturn.finance.v1.Finance.ListInboxItems].
 message ListInboxItemsRequest {}
 
+// The response for
+// [ListInboxItems][saturn.finance.v1.Finance.ListInboxItems].
 message ListInboxItemsResponse {
+  // List of staged inbox items.
   repeated InboxItem inbox_items = 1;
 }
 
+// The request for
+// [ApproveInboxItem][saturn.finance.v1.Finance.ApproveInboxItem].
 message ApproveInboxItemRequest {
+  // Required. Target staged inbox item identifier to approve.
+  // Values are of the form `inb_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
-  string account_id = 2;
-  string budget_id = 3;
-  string scheduled_payment_id = 4;
-  int64 amount = 5;
-  string description = 6;
-  optional string doc_type = 7;
-  optional string destination_account_id = 8;
-  optional string transaction_type = 9;
-  optional string transaction_id = 10;
-  optional bool overwrite_linked_transaction = 11;
-  optional string transfer_leg = 12;
-  optional string currency = 13;
+
+  // Optional. Target account identifier.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
+  string account_id = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Target budget category identifier.
+  // Values are of the form `bud_[a-zA-Z0-9]+`.
+  string budget_id = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Associated scheduled payment identifier to clear.
+  // Values are of the form `sch_[a-zA-Z0-9]+`.
+  string scheduled_payment_id = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Overriding absolute amount in local currency cents.
+  int64 amount = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Overriding narration notes.
+  string description = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Overriding document classification category.
+  optional string doc_type = 7 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Target transfer destination account identifier.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
+  optional string destination_account_id = 8 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Overriding transaction flow type.
+  optional string transaction_type = 9 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Associated transaction identifier to link or merge.
+  // Values are of the form `txn_[a-zA-Z0-9]+`.
+  optional string transaction_id = 10 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Force overwrite of properties if the linked transaction already exists.
+  optional bool overwrite_linked_transaction = 11 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Transfer direction flow leg.
+  optional string transfer_leg = 12 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Currency code.
+  optional string currency = 13 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// The request for
+// [DiscardInboxItem][saturn.finance.v1.Finance.DiscardInboxItem].
 message DiscardInboxItemRequest {
+  // Required. Target staged inbox item identifier to discard.
+  // Values are of the form `inb_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 }

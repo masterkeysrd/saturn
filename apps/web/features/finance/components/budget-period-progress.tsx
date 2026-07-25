@@ -17,9 +17,9 @@ export function BudgetPeriodProgress({
 
   // Propagate total limit in base currency to parent for dashboard overview stats
   useEffect(() => {
-    if (period && onPeriodLoaded && period.exchangeRateToBase > 0) {
+    if (period && onPeriodLoaded && (period.exchangeRateToBase ?? 0) > 0) {
       const limit = formatCents(budget.limitAmount)
-      const limitInBase = limit * period.exchangeRateToBase
+      const limitInBase = limit * (period.exchangeRateToBase ?? 0)
       onPeriodLoaded(limitInBase)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -30,7 +30,7 @@ export function BudgetPeriodProgress({
   // Check if exchange rate is missing (sentinel value 0.0)
   if (
     budget.currency !== period.baseCurrency &&
-    period.exchangeRateToBase <= 0
+    (period.exchangeRateToBase ?? 0) <= 0
   ) {
     return (
       <div className="mt-5 flex animate-in flex-col gap-1 rounded-2xl border border-amber-500/10 bg-amber-500/5 p-3.5 text-[11px] duration-300 fade-in">
@@ -54,18 +54,21 @@ export function BudgetPeriodProgress({
   const progressPercent = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0
 
   // Bounds display formatting
-  const startStr = new Date(period.startDate).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  })
-  const endStr = new Date(period.endDate).toLocaleDateString(undefined, {
+  const startStr = new Date(period.startDate || "").toLocaleDateString(
+    undefined,
+    {
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    }
+  )
+  const endStr = new Date(period.endDate || "").toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
     timeZone: "UTC",
   })
 
-  const baseLimit = limit * period.exchangeRateToBase
+  const baseLimit = limit * (period.exchangeRateToBase ?? 0)
 
   const isOverBudget = spent >= limit
   const isNearLimit = spent >= limit * 0.85 && spent < limit
@@ -134,8 +137,8 @@ export function BudgetPeriodProgress({
       {budget.currency !== period.baseCurrency && (
         <div className="flex justify-between border-t border-border/20 pt-2.5 font-mono text-[10px] text-muted-foreground/60">
           <span>
-            Rate: 1 {budget.currency} = {period.exchangeRateToBase.toFixed(4)}{" "}
-            {period.baseCurrency}
+            Rate: 1 {budget.currency} ={" "}
+            {(period.exchangeRateToBase ?? 0).toFixed(4)} {period.baseCurrency}
           </span>
           <span className="font-semibold">
             Limit:{" "}

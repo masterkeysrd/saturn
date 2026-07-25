@@ -4,14 +4,14 @@ import "errors"
 
 // Sentinel errors for core finance domain operations.
 var (
-	ErrSettingsNotFound     = errors.New("finance settings not found")
-	ErrBudgetNotFound       = errors.New("budget not found")
-	ErrPeriodNotFound       = errors.New("budget period not found")
-	ErrExchangeRateNotFound = errors.New("exchange rate not found")
-	ErrTransactionNotFound  = errors.New("transaction not found")
-	ErrBorrowingNotFound    = errors.New("borrowing not found")
-	ErrRepaymentNotFound    = errors.New("borrowing repayment not found")
-	ErrAccountNotFound      = errors.New("account not found")
-	ErrTransferNotFound     = errors.New("transfer not found")
+	ErrSettingsNotFound           = errors.New("finance settings not found")
+	ErrBudgetNotFound             = errors.New("budget not found")
+	ErrPeriodNotFound             = errors.New("budget period not found")
+	ErrExchangeRateNotFound       = errors.New("exchange rate not found")
+	ErrTransactionNotFound        = errors.New("transaction not found")
+	ErrBorrowingNotFound          = errors.New("borrowing not found")
+	ErrRepaymentNotFound          = errors.New("borrowing repayment not found")
+	ErrAccountNotFound            = errors.New("account not found")
+	ErrTransferNotFound           = errors.New("transfer not found")
 	ErrCannotDeleteDefaultAccount = errors.New("cannot delete the default account. please select another account as default first")
 )

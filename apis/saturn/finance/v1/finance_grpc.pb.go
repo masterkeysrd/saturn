@@ -67,89 +67,91 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// Finance provides budgeting and currency management operations for a workspace.
+// Finance service provides APIs for budgeting, accounts management, transaction
+// recording, daily exchange rate configurations, and analytics insights.
 type FinanceClient interface {
-	// ConfigureFinance sets up the default base currency for a workspace.
+	// Configures the base currency of a space. The base currency acts as the unified
+	// currency in which financial insights and multi-currency conversions are performed.
 	ConfigureFinance(ctx context.Context, in *ConfigureFinanceRequest, opts ...grpc.CallOption) (*FinanceSettings, error)
-	// GetFinanceSettings retrieves the finance settings for a workspace.
+	// Retrieves the current finance settings, including the configured base currency.
 	GetFinanceSettings(ctx context.Context, in *GetFinanceSettingsRequest, opts ...grpc.CallOption) (*FinanceSettings, error)
-	// CreateBudget creates a new budget template in a workspace.
+	// Creates a budget category template. Budgets track spent thresholds over repeating intervals.
 	CreateBudget(ctx context.Context, in *CreateBudgetRequest, opts ...grpc.CallOption) (*Budget, error)
-	// UpdateBudget updates a budget template.
+	// Updates an existing budget template's properties, such as visual parameters or limit propagation policies.
 	UpdateBudget(ctx context.Context, in *UpdateBudgetRequest, opts ...grpc.CallOption) (*Budget, error)
-	// DeleteBudget deletes a budget template.
+	// Deletes a budget template. Only inactive budgets or budgets without active transactions can be deleted.
 	DeleteBudget(ctx context.Context, in *DeleteBudgetRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// ListBudgets lists all budget templates in a workspace.
+	// Lists budget templates inside the space, supporting paginated, sorted, and text-based filter views.
 	ListBudgets(ctx context.Context, in *ListBudgetsRequest, opts ...grpc.CallOption) (*ListBudgetsResponse, error)
-	// GetBudgetPeriod retrieves or generates the budget period for a specific date.
+	// Retrieves or automatically spawns the active budget period containing current spend limits for a target date.
 	GetBudgetPeriod(ctx context.Context, in *GetBudgetPeriodRequest, opts ...grpc.CallOption) (*BudgetPeriod, error)
-	// CreateExchangeRate registers a new daily rate conversion rule.
+	// Registers a daily exchange rate conversion coefficient between two currencies.
 	CreateExchangeRate(ctx context.Context, in *CreateExchangeRateRequest, opts ...grpc.CallOption) (*ExchangeRate, error)
-	// ListExchangeRates lists all exchange rate rules in a workspace.
+	// Lists historical exchange rate conversion coefficients.
 	ListExchangeRates(ctx context.Context, in *ListExchangeRatesRequest, opts ...grpc.CallOption) (*ListExchangeRatesResponse, error)
-	// DeleteExchangeRate deletes a specific daily rate conversion rule.
+	// Deletes a registered daily exchange rate conversion rule.
 	DeleteExchangeRate(ctx context.Context, in *DeleteExchangeRateRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// CreateExpense logs a new expense transaction.
+	// Logs a new expense transaction, updating target budget periods and reducing account balances.
 	CreateExpense(ctx context.Context, in *CreateExpenseRequest, opts ...grpc.CallOption) (*Transaction, error)
-	// UpdateExpense modifies an existing expense.
+	// Modifies properties of a logged expense transaction. Re-calculates budget and currency conversions.
 	UpdateExpense(ctx context.Context, in *UpdateExpenseRequest, opts ...grpc.CallOption) (*Transaction, error)
-	// DeleteTransaction deletes any type of transaction.
+	// Deletes a transaction, reversing all changes to budget period consumption and account balances.
 	DeleteTransaction(ctx context.Context, in *DeleteTransactionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// ListTransactions lists paginated transactions for a workspace.
+	// Lists paginated transaction records matching specific budget, account, source, or text queries.
 	ListTransactions(ctx context.Context, in *ListTransactionsRequest, opts ...grpc.CallOption) (*ListTransactionsResponse, error)
-	// ListTransactionEvents lists the historical lifecycle events of a transaction.
+	// Lists historical lifecycle events tracking mutations and updates applied to a transaction.
 	ListTransactionEvents(ctx context.Context, in *ListTransactionEventsRequest, opts ...grpc.CallOption) (*ListTransactionEventsResponse, error)
-	// GetInsights aggregates workspace spent insights and statistics.
+	// Aggregates space spend patterns, limits, remaining budgets, burn rates, and budget category distributions.
 	GetInsights(ctx context.Context, in *GetInsightsRequest, opts ...grpc.CallOption) (*GetInsightsResponse, error)
-	// CreateRecurringExpense configures a new recurring expense rule.
+	// Registers a recurring expense template, generating repeating payment obligations periodically.
 	CreateRecurringExpense(ctx context.Context, in *CreateRecurringExpenseRequest, opts ...grpc.CallOption) (*RecurringExpense, error)
-	// UpdateRecurringExpense modifies an existing recurring expense rule.
+	// Updates an active recurring expense template.
 	UpdateRecurringExpense(ctx context.Context, in *UpdateRecurringExpenseRequest, opts ...grpc.CallOption) (*RecurringExpense, error)
-	// DeleteRecurringExpense deletes a recurring expense rule.
+	// Deletes a recurring template, preventing any future payment instances from spawning.
 	DeleteRecurringExpense(ctx context.Context, in *DeleteRecurringExpenseRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// ListRecurringExpenses lists recurring expenses for a workspace.
+	// Lists all configured recurring templates in the space.
 	ListRecurringExpenses(ctx context.Context, in *ListRecurringExpensesRequest, opts ...grpc.CallOption) (*ListRecurringExpensesResponse, error)
-	// ListScheduledPayments lists scheduled payments for a workspace.
+	// Lists scheduled payment instances spawned by recurring templates.
 	ListScheduledPayments(ctx context.Context, in *ListScheduledPaymentsRequest, opts ...grpc.CallOption) (*ListScheduledPaymentsResponse, error)
-	// ConfirmScheduledPayment clears a scheduled payment by promoting it to a permanent transaction.
+	// Clears a scheduled payment instance, converting it into a permanent, reconciled ledger transaction.
 	ConfirmScheduledPayment(ctx context.Context, in *ConfirmScheduledPaymentRequest, opts ...grpc.CallOption) (*Transaction, error)
-	// CreateBorrowing logs a new personal lent/borrowed debt agreement.
+	// Logs a new personal debt agreement (lent or borrowed money).
 	CreateBorrowing(ctx context.Context, in *CreateBorrowingRequest, opts ...grpc.CallOption) (*Borrowing, error)
-	// GetBorrowing retrieves a single borrowing record.
+	// Retrieves detail metrics of a borrowing record.
 	GetBorrowing(ctx context.Context, in *GetBorrowingRequest, opts ...grpc.CallOption) (*Borrowing, error)
-	// ListBorrowings returns borrowings for a space, optionally filtered.
+	// Lists active or paid-off personal debt agreements.
 	ListBorrowings(ctx context.Context, in *ListBorrowingsRequest, opts ...grpc.CallOption) (*ListBorrowingsResponse, error)
-	// UpdateBorrowing updates basic details of a borrowing record.
+	// Updates properties of a borrowing record (such as counterparty contact details).
 	UpdateBorrowing(ctx context.Context, in *UpdateBorrowingRequest, opts ...grpc.CallOption) (*Borrowing, error)
-	// DeleteBorrowing removes a borrowing and all its repayments.
+	// Deletes a borrowing record and all corresponding repayments.
 	DeleteBorrowing(ctx context.Context, in *DeleteBorrowingRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// CreateBorrowingRepayment records an installment payment towards a borrowing.
+	// Logs a repayment installment reducing the remaining amount of an active debt agreement.
 	CreateBorrowingRepayment(ctx context.Context, in *CreateBorrowingRepaymentRequest, opts ...grpc.CallOption) (*BorrowingRepayment, error)
-	// ListBorrowingRepayments returns all repayments for a specific borrowing.
+	// Lists all repayment installments registered under a debt agreement.
 	ListBorrowingRepayments(ctx context.Context, in *ListBorrowingRepaymentsRequest, opts ...grpc.CallOption) (*ListBorrowingRepaymentsResponse, error)
-	// DeleteBorrowingRepayment deletes a specific installment and restores the balance.
+	// Deletes a borrowing repayment, restoring the debt balance of the borrowing agreement.
 	DeleteBorrowingRepayment(ctx context.Context, in *DeleteBorrowingRepaymentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// CreateAccount registers a new payment/liquidity account.
+	// Registers a new payment or liquidity account (such as cash, bank, or credit card).
 	CreateAccount(ctx context.Context, in *CreateAccountRequest, opts ...grpc.CallOption) (*Account, error)
-	// GetAccount retrieves details of an account.
+	// Retrieves details of a specific payment account.
 	GetAccount(ctx context.Context, in *GetAccountRequest, opts ...grpc.CallOption) (*Account, error)
-	// UpdateAccount updates details of an account.
+	// Updates details of a payment account (such as notes, active flags, or default overrides).
 	UpdateAccount(ctx context.Context, in *UpdateAccountRequest, opts ...grpc.CallOption) (*Account, error)
-	// DeleteAccount deletes an account.
+	// Deletes a payment account. Default accounts cannot be deleted until another default is nominated.
 	DeleteAccount(ctx context.Context, in *DeleteAccountRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// ListAccounts lists all accounts in a workspace.
+	// Lists payment accounts in the workspace, supporting optional currency conversion hydration.
 	ListAccounts(ctx context.Context, in *ListAccountsRequest, opts ...grpc.CallOption) (*ListAccountsResponse, error)
-	// CreateTransfer logs a new transfer between accounts.
+	// Logs a transfer transaction, shifting funds between a source and destination account.
 	CreateTransfer(ctx context.Context, in *CreateTransferRequest, opts ...grpc.CallOption) (*Transfer, error)
-	// ListTransfers lists all transfers in a workspace.
+	// Lists all transfer transactions registered in the workspace.
 	ListTransfers(ctx context.Context, in *ListTransfersRequest, opts ...grpc.CallOption) (*ListTransfersResponse, error)
-	// ListCurrencies returns the list of supported currencies.
+	// Retrieves a static list of supported currencies.
 	ListCurrencies(ctx context.Context, in *ListCurrenciesRequest, opts ...grpc.CallOption) (*ListCurrenciesResponse, error)
-	// ListInboxItems lists all inbox items staging in the queue for a space.
+	// Lists staging inbox items queue awaiting manual approval or transaction matching.
 	ListInboxItems(ctx context.Context, in *ListInboxItemsRequest, opts ...grpc.CallOption) (*ListInboxItemsResponse, error)
-	// ApproveInboxItem approves and commits a pending inbox item to the main transaction ledger.
+	// Approves and promotes an ingested inbox item into a ledger transaction entry.
 	ApproveInboxItem(ctx context.Context, in *ApproveInboxItemRequest, opts ...grpc.CallOption) (*Transaction, error)
-	// DiscardInboxItem discards an inbox item from the staging queue.
+	// Discards an ingested inbox item from the staging queue, preventing classification.
 	DiscardInboxItem(ctx context.Context, in *DiscardInboxItemRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
@@ -575,89 +577,91 @@ func (c *financeClient) DiscardInboxItem(ctx context.Context, in *DiscardInboxIt
 // All implementations should embed UnimplementedFinanceServer
 // for forward compatibility.
 //
-// Finance provides budgeting and currency management operations for a workspace.
+// Finance service provides APIs for budgeting, accounts management, transaction
+// recording, daily exchange rate configurations, and analytics insights.
 type FinanceServer interface {
-	// ConfigureFinance sets up the default base currency for a workspace.
+	// Configures the base currency of a space. The base currency acts as the unified
+	// currency in which financial insights and multi-currency conversions are performed.
 	ConfigureFinance(context.Context, *ConfigureFinanceRequest) (*FinanceSettings, error)
-	// GetFinanceSettings retrieves the finance settings for a workspace.
+	// Retrieves the current finance settings, including the configured base currency.
 	GetFinanceSettings(context.Context, *GetFinanceSettingsRequest) (*FinanceSettings, error)
-	// CreateBudget creates a new budget template in a workspace.
+	// Creates a budget category template. Budgets track spent thresholds over repeating intervals.
 	CreateBudget(context.Context, *CreateBudgetRequest) (*Budget, error)
-	// UpdateBudget updates a budget template.
+	// Updates an existing budget template's properties, such as visual parameters or limit propagation policies.
 	UpdateBudget(context.Context, *UpdateBudgetRequest) (*Budget, error)
-	// DeleteBudget deletes a budget template.
+	// Deletes a budget template. Only inactive budgets or budgets without active transactions can be deleted.
 	DeleteBudget(context.Context, *DeleteBudgetRequest) (*emptypb.Empty, error)
-	// ListBudgets lists all budget templates in a workspace.
+	// Lists budget templates inside the space, supporting paginated, sorted, and text-based filter views.
 	ListBudgets(context.Context, *ListBudgetsRequest) (*ListBudgetsResponse, error)
-	// GetBudgetPeriod retrieves or generates the budget period for a specific date.
+	// Retrieves or automatically spawns the active budget period containing current spend limits for a target date.
 	GetBudgetPeriod(context.Context, *GetBudgetPeriodRequest) (*BudgetPeriod, error)
-	// CreateExchangeRate registers a new daily rate conversion rule.
+	// Registers a daily exchange rate conversion coefficient between two currencies.
 	CreateExchangeRate(context.Context, *CreateExchangeRateRequest) (*ExchangeRate, error)
-	// ListExchangeRates lists all exchange rate rules in a workspace.
+	// Lists historical exchange rate conversion coefficients.
 	ListExchangeRates(context.Context, *ListExchangeRatesRequest) (*ListExchangeRatesResponse, error)
-	// DeleteExchangeRate deletes a specific daily rate conversion rule.
+	// Deletes a registered daily exchange rate conversion rule.
 	DeleteExchangeRate(context.Context, *DeleteExchangeRateRequest) (*emptypb.Empty, error)
-	// CreateExpense logs a new expense transaction.
+	// Logs a new expense transaction, updating target budget periods and reducing account balances.
 	CreateExpense(context.Context, *CreateExpenseRequest) (*Transaction, error)
-	// UpdateExpense modifies an existing expense.
+	// Modifies properties of a logged expense transaction. Re-calculates budget and currency conversions.
 	UpdateExpense(context.Context, *UpdateExpenseRequest) (*Transaction, error)
-	// DeleteTransaction deletes any type of transaction.
+	// Deletes a transaction, reversing all changes to budget period consumption and account balances.
 	DeleteTransaction(context.Context, *DeleteTransactionRequest) (*emptypb.Empty, error)
-	// ListTransactions lists paginated transactions for a workspace.
+	// Lists paginated transaction records matching specific budget, account, source, or text queries.
 	ListTransactions(context.Context, *ListTransactionsRequest) (*ListTransactionsResponse, error)
-	// ListTransactionEvents lists the historical lifecycle events of a transaction.
+	// Lists historical lifecycle events tracking mutations and updates applied to a transaction.
 	ListTransactionEvents(context.Context, *ListTransactionEventsRequest) (*ListTransactionEventsResponse, error)
-	// GetInsights aggregates workspace spent insights and statistics.
+	// Aggregates space spend patterns, limits, remaining budgets, burn rates, and budget category distributions.
 	GetInsights(context.Context, *GetInsightsRequest) (*GetInsightsResponse, error)
-	// CreateRecurringExpense configures a new recurring expense rule.
+	// Registers a recurring expense template, generating repeating payment obligations periodically.
 	CreateRecurringExpense(context.Context, *CreateRecurringExpenseRequest) (*RecurringExpense, error)
-	// UpdateRecurringExpense modifies an existing recurring expense rule.
+	// Updates an active recurring expense template.
 	UpdateRecurringExpense(context.Context, *UpdateRecurringExpenseRequest) (*RecurringExpense, error)
-	// DeleteRecurringExpense deletes a recurring expense rule.
+	// Deletes a recurring template, preventing any future payment instances from spawning.
 	DeleteRecurringExpense(context.Context, *DeleteRecurringExpenseRequest) (*emptypb.Empty, error)
-	// ListRecurringExpenses lists recurring expenses for a workspace.
+	// Lists all configured recurring templates in the space.
 	ListRecurringExpenses(context.Context, *ListRecurringExpensesRequest) (*ListRecurringExpensesResponse, error)
-	// ListScheduledPayments lists scheduled payments for a workspace.
+	// Lists scheduled payment instances spawned by recurring templates.
 	ListScheduledPayments(context.Context, *ListScheduledPaymentsRequest) (*ListScheduledPaymentsResponse, error)
-	// ConfirmScheduledPayment clears a scheduled payment by promoting it to a permanent transaction.
+	// Clears a scheduled payment instance, converting it into a permanent, reconciled ledger transaction.
 	ConfirmScheduledPayment(context.Context, *ConfirmScheduledPaymentRequest) (*Transaction, error)
-	// CreateBorrowing logs a new personal lent/borrowed debt agreement.
+	// Logs a new personal debt agreement (lent or borrowed money).
 	CreateBorrowing(context.Context, *CreateBorrowingRequest) (*Borrowing, error)
-	// GetBorrowing retrieves a single borrowing record.
+	// Retrieves detail metrics of a borrowing record.
 	GetBorrowing(context.Context, *GetBorrowingRequest) (*Borrowing, error)
-	// ListBorrowings returns borrowings for a space, optionally filtered.
+	// Lists active or paid-off personal debt agreements.
 	ListBorrowings(context.Context, *ListBorrowingsRequest) (*ListBorrowingsResponse, error)
-	// UpdateBorrowing updates basic details of a borrowing record.
+	// Updates properties of a borrowing record (such as counterparty contact details).
 	UpdateBorrowing(context.Context, *UpdateBorrowingRequest) (*Borrowing, error)
-	// DeleteBorrowing removes a borrowing and all its repayments.
+	// Deletes a borrowing record and all corresponding repayments.
 	DeleteBorrowing(context.Context, *DeleteBorrowingRequest) (*emptypb.Empty, error)
-	// CreateBorrowingRepayment records an installment payment towards a borrowing.
+	// Logs a repayment installment reducing the remaining amount of an active debt agreement.
 	CreateBorrowingRepayment(context.Context, *CreateBorrowingRepaymentRequest) (*BorrowingRepayment, error)
-	// ListBorrowingRepayments returns all repayments for a specific borrowing.
+	// Lists all repayment installments registered under a debt agreement.
 	ListBorrowingRepayments(context.Context, *ListBorrowingRepaymentsRequest) (*ListBorrowingRepaymentsResponse, error)
-	// DeleteBorrowingRepayment deletes a specific installment and restores the balance.
+	// Deletes a borrowing repayment, restoring the debt balance of the borrowing agreement.
 	DeleteBorrowingRepayment(context.Context, *DeleteBorrowingRepaymentRequest) (*emptypb.Empty, error)
-	// CreateAccount registers a new payment/liquidity account.
+	// Registers a new payment or liquidity account (such as cash, bank, or credit card).
 	CreateAccount(context.Context, *CreateAccountRequest) (*Account, error)
-	// GetAccount retrieves details of an account.
+	// Retrieves details of a specific payment account.
 	GetAccount(context.Context, *GetAccountRequest) (*Account, error)
-	// UpdateAccount updates details of an account.
+	// Updates details of a payment account (such as notes, active flags, or default overrides).
 	UpdateAccount(context.Context, *UpdateAccountRequest) (*Account, error)
-	// DeleteAccount deletes an account.
+	// Deletes a payment account. Default accounts cannot be deleted until another default is nominated.
 	DeleteAccount(context.Context, *DeleteAccountRequest) (*emptypb.Empty, error)
-	// ListAccounts lists all accounts in a workspace.
+	// Lists payment accounts in the workspace, supporting optional currency conversion hydration.
 	ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error)
-	// CreateTransfer logs a new transfer between accounts.
+	// Logs a transfer transaction, shifting funds between a source and destination account.
 	CreateTransfer(context.Context, *CreateTransferRequest) (*Transfer, error)
-	// ListTransfers lists all transfers in a workspace.
+	// Lists all transfer transactions registered in the workspace.
 	ListTransfers(context.Context, *ListTransfersRequest) (*ListTransfersResponse, error)
-	// ListCurrencies returns the list of supported currencies.
+	// Retrieves a static list of supported currencies.
 	ListCurrencies(context.Context, *ListCurrenciesRequest) (*ListCurrenciesResponse, error)
-	// ListInboxItems lists all inbox items staging in the queue for a space.
+	// Lists staging inbox items queue awaiting manual approval or transaction matching.
 	ListInboxItems(context.Context, *ListInboxItemsRequest) (*ListInboxItemsResponse, error)
-	// ApproveInboxItem approves and commits a pending inbox item to the main transaction ledger.
+	// Approves and promotes an ingested inbox item into a ledger transaction entry.
 	ApproveInboxItem(context.Context, *ApproveInboxItemRequest) (*Transaction, error)
-	// DiscardInboxItem discards an inbox item from the staging queue.
+	// Discards an ingested inbox item from the staging queue, preventing classification.
 	DiscardInboxItem(context.Context, *DiscardInboxItemRequest) (*emptypb.Empty, error)
 }
 

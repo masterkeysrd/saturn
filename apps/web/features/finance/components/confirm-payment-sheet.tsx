@@ -79,9 +79,9 @@ export function ConfirmPaymentSheet({
     const effDateStr = toLocalISODate(effectiveDate)
 
     const res = await confirmMutation.mutateAsync({
-      payment_id: payment.id,
+      payment_id: payment.id || "",
       req: {
-        paymentId: payment.id,
+        paymentId: payment.id || "",
         transactionDate: txDateStr,
         effectiveDate: effDateStr,
         actualAmount: centsAmount,

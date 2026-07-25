@@ -3,13 +3,14 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"encoding/base64"
 	"errors"
 	"fmt"
-	"strings"
 
+	"github.com/doug-martin/goqu/v9"
+	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/platform/conv"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
@@ -42,49 +43,35 @@ func NewTransactionStore(db *sqlx.DB) *TransactionStore {
 }
 
 func (s *TransactionStore) Create(ctx context.Context, t *finance.Transaction) error {
-	query := `INSERT INTO finance.transaction (id, space_id, type, budget_id, period_id, account_id, transfer_id, amount, currency, amount_in_base, description, transaction_date, effective_date, source_type, source_id, create_time, update_time)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`
 
-	var budgetID, periodID sql.NullString
-	if t.BudgetID != nil {
-		budgetID = sql.NullString{String: string(*t.BudgetID), Valid: true}
+	ds := pgDialect.Insert(goqu.S("finance").Table("transaction")).Rows(goqu.Record{
+		"id":               string(t.ID),
+		"space_id":         string(t.SpaceID),
+		"type":             string(t.Type),
+		"budget_id":        conv.StringPtr(t.BudgetID),
+		"period_id":        conv.StringPtr(t.PeriodID),
+		"account_id":       conv.StringPtr(t.AccountID),
+		"transfer_id":      conv.StringPtr(t.TransferID),
+		"amount":           t.Amount,
+		"currency":         string(t.Currency),
+		"amount_in_base":   t.AmountInBase,
+		"description":      t.Description,
+		"transaction_date": t.TransactionDate,
+		"effective_date":   t.EffectiveDate,
+		"source_type":      t.SourceType,
+		"source_id":        t.SourceID,
+		"create_time":      t.CreateTime,
+		"update_time":      t.UpdateTime,
+	})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
 	}
-	if t.PeriodID != nil {
-		periodID = sql.NullString{String: string(*t.PeriodID), Valid: true}
-	}
-	var accountID, transferID sql.NullString
-	if t.AccountID != nil {
-		accountID = sql.NullString{String: string(*t.AccountID), Valid: true}
-	}
-	if t.TransferID != nil {
-		transferID = sql.NullString{String: string(*t.TransferID), Valid: true}
-	}
-	var sourceType, sourceID sql.NullString
-	if t.SourceType != nil {
-		sourceType = sql.NullString{String: *t.SourceType, Valid: true}
-	}
-	if t.SourceID != nil {
-		sourceID = sql.NullString{String: *t.SourceID, Valid: true}
-	}
-
-	_, err := s.db.ExecContext(ctx, query,
-		string(t.ID), string(t.SpaceID), string(t.Type), budgetID, periodID, accountID, transferID,
-		t.Amount, string(t.Currency), t.AmountInBase, t.Description,
-		t.TransactionDate, t.EffectiveDate, sourceType, sourceID, t.CreateTime, t.UpdateTime,
-	)
+	_, err = s.db.ExecContext(ctx, query, args...)
 	return err
 }
 
-func (s *TransactionStore) GetByID(ctx context.Context, id finance.TransactionID) (*finance.Transaction, error) {
-	var row transactionDB
-	query := `SELECT * FROM finance.transaction WHERE id = $1`
-	if err := s.db.GetContext(ctx, &row, query, string(id)); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, finance.ErrTransactionNotFound
-		}
-		return nil, err
-	}
-
+func (row *transactionDB) toDomain() *finance.Transaction {
 	var budgetIDPtr *finance.BudgetID
 	if row.BudgetID.Valid {
 		bID := finance.BudgetID(row.BudgetID.String)
@@ -134,12 +121,32 @@ func (s *TransactionStore) GetByID(ctx context.Context, id finance.TransactionID
 		SourceID:        sourceIDPtr,
 		CreateTime:      nullTimeToTime(row.CreateTime),
 		UpdateTime:      nullTimeToTime(row.UpdateTime),
-	}, nil
+	}
+}
+
+func (s *TransactionStore) GetByID(ctx context.Context, id finance.TransactionID) (*finance.Transaction, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("transaction")).Select("*").Where(goqu.Ex{"id": string(id)})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, err
+	}
+	var row transactionDB
+	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, finance.ErrTransactionNotFound
+		}
+		return nil, err
+	}
+	return row.toDomain(), nil
 }
 
 func (s *TransactionStore) Delete(ctx context.Context, id finance.TransactionID) error {
-	query := `DELETE FROM finance.transaction WHERE id = $1`
-	res, err := s.db.ExecContext(ctx, query, string(id))
+	ds := pgDialect.Delete(goqu.S("finance").Table("transaction")).Where(goqu.Ex{"id": string(id)})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
+	}
+	res, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -154,40 +161,26 @@ func (s *TransactionStore) Delete(ctx context.Context, id finance.TransactionID)
 }
 
 func (s *TransactionStore) Update(ctx context.Context, t *finance.Transaction) error {
-	query := `UPDATE finance.transaction SET 
-		budget_id = $2, 
-		period_id = $3, 
-		account_id = $4,
-		transfer_id = $5,
-		amount = $6, 
-		currency = $7, 
-		amount_in_base = $8, 
-		description = $9, 
-		transaction_date = $10, 
-		effective_date = $11,
-		update_time = $12 
-		WHERE id = $1`
-
-	var budgetID, periodID sql.NullString
-	if t.BudgetID != nil {
-		budgetID = sql.NullString{String: string(*t.BudgetID), Valid: true}
+	ds := pgDialect.Update(goqu.S("finance").Table("transaction")).
+		Set(goqu.Record{
+			"budget_id":        conv.StringPtr(t.BudgetID),
+			"period_id":        conv.StringPtr(t.PeriodID),
+			"account_id":       conv.StringPtr(t.AccountID),
+			"transfer_id":      conv.StringPtr(t.TransferID),
+			"amount":           t.Amount,
+			"currency":         string(t.Currency),
+			"amount_in_base":   t.AmountInBase,
+			"description":      t.Description,
+			"transaction_date": t.TransactionDate,
+			"effective_date":   t.EffectiveDate,
+			"update_time":      t.UpdateTime,
+		}).
+		Where(goqu.Ex{"id": string(t.ID)})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
 	}
-	if t.PeriodID != nil {
-		periodID = sql.NullString{String: string(*t.PeriodID), Valid: true}
-	}
-	var accountID, transferID sql.NullString
-	if t.AccountID != nil {
-		accountID = sql.NullString{String: string(*t.AccountID), Valid: true}
-	}
-	if t.TransferID != nil {
-		transferID = sql.NullString{String: string(*t.TransferID), Valid: true}
-	}
-
-	res, err := s.db.ExecContext(ctx, query,
-		string(t.ID), budgetID, periodID, accountID, transferID,
-		t.Amount, string(t.Currency), t.AmountInBase, t.Description,
-		t.TransactionDate, t.EffectiveDate, t.UpdateTime,
-	)
+	res, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -206,154 +199,80 @@ func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 		filter.PageSize = 20
 	}
 
-	var cursorID string
-	if filter.NextPageToken != "" {
-		if decoded, err := base64.URLEncoding.DecodeString(filter.NextPageToken); err == nil {
-			cursorID = string(decoded)
-		}
-	}
+	ds := pgDialect.From(goqu.S("finance").Table("transaction")).Select("*")
 
-	conditions := []string{"space_id = $1"}
-	args := []any{string(spaceID)}
-	argIndex := 2
+	// Apply filtering conditions
+	ds = ds.Where(goqu.Ex{"space_id": string(spaceID)})
 
 	if filter.BudgetID != nil {
-		conditions = append(conditions, fmt.Sprintf("budget_id = $%d", argIndex))
-		args = append(args, string(*filter.BudgetID))
-		argIndex++
+		ds = ds.Where(goqu.Ex{"budget_id": string(*filter.BudgetID)})
 	}
-
 	if filter.Type != nil {
-		conditions = append(conditions, fmt.Sprintf("type = $%d", argIndex))
-		args = append(args, string(*filter.Type))
-		argIndex++
+		ds = ds.Where(goqu.Ex{"type": string(*filter.Type)})
 	}
-
 	if filter.SourceType != nil {
-		conditions = append(conditions, fmt.Sprintf("source_type = $%d", argIndex))
-		args = append(args, *filter.SourceType)
-		argIndex++
+		ds = ds.Where(goqu.Ex{"source_type": *filter.SourceType})
 	}
-
 	if filter.SourceID != nil {
-		conditions = append(conditions, fmt.Sprintf("source_id = $%d", argIndex))
-		args = append(args, *filter.SourceID)
-		argIndex++
+		ds = ds.Where(goqu.Ex{"source_id": *filter.SourceID})
 	}
-
 	if filter.AccountID != nil {
-		conditions = append(conditions, fmt.Sprintf("account_id = $%d", argIndex))
-		args = append(args, string(*filter.AccountID))
-		argIndex++
+		ds = ds.Where(goqu.Ex{"account_id": string(*filter.AccountID)})
 	}
-
 	if filter.TransferID != nil {
-		conditions = append(conditions, fmt.Sprintf("transfer_id = $%d", argIndex))
-		args = append(args, string(*filter.TransferID))
-		argIndex++
+		ds = ds.Where(goqu.Ex{"transfer_id": string(*filter.TransferID)})
 	}
-
 	if filter.MinAmount != nil {
-		conditions = append(conditions, fmt.Sprintf("amount >= $%d", argIndex))
-		args = append(args, *filter.MinAmount)
-		argIndex++
+		ds = ds.Where(goqu.I("amount").Gte(*filter.MinAmount))
 	}
-
 	if filter.MaxAmount != nil {
-		conditions = append(conditions, fmt.Sprintf("amount <= $%d", argIndex))
-		args = append(args, *filter.MaxAmount)
-		argIndex++
+		ds = ds.Where(goqu.I("amount").Lte(*filter.MaxAmount))
 	}
-
 	if filter.StartDate != nil {
-		conditions = append(conditions, fmt.Sprintf("transaction_date >= $%d", argIndex))
-		args = append(args, *filter.StartDate)
-		argIndex++
+		ds = ds.Where(goqu.I("transaction_date").Gte(*filter.StartDate))
 	}
-
 	if filter.EndDate != nil {
-		conditions = append(conditions, fmt.Sprintf("transaction_date <= $%d", argIndex))
-		args = append(args, *filter.EndDate)
-		argIndex++
+		ds = ds.Where(goqu.I("transaction_date").Lte(*filter.EndDate))
 	}
-
 	if filter.SearchQuery != nil && *filter.SearchQuery != "" {
-		conditions = append(conditions, fmt.Sprintf("description ILIKE $%d", argIndex))
-		args = append(args, "%"+*filter.SearchQuery+"%")
-		argIndex++
+		ds = ds.Where(goqu.I("description").ILike("%" + *filter.SearchQuery + "%"))
 	}
 
-	if cursorID != "" {
-		conditions = append(conditions, fmt.Sprintf("id < $%d", argIndex))
-		args = append(args, cursorID)
-		argIndex++
+	// Keyset Cursor decoding
+	cursor, _ := paging.Decode(filter.NextPageToken)
+
+	// Validate sort field
+	sortOrder := filter.Sort
+	if !finance.IsTransactionSortField(sortOrder.Field) {
+		sortOrder.Field = finance.DefaultTransactionSortField
+		sortOrder.Ascending = false // Fallback to DESC for dates
 	}
 
-	query := fmt.Sprintf(`SELECT * FROM finance.transaction WHERE %s ORDER BY effective_date DESC, transaction_date DESC, id DESC LIMIT $%d`, strings.Join(conditions, " AND "), argIndex)
-	args = append(args, filter.PageSize+1)
+	// Apply sorting and keyset paging
+	ds = paging.ApplyPagination(ds, paging.Options{
+		Sort:     sortOrder,
+		Cursor:   cursor,
+		PageSize: uint(filter.PageSize),
+	})
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("build sql query: %w", err)
+	}
 
 	var dbRows []transactionDB
 	if err := s.db.SelectContext(ctx, &dbRows, query, args...); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("select context: %w", err)
 	}
 
-	txns := make([]*finance.Transaction, 0, len(dbRows))
+	txns := make([]*finance.Transaction, len(dbRows))
 	for i := range dbRows {
-		var budgetIDPtr *finance.BudgetID
-		if dbRows[i].BudgetID.Valid {
-			bID := finance.BudgetID(dbRows[i].BudgetID.String)
-			budgetIDPtr = &bID
-		}
-		var periodIDPtr *finance.PeriodID
-		if dbRows[i].PeriodID.Valid {
-			pID := finance.PeriodID(dbRows[i].PeriodID.String)
-			periodIDPtr = &pID
-		}
-		var accountIDPtr *finance.AccountID
-		if dbRows[i].AccountID.Valid {
-			aID := finance.AccountID(dbRows[i].AccountID.String)
-			accountIDPtr = &aID
-		}
-		var transferIDPtr *finance.TransferID
-		if dbRows[i].TransferID.Valid {
-			tID := finance.TransferID(dbRows[i].TransferID.String)
-			transferIDPtr = &tID
-		}
-		var sourceTypePtr *string
-		if dbRows[i].SourceType.Valid {
-			sT := dbRows[i].SourceType.String
-			sourceTypePtr = &sT
-		}
-		var sourceIDPtr *string
-		if dbRows[i].SourceID.Valid {
-			sI := dbRows[i].SourceID.String
-			sourceIDPtr = &sI
-		}
-
-		txns = append(txns, &finance.Transaction{
-			ID:              finance.TransactionID(dbRows[i].ID),
-			SpaceID:         finance.SpaceID(dbRows[i].SpaceID),
-			Type:            finance.TransactionType(dbRows[i].Type),
-			BudgetID:        budgetIDPtr,
-			PeriodID:        periodIDPtr,
-			AccountID:       accountIDPtr,
-			TransferID:      transferIDPtr,
-			Amount:          dbRows[i].Amount,
-			Currency:        finance.Currency(dbRows[i].Currency),
-			AmountInBase:    dbRows[i].AmountInBase,
-			Description:     dbRows[i].Description,
-			TransactionDate: nullTimeToTime(dbRows[i].TransactionDate),
-			EffectiveDate:   nullTimeToTime(dbRows[i].EffectiveDate),
-			SourceType:      sourceTypePtr,
-			SourceID:        sourceIDPtr,
-			CreateTime:      nullTimeToTime(dbRows[i].CreateTime),
-			UpdateTime:      nullTimeToTime(dbRows[i].UpdateTime),
-		})
+		txns[i] = dbRows[i].toDomain()
 	}
 
 	page := paging.NewPage(txns, int(filter.PageSize), func(t *finance.Transaction) paging.Cursor {
 		return paging.Cursor{
-			SortValue: "",
+			SortValue: t.GetSortValue(sortOrder.Field),
 			ID:        string(t.ID),
 		}
 	})

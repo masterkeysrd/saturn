@@ -39,7 +39,7 @@ export function BudgetsView() {
   const [selectedBudgetId, setSelectedBudgetId] = useState("")
 
   const handleAddExpenseTrigger = (budget: Budget) => {
-    setSelectedBudgetId(budget.id)
+    setSelectedBudgetId(budget.id || "")
     setTxOpen(true)
   }
 

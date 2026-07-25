@@ -508,15 +508,11 @@ func (s *Service) UpdateExpense(ctx context.Context, txn *Transaction) (*Transac
 }
 
 // ListTransactions retrieves paginated transactions.
-func (s *Service) ListTransactions(ctx context.Context, spaceID SpaceID, filter *ListTransactionsFilter) ([]*Transaction, string, error) {
+func (s *Service) ListTransactions(ctx context.Context, spaceID SpaceID, filter *ListTransactionsFilter) (*paging.Page[*Transaction], error) {
 	if err := spaceID.Validate(); err != nil {
-		return nil, "", fmt.Errorf("validate space ID: %w", err)
+		return nil, fmt.Errorf("validate space ID: %w", err)
 	}
-	page, err := s.deps.TransactionStore.ListBySpace(ctx, spaceID, filter)
-	if err != nil {
-		return nil, "", err
-	}
-	return page.Items, page.NextPageToken, nil
+	return s.deps.TransactionStore.ListBySpace(ctx, spaceID, filter)
 }
 
 // GetSpentInsights computes aggregated outflow analytics and trends for a space.
@@ -1666,6 +1662,11 @@ func (s *Service) GetAccount(ctx context.Context, id AccountID) (*Account, error
 	return s.deps.AccountStore.GetByID(ctx, id)
 }
 
+// GetAccounts retrieves a list of accounts by their identifiers.
+func (s *Service) GetAccounts(ctx context.Context, ids []AccountID) ([]*Account, error) {
+	return s.deps.AccountStore.GetByIDs(ctx, ids)
+}
+
 // UpdateAccount updates account metadata and handles default flag adjustments.
 func (s *Service) UpdateAccount(ctx context.Context, a *Account) (*Account, error) {
 	existing, err := s.deps.AccountStore.GetByID(ctx, a.ID)
@@ -2410,4 +2411,9 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, req *App
 // GetBudget retrieves a budget by its unique identifier.
 func (s *Service) GetBudget(ctx context.Context, id BudgetID) (*Budget, error) {
 	return s.deps.BudgetStore.GetByID(ctx, id)
+}
+
+// GetBudgets retrieves a list of budgets by their identifiers.
+func (s *Service) GetBudgets(ctx context.Context, ids []BudgetID) ([]*Budget, error) {
+	return s.deps.BudgetStore.GetByIDs(ctx, ids)
 }

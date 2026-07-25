@@ -565,6 +565,12 @@ func (h *Handler) DeleteTransaction(ctx context.Context, req *financev1.DeleteTr
 }
 
 func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTransactionsRequest) (*financev1.ListTransactionsResponse, error) {
+	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	}
+	spaceID := finance.SpaceID(spaceIDStr)
+
 	var budgetID *finance.BudgetID
 	if req.GetBudgetId() != "" {
 		bID := finance.BudgetID(req.GetBudgetId())
@@ -572,13 +578,17 @@ func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTrans
 	}
 
 	var txnType *finance.TransactionType
-	if req.GetType() != financev1.TransactionType_TRANSACTION_TYPE_UNSPECIFIED {
+	if req.GetType() != financev1.Transaction_TYPE_UNSPECIFIED {
 		var t finance.TransactionType
 		switch req.GetType() {
-		case financev1.TransactionType_EXPENSE:
+		case financev1.Transaction_EXPENSE:
 			t = finance.TransactionTypeExpense
-		case financev1.TransactionType_INCOME:
+		case financev1.Transaction_INCOME:
 			t = finance.TransactionTypeIncome
+		case financev1.Transaction_TRANSFER_OUT:
+			t = finance.TransactionTypeTransferOut
+		case financev1.Transaction_TRANSFER_IN:
+			t = finance.TransactionTypeTransferIn
 		}
 		txnType = &t
 	}
@@ -589,7 +599,13 @@ func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTrans
 		accountID = &idVal
 	}
 
-	appReq := &financeapp.ListTransactionsRequest{
+	var searchQuery *string
+	if req.SearchQuery != nil {
+		val := req.GetSearchQuery()
+		searchQuery = &val
+	}
+
+	filter := finance.ListTransactionsFilter{
 		BudgetID:      budgetID,
 		Type:          txnType,
 		SourceType:    req.SourceType,
@@ -597,21 +613,28 @@ func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTrans
 		AccountID:     accountID,
 		PageSize:      req.GetPageSize(),
 		NextPageToken: req.GetPageToken(),
+		Sort:          sorting.Parse(req.GetSort()),
+		SearchQuery:   searchQuery,
 	}
 
-	txns, nextToken, err := h.Coordinator.ListTransactions(ctx, appReq)
+	view := financeaggregator.ViewBasic
+	if req.GetView() == financev1.Transaction_FULL {
+		view = financeaggregator.ViewFull
+	}
+
+	page, err := h.Aggregator.ListTransactions(ctx, spaceID, view, filter)
 	if err != nil {
 		return nil, h.mapError(err)
 	}
 
-	protoTxns := make([]*financev1.Transaction, 0, len(txns))
-	for _, t := range txns {
-		protoTxns = append(protoTxns, toProtoTransaction(t))
+	protoTxns := make([]*financev1.Transaction, 0, len(page.Items))
+	for _, at := range page.Items {
+		protoTxns = append(protoTxns, toProtoAggregatedTransaction(at))
 	}
 
 	return &financev1.ListTransactionsResponse{
 		Transactions:  protoTxns,
-		NextPageToken: nextToken,
+		NextPageToken: page.NextPageToken,
 	}, nil
 }
 
@@ -619,18 +642,18 @@ func toProtoTransaction(t *finance.Transaction) *financev1.Transaction {
 	if t == nil {
 		return nil
 	}
-	var protoType financev1.TransactionType
+	var protoType financev1.Transaction_Type
 	switch t.Type {
 	case finance.TransactionTypeExpense:
-		protoType = financev1.TransactionType_EXPENSE
+		protoType = financev1.Transaction_EXPENSE
 	case finance.TransactionTypeIncome:
-		protoType = financev1.TransactionType_INCOME
+		protoType = financev1.Transaction_INCOME
 	case finance.TransactionTypeTransferOut:
-		protoType = financev1.TransactionType_TRANSFER_OUT
+		protoType = financev1.Transaction_TRANSFER_OUT
 	case finance.TransactionTypeTransferIn:
-		protoType = financev1.TransactionType_TRANSFER_IN
+		protoType = financev1.Transaction_TRANSFER_IN
 	default:
-		protoType = financev1.TransactionType_TRANSACTION_TYPE_UNSPECIFIED
+		protoType = financev1.Transaction_TYPE_UNSPECIFIED
 	}
 
 	var budgetID, periodID, accountID, transferID string
@@ -674,6 +697,31 @@ func toProtoTransaction(t *finance.Transaction) *financev1.Transaction {
 		CreateTime:      timestamppb.New(t.CreateTime),
 		UpdateTime:      timestamppb.New(t.UpdateTime),
 	}
+}
+
+func toProtoAggregatedTransaction(at *financeaggregator.AggregatedTransaction) *financev1.Transaction {
+	if at == nil {
+		return nil
+	}
+	pb := toProtoTransaction(at.Transaction)
+
+	if at.Account != nil {
+		pb.Account = &financev1.Transaction_AccountInfo{
+			Id:    string(at.Account.ID),
+			Name:  at.Account.Name,
+			Color: at.Account.Color,
+			Type:  string(at.Account.Type),
+		}
+	}
+
+	if at.Budget != nil {
+		pb.Budget = &financev1.Transaction_BudgetInfo{
+			Id:   string(at.Budget.ID),
+			Name: at.Budget.Name,
+		}
+	}
+
+	return pb
 }
 
 func (h *Handler) ListTransactionEvents(ctx context.Context, req *financev1.ListTransactionEventsRequest) (*financev1.ListTransactionEventsResponse, error) {

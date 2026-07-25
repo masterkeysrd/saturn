@@ -79,9 +79,9 @@ export function BorrowingView() {
 
     try {
       await deleteBorrowingMutation.mutateAsync({
-        id: b.id,
+        id: b.id || "",
         req: {
-          id: b.id,
+          id: b.id || "",
         },
       })
       refetchBorrowings()
@@ -101,10 +101,10 @@ export function BorrowingView() {
   )
   const totalLent = activeBorrowings
     .filter((b) => b.direction === "BORROWING_DIRECTION_LENT")
-    .reduce((sum, b) => sum + parseFloat(b.remainingAmount), 0)
+    .reduce((sum, b) => sum + parseFloat(b.remainingAmount || "0"), 0)
   const totalBorrowed = activeBorrowings
     .filter((b) => b.direction === "BORROWING_DIRECTION_BORROWED")
-    .reduce((sum, b) => sum + parseFloat(b.remainingAmount), 0)
+    .reduce((sum, b) => sum + parseFloat(b.remainingAmount || "0"), 0)
 
   const handleOpenCreate = () => {
     setEditBorrowing(null)
@@ -271,7 +271,7 @@ export function BorrowingView() {
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {filteredBorrowings.map((b) => {
               const total = parseFloat(b.totalAmount)
-              const remaining = parseFloat(b.remainingAmount)
+              const remaining = parseFloat(b.remainingAmount || "0")
               const paid = total - remaining
               const percentage = Math.min(
                 100,

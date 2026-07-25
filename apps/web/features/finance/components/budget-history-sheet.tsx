@@ -47,7 +47,7 @@ export function BudgetHistorySheet({
   const { data: txnsData, isLoading: isTxnsLoading } = useListTransactionsQuery(
     {
       budgetId: budget?.id || "",
-      type: "TRANSACTION_TYPE_UNSPECIFIED",
+      type: "TYPE_UNSPECIFIED",
       pageSize: 100,
       pageToken: "",
       sourceType: "",

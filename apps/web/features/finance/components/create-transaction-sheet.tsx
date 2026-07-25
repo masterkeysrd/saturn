@@ -159,7 +159,7 @@ export function CreateTransactionSheet({
       )
     } else {
       const selected =
-        preselectedBudgetId || (budgets.length > 0 ? budgets[0].id : "")
+        preselectedBudgetId || (budgets.length > 0 ? budgets[0].id || "" : "")
       setBudgetId(selected)
       setDescription("")
       setAmount("")
@@ -237,9 +237,9 @@ export function CreateTransactionSheet({
 
     if (editTransaction) {
       await updateExpenseMutation.mutateAsync({
-        id: editTransaction.id,
+        id: editTransaction.id || "",
         req: {
-          id: editTransaction.id,
+          id: editTransaction.id || "",
           expense: {
             budgetId,
             amount: toCentsString(amount),

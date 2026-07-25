@@ -33,7 +33,7 @@ type FinanceService interface {
 	CreateExpense(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error)
 	UpdateExpense(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error)
 	DeleteTransaction(ctx context.Context, id finance.TransactionID) error
-	ListTransactions(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListTransactionsFilter) ([]*finance.Transaction, string, error)
+	ListTransactions(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListTransactionsFilter) (*paging.Page[*finance.Transaction], error)
 	ListTransactionEvents(ctx context.Context, spaceID finance.SpaceID, txnID finance.TransactionID) ([]*finance.TransactionEvent, error)
 	GetSpentInsights(ctx context.Context, req *finance.GetSpentInsightsRequest) (*finance.SpentInsights, error)
 

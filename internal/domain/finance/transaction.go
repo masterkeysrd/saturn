@@ -135,3 +135,29 @@ func (t *Transaction) Validate() error {
 	}
 	return nil
 }
+
+// DefaultTransactionSortField represents the fallback sorting column name for transactions.
+const DefaultTransactionSortField = "transaction_date"
+
+// TransactionSortFields registry maps sortable transaction field names to their cursor string extraction logic.
+var TransactionSortFields = map[string]func(*Transaction) string{
+	"transaction_date": func(t *Transaction) string { return t.TransactionDate.Format(time.RFC3339Nano) },
+	"effective_date":   func(t *Transaction) string { return t.EffectiveDate.Format(time.RFC3339Nano) },
+	"amount":           func(t *Transaction) string { return fmt.Sprintf("%018d", t.Amount) },
+	"description":      func(t *Transaction) string { return t.Description },
+	"create_time":      func(t *Transaction) string { return t.CreateTime.Format(time.RFC3339Nano) },
+}
+
+// IsTransactionSortField validates if a sort column name is allowed.
+func IsTransactionSortField(field string) bool {
+	_, ok := TransactionSortFields[field]
+	return ok
+}
+
+// GetSortValue extracts and formats the string representation of a field for cursor-based lexical sorting.
+func (t *Transaction) GetSortValue(field string) string {
+	if fn, ok := TransactionSortFields[field]; ok {
+		return fn(t)
+	}
+	return t.GetSortValue(DefaultTransactionSortField)
+}

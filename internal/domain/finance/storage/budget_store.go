@@ -177,3 +177,32 @@ func (s *BudgetStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, 
 
 	return page, nil
 }
+
+func (s *BudgetStore) GetByIDs(ctx context.Context, ids []finance.BudgetID) ([]*finance.Budget, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	idStrings := make([]string, len(ids))
+	for i, id := range ids {
+		idStrings[i] = string(id)
+	}
+
+	ds := pgDialect.From(goqu.S("finance").Table("budget")).
+		Select("*").
+		Where(goqu.Ex{"id": idStrings})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, err
+	}
+
+	var rows []budgetDB
+	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
+		return nil, err
+	}
+
+	budgets := make([]*finance.Budget, len(rows))
+	for i := range rows {
+		budgets[i] = rows[i].toDomain()
+	}
+	return budgets, nil
+}

@@ -17,16 +17,6 @@ type CreateExpenseRequest struct {
 	AccountID       *finance.AccountID
 }
 
-type ListTransactionsRequest struct {
-	BudgetID      *finance.BudgetID
-	Type          *finance.TransactionType
-	SourceType    *string
-	SourceID      *string
-	AccountID     *finance.AccountID
-	PageSize      int32
-	NextPageToken string
-}
-
 func (c *Coordinator) CreateExpense(ctx context.Context, req *CreateExpenseRequest) (*finance.Transaction, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
@@ -63,25 +53,6 @@ func (c *Coordinator) DeleteTransaction(ctx context.Context, id finance.Transact
 		return err
 	}
 	return c.financeService.DeleteTransaction(ctx, id)
-}
-
-func (c *Coordinator) ListTransactions(ctx context.Context, req *ListTransactionsRequest) ([]*finance.Transaction, string, error) {
-	rCtx, err := c.resolveContext(ctx)
-	if err != nil {
-		return nil, "", err
-	}
-
-	filter := &finance.ListTransactionsFilter{
-		BudgetID:      req.BudgetID,
-		Type:          req.Type,
-		SourceType:    req.SourceType,
-		SourceID:      req.SourceID,
-		AccountID:     req.AccountID,
-		PageSize:      req.PageSize,
-		NextPageToken: req.NextPageToken,
-	}
-
-	return c.financeService.ListTransactions(ctx, rCtx.SpaceID, filter)
 }
 
 type UpdateExpenseRequest struct {

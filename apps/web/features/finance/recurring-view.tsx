@@ -161,7 +161,7 @@ export function RecurringView() {
   } = useListTransactionsQuery(
     {
       budgetId: "",
-      type: "TRANSACTION_TYPE_UNSPECIFIED",
+      type: "TYPE_UNSPECIFIED",
       pageSize: HISTORY_PAGE_SIZE,
       pageToken: "",
       sourceType: "recurrent_expense",
@@ -471,7 +471,7 @@ export function RecurringView() {
                                       </DropdownMenuItem>
                                       <DropdownMenuItem
                                         onClick={() =>
-                                          handleDeleteExpense(exp.id)
+                                          handleDeleteExpense(exp.id || "")
                                         }
                                         className="flex cursor-pointer items-center gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
                                       >

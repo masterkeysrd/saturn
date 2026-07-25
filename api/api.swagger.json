@@ -629,7 +629,7 @@
     },
     "/v1/finance/accounts": {
       "get": {
-        "summary": "ListAccounts lists all accounts in a workspace.",
+        "summary": "Lists payment accounts in the workspace, supporting optional currency conversion hydration.",
         "operationId": "Finance_ListAccounts",
         "responses": {
           "200": {
@@ -648,6 +648,7 @@
         "parameters": [
           {
             "name": "view",
+            "description": "Optional. Account view details level.\n\n - BASIC: Returns account details without base currency conversion calculations.\n - FULL: Hydrates complete structure including exchange rate conversion metrics.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -658,18 +659,21 @@
           },
           {
             "name": "activeOnly",
+            "description": "Optional. Filter only active accounts.",
             "in": "query",
             "required": false,
             "type": "boolean"
           },
           {
             "name": "searchQuery",
+            "description": "Optional. Search text filter matching account name or notes.",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "pageSize",
+            "description": "Optional. Maximum number of items to return in a single page.",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -677,12 +681,14 @@
           },
           {
             "name": "pageToken",
+            "description": "Optional. Keyset page token returned by a previous call.",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "sort",
+            "description": "Optional. Sort order string specifying column and optional ordering suffix.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -693,7 +699,7 @@
         ]
       },
       "post": {
-        "summary": "CreateAccount registers a new payment/liquidity account.",
+        "summary": "Registers a new payment or liquidity account (such as cash, bank, or credit card).",
         "operationId": "Finance_CreateAccount",
         "responses": {
           "200": {
@@ -712,6 +718,7 @@
         "parameters": [
           {
             "name": "account",
+            "description": "Required. Account configuration parameters.",
             "in": "body",
             "required": true,
             "schema": {
@@ -726,7 +733,7 @@
     },
     "/v1/finance/accounts/{id}": {
       "get": {
-        "summary": "GetAccount retrieves details of an account.",
+        "summary": "Retrieves details of a specific payment account.",
         "operationId": "Finance_GetAccount",
         "responses": {
           "200": {
@@ -745,12 +752,14 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. Target account identifier.\nValues are of the form `acc_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "view",
+            "description": "Optional. Account view details level.\n\n - BASIC: Returns account details without base currency conversion calculations.\n - FULL: Hydrates complete structure including exchange rate conversion metrics.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -765,7 +774,7 @@
         ]
       },
       "delete": {
-        "summary": "DeleteAccount deletes an account.",
+        "summary": "Deletes a payment account. Default accounts cannot be deleted until another default is nominated.",
         "operationId": "Finance_DeleteAccount",
         "responses": {
           "200": {
@@ -785,6 +794,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. Target account identifier to delete.\nValues are of the form `acc_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -795,7 +805,7 @@
         ]
       },
       "put": {
-        "summary": "UpdateAccount updates details of an account.",
+        "summary": "Updates details of a payment account (such as notes, active flags, or default overrides).",
         "operationId": "Finance_UpdateAccount",
         "responses": {
           "200": {
@@ -814,12 +824,14 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. Target account identifier to update.\nValues are of the form `acc_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "account",
+            "description": "Required. Updated account parameters.",
             "in": "body",
             "required": true,
             "schema": {
@@ -834,7 +846,7 @@
     },
     "/v1/finance/borrowings": {
       "get": {
-        "summary": "ListBorrowings returns borrowings for a space, optionally filtered.",
+        "summary": "Lists active or paid-off personal debt agreements.",
         "operationId": "Finance_ListBorrowings",
         "responses": {
           "200": {
@@ -853,6 +865,7 @@
         "parameters": [
           {
             "name": "status",
+            "description": "Optional. Filter by debt status.\n\n - BORROWING_STATUS_ACTIVE: Active borrowing with pending outstanding balances.\n - BORROWING_STATUS_PAID_OFF: Paid-off borrowing with zero remaining balance.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -863,6 +876,7 @@
           },
           {
             "name": "direction",
+            "description": "Optional. Filter by debt flow direction.\n\n - BORROWING_DIRECTION_BORROWED: Funds borrowed from an external entity (payable liability).\n - BORROWING_DIRECTION_LENT: Funds lent to an external entity (receivable asset).",
             "in": "query",
             "required": false,
             "type": "string",
@@ -873,6 +887,7 @@
           },
           {
             "name": "pageSize",
+            "description": "Optional. Maximum number of items to return.",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -880,6 +895,7 @@
           },
           {
             "name": "pageToken",
+            "description": "Optional. Keyset page token.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -890,7 +906,7 @@
         ]
       },
       "post": {
-        "summary": "CreateBorrowing logs a new personal lent/borrowed debt agreement.",
+        "summary": "Logs a new personal debt agreement (lent or borrowed money).",
         "operationId": "Finance_CreateBorrowing",
         "responses": {
           "200": {
@@ -909,6 +925,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "The request for\n[CreateBorrowing][saturn.finance.v1.Finance.CreateBorrowing].",
             "in": "body",
             "required": true,
             "schema": {
@@ -923,7 +940,7 @@
     },
     "/v1/finance/borrowings/{borrowingId}/repayments": {
       "get": {
-        "summary": "ListBorrowingRepayments returns all repayments for a specific borrowing.",
+        "summary": "Lists all repayment installments registered under a debt agreement.",
         "operationId": "Finance_ListBorrowingRepayments",
         "responses": {
           "200": {
@@ -942,6 +959,7 @@
         "parameters": [
           {
             "name": "borrowingId",
+            "description": "Required. Target parent borrowing identifier.\nValues are of the form `bor_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -952,7 +970,7 @@
         ]
       },
       "post": {
-        "summary": "CreateBorrowingRepayment records an installment payment towards a borrowing.",
+        "summary": "Logs a repayment installment reducing the remaining amount of an active debt agreement.",
         "operationId": "Finance_CreateBorrowingRepayment",
         "responses": {
           "200": {
@@ -971,6 +989,7 @@
         "parameters": [
           {
             "name": "borrowingId",
+            "description": "Required. Target parent borrowing identifier.\nValues are of the form `bor_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -991,7 +1010,7 @@
     },
     "/v1/finance/borrowings/{borrowingId}/repayments/{id}": {
       "delete": {
-        "summary": "DeleteBorrowingRepayment deletes a specific installment and restores the balance.",
+        "summary": "Deletes a borrowing repayment, restoring the debt balance of the borrowing agreement.",
         "operationId": "Finance_DeleteBorrowingRepayment",
         "responses": {
           "200": {
@@ -1011,12 +1030,14 @@
         "parameters": [
           {
             "name": "borrowingId",
+            "description": "Required. Target parent borrowing identifier.\nValues are of the form `bor_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "id",
+            "description": "Required. Unique identifier of the installment repayment to delete.\nValues are of the form `rep_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1029,7 +1050,7 @@
     },
     "/v1/finance/borrowings/{id}": {
       "get": {
-        "summary": "GetBorrowing retrieves a single borrowing record.",
+        "summary": "Retrieves detail metrics of a borrowing record.",
         "operationId": "Finance_GetBorrowing",
         "responses": {
           "200": {
@@ -1048,6 +1069,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. ID of the borrowing record to retrieve.\nValues are of the form `bor_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1058,7 +1080,7 @@
         ]
       },
       "delete": {
-        "summary": "DeleteBorrowing removes a borrowing and all its repayments.",
+        "summary": "Deletes a borrowing record and all corresponding repayments.",
         "operationId": "Finance_DeleteBorrowing",
         "responses": {
           "200": {
@@ -1078,6 +1100,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. Unique identifier of the borrowing record to delete.\nValues are of the form `bor_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1088,7 +1111,7 @@
         ]
       },
       "put": {
-        "summary": "UpdateBorrowing updates basic details of a borrowing record.",
+        "summary": "Updates properties of a borrowing record (such as counterparty contact details).",
         "operationId": "Finance_UpdateBorrowing",
         "responses": {
           "200": {
@@ -1107,6 +1130,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. Unique identifier of the borrowing record to update.\nValues are of the form `bor_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1127,7 +1151,7 @@
     },
     "/v1/finance/budgets": {
       "get": {
-        "summary": "ListBudgets lists all budget templates in a workspace.",
+        "summary": "Lists budget templates inside the space, supporting paginated, sorted, and text-based filter views.",
         "operationId": "Finance_ListBudgets",
         "responses": {
           "200": {
@@ -1146,6 +1170,7 @@
         "parameters": [
           {
             "name": "pageSize",
+            "description": "Optional. Maximum number of items to return in a single page.",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -1153,30 +1178,35 @@
           },
           {
             "name": "pageToken",
+            "description": "Optional. Keyset page token returned by a previous call.",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "activeOnly",
+            "description": "Optional. Filter only active budgets.",
             "in": "query",
             "required": false,
             "type": "boolean"
           },
           {
             "name": "searchQuery",
+            "description": "Optional. Text search query matching budget names.",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "sort",
+            "description": "Optional. Sorting rules specifying field name and optional ordering suffix.",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "view",
+            "description": "Optional. Scoped budget representation view type.\n\n - BASIC: Returns basic configuration details without period calculations.\n - FULL: Hydrates complete structure including active period spent statistics.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -1187,6 +1217,7 @@
           },
           {
             "name": "targetDate",
+            "description": "Optional. Specific calculation target date for periods. Defaults to current time if omitted.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -1198,7 +1229,7 @@
         ]
       },
       "post": {
-        "summary": "CreateBudget creates a new budget template in a workspace.",
+        "summary": "Creates a budget category template. Budgets track spent thresholds over repeating intervals.",
         "operationId": "Finance_CreateBudget",
         "responses": {
           "200": {
@@ -1217,7 +1248,7 @@
         "parameters": [
           {
             "name": "body",
-            "description": "CreateBudgetRequest contains fields to create budget.",
+            "description": "The request for\n[CreateBudget][saturn.finance.v1.Finance.CreateBudget].",
             "in": "body",
             "required": true,
             "schema": {
@@ -1232,7 +1263,7 @@
     },
     "/v1/finance/budgets/{budgetId}/period": {
       "get": {
-        "summary": "GetBudgetPeriod retrieves or generates the budget period for a specific date.",
+        "summary": "Retrieves or automatically spawns the active budget period containing current spend limits for a target date.",
         "operationId": "Finance_GetBudgetPeriod",
         "responses": {
           "200": {
@@ -1251,13 +1282,14 @@
         "parameters": [
           {
             "name": "budgetId",
+            "description": "Required. Target parent budget ID.\nValues are of the form `bud_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "date",
-            "description": "Timestamp for calculation, defaults to current time if omitted",
+            "description": "Optional. Target calculation date, defaults to current time if omitted.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -1271,7 +1303,7 @@
     },
     "/v1/finance/budgets/{id}": {
       "delete": {
-        "summary": "DeleteBudget deletes a budget template.",
+        "summary": "Deletes a budget template. Only inactive budgets or budgets without active transactions can be deleted.",
         "operationId": "Finance_DeleteBudget",
         "responses": {
           "200": {
@@ -1291,6 +1323,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. ID of the budget to delete.\nValues are of the form `bud_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1301,7 +1334,7 @@
         ]
       },
       "patch": {
-        "summary": "UpdateBudget updates a budget template.",
+        "summary": "Updates an existing budget template's properties, such as visual parameters or limit propagation policies.",
         "operationId": "Finance_UpdateBudget",
         "responses": {
           "200": {
@@ -1320,6 +1353,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. ID of the budget to update.\nValues are of the form `bud_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1340,7 +1374,7 @@
     },
     "/v1/finance/currencies": {
       "get": {
-        "summary": "ListCurrencies returns the list of supported currencies.",
+        "summary": "Retrieves a static list of supported currencies.",
         "operationId": "Finance_ListCurrencies",
         "responses": {
           "200": {
@@ -1363,7 +1397,7 @@
     },
     "/v1/finance/expenses": {
       "post": {
-        "summary": "CreateExpense logs a new expense transaction.",
+        "summary": "Logs a new expense transaction, updating target budget periods and reducing account balances.",
         "operationId": "Finance_CreateExpense",
         "responses": {
           "200": {
@@ -1382,6 +1416,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "The request for\n[CreateExpense][saturn.finance.v1.Finance.CreateExpense].",
             "in": "body",
             "required": true,
             "schema": {
@@ -1396,7 +1431,7 @@
     },
     "/v1/finance/expenses/{id}": {
       "put": {
-        "summary": "UpdateExpense modifies an existing expense.",
+        "summary": "Modifies properties of a logged expense transaction. Re-calculates budget and currency conversions.",
         "operationId": "Finance_UpdateExpense",
         "responses": {
           "200": {
@@ -1415,6 +1450,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. Unique identifier of the transaction to update.\nValues are of the form `txn_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1435,7 +1471,7 @@
     },
     "/v1/finance/inbox-items": {
       "get": {
-        "summary": "ListInboxItems lists all inbox items staging in the queue for a space.",
+        "summary": "Lists staging inbox items queue awaiting manual approval or transaction matching.",
         "operationId": "Finance_ListInboxItems",
         "responses": {
           "200": {
@@ -1458,7 +1494,7 @@
     },
     "/v1/finance/inbox-items/{id}": {
       "delete": {
-        "summary": "DiscardInboxItem discards an inbox item from the staging queue.",
+        "summary": "Discards an ingested inbox item from the staging queue, preventing classification.",
         "operationId": "Finance_DiscardInboxItem",
         "responses": {
           "200": {
@@ -1478,6 +1514,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. Target staged inbox item identifier to discard.\nValues are of the form `inb_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1490,7 +1527,7 @@
     },
     "/v1/finance/inbox-items/{id}:approve": {
       "post": {
-        "summary": "ApproveInboxItem approves and commits a pending inbox item to the main transaction ledger.",
+        "summary": "Approves and promotes an ingested inbox item into a ledger transaction entry.",
         "operationId": "Finance_ApproveInboxItem",
         "responses": {
           "200": {
@@ -1509,6 +1546,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. Target staged inbox item identifier to approve.\nValues are of the form `inb_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1529,7 +1567,7 @@
     },
     "/v1/finance/insights": {
       "get": {
-        "summary": "GetInsights aggregates workspace spent insights and statistics.",
+        "summary": "Aggregates space spend patterns, limits, remaining budgets, burn rates, and budget category distributions.",
         "operationId": "Finance_GetInsights",
         "responses": {
           "200": {
@@ -1548,8 +1586,9 @@
         "parameters": [
           {
             "name": "granularity",
+            "description": "Required. Statistical grouping granularity.\n\n - DAILY: Group metrics by calendar day.\n - WEEKLY: Group metrics by calendar week.\n - MONTHLY: Group metrics by calendar month.\n - YEARLY: Group metrics by calendar year.",
             "in": "query",
-            "required": false,
+            "required": true,
             "type": "string",
             "enum": [
               "DAILY",
@@ -1560,15 +1599,17 @@
           },
           {
             "name": "startDate",
+            "description": "Required. Target start date window.",
             "in": "query",
-            "required": false,
+            "required": true,
             "type": "string",
             "format": "date-time"
           },
           {
             "name": "endDate",
+            "description": "Required. Target end date window.",
             "in": "query",
-            "required": false,
+            "required": true,
             "type": "string",
             "format": "date-time"
           }
@@ -1580,7 +1621,7 @@
     },
     "/v1/finance/rates": {
       "get": {
-        "summary": "ListExchangeRates lists all exchange rate rules in a workspace.",
+        "summary": "Lists historical exchange rate conversion coefficients.",
         "operationId": "Finance_ListExchangeRates",
         "responses": {
           "200": {
@@ -1599,6 +1640,7 @@
         "parameters": [
           {
             "name": "pageSize",
+            "description": "Optional. Maximum number of items to return.",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -1606,6 +1648,7 @@
           },
           {
             "name": "pageToken",
+            "description": "Optional. Keyset page token.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1616,7 +1659,7 @@
         ]
       },
       "delete": {
-        "summary": "DeleteExchangeRate deletes a specific daily rate conversion rule.",
+        "summary": "Deletes a registered daily exchange rate conversion rule.",
         "operationId": "Finance_DeleteExchangeRate",
         "responses": {
           "200": {
@@ -1636,18 +1679,21 @@
         "parameters": [
           {
             "name": "fromCurrency",
+            "description": "Required. Source currency code.",
             "in": "query",
             "required": true,
             "type": "string"
           },
           {
             "name": "toCurrency",
+            "description": "Required. Target currency code.",
             "in": "query",
             "required": true,
             "type": "string"
           },
           {
             "name": "rateDate",
+            "description": "Required. Target date.",
             "in": "query",
             "required": true,
             "type": "string",
@@ -1659,7 +1705,7 @@
         ]
       },
       "post": {
-        "summary": "CreateExchangeRate registers a new daily rate conversion rule.",
+        "summary": "Registers a daily exchange rate conversion coefficient between two currencies.",
         "operationId": "Finance_CreateExchangeRate",
         "responses": {
           "200": {
@@ -1678,7 +1724,7 @@
         "parameters": [
           {
             "name": "body",
-            "description": "CreateExchangeRateRequest registers a daily rate.",
+            "description": "The request for\n[CreateExchangeRate][saturn.finance.v1.Finance.CreateExchangeRate].",
             "in": "body",
             "required": true,
             "schema": {
@@ -1693,7 +1739,7 @@
     },
     "/v1/finance/recurring-expenses": {
       "get": {
-        "summary": "ListRecurringExpenses lists recurring expenses for a workspace.",
+        "summary": "Lists all configured recurring templates in the space.",
         "operationId": "Finance_ListRecurringExpenses",
         "responses": {
           "200": {
@@ -1712,12 +1758,14 @@
         "parameters": [
           {
             "name": "status",
+            "description": "Optional. Filter templates by active status.",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "pageSize",
+            "description": "Optional. Maximum number of items to return.",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -1725,6 +1773,7 @@
           },
           {
             "name": "pageToken",
+            "description": "Optional. Keyset page token.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1735,7 +1784,7 @@
         ]
       },
       "post": {
-        "summary": "CreateRecurringExpense configures a new recurring expense rule.",
+        "summary": "Registers a recurring expense template, generating repeating payment obligations periodically.",
         "operationId": "Finance_CreateRecurringExpense",
         "responses": {
           "200": {
@@ -1754,6 +1803,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "The request for\n[CreateRecurringExpense][saturn.finance.v1.Finance.CreateRecurringExpense].",
             "in": "body",
             "required": true,
             "schema": {
@@ -1768,7 +1818,7 @@
     },
     "/v1/finance/recurring-expenses/{id}": {
       "delete": {
-        "summary": "DeleteRecurringExpense deletes a recurring expense rule.",
+        "summary": "Deletes a recurring template, preventing any future payment instances from spawning.",
         "operationId": "Finance_DeleteRecurringExpense",
         "responses": {
           "200": {
@@ -1788,6 +1838,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. Unique identifier of the template to delete.\nValues are of the form `rec_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1798,7 +1849,7 @@
         ]
       },
       "put": {
-        "summary": "UpdateRecurringExpense modifies an existing recurring expense rule.",
+        "summary": "Updates an active recurring expense template.",
         "operationId": "Finance_UpdateRecurringExpense",
         "responses": {
           "200": {
@@ -1817,6 +1868,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. Unique identifier of the template to update.\nValues are of the form `rec_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1837,7 +1889,7 @@
     },
     "/v1/finance/scheduled-payments": {
       "get": {
-        "summary": "ListScheduledPayments lists scheduled payments for a workspace.",
+        "summary": "Lists scheduled payment instances spawned by recurring templates.",
         "operationId": "Finance_ListScheduledPayments",
         "responses": {
           "200": {
@@ -1856,12 +1908,14 @@
         "parameters": [
           {
             "name": "status",
+            "description": "Optional. Filter instances by payment status.",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "startDate",
+            "description": "Optional. Target start date of execution window.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -1869,6 +1923,7 @@
           },
           {
             "name": "endDate",
+            "description": "Optional. Target end date of execution window.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -1876,6 +1931,7 @@
           },
           {
             "name": "pageSize",
+            "description": "Optional. Maximum number of items to return.",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -1883,6 +1939,7 @@
           },
           {
             "name": "pageToken",
+            "description": "Optional. Keyset page token.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1895,7 +1952,7 @@
     },
     "/v1/finance/scheduled-payments/{paymentId}/confirm": {
       "post": {
-        "summary": "ConfirmScheduledPayment clears a scheduled payment by promoting it to a permanent transaction.",
+        "summary": "Clears a scheduled payment instance, converting it into a permanent, reconciled ledger transaction.",
         "operationId": "Finance_ConfirmScheduledPayment",
         "responses": {
           "200": {
@@ -1914,6 +1971,7 @@
         "parameters": [
           {
             "name": "paymentId",
+            "description": "Required. Unique identifier of the scheduled payment to confirm.\nValues are of the form `sch_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1934,7 +1992,7 @@
     },
     "/v1/finance/settings": {
       "get": {
-        "summary": "GetFinanceSettings retrieves the finance settings for a workspace.",
+        "summary": "Retrieves the current finance settings, including the configured base currency.",
         "operationId": "Finance_GetFinanceSettings",
         "responses": {
           "200": {
@@ -1955,7 +2013,7 @@
         ]
       },
       "post": {
-        "summary": "ConfigureFinance sets up the default base currency for a workspace.",
+        "summary": "Configures the base currency of a space. The base currency acts as the unified\ncurrency in which financial insights and multi-currency conversions are performed.",
         "operationId": "Finance_ConfigureFinance",
         "responses": {
           "200": {
@@ -1974,7 +2032,7 @@
         "parameters": [
           {
             "name": "body",
-            "description": "ConfigureFinanceRequest contains fields for initial setup.",
+            "description": "The request for\n[ConfigureFinance][saturn.finance.v1.Finance.ConfigureFinance].",
             "in": "body",
             "required": true,
             "schema": {
@@ -1989,7 +2047,7 @@
     },
     "/v1/finance/transactions": {
       "get": {
-        "summary": "ListTransactions lists paginated transactions for a workspace.",
+        "summary": "Lists paginated transaction records matching specific budget, account, source, or text queries.",
         "operationId": "Finance_ListTransactions",
         "responses": {
           "200": {
@@ -2007,13 +2065,26 @@
         },
         "parameters": [
           {
+            "name": "view",
+            "description": "Optional. Scoped budget representation view type.\n\n - BASIC: Returns transaction details without related account or budget info.\n - FULL: Hydrates complete structure including account and budget details.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "BASIC",
+              "FULL"
+            ]
+          },
+          {
             "name": "budgetId",
+            "description": "Optional. Target parent budget ID filter.\nValues are of the form `bud_[a-zA-Z0-9]+`.",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "type",
+            "description": "Optional. Target transaction flow type filter.\n\n - EXPENSE: Expense transaction, subtracting from the account balance.\n - INCOME: Income transaction, adding to the account balance.\n - TRANSFER_OUT: Transfer out transaction, moving funds to another account.\n - TRANSFER_IN: Transfer in transaction, receiving funds from another account.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -2025,7 +2096,36 @@
             ]
           },
           {
+            "name": "sourceType",
+            "description": "Optional. Integration source type.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sourceId",
+            "description": "Optional. Integration source record ID.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "accountId",
+            "description": "Optional. Target account identifier.\nValues are of the form `acc_[a-zA-Z0-9]+`.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "searchQuery",
+            "description": "Optional. Text search query matching transaction description notes.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "pageSize",
+            "description": "Optional. Maximum number of items to return.",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -2033,24 +2133,14 @@
           },
           {
             "name": "pageToken",
+            "description": "Optional. Keyset page token.",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
-            "name": "sourceType",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "sourceId",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "accountId",
+            "name": "sort",
+            "description": "Optional. Sort order string.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -2063,7 +2153,7 @@
     },
     "/v1/finance/transactions/{id}": {
       "delete": {
-        "summary": "DeleteTransaction deletes any type of transaction.",
+        "summary": "Deletes a transaction, reversing all changes to budget period consumption and account balances.",
         "operationId": "Finance_DeleteTransaction",
         "responses": {
           "200": {
@@ -2083,6 +2173,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. Unique identifier of the transaction to delete.\nValues are of the form `txn_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -2095,7 +2186,7 @@
     },
     "/v1/finance/transactions/{txnId}/events": {
       "get": {
-        "summary": "ListTransactionEvents lists the historical lifecycle events of a transaction.",
+        "summary": "Lists historical lifecycle events tracking mutations and updates applied to a transaction.",
         "operationId": "Finance_ListTransactionEvents",
         "responses": {
           "200": {
@@ -2114,6 +2205,7 @@
         "parameters": [
           {
             "name": "txnId",
+            "description": "Required. Target transaction ID.\nValues are of the form `txn_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -2126,7 +2218,7 @@
     },
     "/v1/finance/transfers": {
       "get": {
-        "summary": "ListTransfers lists all transfers in a workspace.",
+        "summary": "Lists all transfer transactions registered in the workspace.",
         "operationId": "Finance_ListTransfers",
         "responses": {
           "200": {
@@ -2145,6 +2237,7 @@
         "parameters": [
           {
             "name": "pageSize",
+            "description": "Optional. Maximum number of items to return.",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -2152,6 +2245,7 @@
           },
           {
             "name": "pageToken",
+            "description": "Optional. Keyset page token.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -2162,7 +2256,7 @@
         ]
       },
       "post": {
-        "summary": "CreateTransfer logs a new transfer between accounts.",
+        "summary": "Logs a transfer transaction, shifting funds between a source and destination account.",
         "operationId": "Finance_CreateTransfer",
         "responses": {
           "200": {
@@ -2181,6 +2275,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "The request for\n[CreateTransfer][saturn.finance.v1.Finance.CreateTransfer].",
             "in": "body",
             "required": true,
             "schema": {
@@ -3525,13 +3620,18 @@
       "properties": {
         "balance": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Output only. Converted balance in base currency cents.",
+          "readOnly": true
         },
         "rate": {
           "type": "number",
-          "format": "double"
+          "format": "double",
+          "description": "Output only. Exchange rate multiplier used.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Conversion contains hydrated conversion metrics relative to the workspace base currency."
     },
     "AdminIdentityApproveUserBody": {
       "type": "object"
@@ -3609,30 +3709,44 @@
       "properties": {
         "startDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Start date boundary of the current period.",
+          "readOnly": true
         },
         "endDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. End date boundary of the current period.",
+          "readOnly": true
         },
         "spentAmount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Output only. Amount spent in local currency cents within this period.",
+          "readOnly": true
         },
         "spentInBase": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Output only. Amount spent converted to base currency cents.",
+          "readOnly": true
         },
         "exchangeRateToBase": {
           "type": "number",
-          "format": "double"
+          "format": "double",
+          "description": "Output only. Exchange rate to base currency used during conversion.",
+          "readOnly": true
         },
         "baseCurrency": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Base currency identifier.",
+          "readOnly": true
         },
         "limitInBase": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Output only. Limit in base currency cents.",
+          "readOnly": true
         }
       },
       "description": "Represents the computed details of the active/current period."
@@ -3641,63 +3755,81 @@
       "type": "object",
       "properties": {
         "accountId": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Target account identifier.\nValues are of the form `acc_[a-zA-Z0-9]+`."
         },
         "budgetId": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Target budget category identifier.\nValues are of the form `bud_[a-zA-Z0-9]+`."
         },
         "scheduledPaymentId": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Associated scheduled payment identifier to clear.\nValues are of the form `sch_[a-zA-Z0-9]+`."
         },
         "amount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Optional. Overriding absolute amount in local currency cents."
         },
         "description": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Overriding narration notes."
         },
         "docType": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Overriding document classification category."
         },
         "destinationAccountId": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Target transfer destination account identifier.\nValues are of the form `acc_[a-zA-Z0-9]+`."
         },
         "transactionType": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Overriding transaction flow type."
         },
         "transactionId": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Associated transaction identifier to link or merge.\nValues are of the form `txn_[a-zA-Z0-9]+`."
         },
         "overwriteLinkedTransaction": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Optional. Force overwrite of properties if the linked transaction already exists."
         },
         "transferLeg": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Transfer direction flow leg."
         },
         "currency": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Currency code."
         }
-      }
+      },
+      "description": "The request for\n[ApproveInboxItem][saturn.finance.v1.Finance.ApproveInboxItem]."
     },
     "FinanceConfirmScheduledPaymentBody": {
       "type": "object",
       "properties": {
         "transactionDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Required. Time transaction occurred."
         },
         "effectiveDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Required. Execution/posting date."
         },
         "actualAmount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Required. Actual amount cleared in local currency cents."
         },
         "description": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Narration notes."
         }
       },
+      "description": "The request for\n[ConfirmScheduledPayment][saturn.finance.v1.Finance.ConfirmScheduledPayment].",
       "required": [
         "transactionDate",
         "effectiveDate",
@@ -3708,9 +3840,11 @@
       "type": "object",
       "properties": {
         "repayment": {
-          "$ref": "#/definitions/v1BorrowingRepaymentInput"
+          "$ref": "#/definitions/v1BorrowingRepaymentInput",
+          "description": "Required. Updated repayment parameters."
         }
       },
+      "description": "The request for\n[CreateBorrowingRepayment][saturn.finance.v1.Finance.CreateBorrowingRepayment].",
       "required": [
         "repayment"
       ]
@@ -3719,9 +3853,11 @@
       "type": "object",
       "properties": {
         "borrowing": {
-          "$ref": "#/definitions/v1BorrowingInput"
+          "$ref": "#/definitions/v1BorrowingInput",
+          "description": "Required. Updated borrowing parameters."
         }
       },
+      "description": "The request for\n[UpdateBorrowing][saturn.finance.v1.Finance.UpdateBorrowing].",
       "required": [
         "borrowing"
       ]
@@ -3730,43 +3866,54 @@
       "type": "object",
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. User-friendly name."
         },
         "limitAmount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Optional. Limit amount in cents."
         },
         "currency": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Currency code."
         },
         "interval": {
-          "$ref": "#/definitions/v1RecurrenceInterval"
+          "$ref": "#/definitions/v1RecurrenceInterval",
+          "description": "Optional. Recurrence interval."
         },
         "isActive": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Optional. Indicates if the budget is active."
         },
         "propagation": {
-          "$ref": "#/definitions/v1LimitPropagation"
+          "$ref": "#/definitions/v1LimitPropagation",
+          "description": "Optional. Limit propagation logic determining how future periods are affected."
         },
         "icon": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Icon identifier."
         },
         "color": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Color code."
         },
         "defaultAccountId": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Unique identifier of the default account associated with this budget.\nValues are of the form `acc_[a-zA-Z0-9]+`."
         }
       },
-      "description": "UpdateBudgetRequest contains update rules."
+      "description": "The request for\n[UpdateBudget][saturn.finance.v1.Finance.UpdateBudget]."
     },
     "FinanceUpdateExpenseBody": {
       "type": "object",
       "properties": {
         "expense": {
-          "$ref": "#/definitions/v1ExpenseInput"
+          "$ref": "#/definitions/v1ExpenseInput",
+          "description": "Required. Updated expense transaction parameters."
         }
       },
+      "description": "The request for\n[UpdateExpense][saturn.finance.v1.Finance.UpdateExpense].",
       "required": [
         "expense"
       ]
@@ -3775,36 +3922,46 @@
       "type": "object",
       "properties": {
         "budgetId": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Budget category identifier.\nValues are of the form `bud_[a-zA-Z0-9]+`."
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. User-friendly name."
         },
         "amount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Required. Base payment amount in cents."
         },
         "currency": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Currency code."
         },
         "interval": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Execution interval rule string."
         },
         "nextDueDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Required. Next execution due date."
         },
         "isVariable": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Optional. Indicates if the payment amount is variable."
         },
         "status": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Template status string."
         },
         "gracePeriodDays": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Optional. Days allowed past due date before triggering warning events."
         }
       },
+      "description": "The request for\n[UpdateRecurringExpense][saturn.finance.v1.Finance.UpdateRecurringExpense].",
       "required": [
         "budgetId",
         "name",
@@ -3967,122 +4124,196 @@
       "type": "object",
       "properties": {
         "budgetId": {
-          "type": "string"
+          "type": "string",
+          "description": "Unique identifier of the budget."
         },
         "budgetName": {
-          "type": "string"
+          "type": "string",
+          "description": "User-friendly name."
         },
         "budgetColor": {
-          "type": "string"
+          "type": "string",
+          "description": "Color hex code."
         },
         "amountInBase": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Amount spent in base currency cents."
         },
         "amountInLocal": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Amount spent in local currency cents."
         },
         "localCurrency": {
-          "type": "string"
+          "type": "string",
+          "description": "Local currency code."
         },
         "contributionPercentage": {
           "type": "number",
-          "format": "double"
+          "format": "double",
+          "description": "Contribution percentage relative to total spent."
         }
-      }
+      },
+      "description": "Detailed contribution metrics of a single budget."
     },
     "SpentInsightsBudgetUsage": {
       "type": "object",
       "properties": {
         "budgetId": {
-          "type": "string"
+          "type": "string",
+          "description": "Unique identifier of the budget."
         },
         "budgetName": {
-          "type": "string"
+          "type": "string",
+          "description": "User-friendly name."
         },
         "budgetColor": {
-          "type": "string"
+          "type": "string",
+          "description": "Color hex code."
         },
         "budgetIcon": {
-          "type": "string"
+          "type": "string",
+          "description": "Icon identifier."
         },
         "limit": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Budget limit in cents."
         },
         "spent": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Spent amount in cents."
         },
         "spentInBase": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Spent amount converted to base currency cents."
         },
         "usagePercentage": {
           "type": "number",
-          "format": "double"
+          "format": "double",
+          "description": "Limit consumption percentage."
         }
-      }
+      },
+      "description": "BudgetUsage represents progress against budget limits."
     },
     "SpentInsightsHighValueExpense": {
       "type": "object",
       "properties": {
         "transactionId": {
-          "type": "string"
+          "type": "string",
+          "description": "Unique identifier of the transaction."
         },
         "description": {
-          "type": "string"
+          "type": "string",
+          "description": "Narration notes."
         },
         "amount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Absolute value in local currency cents."
         },
         "currency": {
-          "type": "string"
+          "type": "string",
+          "description": "Local currency code."
         },
         "amountInBase": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Value converted to base currency cents."
         },
         "budgetName": {
-          "type": "string"
+          "type": "string",
+          "description": "Parent budget name."
         },
         "transactionDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Time transaction occurred."
         },
         "effectiveDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Execution/posting date."
         }
-      }
+      },
+      "description": "HighValueExpense tracks outlier transactions exceeding typical limits."
     },
     "SpentInsightsTrendDataPoint": {
       "type": "object",
       "properties": {
         "label": {
-          "type": "string"
+          "type": "string",
+          "description": "Dynamic grouping label (e.g. Month name, date string)."
         },
         "startDate": {
-          "type": "string"
+          "type": "string",
+          "description": "Interval start date boundary."
         },
         "amountInBase": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Spent amount converted to base currency cents."
         },
         "transactionCount": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Total transactions within this interval."
         },
         "contributions": {
           "type": "array",
           "items": {
             "type": "object",
             "$ref": "#/definitions/SpentInsightsBudgetContribution"
-          }
+          },
+          "description": "List of budget category contributions within this interval."
         }
-      }
+      },
+      "description": "TrendDataPoint tracks spend patterns grouped by granular interval."
+    },
+    "TransactionAccountInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. Unique identifier of the account.",
+          "readOnly": true
+        },
+        "name": {
+          "type": "string",
+          "description": "Output only. User-friendly name of the account.",
+          "readOnly": true
+        },
+        "color": {
+          "type": "string",
+          "description": "Output only. Color hex code for display.",
+          "readOnly": true
+        },
+        "type": {
+          "type": "string",
+          "description": "Output only. Account type.",
+          "readOnly": true
+        }
+      },
+      "description": "AccountInfo wraps minimal account details required for UI listing."
+    },
+    "TransactionBudgetInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. Unique identifier of the budget.",
+          "readOnly": true
+        },
+        "name": {
+          "type": "string",
+          "description": "Output only. User-friendly name of the budget.",
+          "readOnly": true
+        }
+      },
+      "description": "BudgetInfo wraps minimal budget details required for UI listing."
     },
     "identityAdminV1RevokeAllSessionsResponse": {
       "type": "object",
@@ -4280,63 +4511,87 @@
       "properties": {
         "id": {
           "type": "string",
+          "description": "Output only. Unique identifier of the account.\nValues are of the form `acc_[a-zA-Z0-9]+`.",
           "readOnly": true
         },
         "spaceId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Space identifier.",
+          "readOnly": true
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. User-friendly account name (e.g. \"Chase Checking\")."
         },
         "type": {
-          "$ref": "#/definitions/v1AccountType"
+          "$ref": "#/definitions/v1AccountType",
+          "description": "Required. Account classification type."
         },
         "currency": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Account currency (e.g. \"USD\")."
         },
         "initialBalance": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Required. Initial balance amount in cents (e.g. 500000 for $5,000.00)."
         },
         "currentBalance": {
           "type": "string",
           "format": "int64",
+          "description": "Output only. Computed current balance amount in cents.\nCalculated dynamically as `InitialBalance + Sum(Income/TransferIn) - Sum(Expense/TransferOut)`.",
           "readOnly": true
         },
         "creditLimit": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Optional. Credit limit amount in cents (applicable only if CREDIT_CARD type)."
         },
         "isDefault": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Optional. Indicates if the account is the workspace default. Default accounts receive\ntransactions if no explicit account is nominated."
         },
         "isActive": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Optional. Indicates if the account is active."
         },
         "color": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Color HEX code for visual UI identification."
         },
         "notes": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Narration notes."
         },
         "lastFour": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Last four digits of card or account number."
         },
         "createTime": {
           "type": "string",
           "format": "date-time",
+          "description": "Output only. Creation timestamp.",
           "readOnly": true
         },
         "updateTime": {
           "type": "string",
           "format": "date-time",
+          "description": "Output only. Last update timestamp.",
           "readOnly": true
         },
         "conversion": {
           "$ref": "#/definitions/AccountConversion",
+          "description": "Output only. Currency conversion statistics.",
           "readOnly": true
         }
-      }
+      },
+      "description": "Account represents a physical or digital payment account.",
+      "required": [
+        "name",
+        "type",
+        "currency",
+        "initialBalance"
+      ]
     },
     "v1AccountType": {
       "type": "string",
@@ -4345,14 +4600,16 @@
         "CREDIT_CARD",
         "CASH",
         "DIGITAL_ACCOUNT"
-      ]
+      ],
+      "description": "Type defines the classification of payment accounts.\n\n - BANK: Checking or savings bank account.\n - CREDIT_CARD: Credit card account. Credit accounts support negative balances.\n - CASH: Cash balance.\n - DIGITAL_ACCOUNT: Digital wallet or virtual balance."
     },
     "v1AccountView": {
       "type": "string",
       "enum": [
         "BASIC",
         "FULL"
-      ]
+      ],
+      "description": "View controls the hydration of related metadata.\n\n - BASIC: Returns account details without base currency conversion calculations.\n - FULL: Hydrates complete structure including exchange rate conversion metrics."
     },
     "v1AdminIdentityRevokeAllSessionsBody": {
       "type": "object"
@@ -4507,102 +4764,143 @@
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Unique identifier.\nValues are of the form `bor_[a-zA-Z0-9]+`.",
+          "readOnly": true
         },
         "spaceId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Space identifier.",
+          "readOnly": true
         },
         "direction": {
-          "$ref": "#/definitions/v1BorrowingDirection"
+          "$ref": "#/definitions/v1BorrowingDirection",
+          "description": "Required. Direction flow of the debt."
         },
         "counterparty": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Name of the counterparty entity."
         },
         "contactInfo": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Contact information."
         },
         "totalAmount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Required. Initial loan principal amount in cents."
         },
         "remainingAmount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Output only. Remaining balance amount in cents.",
+          "readOnly": true
         },
         "currency": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Currency code."
         },
         "status": {
-          "$ref": "#/definitions/v1BorrowingStatus"
+          "$ref": "#/definitions/v1BorrowingStatus",
+          "description": "Required. Lifecycle status."
         },
         "establishedAt": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Required. Date established."
         },
         "dueAt": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Optional. Target repayment due date."
         },
         "createAsTransaction": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Optional. Automatically create a parallel transaction entry in the ledger."
         },
         "notes": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Narration notes."
         },
         "createTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Creation timestamp.",
+          "readOnly": true
         },
         "updateTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Last update timestamp.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Borrowing represents a personal lent/borrowed debt agreement.",
+      "required": [
+        "direction",
+        "counterparty",
+        "totalAmount",
+        "currency",
+        "status",
+        "establishedAt"
+      ]
     },
     "v1BorrowingDirection": {
       "type": "string",
       "enum": [
         "BORROWING_DIRECTION_BORROWED",
         "BORROWING_DIRECTION_LENT"
-      ]
+      ],
+      "description": "BorrowingDirection defines the type/direction of personal debt agreements.\n\n - BORROWING_DIRECTION_BORROWED: Funds borrowed from an external entity (payable liability).\n - BORROWING_DIRECTION_LENT: Funds lent to an external entity (receivable asset)."
     },
     "v1BorrowingInput": {
       "type": "object",
       "properties": {
         "direction": {
-          "$ref": "#/definitions/v1BorrowingDirection"
+          "$ref": "#/definitions/v1BorrowingDirection",
+          "description": "Required. Direction flow of the debt."
         },
         "counterparty": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Name of the counterparty."
         },
         "contactInfo": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Contact information."
         },
         "totalAmount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Required. Initial loan amount in cents."
         },
         "currency": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Currency code."
         },
         "establishedAt": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Required. Date established."
         },
         "dueAt": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Optional. Target repayment due date."
         },
         "notes": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Narration notes."
         },
         "createAsTransaction": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Optional. Automatically create a parallel transaction entry in the ledger."
         },
         "accountId": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Source account identifier.\nValues are of the form `acc_[a-zA-Z0-9]+`."
         }
       },
+      "description": "BorrowingInput encapsulates fields for configuring borrowing records.",
       "required": [
         "direction",
         "counterparty",
@@ -4615,56 +4913,81 @@
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Unique identifier.\nValues are of the form `rep_[a-zA-Z0-9]+`.",
+          "readOnly": true
         },
         "borrowingId": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Parent borrowing identifier.\nValues are of the form `bor_[a-zA-Z0-9]+`."
         },
         "spaceId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Space identifier.",
+          "readOnly": true
         },
         "amount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Required. Installment amount in cents."
         },
         "paymentDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Required. Installment payment date."
         },
         "notes": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Narration notes."
         },
         "createTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Creation timestamp.",
+          "readOnly": true
         },
         "updateTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Last update timestamp.",
+          "readOnly": true
         },
         "accountId": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Source account identifier.\nValues are of the form `acc_[a-zA-Z0-9]+`."
         }
-      }
+      },
+      "description": "BorrowingRepayment represents an installment payment towards a borrowing.",
+      "required": [
+        "borrowingId",
+        "amount",
+        "paymentDate",
+        "accountId"
+      ]
     },
     "v1BorrowingRepaymentInput": {
       "type": "object",
       "properties": {
         "amount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Required. Repayment amount in cents."
         },
         "paymentDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Required. Repayment date."
         },
         "notes": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Narration notes."
         },
         "accountId": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Target account identifier.\nValues are of the form `acc_[a-zA-Z0-9]+`."
         }
       },
+      "description": "BorrowingRepaymentInput encapsulates fields for configuring installment payments.",
       "required": [
         "amount",
         "paymentDate",
@@ -4676,105 +4999,156 @@
       "enum": [
         "BORROWING_STATUS_ACTIVE",
         "BORROWING_STATUS_PAID_OFF"
-      ]
+      ],
+      "description": "BorrowingStatus defines the lifecycle status of debt agreements.\n\n - BORROWING_STATUS_ACTIVE: Active borrowing with pending outstanding balances.\n - BORROWING_STATUS_PAID_OFF: Paid-off borrowing with zero remaining balance."
     },
     "v1Budget": {
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Budget template identifier.\nValues are of the form `bud_[a-zA-Z0-9]+`.",
+          "readOnly": true
         },
         "spaceId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Space identifier.",
+          "readOnly": true
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. User-friendly name of the budget template."
         },
         "limitAmount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Required. Limit amount in cents (e.g. 50000 for $500.00)."
         },
         "currency": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. ISO Currency code of the budget limit."
         },
         "interval": {
-          "$ref": "#/definitions/v1RecurrenceInterval"
+          "$ref": "#/definitions/v1RecurrenceInterval",
+          "description": "Required. Recurrence interval frequency."
         },
         "isActive": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Optional. Indicates if the budget is active and accepting transaction logging."
         },
         "icon": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Icon identifier for UI rendering."
         },
         "color": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. HEX Color code for UI categorization."
         },
         "defaultAccountId": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Default payment/liquidity account associated with this budget.\nValues are of the form `acc_[a-zA-Z0-9]+`."
         },
         "currentPeriod": {
-          "$ref": "#/definitions/BudgetActivePeriod"
+          "$ref": "#/definitions/BudgetActivePeriod",
+          "description": "Output only. Metrics of the current budget period.",
+          "readOnly": true
         },
         "createTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Creation time of the budget.",
+          "readOnly": true
         },
         "updateTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Last update time of the budget.",
+          "readOnly": true
         }
       },
-      "description": "Budget represents a budget template definition."
+      "description": "Budget represents a budget template definition.",
+      "required": [
+        "name",
+        "limitAmount",
+        "currency",
+        "interval"
+      ]
     },
     "v1BudgetPeriod": {
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Period identifier.\nValues are of the form `per_[a-zA-Z0-9]+`.",
+          "readOnly": true
         },
         "budgetId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Parent budget template identifier.\nValues are of the form `bud_[a-zA-Z0-9]+`.",
+          "readOnly": true
         },
         "spaceId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Space identifier.",
+          "readOnly": true
         },
         "startDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Period start date.",
+          "readOnly": true
         },
         "endDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Period end date.",
+          "readOnly": true
         },
         "limitAmount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Output only. Limit amount allocated to this period in local currency cents.",
+          "readOnly": true
         },
         "currency": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Local currency code.",
+          "readOnly": true
         },
         "baseCurrency": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Workspace base currency code.",
+          "readOnly": true
         },
         "exchangeRateToBase": {
           "type": "number",
-          "format": "double"
+          "format": "double",
+          "description": "Output only. Exchange rate to base currency used during conversion.",
+          "readOnly": true
         },
         "createTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Creation time of the budget period.",
+          "readOnly": true
         },
         "updateTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Last update time of the budget period.",
+          "readOnly": true
         },
         "spentAmount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Output only. Spent amount in cents within this period.",
+          "readOnly": true
         },
         "spentInBase": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Output only. Spent amount converted to base currency cents.",
+          "readOnly": true
         }
       },
       "description": "BudgetPeriod represents an active instantiation of a budget."
@@ -4785,7 +5159,7 @@
         "BASIC",
         "FULL"
       ],
-      "title": "Scoped resource view options"
+      "description": "Scoped resource view options.\n\n - BASIC: Returns basic configuration details without period calculations.\n - FULL: Hydrates complete structure including active period spent statistics."
     },
     "v1CatalogDescriptor": {
       "type": "object",
@@ -4823,10 +5197,11 @@
       "type": "object",
       "properties": {
         "baseCurrency": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Base currency for conversions and insights (e.g. \"USD\").\nConversions and aggregated spent statistics will default to this currency."
         }
       },
-      "description": "ConfigureFinanceRequest contains fields for initial setup.",
+      "description": "The request for\n[ConfigureFinance][saturn.finance.v1.Finance.ConfigureFinance].",
       "required": [
         "baseCurrency"
       ]
@@ -4895,9 +5270,11 @@
       "type": "object",
       "properties": {
         "borrowing": {
-          "$ref": "#/definitions/v1BorrowingInput"
+          "$ref": "#/definitions/v1BorrowingInput",
+          "description": "Required. Target borrowing parameters."
         }
       },
+      "description": "The request for\n[CreateBorrowing][saturn.finance.v1.Finance.CreateBorrowing].",
       "required": [
         "borrowing"
       ]
@@ -4906,29 +5283,36 @@
       "type": "object",
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. User-friendly name of the budget template."
         },
         "limitAmount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Required. Limit amount in cents (e.g. 50000 for $500.00)."
         },
         "currency": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. ISO currency code of the budget limit."
         },
         "interval": {
-          "$ref": "#/definitions/v1RecurrenceInterval"
+          "$ref": "#/definitions/v1RecurrenceInterval",
+          "description": "Required. Recurrence interval frequency."
         },
         "icon": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Icon identifier for UI rendering."
         },
         "color": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. HEX Color code used for visual categorization."
         },
         "defaultAccountId": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Unique identifier of the default account associated with this budget.\nValues are of the form `acc_[a-zA-Z0-9]+`."
         }
       },
-      "description": "CreateBudgetRequest contains fields to create budget.",
+      "description": "The request for\n[CreateBudget][saturn.finance.v1.Finance.CreateBudget].",
       "required": [
         "name",
         "limitAmount",
@@ -4940,21 +5324,25 @@
       "type": "object",
       "properties": {
         "fromCurrency": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Source currency code."
         },
         "toCurrency": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Target currency code."
         },
         "rate": {
           "type": "number",
-          "format": "double"
+          "format": "double",
+          "description": "Required. Conversion rate multiplier."
         },
         "rateDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Required. Target date."
         }
       },
-      "description": "CreateExchangeRateRequest registers a daily rate.",
+      "description": "The request for\n[CreateExchangeRate][saturn.finance.v1.Finance.CreateExchangeRate].",
       "required": [
         "fromCurrency",
         "toCurrency",
@@ -4966,9 +5354,11 @@
       "type": "object",
       "properties": {
         "expense": {
-          "$ref": "#/definitions/v1ExpenseInput"
+          "$ref": "#/definitions/v1ExpenseInput",
+          "description": "Required. Target expense transaction parameters."
         }
       },
+      "description": "The request for\n[CreateExpense][saturn.finance.v1.Finance.CreateExpense].",
       "required": [
         "expense"
       ]
@@ -5010,33 +5400,42 @@
       "type": "object",
       "properties": {
         "budgetId": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Budget category identifier.\nValues are of the form `bud_[a-zA-Z0-9]+`."
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. User-friendly name of the recurring expense rule."
         },
         "amount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Required. Base payment amount in cents."
         },
         "currency": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Currency code."
         },
         "interval": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Execution interval rule string (cron expression or interval descriptor)."
         },
         "nextDueDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Required. Initial execution due date."
         },
         "isVariable": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Optional. Indicates if the payment amount is variable."
         },
         "gracePeriodDays": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Optional. Days allowed past due date before triggering warning events."
         }
       },
+      "description": "The request for\n[CreateRecurringExpense][saturn.finance.v1.Finance.CreateRecurringExpense].",
       "required": [
         "budgetId",
         "name",
@@ -5067,27 +5466,34 @@
       "type": "object",
       "properties": {
         "sourceAccountId": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Source account ID.\nValues are of the form `acc_[a-zA-Z0-9]+`."
         },
         "destinationAccountId": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Destination account ID.\nValues are of the form `acc_[a-zA-Z0-9]+`."
         },
         "sourceAmount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Required. Source amount in source account currency cents."
         },
         "destinationAmount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Required. Destination amount in destination account currency cents."
         },
         "transferDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Required. Transfer date."
         },
         "notes": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Narration notes."
         }
       },
+      "description": "The request for\n[CreateTransfer][saturn.finance.v1.Finance.CreateTransfer].",
       "required": [
         "sourceAccountId",
         "destinationAccountId",
@@ -5100,12 +5506,19 @@
       "type": "object",
       "properties": {
         "code": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. ISO currency code (e.g. USD)."
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. User-friendly currency name."
         }
-      }
+      },
+      "description": "CurrencyInfo encapsulates currency code metadata.",
+      "required": [
+        "code",
+        "name"
+      ]
     },
     "v1DeleteSpaceResponse": {
       "type": "object",
@@ -5115,57 +5528,79 @@
       "type": "object",
       "properties": {
         "spaceId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Associated space identifier.",
+          "readOnly": true
         },
         "fromCurrency": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Source currency code (e.g. \"EUR\")."
         },
         "toCurrency": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Target currency code (e.g. \"USD\")."
         },
         "rate": {
           "type": "number",
-          "format": "double"
+          "format": "double",
+          "description": "Required. Conversion rate multiplier (e.g. 1.12)."
         },
         "rateDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Required. Target date for this rate."
         },
         "createTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Record creation timestamp.",
+          "readOnly": true
         }
       },
-      "description": "ExchangeRate represents a daily rate record."
+      "description": "ExchangeRate represents a daily rate record.",
+      "required": [
+        "fromCurrency",
+        "toCurrency",
+        "rate",
+        "rateDate"
+      ]
     },
     "v1ExpenseInput": {
       "type": "object",
       "properties": {
         "budgetId": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Budget category identifier.\nValues are of the form `bud_[a-zA-Z0-9]+`."
         },
         "amount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Required. Absolute value of transaction in local currency cents (e.g. 10000 for $100.00)."
         },
         "currency": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Currency code."
         },
         "description": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Narration notes."
         },
         "transactionDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Optional. Time transaction occurred."
         },
         "effectiveDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Optional. Execution/posting date."
         },
         "accountId": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Target account identifier.\nValues are of the form `acc_[a-zA-Z0-9]+`."
         }
       },
+      "description": "ExpenseInput encapsulates fields representing an expense record payload.",
       "required": [
         "budgetId",
         "amount",
@@ -5176,21 +5611,31 @@
       "type": "object",
       "properties": {
         "spaceId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Associated space identifier.",
+          "readOnly": true
         },
         "baseCurrency": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Base currency for conversions and insights (e.g. \"USD\").\nAnalytics calculations and overall spend views default to this currency."
         },
         "createTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Creation time of the settings.",
+          "readOnly": true
         },
         "updateTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Last update time of the settings.",
+          "readOnly": true
         }
       },
-      "description": "FinanceSettings represents workspace configuration."
+      "description": "FinanceSettings represents the workspace configuration.",
+      "required": [
+        "baseCurrency"
+      ]
     },
     "v1GetAgentCatalogResponse": {
       "type": "object",
@@ -5208,9 +5653,11 @@
       "type": "object",
       "properties": {
         "spent": {
-          "$ref": "#/definitions/v1SpentInsights"
+          "$ref": "#/definitions/v1SpentInsights",
+          "description": "Spent insights statistics."
         }
-      }
+      },
+      "description": "The response for\n[GetInsights][saturn.finance.v1.Finance.GetInsights]."
     },
     "v1GetProviderCatalogResponse": {
       "type": "object",
@@ -5241,59 +5688,90 @@
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Unique identifier.\nValues are of the form `inb_[a-zA-Z0-9]+`.",
+          "readOnly": true
         },
         "spaceId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Space identifier.",
+          "readOnly": true
         },
         "integrationId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Ingestion integration channel identifier.",
+          "readOnly": true
         },
         "status": {
           "type": "string",
-          "title": "pending, processing, resolved, archived"
+          "description": "Output only. Staging lifecycle status (e.g. \"pending\", \"approved\", \"discarded\").",
+          "readOnly": true
         },
         "docType": {
           "type": "string",
-          "title": "invoice, receipt, bank_notification, unknown"
+          "description": "Output only. Extracted document classification category (e.g. \"receipt\").",
+          "readOnly": true
         },
         "amount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Output only. Extracted transaction amount in cents.",
+          "readOnly": true
         },
         "currency": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Extracted currency code.",
+          "readOnly": true
         },
         "vendorName": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Extracted vendor counterparty name.",
+          "readOnly": true
         },
         "transactionDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Extracted transaction transaction date.",
+          "readOnly": true
         },
         "accountId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Suggested account ID for categorization.\nValues are of the form `acc_[a-zA-Z0-9]+`.",
+          "readOnly": true
         },
         "budgetId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Suggested budget category ID.\nValues are of the form `bud_[a-zA-Z0-9]+`.",
+          "readOnly": true
         },
         "scheduledPaymentId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Associated scheduled payment identifier to clear.\nValues are of the form `sch_[a-zA-Z0-9]+`.",
+          "readOnly": true
         },
         "transactionId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Associated completed transaction ledger ID.\nValues are of the form `txn_[a-zA-Z0-9]+`.",
+          "readOnly": true
         },
         "rawPayload": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Ingestion raw notification payload details.",
+          "readOnly": true
         },
         "metadataJson": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Additional extracted metadata payload (JSON format).",
+          "readOnly": true
         },
         "createTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Ingestion stage timestamp.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "InboxItem represents an ingested invoice, receipt, or notification in processing staging."
     },
     "v1InsightGranularity": {
       "type": "string",
@@ -5302,7 +5780,8 @@
         "WEEKLY",
         "MONTHLY",
         "YEARLY"
-      ]
+      ],
+      "description": "InsightGranularity defines the grouping interval of aggregated statistical data.\n\n - DAILY: Group metrics by calendar day.\n - WEEKLY: Group metrics by calendar week.\n - MONTHLY: Group metrics by calendar month.\n - YEARLY: Group metrics by calendar year."
     },
     "v1Integration": {
       "type": "object",
@@ -5445,7 +5924,8 @@
       "enum": [
         "LIMIT_PROPAGATION_CURRENT_PERIOD",
         "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
-      ]
+      ],
+      "description": "LimitPropagation defines how changes in budget limits propagate to future periods.\n\n - LIMIT_PROPAGATION_CURRENT_PERIOD: Apply the limit modification only to the current active period.\n - LIMIT_PROPAGATION_NEXT_PERIODS_ONLY: Propagate limits to all future budget periods without modifying history."
     },
     "v1ListAccountsResponse": {
       "type": "object",
@@ -5455,12 +5935,15 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1Account"
-          }
+          },
+          "description": "List of accounts matching filters."
         },
         "nextPageToken": {
-          "type": "string"
+          "type": "string",
+          "description": "Next page keyset token. Empty if no more pages are available."
         }
-      }
+      },
+      "description": "The response for\n[ListAccounts][saturn.finance.v1.Finance.ListAccounts]."
     },
     "v1ListActiveSessionsResponse": {
       "type": "object",
@@ -5523,9 +6006,11 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1BorrowingRepayment"
-          }
+          },
+          "description": "List of installment repayments."
         }
-      }
+      },
+      "description": "The response for\n[ListBorrowingRepayments][saturn.finance.v1.Finance.ListBorrowingRepayments]."
     },
     "v1ListBorrowingsResponse": {
       "type": "object",
@@ -5535,12 +6020,15 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1Borrowing"
-          }
+          },
+          "description": "List of borrowing records matching filters."
         },
         "nextPageToken": {
-          "type": "string"
+          "type": "string",
+          "description": "Next page keyset token. Empty if no more pages are available."
         }
-      }
+      },
+      "description": "The response for\n[ListBorrowings][saturn.finance.v1.Finance.ListBorrowings]."
     },
     "v1ListBudgetsResponse": {
       "type": "object",
@@ -5550,13 +6038,15 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1Budget"
-          }
+          },
+          "description": "List of budgets matching filter rules."
         },
         "nextPageToken": {
-          "type": "string"
+          "type": "string",
+          "description": "Keyset token to fetch the next page of results. Empty if no more pages are available."
         }
       },
-      "description": "ListBudgetsResponse contains paginated budgets."
+      "description": "The response for\n[ListBudgets][saturn.finance.v1.Finance.ListBudgets]."
     },
     "v1ListCatalogResponse": {
       "type": "object",
@@ -5578,9 +6068,11 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1CurrencyInfo"
-          }
+          },
+          "description": "List of currency codes and details."
         }
-      }
+      },
+      "description": "The response for\n[ListCurrencies][saturn.finance.v1.Finance.ListCurrencies]."
     },
     "v1ListExchangeRatesResponse": {
       "type": "object",
@@ -5590,13 +6082,15 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1ExchangeRate"
-          }
+          },
+          "description": "List of matching exchange rate records."
         },
         "nextPageToken": {
-          "type": "string"
+          "type": "string",
+          "description": "Keyset token to fetch the next page of results. Empty if no more pages are available."
         }
       },
-      "description": "ListExchangeRatesResponse contains paginated rates."
+      "description": "The response for\n[ListExchangeRates][saturn.finance.v1.Finance.ListExchangeRates]."
     },
     "v1ListInboxItemsResponse": {
       "type": "object",
@@ -5606,9 +6100,11 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1InboxItem"
-          }
+          },
+          "description": "List of staged inbox items."
         }
-      }
+      },
+      "description": "The response for\n[ListInboxItems][saturn.finance.v1.Finance.ListInboxItems]."
     },
     "v1ListIntegrationTokensResponse": {
       "type": "object",
@@ -5681,12 +6177,15 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1RecurringExpense"
-          }
+          },
+          "description": "List of recurring expense templates matching filters."
         },
         "nextPageToken": {
-          "type": "string"
+          "type": "string",
+          "description": "Next page keyset token. Empty if no more pages are available."
         }
-      }
+      },
+      "description": "The response for\n[ListRecurringExpenses][saturn.finance.v1.Finance.ListRecurringExpenses]."
     },
     "v1ListScheduledPaymentsResponse": {
       "type": "object",
@@ -5696,12 +6195,15 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1ScheduledPayment"
-          }
+          },
+          "description": "List of scheduled payment instances matching filters."
         },
         "nextPageToken": {
-          "type": "string"
+          "type": "string",
+          "description": "Next page keyset token. Empty if no more pages are available."
         }
-      }
+      },
+      "description": "The response for\n[ListScheduledPayments][saturn.finance.v1.Finance.ListScheduledPayments]."
     },
     "v1ListSchedulesResponse": {
       "type": "object",
@@ -5770,9 +6272,11 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1TransactionEvent"
-          }
+          },
+          "description": "List of transaction lifecycle history events."
         }
-      }
+      },
+      "description": "The response for\n[ListTransactionEvents][saturn.finance.v1.Finance.ListTransactionEvents]."
     },
     "v1ListTransactionsResponse": {
       "type": "object",
@@ -5782,12 +6286,15 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1Transaction"
-          }
+          },
+          "description": "List of transactions matching filter rules."
         },
         "nextPageToken": {
-          "type": "string"
+          "type": "string",
+          "description": "Next page keyset token. Empty if no more pages are available."
         }
-      }
+      },
+      "description": "The response for\n[ListTransactions][saturn.finance.v1.Finance.ListTransactions]."
     },
     "v1ListTransfersResponse": {
       "type": "object",
@@ -5797,12 +6304,15 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1Transfer"
-          }
+          },
+          "description": "List of transfer records."
         },
         "nextPageToken": {
-          "type": "string"
+          "type": "string",
+          "description": "Next page keyset token. Empty if no more pages are available."
         }
-      }
+      },
+      "description": "The response for\n[ListTransfers][saturn.finance.v1.Finance.ListTransfers]."
     },
     "v1ListUsersResponse": {
       "type": "object",
@@ -5906,56 +6416,84 @@
         "INTERVAL_WEEKLY",
         "INTERVAL_MONTHLY",
         "INTERVAL_YEARLY"
-      ]
+      ],
+      "description": "RecurrenceInterval defines the frequency of budgeting or transaction execution rules.\n\n - INTERVAL_WEEKLY: Budget resets or templates trigger every calendar week.\n - INTERVAL_MONTHLY: Budget resets or templates trigger every calendar month.\n - INTERVAL_YEARLY: Budget resets or templates trigger every calendar year."
     },
     "v1RecurringExpense": {
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Unique identifier.\nValues are of the form `rec_[a-zA-Z0-9]+`.",
+          "readOnly": true
         },
         "spaceId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Space identifier.",
+          "readOnly": true
         },
         "budgetId": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Budget category identifier.\nValues are of the form `bud_[a-zA-Z0-9]+`."
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. User-friendly name."
         },
         "amount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Required. Base payment amount in cents."
         },
         "currency": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Currency code."
         },
         "interval": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Execution interval rule string."
         },
         "nextDueDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Required. Next execution due date."
         },
         "isVariable": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Optional. Indicates if the payment amount is variable."
         },
         "status": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Active template status (e.g. \"active\", \"paused\")."
         },
         "gracePeriodDays": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Optional. Days allowed past due date before triggering warning events."
         },
         "createTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Creation timestamp.",
+          "readOnly": true
         },
         "updateTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Last update timestamp.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "RecurringExpense represents a template rule to repeat payments.",
+      "required": [
+        "budgetId",
+        "name",
+        "amount",
+        "currency",
+        "interval",
+        "nextDueDate",
+        "status"
+      ]
     },
     "v1RefreshSessionRequest": {
       "type": "object",
@@ -6075,47 +6613,73 @@
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Unique identifier.\nValues are of the form `sch_[a-zA-Z0-9]+`.",
+          "readOnly": true
         },
         "spaceId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Space identifier.",
+          "readOnly": true
         },
         "budgetId": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Budget category identifier.\nValues are of the form `bud_[a-zA-Z0-9]+`."
         },
         "sourceType": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Parent template source type."
         },
         "sourceId": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Parent template source ID."
         },
         "amount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Required. Target payment amount in cents."
         },
         "currency": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Currency code."
         },
         "dueDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Required. Scheduled execution due date."
         },
         "status": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Instance execution status (e.g. \"pending\", \"confirmed\")."
         },
         "metadata": {
           "type": "string",
-          "format": "byte"
+          "format": "byte",
+          "description": "Optional. Metadata binary payload."
         },
         "createTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Creation timestamp.",
+          "readOnly": true
         },
         "updateTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Last update timestamp.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "ScheduledPayment represents a spawned pending payment instance.",
+      "required": [
+        "budgetId",
+        "sourceType",
+        "sourceId",
+        "amount",
+        "currency",
+        "dueDate",
+        "status"
+      ]
     },
     "v1SimulateWebhookResponse": {
       "type": "object",
@@ -6210,129 +6774,191 @@
       "properties": {
         "totalLimit": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Total configured budget limits in base currency cents."
         },
         "totalSpent": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Total spent in base currency cents."
         },
         "remainingBudget": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Remaining space budget in base currency cents."
         },
         "burnRate": {
           "type": "number",
-          "format": "double"
+          "format": "double",
+          "description": "Average spend speed rate relative to elapsed time."
         },
         "trend": {
           "type": "array",
           "items": {
             "type": "object",
             "$ref": "#/definitions/SpentInsightsTrendDataPoint"
-          }
+          },
+          "description": "List of granular interval trend points."
         },
         "distributions": {
           "type": "array",
           "items": {
             "type": "object",
             "$ref": "#/definitions/SpentInsightsBudgetUsage"
-          }
+          },
+          "description": "Distribution breakdown by budget category."
         },
         "topExpenses": {
           "type": "array",
           "items": {
             "type": "object",
             "$ref": "#/definitions/SpentInsightsHighValueExpense"
-          }
+          },
+          "description": "List of largest expense transactions."
         }
-      }
+      },
+      "description": "SpentInsights aggregates workspace statistics."
     },
     "v1Transaction": {
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Unique identifier of the transaction.\nValues are of the form `txn_[a-zA-Z0-9]+`.",
+          "readOnly": true
         },
         "spaceId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Associated space identifier.",
+          "readOnly": true
         },
         "type": {
-          "$ref": "#/definitions/v1TransactionType"
+          "$ref": "#/definitions/v1TransactionType",
+          "description": "Required. Fund movement flow type."
         },
         "budgetId": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Associated budget identifier.\nValues are of the form `bud_[a-zA-Z0-9]+`."
         },
         "periodId": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Associated period identifier.\nValues are of the form `per_[a-zA-Z0-9]+`."
         },
         "amount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Required. Absolute value of transaction in local currency cents (e.g. 10000 for $100.00)."
         },
         "currency": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Currency code."
         },
         "amountInBase": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Output only. Value converted to base currency cents.",
+          "readOnly": true
         },
         "description": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Narration notes."
         },
         "transactionDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Required. Time transaction occurred."
         },
         "createTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. System create timestamp.",
+          "readOnly": true
         },
         "updateTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. System update timestamp.",
+          "readOnly": true
         },
         "effectiveDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Required. Execution/posting date (when funds reconcile in account balance)."
         },
         "sourceType": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Integration source type (e.g. \"plaid\")."
         },
         "sourceId": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Integration source record ID."
         },
         "accountId": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Associated account ID.\nValues are of the form `acc_[a-zA-Z0-9]+`."
         },
         "transferId": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Associated transfer transaction ID.\nValues are of the form `txn_[a-zA-Z0-9]+`."
+        },
+        "account": {
+          "$ref": "#/definitions/TransactionAccountInfo",
+          "description": "Output only. Hydrated minimal account info. Available only on FULL view.",
+          "readOnly": true
+        },
+        "budget": {
+          "$ref": "#/definitions/TransactionBudgetInfo",
+          "description": "Output only. Hydrated minimal budget info. Available only on FULL view.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Transaction represents a financial record in the space ledger.",
+      "required": [
+        "type",
+        "amount",
+        "currency",
+        "transactionDate",
+        "effectiveDate"
+      ]
     },
     "v1TransactionEvent": {
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Unique identifier.\nValues are of the form `evt_[a-zA-Z0-9]+`.",
+          "readOnly": true
         },
         "spaceId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Space identifier.",
+          "readOnly": true
         },
         "txnId": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Associated transaction ID.\nValues are of the form `txn_[a-zA-Z0-9]+`."
         },
         "eventType": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Lifecycle change event type (e.g. \"created\", \"updated\")."
         },
         "metadata": {
           "type": "string",
-          "title": "JSON string representing event details"
+          "description": "Required. JSON metadata describing the change details (e.g. diff properties)."
         },
         "createTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Event registration timestamp.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "TransactionEvent represents a historical transaction lifecycle change.",
+      "required": [
+        "txnId",
+        "eventType",
+        "metadata"
+      ]
     },
     "v1TransactionType": {
       "type": "string",
@@ -6341,47 +6967,78 @@
         "INCOME",
         "TRANSFER_OUT",
         "TRANSFER_IN"
-      ]
+      ],
+      "description": "Type defines the direction and flow of funds.\n\n - EXPENSE: Expense transaction, subtracting from the account balance.\n - INCOME: Income transaction, adding to the account balance.\n - TRANSFER_OUT: Transfer out transaction, moving funds to another account.\n - TRANSFER_IN: Transfer in transaction, receiving funds from another account."
+    },
+    "v1TransactionView": {
+      "type": "string",
+      "enum": [
+        "BASIC",
+        "FULL"
+      ],
+      "description": "View controls the hydration of related metadata.\n\n - BASIC: Returns transaction details without related account or budget info.\n - FULL: Hydrates complete structure including account and budget details."
     },
     "v1Transfer": {
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Unique identifier.\nValues are of the form `txn_[a-zA-Z0-9]+`.",
+          "readOnly": true
         },
         "spaceId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Space identifier.",
+          "readOnly": true
         },
         "sourceAccountId": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Source account ID.\nValues are of the form `acc_[a-zA-Z0-9]+`."
         },
         "destinationAccountId": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. Destination account ID.\nValues are of the form `acc_[a-zA-Z0-9]+`."
         },
         "sourceAmount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Required. Source amount in source account currency cents."
         },
         "destinationAmount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Required. Destination amount in destination account currency cents."
         },
         "transferDate": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Required. Transfer date."
         },
         "notes": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Narration notes."
         },
         "createTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Creation timestamp.",
+          "readOnly": true
         },
         "updateTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Last update timestamp.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Transfer represents a new transfer between accounts.",
+      "required": [
+        "sourceAccountId",
+        "destinationAccountId",
+        "sourceAmount",
+        "destinationAmount",
+        "transferDate"
+      ]
     },
     "v1TriggerBackupRequest": {
       "type": "object"

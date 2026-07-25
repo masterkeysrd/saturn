@@ -111,9 +111,9 @@ export function BorrowingDetailSheet({
 
     try {
       await createRepaymentMutation.mutateAsync({
-        borrowing_id: borrowing.id,
+        borrowing_id: borrowing.id || "",
         req: {
-          borrowingId: borrowing.id,
+          borrowingId: borrowing.id || "",
           repayment: {
             amount: cents.toString(),
             paymentDate: paymentDate.toISOString(),
@@ -135,10 +135,10 @@ export function BorrowingDetailSheet({
     if (!borrowing) return
     try {
       await deleteRepaymentMutation.mutateAsync({
-        borrowing_id: borrowing.id,
+        borrowing_id: borrowing.id || "",
         id: repaymentId,
         req: {
-          borrowingId: borrowing.id,
+          borrowingId: borrowing.id || "",
           id: repaymentId,
         },
       })
@@ -335,7 +335,7 @@ export function BorrowingDetailSheet({
                         size="icon"
                         variant="ghost"
                         className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => handleDeleteRepayment(r.id)}
+                        onClick={() => handleDeleteRepayment(r.id || "")}
                         disabled={deleteRepaymentMutation.isPending}
                       >
                         {deleteRepaymentMutation.isPending ? (

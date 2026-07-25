@@ -119,8 +119,11 @@ export function EditBudgetSheet({
   const [prevBudgetId, setPrevBudgetId] = useState<string | null>(null)
   const [prevOpen, setPrevOpen] = useState(false)
 
-  if (activeBudget && (activeBudget.id !== prevBudgetId || open !== prevOpen)) {
-    setPrevBudgetId(activeBudget.id)
+  if (
+    activeBudget &&
+    ((activeBudget.id || "") !== prevBudgetId || open !== prevOpen)
+  ) {
+    setPrevBudgetId(activeBudget.id || null)
     setPrevOpen(open)
     setName(activeBudget.name)
     setLimit(formatCents(activeBudget.limitAmount).toString())
@@ -139,9 +142,9 @@ export function EditBudgetSheet({
     if (!activeBudget) return
 
     await updateMutation.mutateAsync({
-      id: activeBudget.id,
+      id: activeBudget.id || "",
       req: {
-        id: activeBudget.id,
+        id: activeBudget.id || "",
         name,
         limitAmount: toCentsString(limit),
         currency,

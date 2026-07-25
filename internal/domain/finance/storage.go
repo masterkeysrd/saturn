@@ -18,6 +18,7 @@ type SettingsStore interface {
 type BudgetStore interface {
 	Create(ctx context.Context, budget *Budget) error
 	GetByID(ctx context.Context, id BudgetID) (*Budget, error)
+	GetByIDs(ctx context.Context, ids []BudgetID) ([]*Budget, error)
 	Update(ctx context.Context, budget *Budget) error
 	Delete(ctx context.Context, id BudgetID) error
 	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListBudgetsFilter) (*paging.Page[*Budget], error)
@@ -141,6 +142,7 @@ type ListTransactionsFilter struct {
 	TransferID    *TransferID
 	PageSize      int32
 	NextPageToken string
+	Sort          sorting.SortOrder
 
 	// Deduplication / search filters
 	MinAmount   *int64
@@ -206,6 +208,7 @@ type BorrowingRepaymentStore interface {
 type AccountStore interface {
 	Create(ctx context.Context, account *Account) error
 	GetByID(ctx context.Context, id AccountID) (*Account, error)
+	GetByIDs(ctx context.Context, ids []AccountID) ([]*Account, error)
 	Update(ctx context.Context, account *Account) error
 	Delete(ctx context.Context, id AccountID) error
 	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListAccountsFilter) (*paging.Page[*Account], error)

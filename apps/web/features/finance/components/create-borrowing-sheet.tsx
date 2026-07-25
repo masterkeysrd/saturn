@@ -151,9 +151,9 @@ export function CreateBorrowingSheet({
     try {
       if (editBorrowing) {
         await updateBorrowingMutation.mutateAsync({
-          id: editBorrowing.id,
+          id: editBorrowing.id || "",
           req: {
-            id: editBorrowing.id,
+            id: editBorrowing.id || "",
             borrowing: borrowingInput,
           },
         })

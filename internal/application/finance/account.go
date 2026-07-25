@@ -55,8 +55,6 @@ func (c *Coordinator) CreateAccount(ctx context.Context, req *CreateAccountReque
 	return c.financeService.CreateAccount(ctx, acc)
 }
 
-
-
 func (c *Coordinator) UpdateAccount(ctx context.Context, req *UpdateAccountRequest) (*finance.Account, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
@@ -98,5 +96,3 @@ func (c *Coordinator) DeleteAccount(ctx context.Context, id finance.AccountID) e
 
 	return c.financeService.DeleteAccount(ctx, id)
 }
-
-

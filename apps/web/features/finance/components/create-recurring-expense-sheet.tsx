@@ -124,9 +124,9 @@ export function CreateRecurringExpenseSheet({
 
     if (editExpense) {
       await updateMutation.mutateAsync({
-        id: editExpense.id,
+        id: editExpense.id || "",
         req: {
-          id: editExpense.id,
+          id: editExpense.id || "",
           budgetId,
           name,
           amount: centsAmount,

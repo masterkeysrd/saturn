@@ -1,6 +1,11 @@
 import { useState, useEffect, createElement } from "react"
-import { useSearchParams } from "react-router-dom"
-import { useSpacePermissions } from "@/features/space/use-space"
+import { useSearchParams, useNavigate } from "react-router-dom"
+import { useUrlState } from "@/lib/use-url-state"
+import { useDebounce } from "@/lib/use-debounce"
+import {
+  useSpacePermissions,
+  resolveSpacePath,
+} from "@/features/space/use-space"
 import {
   useListTransactionsQuery,
   useDeleteTransactionMutation,
@@ -11,7 +16,6 @@ import {
   useListBudgetsQuery,
 } from "@/gen/saturn/finance/v1/finance"
 import { Inbox } from "lucide-react"
-import { InboxItemsSheet } from "./components/inbox-items-sheet"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -25,7 +29,6 @@ import {
   ArrowDownLeft,
   Coins,
   Trash2,
-  Filter,
   Receipt,
   Plus,
   Loader2,
@@ -44,6 +47,13 @@ import { FinancePageLayout } from "./components/finance-page-layout"
 import { formatCents, getBudgetColors, getBudgetIcon } from "./utils"
 import { CreateTransactionSheet } from "./components/create-transaction-sheet"
 import { TransactionEventsSheet } from "./components/transaction-events-sheet"
+const TRANSACTIONS_FILTER_DEFAULTS = {
+  q: "",
+  type: "TYPE_UNSPECIFIED" as string,
+  budgetId: "_all" as string,
+  accountId: "_all" as string,
+  sort: "_default" as string,
+}
 
 export function TransactionsView() {
   const { spaceId, isWritable } = useSpacePermissions()
@@ -65,7 +75,19 @@ export function TransactionsView() {
     { enabled: !!spaceId }
   )
   const accounts = accountsData?.accounts || []
-  const [selectedBudgetFilter, setSelectedBudgetFilter] = useState("")
+
+  const [urlState, setUrlState] = useUrlState(TRANSACTIONS_FILTER_DEFAULTS)
+  const [searchQuery, setSearchQuery] = useState(urlState.q)
+  const debouncedSearchQuery = useDebounce(searchQuery, 300)
+
+  useEffect(() => {
+    setUrlState({ q: debouncedSearchQuery })
+  }, [debouncedSearchQuery, setUrlState])
+
+  useEffect(() => {
+    setSearchQuery(urlState.q)
+  }, [urlState.q])
+
   const [createOpen, setCreateOpen] = useState(false)
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(
     null
@@ -75,26 +97,17 @@ export function TransactionsView() {
   const [eventsTxnDescription, setEventsTxnDescription] = useState<
     string | null
   >(null)
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchParams] = useSearchParams()
   const reviewParam = searchParams.get("review") === "true"
-  const [pendingOpen, setPendingOpen] = useState(reviewParam)
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (reviewParam) {
-      setTimeout(() => {
-        setPendingOpen(true)
-      }, 0)
+      navigate(resolveSpacePath("/finance/inbox", spaceId, true), {
+        replace: true,
+      })
     }
-  }, [reviewParam])
-
-  const handlePendingOpenChange = (open: boolean) => {
-    setPendingOpen(open)
-    if (!open && searchParams.get("review") === "true") {
-      const nextParams = new URLSearchParams(searchParams)
-      nextParams.delete("review")
-      setSearchParams(nextParams, { replace: true })
-    }
-  }
+  }, [reviewParam, navigate, spaceId])
 
   // Query inbox items staged for review
   const { data: pendingData } = useListInboxItemsQuery(
@@ -114,8 +127,8 @@ export function TransactionsView() {
   }
 
   const handleViewEventsTrigger = (t: Transaction) => {
-    setEventsTxnId(t.id)
-    setEventsTxnDescription(t.description)
+    setEventsTxnId(t.id || null)
+    setEventsTxnDescription(t.description || null)
     setEventsOpen(true)
   }
 
@@ -126,8 +139,16 @@ export function TransactionsView() {
     refetch: refetchTransactions,
   } = useListTransactionsQuery(
     {
-      budgetId: selectedBudgetFilter || "",
-      type: "TRANSACTION_TYPE_UNSPECIFIED",
+      view: "FULL",
+      budgetId: urlState.budgetId === "_all" ? "" : urlState.budgetId,
+      type: urlState.type as any,
+      accountId:
+        urlState.accountId === "_all"
+          ? undefined
+          : urlState.accountId || undefined,
+      searchQuery: urlState.q || undefined,
+      sort:
+        urlState.sort === "_default" ? undefined : urlState.sort || undefined,
       pageSize: 100,
       pageToken: "",
     },
@@ -205,7 +226,9 @@ export function TransactionsView() {
                 <Button
                   size="sm"
                   className="mt-4 w-full cursor-pointer rounded-2xl bg-indigo-500 font-semibold text-white shadow-md hover:bg-indigo-600"
-                  onClick={() => setPendingOpen(true)}
+                  onClick={() =>
+                    navigate(resolveSpacePath("/finance/inbox", spaceId, true))
+                  }
                 >
                   Review Staged Expenses
                 </Button>
@@ -258,36 +281,180 @@ export function TransactionsView() {
                     </span>
                   </div>
                 </div>
+                {/* Filters */}
+                <div className="block space-y-4 border-t border-border/20 pt-4">
+                  {/* Search query */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                      Search Notes
+                    </label>
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search description..."
+                      className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold placeholder:text-muted-foreground/50 focus:ring-1 focus:ring-primary focus:outline-none"
+                    />
+                  </div>
 
-                {/* Filter */}
-                <div className="block space-y-2 border-t border-border/20 pt-4">
-                  <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                    Filter Budget
-                  </label>
-                  <Select
-                    value={selectedBudgetFilter}
-                    onValueChange={(val) => setSelectedBudgetFilter(val || "")}
-                  >
-                    <SelectTrigger className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold">
-                      <span className="flex items-center gap-2">
-                        <Filter className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        <SelectValue placeholder="All Budgets">
-                          {selectedBudgetFilter
-                            ? budgets.find((b) => b.id === selectedBudgetFilter)
-                                ?.name || "All Budgets"
-                            : "All Budgets"}
+                  {/* Flow Type filter */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                      Flow Type
+                    </label>
+                    <Select
+                      value={urlState.type}
+                      onValueChange={(val) =>
+                        setUrlState({ type: val || "TYPE_UNSPECIFIED" })
+                      }
+                    >
+                      <SelectTrigger className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold">
+                        <SelectValue placeholder="All Flows">
+                          {urlState.type === "TYPE_UNSPECIFIED"
+                            ? "All Flows"
+                            : urlState.type === "EXPENSE"
+                              ? "Expense"
+                              : urlState.type === "INCOME"
+                                ? "Income"
+                                : urlState.type === "TRANSFER_OUT"
+                                  ? "Transfer Out"
+                                  : urlState.type === "TRANSFER_IN"
+                                    ? "Transfer In"
+                                    : "All Flows"}
                         </SelectValue>
-                      </span>
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                      <SelectItem value="">All Budgets</SelectItem>
-                      {budgets.map((b) => (
-                        <SelectItem key={b.id} value={b.id}>
-                          {b.name}
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                        <SelectItem value="TYPE_UNSPECIFIED">
+                          All Flows
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        <SelectItem value="EXPENSE">Expense</SelectItem>
+                        <SelectItem value="INCOME">Income</SelectItem>
+                        <SelectItem value="TRANSFER_OUT">
+                          Transfer Out
+                        </SelectItem>
+                        <SelectItem value="TRANSFER_IN">Transfer In</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Budget Category filter */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                      Budget Category
+                    </label>
+                    <Select
+                      value={urlState.budgetId}
+                      onValueChange={(val) =>
+                        setUrlState({ budgetId: val || "_all" })
+                      }
+                    >
+                      <SelectTrigger className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold">
+                        <SelectValue placeholder="All Budgets">
+                          {urlState.budgetId === "_all"
+                            ? "All Budgets"
+                            : budgets.find((b) => b.id === urlState.budgetId)
+                                ?.name || "All Budgets"}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                        <SelectItem value="_all">All Budgets</SelectItem>
+                        {budgets.map((b) => (
+                          <SelectItem key={b.id} value={b.id}>
+                            {b.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Asset Account filter */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                      Asset Account
+                    </label>
+                    <Select
+                      value={urlState.accountId}
+                      onValueChange={(val) =>
+                        setUrlState({ accountId: val || "_all" })
+                      }
+                    >
+                      <SelectTrigger className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold">
+                        <SelectValue placeholder="All Accounts">
+                          {urlState.accountId === "_all"
+                            ? "All Accounts"
+                            : accounts.find((a) => a.id === urlState.accountId)
+                                ?.name || "All Accounts"}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                        <SelectItem value="_all">All Accounts</SelectItem>
+                        {accounts.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.name} ({a.currency})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Sort Order filter */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                      Sort Order
+                    </label>
+                    <Select
+                      value={urlState.sort}
+                      onValueChange={(val) =>
+                        setUrlState({ sort: val || "_default" })
+                      }
+                    >
+                      <SelectTrigger className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold">
+                        <SelectValue placeholder="Newest first">
+                          {urlState.sort === "_default"
+                            ? "Newest first"
+                            : urlState.sort === "transaction_date:asc"
+                              ? "Oldest first"
+                              : urlState.sort === "effective_date:desc"
+                                ? "Effective: Newest"
+                                : urlState.sort === "effective_date:asc"
+                                  ? "Effective: Oldest"
+                                  : urlState.sort === "amount:desc"
+                                    ? "Highest Amount"
+                                    : urlState.sort === "amount:asc"
+                                      ? "Lowest Amount"
+                                      : urlState.sort === "description:asc"
+                                        ? "Description: A-Z"
+                                        : urlState.sort === "description:desc"
+                                          ? "Description: Z-A"
+                                          : "Newest first"}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                        <SelectItem value="_default">Newest first</SelectItem>
+                        <SelectItem value="transaction_date:asc">
+                          Oldest first
+                        </SelectItem>
+                        <SelectItem value="effective_date:desc">
+                          Effective: Newest
+                        </SelectItem>
+                        <SelectItem value="effective_date:asc">
+                          Effective: Oldest
+                        </SelectItem>
+                        <SelectItem value="amount:desc">
+                          Highest Amount
+                        </SelectItem>
+                        <SelectItem value="amount:asc">
+                          Lowest Amount
+                        </SelectItem>
+                        <SelectItem value="description:asc">
+                          Description: A-Z
+                        </SelectItem>
+                        <SelectItem value="description:desc">
+                          Description: Z-A
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 {/* Add Expense Action Button */}
@@ -517,7 +684,7 @@ export function TransactionsView() {
                                 <span>Edit</span>
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() => handleDelete(t.id)}
+                                onClick={() => handleDelete(t.id || "")}
                                 disabled={deleteMutation.isPending}
                                 className="flex cursor-pointer items-center gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
                               >
@@ -552,14 +719,6 @@ export function TransactionsView() {
           onOpenChange={setEventsOpen}
           txnId={eventsTxnId}
           txnDescription={eventsTxnDescription}
-        />
-        <InboxItemsSheet
-          open={pendingOpen}
-          onOpenChange={handlePendingOpenChange}
-          spaceId={spaceId}
-          budgets={budgets}
-          refetchTransactions={refetchTransactions}
-          refetchBudgets={refetchBudgets}
         />
       </div>
     </FinancePageLayout>

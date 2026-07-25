@@ -130,7 +130,7 @@ export function BudgetCard({
                     Edit Template
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => onDelete(budget.id)}
+                    onClick={() => onDelete(budget.id || "")}
                     className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-destructive hover:bg-destructive/10"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -148,7 +148,7 @@ export function BudgetCard({
         <BudgetPeriodProgress
           budget={budget}
           onPeriodLoaded={(limitInBase) =>
-            onPeriodLoaded(budget.id, limitInBase)
+            onPeriodLoaded(budget.id || "", limitInBase)
           }
         />
       )}

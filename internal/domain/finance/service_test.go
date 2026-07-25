@@ -48,6 +48,16 @@ func (m *mockBudgetStore) GetByID(ctx context.Context, id BudgetID) (*Budget, er
 	return b, nil
 }
 
+func (m *mockBudgetStore) GetByIDs(ctx context.Context, ids []BudgetID) ([]*Budget, error) {
+	var list []*Budget
+	for _, id := range ids {
+		if b, ok := m.data[id]; ok {
+			list = append(list, b)
+		}
+	}
+	return list, nil
+}
+
 func (m *mockBudgetStore) Update(ctx context.Context, b *Budget) error {
 	if _, ok := m.data[b.ID]; !ok {
 		return ErrBudgetNotFound
@@ -390,6 +400,16 @@ func (m *mockAccountStore) HasDefault(ctx context.Context, spaceID SpaceID) (boo
 		}
 	}
 	return false, nil
+}
+
+func (m *mockAccountStore) GetByIDs(ctx context.Context, ids []AccountID) ([]*Account, error) {
+	var list []*Account
+	for _, id := range ids {
+		if a, ok := m.data[id]; ok {
+			list = append(list, a)
+		}
+	}
+	return list, nil
 }
 
 func (m *mockAccountStore) UnsetDefaultsExcept(ctx context.Context, spaceID SpaceID, id AccountID) error {

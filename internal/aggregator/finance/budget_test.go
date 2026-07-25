@@ -48,6 +48,15 @@ func (m *mockBudgetStore) GetByID(ctx context.Context, id finance.BudgetID) (*fi
 	}
 	return b, nil
 }
+func (m *mockBudgetStore) GetByIDs(ctx context.Context, ids []finance.BudgetID) ([]*finance.Budget, error) {
+	var list []*finance.Budget
+	for _, id := range ids {
+		if b, ok := m.budgets[id]; ok {
+			list = append(list, b)
+		}
+	}
+	return list, nil
+}
 func (m *mockBudgetStore) Update(ctx context.Context, b *finance.Budget) error {
 	m.budgets[b.ID] = b
 	return nil

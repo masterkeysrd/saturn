@@ -9,185 +9,558 @@ import {
   type UseMutationOptions,
 } from "@tanstack/react-query"
 
+/**
+ * RecurrenceInterval defines the frequency of budgeting or transaction execution rules.
+ */
 export type RecurrenceInterval =
+  /**
+   * Default unspecified value. Invalid fallback.
+   */
   | "RECURRENCE_INTERVAL_UNSPECIFIED"
+  /**
+   * Budget resets or templates trigger every calendar week.
+   */
   | "INTERVAL_WEEKLY"
+  /**
+   * Budget resets or templates trigger every calendar month.
+   */
   | "INTERVAL_MONTHLY"
+  /**
+   * Budget resets or templates trigger every calendar year.
+   */
   | "INTERVAL_YEARLY"
 
+/**
+ * LimitPropagation defines how changes in budget limits propagate to future periods.
+ */
 export type LimitPropagation =
+  /**
+   * Default unspecified value.
+   */
   | "LIMIT_PROPAGATION_UNSPECIFIED"
+  /**
+   * Apply the limit modification only to the current active period.
+   */
   | "LIMIT_PROPAGATION_CURRENT_PERIOD"
+  /**
+   * Propagate limits to all future budget periods without modifying history.
+   */
   | "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
 
-export type TransactionType =
-  | "TRANSACTION_TYPE_UNSPECIFIED"
-  | "EXPENSE"
-  | "INCOME"
-  | "TRANSFER_OUT"
-  | "TRANSFER_IN"
-
+/**
+ * InsightGranularity defines the grouping interval of aggregated statistical data.
+ */
 export type InsightGranularity =
-  "INSIGHT_GRANULARITY_UNSPECIFIED" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY"
+  /**
+   * Default unspecified granularity.
+   */
+  | "INSIGHT_GRANULARITY_UNSPECIFIED"
+  /**
+   * Group metrics by calendar day.
+   */
+  | "DAILY"
+  /**
+   * Group metrics by calendar week.
+   */
+  | "WEEKLY"
+  /**
+   * Group metrics by calendar month.
+   */
+  | "MONTHLY"
+  /**
+   * Group metrics by calendar year.
+   */
+  | "YEARLY"
 
+/**
+ * BorrowingDirection defines the type/direction of personal debt agreements.
+ */
 export type BorrowingDirection =
+  /**
+   * Default unspecified value. Invalid fallback.
+   */
   | "BORROWING_DIRECTION_UNSPECIFIED"
+  /**
+   * Funds borrowed from an external entity (payable liability).
+   */
   | "BORROWING_DIRECTION_BORROWED"
+  /**
+   * Funds lent to an external entity (receivable asset).
+   */
   | "BORROWING_DIRECTION_LENT"
 
+/**
+ * BorrowingStatus defines the lifecycle status of debt agreements.
+ */
 export type BorrowingStatus =
+  /**
+   * Default unspecified value. Invalid fallback.
+   */
   | "BORROWING_STATUS_UNSPECIFIED"
+  /**
+   * Active borrowing with pending outstanding balances.
+   */
   | "BORROWING_STATUS_ACTIVE"
+  /**
+   * Paid-off borrowing with zero remaining balance.
+   */
   | "BORROWING_STATUS_PAID_OFF"
 
 /**
- * Scoped resource view options
+ * Scoped resource view options.
  */
-export type Budget_View = "VIEW_UNSPECIFIED" | "BASIC" | "FULL"
-
-export type Account_Type =
-  "TYPE_UNSPECIFIED" | "BANK" | "CREDIT_CARD" | "CASH" | "DIGITAL_ACCOUNT"
-
-export type Account_View = "VIEW_UNSPECIFIED" | "BASIC" | "FULL"
+export type Budget_View =
+  /**
+   * Default view. Resolves only basic configuration fields.
+   */
+  | "VIEW_UNSPECIFIED"
+  /**
+   * Returns basic configuration details without period calculations.
+   */
+  | "BASIC"
+  /**
+   * Hydrates complete structure including active period spent statistics.
+   */
+  | "FULL"
 
 /**
- * FinanceSettings represents workspace configuration.
+ * Type defines the direction and flow of funds.
+ */
+export type Transaction_Type =
+  /**
+   * Default unspecified type.
+   */
+  | "TYPE_UNSPECIFIED"
+  /**
+   * Expense transaction, subtracting from the account balance.
+   */
+  | "EXPENSE"
+  /**
+   * Income transaction, adding to the account balance.
+   */
+  | "INCOME"
+  /**
+   * Transfer out transaction, moving funds to another account.
+   */
+  | "TRANSFER_OUT"
+  /**
+   * Transfer in transaction, receiving funds from another account.
+   */
+  | "TRANSFER_IN"
+
+/**
+ * View controls the hydration of related metadata.
+ */
+export type Transaction_View =
+  /**
+   * Default view. Returns only basic properties.
+   */
+  | "VIEW_UNSPECIFIED"
+  /**
+   * Returns transaction details without related account or budget info.
+   */
+  | "BASIC"
+  /**
+   * Hydrates complete structure including account and budget details.
+   */
+  | "FULL"
+
+/**
+ * Type defines the classification of payment accounts.
+ */
+export type Account_Type =
+  /**
+   * Default unspecified type. Invalid fallback.
+   */
+  | "TYPE_UNSPECIFIED"
+  /**
+   * Checking or savings bank account.
+   */
+  | "BANK"
+  /**
+   * Credit card account. Credit accounts support negative balances.
+   */
+  | "CREDIT_CARD"
+  /**
+   * Cash balance.
+   */
+  | "CASH"
+  /**
+   * Digital wallet or virtual balance.
+   */
+  | "DIGITAL_ACCOUNT"
+
+/**
+ * View controls the hydration of related metadata.
+ */
+export type Account_View =
+  /**
+   * Default view. Resolves only basic configuration fields.
+   */
+  | "VIEW_UNSPECIFIED"
+  /**
+   * Returns account details without base currency conversion calculations.
+   */
+  | "BASIC"
+  /**
+   * Hydrates complete structure including exchange rate conversion metrics.
+   */
+  | "FULL"
+
+/**
+ * FinanceSettings represents the workspace configuration.
  */
 export interface FinanceSettings {
-  spaceId: string
+  /**
+   * Output only. Associated space identifier.
+   */
+  spaceId?: string
+  /**
+   * Required. Base currency for conversions and insights (e.g. "USD").
+   * Analytics calculations and overall spend views default to this currency.
+   */
   baseCurrency: string
-  createTime: string
-  updateTime: string
+  /**
+   * Output only. Creation time of the settings.
+   */
+  createTime?: string
+  /**
+   * Output only. Last update time of the settings.
+   */
+  updateTime?: string
 }
 
 /**
  * Budget represents a budget template definition.
  */
 export interface Budget {
-  id: string
-  spaceId: string
+  /**
+   * Output only. Budget template identifier.
+   * Values are of the form `bud_[a-zA-Z0-9]+`.
+   */
+  id?: string
+  /**
+   * Output only. Space identifier.
+   */
+  spaceId?: string
+  /**
+   * Required. User-friendly name of the budget template.
+   */
   name: string
+  /**
+   * Required. Limit amount in cents (e.g. 50000 for $500.00).
+   */
   limitAmount: string
+  /**
+   * Required. ISO Currency code of the budget limit.
+   */
   currency: string
+  /**
+   * Required. Recurrence interval frequency.
+   */
   interval: RecurrenceInterval
+  /**
+   * Optional. Indicates if the budget is active and accepting transaction logging.
+   */
   isActive: boolean
+  /**
+   * Optional. Icon identifier for UI rendering.
+   */
   icon: string
+  /**
+   * Optional. HEX Color code for UI categorization.
+   */
   color: string
+  /**
+   * Optional. Default payment/liquidity account associated with this budget.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
   defaultAccountId?: string
-  currentPeriod: Budget_ActivePeriod
-  createTime: string
-  updateTime: string
+  /**
+   * Output only. Metrics of the current budget period.
+   */
+  currentPeriod?: Budget_ActivePeriod
+  /**
+   * Output only. Creation time of the budget.
+   */
+  createTime?: string
+  /**
+   * Output only. Last update time of the budget.
+   */
+  updateTime?: string
 }
 
 /**
  * Represents the computed details of the active/current period.
  */
 export interface Budget_ActivePeriod {
-  startDate: string
-  endDate: string
-  spentAmount: string
-  spentInBase: string
-  exchangeRateToBase: number
-  baseCurrency: string
-  limitInBase: string
+  /**
+   * Output only. Start date boundary of the current period.
+   */
+  startDate?: string
+  /**
+   * Output only. End date boundary of the current period.
+   */
+  endDate?: string
+  /**
+   * Output only. Amount spent in local currency cents within this period.
+   */
+  spentAmount?: string
+  /**
+   * Output only. Amount spent converted to base currency cents.
+   */
+  spentInBase?: string
+  /**
+   * Output only. Exchange rate to base currency used during conversion.
+   */
+  exchangeRateToBase?: number
+  /**
+   * Output only. Base currency identifier.
+   */
+  baseCurrency?: string
+  /**
+   * Output only. Limit in base currency cents.
+   */
+  limitInBase?: string
 }
 
 /**
  * BudgetPeriod represents an active instantiation of a budget.
  */
 export interface BudgetPeriod {
-  id: string
-  budgetId: string
-  spaceId: string
-  startDate: string
-  endDate: string
-  limitAmount: string
-  currency: string
-  baseCurrency: string
-  exchangeRateToBase: number
-  createTime: string
-  updateTime: string
-  spentAmount: string
-  spentInBase: string
+  /**
+   * Output only. Period identifier.
+   * Values are of the form `per_[a-zA-Z0-9]+`.
+   */
+  id?: string
+  /**
+   * Output only. Parent budget template identifier.
+   * Values are of the form `bud_[a-zA-Z0-9]+`.
+   */
+  budgetId?: string
+  /**
+   * Output only. Space identifier.
+   */
+  spaceId?: string
+  /**
+   * Output only. Period start date.
+   */
+  startDate?: string
+  /**
+   * Output only. Period end date.
+   */
+  endDate?: string
+  /**
+   * Output only. Limit amount allocated to this period in local currency cents.
+   */
+  limitAmount?: string
+  /**
+   * Output only. Local currency code.
+   */
+  currency?: string
+  /**
+   * Output only. Workspace base currency code.
+   */
+  baseCurrency?: string
+  /**
+   * Output only. Exchange rate to base currency used during conversion.
+   */
+  exchangeRateToBase?: number
+  /**
+   * Output only. Creation time of the budget period.
+   */
+  createTime?: string
+  /**
+   * Output only. Last update time of the budget period.
+   */
+  updateTime?: string
+  /**
+   * Output only. Spent amount in cents within this period.
+   */
+  spentAmount?: string
+  /**
+   * Output only. Spent amount converted to base currency cents.
+   */
+  spentInBase?: string
 }
 
 /**
- * ConfigureFinanceRequest contains fields for initial setup.
+ * The request for
+ * [ConfigureFinance][saturn.finance.v1.Finance.ConfigureFinance].
  */
 export interface ConfigureFinanceRequest {
+  /**
+   * Required. Base currency for conversions and insights (e.g. "USD").
+   * Conversions and aggregated spent statistics will default to this currency.
+   */
   baseCurrency: string
 }
 
 /**
- * GetFinanceSettingsRequest contains fields to fetch config.
+ * The request for
+ * [GetFinanceSettings][saturn.finance.v1.Finance.GetFinanceSettings].
  */
 export type GetFinanceSettingsRequest = Record<string, never>
 
 /**
- * CreateBudgetRequest contains fields to create budget.
+ * The request for
+ * [CreateBudget][saturn.finance.v1.Finance.CreateBudget].
  */
 export interface CreateBudgetRequest {
+  /**
+   * Required. User-friendly name of the budget template.
+   */
   name: string
+  /**
+   * Required. Limit amount in cents (e.g. 50000 for $500.00).
+   */
   limitAmount: string
+  /**
+   * Required. ISO currency code of the budget limit.
+   */
   currency: string
+  /**
+   * Required. Recurrence interval frequency.
+   */
   interval: RecurrenceInterval
+  /**
+   * Optional. Icon identifier for UI rendering.
+   */
   icon: string
+  /**
+   * Optional. HEX Color code used for visual categorization.
+   */
   color: string
+  /**
+   * Optional. Unique identifier of the default account associated with this budget.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
   defaultAccountId?: string
 }
 
 /**
- * UpdateBudgetRequest contains update rules.
+ * The request for
+ * [UpdateBudget][saturn.finance.v1.Finance.UpdateBudget].
  */
 export interface UpdateBudgetRequest {
+  /**
+   * Required. ID of the budget to update.
+   * Values are of the form `bud_[a-zA-Z0-9]+`.
+   */
   id: string
+  /**
+   * Optional. User-friendly name.
+   */
   name: string
+  /**
+   * Optional. Limit amount in cents.
+   */
   limitAmount: string
+  /**
+   * Optional. Currency code.
+   */
   currency: string
+  /**
+   * Optional. Recurrence interval.
+   */
   interval: RecurrenceInterval
+  /**
+   * Optional. Indicates if the budget is active.
+   */
   isActive: boolean
+  /**
+   * Optional. Limit propagation logic determining how future periods are affected.
+   */
   propagation: LimitPropagation
+  /**
+   * Optional. Icon identifier.
+   */
   icon: string
+  /**
+   * Optional. Color code.
+   */
   color: string
+  /**
+   * Optional. Unique identifier of the default account associated with this budget.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
   defaultAccountId?: string
 }
 
 /**
- * DeleteBudgetRequest contains deletion target.
+ * The request for
+ * [DeleteBudget][saturn.finance.v1.Finance.DeleteBudget].
  */
 export interface DeleteBudgetRequest {
+  /**
+   * Required. ID of the budget to delete.
+   * Values are of the form `bud_[a-zA-Z0-9]+`.
+   */
   id: string
 }
 
 /**
- * ListBudgetsRequest contains listing parameters.
+ * The request for
+ * [ListBudgets][saturn.finance.v1.Finance.ListBudgets].
  */
 export interface ListBudgetsRequest {
+  /**
+   * Optional. Maximum number of items to return in a single page.
+   */
   pageSize: number
+  /**
+   * Optional. Keyset page token returned by a previous call.
+   */
   pageToken: string
+  /**
+   * Optional. Filter only active budgets.
+   */
   activeOnly?: boolean
+  /**
+   * Optional. Text search query matching budget names.
+   */
   searchQuery?: string
+  /**
+   * Optional. Sorting rules specifying field name and optional ordering suffix.
+   */
   sort?: string
+  /**
+   * Optional. Scoped budget representation view type.
+   */
   view?: Budget_View
+  /**
+   * Optional. Specific calculation target date for periods. Defaults to current time if omitted.
+   */
   targetDate?: string
 }
 
 /**
- * ListBudgetsResponse contains paginated budgets.
+ * The response for
+ * [ListBudgets][saturn.finance.v1.Finance.ListBudgets].
  */
 export interface ListBudgetsResponse {
+  /**
+   * List of budgets matching filter rules.
+   */
   budgets: Budget[]
+  /**
+   * Keyset token to fetch the next page of results. Empty if no more pages are available.
+   */
   nextPageToken: string
 }
 
 /**
- * GetBudgetPeriodRequest retrieves period for date.
+ * The request for
+ * [GetBudgetPeriod][saturn.finance.v1.Finance.GetBudgetPeriod].
  */
 export interface GetBudgetPeriodRequest {
+  /**
+   * Required. Target parent budget ID.
+   * Values are of the form `bud_[a-zA-Z0-9]+`.
+   */
   budgetId: string
   /**
-   *
-   * @description Timestamp for calculation, defaults to current time if omitted
+   * Optional. Target calculation date, defaults to current time if omitted.
    */
   date: string
 }
@@ -196,535 +569,1781 @@ export interface GetBudgetPeriodRequest {
  * ExchangeRate represents a daily rate record.
  */
 export interface ExchangeRate {
-  spaceId: string
+  /**
+   * Output only. Associated space identifier.
+   */
+  spaceId?: string
+  /**
+   * Required. Source currency code (e.g. "EUR").
+   */
   fromCurrency: string
+  /**
+   * Required. Target currency code (e.g. "USD").
+   */
   toCurrency: string
+  /**
+   * Required. Conversion rate multiplier (e.g. 1.12).
+   */
   rate: number
+  /**
+   * Required. Target date for this rate.
+   */
   rateDate: string
-  createTime: string
+  /**
+   * Output only. Record creation timestamp.
+   */
+  createTime?: string
 }
 
 /**
- * CreateExchangeRateRequest registers a daily rate.
+ * The request for
+ * [CreateExchangeRate][saturn.finance.v1.Finance.CreateExchangeRate].
  */
 export interface CreateExchangeRateRequest {
+  /**
+   * Required. Source currency code.
+   */
   fromCurrency: string
+  /**
+   * Required. Target currency code.
+   */
   toCurrency: string
+  /**
+   * Required. Conversion rate multiplier.
+   */
   rate: number
+  /**
+   * Required. Target date.
+   */
   rateDate: string
 }
 
 /**
- * ListExchangeRatesRequest lists workspace rates.
+ * The request for
+ * [ListExchangeRates][saturn.finance.v1.Finance.ListExchangeRates].
  */
 export interface ListExchangeRatesRequest {
+  /**
+   * Optional. Maximum number of items to return.
+   */
   pageSize: number
+  /**
+   * Optional. Keyset page token.
+   */
   pageToken: string
 }
 
 /**
- * ListExchangeRatesResponse contains paginated rates.
+ * The response for
+ * [ListExchangeRates][saturn.finance.v1.Finance.ListExchangeRates].
  */
 export interface ListExchangeRatesResponse {
+  /**
+   * List of matching exchange rate records.
+   */
   exchangeRates: ExchangeRate[]
+  /**
+   * Keyset token to fetch the next page of results. Empty if no more pages are available.
+   */
   nextPageToken: string
 }
 
 /**
- * DeleteExchangeRateRequest contains identifiers for rate deletion.
+ * The request for
+ * [DeleteExchangeRate][saturn.finance.v1.Finance.DeleteExchangeRate].
  */
 export interface DeleteExchangeRateRequest {
+  /**
+   * Required. Source currency code.
+   */
   fromCurrency: string
+  /**
+   * Required. Target currency code.
+   */
   toCurrency: string
+  /**
+   * Required. Target date.
+   */
   rateDate: string
 }
 
+/**
+ * Transaction represents a financial record in the space ledger.
+ */
 export interface Transaction {
-  id: string
-  spaceId: string
-  type: TransactionType
-  budgetId: string
-  periodId: string
-  amount: string
-  currency: string
-  amountInBase: string
-  description: string
-  transactionDate: string
-  createTime: string
-  updateTime: string
-  effectiveDate: string
-  sourceType?: string
-  sourceId?: string
-  accountId?: string
-  transferId?: string
-}
-
-export interface ExpenseInput {
-  budgetId: string
-  amount: string
-  currency: string
-  description: string
-  transactionDate: string
-  effectiveDate: string
-  accountId?: string
-}
-
-export interface CreateExpenseRequest {
-  expense: ExpenseInput
-}
-
-export interface UpdateExpenseRequest {
-  id: string
-  expense: ExpenseInput
-}
-
-export interface DeleteTransactionRequest {
-  id: string
-}
-
-export interface ListTransactionsRequest {
-  budgetId: string
-  type: TransactionType
-  pageSize: number
-  pageToken: string
-  sourceType?: string
-  sourceId?: string
-  accountId?: string
-}
-
-export interface ListTransactionsResponse {
-  transactions: Transaction[]
-  nextPageToken: string
-}
-
-export interface GetInsightsRequest {
-  granularity: InsightGranularity
-  startDate: string
-  endDate: string
-}
-
-export interface GetInsightsResponse {
-  spent: SpentInsights
-}
-
-export interface SpentInsights {
-  totalLimit: string
-  totalSpent: string
-  remainingBudget: string
-  burnRate: number
-  trend: SpentInsights_TrendDataPoint[]
-  distributions: SpentInsights_BudgetUsage[]
-  topExpenses: SpentInsights_HighValueExpense[]
-}
-
-export interface SpentInsights_BudgetContribution {
-  budgetId: string
-  budgetName: string
-  budgetColor: string
-  amountInBase: string
-  amountInLocal: string
-  localCurrency: string
-  contributionPercentage: number
-}
-
-export interface SpentInsights_TrendDataPoint {
-  label: string
-  startDate: string
-  amountInBase: string
-  transactionCount: number
-  contributions: SpentInsights_BudgetContribution[]
-}
-
-export interface SpentInsights_BudgetUsage {
-  budgetId: string
-  budgetName: string
-  budgetColor: string
-  budgetIcon: string
-  limit: string
-  spent: string
-  spentInBase: string
-  usagePercentage: number
-}
-
-export interface SpentInsights_HighValueExpense {
-  transactionId: string
-  description: string
-  amount: string
-  currency: string
-  amountInBase: string
-  budgetName: string
-  transactionDate: string
-  effectiveDate: string
-}
-
-export type GenerateScheduledPaymentsPayload = Record<string, never>
-
-export interface RecurringExpense {
-  id: string
-  spaceId: string
-  budgetId: string
-  name: string
-  amount: string
-  currency: string
-  interval: string
-  nextDueDate: string
-  isVariable: boolean
-  status: string
-  gracePeriodDays: number
-  createTime: string
-  updateTime: string
-}
-
-export interface ScheduledPayment {
-  id: string
-  spaceId: string
-  budgetId: string
-  sourceType: string
-  sourceId: string
-  amount: string
-  currency: string
-  dueDate: string
-  status: string
-  metadata: string
-  createTime: string
-  updateTime: string
-}
-
-export interface CreateRecurringExpenseRequest {
-  budgetId: string
-  name: string
-  amount: string
-  currency: string
-  interval: string
-  nextDueDate: string
-  isVariable: boolean
-  gracePeriodDays: number
-}
-
-export interface UpdateRecurringExpenseRequest {
-  id: string
-  budgetId: string
-  name: string
-  amount: string
-  currency: string
-  interval: string
-  nextDueDate: string
-  isVariable: boolean
-  status: string
-  gracePeriodDays: number
-}
-
-export interface DeleteRecurringExpenseRequest {
-  id: string
-}
-
-export interface ListRecurringExpensesRequest {
-  status: string
-  pageSize: number
-  pageToken: string
-}
-
-export interface ListRecurringExpensesResponse {
-  recurringExpenses: RecurringExpense[]
-  nextPageToken: string
-}
-
-export interface ListScheduledPaymentsRequest {
-  status: string
-  startDate: string
-  endDate: string
-  pageSize: number
-  pageToken: string
-}
-
-export interface ListScheduledPaymentsResponse {
-  scheduledPayments: ScheduledPayment[]
-  nextPageToken: string
-}
-
-export interface ConfirmScheduledPaymentRequest {
-  paymentId: string
-  transactionDate: string
-  effectiveDate: string
-  actualAmount: string
-  description?: string
-}
-
-export interface Borrowing {
-  id: string
-  spaceId: string
-  direction: BorrowingDirection
-  counterparty: string
-  contactInfo: string
-  totalAmount: string
-  remainingAmount: string
-  currency: string
-  status: BorrowingStatus
-  establishedAt: string
-  dueAt: string
-  createAsTransaction: boolean
-  notes: string
-  createTime: string
-  updateTime: string
-}
-
-export interface BorrowingRepayment {
-  id: string
-  borrowingId: string
-  spaceId: string
-  amount: string
-  paymentDate: string
-  notes: string
-  createTime: string
-  updateTime: string
-  accountId: string
-}
-
-export interface BorrowingInput {
-  direction: BorrowingDirection
-  counterparty: string
-  contactInfo: string
-  totalAmount: string
-  currency: string
-  establishedAt: string
-  dueAt: string
-  notes: string
-  createAsTransaction: boolean
-  accountId?: string
-}
-
-export interface CreateBorrowingRequest {
-  borrowing: BorrowingInput
-}
-
-export interface GetBorrowingRequest {
-  id: string
-}
-
-export interface ListBorrowingsRequest {
-  status?: BorrowingStatus
-  direction?: BorrowingDirection
-  pageSize: number
-  pageToken: string
-}
-
-export interface ListBorrowingsResponse {
-  borrowings: Borrowing[]
-  nextPageToken: string
-}
-
-export interface UpdateBorrowingRequest {
-  id: string
-  borrowing: BorrowingInput
-}
-
-export interface DeleteBorrowingRequest {
-  id: string
-}
-
-export interface BorrowingRepaymentInput {
-  amount: string
-  paymentDate: string
-  notes: string
-  accountId: string
-}
-
-export interface CreateBorrowingRepaymentRequest {
-  borrowingId: string
-  repayment: BorrowingRepaymentInput
-}
-
-export interface ListBorrowingRepaymentsRequest {
-  borrowingId: string
-}
-
-export interface ListBorrowingRepaymentsResponse {
-  repayments: BorrowingRepayment[]
-}
-
-export interface DeleteBorrowingRepaymentRequest {
-  borrowingId: string
-  id: string
-}
-
-export interface CurrencyInfo {
-  code: string
-  name: string
-}
-
-export type ListCurrenciesRequest = Record<string, never>
-
-export interface ListCurrenciesResponse {
-  currencies: CurrencyInfo[]
-}
-
-export interface Account {
+  /**
+   * Output only. Unique identifier of the transaction.
+   * Values are of the form `txn_[a-zA-Z0-9]+`.
+   */
   id?: string
-  spaceId: string
-  name: string
-  type: Account_Type
+  /**
+   * Output only. Associated space identifier.
+   */
+  spaceId?: string
+  /**
+   * Required. Fund movement flow type.
+   */
+  type: Transaction_Type
+  /**
+   * Optional. Associated budget identifier.
+   * Values are of the form `bud_[a-zA-Z0-9]+`.
+   */
+  budgetId: string
+  /**
+   * Optional. Associated period identifier.
+   * Values are of the form `per_[a-zA-Z0-9]+`.
+   */
+  periodId: string
+  /**
+   * Required. Absolute value of transaction in local currency cents (e.g. 10000 for $100.00).
+   */
+  amount: string
+  /**
+   * Required. Currency code.
+   */
   currency: string
-  initialBalance: string
-  currentBalance?: string
-  creditLimit: string
-  isDefault: boolean
-  isActive: boolean
-  color: string
-  notes: string
-  lastFour: string
+  /**
+   * Output only. Value converted to base currency cents.
+   */
+  amountInBase?: string
+  /**
+   * Optional. Narration notes.
+   */
+  description: string
+  /**
+   * Required. Time transaction occurred.
+   */
+  transactionDate: string
+  /**
+   * Output only. System create timestamp.
+   */
   createTime?: string
+  /**
+   * Output only. System update timestamp.
+   */
   updateTime?: string
-  conversion?: Account_Conversion
+  /**
+   * Required. Execution/posting date (when funds reconcile in account balance).
+   */
+  effectiveDate: string
+  /**
+   * Optional. Integration source type (e.g. "plaid").
+   */
+  sourceType?: string
+  /**
+   * Optional. Integration source record ID.
+   */
+  sourceId?: string
+  /**
+   * Optional. Associated account ID.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
+  accountId?: string
+  /**
+   * Optional. Associated transfer transaction ID.
+   * Values are of the form `txn_[a-zA-Z0-9]+`.
+   */
+  transferId?: string
+  /**
+   * Output only. Hydrated minimal account info. Available only on FULL view.
+   */
+  account?: Transaction_AccountInfo
+  /**
+   * Output only. Hydrated minimal budget info. Available only on FULL view.
+   */
+  budget?: Transaction_BudgetInfo
 }
 
-export interface Account_Conversion {
-  balance: string
-  rate: number
+/**
+ * AccountInfo wraps minimal account details required for UI listing.
+ */
+export interface Transaction_AccountInfo {
+  /**
+   * Output only. Unique identifier of the account.
+   */
+  id?: string
+  /**
+   * Output only. User-friendly name of the account.
+   */
+  name?: string
+  /**
+   * Output only. Color hex code for display.
+   */
+  color?: string
+  /**
+   * Output only. Account type.
+   */
+  type?: string
 }
 
-export interface CreateAccountRequest {
-  account: Account
+/**
+ * BudgetInfo wraps minimal budget details required for UI listing.
+ */
+export interface Transaction_BudgetInfo {
+  /**
+   * Output only. Unique identifier of the budget.
+   */
+  id?: string
+  /**
+   * Output only. User-friendly name of the budget.
+   */
+  name?: string
 }
 
-export interface GetAccountRequest {
+/**
+ * ExpenseInput encapsulates fields representing an expense record payload.
+ */
+export interface ExpenseInput {
+  /**
+   * Required. Budget category identifier.
+   * Values are of the form `bud_[a-zA-Z0-9]+`.
+   */
+  budgetId: string
+  /**
+   * Required. Absolute value of transaction in local currency cents (e.g. 10000 for $100.00).
+   */
+  amount: string
+  /**
+   * Required. Currency code.
+   */
+  currency: string
+  /**
+   * Optional. Narration notes.
+   */
+  description: string
+  /**
+   * Optional. Time transaction occurred.
+   */
+  transactionDate: string
+  /**
+   * Optional. Execution/posting date.
+   */
+  effectiveDate: string
+  /**
+   * Optional. Target account identifier.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
+  accountId?: string
+}
+
+/**
+ * The request for
+ * [CreateExpense][saturn.finance.v1.Finance.CreateExpense].
+ */
+export interface CreateExpenseRequest {
+  /**
+   * Required. Target expense transaction parameters.
+   */
+  expense: ExpenseInput
+}
+
+/**
+ * The request for
+ * [UpdateExpense][saturn.finance.v1.Finance.UpdateExpense].
+ */
+export interface UpdateExpenseRequest {
+  /**
+   * Required. Unique identifier of the transaction to update.
+   * Values are of the form `txn_[a-zA-Z0-9]+`.
+   */
   id: string
-  view?: Account_View
+  /**
+   * Required. Updated expense transaction parameters.
+   */
+  expense: ExpenseInput
 }
 
-export interface UpdateAccountRequest {
+/**
+ * The request for
+ * [DeleteTransaction][saturn.finance.v1.Finance.DeleteTransaction].
+ */
+export interface DeleteTransactionRequest {
+  /**
+   * Required. Unique identifier of the transaction to delete.
+   * Values are of the form `txn_[a-zA-Z0-9]+`.
+   */
   id: string
-  account: Account
 }
 
-export interface DeleteAccountRequest {
-  id: string
-}
-
-export interface ListAccountsRequest {
-  view?: Account_View
-  activeOnly?: boolean
+/**
+ * The request for
+ * [ListTransactions][saturn.finance.v1.Finance.ListTransactions].
+ */
+export interface ListTransactionsRequest {
+  /**
+   * Optional. Scoped budget representation view type.
+   */
+  view?: Transaction_View
+  /**
+   * Optional. Target parent budget ID filter.
+   * Values are of the form `bud_[a-zA-Z0-9]+`.
+   */
+  budgetId: string
+  /**
+   * Optional. Target transaction flow type filter.
+   */
+  type: Transaction_Type
+  /**
+   * Optional. Integration source type.
+   */
+  sourceType?: string
+  /**
+   * Optional. Integration source record ID.
+   */
+  sourceId?: string
+  /**
+   * Optional. Target account identifier.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
+  accountId?: string
+  /**
+   * Optional. Text search query matching transaction description notes.
+   */
   searchQuery?: string
-  pageSize?: number
-  pageToken?: string
+  /**
+   * Optional. Maximum number of items to return.
+   */
+  pageSize: number
+  /**
+   * Optional. Keyset page token.
+   */
+  pageToken: string
+  /**
+   * Optional. Sort order string.
+   */
   sort?: string
 }
 
-export interface ListAccountsResponse {
-  accounts: Account[]
-  nextPageToken: string
-}
-
-export interface Transfer {
-  id: string
-  spaceId: string
-  sourceAccountId: string
-  destinationAccountId: string
-  sourceAmount: string
-  destinationAmount: string
-  transferDate: string
-  notes: string
-  createTime: string
-  updateTime: string
-}
-
-export interface CreateTransferRequest {
-  sourceAccountId: string
-  destinationAccountId: string
-  sourceAmount: string
-  destinationAmount: string
-  transferDate: string
-  notes: string
-}
-
-export interface ListTransfersRequest {
-  pageSize: number
-  pageToken: string
-}
-
-export interface ListTransfersResponse {
-  transfers: Transfer[]
-  nextPageToken: string
-}
-
-export interface ListTransactionEventsRequest {
-  txnId: string
-}
-
-export interface TransactionEvent {
-  id: string
-  spaceId: string
-  txnId: string
-  eventType: string
+/**
+ * The response for
+ * [ListTransactions][saturn.finance.v1.Finance.ListTransactions].
+ */
+export interface ListTransactionsResponse {
   /**
-   *
-   * @description JSON string representing event details
+   * List of transactions matching filter rules.
    */
-  metadata: string
-  createTime: string
-}
-
-export interface ListTransactionEventsResponse {
-  events: TransactionEvent[]
-}
-
-export interface InboxItem {
-  id: string
-  spaceId: string
-  integrationId: string
+  transactions: Transaction[]
   /**
-   *
-   * @description pending, processing, resolved, archived
+   * Next page keyset token. Empty if no more pages are available.
+   */
+  nextPageToken: string
+}
+
+/**
+ * The request for
+ * [GetInsights][saturn.finance.v1.Finance.GetInsights].
+ */
+export interface GetInsightsRequest {
+  /**
+   * Required. Statistical grouping granularity.
+   */
+  granularity: InsightGranularity
+  /**
+   * Required. Target start date window.
+   */
+  startDate: string
+  /**
+   * Required. Target end date window.
+   */
+  endDate: string
+}
+
+/**
+ * The response for
+ * [GetInsights][saturn.finance.v1.Finance.GetInsights].
+ */
+export interface GetInsightsResponse {
+  /**
+   * Spent insights statistics.
+   */
+  spent: SpentInsights
+}
+
+/**
+ * SpentInsights aggregates workspace statistics.
+ */
+export interface SpentInsights {
+  /**
+   * Total configured budget limits in base currency cents.
+   */
+  totalLimit: string
+  /**
+   * Total spent in base currency cents.
+   */
+  totalSpent: string
+  /**
+   * Remaining space budget in base currency cents.
+   */
+  remainingBudget: string
+  /**
+   * Average spend speed rate relative to elapsed time.
+   */
+  burnRate: number
+  /**
+   * List of granular interval trend points.
+   */
+  trend: SpentInsights_TrendDataPoint[]
+  /**
+   * Distribution breakdown by budget category.
+   */
+  distributions: SpentInsights_BudgetUsage[]
+  /**
+   * List of largest expense transactions.
+   */
+  topExpenses: SpentInsights_HighValueExpense[]
+}
+
+/**
+ * Detailed contribution metrics of a single budget.
+ */
+export interface SpentInsights_BudgetContribution {
+  /**
+   * Unique identifier of the budget.
+   */
+  budgetId: string
+  /**
+   * User-friendly name.
+   */
+  budgetName: string
+  /**
+   * Color hex code.
+   */
+  budgetColor: string
+  /**
+   * Amount spent in base currency cents.
+   */
+  amountInBase: string
+  /**
+   * Amount spent in local currency cents.
+   */
+  amountInLocal: string
+  /**
+   * Local currency code.
+   */
+  localCurrency: string
+  /**
+   * Contribution percentage relative to total spent.
+   */
+  contributionPercentage: number
+}
+
+/**
+ * TrendDataPoint tracks spend patterns grouped by granular interval.
+ */
+export interface SpentInsights_TrendDataPoint {
+  /**
+   * Dynamic grouping label (e.g. Month name, date string).
+   */
+  label: string
+  /**
+   * Interval start date boundary.
+   */
+  startDate: string
+  /**
+   * Spent amount converted to base currency cents.
+   */
+  amountInBase: string
+  /**
+   * Total transactions within this interval.
+   */
+  transactionCount: number
+  /**
+   * List of budget category contributions within this interval.
+   */
+  contributions: SpentInsights_BudgetContribution[]
+}
+
+/**
+ * BudgetUsage represents progress against budget limits.
+ */
+export interface SpentInsights_BudgetUsage {
+  /**
+   * Unique identifier of the budget.
+   */
+  budgetId: string
+  /**
+   * User-friendly name.
+   */
+  budgetName: string
+  /**
+   * Color hex code.
+   */
+  budgetColor: string
+  /**
+   * Icon identifier.
+   */
+  budgetIcon: string
+  /**
+   * Budget limit in cents.
+   */
+  limit: string
+  /**
+   * Spent amount in cents.
+   */
+  spent: string
+  /**
+   * Spent amount converted to base currency cents.
+   */
+  spentInBase: string
+  /**
+   * Limit consumption percentage.
+   */
+  usagePercentage: number
+}
+
+/**
+ * HighValueExpense tracks outlier transactions exceeding typical limits.
+ */
+export interface SpentInsights_HighValueExpense {
+  /**
+   * Unique identifier of the transaction.
+   */
+  transactionId: string
+  /**
+   * Narration notes.
+   */
+  description: string
+  /**
+   * Absolute value in local currency cents.
+   */
+  amount: string
+  /**
+   * Local currency code.
+   */
+  currency: string
+  /**
+   * Value converted to base currency cents.
+   */
+  amountInBase: string
+  /**
+   * Parent budget name.
+   */
+  budgetName: string
+  /**
+   * Time transaction occurred.
+   */
+  transactionDate: string
+  /**
+   * Execution/posting date.
+   */
+  effectiveDate: string
+}
+
+/**
+ * GenerateScheduledPaymentsPayload defines the cron scheduling payload.
+ */
+export type GenerateScheduledPaymentsPayload = Record<string, never>
+
+/**
+ * RecurringExpense represents a template rule to repeat payments.
+ */
+export interface RecurringExpense {
+  /**
+   * Output only. Unique identifier.
+   * Values are of the form `rec_[a-zA-Z0-9]+`.
+   */
+  id?: string
+  /**
+   * Output only. Space identifier.
+   */
+  spaceId?: string
+  /**
+   * Required. Budget category identifier.
+   * Values are of the form `bud_[a-zA-Z0-9]+`.
+   */
+  budgetId: string
+  /**
+   * Required. User-friendly name.
+   */
+  name: string
+  /**
+   * Required. Base payment amount in cents.
+   */
+  amount: string
+  /**
+   * Required. Currency code.
+   */
+  currency: string
+  /**
+   * Required. Execution interval rule string.
+   */
+  interval: string
+  /**
+   * Required. Next execution due date.
+   */
+  nextDueDate: string
+  /**
+   * Optional. Indicates if the payment amount is variable.
+   */
+  isVariable: boolean
+  /**
+   * Required. Active template status (e.g. "active", "paused").
    */
   status: string
   /**
-   *
-   * @description invoice, receipt, bank_notification, unknown
+   * Optional. Days allowed past due date before triggering warning events.
    */
-  docType: string
-  amount: string
-  currency: string
-  vendorName: string
-  transactionDate: string
-  accountId: string
-  budgetId: string
-  scheduledPaymentId: string
-  transactionId: string
-  rawPayload: string
-  metadataJson: string
-  createTime: string
+  gracePeriodDays: number
+  /**
+   * Output only. Creation timestamp.
+   */
+  createTime?: string
+  /**
+   * Output only. Last update timestamp.
+   */
+  updateTime?: string
 }
 
+/**
+ * ScheduledPayment represents a spawned pending payment instance.
+ */
+export interface ScheduledPayment {
+  /**
+   * Output only. Unique identifier.
+   * Values are of the form `sch_[a-zA-Z0-9]+`.
+   */
+  id?: string
+  /**
+   * Output only. Space identifier.
+   */
+  spaceId?: string
+  /**
+   * Required. Budget category identifier.
+   * Values are of the form `bud_[a-zA-Z0-9]+`.
+   */
+  budgetId: string
+  /**
+   * Required. Parent template source type.
+   */
+  sourceType: string
+  /**
+   * Required. Parent template source ID.
+   */
+  sourceId: string
+  /**
+   * Required. Target payment amount in cents.
+   */
+  amount: string
+  /**
+   * Required. Currency code.
+   */
+  currency: string
+  /**
+   * Required. Scheduled execution due date.
+   */
+  dueDate: string
+  /**
+   * Required. Instance execution status (e.g. "pending", "confirmed").
+   */
+  status: string
+  /**
+   * Optional. Metadata binary payload.
+   */
+  metadata: string
+  /**
+   * Output only. Creation timestamp.
+   */
+  createTime?: string
+  /**
+   * Output only. Last update timestamp.
+   */
+  updateTime?: string
+}
+
+/**
+ * The request for
+ * [CreateRecurringExpense][saturn.finance.v1.Finance.CreateRecurringExpense].
+ */
+export interface CreateRecurringExpenseRequest {
+  /**
+   * Required. Budget category identifier.
+   * Values are of the form `bud_[a-zA-Z0-9]+`.
+   */
+  budgetId: string
+  /**
+   * Required. User-friendly name of the recurring expense rule.
+   */
+  name: string
+  /**
+   * Required. Base payment amount in cents.
+   */
+  amount: string
+  /**
+   * Required. Currency code.
+   */
+  currency: string
+  /**
+   * Required. Execution interval rule string (cron expression or interval descriptor).
+   */
+  interval: string
+  /**
+   * Required. Initial execution due date.
+   */
+  nextDueDate: string
+  /**
+   * Optional. Indicates if the payment amount is variable.
+   */
+  isVariable: boolean
+  /**
+   * Optional. Days allowed past due date before triggering warning events.
+   */
+  gracePeriodDays: number
+}
+
+/**
+ * The request for
+ * [UpdateRecurringExpense][saturn.finance.v1.Finance.UpdateRecurringExpense].
+ */
+export interface UpdateRecurringExpenseRequest {
+  /**
+   * Required. Unique identifier of the template to update.
+   * Values are of the form `rec_[a-zA-Z0-9]+`.
+   */
+  id: string
+  /**
+   * Required. Budget category identifier.
+   * Values are of the form `bud_[a-zA-Z0-9]+`.
+   */
+  budgetId: string
+  /**
+   * Required. User-friendly name.
+   */
+  name: string
+  /**
+   * Required. Base payment amount in cents.
+   */
+  amount: string
+  /**
+   * Required. Currency code.
+   */
+  currency: string
+  /**
+   * Required. Execution interval rule string.
+   */
+  interval: string
+  /**
+   * Required. Next execution due date.
+   */
+  nextDueDate: string
+  /**
+   * Optional. Indicates if the payment amount is variable.
+   */
+  isVariable: boolean
+  /**
+   * Required. Template status string.
+   */
+  status: string
+  /**
+   * Optional. Days allowed past due date before triggering warning events.
+   */
+  gracePeriodDays: number
+}
+
+/**
+ * The request for
+ * [DeleteRecurringExpense][saturn.finance.v1.Finance.DeleteRecurringExpense].
+ */
+export interface DeleteRecurringExpenseRequest {
+  /**
+   * Required. Unique identifier of the template to delete.
+   * Values are of the form `rec_[a-zA-Z0-9]+`.
+   */
+  id: string
+}
+
+/**
+ * The request for
+ * [ListRecurringExpenses][saturn.finance.v1.Finance.ListRecurringExpenses].
+ */
+export interface ListRecurringExpensesRequest {
+  /**
+   * Optional. Filter templates by active status.
+   */
+  status: string
+  /**
+   * Optional. Maximum number of items to return.
+   */
+  pageSize: number
+  /**
+   * Optional. Keyset page token.
+   */
+  pageToken: string
+}
+
+/**
+ * The response for
+ * [ListRecurringExpenses][saturn.finance.v1.Finance.ListRecurringExpenses].
+ */
+export interface ListRecurringExpensesResponse {
+  /**
+   * List of recurring expense templates matching filters.
+   */
+  recurringExpenses: RecurringExpense[]
+  /**
+   * Next page keyset token. Empty if no more pages are available.
+   */
+  nextPageToken: string
+}
+
+/**
+ * The request for
+ * [ListScheduledPayments][saturn.finance.v1.Finance.ListScheduledPayments].
+ */
+export interface ListScheduledPaymentsRequest {
+  /**
+   * Optional. Filter instances by payment status.
+   */
+  status: string
+  /**
+   * Optional. Target start date of execution window.
+   */
+  startDate: string
+  /**
+   * Optional. Target end date of execution window.
+   */
+  endDate: string
+  /**
+   * Optional. Maximum number of items to return.
+   */
+  pageSize: number
+  /**
+   * Optional. Keyset page token.
+   */
+  pageToken: string
+}
+
+/**
+ * The response for
+ * [ListScheduledPayments][saturn.finance.v1.Finance.ListScheduledPayments].
+ */
+export interface ListScheduledPaymentsResponse {
+  /**
+   * List of scheduled payment instances matching filters.
+   */
+  scheduledPayments: ScheduledPayment[]
+  /**
+   * Next page keyset token. Empty if no more pages are available.
+   */
+  nextPageToken: string
+}
+
+/**
+ * The request for
+ * [ConfirmScheduledPayment][saturn.finance.v1.Finance.ConfirmScheduledPayment].
+ */
+export interface ConfirmScheduledPaymentRequest {
+  /**
+   * Required. Unique identifier of the scheduled payment to confirm.
+   * Values are of the form `sch_[a-zA-Z0-9]+`.
+   */
+  paymentId: string
+  /**
+   * Required. Time transaction occurred.
+   */
+  transactionDate: string
+  /**
+   * Required. Execution/posting date.
+   */
+  effectiveDate: string
+  /**
+   * Required. Actual amount cleared in local currency cents.
+   */
+  actualAmount: string
+  /**
+   * Optional. Narration notes.
+   */
+  description?: string
+}
+
+/**
+ * Borrowing represents a personal lent/borrowed debt agreement.
+ */
+export interface Borrowing {
+  /**
+   * Output only. Unique identifier.
+   * Values are of the form `bor_[a-zA-Z0-9]+`.
+   */
+  id?: string
+  /**
+   * Output only. Space identifier.
+   */
+  spaceId?: string
+  /**
+   * Required. Direction flow of the debt.
+   */
+  direction: BorrowingDirection
+  /**
+   * Required. Name of the counterparty entity.
+   */
+  counterparty: string
+  /**
+   * Optional. Contact information.
+   */
+  contactInfo: string
+  /**
+   * Required. Initial loan principal amount in cents.
+   */
+  totalAmount: string
+  /**
+   * Output only. Remaining balance amount in cents.
+   */
+  remainingAmount?: string
+  /**
+   * Required. Currency code.
+   */
+  currency: string
+  /**
+   * Required. Lifecycle status.
+   */
+  status: BorrowingStatus
+  /**
+   * Required. Date established.
+   */
+  establishedAt: string
+  /**
+   * Optional. Target repayment due date.
+   */
+  dueAt: string
+  /**
+   * Optional. Automatically create a parallel transaction entry in the ledger.
+   */
+  createAsTransaction: boolean
+  /**
+   * Optional. Narration notes.
+   */
+  notes: string
+  /**
+   * Output only. Creation timestamp.
+   */
+  createTime?: string
+  /**
+   * Output only. Last update timestamp.
+   */
+  updateTime?: string
+}
+
+/**
+ * BorrowingRepayment represents an installment payment towards a borrowing.
+ */
+export interface BorrowingRepayment {
+  /**
+   * Output only. Unique identifier.
+   * Values are of the form `rep_[a-zA-Z0-9]+`.
+   */
+  id?: string
+  /**
+   * Required. Parent borrowing identifier.
+   * Values are of the form `bor_[a-zA-Z0-9]+`.
+   */
+  borrowingId: string
+  /**
+   * Output only. Space identifier.
+   */
+  spaceId?: string
+  /**
+   * Required. Installment amount in cents.
+   */
+  amount: string
+  /**
+   * Required. Installment payment date.
+   */
+  paymentDate: string
+  /**
+   * Optional. Narration notes.
+   */
+  notes: string
+  /**
+   * Output only. Creation timestamp.
+   */
+  createTime?: string
+  /**
+   * Output only. Last update timestamp.
+   */
+  updateTime?: string
+  /**
+   * Required. Source account identifier.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
+  accountId: string
+}
+
+/**
+ * BorrowingInput encapsulates fields for configuring borrowing records.
+ */
+export interface BorrowingInput {
+  /**
+   * Required. Direction flow of the debt.
+   */
+  direction: BorrowingDirection
+  /**
+   * Required. Name of the counterparty.
+   */
+  counterparty: string
+  /**
+   * Optional. Contact information.
+   */
+  contactInfo: string
+  /**
+   * Required. Initial loan amount in cents.
+   */
+  totalAmount: string
+  /**
+   * Required. Currency code.
+   */
+  currency: string
+  /**
+   * Required. Date established.
+   */
+  establishedAt: string
+  /**
+   * Optional. Target repayment due date.
+   */
+  dueAt: string
+  /**
+   * Optional. Narration notes.
+   */
+  notes: string
+  /**
+   * Optional. Automatically create a parallel transaction entry in the ledger.
+   */
+  createAsTransaction: boolean
+  /**
+   * Optional. Source account identifier.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
+  accountId?: string
+}
+
+/**
+ * The request for
+ * [CreateBorrowing][saturn.finance.v1.Finance.CreateBorrowing].
+ */
+export interface CreateBorrowingRequest {
+  /**
+   * Required. Target borrowing parameters.
+   */
+  borrowing: BorrowingInput
+}
+
+/**
+ * The request for
+ * [GetBorrowing][saturn.finance.v1.Finance.GetBorrowing].
+ */
+export interface GetBorrowingRequest {
+  /**
+   * Required. ID of the borrowing record to retrieve.
+   * Values are of the form `bor_[a-zA-Z0-9]+`.
+   */
+  id: string
+}
+
+/**
+ * The request for
+ * [ListBorrowings][saturn.finance.v1.Finance.ListBorrowings].
+ */
+export interface ListBorrowingsRequest {
+  /**
+   * Optional. Filter by debt status.
+   */
+  status?: BorrowingStatus
+  /**
+   * Optional. Filter by debt flow direction.
+   */
+  direction?: BorrowingDirection
+  /**
+   * Optional. Maximum number of items to return.
+   */
+  pageSize: number
+  /**
+   * Optional. Keyset page token.
+   */
+  pageToken: string
+}
+
+/**
+ * The response for
+ * [ListBorrowings][saturn.finance.v1.Finance.ListBorrowings].
+ */
+export interface ListBorrowingsResponse {
+  /**
+   * List of borrowing records matching filters.
+   */
+  borrowings: Borrowing[]
+  /**
+   * Next page keyset token. Empty if no more pages are available.
+   */
+  nextPageToken: string
+}
+
+/**
+ * The request for
+ * [UpdateBorrowing][saturn.finance.v1.Finance.UpdateBorrowing].
+ */
+export interface UpdateBorrowingRequest {
+  /**
+   * Required. Unique identifier of the borrowing record to update.
+   * Values are of the form `bor_[a-zA-Z0-9]+`.
+   */
+  id: string
+  /**
+   * Required. Updated borrowing parameters.
+   */
+  borrowing: BorrowingInput
+}
+
+/**
+ * The request for
+ * [DeleteBorrowing][saturn.finance.v1.Finance.DeleteBorrowing].
+ */
+export interface DeleteBorrowingRequest {
+  /**
+   * Required. Unique identifier of the borrowing record to delete.
+   * Values are of the form `bor_[a-zA-Z0-9]+`.
+   */
+  id: string
+}
+
+/**
+ * BorrowingRepaymentInput encapsulates fields for configuring installment payments.
+ */
+export interface BorrowingRepaymentInput {
+  /**
+   * Required. Repayment amount in cents.
+   */
+  amount: string
+  /**
+   * Required. Repayment date.
+   */
+  paymentDate: string
+  /**
+   * Optional. Narration notes.
+   */
+  notes: string
+  /**
+   * Required. Target account identifier.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
+  accountId: string
+}
+
+/**
+ * The request for
+ * [CreateBorrowingRepayment][saturn.finance.v1.Finance.CreateBorrowingRepayment].
+ */
+export interface CreateBorrowingRepaymentRequest {
+  /**
+   * Required. Target parent borrowing identifier.
+   * Values are of the form `bor_[a-zA-Z0-9]+`.
+   */
+  borrowingId: string
+  /**
+   * Required. Updated repayment parameters.
+   */
+  repayment: BorrowingRepaymentInput
+}
+
+/**
+ * The request for
+ * [ListBorrowingRepayments][saturn.finance.v1.Finance.ListBorrowingRepayments].
+ */
+export interface ListBorrowingRepaymentsRequest {
+  /**
+   * Required. Target parent borrowing identifier.
+   * Values are of the form `bor_[a-zA-Z0-9]+`.
+   */
+  borrowingId: string
+}
+
+/**
+ * The response for
+ * [ListBorrowingRepayments][saturn.finance.v1.Finance.ListBorrowingRepayments].
+ */
+export interface ListBorrowingRepaymentsResponse {
+  /**
+   * List of installment repayments.
+   */
+  repayments: BorrowingRepayment[]
+}
+
+/**
+ * The request for
+ * [DeleteBorrowingRepayment][saturn.finance.v1.Finance.DeleteBorrowingRepayment].
+ */
+export interface DeleteBorrowingRepaymentRequest {
+  /**
+   * Required. Target parent borrowing identifier.
+   * Values are of the form `bor_[a-zA-Z0-9]+`.
+   */
+  borrowingId: string
+  /**
+   * Required. Unique identifier of the installment repayment to delete.
+   * Values are of the form `rep_[a-zA-Z0-9]+`.
+   */
+  id: string
+}
+
+/**
+ * CurrencyInfo encapsulates currency code metadata.
+ */
+export interface CurrencyInfo {
+  /**
+   * Required. ISO currency code (e.g. USD).
+   */
+  code: string
+  /**
+   * Required. User-friendly currency name.
+   */
+  name: string
+}
+
+/**
+ * The request for
+ * [ListCurrencies][saturn.finance.v1.Finance.ListCurrencies].
+ */
+export type ListCurrenciesRequest = Record<string, never>
+
+/**
+ * The response for
+ * [ListCurrencies][saturn.finance.v1.Finance.ListCurrencies].
+ */
+export interface ListCurrenciesResponse {
+  /**
+   * List of currency codes and details.
+   */
+  currencies: CurrencyInfo[]
+}
+
+/**
+ * Account represents a physical or digital payment account.
+ */
+export interface Account {
+  /**
+   * Output only. Unique identifier of the account.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
+  id?: string
+  /**
+   * Output only. Space identifier.
+   */
+  spaceId?: string
+  /**
+   * Required. User-friendly account name (e.g. "Chase Checking").
+   */
+  name: string
+  /**
+   * Required. Account classification type.
+   */
+  type: Account_Type
+  /**
+   * Required. Account currency (e.g. "USD").
+   */
+  currency: string
+  /**
+   * Required. Initial balance amount in cents (e.g. 500000 for $5,000.00).
+   */
+  initialBalance: string
+  /**
+   * Output only. Computed current balance amount in cents.
+   * Calculated dynamically as `InitialBalance + Sum(Income/TransferIn) - Sum(Expense/TransferOut)`.
+   */
+  currentBalance?: string
+  /**
+   * Optional. Credit limit amount in cents (applicable only if CREDIT_CARD type).
+   */
+  creditLimit: string
+  /**
+   * Optional. Indicates if the account is the workspace default. Default accounts receive
+   * transactions if no explicit account is nominated.
+   */
+  isDefault: boolean
+  /**
+   * Optional. Indicates if the account is active.
+   */
+  isActive: boolean
+  /**
+   * Optional. Color HEX code for visual UI identification.
+   */
+  color: string
+  /**
+   * Optional. Narration notes.
+   */
+  notes: string
+  /**
+   * Optional. Last four digits of card or account number.
+   */
+  lastFour: string
+  /**
+   * Output only. Creation timestamp.
+   */
+  createTime?: string
+  /**
+   * Output only. Last update timestamp.
+   */
+  updateTime?: string
+  /**
+   * Output only. Currency conversion statistics.
+   */
+  conversion?: Account_Conversion
+}
+
+/**
+ * Conversion contains hydrated conversion metrics relative to the workspace base currency.
+ */
+export interface Account_Conversion {
+  /**
+   * Output only. Converted balance in base currency cents.
+   */
+  balance?: string
+  /**
+   * Output only. Exchange rate multiplier used.
+   */
+  rate?: number
+}
+
+/**
+ * The request for
+ * [CreateAccount][saturn.finance.v1.Finance.CreateAccount].
+ */
+export interface CreateAccountRequest {
+  /**
+   * Required. Account configuration parameters.
+   */
+  account: Account
+}
+
+/**
+ * The request for
+ * [GetAccount][saturn.finance.v1.Finance.GetAccount].
+ */
+export interface GetAccountRequest {
+  /**
+   * Required. Target account identifier.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
+  id: string
+  /**
+   * Optional. Account view details level.
+   */
+  view?: Account_View
+}
+
+/**
+ * The request for
+ * [UpdateAccount][saturn.finance.v1.Finance.UpdateAccount].
+ */
+export interface UpdateAccountRequest {
+  /**
+   * Required. Target account identifier to update.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
+  id: string
+  /**
+   * Required. Updated account parameters.
+   */
+  account: Account
+}
+
+/**
+ * The request for
+ * [DeleteAccount][saturn.finance.v1.Finance.DeleteAccount].
+ */
+export interface DeleteAccountRequest {
+  /**
+   * Required. Target account identifier to delete.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
+  id: string
+}
+
+/**
+ * The request for
+ * [ListAccounts][saturn.finance.v1.Finance.ListAccounts].
+ */
+export interface ListAccountsRequest {
+  /**
+   * Optional. Account view details level.
+   */
+  view?: Account_View
+  /**
+   * Optional. Filter only active accounts.
+   */
+  activeOnly?: boolean
+  /**
+   * Optional. Search text filter matching account name or notes.
+   */
+  searchQuery?: string
+  /**
+   * Optional. Maximum number of items to return in a single page.
+   */
+  pageSize?: number
+  /**
+   * Optional. Keyset page token returned by a previous call.
+   */
+  pageToken?: string
+  /**
+   * Optional. Sort order string specifying column and optional ordering suffix.
+   */
+  sort?: string
+}
+
+/**
+ * The response for
+ * [ListAccounts][saturn.finance.v1.Finance.ListAccounts].
+ */
+export interface ListAccountsResponse {
+  /**
+   * List of accounts matching filters.
+   */
+  accounts: Account[]
+  /**
+   * Next page keyset token. Empty if no more pages are available.
+   */
+  nextPageToken: string
+}
+
+/**
+ * Transfer represents a new transfer between accounts.
+ */
+export interface Transfer {
+  /**
+   * Output only. Unique identifier.
+   * Values are of the form `txn_[a-zA-Z0-9]+`.
+   */
+  id?: string
+  /**
+   * Output only. Space identifier.
+   */
+  spaceId?: string
+  /**
+   * Required. Source account ID.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
+  sourceAccountId: string
+  /**
+   * Required. Destination account ID.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
+  destinationAccountId: string
+  /**
+   * Required. Source amount in source account currency cents.
+   */
+  sourceAmount: string
+  /**
+   * Required. Destination amount in destination account currency cents.
+   */
+  destinationAmount: string
+  /**
+   * Required. Transfer date.
+   */
+  transferDate: string
+  /**
+   * Optional. Narration notes.
+   */
+  notes: string
+  /**
+   * Output only. Creation timestamp.
+   */
+  createTime?: string
+  /**
+   * Output only. Last update timestamp.
+   */
+  updateTime?: string
+}
+
+/**
+ * The request for
+ * [CreateTransfer][saturn.finance.v1.Finance.CreateTransfer].
+ */
+export interface CreateTransferRequest {
+  /**
+   * Required. Source account ID.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
+  sourceAccountId: string
+  /**
+   * Required. Destination account ID.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
+  destinationAccountId: string
+  /**
+   * Required. Source amount in source account currency cents.
+   */
+  sourceAmount: string
+  /**
+   * Required. Destination amount in destination account currency cents.
+   */
+  destinationAmount: string
+  /**
+   * Required. Transfer date.
+   */
+  transferDate: string
+  /**
+   * Optional. Narration notes.
+   */
+  notes: string
+}
+
+/**
+ * The request for
+ * [ListTransfers][saturn.finance.v1.Finance.ListTransfers].
+ */
+export interface ListTransfersRequest {
+  /**
+   * Optional. Maximum number of items to return.
+   */
+  pageSize: number
+  /**
+   * Optional. Keyset page token.
+   */
+  pageToken: string
+}
+
+/**
+ * The response for
+ * [ListTransfers][saturn.finance.v1.Finance.ListTransfers].
+ */
+export interface ListTransfersResponse {
+  /**
+   * List of transfer records.
+   */
+  transfers: Transfer[]
+  /**
+   * Next page keyset token. Empty if no more pages are available.
+   */
+  nextPageToken: string
+}
+
+/**
+ * The request for
+ * [ListTransactionEvents][saturn.finance.v1.Finance.ListTransactionEvents].
+ */
+export interface ListTransactionEventsRequest {
+  /**
+   * Required. Target transaction ID.
+   * Values are of the form `txn_[a-zA-Z0-9]+`.
+   */
+  txnId: string
+}
+
+/**
+ * TransactionEvent represents a historical transaction lifecycle change.
+ */
+export interface TransactionEvent {
+  /**
+   * Output only. Unique identifier.
+   * Values are of the form `evt_[a-zA-Z0-9]+`.
+   */
+  id?: string
+  /**
+   * Output only. Space identifier.
+   */
+  spaceId?: string
+  /**
+   * Required. Associated transaction ID.
+   * Values are of the form `txn_[a-zA-Z0-9]+`.
+   */
+  txnId: string
+  /**
+   * Required. Lifecycle change event type (e.g. "created", "updated").
+   */
+  eventType: string
+  /**
+   * Required. JSON metadata describing the change details (e.g. diff properties).
+   */
+  metadata: string
+  /**
+   * Output only. Event registration timestamp.
+   */
+  createTime?: string
+}
+
+/**
+ * The response for
+ * [ListTransactionEvents][saturn.finance.v1.Finance.ListTransactionEvents].
+ */
+export interface ListTransactionEventsResponse {
+  /**
+   * List of transaction lifecycle history events.
+   */
+  events: TransactionEvent[]
+}
+
+/**
+ * InboxItem represents an ingested invoice, receipt, or notification in processing staging.
+ */
+export interface InboxItem {
+  /**
+   * Output only. Unique identifier.
+   * Values are of the form `inb_[a-zA-Z0-9]+`.
+   */
+  id?: string
+  /**
+   * Output only. Space identifier.
+   */
+  spaceId?: string
+  /**
+   * Output only. Ingestion integration channel identifier.
+   */
+  integrationId?: string
+  /**
+   * Output only. Staging lifecycle status (e.g. "pending", "approved", "discarded").
+   */
+  status?: string
+  /**
+   * Output only. Extracted document classification category (e.g. "receipt").
+   */
+  docType?: string
+  /**
+   * Output only. Extracted transaction amount in cents.
+   */
+  amount?: string
+  /**
+   * Output only. Extracted currency code.
+   */
+  currency?: string
+  /**
+   * Output only. Extracted vendor counterparty name.
+   */
+  vendorName?: string
+  /**
+   * Output only. Extracted transaction transaction date.
+   */
+  transactionDate?: string
+  /**
+   * Output only. Suggested account ID for categorization.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
+  accountId?: string
+  /**
+   * Output only. Suggested budget category ID.
+   * Values are of the form `bud_[a-zA-Z0-9]+`.
+   */
+  budgetId?: string
+  /**
+   * Output only. Associated scheduled payment identifier to clear.
+   * Values are of the form `sch_[a-zA-Z0-9]+`.
+   */
+  scheduledPaymentId?: string
+  /**
+   * Output only. Associated completed transaction ledger ID.
+   * Values are of the form `txn_[a-zA-Z0-9]+`.
+   */
+  transactionId?: string
+  /**
+   * Output only. Ingestion raw notification payload details.
+   */
+  rawPayload?: string
+  /**
+   * Output only. Additional extracted metadata payload (JSON format).
+   */
+  metadataJson?: string
+  /**
+   * Output only. Ingestion stage timestamp.
+   */
+  createTime?: string
+}
+
+/**
+ * The request for
+ * [ListInboxItems][saturn.finance.v1.Finance.ListInboxItems].
+ */
 export type ListInboxItemsRequest = Record<string, never>
 
+/**
+ * The response for
+ * [ListInboxItems][saturn.finance.v1.Finance.ListInboxItems].
+ */
 export interface ListInboxItemsResponse {
+  /**
+   * List of staged inbox items.
+   */
   inboxItems: InboxItem[]
 }
 
+/**
+ * The request for
+ * [ApproveInboxItem][saturn.finance.v1.Finance.ApproveInboxItem].
+ */
 export interface ApproveInboxItemRequest {
+  /**
+   * Required. Target staged inbox item identifier to approve.
+   * Values are of the form `inb_[a-zA-Z0-9]+`.
+   */
   id: string
+  /**
+   * Optional. Target account identifier.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
   accountId: string
+  /**
+   * Optional. Target budget category identifier.
+   * Values are of the form `bud_[a-zA-Z0-9]+`.
+   */
   budgetId: string
+  /**
+   * Optional. Associated scheduled payment identifier to clear.
+   * Values are of the form `sch_[a-zA-Z0-9]+`.
+   */
   scheduledPaymentId: string
+  /**
+   * Optional. Overriding absolute amount in local currency cents.
+   */
   amount: string
+  /**
+   * Optional. Overriding narration notes.
+   */
   description: string
+  /**
+   * Optional. Overriding document classification category.
+   */
   docType?: string
+  /**
+   * Optional. Target transfer destination account identifier.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
   destinationAccountId?: string
+  /**
+   * Optional. Overriding transaction flow type.
+   */
   transactionType?: string
+  /**
+   * Optional. Associated transaction identifier to link or merge.
+   * Values are of the form `txn_[a-zA-Z0-9]+`.
+   */
   transactionId?: string
+  /**
+   * Optional. Force overwrite of properties if the linked transaction already exists.
+   */
   overwriteLinkedTransaction?: boolean
+  /**
+   * Optional. Transfer direction flow leg.
+   */
   transferLeg?: string
+  /**
+   * Optional. Currency code.
+   */
   currency?: string
 }
 
+/**
+ * The request for
+ * [DiscardInboxItem][saturn.finance.v1.Finance.DiscardInboxItem].
+ */
 export interface DiscardInboxItemRequest {
+  /**
+   * Required. Target staged inbox item identifier to discard.
+   * Values are of the form `inb_[a-zA-Z0-9]+`.
+   */
   id: string
 }
 
 /**
- * Finance provides budgeting and currency management operations for a workspace.
+ * Finance service provides APIs for budgeting, accounts management, transaction
+ * recording, daily exchange rate configurations, and analytics insights.
  */
 /**
- * ConfigureFinance sets up the default base currency for a workspace.
+ * Configures the base currency of a space. The base currency acts as the unified
+ * currency in which financial insights and multi-currency conversions are performed.
  */
 export async function configureFinance(
   req: ConfigureFinanceRequest
@@ -746,7 +2365,7 @@ export function useConfigureFinanceMutation(
 }
 
 /**
- * GetFinanceSettings retrieves the finance settings for a workspace.
+ * Retrieves the current finance settings, including the configured base currency.
  */
 export async function getFinanceSettings(
   req?: GetFinanceSettingsRequest
@@ -773,7 +2392,7 @@ export function useGetFinanceSettingsQuery(
 }
 
 /**
- * CreateBudget creates a new budget template in a workspace.
+ * Creates a budget category template. Budgets track spent thresholds over repeating intervals.
  */
 export async function createBudget(req: CreateBudgetRequest): Promise<Budget> {
   return request<Budget>({
@@ -793,7 +2412,7 @@ export function useCreateBudgetMutation(
 }
 
 /**
- * UpdateBudget updates a budget template.
+ * Updates an existing budget template's properties, such as visual parameters or limit propagation policies.
  */
 export async function updateBudget(
   id: string,
@@ -820,7 +2439,7 @@ export function useUpdateBudgetMutation(
 }
 
 /**
- * DeleteBudget deletes a budget template.
+ * Deletes a budget template. Only inactive budgets or budgets without active transactions can be deleted.
  */
 export async function deleteBudget(
   id: string,
@@ -853,7 +2472,7 @@ export function useDeleteBudgetMutation(
 }
 
 /**
- * ListBudgets lists all budget templates in a workspace.
+ * Lists budget templates inside the space, supporting paginated, sorted, and text-based filter views.
  */
 export async function listBudgets(
   req: ListBudgetsRequest
@@ -880,7 +2499,7 @@ export function useListBudgetsQuery(
 }
 
 /**
- * GetBudgetPeriod retrieves or generates the budget period for a specific date.
+ * Retrieves or automatically spawns the active budget period containing current spend limits for a target date.
  */
 export async function getBudgetPeriod(
   budget_id: string,
@@ -907,7 +2526,7 @@ export function useGetBudgetPeriodQuery(
 }
 
 /**
- * CreateExchangeRate registers a new daily rate conversion rule.
+ * Registers a daily exchange rate conversion coefficient between two currencies.
  */
 export async function createExchangeRate(
   req: CreateExchangeRateRequest
@@ -929,7 +2548,7 @@ export function useCreateExchangeRateMutation(
 }
 
 /**
- * ListExchangeRates lists all exchange rate rules in a workspace.
+ * Lists historical exchange rate conversion coefficients.
  */
 export async function listExchangeRates(
   req: ListExchangeRatesRequest
@@ -956,7 +2575,7 @@ export function useListExchangeRatesQuery(
 }
 
 /**
- * DeleteExchangeRate deletes a specific daily rate conversion rule.
+ * Deletes a registered daily exchange rate conversion rule.
  */
 export async function deleteExchangeRate(
   req: DeleteExchangeRateRequest
@@ -982,7 +2601,7 @@ export function useDeleteExchangeRateMutation(
 }
 
 /**
- * CreateExpense logs a new expense transaction.
+ * Logs a new expense transaction, updating target budget periods and reducing account balances.
  */
 export async function createExpense(
   req: CreateExpenseRequest
@@ -1004,7 +2623,7 @@ export function useCreateExpenseMutation(
 }
 
 /**
- * UpdateExpense modifies an existing expense.
+ * Modifies properties of a logged expense transaction. Re-calculates budget and currency conversions.
  */
 export async function updateExpense(
   id: string,
@@ -1035,7 +2654,7 @@ export function useUpdateExpenseMutation(
 }
 
 /**
- * DeleteTransaction deletes any type of transaction.
+ * Deletes a transaction, reversing all changes to budget period consumption and account balances.
  */
 export async function deleteTransaction(
   id: string,
@@ -1068,7 +2687,7 @@ export function useDeleteTransactionMutation(
 }
 
 /**
- * ListTransactions lists paginated transactions for a workspace.
+ * Lists paginated transaction records matching specific budget, account, source, or text queries.
  */
 export async function listTransactions(
   req: ListTransactionsRequest
@@ -1095,7 +2714,7 @@ export function useListTransactionsQuery(
 }
 
 /**
- * ListTransactionEvents lists the historical lifecycle events of a transaction.
+ * Lists historical lifecycle events tracking mutations and updates applied to a transaction.
  */
 export async function listTransactionEvents(
   txn_id: string,
@@ -1125,7 +2744,7 @@ export function useListTransactionEventsQuery(
 }
 
 /**
- * GetInsights aggregates workspace spent insights and statistics.
+ * Aggregates space spend patterns, limits, remaining budgets, burn rates, and budget category distributions.
  */
 export async function getInsights(
   req: GetInsightsRequest
@@ -1152,7 +2771,7 @@ export function useGetInsightsQuery(
 }
 
 /**
- * CreateRecurringExpense configures a new recurring expense rule.
+ * Registers a recurring expense template, generating repeating payment obligations periodically.
  */
 export async function createRecurringExpense(
   req: CreateRecurringExpenseRequest
@@ -1178,7 +2797,7 @@ export function useCreateRecurringExpenseMutation(
 }
 
 /**
- * UpdateRecurringExpense modifies an existing recurring expense rule.
+ * Updates an active recurring expense template.
  */
 export async function updateRecurringExpense(
   id: string,
@@ -1209,7 +2828,7 @@ export function useUpdateRecurringExpenseMutation(
 }
 
 /**
- * DeleteRecurringExpense deletes a recurring expense rule.
+ * Deletes a recurring template, preventing any future payment instances from spawning.
  */
 export async function deleteRecurringExpense(
   id: string,
@@ -1242,7 +2861,7 @@ export function useDeleteRecurringExpenseMutation(
 }
 
 /**
- * ListRecurringExpenses lists recurring expenses for a workspace.
+ * Lists all configured recurring templates in the space.
  */
 export async function listRecurringExpenses(
   req: ListRecurringExpensesRequest
@@ -1269,7 +2888,7 @@ export function useListRecurringExpensesQuery(
 }
 
 /**
- * ListScheduledPayments lists scheduled payments for a workspace.
+ * Lists scheduled payment instances spawned by recurring templates.
  */
 export async function listScheduledPayments(
   req: ListScheduledPaymentsRequest
@@ -1296,7 +2915,7 @@ export function useListScheduledPaymentsQuery(
 }
 
 /**
- * ConfirmScheduledPayment clears a scheduled payment by promoting it to a permanent transaction.
+ * Clears a scheduled payment instance, converting it into a permanent, reconciled ledger transaction.
  */
 export async function confirmScheduledPayment(
   payment_id: string,
@@ -1328,7 +2947,7 @@ export function useConfirmScheduledPaymentMutation(
 }
 
 /**
- * CreateBorrowing logs a new personal lent/borrowed debt agreement.
+ * Logs a new personal debt agreement (lent or borrowed money).
  */
 export async function createBorrowing(
   req: CreateBorrowingRequest
@@ -1350,7 +2969,7 @@ export function useCreateBorrowingMutation(
 }
 
 /**
- * GetBorrowing retrieves a single borrowing record.
+ * Retrieves detail metrics of a borrowing record.
  */
 export async function getBorrowing(
   id: string,
@@ -1377,7 +2996,7 @@ export function useGetBorrowingQuery(
 }
 
 /**
- * ListBorrowings returns borrowings for a space, optionally filtered.
+ * Lists active or paid-off personal debt agreements.
  */
 export async function listBorrowings(
   req: ListBorrowingsRequest
@@ -1404,7 +3023,7 @@ export function useListBorrowingsQuery(
 }
 
 /**
- * UpdateBorrowing updates basic details of a borrowing record.
+ * Updates properties of a borrowing record (such as counterparty contact details).
  */
 export async function updateBorrowing(
   id: string,
@@ -1435,7 +3054,7 @@ export function useUpdateBorrowingMutation(
 }
 
 /**
- * DeleteBorrowing removes a borrowing and all its repayments.
+ * Deletes a borrowing record and all corresponding repayments.
  */
 export async function deleteBorrowing(
   id: string,
@@ -1468,7 +3087,7 @@ export function useDeleteBorrowingMutation(
 }
 
 /**
- * CreateBorrowingRepayment records an installment payment towards a borrowing.
+ * Logs a repayment installment reducing the remaining amount of an active debt agreement.
  */
 export async function createBorrowingRepayment(
   borrowing_id: string,
@@ -1500,7 +3119,7 @@ export function useCreateBorrowingRepaymentMutation(
 }
 
 /**
- * ListBorrowingRepayments returns all repayments for a specific borrowing.
+ * Lists all repayment installments registered under a debt agreement.
  */
 export async function listBorrowingRepayments(
   borrowing_id: string,
@@ -1530,7 +3149,7 @@ export function useListBorrowingRepaymentsQuery(
 }
 
 /**
- * DeleteBorrowingRepayment deletes a specific installment and restores the balance.
+ * Deletes a borrowing repayment, restoring the debt balance of the borrowing agreement.
  */
 export async function deleteBorrowingRepayment(
   borrowing_id: string,
@@ -1566,7 +3185,7 @@ export function useDeleteBorrowingRepaymentMutation(
 }
 
 /**
- * CreateAccount registers a new payment/liquidity account.
+ * Registers a new payment or liquidity account (such as cash, bank, or credit card).
  */
 export async function createAccount(
   req: CreateAccountRequest
@@ -1588,7 +3207,7 @@ export function useCreateAccountMutation(
 }
 
 /**
- * GetAccount retrieves details of an account.
+ * Retrieves details of a specific payment account.
  */
 export async function getAccount(
   id: string,
@@ -1615,7 +3234,7 @@ export function useGetAccountQuery(
 }
 
 /**
- * UpdateAccount updates details of an account.
+ * Updates details of a payment account (such as notes, active flags, or default overrides).
  */
 export async function updateAccount(
   id: string,
@@ -1644,7 +3263,7 @@ export function useUpdateAccountMutation(
 }
 
 /**
- * DeleteAccount deletes an account.
+ * Deletes a payment account. Default accounts cannot be deleted until another default is nominated.
  */
 export async function deleteAccount(
   id: string,
@@ -1677,7 +3296,7 @@ export function useDeleteAccountMutation(
 }
 
 /**
- * ListAccounts lists all accounts in a workspace.
+ * Lists payment accounts in the workspace, supporting optional currency conversion hydration.
  */
 export async function listAccounts(
   req: ListAccountsRequest
@@ -1704,7 +3323,7 @@ export function useListAccountsQuery(
 }
 
 /**
- * CreateTransfer logs a new transfer between accounts.
+ * Logs a transfer transaction, shifting funds between a source and destination account.
  */
 export async function createTransfer(
   req: CreateTransferRequest
@@ -1726,7 +3345,7 @@ export function useCreateTransferMutation(
 }
 
 /**
- * ListTransfers lists all transfers in a workspace.
+ * Lists all transfer transactions registered in the workspace.
  */
 export async function listTransfers(
   req: ListTransfersRequest
@@ -1753,7 +3372,7 @@ export function useListTransfersQuery(
 }
 
 /**
- * ListCurrencies returns the list of supported currencies.
+ * Retrieves a static list of supported currencies.
  */
 export async function listCurrencies(
   req?: ListCurrenciesRequest
@@ -1780,7 +3399,7 @@ export function useListCurrenciesQuery(
 }
 
 /**
- * ListInboxItems lists all inbox items staging in the queue for a space.
+ * Lists staging inbox items queue awaiting manual approval or transaction matching.
  */
 export async function listInboxItems(
   req?: ListInboxItemsRequest
@@ -1807,7 +3426,7 @@ export function useListInboxItemsQuery(
 }
 
 /**
- * ApproveInboxItem approves and commits a pending inbox item to the main transaction ledger.
+ * Approves and promotes an ingested inbox item into a ledger transaction entry.
  */
 export async function approveInboxItem(
   id: string,
@@ -1838,7 +3457,7 @@ export function useApproveInboxItemMutation(
 }
 
 /**
- * DiscardInboxItem discards an inbox item from the staging queue.
+ * Discards an ingested inbox item from the staging queue, preventing classification.
  */
 export async function discardInboxItem(
   id: string,
