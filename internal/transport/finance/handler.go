@@ -1150,6 +1150,66 @@ func (h *Handler) ListTransfers(ctx context.Context, req *financev1.ListTransfer
 
 // --- Integrations & Inbox Items Endpoints ---
 
+func toProtoInboxStatus(s finance.InboxItemStatus) financev1.InboxItem_Status {
+	switch s {
+	case finance.InboxItemPending:
+		return financev1.InboxItem_PENDING
+	case finance.InboxItemProcessing:
+		return financev1.InboxItem_PROCESSING
+	case finance.InboxItemResolved:
+		return financev1.InboxItem_RESOLVED
+	case finance.InboxItemArchived:
+		return financev1.InboxItem_ARCHIVED
+	default:
+		return financev1.InboxItem_STATUS_UNSPECIFIED
+	}
+}
+
+func toDomainInboxStatus(s financev1.InboxItem_Status) finance.InboxItemStatus {
+	switch s {
+	case financev1.InboxItem_PENDING:
+		return finance.InboxItemPending
+	case financev1.InboxItem_PROCESSING:
+		return finance.InboxItemProcessing
+	case financev1.InboxItem_RESOLVED:
+		return finance.InboxItemResolved
+	case financev1.InboxItem_ARCHIVED:
+		return finance.InboxItemArchived
+	default:
+		return finance.InboxItemPending
+	}
+}
+
+func toProtoInboxDocType(d finance.InboxItemDocType) financev1.InboxItem_DocType {
+	switch d {
+	case finance.InboxItemDocInvoice:
+		return financev1.InboxItem_INVOICE
+	case finance.InboxItemDocReceipt:
+		return financev1.InboxItem_RECEIPT
+	case finance.InboxItemDocBankNotification:
+		return financev1.InboxItem_BANK_NOTIFICATION
+	case finance.InboxItemDocUnknown:
+		return financev1.InboxItem_UNKNOWN
+	default:
+		return financev1.InboxItem_DOC_TYPE_UNSPECIFIED
+	}
+}
+
+func toDomainInboxDocType(d financev1.InboxItem_DocType) finance.InboxItemDocType {
+	switch d {
+	case financev1.InboxItem_INVOICE:
+		return finance.InboxItemDocInvoice
+	case financev1.InboxItem_RECEIPT:
+		return finance.InboxItemDocReceipt
+	case financev1.InboxItem_BANK_NOTIFICATION:
+		return finance.InboxItemDocBankNotification
+	case financev1.InboxItem_UNKNOWN:
+		return finance.InboxItemDocUnknown
+	default:
+		return finance.InboxItemDocUnknown
+	}
+}
+
 func toProtoInboxItem(pt *finance.InboxItem) *financev1.InboxItem {
 	var accountID, budgetID, paymentID, transactionID string
 	if pt.AccountID != nil {
@@ -1174,8 +1234,8 @@ func toProtoInboxItem(pt *finance.InboxItem) *financev1.InboxItem {
 		Id:                 pt.ID,
 		SpaceId:            pt.SpaceID,
 		IntegrationId:      pt.IntegrationID,
-		Status:             string(pt.Status),
-		DocType:            string(pt.DocType),
+		Status:             toProtoInboxStatus(pt.Status),
+		DocType:            toProtoInboxDocType(pt.DocType),
 		Amount:             pt.Amount,
 		Currency:           pt.Currency,
 		VendorName:         pt.VendorName,
@@ -1190,51 +1250,135 @@ func toProtoInboxItem(pt *finance.InboxItem) *financev1.InboxItem {
 	}
 }
 
-func (h *Handler) ListInboxItems(ctx context.Context, req *financev1.ListInboxItemsRequest) (*financev1.ListInboxItemsResponse, error) {
-	list, err := h.Coordinator.ListInboxItems(ctx)
+func toDomainInboxItem(pb *financev1.InboxItem) *finance.InboxItem {
+	var accountID, budgetID, paymentID, transactionID *string
+	if pb.GetAccountId() != "" {
+		val := pb.GetAccountId()
+		accountID = &val
+	}
+	if pb.GetBudgetId() != "" {
+		val := pb.GetBudgetId()
+		budgetID = &val
+	}
+	if pb.GetScheduledPaymentId() != "" {
+		val := pb.GetScheduledPaymentId()
+		paymentID = &val
+	}
+	if pb.GetTransactionId() != "" {
+		val := pb.GetTransactionId()
+		transactionID = &val
+	}
+
+	var txDate time.Time
+	if pb.GetTransactionDate() != nil {
+		txDate = pb.GetTransactionDate().AsTime()
+	}
+
+	return &finance.InboxItem{
+		ID:                 pb.GetId(),
+		SpaceID:            pb.GetSpaceId(),
+		IntegrationID:      pb.GetIntegrationId(),
+		Status:             toDomainInboxStatus(pb.GetStatus()),
+		DocType:            toDomainInboxDocType(pb.GetDocType()),
+		Amount:             pb.GetAmount(),
+		Currency:           pb.GetCurrency(),
+		VendorName:         pb.GetVendorName(),
+		TransactionDate:    txDate,
+		AccountID:          accountID,
+		BudgetID:           budgetID,
+		ScheduledPaymentID: paymentID,
+		TransactionID:      transactionID,
+		RawPayload:         pb.GetRawPayload(),
+		MetadataJSON:       pb.GetMetadataJson(),
+	}
+}
+
+func (h *Handler) UpdateInboxItem(ctx context.Context, req *financev1.UpdateInboxItemRequest) (*financev1.InboxItem, error) {
+	if req.GetId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "id is required")
+	}
+	if req.GetInboxItem() == nil {
+		return nil, status.Error(codes.InvalidArgument, "inbox_item is required")
+	}
+
+	domainItem := toDomainInboxItem(req.GetInboxItem())
+	domainItem.ID = req.GetId()
+
+	res, err := h.Coordinator.UpdateInboxItem(ctx, domainItem)
 	if err != nil {
 		return nil, h.mapError(err)
 	}
 
-	protoList := make([]*financev1.InboxItem, len(list))
-	for idx, pt := range list {
+	return toProtoInboxItem(res), nil
+}
+
+func (h *Handler) ListInboxItems(ctx context.Context, req *financev1.ListInboxItemsRequest) (*financev1.ListInboxItemsResponse, error) {
+	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	}
+	spaceID := finance.SpaceID(spaceIDStr)
+
+	var status *finance.InboxItemStatus
+	if req.Status != nil {
+		sVal := toDomainInboxStatus(*req.Status)
+		status = &sVal
+	}
+
+	var docType *finance.InboxItemDocType
+	if req.DocType != nil {
+		dVal := toDomainInboxDocType(*req.DocType)
+		docType = &dVal
+	}
+
+	var searchQuery *string
+	if req.SearchQuery != nil {
+		sVal := req.GetSearchQuery()
+		searchQuery = &sVal
+	}
+
+	excludePayload := false
+	if req.GetView() == financev1.InboxItem_BASIC {
+		excludePayload = true
+	}
+
+	filter := &finance.ListInboxItemsFilter{
+		PageSize:       req.GetPageSize(),
+		NextPageToken:  req.GetPageToken(),
+		SearchQuery:    searchQuery,
+		Status:         status,
+		DocType:        docType,
+		Sort:           sorting.Parse(req.GetSort()),
+		ExcludePayload: excludePayload,
+	}
+
+	page, err := h.Aggregator.ListInboxItems(ctx, spaceID, *filter)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	protoList := make([]*financev1.InboxItem, len(page.Items))
+	for idx, pt := range page.Items {
 		protoList[idx] = toProtoInboxItem(pt)
 	}
 
-	return &financev1.ListInboxItemsResponse{InboxItems: protoList}, nil
+	return &financev1.ListInboxItemsResponse{
+		InboxItems:    protoList,
+		NextPageToken: page.NextPageToken,
+	}, nil
 }
 
-func (h *Handler) ApproveInboxItem(ctx context.Context, req *financev1.ApproveInboxItemRequest) (*financev1.Transaction, error) {
+func (h *Handler) ApproveInboxItem(ctx context.Context, req *financev1.ApproveInboxItemRequest) (*emptypb.Empty, error) {
 	if req.GetId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "id is required")
 	}
 
-	params := &finance.ApproveInboxItem{
-		ID:                         req.GetId(),
-		AccountID:                  req.GetAccountId(),
-		BudgetID:                   req.GetBudgetId(),
-		ScheduledPaymentID:         req.GetScheduledPaymentId(),
-		Amount:                     req.GetAmount(),
-		Description:                req.GetDescription(),
-		DocType:                    req.GetDocType(),
-		DestinationAccountID:       req.GetDestinationAccountId(),
-		TransactionType:            req.GetTransactionType(),
-		TransactionID:              req.GetTransactionId(),
-		OverwriteLinkedTransaction: req.GetOverwriteLinkedTransaction(),
-		TransferLeg:                req.GetTransferLeg(),
-		Currency:                   req.GetCurrency(),
-	}
-
-	tx, err := h.Coordinator.ApproveInboxItem(ctx, params)
+	err := h.Coordinator.ApproveInboxItem(ctx, req.GetId())
 	if err != nil {
 		return nil, h.mapError(err)
 	}
 
-	if tx == nil {
-		return &financev1.Transaction{}, nil
-	}
-
-	return toProtoTransaction(tx), nil
+	return &emptypb.Empty{}, nil
 }
 
 func (h *Handler) DiscardInboxItem(ctx context.Context, req *financev1.DiscardInboxItemRequest) (*emptypb.Empty, error) {

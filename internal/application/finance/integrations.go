@@ -39,15 +39,6 @@ func (c *Coordinator) IngestEmail(ctx context.Context, spaceID string, integrati
 	return c.RunIngestionPipeline(ctx, spaceID, integrationID, sender, subject, body)
 }
 
-// ListInboxItems lists all staging inbox items waiting in the workspace queue.
-func (c *Coordinator) ListInboxItems(ctx context.Context) ([]*finance.InboxItem, error) {
-	rctx, err := c.resolveContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return c.financeService.ListInboxItems(ctx, string(rctx.SpaceID))
-}
-
 // DiscardInboxItem deletes a staging inbox item without ledger modification.
 func (c *Coordinator) DiscardInboxItem(ctx context.Context, id string) error {
 	rctx, err := c.resolveContext(ctx)
@@ -57,11 +48,20 @@ func (c *Coordinator) DiscardInboxItem(ctx context.Context, id string) error {
 	return c.financeService.DiscardInboxItem(ctx, string(rctx.SpaceID), id)
 }
 
-// ApproveInboxItem commits a staged inbox item to the main transaction ledger.
-func (c *Coordinator) ApproveInboxItem(ctx context.Context, req *finance.ApproveInboxItem) (*finance.Transaction, error) {
+// UpdateInboxItem updates a staging inbox item's draft properties.
+func (c *Coordinator) UpdateInboxItem(ctx context.Context, item *finance.InboxItem) (*finance.InboxItem, error) {
 	rctx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return c.financeService.ApproveInboxItem(ctx, string(rctx.SpaceID), req)
+	return c.financeService.UpdateInboxItem(ctx, string(rctx.SpaceID), item)
+}
+
+// ApproveInboxItem commits a staged inbox item to the main transaction ledger.
+func (c *Coordinator) ApproveInboxItem(ctx context.Context, id string) error {
+	rctx, err := c.resolveContext(ctx)
+	if err != nil {
+		return err
+	}
+	return c.financeService.ApproveInboxItem(ctx, string(rctx.SpaceID), id)
 }

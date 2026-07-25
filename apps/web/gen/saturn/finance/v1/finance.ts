@@ -208,6 +208,27 @@ export type Account_View =
   | "FULL"
 
 /**
+ * Staging lifecycle status enum.
+ */
+export type InboxItem_Status =
+  "STATUS_UNSPECIFIED" | "PENDING" | "PROCESSING" | "RESOLVED" | "ARCHIVED"
+
+/**
+ * Document category classification enum.
+ */
+export type InboxItem_DocType =
+  | "DOC_TYPE_UNSPECIFIED"
+  | "INVOICE"
+  | "RECEIPT"
+  | "BANK_NOTIFICATION"
+  | "UNKNOWN"
+
+/**
+ * Optional representation view.
+ */
+export type InboxItem_View = "VIEW_UNSPECIFIED" | "BASIC" | "FULL"
+
+/**
  * FinanceSettings represents the workspace configuration.
  */
 export interface FinanceSettings {
@@ -2186,57 +2207,57 @@ export interface InboxItem {
    */
   integrationId?: string
   /**
-   * Output only. Staging lifecycle status (e.g. "pending", "approved", "discarded").
+   * Output only. Staging lifecycle status.
    */
-  status?: string
+  status?: InboxItem_Status
   /**
-   * Output only. Extracted document classification category (e.g. "receipt").
+   * Required. Extracted document classification category.
    */
-  docType?: string
+  docType: InboxItem_DocType
   /**
-   * Output only. Extracted transaction amount in cents.
+   * Required. Extracted transaction amount in cents.
    */
-  amount?: string
+  amount: string
   /**
-   * Output only. Extracted currency code.
+   * Required. Extracted currency code.
    */
-  currency?: string
+  currency: string
   /**
-   * Output only. Extracted vendor counterparty name.
+   * Required. Extracted vendor counterparty name.
    */
-  vendorName?: string
+  vendorName: string
   /**
-   * Output only. Extracted transaction transaction date.
+   * Required. Extracted transaction transaction date.
    */
-  transactionDate?: string
+  transactionDate: string
   /**
-   * Output only. Suggested account ID for categorization.
+   * Optional. Suggested account ID for categorization.
    * Values are of the form `acc_[a-zA-Z0-9]+`.
    */
-  accountId?: string
+  accountId: string
   /**
-   * Output only. Suggested budget category ID.
+   * Optional. Suggested budget category ID.
    * Values are of the form `bud_[a-zA-Z0-9]+`.
    */
-  budgetId?: string
+  budgetId: string
   /**
-   * Output only. Associated scheduled payment identifier to clear.
+   * Optional. Associated scheduled payment identifier to clear.
    * Values are of the form `sch_[a-zA-Z0-9]+`.
    */
-  scheduledPaymentId?: string
+  scheduledPaymentId: string
   /**
-   * Output only. Associated completed transaction ledger ID.
+   * Optional. Associated completed transaction ledger ID.
    * Values are of the form `txn_[a-zA-Z0-9]+`.
    */
-  transactionId?: string
+  transactionId: string
   /**
    * Output only. Ingestion raw notification payload details.
    */
   rawPayload?: string
   /**
-   * Output only. Additional extracted metadata payload (JSON format).
+   * Optional. Additional extracted metadata payload (JSON format).
    */
-  metadataJson?: string
+  metadataJson: string
   /**
    * Output only. Ingestion stage timestamp.
    */
@@ -2247,7 +2268,36 @@ export interface InboxItem {
  * The request for
  * [ListInboxItems][saturn.finance.v1.Finance.ListInboxItems].
  */
-export type ListInboxItemsRequest = Record<string, never>
+export interface ListInboxItemsRequest {
+  /**
+   * Optional. Number of items to retrieve per page.
+   */
+  pageSize: number
+  /**
+   * Optional. Cursor token from previous page response.
+   */
+  pageToken: string
+  /**
+   * Optional. Free-text search query matching vendor names or classifications.
+   */
+  searchQuery?: string
+  /**
+   * Optional. Stage status to filter by.
+   */
+  status?: InboxItem_Status
+  /**
+   * Optional. Document category classification filter.
+   */
+  docType?: InboxItem_DocType
+  /**
+   * Optional. Sorting rules (e.g. "create_time:desc").
+   */
+  sort: string
+  /**
+   * Optional. Representation view.
+   */
+  view: InboxItem_View
+}
 
 /**
  * The response for
@@ -2258,6 +2308,26 @@ export interface ListInboxItemsResponse {
    * List of staged inbox items.
    */
   inboxItems: InboxItem[]
+  /**
+   * Cursor page token for retrieving the next page.
+   */
+  nextPageToken: string
+}
+
+/**
+ * The request for
+ * [UpdateInboxItem][saturn.finance.v1.Finance.UpdateInboxItem].
+ */
+export interface UpdateInboxItemRequest {
+  /**
+   * Required. Target staged inbox item identifier to update.
+   * Values are of the form `inb_[a-zA-Z0-9]+`.
+   */
+  id: string
+  /**
+   * Required. Updated staging inbox item parameters.
+   */
+  inboxItem: InboxItem
 }
 
 /**
@@ -2270,59 +2340,6 @@ export interface ApproveInboxItemRequest {
    * Values are of the form `inb_[a-zA-Z0-9]+`.
    */
   id: string
-  /**
-   * Optional. Target account identifier.
-   * Values are of the form `acc_[a-zA-Z0-9]+`.
-   */
-  accountId: string
-  /**
-   * Optional. Target budget category identifier.
-   * Values are of the form `bud_[a-zA-Z0-9]+`.
-   */
-  budgetId: string
-  /**
-   * Optional. Associated scheduled payment identifier to clear.
-   * Values are of the form `sch_[a-zA-Z0-9]+`.
-   */
-  scheduledPaymentId: string
-  /**
-   * Optional. Overriding absolute amount in local currency cents.
-   */
-  amount: string
-  /**
-   * Optional. Overriding narration notes.
-   */
-  description: string
-  /**
-   * Optional. Overriding document classification category.
-   */
-  docType?: string
-  /**
-   * Optional. Target transfer destination account identifier.
-   * Values are of the form `acc_[a-zA-Z0-9]+`.
-   */
-  destinationAccountId?: string
-  /**
-   * Optional. Overriding transaction flow type.
-   */
-  transactionType?: string
-  /**
-   * Optional. Associated transaction identifier to link or merge.
-   * Values are of the form `txn_[a-zA-Z0-9]+`.
-   */
-  transactionId?: string
-  /**
-   * Optional. Force overwrite of properties if the linked transaction already exists.
-   */
-  overwriteLinkedTransaction?: boolean
-  /**
-   * Optional. Transfer direction flow leg.
-   */
-  transferLeg?: string
-  /**
-   * Optional. Currency code.
-   */
-  currency?: string
 }
 
 /**
@@ -3402,7 +3419,7 @@ export function useListCurrenciesQuery(
  * Lists staging inbox items queue awaiting manual approval or transaction matching.
  */
 export async function listInboxItems(
-  req?: ListInboxItemsRequest
+  req: ListInboxItemsRequest
 ): Promise<ListInboxItemsResponse> {
   return request<ListInboxItemsResponse>({
     method: "GET",
@@ -3426,13 +3443,44 @@ export function useListInboxItemsQuery(
 }
 
 /**
- * Approves and promotes an ingested inbox item into a ledger transaction entry.
+ * Updates a staged inbox item's draft properties.
+ */
+export async function updateInboxItem(
+  id: string,
+  req: UpdateInboxItemRequest
+): Promise<InboxItem> {
+  return request<InboxItem>({
+    method: "PUT",
+    url: `/api/v1/finance/inbox-items/${id}`,
+    data: req.inboxItem,
+  })
+}
+
+export function useUpdateInboxItemMutation(
+  options?: UseMutationOptions<
+    InboxItem,
+    Error,
+    { id: string; req: UpdateInboxItemRequest }
+  >
+) {
+  return useMutation<
+    InboxItem,
+    Error,
+    { id: string; req: UpdateInboxItemRequest }
+  >({
+    mutationFn: ({ id, req }) => updateInboxItem(id, req),
+    ...options,
+  })
+}
+
+/**
+ * Approves and promotes an ingested inbox item.
  */
 export async function approveInboxItem(
   id: string,
   req: ApproveInboxItemRequest
-): Promise<Transaction> {
-  return request<Transaction>({
+): Promise<Record<string, never>> {
+  return request<Record<string, never>>({
     method: "POST",
     url: `/api/v1/finance/inbox-items/${id}:approve`,
     data: req,
@@ -3441,13 +3489,13 @@ export async function approveInboxItem(
 
 export function useApproveInboxItemMutation(
   options?: UseMutationOptions<
-    Transaction,
+    Record<string, never>,
     Error,
     { id: string; req: ApproveInboxItemRequest }
   >
 ) {
   return useMutation<
-    Transaction,
+    Record<string, never>,
     Error,
     { id: string; req: ApproveInboxItemRequest }
   >({

@@ -44,3 +44,22 @@ func TestStringPtr(t *testing.T) {
 		t.Errorf("StringPtr() = %q, want %q", *res, "world")
 	}
 }
+
+func TestPtr(t *testing.T) {
+	if res := Ptr(""); res != nil {
+		t.Errorf("Ptr(\"\") = %v, want nil", res)
+	}
+	if res := Ptr(0); res != nil {
+		t.Errorf("Ptr(0) = %v, want nil", res)
+	}
+
+	resStr := Ptr("hello")
+	if resStr == nil || *resStr != "hello" {
+		t.Errorf("Ptr(\"hello\") = %v, want \"hello\"", resStr)
+	}
+
+	resInt := Ptr(42)
+	if resInt == nil || *resInt != 42 {
+		t.Errorf("Ptr(42) = %v, want 42", resInt)
+	}
+}

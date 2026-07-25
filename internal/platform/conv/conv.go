@@ -23,3 +23,12 @@ func Value[T any](p *T) T {
 	}
 	return *p
 }
+
+// Ptr returns a pointer to v if v is not the zero value of T, otherwise nil.
+func Ptr[T comparable](v T) *T {
+	var zero T
+	if v == zero {
+		return nil
+	}
+	return &v
+}

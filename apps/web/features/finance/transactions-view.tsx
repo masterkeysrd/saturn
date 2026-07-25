@@ -111,7 +111,12 @@ export function TransactionsView() {
 
   // Query inbox items staged for review
   const { data: pendingData } = useListInboxItemsQuery(
-    {},
+    {
+      pageSize: 100,
+      pageToken: "",
+      sort: "",
+      view: "BASIC",
+    },
     { enabled: !!spaceId }
   )
   const pendingCount = pendingData?.inboxItems?.length || 0

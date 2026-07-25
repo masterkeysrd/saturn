@@ -7,8 +7,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/doug-martin/goqu/v9"
+	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/platform/conv"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
 type inboxItemDB struct {
@@ -79,38 +83,6 @@ func NewInboxItemStore(db *sqlx.DB) *InboxItemStore {
 }
 
 func (s *InboxItemStore) Insert(ctx context.Context, item *finance.InboxItem) error {
-	query := `INSERT INTO finance.inbox_item (
-		id, space_id, integration_id, status, doc_type, 
-		amount, currency, vendor_name, transaction_date, 
-		account_id, budget_id, scheduled_payment_id, transaction_id, 
-		raw_payload, metadata, create_time
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`
-
-	var amount sql.NullInt64
-	if item.Amount > 0 {
-		amount = sql.NullInt64{Int64: item.Amount, Valid: true}
-	}
-	currency := sql.NullString{String: item.Currency, Valid: item.Currency != ""}
-	vendorName := sql.NullString{String: item.VendorName, Valid: item.VendorName != ""}
-	var txDate sql.NullTime
-	if !item.TransactionDate.IsZero() {
-		txDate = sql.NullTime{Time: item.TransactionDate, Valid: true}
-	}
-
-	var accountID, budgetID, paymentID, transactionID sql.NullString
-	if item.AccountID != nil {
-		accountID = sql.NullString{String: *item.AccountID, Valid: true}
-	}
-	if item.BudgetID != nil {
-		budgetID = sql.NullString{String: *item.BudgetID, Valid: true}
-	}
-	if item.ScheduledPaymentID != nil {
-		paymentID = sql.NullString{String: *item.ScheduledPaymentID, Valid: true}
-	}
-	if item.TransactionID != nil {
-		transactionID = sql.NullString{String: *item.TransactionID, Valid: true}
-	}
-
 	var createTime time.Time
 	if item.CreateTime.IsZero() {
 		createTime = time.Now().UTC()
@@ -118,12 +90,29 @@ func (s *InboxItemStore) Insert(ctx context.Context, item *finance.InboxItem) er
 		createTime = item.CreateTime
 	}
 
-	_, err := s.db.ExecContext(ctx, query,
-		item.ID, item.SpaceID, item.IntegrationID, string(item.Status), string(item.DocType),
-		amount, currency, vendorName, txDate,
-		accountID, budgetID, paymentID, transactionID,
-		item.RawPayload, item.MetadataJSON, createTime,
-	)
+	ds := pgDialect.Insert(goqu.S("finance").Table("inbox_item")).Rows(goqu.Record{
+		"id":                   item.ID,
+		"space_id":             item.SpaceID,
+		"integration_id":       item.IntegrationID,
+		"status":               string(item.Status),
+		"doc_type":             string(item.DocType),
+		"amount":               conv.Ptr(item.Amount),
+		"currency":             conv.Ptr(item.Currency),
+		"vendor_name":          conv.Ptr(item.VendorName),
+		"transaction_date":     conv.Ptr(item.TransactionDate),
+		"account_id":           conv.StringPtr(item.AccountID),
+		"budget_id":            conv.StringPtr(item.BudgetID),
+		"scheduled_payment_id": conv.StringPtr(item.ScheduledPaymentID),
+		"transaction_id":       conv.StringPtr(item.TransactionID),
+		"raw_payload":          item.RawPayload,
+		"metadata":             item.MetadataJSON,
+		"create_time":          createTime,
+	})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("insert inbox item: %w", err)
 	}
@@ -131,60 +120,114 @@ func (s *InboxItemStore) Insert(ctx context.Context, item *finance.InboxItem) er
 }
 
 func (s *InboxItemStore) Get(ctx context.Context, spaceID, id string) (*finance.InboxItem, error) {
-	query := `SELECT id, space_id, integration_id, status, doc_type, 
-	                 amount, currency, vendor_name, transaction_date, 
-	                 account_id, budget_id, scheduled_payment_id, transaction_id, 
-	                 raw_payload, metadata, create_time 
-	          FROM finance.inbox_item WHERE space_id = $1 AND id = $2`
-
+	ds := pgDialect.From(goqu.S("finance").Table("inbox_item")).Select("*").Where(goqu.Ex{
+		"space_id": spaceID,
+		"id":       id,
+	})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, err
+	}
 	var db inboxItemDB
-	err := s.db.GetContext(ctx, &db, query, spaceID, id)
+	err = s.db.GetContext(ctx, &db, query, args...)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("inbox item not found: %s", id)
 		}
 		return nil, fmt.Errorf("query inbox item: %w", err)
 	}
-
 	return toInboxItemDomain(db), nil
 }
 
-func (s *InboxItemStore) ListBySpace(ctx context.Context, spaceID string, filter *finance.ListInboxItemsFilter) ([]*finance.InboxItem, error) {
-	query := `SELECT id, space_id, integration_id, status, doc_type, 
-	                 amount, currency, vendor_name, transaction_date, 
-	                 account_id, budget_id, scheduled_payment_id, transaction_id, 
-	                 raw_payload, metadata, create_time 
-	          FROM finance.inbox_item WHERE space_id = $1`
-
-	args := []interface{}{spaceID}
-
-	if filter != nil && filter.Status != nil {
-		query += " AND status = $2"
-		args = append(args, string(*filter.Status))
+func (s *InboxItemStore) ListBySpace(ctx context.Context, spaceID string, filter *finance.ListInboxItemsFilter) (*paging.Page[*finance.InboxItem], error) {
+	if filter.PageSize <= 0 || filter.PageSize > 100 {
+		filter.PageSize = 20
 	}
 
-	query += " ORDER BY create_time DESC"
+	var ds *goqu.SelectDataset
+	if filter.ExcludePayload {
+		ds = pgDialect.From(goqu.S("finance").Table("inbox_item")).Select(
+			"id", "space_id", "integration_id", "status", "doc_type",
+			"amount", "currency", "vendor_name", "transaction_date",
+			"account_id", "budget_id", "scheduled_payment_id", "transaction_id",
+			"create_time",
+		)
+	} else {
+		ds = pgDialect.From(goqu.S("finance").Table("inbox_item")).Select("*")
+	}
 
-	var dbList []inboxItemDB
-	err := s.db.SelectContext(ctx, &dbList, query, args...)
+	// Apply filtering conditions
+	ds = ds.Where(goqu.Ex{"space_id": spaceID})
+
+	if filter.Status != nil {
+		ds = ds.Where(goqu.Ex{"status": string(*filter.Status)})
+	}
+	if filter.DocType != nil {
+		ds = ds.Where(goqu.Ex{"doc_type": string(*filter.DocType)})
+	}
+	if filter.SearchQuery != nil && *filter.SearchQuery != "" {
+		ds = ds.Where(goqu.Or(
+			goqu.I("vendor_name").ILike("%"+*filter.SearchQuery+"%"),
+			goqu.I("doc_type").ILike("%"+*filter.SearchQuery+"%"),
+			goqu.I("raw_payload").ILike("%"+*filter.SearchQuery+"%"),
+		))
+	}
+
+	// Keyset Cursor decoding
+	cursor, _ := paging.Decode(filter.NextPageToken)
+
+	// Validate sort field
+	sortOrder := filter.Sort
+	if !finance.IsInboxItemSortField(sortOrder.Field) {
+		sortOrder.Field = finance.DefaultInboxItemSortField
+		sortOrder.Ascending = false // Fallback to DESC for dates
+	}
+
+	// Apply sorting and keyset paging
+	ds = paging.ApplyPagination(ds, paging.Options{
+		Sort:     sortOrder,
+		Cursor:   cursor,
+		PageSize: uint(filter.PageSize),
+	})
+
+	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, fmt.Errorf("select inbox items: %w", err)
+		return nil, fmt.Errorf("build sql query: %w", err)
 	}
 
-	list := make([]*finance.InboxItem, len(dbList))
-	for i, db := range dbList {
-		list[i] = toInboxItemDomain(db)
+	var dbRows []inboxItemDB
+	if err := s.db.SelectContext(ctx, &dbRows, query, args...); err != nil {
+		return nil, fmt.Errorf("select context: %w", err)
 	}
-	return list, nil
+
+	items := make([]*finance.InboxItem, len(dbRows))
+	for i := range dbRows {
+		items[i] = toInboxItemDomain(dbRows[i])
+	}
+
+	page := paging.NewPage(items, int(filter.PageSize), func(i *finance.InboxItem) paging.Cursor {
+		return paging.Cursor{
+			SortValue: i.GetSortValue(sortOrder.Field),
+			ID:        i.ID,
+		}
+	})
+
+	return page, nil
 }
 
 func (s *InboxItemStore) Delete(ctx context.Context, spaceID, id string) error {
-	query := `DELETE FROM finance.inbox_item WHERE space_id = $1 AND id = $2`
-	res, err := s.db.ExecContext(ctx, query, spaceID, id)
+	ds := pgDialect.Delete(goqu.S("finance").Table("inbox_item")).Where(goqu.Ex{
+		"space_id": spaceID,
+		"id":       id,
+	})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
+	}
+	res, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("delete inbox item: %w", err)
 	}
-
 	rows, err := res.RowsAffected()
 	if err != nil {
 		return err
@@ -192,52 +235,38 @@ func (s *InboxItemStore) Delete(ctx context.Context, spaceID, id string) error {
 	if rows == 0 {
 		return fmt.Errorf("inbox item not found: %s", id)
 	}
-
 	return nil
 }
 
 func (s *InboxItemStore) Update(ctx context.Context, item *finance.InboxItem) error {
-	query := `UPDATE finance.inbox_item SET 
-		status = $1, doc_type = $2, amount = $3, currency = $4, vendor_name = $5, 
-		transaction_date = $6, account_id = $7, budget_id = $8, 
-		scheduled_payment_id = $9, transaction_id = $10, raw_payload = $11, 
-		metadata = $12
-	WHERE space_id = $13 AND id = $14`
+	ds := pgDialect.Update(goqu.S("finance").Table("inbox_item")).
+		Set(goqu.Record{
+			"status":               string(item.Status),
+			"doc_type":             string(item.DocType),
+			"amount":               conv.Ptr(item.Amount),
+			"currency":             conv.Ptr(item.Currency),
+			"vendor_name":          conv.Ptr(item.VendorName),
+			"transaction_date":     conv.Ptr(item.TransactionDate),
+			"account_id":           conv.StringPtr(item.AccountID),
+			"budget_id":            conv.StringPtr(item.BudgetID),
+			"scheduled_payment_id": conv.StringPtr(item.ScheduledPaymentID),
+			"transaction_id":       conv.StringPtr(item.TransactionID),
+			"raw_payload":          item.RawPayload,
+			"metadata":             item.MetadataJSON,
+		}).
+		Where(goqu.Ex{
+			"space_id": item.SpaceID,
+			"id":       item.ID,
+		})
 
-	var amount sql.NullInt64
-	if item.Amount > 0 {
-		amount = sql.NullInt64{Int64: item.Amount, Valid: true}
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
 	}
-	currency := sql.NullString{String: item.Currency, Valid: item.Currency != ""}
-	vendorName := sql.NullString{String: item.VendorName, Valid: item.VendorName != ""}
-	var txDate sql.NullTime
-	if !item.TransactionDate.IsZero() {
-		txDate = sql.NullTime{Time: item.TransactionDate, Valid: true}
-	}
-
-	var accountID, budgetID, paymentID, transactionID sql.NullString
-	if item.AccountID != nil {
-		accountID = sql.NullString{String: *item.AccountID, Valid: true}
-	}
-	if item.BudgetID != nil {
-		budgetID = sql.NullString{String: *item.BudgetID, Valid: true}
-	}
-	if item.ScheduledPaymentID != nil {
-		paymentID = sql.NullString{String: *item.ScheduledPaymentID, Valid: true}
-	}
-	if item.TransactionID != nil {
-		transactionID = sql.NullString{String: *item.TransactionID, Valid: true}
-	}
-
-	res, err := s.db.ExecContext(ctx, query,
-		string(item.Status), string(item.DocType), amount, currency, vendorName,
-		txDate, accountID, budgetID, paymentID, transactionID,
-		item.RawPayload, item.MetadataJSON, item.SpaceID, item.ID,
-	)
+	res, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("update inbox item: %w", err)
 	}
-
 	rows, err := res.RowsAffected()
 	if err != nil {
 		return err
@@ -245,6 +274,5 @@ func (s *InboxItemStore) Update(ctx context.Context, item *finance.InboxItem) er
 	if rows == 0 {
 		return fmt.Errorf("inbox item not found for update: %s", item.ID)
 	}
-
 	return nil
 }

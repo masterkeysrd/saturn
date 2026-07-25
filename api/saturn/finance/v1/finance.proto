@@ -254,8 +254,16 @@ service Finance {
     option (google.api.http) = {get: "/v1/finance/inbox-items"};
   }
 
-  // Approves and promotes an ingested inbox item into a ledger transaction entry.
-  rpc ApproveInboxItem(ApproveInboxItemRequest) returns (Transaction) {
+  // Updates a staged inbox item's draft properties.
+  rpc UpdateInboxItem(UpdateInboxItemRequest) returns (InboxItem) {
+    option (google.api.http) = {
+      put: "/v1/finance/inbox-items/{id}"
+      body: "inbox_item"
+    };
+  }
+
+  // Approves and promotes an ingested inbox item.
+  rpc ApproveInboxItem(ApproveInboxItemRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/v1/finance/inbox-items/{id}:approve"
       body: "*"
@@ -1771,6 +1779,24 @@ message ListTransactionEventsResponse {
 
 // InboxItem represents an ingested invoice, receipt, or notification in processing staging.
 message InboxItem {
+  // Staging lifecycle status enum.
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+    PENDING = 1;
+    PROCESSING = 2;
+    RESOLVED = 3;
+    ARCHIVED = 4;
+  }
+
+  // Document category classification enum.
+  enum DocType {
+    DOC_TYPE_UNSPECIFIED = 0;
+    INVOICE = 1;
+    RECEIPT = 2;
+    BANK_NOTIFICATION = 3;
+    UNKNOWN = 4;
+  }
+
   // Output only. Unique identifier.
   // Values are of the form `inb_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
@@ -1781,59 +1807,101 @@ message InboxItem {
   // Output only. Ingestion integration channel identifier.
   string integration_id = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
 
-  // Output only. Staging lifecycle status (e.g. "pending", "approved", "discarded").
-  string status = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Output only. Staging lifecycle status.
+  Status status = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
 
-  // Output only. Extracted document classification category (e.g. "receipt").
-  string doc_type = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Required. Extracted document classification category.
+  DocType doc_type = 5;
 
-  // Output only. Extracted transaction amount in cents.
-  int64 amount = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Required. Extracted transaction amount in cents.
+  int64 amount = 6;
 
-  // Output only. Extracted currency code.
-  string currency = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Required. Extracted currency code.
+  string currency = 7;
 
-  // Output only. Extracted vendor counterparty name.
-  string vendor_name = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Required. Extracted vendor counterparty name.
+  string vendor_name = 8;
 
-  // Output only. Extracted transaction transaction date.
-  google.protobuf.Timestamp transaction_date = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Required. Extracted transaction transaction date.
+  google.protobuf.Timestamp transaction_date = 9;
 
-  // Output only. Suggested account ID for categorization.
+  // Optional. Suggested account ID for categorization.
   // Values are of the form `acc_[a-zA-Z0-9]+`.
-  string account_id = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string account_id = 10;
 
-  // Output only. Suggested budget category ID.
+  // Optional. Suggested budget category ID.
   // Values are of the form `bud_[a-zA-Z0-9]+`.
-  string budget_id = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string budget_id = 11;
 
-  // Output only. Associated scheduled payment identifier to clear.
+  // Optional. Associated scheduled payment identifier to clear.
   // Values are of the form `sch_[a-zA-Z0-9]+`.
-  string scheduled_payment_id = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string scheduled_payment_id = 12;
 
-  // Output only. Associated completed transaction ledger ID.
+  // Optional. Associated completed transaction ledger ID.
   // Values are of the form `txn_[a-zA-Z0-9]+`.
-  string transaction_id = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string transaction_id = 13;
 
   // Output only. Ingestion raw notification payload details.
   string raw_payload = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
 
-  // Output only. Additional extracted metadata payload (JSON format).
-  string metadata_json = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Optional. Additional extracted metadata payload (JSON format).
+  string metadata_json = 15;
 
   // Output only. Ingestion stage timestamp.
   google.protobuf.Timestamp create_time = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional representation view.
+  enum View {
+    VIEW_UNSPECIFIED = 0;
+    BASIC = 1; // Excludes raw_payload and metadata_json
+    FULL = 2; // Returns complete fields
+  }
 }
 
 // The request for
 // [ListInboxItems][saturn.finance.v1.Finance.ListInboxItems].
-message ListInboxItemsRequest {}
+message ListInboxItemsRequest {
+  // Optional. Number of items to retrieve per page.
+  int32 page_size = 1;
+
+  // Optional. Cursor token from previous page response.
+  string page_token = 2;
+
+  // Optional. Free-text search query matching vendor names or classifications.
+  optional string search_query = 3;
+
+  // Optional. Stage status to filter by.
+  optional InboxItem.Status status = 4;
+
+  // Optional. Document category classification filter.
+  optional InboxItem.DocType doc_type = 5;
+
+  // Optional. Sorting rules (e.g. "create_time:desc").
+  string sort = 6;
+
+  // Optional. Representation view.
+  InboxItem.View view = 7;
+}
 
 // The response for
 // [ListInboxItems][saturn.finance.v1.Finance.ListInboxItems].
 message ListInboxItemsResponse {
   // List of staged inbox items.
   repeated InboxItem inbox_items = 1;
+
+  // Cursor page token for retrieving the next page.
+  string next_page_token = 2;
+}
+
+// The request for
+// [UpdateInboxItem][saturn.finance.v1.Finance.UpdateInboxItem].
+message UpdateInboxItemRequest {
+  // Required. Target staged inbox item identifier to update.
+  // Values are of the form `inb_[a-zA-Z0-9]+`.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Updated staging inbox item parameters.
+  InboxItem inbox_item = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 // The request for
@@ -1842,47 +1910,6 @@ message ApproveInboxItemRequest {
   // Required. Target staged inbox item identifier to approve.
   // Values are of the form `inb_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
-
-  // Optional. Target account identifier.
-  // Values are of the form `acc_[a-zA-Z0-9]+`.
-  string account_id = 2 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Target budget category identifier.
-  // Values are of the form `bud_[a-zA-Z0-9]+`.
-  string budget_id = 3 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Associated scheduled payment identifier to clear.
-  // Values are of the form `sch_[a-zA-Z0-9]+`.
-  string scheduled_payment_id = 4 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Overriding absolute amount in local currency cents.
-  int64 amount = 5 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Overriding narration notes.
-  string description = 6 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Overriding document classification category.
-  optional string doc_type = 7 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Target transfer destination account identifier.
-  // Values are of the form `acc_[a-zA-Z0-9]+`.
-  optional string destination_account_id = 8 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Overriding transaction flow type.
-  optional string transaction_type = 9 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Associated transaction identifier to link or merge.
-  // Values are of the form `txn_[a-zA-Z0-9]+`.
-  optional string transaction_id = 10 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Force overwrite of properties if the linked transaction already exists.
-  optional bool overwrite_linked_transaction = 11 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Transfer direction flow leg.
-  optional string transfer_leg = 12 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Currency code.
-  optional string currency = 13 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // The request for

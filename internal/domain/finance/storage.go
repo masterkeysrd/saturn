@@ -226,14 +226,20 @@ type TransferStore interface {
 }
 
 type ListInboxItemsFilter struct {
-	Status *InboxItemStatus
+	PageSize       int32
+	NextPageToken  string
+	SearchQuery    *string
+	Status         *InboxItemStatus
+	DocType        *InboxItemDocType
+	Sort           sorting.SortOrder
+	ExcludePayload bool
 }
 
 // InboxItemStore defines repository operations for staged inbox items.
 type InboxItemStore interface {
 	Insert(ctx context.Context, item *InboxItem) error
 	Get(ctx context.Context, spaceID, id string) (*InboxItem, error)
-	ListBySpace(ctx context.Context, spaceID string, filter *ListInboxItemsFilter) ([]*InboxItem, error)
+	ListBySpace(ctx context.Context, spaceID string, filter *ListInboxItemsFilter) (*paging.Page[*InboxItem], error)
 	Update(ctx context.Context, item *InboxItem) error
 	Delete(ctx context.Context, spaceID, id string) error
 }

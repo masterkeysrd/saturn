@@ -51,7 +51,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -72,7 +72,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -105,7 +105,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -155,7 +155,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -215,7 +215,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -254,7 +254,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -293,7 +293,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -332,7 +332,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -371,7 +371,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -404,7 +404,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -436,7 +436,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -475,7 +475,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -499,7 +499,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -539,7 +539,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -579,7 +579,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -618,7 +618,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -641,7 +641,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -711,7 +711,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -745,7 +745,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -787,7 +787,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -817,7 +817,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -858,7 +858,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -918,7 +918,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -952,7 +952,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -982,7 +982,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1023,7 +1023,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1062,7 +1062,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1093,7 +1093,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1123,7 +1123,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1163,7 +1163,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1241,7 +1241,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1275,7 +1275,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1316,7 +1316,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1346,7 +1346,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1386,7 +1386,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1409,7 +1409,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1443,7 +1443,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1483,10 +1483,78 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
+        "parameters": [
+          {
+            "name": "pageSize",
+            "description": "Optional. Number of items to retrieve per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "description": "Optional. Cursor token from previous page response.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "searchQuery",
+            "description": "Optional. Free-text search query matching vendor names or classifications.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "description": "Optional. Stage status to filter by.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PROCESSING",
+              "RESOLVED",
+              "ARCHIVED"
+            ]
+          },
+          {
+            "name": "docType",
+            "description": "Optional. Document category classification filter.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "INVOICE",
+              "RECEIPT",
+              "BANK_NOTIFICATION",
+              "UNKNOWN"
+            ]
+          },
+          {
+            "name": "sort",
+            "description": "Optional. Sorting rules (e.g. \"create_time:desc\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "view",
+            "description": "Optional. Representation view.\n\n - BASIC: Excludes raw_payload and metadata_json\n - FULL: Returns complete fields",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "BASIC",
+              "FULL"
+            ]
+          }
+        ],
         "tags": [
           "Finance"
         ]
@@ -1507,7 +1575,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1523,23 +1591,63 @@
         "tags": [
           "Finance"
         ]
-      }
-    },
-    "/v1/finance/inbox-items/{id}:approve": {
-      "post": {
-        "summary": "Approves and promotes an ingested inbox item into a ledger transaction entry.",
-        "operationId": "Finance_ApproveInboxItem",
+      },
+      "put": {
+        "summary": "Updates a staged inbox item's draft properties.",
+        "operationId": "Finance_UpdateInboxItem",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1Transaction"
+              "$ref": "#/definitions/v1InboxItem"
             }
           },
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Target staged inbox item identifier to update.\nValues are of the form `inb_[a-zA-Z0-9]+`.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "inboxItem",
+            "description": "Required. Updated staging inbox item parameters.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1InboxItem"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/inbox-items/{id}:approve": {
+      "post": {
+        "summary": "Approves and promotes an ingested inbox item.",
+        "operationId": "Finance_ApproveInboxItem",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1579,7 +1687,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1633,7 +1741,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1672,7 +1780,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1717,7 +1825,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1751,7 +1859,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1796,7 +1904,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1831,7 +1939,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1861,7 +1969,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1901,7 +2009,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -1964,7 +2072,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2004,7 +2112,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2025,7 +2133,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2059,7 +2167,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2166,7 +2274,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2198,7 +2306,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2230,7 +2338,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2268,7 +2376,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2302,7 +2410,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2325,7 +2433,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2364,7 +2472,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2398,7 +2506,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2432,7 +2540,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2466,7 +2574,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2489,7 +2597,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2527,7 +2635,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2561,7 +2669,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2595,7 +2703,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2616,7 +2724,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2649,7 +2757,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2672,7 +2780,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2703,7 +2811,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2733,7 +2841,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2762,7 +2870,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2801,7 +2909,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2822,7 +2930,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2855,7 +2963,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2878,7 +2986,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2908,7 +3016,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2937,7 +3045,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2976,7 +3084,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -2997,7 +3105,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -3030,7 +3138,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -3053,7 +3161,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -3090,7 +3198,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -3125,7 +3233,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -3165,7 +3273,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -3208,7 +3316,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -3247,7 +3355,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -3286,7 +3394,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -3324,7 +3432,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -3358,7 +3466,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -3388,7 +3496,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -3418,7 +3526,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -3458,7 +3566,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -3503,7 +3611,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -3543,7 +3651,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -3580,7 +3688,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googleRpcStatus"
             }
           }
         },
@@ -3753,57 +3861,6 @@
     },
     "FinanceApproveInboxItemBody": {
       "type": "object",
-      "properties": {
-        "accountId": {
-          "type": "string",
-          "description": "Optional. Target account identifier.\nValues are of the form `acc_[a-zA-Z0-9]+`."
-        },
-        "budgetId": {
-          "type": "string",
-          "description": "Optional. Target budget category identifier.\nValues are of the form `bud_[a-zA-Z0-9]+`."
-        },
-        "scheduledPaymentId": {
-          "type": "string",
-          "description": "Optional. Associated scheduled payment identifier to clear.\nValues are of the form `sch_[a-zA-Z0-9]+`."
-        },
-        "amount": {
-          "type": "string",
-          "format": "int64",
-          "description": "Optional. Overriding absolute amount in local currency cents."
-        },
-        "description": {
-          "type": "string",
-          "description": "Optional. Overriding narration notes."
-        },
-        "docType": {
-          "type": "string",
-          "description": "Optional. Overriding document classification category."
-        },
-        "destinationAccountId": {
-          "type": "string",
-          "description": "Optional. Target transfer destination account identifier.\nValues are of the form `acc_[a-zA-Z0-9]+`."
-        },
-        "transactionType": {
-          "type": "string",
-          "description": "Optional. Overriding transaction flow type."
-        },
-        "transactionId": {
-          "type": "string",
-          "description": "Optional. Associated transaction identifier to link or merge.\nValues are of the form `txn_[a-zA-Z0-9]+`."
-        },
-        "overwriteLinkedTransaction": {
-          "type": "boolean",
-          "description": "Optional. Force overwrite of properties if the linked transaction already exists."
-        },
-        "transferLeg": {
-          "type": "string",
-          "description": "Optional. Transfer direction flow leg."
-        },
-        "currency": {
-          "type": "string",
-          "description": "Optional. Currency code."
-        }
-      },
       "description": "The request for\n[ApproveInboxItem][saturn.finance.v1.Finance.ApproveInboxItem]."
     },
     "FinanceConfirmScheduledPaymentBody": {
@@ -3975,6 +4032,16 @@
     "IdentityRevokeSessionBody": {
       "type": "object",
       "description": "RevokeSessionRequest targets a specific session to invalidate."
+    },
+    "InboxItemDocType": {
+      "type": "string",
+      "enum": [
+        "INVOICE",
+        "RECEIPT",
+        "BANK_NOTIFICATION",
+        "UNKNOWN"
+      ],
+      "description": "Document category classification enum."
     },
     "IntegrationServiceCreateIntegrationTokenBody": {
       "type": "object",
@@ -4315,6 +4382,25 @@
       },
       "description": "BudgetInfo wraps minimal budget details required for UI listing."
     },
+    "googleRpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
     "identityAdminV1RevokeAllSessionsResponse": {
       "type": "object",
       "properties": {
@@ -4402,25 +4488,6 @@
     "protobufNullValue": {
       "type": "string",
       "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\nThe JSON representation for `NullValue` is JSON `null`."
-    },
-    "rpcStatus": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "message": {
-          "type": "string"
-        },
-        "details": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/protobufAny"
-          }
-        }
-      }
     },
     "saturnIdentityV1RevokeAllSessionsRequest": {
       "type": "object",
@@ -5703,56 +5770,47 @@
           "readOnly": true
         },
         "status": {
-          "type": "string",
-          "description": "Output only. Staging lifecycle status (e.g. \"pending\", \"approved\", \"discarded\").",
+          "$ref": "#/definitions/v1InboxItemStatus",
+          "description": "Output only. Staging lifecycle status.",
           "readOnly": true
         },
         "docType": {
-          "type": "string",
-          "description": "Output only. Extracted document classification category (e.g. \"receipt\").",
-          "readOnly": true
+          "$ref": "#/definitions/InboxItemDocType",
+          "description": "Required. Extracted document classification category."
         },
         "amount": {
           "type": "string",
           "format": "int64",
-          "description": "Output only. Extracted transaction amount in cents.",
-          "readOnly": true
+          "description": "Required. Extracted transaction amount in cents."
         },
         "currency": {
           "type": "string",
-          "description": "Output only. Extracted currency code.",
-          "readOnly": true
+          "description": "Required. Extracted currency code."
         },
         "vendorName": {
           "type": "string",
-          "description": "Output only. Extracted vendor counterparty name.",
-          "readOnly": true
+          "description": "Required. Extracted vendor counterparty name."
         },
         "transactionDate": {
           "type": "string",
           "format": "date-time",
-          "description": "Output only. Extracted transaction transaction date.",
-          "readOnly": true
+          "description": "Required. Extracted transaction transaction date."
         },
         "accountId": {
           "type": "string",
-          "description": "Output only. Suggested account ID for categorization.\nValues are of the form `acc_[a-zA-Z0-9]+`.",
-          "readOnly": true
+          "description": "Optional. Suggested account ID for categorization.\nValues are of the form `acc_[a-zA-Z0-9]+`."
         },
         "budgetId": {
           "type": "string",
-          "description": "Output only. Suggested budget category ID.\nValues are of the form `bud_[a-zA-Z0-9]+`.",
-          "readOnly": true
+          "description": "Optional. Suggested budget category ID.\nValues are of the form `bud_[a-zA-Z0-9]+`."
         },
         "scheduledPaymentId": {
           "type": "string",
-          "description": "Output only. Associated scheduled payment identifier to clear.\nValues are of the form `sch_[a-zA-Z0-9]+`.",
-          "readOnly": true
+          "description": "Optional. Associated scheduled payment identifier to clear.\nValues are of the form `sch_[a-zA-Z0-9]+`."
         },
         "transactionId": {
           "type": "string",
-          "description": "Output only. Associated completed transaction ledger ID.\nValues are of the form `txn_[a-zA-Z0-9]+`.",
-          "readOnly": true
+          "description": "Optional. Associated completed transaction ledger ID.\nValues are of the form `txn_[a-zA-Z0-9]+`."
         },
         "rawPayload": {
           "type": "string",
@@ -5761,8 +5819,7 @@
         },
         "metadataJson": {
           "type": "string",
-          "description": "Output only. Additional extracted metadata payload (JSON format).",
-          "readOnly": true
+          "description": "Optional. Additional extracted metadata payload (JSON format)."
         },
         "createTime": {
           "type": "string",
@@ -5772,6 +5829,24 @@
         }
       },
       "description": "InboxItem represents an ingested invoice, receipt, or notification in processing staging."
+    },
+    "v1InboxItemStatus": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "PROCESSING",
+        "RESOLVED",
+        "ARCHIVED"
+      ],
+      "description": "Staging lifecycle status enum."
+    },
+    "v1InboxItemView": {
+      "type": "string",
+      "enum": [
+        "BASIC",
+        "FULL"
+      ],
+      "description": "Optional representation view.\n\n - BASIC: Excludes raw_payload and metadata_json\n - FULL: Returns complete fields"
     },
     "v1InsightGranularity": {
       "type": "string",
@@ -6102,6 +6177,10 @@
             "$ref": "#/definitions/v1InboxItem"
           },
           "description": "List of staged inbox items."
+        },
+        "nextPageToken": {
+          "type": "string",
+          "description": "Cursor page token for retrieving the next page."
         }
       },
       "description": "The response for\n[ListInboxItems][saturn.finance.v1.Finance.ListInboxItems]."

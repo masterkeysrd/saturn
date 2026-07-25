@@ -1,6 +1,7 @@
 package finance
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -71,4 +72,29 @@ type ApproveInboxItem struct {
 	OverwriteLinkedTransaction bool
 	TransferLeg                string
 	Currency                   string
+}
+
+// DefaultInboxItemSortField represents the fallback sorting column name for inbox items.
+const DefaultInboxItemSortField = "create_time"
+
+// InboxItemSortFields registry maps sortable inbox item field names to their cursor string extraction logic.
+var InboxItemSortFields = map[string]func(*InboxItem) string{
+	"create_time":      func(i *InboxItem) string { return i.CreateTime.Format(time.RFC3339Nano) },
+	"amount":           func(i *InboxItem) string { return fmt.Sprintf("%018d", i.Amount) },
+	"vendor_name":      func(i *InboxItem) string { return i.VendorName },
+	"transaction_date": func(i *InboxItem) string { return i.TransactionDate.Format(time.RFC3339Nano) },
+}
+
+// IsInboxItemSortField validates if a sort column name is allowed.
+func IsInboxItemSortField(field string) bool {
+	_, ok := InboxItemSortFields[field]
+	return ok
+}
+
+// GetSortValue extracts the keyset paging cursor value for a given field.
+func (i *InboxItem) GetSortValue(field string) string {
+	if fn, ok := InboxItemSortFields[field]; ok {
+		return fn(i)
+	}
+	return i.GetSortValue(DefaultInboxItemSortField)
 }

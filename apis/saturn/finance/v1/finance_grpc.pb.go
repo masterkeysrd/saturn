@@ -59,6 +59,7 @@ const (
 	Finance_ListTransfers_FullMethodName            = "/saturn.finance.v1.Finance/ListTransfers"
 	Finance_ListCurrencies_FullMethodName           = "/saturn.finance.v1.Finance/ListCurrencies"
 	Finance_ListInboxItems_FullMethodName           = "/saturn.finance.v1.Finance/ListInboxItems"
+	Finance_UpdateInboxItem_FullMethodName          = "/saturn.finance.v1.Finance/UpdateInboxItem"
 	Finance_ApproveInboxItem_FullMethodName         = "/saturn.finance.v1.Finance/ApproveInboxItem"
 	Finance_DiscardInboxItem_FullMethodName         = "/saturn.finance.v1.Finance/DiscardInboxItem"
 )
@@ -149,8 +150,10 @@ type FinanceClient interface {
 	ListCurrencies(ctx context.Context, in *ListCurrenciesRequest, opts ...grpc.CallOption) (*ListCurrenciesResponse, error)
 	// Lists staging inbox items queue awaiting manual approval or transaction matching.
 	ListInboxItems(ctx context.Context, in *ListInboxItemsRequest, opts ...grpc.CallOption) (*ListInboxItemsResponse, error)
-	// Approves and promotes an ingested inbox item into a ledger transaction entry.
-	ApproveInboxItem(ctx context.Context, in *ApproveInboxItemRequest, opts ...grpc.CallOption) (*Transaction, error)
+	// Updates a staged inbox item's draft properties.
+	UpdateInboxItem(ctx context.Context, in *UpdateInboxItemRequest, opts ...grpc.CallOption) (*InboxItem, error)
+	// Approves and promotes an ingested inbox item.
+	ApproveInboxItem(ctx context.Context, in *ApproveInboxItemRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Discards an ingested inbox item from the staging queue, preventing classification.
 	DiscardInboxItem(ctx context.Context, in *DiscardInboxItemRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
@@ -553,9 +556,19 @@ func (c *financeClient) ListInboxItems(ctx context.Context, in *ListInboxItemsRe
 	return out, nil
 }
 
-func (c *financeClient) ApproveInboxItem(ctx context.Context, in *ApproveInboxItemRequest, opts ...grpc.CallOption) (*Transaction, error) {
+func (c *financeClient) UpdateInboxItem(ctx context.Context, in *UpdateInboxItemRequest, opts ...grpc.CallOption) (*InboxItem, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Transaction)
+	out := new(InboxItem)
+	err := c.cc.Invoke(ctx, Finance_UpdateInboxItem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) ApproveInboxItem(ctx context.Context, in *ApproveInboxItemRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Finance_ApproveInboxItem_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -659,8 +672,10 @@ type FinanceServer interface {
 	ListCurrencies(context.Context, *ListCurrenciesRequest) (*ListCurrenciesResponse, error)
 	// Lists staging inbox items queue awaiting manual approval or transaction matching.
 	ListInboxItems(context.Context, *ListInboxItemsRequest) (*ListInboxItemsResponse, error)
-	// Approves and promotes an ingested inbox item into a ledger transaction entry.
-	ApproveInboxItem(context.Context, *ApproveInboxItemRequest) (*Transaction, error)
+	// Updates a staged inbox item's draft properties.
+	UpdateInboxItem(context.Context, *UpdateInboxItemRequest) (*InboxItem, error)
+	// Approves and promotes an ingested inbox item.
+	ApproveInboxItem(context.Context, *ApproveInboxItemRequest) (*emptypb.Empty, error)
 	// Discards an ingested inbox item from the staging queue, preventing classification.
 	DiscardInboxItem(context.Context, *DiscardInboxItemRequest) (*emptypb.Empty, error)
 }
@@ -789,7 +804,10 @@ func (UnimplementedFinanceServer) ListCurrencies(context.Context, *ListCurrencie
 func (UnimplementedFinanceServer) ListInboxItems(context.Context, *ListInboxItemsRequest) (*ListInboxItemsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListInboxItems not implemented")
 }
-func (UnimplementedFinanceServer) ApproveInboxItem(context.Context, *ApproveInboxItemRequest) (*Transaction, error) {
+func (UnimplementedFinanceServer) UpdateInboxItem(context.Context, *UpdateInboxItemRequest) (*InboxItem, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateInboxItem not implemented")
+}
+func (UnimplementedFinanceServer) ApproveInboxItem(context.Context, *ApproveInboxItemRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method ApproveInboxItem not implemented")
 }
 func (UnimplementedFinanceServer) DiscardInboxItem(context.Context, *DiscardInboxItemRequest) (*emptypb.Empty, error) {
@@ -1517,6 +1535,24 @@ func _Finance_ListInboxItems_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Finance_UpdateInboxItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateInboxItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).UpdateInboxItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_UpdateInboxItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).UpdateInboxItem(ctx, req.(*UpdateInboxItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Finance_ApproveInboxItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ApproveInboxItemRequest)
 	if err := dec(in); err != nil {
@@ -1715,6 +1751,10 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListInboxItems",
 			Handler:    _Finance_ListInboxItems_Handler,
+		},
+		{
+			MethodName: "UpdateInboxItem",
+			Handler:    _Finance_UpdateInboxItem_Handler,
 		},
 		{
 			MethodName: "ApproveInboxItem",
