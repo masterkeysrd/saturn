@@ -169,10 +169,11 @@ func (c *Coordinator) pipelineClassifyNode(ctx context.Context, state *Ingestion
 // 2. Extractor Node: Runs Hyperion to pull structured transaction details.
 func (c *Coordinator) pipelineExtractNode(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
 	// Fetch active budgets, accounts, scheduled payments, and recurring expenses to guide matching context
-	budgets, _, err := c.financeService.ListBudgets(ctx, finance.SpaceID(state.SpaceID), &finance.ListBudgetsFilter{})
+	page, err := c.financeService.ListBudgets(ctx, finance.SpaceID(state.SpaceID), &finance.ListBudgetsFilter{})
 	if err != nil {
 		return nil, fmt.Errorf("list budgets: %w", err)
 	}
+	budgets := page.Items
 
 	var accounts []*finance.Account
 	if state.Classification != "INVOICE" {

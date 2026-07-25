@@ -1,11 +1,14 @@
 import { useState, useEffect, createElement } from "react"
 import { useSearchParams } from "react-router-dom"
+import { useSpacePermissions } from "@/features/space/use-space"
 import {
   useListTransactionsQuery,
   useDeleteTransactionMutation,
   type Transaction,
   useListAccountsQuery,
   useListInboxItemsQuery,
+  useGetFinanceSettingsQuery,
+  useListBudgetsQuery,
 } from "@/gen/saturn/finance/v1/finance"
 import { Inbox } from "lucide-react"
 import { InboxItemsSheet } from "./components/inbox-items-sheet"
@@ -37,21 +40,26 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
-import { useWorkspaceFinance } from "./use-workspace-finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import { formatCents, getBudgetColors, getBudgetIcon } from "./utils"
 import { CreateTransactionSheet } from "./components/create-transaction-sheet"
 import { TransactionEventsSheet } from "./components/transaction-events-sheet"
 
 export function TransactionsView() {
-  const {
-    spaceId,
-    isWritable,
-    settings,
-    budgets,
-    getConversionPreview,
-    refetchBudgets,
-  } = useWorkspaceFinance()
+  const { spaceId, isWritable } = useSpacePermissions()
+
+  const { data: settings } = useGetFinanceSettingsQuery(
+    {},
+    { enabled: !!spaceId }
+  )
+  const baseCurrency = settings?.baseCurrency || "USD"
+
+  const { data: budgetsData, refetch: refetchBudgets } = useListBudgetsQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: !!settings }
+  )
+  const budgets = budgetsData?.budgets || []
+
   const { data: accountsData } = useListAccountsQuery(
     {},
     { enabled: !!spaceId }
@@ -533,12 +541,11 @@ export function TransactionsView() {
           open={createOpen}
           onOpenChange={setCreateOpen}
           spaceId={spaceId}
-          baseCurrency={settings?.baseCurrency || "USD"}
+          baseCurrency={baseCurrency}
           budgets={budgets}
           editTransaction={editTransaction}
           refetchTransactions={refetchTransactions}
           refetchBudgets={refetchBudgets}
-          getConversionPreview={getConversionPreview}
         />
         <TransactionEventsSheet
           open={eventsOpen}

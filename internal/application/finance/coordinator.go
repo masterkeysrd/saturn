@@ -8,6 +8,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
 // SpaceService defines the decoupled interface for workspace accessibility check.
@@ -22,7 +23,7 @@ type FinanceService interface {
 	CreateBudget(ctx context.Context, budget *finance.Budget) (*finance.Budget, error)
 	UpdateBudget(ctx context.Context, budget *finance.Budget) (*finance.Budget, error)
 	DeleteBudget(ctx context.Context, id finance.BudgetID) error
-	ListBudgets(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBudgetsFilter) ([]*finance.Budget, string, error)
+	ListBudgets(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error)
 	GetBudget(ctx context.Context, id finance.BudgetID) (*finance.Budget, error)
 	GetOrCreatePeriod(ctx context.Context, budgetID finance.BudgetID, date time.Time) (*finance.BudgetPeriod, error)
 	UpdatePeriodLimit(ctx context.Context, id finance.PeriodID, limit int64) error
@@ -129,7 +130,7 @@ type Dependencies struct {
 
 // Coordinator orchestrates requests across workspace and finance boundaries.
 type Coordinator struct {
-	financeService financeServiceWrapper
+	financeService FinanceService
 	spaceService   SpaceService
 	classifier     DocumentClassifier
 	parser         IngestionParser
@@ -139,31 +140,12 @@ type Coordinator struct {
 // NewCoordinator instantiates a new Coordinator.
 func NewCoordinator(deps Dependencies) *Coordinator {
 	return &Coordinator{
-		financeService: &financeServiceAdapter{deps.FinanceService},
+		financeService: deps.FinanceService,
 		spaceService:   deps.SpaceService,
 		classifier:     deps.Classifier,
 		parser:         deps.Parser,
 		deduplicator:   deps.Deduplicator,
 	}
-}
-
-// financeServiceWrapper lets coordinator call underlying domain methods including GetBudget
-type financeServiceWrapper interface {
-	FinanceService
-	GetBudget(ctx context.Context, id finance.BudgetID) (*finance.Budget, error)
-}
-
-type financeServiceAdapter struct {
-	FinanceService
-}
-
-func (a *financeServiceAdapter) GetBudget(ctx context.Context, id finance.BudgetID) (*finance.Budget, error) {
-	if s, ok := a.FinanceService.(interface {
-		GetBudget(ctx context.Context, id finance.BudgetID) (*finance.Budget, error)
-	}); ok {
-		return s.GetBudget(ctx, id)
-	}
-	return nil, errors.New("underlying service does not support GetBudget")
 }
 
 // RequestContext encapsulates the active request context properties.

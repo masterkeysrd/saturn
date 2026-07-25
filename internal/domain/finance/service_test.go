@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/id"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
 // --- In-Memory Mocks for Stores ---
@@ -62,14 +63,16 @@ func (m *mockBudgetStore) Delete(ctx context.Context, id BudgetID) error {
 	return nil
 }
 
-func (m *mockBudgetStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListBudgetsFilter) ([]*Budget, string, error) {
+func (m *mockBudgetStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListBudgetsFilter) (*paging.Page[*Budget], error) {
 	var list []*Budget
 	for _, b := range m.data {
 		if b.SpaceID == spaceID {
 			list = append(list, b)
 		}
 	}
-	return list, "", nil
+	return &paging.Page[*Budget]{
+		Items: list,
+	}, nil
 }
 
 type mockPeriodStore struct {
@@ -89,6 +92,17 @@ func (m *mockPeriodStore) GetByRange(ctx context.Context, budgetID BudgetID, sta
 		return nil, ErrPeriodNotFound
 	}
 	return p, nil
+}
+
+func (m *mockPeriodStore) GetByRanges(ctx context.Context, keys []PeriodRangeKey) ([]*BudgetPeriod, error) {
+	var list []*BudgetPeriod
+	for _, key := range keys {
+		k := string(key.BudgetID) + "_" + key.StartDate.Format(time.RFC3339) + "_" + key.EndDate.Format(time.RFC3339)
+		if p, ok := m.data[k]; ok {
+			list = append(list, p)
+		}
+	}
+	return list, nil
 }
 
 func (m *mockPeriodStore) UpdateLimit(ctx context.Context, id PeriodID, limit int64) error {
@@ -206,7 +220,7 @@ func (m *mockTransactionStore) Update(ctx context.Context, t *Transaction) error
 	return nil
 }
 
-func (m *mockTransactionStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListTransactionsFilter) ([]*Transaction, string, error) {
+func (m *mockTransactionStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListTransactionsFilter) (*paging.Page[*Transaction], error) {
 	var list []*Transaction
 	for _, t := range m.txns {
 		if t.SpaceID == spaceID {
@@ -238,7 +252,9 @@ func (m *mockTransactionStore) ListBySpace(ctx context.Context, spaceID SpaceID,
 			list = append(list, t)
 		}
 	}
-	return list, "", nil
+	return &paging.Page[*Transaction]{
+		Items: list,
+	}, nil
 }
 
 func (m *mockTransactionStore) AggregateSpent(ctx context.Context, periodID PeriodID, budgetCurrency Currency, exchangeRateToBase float64) (int64, int64, error) {
@@ -255,6 +271,26 @@ func (m *mockTransactionStore) AggregateSpent(ctx context.Context, periodID Peri
 		}
 	}
 	return spentInBase, spentAmount, nil
+}
+
+func (m *mockTransactionStore) AggregateSpentBatch(ctx context.Context, periodIDs []PeriodID) ([]PeriodSpent, error) {
+	results := make([]PeriodSpent, len(periodIDs))
+	for i, periodID := range periodIDs {
+		var spentInBase int64
+		var spentAmount int64
+		for _, t := range m.txns {
+			if t.PeriodID != nil && *t.PeriodID == periodID {
+				spentInBase += t.AmountInBase
+				spentAmount += t.Amount
+			}
+		}
+		results[i] = PeriodSpent{
+			PeriodID:    periodID,
+			SpentInBase: spentInBase,
+			SpentAmount: spentAmount,
+		}
+	}
+	return results, nil
 }
 
 type mockInsightsStore struct {
@@ -630,17 +666,24 @@ func TestTransactions(t *testing.T) {
 		t.Errorf("AmountInBase = %d, want 1100", createdTxn.AmountInBase)
 	}
 
-	// Verify the period updated its spent aggregates
 	period, err := svc.GetOrCreatePeriod(ctx, budget.ID, targetDate)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if period.SpentInBase != 1100 {
-		t.Errorf("Period SpentInBase = %d, want 1100", period.SpentInBase)
+	// Verify the period spent progress calculates correctly in batch query
+	stats, err := svc.AggregateSpentBatch(ctx, []PeriodID{period.ID})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if period.SpentAmount != 1000 { // 1100 / 1.10 = 1000
-		t.Errorf("Period SpentAmount = %d, want 1000", period.SpentAmount)
+	if len(stats) != 1 {
+		t.Fatalf("expected 1 stats item, got %d", len(stats))
+	}
+	if stats[0].SpentInBase != 1100 {
+		t.Errorf("Period SpentInBase = %d, want 1100", stats[0].SpentInBase)
+	}
+	if stats[0].SpentAmount != 1000 { // 1100 / 1.10 = 1000
+		t.Errorf("Period SpentAmount = %d, want 1000", stats[0].SpentAmount)
 	}
 
 	// Update the expense to 15.00 EUR (1500 cents)
@@ -655,12 +698,15 @@ func TestTransactions(t *testing.T) {
 	}
 
 	// Verify the period updated its spent aggregates to reflect new amount
-	periodUpdated, err := svc.GetOrCreatePeriod(ctx, budget.ID, targetDate)
+	stats2, err := svc.AggregateSpentBatch(ctx, []PeriodID{period.ID})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if periodUpdated.SpentInBase != 1650 {
-		t.Errorf("Period SpentInBase = %d, want 1650", periodUpdated.SpentInBase)
+	if len(stats2) != 1 {
+		t.Fatalf("expected 1 stats item, got %d", len(stats2))
+	}
+	if stats2[0].SpentInBase != 1650 {
+		t.Errorf("Period SpentInBase = %d, want 1650", stats2[0].SpentInBase)
 	}
 
 	// 5. Delete transaction
@@ -670,12 +716,15 @@ func TestTransactions(t *testing.T) {
 	}
 
 	// Verify period spent is back to 0
-	period2, err := svc.GetOrCreatePeriod(ctx, budget.ID, targetDate)
+	stats3, err := svc.AggregateSpentBatch(ctx, []PeriodID{period.ID})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if period2.SpentInBase != 0 {
-		t.Errorf("After delete, SpentInBase = %d, want 0", period2.SpentInBase)
+	if len(stats3) != 1 {
+		t.Fatalf("expected 1 stats item, got %d", len(stats3))
+	}
+	if stats3[0].SpentInBase != 0 {
+		t.Errorf("After delete, SpentInBase = %d, want 0", stats3[0].SpentInBase)
 	}
 }
 

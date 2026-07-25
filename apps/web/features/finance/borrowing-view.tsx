@@ -1,12 +1,13 @@
 import { useState } from "react"
+import { useSpacePermissions } from "@/features/space/use-space"
 import {
   useListBorrowingsQuery,
   useDeleteBorrowingMutation,
   type Borrowing,
   type BorrowingStatus,
   type BorrowingDirection,
+  useGetFinanceSettingsQuery,
 } from "@/gen/saturn/finance/v1/finance"
-import { useWorkspaceFinance } from "./use-workspace-finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import { Button } from "@/components/ui/button"
 import {
@@ -32,7 +33,12 @@ import {
 
 export function BorrowingView() {
   const [now] = useState(() => Date.now())
-  const { spaceId, isWritable, settings } = useWorkspaceFinance()
+  const { spaceId, isWritable } = useSpacePermissions()
+
+  const { data: settings } = useGetFinanceSettingsQuery(
+    {},
+    { enabled: !!spaceId }
+  )
   const baseCurrency = settings?.baseCurrency || "USD"
 
   const [search, setSearch] = useState("")

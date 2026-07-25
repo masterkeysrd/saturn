@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useWorkspaceFinance } from "./use-workspace-finance"
+import { useSpacePermissions } from "@/features/space/use-space"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import {
   useListRecurringExpensesQuery,
@@ -9,6 +9,11 @@ import {
   type RecurringExpense,
   type ScheduledPayment,
   type ListScheduledPaymentsRequest,
+  useGetFinanceSettingsQuery,
+  useListBudgetsQuery,
+  useListExchangeRatesQuery,
+  useListCurrenciesQuery,
+  type ExchangeRate,
 } from "@/gen/saturn/finance/v1/finance"
 import {
   TrendingDownIcon,
@@ -61,15 +66,53 @@ function decodeBase64Utf8(base64: string): string {
 }
 
 export function RecurringView() {
-  const {
-    spaceId,
-    settings,
-    getConversionPreview,
-    budgets,
-    currencies,
-    isWritable,
-  } = useWorkspaceFinance()
+  const { spaceId, isWritable } = useSpacePermissions()
+
+  const { data: settings } = useGetFinanceSettingsQuery(
+    {},
+    { enabled: !!spaceId }
+  )
   const baseCurrency = settings?.baseCurrency || "USD"
+
+  const { data: budgetsData } = useListBudgetsQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: !!settings }
+  )
+  const budgets = budgetsData?.budgets || []
+
+  const { data: currenciesData } = useListCurrenciesQuery(
+    {},
+    { enabled: !!spaceId, staleTime: 1000 * 60 * 30 }
+  )
+  const currencies = currenciesData?.currencies || []
+
+  const { data: ratesData } = useListExchangeRatesQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: !!settings }
+  )
+
+  const getConversionPreview = (amountStr: string, fromCurr: string) => {
+    const amount = parseFloat(amountStr)
+    if (isNaN(amount) || amount <= 0) return null
+    if (!baseCurrency || fromCurr === baseCurrency) return null
+
+    const matchingRates =
+      ratesData?.exchangeRates?.filter(
+        (r: ExchangeRate) =>
+          r.fromCurrency === fromCurr && r.toCurrency === baseCurrency
+      ) || []
+
+    if (matchingRates.length === 0) return null
+
+    const latestRate = [...matchingRates].sort(
+      (a, b) => new Date(b.rateDate).getTime() - new Date(a.rateDate).getTime()
+    )[0]
+    return {
+      amount: amount * latestRate.rate,
+      rate: latestRate.rate,
+      currency: baseCurrency,
+    }
+  }
 
   // Sheets and Dialogs state
   const [expenseSheetOpen, setExpenseSheetOpen] = useState(false)

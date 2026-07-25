@@ -1,9 +1,11 @@
 import { useState, useMemo } from "react"
+import { useSpacePermissions } from "@/features/space/use-space"
 import {
   type Budget,
   useDeleteBudgetMutation,
+  useGetFinanceSettingsQuery,
+  useListBudgetsQuery,
 } from "@/gen/saturn/finance/v1/finance"
-import { useWorkspaceFinance } from "./use-workspace-finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import { Globe, DollarSign, PieChart, PiggyBank } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -15,15 +17,19 @@ import { BudgetHistorySheet } from "./components/budget-history-sheet"
 import { formatCents } from "./utils"
 
 export function BudgetsView() {
-  const {
-    spaceId,
-    isWritable,
-    settings,
-    budgetsData,
-    refetchBudgets,
-    getConversionPreview,
-    currencies,
-  } = useWorkspaceFinance()
+  const { spaceId, isWritable } = useSpacePermissions()
+
+  // 1. Fetch settings
+  const { data: settings } = useGetFinanceSettingsQuery(
+    {},
+    { enabled: !!spaceId }
+  )
+
+  // 2. Fetch budgets with FULL view
+  const { data: budgetsData, refetch: refetchBudgets } = useListBudgetsQuery(
+    { pageSize: 100, pageToken: "", view: "FULL" },
+    { enabled: !!settings }
+  )
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -42,22 +48,17 @@ export function BudgetsView() {
     setHistoryOpen(true)
   }
 
-  // Aggregate limits total in base currency synchronously
+  // Aggregate limits total in base currency synchronously using pre-computed ActivePeriod data
   const totalLimitBudgeted = useMemo(() => {
     const budgets = budgetsData?.budgets || []
     return budgets.reduce((acc, b) => {
       if (!b.isActive) return acc
-      const limit = formatCents(b.limitAmount)
-      if (!settings?.baseCurrency || b.currency === settings.baseCurrency) {
-        return acc + limit
+      if (b.currentPeriod) {
+        return acc + formatCents(b.currentPeriod.limitInBase || "0")
       }
-      const preview = getConversionPreview(limit.toString(), b.currency)
-      if (preview && typeof preview.amount === "number") {
-        return acc + preview.amount
-      }
-      return acc + limit
+      return acc + formatCents(b.limitAmount)
     }, 0)
-  }, [budgetsData, settings, getConversionPreview])
+  }, [budgetsData])
 
   const handlePeriodLoaded = () => {}
 
@@ -182,8 +183,6 @@ export function BudgetsView() {
           spaceId={spaceId}
           baseCurrency={settings?.baseCurrency || "USD"}
           refetchBudgets={refetchBudgets}
-          getConversionPreview={getConversionPreview}
-          currencies={currencies}
         />
 
         {/* Modal Sheet triggers */}
@@ -193,8 +192,7 @@ export function BudgetsView() {
           activeBudget={activeBudget}
           spaceId={spaceId}
           refetchBudgets={refetchBudgets}
-          getConversionPreview={getConversionPreview}
-          currencies={currencies}
+          baseCurrency={settings?.baseCurrency || "USD"}
         />
 
         {/* Quick transaction recording slider sheet */}
@@ -207,7 +205,6 @@ export function BudgetsView() {
           preselectedBudgetId={selectedBudgetId}
           refetchTransactions={() => {}} // No transactions list on this view to refetch
           refetchBudgets={refetchBudgets}
-          getConversionPreview={getConversionPreview}
         />
 
         {/* Budget History Ledger Sheet */}

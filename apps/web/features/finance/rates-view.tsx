@@ -1,17 +1,27 @@
 import { useState } from "react"
+import { useSpacePermissions } from "@/features/space/use-space"
 import {
   type ExchangeRate,
   useDeleteExchangeRateMutation,
+  useGetFinanceSettingsQuery,
+  useListExchangeRatesQuery,
 } from "@/gen/saturn/finance/v1/finance"
-import { useWorkspaceFinance } from "./use-workspace-finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import { Button } from "@/components/ui/button"
 import { Globe, ArrowRight, Trash2 } from "lucide-react"
 import { CreateRateSheet } from "./components/create-rate-sheet"
 
 export function RatesView() {
-  const { isWritable, settings, ratesData, refetchRates } =
-    useWorkspaceFinance()
+  const { spaceId, isWritable } = useSpacePermissions()
+
+  const { data: settings } = useGetFinanceSettingsQuery(
+    {},
+    { enabled: !!spaceId }
+  )
+  const { data: ratesData, refetch: refetchRates } = useListExchangeRatesQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: !!settings }
+  )
 
   const [rateCreateOpen, setRateCreateOpen] = useState(false)
   const deleteRateMutation = useDeleteExchangeRateMutation()

@@ -81,6 +81,29 @@ type Budget struct {
 	UpdateTime       time.Time
 }
 
+// DefaultBudgetSortField represents the fallback sorting column name for budgets.
+const DefaultBudgetSortField = "name"
+
+// BudgetSortFields registry maps sortable budget field names to their cursor string extraction logic.
+var BudgetSortFields = map[string]func(*Budget) string{
+	"name":         func(b *Budget) string { return b.Name },
+	"limit_amount": func(b *Budget) string { return fmt.Sprintf("%018d", b.LimitAmount) },
+}
+
+// IsBudgetSortField validates if a sort column name is allowed.
+func IsBudgetSortField(field string) bool {
+	_, ok := BudgetSortFields[field]
+	return ok
+}
+
+// GetSortValue extracts and formats the string representation of a field for cursor-based lexical sorting.
+func (b *Budget) GetSortValue(field string) string {
+	if fn, ok := BudgetSortFields[field]; ok {
+		return fn(b)
+	}
+	return b.GetSortValue(DefaultBudgetSortField)
+}
+
 // Validate checks the budget's business rules.
 func (b *Budget) Validate() error {
 	b.Name = strings.TrimSpace(b.Name)

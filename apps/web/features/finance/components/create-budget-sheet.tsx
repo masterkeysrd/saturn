@@ -3,7 +3,9 @@ import {
   useCreateBudgetMutation,
   type RecurrenceInterval,
   useListAccountsQuery,
-  type CurrencyInfo,
+  useListCurrenciesQuery,
+  useListExchangeRatesQuery,
+  type ExchangeRate,
 } from "@/gen/saturn/finance/v1/finance"
 import {
   Sheet,
@@ -45,14 +47,6 @@ interface CreateBudgetSheetProps {
   spaceId: string
   baseCurrency: string
   refetchBudgets: () => void
-  getConversionPreview: (
-    amountStr: string,
-    fromCurr: string
-  ) =>
-    | { amount: number; rate: number; currency: string }
-    | { error: string }
-    | null
-  currencies?: CurrencyInfo[]
 }
 
 export function CreateBudgetSheet({
@@ -61,9 +55,43 @@ export function CreateBudgetSheet({
   spaceId,
   baseCurrency,
   refetchBudgets,
-  getConversionPreview,
-  currencies = [],
 }: CreateBudgetSheetProps) {
+  const { data: ratesData } = useListExchangeRatesQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: open }
+  )
+
+  const getConversionPreview = (amountStr: string, fromCurr: string) => {
+    const amount = parseFloat(amountStr)
+    if (isNaN(amount) || amount <= 0) return null
+    if (!baseCurrency || fromCurr === baseCurrency) return null
+
+    const matchingRates =
+      ratesData?.exchangeRates?.filter(
+        (r: ExchangeRate) =>
+          r.fromCurrency === fromCurr && r.toCurrency === baseCurrency
+      ) || []
+
+    if (matchingRates.length === 0) {
+      return {
+        error: `No exchange rate configured from ${fromCurr} to ${baseCurrency}.`,
+      }
+    }
+
+    const latestRate = [...matchingRates].sort(
+      (a, b) => new Date(b.rateDate).getTime() - new Date(a.rateDate).getTime()
+    )[0]
+    return {
+      amount: amount * latestRate.rate,
+      rate: latestRate.rate,
+      currency: baseCurrency,
+    }
+  }
+  const { data: currenciesData } = useListCurrenciesQuery(
+    {},
+    { enabled: open && !!spaceId, staleTime: 1000 * 60 * 30 }
+  )
+  const currencies = currenciesData?.currencies || []
   const [name, setName] = useState("")
   const [limit, setLimit] = useState("")
   const [currency, setCurrency] = useState(baseCurrency || "USD")

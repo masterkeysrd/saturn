@@ -1,12 +1,13 @@
 import { useState } from "react"
-import { useWorkspaceFinance } from "./use-workspace-finance"
-import { FinancePageLayout } from "./components/finance-page-layout"
-import { formatCents, getBudgetColors, getBudgetIcon } from "./utils"
-import { cn } from "@/lib/utils"
+import { useActiveSpaceContext } from "@/features/space/use-space"
 import {
   useGetInsightsQuery,
   type InsightGranularity,
+  useGetFinanceSettingsQuery,
 } from "@/gen/saturn/finance/v1/finance"
+import { FinancePageLayout } from "./components/finance-page-layout"
+import { formatCents, getBudgetColors, getBudgetIcon } from "./utils"
+import { cn } from "@/lib/utils"
 import {
   TrendingDownIcon,
   TrendingUp,
@@ -21,7 +22,11 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 export function InsightsView() {
-  const { spaceId, settings } = useWorkspaceFinance()
+  const { spaceId } = useActiveSpaceContext()
+  const { data: settings } = useGetFinanceSettingsQuery(
+    {},
+    { enabled: !!spaceId }
+  )
   const [granularity, setGranularity] = useState<InsightGranularity>("MONTHLY")
 
   // Fetch spent insights from the newly implemented gRPC backend service

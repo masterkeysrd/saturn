@@ -6,6 +6,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/doug-martin/goqu/v9"
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 )
@@ -22,6 +23,22 @@ type periodDB struct {
 	ExchangeRateToBase float64      `db:"exchange_rate_to_base"`
 	CreateTime         sql.NullTime `db:"create_time"`
 	UpdateTime         sql.NullTime `db:"update_time"`
+}
+
+func (row *periodDB) toDomain() *finance.BudgetPeriod {
+	return &finance.BudgetPeriod{
+		ID:                 finance.PeriodID(row.ID),
+		BudgetID:           finance.BudgetID(row.BudgetID),
+		SpaceID:            finance.SpaceID(row.SpaceID),
+		StartDate:          row.StartDate,
+		EndDate:            row.EndDate,
+		LimitAmount:        row.LimitAmount,
+		Currency:           finance.Currency(row.Currency),
+		BaseCurrency:       finance.Currency(row.BaseCurrency),
+		ExchangeRateToBase: row.ExchangeRateToBase,
+		CreateTime:         nullTimeToTime(row.CreateTime),
+		UpdateTime:         nullTimeToTime(row.UpdateTime),
+	}
 }
 
 type PeriodStore struct {
@@ -48,19 +65,40 @@ func (s *PeriodStore) GetByRange(ctx context.Context, budgetID finance.BudgetID,
 		}
 		return nil, err
 	}
-	return &finance.BudgetPeriod{
-		ID:                 finance.PeriodID(row.ID),
-		BudgetID:           finance.BudgetID(row.BudgetID),
-		SpaceID:            finance.SpaceID(row.SpaceID),
-		StartDate:          row.StartDate,
-		EndDate:            row.EndDate,
-		LimitAmount:        row.LimitAmount,
-		Currency:           finance.Currency(row.Currency),
-		BaseCurrency:       finance.Currency(row.BaseCurrency),
-		ExchangeRateToBase: row.ExchangeRateToBase,
-		CreateTime:         nullTimeToTime(row.CreateTime),
-		UpdateTime:         nullTimeToTime(row.UpdateTime),
-	}, nil
+	return row.toDomain(), nil
+}
+
+func (s *PeriodStore) GetByRanges(ctx context.Context, keys []finance.PeriodRangeKey) ([]*finance.BudgetPeriod, error) {
+	if len(keys) == 0 {
+		return nil, nil
+	}
+
+	var orExprs []goqu.Expression
+	for _, key := range keys {
+		orExprs = append(orExprs, goqu.And(
+			goqu.C("budget_id").Eq(string(key.BudgetID)),
+			goqu.C("start_date").Eq(key.StartDate),
+			goqu.C("end_date").Eq(key.EndDate),
+		))
+	}
+
+	ds := pgDialect.From(goqu.S("finance").Table("budget_period")).
+		Where(goqu.Or(orExprs...))
+	sqlStr, args, err := ds.ToSQL()
+	if err != nil {
+		return nil, err
+	}
+
+	var dbRows []periodDB
+	if err := s.db.SelectContext(ctx, &dbRows, sqlStr, args...); err != nil {
+		return nil, err
+	}
+
+	periods := make([]*finance.BudgetPeriod, len(dbRows))
+	for i := range dbRows {
+		periods[i] = dbRows[i].toDomain()
+	}
+	return periods, nil
 }
 
 func (s *PeriodStore) UpdateLimit(ctx context.Context, id finance.PeriodID, limit int64) error {
@@ -86,21 +124,9 @@ func (s *PeriodStore) ListByBudget(ctx context.Context, budgetID finance.BudgetI
 		return nil, err
 	}
 
-	periods := make([]*finance.BudgetPeriod, 0, len(rows))
+	periods := make([]*finance.BudgetPeriod, len(rows))
 	for i := range rows {
-		periods = append(periods, &finance.BudgetPeriod{
-			ID:                 finance.PeriodID(rows[i].ID),
-			BudgetID:           finance.BudgetID(rows[i].BudgetID),
-			SpaceID:            finance.SpaceID(rows[i].SpaceID),
-			StartDate:          rows[i].StartDate,
-			EndDate:            rows[i].EndDate,
-			LimitAmount:        rows[i].LimitAmount,
-			Currency:           finance.Currency(rows[i].Currency),
-			BaseCurrency:       finance.Currency(rows[i].BaseCurrency),
-			ExchangeRateToBase: rows[i].ExchangeRateToBase,
-			CreateTime:         nullTimeToTime(rows[i].CreateTime),
-			UpdateTime:         nullTimeToTime(rows[i].UpdateTime),
-		})
+		periods[i] = rows[i].toDomain()
 	}
 	return periods, nil
 }

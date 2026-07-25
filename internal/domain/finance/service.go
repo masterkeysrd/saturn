@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/id"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
 // Dependencies defines the required persistence adapters for the service.
@@ -162,9 +163,9 @@ func (s *Service) DeleteBudget(ctx context.Context, id BudgetID) error {
 }
 
 // ListBudgets returns the workspace's budgets.
-func (s *Service) ListBudgets(ctx context.Context, spaceID SpaceID, filter *ListBudgetsFilter) ([]*Budget, string, error) {
+func (s *Service) ListBudgets(ctx context.Context, spaceID SpaceID, filter *ListBudgetsFilter) (*paging.Page[*Budget], error) {
 	if string(spaceID) == "" {
-		return nil, "", errors.New("space ID is required")
+		return nil, errors.New("space ID is required")
 	}
 	return s.deps.BudgetStore.ListBySpace(ctx, spaceID, filter)
 }
@@ -186,13 +187,6 @@ func (s *Service) GetOrCreatePeriod(ctx context.Context, budgetID BudgetID, date
 	// Try lookup
 	period, err := s.deps.PeriodStore.GetByRange(ctx, budgetID, startDate, endDate)
 	if err == nil {
-		if s.deps.TransactionStore != nil {
-			spentInBase, spentAmount, aggErr := s.deps.TransactionStore.AggregateSpent(ctx, period.ID, period.Currency, period.ExchangeRateToBase)
-			if aggErr == nil {
-				period.SpentInBase = spentInBase
-				period.SpentAmount = spentAmount
-			}
-		}
 		return period, nil
 	}
 	if !errors.Is(err, ErrPeriodNotFound) {
@@ -209,9 +203,14 @@ func (s *Service) GetOrCreatePeriod(ctx context.Context, budgetID BudgetID, date
 			RateDate:     date,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("fetch exchange rate from %s to %s for date %s: %w", budget.Currency, settings.BaseCurrency, date.Format("2006-01-02"), err)
+			if errors.Is(err, ErrExchangeRateNotFound) {
+				rate = 0.0
+			} else {
+				return nil, fmt.Errorf("fetch exchange rate from %s to %s for date %s: %w", budget.Currency, settings.BaseCurrency, date.Format("2006-01-02"), err)
+			}
+		} else {
+			rate = rateRecord.Rate
 		}
-		rate = rateRecord.Rate
 	}
 
 	periodID, err := NewPeriodID()
@@ -241,10 +240,112 @@ func (s *Service) GetOrCreatePeriod(ctx context.Context, budgetID BudgetID, date
 		return nil, err
 	}
 
-	newPeriod.SpentInBase = 0
-	newPeriod.SpentAmount = 0
-
 	return newPeriod, nil
+}
+
+// GetOrCreatePeriods retrieves or lazily spawns budget periods for a slice of budgets in batch.
+func (s *Service) GetOrCreatePeriods(ctx context.Context, budgets []*Budget, date time.Time) (map[BudgetID]*BudgetPeriod, error) {
+	if len(budgets) == 0 {
+		return make(map[BudgetID]*BudgetPeriod), nil
+	}
+
+	// Fetch workspace base currency settings once (using the SpaceID of the first budget)
+	settings, err := s.deps.SettingsStore.GetByID(ctx, budgets[0].SpaceID)
+	if err != nil {
+		return nil, fmt.Errorf("fetch workspace base currency settings: %w", err)
+	}
+
+	// Calculate bounds for each budget
+	keys := make([]PeriodRangeKey, len(budgets))
+	boundsMap := make(map[BudgetID]struct{ Start, End time.Time })
+	for i, b := range budgets {
+		start, end := b.CalculateBounds(date)
+		keys[i] = PeriodRangeKey{
+			BudgetID:  b.ID,
+			StartDate: start,
+			EndDate:   end,
+		}
+		boundsMap[b.ID] = struct{ Start, End time.Time }{Start: start, End: end}
+	}
+
+	// 1. Bulk-retrieve existing periods in a single DB query
+	existingPeriods, err := s.deps.PeriodStore.GetByRanges(ctx, keys)
+	if err != nil {
+		return nil, fmt.Errorf("bulk fetch existing budget periods: %w", err)
+	}
+
+	periodsMap := make(map[BudgetID]*BudgetPeriod)
+	for _, p := range existingPeriods {
+		periodsMap[p.BudgetID] = p
+	}
+
+	// 2. Identify missing periods and create them
+	for _, b := range budgets {
+		if _, exists := periodsMap[b.ID]; exists {
+			continue
+		}
+
+		bounds := boundsMap[b.ID]
+
+		// Determine exchange rate to base currency
+		rate := 1.0
+		if b.Currency != settings.BaseCurrency {
+			rateRecord, err := s.getExchangeRate(ctx, ExchangeRateKey{
+				SpaceID:      b.SpaceID,
+				FromCurrency: Currency(b.Currency),
+				ToCurrency:   Currency(settings.BaseCurrency),
+				RateDate:     date,
+			})
+			if err != nil {
+				if errors.Is(err, ErrExchangeRateNotFound) {
+					rate = 0.0
+				} else {
+					return nil, fmt.Errorf("fetch exchange rate from %s to %s for date %s: %w", b.Currency, settings.BaseCurrency, date.Format("2006-01-02"), err)
+				}
+			} else {
+				rate = rateRecord.Rate
+			}
+		}
+
+		periodID, err := NewPeriodID()
+		if err != nil {
+			return nil, err
+		}
+
+		newPeriod := &BudgetPeriod{
+			ID:                 periodID,
+			BudgetID:           b.ID,
+			SpaceID:            b.SpaceID,
+			StartDate:          bounds.Start,
+			EndDate:            bounds.End,
+			LimitAmount:        b.LimitAmount,
+			Currency:           b.Currency,
+			BaseCurrency:       settings.BaseCurrency,
+			ExchangeRateToBase: rate,
+			CreateTime:         time.Now().UTC(),
+			UpdateTime:         time.Now().UTC(),
+		}
+
+		if err := newPeriod.Validate(); err != nil {
+			return nil, err
+		}
+
+		if err := s.deps.PeriodStore.Create(ctx, newPeriod); err != nil {
+			return nil, fmt.Errorf("create budget period: %w", err)
+		}
+
+		periodsMap[b.ID] = newPeriod
+	}
+
+	return periodsMap, nil
+}
+
+// AggregateSpentBatch calculates dynamic transaction spent progress for a list of budget period IDs.
+func (s *Service) AggregateSpentBatch(ctx context.Context, periodIDs []PeriodID) ([]PeriodSpent, error) {
+	if s.deps.TransactionStore == nil {
+		return nil, nil
+	}
+	return s.deps.TransactionStore.AggregateSpentBatch(ctx, periodIDs)
 }
 
 // UpdatePeriodLimit modifies the budget limit of a specific period.
@@ -411,7 +512,11 @@ func (s *Service) ListTransactions(ctx context.Context, spaceID SpaceID, filter 
 	if err := spaceID.Validate(); err != nil {
 		return nil, "", fmt.Errorf("validate space ID: %w", err)
 	}
-	return s.deps.TransactionStore.ListBySpace(ctx, spaceID, filter)
+	page, err := s.deps.TransactionStore.ListBySpace(ctx, spaceID, filter)
+	if err != nil {
+		return nil, "", err
+	}
+	return page.Items, page.NextPageToken, nil
 }
 
 // GetSpentInsights computes aggregated outflow analytics and trends for a space.
@@ -1080,7 +1185,7 @@ func (s *Service) syncTransaction(ctx context.Context, params syncTransactionPar
 	// Find if transaction already exists
 	st := params.SourceType
 	si := params.SourceID
-	existingTxs, _, err := s.deps.TransactionStore.ListBySpace(ctx, params.SpaceID, &ListTransactionsFilter{
+	page, err := s.deps.TransactionStore.ListBySpace(ctx, params.SpaceID, &ListTransactionsFilter{
 		SourceType: &st,
 		SourceID:   &si,
 		PageSize:   1,
@@ -1088,6 +1193,7 @@ func (s *Service) syncTransaction(ctx context.Context, params syncTransactionPar
 	if err != nil {
 		return fmt.Errorf("list existing transactions: %w", err)
 	}
+	existingTxs := page.Items
 
 	if len(existingTxs) > 0 {
 		existing := existingTxs[0]
@@ -1135,7 +1241,7 @@ func (s *Service) syncTransaction(ctx context.Context, params syncTransactionPar
 func (s *Service) deleteTransactionBySource(ctx context.Context, spaceID SpaceID, sourceID string, sourceType string) error {
 	st := sourceType
 	si := sourceID
-	existingTxs, _, err := s.deps.TransactionStore.ListBySpace(ctx, spaceID, &ListTransactionsFilter{
+	page, err := s.deps.TransactionStore.ListBySpace(ctx, spaceID, &ListTransactionsFilter{
 		SourceType: &st,
 		SourceID:   &si,
 		PageSize:   10,
@@ -1143,6 +1249,7 @@ func (s *Service) deleteTransactionBySource(ctx context.Context, spaceID SpaceID
 	if err != nil {
 		return err
 	}
+	existingTxs := page.Items
 	for _, txn := range existingTxs {
 		if err := s.deleteTransaction(ctx, txn); err != nil {
 			return err
@@ -1262,7 +1369,7 @@ func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing) (*Borrowing
 	// Check if a transaction already exists for this borrowing
 	st := SourceTypeBorrowing
 	si := string(b.ID)
-	existingTxs, _, err := s.deps.TransactionStore.ListBySpace(ctx, b.SpaceID, &ListTransactionsFilter{
+	page, err := s.deps.TransactionStore.ListBySpace(ctx, b.SpaceID, &ListTransactionsFilter{
 		SourceType: &st,
 		SourceID:   &si,
 		PageSize:   1,
@@ -1270,6 +1377,7 @@ func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing) (*Borrowing
 	if err != nil {
 		return nil, fmt.Errorf("check existing transaction: %w", err)
 	}
+	existingTxs := page.Items
 	hasTransaction := len(existingTxs) > 0
 
 	if hasTransaction && b.Currency != settings.BaseCurrency {
@@ -1774,13 +1882,14 @@ func (s *Service) DeleteTransfer(ctx context.Context, id TransferID) error {
 	}
 
 	// Find the associated transaction legs using TransferID
-	legs, _, err := s.deps.TransactionStore.ListBySpace(ctx, t.SpaceID, &ListTransactionsFilter{
+	page, err := s.deps.TransactionStore.ListBySpace(ctx, t.SpaceID, &ListTransactionsFilter{
 		TransferID: &id,
 		PageSize:   10,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to retrieve transfer transaction legs: %w", err)
 	}
+	legs := page.Items
 
 	// Delete both transaction legs
 	for _, leg := range legs {
@@ -2006,7 +2115,7 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, req *App
 			SpaceID:       SpaceID(spaceID),
 			TransactionID: txn.ID,
 			EventType:     "RECEIPT_INGESTED",
-			Metadata: map[string]interface{}{
+			Metadata: map[string]any{
 				"amount_cents": item.Amount,
 				"currency":     item.Currency,
 				"vendor_name":  item.VendorName,
@@ -2028,7 +2137,7 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, req *App
 			SpaceID:       SpaceID(spaceID),
 			TransactionID: txn.ID,
 			EventType:     "TRANSACTION_LINKED",
-			Metadata: map[string]interface{}{
+			Metadata: map[string]any{
 				"inbox_item_id":                string(item.ID),
 				"overwrite_linked_transaction": req.OverwriteLinkedTransaction,
 				"description":                  linkedDesc,
@@ -2192,9 +2301,13 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, req *App
 				targetAccID = destAccID
 			}
 
-			txs, _, err := s.deps.TransactionStore.ListBySpace(ctx, SpaceID(spaceID), &ListTransactionsFilter{
+			page, err := s.deps.TransactionStore.ListBySpace(ctx, SpaceID(spaceID), &ListTransactionsFilter{
 				TransferID: &newT.ID,
 			})
+			var txs []*Transaction
+			if err == nil {
+				txs = page.Items
+			}
 			var matchedTx *Transaction
 			if err == nil {
 				for _, tx := range txs {

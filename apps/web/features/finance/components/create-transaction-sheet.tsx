@@ -5,8 +5,10 @@ import {
   type Budget,
   type Transaction,
   useListAccountsQuery,
+  useListCurrenciesQuery,
+  useListExchangeRatesQuery,
+  type ExchangeRate,
 } from "@/gen/saturn/finance/v1/finance"
-import { useWorkspaceFinance } from "../use-workspace-finance"
 import {
   Sheet,
   SheetContent,
@@ -42,13 +44,6 @@ interface CreateTransactionSheetProps {
   editTransaction?: Transaction | null
   refetchTransactions: () => void
   refetchBudgets: () => void
-  getConversionPreview: (
-    amountStr: string,
-    fromCurr: string
-  ) =>
-    | { amount: number; rate: number; currency: string }
-    | { error: string }
-    | null
 }
 
 export function CreateTransactionSheet({
@@ -61,9 +56,43 @@ export function CreateTransactionSheet({
   editTransaction,
   refetchTransactions,
   refetchBudgets,
-  getConversionPreview,
 }: CreateTransactionSheetProps) {
-  const { currencies } = useWorkspaceFinance()
+  const { data: ratesData } = useListExchangeRatesQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: open }
+  )
+
+  const getConversionPreview = (amountStr: string, fromCurr: string) => {
+    const amount = parseFloat(amountStr)
+    if (isNaN(amount) || amount <= 0) return null
+    if (!baseCurrency || fromCurr === baseCurrency) return null
+
+    const matchingRates =
+      ratesData?.exchangeRates?.filter(
+        (r: ExchangeRate) =>
+          r.fromCurrency === fromCurr && r.toCurrency === baseCurrency
+      ) || []
+
+    if (matchingRates.length === 0) {
+      return {
+        error: `No exchange rate configured from ${fromCurr} to ${baseCurrency}.`,
+      }
+    }
+
+    const latestRate = [...matchingRates].sort(
+      (a, b) => new Date(b.rateDate).getTime() - new Date(a.rateDate).getTime()
+    )[0]
+    return {
+      amount: amount * latestRate.rate,
+      rate: latestRate.rate,
+      currency: baseCurrency,
+    }
+  }
+  const { data: currenciesData } = useListCurrenciesQuery(
+    {},
+    { enabled: open && !!spaceId, staleTime: 1000 * 60 * 30 }
+  )
+  const currencies = currenciesData?.currencies || []
   const fallbackCurrencies = [
     { code: "USD" },
     { code: "EUR" },

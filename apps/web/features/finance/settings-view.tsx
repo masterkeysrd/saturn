@@ -1,9 +1,21 @@
-import { useWorkspaceFinance } from "./use-workspace-finance"
+import { useActiveSpaceContext } from "@/features/space/use-space"
+import {
+  useGetFinanceSettingsQuery,
+  useListExchangeRatesQuery,
+} from "@/gen/saturn/finance/v1/finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import { AlertTriangle, CheckCircle2, Settings } from "lucide-react"
 
 export function SettingsView() {
-  const { settings, ratesData } = useWorkspaceFinance()
+  const { spaceId } = useActiveSpaceContext()
+  const { data: settings } = useGetFinanceSettingsQuery(
+    {},
+    { enabled: !!spaceId }
+  )
+  const { data: ratesData } = useListExchangeRatesQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: !!settings }
+  )
 
   return (
     <FinancePageLayout

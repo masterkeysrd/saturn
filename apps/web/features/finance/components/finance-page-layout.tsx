@@ -1,10 +1,13 @@
 import { useState } from "react"
 import type { ElementType } from "react"
-import { useWorkspaceFinance } from "../use-workspace-finance"
+import { useActiveSpaceContext } from "@/features/space/use-space"
+import {
+  useGetFinanceSettingsQuery,
+  useConfigureFinanceMutation,
+} from "@/gen/saturn/finance/v1/finance"
 import { Button } from "@/components/ui/button"
 import { Coins, Loader2, PiggyBank } from "lucide-react"
 import { Label } from "@/components/ui/label"
-import { useConfigureFinanceMutation } from "@/gen/saturn/finance/v1/finance"
 import {
   Select,
   SelectTrigger,
@@ -29,8 +32,26 @@ export function FinancePageLayout({
   actions,
   icon = PiggyBank,
 }: FinancePageLayoutProps) {
-  const { isWritable, isLoading, isNotConfigured, refetchSettings } =
-    useWorkspaceFinance()
+  const { spaceId, spaceRole } = useActiveSpaceContext()
+  const isWritable =
+    spaceRole === "owner" ||
+    spaceRole === "admin" ||
+    spaceRole === "finance_manager"
+
+  const {
+    isLoading: settingsLoading,
+    error: settingsError,
+    refetch: refetchSettings,
+  } = useGetFinanceSettingsQuery(
+    {},
+    {
+      enabled: !!spaceId,
+      retry: false,
+    }
+  )
+
+  const isLoading = settingsLoading
+  const isNotConfigured = !!settingsError && !settingsLoading
 
   const [setupCurrency, setSetupCurrency] = useState("USD")
   const configureMutation = useConfigureFinanceMutation()

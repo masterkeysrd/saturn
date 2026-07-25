@@ -31,16 +31,6 @@ type UpdateBudgetRequest struct {
 	DefaultAccountID *finance.AccountID
 }
 
-type ListBudgetsRequest struct {
-	PageSize  int32
-	PageToken string
-}
-
-type GetBudgetPeriodRequest struct {
-	BudgetID finance.BudgetID
-	Date     time.Time
-}
-
 // CreateBudget orchestrates budget template creation.
 func (c *Coordinator) CreateBudget(ctx context.Context, req *CreateBudgetRequest) (*finance.Budget, error) {
 	rCtx, err := c.resolveContext(ctx)
@@ -106,34 +96,4 @@ func (c *Coordinator) DeleteBudget(ctx context.Context, id finance.BudgetID) err
 	}
 
 	return c.financeService.DeleteBudget(ctx, id)
-}
-
-// ListBudgets orchestrates listing workspace budget templates.
-func (c *Coordinator) ListBudgets(ctx context.Context, req *ListBudgetsRequest) ([]*finance.Budget, string, error) {
-	rCtx, err := c.resolveContext(ctx)
-	if err != nil {
-		return nil, "", err
-	}
-
-	filter := &finance.ListBudgetsFilter{
-		PageSize:      req.PageSize,
-		NextPageToken: req.PageToken,
-	}
-
-	return c.financeService.ListBudgets(ctx, rCtx.SpaceID, filter)
-}
-
-// GetBudgetPeriod orchestrates retrieving or lazily creating a period.
-func (c *Coordinator) GetBudgetPeriod(ctx context.Context, req *GetBudgetPeriodRequest) (*finance.BudgetPeriod, error) {
-	_, err := c.resolveContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	targetDate := req.Date
-	if targetDate.IsZero() {
-		targetDate = time.Now()
-	}
-
-	return c.financeService.GetOrCreatePeriod(ctx, req.BudgetID, targetDate)
 }

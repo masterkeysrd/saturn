@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react"
+import { useSpacePermissions } from "@/features/space/use-space"
 import {
   type Account,
   type AccountType,
@@ -9,8 +10,10 @@ import {
   useDeleteAccountMutation,
   useCreateTransferMutation,
   useListTransfersQuery,
+  useGetFinanceSettingsQuery,
+  useListExchangeRatesQuery,
+  useListCurrenciesQuery,
 } from "@/gen/saturn/finance/v1/finance"
-import { useWorkspaceFinance } from "./use-workspace-finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import { AccountSelect } from "./components/account-select"
 import { AccountHistorySheet } from "./components/account-history-sheet"
@@ -150,7 +153,18 @@ function getAccountTypeLabel(type: AccountType) {
 }
 
 export function AccountsView() {
-  const { spaceId, isWritable, settings, rates } = useWorkspaceFinance()
+  const { spaceId, isWritable } = useSpacePermissions()
+
+  const { data: settings } = useGetFinanceSettingsQuery(
+    {},
+    { enabled: !!spaceId }
+  )
+
+  const { data: ratesData } = useListExchangeRatesQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: !!settings }
+  )
+  const rates: ExchangeRate[] = ratesData?.exchangeRates || []
 
   const { data: accountsData, refetch: refetchAccounts } = useListAccountsQuery(
     {},
@@ -735,7 +749,11 @@ function CreateAccountSheet({
   editAccount,
   refetchAccounts,
 }: CreateAccountSheetProps) {
-  const { currencies } = useWorkspaceFinance()
+  const { data: currenciesData } = useListCurrenciesQuery(
+    {},
+    { enabled: open && !!spaceId, staleTime: 1000 * 60 * 30 }
+  )
+  const currencies = currenciesData?.currencies || []
   const currencyList = currencies || []
 
   const [name, setName] = useState("")

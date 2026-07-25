@@ -5,6 +5,9 @@ import {
   useDeleteBorrowingRepaymentMutation,
   type Borrowing,
   useListAccountsQuery,
+  useGetFinanceSettingsQuery,
+  useListExchangeRatesQuery,
+  type ExchangeRate,
 } from "@/gen/saturn/finance/v1/finance"
 import {
   Sheet,
@@ -19,7 +22,6 @@ import { Label } from "@/components/ui/label"
 import { Loader2, Trash2, Calendar, HandCoins } from "lucide-react"
 import { formatCents, toCentsString } from "../utils"
 import { DatePicker } from "@/components/ui/date-picker"
-import { useWorkspaceFinance } from "../use-workspace-finance"
 import { CurrencyConversionPreview } from "./currency-conversion-preview"
 import { AccountSelect } from "./account-select"
 
@@ -38,7 +40,39 @@ export function BorrowingDetailSheet({
   borrowing,
   refetchBorrowings,
 }: BorrowingDetailSheetProps) {
-  const { getConversionPreview } = useWorkspaceFinance()
+  const { data: settings } = useGetFinanceSettingsQuery(
+    {},
+    { enabled: open && !!spaceId }
+  )
+  const baseCurrency = settings?.baseCurrency || "USD"
+
+  const { data: ratesData } = useListExchangeRatesQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: open && !!spaceId }
+  )
+
+  const getConversionPreview = (amountStr: string, fromCurr: string) => {
+    const amount = parseFloat(amountStr)
+    if (isNaN(amount) || amount <= 0) return null
+    if (!baseCurrency || fromCurr === baseCurrency) return null
+
+    const matchingRates =
+      ratesData?.exchangeRates?.filter(
+        (r: ExchangeRate) =>
+          r.fromCurrency === fromCurr && r.toCurrency === baseCurrency
+      ) || []
+
+    if (matchingRates.length === 0) return null
+
+    const latestRate = [...matchingRates].sort(
+      (a, b) => new Date(b.rateDate).getTime() - new Date(a.rateDate).getTime()
+    )[0]
+    return {
+      amount: amount * latestRate.rate,
+      rate: latestRate.rate,
+      currency: baseCurrency,
+    }
+  }
   const [amount, setAmount] = useState("")
   const [paymentDate, setPaymentDate] = useState<Date>(new Date())
   const [notes, setNotes] = useState("")

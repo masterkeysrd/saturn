@@ -129,6 +129,12 @@ export function useActiveSpaceContext() {
   }
 }
 
+export function useSpacePermissions() {
+  const { spaceId, spaceRole } = useActiveSpaceContext()
+  const isWritable = spaceRole === "owner" || spaceRole === "admin"
+  return { spaceId, spaceRole, isWritable }
+}
+
 export function resolveSpacePath(
   url: string,
   spaceId: string,

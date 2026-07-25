@@ -283,6 +283,24 @@ message FinanceSettings {
 
 // Budget represents a budget template definition.
 message Budget {
+  // Scoped resource view options
+  enum View {
+    VIEW_UNSPECIFIED = 0;
+    BASIC = 1;
+    FULL = 2;
+  }
+
+  // Represents the computed details of the active/current period.
+  message ActivePeriod {
+    google.protobuf.Timestamp start_date = 1;
+    google.protobuf.Timestamp end_date = 2;
+    int64 spent_amount = 3;
+    int64 spent_in_base = 4;
+    double exchange_rate_to_base = 5;
+    string base_currency = 6;
+    int64 limit_in_base = 7;
+  }
+
   string id = 1;
   string space_id = 2;
   string name = 3;
@@ -290,11 +308,12 @@ message Budget {
   string currency = 5;
   RecurrenceInterval interval = 6;
   bool is_active = 7;
-  google.protobuf.Timestamp create_time = 8;
-  google.protobuf.Timestamp update_time = 9;
-  string icon = 10;
-  string color = 11;
-  optional string default_account_id = 12;
+  string icon = 8;
+  string color = 9;
+  optional string default_account_id = 10;
+  ActivePeriod current_period = 11;
+  google.protobuf.Timestamp create_time = 12;
+  google.protobuf.Timestamp update_time = 13;
 }
 
 // BudgetPeriod represents an active instantiation of a budget.
@@ -362,6 +381,11 @@ message DeleteBudgetRequest {
 message ListBudgetsRequest {
   int32 page_size = 1;
   string page_token = 2;
+  optional bool active_only = 3;
+  optional string search_query = 4;
+  optional string sort = 5;
+  optional Budget.View view = 6;
+  optional google.protobuf.Timestamp target_date = 7;
 }
 
 // ListBudgetsResponse contains paginated budgets.

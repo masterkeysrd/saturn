@@ -1103,6 +1103,41 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "activeOnly",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "searchQuery",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "BASIC",
+              "FULL"
+            ]
+          },
+          {
+            "name": "targetDate",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
           }
         ],
         "tags": [
@@ -3503,6 +3538,47 @@
         "name"
       ]
     },
+    "BudgetActivePeriod": {
+      "type": "object",
+      "properties": {
+        "startDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "endDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "spentAmount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "spentInBase": {
+          "type": "string",
+          "format": "int64"
+        },
+        "exchangeRateToBase": {
+          "type": "number",
+          "format": "double"
+        },
+        "baseCurrency": {
+          "type": "string"
+        },
+        "limitInBase": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "Represents the computed details of the active/current period."
+    },
+    "BudgetView": {
+      "type": "string",
+      "enum": [
+        "BASIC",
+        "FULL"
+      ],
+      "title": "Scoped resource view options"
+    },
     "FinanceApproveInboxItemBody": {
       "type": "object",
       "properties": {
@@ -4558,14 +4634,6 @@
         "isActive": {
           "type": "boolean"
         },
-        "createTime": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updateTime": {
-          "type": "string",
-          "format": "date-time"
-        },
         "icon": {
           "type": "string"
         },
@@ -4574,6 +4642,17 @@
         },
         "defaultAccountId": {
           "type": "string"
+        },
+        "currentPeriod": {
+          "$ref": "#/definitions/BudgetActivePeriod"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
         }
       },
       "description": "Budget represents a budget template definition."

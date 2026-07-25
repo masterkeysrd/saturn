@@ -12,19 +12,26 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	financev1 "github.com/masterkeysrd/saturn/apis/saturn/finance/v1"
+	financeaggregator "github.com/masterkeysrd/saturn/internal/aggregator/finance"
 	financeapp "github.com/masterkeysrd/saturn/internal/application/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
+	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
 
 // Handler implements the financev1.FinanceServer interface.
 type Handler struct {
 	financev1.UnimplementedFinanceServer
 	Coordinator *financeapp.Coordinator
+	Aggregator  *financeaggregator.Service
 }
 
 // NewHandler creates a new Handler.
-func NewHandler(coordinator *financeapp.Coordinator) *Handler {
-	return &Handler{Coordinator: coordinator}
+func NewHandler(coordinator *financeapp.Coordinator, financeAggregator *financeaggregator.Service) *Handler {
+	return &Handler{
+		Coordinator: coordinator,
+		Aggregator:  financeAggregator,
+	}
 }
 
 // --- Mappers ---
@@ -97,7 +104,7 @@ func toProtoBudget(b *finance.Budget) *financev1.Budget {
 	}
 }
 
-func toProtoBudgetPeriod(p *finance.BudgetPeriod) *financev1.BudgetPeriod {
+func toProtoBudgetPeriod(p *financeaggregator.AggregatedBudgetPeriod) *financev1.BudgetPeriod {
 	return &financev1.BudgetPeriod{
 		Id:                 string(p.ID),
 		BudgetId:           string(p.BudgetID),
@@ -235,24 +242,75 @@ func (h *Handler) DeleteBudget(ctx context.Context, req *financev1.DeleteBudgetR
 }
 
 func (h *Handler) ListBudgets(ctx context.Context, req *financev1.ListBudgetsRequest) (*financev1.ListBudgetsResponse, error) {
-	appReq := &financeapp.ListBudgetsRequest{
-		PageSize:  req.GetPageSize(),
-		PageToken: req.GetPageToken(),
+	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	}
+	spaceID := finance.SpaceID(spaceIDStr)
+
+	sortOrder := sorting.Parse(req.GetSort())
+
+	pageSize := req.GetPageSize()
+
+	var targetDate time.Time
+	if req.GetTargetDate() != nil {
+		targetDate = req.GetTargetDate().AsTime()
+	} else {
+		targetDate = time.Now()
 	}
 
-	budgets, nextToken, err := h.Coordinator.ListBudgets(ctx, appReq)
+	var activeOnly *bool
+	if req.ActiveOnly != nil {
+		val := req.GetActiveOnly()
+		activeOnly = &val
+	}
+
+	var searchQuery *string
+	if req.SearchQuery != nil {
+		val := req.GetSearchQuery()
+		searchQuery = &val
+	}
+
+	viewType := financeaggregator.ViewBasic
+	if req.GetView() == financev1.Budget_FULL {
+		viewType = financeaggregator.ViewFull
+	}
+
+	page, err := h.Aggregator.ListBudgets(ctx, spaceID, financeaggregator.ListBudgetsFilter{
+		ListBudgetsFilter: finance.ListBudgetsFilter{
+			PageSize:      int32(pageSize),
+			NextPageToken: req.GetPageToken(),
+			ActiveOnly:    activeOnly,
+			SearchQuery:   searchQuery,
+			Sort:          sortOrder,
+		},
+		TargetDate: targetDate,
+		View:       viewType,
+	})
 	if err != nil {
 		return nil, h.mapError(err)
 	}
 
-	protoBudgets := make([]*financev1.Budget, 0, len(budgets))
-	for _, b := range budgets {
-		protoBudgets = append(protoBudgets, toProtoBudget(b))
+	protoBudgets := make([]*financev1.Budget, 0, len(page.Items))
+	for _, ab := range page.Items {
+		pbBgt := toProtoBudget(ab.Budget)
+		if ab.Period != nil {
+			pbBgt.CurrentPeriod = &financev1.Budget_ActivePeriod{
+				StartDate:          timestamppb.New(ab.Period.StartDate),
+				EndDate:            timestamppb.New(ab.Period.EndDate),
+				SpentAmount:        ab.Period.SpentAmount,
+				SpentInBase:        ab.Period.SpentInBase,
+				ExchangeRateToBase: ab.Period.ExchangeRateToBase,
+				BaseCurrency:       string(ab.Period.BaseCurrency),
+				LimitInBase:        ab.Period.LimitInBase,
+			}
+		}
+		protoBudgets = append(protoBudgets, pbBgt)
 	}
 
 	return &financev1.ListBudgetsResponse{
 		Budgets:       protoBudgets,
-		NextPageToken: nextToken,
+		NextPageToken: page.NextPageToken,
 	}, nil
 }
 
@@ -260,14 +318,12 @@ func (h *Handler) GetBudgetPeriod(ctx context.Context, req *financev1.GetBudgetP
 	var targetDate time.Time
 	if req.GetDate() != nil {
 		targetDate = req.GetDate().AsTime()
+	} else {
+		targetDate = time.Now()
 	}
 
-	appReq := &financeapp.GetBudgetPeriodRequest{
-		BudgetID: finance.BudgetID(req.GetBudgetId()),
-		Date:     targetDate,
-	}
-
-	period, err := h.Coordinator.GetBudgetPeriod(ctx, appReq)
+	bID := finance.BudgetID(req.GetBudgetId())
+	period, err := h.Aggregator.GetBudgetPeriod(ctx, bID, targetDate)
 	if err != nil {
 		return nil, h.mapError(err)
 	}

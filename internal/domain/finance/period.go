@@ -62,8 +62,6 @@ type BudgetPeriod struct {
 	ExchangeRateToBase float64
 	CreateTime         time.Time
 	UpdateTime         time.Time
-	SpentAmount        int64
-	SpentInBase        int64
 }
 
 // Validate checks the period constraints.

@@ -1,8 +1,5 @@
-import { useEffect, useState } from "react"
-import {
-  useGetBudgetPeriodQuery,
-  type Budget,
-} from "@/gen/saturn/finance/v1/finance"
+import { useEffect } from "react"
+import { type Budget } from "@/gen/saturn/finance/v1/finance"
 import { AlertTriangle, Calendar } from "lucide-react"
 import { formatCents, getBudgetColors } from "../utils"
 import { cn } from "@/lib/utils"
@@ -16,46 +13,25 @@ export function BudgetPeriodProgress({
   budget,
   onPeriodLoaded,
 }: BudgetPeriodProgressProps) {
-  const [currentDate] = useState(() => new Date().toISOString())
-
-  const {
-    data: period,
-    isLoading,
-    error,
-  } = useGetBudgetPeriodQuery(
-    {
-      budgetId: budget.id,
-      date: currentDate,
-    },
-    {
-      retry: false,
-      staleTime: 5 * 60 * 1000, // 5 minutes cache fresh period
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      refetchOnMount: false,
-    }
-  )
+  const period = budget.currentPeriod
 
   // Propagate total limit in base currency to parent for dashboard overview stats
   useEffect(() => {
-    if (period && onPeriodLoaded) {
-      const limit = formatCents(period.limitAmount)
+    if (period && onPeriodLoaded && period.exchangeRateToBase > 0) {
+      const limit = formatCents(budget.limitAmount)
       const limitInBase = limit * period.exchangeRateToBase
       onPeriodLoaded(limitInBase)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [period])
+  }, [period, budget.limitAmount])
 
-  if (isLoading) {
-    return (
-      <div className="mt-6 animate-pulse space-y-3">
-        <div className="h-4 w-2/3 rounded bg-muted/50"></div>
-        <div className="h-2 w-full rounded bg-muted/40"></div>
-      </div>
-    )
-  }
+  if (!period) return null
 
-  if (error) {
+  // Check if exchange rate is missing (sentinel value 0.0)
+  if (
+    budget.currency !== period.baseCurrency &&
+    period.exchangeRateToBase <= 0
+  ) {
     return (
       <div className="mt-5 flex animate-in flex-col gap-1 rounded-2xl border border-amber-500/10 bg-amber-500/5 p-3.5 text-[11px] duration-300 fade-in">
         <div className="flex items-center gap-1.5 font-bold text-amber-500">
@@ -73,9 +49,7 @@ export function BudgetPeriodProgress({
     )
   }
 
-  if (!period) return null
-
-  const limit = formatCents(period.limitAmount)
+  const limit = formatCents(budget.limitAmount)
   const spent = formatCents(period.spentAmount || "0")
   const progressPercent = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0
 
@@ -127,7 +101,7 @@ export function BudgetPeriodProgress({
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           })}{" "}
-          {period.currency}
+          {budget.currency}
         </span>
       </div>
 
@@ -157,10 +131,10 @@ export function BudgetPeriodProgress({
       )}
 
       {/* Exchange Rate details for cross-currency templates */}
-      {period.currency !== period.baseCurrency && (
+      {budget.currency !== period.baseCurrency && (
         <div className="flex justify-between border-t border-border/20 pt-2.5 font-mono text-[10px] text-muted-foreground/60">
           <span>
-            Rate: 1 {period.currency} = {period.exchangeRateToBase.toFixed(4)}{" "}
+            Rate: 1 {budget.currency} = {period.exchangeRateToBase.toFixed(4)}{" "}
             {period.baseCurrency}
           </span>
           <span className="font-semibold">

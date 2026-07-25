@@ -2,8 +2,9 @@ import { useState } from "react"
 import {
   useCreateExchangeRateMutation,
   type FinanceSettings,
+  useListCurrenciesQuery,
 } from "@/gen/saturn/finance/v1/finance"
-import { useWorkspaceFinance } from "../use-workspace-finance"
+import { useActiveSpaceContext } from "@/features/space/use-space"
 import {
   Sheet,
   SheetContent,
@@ -36,7 +37,12 @@ export function CreateRateSheet({
   settings,
   refetchRates,
 }: CreateRateSheetProps) {
-  const { currencies } = useWorkspaceFinance()
+  const { spaceId } = useActiveSpaceContext()
+  const { data: currenciesData } = useListCurrenciesQuery(
+    {},
+    { enabled: open && !!spaceId, staleTime: 1000 * 60 * 30 }
+  )
+  const currencies = currenciesData?.currencies || []
   const fallbackCurrencies = [
     { code: "USD" },
     { code: "EUR" },

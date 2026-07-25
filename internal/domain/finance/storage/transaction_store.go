@@ -10,6 +10,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
 type transactionDB struct {
@@ -200,7 +201,7 @@ func (s *TransactionStore) Update(ctx context.Context, t *finance.Transaction) e
 	return nil
 }
 
-func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListTransactionsFilter) ([]*finance.Transaction, string, error) {
+func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListTransactionsFilter) (*paging.Page[*finance.Transaction], error) {
 	if filter.PageSize <= 0 || filter.PageSize > 100 {
 		filter.PageSize = 20
 	}
@@ -291,77 +292,73 @@ func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 	query := fmt.Sprintf(`SELECT * FROM finance.transaction WHERE %s ORDER BY effective_date DESC, transaction_date DESC, id DESC LIMIT $%d`, strings.Join(conditions, " AND "), argIndex)
 	args = append(args, filter.PageSize+1)
 
-	var rows []transactionDB
-	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
-		return nil, "", err
+	var dbRows []transactionDB
+	if err := s.db.SelectContext(ctx, &dbRows, query, args...); err != nil {
+		return nil, err
 	}
 
-	hasMore := len(rows) > int(filter.PageSize)
-	if hasMore {
-		rows = rows[:filter.PageSize]
-	}
-
-	txns := make([]*finance.Transaction, 0, len(rows))
-	for i := range rows {
+	txns := make([]*finance.Transaction, 0, len(dbRows))
+	for i := range dbRows {
 		var budgetIDPtr *finance.BudgetID
-		if rows[i].BudgetID.Valid {
-			bID := finance.BudgetID(rows[i].BudgetID.String)
+		if dbRows[i].BudgetID.Valid {
+			bID := finance.BudgetID(dbRows[i].BudgetID.String)
 			budgetIDPtr = &bID
 		}
 		var periodIDPtr *finance.PeriodID
-		if rows[i].PeriodID.Valid {
-			pID := finance.PeriodID(rows[i].PeriodID.String)
+		if dbRows[i].PeriodID.Valid {
+			pID := finance.PeriodID(dbRows[i].PeriodID.String)
 			periodIDPtr = &pID
 		}
 		var accountIDPtr *finance.AccountID
-		if rows[i].AccountID.Valid {
-			aID := finance.AccountID(rows[i].AccountID.String)
+		if dbRows[i].AccountID.Valid {
+			aID := finance.AccountID(dbRows[i].AccountID.String)
 			accountIDPtr = &aID
 		}
 		var transferIDPtr *finance.TransferID
-		if rows[i].TransferID.Valid {
-			tID := finance.TransferID(rows[i].TransferID.String)
+		if dbRows[i].TransferID.Valid {
+			tID := finance.TransferID(dbRows[i].TransferID.String)
 			transferIDPtr = &tID
 		}
 		var sourceTypePtr *string
-		if rows[i].SourceType.Valid {
-			sT := rows[i].SourceType.String
+		if dbRows[i].SourceType.Valid {
+			sT := dbRows[i].SourceType.String
 			sourceTypePtr = &sT
 		}
 		var sourceIDPtr *string
-		if rows[i].SourceID.Valid {
-			sI := rows[i].SourceID.String
+		if dbRows[i].SourceID.Valid {
+			sI := dbRows[i].SourceID.String
 			sourceIDPtr = &sI
 		}
 
 		txns = append(txns, &finance.Transaction{
-			ID:              finance.TransactionID(rows[i].ID),
-			SpaceID:         finance.SpaceID(rows[i].SpaceID),
-			Type:            finance.TransactionType(rows[i].Type),
+			ID:              finance.TransactionID(dbRows[i].ID),
+			SpaceID:         finance.SpaceID(dbRows[i].SpaceID),
+			Type:            finance.TransactionType(dbRows[i].Type),
 			BudgetID:        budgetIDPtr,
 			PeriodID:        periodIDPtr,
 			AccountID:       accountIDPtr,
 			TransferID:      transferIDPtr,
-			Amount:          rows[i].Amount,
-			Currency:        finance.Currency(rows[i].Currency),
-			AmountInBase:    rows[i].AmountInBase,
-			Description:     rows[i].Description,
-			TransactionDate: nullTimeToTime(rows[i].TransactionDate),
-			EffectiveDate:   nullTimeToTime(rows[i].EffectiveDate),
+			Amount:          dbRows[i].Amount,
+			Currency:        finance.Currency(dbRows[i].Currency),
+			AmountInBase:    dbRows[i].AmountInBase,
+			Description:     dbRows[i].Description,
+			TransactionDate: nullTimeToTime(dbRows[i].TransactionDate),
+			EffectiveDate:   nullTimeToTime(dbRows[i].EffectiveDate),
 			SourceType:      sourceTypePtr,
 			SourceID:        sourceIDPtr,
-			CreateTime:      nullTimeToTime(rows[i].CreateTime),
-			UpdateTime:      nullTimeToTime(rows[i].UpdateTime),
+			CreateTime:      nullTimeToTime(dbRows[i].CreateTime),
+			UpdateTime:      nullTimeToTime(dbRows[i].UpdateTime),
 		})
 	}
 
-	var nextToken string
-	if hasMore && len(rows) > 0 {
-		lastTxn := rows[len(rows)-1]
-		nextToken = base64.URLEncoding.EncodeToString([]byte(lastTxn.ID))
-	}
+	page := paging.NewPage(txns, int(filter.PageSize), func(t *finance.Transaction) paging.Cursor {
+		return paging.Cursor{
+			SortValue: "",
+			ID:        string(t.ID),
+		}
+	})
 
-	return txns, nextToken, nil
+	return page, nil
 }
 
 func (s *TransactionStore) AggregateSpent(ctx context.Context, periodID finance.PeriodID, budgetCurrency finance.Currency, exchangeRateToBase float64) (int64, int64, error) {
@@ -387,4 +384,57 @@ func (s *TransactionStore) AggregateSpent(ctx context.Context, periodID finance.
 		return 0, 0, err
 	}
 	return row.SpentInBase, row.SpentAmount, nil
+}
+
+func (s *TransactionStore) AggregateSpentBatch(ctx context.Context, periodIDs []finance.PeriodID) ([]finance.PeriodSpent, error) {
+	if len(periodIDs) == 0 {
+		return nil, nil
+	}
+
+	idStrings := make([]string, len(periodIDs))
+	for i, id := range periodIDs {
+		idStrings[i] = string(id)
+	}
+
+	query, args, err := sqlx.In(`
+		SELECT 
+			t.period_id,
+			COALESCE(SUM(t.amount_in_base), 0) as spent_in_base,
+			COALESCE(SUM(
+				CASE 
+					WHEN t.currency = p.currency THEN t.amount 
+					WHEN p.exchange_rate_to_base = 0.0 THEN 0
+					ELSE ROUND(t.amount_in_base::numeric / p.exchange_rate_to_base)::bigint 
+				END
+			), 0) as spent_amount
+		FROM finance.transaction t
+		JOIN finance.budget_period p ON t.period_id = p.id
+		WHERE t.period_id IN (?)
+		GROUP BY t.period_id
+	`, idStrings)
+	if err != nil {
+		return nil, err
+	}
+
+	query = s.db.Rebind(query)
+
+	var dbRows []struct {
+		PeriodID    string `db:"period_id"`
+		SpentInBase int64  `db:"spent_in_base"`
+		SpentAmount int64  `db:"spent_amount"`
+	}
+
+	if err := s.db.SelectContext(ctx, &dbRows, query, args...); err != nil {
+		return nil, err
+	}
+
+	results := make([]finance.PeriodSpent, len(dbRows))
+	for i, row := range dbRows {
+		results[i] = finance.PeriodSpent{
+			PeriodID:    finance.PeriodID(row.PeriodID),
+			SpentInBase: row.SpentInBase,
+			SpentAmount: row.SpentAmount,
+		}
+	}
+	return results, nil
 }

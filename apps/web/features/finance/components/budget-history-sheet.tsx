@@ -9,8 +9,9 @@ import {
   useListTransactionsQuery,
   useListAccountsQuery,
   type Budget,
+  useGetFinanceSettingsQuery,
 } from "@/gen/saturn/finance/v1/finance"
-import { useWorkspaceFinance } from "../use-workspace-finance"
+import { useActiveSpaceContext } from "@/features/space/use-space"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Loader2,
@@ -35,7 +36,11 @@ export function BudgetHistorySheet({
   onOpenChange,
   budget,
 }: BudgetHistorySheetProps) {
-  const { spaceId, settings } = useWorkspaceFinance()
+  const { spaceId } = useActiveSpaceContext()
+  const { data: settings } = useGetFinanceSettingsQuery(
+    {},
+    { enabled: open && !!spaceId }
+  )
   const baseCurrency = settings?.baseCurrency || "USD"
 
   // Fetch transaction history for this budget

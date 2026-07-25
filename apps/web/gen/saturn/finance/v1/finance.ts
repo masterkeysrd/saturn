@@ -48,6 +48,11 @@ export type AccountType =
   | "DIGITAL_ACCOUNT"
 
 /**
+ * Scoped resource view options
+ */
+export type Budget_View = "VIEW_UNSPECIFIED" | "BASIC" | "FULL"
+
+/**
  * FinanceSettings represents workspace configuration.
  */
 export interface FinanceSettings {
@@ -68,11 +73,25 @@ export interface Budget {
   currency: string
   interval: RecurrenceInterval
   isActive: boolean
-  createTime: string
-  updateTime: string
   icon: string
   color: string
   defaultAccountId?: string
+  currentPeriod: Budget_ActivePeriod
+  createTime: string
+  updateTime: string
+}
+
+/**
+ * Represents the computed details of the active/current period.
+ */
+export interface Budget_ActivePeriod {
+  startDate: string
+  endDate: string
+  spentAmount: string
+  spentInBase: string
+  exchangeRateToBase: number
+  baseCurrency: string
+  limitInBase: string
 }
 
 /**
@@ -148,6 +167,11 @@ export interface DeleteBudgetRequest {
 export interface ListBudgetsRequest {
   pageSize: number
   pageToken: string
+  activeOnly?: boolean
+  searchQuery?: string
+  sort?: string
+  view?: Budget_View
+  targetDate?: string
 }
 
 /**

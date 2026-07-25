@@ -4,7 +4,11 @@ import {
   useUpdateBorrowingMutation,
   type Borrowing,
   type BorrowingDirection,
+  useListCurrenciesQuery,
+  useListExchangeRatesQuery,
+  type ExchangeRate,
 } from "@/gen/saturn/finance/v1/finance"
+import { useActiveSpaceContext } from "@/features/space/use-space"
 import {
   Sheet,
   SheetContent,
@@ -25,7 +29,6 @@ import {
   SelectItem,
 } from "@/components/ui/select"
 import { DatePicker } from "@/components/ui/date-picker"
-import { useWorkspaceFinance } from "../use-workspace-finance"
 import { CurrencyConversionPreview } from "./currency-conversion-preview"
 
 interface CreateBorrowingSheetProps {
@@ -43,7 +46,41 @@ export function CreateBorrowingSheet({
   editBorrowing,
   refetchBorrowings,
 }: CreateBorrowingSheetProps) {
-  const { currencies, getConversionPreview } = useWorkspaceFinance()
+  const { spaceId } = useActiveSpaceContext()
+
+  const { data: currenciesData } = useListCurrenciesQuery(
+    {},
+    { enabled: open && !!spaceId, staleTime: 1000 * 60 * 30 }
+  )
+  const currencies = currenciesData?.currencies || []
+
+  const { data: ratesData } = useListExchangeRatesQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: open && !!spaceId }
+  )
+
+  const getConversionPreview = (amountStr: string, fromCurr: string) => {
+    const amount = parseFloat(amountStr)
+    if (isNaN(amount) || amount <= 0) return null
+    if (!baseCurrency || fromCurr === baseCurrency) return null
+
+    const matchingRates =
+      ratesData?.exchangeRates?.filter(
+        (r: ExchangeRate) =>
+          r.fromCurrency === fromCurr && r.toCurrency === baseCurrency
+      ) || []
+
+    if (matchingRates.length === 0) return null
+
+    const latestRate = [...matchingRates].sort(
+      (a, b) => new Date(b.rateDate).getTime() - new Date(a.rateDate).getTime()
+    )[0]
+    return {
+      amount: amount * latestRate.rate,
+      rate: latestRate.rate,
+      currency: baseCurrency,
+    }
+  }
   const fallbackCurrencies = [
     { code: "USD" },
     { code: "EUR" },

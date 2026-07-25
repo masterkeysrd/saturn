@@ -3,13 +3,14 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"encoding/base64"
 	"errors"
 	"fmt"
-	"strings"
 
+	"github.com/doug-martin/goqu/v9"
+	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
 type budgetDB struct {
@@ -25,6 +26,28 @@ type budgetDB struct {
 	DefaultAccountID sql.NullString `db:"default_account_id"`
 	CreateTime       sql.NullTime   `db:"create_time"`
 	UpdateTime       sql.NullTime   `db:"update_time"`
+}
+
+func (row *budgetDB) toDomain() *finance.Budget {
+	var defaultAccountID *finance.AccountID
+	if row.DefaultAccountID.Valid {
+		idVal := finance.AccountID(row.DefaultAccountID.String)
+		defaultAccountID = &idVal
+	}
+	return &finance.Budget{
+		ID:               finance.BudgetID(row.ID),
+		SpaceID:          finance.SpaceID(row.SpaceID),
+		Name:             row.Name,
+		LimitAmount:      row.LimitAmount,
+		Currency:         finance.Currency(row.Currency),
+		Interval:         finance.RecurrenceInterval(row.Interval),
+		IsActive:         row.IsActive,
+		Icon:             row.Icon,
+		Color:            row.Color,
+		DefaultAccountID: defaultAccountID,
+		CreateTime:       nullTimeToTime(row.CreateTime),
+		UpdateTime:       nullTimeToTime(row.UpdateTime),
+	}
 }
 
 type BudgetStore struct {
@@ -55,25 +78,7 @@ func (s *BudgetStore) GetByID(ctx context.Context, id finance.BudgetID) (*financ
 		}
 		return nil, err
 	}
-	var defaultAccountID *finance.AccountID
-	if row.DefaultAccountID.Valid {
-		idVal := finance.AccountID(row.DefaultAccountID.String)
-		defaultAccountID = &idVal
-	}
-	return &finance.Budget{
-		ID:               finance.BudgetID(row.ID),
-		SpaceID:          finance.SpaceID(row.SpaceID),
-		Name:             row.Name,
-		LimitAmount:      row.LimitAmount,
-		Currency:         finance.Currency(row.Currency),
-		Interval:         finance.RecurrenceInterval(row.Interval),
-		IsActive:         row.IsActive,
-		Icon:             row.Icon,
-		Color:            row.Color,
-		DefaultAccountID: defaultAccountID,
-		CreateTime:       nullTimeToTime(row.CreateTime),
-		UpdateTime:       nullTimeToTime(row.UpdateTime),
-	}, nil
+	return row.toDomain(), nil
 }
 
 func (s *BudgetStore) Update(ctx context.Context, b *finance.Budget) error {
@@ -114,69 +119,61 @@ func (s *BudgetStore) Delete(ctx context.Context, id finance.BudgetID) error {
 	return nil
 }
 
-func (s *BudgetStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBudgetsFilter) ([]*finance.Budget, string, error) {
+func (s *BudgetStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error) {
 	if filter.PageSize <= 0 || filter.PageSize > 100 {
 		filter.PageSize = 20
 	}
 
-	var cursorID string
-	if filter.NextPageToken != "" {
-		if decoded, err := base64.URLEncoding.DecodeString(filter.NextPageToken); err == nil {
-			cursorID = string(decoded)
-		}
+	ds := pgDialect.From(goqu.S("finance").Table("budget")).Select("*")
+
+	// Apply filter conditions
+	ds = ds.Where(goqu.Ex{"space_id": string(spaceID)})
+
+	if filter.ActiveOnly != nil && *filter.ActiveOnly {
+		ds = ds.Where(goqu.Ex{"is_active": true})
 	}
 
-	conditions := []string{"space_id = $1"}
-	args := []any{string(spaceID)}
-	argIndex := 2
-
-	if cursorID != "" {
-		conditions = append(conditions, fmt.Sprintf("id > $%d", argIndex))
-		args = append(args, cursorID)
-		argIndex++
+	if filter.SearchQuery != nil && *filter.SearchQuery != "" {
+		ds = ds.Where(goqu.I("name").ILike("%" + *filter.SearchQuery + "%"))
 	}
 
-	query := fmt.Sprintf(`SELECT * FROM finance.budget WHERE %s ORDER BY id LIMIT $%d`, strings.Join(conditions, " AND "), argIndex)
-	args = append(args, filter.PageSize+1)
+	// Keyset Cursor decoding
+	cursor, _ := paging.Decode(filter.NextPageToken)
+
+	// Map sort field name (e.g. limit_amount) to actual DB columns
+	sortOrder := filter.Sort
+	if !finance.IsBudgetSortField(sortOrder.Field) {
+		sortOrder.Field = finance.DefaultBudgetSortField
+	}
+
+	// Apply sorting and keyset paging conditions
+	ds = paging.ApplyPagination(ds, paging.Options{
+		Sort:     sortOrder,
+		Cursor:   cursor,
+		PageSize: uint(filter.PageSize),
+	})
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("build sql query: %w", err)
+	}
 
 	var rows []budgetDB
 	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
-		return nil, "", err
+		return nil, fmt.Errorf("select context: %w", err)
 	}
 
-	hasMore := len(rows) > int(filter.PageSize)
-	if hasMore {
-		rows = rows[:filter.PageSize]
-	}
-
-	budgets := make([]*finance.Budget, 0, len(rows))
+	budgets := make([]*finance.Budget, len(rows))
 	for i := range rows {
-		var defaultAccountID *finance.AccountID
-		if rows[i].DefaultAccountID.Valid {
-			idVal := finance.AccountID(rows[i].DefaultAccountID.String)
-			defaultAccountID = &idVal
+		budgets[i] = rows[i].toDomain()
+	}
+
+	page := paging.NewPage(budgets, int(filter.PageSize), func(b *finance.Budget) paging.Cursor {
+		return paging.Cursor{
+			SortValue: b.GetSortValue(sortOrder.Field),
+			ID:        string(b.ID),
 		}
-		budgets = append(budgets, &finance.Budget{
-			ID:               finance.BudgetID(rows[i].ID),
-			SpaceID:          finance.SpaceID(rows[i].SpaceID),
-			Name:             rows[i].Name,
-			LimitAmount:      rows[i].LimitAmount,
-			Currency:         finance.Currency(rows[i].Currency),
-			Interval:         finance.RecurrenceInterval(rows[i].Interval),
-			IsActive:         rows[i].IsActive,
-			Icon:             rows[i].Icon,
-			Color:            rows[i].Color,
-			DefaultAccountID: defaultAccountID,
-			CreateTime:       nullTimeToTime(rows[i].CreateTime),
-			UpdateTime:       nullTimeToTime(rows[i].UpdateTime),
-		})
-	}
+	})
 
-	var nextToken string
-	if hasMore && len(rows) > 0 {
-		lastBudget := rows[len(rows)-1]
-		nextToken = base64.URLEncoding.EncodeToString([]byte(lastBudget.ID))
-	}
-
-	return budgets, nextToken, nil
+	return page, nil
 }

@@ -3,6 +3,9 @@ package finance
 import (
 	"context"
 	"time"
+
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
+	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
 
 // SettingsStore defines persistence for workspace settings.
@@ -17,13 +20,20 @@ type BudgetStore interface {
 	GetByID(ctx context.Context, id BudgetID) (*Budget, error)
 	Update(ctx context.Context, budget *Budget) error
 	Delete(ctx context.Context, id BudgetID) error
-	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListBudgetsFilter) ([]*Budget, string, error)
+	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListBudgetsFilter) (*paging.Page[*Budget], error)
+}
+
+type PeriodRangeKey struct {
+	BudgetID  BudgetID
+	StartDate time.Time
+	EndDate   time.Time
 }
 
 // PeriodStore defines persistence for budget periods.
 type PeriodStore interface {
 	Create(ctx context.Context, period *BudgetPeriod) error
 	GetByRange(ctx context.Context, budgetID BudgetID, startDate, endDate time.Time) (*BudgetPeriod, error)
+	GetByRanges(ctx context.Context, keys []PeriodRangeKey) ([]*BudgetPeriod, error)
 	UpdateLimit(ctx context.Context, periodID PeriodID, limitAmount int64) error
 	ListByBudget(ctx context.Context, budgetID BudgetID) ([]*BudgetPeriod, error)
 }
@@ -46,14 +56,21 @@ type ExchangeRateStore interface {
 	Delete(ctx context.Context, key ExchangeRateKey) error
 }
 
+type PeriodSpent struct {
+	PeriodID    PeriodID
+	SpentInBase int64
+	SpentAmount int64
+}
+
 // TransactionStore defines persistence for transactions.
 type TransactionStore interface {
 	Create(ctx context.Context, txn *Transaction) error
 	GetByID(ctx context.Context, id TransactionID) (*Transaction, error)
 	Delete(ctx context.Context, id TransactionID) error
 	Update(ctx context.Context, txn *Transaction) error
-	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListTransactionsFilter) ([]*Transaction, string, error)
+	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListTransactionsFilter) (*paging.Page[*Transaction], error)
 	AggregateSpent(ctx context.Context, periodID PeriodID, budgetCurrency Currency, exchangeRateToBase float64) (spentInBase int64, spentAmount int64, err error)
+	AggregateSpentBatch(ctx context.Context, periodIDs []PeriodID) ([]PeriodSpent, error)
 }
 
 // TransactionEventStore defines persistence for transaction events.
@@ -93,6 +110,9 @@ type TopExpensesFilter struct {
 type ListBudgetsFilter struct {
 	PageSize      int32
 	NextPageToken string
+	ActiveOnly    *bool
+	SearchQuery   *string
+	Sort          sorting.SortOrder
 }
 
 // ListExchangeRatesFilter encapsulates filtering parameters for exchange rates.
