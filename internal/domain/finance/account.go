@@ -122,3 +122,27 @@ func (a *Account) Validate() error {
 	}
 	return nil
 }
+
+// DefaultAccountSortField represents the fallback sorting column name for accounts.
+const DefaultAccountSortField = "name"
+
+// AccountSortFields registry maps sortable account field names to their cursor string extraction logic.
+var AccountSortFields = map[string]func(*Account) string{
+	"name":            func(a *Account) string { return a.Name },
+	"current_balance": func(a *Account) string { return fmt.Sprintf("%018d", a.CurrentBalance) },
+	"create_time":     func(a *Account) string { return a.CreateTime.Format(time.RFC3339Nano) },
+}
+
+// IsAccountSortField validates if a sort column name is allowed.
+func IsAccountSortField(field string) bool {
+	_, ok := AccountSortFields[field]
+	return ok
+}
+
+// GetSortValue extracts and formats the string representation of a field for cursor-based lexical sorting.
+func (a *Account) GetSortValue(field string) string {
+	if fn, ok := AccountSortFields[field]; ok {
+		return fn(a)
+	}
+	return a.GetSortValue(DefaultAccountSortField)
+}

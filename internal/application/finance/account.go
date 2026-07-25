@@ -55,23 +55,7 @@ func (c *Coordinator) CreateAccount(ctx context.Context, req *CreateAccountReque
 	return c.financeService.CreateAccount(ctx, acc)
 }
 
-func (c *Coordinator) GetAccount(ctx context.Context, id finance.AccountID) (*finance.Account, error) {
-	rCtx, err := c.resolveContext(ctx)
-	if err != nil {
-		return nil, err
-	}
 
-	acc, err := c.financeService.GetAccount(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	if acc.SpaceID != rCtx.SpaceID {
-		return nil, finance.ErrAccountNotFound
-	}
-
-	return acc, nil
-}
 
 func (c *Coordinator) UpdateAccount(ctx context.Context, req *UpdateAccountRequest) (*finance.Account, error) {
 	rCtx, err := c.resolveContext(ctx)
@@ -115,11 +99,4 @@ func (c *Coordinator) DeleteAccount(ctx context.Context, id finance.AccountID) e
 	return c.financeService.DeleteAccount(ctx, id)
 }
 
-func (c *Coordinator) ListAccounts(ctx context.Context) ([]*finance.Account, error) {
-	rCtx, err := c.resolveContext(ctx)
-	if err != nil {
-		return nil, err
-	}
 
-	return c.financeService.ListAccounts(ctx, rCtx.SpaceID)
-}

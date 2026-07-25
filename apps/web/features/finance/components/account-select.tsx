@@ -1,4 +1,4 @@
-import type { Account, AccountType } from "@/gen/saturn/finance/v1/finance"
+import type { Account, Account_Type } from "@/gen/saturn/finance/v1/finance"
 import {
   Select,
   SelectContent,
@@ -24,7 +24,7 @@ interface AccountSelectProps {
   allowNone?: boolean
 }
 
-function getAccountTypeIcon(type: AccountType) {
+function getAccountTypeIcon(type: Account_Type) {
   switch (type) {
     case "CREDIT_CARD":
       return CreditCard

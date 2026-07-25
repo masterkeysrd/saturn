@@ -791,19 +791,25 @@ message ListCurrenciesResponse {
 
 // --- Account Messages ---
 
-enum AccountType {
-  ACCOUNT_TYPE_UNSPECIFIED = 0;
-  BANK = 1;
-  CREDIT_CARD = 2;
-  CASH = 3;
-  DIGITAL_ACCOUNT = 4;
-}
-
 message Account {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    BANK = 1;
+    CREDIT_CARD = 2;
+    CASH = 3;
+    DIGITAL_ACCOUNT = 4;
+  }
+
+  enum View {
+    VIEW_UNSPECIFIED = 0;
+    BASIC = 1;
+    FULL = 2;
+  }
+
   string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
   string space_id = 2;
   string name = 3;
-  AccountType type = 4;
+  Type type = 4;
   string currency = 5;
   int64 initial_balance = 6;
   int64 current_balance = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
@@ -815,6 +821,12 @@ message Account {
   string last_four = 13;
   google.protobuf.Timestamp create_time = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
   google.protobuf.Timestamp update_time = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  message Conversion {
+    int64 balance = 1;
+    double rate = 2;
+  }
+  Conversion conversion = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 message CreateAccountRequest {
@@ -823,6 +835,7 @@ message CreateAccountRequest {
 
 message GetAccountRequest {
   string id = 1 [(google.api.field_behavior) = REQUIRED];
+  optional Account.View view = 2;
 }
 
 message UpdateAccountRequest {
@@ -834,10 +847,18 @@ message DeleteAccountRequest {
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
-message ListAccountsRequest {}
+message ListAccountsRequest {
+  optional Account.View view = 1;
+  optional bool active_only = 2;
+  optional string search_query = 3;
+  optional int32 page_size = 4;
+  optional string page_token = 5;
+  optional string sort = 6;
+}
 
 message ListAccountsResponse {
   repeated Account accounts = 1;
+  string next_page_token = 2;
 }
 
 // --- Transfer Messages ---

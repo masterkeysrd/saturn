@@ -152,3 +152,64 @@ func (s *ExchangeRateStore) Delete(ctx context.Context, key finance.ExchangeRate
 	_, err := s.db.ExecContext(ctx, q, string(key.SpaceID), string(key.FromCurrency), string(key.ToCurrency), key.RateDate.Format("2006-01-02"))
 	return err
 }
+
+func (s *ExchangeRateStore) GetLatestRates(ctx context.Context, spaceID finance.SpaceID, fromCurrencies []finance.Currency, toCurrency finance.Currency) ([]*finance.ExchangeRate, error) {
+	if len(fromCurrencies) == 0 {
+		return nil, nil
+	}
+
+	// Deduplicate currencies to query
+	currencyMap := make(map[string]bool)
+	var currencies []string
+	for _, c := range fromCurrencies {
+		cStr := string(c)
+		if !currencyMap[cStr] && cStr != string(toCurrency) {
+			currencyMap[cStr] = true
+			currencies = append(currencies, cStr)
+		}
+	}
+
+	if len(currencies) == 0 {
+		return nil, nil
+	}
+
+	query := `
+		SELECT r.* 
+		FROM finance.exchange_rate r
+		INNER JOIN (
+			SELECT space_id, from_currency, to_currency, MAX(rate_date) as max_date
+			FROM finance.exchange_rate
+			WHERE space_id = ? AND to_currency = ? AND from_currency IN (?)
+			GROUP BY space_id, from_currency, to_currency
+		) m ON r.space_id = m.space_id 
+		   AND r.from_currency = m.from_currency 
+		   AND r.to_currency = m.to_currency 
+		   AND r.rate_date = m.max_date
+	`
+
+	query, args, err := sqlx.In(query, string(spaceID), string(toCurrency), currencies)
+	if err != nil {
+		return nil, err
+	}
+
+	query = s.db.Rebind(query)
+
+	var rows []exchangeRateDB
+	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
+		return nil, err
+	}
+
+	rates := make([]*finance.ExchangeRate, 0, len(rows))
+	for i := range rows {
+		rates = append(rates, &finance.ExchangeRate{
+			SpaceID:      finance.SpaceID(rows[i].SpaceID),
+			FromCurrency: finance.Currency(rows[i].FromCurrency),
+			ToCurrency:   finance.Currency(rows[i].ToCurrency),
+			Rate:         rows[i].Rate,
+			RateDate:     rows[i].RateDate,
+			CreateTime:   rows[i].CreateTime,
+		})
+	}
+
+	return rates, nil
+}

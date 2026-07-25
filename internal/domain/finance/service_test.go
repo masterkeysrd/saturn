@@ -3,6 +3,7 @@ package finance
 import (
 	"context"
 	"math"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -187,6 +188,31 @@ func (m *mockExchangeRateStore) Delete(ctx context.Context, query ExchangeRateKe
 	return nil
 }
 
+func (m *mockExchangeRateStore) GetLatestRates(ctx context.Context, spaceID SpaceID, fromCurrencies []Currency, toCurrency Currency) ([]*ExchangeRate, error) {
+	type currencyPair struct {
+		from Currency
+		to   Currency
+	}
+	latestRates := make(map[currencyPair]*ExchangeRate)
+	for _, r := range m.rates {
+		if r.SpaceID == spaceID && r.ToCurrency == toCurrency {
+			match := slices.Contains(fromCurrencies, r.FromCurrency)
+			if match {
+				pair := currencyPair{from: r.FromCurrency, to: r.ToCurrency}
+				existing, ok := latestRates[pair]
+				if !ok || r.RateDate.After(existing.RateDate) {
+					latestRates[pair] = r
+				}
+			}
+		}
+	}
+	var result []*ExchangeRate
+	for _, r := range latestRates {
+		result = append(result, r)
+	}
+	return result, nil
+}
+
 type mockTransactionStore struct {
 	txns map[TransactionID]*Transaction
 }
@@ -345,14 +371,43 @@ func (m *mockAccountStore) Delete(ctx context.Context, id AccountID) error {
 	return nil
 }
 
-func (m *mockAccountStore) ListBySpace(ctx context.Context, spaceID SpaceID) ([]*Account, error) {
+func (m *mockAccountStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListAccountsFilter) (*paging.Page[*Account], error) {
 	var list []*Account
 	for _, a := range m.data {
 		if a.SpaceID == spaceID {
 			list = append(list, a)
 		}
 	}
-	return list, nil
+	return &paging.Page[*Account]{
+		Items: list,
+	}, nil
+}
+
+func (m *mockAccountStore) HasDefault(ctx context.Context, spaceID SpaceID) (bool, error) {
+	for _, a := range m.data {
+		if a.SpaceID == spaceID && a.IsDefault {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (m *mockAccountStore) UnsetDefaultsExcept(ctx context.Context, spaceID SpaceID, id AccountID) error {
+	for _, a := range m.data {
+		if a.SpaceID == spaceID && a.ID != id {
+			a.IsDefault = false
+		}
+	}
+	return nil
+}
+
+func (m *mockAccountStore) HasAny(ctx context.Context, spaceID SpaceID) (bool, error) {
+	for _, a := range m.data {
+		if a.SpaceID == spaceID {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 type mockTransferStore struct {

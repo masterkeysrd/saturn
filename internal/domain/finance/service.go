@@ -1638,26 +1638,19 @@ func (s *Service) CreateAccount(ctx context.Context, a *Account) (*Account, erro
 		return nil, err
 	}
 
-	existing, err := s.deps.AccountStore.ListBySpace(ctx, a.SpaceID)
+	// Check if first account in space
+	hasAny, err := s.deps.AccountStore.HasAny(ctx, a.SpaceID)
 	if err != nil {
 		return nil, err
 	}
-
-	// Rule: If first account, force is_default = true. Else if is_default is true, unset default flag on others.
-	if len(existing) == 0 {
+	if !hasAny {
 		a.IsDefault = true
 	} else if a.IsDefault {
-		for _, acc := range existing {
-			if acc.IsDefault {
-				acc.IsDefault = false
-				acc.UpdateTime = time.Now().UTC()
-				if err := s.deps.AccountStore.Update(ctx, acc); err != nil {
-					return nil, fmt.Errorf("failed to unset default flag: %w", err)
-				}
-			}
+		// Unset all other defaults space-wide atomically in the DB
+		if err := s.deps.AccountStore.UnsetDefaultsExcept(ctx, a.SpaceID, a.ID); err != nil {
+			return nil, err
 		}
 	}
-
 	if err := s.deps.AccountStore.Create(ctx, a); err != nil {
 		return nil, err
 	}
@@ -1694,44 +1687,14 @@ func (s *Service) UpdateAccount(ctx context.Context, a *Account) (*Account, erro
 	}
 
 	if a.IsDefault && !existing.IsDefault {
-		// Unset default on other accounts
-		accounts, err := s.deps.AccountStore.ListBySpace(ctx, a.SpaceID)
-		if err != nil {
+		// Unset all other defaults space-wide atomically in the DB
+		if err := s.deps.AccountStore.UnsetDefaultsExcept(ctx, a.SpaceID, a.ID); err != nil {
 			return nil, err
-		}
-		for _, acc := range accounts {
-			if acc.ID != a.ID && acc.IsDefault {
-				acc.IsDefault = false
-				acc.UpdateTime = time.Now().UTC()
-				if err := s.deps.AccountStore.Update(ctx, acc); err != nil {
-					return nil, fmt.Errorf("failed to unset default flag on other accounts: %w", err)
-				}
-			}
 		}
 	} else if !a.IsDefault && existing.IsDefault {
-		// Cannot unset default if it is the only account, or we must ensure another account becomes default
-		accounts, err := s.deps.AccountStore.ListBySpace(ctx, a.SpaceID)
-		if err != nil {
-			return nil, err
-		}
-		var foundOther bool
-		for _, acc := range accounts {
-			if acc.ID != a.ID && acc.IsActive {
-				acc.IsDefault = true
-				acc.UpdateTime = time.Now().UTC()
-				if err := s.deps.AccountStore.Update(ctx, acc); err != nil {
-					return nil, fmt.Errorf("failed to propagate default flag: %w", err)
-				}
-				foundOther = true
-				break
-			}
-		}
-		if !foundOther {
-			// Keep it default
-			a.IsDefault = true
-		}
+		// Override and force it to remain default
+		a.IsDefault = true
 	}
-
 	if err := s.deps.AccountStore.Update(ctx, a); err != nil {
 		return nil, err
 	}
@@ -1746,35 +1709,27 @@ func (s *Service) DeleteAccount(ctx context.Context, id AccountID) error {
 		return err
 	}
 
-	if err := s.deps.AccountStore.Delete(ctx, id); err != nil {
-		return err
-	}
-
 	if existing.IsDefault {
-		// Mark next available active account as default
-		accounts, err := s.deps.AccountStore.ListBySpace(ctx, existing.SpaceID)
-		if err != nil {
-			return nil // DB clean deletion completed, default reallocation failure is non-fatal to delete
-		}
-		for _, acc := range accounts {
-			if acc.IsActive {
-				acc.IsDefault = true
-				acc.UpdateTime = time.Now().UTC()
-				_ = s.deps.AccountStore.Update(ctx, acc)
-				break
-			}
-		}
+		return ErrCannotDeleteDefaultAccount
 	}
 
-	return nil
+	return s.deps.AccountStore.Delete(ctx, id)
 }
 
 // ListAccounts lists all accounts for a space.
-func (s *Service) ListAccounts(ctx context.Context, spaceID SpaceID) ([]*Account, error) {
+func (s *Service) ListAccounts(ctx context.Context, spaceID SpaceID, filter *ListAccountsFilter) (*paging.Page[*Account], error) {
 	if err := spaceID.Validate(); err != nil {
 		return nil, err
 	}
-	return s.deps.AccountStore.ListBySpace(ctx, spaceID)
+	return s.deps.AccountStore.ListBySpace(ctx, spaceID, filter)
+}
+
+// GetLatestRates retrieves the latest exchange rates for the given fromCurrencies to the target currency.
+func (s *Service) GetLatestRates(ctx context.Context, spaceID SpaceID, fromCurrencies []Currency, toCurrency Currency) ([]*ExchangeRate, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, err
+	}
+	return s.deps.ExchangeRateStore.GetLatestRates(ctx, spaceID, fromCurrencies, toCurrency)
 }
 
 // CreateTransfer logs a fund movement between accounts.
@@ -1957,9 +1912,9 @@ func (s *Service) StageInboxItem(ctx context.Context, spaceID string, req *Stage
 	// 2. Resolve matching account by card last four digits
 	var accountID *string
 	if req.CardLastFour != "" {
-		accounts, err := s.deps.AccountStore.ListBySpace(ctx, SpaceID(spaceID))
+		page, err := s.deps.AccountStore.ListBySpace(ctx, SpaceID(spaceID), &ListAccountsFilter{PageSize: 1000})
 		if err == nil {
-			for _, acc := range accounts {
+			for _, acc := range page.Items {
 				if acc.LastFour == req.CardLastFour && acc.IsActive {
 					accIDStr := string(acc.ID)
 					accountID = &accIDStr

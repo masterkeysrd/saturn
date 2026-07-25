@@ -823,30 +823,30 @@ func toProtoInsightsResponse(in *finance.SpentInsights) *financev1.GetInsightsRe
 	}
 }
 
-func toProtoAccountType(t finance.AccountType) financev1.AccountType {
+func toProtoAccountType(t finance.AccountType) financev1.Account_Type {
 	switch t {
 	case finance.AccountTypeBank:
-		return financev1.AccountType_BANK
+		return financev1.Account_BANK
 	case finance.AccountTypeCreditCard:
-		return financev1.AccountType_CREDIT_CARD
+		return financev1.Account_CREDIT_CARD
 	case finance.AccountTypeCash:
-		return financev1.AccountType_CASH
+		return financev1.Account_CASH
 	case finance.AccountTypeDigitalAccount:
-		return financev1.AccountType_DIGITAL_ACCOUNT
+		return financev1.Account_DIGITAL_ACCOUNT
 	default:
-		return financev1.AccountType_ACCOUNT_TYPE_UNSPECIFIED
+		return financev1.Account_TYPE_UNSPECIFIED
 	}
 }
 
-func toDomainAccountType(t financev1.AccountType) finance.AccountType {
+func toDomainAccountType(t financev1.Account_Type) finance.AccountType {
 	switch t {
-	case financev1.AccountType_BANK:
+	case financev1.Account_BANK:
 		return finance.AccountTypeBank
-	case financev1.AccountType_CREDIT_CARD:
+	case financev1.Account_CREDIT_CARD:
 		return finance.AccountTypeCreditCard
-	case financev1.AccountType_CASH:
+	case financev1.Account_CASH:
 		return finance.AccountTypeCash
-	case financev1.AccountType_DIGITAL_ACCOUNT:
+	case financev1.Account_DIGITAL_ACCOUNT:
 		fallthrough
 	default:
 		return finance.AccountTypeDigitalAccount
@@ -921,17 +921,36 @@ func (h *Handler) CreateAccount(ctx context.Context, req *financev1.CreateAccoun
 }
 
 func (h *Handler) GetAccount(ctx context.Context, req *financev1.GetAccountRequest) (*financev1.Account, error) {
+	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	}
+	spaceID := finance.SpaceID(spaceIDStr)
+
 	aID, err := finance.ParseAccountID(req.GetId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	acc, err := h.Coordinator.GetAccount(ctx, aID)
+	viewType := financeaggregator.ViewBasic
+	if req.GetView() == financev1.Account_FULL {
+		viewType = financeaggregator.ViewFull
+	}
+
+	a, err := h.Aggregator.GetAccount(ctx, spaceID, aID, viewType)
 	if err != nil {
 		return nil, h.mapError(err)
 	}
 
-	return toProtoAccount(acc), nil
+	pbAcc := toProtoAccount(a.Account)
+	if viewType == financeaggregator.ViewFull {
+		pbAcc.Conversion = &financev1.Account_Conversion{
+			Balance: a.BalanceInBase,
+			Rate:    a.ExchangeRateToBase,
+		}
+	}
+
+	return pbAcc, nil
 }
 
 func (h *Handler) UpdateAccount(ctx context.Context, req *financev1.UpdateAccountRequest) (*financev1.Account, error) {
@@ -978,18 +997,59 @@ func (h *Handler) DeleteAccount(ctx context.Context, req *financev1.DeleteAccoun
 }
 
 func (h *Handler) ListAccounts(ctx context.Context, req *financev1.ListAccountsRequest) (*financev1.ListAccountsResponse, error) {
-	list, err := h.Coordinator.ListAccounts(ctx)
+	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	}
+	spaceID := finance.SpaceID(spaceIDStr)
+
+	viewType := financeaggregator.ViewBasic
+	if req.GetView() == financev1.Account_FULL {
+		viewType = financeaggregator.ViewFull
+	}
+
+	var activeOnly *bool
+	if req.ActiveOnly != nil {
+		val := req.GetActiveOnly()
+		activeOnly = &val
+	}
+
+	var searchQuery *string
+	if req.SearchQuery != nil {
+		val := req.GetSearchQuery()
+		searchQuery = &val
+	}
+
+	filter := financeaggregator.ListAccountsFilter{
+		ListAccountsFilter: finance.ListAccountsFilter{
+			PageSize:      req.GetPageSize(),
+			NextPageToken: req.GetPageToken(),
+			ActiveOnly:    activeOnly,
+			SearchQuery:   searchQuery,
+			Sort:          sorting.Parse(req.GetSort()),
+		},
+	}
+
+	page, err := h.Aggregator.ListAccounts(ctx, spaceID, viewType, filter)
 	if err != nil {
 		return nil, h.mapError(err)
 	}
 
-	protoAccounts := make([]*financev1.Account, 0, len(list))
-	for _, a := range list {
-		protoAccounts = append(protoAccounts, toProtoAccount(a))
+	protoAccounts := make([]*financev1.Account, 0, len(page.Items))
+	for _, a := range page.Items {
+		pbAcc := toProtoAccount(a.Account)
+		if viewType == financeaggregator.ViewFull {
+			pbAcc.Conversion = &financev1.Account_Conversion{
+				Balance: a.BalanceInBase,
+				Rate:    a.ExchangeRateToBase,
+			}
+		}
+		protoAccounts = append(protoAccounts, pbAcc)
 	}
 
 	return &financev1.ListAccountsResponse{
-		Accounts: protoAccounts,
+		Accounts:      protoAccounts,
+		NextPageToken: page.NextPageToken,
 	}, nil
 }
 

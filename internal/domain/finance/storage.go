@@ -53,6 +53,7 @@ type ExchangeRateStore interface {
 	// GetNextRate retrieves the rate from fromCurrency to toCurrency on the closest date > rateDate.
 	GetNextRate(ctx context.Context, key ExchangeRateKey) (*ExchangeRate, error)
 	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListExchangeRatesFilter) ([]*ExchangeRate, string, error)
+	GetLatestRates(ctx context.Context, spaceID SpaceID, fromCurrencies []Currency, toCurrency Currency) ([]*ExchangeRate, error)
 	Delete(ctx context.Context, key ExchangeRateKey) error
 }
 
@@ -108,6 +109,15 @@ type TopExpensesFilter struct {
 
 // ListBudgetsFilter encapsulates filtering parameters for listing budgets.
 type ListBudgetsFilter struct {
+	PageSize      int32
+	NextPageToken string
+	ActiveOnly    *bool
+	SearchQuery   *string
+	Sort          sorting.SortOrder
+}
+
+// ListAccountsFilter encapsulates filtering parameters for listing accounts.
+type ListAccountsFilter struct {
 	PageSize      int32
 	NextPageToken string
 	ActiveOnly    *bool
@@ -198,7 +208,10 @@ type AccountStore interface {
 	GetByID(ctx context.Context, id AccountID) (*Account, error)
 	Update(ctx context.Context, account *Account) error
 	Delete(ctx context.Context, id AccountID) error
-	ListBySpace(ctx context.Context, spaceID SpaceID) ([]*Account, error)
+	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListAccountsFilter) (*paging.Page[*Account], error)
+	HasDefault(ctx context.Context, spaceID SpaceID) (bool, error)
+	UnsetDefaultsExcept(ctx context.Context, spaceID SpaceID, id AccountID) error
+	HasAny(ctx context.Context, spaceID SpaceID) (bool, error)
 }
 
 // TransferStore defines persistence for parent transfer logs.

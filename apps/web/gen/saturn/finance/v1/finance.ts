@@ -40,17 +40,15 @@ export type BorrowingStatus =
   | "BORROWING_STATUS_ACTIVE"
   | "BORROWING_STATUS_PAID_OFF"
 
-export type AccountType =
-  | "ACCOUNT_TYPE_UNSPECIFIED"
-  | "BANK"
-  | "CREDIT_CARD"
-  | "CASH"
-  | "DIGITAL_ACCOUNT"
-
 /**
  * Scoped resource view options
  */
 export type Budget_View = "VIEW_UNSPECIFIED" | "BASIC" | "FULL"
+
+export type Account_Type =
+  "TYPE_UNSPECIFIED" | "BANK" | "CREDIT_CARD" | "CASH" | "DIGITAL_ACCOUNT"
+
+export type Account_View = "VIEW_UNSPECIFIED" | "BASIC" | "FULL"
 
 /**
  * FinanceSettings represents workspace configuration.
@@ -564,7 +562,7 @@ export interface Account {
   id?: string
   spaceId: string
   name: string
-  type: AccountType
+  type: Account_Type
   currency: string
   initialBalance: string
   currentBalance?: string
@@ -576,6 +574,12 @@ export interface Account {
   lastFour: string
   createTime?: string
   updateTime?: string
+  conversion?: Account_Conversion
+}
+
+export interface Account_Conversion {
+  balance: string
+  rate: number
 }
 
 export interface CreateAccountRequest {
@@ -584,6 +588,7 @@ export interface CreateAccountRequest {
 
 export interface GetAccountRequest {
   id: string
+  view?: Account_View
 }
 
 export interface UpdateAccountRequest {
@@ -595,10 +600,18 @@ export interface DeleteAccountRequest {
   id: string
 }
 
-export type ListAccountsRequest = Record<string, never>
+export interface ListAccountsRequest {
+  view?: Account_View
+  activeOnly?: boolean
+  searchQuery?: string
+  pageSize?: number
+  pageToken?: string
+  sort?: string
+}
 
 export interface ListAccountsResponse {
   accounts: Account[]
+  nextPageToken: string
 }
 
 export interface Transfer {
@@ -1667,7 +1680,7 @@ export function useDeleteAccountMutation(
  * ListAccounts lists all accounts in a workspace.
  */
 export async function listAccounts(
-  req?: ListAccountsRequest
+  req: ListAccountsRequest
 ): Promise<ListAccountsResponse> {
   return request<ListAccountsResponse>({
     method: "GET",

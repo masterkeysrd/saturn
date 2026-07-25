@@ -645,6 +645,49 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "BASIC",
+              "FULL"
+            ]
+          },
+          {
+            "name": "activeOnly",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "searchQuery",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
         "tags": [
           "Finance"
         ]
@@ -705,6 +748,16 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "BASIC",
+              "FULL"
+            ]
           }
         ],
         "tags": [
@@ -3467,6 +3520,19 @@
     }
   },
   "definitions": {
+    "AccountConversion": {
+      "type": "object",
+      "properties": {
+        "balance": {
+          "type": "string",
+          "format": "int64"
+        },
+        "rate": {
+          "type": "number",
+          "format": "double"
+        }
+      }
+    },
     "AdminIdentityApproveUserBody": {
       "type": "object"
     },
@@ -3570,14 +3636,6 @@
         }
       },
       "description": "Represents the computed details of the active/current period."
-    },
-    "BudgetView": {
-      "type": "string",
-      "enum": [
-        "BASIC",
-        "FULL"
-      ],
-      "title": "Scoped resource view options"
     },
     "FinanceApproveInboxItemBody": {
       "type": "object",
@@ -4273,6 +4331,10 @@
           "type": "string",
           "format": "date-time",
           "readOnly": true
+        },
+        "conversion": {
+          "$ref": "#/definitions/AccountConversion",
+          "readOnly": true
         }
       }
     },
@@ -4283,6 +4345,13 @@
         "CREDIT_CARD",
         "CASH",
         "DIGITAL_ACCOUNT"
+      ]
+    },
+    "v1AccountView": {
+      "type": "string",
+      "enum": [
+        "BASIC",
+        "FULL"
       ]
     },
     "v1AdminIdentityRevokeAllSessionsBody": {
@@ -4709,6 +4778,14 @@
         }
       },
       "description": "BudgetPeriod represents an active instantiation of a budget."
+    },
+    "v1BudgetView": {
+      "type": "string",
+      "enum": [
+        "BASIC",
+        "FULL"
+      ],
+      "title": "Scoped resource view options"
     },
     "v1CatalogDescriptor": {
       "type": "object",
@@ -5379,6 +5456,9 @@
             "type": "object",
             "$ref": "#/definitions/v1Account"
           }
+        },
+        "nextPageToken": {
+          "type": "string"
         }
       }
     },

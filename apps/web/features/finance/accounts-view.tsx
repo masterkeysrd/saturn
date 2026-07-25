@@ -1,9 +1,8 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useSpacePermissions } from "@/features/space/use-space"
 import {
   type Account,
-  type AccountType,
-  type ExchangeRate,
+  type Account_Type,
   useListAccountsQuery,
   useCreateAccountMutation,
   useUpdateAccountMutation,
@@ -11,10 +10,12 @@ import {
   useCreateTransferMutation,
   useListTransfersQuery,
   useGetFinanceSettingsQuery,
-  useListExchangeRatesQuery,
   useListCurrenciesQuery,
+  useListExchangeRatesQuery,
 } from "@/gen/saturn/finance/v1/finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
+import { useDebounce } from "@/lib/use-debounce"
+import { useUrlState } from "@/lib/use-url-state"
 import { AccountSelect } from "./components/account-select"
 import { AccountHistorySheet } from "./components/account-history-sheet"
 import {
@@ -23,6 +24,7 @@ import {
   Coins,
   Wallet,
   Plus,
+  Search,
   ArrowRightLeft,
   Trash2,
   Edit2,
@@ -122,7 +124,7 @@ function getAccountColors(colorName: string) {
   return ACCOUNT_COLORS.find((c) => c.value === colorName) || ACCOUNT_COLORS[0]
 }
 
-function getAccountTypeIcon(type: AccountType) {
+function getAccountTypeIcon(type: Account_Type) {
   switch (type) {
     case "BANK":
       return Landmark
@@ -137,7 +139,7 @@ function getAccountTypeIcon(type: AccountType) {
   }
 }
 
-function getAccountTypeLabel(type: AccountType) {
+function getAccountTypeLabel(type: Account_Type) {
   switch (type) {
     case "BANK":
       return "Bank / Checking"
@@ -152,6 +154,12 @@ function getAccountTypeLabel(type: AccountType) {
   }
 }
 
+const ACCOUNTS_FILTER_DEFAULTS = {
+  q: "",
+  active: false as boolean,
+  sort: "_default",
+}
+
 export function AccountsView() {
   const { spaceId, isWritable } = useSpacePermissions()
 
@@ -160,14 +168,29 @@ export function AccountsView() {
     { enabled: !!spaceId }
   )
 
-  const { data: ratesData } = useListExchangeRatesQuery(
-    { pageSize: 100, pageToken: "" },
-    { enabled: !!settings }
-  )
-  const rates: ExchangeRate[] = ratesData?.exchangeRates || []
+  const [urlState, setUrlState] = useUrlState(ACCOUNTS_FILTER_DEFAULTS)
+
+  const [searchQuery, setSearchQuery] = useState(urlState.q)
+  const debouncedSearchQuery = useDebounce(searchQuery, 300)
+
+  // Sync debounced search to URL parameter
+  useEffect(() => {
+    setUrlState({ q: debouncedSearchQuery })
+  }, [debouncedSearchQuery, setUrlState])
+
+  // Sync local search when URL changes externally (back/forward button)
+  useEffect(() => {
+    setSearchQuery(urlState.q)
+  }, [urlState.q])
 
   const { data: accountsData, refetch: refetchAccounts } = useListAccountsQuery(
-    {},
+    {
+      view: "FULL",
+      searchQuery: urlState.q || undefined,
+      activeOnly: urlState.active || undefined,
+      sort:
+        urlState.sort === "_default" ? undefined : urlState.sort || undefined,
+    },
     { enabled: !!spaceId }
   )
 
@@ -198,27 +221,9 @@ export function AccountsView() {
     accounts.forEach((acc) => {
       if (acc.isActive) {
         activeCount++
-        const balanceFloat = formatCents(acc.currentBalance)
-
-        // Convert balance to base currency using rates
-        let baseValue = balanceFloat
-        if (settings?.baseCurrency && acc.currency !== settings.baseCurrency) {
-          // Find direct exchange rate (acc.currency -> baseCurrency)
-          const latestRate = rates
-            .filter(
-              (r) =>
-                r.fromCurrency === acc.currency &&
-                r.toCurrency === settings.baseCurrency
-            )
-            .sort(
-              (a, b) =>
-                new Date(b.rateDate).getTime() - new Date(a.rateDate).getTime()
-            )[0]
-
-          if (latestRate) {
-            baseValue = balanceFloat * latestRate.rate
-          }
-        }
+        const baseValue = formatCents(
+          acc.conversion?.balance || acc.currentBalance
+        )
 
         if (baseValue < 0) {
           totalLiabilities += Math.abs(baseValue)
@@ -239,7 +244,7 @@ export function AccountsView() {
       activeCount,
       defaultAccount,
     }
-  }, [accounts, settings, rates])
+  }, [accounts])
 
   const handleDeleteAccount = async (id: string) => {
     const acc = accounts.find((a) => a.id === id)
@@ -399,18 +404,86 @@ export function AccountsView() {
               Workspace Accounts
             </h2>
 
+            {/* Filter Bar */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="relative flex-1">
+                <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search accounts by name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-10 rounded-xl border-border/50 bg-background/40 pl-9 placeholder:text-muted-foreground/60 focus-visible:ring-1"
+                />
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="view-active-only"
+                    checked={urlState.active}
+                    onCheckedChange={(checked) =>
+                      setUrlState({ active: checked })
+                    }
+                  />
+                  <Label
+                    htmlFor="view-active-only"
+                    className="cursor-pointer text-xs font-semibold text-foreground"
+                  >
+                    Active Only
+                  </Label>
+                </div>
+
+                <Select
+                  value={urlState.sort}
+                  onValueChange={(val) =>
+                    setUrlState({ sort: val || "_default" })
+                  }
+                >
+                  <SelectTrigger className="h-10 w-[160px] rounded-xl border-border/50 bg-background/40 text-xs font-semibold">
+                    <SelectValue placeholder="Sort By">
+                      {urlState.sort === "name_asc" && "Name (A-Z)"}
+                      {urlState.sort === "name_desc" && "Name (Z-A)"}
+                      {urlState.sort === "balance_desc" && "Balance (Highest)"}
+                      {urlState.sort === "balance_asc" && "Balance (Lowest)"}
+                      {urlState.sort === "created_desc" && "Newest"}
+                      {urlState.sort === "created_asc" && "Oldest"}
+                      {(!urlState.sort || urlState.sort === "_default") &&
+                        "Default Sort"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="_default">Default Sort</SelectItem>
+                    <SelectItem value="name_asc">Name (A-Z)</SelectItem>
+                    <SelectItem value="name_desc">Name (Z-A)</SelectItem>
+                    <SelectItem value="balance_desc">
+                      Balance (Highest)
+                    </SelectItem>
+                    <SelectItem value="balance_asc">
+                      Balance (Lowest)
+                    </SelectItem>
+                    <SelectItem value="created_desc">Newest</SelectItem>
+                    <SelectItem value="created_asc">Oldest</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             {accounts.length === 0 ? (
               <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-border/40 bg-card/15 py-16 text-center">
                 <Landmark className="mb-3 h-10 w-10 text-muted-foreground/60" />
                 <p className="text-sm font-semibold text-muted-foreground">
-                  No bank or cash accounts setup yet.
+                  {urlState.q || urlState.active
+                    ? "No accounts match your active filters."
+                    : "No bank or cash accounts setup yet."}
                 </p>
-                <Button
-                  onClick={() => setCreateOpen(true)}
-                  className="mt-4 flex items-center gap-2 rounded-xl bg-primary text-xs font-bold text-white"
-                >
-                  Create Your First Account
-                </Button>
+                {!urlState.q && !urlState.active && (
+                  <Button
+                    onClick={() => setCreateOpen(true)}
+                    className="mt-4 flex items-center gap-2 rounded-xl bg-primary text-xs font-bold text-white"
+                  >
+                    Create Your First Account
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -717,7 +790,6 @@ export function AccountsView() {
         open={transferOpen}
         onOpenChange={setTransferOpen}
         accounts={accounts}
-        rates={rates}
         refetchAccounts={refetchAccounts}
         refetchTransfers={refetchTransfers}
       />
@@ -757,7 +829,7 @@ function CreateAccountSheet({
   const currencyList = currencies || []
 
   const [name, setName] = useState("")
-  const [type, setType] = useState<AccountType>("BANK")
+  const [type, setType] = useState<Account_Type>("BANK")
   const [currency, setCurrency] = useState("")
   const [initialBalance, setInitialBalance] = useState("")
   const [creditLimit, setCreditLimit] = useState("")
@@ -918,7 +990,7 @@ function CreateAccountSheet({
             </Label>
             <Select
               value={type}
-              onValueChange={(val) => setType(val as AccountType)}
+              onValueChange={(val) => setType(val as Account_Type)}
               disabled={!!editAccount}
             >
               <SelectTrigger className="!h-11 w-full rounded-xl text-left">
@@ -1100,7 +1172,6 @@ interface CreateTransferSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   accounts: Account[]
-  rates: ExchangeRate[]
   refetchAccounts: () => void
   refetchTransfers: () => void
 }
@@ -1109,11 +1180,16 @@ function CreateTransferSheet({
   open,
   onOpenChange,
   accounts,
-  rates,
   refetchAccounts,
   refetchTransfers,
 }: CreateTransferSheetProps) {
   const activeAccounts = accounts.filter((a) => a.isActive)
+
+  const { data: ratesData } = useListExchangeRatesQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: open }
+  )
+  const rates = ratesData?.exchangeRates || []
 
   const [srcId, setSrcId] = useState("")
   const [dstId, setDstId] = useState("")

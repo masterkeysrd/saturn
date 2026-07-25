@@ -178,10 +178,11 @@ func (c *Coordinator) pipelineExtractNode(ctx context.Context, state *IngestionS
 	var accounts []*finance.Account
 	if state.Classification != "INVOICE" {
 		var err error
-		accounts, err = c.financeService.ListAccounts(ctx, finance.SpaceID(state.SpaceID))
+		page, err := c.financeService.ListAccounts(ctx, finance.SpaceID(state.SpaceID), &finance.ListAccountsFilter{PageSize: 1000})
 		if err != nil {
 			return nil, fmt.Errorf("list accounts: %w", err)
 		}
+		accounts = page.Items
 	}
 
 	payments, _, err := c.financeService.ListScheduledPayments(ctx, finance.SpaceID(state.SpaceID), &finance.ListScheduledPaymentsFilter{})
@@ -236,9 +237,9 @@ func (c *Coordinator) pipelineExtractNode(ctx context.Context, state *IngestionS
 func (c *Coordinator) pipelineResolveNode(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
 	var accountID *string
 	if state.Classification != "INVOICE" && state.CardLastFour != "" {
-		accounts, err := c.financeService.ListAccounts(ctx, finance.SpaceID(state.SpaceID))
+		page, err := c.financeService.ListAccounts(ctx, finance.SpaceID(state.SpaceID), &finance.ListAccountsFilter{PageSize: 1000})
 		if err == nil {
-			for _, acc := range accounts {
+			for _, acc := range page.Items {
 				if acc.LastFour == state.CardLastFour && acc.IsActive {
 					val := string(acc.ID)
 					accountID = &val

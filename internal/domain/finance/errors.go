@@ -13,4 +13,5 @@ var (
 	ErrRepaymentNotFound    = errors.New("borrowing repayment not found")
 	ErrAccountNotFound      = errors.New("account not found")
 	ErrTransferNotFound     = errors.New("transfer not found")
+	ErrCannotDeleteDefaultAccount = errors.New("cannot delete the default account. please select another account as default first")
 )

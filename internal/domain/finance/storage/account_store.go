@@ -4,9 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
+	"github.com/doug-martin/goqu/v9"
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
 type accountDB struct {
@@ -36,20 +39,39 @@ func NewAccountStore(db *sqlx.DB) *AccountStore {
 }
 
 func (s *AccountStore) Create(ctx context.Context, a *finance.Account) error {
-	query := `INSERT INTO finance.account (id, space_id, name, type, currency, initial_balance, current_balance, credit_limit, is_default, is_active, color, notes, last_four, create_time, update_time)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`
-	_, err := s.db.ExecContext(ctx, query,
-		string(a.ID), string(a.SpaceID), a.Name, string(a.Type), string(a.Currency),
-		a.InitialBalance, a.CurrentBalance, a.CreditLimit, a.IsDefault, a.IsActive, a.Color, a.Notes, a.LastFour,
-		a.CreateTime, a.UpdateTime,
-	)
+	ds := pgDialect.Insert(goqu.S("finance").Table("account")).Rows(goqu.Record{
+		"id":              string(a.ID),
+		"space_id":        string(a.SpaceID),
+		"name":            a.Name,
+		"type":            string(a.Type),
+		"currency":        string(a.Currency),
+		"initial_balance": a.InitialBalance,
+		"current_balance": a.CurrentBalance,
+		"credit_limit":    a.CreditLimit,
+		"is_default":      a.IsDefault,
+		"is_active":       a.IsActive,
+		"color":           a.Color,
+		"notes":           a.Notes,
+		"last_four":       a.LastFour,
+		"create_time":     a.CreateTime,
+		"update_time":     a.UpdateTime,
+	})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, query, args...)
 	return err
 }
 
 func (s *AccountStore) GetByID(ctx context.Context, id finance.AccountID) (*finance.Account, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("account")).Select("*").Where(goqu.Ex{"id": string(id)})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, err
+	}
 	var row accountDB
-	query := `SELECT * FROM finance.account WHERE id = $1`
-	if err := s.db.GetContext(ctx, &row, query, string(id)); err != nil {
+	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, finance.ErrAccountNotFound
 		}
@@ -75,25 +97,27 @@ func (s *AccountStore) GetByID(ctx context.Context, id finance.AccountID) (*fina
 }
 
 func (s *AccountStore) Update(ctx context.Context, a *finance.Account) error {
-	query := `UPDATE finance.account SET 
-		name = $2, 
-		type = $3, 
-		currency = $4, 
-		initial_balance = $5, 
-		current_balance = $6, 
-		credit_limit = $7,
-		is_default = $8, 
-		is_active = $9, 
-		color = $10, 
-		notes = $11, 
-		last_four = $12,
-		update_time = $13 
-		WHERE id = $1`
-	res, err := s.db.ExecContext(ctx, query,
-		string(a.ID), a.Name, string(a.Type), string(a.Currency),
-		a.InitialBalance, a.CurrentBalance, a.CreditLimit, a.IsDefault, a.IsActive, a.Color, a.Notes, a.LastFour,
-		a.UpdateTime,
-	)
+	ds := pgDialect.Update(goqu.S("finance").Table("account")).
+		Set(goqu.Record{
+			"name":            a.Name,
+			"type":            string(a.Type),
+			"currency":        string(a.Currency),
+			"initial_balance": a.InitialBalance,
+			"current_balance": a.CurrentBalance,
+			"credit_limit":    a.CreditLimit,
+			"is_default":      a.IsDefault,
+			"is_active":       a.IsActive,
+			"color":           a.Color,
+			"notes":           a.Notes,
+			"last_four":       a.LastFour,
+			"update_time":     a.UpdateTime,
+		}).
+		Where(goqu.Ex{"id": string(a.ID)})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
+	}
+	res, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -108,8 +132,12 @@ func (s *AccountStore) Update(ctx context.Context, a *finance.Account) error {
 }
 
 func (s *AccountStore) Delete(ctx context.Context, id finance.AccountID) error {
-	query := `DELETE FROM finance.account WHERE id = $1`
-	res, err := s.db.ExecContext(ctx, query, string(id))
+	ds := pgDialect.Delete(goqu.S("finance").Table("account")).Where(goqu.Ex{"id": string(id)})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
+	}
+	res, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -123,16 +151,48 @@ func (s *AccountStore) Delete(ctx context.Context, id finance.AccountID) error {
 	return nil
 }
 
-func (s *AccountStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID) ([]*finance.Account, error) {
-	var rows []accountDB
-	query := `SELECT * FROM finance.account WHERE space_id = $1 ORDER BY is_default DESC, name ASC, id ASC`
-	if err := s.db.SelectContext(ctx, &rows, query, string(spaceID)); err != nil {
-		return nil, err
+func (s *AccountStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
+	if filter.PageSize <= 0 || filter.PageSize > 100 {
+		filter.PageSize = 20
 	}
 
-	accounts := make([]*finance.Account, 0, len(rows))
+	ds := pgDialect.From(goqu.S("finance").Table("account")).Select("*")
+	ds = ds.Where(goqu.Ex{"space_id": string(spaceID)})
+
+	if filter.ActiveOnly != nil && *filter.ActiveOnly {
+		ds = ds.Where(goqu.Ex{"is_active": true})
+	}
+
+	if filter.SearchQuery != nil && *filter.SearchQuery != "" {
+		ds = ds.Where(goqu.I("name").ILike("%" + *filter.SearchQuery + "%"))
+	}
+
+	cursor, _ := paging.Decode(filter.NextPageToken)
+
+	sortOrder := filter.Sort
+	if !finance.IsAccountSortField(sortOrder.Field) {
+		sortOrder.Field = finance.DefaultAccountSortField
+	}
+
+	ds = paging.ApplyPagination(ds, paging.Options{
+		Sort:     sortOrder,
+		Cursor:   cursor,
+		PageSize: uint(filter.PageSize),
+	})
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("build sql query: %w", err)
+	}
+
+	var rows []accountDB
+	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
+		return nil, fmt.Errorf("select context: %w", err)
+	}
+
+	accounts := make([]*finance.Account, len(rows))
 	for i := range rows {
-		accounts = append(accounts, &finance.Account{
+		accounts[i] = &finance.Account{
 			ID:             finance.AccountID(rows[i].ID),
 			SpaceID:        finance.SpaceID(rows[i].SpaceID),
 			Name:           rows[i].Name,
@@ -148,7 +208,67 @@ func (s *AccountStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID)
 			LastFour:       rows[i].LastFour,
 			CreateTime:     nullTimeToTime(rows[i].CreateTime),
 			UpdateTime:     nullTimeToTime(rows[i].UpdateTime),
-		})
+		}
 	}
-	return accounts, nil
+
+	page := paging.NewPage(accounts, int(filter.PageSize), func(a *finance.Account) paging.Cursor {
+		return paging.Cursor{
+			SortValue: a.GetSortValue(sortOrder.Field),
+			ID:        string(a.ID),
+		}
+	})
+
+	return page, nil
+}
+
+func (s *AccountStore) HasDefault(ctx context.Context, spaceID finance.SpaceID) (bool, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("account")).
+		Select(goqu.L("1")).
+		Where(goqu.Ex{"space_id": string(spaceID), "is_default": true}).
+		Limit(1)
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return false, err
+	}
+	var dummy int
+	err = s.db.GetContext(ctx, &dummy, query, args...)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func (s *AccountStore) UnsetDefaultsExcept(ctx context.Context, spaceID finance.SpaceID, id finance.AccountID) error {
+	ds := pgDialect.Update(goqu.S("finance").Table("account")).
+		Set(goqu.Record{"is_default": false}).
+		Where(goqu.Ex{"space_id": string(spaceID)}, goqu.I("id").Neq(string(id)))
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, query, args...)
+	return err
+}
+
+func (s *AccountStore) HasAny(ctx context.Context, spaceID finance.SpaceID) (bool, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("account")).
+		Select(goqu.L("1")).
+		Where(goqu.Ex{"space_id": string(spaceID)}).
+		Limit(1)
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return false, err
+	}
+	var dummy int
+	err = s.db.GetContext(ctx, &dummy, query, args...)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
