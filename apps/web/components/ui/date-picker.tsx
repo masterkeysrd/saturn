@@ -1,4 +1,4 @@
-import { format } from "date-fns"
+import { format, isValid } from "date-fns"
 import { Calendar as CalendarIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -23,6 +23,8 @@ export function DatePicker({
   placeholder = "Pick a date",
   className,
 }: DatePickerProps) {
+  const isValidDate = date instanceof Date && isValid(date)
+
   return (
     <Popover>
       <PopoverTrigger
@@ -31,17 +33,25 @@ export function DatePicker({
             variant="outline"
             className={cn(
               "h-12 w-full justify-start rounded-xl border border-border/60 bg-background/50 text-left font-normal",
-              !date && "text-muted-foreground",
+              !isValidDate && "text-muted-foreground",
               className
             )}
           >
             <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-            {date ? format(date, "yyyy/MM/dd") : <span>{placeholder}</span>}
+            {isValidDate ? (
+              format(date, "yyyy/MM/dd")
+            ) : (
+              <span>{placeholder}</span>
+            )}
           </Button>
         }
       />
       <PopoverContent className="w-auto rounded-2xl border border-border/50 bg-card/90 p-0 shadow-2xl backdrop-blur-xl">
-        <Calendar mode="single" selected={date} onSelect={setDate} />
+        <Calendar
+          mode="single"
+          selected={isValidDate ? date : undefined}
+          onSelect={setDate}
+        />
       </PopoverContent>
     </Popover>
   )

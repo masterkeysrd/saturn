@@ -7,7 +7,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import { getBudgetIcon, getBudgetColors, formatCents } from "../utils"
+import {
+  getBudgetIcon,
+  getBudgetColors,
+  formatCents,
+  formatInterval,
+} from "../utils"
 import { PauseCircle } from "lucide-react"
 
 interface BudgetSelectProps {
@@ -84,13 +89,11 @@ export function BudgetSelect({
                   </span>
                   <span
                     className={cn(
-                      "rounded-full border px-1.5 py-0.5 text-[8px] font-bold tracking-wider uppercase",
+                      "rounded-full border px-1.5 py-0.5 text-[8px] font-bold tracking-wider",
                       getIntervalColorClass(selectedBudget.interval)
                     )}
                   >
-                    {selectedBudget.interval
-                      .replace("INTERVAL_", "")
-                      .toLowerCase()}
+                    {formatInterval(selectedBudget.interval)}
                   </span>
                   {!selectedBudget.isActive && (
                     <span className="flex items-center gap-0.5 rounded-full border border-border/40 bg-muted px-1.5 py-0.5 text-[8px] font-bold text-muted-foreground uppercase">

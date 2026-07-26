@@ -166,6 +166,40 @@ export type Transaction_View =
   | "FULL"
 
 /**
+ * Scoped resource representation view level.
+ */
+export type RecurringExpense_View = "VIEW_UNSPECIFIED" | "BASIC" | "FULL"
+
+/**
+ * Execution interval recurrence rule.
+ */
+export type RecurringExpense_Interval =
+  "INTERVAL_UNSPECIFIED" | "WEEKLY" | "MONTHLY" | "YEARLY"
+
+/**
+ * Active template status.
+ */
+export type RecurringExpense_Status =
+  "STATUS_UNSPECIFIED" | "ACTIVE" | "PAUSED" | "ENDED"
+
+/**
+ * Scoped resource representation view level.
+ */
+export type ScheduledPayment_View = "VIEW_UNSPECIFIED" | "BASIC" | "FULL"
+
+/**
+ * Parent template source type.
+ */
+export type ScheduledPayment_SourceType =
+  "SOURCE_TYPE_UNSPECIFIED" | "RECURRENT_EXPENSE" | "LOAN" | "TAX"
+
+/**
+ * Instance execution status.
+ */
+export type ScheduledPayment_Status =
+  "STATUS_UNSPECIFIED" | "PENDING" | "PROCESSING" | "SKIPPED"
+
+/**
  * Type defines the classification of payment accounts.
  */
 export type Account_Type =
@@ -1186,21 +1220,21 @@ export interface RecurringExpense {
    */
   currency: string
   /**
-   * Required. Execution interval rule string.
+   * Required. Execution interval rule.
    */
-  interval: string
+  interval: RecurringExpense_Interval
   /**
-   * Required. Next execution due date.
+   * Required. Scheduler engine runtime state.
    */
-  nextDueDate: string
+  executionState: RecurringExpense_ExecutionState
   /**
    * Optional. Indicates if the payment amount is variable.
    */
   isVariable: boolean
   /**
-   * Required. Active template status (e.g. "active", "paused").
+   * Required. Active template status.
    */
-  status: string
+  status: RecurringExpense_Status
   /**
    * Optional. Days allowed past due date before triggering warning events.
    */
@@ -1213,6 +1247,34 @@ export interface RecurringExpense {
    * Output only. Last update timestamp.
    */
   updateTime?: string
+  /**
+   * Output only. Hydrated minimal budget details. Available only on FULL view.
+   */
+  budget?: RecurringExpense_BudgetInfo
+}
+
+/**
+ * BudgetInfo wraps minimal budget details required for UI listing.
+ */
+export interface RecurringExpense_BudgetInfo {
+  id: string
+  name: string
+  color: string
+  icon: string
+}
+
+/**
+ * ExecutionState represents the scheduler engine runtime tracking parameters.
+ */
+export interface RecurringExpense_ExecutionState {
+  /**
+   * Required. Next execution due date.
+   */
+  nextDueDate: string
+  /**
+   * Output only. Last execution/posting date.
+   */
+  lastPaymentDate?: string
 }
 
 /**
@@ -1236,7 +1298,7 @@ export interface ScheduledPayment {
   /**
    * Required. Parent template source type.
    */
-  sourceType: string
+  sourceType: ScheduledPayment_SourceType
   /**
    * Required. Parent template source ID.
    */
@@ -1254,9 +1316,9 @@ export interface ScheduledPayment {
    */
   dueDate: string
   /**
-   * Required. Instance execution status (e.g. "pending", "confirmed").
+   * Required. Instance execution status.
    */
-  status: string
+  status: ScheduledPayment_Status
   /**
    * Optional. Metadata binary payload.
    */
@@ -1269,6 +1331,33 @@ export interface ScheduledPayment {
    * Output only. Last update timestamp.
    */
   updateTime?: string
+  /**
+   * Output only. Hydrated minimal budget details. Available only on FULL view.
+   */
+  budget?: ScheduledPayment_BudgetInfo
+  /**
+   * Output only. Hydrated parent template details. Available only on FULL view.
+   */
+  recurringExpense?: ScheduledPayment_RecurringExpenseInfo
+}
+
+/**
+ * BudgetInfo wraps minimal budget details required for UI listing.
+ */
+export interface ScheduledPayment_BudgetInfo {
+  id: string
+  name: string
+  color: string
+  icon: string
+}
+
+/**
+ * RecurringExpenseInfo wraps parent template details.
+ */
+export interface ScheduledPayment_RecurringExpenseInfo {
+  id: string
+  name: string
+  interval: RecurringExpense_Interval
 }
 
 /**
@@ -1277,38 +1366,9 @@ export interface ScheduledPayment {
  */
 export interface CreateRecurringExpenseRequest {
   /**
-   * Required. Budget category identifier.
-   * Values are of the form `bud_[a-zA-Z0-9]+`.
+   * Required. The recurring expense template to create.
    */
-  budgetId: string
-  /**
-   * Required. User-friendly name of the recurring expense rule.
-   */
-  name: string
-  /**
-   * Required. Base payment amount in cents.
-   */
-  amount: string
-  /**
-   * Required. Currency code.
-   */
-  currency: string
-  /**
-   * Required. Execution interval rule string (cron expression or interval descriptor).
-   */
-  interval: string
-  /**
-   * Required. Initial execution due date.
-   */
-  nextDueDate: string
-  /**
-   * Optional. Indicates if the payment amount is variable.
-   */
-  isVariable: boolean
-  /**
-   * Optional. Days allowed past due date before triggering warning events.
-   */
-  gracePeriodDays: number
+  recurringExpense: RecurringExpense
 }
 
 /**
@@ -1318,46 +1378,12 @@ export interface CreateRecurringExpenseRequest {
 export interface UpdateRecurringExpenseRequest {
   /**
    * Required. Unique identifier of the template to update.
-   * Values are of the form `rec_[a-zA-Z0-9]+`.
    */
   id: string
   /**
-   * Required. Budget category identifier.
-   * Values are of the form `bud_[a-zA-Z0-9]+`.
+   * Required. The recurring expense template to update.
    */
-  budgetId: string
-  /**
-   * Required. User-friendly name.
-   */
-  name: string
-  /**
-   * Required. Base payment amount in cents.
-   */
-  amount: string
-  /**
-   * Required. Currency code.
-   */
-  currency: string
-  /**
-   * Required. Execution interval rule string.
-   */
-  interval: string
-  /**
-   * Required. Next execution due date.
-   */
-  nextDueDate: string
-  /**
-   * Optional. Indicates if the payment amount is variable.
-   */
-  isVariable: boolean
-  /**
-   * Required. Template status string.
-   */
-  status: string
-  /**
-   * Optional. Days allowed past due date before triggering warning events.
-   */
-  gracePeriodDays: number
+  recurringExpense: RecurringExpense
 }
 
 /**
@@ -1380,7 +1406,7 @@ export interface ListRecurringExpensesRequest {
   /**
    * Optional. Filter templates by active status.
    */
-  status: string
+  status: RecurringExpense_Status
   /**
    * Optional. Maximum number of items to return.
    */
@@ -1389,6 +1415,18 @@ export interface ListRecurringExpensesRequest {
    * Optional. Keyset page token.
    */
   pageToken: string
+  /**
+   * Optional. Representation view level.
+   */
+  view?: RecurringExpense_View
+  /**
+   * Optional. Search string querying the name of the template.
+   */
+  searchQuery?: string
+  /**
+   * Optional. Sorting specification.
+   */
+  sort?: string
 }
 
 /**
@@ -1414,7 +1452,7 @@ export interface ListScheduledPaymentsRequest {
   /**
    * Optional. Filter instances by payment status.
    */
-  status: string
+  status: ScheduledPayment_Status
   /**
    * Optional. Target start date of execution window.
    */
@@ -1431,6 +1469,18 @@ export interface ListScheduledPaymentsRequest {
    * Optional. Keyset page token.
    */
   pageToken: string
+  /**
+   * Optional. Representation view level.
+   */
+  view?: ScheduledPayment_View
+  /**
+   * Optional. Search string querying the description or parent info.
+   */
+  searchQuery?: string
+  /**
+   * Optional. Sorting specification.
+   */
+  sort?: string
 }
 
 /**
@@ -1474,6 +1524,39 @@ export interface ConfirmScheduledPaymentRequest {
    * Optional. Narration notes.
    */
   description?: string
+  /**
+   * Optional. Financial account identifier used to settle the payment.
+   * When provided, the account balance will be updated accordingly.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
+  accountId?: string
+  /**
+   * Optional. Budget category identifier to allocate the cleared transaction under.
+   * If omitted, defaults to the budget category configured on the scheduled payment.
+   * Values are of the form `bud_[a-zA-Z0-9]+`.
+   */
+  budgetId?: string
+  /**
+   * Optional. Settlement currency code (ISO 4217 standard 3-letter code).
+   * If omitted, defaults to the currency configured on the scheduled payment.
+   */
+  currency?: string
+}
+
+/**
+ * The request for [MatchScheduledPayment][saturn.finance.v1.Finance.MatchScheduledPayment].
+ */
+export interface MatchScheduledPaymentRequest {
+  /**
+   * Required. Target scheduled payment identifier.
+   * Values are of the form `sch_[a-zA-Z0-9]+`.
+   */
+  paymentId: string
+  /**
+   * Required. Existing transaction identifier to match and link.
+   * Values are of the form `txn_[a-zA-Z0-9]+`.
+   */
+  transactionId: string
 }
 
 /**
@@ -2796,7 +2879,7 @@ export async function createRecurringExpense(
   return request<RecurringExpense>({
     method: "POST",
     url: "/api/v1/finance/recurring-expenses",
-    data: req,
+    data: req.recurringExpense,
   })
 }
 
@@ -2823,7 +2906,7 @@ export async function updateRecurringExpense(
   return request<RecurringExpense>({
     method: "PUT",
     url: `/api/v1/finance/recurring-expenses/${id}`,
-    data: req,
+    data: req.recurringExpense,
   })
 }
 
@@ -2959,6 +3042,37 @@ export function useConfirmScheduledPaymentMutation(
   >({
     mutationFn: ({ payment_id, req }) =>
       confirmScheduledPayment(payment_id, req),
+    ...options,
+  })
+}
+
+/**
+ * Links an existing transaction with a pending scheduled payment, marking it cleared.
+ */
+export async function matchScheduledPayment(
+  payment_id: string,
+  req: MatchScheduledPaymentRequest
+): Promise<Transaction> {
+  return request<Transaction>({
+    method: "POST",
+    url: `/api/v1/finance/scheduled-payments/${payment_id}/match`,
+    data: req,
+  })
+}
+
+export function useMatchScheduledPaymentMutation(
+  options?: UseMutationOptions<
+    Transaction,
+    Error,
+    { payment_id: string; req: MatchScheduledPaymentRequest }
+  >
+) {
+  return useMutation<
+    Transaction,
+    Error,
+    { payment_id: string; req: MatchScheduledPaymentRequest }
+  >({
+    mutationFn: ({ payment_id, req }) => matchScheduledPayment(payment_id, req),
     ...options,
   })
 }

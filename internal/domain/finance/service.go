@@ -756,6 +756,16 @@ func (s *Service) GetRecurringExpense(ctx context.Context, id RecurringExpenseID
 	return s.deps.RecurringExpenseStore.GetByID(ctx, id)
 }
 
+// GetRecurringExpenses retrieves a batch of recurring expenses by their IDs.
+func (s *Service) GetRecurringExpenses(ctx context.Context, ids []RecurringExpenseID) ([]*RecurringExpense, error) {
+	for _, id := range ids {
+		if err := id.Validate(); err != nil {
+			return nil, err
+		}
+	}
+	return s.deps.RecurringExpenseStore.GetByIDs(ctx, ids)
+}
+
 // UpdateRecurringExpense modifies an existing recurring expense rule.
 func (s *Service) UpdateRecurringExpense(ctx context.Context, re *RecurringExpense) (*RecurringExpense, error) {
 	existing, err := s.deps.RecurringExpenseStore.GetByID(ctx, re.ID)
@@ -785,17 +795,17 @@ func (s *Service) DeleteRecurringExpense(ctx context.Context, id RecurringExpens
 }
 
 // ListRecurringExpenses lists recurring expenses for a workspace.
-func (s *Service) ListRecurringExpenses(ctx context.Context, spaceID SpaceID, filter *ListRecurringExpensesFilter) ([]*RecurringExpense, string, error) {
+func (s *Service) ListRecurringExpenses(ctx context.Context, spaceID SpaceID, filter *ListRecurringExpensesFilter) (*paging.Page[*RecurringExpense], error) {
 	if err := spaceID.Validate(); err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	return s.deps.RecurringExpenseStore.ListBySpace(ctx, spaceID, filter)
 }
 
 // ListScheduledPayments lists scheduled payments for a workspace.
-func (s *Service) ListScheduledPayments(ctx context.Context, spaceID SpaceID, filter *ListScheduledPaymentsFilter) ([]*ScheduledPayment, string, error) {
+func (s *Service) ListScheduledPayments(ctx context.Context, spaceID SpaceID, filter *ListScheduledPaymentsFilter) (*paging.Page[*ScheduledPayment], error) {
 	if err := spaceID.Validate(); err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	return s.deps.ScheduledPaymentStore.ListBySpace(ctx, spaceID, filter)
 }
@@ -807,6 +817,9 @@ type ConfirmScheduledPaymentRequest struct {
 	EffectiveDate   time.Time
 	ActualAmount    int64
 	Description     string
+	AccountID       *AccountID
+	BudgetID        *BudgetID
+	Currency        *Currency
 }
 
 // ConfirmScheduledPayment clears a scheduled payment by promoting it to a permanent transaction.
@@ -821,7 +834,17 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 		return nil, err
 	}
 
-	budget, err := s.deps.BudgetStore.GetByID(ctx, payment.BudgetID)
+	budgetID := payment.BudgetID
+	if req.BudgetID != nil && *req.BudgetID != "" {
+		budgetID = *req.BudgetID
+	}
+
+	currency := payment.Currency
+	if req.Currency != nil && *req.Currency != "" {
+		currency = *req.Currency
+	}
+
+	budget, err := s.deps.BudgetStore.GetByID(ctx, budgetID)
 	if err != nil {
 		return nil, err
 	}
@@ -834,10 +857,10 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 
 	// Calculate base currency conversion
 	rate := 1.0
-	if payment.Currency != settings.BaseCurrency {
+	if currency != settings.BaseCurrency {
 		rateRecord, err := s.getExchangeRate(ctx, ExchangeRateKey{
 			SpaceID:      payment.SpaceID,
-			FromCurrency: payment.Currency,
+			FromCurrency: currency,
 			ToCurrency:   settings.BaseCurrency,
 			RateDate:     req.TransactionDate,
 		})
@@ -849,19 +872,32 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 
 	amountInBase := int64(float64(req.ActualAmount) * rate)
 
-	description := "Scheduled Payment"
+	description := ""
 	if req.Description != "" {
 		description = req.Description
-	} else if payment.SourceType == SourceTypeRecurrentExpense {
+	} else if len(payment.Metadata) > 0 {
+		var meta struct {
+			Description string `json:"description"`
+		}
+		if err := json.Unmarshal(payment.Metadata, &meta); err == nil && meta.Description != "" {
+			description = meta.Description
+		}
+	}
+
+	if description == "" && payment.SourceType == SourceTypeRecurrentExpense {
 		if exp, err := s.deps.RecurringExpenseStore.GetByID(ctx, RecurringExpenseID(payment.SourceID)); err == nil {
 			description = exp.Name
 		}
-	} else if payment.SourceType == "invoice" {
+	} else if description == "" && payment.SourceType == "invoice" {
 		if item, err := s.deps.InboxItemStore.Get(ctx, string(payment.SpaceID), payment.SourceID); err == nil {
 			if item.VendorName != "" {
 				description = item.VendorName
 			}
 		}
+	}
+
+	if description == "" {
+		description = "Scheduled Payment"
 	}
 
 	tID, err := NewTransactionID()
@@ -872,11 +908,12 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 	txn := &Transaction{
 		ID:              tID,
 		SpaceID:         payment.SpaceID,
+		AccountID:       req.AccountID,
 		Type:            TransactionTypeExpense,
-		BudgetID:        &payment.BudgetID,
+		BudgetID:        &budgetID,
 		PeriodID:        &period.ID,
 		Amount:          req.ActualAmount,
-		Currency:        payment.Currency,
+		Currency:        currency,
 		AmountInBase:    amountInBase,
 		Description:     description,
 		TransactionDate: req.TransactionDate,
@@ -893,6 +930,12 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 
 	if err := s.deps.TransactionStore.Create(ctx, txn); err != nil {
 		return nil, err
+	}
+
+	if req.AccountID != nil && *req.AccountID != "" {
+		if err := s.adjustAccountBalance(ctx, *req.AccountID, req.ActualAmount, TransactionTypeExpense, false); err != nil {
+			return nil, fmt.Errorf("failed to adjust account balance: %w", err)
+		}
 	}
 
 	// Log the historical scheduled event with the deferred creation date
@@ -926,6 +969,59 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 	return txn, nil
 }
 
+// MatchScheduledPaymentRequest represents parameters to link an existing transaction to a scheduled payment.
+type MatchScheduledPaymentRequest struct {
+	PaymentID     ScheduledPaymentID
+	TransactionID TransactionID
+}
+
+// MatchScheduledPayment links an existing transaction with a pending scheduled payment, marking the payment cleared.
+func (s *Service) MatchScheduledPayment(ctx context.Context, req MatchScheduledPaymentRequest) (*Transaction, error) {
+	payment, err := s.deps.ScheduledPaymentStore.GetByID(ctx, req.PaymentID)
+	if err != nil {
+		return nil, fmt.Errorf("scheduled payment not found: %w", err)
+	}
+
+	txn, err := s.deps.TransactionStore.GetByID(ctx, req.TransactionID)
+	if err != nil {
+		return nil, fmt.Errorf("transaction not found: %w", err)
+	}
+
+	if txn.SpaceID != payment.SpaceID {
+		return nil, errors.New("transaction and scheduled payment belong to different spaces")
+	}
+
+	// Update transaction link properties
+	st := payment.SourceType
+	sid := payment.SourceID
+	txn.SourceType = &st
+	txn.SourceID = &sid
+	txn.UpdateTime = time.Now().UTC()
+
+	if err := s.deps.TransactionStore.Update(ctx, txn); err != nil {
+		return nil, fmt.Errorf("failed to link transaction: %w", err)
+	}
+
+	// Log event
+	_, err = s.LogTransactionEvent(ctx, &TransactionEvent{
+		SpaceID:       payment.SpaceID,
+		TransactionID: txn.ID,
+		EventType:     "SCHEDULED_PAYMENT_LINKED",
+		CreateTime:    time.Now().UTC(),
+		Metadata:      map[string]any{"scheduled_payment_id": string(payment.ID)},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to log match event: %w", err)
+	}
+
+	// Delete/clear the pending scheduled payment instance
+	if err := s.deps.ScheduledPaymentStore.Delete(ctx, req.PaymentID); err != nil {
+		return nil, fmt.Errorf("failed to delete scheduled payment: %w", err)
+	}
+
+	return txn, nil
+}
+
 // GenerateScheduledPayments performs bulk generation of pending scheduled payments for recurring expenses.
 func (s *Service) GenerateScheduledPayments(ctx context.Context) error {
 	// Query templates due in next 10 days
@@ -943,6 +1039,29 @@ func (s *Service) GenerateScheduledPayments(ctx context.Context) error {
 				return err
 			}
 
+			var dateTag string
+			switch re.Interval {
+			case "monthly":
+				dateTag = re.NextDueDate.Format("2006-01")
+			case "yearly":
+				dateTag = re.NextDueDate.Format("2006")
+			case "weekly":
+				dateTag = re.NextDueDate.Format("2006-01-02")
+			default:
+				dateTag = re.NextDueDate.Format("2006-01-02")
+			}
+
+			descText := fmt.Sprintf("%s (%s)", re.Name, dateTag)
+			metaMap := map[string]any{
+				"name":        re.Name,
+				"due_date":    re.NextDueDate.Format("2006-01-02"),
+				"description": descText,
+			}
+			metaBytes, err := json.Marshal(metaMap)
+			if err != nil {
+				return fmt.Errorf("marshal scheduled payment metadata: %w", err)
+			}
+
 			payment := &ScheduledPayment{
 				ID:         spID,
 				SpaceID:    re.SpaceID,
@@ -953,6 +1072,7 @@ func (s *Service) GenerateScheduledPayments(ctx context.Context) error {
 				Currency:   re.Currency,
 				DueDate:    re.NextDueDate,
 				Status:     ScheduledPaymentPending,
+				Metadata:   metaBytes,
 				CreateTime: time.Now().UTC(),
 				UpdateTime: time.Now().UTC(),
 			}

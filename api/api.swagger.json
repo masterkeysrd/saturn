@@ -1869,7 +1869,12 @@
             "description": "Optional. Filter templates by active status.",
             "in": "query",
             "required": false,
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "PAUSED",
+              "ENDED"
+            ]
           },
           {
             "name": "pageSize",
@@ -1882,6 +1887,31 @@
           {
             "name": "pageToken",
             "description": "Optional. Keyset page token.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "view",
+            "description": "Optional. Representation view level.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "BASIC",
+              "FULL"
+            ]
+          },
+          {
+            "name": "searchQuery",
+            "description": "Optional. Search string querying the name of the template.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sort",
+            "description": "Optional. Sorting specification.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1910,12 +1940,12 @@
         },
         "parameters": [
           {
-            "name": "body",
-            "description": "The request for\n[CreateRecurringExpense][saturn.finance.v1.Finance.CreateRecurringExpense].",
+            "name": "recurringExpense",
+            "description": "Required. The recurring expense template to create.",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1CreateRecurringExpenseRequest"
+              "$ref": "#/definitions/v1RecurringExpense"
             }
           }
         ],
@@ -1976,17 +2006,18 @@
         "parameters": [
           {
             "name": "id",
-            "description": "Required. Unique identifier of the template to update.\nValues are of the form `rec_[a-zA-Z0-9]+`.",
+            "description": "Required. Unique identifier of the template to update.",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
-            "name": "body",
+            "name": "recurringExpense",
+            "description": "Required. The recurring expense template to update.",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/FinanceUpdateRecurringExpenseBody"
+              "$ref": "#/definitions/v1RecurringExpense"
             }
           }
         ],
@@ -2019,7 +2050,12 @@
             "description": "Optional. Filter instances by payment status.",
             "in": "query",
             "required": false,
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PROCESSING",
+              "SKIPPED"
+            ]
           },
           {
             "name": "startDate",
@@ -2048,6 +2084,31 @@
           {
             "name": "pageToken",
             "description": "Optional. Keyset page token.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "view",
+            "description": "Optional. Representation view level.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "BASIC",
+              "FULL"
+            ]
+          },
+          {
+            "name": "searchQuery",
+            "description": "Optional. Search string querying the description or parent info.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sort",
+            "description": "Optional. Sorting specification.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -2090,6 +2151,46 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/FinanceConfirmScheduledPaymentBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/scheduled-payments/{paymentId}/match": {
+      "post": {
+        "summary": "Links an existing transaction with a pending scheduled payment, marking it cleared.",
+        "operationId": "Finance_MatchScheduledPayment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Transaction"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "paymentId",
+            "description": "Required. Target scheduled payment identifier.\nValues are of the form `sch_[a-zA-Z0-9]+`.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceMatchScheduledPaymentBody"
             }
           }
         ],
@@ -3884,6 +3985,18 @@
         "description": {
           "type": "string",
           "description": "Optional. Narration notes."
+        },
+        "accountId": {
+          "type": "string",
+          "description": "Optional. Financial account identifier used to settle the payment.\nWhen provided, the account balance will be updated accordingly.\nValues are of the form `acc_[a-zA-Z0-9]+`."
+        },
+        "budgetId": {
+          "type": "string",
+          "description": "Optional. Budget category identifier to allocate the cleared transaction under.\nIf omitted, defaults to the budget category configured on the scheduled payment.\nValues are of the form `bud_[a-zA-Z0-9]+`."
+        },
+        "currency": {
+          "type": "string",
+          "description": "Optional. Settlement currency code (ISO 4217 standard 3-letter code).\nIf omitted, defaults to the currency configured on the scheduled payment."
         }
       },
       "description": "The request for\n[ConfirmScheduledPayment][saturn.finance.v1.Finance.ConfirmScheduledPayment].",
@@ -3904,6 +4017,19 @@
       "description": "The request for\n[CreateBorrowingRepayment][saturn.finance.v1.Finance.CreateBorrowingRepayment].",
       "required": [
         "repayment"
+      ]
+    },
+    "FinanceMatchScheduledPaymentBody": {
+      "type": "object",
+      "properties": {
+        "transactionId": {
+          "type": "string",
+          "description": "Required. Existing transaction identifier to match and link.\nValues are of the form `txn_[a-zA-Z0-9]+`."
+        }
+      },
+      "description": "The request for [MatchScheduledPayment][saturn.finance.v1.Finance.MatchScheduledPayment].",
+      "required": [
+        "transactionId"
       ]
     },
     "FinanceUpdateBorrowingBody": {
@@ -3973,60 +4099,6 @@
       "description": "The request for\n[UpdateExpense][saturn.finance.v1.Finance.UpdateExpense].",
       "required": [
         "expense"
-      ]
-    },
-    "FinanceUpdateRecurringExpenseBody": {
-      "type": "object",
-      "properties": {
-        "budgetId": {
-          "type": "string",
-          "description": "Required. Budget category identifier.\nValues are of the form `bud_[a-zA-Z0-9]+`."
-        },
-        "name": {
-          "type": "string",
-          "description": "Required. User-friendly name."
-        },
-        "amount": {
-          "type": "string",
-          "format": "int64",
-          "description": "Required. Base payment amount in cents."
-        },
-        "currency": {
-          "type": "string",
-          "description": "Required. Currency code."
-        },
-        "interval": {
-          "type": "string",
-          "description": "Required. Execution interval rule string."
-        },
-        "nextDueDate": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Required. Next execution due date."
-        },
-        "isVariable": {
-          "type": "boolean",
-          "description": "Optional. Indicates if the payment amount is variable."
-        },
-        "status": {
-          "type": "string",
-          "description": "Required. Template status string."
-        },
-        "gracePeriodDays": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Optional. Days allowed past due date before triggering warning events."
-        }
-      },
-      "description": "The request for\n[UpdateRecurringExpense][saturn.finance.v1.Finance.UpdateRecurringExpense].",
-      "required": [
-        "budgetId",
-        "name",
-        "amount",
-        "currency",
-        "interval",
-        "nextDueDate",
-        "status"
       ]
     },
     "IdentityRevokeSessionBody": {
@@ -4111,6 +4183,59 @@
         "identifier",
         "password"
       ]
+    },
+    "RecurringExpenseExecutionState": {
+      "type": "object",
+      "properties": {
+        "nextDueDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Required. Next execution due date."
+        },
+        "lastPaymentDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Last execution/posting date.",
+          "readOnly": true
+        }
+      },
+      "description": "ExecutionState represents the scheduler engine runtime tracking parameters.",
+      "required": [
+        "nextDueDate"
+      ]
+    },
+    "RecurringExpenseInterval": {
+      "type": "string",
+      "enum": [
+        "WEEKLY",
+        "MONTHLY",
+        "YEARLY"
+      ],
+      "description": "Execution interval recurrence rule."
+    },
+    "ScheduledPaymentRecurringExpenseInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "interval": {
+          "$ref": "#/definitions/RecurringExpenseInterval"
+        }
+      },
+      "description": "RecurringExpenseInfo wraps parent template details."
+    },
+    "ScheduledPaymentSourceType": {
+      "type": "string",
+      "enum": [
+        "RECURRENT_EXPENSE",
+        "LOAN",
+        "TAX"
+      ],
+      "description": "Parent template source type."
     },
     "SchedulerAdminPauseScheduleBody": {
       "type": "object"
@@ -4365,22 +4490,6 @@
         }
       },
       "description": "AccountInfo wraps minimal account details required for UI listing."
-    },
-    "TransactionBudgetInfo": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Output only. Unique identifier of the budget.",
-          "readOnly": true
-        },
-        "name": {
-          "type": "string",
-          "description": "Output only. User-friendly name of the budget.",
-          "readOnly": true
-        }
-      },
-      "description": "BudgetInfo wraps minimal budget details required for UI listing."
     },
     "googleRpcStatus": {
       "type": "object",
@@ -5463,55 +5572,6 @@
         "compatibilityMode"
       ]
     },
-    "v1CreateRecurringExpenseRequest": {
-      "type": "object",
-      "properties": {
-        "budgetId": {
-          "type": "string",
-          "description": "Required. Budget category identifier.\nValues are of the form `bud_[a-zA-Z0-9]+`."
-        },
-        "name": {
-          "type": "string",
-          "description": "Required. User-friendly name of the recurring expense rule."
-        },
-        "amount": {
-          "type": "string",
-          "format": "int64",
-          "description": "Required. Base payment amount in cents."
-        },
-        "currency": {
-          "type": "string",
-          "description": "Required. Currency code."
-        },
-        "interval": {
-          "type": "string",
-          "description": "Required. Execution interval rule string (cron expression or interval descriptor)."
-        },
-        "nextDueDate": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Required. Initial execution due date."
-        },
-        "isVariable": {
-          "type": "boolean",
-          "description": "Optional. Indicates if the payment amount is variable."
-        },
-        "gracePeriodDays": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Optional. Days allowed past due date before triggering warning events."
-        }
-      },
-      "description": "The request for\n[CreateRecurringExpense][saturn.finance.v1.Finance.CreateRecurringExpense].",
-      "required": [
-        "budgetId",
-        "name",
-        "amount",
-        "currency",
-        "interval",
-        "nextDueDate"
-      ]
-    },
     "v1CreateSpaceRequest": {
       "type": "object",
       "properties": {
@@ -6529,21 +6589,20 @@
           "description": "Required. Currency code."
         },
         "interval": {
-          "type": "string",
-          "description": "Required. Execution interval rule string."
+          "$ref": "#/definitions/RecurringExpenseInterval",
+          "description": "Required. Execution interval rule."
         },
-        "nextDueDate": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Required. Next execution due date."
+        "executionState": {
+          "$ref": "#/definitions/RecurringExpenseExecutionState",
+          "description": "Required. Scheduler engine runtime state."
         },
         "isVariable": {
           "type": "boolean",
           "description": "Optional. Indicates if the payment amount is variable."
         },
         "status": {
-          "type": "string",
-          "description": "Required. Active template status (e.g. \"active\", \"paused\")."
+          "$ref": "#/definitions/v1RecurringExpenseStatus",
+          "description": "Required. Active template status."
         },
         "gracePeriodDays": {
           "type": "integer",
@@ -6561,6 +6620,11 @@
           "format": "date-time",
           "description": "Output only. Last update timestamp.",
           "readOnly": true
+        },
+        "budget": {
+          "$ref": "#/definitions/v1RecurringExpenseBudgetInfo",
+          "description": "Output only. Hydrated minimal budget details. Available only on FULL view.",
+          "readOnly": true
         }
       },
       "description": "RecurringExpense represents a template rule to repeat payments.",
@@ -6570,9 +6634,44 @@
         "amount",
         "currency",
         "interval",
-        "nextDueDate",
+        "executionState",
         "status"
       ]
+    },
+    "v1RecurringExpenseBudgetInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        }
+      },
+      "description": "BudgetInfo wraps minimal budget details required for UI listing."
+    },
+    "v1RecurringExpenseStatus": {
+      "type": "string",
+      "enum": [
+        "ACTIVE",
+        "PAUSED",
+        "ENDED"
+      ],
+      "description": "Active template status."
+    },
+    "v1RecurringExpenseView": {
+      "type": "string",
+      "enum": [
+        "BASIC",
+        "FULL"
+      ],
+      "description": "Scoped resource representation view level."
     },
     "v1RefreshSessionRequest": {
       "type": "object",
@@ -6706,7 +6805,7 @@
           "description": "Required. Budget category identifier.\nValues are of the form `bud_[a-zA-Z0-9]+`."
         },
         "sourceType": {
-          "type": "string",
+          "$ref": "#/definitions/ScheduledPaymentSourceType",
           "description": "Required. Parent template source type."
         },
         "sourceId": {
@@ -6728,8 +6827,8 @@
           "description": "Required. Scheduled execution due date."
         },
         "status": {
-          "type": "string",
-          "description": "Required. Instance execution status (e.g. \"pending\", \"confirmed\")."
+          "$ref": "#/definitions/v1ScheduledPaymentStatus",
+          "description": "Required. Instance execution status."
         },
         "metadata": {
           "type": "string",
@@ -6747,6 +6846,16 @@
           "format": "date-time",
           "description": "Output only. Last update timestamp.",
           "readOnly": true
+        },
+        "budget": {
+          "$ref": "#/definitions/v1ScheduledPaymentBudgetInfo",
+          "description": "Output only. Hydrated minimal budget details. Available only on FULL view.",
+          "readOnly": true
+        },
+        "recurringExpense": {
+          "$ref": "#/definitions/ScheduledPaymentRecurringExpenseInfo",
+          "description": "Output only. Hydrated parent template details. Available only on FULL view.",
+          "readOnly": true
         }
       },
       "description": "ScheduledPayment represents a spawned pending payment instance.",
@@ -6759,6 +6868,41 @@
         "dueDate",
         "status"
       ]
+    },
+    "v1ScheduledPaymentBudgetInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        }
+      },
+      "description": "BudgetInfo wraps minimal budget details required for UI listing."
+    },
+    "v1ScheduledPaymentStatus": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "PROCESSING",
+        "SKIPPED"
+      ],
+      "description": "Instance execution status."
+    },
+    "v1ScheduledPaymentView": {
+      "type": "string",
+      "enum": [
+        "BASIC",
+        "FULL"
+      ],
+      "description": "Scoped resource representation view level."
     },
     "v1SimulateWebhookResponse": {
       "type": "object",
@@ -6986,7 +7130,7 @@
           "readOnly": true
         },
         "budget": {
-          "$ref": "#/definitions/TransactionBudgetInfo",
+          "$ref": "#/definitions/v1TransactionBudgetInfo",
           "description": "Output only. Hydrated minimal budget info. Available only on FULL view.",
           "readOnly": true
         }
@@ -6999,6 +7143,22 @@
         "transactionDate",
         "effectiveDate"
       ]
+    },
+    "v1TransactionBudgetInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. Unique identifier of the budget.",
+          "readOnly": true
+        },
+        "name": {
+          "type": "string",
+          "description": "Output only. User-friendly name of the budget.",
+          "readOnly": true
+        }
+      },
+      "description": "BudgetInfo wraps minimal budget details required for UI listing."
     },
     "v1TransactionEvent": {
       "type": "object",

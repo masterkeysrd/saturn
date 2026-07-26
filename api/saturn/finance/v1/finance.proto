@@ -116,7 +116,7 @@ service Finance {
   rpc CreateRecurringExpense(CreateRecurringExpenseRequest) returns (RecurringExpense) {
     option (google.api.http) = {
       post: "/v1/finance/recurring-expenses"
-      body: "*"
+      body: "recurring_expense"
     };
   }
 
@@ -124,7 +124,7 @@ service Finance {
   rpc UpdateRecurringExpense(UpdateRecurringExpenseRequest) returns (RecurringExpense) {
     option (google.api.http) = {
       put: "/v1/finance/recurring-expenses/{id}"
-      body: "*"
+      body: "recurring_expense"
     };
   }
 
@@ -147,6 +147,14 @@ service Finance {
   rpc ConfirmScheduledPayment(ConfirmScheduledPaymentRequest) returns (Transaction) {
     option (google.api.http) = {
       post: "/v1/finance/scheduled-payments/{payment_id}/confirm"
+      body: "*"
+    };
+  }
+
+  // Links an existing transaction with a pending scheduled payment, marking it cleared.
+  rpc MatchScheduledPayment(MatchScheduledPaymentRequest) returns (Transaction) {
+    option (google.api.http) = {
+      post: "/v1/finance/scheduled-payments/{payment_id}/match"
       body: "*"
     };
   }
@@ -1006,6 +1014,37 @@ message GenerateScheduledPaymentsPayload {
 
 // RecurringExpense represents a template rule to repeat payments.
 message RecurringExpense {
+  // Scoped resource representation view level.
+  enum View {
+    VIEW_UNSPECIFIED = 0;
+    BASIC = 1;
+    FULL = 2;
+  }
+
+  // BudgetInfo wraps minimal budget details required for UI listing.
+  message BudgetInfo {
+    string id = 1;
+    string name = 2;
+    string color = 3;
+    string icon = 4;
+  }
+
+  // Execution interval recurrence rule.
+  enum Interval {
+    INTERVAL_UNSPECIFIED = 0;
+    WEEKLY = 1;
+    MONTHLY = 2;
+    YEARLY = 3;
+  }
+
+  // Active template status.
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+    ACTIVE = 1;
+    PAUSED = 2;
+    ENDED = 3;
+  }
+
   // Output only. Unique identifier.
   // Values are of the form `rec_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
@@ -1026,17 +1065,26 @@ message RecurringExpense {
   // Required. Currency code.
   string currency = 6 [(google.api.field_behavior) = REQUIRED];
 
-  // Required. Execution interval rule string.
-  string interval = 7 [(google.api.field_behavior) = REQUIRED];
+  // Required. Execution interval rule.
+  Interval interval = 7 [(google.api.field_behavior) = REQUIRED];
 
-  // Required. Next execution due date.
-  google.protobuf.Timestamp next_due_date = 8 [(google.api.field_behavior) = REQUIRED];
+  // ExecutionState represents the scheduler engine runtime tracking parameters.
+  message ExecutionState {
+    // Required. Next execution due date.
+    google.protobuf.Timestamp next_due_date = 1 [(google.api.field_behavior) = REQUIRED];
+
+    // Output only. Last execution/posting date.
+    google.protobuf.Timestamp last_payment_date = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  }
+
+  // Required. Scheduler engine runtime state.
+  ExecutionState execution_state = 8 [(google.api.field_behavior) = REQUIRED];
 
   // Optional. Indicates if the payment amount is variable.
   bool is_variable = 9 [(google.api.field_behavior) = OPTIONAL];
 
-  // Required. Active template status (e.g. "active", "paused").
-  string status = 10 [(google.api.field_behavior) = REQUIRED];
+  // Required. Active template status.
+  Status status = 10 [(google.api.field_behavior) = REQUIRED];
 
   // Optional. Days allowed past due date before triggering warning events.
   int32 grace_period_days = 11 [(google.api.field_behavior) = OPTIONAL];
@@ -1046,10 +1094,35 @@ message RecurringExpense {
 
   // Output only. Last update timestamp.
   google.protobuf.Timestamp update_time = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Hydrated minimal budget details. Available only on FULL view.
+  optional BudgetInfo budget = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // ScheduledPayment represents a spawned pending payment instance.
 message ScheduledPayment {
+  // Scoped resource representation view level.
+  enum View {
+    VIEW_UNSPECIFIED = 0;
+    BASIC = 1;
+    FULL = 2;
+  }
+
+  // BudgetInfo wraps minimal budget details required for UI listing.
+  message BudgetInfo {
+    string id = 1;
+    string name = 2;
+    string color = 3;
+    string icon = 4;
+  }
+
+  // RecurringExpenseInfo wraps parent template details.
+  message RecurringExpenseInfo {
+    string id = 1;
+    string name = 2;
+    RecurringExpense.Interval interval = 3;
+  }
+
   // Output only. Unique identifier.
   // Values are of the form `sch_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
@@ -1061,8 +1134,16 @@ message ScheduledPayment {
   // Values are of the form `bud_[a-zA-Z0-9]+`.
   string budget_id = 3 [(google.api.field_behavior) = REQUIRED];
 
+  // Parent template source type.
+  enum SourceType {
+    SOURCE_TYPE_UNSPECIFIED = 0;
+    RECURRENT_EXPENSE = 1;
+    LOAN = 2;
+    TAX = 3;
+  }
+
   // Required. Parent template source type.
-  string source_type = 4 [(google.api.field_behavior) = REQUIRED];
+  SourceType source_type = 4 [(google.api.field_behavior) = REQUIRED];
 
   // Required. Parent template source ID.
   string source_id = 5 [(google.api.field_behavior) = REQUIRED];
@@ -1076,8 +1157,16 @@ message ScheduledPayment {
   // Required. Scheduled execution due date.
   google.protobuf.Timestamp due_date = 8 [(google.api.field_behavior) = REQUIRED];
 
-  // Required. Instance execution status (e.g. "pending", "confirmed").
-  string status = 9 [(google.api.field_behavior) = REQUIRED];
+  // Instance execution status.
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+    PENDING = 1;
+    PROCESSING = 2;
+    SKIPPED = 3;
+  }
+
+  // Required. Instance execution status.
+  Status status = 9 [(google.api.field_behavior) = REQUIRED];
 
   // Optional. Metadata binary payload.
   bytes metadata = 10 [(google.api.field_behavior) = OPTIONAL];
@@ -1087,71 +1176,29 @@ message ScheduledPayment {
 
   // Output only. Last update timestamp.
   google.protobuf.Timestamp update_time = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Hydrated minimal budget details. Available only on FULL view.
+  optional BudgetInfo budget = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Hydrated parent template details. Available only on FULL view.
+  optional RecurringExpenseInfo recurring_expense = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // The request for
 // [CreateRecurringExpense][saturn.finance.v1.Finance.CreateRecurringExpense].
 message CreateRecurringExpenseRequest {
-  // Required. Budget category identifier.
-  // Values are of the form `bud_[a-zA-Z0-9]+`.
-  string budget_id = 1 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. User-friendly name of the recurring expense rule.
-  string name = 2 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. Base payment amount in cents.
-  int64 amount = 3 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. Currency code.
-  string currency = 4 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. Execution interval rule string (cron expression or interval descriptor).
-  string interval = 5 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. Initial execution due date.
-  google.protobuf.Timestamp next_due_date = 6 [(google.api.field_behavior) = REQUIRED];
-
-  // Optional. Indicates if the payment amount is variable.
-  bool is_variable = 7 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Days allowed past due date before triggering warning events.
-  int32 grace_period_days = 8 [(google.api.field_behavior) = OPTIONAL];
+  // Required. The recurring expense template to create.
+  RecurringExpense recurring_expense = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 // The request for
 // [UpdateRecurringExpense][saturn.finance.v1.Finance.UpdateRecurringExpense].
 message UpdateRecurringExpenseRequest {
   // Required. Unique identifier of the template to update.
-  // Values are of the form `rec_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 
-  // Required. Budget category identifier.
-  // Values are of the form `bud_[a-zA-Z0-9]+`.
-  string budget_id = 2 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. User-friendly name.
-  string name = 3 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. Base payment amount in cents.
-  int64 amount = 4 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. Currency code.
-  string currency = 5 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. Execution interval rule string.
-  string interval = 6 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. Next execution due date.
-  google.protobuf.Timestamp next_due_date = 7 [(google.api.field_behavior) = REQUIRED];
-
-  // Optional. Indicates if the payment amount is variable.
-  bool is_variable = 8 [(google.api.field_behavior) = OPTIONAL];
-
-  // Required. Template status string.
-  string status = 9 [(google.api.field_behavior) = REQUIRED];
-
-  // Optional. Days allowed past due date before triggering warning events.
-  int32 grace_period_days = 10 [(google.api.field_behavior) = OPTIONAL];
+  // Required. The recurring expense template to update.
+  RecurringExpense recurring_expense = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 // The request for
@@ -1166,13 +1213,22 @@ message DeleteRecurringExpenseRequest {
 // [ListRecurringExpenses][saturn.finance.v1.Finance.ListRecurringExpenses].
 message ListRecurringExpensesRequest {
   // Optional. Filter templates by active status.
-  string status = 1 [(google.api.field_behavior) = OPTIONAL];
+  RecurringExpense.Status status = 1 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Maximum number of items to return.
   int32 page_size = 2 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Keyset page token.
   string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Representation view level.
+  optional RecurringExpense.View view = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Search string querying the name of the template.
+  optional string search_query = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Sorting specification.
+  optional string sort = 6 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // The response for
@@ -1189,7 +1245,7 @@ message ListRecurringExpensesResponse {
 // [ListScheduledPayments][saturn.finance.v1.Finance.ListScheduledPayments].
 message ListScheduledPaymentsRequest {
   // Optional. Filter instances by payment status.
-  string status = 1 [(google.api.field_behavior) = OPTIONAL];
+  ScheduledPayment.Status status = 1 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Target start date of execution window.
   google.protobuf.Timestamp start_date = 2 [(google.api.field_behavior) = OPTIONAL];
@@ -1202,6 +1258,15 @@ message ListScheduledPaymentsRequest {
 
   // Optional. Keyset page token.
   string page_token = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Representation view level.
+  optional ScheduledPayment.View view = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Search string querying the description or parent info.
+  optional string search_query = 7 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Sorting specification.
+  optional string sort = 8 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // The response for
@@ -1232,6 +1297,31 @@ message ConfirmScheduledPaymentRequest {
 
   // Optional. Narration notes.
   optional string description = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Financial account identifier used to settle the payment.
+  // When provided, the account balance will be updated accordingly.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
+  optional string account_id = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Budget category identifier to allocate the cleared transaction under.
+  // If omitted, defaults to the budget category configured on the scheduled payment.
+  // Values are of the form `bud_[a-zA-Z0-9]+`.
+  optional string budget_id = 7 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Settlement currency code (ISO 4217 standard 3-letter code).
+  // If omitted, defaults to the currency configured on the scheduled payment.
+  optional string currency = 8 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// The request for [MatchScheduledPayment][saturn.finance.v1.Finance.MatchScheduledPayment].
+message MatchScheduledPaymentRequest {
+  // Required. Target scheduled payment identifier.
+  // Values are of the form `sch_[a-zA-Z0-9]+`.
+  string payment_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Existing transaction identifier to match and link.
+  // Values are of the form `txn_[a-zA-Z0-9]+`.
+  string transaction_id = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 // BorrowingDirection defines the type/direction of personal debt agreements.

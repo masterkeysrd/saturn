@@ -95,3 +95,68 @@ export function toCentsString(amountStr: string | number): string {
   const val = typeof amountStr === "number" ? amountStr : parseFloat(amountStr)
   return isNaN(val) ? "0" : Math.round(val * 100).toString()
 }
+
+export function formatInterval(interval: string | undefined | null): string {
+  if (!interval) return "Monthly"
+  const clean = interval.replace(/^(INTERVAL_|STATUS_)/i, "").toLowerCase()
+  if (!clean) return "Monthly"
+  return clean.charAt(0).toUpperCase() + clean.slice(1)
+}
+
+export function formatNextDueDate(dateStr: string | undefined | null): string {
+  if (!dateStr) return "N/A"
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime()) || d.getFullYear() <= 1970) return "N/A"
+  const now = new Date()
+  const showYear = d.getFullYear() !== now.getFullYear()
+  return d.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: showYear ? "numeric" : undefined,
+    timeZone: "UTC",
+  })
+}
+
+export function formatStatus(status: string | undefined | null): string {
+  if (!status) return "Active"
+  const clean = status
+    .replace(/^(STATUS_|RECURRING_EXPENSE_STATUS_)/i, "")
+    .toLowerCase()
+  if (!clean || clean === "unspecified") return "Active"
+  return clean.charAt(0).toUpperCase() + clean.slice(1)
+}
+
+export function isStatusActive(status: string | undefined | null): boolean {
+  if (!status) return true
+  const clean = status
+    .replace(/^(STATUS_|RECURRING_EXPENSE_STATUS_)/i, "")
+    .toUpperCase()
+  return clean === "ACTIVE" || clean === "UNSPECIFIED"
+}
+
+export function formatSourceType(
+  sourceType: string | undefined | null
+): string {
+  if (!sourceType) return "Scheduled Payment"
+  const clean = sourceType
+    .replace(/^SOURCE_TYPE_/i, "")
+    .replace(/_/g, " ")
+    .toLowerCase()
+  if (!clean || clean === "unspecified") return "Scheduled Payment"
+  if (clean === "recurrent expense" || clean === "recurring expense")
+    return "Recurring Expense"
+  return clean
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ")
+}
+
+export function decodeBase64Utf8(base64: string): string {
+  try {
+    const binString = atob(base64)
+    const bytes = Uint8Array.from(binString, (m) => m.charCodeAt(0))
+    return new TextDecoder().decode(bytes)
+  } catch (e) {
+    return ""
+  }
+}

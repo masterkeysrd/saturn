@@ -81,3 +81,25 @@ func (sp *ScheduledPayment) Validate() error {
 	}
 	return nil
 }
+
+const DefaultScheduledPaymentSortField = "due_date"
+
+// ScheduledPaymentSortFields registry maps sortable scheduled payment field names to cursor strings.
+var ScheduledPaymentSortFields = map[string]func(*ScheduledPayment) string{
+	"due_date":    func(sp *ScheduledPayment) string { return sp.DueDate.Format(time.RFC3339) },
+	"amount":      func(sp *ScheduledPayment) string { return fmt.Sprintf("%018d", sp.Amount) },
+	"status":      func(sp *ScheduledPayment) string { return string(sp.Status) },
+	"create_time": func(sp *ScheduledPayment) string { return sp.CreateTime.Format(time.RFC3339) },
+}
+
+func IsScheduledPaymentSortField(field string) bool {
+	_, ok := ScheduledPaymentSortFields[field]
+	return ok
+}
+
+func (sp *ScheduledPayment) GetSortValue(field string) string {
+	if fn, ok := ScheduledPaymentSortFields[field]; ok {
+		return fn(sp)
+	}
+	return sp.GetSortValue(DefaultScheduledPaymentSortField)
+}

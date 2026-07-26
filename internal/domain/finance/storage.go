@@ -156,9 +156,10 @@ type ListTransactionsFilter struct {
 type RecurringExpenseStore interface {
 	Create(ctx context.Context, expense *RecurringExpense) error
 	GetByID(ctx context.Context, id RecurringExpenseID) (*RecurringExpense, error)
+	GetByIDs(ctx context.Context, ids []RecurringExpenseID) ([]*RecurringExpense, error)
 	Update(ctx context.Context, expense *RecurringExpense) error
 	Delete(ctx context.Context, id RecurringExpenseID) error
-	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListRecurringExpensesFilter) ([]*RecurringExpense, string, error)
+	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListRecurringExpensesFilter) (*paging.Page[*RecurringExpense], error)
 	ListPendingGeneration(ctx context.Context, maxDueDate time.Time) ([]*RecurringExpense, error)
 }
 
@@ -168,7 +169,7 @@ type ScheduledPaymentStore interface {
 	GetByID(ctx context.Context, id ScheduledPaymentID) (*ScheduledPayment, error)
 	UpdateStatus(ctx context.Context, id ScheduledPaymentID, status ScheduledPaymentStatus) error
 	Delete(ctx context.Context, id ScheduledPaymentID) error
-	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListScheduledPaymentsFilter) ([]*ScheduledPayment, string, error)
+	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListScheduledPaymentsFilter) (*paging.Page[*ScheduledPayment], error)
 }
 
 // ListRecurringExpensesFilter encapsulates filtering parameters for recurring expenses.
@@ -176,6 +177,8 @@ type ListRecurringExpensesFilter struct {
 	Status        *RecurringExpenseStatus
 	PageSize      int32
 	NextPageToken string
+	SearchQuery   *string
+	Sort          sorting.SortOrder
 }
 
 // ListScheduledPaymentsFilter encapsulates filtering parameters for scheduled payments.
@@ -185,6 +188,8 @@ type ListScheduledPaymentsFilter struct {
 	EndDate       *time.Time
 	PageSize      int32
 	NextPageToken string
+	SearchQuery   *string
+	Sort          sorting.SortOrder
 }
 
 // BorrowingStore defines persistence for personal borrowing/lending agreements.

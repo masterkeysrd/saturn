@@ -31,26 +31,15 @@ type UpdateRecurringExpenseRequest struct {
 	GracePeriodDays int32
 }
 
-type ListRecurringExpensesRequest struct {
-	Status        *string
-	PageSize      int32
-	NextPageToken string
-}
-
-type ListScheduledPaymentsRequest struct {
-	Status        *string
-	StartDate     *time.Time
-	EndDate       *time.Time
-	PageSize      int32
-	NextPageToken string
-}
-
 type ConfirmScheduledPaymentRequest struct {
 	PaymentID       finance.ScheduledPaymentID
 	TransactionDate time.Time
 	EffectiveDate   time.Time
 	ActualAmount    int64
 	Description     string
+	AccountID       *finance.AccountID
+	BudgetID        *finance.BudgetID
+	Currency        *finance.Currency
 }
 
 func (c *Coordinator) CreateRecurringExpense(ctx context.Context, req *CreateRecurringExpenseRequest) (*finance.RecurringExpense, error) {
@@ -105,50 +94,6 @@ func (c *Coordinator) DeleteRecurringExpense(ctx context.Context, id finance.Rec
 	return c.financeService.DeleteRecurringExpense(ctx, id)
 }
 
-func (c *Coordinator) ListRecurringExpenses(ctx context.Context, req *ListRecurringExpensesRequest) ([]*finance.RecurringExpense, string, error) {
-	rCtx, err := c.resolveContext(ctx)
-	if err != nil {
-		return nil, "", err
-	}
-
-	var statusFilter *finance.RecurringExpenseStatus
-	if req.Status != nil {
-		st := finance.RecurringExpenseStatus(*req.Status)
-		statusFilter = &st
-	}
-
-	filter := &finance.ListRecurringExpensesFilter{
-		Status:        statusFilter,
-		PageSize:      req.PageSize,
-		NextPageToken: req.NextPageToken,
-	}
-
-	return c.financeService.ListRecurringExpenses(ctx, rCtx.SpaceID, filter)
-}
-
-func (c *Coordinator) ListScheduledPayments(ctx context.Context, req *ListScheduledPaymentsRequest) ([]*finance.ScheduledPayment, string, error) {
-	rCtx, err := c.resolveContext(ctx)
-	if err != nil {
-		return nil, "", err
-	}
-
-	var statusFilter *finance.ScheduledPaymentStatus
-	if req.Status != nil {
-		st := finance.ScheduledPaymentStatus(*req.Status)
-		statusFilter = &st
-	}
-
-	filter := &finance.ListScheduledPaymentsFilter{
-		Status:        statusFilter,
-		StartDate:     req.StartDate,
-		EndDate:       req.EndDate,
-		PageSize:      req.PageSize,
-		NextPageToken: req.NextPageToken,
-	}
-
-	return c.financeService.ListScheduledPayments(ctx, rCtx.SpaceID, filter)
-}
-
 func (c *Coordinator) ConfirmScheduledPayment(ctx context.Context, req *ConfirmScheduledPaymentRequest) (*finance.Transaction, error) {
 	_, err := c.resolveContext(ctx)
 	if err != nil {
@@ -161,6 +106,26 @@ func (c *Coordinator) ConfirmScheduledPayment(ctx context.Context, req *ConfirmS
 		EffectiveDate:   req.EffectiveDate,
 		ActualAmount:    req.ActualAmount,
 		Description:     req.Description,
+		AccountID:       req.AccountID,
+		BudgetID:        req.BudgetID,
+		Currency:        req.Currency,
+	})
+}
+
+type MatchScheduledPaymentRequest struct {
+	PaymentID     finance.ScheduledPaymentID
+	TransactionID finance.TransactionID
+}
+
+func (c *Coordinator) MatchScheduledPayment(ctx context.Context, req *MatchScheduledPaymentRequest) (*finance.Transaction, error) {
+	_, err := c.resolveContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.financeService.MatchScheduledPayment(ctx, finance.MatchScheduledPaymentRequest{
+		PaymentID:     req.PaymentID,
+		TransactionID: req.TransactionID,
 	})
 }
 

@@ -82,3 +82,26 @@ func (re *RecurringExpense) Validate() error {
 	}
 	return nil
 }
+
+const DefaultRecurringExpenseSortField = "create_time"
+
+// RecurringExpenseSortFields registry maps sortable recurring expense field names to cursor strings.
+var RecurringExpenseSortFields = map[string]func(*RecurringExpense) string{
+	"name":          func(re *RecurringExpense) string { return re.Name },
+	"amount":        func(re *RecurringExpense) string { return fmt.Sprintf("%018d", re.Amount) },
+	"next_due_date": func(re *RecurringExpense) string { return re.NextDueDate.Format(time.RFC3339) },
+	"status":        func(re *RecurringExpense) string { return string(re.Status) },
+	"create_time":   func(re *RecurringExpense) string { return re.CreateTime.Format(time.RFC3339) },
+}
+
+func IsRecurringExpenseSortField(field string) bool {
+	_, ok := RecurringExpenseSortFields[field]
+	return ok
+}
+
+func (re *RecurringExpense) GetSortValue(field string) string {
+	if fn, ok := RecurringExpenseSortFields[field]; ok {
+		return fn(re)
+	}
+	return re.GetSortValue(DefaultRecurringExpenseSortField)
+}

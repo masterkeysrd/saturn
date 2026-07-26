@@ -187,7 +187,7 @@ export function InboxView() {
 
   const { data: paymentsData } = useListScheduledPaymentsQuery(
     {
-      status: "pending",
+      status: "PENDING",
       pageSize: 100,
       pageToken: "",
       startDate: "",

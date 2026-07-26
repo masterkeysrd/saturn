@@ -16,13 +16,44 @@ function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   )
 }
 
-function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
+function formatSelectValueLabel(
+  val: any,
+  placeholder?: React.ReactNode
+): React.ReactNode {
+  if (val === null || val === undefined || val === "") return placeholder
+  if (typeof val === "string") {
+    if (/^[A-Z]{3}$/.test(val)) return val
+    const clean = val
+      .replace(
+        /^(INTERVAL_|STATUS_|RECURRING_EXPENSE_STATUS_|BORROWING_STATUS_|BORROWING_DIRECTION_)/i,
+        ""
+      )
+      .toLowerCase()
+    return clean.charAt(0).toUpperCase() + clean.slice(1)
+  }
+  return val
+}
+
+function SelectValue({
+  className,
+  children,
+  placeholder,
+  ...props
+}: SelectPrimitive.Value.Props) {
   return (
     <SelectPrimitive.Value
       data-slot="select-value"
       className={cn("flex flex-1 text-left", className)}
+      placeholder={placeholder}
       {...props}
-    />
+    >
+      {typeof children === "function"
+        ? children
+        : (val: any) => {
+            if (children) return children
+            return formatSelectValueLabel(val, placeholder)
+          }}
+    </SelectPrimitive.Value>
   )
 }
 
@@ -112,11 +143,16 @@ function SelectLabel({
 function SelectItem({
   className,
   children,
+  label,
   ...props
 }: SelectPrimitive.Item.Props) {
+  const itemLabel =
+    label || (typeof children === "string" ? children : undefined)
+
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
+      label={itemLabel}
       className={cn(
         "relative flex w-full cursor-default items-center gap-2.5 rounded-xl py-2 pr-8 pl-3 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
         className

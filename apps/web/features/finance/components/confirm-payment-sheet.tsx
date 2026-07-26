@@ -2,6 +2,11 @@ import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   useConfirmScheduledPaymentMutation,
+  useMatchScheduledPaymentMutation,
+  useListAccountsQuery,
+  useListBudgetsQuery,
+  useListRecurringExpensesQuery,
+  useListTransactionsQuery,
   type ScheduledPayment,
   type Transaction,
 } from "@/gen/saturn/finance/v1/finance"
@@ -12,12 +17,38 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import { DatePicker } from "@/components/ui/date-picker"
-import { Loader2, CheckCircle2 } from "lucide-react"
+import {
+  Loader2,
+  CheckCircle2,
+  ChevronDown,
+  Sparkles,
+  Link2,
+  Search,
+} from "lucide-react"
 import { CurrencyConversionPreview } from "./currency-conversion-preview"
-import { toCentsString, formatCents } from "../utils"
+import { AccountSelect } from "./account-select"
+import { BudgetSelect } from "./budget-select"
+import { cn } from "@/lib/utils"
+import {
+  toCentsString,
+  formatCents,
+  formatSourceType,
+  getBudgetColors,
+  getBudgetIcon,
+  formatInterval,
+  decodeBase64Utf8,
+} from "../utils"
 
 interface ConfirmPaymentSheetProps {
   open: boolean
@@ -42,11 +73,81 @@ export function ConfirmPaymentSheet({
 }: ConfirmPaymentSheetProps) {
   const navigate = useNavigate()
   const [amount, setAmount] = useState("")
+  const [accountId, setAccountId] = useState("")
+  const [budgetId, setBudgetId] = useState("")
+  const [description, setDescription] = useState("")
   const [transactionDate, setTransactionDate] = useState<Date>(new Date())
   const [effectiveDate, setEffectiveDate] = useState<Date>(new Date())
   const [confirmedTxn, setConfirmedTxn] = useState<Transaction | null>(null)
+  const [selectedTxnId, setSelectedTxnId] = useState<string>("")
+  const [accordionOpen, setAccordionOpen] = useState<boolean>(false)
+  const [txSearch, setTxSearch] = useState<string>("")
+  const [popoverOpen, setPopoverOpen] = useState<boolean>(false)
+
+  const { data: accountsData } = useListAccountsQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: open }
+  )
+  const { data: budgetsData } = useListBudgetsQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: open }
+  )
+  const { data: expensesData } = useListRecurringExpensesQuery(
+    { pageSize: 100, pageToken: "", status: "STATUS_UNSPECIFIED" },
+    { enabled: open }
+  )
+  const { data: transactionsData } = useListTransactionsQuery(
+    { pageSize: 100, pageToken: "", budgetId: "", type: "TYPE_UNSPECIFIED" },
+    { enabled: open }
+  )
+
+  const accounts = accountsData?.accounts || []
+  const budgets = budgetsData?.budgets || []
+  const expenses = expensesData?.recurringExpenses || []
+  const transactions = transactionsData?.transactions || []
+
+  // Filter unlinked expense transactions
+  const unlinkedTransactions = transactions.filter(
+    (t) => !t.sourceType && t.type === "EXPENSE"
+  )
+
+  // Reconciliation Queue style multi-field search filter
+  const filteredTransactions = unlinkedTransactions.filter((t) => {
+    const q = txSearch.toLowerCase().trim()
+    if (!q) return true
+    const vendor = (t.description || "").toLowerCase()
+    const amountStr = formatCents(t.amount || "0").toFixed(2)
+    const budgetName =
+      budgets.find((b) => b.id === t.budgetId)?.name?.toLowerCase() || ""
+    const accountName =
+      accounts.find((a) => a.id === t.accountId)?.name?.toLowerCase() || ""
+    const dateStr = t.transactionDate
+      ? new Date(t.transactionDate).toLocaleDateString()
+      : ""
+
+    return (
+      vendor.includes(q) ||
+      amountStr.includes(q) ||
+      budgetName.includes(q) ||
+      accountName.includes(q) ||
+      dateStr.includes(q)
+    )
+  })
+
+  // Smart Candidate Search (matching amount, currency, and date within 7 days)
+  const candidateMatch = payment
+    ? unlinkedTransactions.find((t) => {
+        if (t.amount !== payment.amount || t.currency !== payment.currency)
+          return false
+        const tDate = new Date(t.transactionDate).getTime()
+        const pDate = new Date(payment.dueDate).getTime()
+        const diffDays = Math.abs(tDate - pDate) / (1000 * 3600 * 24)
+        return diffDays <= 7
+      })
+    : null
 
   const confirmMutation = useConfirmScheduledPaymentMutation()
+  const matchMutation = useMatchScheduledPaymentMutation()
 
   const [prevPaymentId, setPrevPaymentId] = useState<string | null>(null)
   const [prevOpen, setPrevOpen] = useState(false)
@@ -56,10 +157,43 @@ export function ConfirmPaymentSheet({
     setPrevPaymentId(currentPaymentId)
     setPrevOpen(open)
     if (payment) {
+      const matchedExp = payment.sourceId
+        ? expenses.find((e) => e.id === payment.sourceId)
+        : null
+      const metaDesc = payment.metadata
+        ? (() => {
+            try {
+              const decoded = JSON.parse(decodeBase64Utf8(payment.metadata))
+              return decoded?.description || null
+            } catch (e) {
+              return null
+            }
+          })()
+        : null
+
+      const dueFormatted = new Date(payment.dueDate).toISOString().slice(0, 10)
+      const name =
+        matchedExp?.name ||
+        payment.recurringExpense?.name ||
+        "Scheduled Payment"
+      const defaultDesc = metaDesc || `${name} (${dueFormatted})`
+
       setAmount(formatCents(payment.amount).toString())
       setTransactionDate(new Date())
       setEffectiveDate(new Date(payment.dueDate))
+      setBudgetId(payment.budgetId || "")
+      setAccountId("")
+      setDescription(defaultDesc)
       setConfirmedTxn(null) // reset success state on reopen
+
+      // Smart Candidate Initialization
+      if (candidateMatch) {
+        setSelectedTxnId(candidateMatch.id || "")
+        setAccordionOpen(true)
+      } else {
+        setSelectedTxnId("")
+        setAccordionOpen(false)
+      }
     }
   }
 
@@ -70,26 +204,42 @@ export function ConfirmPaymentSheet({
     return `${y}-${m}-${date}T12:00:00Z`
   }
 
-  const handleConfirm = async (e: React.FormEvent) => {
+  const handleConfirmOrMatch = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!payment) return
 
-    const centsAmount = toCentsString(amount)
-    const txDateStr = toLocalISODate(transactionDate)
-    const effDateStr = toLocalISODate(effectiveDate)
+    if (selectedTxnId) {
+      // Execute Match & Link
+      const res = await matchMutation.mutateAsync({
+        payment_id: payment.id || "",
+        req: {
+          paymentId: payment.id || "",
+          transactionId: selectedTxnId,
+        },
+      })
+      refetchPayments()
+      setConfirmedTxn(res)
+    } else {
+      // Execute Create New Transaction
+      const centsAmount = toCentsString(amount)
+      const txDateStr = toLocalISODate(transactionDate)
+      const effDateStr = toLocalISODate(effectiveDate)
 
-    const res = await confirmMutation.mutateAsync({
-      payment_id: payment.id || "",
-      req: {
-        paymentId: payment.id || "",
-        transactionDate: txDateStr,
-        effectiveDate: effDateStr,
-        actualAmount: centsAmount,
-      },
-    })
-
-    refetchPayments()
-    setConfirmedTxn(res)
+      const res = await confirmMutation.mutateAsync({
+        payment_id: payment.id || "",
+        req: {
+          paymentId: payment.id || "",
+          transactionDate: txDateStr,
+          effectiveDate: effDateStr,
+          actualAmount: centsAmount,
+          description: description.trim() || undefined,
+          accountId: accountId || undefined,
+          budgetId: budgetId || undefined,
+        },
+      })
+      refetchPayments()
+      setConfirmedTxn(res)
+    }
   }
 
   const isPending = confirmMutation.isPending
@@ -179,7 +329,7 @@ export function ConfirmPaymentSheet({
         ) : (
           // Confirmation Form Screen
           <div className="flex h-full flex-col justify-between">
-            <div>
+            <div className="overflow-y-auto pr-1">
               <SheetHeader className="p-0">
                 <SheetTitle className="text-xl font-bold">
                   Confirm Payment
@@ -189,101 +339,498 @@ export function ConfirmPaymentSheet({
                 </SheetDescription>
               </SheetHeader>
 
-              {payment && (
-                <form
-                  id="confirm-payment-form"
-                  onSubmit={handleConfirm}
-                  className="mt-8 space-y-6"
-                >
-                  <div className="space-y-2 rounded-2xl border border-muted/20 bg-muted/5 p-4 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        Source Type:
-                      </span>
-                      <span className="font-bold text-foreground capitalize">
-                        {payment.sourceType.replace("_", " ")}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        Original Due Date:
-                      </span>
-                      <span className="font-mono font-bold text-foreground">
-                        {new Date(payment.dueDate).toLocaleDateString(
-                          undefined,
-                          {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                            timeZone: "UTC",
-                          }
-                        )}
-                      </span>
-                    </div>
-                  </div>
+              {payment &&
+                (() => {
+                  const matchedExpense = payment.sourceId
+                    ? expenses.find((e) => e.id === payment.sourceId)
+                    : null
 
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="actualAmount"
-                      className="text-xs font-bold tracking-wider text-muted-foreground uppercase"
+                  const vendorFromMeta = payment.metadata
+                    ? (() => {
+                        try {
+                          const decoded = JSON.parse(
+                            decodeBase64Utf8(payment.metadata)
+                          )
+                          return decoded?.vendor_name || null
+                        } catch (e) {
+                          return null
+                        }
+                      })()
+                    : null
+
+                  const templateName =
+                    matchedExpense?.name ||
+                    payment.recurringExpense?.name ||
+                    vendorFromMeta ||
+                    "Scheduled Outflow"
+
+                  const budget =
+                    payment.budget ||
+                    budgets.find((b) => b.id === (budgetId || payment.budgetId))
+                  const colors = getBudgetColors(budget?.color || "indigo")
+                  const Icon = getBudgetIcon(budget?.icon || "piggy-bank")
+
+                  const intervalVal =
+                    matchedExpense?.interval ||
+                    payment.recurringExpense?.interval
+                  const intervalLabel = intervalVal
+                    ? formatInterval(intervalVal)
+                    : null
+
+                  return (
+                    <form
+                      id="confirm-payment-form"
+                      onSubmit={handleConfirmOrMatch}
+                      className="mt-6 space-y-5"
                     >
-                      Amount Paid
-                    </Label>
-                    <div className="flex h-12 items-center overflow-hidden rounded-xl border border-border/60 bg-background/50 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20">
-                      <input
-                        id="actualAmount"
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        placeholder="0.00"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        required
-                        className="h-full w-full flex-1 bg-transparent px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
-                      />
+                      {/* Rich Context Card for Scheduled Payment / Recurring Expense */}
+                      <div className="rounded-2xl border border-border/40 bg-card/40 p-4 shadow-sm backdrop-blur-md">
+                        <div className="flex items-center gap-3.5">
+                          <div
+                            className={cn(
+                              "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-xs",
+                              colors.bg,
+                              colors.text
+                            )}
+                          >
+                            <Icon className="h-5 w-5" />
+                          </div>
 
-                      <div className="h-6 w-px shrink-0 bg-border/40" />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <h4 className="truncate text-sm font-bold text-foreground">
+                                {templateName}
+                              </h4>
+                              {intervalLabel && (
+                                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                                  {intervalLabel}
+                                </span>
+                              )}
+                            </div>
 
-                      <div className="px-4 text-xs font-bold text-muted-foreground select-none">
-                        {payment.currency}
+                            <div className="mt-0.5 flex items-center justify-between gap-2 text-xs">
+                              {budget?.name && (
+                                <span className="truncate text-[11px] font-medium text-muted-foreground">
+                                  Budget:{" "}
+                                  <span className="font-semibold text-foreground">
+                                    {budget.name}
+                                  </span>
+                                </span>
+                              )}
+                              <span className="shrink-0 font-semibold text-foreground">
+                                Target: {formatCents(payment.amount).toFixed(2)}{" "}
+                                <span className="text-[10px] font-medium text-muted-foreground uppercase">
+                                  {payment.currency}
+                                </span>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-3.5 grid grid-cols-2 gap-2 border-t border-border/20 pt-3 text-xs">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                              Source
+                            </span>
+                            <span className="font-bold text-foreground">
+                              {formatSourceType(payment.sourceType)}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                              Due Date
+                            </span>
+                            <span className="font-mono font-bold text-foreground">
+                              {new Date(payment.dueDate).toLocaleDateString(
+                                undefined,
+                                {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                  timeZone: "UTC",
+                                }
+                              )}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
 
-                  <CurrencyConversionPreview
-                    conversion={conversion}
-                    fromCurrency={payment.currency}
-                  />
+                      {/* Mini Accordion for Linking Existing Transaction */}
+                      <div className="overflow-hidden rounded-2xl border border-border/40 bg-card/30 transition-all">
+                        <button
+                          type="button"
+                          onClick={() => setAccordionOpen(!accordionOpen)}
+                          className="flex w-full items-center justify-between p-3.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted/10"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Link2 className="h-4 w-4 text-primary" />
+                            <span>Link Existing Bank Transaction</span>
+                            {candidateMatch ? (
+                              <span className="flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-500">
+                                <Sparkles className="h-3 w-3" />1 Smart Match
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-normal text-muted-foreground">
+                                (Optional)
+                              </span>
+                            )}
+                          </div>
+                          <ChevronDown
+                            className={cn(
+                              "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                              accordionOpen && "rotate-180"
+                            )}
+                          />
+                        </button>
 
-                  <div className="space-y-2">
-                    <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                      Date Cleared
-                    </Label>
-                    <DatePicker
-                      date={transactionDate}
-                      setDate={(d) => d && setTransactionDate(d)}
-                    />
-                  </div>
+                        {accordionOpen && (
+                          <div className="space-y-3 border-t border-border/20 bg-muted/5 p-3.5 text-xs">
+                            {/* Smart Candidate Suggestion Card */}
+                            {candidateMatch && (
+                              <div className="space-y-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3">
+                                <div className="flex items-center justify-between">
+                                  <span className="flex items-center gap-1.5 text-[11px] font-bold text-amber-500">
+                                    <Sparkles className="h-3.5 w-3.5" />
+                                    Suggested Match Found
+                                  </span>
+                                  <Button
+                                    type="button"
+                                    variant={
+                                      selectedTxnId === candidateMatch.id
+                                        ? "default"
+                                        : "outline"
+                                    }
+                                    size="sm"
+                                    onClick={() =>
+                                      setSelectedTxnId(
+                                        selectedTxnId === candidateMatch.id
+                                          ? ""
+                                          : candidateMatch.id || ""
+                                      )
+                                    }
+                                    className="h-7 cursor-pointer rounded-lg px-2.5 text-[10px] font-bold"
+                                  >
+                                    {selectedTxnId === candidateMatch.id
+                                      ? "Selected"
+                                      : "Use Suggestion"}
+                                  </Button>
+                                </div>
+                                <div className="flex items-center justify-between pt-0.5 font-medium text-foreground">
+                                  <span className="max-w-[200px] truncate">
+                                    {candidateMatch.description ||
+                                      "Bank Outflow"}
+                                  </span>
+                                  <span className="font-bold">
+                                    {formatCents(candidateMatch.amount).toFixed(
+                                      2
+                                    )}{" "}
+                                    <span className="text-[9px] font-medium text-muted-foreground uppercase">
+                                      {candidateMatch.currency}
+                                    </span>
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                  <span>
+                                    {new Date(
+                                      candidateMatch.transactionDate
+                                    ).toLocaleDateString(undefined, {
+                                      month: "short",
+                                      day: "numeric",
+                                    })}
+                                  </span>
+                                  {candidateMatch.account && (
+                                    <>
+                                      <span>•</span>
+                                      <span>{candidateMatch.account.name}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            )}
 
-                  <div className="space-y-2">
-                    <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                      Effective Date
-                    </Label>
-                    <DatePicker
-                      date={effectiveDate}
-                      setDate={(d) => d && setEffectiveDate(d)}
-                    />
-                  </div>
-                </form>
-              )}
+                            {/* Manual Search Select using Reconciliation Queue Search Popover */}
+                            <div className="space-y-1.5">
+                              <Label className="text-[11px] font-semibold text-muted-foreground">
+                                {candidateMatch
+                                  ? "Or search and pick another transaction:"
+                                  : "Search transaction to pair with:"}
+                              </Label>
+                              <Popover
+                                open={popoverOpen}
+                                onOpenChange={setPopoverOpen}
+                                modal={false}
+                              >
+                                <PopoverTrigger className="flex h-10 w-full cursor-pointer items-center justify-between rounded-xl border border-border/60 bg-background/50 px-3 text-left font-normal text-foreground transition-colors hover:bg-background/80 focus:ring-1 focus:ring-ring">
+                                  {selectedTxnId ? (
+                                    (() => {
+                                      const matched = transactions.find(
+                                        (t) => t.id === selectedTxnId
+                                      )
+                                      if (!matched)
+                                        return "Selected Transaction"
+                                      const dateStr = matched.transactionDate
+                                        ? new Date(
+                                            matched.transactionDate
+                                          ).toLocaleDateString(undefined, {
+                                            month: "short",
+                                            day: "numeric",
+                                          })
+                                        : ""
+                                      const amtStr = formatCents(
+                                        matched.amount || "0"
+                                      ).toFixed(2)
+                                      return (
+                                        <div className="flex w-full items-center justify-between pr-1 text-xs">
+                                          <div className="flex min-w-0 items-center gap-2">
+                                            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500" />
+                                            <span className="max-w-[190px] truncate font-semibold text-foreground">
+                                              {matched.description || "Outflow"}
+                                            </span>
+                                            <span className="shrink-0 text-[10px] text-muted-foreground">
+                                              ({dateStr})
+                                            </span>
+                                          </div>
+                                          <span className="shrink-0 font-bold text-foreground">
+                                            {amtStr} {matched.currency}
+                                          </span>
+                                        </div>
+                                      )
+                                    })()
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">
+                                      Search by vendor, amount, budget, or
+                                      account...
+                                    </span>
+                                  )}
+                                  <ChevronDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
+                                </PopoverTrigger>
+
+                                <PopoverContent
+                                  align="start"
+                                  className="flex w-[var(--anchor-width)] min-w-[340px] flex-col gap-2 rounded-2xl border border-border/50 bg-card/95 p-2.5 shadow-2xl backdrop-blur-xl"
+                                >
+                                  <div className="relative">
+                                    <Search className="absolute top-2.5 left-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                                    <Input
+                                      placeholder="Type to search (vendor, amount, budget...)"
+                                      className="h-9 rounded-xl border-border/50 bg-background/50 pl-8 text-xs focus-visible:ring-ring"
+                                      value={txSearch}
+                                      onChange={(e) =>
+                                        setTxSearch(e.target.value)
+                                      }
+                                      autoFocus
+                                    />
+                                  </div>
+                                  <ScrollArea className="h-56">
+                                    <div className="flex flex-col gap-1 pr-1">
+                                      <button
+                                        type="button"
+                                        className="flex w-full cursor-pointer items-center justify-between rounded-xl px-2.5 py-2 text-left text-xs font-semibold text-rose-400 transition-colors hover:bg-rose-500/10"
+                                        onClick={() => {
+                                          setSelectedTxnId("")
+                                          setPopoverOpen(false)
+                                        }}
+                                      >
+                                        <span>
+                                          Don't link (Create new transaction)
+                                        </span>
+                                      </button>
+                                      <Separator className="my-1 bg-border/10" />
+                                      {filteredTransactions.length === 0 ? (
+                                        <div className="p-4 text-center text-xs text-muted-foreground">
+                                          No unlinked transactions found.
+                                        </div>
+                                      ) : (
+                                        filteredTransactions.map((t) => {
+                                          const dateStr = t.transactionDate
+                                            ? new Date(
+                                                t.transactionDate
+                                              ).toLocaleDateString(undefined, {
+                                                month: "short",
+                                                day: "numeric",
+                                              })
+                                            : ""
+                                          const amtStr = formatCents(
+                                            t.amount || "0"
+                                          ).toFixed(2)
+                                          const budgetName = budgets.find(
+                                            (b) => b.id === t.budgetId
+                                          )?.name
+                                          const accountName = accounts.find(
+                                            (a) => a.id === t.accountId
+                                          )?.name
+                                          const isSelected =
+                                            selectedTxnId === t.id
+
+                                          return (
+                                            <button
+                                              key={t.id}
+                                              type="button"
+                                              className={cn(
+                                                "flex w-full cursor-pointer items-center justify-between rounded-xl px-2.5 py-2 text-left text-xs transition-colors",
+                                                isSelected
+                                                  ? "bg-primary/10 font-semibold text-primary"
+                                                  : "text-foreground hover:bg-muted/10"
+                                              )}
+                                              onClick={() => {
+                                                setSelectedTxnId(t.id || "")
+                                                setPopoverOpen(false)
+                                              }}
+                                            >
+                                              <div className="flex min-w-0 flex-col gap-0.5 pr-2">
+                                                <div className="flex items-center gap-1.5">
+                                                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500" />
+                                                  <span className="truncate font-bold text-foreground">
+                                                    {t.description || "Outflow"}
+                                                  </span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                                  <span>{dateStr}</span>
+                                                  {accountName && (
+                                                    <>
+                                                      <span>•</span>
+                                                      <span>{accountName}</span>
+                                                    </>
+                                                  )}
+                                                  {budgetName && (
+                                                    <>
+                                                      <span>•</span>
+                                                      <span className="font-medium text-foreground/80">
+                                                        {budgetName}
+                                                      </span>
+                                                    </>
+                                                  )}
+                                                </div>
+                                              </div>
+
+                                              <span className="shrink-0 font-mono font-bold text-foreground">
+                                                {amtStr} {t.currency}
+                                              </span>
+                                            </button>
+                                          )
+                                        })
+                                      )}
+                                    </div>
+                                  </ScrollArea>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {!selectedTxnId && (
+                        <>
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor="actualAmount"
+                              className="text-xs font-bold tracking-wider text-muted-foreground uppercase"
+                            >
+                              Amount Paid
+                            </Label>
+                            <div className="flex h-12 items-center overflow-hidden rounded-xl border border-border/60 bg-background/50 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20">
+                              <input
+                                id="actualAmount"
+                                type="number"
+                                step="0.01"
+                                min="0.01"
+                                placeholder="0.00"
+                                value={amount}
+                                onChange={(e) => setAmount(e.target.value)}
+                                required
+                                className="h-full w-full flex-1 bg-transparent px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+                              />
+
+                              <div className="h-6 w-px shrink-0 bg-border/40" />
+
+                              <div className="px-4 text-xs font-bold text-muted-foreground select-none">
+                                {payment.currency}
+                              </div>
+                            </div>
+                          </div>
+
+                          <CurrencyConversionPreview
+                            conversion={conversion}
+                            fromCurrency={payment.currency}
+                          />
+
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
+                              Financial Account (Paid From)
+                            </Label>
+                            <AccountSelect
+                              value={accountId}
+                              onValueChange={setAccountId}
+                              accounts={accounts}
+                              allowNone
+                              placeholder="Select account used for payment..."
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
+                              Budget Category
+                            </Label>
+                            <BudgetSelect
+                              value={budgetId}
+                              onValueChange={setBudgetId}
+                              budgets={budgets}
+                              placeholder="Select budget category..."
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor="confirm-description"
+                              className="text-xs font-bold tracking-wider text-muted-foreground uppercase"
+                            >
+                              Description / Notes
+                            </Label>
+                            <Input
+                              id="confirm-description"
+                              type="text"
+                              placeholder="Optional notes or narration..."
+                              value={description}
+                              onChange={(e) => setDescription(e.target.value)}
+                              className="h-12 rounded-xl border-border/60 bg-background/50"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
+                                Date Cleared
+                              </Label>
+                              <DatePicker
+                                date={transactionDate}
+                                setDate={(d) => d && setTransactionDate(d)}
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
+                                Effective Date
+                              </Label>
+                              <DatePicker
+                                date={effectiveDate}
+                                setDate={(d) => d && setEffectiveDate(d)}
+                              />
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </form>
+                  )
+                })()}
             </div>
 
-            <div className="mt-8 flex gap-3">
+            <div className="mt-6 flex gap-3 pt-3">
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}
                 className="h-12 flex-1 cursor-pointer rounded-xl border-border/60 text-xs font-bold hover:bg-muted/10"
-                disabled={isPending}
+                disabled={isPending || matchMutation.isPending}
               >
                 Cancel
               </Button>
@@ -291,13 +838,15 @@ export function ConfirmPaymentSheet({
                 type="submit"
                 form="confirm-payment-form"
                 className="h-12 flex-1 cursor-pointer rounded-xl bg-gradient-to-r from-primary to-accent text-xs font-bold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.01] hover:opacity-95"
-                disabled={isPending}
+                disabled={isPending || matchMutation.isPending}
               >
-                {isPending ? (
+                {isPending || matchMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Clearing...
+                    {selectedTxnId ? "Linking..." : "Clearing..."}
                   </>
+                ) : selectedTxnId ? (
+                  "Link & Clear Payment"
                 ) : (
                   "Clear Payment"
                 )}

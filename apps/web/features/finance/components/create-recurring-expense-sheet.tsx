@@ -5,6 +5,8 @@ import {
   type RecurringExpense,
   type Budget,
   type CurrencyInfo,
+  type RecurringExpense_Interval,
+  type RecurringExpense_Status,
 } from "@/gen/saturn/finance/v1/finance"
 import {
   Sheet,
@@ -73,6 +75,30 @@ export function CreateRecurringExpenseSheet({
   const [prevExpenseId, setPrevExpenseId] = useState<string | null>(null)
   const [prevOpen, setPrevOpen] = useState(false)
 
+  const normalizeIntervalVal = (
+    intv: string | undefined
+  ): RecurringExpense_Interval => {
+    if (!intv) return "MONTHLY"
+    const clean = intv.replace(/^INTERVAL_/i, "").toUpperCase()
+    if (clean === "WEEKLY" || clean === "MONTHLY" || clean === "YEARLY") {
+      return clean as RecurringExpense_Interval
+    }
+    return "MONTHLY"
+  }
+
+  const normalizeStatusVal = (
+    st: string | undefined
+  ): RecurringExpense_Status => {
+    if (!st) return "ACTIVE"
+    const clean = st
+      .replace(/^(STATUS_|RECURRING_EXPENSE_STATUS_)/i, "")
+      .toUpperCase()
+    if (clean === "ACTIVE" || clean === "PAUSED" || clean === "ENDED") {
+      return clean as RecurringExpense_Status
+    }
+    return "ACTIVE"
+  }
+
   const currentExpenseId = editExpense?.id || null
   if (currentExpenseId !== prevExpenseId || open !== prevOpen) {
     setPrevExpenseId(currentExpenseId)
@@ -82,20 +108,28 @@ export function CreateRecurringExpenseSheet({
       setName(editExpense.name)
       setAmount(formatCents(editExpense.amount).toString())
       setCurrency(editExpense.currency)
-      setInterval(editExpense.interval)
-      setNextDueDate(new Date(editExpense.nextDueDate))
+      setInterval(normalizeIntervalVal(editExpense.interval))
+      const rawNextDueDate =
+        editExpense.executionState?.nextDueDate ||
+        (editExpense.executionState as any)?.next_due_date ||
+        (editExpense as any).nextDueDate ||
+        (editExpense as any).next_due_date
+      const parsedDate = rawNextDueDate ? new Date(rawNextDueDate) : new Date()
+      setNextDueDate(
+        parsedDate && !isNaN(parsedDate.getTime()) ? parsedDate : new Date()
+      )
       setIsVariable(editExpense.isVariable)
-      setStatus(editExpense.status)
+      setStatus(normalizeStatusVal(editExpense.status))
       setGracePeriodDays(editExpense.gracePeriodDays || 0)
     } else {
       setBudgetId("")
       setName("")
       setAmount("")
       setCurrency(baseCurrency || "USD")
-      setInterval("monthly")
+      setInterval("MONTHLY")
       setNextDueDate(new Date())
       setIsVariable(false)
-      setStatus("active")
+      setStatus("ACTIVE")
       setGracePeriodDays(0)
     }
   }
@@ -115,6 +149,24 @@ export function CreateRecurringExpenseSheet({
     }
   }
 
+  const mapIntervalToProto = (intv: string): RecurringExpense_Interval => {
+    const clean = intv.replace(/^INTERVAL_/i, "").toUpperCase()
+    if (clean === "WEEKLY" || clean === "MONTHLY" || clean === "YEARLY") {
+      return clean as RecurringExpense_Interval
+    }
+    return "INTERVAL_UNSPECIFIED"
+  }
+
+  const mapStatusToProto = (st: string): RecurringExpense_Status => {
+    const clean = st
+      .replace(/^(STATUS_|RECURRING_EXPENSE_STATUS_)/i, "")
+      .toUpperCase()
+    if (clean === "ACTIVE" || clean === "PAUSED" || clean === "ENDED") {
+      return clean as RecurringExpense_Status
+    }
+    return "STATUS_UNSPECIFIED"
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!budgetId) return
@@ -127,27 +179,38 @@ export function CreateRecurringExpenseSheet({
         id: editExpense.id || "",
         req: {
           id: editExpense.id || "",
-          budgetId,
-          name,
-          amount: centsAmount,
-          currency,
-          interval,
-          nextDueDate: nextDueDateStr,
-          isVariable,
-          status,
-          gracePeriodDays,
+          recurringExpense: {
+            id: editExpense.id || "",
+            spaceId: editExpense.spaceId || "",
+            budgetId,
+            name,
+            amount: centsAmount,
+            currency,
+            interval: mapIntervalToProto(interval),
+            executionState: {
+              nextDueDate: nextDueDateStr,
+            },
+            isVariable,
+            status: mapStatusToProto(status),
+            gracePeriodDays,
+          },
         },
       })
     } else {
       await createMutation.mutateAsync({
-        budgetId,
-        name,
-        amount: centsAmount,
-        currency,
-        interval,
-        nextDueDate: nextDueDateStr,
-        isVariable,
-        gracePeriodDays,
+        recurringExpense: {
+          budgetId,
+          name,
+          amount: centsAmount,
+          currency,
+          interval: mapIntervalToProto(interval),
+          executionState: {
+            nextDueDate: nextDueDateStr,
+          },
+          isVariable,
+          status: "ACTIVE",
+          gracePeriodDays,
+        },
       })
     }
 
@@ -265,22 +328,20 @@ export function CreateRecurringExpenseSheet({
             </Label>
             <Select
               value={interval}
-              onValueChange={(val) => setInterval(val || "monthly")}
+              onValueChange={(val) =>
+                setInterval((val as RecurringExpense_Interval) || "MONTHLY")
+              }
             >
               <SelectTrigger
                 id="interval"
                 className="!h-12 w-full rounded-xl border-border/60 bg-background/50"
               >
-                <SelectValue placeholder="Monthly">
-                  {interval
-                    ? interval.charAt(0).toUpperCase() + interval.slice(1)
-                    : undefined}
-                </SelectValue>
+                <SelectValue placeholder="Select interval..." />
               </SelectTrigger>
               <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="monthly">Monthly</SelectItem>
-                <SelectItem value="yearly">Yearly</SelectItem>
+                <SelectItem value="WEEKLY">Weekly</SelectItem>
+                <SelectItem value="MONTHLY">Monthly</SelectItem>
+                <SelectItem value="YEARLY">Yearly</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -343,18 +404,20 @@ export function CreateRecurringExpenseSheet({
               </Label>
               <Select
                 value={status}
-                onValueChange={(val) => setStatus(val || "active")}
+                onValueChange={(val) =>
+                  setStatus((val as RecurringExpense_Status) || "ACTIVE")
+                }
               >
                 <SelectTrigger
                   id="status"
                   className="!h-12 w-full rounded-xl border-border/60 bg-background/50"
                 >
-                  <SelectValue />
+                  <SelectValue placeholder="Select status..." />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="paused">Paused</SelectItem>
-                  <SelectItem value="ended">Ended</SelectItem>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="PAUSED">Paused</SelectItem>
+                  <SelectItem value="ENDED">Ended</SelectItem>
                 </SelectContent>
               </Select>
             </div>

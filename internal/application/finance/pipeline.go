@@ -185,15 +185,17 @@ func (c *Coordinator) pipelineExtractNode(ctx context.Context, state *IngestionS
 		accounts = page.Items
 	}
 
-	payments, _, err := c.financeService.ListScheduledPayments(ctx, finance.SpaceID(state.SpaceID), &finance.ListScheduledPaymentsFilter{})
+	spPage, err := c.financeService.ListScheduledPayments(ctx, finance.SpaceID(state.SpaceID), &finance.ListScheduledPaymentsFilter{})
 	if err != nil {
 		return nil, fmt.Errorf("list scheduled payments: %w", err)
 	}
+	payments := spPage.Items
 
-	expenses, _, err := c.financeService.ListRecurringExpenses(ctx, finance.SpaceID(state.SpaceID), &finance.ListRecurringExpensesFilter{})
+	reePage, err := c.financeService.ListRecurringExpenses(ctx, finance.SpaceID(state.SpaceID), &finance.ListRecurringExpensesFilter{})
 	if err != nil {
 		return nil, fmt.Errorf("list recurring expenses: %w", err)
 	}
+	expenses := reePage.Items
 
 	statusActive := finance.BorrowingStatusActive
 	borrowings, _, err := c.financeService.ListBorrowings(ctx, finance.SpaceID(state.SpaceID), &finance.ListBorrowingsFilter{

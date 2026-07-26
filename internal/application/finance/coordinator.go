@@ -41,9 +41,10 @@ type FinanceService interface {
 	GetRecurringExpense(ctx context.Context, id finance.RecurringExpenseID) (*finance.RecurringExpense, error)
 	UpdateRecurringExpense(ctx context.Context, expense *finance.RecurringExpense) (*finance.RecurringExpense, error)
 	DeleteRecurringExpense(ctx context.Context, id finance.RecurringExpenseID) error
-	ListRecurringExpenses(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListRecurringExpensesFilter) ([]*finance.RecurringExpense, string, error)
-	ListScheduledPayments(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListScheduledPaymentsFilter) ([]*finance.ScheduledPayment, string, error)
+	ListRecurringExpenses(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListRecurringExpensesFilter) (*paging.Page[*finance.RecurringExpense], error)
+	ListScheduledPayments(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListScheduledPaymentsFilter) (*paging.Page[*finance.ScheduledPayment], error)
 	ConfirmScheduledPayment(ctx context.Context, req finance.ConfirmScheduledPaymentRequest) (*finance.Transaction, error)
+	MatchScheduledPayment(ctx context.Context, req finance.MatchScheduledPaymentRequest) (*finance.Transaction, error)
 	GenerateScheduledPayments(ctx context.Context) error
 
 	CreateBorrowing(ctx context.Context, b *finance.Borrowing, createAsTransaction bool) (*finance.Borrowing, error)

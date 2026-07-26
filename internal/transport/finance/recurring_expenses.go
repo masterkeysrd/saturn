@@ -10,30 +10,43 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	financev1 "github.com/masterkeysrd/saturn/apis/saturn/finance/v1"
+	financeaggregator "github.com/masterkeysrd/saturn/internal/aggregator/finance"
 	financeapp "github.com/masterkeysrd/saturn/internal/application/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
+	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
 
 func (h *Handler) CreateRecurringExpense(ctx context.Context, req *financev1.CreateRecurringExpenseRequest) (*financev1.RecurringExpense, error) {
-	var nextDueDate time.Time
-	if req.GetNextDueDate() != nil {
-		nextDueDate = req.GetNextDueDate().AsTime()
+	exp := req.GetRecurringExpense()
+	if exp == nil {
+		return nil, status.Error(codes.InvalidArgument, "recurring_expense is required")
 	}
 
-	currency, err := finance.ParseCurrency(req.GetCurrency())
+	var nextDueDate time.Time
+	if exp.GetExecutionState() != nil && exp.GetExecutionState().GetNextDueDate() != nil {
+		nextDueDate = exp.GetExecutionState().GetNextDueDate().AsTime()
+	}
+
+	currency, err := finance.ParseCurrency(exp.GetCurrency())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
+	interval, err := mapProtoIntervalToDomain(exp.GetInterval())
+	if err != nil {
+		return nil, err
+	}
+
 	appReq := &financeapp.CreateRecurringExpenseRequest{
-		BudgetID:        finance.BudgetID(req.GetBudgetId()),
-		Name:            req.GetName(),
-		Amount:          req.GetAmount(),
+		BudgetID:        finance.BudgetID(exp.GetBudgetId()),
+		Name:            exp.GetName(),
+		Amount:          exp.GetAmount(),
 		Currency:        currency,
-		Interval:        req.GetInterval(),
+		Interval:        interval,
 		DueDate:         nextDueDate,
-		IsVariable:      req.GetIsVariable(),
-		GracePeriodDays: req.GetGracePeriodDays(),
+		IsVariable:      exp.GetIsVariable(),
+		GracePeriodDays: exp.GetGracePeriodDays(),
 	}
 
 	expense, err := h.Coordinator.CreateRecurringExpense(ctx, appReq)
@@ -45,32 +58,47 @@ func (h *Handler) CreateRecurringExpense(ctx context.Context, req *financev1.Cre
 }
 
 func (h *Handler) UpdateRecurringExpense(ctx context.Context, req *financev1.UpdateRecurringExpenseRequest) (*financev1.RecurringExpense, error) {
+	exp := req.GetRecurringExpense()
+	if exp == nil {
+		return nil, status.Error(codes.InvalidArgument, "recurring_expense is required")
+	}
+
 	var nextDueDate time.Time
-	if req.GetNextDueDate() != nil {
-		nextDueDate = req.GetNextDueDate().AsTime()
+	if exp.GetExecutionState() != nil && exp.GetExecutionState().GetNextDueDate() != nil {
+		nextDueDate = exp.GetExecutionState().GetNextDueDate().AsTime()
 	}
 
-	currency, err := finance.ParseCurrency(req.GetCurrency())
+	currency, err := finance.ParseCurrency(exp.GetCurrency())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	id, err := finance.ParseRecurringExpenseID(req.GetId())
+	id, err := finance.ParseRecurringExpenseID(exp.GetId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	interval, err := mapProtoIntervalToDomain(exp.GetInterval())
+	if err != nil {
+		return nil, err
+	}
+
+	statusVal, err := mapProtoStatusToDomain(exp.GetStatus())
+	if err != nil {
+		return nil, err
 	}
 
 	appReq := &financeapp.UpdateRecurringExpenseRequest{
 		ID:              id,
-		BudgetID:        finance.BudgetID(req.GetBudgetId()),
-		Name:            req.GetName(),
-		Amount:          req.GetAmount(),
+		BudgetID:        finance.BudgetID(exp.GetBudgetId()),
+		Name:            exp.GetName(),
+		Amount:          exp.GetAmount(),
 		Currency:        currency,
-		Interval:        req.GetInterval(),
+		Interval:        interval,
 		DueDate:         nextDueDate,
-		IsVariable:      req.GetIsVariable(),
-		Status:          req.GetStatus(),
-		GracePeriodDays: req.GetGracePeriodDays(),
+		IsVariable:      exp.GetIsVariable(),
+		Status:          string(statusVal),
+		GracePeriodDays: exp.GetGracePeriodDays(),
 	}
 
 	expense, err := h.Coordinator.UpdateRecurringExpense(ctx, appReq)
@@ -95,38 +123,65 @@ func (h *Handler) DeleteRecurringExpense(ctx context.Context, req *financev1.Del
 }
 
 func (h *Handler) ListRecurringExpenses(ctx context.Context, req *financev1.ListRecurringExpensesRequest) (*financev1.ListRecurringExpensesResponse, error) {
+	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	}
+	spaceID := finance.SpaceID(spaceIDStr)
+
 	var statusFilter *string
-	if req.GetStatus() != "" {
-		st := req.GetStatus()
+	if req.GetStatus() != financev1.RecurringExpense_STATUS_UNSPECIFIED {
+		domainStatus, err := mapProtoStatusToDomain(req.GetStatus())
+		if err != nil {
+			return nil, err
+		}
+		st := string(domainStatus)
 		statusFilter = &st
 	}
 
-	appReq := &financeapp.ListRecurringExpensesRequest{
-		Status:        statusFilter,
+	filter := finance.ListRecurringExpensesFilter{
+		Status:        (*finance.RecurringExpenseStatus)(statusFilter),
 		PageSize:      req.GetPageSize(),
 		NextPageToken: req.GetPageToken(),
+		SearchQuery:   req.SearchQuery,
+		Sort:          sorting.Parse(req.GetSort()),
 	}
 
-	expenses, nextToken, err := h.Coordinator.ListRecurringExpenses(ctx, appReq)
+	viewType := financeaggregator.ViewBasic
+	if req.GetView() == financev1.RecurringExpense_FULL {
+		viewType = financeaggregator.ViewFull
+	}
+
+	page, err := h.Aggregator.ListRecurringExpenses(ctx, spaceID, viewType, filter)
 	if err != nil {
 		return nil, h.mapError(err)
 	}
 
-	protoExpenses := make([]*financev1.RecurringExpense, 0, len(expenses))
-	for _, e := range expenses {
-		protoExpenses = append(protoExpenses, toProtoRecurringExpense(e))
+	protoExpenses := make([]*financev1.RecurringExpense, 0, len(page.Items))
+	for _, e := range page.Items {
+		protoExpenses = append(protoExpenses, toProtoAggregatedRecurringExpense(e))
 	}
 
 	return &financev1.ListRecurringExpensesResponse{
 		RecurringExpenses: protoExpenses,
-		NextPageToken:     nextToken,
+		NextPageToken:     page.NextPageToken,
 	}, nil
 }
 
 func (h *Handler) ListScheduledPayments(ctx context.Context, req *financev1.ListScheduledPaymentsRequest) (*financev1.ListScheduledPaymentsResponse, error) {
+	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	}
+	spaceID := finance.SpaceID(spaceIDStr)
+
 	var statusFilter *string
-	if req.GetStatus() != "" {
-		st := req.GetStatus()
+	if req.GetStatus() != financev1.ScheduledPayment_STATUS_UNSPECIFIED {
+		domainStatus, err := mapProtoPaymentStatusToDomain(req.GetStatus())
+		if err != nil {
+			return nil, err
+		}
+		st := string(domainStatus)
 		statusFilter = &st
 	}
 
@@ -140,27 +195,34 @@ func (h *Handler) ListScheduledPayments(ctx context.Context, req *financev1.List
 		endDate = &et
 	}
 
-	appReq := &financeapp.ListScheduledPaymentsRequest{
-		Status:        statusFilter,
+	filter := finance.ListScheduledPaymentsFilter{
+		Status:        (*finance.ScheduledPaymentStatus)(statusFilter),
 		StartDate:     startDate,
 		EndDate:       endDate,
 		PageSize:      req.GetPageSize(),
 		NextPageToken: req.GetPageToken(),
+		SearchQuery:   req.SearchQuery,
+		Sort:          sorting.Parse(req.GetSort()),
 	}
 
-	payments, nextToken, err := h.Coordinator.ListScheduledPayments(ctx, appReq)
+	viewType := financeaggregator.ViewBasic
+	if req.GetView() == financev1.ScheduledPayment_FULL {
+		viewType = financeaggregator.ViewFull
+	}
+
+	page, err := h.Aggregator.ListScheduledPayments(ctx, spaceID, viewType, filter)
 	if err != nil {
 		return nil, h.mapError(err)
 	}
 
-	protoPayments := make([]*financev1.ScheduledPayment, 0, len(payments))
-	for _, p := range payments {
-		protoPayments = append(protoPayments, toProtoScheduledPayment(p))
+	protoPayments := make([]*financev1.ScheduledPayment, 0, len(page.Items))
+	for _, p := range page.Items {
+		protoPayments = append(protoPayments, toProtoAggregatedScheduledPayment(p))
 	}
 
 	return &financev1.ListScheduledPaymentsResponse{
 		ScheduledPayments: protoPayments,
-		NextPageToken:     nextToken,
+		NextPageToken:     page.NextPageToken,
 	}, nil
 }
 
@@ -180,12 +242,39 @@ func (h *Handler) ConfirmScheduledPayment(ctx context.Context, req *financev1.Co
 		effectiveDate = req.GetEffectiveDate().AsTime()
 	}
 
+	var accountID *finance.AccountID
+	if req.AccountId != nil && *req.AccountId != "" {
+		parsed, err := finance.ParseAccountID(*req.AccountId)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		accountID = &parsed
+	}
+
+	var budgetID *finance.BudgetID
+	if req.BudgetId != nil && *req.BudgetId != "" {
+		parsed, err := finance.ParseBudgetID(*req.BudgetId)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		budgetID = &parsed
+	}
+
+	var currency *finance.Currency
+	if req.Currency != nil && *req.Currency != "" {
+		parsed := finance.Currency(*req.Currency)
+		currency = &parsed
+	}
+
 	appReq := &financeapp.ConfirmScheduledPaymentRequest{
 		PaymentID:       paymentID,
 		TransactionDate: transactionDate,
 		EffectiveDate:   effectiveDate,
 		ActualAmount:    req.GetActualAmount(),
 		Description:     req.GetDescription(),
+		AccountID:       accountID,
+		BudgetID:        budgetID,
+		Currency:        currency,
 	}
 
 	txn, err := h.Coordinator.ConfirmScheduledPayment(ctx, appReq)
@@ -196,23 +285,153 @@ func (h *Handler) ConfirmScheduledPayment(ctx context.Context, req *financev1.Co
 	return toProtoTransaction(txn), nil
 }
 
+func (h *Handler) MatchScheduledPayment(ctx context.Context, req *financev1.MatchScheduledPaymentRequest) (*financev1.Transaction, error) {
+	paymentID, err := finance.ParseScheduledPaymentID(req.GetPaymentId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	txnID, err := finance.ParseTransactionID(req.GetTransactionId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	appReq := &financeapp.MatchScheduledPaymentRequest{
+		PaymentID:     paymentID,
+		TransactionID: txnID,
+	}
+
+	txn, err := h.Coordinator.MatchScheduledPayment(ctx, appReq)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoTransaction(txn), nil
+}
+
 // --- Mappers ---
+
+func mapProtoIntervalToDomain(interval financev1.RecurringExpense_Interval) (string, error) {
+	switch interval {
+	case financev1.RecurringExpense_WEEKLY:
+		return "weekly", nil
+	case financev1.RecurringExpense_MONTHLY:
+		return "monthly", nil
+	case financev1.RecurringExpense_YEARLY:
+		return "yearly", nil
+	default:
+		return "", status.Error(codes.InvalidArgument, "invalid recurring expense interval")
+	}
+}
+
+func mapDomainIntervalToProto(interval string) financev1.RecurringExpense_Interval {
+	switch interval {
+	case "weekly":
+		return financev1.RecurringExpense_WEEKLY
+	case "monthly":
+		return financev1.RecurringExpense_MONTHLY
+	case "yearly":
+		return financev1.RecurringExpense_YEARLY
+	default:
+		return financev1.RecurringExpense_INTERVAL_UNSPECIFIED
+	}
+}
+
+func mapProtoStatusToDomain(st financev1.RecurringExpense_Status) (finance.RecurringExpenseStatus, error) {
+	switch st {
+	case financev1.RecurringExpense_ACTIVE:
+		return finance.RecurringExpenseActive, nil
+	case financev1.RecurringExpense_PAUSED:
+		return finance.RecurringExpensePaused, nil
+	case financev1.RecurringExpense_ENDED:
+		return finance.RecurringExpenseEnded, nil
+	default:
+		return "", status.Error(codes.InvalidArgument, "invalid recurring expense status")
+	}
+}
+
+func mapDomainStatusToProto(st finance.RecurringExpenseStatus) financev1.RecurringExpense_Status {
+	switch st {
+	case finance.RecurringExpenseActive:
+		return financev1.RecurringExpense_ACTIVE
+	case finance.RecurringExpensePaused:
+		return financev1.RecurringExpense_PAUSED
+	case finance.RecurringExpenseEnded:
+		return financev1.RecurringExpense_ENDED
+	default:
+		return financev1.RecurringExpense_STATUS_UNSPECIFIED
+	}
+}
+
+func mapProtoSourceTypeToDomain(st financev1.ScheduledPayment_SourceType) (string, error) {
+	switch st {
+	case financev1.ScheduledPayment_RECURRENT_EXPENSE:
+		return "recurrent_expense", nil
+	case financev1.ScheduledPayment_LOAN:
+		return "loan", nil
+	case financev1.ScheduledPayment_TAX:
+		return "tax", nil
+	default:
+		return "", status.Error(codes.InvalidArgument, "invalid scheduled payment source type")
+	}
+}
+
+func mapDomainSourceTypeToProto(st string) financev1.ScheduledPayment_SourceType {
+	switch st {
+	case "recurrent_expense":
+		return financev1.ScheduledPayment_RECURRENT_EXPENSE
+	case "loan":
+		return financev1.ScheduledPayment_LOAN
+	case "tax":
+		return financev1.ScheduledPayment_TAX
+	default:
+		return financev1.ScheduledPayment_SOURCE_TYPE_UNSPECIFIED
+	}
+}
+
+func mapProtoPaymentStatusToDomain(st financev1.ScheduledPayment_Status) (finance.ScheduledPaymentStatus, error) {
+	switch st {
+	case financev1.ScheduledPayment_PENDING:
+		return finance.ScheduledPaymentPending, nil
+	case financev1.ScheduledPayment_PROCESSING:
+		return finance.ScheduledPaymentProcessing, nil
+	case financev1.ScheduledPayment_SKIPPED:
+		return finance.ScheduledPaymentSkipped, nil
+	default:
+		return "", status.Error(codes.InvalidArgument, "invalid scheduled payment status")
+	}
+}
+
+func mapDomainPaymentStatusToProto(st finance.ScheduledPaymentStatus) financev1.ScheduledPayment_Status {
+	switch st {
+	case finance.ScheduledPaymentPending:
+		return financev1.ScheduledPayment_PENDING
+	case finance.ScheduledPaymentProcessing:
+		return financev1.ScheduledPayment_PROCESSING
+	case finance.ScheduledPaymentSkipped:
+		return financev1.ScheduledPayment_SKIPPED
+	default:
+		return financev1.ScheduledPayment_STATUS_UNSPECIFIED
+	}
+}
 
 func toProtoRecurringExpense(e *finance.RecurringExpense) *financev1.RecurringExpense {
 	if e == nil {
 		return nil
 	}
 	return &financev1.RecurringExpense{
-		Id:              string(e.ID),
-		SpaceId:         string(e.SpaceID),
-		BudgetId:        string(e.BudgetID),
-		Name:            e.Name,
-		Amount:          e.Amount,
-		Currency:        string(e.Currency),
-		Interval:        e.Interval,
-		NextDueDate:     timestamppb.New(e.NextDueDate),
+		Id:       string(e.ID),
+		SpaceId:  string(e.SpaceID),
+		BudgetId: string(e.BudgetID),
+		Name:     e.Name,
+		Amount:   e.Amount,
+		Currency: string(e.Currency),
+		Interval: mapDomainIntervalToProto(e.Interval),
+		ExecutionState: &financev1.RecurringExpense_ExecutionState{
+			NextDueDate: timestamppb.New(e.NextDueDate),
+		},
 		IsVariable:      e.IsVariable,
-		Status:          string(e.Status),
+		Status:          mapDomainStatusToProto(e.Status),
 		GracePeriodDays: e.GracePeriodDays,
 		CreateTime:      timestamppb.New(e.CreateTime),
 		UpdateTime:      timestamppb.New(e.UpdateTime),
@@ -227,14 +446,53 @@ func toProtoScheduledPayment(p *finance.ScheduledPayment) *financev1.ScheduledPa
 		Id:         string(p.ID),
 		SpaceId:    string(p.SpaceID),
 		BudgetId:   string(p.BudgetID),
-		SourceType: p.SourceType,
+		SourceType: mapDomainSourceTypeToProto(p.SourceType),
 		SourceId:   p.SourceID,
 		Amount:     p.Amount,
 		Currency:   string(p.Currency),
 		DueDate:    timestamppb.New(p.DueDate),
-		Status:     string(p.Status),
+		Status:     mapDomainPaymentStatusToProto(p.Status),
 		Metadata:   p.Metadata,
 		CreateTime: timestamppb.New(p.CreateTime),
 		UpdateTime: timestamppb.New(p.UpdateTime),
 	}
+}
+
+func toProtoAggregatedRecurringExpense(at *financeaggregator.AggregatedRecurringExpense) *financev1.RecurringExpense {
+	if at == nil {
+		return nil
+	}
+	protoVal := toProtoRecurringExpense(at.RecurringExpense)
+	if at.Budget != nil {
+		protoVal.Budget = &financev1.RecurringExpense_BudgetInfo{
+			Id:    string(at.Budget.ID),
+			Name:  at.Budget.Name,
+			Color: at.Budget.Color,
+			Icon:  at.Budget.Icon,
+		}
+	}
+	return protoVal
+}
+
+func toProtoAggregatedScheduledPayment(ap *financeaggregator.AggregatedScheduledPayment) *financev1.ScheduledPayment {
+	if ap == nil {
+		return nil
+	}
+	protoVal := toProtoScheduledPayment(ap.ScheduledPayment)
+	if ap.Budget != nil {
+		protoVal.Budget = &financev1.ScheduledPayment_BudgetInfo{
+			Id:    string(ap.Budget.ID),
+			Name:  ap.Budget.Name,
+			Color: ap.Budget.Color,
+			Icon:  ap.Budget.Icon,
+		}
+	}
+	if ap.RecurringExpense != nil {
+		protoVal.RecurringExpense = &financev1.ScheduledPayment_RecurringExpenseInfo{
+			Id:       string(ap.RecurringExpense.ID),
+			Name:     ap.RecurringExpense.Name,
+			Interval: mapDomainIntervalToProto(ap.RecurringExpense.Interval),
+		}
+	}
+	return protoVal
 }

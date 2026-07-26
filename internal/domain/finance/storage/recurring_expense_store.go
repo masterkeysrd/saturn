@@ -3,14 +3,13 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"encoding/base64"
 	"errors"
-	"fmt"
-	"strings"
 	"time"
 
+	"github.com/doug-martin/goqu/v9"
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
 type recurringExpenseDB struct {
@@ -27,6 +26,24 @@ type recurringExpenseDB struct {
 	GracePeriodDays int32        `db:"grace_period_days"`
 	CreateTime      sql.NullTime `db:"create_time"`
 	UpdateTime      sql.NullTime `db:"update_time"`
+}
+
+func (r *recurringExpenseDB) toDomain() *finance.RecurringExpense {
+	return &finance.RecurringExpense{
+		ID:              finance.RecurringExpenseID(r.ID),
+		SpaceID:         finance.SpaceID(r.SpaceID),
+		BudgetID:        finance.BudgetID(r.BudgetID),
+		Name:            r.Name,
+		Amount:          r.Amount,
+		Currency:        finance.Currency(r.Currency),
+		Interval:        r.Interval,
+		NextDueDate:     r.NextDueDate,
+		IsVariable:      r.IsVariable,
+		Status:          finance.RecurringExpenseStatus(r.Status),
+		GracePeriodDays: r.GracePeriodDays,
+		CreateTime:      r.CreateTime.Time,
+		UpdateTime:      r.UpdateTime.Time,
+	}
 }
 
 type RecurringExpenseStore struct {
@@ -56,21 +73,36 @@ func (s *RecurringExpenseStore) GetByID(ctx context.Context, id finance.Recurrin
 		}
 		return nil, err
 	}
-	return &finance.RecurringExpense{
-		ID:              finance.RecurringExpenseID(row.ID),
-		SpaceID:         finance.SpaceID(row.SpaceID),
-		BudgetID:        finance.BudgetID(row.BudgetID),
-		Name:            row.Name,
-		Amount:          row.Amount,
-		Currency:        finance.Currency(row.Currency),
-		Interval:        row.Interval,
-		NextDueDate:     row.NextDueDate,
-		IsVariable:      row.IsVariable,
-		Status:          finance.RecurringExpenseStatus(row.Status),
-		GracePeriodDays: row.GracePeriodDays,
-		CreateTime:      row.CreateTime.Time,
-		UpdateTime:      row.UpdateTime.Time,
-	}, nil
+	return row.toDomain(), nil
+}
+
+func (s *RecurringExpenseStore) GetByIDs(ctx context.Context, ids []finance.RecurringExpenseID) ([]*finance.RecurringExpense, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	idStrings := make([]string, len(ids))
+	for i, id := range ids {
+		idStrings[i] = string(id)
+	}
+
+	ds := pgDialect.From(goqu.S("finance").Table("recurring_expense")).
+		Select("*").
+		Where(goqu.Ex{"id": idStrings})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, err
+	}
+
+	var rows []recurringExpenseDB
+	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
+		return nil, err
+	}
+
+	expenses := make([]*finance.RecurringExpense, len(rows))
+	for i := range rows {
+		expenses[i] = rows[i].toDomain()
+	}
+	return expenses, nil
 }
 
 func (s *RecurringExpenseStore) Update(ctx context.Context, re *finance.RecurringExpense) error {
@@ -119,73 +151,57 @@ func (s *RecurringExpenseStore) Delete(ctx context.Context, id finance.Recurring
 	return nil
 }
 
-func (s *RecurringExpenseStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListRecurringExpensesFilter) ([]*finance.RecurringExpense, string, error) {
+func (s *RecurringExpenseStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListRecurringExpensesFilter) (*paging.Page[*finance.RecurringExpense], error) {
 	if filter.PageSize <= 0 || filter.PageSize > 100 {
 		filter.PageSize = 20
 	}
 
-	var cursorID string
-	if filter.NextPageToken != "" {
-		if decoded, err := base64.URLEncoding.DecodeString(filter.NextPageToken); err == nil {
-			cursorID = string(decoded)
-		}
-	}
-
-	conditions := []string{"space_id = $1"}
-	args := []any{string(spaceID)}
-	argIndex := 2
+	ds := pgDialect.From(goqu.S("finance").Table("recurring_expense")).Select("*")
+	ds = ds.Where(goqu.Ex{"space_id": string(spaceID)})
 
 	if filter.Status != nil {
-		conditions = append(conditions, fmt.Sprintf("status = $%d", argIndex))
-		args = append(args, string(*filter.Status))
-		argIndex++
+		ds = ds.Where(goqu.Ex{"status": string(*filter.Status)})
 	}
 
-	if cursorID != "" {
-		conditions = append(conditions, fmt.Sprintf("id < $%d", argIndex))
-		args = append(args, cursorID)
-		argIndex++
+	if filter.SearchQuery != nil && *filter.SearchQuery != "" {
+		ds = ds.Where(goqu.I("name").ILike("%" + *filter.SearchQuery + "%"))
 	}
 
-	query := fmt.Sprintf(`SELECT * FROM finance.recurring_expense WHERE %s ORDER BY create_time DESC, id DESC LIMIT $%d`, strings.Join(conditions, " AND "), argIndex)
-	args = append(args, filter.PageSize+1)
+	cursor, _ := paging.Decode(filter.NextPageToken)
+
+	sortOrder := filter.Sort
+	if !finance.IsRecurringExpenseSortField(sortOrder.Field) {
+		sortOrder.Field = finance.DefaultRecurringExpenseSortField
+		sortOrder.Ascending = false // default: newest first
+	}
+
+	ds = paging.ApplyPagination(ds, paging.Options{
+		Sort:     sortOrder,
+		Cursor:   cursor,
+		PageSize: uint(filter.PageSize),
+	})
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, err
+	}
 
 	var rows []recurringExpenseDB
 	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
-	hasMore := len(rows) > int(filter.PageSize)
-	if hasMore {
-		rows = rows[:filter.PageSize]
-	}
-
-	expenses := make([]*finance.RecurringExpense, 0, len(rows))
+	expenses := make([]*finance.RecurringExpense, len(rows))
 	for i := range rows {
-		expenses = append(expenses, &finance.RecurringExpense{
-			ID:              finance.RecurringExpenseID(rows[i].ID),
-			SpaceID:         finance.SpaceID(rows[i].SpaceID),
-			BudgetID:        finance.BudgetID(rows[i].BudgetID),
-			Name:            rows[i].Name,
-			Amount:          rows[i].Amount,
-			Currency:        finance.Currency(rows[i].Currency),
-			Interval:        rows[i].Interval,
-			NextDueDate:     rows[i].NextDueDate,
-			IsVariable:      rows[i].IsVariable,
-			Status:          finance.RecurringExpenseStatus(rows[i].Status),
-			GracePeriodDays: rows[i].GracePeriodDays,
-			CreateTime:      rows[i].CreateTime.Time,
-			UpdateTime:      rows[i].UpdateTime.Time,
-		})
+		expenses[i] = rows[i].toDomain()
 	}
 
-	var nextToken string
-	if hasMore && len(rows) > 0 {
-		lastRow := rows[len(rows)-1]
-		nextToken = base64.URLEncoding.EncodeToString([]byte(lastRow.ID))
-	}
-
-	return expenses, nextToken, nil
+	return paging.NewPage(expenses, int(filter.PageSize), func(e *finance.RecurringExpense) paging.Cursor {
+		return paging.Cursor{
+			SortValue: e.GetSortValue(sortOrder.Field),
+			ID:        string(e.ID),
+		}
+	}), nil
 }
 
 func (s *RecurringExpenseStore) ListPendingGeneration(ctx context.Context, maxDueDate time.Time) ([]*finance.RecurringExpense, error) {
@@ -197,22 +213,9 @@ func (s *RecurringExpenseStore) ListPendingGeneration(ctx context.Context, maxDu
 		return nil, err
 	}
 
-	expenses := make([]*finance.RecurringExpense, 0, len(rows))
+	expenses := make([]*finance.RecurringExpense, len(rows))
 	for i := range rows {
-		expenses = append(expenses, &finance.RecurringExpense{
-			ID:          finance.RecurringExpenseID(rows[i].ID),
-			SpaceID:     finance.SpaceID(rows[i].SpaceID),
-			BudgetID:    finance.BudgetID(rows[i].BudgetID),
-			Name:        rows[i].Name,
-			Amount:      rows[i].Amount,
-			Currency:    finance.Currency(rows[i].Currency),
-			Interval:    rows[i].Interval,
-			NextDueDate: rows[i].NextDueDate,
-			IsVariable:  rows[i].IsVariable,
-			Status:      finance.RecurringExpenseStatus(rows[i].Status),
-			CreateTime:  rows[i].CreateTime.Time,
-			UpdateTime:  rows[i].UpdateTime.Time,
-		})
+		expenses[i] = rows[i].toDomain()
 	}
 	return expenses, nil
 }

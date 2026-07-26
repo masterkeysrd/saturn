@@ -327,13 +327,7 @@ export function EditBudgetSheet({
                 id="editInterval"
                 className="!h-11 w-full rounded-xl border-border/60 bg-background/50 opacity-70"
               >
-                <SelectValue>
-                  {interval === "INTERVAL_WEEKLY"
-                    ? "Weekly"
-                    : interval === "INTERVAL_YEARLY"
-                      ? "Yearly"
-                      : "Monthly"}
-                </SelectValue>
+                <SelectValue placeholder="Select interval..." />
               </SelectTrigger>
               <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
                 <SelectItem value="INTERVAL_WEEKLY">Weekly</SelectItem>
@@ -380,11 +374,7 @@ export function EditBudgetSheet({
                 id="propagation"
                 className="!h-11 w-full rounded-xl border-border/60 bg-background/50"
               >
-                <SelectValue>
-                  {propagation === "LIMIT_PROPAGATION_CURRENT_PERIOD"
-                    ? "Apply also to current active period"
-                    : "Next periods only (keep current period limit)"}
-                </SelectValue>
+                <SelectValue placeholder="Select propagation rule..." />
               </SelectTrigger>
               <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
                 <SelectItem value="LIMIT_PROPAGATION_NEXT_PERIODS_ONLY">
