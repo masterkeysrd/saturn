@@ -178,10 +178,11 @@ export function AccountsView() {
     setUrlState({ q: debouncedSearchQuery })
   }, [debouncedSearchQuery, setUrlState])
 
-  // Sync local search when URL changes externally (back/forward button)
-  useEffect(() => {
+  const [prevUrlQ, setPrevUrlQ] = useState(urlState.q)
+  if (urlState.q !== prevUrlQ) {
+    setPrevUrlQ(urlState.q)
     setSearchQuery(urlState.q)
-  }, [urlState.q])
+  }
 
   const { data: accountsData, refetch: refetchAccounts } = useListAccountsQuery(
     {

@@ -17,7 +17,7 @@ function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
 }
 
 function formatSelectValueLabel(
-  val: any,
+  val: unknown,
   placeholder?: React.ReactNode
 ): React.ReactNode {
   if (val === null || val === undefined || val === "") return placeholder
@@ -31,7 +31,7 @@ function formatSelectValueLabel(
       .toLowerCase()
     return clean.charAt(0).toUpperCase() + clean.slice(1)
   }
-  return val
+  return val as React.ReactNode
 }
 
 function SelectValue({
@@ -49,7 +49,7 @@ function SelectValue({
     >
       {typeof children === "function"
         ? children
-        : (val: any) => {
+        : (val: unknown) => {
             if (children) return children
             return formatSelectValueLabel(val, placeholder)
           }}

@@ -70,20 +70,27 @@ export function InboxView() {
   const [searchQuery, setSearchQuery] = useState(search)
   const debouncedSearch = useDebounce(searchQuery, 300)
 
-  useEffect(() => {
+  const [prevSearch, setPrevSearch] = useState(search)
+  if (search !== prevSearch) {
+    setPrevSearch(search)
     setSearchQuery(search)
-  }, [search])
+  }
 
   useEffect(() => {
     setUrlState({ search: debouncedSearch })
-  }, [debouncedSearch])
+  }, [debouncedSearch, setUrlState])
 
   const [pageToken, setPageToken] = useState("")
   const [allStagedItems, setAllStagedItems] = useState<InboxItem[]>([])
 
-  useEffect(() => {
+  const [prevSearchFilter, setPrevSearchFilter] = useState({ search, docType })
+  if (
+    prevSearchFilter.search !== search ||
+    prevSearchFilter.docType !== docType
+  ) {
+    setPrevSearchFilter({ search, docType })
     setPageToken("")
-  }, [search, docType])
+  }
 
   // 1. Query inbox items
   const {
@@ -98,7 +105,10 @@ export function InboxView() {
       sort: "",
       view: "FULL",
       searchQuery: search || undefined,
-      docType: docType !== "ALL" ? (docType as any) : undefined,
+      docType:
+        docType !== "ALL"
+          ? (docType as Parameters<typeof useListInboxItemsQuery>[0]["docType"])
+          : undefined,
     },
     {
       enabled: !!spaceId,
@@ -106,20 +116,19 @@ export function InboxView() {
     }
   )
 
-  useEffect(() => {
-    if (!inboxData) return
+  const [prevInboxData, setPrevInboxData] = useState(inboxData)
+  if (inboxData && inboxData !== prevInboxData) {
+    setPrevInboxData(inboxData)
     if (pageToken === "") {
       setAllStagedItems(inboxData.inboxItems || [])
     } else {
-      setAllStagedItems((prev) => {
-        const existingIds = new Set(prev.map((item) => item.id))
-        const uniqueNew = (inboxData.inboxItems || []).filter(
-          (item) => !existingIds.has(item.id)
-        )
-        return [...prev, ...uniqueNew]
-      })
+      const existingIds = new Set(allStagedItems.map((item) => item.id))
+      const uniqueNew = (inboxData.inboxItems || []).filter(
+        (item) => !existingIds.has(item.id)
+      )
+      setAllStagedItems([...allStagedItems, ...uniqueNew])
     }
-  }, [inboxData, pageToken])
+  }
 
   const inboxItems = allStagedItems
 
@@ -131,18 +140,14 @@ export function InboxView() {
   const [txSearch, setTxSearch] = useState("")
   const [popoverOpen, setPopoverOpen] = useState(false)
 
-  useEffect(() => {
-    if (!popoverOpen) {
-      setTxSearch("")
-    }
-  }, [popoverOpen])
-
   const [overwriteLinkedTx, setOverwriteLinkedTx] = useState(false)
   const [transferLeg, setTransferLeg] = useState<"SOURCE" | "DESTINATION">(
     "SOURCE"
   )
 
-  useEffect(() => {
+  const [prevSelectedId, setPrevSelectedId] = useState(selectedItemId)
+  if (selectedItemId !== prevSelectedId) {
+    setPrevSelectedId(selectedItemId)
     setError(null)
     setOverwriteLinkedTx(false)
 
@@ -164,13 +169,13 @@ export function InboxView() {
       // Ignore JSON parse errors
     }
     setTransferLeg(initialLeg)
-  }, [selectedItemId, selectedItem])
+  }
 
   useEffect(() => {
     if (!selectedItemId && inboxItems.length > 0) {
       setUrlState({ selected: inboxItems[0].id || "" })
     }
-  }, [inboxItems, selectedItemId])
+  }, [inboxItems, selectedItemId, setUrlState])
 
   // 3. Query supporting context
   const { data: accountsData } = useListAccountsQuery(
@@ -288,42 +293,39 @@ export function InboxView() {
     }))
   }
 
-  useEffect(() => {
-    if (selectedItem) {
-      const id = selectedItem.id || ""
-      if (!overrides[id]) {
-        let meta: {
-          suggested_borrowing_id?: string
-          transaction_type?: string
-          potential_duplicate_id?: string
-        } = {}
-        try {
-          if (selectedItem.metadataJson) {
-            meta = JSON.parse(selectedItem.metadataJson)
-          }
-        } catch {
-          // Ignore JSON parse errors
+  if (selectedItem) {
+    const id = selectedItem.id || ""
+    if (!overrides[id]) {
+      let meta: {
+        suggested_borrowing_id?: string
+        transaction_type?: string
+        potential_duplicate_id?: string
+      } = {}
+      try {
+        if (selectedItem.metadataJson) {
+          meta = JSON.parse(selectedItem.metadataJson)
         }
-
-        setOverrides((prev) => ({
-          ...prev,
-          [id]: {
-            accountId: selectedItem.accountId || "",
-            budgetId: selectedItem.budgetId || "",
-            scheduledPaymentId: selectedItem.scheduledPaymentId || "",
-            borrowingId: meta.suggested_borrowing_id || "",
-            amountStr: (Number(selectedItem.amount || 0) / 100).toFixed(2),
-            description: selectedItem.vendorName || "",
-            docType: (selectedItem.docType || "RECEIPT").toUpperCase(),
-            transactionType: (meta.transaction_type || "EXPENSE").toUpperCase(),
-            destinationAccountId: "",
-            transactionId: meta.potential_duplicate_id || "",
-            currency: selectedItem.currency || "USD",
-          },
-        }))
+      } catch {
+        // Ignore JSON parse errors
       }
+
+      setOverrides({
+        ...overrides,
+        [id]: {
+          accountId: selectedItem.accountId || "",
+          budgetId: selectedItem.budgetId || "",
+          scheduledPaymentId: selectedItem.scheduledPaymentId || "",
+          borrowingId: meta.suggested_borrowing_id || "",
+          amountStr: (Number(selectedItem.amount || 0) / 100).toFixed(2),
+          description: selectedItem.vendorName || "",
+          docType: (selectedItem.docType || "RECEIPT").toUpperCase(),
+          transactionType: (meta.transaction_type || "EXPENSE").toUpperCase(),
+          destinationAccountId: "",
+          transactionId: meta.potential_duplicate_id || "",
+        },
+      })
     }
-  }, [selectedItem, overrides])
+  }
 
   const handleApprove = async (tx: InboxItem) => {
     setError(null)
@@ -377,7 +379,7 @@ export function InboxView() {
 
     try {
       // 1. Save refined draft fields via UpdateInboxItem
-      const metadataObj: Record<string, any> = {}
+      const metadataObj: Record<string, unknown> = {}
       if (txnType) metadataObj["transaction_type"] = txnType
       if (destAccId) metadataObj["destination_account_id"] = destAccId
       if (transferLeg) metadataObj["transfer_leg"] = transferLeg
@@ -392,7 +394,9 @@ export function InboxView() {
             spaceId: tx.spaceId,
             integrationId: tx.integrationId,
             status: tx.status,
-            docType: docType as any,
+            docType: docType as Parameters<
+              typeof updateInboxMutation.mutateAsync
+            >[0]["req"]["inboxItem"]["docType"],
             amount: finalAmount,
             currency: currency,
             vendorName: desc || tx.vendorName || "",

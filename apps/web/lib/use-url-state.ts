@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from "react"
+import { useCallback, useEffect, useMemo, useRef } from "react"
 import { useSearchParams } from "react-router-dom"
 
 /**
@@ -10,18 +10,20 @@ export function useUrlState<
 >(defaultValues: T): [T, (updates: Partial<T>) => void] {
   const [searchParams, setSearchParams] = useSearchParams()
   const defaultRef = useRef(defaultValues)
-  defaultRef.current = defaultValues
+
+  useEffect(() => {
+    defaultRef.current = defaultValues
+  }, [defaultValues])
 
   // 1. Resolve current state by reading URL parameters and falling back to default values
   const state = useMemo(() => {
     const nextState = {} as Record<string, string | number | boolean>
-    const defaults = defaultRef.current
-    for (const key of Object.keys(defaults)) {
+    for (const key of Object.keys(defaultValues)) {
       const val = searchParams.get(key)
       if (val === null) {
-        nextState[key] = defaults[key]
+        nextState[key] = defaultValues[key]
       } else {
-        const def = defaults[key]
+        const def = defaultValues[key]
         if (typeof def === "boolean") {
           nextState[key] = val === "true"
         } else if (typeof def === "number") {
@@ -32,7 +34,7 @@ export function useUrlState<
       }
     }
     return nextState as T
-  }, [searchParams])
+  }, [searchParams, defaultValues])
 
   // 2. Batched updater function that writes changes to URL (updates parameter or deletes if default)
   const setUrlState = useCallback(

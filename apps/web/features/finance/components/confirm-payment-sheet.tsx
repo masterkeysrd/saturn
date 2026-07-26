@@ -165,7 +165,7 @@ export function ConfirmPaymentSheet({
             try {
               const decoded = JSON.parse(decodeBase64Utf8(payment.metadata))
               return decoded?.description || null
-            } catch (e) {
+            } catch {
               return null
             }
           })()
@@ -352,7 +352,7 @@ export function ConfirmPaymentSheet({
                             decodeBase64Utf8(payment.metadata)
                           )
                           return decoded?.vendor_name || null
-                        } catch (e) {
+                        } catch {
                           return null
                         }
                       })()

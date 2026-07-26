@@ -73,7 +73,7 @@ export interface SimulateWebhookRequest {
 export interface SimulateWebhookResponse {
   success: boolean
   message: string
-  result: Record<string, any>
+  result: Record<string, unknown>
 }
 
 export interface CatalogDescriptor {

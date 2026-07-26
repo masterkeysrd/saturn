@@ -156,7 +156,7 @@ export function decodeBase64Utf8(base64: string): string {
     const binString = atob(base64)
     const bytes = Uint8Array.from(binString, (m) => m.charCodeAt(0))
     return new TextDecoder().decode(bytes)
-  } catch (e) {
+  } catch {
     return ""
   }
 }

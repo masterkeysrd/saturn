@@ -111,9 +111,14 @@ export function CreateRecurringExpenseSheet({
       setInterval(normalizeIntervalVal(editExpense.interval))
       const rawNextDueDate =
         editExpense.executionState?.nextDueDate ||
-        (editExpense.executionState as any)?.next_due_date ||
-        (editExpense as any).nextDueDate ||
-        (editExpense as any).next_due_date
+        ((
+          editExpense.executionState as unknown as
+            Record<string, unknown> | undefined
+        )?.next_due_date as string | undefined) ||
+        ((editExpense as unknown as Record<string, unknown>).nextDueDate as
+          string | undefined) ||
+        ((editExpense as unknown as Record<string, unknown>).next_due_date as
+          string | undefined)
       const parsedDate = rawNextDueDate ? new Date(rawNextDueDate) : new Date()
       setNextDueDate(
         parsedDate && !isNaN(parsedDate.getTime()) ? parsedDate : new Date()

@@ -434,7 +434,7 @@ func mapMessageName(msg *protogen.Message) string {
 		return "Record<string, never>"
 	}
 	if fullName == "google.protobuf.Struct" {
-		return "Record<string, any>"
+		return "Record<string, unknown>"
 	}
 	return getNestedPrefix(msg) + string(msg.Desc.Name())
 }
@@ -474,9 +474,9 @@ func mapBaseTypeForKind(kind protoreflect.Kind, msg protoreflect.MessageDescript
 			}
 			return string(msg.Name())
 		}
-		return "any"
+		return "unknown"
 	default:
-		return "any"
+		return "unknown"
 	}
 }
 

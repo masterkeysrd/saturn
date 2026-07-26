@@ -84,9 +84,11 @@ export function TransactionsView() {
     setUrlState({ q: debouncedSearchQuery })
   }, [debouncedSearchQuery, setUrlState])
 
-  useEffect(() => {
+  const [prevUrlQ, setPrevUrlQ] = useState(urlState.q)
+  if (urlState.q !== prevUrlQ) {
+    setPrevUrlQ(urlState.q)
     setSearchQuery(urlState.q)
-  }, [urlState.q])
+  }
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(
@@ -98,6 +100,31 @@ export function TransactionsView() {
     string | null
   >(null)
   const [searchParams] = useSearchParams()
+
+  // Fetch transactions
+  const {
+    data: txnData,
+    isLoading: txnLoading,
+    refetch: refetchTransactions,
+  } = useListTransactionsQuery(
+    {
+      view: "FULL",
+      budgetId: urlState.budgetId === "_all" ? "" : urlState.budgetId,
+      type: urlState.type as Parameters<
+        typeof useListTransactionsQuery
+      >[0]["type"],
+      accountId:
+        urlState.accountId === "_all"
+          ? undefined
+          : urlState.accountId || undefined,
+      searchQuery: urlState.q || undefined,
+      sort:
+        urlState.sort === "_default" ? undefined : urlState.sort || undefined,
+      pageSize: 100,
+      pageToken: "",
+    },
+    { enabled: !!spaceId }
+  )
   const reviewParam = searchParams.get("review") === "true"
   const navigate = useNavigate()
 
@@ -112,6 +139,7 @@ export function TransactionsView() {
   // Query inbox items staged for review
   const { data: pendingData } = useListInboxItemsQuery(
     {
+      status: "PENDING",
       pageSize: 100,
       pageToken: "",
       sort: "",
@@ -119,7 +147,6 @@ export function TransactionsView() {
     },
     { enabled: !!spaceId }
   )
-  const pendingCount = pendingData?.inboxItems?.length || 0
 
   const handleCreateTrigger = () => {
     setEditTransaction(null)
@@ -136,29 +163,6 @@ export function TransactionsView() {
     setEventsTxnDescription(t.description || null)
     setEventsOpen(true)
   }
-
-  // Fetch transactions
-  const {
-    data: txnData,
-    isLoading: txnLoading,
-    refetch: refetchTransactions,
-  } = useListTransactionsQuery(
-    {
-      view: "FULL",
-      budgetId: urlState.budgetId === "_all" ? "" : urlState.budgetId,
-      type: urlState.type as any,
-      accountId:
-        urlState.accountId === "_all"
-          ? undefined
-          : urlState.accountId || undefined,
-      searchQuery: urlState.q || undefined,
-      sort:
-        urlState.sort === "_default" ? undefined : urlState.sort || undefined,
-      pageSize: 100,
-      pageToken: "",
-    },
-    { enabled: !!spaceId }
-  )
 
   const deleteMutation = useDeleteTransactionMutation()
 
@@ -201,6 +205,7 @@ export function TransactionsView() {
   )
   const txCount = transactions.length
   const avgSpent = txCount > 0 ? totalSpent / txCount : 0
+  const pendingCount = pendingData?.inboxItems.length || 0
 
   return (
     <FinancePageLayout

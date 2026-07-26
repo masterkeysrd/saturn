@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import {
   useListAgentsQuery,
@@ -32,25 +32,16 @@ export function AgentRunsListView() {
     {},
     { staleTime: 60000, refetchOnWindowFocus: false }
   )
-  const [logAgentId, setLogAgentId] = useState<string>("")
   const [selectedRun, setSelectedRun] = useState<AgentRun | null>(null)
 
-  // Handle sync with query parameters
-  useEffect(() => {
-    if (urlAgentId) {
-      setLogAgentId(urlAgentId)
-    } else if (
-      agentsData?.agents &&
-      agentsData.agents.length > 0 &&
-      !logAgentId
-    ) {
-      setLogAgentId(agentsData.agents[0].id)
-    }
-  }, [urlAgentId, agentsData, logAgentId])
+  const logAgentId =
+    urlAgentId ||
+    (agentsData?.agents && agentsData.agents.length > 0
+      ? agentsData.agents[0].id
+      : "")
 
   const handleAgentChange = (id: string | null) => {
     const finalId = id || ""
-    setLogAgentId(finalId)
     setSearchParams(finalId ? { agentId: finalId } : {}, { replace: true })
   }
 

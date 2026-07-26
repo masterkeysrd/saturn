@@ -169,7 +169,10 @@ export function IntegrationSettings() {
     '{\n  "event": "transaction.created",\n  "amount": 4500,\n  "currency": "USD"\n}'
   )
 
-  const [simulationResult, setSimulationResult] = useState<any | null>(null)
+  const [simulationResult, setSimulationResult] = useState<Record<
+    string,
+    unknown
+  > | null>(null)
 
   // Sync config parameters from selected integration record
   useEffect(() => {
@@ -971,7 +974,7 @@ export function IntegrationSettings() {
                             Vendor
                           </span>
                           <span className="font-extrabold text-foreground">
-                            {simulationResult.vendorName}
+                            {String(simulationResult.vendorName || "")}
                           </span>
                         </div>
                         <div>
@@ -979,8 +982,10 @@ export function IntegrationSettings() {
                             Amount
                           </span>
                           <span className="font-extrabold text-foreground">
-                            {simulationResult.currency || "USD"}{" "}
-                            {(Number(simulationResult.amount) / 100).toFixed(2)}
+                            {String(simulationResult.currency || "USD")}{" "}
+                            {(
+                              Number(simulationResult.amount || 0) / 100
+                            ).toFixed(2)}
                           </span>
                         </div>
                         <div>
@@ -988,7 +993,7 @@ export function IntegrationSettings() {
                             Budget ID
                           </span>
                           <span className="font-mono text-[9px] text-muted-foreground">
-                            {simulationResult.budgetId || "General"}
+                            {String(simulationResult.budgetId || "General")}
                           </span>
                         </div>
                         <div>
@@ -996,7 +1001,7 @@ export function IntegrationSettings() {
                             Account ID
                           </span>
                           <span className="font-mono text-[9px] text-muted-foreground">
-                            {simulationResult.accountId || "Manual"}
+                            {String(simulationResult.accountId || "Manual")}
                           </span>
                         </div>
                       </div>

@@ -383,9 +383,14 @@ export function RecurringView() {
 
                           const nextDueDateVal =
                             exp.executionState?.nextDueDate ||
-                            (exp.executionState as any)?.next_due_date ||
-                            (exp as any).nextDueDate ||
-                            (exp as any).next_due_date
+                            ((
+                              exp.executionState as unknown as
+                                Record<string, unknown> | undefined
+                            )?.next_due_date as string | undefined) ||
+                            ((exp as unknown as Record<string, unknown>)
+                              .nextDueDate as string | undefined) ||
+                            ((exp as unknown as Record<string, unknown>)
+                              .next_due_date as string | undefined)
 
                           return (
                             <div
