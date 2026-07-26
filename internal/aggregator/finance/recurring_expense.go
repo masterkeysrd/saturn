@@ -137,8 +137,7 @@ func (s *Service) ListScheduledPayments(ctx context.Context, spaceID finance.Spa
 	}
 
 	for _, p := range payments {
-		var budget *AggregatedBudget
-		budget = budgetsMap[p.BudgetID]
+		budget := budgetsMap[p.BudgetID]
 
 		var source *AggregatedRecurringExpense
 		if p.SourceType == "recurrent_expense" {

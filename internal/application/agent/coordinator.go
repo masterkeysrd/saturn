@@ -86,11 +86,11 @@ func (c *Coordinator) ExecuteAgent(ctx context.Context, req ExecutionRequest) (s
 		return "", fmt.Errorf("lookup workspace agent: %w", err)
 	}
 
-	var providerMode agent.CompatibilityMode = agent.ModeGeminiNative
+	var providerMode = agent.ModeGeminiNative
 	var apiURL string
 	var apiKey string
-	var modelName string = "gemini-2.5-flash"
-	var temperature float64 = 0.0
+	var modelName = "gemini-2.5-flash"
+	var temperature = 0.0
 	var agentID string
 
 	// Resolve the raw system instruction to compile

@@ -362,20 +362,6 @@ func mapDomainStatusToProto(st finance.RecurringExpenseStatus) financev1.Recurri
 		return financev1.RecurringExpense_STATUS_UNSPECIFIED
 	}
 }
-
-func mapProtoSourceTypeToDomain(st financev1.ScheduledPayment_SourceType) (string, error) {
-	switch st {
-	case financev1.ScheduledPayment_RECURRENT_EXPENSE:
-		return "recurrent_expense", nil
-	case financev1.ScheduledPayment_LOAN:
-		return "loan", nil
-	case financev1.ScheduledPayment_TAX:
-		return "tax", nil
-	default:
-		return "", status.Error(codes.InvalidArgument, "invalid scheduled payment source type")
-	}
-}
-
 func mapDomainSourceTypeToProto(st string) financev1.ScheduledPayment_SourceType {
 	switch st {
 	case "recurrent_expense":

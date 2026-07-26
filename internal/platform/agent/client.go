@@ -120,7 +120,7 @@ func (c *Client) Execute(ctx context.Context, req ExecutionRequest) (ExecutionRe
 			return ExecutionResponse{}, fmt.Errorf("invalid Ollama host URL: %w", err)
 		}
 
-		var rt http.RoundTripper = http.DefaultTransport
+		var rt = http.DefaultTransport
 		if req.APIKey != "" {
 			rt = &authTransport{
 				transport: rt,

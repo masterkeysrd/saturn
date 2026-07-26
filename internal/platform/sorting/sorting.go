@@ -24,11 +24,7 @@ func Parse(sortStr string) SortOrder {
 
 	parts := strings.Split(sortStr, ":")
 	field := parts[0]
-	ascending := true
-
-	if len(parts) > 1 && strings.ToLower(parts[1]) == "desc" {
-		ascending = false
-	}
+	ascending := len(parts) <= 1 || strings.ToLower(parts[1]) != "desc"
 
 	return SortOrder{
 		Field:     field,

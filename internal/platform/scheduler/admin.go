@@ -65,7 +65,7 @@ func (e *Engine) TriggerSchedule(ctx context.Context, scheduleID string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var s struct {
 		JobType string `db:"job_type"`
@@ -104,7 +104,7 @@ func (e *Engine) ResumeSchedule(ctx context.Context, scheduleID string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var s struct {
 		CronExpression string `db:"cron_expression"`

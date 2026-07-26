@@ -232,7 +232,7 @@ func (p *TransactionIngestionProvider) Simulate(ctx context.Context, spaceID str
 		if err != nil {
 			return nil, fmt.Errorf("read multipart form: %w", err)
 		}
-		defer form.RemoveAll()
+		defer func() { _ = form.RemoveAll() }()
 
 		fromValues := form.Value["from"]
 		subjectValues := form.Value["subject"]

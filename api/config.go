@@ -257,13 +257,13 @@ func ApplyConfig(specJSON []byte) ([]byte, error) {
 			// Extract the operationId from the operation
 			var operationID string
 			if opIDRaw, ok := op["operationId"]; ok {
-				json.Unmarshal(opIDRaw, &operationID)
+				_ = json.Unmarshal(opIDRaw, &operationID)
 			}
 
 			// Extract the tag(s) from the operation to determine the service
 			var tags []string
 			if tagsRaw, ok := op["tags"]; ok {
-				json.Unmarshal(tagsRaw, &tags)
+				_ = json.Unmarshal(tagsRaw, &tags)
 			}
 			tag := ""
 			if len(tags) > 0 {

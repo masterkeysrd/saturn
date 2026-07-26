@@ -185,7 +185,7 @@ func LoadConfig(v *viper.Viper) *Config {
 // env var and file defaults.
 func BindFlags(v *viper.Viper, flags *pflag.FlagSet) {
 	flags.VisitAll(func(f *pflag.Flag) {
-		v.BindPFlag(f.Name, f)
+		_ = v.BindPFlag(f.Name, f)
 	})
 }
 

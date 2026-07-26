@@ -7,7 +7,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
@@ -45,8 +44,7 @@ func NewS3Storage(ctx context.Context, bucket, region, endpoint string) (*S3Stor
 
 // Upload writes a stream to S3 bucket.
 func (s *S3Storage) Upload(ctx context.Context, key string, reader io.Reader) error {
-	uploader := manager.NewUploader(s.client)
-	_, err := uploader.Upload(ctx, &s3.PutObjectInput{
+	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 		Body:   reader,
@@ -56,18 +54,16 @@ func (s *S3Storage) Upload(ctx context.Context, key string, reader io.Reader) er
 
 // Download fetches an object from S3.
 func (s *S3Storage) Download(ctx context.Context, key string, writer io.Writer) error {
-	downloader := manager.NewDownloader(s.client)
-	// We use bufferWriter to support downloading to non-seekable streams
-	buffer := manager.NewWriteAtBuffer([]byte{})
-	_, err := downloader.Download(ctx, buffer, &s3.GetObjectInput{
+	resp, err := s.client.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	})
 	if err != nil {
 		return err
 	}
+	defer func() { _ = resp.Body.Close() }()
 
-	_, err = writer.Write(buffer.Bytes())
+	_, err = io.Copy(writer, resp.Body)
 	return err
 }
 

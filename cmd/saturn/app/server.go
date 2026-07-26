@@ -439,7 +439,7 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 		// Check if file exists in the embedded filesystem
 		f, err := uiFS.Open(cleaned)
 		if err == nil {
-			f.Close()
+			_ = f.Close()
 			fileServer.ServeHTTP(w, r)
 			return
 		}
@@ -466,7 +466,7 @@ func (s *GRPCGatewayServer) Shutdown(ctx context.Context) error {
 		return err
 	}
 	if s.grpcConn != nil {
-		s.grpcConn.Close()
+		_ = s.grpcConn.Close()
 	}
 	slog.Info("gRPC-Gateway server stopped")
 	return nil
@@ -483,7 +483,7 @@ func StartAll(ctx context.Context, mgr *shutdown.Manager, cfg *Config) error {
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	grpcSrv := NewGRPCServer(cfg)
 

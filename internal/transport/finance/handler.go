@@ -1337,10 +1337,7 @@ func (h *Handler) ListInboxItems(ctx context.Context, req *financev1.ListInboxIt
 		searchQuery = &sVal
 	}
 
-	excludePayload := false
-	if req.GetView() == financev1.InboxItem_BASIC {
-		excludePayload = true
-	}
+	excludePayload := req.GetView() == financev1.InboxItem_BASIC
 
 	filter := &finance.ListInboxItemsFilter{
 		PageSize:       req.GetPageSize(),

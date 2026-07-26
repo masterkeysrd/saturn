@@ -109,7 +109,7 @@ func (s *SessionStore) Rotate(ctx context.Context, refreshTokenHash []byte, now 
 	if err != nil {
 		return nil, fmt.Errorf("begin tx: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var old sessionDB
 	query := `SELECT * FROM identity.sessions WHERE refresh_token_hash = $1 FOR UPDATE`

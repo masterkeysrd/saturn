@@ -196,7 +196,7 @@ func parseMultipart(r io.Reader, boundary string, parsed *ParsedEmail, htmlBody 
 
 // readPartData decodes the transfer encoding (quoted-printable or base64) and reads the content bytes.
 func readPartData(r io.Reader, encoding string) ([]byte, error) {
-	var decoded io.Reader = r
+	var decoded = r
 	switch strings.ToLower(strings.TrimSpace(encoding)) {
 	case "quoted-printable":
 		decoded = quotedprintable.NewReader(r)

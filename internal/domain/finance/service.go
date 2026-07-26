@@ -1415,7 +1415,7 @@ func (s *Service) CreateBorrowing(ctx context.Context, b *Borrowing, createAsTra
 
 	if createAsTransaction {
 		// Sync transaction
-		txnType := TransactionTypeExpense
+		var txnType TransactionType
 		var desc string
 		if b.Direction == BorrowingDirectionLent {
 			txnType = TransactionTypeExpense
@@ -1514,7 +1514,7 @@ func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing) (*Borrowing
 
 	if hasTransaction {
 		// Update associated transaction
-		txnType := TransactionTypeExpense
+		var txnType TransactionType
 		var desc string
 		if b.Direction == BorrowingDirectionLent {
 			txnType = TransactionTypeExpense
@@ -1635,7 +1635,7 @@ func (s *Service) CreateBorrowingRepayment(ctx context.Context, r *BorrowingRepa
 	}
 
 	// Sync transaction for repayment
-	var txnType = TransactionTypeIncome
+	var txnType TransactionType
 	var desc string
 	if b.Direction == BorrowingDirectionLent {
 		txnType = TransactionTypeIncome // paid back to us
@@ -2434,13 +2434,14 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, id strin
 		return nil
 	}
 
-	txnType := TransactionTypeExpense
+	var txnType TransactionType
 	var budgetID *BudgetID
 	var periodID *PeriodID
 
-	if transactionType == "INCOME" {
+	switch transactionType {
+	case "INCOME":
 		txnType = TransactionTypeIncome
-	} else if transactionType == "EXPENSE" {
+	case "EXPENSE":
 		txnType = TransactionTypeExpense
 		if item.BudgetID != nil && *item.BudgetID != "" {
 			bID, err := ParseBudgetID(*item.BudgetID)
@@ -2458,7 +2459,7 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, id strin
 			budgetID = &budget.ID
 			periodID = &period.ID
 		}
-	} else {
+	default:
 		if item.BudgetID != nil && *item.BudgetID != "" {
 			bID, err := ParseBudgetID(*item.BudgetID)
 			if err != nil {

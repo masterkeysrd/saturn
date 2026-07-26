@@ -9,22 +9,6 @@ import (
 
 var pgDialect = goqu.Dialect("postgres")
 
-// ptrToString converts a *string to string.
-func ptrToString(p *string) string {
-	if p == nil {
-		return ""
-	}
-	return *p
-}
-
-// strToPtr converts a string to *string.
-func strToPtr(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
-}
-
 // timeToNullTime converts a time.Time to sql.NullTime.
 func timeToNullTime(t time.Time) sql.NullTime {
 	return sql.NullTime{Time: t, Valid: !t.IsZero()}

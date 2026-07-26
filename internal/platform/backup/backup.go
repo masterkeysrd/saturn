@@ -91,7 +91,7 @@ func (pm *PostgresBackupManager) RunBackup(ctx context.Context, triggeredBy stri
 
 	var cmdErr error
 	go func() {
-		defer pw.Close()
+		defer func() { _ = pw.Close() }()
 
 		// Execute pg_dump command
 		cmd := exec.CommandContext(ctx, "pg_dump",

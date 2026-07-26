@@ -64,7 +64,7 @@ func Execute() error {
 			if err != nil {
 				return err
 			}
-			defer db.Close()
+			defer func() { _ = db.Close() }()
 
 			slog.Info("running migrations up")
 			if err := migrations.Migrate(db); err != nil {
@@ -88,7 +88,7 @@ func Execute() error {
 			if err != nil {
 				return err
 			}
-			defer db.Close()
+			defer func() { _ = db.Close() }()
 
 			slog.Info("rolling back migrations")
 			if err := migrations.Down(db); err != nil {
@@ -120,7 +120,7 @@ func Execute() error {
 			if err != nil {
 				return err
 			}
-			defer db.Close()
+			defer func() { _ = db.Close() }()
 
 			sqlxDB := sqlx.NewDb(db, "postgres")
 			userStore := identitystorage.NewUserStore(sqlxDB)
@@ -186,9 +186,9 @@ func Execute() error {
 	createUserCmd.Flags().String("name", "", "display name (required)")
 	createUserCmd.Flags().StringP("password", "p", "", "password (will prompt if empty)")
 	createUserCmd.Flags().String("role", "user", "access level: admin or user")
-	createUserCmd.MarkFlagRequired("email")
-	createUserCmd.MarkFlagRequired("username")
-	createUserCmd.MarkFlagRequired("name")
+	_ = createUserCmd.MarkFlagRequired("email")
+	_ = createUserCmd.MarkFlagRequired("username")
+	_ = createUserCmd.MarkFlagRequired("name")
 
 	adminCmd.AddCommand(createUserCmd)
 	rootCmd.AddCommand(serveCmd)

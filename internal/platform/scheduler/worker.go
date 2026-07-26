@@ -82,7 +82,7 @@ func (e *Engine) spawnRecurrentJobs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Select active schedules that are due to spawn a job
 	var schedules []struct {
@@ -140,7 +140,7 @@ func (e *Engine) executePendingJobs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var jobs []jobInstance
 

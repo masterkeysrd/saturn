@@ -41,7 +41,7 @@ func SwaggerHandler(swaggerJSONPath string) http.Handler {
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			w.Write(data)
+			_, _ = w.Write(data)
 			return
 		}
 		http.NotFound(w, r)

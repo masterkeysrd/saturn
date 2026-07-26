@@ -2,12 +2,8 @@ package token
 
 import (
 	"crypto/ed25519"
-	"crypto/hmac"
 	"crypto/rand"
-	"crypto/sha256"
-	"crypto/subtle"
 	"crypto/x509"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -75,7 +71,7 @@ func NewEd25519Service(cfg Config, activePrivateKey ed25519.PrivateKey, publicKe
 	}
 
 	// If no public keys provided, derive from the active private key
-	if publicKeys == nil || len(publicKeys) == 0 {
+	if len(publicKeys) == 0 {
 		pub := activePrivateKey.Public().(ed25519.PublicKey)
 		publicKeys = map[string]ed25519.PublicKey{
 			cfg.ActiveKeyID: pub,
@@ -190,7 +186,7 @@ func (s *Ed25519Service) ValidateAccessToken(raw string, now time.Time) (*Claims
 	if err != nil {
 		return nil, ErrInvalidToken
 	}
-	if claims.RegisteredClaims.ID == "" {
+	if claims.ID == "" {
 		return nil, ErrInvalidToken
 	}
 
@@ -259,7 +255,7 @@ func (s *Ed25519Service) ValidateRefreshToken(raw string, now time.Time) (*Claim
 	if err != nil {
 		return nil, ErrInvalidToken
 	}
-	if claims.RegisteredClaims.ID == "" {
+	if claims.ID == "" {
 		return nil, ErrInvalidToken
 	}
 
@@ -399,26 +395,6 @@ func LoadPublicKeys(paths map[string]string) (map[string]ed25519.PublicKey, erro
 	return keys, nil
 }
 
-// digestRefreshToken computes an HMAC-SHA256 digest of a refresh token using the given pepper.
-func digestRefreshToken(pepper []byte, token string) []byte {
-	mac := hmac.New(sha256.New, pepper)
-	_, _ = mac.Write([]byte(token))
-	return mac.Sum(nil)
-}
-
-// compareRefreshTokenDigest compares a stored digest with a computed one using constant-time comparison.
-func compareRefreshTokenDigest(stored, computed []byte) bool {
-	return subtle.ConstantTimeCompare(stored, computed) == 1
-}
-
-// generateRefreshToken generates a cryptographically random opaque refresh token.
-func generateRefreshToken() (string, error) {
-	b, err := GenerateRandomBytes(32)
-	if err != nil {
-		return "", err
-	}
-	return base64.RawURLEncoding.EncodeToString(b), nil
-}
 
 // NewTestService creates an Ed25519Service configured for testing.
 func NewTestService() (*Ed25519Service, error) {

@@ -84,9 +84,10 @@ func (h *Handler) ListBorrowings(ctx context.Context, req *financev1.ListBorrowi
 	if req.Status != nil && *req.Status != financev1.BorrowingStatus_BORROWING_STATUS_UNSPECIFIED {
 		sStr := req.Status.String()
 		// Convert proto enum string representation (e.g. BORROWING_STATUS_ACTIVE) to ACTIVE/PAID_OFF
-		if *req.Status == financev1.BorrowingStatus_BORROWING_STATUS_ACTIVE {
+		switch *req.Status {
+		case financev1.BorrowingStatus_BORROWING_STATUS_ACTIVE:
 			sStr = "ACTIVE"
-		} else if *req.Status == financev1.BorrowingStatus_BORROWING_STATUS_PAID_OFF {
+		case financev1.BorrowingStatus_BORROWING_STATUS_PAID_OFF:
 			sStr = "PAID_OFF"
 		}
 		statusFilter = &sStr
@@ -95,9 +96,10 @@ func (h *Handler) ListBorrowings(ctx context.Context, req *financev1.ListBorrowi
 	var directionFilter *string
 	if req.Direction != nil && *req.Direction != financev1.BorrowingDirection_BORROWING_DIRECTION_UNSPECIFIED {
 		dStr := req.Direction.String()
-		if *req.Direction == financev1.BorrowingDirection_BORROWING_DIRECTION_BORROWED {
+		switch *req.Direction {
+		case financev1.BorrowingDirection_BORROWING_DIRECTION_BORROWED:
 			dStr = "BORROWED"
-		} else if *req.Direction == financev1.BorrowingDirection_BORROWING_DIRECTION_LENT {
+		case financev1.BorrowingDirection_BORROWING_DIRECTION_LENT:
 			dStr = "LENT"
 		}
 		directionFilter = &dStr

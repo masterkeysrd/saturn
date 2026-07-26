@@ -155,12 +155,13 @@ func TestApplyConfig(t *testing.T) {
 		t.Errorf("expected 2 tags, got %d", len(doc.Tags))
 	} else {
 		for _, tag := range doc.Tags {
-			if tag.Name == "Identity" {
+			switch tag.Name {
+			case "Identity":
 				expectedDesc := "Provides user authentication, registration, session management, and logout capabilities."
 				if tag.Description != expectedDesc {
 					t.Errorf("expected Identity tag description %q, got %q", expectedDesc, tag.Description)
 				}
-			} else if tag.Name == "AdminIdentity" {
+			case "AdminIdentity":
 				expectedDesc := "Provides user administration capabilities, including approving, rejecting, suspending, and role updates."
 				if tag.Description != expectedDesc {
 					t.Errorf("expected AdminIdentity tag description %q, got %q", expectedDesc, tag.Description)
