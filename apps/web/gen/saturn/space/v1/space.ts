@@ -271,14 +271,11 @@ export function useCreateSpaceMutation(
  */
 export async function getSpace(
   space_id: string,
-  req: GetSpaceRequest
+  _req: GetSpaceRequest
 ): Promise<Space> {
-  const params = { ...req }
-  delete (params as Record<string, unknown>).spaceId
   return request<Space>({
     method: "GET",
     url: `/api/v1/spaces/${space_id}`,
-    params: params,
   })
 }
 
@@ -329,14 +326,11 @@ export function useUpdateSpaceMutation(
  */
 export async function deleteSpace(
   space_id: string,
-  req: DeleteSpaceRequest
+  _req: DeleteSpaceRequest
 ): Promise<DeleteSpaceResponse> {
-  const params = { ...req }
-  delete (params as Record<string, unknown>).spaceId
   return request<DeleteSpaceResponse>({
     method: "DELETE",
     url: `/api/v1/spaces/${space_id}`,
-    params: params,
   })
 }
 
@@ -363,10 +357,11 @@ export function useDeleteSpaceMutation(
 export async function listSpaces(
   req: ListSpacesRequest
 ): Promise<ListSpacesResponse> {
+  const params = { ...req }
   return request<ListSpacesResponse>({
     method: "GET",
     url: "/api/v1/spaces",
-    params: req,
+    params: params,
   })
 }
 
@@ -421,15 +416,11 @@ export function useAddSpaceMemberMutation(
 export async function removeSpaceMember(
   space_id: string,
   user_id: string,
-  req: RemoveSpaceMemberRequest
+  _req: RemoveSpaceMemberRequest
 ): Promise<RemoveSpaceMemberResponse> {
-  const params = { ...req }
-  delete (params as Record<string, unknown>).spaceId
-  delete (params as Record<string, unknown>).userId
   return request<RemoveSpaceMemberResponse>({
     method: "DELETE",
     url: `/api/v1/spaces/${space_id}/members/${user_id}`,
-    params: params,
   })
 }
 

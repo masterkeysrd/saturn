@@ -31,15 +31,20 @@ service Finance {
   rpc CreateBudget(CreateBudgetRequest) returns (Budget) {
     option (google.api.http) = {
       post: "/v1/finance/budgets"
-      body: "*"
+      body: "budget"
     };
+  }
+
+  // Retrieves details of a specific budget category template.
+  rpc GetBudget(GetBudgetRequest) returns (Budget) {
+    option (google.api.http) = {get: "/v1/finance/budgets/{id}"};
   }
 
   // Updates an existing budget template's properties, such as visual parameters or limit propagation policies.
   rpc UpdateBudget(UpdateBudgetRequest) returns (Budget) {
     option (google.api.http) = {
-      patch: "/v1/finance/budgets/{id}"
-      body: "*"
+      put: "/v1/finance/budgets/{id}"
+      body: "budget"
     };
   }
 
@@ -447,29 +452,18 @@ message ConfigureFinanceRequest {
 message GetFinanceSettingsRequest {}
 
 // The request for
+// [GetBudget][saturn.finance.v1.Finance.GetBudget].
+message GetBudgetRequest {
+  // Required. Unique identifier of the budget template to retrieve.
+  // Values are of the form `bud_[a-zA-Z0-9]+`.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// The request for
 // [CreateBudget][saturn.finance.v1.Finance.CreateBudget].
 message CreateBudgetRequest {
-  // Required. User-friendly name of the budget template.
-  string name = 1 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. Limit amount in cents (e.g. 50000 for $500.00).
-  int64 limit_amount = 2 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. ISO currency code of the budget limit.
-  string currency = 3 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. Recurrence interval frequency.
-  RecurrenceInterval interval = 4 [(google.api.field_behavior) = REQUIRED];
-
-  // Optional. Icon identifier for UI rendering.
-  string icon = 5 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. HEX Color code used for visual categorization.
-  string color = 6 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Unique identifier of the default account associated with this budget.
-  // Values are of the form `acc_[a-zA-Z0-9]+`.
-  optional string default_account_id = 7 [(google.api.field_behavior) = OPTIONAL];
+  // Required. Target budget template parameters.
+  Budget budget = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 // LimitPropagation defines how changes in budget limits propagate to future periods.
@@ -489,33 +483,11 @@ message UpdateBudgetRequest {
   // Values are of the form `bud_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 
-  // Optional. User-friendly name.
-  string name = 2 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Limit amount in cents.
-  int64 limit_amount = 3 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Currency code.
-  string currency = 4 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Recurrence interval.
-  RecurrenceInterval interval = 5 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Indicates if the budget is active.
-  bool is_active = 6 [(google.api.field_behavior) = OPTIONAL];
+  // Required. Updated budget template parameters.
+  Budget budget = 2 [(google.api.field_behavior) = REQUIRED];
 
   // Optional. Limit propagation logic determining how future periods are affected.
-  LimitPropagation propagation = 7 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Icon identifier.
-  string icon = 8 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Color code.
-  string color = 9 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Unique identifier of the default account associated with this budget.
-  // Values are of the form `acc_[a-zA-Z0-9]+`.
-  optional string default_account_id = 10 [(google.api.field_behavior) = OPTIONAL];
+  LimitPropagation propagation = 3 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // The request for

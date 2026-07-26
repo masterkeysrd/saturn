@@ -88,6 +88,16 @@ func (c *Coordinator) UpdateBudget(ctx context.Context, req *UpdateBudgetRequest
 	return updated, nil
 }
 
+// GetBudget orchestrates fetching a single budget template.
+func (c *Coordinator) GetBudget(ctx context.Context, id finance.BudgetID) (*finance.Budget, error) {
+	_, err := c.resolveContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.financeService.GetBudget(ctx, id)
+}
+
 // DeleteBudget orchestrates budget template deletion.
 func (c *Coordinator) DeleteBudget(ctx context.Context, id finance.BudgetID) error {
 	_, err := c.resolveContext(ctx)

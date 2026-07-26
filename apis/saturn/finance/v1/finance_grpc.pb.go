@@ -23,6 +23,7 @@ const (
 	Finance_ConfigureFinance_FullMethodName         = "/saturn.finance.v1.Finance/ConfigureFinance"
 	Finance_GetFinanceSettings_FullMethodName       = "/saturn.finance.v1.Finance/GetFinanceSettings"
 	Finance_CreateBudget_FullMethodName             = "/saturn.finance.v1.Finance/CreateBudget"
+	Finance_GetBudget_FullMethodName                = "/saturn.finance.v1.Finance/GetBudget"
 	Finance_UpdateBudget_FullMethodName             = "/saturn.finance.v1.Finance/UpdateBudget"
 	Finance_DeleteBudget_FullMethodName             = "/saturn.finance.v1.Finance/DeleteBudget"
 	Finance_ListBudgets_FullMethodName              = "/saturn.finance.v1.Finance/ListBudgets"
@@ -79,6 +80,8 @@ type FinanceClient interface {
 	GetFinanceSettings(ctx context.Context, in *GetFinanceSettingsRequest, opts ...grpc.CallOption) (*FinanceSettings, error)
 	// Creates a budget category template. Budgets track spent thresholds over repeating intervals.
 	CreateBudget(ctx context.Context, in *CreateBudgetRequest, opts ...grpc.CallOption) (*Budget, error)
+	// Retrieves details of a specific budget category template.
+	GetBudget(ctx context.Context, in *GetBudgetRequest, opts ...grpc.CallOption) (*Budget, error)
 	// Updates an existing budget template's properties, such as visual parameters or limit propagation policies.
 	UpdateBudget(ctx context.Context, in *UpdateBudgetRequest, opts ...grpc.CallOption) (*Budget, error)
 	// Deletes a budget template. Only inactive budgets or budgets without active transactions can be deleted.
@@ -193,6 +196,16 @@ func (c *financeClient) CreateBudget(ctx context.Context, in *CreateBudgetReques
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Budget)
 	err := c.cc.Invoke(ctx, Finance_CreateBudget_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) GetBudget(ctx context.Context, in *GetBudgetRequest, opts ...grpc.CallOption) (*Budget, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Budget)
+	err := c.cc.Invoke(ctx, Finance_GetBudget_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -613,6 +626,8 @@ type FinanceServer interface {
 	GetFinanceSettings(context.Context, *GetFinanceSettingsRequest) (*FinanceSettings, error)
 	// Creates a budget category template. Budgets track spent thresholds over repeating intervals.
 	CreateBudget(context.Context, *CreateBudgetRequest) (*Budget, error)
+	// Retrieves details of a specific budget category template.
+	GetBudget(context.Context, *GetBudgetRequest) (*Budget, error)
 	// Updates an existing budget template's properties, such as visual parameters or limit propagation policies.
 	UpdateBudget(context.Context, *UpdateBudgetRequest) (*Budget, error)
 	// Deletes a budget template. Only inactive budgets or budgets without active transactions can be deleted.
@@ -710,6 +725,9 @@ func (UnimplementedFinanceServer) GetFinanceSettings(context.Context, *GetFinanc
 }
 func (UnimplementedFinanceServer) CreateBudget(context.Context, *CreateBudgetRequest) (*Budget, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateBudget not implemented")
+}
+func (UnimplementedFinanceServer) GetBudget(context.Context, *GetBudgetRequest) (*Budget, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetBudget not implemented")
 }
 func (UnimplementedFinanceServer) UpdateBudget(context.Context, *UpdateBudgetRequest) (*Budget, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateBudget not implemented")
@@ -901,6 +919,24 @@ func _Finance_CreateBudget_Handler(srv interface{}, ctx context.Context, dec fun
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(FinanceServer).CreateBudget(ctx, req.(*CreateBudgetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_GetBudget_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBudgetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).GetBudget(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_GetBudget_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).GetBudget(ctx, req.(*GetBudgetRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1643,6 +1679,10 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateBudget",
 			Handler:    _Finance_CreateBudget_Handler,
+		},
+		{
+			MethodName: "GetBudget",
+			Handler:    _Finance_GetBudget_Handler,
 		},
 		{
 			MethodName: "UpdateBudget",

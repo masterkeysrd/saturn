@@ -95,12 +95,11 @@ export interface GetSchedulerStatusResponse {
  * ListSchedules lists all recurring schedules currently defined in the system.
  */
 export async function listSchedules(
-  req?: ListSchedulesRequest
+  _req?: ListSchedulesRequest
 ): Promise<ListSchedulesResponse> {
   return request<ListSchedulesResponse>({
     method: "GET",
     url: "/api/v1/admin/scheduler/schedules",
-    params: req,
   })
 }
 
@@ -124,10 +123,11 @@ export function useListSchedulesQuery(
 export async function listJobs(
   req: ListJobsRequest
 ): Promise<ListJobsResponse> {
+  const params = { ...req }
   return request<ListJobsResponse>({
     method: "GET",
     url: "/api/v1/admin/scheduler/jobs",
-    params: req,
+    params: params,
   })
 }
 
@@ -149,12 +149,11 @@ export function useListJobsQuery(
  * GetSchedulerStatus retrieves the current scheduler engine configuration and status.
  */
 export async function getSchedulerStatus(
-  req?: GetSchedulerStatusRequest
+  _req?: GetSchedulerStatusRequest
 ): Promise<GetSchedulerStatusResponse> {
   return request<GetSchedulerStatusResponse>({
     method: "GET",
     url: "/api/v1/admin/scheduler/status",
-    params: req,
   })
 }
 
@@ -301,14 +300,11 @@ export function useRetryJobMutation(
  */
 export async function deleteJob(
   id: string,
-  req: DeleteJobRequest
+  _req: DeleteJobRequest
 ): Promise<Record<string, never>> {
-  const params = { ...req }
-  delete (params as Record<string, unknown>).id
   return request<Record<string, never>>({
     method: "DELETE",
     url: `/api/v1/admin/scheduler/jobs/${id}`,
-    params: params,
   })
 }
 

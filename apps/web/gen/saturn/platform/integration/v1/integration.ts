@@ -244,12 +244,11 @@ export function useSimulateWebhookMutation(
  * ListCatalog returns the metadata of all available integrations in the catalog.
  */
 export async function listCatalog(
-  req?: Record<string, never>
+  _req?: Record<string, never>
 ): Promise<ListCatalogResponse> {
   return request<ListCatalogResponse>({
     method: "GET",
     url: "/api/v1/platform/integrations/catalog",
-    params: req,
   })
 }
 
@@ -271,12 +270,11 @@ export function useListCatalogQuery(
  * ListIntegrations retrieves all configured integrations for the active Space.
  */
 export async function listIntegrations(
-  req?: Record<string, never>
+  _req?: Record<string, never>
 ): Promise<ListIntegrationsResponse> {
   return request<ListIntegrationsResponse>({
     method: "GET",
     url: "/api/v1/platform/integrations",
-    params: req,
   })
 }
 

@@ -127,10 +127,11 @@ export interface ListSecurityEventsResponse {
 export async function listUsers(
   req: ListUsersRequest
 ): Promise<ListUsersResponse> {
+  const params = { ...req }
   return request<ListUsersResponse>({
     method: "GET",
     url: "/api/v1/admin/identity/users",
-    params: req,
+    params: params,
   })
 }
 
@@ -278,10 +279,11 @@ export function useRevokeAllSessionsMutation(
 export async function listSecurityEvents(
   req: ListSecurityEventsRequest
 ): Promise<ListSecurityEventsResponse> {
+  const params = { ...req }
   return request<ListSecurityEventsResponse>({
     method: "GET",
     url: "/api/v1/admin/identity/security-events",
-    params: req,
+    params: params,
   })
 }
 

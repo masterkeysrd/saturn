@@ -459,38 +459,25 @@ export type GetFinanceSettingsRequest = Record<string, never>
 
 /**
  * The request for
+ * [GetBudget][saturn.finance.v1.Finance.GetBudget].
+ */
+export interface GetBudgetRequest {
+  /**
+   * Required. Unique identifier of the budget template to retrieve.
+   * Values are of the form `bud_[a-zA-Z0-9]+`.
+   */
+  id: string
+}
+
+/**
+ * The request for
  * [CreateBudget][saturn.finance.v1.Finance.CreateBudget].
  */
 export interface CreateBudgetRequest {
   /**
-   * Required. User-friendly name of the budget template.
+   * Required. Target budget template parameters.
    */
-  name: string
-  /**
-   * Required. Limit amount in cents (e.g. 50000 for $500.00).
-   */
-  limitAmount: string
-  /**
-   * Required. ISO currency code of the budget limit.
-   */
-  currency: string
-  /**
-   * Required. Recurrence interval frequency.
-   */
-  interval: RecurrenceInterval
-  /**
-   * Optional. Icon identifier for UI rendering.
-   */
-  icon: string
-  /**
-   * Optional. HEX Color code used for visual categorization.
-   */
-  color: string
-  /**
-   * Optional. Unique identifier of the default account associated with this budget.
-   * Values are of the form `acc_[a-zA-Z0-9]+`.
-   */
-  defaultAccountId?: string
+  budget: Budget
 }
 
 /**
@@ -504,42 +491,13 @@ export interface UpdateBudgetRequest {
    */
   id: string
   /**
-   * Optional. User-friendly name.
+   * Required. Updated budget template parameters.
    */
-  name: string
-  /**
-   * Optional. Limit amount in cents.
-   */
-  limitAmount: string
-  /**
-   * Optional. Currency code.
-   */
-  currency: string
-  /**
-   * Optional. Recurrence interval.
-   */
-  interval: RecurrenceInterval
-  /**
-   * Optional. Indicates if the budget is active.
-   */
-  isActive: boolean
+  budget: Budget
   /**
    * Optional. Limit propagation logic determining how future periods are affected.
    */
   propagation: LimitPropagation
-  /**
-   * Optional. Icon identifier.
-   */
-  icon: string
-  /**
-   * Optional. Color code.
-   */
-  color: string
-  /**
-   * Optional. Unique identifier of the default account associated with this budget.
-   * Values are of the form `acc_[a-zA-Z0-9]+`.
-   */
-  defaultAccountId?: string
 }
 
 /**
@@ -2468,12 +2426,11 @@ export function useConfigureFinanceMutation(
  * Retrieves the current finance settings, including the configured base currency.
  */
 export async function getFinanceSettings(
-  req?: GetFinanceSettingsRequest
+  _req?: GetFinanceSettingsRequest
 ): Promise<FinanceSettings> {
   return request<FinanceSettings>({
     method: "GET",
     url: "/api/v1/finance/settings",
-    params: req,
   })
 }
 
@@ -2498,7 +2455,7 @@ export async function createBudget(req: CreateBudgetRequest): Promise<Budget> {
   return request<Budget>({
     method: "POST",
     url: "/api/v1/finance/budgets",
-    data: req,
+    data: req.budget,
   })
 }
 
@@ -2512,16 +2469,44 @@ export function useCreateBudgetMutation(
 }
 
 /**
+ * Retrieves details of a specific budget category template.
+ */
+export async function getBudget(
+  id: string,
+  _req: GetBudgetRequest
+): Promise<Budget> {
+  return request<Budget>({
+    method: "GET",
+    url: `/api/v1/finance/budgets/${id}`,
+  })
+}
+
+export function useGetBudgetQuery(
+  req: GetBudgetRequest,
+  options?: Omit<UseQueryOptions<Budget, Error>, "queryKey" | "queryFn">
+) {
+  return useQuery<Budget, Error>({
+    queryKey: [`/api/v1/finance/budgets/${req.id}`, req],
+    queryFn: () => getBudget(req.id, req),
+    ...options,
+  })
+}
+
+/**
  * Updates an existing budget template's properties, such as visual parameters or limit propagation policies.
  */
 export async function updateBudget(
   id: string,
   req: UpdateBudgetRequest
 ): Promise<Budget> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
+  delete (params as Record<string, unknown>).budget
   return request<Budget>({
-    method: "PATCH",
+    method: "PUT",
     url: `/api/v1/finance/budgets/${id}`,
-    data: req,
+    params: params,
+    data: req.budget,
   })
 }
 
@@ -2543,14 +2528,11 @@ export function useUpdateBudgetMutation(
  */
 export async function deleteBudget(
   id: string,
-  req: DeleteBudgetRequest
+  _req: DeleteBudgetRequest
 ): Promise<Record<string, never>> {
-  const params = { ...req }
-  delete (params as Record<string, unknown>).id
   return request<Record<string, never>>({
     method: "DELETE",
     url: `/api/v1/finance/budgets/${id}`,
-    params: params,
   })
 }
 
@@ -2577,10 +2559,11 @@ export function useDeleteBudgetMutation(
 export async function listBudgets(
   req: ListBudgetsRequest
 ): Promise<ListBudgetsResponse> {
+  const params = { ...req }
   return request<ListBudgetsResponse>({
     method: "GET",
     url: "/api/v1/finance/budgets",
-    params: req,
+    params: params,
   })
 }
 
@@ -2653,10 +2636,11 @@ export function useCreateExchangeRateMutation(
 export async function listExchangeRates(
   req: ListExchangeRatesRequest
 ): Promise<ListExchangeRatesResponse> {
+  const params = { ...req }
   return request<ListExchangeRatesResponse>({
     method: "GET",
     url: "/api/v1/finance/rates",
-    params: req,
+    params: params,
   })
 }
 
@@ -2680,10 +2664,11 @@ export function useListExchangeRatesQuery(
 export async function deleteExchangeRate(
   req: DeleteExchangeRateRequest
 ): Promise<Record<string, never>> {
+  const params = { ...req }
   return request<Record<string, never>>({
     method: "DELETE",
     url: "/api/v1/finance/rates",
-    params: req,
+    params: params,
   })
 }
 
@@ -2758,14 +2743,11 @@ export function useUpdateExpenseMutation(
  */
 export async function deleteTransaction(
   id: string,
-  req: DeleteTransactionRequest
+  _req: DeleteTransactionRequest
 ): Promise<Record<string, never>> {
-  const params = { ...req }
-  delete (params as Record<string, unknown>).id
   return request<Record<string, never>>({
     method: "DELETE",
     url: `/api/v1/finance/transactions/${id}`,
-    params: params,
   })
 }
 
@@ -2792,10 +2774,11 @@ export function useDeleteTransactionMutation(
 export async function listTransactions(
   req: ListTransactionsRequest
 ): Promise<ListTransactionsResponse> {
+  const params = { ...req }
   return request<ListTransactionsResponse>({
     method: "GET",
     url: "/api/v1/finance/transactions",
-    params: req,
+    params: params,
   })
 }
 
@@ -2818,14 +2801,11 @@ export function useListTransactionsQuery(
  */
 export async function listTransactionEvents(
   txn_id: string,
-  req: ListTransactionEventsRequest
+  _req: ListTransactionEventsRequest
 ): Promise<ListTransactionEventsResponse> {
-  const params = { ...req }
-  delete (params as Record<string, unknown>).txnId
   return request<ListTransactionEventsResponse>({
     method: "GET",
     url: `/api/v1/finance/transactions/${txn_id}/events`,
-    params: params,
   })
 }
 
@@ -2849,10 +2829,11 @@ export function useListTransactionEventsQuery(
 export async function getInsights(
   req: GetInsightsRequest
 ): Promise<GetInsightsResponse> {
+  const params = { ...req }
   return request<GetInsightsResponse>({
     method: "GET",
     url: "/api/v1/finance/insights",
-    params: req,
+    params: params,
   })
 }
 
@@ -2932,14 +2913,11 @@ export function useUpdateRecurringExpenseMutation(
  */
 export async function deleteRecurringExpense(
   id: string,
-  req: DeleteRecurringExpenseRequest
+  _req: DeleteRecurringExpenseRequest
 ): Promise<Record<string, never>> {
-  const params = { ...req }
-  delete (params as Record<string, unknown>).id
   return request<Record<string, never>>({
     method: "DELETE",
     url: `/api/v1/finance/recurring-expenses/${id}`,
-    params: params,
   })
 }
 
@@ -2966,10 +2944,11 @@ export function useDeleteRecurringExpenseMutation(
 export async function listRecurringExpenses(
   req: ListRecurringExpensesRequest
 ): Promise<ListRecurringExpensesResponse> {
+  const params = { ...req }
   return request<ListRecurringExpensesResponse>({
     method: "GET",
     url: "/api/v1/finance/recurring-expenses",
-    params: req,
+    params: params,
   })
 }
 
@@ -2993,10 +2972,11 @@ export function useListRecurringExpensesQuery(
 export async function listScheduledPayments(
   req: ListScheduledPaymentsRequest
 ): Promise<ListScheduledPaymentsResponse> {
+  const params = { ...req }
   return request<ListScheduledPaymentsResponse>({
     method: "GET",
     url: "/api/v1/finance/scheduled-payments",
-    params: req,
+    params: params,
   })
 }
 
@@ -3104,14 +3084,11 @@ export function useCreateBorrowingMutation(
  */
 export async function getBorrowing(
   id: string,
-  req: GetBorrowingRequest
+  _req: GetBorrowingRequest
 ): Promise<Borrowing> {
-  const params = { ...req }
-  delete (params as Record<string, unknown>).id
   return request<Borrowing>({
     method: "GET",
     url: `/api/v1/finance/borrowings/${id}`,
-    params: params,
   })
 }
 
@@ -3132,10 +3109,11 @@ export function useGetBorrowingQuery(
 export async function listBorrowings(
   req: ListBorrowingsRequest
 ): Promise<ListBorrowingsResponse> {
+  const params = { ...req }
   return request<ListBorrowingsResponse>({
     method: "GET",
     url: "/api/v1/finance/borrowings",
-    params: req,
+    params: params,
   })
 }
 
@@ -3189,14 +3167,11 @@ export function useUpdateBorrowingMutation(
  */
 export async function deleteBorrowing(
   id: string,
-  req: DeleteBorrowingRequest
+  _req: DeleteBorrowingRequest
 ): Promise<Record<string, never>> {
-  const params = { ...req }
-  delete (params as Record<string, unknown>).id
   return request<Record<string, never>>({
     method: "DELETE",
     url: `/api/v1/finance/borrowings/${id}`,
-    params: params,
   })
 }
 
@@ -3254,14 +3229,11 @@ export function useCreateBorrowingRepaymentMutation(
  */
 export async function listBorrowingRepayments(
   borrowing_id: string,
-  req: ListBorrowingRepaymentsRequest
+  _req: ListBorrowingRepaymentsRequest
 ): Promise<ListBorrowingRepaymentsResponse> {
-  const params = { ...req }
-  delete (params as Record<string, unknown>).borrowingId
   return request<ListBorrowingRepaymentsResponse>({
     method: "GET",
     url: `/api/v1/finance/borrowings/${borrowing_id}/repayments`,
-    params: params,
   })
 }
 
@@ -3285,15 +3257,11 @@ export function useListBorrowingRepaymentsQuery(
 export async function deleteBorrowingRepayment(
   borrowing_id: string,
   id: string,
-  req: DeleteBorrowingRepaymentRequest
+  _req: DeleteBorrowingRepaymentRequest
 ): Promise<Record<string, never>> {
-  const params = { ...req }
-  delete (params as Record<string, unknown>).borrowingId
-  delete (params as Record<string, unknown>).id
   return request<Record<string, never>>({
     method: "DELETE",
     url: `/api/v1/finance/borrowings/${borrowing_id}/repayments/${id}`,
-    params: params,
   })
 }
 
@@ -3398,14 +3366,11 @@ export function useUpdateAccountMutation(
  */
 export async function deleteAccount(
   id: string,
-  req: DeleteAccountRequest
+  _req: DeleteAccountRequest
 ): Promise<Record<string, never>> {
-  const params = { ...req }
-  delete (params as Record<string, unknown>).id
   return request<Record<string, never>>({
     method: "DELETE",
     url: `/api/v1/finance/accounts/${id}`,
-    params: params,
   })
 }
 
@@ -3432,10 +3397,11 @@ export function useDeleteAccountMutation(
 export async function listAccounts(
   req: ListAccountsRequest
 ): Promise<ListAccountsResponse> {
+  const params = { ...req }
   return request<ListAccountsResponse>({
     method: "GET",
     url: "/api/v1/finance/accounts",
-    params: req,
+    params: params,
   })
 }
 
@@ -3481,10 +3447,11 @@ export function useCreateTransferMutation(
 export async function listTransfers(
   req: ListTransfersRequest
 ): Promise<ListTransfersResponse> {
+  const params = { ...req }
   return request<ListTransfersResponse>({
     method: "GET",
     url: "/api/v1/finance/transfers",
-    params: req,
+    params: params,
   })
 }
 
@@ -3506,12 +3473,11 @@ export function useListTransfersQuery(
  * Retrieves a static list of supported currencies.
  */
 export async function listCurrencies(
-  req?: ListCurrenciesRequest
+  _req?: ListCurrenciesRequest
 ): Promise<ListCurrenciesResponse> {
   return request<ListCurrenciesResponse>({
     method: "GET",
     url: "/api/v1/finance/currencies",
-    params: req,
   })
 }
 
@@ -3535,10 +3501,11 @@ export function useListCurrenciesQuery(
 export async function listInboxItems(
   req: ListInboxItemsRequest
 ): Promise<ListInboxItemsResponse> {
+  const params = { ...req }
   return request<ListInboxItemsResponse>({
     method: "GET",
     url: "/api/v1/finance/inbox-items",
-    params: req,
+    params: params,
   })
 }
 
@@ -3623,14 +3590,11 @@ export function useApproveInboxItemMutation(
  */
 export async function discardInboxItem(
   id: string,
-  req: DiscardInboxItemRequest
+  _req: DiscardInboxItemRequest
 ): Promise<Record<string, never>> {
-  const params = { ...req }
-  delete (params as Record<string, unknown>).id
   return request<Record<string, never>>({
     method: "DELETE",
     url: `/api/v1/finance/inbox-items/${id}`,
-    params: params,
   })
 }
 

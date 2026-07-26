@@ -335,12 +335,11 @@ export function useLogoutMutation(
  * GetCurrentUser retrieves the profile of the authenticated user.
  */
 export async function getCurrentUser(
-  req?: GetCurrentUserRequest
+  _req?: GetCurrentUserRequest
 ): Promise<User> {
   return request<User>({
     method: "GET",
     url: "/api/v1/identity/users/me",
-    params: req,
   })
 }
 
@@ -359,12 +358,11 @@ export function useGetCurrentUserQuery(
  * ListActiveSessions returns all non-expired, non-revoked sessions for the user.
  */
 export async function listActiveSessions(
-  req?: ListActiveSessionsRequest
+  _req?: ListActiveSessionsRequest
 ): Promise<ListActiveSessionsResponse> {
   return request<ListActiveSessionsResponse>({
     method: "GET",
     url: "/api/v1/identity/sessions",
-    params: req,
   })
 }
 
@@ -449,10 +447,11 @@ export function useRevokeAllSessionsMutation(
 export async function listMySecurityEvents(
   req: ListMySecurityEventsRequest
 ): Promise<ListMySecurityEventsResponse> {
+  const params = { ...req }
   return request<ListMySecurityEventsResponse>({
     method: "GET",
     url: "/api/v1/identity/users/me/security-events",
-    params: req,
+    params: params,
   })
 }
 

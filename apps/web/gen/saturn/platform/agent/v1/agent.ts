@@ -174,14 +174,11 @@ export function useCreateProviderMutation(
  */
 export async function getProvider(
   id: string,
-  req: GetProviderRequest
+  _req: GetProviderRequest
 ): Promise<LLMProvider> {
-  const params = { ...req }
-  delete (params as Record<string, unknown>).id
   return request<LLMProvider>({
     method: "GET",
     url: `/api/v1/platform/agent/providers/${id}`,
-    params: params,
   })
 }
 
@@ -200,12 +197,11 @@ export function useGetProviderQuery(
  * ListProviders lists all configured LLM providers in the workspace.
  */
 export async function listProviders(
-  req?: Record<string, never>
+  _req?: Record<string, never>
 ): Promise<ListProvidersResponse> {
   return request<ListProvidersResponse>({
     method: "GET",
     url: "/api/v1/platform/agent/providers",
-    params: req,
   })
 }
 
@@ -259,14 +255,11 @@ export function useUpdateProviderMutation(
  */
 export async function deleteProvider(
   id: string,
-  req: DeleteProviderRequest
+  _req: DeleteProviderRequest
 ): Promise<Record<string, never>> {
-  const params = { ...req }
-  delete (params as Record<string, unknown>).id
   return request<Record<string, never>>({
     method: "DELETE",
     url: `/api/v1/platform/agent/providers/${id}`,
-    params: params,
   })
 }
 
@@ -312,14 +305,11 @@ export function useCreateAgentMutation(
  */
 export async function getAgent(
   id: string,
-  req: GetAgentRequest
+  _req: GetAgentRequest
 ): Promise<Agent> {
-  const params = { ...req }
-  delete (params as Record<string, unknown>).id
   return request<Agent>({
     method: "GET",
     url: `/api/v1/platform/agent/agents/${id}`,
-    params: params,
   })
 }
 
@@ -338,12 +328,11 @@ export function useGetAgentQuery(
  * ListAgents lists all active AI Agent instances in the workspace.
  */
 export async function listAgents(
-  req?: Record<string, never>
+  _req?: Record<string, never>
 ): Promise<ListAgentsResponse> {
   return request<ListAgentsResponse>({
     method: "GET",
     url: "/api/v1/platform/agent/agents",
-    params: req,
   })
 }
 
@@ -393,14 +382,11 @@ export function useUpdateAgentMutation(
  */
 export async function deleteAgent(
   id: string,
-  req: DeleteAgentRequest
+  _req: DeleteAgentRequest
 ): Promise<Record<string, never>> {
-  const params = { ...req }
-  delete (params as Record<string, unknown>).id
   return request<Record<string, never>>({
     method: "DELETE",
     url: `/api/v1/platform/agent/agents/${id}`,
-    params: params,
   })
 }
 
@@ -426,14 +412,11 @@ export function useDeleteAgentMutation(
  */
 export async function listAgentRuns(
   agent_id: string,
-  req: ListAgentRunsRequest
+  _req: ListAgentRunsRequest
 ): Promise<ListAgentRunsResponse> {
-  const params = { ...req }
-  delete (params as Record<string, unknown>).agentId
   return request<ListAgentRunsResponse>({
     method: "GET",
     url: `/api/v1/platform/agent/agents/${agent_id}/runs`,
-    params: params,
   })
 }
 
@@ -455,12 +438,11 @@ export function useListAgentRunsQuery(
  * GetAgentCatalog retrieves standard agent purpose blueprints (descriptors).
  */
 export async function getAgentCatalog(
-  req?: Record<string, never>
+  _req?: Record<string, never>
 ): Promise<GetAgentCatalogResponse> {
   return request<GetAgentCatalogResponse>({
     method: "GET",
     url: "/api/v1/platform/agent/agents-catalog",
-    params: req,
   })
 }
 
@@ -482,12 +464,11 @@ export function useGetAgentCatalogQuery(
  * GetProviderCatalog retrieves standard connection type templates.
  */
 export async function getProviderCatalog(
-  req?: Record<string, never>
+  _req?: Record<string, never>
 ): Promise<GetProviderCatalogResponse> {
   return request<GetProviderCatalogResponse>({
     method: "GET",
     url: "/api/v1/platform/agent/providers-catalog",
-    params: req,
   })
 }
 

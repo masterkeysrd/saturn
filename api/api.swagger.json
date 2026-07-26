@@ -1247,12 +1247,12 @@
         },
         "parameters": [
           {
-            "name": "body",
-            "description": "The request for\n[CreateBudget][saturn.finance.v1.Finance.CreateBudget].",
+            "name": "budget",
+            "description": "Required. Target budget template parameters.",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1CreateBudgetRequest"
+              "$ref": "#/definitions/v1Budget"
             }
           }
         ],
@@ -1302,6 +1302,36 @@
       }
     },
     "/v1/finance/budgets/{id}": {
+      "get": {
+        "summary": "Retrieves details of a specific budget category template.",
+        "operationId": "Finance_GetBudget",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Budget"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Unique identifier of the budget template to retrieve.\nValues are of the form `bud_[a-zA-Z0-9]+`.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
       "delete": {
         "summary": "Deletes a budget template. Only inactive budgets or budgets without active transactions can be deleted.",
         "operationId": "Finance_DeleteBudget",
@@ -1333,7 +1363,7 @@
           "Finance"
         ]
       },
-      "patch": {
+      "put": {
         "summary": "Updates an existing budget template's properties, such as visual parameters or limit propagation policies.",
         "operationId": "Finance_UpdateBudget",
         "responses": {
@@ -1359,12 +1389,24 @@
             "type": "string"
           },
           {
-            "name": "body",
+            "name": "budget",
+            "description": "Required. Updated budget template parameters.",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/FinanceUpdateBudgetBody"
+              "$ref": "#/definitions/v1Budget"
             }
+          },
+          {
+            "name": "propagation",
+            "description": "Optional. Limit propagation logic determining how future periods are affected.\n\n - LIMIT_PROPAGATION_CURRENT_PERIOD: Apply the limit modification only to the current active period.\n - LIMIT_PROPAGATION_NEXT_PERIODS_ONLY: Propagate limits to all future budget periods without modifying history.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "LIMIT_PROPAGATION_CURRENT_PERIOD",
+              "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
+            ]
           }
         ],
         "tags": [
@@ -4045,49 +4087,6 @@
         "borrowing"
       ]
     },
-    "FinanceUpdateBudgetBody": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Optional. User-friendly name."
-        },
-        "limitAmount": {
-          "type": "string",
-          "format": "int64",
-          "description": "Optional. Limit amount in cents."
-        },
-        "currency": {
-          "type": "string",
-          "description": "Optional. Currency code."
-        },
-        "interval": {
-          "$ref": "#/definitions/v1RecurrenceInterval",
-          "description": "Optional. Recurrence interval."
-        },
-        "isActive": {
-          "type": "boolean",
-          "description": "Optional. Indicates if the budget is active."
-        },
-        "propagation": {
-          "$ref": "#/definitions/v1LimitPropagation",
-          "description": "Optional. Limit propagation logic determining how future periods are affected."
-        },
-        "icon": {
-          "type": "string",
-          "description": "Optional. Icon identifier."
-        },
-        "color": {
-          "type": "string",
-          "description": "Optional. Color code."
-        },
-        "defaultAccountId": {
-          "type": "string",
-          "description": "Optional. Unique identifier of the default account associated with this budget.\nValues are of the form `acc_[a-zA-Z0-9]+`."
-        }
-      },
-      "description": "The request for\n[UpdateBudget][saturn.finance.v1.Finance.UpdateBudget]."
-    },
     "FinanceUpdateExpenseBody": {
       "type": "object",
       "properties": {
@@ -5453,47 +5452,6 @@
       "description": "The request for\n[CreateBorrowing][saturn.finance.v1.Finance.CreateBorrowing].",
       "required": [
         "borrowing"
-      ]
-    },
-    "v1CreateBudgetRequest": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Required. User-friendly name of the budget template."
-        },
-        "limitAmount": {
-          "type": "string",
-          "format": "int64",
-          "description": "Required. Limit amount in cents (e.g. 50000 for $500.00)."
-        },
-        "currency": {
-          "type": "string",
-          "description": "Required. ISO currency code of the budget limit."
-        },
-        "interval": {
-          "$ref": "#/definitions/v1RecurrenceInterval",
-          "description": "Required. Recurrence interval frequency."
-        },
-        "icon": {
-          "type": "string",
-          "description": "Optional. Icon identifier for UI rendering."
-        },
-        "color": {
-          "type": "string",
-          "description": "Optional. HEX Color code used for visual categorization."
-        },
-        "defaultAccountId": {
-          "type": "string",
-          "description": "Optional. Unique identifier of the default account associated with this budget.\nValues are of the form `acc_[a-zA-Z0-9]+`."
-        }
-      },
-      "description": "The request for\n[CreateBudget][saturn.finance.v1.Finance.CreateBudget].",
-      "required": [
-        "name",
-        "limitAmount",
-        "currency",
-        "interval"
       ]
     },
     "v1CreateExchangeRateRequest": {

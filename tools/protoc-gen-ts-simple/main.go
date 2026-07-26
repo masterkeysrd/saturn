@@ -206,6 +206,45 @@ func generateMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 
 	writeComments(g, method.Comments)
 
+	bodyField := httpRule.GetBody()
+	jsonBodyField := ""
+	if bodyField != "" && bodyField != "*" {
+		jsonBodyField = bodyField
+		for _, f := range method.Input.Fields {
+			if string(f.Desc.Name()) == bodyField {
+				jsonBodyField = f.Desc.JSONName()
+				break
+			}
+		}
+	}
+
+	var hasQueryParams bool
+	if httpMethod == "GET" || httpMethod == "DELETE" {
+		hasQueryParams = len(method.Input.Fields) > len(pathParams)
+	} else if bodyField != "" && bodyField != "*" {
+		nonBodyOrPathCount := 0
+		for _, f := range method.Input.Fields {
+			fName := string(f.Desc.Name())
+			isPath := false
+			for _, p := range pathParams {
+				if p == fName {
+					isPath = true
+					break
+				}
+			}
+			if !isPath && f.Desc.JSONName() != jsonBodyField {
+				nonBodyOrPathCount++
+			}
+		}
+		hasQueryParams = nonBodyOrPathCount > 0
+	}
+
+	reqUsed := hasQueryParams || (httpMethod != "GET" && httpMethod != "DELETE")
+	reqParamName := "req"
+	if !reqUsed {
+		reqParamName = "_req"
+	}
+
 	// Build parameters list
 	var paramsList []string
 	for _, p := range pathParams {
@@ -215,7 +254,7 @@ func generateMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 	if len(method.Input.Fields) == 0 {
 		reqSuffix = "?"
 	}
-	paramsList = append(paramsList, fmt.Sprintf("req%s: %s", reqSuffix, reqType))
+	paramsList = append(paramsList, fmt.Sprintf("%s%s: %s", reqParamName, reqSuffix, reqType))
 
 	// Map path parameters to their camelCased JSON name from the input message fields
 	var pathParamJSONNames []string
@@ -240,30 +279,24 @@ func generateMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 		urlStr = fmt.Sprintf("%q", "/api"+path)
 	}
 
-	paramsVal := "req"
-	if len(pathParamJSONNames) > 0 && (httpMethod == "GET" || httpMethod == "DELETE") {
+	if hasQueryParams {
 		g.P("  const params = { ...req };")
 		for _, name := range pathParamJSONNames {
 			g.P("  delete (params as Record<string, unknown>).", name, ";")
 		}
-		paramsVal = "params"
+		if jsonBodyField != "" {
+			g.P("  delete (params as Record<string, unknown>).", jsonBodyField, ";")
+		}
 	}
 
 	g.P("  return request<", resType, ">({")
 	g.P("    method: ", fmt.Sprintf("%q", httpMethod), ",")
 	g.P("    url: ", urlStr, ",")
-	if httpMethod == "GET" || httpMethod == "DELETE" {
-		g.P("    params: ", paramsVal, ",")
-	} else {
-		bodyField := httpRule.GetBody()
-		if bodyField != "" && bodyField != "*" {
-			jsonBodyField := bodyField
-			for _, f := range method.Input.Fields {
-				if string(f.Desc.Name()) == bodyField {
-					jsonBodyField = f.Desc.JSONName()
-					break
-				}
-			}
+	if hasQueryParams {
+		g.P("    params: params,")
+	}
+	if httpMethod != "GET" && httpMethod != "DELETE" {
+		if jsonBodyField != "" {
 			g.P("    data: req.", jsonBodyField, ",")
 		} else {
 			g.P("    data: req,")

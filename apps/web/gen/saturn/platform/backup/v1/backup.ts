@@ -41,12 +41,11 @@ export type RunDatabaseBackupPayload = Record<string, never>
  * ListBackups returns a list of database backup entries from the index.
  */
 export async function listBackups(
-  req?: ListBackupsRequest
+  _req?: ListBackupsRequest
 ): Promise<ListBackupsResponse> {
   return request<ListBackupsResponse>({
     method: "GET",
     url: "/api/v1/admin/backups",
-    params: req,
   })
 }
 

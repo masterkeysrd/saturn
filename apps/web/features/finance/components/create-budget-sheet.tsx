@@ -112,13 +112,15 @@ export function CreateBudgetSheet({
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     await createMutation.mutateAsync({
-      name,
-      limitAmount: toCentsString(limit),
-      currency,
-      interval,
-      icon,
-      color,
-      defaultAccountId: defaultAccountId || undefined,
+      budget: {
+        name,
+        limitAmount: toCentsString(limit),
+        currency,
+        interval,
+        icon,
+        color,
+        defaultAccountId: defaultAccountId || undefined,
+      },
     })
     onOpenChange(false)
     setName("")

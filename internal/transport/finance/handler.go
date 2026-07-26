@@ -171,24 +171,29 @@ func (h *Handler) ListCurrencies(ctx context.Context, req *financev1.ListCurrenc
 }
 
 func (h *Handler) CreateBudget(ctx context.Context, req *financev1.CreateBudgetRequest) (*financev1.Budget, error) {
-	currency, err := finance.ParseCurrency(req.GetCurrency())
+	bInput := req.GetBudget()
+	if bInput == nil {
+		return nil, status.Error(codes.InvalidArgument, "budget payload is required")
+	}
+
+	currency, err := finance.ParseCurrency(bInput.GetCurrency())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	var defaultAccountID *finance.AccountID
-	if req.DefaultAccountId != nil {
-		idVal := finance.AccountID(*req.DefaultAccountId)
+	if bInput.DefaultAccountId != nil {
+		idVal := finance.AccountID(*bInput.DefaultAccountId)
 		defaultAccountID = &idVal
 	}
 
 	appReq := &financeapp.CreateBudgetRequest{
-		Name:             req.GetName(),
-		LimitAmount:      req.GetLimitAmount(),
+		Name:             bInput.GetName(),
+		LimitAmount:      bInput.GetLimitAmount(),
 		Currency:         currency,
-		Interval:         toDomainInterval(req.GetInterval()),
-		Icon:             req.GetIcon(),
-		Color:            req.GetColor(),
+		Interval:         toDomainInterval(bInput.GetInterval()),
+		Icon:             bInput.GetIcon(),
+		Color:            bInput.GetColor(),
 		DefaultAccountID: defaultAccountID,
 	}
 
@@ -200,28 +205,42 @@ func (h *Handler) CreateBudget(ctx context.Context, req *financev1.CreateBudgetR
 	return toProtoBudget(budget), nil
 }
 
+func (h *Handler) GetBudget(ctx context.Context, req *financev1.GetBudgetRequest) (*financev1.Budget, error) {
+	budget, err := h.Coordinator.GetBudget(ctx, finance.BudgetID(req.GetId()))
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoBudget(budget), nil
+}
+
 func (h *Handler) UpdateBudget(ctx context.Context, req *financev1.UpdateBudgetRequest) (*financev1.Budget, error) {
-	currency, err := finance.ParseCurrency(req.GetCurrency())
+	bInput := req.GetBudget()
+	if bInput == nil {
+		return nil, status.Error(codes.InvalidArgument, "budget payload is required")
+	}
+
+	currency, err := finance.ParseCurrency(bInput.GetCurrency())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	var defaultAccountID *finance.AccountID
-	if req.DefaultAccountId != nil {
-		idVal := finance.AccountID(*req.DefaultAccountId)
+	if bInput.DefaultAccountId != nil {
+		idVal := finance.AccountID(*bInput.DefaultAccountId)
 		defaultAccountID = &idVal
 	}
 
 	appReq := &financeapp.UpdateBudgetRequest{
 		ID:               finance.BudgetID(req.GetId()),
-		Name:             req.GetName(),
-		LimitAmount:      req.GetLimitAmount(),
+		Name:             bInput.GetName(),
+		LimitAmount:      bInput.GetLimitAmount(),
 		Currency:         currency,
-		Interval:         toDomainInterval(req.GetInterval()),
-		IsActive:         req.GetIsActive(),
+		Interval:         toDomainInterval(bInput.GetInterval()),
+		IsActive:         bInput.GetIsActive(),
 		Propagation:      toDomainPropagation(req.GetPropagation()),
-		Icon:             req.GetIcon(),
-		Color:            req.GetColor(),
+		Icon:             bInput.GetIcon(),
+		Color:            bInput.GetColor(),
 		DefaultAccountID: defaultAccountID,
 	}
 

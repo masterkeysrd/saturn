@@ -145,15 +145,17 @@ export function EditBudgetSheet({
       id: activeBudget.id || "",
       req: {
         id: activeBudget.id || "",
-        name,
-        limitAmount: toCentsString(limit),
-        currency,
-        interval,
-        isActive,
+        budget: {
+          name,
+          limitAmount: toCentsString(limit),
+          currency,
+          interval,
+          isActive,
+          icon,
+          color,
+          defaultAccountId: defaultAccountId || undefined,
+        },
         propagation,
-        icon,
-        color,
-        defaultAccountId: defaultAccountId || undefined,
       },
     })
     onOpenChange(false)
