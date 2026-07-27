@@ -29,6 +29,8 @@ const (
 	Finance_ListBudgets_FullMethodName              = "/saturn.finance.v1.Finance/ListBudgets"
 	Finance_GetBudgetPeriod_FullMethodName          = "/saturn.finance.v1.Finance/GetBudgetPeriod"
 	Finance_CreateExchangeRate_FullMethodName       = "/saturn.finance.v1.Finance/CreateExchangeRate"
+	Finance_GetExchangeRate_FullMethodName          = "/saturn.finance.v1.Finance/GetExchangeRate"
+	Finance_UpdateExchangeRate_FullMethodName       = "/saturn.finance.v1.Finance/UpdateExchangeRate"
 	Finance_ListExchangeRates_FullMethodName        = "/saturn.finance.v1.Finance/ListExchangeRates"
 	Finance_DeleteExchangeRate_FullMethodName       = "/saturn.finance.v1.Finance/DeleteExchangeRate"
 	Finance_CreateExpense_FullMethodName            = "/saturn.finance.v1.Finance/CreateExpense"
@@ -92,6 +94,10 @@ type FinanceClient interface {
 	GetBudgetPeriod(ctx context.Context, in *GetBudgetPeriodRequest, opts ...grpc.CallOption) (*BudgetPeriod, error)
 	// Registers a daily exchange rate conversion coefficient between two currencies.
 	CreateExchangeRate(ctx context.Context, in *CreateExchangeRateRequest, opts ...grpc.CallOption) (*ExchangeRate, error)
+	// Retrieves a specific daily exchange rate conversion rule by ID.
+	GetExchangeRate(ctx context.Context, in *GetExchangeRateRequest, opts ...grpc.CallOption) (*ExchangeRate, error)
+	// Updates an existing daily exchange rate conversion coefficient.
+	UpdateExchangeRate(ctx context.Context, in *UpdateExchangeRateRequest, opts ...grpc.CallOption) (*ExchangeRate, error)
 	// Lists historical exchange rate conversion coefficients.
 	ListExchangeRates(ctx context.Context, in *ListExchangeRatesRequest, opts ...grpc.CallOption) (*ListExchangeRatesResponse, error)
 	// Deletes a registered daily exchange rate conversion rule.
@@ -256,6 +262,26 @@ func (c *financeClient) CreateExchangeRate(ctx context.Context, in *CreateExchan
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ExchangeRate)
 	err := c.cc.Invoke(ctx, Finance_CreateExchangeRate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) GetExchangeRate(ctx context.Context, in *GetExchangeRateRequest, opts ...grpc.CallOption) (*ExchangeRate, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExchangeRate)
+	err := c.cc.Invoke(ctx, Finance_GetExchangeRate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) UpdateExchangeRate(ctx context.Context, in *UpdateExchangeRateRequest, opts ...grpc.CallOption) (*ExchangeRate, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExchangeRate)
+	err := c.cc.Invoke(ctx, Finance_UpdateExchangeRate_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -638,6 +664,10 @@ type FinanceServer interface {
 	GetBudgetPeriod(context.Context, *GetBudgetPeriodRequest) (*BudgetPeriod, error)
 	// Registers a daily exchange rate conversion coefficient between two currencies.
 	CreateExchangeRate(context.Context, *CreateExchangeRateRequest) (*ExchangeRate, error)
+	// Retrieves a specific daily exchange rate conversion rule by ID.
+	GetExchangeRate(context.Context, *GetExchangeRateRequest) (*ExchangeRate, error)
+	// Updates an existing daily exchange rate conversion coefficient.
+	UpdateExchangeRate(context.Context, *UpdateExchangeRateRequest) (*ExchangeRate, error)
 	// Lists historical exchange rate conversion coefficients.
 	ListExchangeRates(context.Context, *ListExchangeRatesRequest) (*ListExchangeRatesResponse, error)
 	// Deletes a registered daily exchange rate conversion rule.
@@ -743,6 +773,12 @@ func (UnimplementedFinanceServer) GetBudgetPeriod(context.Context, *GetBudgetPer
 }
 func (UnimplementedFinanceServer) CreateExchangeRate(context.Context, *CreateExchangeRateRequest) (*ExchangeRate, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateExchangeRate not implemented")
+}
+func (UnimplementedFinanceServer) GetExchangeRate(context.Context, *GetExchangeRateRequest) (*ExchangeRate, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetExchangeRate not implemented")
+}
+func (UnimplementedFinanceServer) UpdateExchangeRate(context.Context, *UpdateExchangeRateRequest) (*ExchangeRate, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateExchangeRate not implemented")
 }
 func (UnimplementedFinanceServer) ListExchangeRates(context.Context, *ListExchangeRatesRequest) (*ListExchangeRatesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListExchangeRates not implemented")
@@ -1027,6 +1063,42 @@ func _Finance_CreateExchangeRate_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(FinanceServer).CreateExchangeRate(ctx, req.(*CreateExchangeRateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_GetExchangeRate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetExchangeRateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).GetExchangeRate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_GetExchangeRate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).GetExchangeRate(ctx, req.(*GetExchangeRateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_UpdateExchangeRate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateExchangeRateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).UpdateExchangeRate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_UpdateExchangeRate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).UpdateExchangeRate(ctx, req.(*UpdateExchangeRateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1703,6 +1775,14 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateExchangeRate",
 			Handler:    _Finance_CreateExchangeRate_Handler,
+		},
+		{
+			MethodName: "GetExchangeRate",
+			Handler:    _Finance_GetExchangeRate_Handler,
+		},
+		{
+			MethodName: "UpdateExchangeRate",
+			Handler:    _Finance_UpdateExchangeRate_Handler,
 		},
 		{
 			MethodName: "ListExchangeRates",

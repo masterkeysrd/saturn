@@ -3,17 +3,46 @@ package finance
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 )
 
 // ExchangeRate represents a daily rate record.
 type ExchangeRate struct {
+	ID           string
 	SpaceID      SpaceID
 	FromCurrency Currency
 	ToCurrency   Currency
 	Rate         float64
 	RateDate     time.Time
 	CreateTime   time.Time
+}
+
+// ComputeID generates the deterministic identifier for an exchange rate (e.g. "rate_USD_EUR_20260727").
+func (r *ExchangeRate) ComputeID() string {
+	return fmt.Sprintf("rate_%s_%s_%s", r.FromCurrency, r.ToCurrency, r.RateDate.Format("20060102"))
+}
+
+// ParseExchangeRateID extracts fromCurrency, toCurrency, and rateDate from an exchange rate ID.
+func ParseExchangeRateID(id string) (Currency, Currency, time.Time, error) {
+	clean := strings.TrimPrefix(id, "rate_")
+	parts := strings.Split(clean, "_")
+	if len(parts) != 3 {
+		return "", "", time.Time{}, errors.New("invalid exchange rate ID format")
+	}
+	from, err := ParseCurrency(parts[0])
+	if err != nil {
+		return "", "", time.Time{}, fmt.Errorf("invalid from currency in ID: %w", err)
+	}
+	to, err := ParseCurrency(parts[1])
+	if err != nil {
+		return "", "", time.Time{}, fmt.Errorf("invalid to currency in ID: %w", err)
+	}
+	t, err := time.Parse("20060102", parts[2])
+	if err != nil {
+		return "", "", time.Time{}, fmt.Errorf("invalid rate date in ID: %w", err)
+	}
+	return from, to, t, nil
 }
 
 // Validate checks exchange rate constraints.
@@ -34,4 +63,30 @@ func (r *ExchangeRate) Validate() error {
 		return errors.New("rate date is required")
 	}
 	return nil
+}
+
+// DefaultExchangeRateSortField represents the fallback sorting column name for exchange rates.
+const DefaultExchangeRateSortField = "rate_date"
+
+// ExchangeRateSortFields registry maps sortable exchange rate field names to cursor strings.
+var ExchangeRateSortFields = map[string]func(*ExchangeRate) string{
+	"rate_date":     func(r *ExchangeRate) string { return r.RateDate.Format("2006-01-02") },
+	"from_currency": func(r *ExchangeRate) string { return string(r.FromCurrency) },
+	"to_currency":   func(r *ExchangeRate) string { return string(r.ToCurrency) },
+	"rate":          func(r *ExchangeRate) string { return fmt.Sprintf("%f", r.Rate) },
+	"create_time":   func(r *ExchangeRate) string { return r.CreateTime.Format(time.RFC3339) },
+}
+
+// IsExchangeRateSortField validates if a sort column name is allowed.
+func IsExchangeRateSortField(field string) bool {
+	_, ok := ExchangeRateSortFields[field]
+	return ok
+}
+
+// GetSortValue extracts the sort value string for pagination cursor generation.
+func (r *ExchangeRate) GetSortValue(field string) string {
+	if fn, ok := ExchangeRateSortFields[field]; ok {
+		return fn(r)
+	}
+	return r.GetSortValue(DefaultExchangeRateSortField)
 }

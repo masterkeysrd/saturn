@@ -583,6 +583,10 @@ export interface GetBudgetPeriodRequest {
  */
 export interface ExchangeRate {
   /**
+   * Output only. Unique resource identifier (e.g. "rate_USD_EUR_20260727").
+   */
+  id?: string
+  /**
    * Output only. Associated space identifier.
    */
   spaceId?: string
@@ -614,21 +618,35 @@ export interface ExchangeRate {
  */
 export interface CreateExchangeRateRequest {
   /**
-   * Required. Source currency code.
+   * Required. The exchange rate resource to create.
    */
-  fromCurrency: string
+  exchangeRate: ExchangeRate
+}
+
+/**
+ * The request for
+ * [GetExchangeRate][saturn.finance.v1.Finance.GetExchangeRate].
+ */
+export interface GetExchangeRateRequest {
   /**
-   * Required. Target currency code.
+   * Required. Unique identifier of the exchange rate (e.g. "rate_USD_EUR_20260727").
    */
-  toCurrency: string
+  id: string
+}
+
+/**
+ * The request for
+ * [UpdateExchangeRate][saturn.finance.v1.Finance.UpdateExchangeRate].
+ */
+export interface UpdateExchangeRateRequest {
   /**
-   * Required. Conversion rate multiplier.
+   * Required. Unique identifier of the exchange rate to update.
    */
-  rate: number
+  id: string
   /**
-   * Required. Target date.
+   * Required. The exchange rate details to update.
    */
-  rateDate: string
+  exchangeRate: ExchangeRate
 }
 
 /**
@@ -639,11 +657,31 @@ export interface ListExchangeRatesRequest {
   /**
    * Optional. Maximum number of items to return.
    */
-  pageSize: number
+  pageSize?: number
   /**
    * Optional. Keyset page token.
    */
-  pageToken: string
+  pageToken?: string
+  /**
+   * Optional. Source currency code to filter by (e.g. "EUR").
+   */
+  fromCurrency?: string
+  /**
+   * Optional. Target currency code to filter by (e.g. "USD").
+   */
+  toCurrency?: string
+  /**
+   * Optional. Start boundary date (inclusive) for rate_date filter.
+   */
+  startDate?: string
+  /**
+   * Optional. End boundary date (inclusive) for rate_date filter.
+   */
+  endDate?: string
+  /**
+   * Optional. Sort order for results (e.g. "rate_date desc", "from_currency asc").
+   */
+  orderBy?: string
 }
 
 /**
@@ -667,17 +705,9 @@ export interface ListExchangeRatesResponse {
  */
 export interface DeleteExchangeRateRequest {
   /**
-   * Required. Source currency code.
+   * Required. Unique identifier of the exchange rate to delete (e.g. "rate_USD_EUR_20260727").
    */
-  fromCurrency: string
-  /**
-   * Required. Target currency code.
-   */
-  toCurrency: string
-  /**
-   * Required. Target date.
-   */
-  rateDate: string
+  id: string
 }
 
 /**
@@ -2616,8 +2646,8 @@ export async function createExchangeRate(
 ): Promise<ExchangeRate> {
   return request<ExchangeRate>({
     method: "POST",
-    url: "/api/v1/finance/rates",
-    data: req,
+    url: "/api/v1/finance/exchange-rates",
+    data: req.exchangeRate,
   })
 }
 
@@ -2631,6 +2661,61 @@ export function useCreateExchangeRateMutation(
 }
 
 /**
+ * Retrieves a specific daily exchange rate conversion rule by ID.
+ */
+export async function getExchangeRate(
+  id: string,
+  _req: GetExchangeRateRequest
+): Promise<ExchangeRate> {
+  return request<ExchangeRate>({
+    method: "GET",
+    url: `/api/v1/finance/exchange-rates/${id}`,
+  })
+}
+
+export function useGetExchangeRateQuery(
+  req: GetExchangeRateRequest,
+  options?: Omit<UseQueryOptions<ExchangeRate, Error>, "queryKey" | "queryFn">
+) {
+  return useQuery<ExchangeRate, Error>({
+    queryKey: [`/api/v1/finance/exchange-rates/${req.id}`, req],
+    queryFn: () => getExchangeRate(req.id, req),
+    ...options,
+  })
+}
+
+/**
+ * Updates an existing daily exchange rate conversion coefficient.
+ */
+export async function updateExchangeRate(
+  id: string,
+  req: UpdateExchangeRateRequest
+): Promise<ExchangeRate> {
+  return request<ExchangeRate>({
+    method: "PUT",
+    url: `/api/v1/finance/exchange-rates/${id}`,
+    data: req.exchangeRate,
+  })
+}
+
+export function useUpdateExchangeRateMutation(
+  options?: UseMutationOptions<
+    ExchangeRate,
+    Error,
+    { id: string; req: UpdateExchangeRateRequest }
+  >
+) {
+  return useMutation<
+    ExchangeRate,
+    Error,
+    { id: string; req: UpdateExchangeRateRequest }
+  >({
+    mutationFn: ({ id, req }) => updateExchangeRate(id, req),
+    ...options,
+  })
+}
+
+/**
  * Lists historical exchange rate conversion coefficients.
  */
 export async function listExchangeRates(
@@ -2639,7 +2724,7 @@ export async function listExchangeRates(
   const params = { ...req }
   return request<ListExchangeRatesResponse>({
     method: "GET",
-    url: "/api/v1/finance/rates",
+    url: "/api/v1/finance/exchange-rates",
     params: params,
   })
 }
@@ -2652,7 +2737,7 @@ export function useListExchangeRatesQuery(
   >
 ) {
   return useQuery<ListExchangeRatesResponse, Error>({
-    queryKey: ["/api/v1/finance/rates", req],
+    queryKey: ["/api/v1/finance/exchange-rates", req],
     queryFn: () => listExchangeRates(req),
     ...options,
   })
@@ -2662,13 +2747,12 @@ export function useListExchangeRatesQuery(
  * Deletes a registered daily exchange rate conversion rule.
  */
 export async function deleteExchangeRate(
-  req: DeleteExchangeRateRequest
+  id: string,
+  _req: DeleteExchangeRateRequest
 ): Promise<Record<string, never>> {
-  const params = { ...req }
   return request<Record<string, never>>({
     method: "DELETE",
-    url: "/api/v1/finance/rates",
-    params: params,
+    url: `/api/v1/finance/exchange-rates/${id}`,
   })
 }
 
@@ -2676,11 +2760,15 @@ export function useDeleteExchangeRateMutation(
   options?: UseMutationOptions<
     Record<string, never>,
     Error,
-    DeleteExchangeRateRequest
+    { id: string; req: DeleteExchangeRateRequest }
   >
 ) {
-  return useMutation<Record<string, never>, Error, DeleteExchangeRateRequest>({
-    mutationFn: (req) => deleteExchangeRate(req),
+  return useMutation<
+    Record<string, never>,
+    Error,
+    { id: string; req: DeleteExchangeRateRequest }
+  >({
+    mutationFn: ({ id, req }) => deleteExchangeRate(id, req),
     ...options,
   })
 }

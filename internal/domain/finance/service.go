@@ -362,8 +362,50 @@ func (s *Service) CreateExchangeRate(ctx context.Context, rate *ExchangeRate) (*
 		return nil, fmt.Errorf("validate exchange rate: %w", err)
 	}
 	rate.CreateTime = time.Now().UTC()
+	rate.ID = rate.ComputeID()
 
 	if err := s.deps.ExchangeRateStore.Create(ctx, rate); err != nil {
+		return nil, err
+	}
+	return rate, nil
+}
+
+// GetExchangeRateByID retrieves an exact exchange rate record by its ID.
+func (s *Service) GetExchangeRateByID(ctx context.Context, spaceID SpaceID, id string) (*ExchangeRate, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, fmt.Errorf("validate space ID: %w", err)
+	}
+	from, to, t, err := ParseExchangeRateID(id)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrExchangeRateNotFound, err)
+	}
+	key := ExchangeRateKey{
+		SpaceID:      spaceID,
+		FromCurrency: from,
+		ToCurrency:   to,
+		RateDate:     t,
+	}
+	return s.deps.ExchangeRateStore.GetExactRate(ctx, key)
+}
+
+// UpdateExchangeRate updates an existing exchange rate record.
+func (s *Service) UpdateExchangeRate(ctx context.Context, spaceID SpaceID, id string, rate *ExchangeRate) (*ExchangeRate, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, fmt.Errorf("validate space ID: %w", err)
+	}
+	from, to, t, err := ParseExchangeRateID(id)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrExchangeRateNotFound, err)
+	}
+	rate.SpaceID = spaceID
+	rate.FromCurrency = from
+	rate.ToCurrency = to
+	rate.RateDate = t
+	rate.ID = id
+	if err := rate.Validate(); err != nil {
+		return nil, fmt.Errorf("validate exchange rate: %w", err)
+	}
+	if err := s.deps.ExchangeRateStore.Update(ctx, rate); err != nil {
 		return nil, err
 	}
 	return rate, nil
@@ -377,29 +419,22 @@ func (s *Service) ListExchangeRates(ctx context.Context, spaceID SpaceID, filter
 	return s.deps.ExchangeRateStore.ListBySpace(ctx, spaceID, filter)
 }
 
-// DeleteExchangeRateRequest represents parameters to delete an exchange rate conversion rule.
-type DeleteExchangeRateRequest struct {
-	SpaceID      SpaceID
-	FromCurrency Currency
-	ToCurrency   Currency
-	RateDate     time.Time
-}
-
-// DeleteExchangeRate removes a daily rate conversion rule.
-func (s *Service) DeleteExchangeRate(ctx context.Context, req DeleteExchangeRateRequest) error {
-	if err := req.SpaceID.Validate(); err != nil {
+// DeleteExchangeRateByID removes a daily rate conversion rule by ID.
+func (s *Service) DeleteExchangeRateByID(ctx context.Context, spaceID SpaceID, id string) error {
+	if err := spaceID.Validate(); err != nil {
 		return fmt.Errorf("validate space ID: %w", err)
 	}
-	if err := req.FromCurrency.Validate(); err != nil {
-		return fmt.Errorf("validate from currency: %w", err)
+	from, to, t, err := ParseExchangeRateID(id)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrExchangeRateNotFound, err)
 	}
-	if err := req.ToCurrency.Validate(); err != nil {
-		return fmt.Errorf("validate to currency: %w", err)
+	key := ExchangeRateKey{
+		SpaceID:      spaceID,
+		FromCurrency: from,
+		ToCurrency:   to,
+		RateDate:     t,
 	}
-	if req.RateDate.IsZero() {
-		return errors.New("rate date is required")
-	}
-	return s.deps.ExchangeRateStore.Delete(ctx, ExchangeRateKey(req))
+	return s.deps.ExchangeRateStore.Delete(ctx, key)
 }
 
 // getExchangeRate resolves the exchange rate for the given key.

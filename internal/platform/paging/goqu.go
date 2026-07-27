@@ -10,6 +10,7 @@ type Options struct {
 	Sort     sorting.SortOrder
 	Cursor   *Cursor
 	PageSize uint
+	IDColumn string
 }
 
 // ApplyPagination applies limit, sorting, and keyset cursor conditions to a goqu select dataset.
@@ -19,7 +20,11 @@ func ApplyPagination(query *goqu.SelectDataset, opts Options) *goqu.SelectDatase
 
 	// Apply Sorting and Cursor condition
 	sortCol := goqu.I(opts.Sort.Field)
-	idCol := goqu.I("id")
+	idColName := opts.IDColumn
+	if idColName == "" {
+		idColName = "id"
+	}
+	idCol := goqu.I(idColName)
 
 	if opts.Sort.Ascending {
 		query = query.Order(sortCol.Asc(), idCol.Asc())

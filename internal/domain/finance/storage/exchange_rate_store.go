@@ -3,14 +3,15 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"encoding/base64"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
+	"github.com/doug-martin/goqu/v9"
+	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
 type exchangeRateDB struct {
@@ -22,6 +23,19 @@ type exchangeRateDB struct {
 	CreateTime   time.Time `db:"create_time"`
 }
 
+func (row *exchangeRateDB) toDomain() *finance.ExchangeRate {
+	r := &finance.ExchangeRate{
+		SpaceID:      finance.SpaceID(row.SpaceID),
+		FromCurrency: finance.Currency(row.FromCurrency),
+		ToCurrency:   finance.Currency(row.ToCurrency),
+		Rate:         row.Rate,
+		RateDate:     row.RateDate,
+		CreateTime:   row.CreateTime,
+	}
+	r.ID = r.ComputeID()
+	return r
+}
+
 type ExchangeRateStore struct {
 	db *sqlx.DB
 }
@@ -31,126 +45,222 @@ func NewExchangeRateStore(db *sqlx.DB) *ExchangeRateStore {
 }
 
 func (s *ExchangeRateStore) Create(ctx context.Context, r *finance.ExchangeRate) error {
-	query := `INSERT INTO finance.exchange_rate (space_id, from_currency, to_currency, rate, rate_date, create_time)
-		VALUES ($1, $2, $3, $4, $5, NOW())`
-	_, err := s.db.ExecContext(ctx, query, string(r.SpaceID), r.FromCurrency, r.ToCurrency, r.Rate, r.RateDate)
+	ds := pgDialect.Insert(goqu.S("finance").Table("exchange_rate")).
+		Rows(goqu.Record{
+			"space_id":      string(r.SpaceID),
+			"from_currency": string(r.FromCurrency),
+			"to_currency":   string(r.ToCurrency),
+			"rate":          r.Rate,
+			"rate_date":     r.RateDate.Format("2006-01-02"),
+			"create_time":   goqu.L("NOW()"),
+		}).
+		OnConflict(goqu.DoUpdate("space_id, from_currency, to_currency, rate_date", goqu.Record{
+			"rate": goqu.L("EXCLUDED.rate"),
+		}))
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return fmt.Errorf("build sql query: %w", err)
+	}
+
+	_, err = s.db.ExecContext(ctx, query, args...)
 	return err
+}
+
+func (s *ExchangeRateStore) Update(ctx context.Context, r *finance.ExchangeRate) error {
+	ds := pgDialect.Update(goqu.S("finance").Table("exchange_rate")).
+		Set(goqu.Record{"rate": r.Rate}).
+		Where(goqu.Ex{
+			"space_id":      string(r.SpaceID),
+			"from_currency": string(r.FromCurrency),
+			"to_currency":   string(r.ToCurrency),
+			"rate_date":     r.RateDate.Format("2006-01-02"),
+		})
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return fmt.Errorf("build sql query: %w", err)
+	}
+
+	res, err := s.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return finance.ErrExchangeRateNotFound
+	}
+	return nil
 }
 
 func (s *ExchangeRateStore) GetRate(ctx context.Context, key finance.ExchangeRateKey) (*finance.ExchangeRate, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("exchange_rate")).
+		Select("*").
+		Where(goqu.Ex{
+			"space_id":      string(key.SpaceID),
+			"from_currency": string(key.FromCurrency),
+			"to_currency":   string(key.ToCurrency),
+		}, goqu.I("rate_date").Lte(key.RateDate.Format("2006-01-02"))).
+		Order(goqu.I("rate_date").Desc()).
+		Limit(1)
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("build sql query: %w", err)
+	}
+
 	var row exchangeRateDB
-	// Lookup the rate on the closest date <= target date.
-	q := `SELECT * FROM finance.exchange_rate 
-		WHERE space_id = $1 AND from_currency = $2 AND to_currency = $3 AND rate_date <= $4 
-		ORDER BY rate_date DESC LIMIT 1`
-	if err := s.db.GetContext(ctx, &row, q, string(key.SpaceID), string(key.FromCurrency), string(key.ToCurrency), key.RateDate.Format("2006-01-02")); err != nil {
+	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, finance.ErrExchangeRateNotFound
 		}
 		return nil, err
 	}
-	return &finance.ExchangeRate{
-		SpaceID:      finance.SpaceID(row.SpaceID),
-		FromCurrency: finance.Currency(row.FromCurrency),
-		ToCurrency:   finance.Currency(row.ToCurrency),
-		Rate:         row.Rate,
-		RateDate:     row.RateDate,
-		CreateTime:   row.CreateTime,
-	}, nil
+	return row.toDomain(), nil
+}
+
+func (s *ExchangeRateStore) GetExactRate(ctx context.Context, key finance.ExchangeRateKey) (*finance.ExchangeRate, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("exchange_rate")).
+		Select("*").
+		Where(goqu.Ex{
+			"space_id":      string(key.SpaceID),
+			"from_currency": string(key.FromCurrency),
+			"to_currency":   string(key.ToCurrency),
+			"rate_date":     key.RateDate.Format("2006-01-02"),
+		}).
+		Limit(1)
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("build sql query: %w", err)
+	}
+
+	var row exchangeRateDB
+	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, finance.ErrExchangeRateNotFound
+		}
+		return nil, err
+	}
+	return row.toDomain(), nil
 }
 
 func (s *ExchangeRateStore) GetNextRate(ctx context.Context, key finance.ExchangeRateKey) (*finance.ExchangeRate, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("exchange_rate")).
+		Select("*").
+		Where(goqu.Ex{
+			"space_id":      string(key.SpaceID),
+			"from_currency": string(key.FromCurrency),
+			"to_currency":   string(key.ToCurrency),
+		}, goqu.I("rate_date").Gt(key.RateDate.Format("2006-01-02"))).
+		Order(goqu.I("rate_date").Asc()).
+		Limit(1)
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("build sql query: %w", err)
+	}
+
 	var row exchangeRateDB
-	// Lookup the rate on the closest date > target date.
-	q := `SELECT * FROM finance.exchange_rate 
-		WHERE space_id = $1 AND from_currency = $2 AND to_currency = $3 AND rate_date > $4 
-		ORDER BY rate_date ASC LIMIT 1`
-	if err := s.db.GetContext(ctx, &row, q, string(key.SpaceID), string(key.FromCurrency), string(key.ToCurrency), key.RateDate.Format("2006-01-02")); err != nil {
+	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, finance.ErrExchangeRateNotFound
 		}
 		return nil, err
 	}
-	return &finance.ExchangeRate{
-		SpaceID:      finance.SpaceID(row.SpaceID),
-		FromCurrency: finance.Currency(row.FromCurrency),
-		ToCurrency:   finance.Currency(row.ToCurrency),
-		Rate:         row.Rate,
-		RateDate:     row.RateDate,
-		CreateTime:   row.CreateTime,
-	}, nil
+	return row.toDomain(), nil
 }
 
 func (s *ExchangeRateStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListExchangeRatesFilter) ([]*finance.ExchangeRate, string, error) {
+	if filter.PageSize <= 0 {
+		filter.PageSize = 100
+	}
+
+	ds := pgDialect.From(goqu.S("finance").Table("exchange_rate")).
+		Select("*").
+		Where(goqu.Ex{"space_id": string(spaceID)})
+
+	if filter.FromCurrency != nil {
+		ds = ds.Where(goqu.Ex{"from_currency": string(*filter.FromCurrency)})
+	}
+	if filter.ToCurrency != nil {
+		ds = ds.Where(goqu.Ex{"to_currency": string(*filter.ToCurrency)})
+	}
+	if filter.StartDate != nil {
+		ds = ds.Where(goqu.I("rate_date").Gte(filter.StartDate.Format("2006-01-02")))
+	}
+	if filter.EndDate != nil {
+		ds = ds.Where(goqu.I("rate_date").Lte(filter.EndDate.Format("2006-01-02")))
+	}
+
+	cursor, _ := paging.Decode(filter.NextPageToken)
+
+	sortOrder := filter.Sort
+	if !finance.IsExchangeRateSortField(sortOrder.Field) {
+		sortOrder.Field = finance.DefaultExchangeRateSortField
+	}
+
+	ds = paging.ApplyPagination(ds, paging.Options{
+		Sort:     sortOrder,
+		Cursor:   cursor,
+		PageSize: uint(filter.PageSize),
+		IDColumn: "from_currency",
+	})
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, "", fmt.Errorf("build sql query: %w", err)
+	}
+
 	var rows []exchangeRateDB
-	var err error
-
-	limit := filter.PageSize
-	if limit <= 0 {
-		limit = 100
+	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
+		return nil, "", fmt.Errorf("select context: %w", err)
 	}
 
-	var query string
-	var args []interface{}
-
-	if filter.NextPageToken != "" {
-		decoded, err := base64.URLEncoding.DecodeString(filter.NextPageToken)
-		if err != nil {
-			return nil, "", errors.New("invalid page token")
-		}
-		parts := strings.Split(string(decoded), ":")
-		if len(parts) == 3 {
-			query = `SELECT * FROM finance.exchange_rate 
-				WHERE space_id = $1 AND (from_currency, to_currency, rate_date) > ($2, $3, $4)
-				ORDER BY from_currency ASC, to_currency ASC, rate_date ASC
-				LIMIT $5`
-			args = []interface{}{string(spaceID), parts[0], parts[1], parts[2], limit + 1}
-		} else {
-			return nil, "", errors.New("invalid page token")
-		}
-	} else {
-		query = `SELECT * FROM finance.exchange_rate 
-			WHERE space_id = $1
-			ORDER BY from_currency ASC, to_currency ASC, rate_date ASC
-			LIMIT $2`
-		args = []interface{}{string(spaceID), limit + 1}
-	}
-
-	if err = s.db.SelectContext(ctx, &rows, query, args...); err != nil {
-		return nil, "", err
-	}
-
-	hasMore := len(rows) > int(limit)
-	if hasMore {
-		rows = rows[:limit]
-	}
-
-	rates := make([]*finance.ExchangeRate, 0, len(rows))
+	rates := make([]*finance.ExchangeRate, len(rows))
 	for i := range rows {
-		rates = append(rates, &finance.ExchangeRate{
-			SpaceID:      finance.SpaceID(rows[i].SpaceID),
-			FromCurrency: finance.Currency(rows[i].FromCurrency),
-			ToCurrency:   finance.Currency(rows[i].ToCurrency),
-			Rate:         rows[i].Rate,
-			RateDate:     rows[i].RateDate,
-			CreateTime:   rows[i].CreateTime,
-		})
+		rates[i] = rows[i].toDomain()
 	}
 
-	var nextToken string
-	if hasMore && len(rows) > 0 {
-		last := rows[len(rows)-1]
-		tokenStr := fmt.Sprintf("%s:%s:%s", last.FromCurrency, last.ToCurrency, last.RateDate.Format("2006-01-02"))
-		nextToken = base64.URLEncoding.EncodeToString([]byte(tokenStr))
-	}
+	page := paging.NewPage(rates, int(filter.PageSize), func(r *finance.ExchangeRate) paging.Cursor {
+		return paging.Cursor{
+			SortValue: r.GetSortValue(sortOrder.Field),
+			ID:        r.ID,
+		}
+	})
 
-	return rates, nextToken, nil
+	return page.Items, page.NextPageToken, nil
 }
 
 func (s *ExchangeRateStore) Delete(ctx context.Context, key finance.ExchangeRateKey) error {
-	q := `DELETE FROM finance.exchange_rate WHERE space_id = $1 AND from_currency = $2 AND to_currency = $3 AND rate_date = $4`
-	_, err := s.db.ExecContext(ctx, q, string(key.SpaceID), string(key.FromCurrency), string(key.ToCurrency), key.RateDate.Format("2006-01-02"))
-	return err
+	ds := pgDialect.Delete(goqu.S("finance").Table("exchange_rate")).
+		Where(goqu.Ex{
+			"space_id":      string(key.SpaceID),
+			"from_currency": string(key.FromCurrency),
+			"to_currency":   string(key.ToCurrency),
+			"rate_date":     key.RateDate.Format("2006-01-02"),
+		})
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return fmt.Errorf("build sql query: %w", err)
+	}
+
+	res, err := s.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return finance.ErrExchangeRateNotFound
+	}
+	return nil
 }
 
 func (s *ExchangeRateStore) GetLatestRates(ctx context.Context, spaceID finance.SpaceID, fromCurrencies []finance.Currency, toCurrency finance.Currency) ([]*finance.ExchangeRate, error) {
@@ -199,16 +309,9 @@ func (s *ExchangeRateStore) GetLatestRates(ctx context.Context, spaceID finance.
 		return nil, err
 	}
 
-	rates := make([]*finance.ExchangeRate, 0, len(rows))
+	rates := make([]*finance.ExchangeRate, len(rows))
 	for i := range rows {
-		rates = append(rates, &finance.ExchangeRate{
-			SpaceID:      finance.SpaceID(rows[i].SpaceID),
-			FromCurrency: finance.Currency(rows[i].FromCurrency),
-			ToCurrency:   finance.Currency(rows[i].ToCurrency),
-			Rate:         rows[i].Rate,
-			RateDate:     rows[i].RateDate,
-			CreateTime:   rows[i].CreateTime,
-		})
+		rates[i] = rows[i].toDomain()
 	}
 
 	return rates, nil

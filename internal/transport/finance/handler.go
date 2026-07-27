@@ -351,15 +351,19 @@ func (h *Handler) GetBudgetPeriod(ctx context.Context, req *financev1.GetBudgetP
 }
 
 func (h *Handler) CreateExchangeRate(ctx context.Context, req *financev1.CreateExchangeRateRequest) (*financev1.ExchangeRate, error) {
-	if req.GetRateDate() == nil {
+	exRate := req.GetExchangeRate()
+	if exRate == nil {
+		return nil, status.Error(codes.InvalidArgument, "exchange_rate is required")
+	}
+	if exRate.GetRateDate() == nil {
 		return nil, status.Error(codes.InvalidArgument, "rate date is required")
 	}
 
-	fromCurrency, err := finance.ParseCurrency(req.GetFromCurrency())
+	fromCurrency, err := finance.ParseCurrency(exRate.GetFromCurrency())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	toCurrency, err := finance.ParseCurrency(req.GetToCurrency())
+	toCurrency, err := finance.ParseCurrency(exRate.GetToCurrency())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -367,8 +371,8 @@ func (h *Handler) CreateExchangeRate(ctx context.Context, req *financev1.CreateE
 	appReq := &financeapp.CreateExchangeRateRequest{
 		FromCurrency: fromCurrency,
 		ToCurrency:   toCurrency,
-		Rate:         req.GetRate(),
-		RateDate:     req.GetRateDate().AsTime(),
+		Rate:         exRate.GetRate(),
+		RateDate:     exRate.GetRateDate().AsTime(),
 	}
 
 	rate, err := h.Coordinator.CreateExchangeRate(ctx, appReq)
@@ -379,13 +383,86 @@ func (h *Handler) CreateExchangeRate(ctx context.Context, req *financev1.CreateE
 	return toProtoExchangeRate(rate), nil
 }
 
-func (h *Handler) ListExchangeRates(ctx context.Context, req *financev1.ListExchangeRatesRequest) (*financev1.ListExchangeRatesResponse, error) {
-	appReq := &financeapp.ListExchangeRatesRequest{
-		PageSize:  req.GetPageSize(),
-		PageToken: req.GetPageToken(),
+func (h *Handler) GetExchangeRate(ctx context.Context, req *financev1.GetExchangeRateRequest) (*financev1.ExchangeRate, error) {
+	if req.GetId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "id is required")
 	}
 
-	rates, nextToken, err := h.Coordinator.ListExchangeRates(ctx, appReq)
+	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	}
+	spaceID := finance.SpaceID(spaceIDStr)
+
+	rate, err := h.Aggregator.GetExchangeRate(ctx, spaceID, req.GetId())
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoExchangeRate(rate), nil
+}
+
+func (h *Handler) UpdateExchangeRate(ctx context.Context, req *financev1.UpdateExchangeRateRequest) (*financev1.ExchangeRate, error) {
+	if req.GetId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "id is required")
+	}
+	exRate := req.GetExchangeRate()
+	if exRate == nil {
+		return nil, status.Error(codes.InvalidArgument, "exchange_rate is required")
+	}
+
+	appReq := &financeapp.UpdateExchangeRateRequest{
+		ID:   req.GetId(),
+		Rate: exRate.GetRate(),
+	}
+
+	rate, err := h.Coordinator.UpdateExchangeRate(ctx, appReq)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoExchangeRate(rate), nil
+}
+
+func (h *Handler) ListExchangeRates(ctx context.Context, req *financev1.ListExchangeRatesRequest) (*financev1.ListExchangeRatesResponse, error) {
+	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	}
+	spaceID := finance.SpaceID(spaceIDStr)
+
+	filter := financeaggregator.ListExchangeRatesFilter{
+		ListExchangeRatesFilter: finance.ListExchangeRatesFilter{
+			PageSize:      req.GetPageSize(),
+			NextPageToken: req.GetPageToken(),
+			Sort:          sorting.Parse(req.GetOrderBy()),
+		},
+	}
+
+	if req.GetFromCurrency() != "" {
+		from, err := finance.ParseCurrency(req.GetFromCurrency())
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		filter.FromCurrency = &from
+	}
+	if req.GetToCurrency() != "" {
+		to, err := finance.ParseCurrency(req.GetToCurrency())
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		filter.ToCurrency = &to
+	}
+	if req.GetStartDate() != nil {
+		st := req.GetStartDate().AsTime()
+		filter.StartDate = &st
+	}
+	if req.GetEndDate() != nil {
+		et := req.GetEndDate().AsTime()
+		filter.EndDate = &et
+	}
+
+	rates, nextToken, err := h.Aggregator.ListExchangeRates(ctx, spaceID, filter)
 	if err != nil {
 		return nil, h.mapError(err)
 	}
@@ -402,26 +479,15 @@ func (h *Handler) ListExchangeRates(ctx context.Context, req *financev1.ListExch
 }
 
 func (h *Handler) DeleteExchangeRate(ctx context.Context, req *financev1.DeleteExchangeRateRequest) (*emptypb.Empty, error) {
-	if req.GetRateDate() == nil {
-		return nil, status.Error(codes.InvalidArgument, "rate date is required")
-	}
-
-	fromCurrency, err := finance.ParseCurrency(req.GetFromCurrency())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-	toCurrency, err := finance.ParseCurrency(req.GetToCurrency())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+	if req.GetId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "id is required")
 	}
 
 	appReq := &financeapp.DeleteExchangeRateRequest{
-		FromCurrency: fromCurrency,
-		ToCurrency:   toCurrency,
-		RateDate:     req.GetRateDate().AsTime(),
+		ID: req.GetId(),
 	}
 
-	err = h.Coordinator.DeleteExchangeRate(ctx, appReq)
+	err := h.Coordinator.DeleteExchangeRate(ctx, appReq)
 	if err != nil {
 		return nil, h.mapError(err)
 	}
@@ -433,7 +499,11 @@ func toProtoExchangeRate(rate *finance.ExchangeRate) *financev1.ExchangeRate {
 	if rate == nil {
 		return nil
 	}
+	if rate.ID == "" {
+		rate.ID = rate.ComputeID()
+	}
 	return &financev1.ExchangeRate{
+		Id:           rate.ID,
 		SpaceId:      string(rate.SpaceID),
 		FromCurrency: string(rate.FromCurrency),
 		ToCurrency:   string(rate.ToCurrency),

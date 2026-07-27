@@ -83,10 +83,12 @@ export function CreateRateSheet({
     const dateObj = new Date(rateDateStr + "T00:00:00Z")
 
     await createRateMutation.mutateAsync({
-      fromCurrency: rateFrom,
-      toCurrency: rateTo,
-      rate: finalRate,
-      rateDate: dateObj.toISOString(),
+      exchangeRate: {
+        fromCurrency: rateFrom,
+        toCurrency: rateTo,
+        rate: finalRate,
+        rateDate: dateObj.toISOString(),
+      },
     })
 
     onOpenChange(false)

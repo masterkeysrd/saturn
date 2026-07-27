@@ -66,19 +66,32 @@ service Finance {
   // Registers a daily exchange rate conversion coefficient between two currencies.
   rpc CreateExchangeRate(CreateExchangeRateRequest) returns (ExchangeRate) {
     option (google.api.http) = {
-      post: "/v1/finance/rates"
-      body: "*"
+      post: "/v1/finance/exchange-rates"
+      body: "exchange_rate"
+    };
+  }
+
+  // Retrieves a specific daily exchange rate conversion rule by ID.
+  rpc GetExchangeRate(GetExchangeRateRequest) returns (ExchangeRate) {
+    option (google.api.http) = {get: "/v1/finance/exchange-rates/{id}"};
+  }
+
+  // Updates an existing daily exchange rate conversion coefficient.
+  rpc UpdateExchangeRate(UpdateExchangeRateRequest) returns (ExchangeRate) {
+    option (google.api.http) = {
+      put: "/v1/finance/exchange-rates/{id}"
+      body: "exchange_rate"
     };
   }
 
   // Lists historical exchange rate conversion coefficients.
   rpc ListExchangeRates(ListExchangeRatesRequest) returns (ListExchangeRatesResponse) {
-    option (google.api.http) = {get: "/v1/finance/rates"};
+    option (google.api.http) = {get: "/v1/finance/exchange-rates"};
   }
 
   // Deletes a registered daily exchange rate conversion rule.
   rpc DeleteExchangeRate(DeleteExchangeRateRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {delete: "/v1/finance/rates"};
+    option (google.api.http) = {delete: "/v1/finance/exchange-rates/{id}"};
   }
 
   // Logs a new expense transaction, updating target budget periods and reducing account balances.
@@ -546,49 +559,75 @@ message GetBudgetPeriodRequest {
 
 // ExchangeRate represents a daily rate record.
 message ExchangeRate {
+  // Output only. Unique resource identifier (e.g. "rate_USD_EUR_20260727").
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
   // Output only. Associated space identifier.
-  string space_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Required. Source currency code (e.g. "EUR").
-  string from_currency = 2 [(google.api.field_behavior) = REQUIRED];
+  string from_currency = 3 [(google.api.field_behavior) = REQUIRED];
 
   // Required. Target currency code (e.g. "USD").
-  string to_currency = 3 [(google.api.field_behavior) = REQUIRED];
+  string to_currency = 4 [(google.api.field_behavior) = REQUIRED];
 
   // Required. Conversion rate multiplier (e.g. 1.12).
-  double rate = 4 [(google.api.field_behavior) = REQUIRED];
+  double rate = 5 [(google.api.field_behavior) = REQUIRED];
 
   // Required. Target date for this rate.
-  google.protobuf.Timestamp rate_date = 5 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.Timestamp rate_date = 6 [(google.api.field_behavior) = REQUIRED];
 
   // Output only. Record creation timestamp.
-  google.protobuf.Timestamp create_time = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp create_time = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // The request for
 // [CreateExchangeRate][saturn.finance.v1.Finance.CreateExchangeRate].
 message CreateExchangeRateRequest {
-  // Required. Source currency code.
-  string from_currency = 1 [(google.api.field_behavior) = REQUIRED];
+  // Required. The exchange rate resource to create.
+  ExchangeRate exchange_rate = 1 [(google.api.field_behavior) = REQUIRED];
+}
 
-  // Required. Target currency code.
-  string to_currency = 2 [(google.api.field_behavior) = REQUIRED];
+// The request for
+// [GetExchangeRate][saturn.finance.v1.Finance.GetExchangeRate].
+message GetExchangeRateRequest {
+  // Required. Unique identifier of the exchange rate (e.g. "rate_USD_EUR_20260727").
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
 
-  // Required. Conversion rate multiplier.
-  double rate = 3 [(google.api.field_behavior) = REQUIRED];
+// The request for
+// [UpdateExchangeRate][saturn.finance.v1.Finance.UpdateExchangeRate].
+message UpdateExchangeRateRequest {
+  // Required. Unique identifier of the exchange rate to update.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
 
-  // Required. Target date.
-  google.protobuf.Timestamp rate_date = 4 [(google.api.field_behavior) = REQUIRED];
+  // Required. The exchange rate details to update.
+  ExchangeRate exchange_rate = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 // The request for
 // [ListExchangeRates][saturn.finance.v1.Finance.ListExchangeRates].
 message ListExchangeRatesRequest {
   // Optional. Maximum number of items to return.
-  int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
+  optional int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Keyset page token.
-  string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
+  optional string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Source currency code to filter by (e.g. "EUR").
+  optional string from_currency = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Target currency code to filter by (e.g. "USD").
+  optional string to_currency = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Start boundary date (inclusive) for rate_date filter.
+  optional google.protobuf.Timestamp start_date = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. End boundary date (inclusive) for rate_date filter.
+  optional google.protobuf.Timestamp end_date = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Sort order for results (e.g. "rate_date desc", "from_currency asc").
+  optional string order_by = 7 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // The response for
@@ -604,14 +643,8 @@ message ListExchangeRatesResponse {
 // The request for
 // [DeleteExchangeRate][saturn.finance.v1.Finance.DeleteExchangeRate].
 message DeleteExchangeRateRequest {
-  // Required. Source currency code.
-  string from_currency = 1 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. Target currency code.
-  string to_currency = 2 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. Target date.
-  google.protobuf.Timestamp rate_date = 3 [(google.api.field_behavior) = REQUIRED];
+  // Required. Unique identifier of the exchange rate to delete (e.g. "rate_USD_EUR_20260727").
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 // Transaction represents a financial record in the space ledger.

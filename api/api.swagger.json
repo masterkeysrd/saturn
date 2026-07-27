@@ -1437,6 +1437,217 @@
         ]
       }
     },
+    "/v1/finance/exchange-rates": {
+      "get": {
+        "summary": "Lists historical exchange rate conversion coefficients.",
+        "operationId": "Finance_ListExchangeRates",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListExchangeRatesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pageSize",
+            "description": "Optional. Maximum number of items to return.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "description": "Optional. Keyset page token.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "fromCurrency",
+            "description": "Optional. Source currency code to filter by (e.g. \"EUR\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "toCurrency",
+            "description": "Optional. Target currency code to filter by (e.g. \"USD\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "startDate",
+            "description": "Optional. Start boundary date (inclusive) for rate_date filter.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "endDate",
+            "description": "Optional. End boundary date (inclusive) for rate_date filter.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "orderBy",
+            "description": "Optional. Sort order for results (e.g. \"rate_date desc\", \"from_currency asc\").",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "post": {
+        "summary": "Registers a daily exchange rate conversion coefficient between two currencies.",
+        "operationId": "Finance_CreateExchangeRate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExchangeRate"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "exchangeRate",
+            "description": "Required. The exchange rate resource to create.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ExchangeRate"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/exchange-rates/{id}": {
+      "get": {
+        "summary": "Retrieves a specific daily exchange rate conversion rule by ID.",
+        "operationId": "Finance_GetExchangeRate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExchangeRate"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Unique identifier of the exchange rate (e.g. \"rate_USD_EUR_20260727\").",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "delete": {
+        "summary": "Deletes a registered daily exchange rate conversion rule.",
+        "operationId": "Finance_DeleteExchangeRate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Unique identifier of the exchange rate to delete (e.g. \"rate_USD_EUR_20260727\").",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "put": {
+        "summary": "Updates an existing daily exchange rate conversion coefficient.",
+        "operationId": "Finance_UpdateExchangeRate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExchangeRate"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Unique identifier of the exchange rate to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "exchangeRate",
+            "description": "Required. The exchange rate details to update.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ExchangeRate"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/finance/expenses": {
       "post": {
         "summary": "Logs a new expense transaction, updating target budget periods and reducing account balances.",
@@ -1762,124 +1973,6 @@
             "required": true,
             "type": "string",
             "format": "date-time"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      }
-    },
-    "/v1/finance/rates": {
-      "get": {
-        "summary": "Lists historical exchange rate conversion coefficients.",
-        "operationId": "Finance_ListExchangeRates",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListExchangeRatesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/googleRpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "pageSize",
-            "description": "Optional. Maximum number of items to return.",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "pageToken",
-            "description": "Optional. Keyset page token.",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      },
-      "delete": {
-        "summary": "Deletes a registered daily exchange rate conversion rule.",
-        "operationId": "Finance_DeleteExchangeRate",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "type": "object",
-              "properties": {}
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/googleRpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "fromCurrency",
-            "description": "Required. Source currency code.",
-            "in": "query",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "toCurrency",
-            "description": "Required. Target currency code.",
-            "in": "query",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "rateDate",
-            "description": "Required. Target date.",
-            "in": "query",
-            "required": true,
-            "type": "string",
-            "format": "date-time"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      },
-      "post": {
-        "summary": "Registers a daily exchange rate conversion coefficient between two currencies.",
-        "operationId": "Finance_CreateExchangeRate",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ExchangeRate"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/googleRpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "description": "The request for\n[CreateExchangeRate][saturn.finance.v1.Finance.CreateExchangeRate].",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1CreateExchangeRateRequest"
-            }
           }
         ],
         "tags": [
@@ -5463,36 +5556,6 @@
         "borrowing"
       ]
     },
-    "v1CreateExchangeRateRequest": {
-      "type": "object",
-      "properties": {
-        "fromCurrency": {
-          "type": "string",
-          "description": "Required. Source currency code."
-        },
-        "toCurrency": {
-          "type": "string",
-          "description": "Required. Target currency code."
-        },
-        "rate": {
-          "type": "number",
-          "format": "double",
-          "description": "Required. Conversion rate multiplier."
-        },
-        "rateDate": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Required. Target date."
-        }
-      },
-      "description": "The request for\n[CreateExchangeRate][saturn.finance.v1.Finance.CreateExchangeRate].",
-      "required": [
-        "fromCurrency",
-        "toCurrency",
-        "rate",
-        "rateDate"
-      ]
-    },
     "v1CreateExpenseRequest": {
       "type": "object",
       "properties": {
@@ -5621,6 +5684,11 @@
     "v1ExchangeRate": {
       "type": "object",
       "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. Unique resource identifier (e.g. \"rate_USD_EUR_20260727\").",
+          "readOnly": true
+        },
         "spaceId": {
           "type": "string",
           "description": "Output only. Associated space identifier.",

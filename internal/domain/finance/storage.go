@@ -49,8 +49,11 @@ type ExchangeRateKey struct {
 // ExchangeRateStore defines persistence for exchange rates.
 type ExchangeRateStore interface {
 	Create(ctx context.Context, rate *ExchangeRate) error
+	Update(ctx context.Context, rate *ExchangeRate) error
 	// GetRate retrieves the rate from fromCurrency to toCurrency on the closest date <= rateDate.
 	GetRate(ctx context.Context, key ExchangeRateKey) (*ExchangeRate, error)
+	// GetExactRate retrieves the exact rate for the given key on rateDate.
+	GetExactRate(ctx context.Context, key ExchangeRateKey) (*ExchangeRate, error)
 	// GetNextRate retrieves the rate from fromCurrency to toCurrency on the closest date > rateDate.
 	GetNextRate(ctx context.Context, key ExchangeRateKey) (*ExchangeRate, error)
 	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListExchangeRatesFilter) ([]*ExchangeRate, string, error)
@@ -130,6 +133,11 @@ type ListAccountsFilter struct {
 type ListExchangeRatesFilter struct {
 	PageSize      int32
 	NextPageToken string
+	FromCurrency  *Currency
+	ToCurrency    *Currency
+	StartDate     *time.Time
+	EndDate       *time.Time
+	Sort          sorting.SortOrder
 }
 
 // ListTransactionsFilter encapsulates filtering parameters for transactions.

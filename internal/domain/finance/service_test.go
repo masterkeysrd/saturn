@@ -146,6 +146,24 @@ func (m *mockExchangeRateStore) Create(ctx context.Context, r *ExchangeRate) err
 	return nil
 }
 
+func (m *mockExchangeRateStore) Update(ctx context.Context, r *ExchangeRate) error {
+	key := string(r.SpaceID) + "_" + string(r.FromCurrency) + "_" + string(r.ToCurrency) + "_" + r.RateDate.Format("2006-01-02")
+	if _, ok := m.rates[key]; !ok {
+		return ErrExchangeRateNotFound
+	}
+	m.rates[key] = r
+	return nil
+}
+
+func (m *mockExchangeRateStore) GetExactRate(ctx context.Context, query ExchangeRateKey) (*ExchangeRate, error) {
+	key := string(query.SpaceID) + "_" + string(query.FromCurrency) + "_" + string(query.ToCurrency) + "_" + query.RateDate.Format("2006-01-02")
+	r, ok := m.rates[key]
+	if !ok {
+		return nil, ErrExchangeRateNotFound
+	}
+	return r, nil
+}
+
 func (m *mockExchangeRateStore) GetRate(ctx context.Context, query ExchangeRateKey) (*ExchangeRate, error) {
 	// Look up rate exactly, or fallback to the closest date before
 	var best *ExchangeRate

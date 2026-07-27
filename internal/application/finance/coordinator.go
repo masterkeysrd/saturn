@@ -28,8 +28,10 @@ type FinanceService interface {
 	GetOrCreatePeriod(ctx context.Context, budgetID finance.BudgetID, date time.Time) (*finance.BudgetPeriod, error)
 	UpdatePeriodLimit(ctx context.Context, id finance.PeriodID, limit int64) error
 	CreateExchangeRate(ctx context.Context, rate *finance.ExchangeRate) (*finance.ExchangeRate, error)
+	GetExchangeRateByID(ctx context.Context, spaceID finance.SpaceID, id string) (*finance.ExchangeRate, error)
+	UpdateExchangeRate(ctx context.Context, spaceID finance.SpaceID, id string, rate *finance.ExchangeRate) (*finance.ExchangeRate, error)
 	ListExchangeRates(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListExchangeRatesFilter) ([]*finance.ExchangeRate, string, error)
-	DeleteExchangeRate(ctx context.Context, req finance.DeleteExchangeRateRequest) error
+	DeleteExchangeRateByID(ctx context.Context, spaceID finance.SpaceID, id string) error
 	CreateExpense(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error)
 	UpdateExpense(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error)
 	DeleteTransaction(ctx context.Context, id finance.TransactionID) error

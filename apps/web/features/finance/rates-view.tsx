@@ -27,6 +27,9 @@ export function RatesView() {
   const deleteRateMutation = useDeleteExchangeRateMutation()
 
   const handleDeleteRate = async (rate: ExchangeRate) => {
+    const rateId =
+      rate.id ||
+      `rate_${rate.fromCurrency}_${rate.toCurrency}_${rate.rateDate.split("T")[0].replace(/-/g, "")}`
     if (
       !confirm(
         `Are you sure you want to delete exchange rate for ${rate.fromCurrency} to ${rate.toCurrency} on ${new Date(rate.rateDate).toLocaleDateString(undefined, { timeZone: "UTC" })}?`
@@ -34,9 +37,8 @@ export function RatesView() {
     )
       return
     await deleteRateMutation.mutateAsync({
-      fromCurrency: rate.fromCurrency,
-      toCurrency: rate.toCurrency,
-      rateDate: rate.rateDate,
+      id: rateId,
+      req: { id: rateId },
     })
     refetchRates()
   }
