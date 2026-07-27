@@ -26,7 +26,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
-import { cn } from "@/lib/utils"
 import { AccountSelect } from "./account-select"
 import {
   Select,
@@ -38,11 +37,27 @@ import {
 import {
   BUDGET_COLORS,
   BUDGET_ICONS,
-  getBudgetColors,
   getBudgetIcon,
   formatCents,
   toCentsString,
 } from "../utils"
+
+const PROPAGATION_ITEMS: Array<{ value: LimitPropagation; label: string }> = [
+  {
+    value: "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY",
+    label: "Next periods only (keep current period limit)",
+  },
+  {
+    value: "LIMIT_PROPAGATION_CURRENT_PERIOD",
+    label: "Apply also to current active period",
+  },
+]
+
+const INTERVAL_ITEMS: Array<{ value: RecurrenceInterval; label: string }> = [
+  { value: "INTERVAL_WEEKLY", label: "Weekly" },
+  { value: "INTERVAL_MONTHLY", label: "Monthly" },
+  { value: "INTERVAL_YEARLY", label: "Yearly" },
+]
 
 interface EditBudgetSheetProps {
   open: boolean
@@ -97,6 +112,10 @@ export function EditBudgetSheet({
     { enabled: open && !!spaceId, staleTime: 1000 * 60 * 30 }
   )
   const currencies = currenciesData?.currencies || []
+  const currencyItems = currencies.map((cur) => ({
+    value: cur.code,
+    label: `${cur.code}${cur.name ? ` (${cur.name})` : ""}`,
+  }))
   const [name, setName] = useState("")
   const [limit, setLimit] = useState("")
   const [currency, setCurrency] = useState("USD")
@@ -170,7 +189,8 @@ export function EditBudgetSheet({
             Edit Budget Template
           </SheetTitle>
           <SheetDescription className="mt-1">
-            Modify this budget's properties and choose how changes propagate.
+            Modify budget category properties, visual parameters, or limit
+            propagation.
           </SheetDescription>
         </SheetHeader>
         <form onSubmit={handleUpdate} className="mt-8 space-y-5">
@@ -180,33 +200,20 @@ export function EditBudgetSheet({
               htmlFor="editName"
               className="text-xs font-semibold tracking-wider text-muted-foreground/90 uppercase"
             >
-              Budget Name
+              Budget Name & Icon
             </Label>
-            <div className="flex h-11 items-center overflow-hidden rounded-xl border border-border/60 bg-background/50 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20">
-              <input
-                id="editName"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="order-2 h-full w-full flex-1 bg-transparent px-3.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
-                required
-              />
-
+            <div className="flex gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
                     <Button
                       type="button"
                       variant="ghost"
-                      className={cn(
-                        "order-1 flex h-full shrink-0 cursor-pointer items-center justify-center rounded-none border-y-0 border-r border-l-0 border-border/30 px-4 transition-all hover:bg-muted/20 focus:border-r-primary/50 focus:bg-muted/40 focus:outline-none",
-                        getBudgetColors(color).text,
-                        getBudgetColors(color).bg
-                      )}
+                      className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border/60 bg-background/50 p-0 text-primary transition-all hover:bg-muted/20"
                       title="Choose category icon"
                     >
                       {createElement(getBudgetIcon(icon), {
-                        className:
-                          "h-5 w-5 transition-transform duration-200 group-focus/button:scale-110",
+                        className: "h-5 w-5",
                       })}
                     </Button>
                   }
@@ -231,6 +238,15 @@ export function EditBudgetSheet({
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              <Input
+                id="editName"
+                placeholder="e.g. Groceries, Dining Out"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="h-11 rounded-xl border-border/60 bg-background/50"
+                required
+              />
             </div>
           </div>
 
@@ -239,13 +255,14 @@ export function EditBudgetSheet({
               htmlFor="editLimit"
               className="text-xs font-semibold tracking-wider text-muted-foreground/90 uppercase"
             >
-              Limit Amount
+              Limit Amount ({currency})
             </Label>
             <Input
               id="editLimit"
               type="number"
               step="0.01"
-              min="0.01"
+              min="0"
+              placeholder="0.00"
               value={limit}
               onChange={(e) => setLimit(e.target.value)}
               className="h-11 rounded-xl border-border/60 bg-background/50"
@@ -287,6 +304,7 @@ export function EditBudgetSheet({
               Currency
             </Label>
             <Select
+              items={currencyItems}
               value={currency}
               onValueChange={(val) => setCurrency(val || "")}
               disabled
@@ -298,9 +316,9 @@ export function EditBudgetSheet({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                {currencies.map((cur) => (
-                  <SelectItem key={cur.code} value={cur.code}>
-                    {cur.code} {cur.name ? `(${cur.name})` : ""}
+                {currencyItems.map((cur) => (
+                  <SelectItem key={cur.value} value={cur.value}>
+                    {cur.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -319,6 +337,7 @@ export function EditBudgetSheet({
               Interval
             </Label>
             <Select
+              items={INTERVAL_ITEMS}
               value={interval}
               onValueChange={(val) =>
                 val && setInterval(val as RecurrenceInterval)
@@ -332,9 +351,11 @@ export function EditBudgetSheet({
                 <SelectValue placeholder="Select interval..." />
               </SelectTrigger>
               <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                <SelectItem value="INTERVAL_WEEKLY">Weekly</SelectItem>
-                <SelectItem value="INTERVAL_MONTHLY">Monthly</SelectItem>
-                <SelectItem value="INTERVAL_YEARLY">Yearly</SelectItem>
+                {INTERVAL_ITEMS.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <span className="mt-1 block text-[10px] text-muted-foreground/75">
@@ -367,6 +388,7 @@ export function EditBudgetSheet({
               Limit Propagation Rule
             </Label>
             <Select
+              items={PROPAGATION_ITEMS}
               value={propagation}
               onValueChange={(val) =>
                 val && setPropagation(val as LimitPropagation)
@@ -379,12 +401,11 @@ export function EditBudgetSheet({
                 <SelectValue placeholder="Select propagation rule..." />
               </SelectTrigger>
               <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                <SelectItem value="LIMIT_PROPAGATION_NEXT_PERIODS_ONLY">
-                  Next periods only (keep current period limit)
-                </SelectItem>
-                <SelectItem value="LIMIT_PROPAGATION_CURRENT_PERIOD">
-                  Apply also to current active period
-                </SelectItem>
+                {PROPAGATION_ITEMS.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

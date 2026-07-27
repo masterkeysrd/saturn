@@ -16,28 +16,10 @@ function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   )
 }
 
-function formatSelectValueLabel(
-  val: unknown,
-  placeholder?: React.ReactNode
-): React.ReactNode {
-  if (val === null || val === undefined || val === "") return placeholder
-  if (typeof val === "string") {
-    if (/^[A-Z]{3}$/.test(val)) return val
-    const clean = val
-      .replace(
-        /^(INTERVAL_|STATUS_|RECURRING_EXPENSE_STATUS_|BORROWING_STATUS_|BORROWING_DIRECTION_)/i,
-        ""
-      )
-      .toLowerCase()
-    return clean.charAt(0).toUpperCase() + clean.slice(1)
-  }
-  return val as React.ReactNode
-}
-
 function SelectValue({
   className,
-  children,
   placeholder,
+  children,
   ...props
 }: SelectPrimitive.Value.Props) {
   return (
@@ -47,12 +29,7 @@ function SelectValue({
       placeholder={placeholder}
       {...props}
     >
-      {typeof children === "function"
-        ? children
-        : (val: unknown) => {
-            if (children) return children
-            return formatSelectValueLabel(val, placeholder)
-          }}
+      {children}
     </SelectPrimitive.Value>
   )
 }

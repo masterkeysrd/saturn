@@ -117,6 +117,7 @@ export function CreateBudgetSheet({
         limitAmount: toCentsString(limit),
         currency,
         interval,
+        isActive: true,
         icon,
         color,
         defaultAccountId: defaultAccountId || undefined,
