@@ -10,27 +10,6 @@ import {
 } from "@tanstack/react-query"
 
 /**
- * RecurrenceInterval defines the frequency of budgeting or transaction execution rules.
- */
-export type RecurrenceInterval =
-  /**
-   * Default unspecified value. Invalid fallback.
-   */
-  | "RECURRENCE_INTERVAL_UNSPECIFIED"
-  /**
-   * Budget resets or templates trigger every calendar week.
-   */
-  | "INTERVAL_WEEKLY"
-  /**
-   * Budget resets or templates trigger every calendar month.
-   */
-  | "INTERVAL_MONTHLY"
-  /**
-   * Budget resets or templates trigger every calendar year.
-   */
-  | "INTERVAL_YEARLY"
-
-/**
  * LimitPropagation defines how changes in budget limits propagate to future periods.
  */
 export type LimitPropagation =
@@ -105,6 +84,27 @@ export type BorrowingStatus =
    * Paid-off borrowing with zero remaining balance.
    */
   | "BORROWING_STATUS_PAID_OFF"
+
+/**
+ * RecurrenceInterval defines the frequency of budgeting or transaction execution rules.
+ */
+export type Budget_RecurrenceInterval =
+  /**
+   * Default unspecified value. Invalid fallback.
+   */
+  | "RECURRENCE_INTERVAL_UNSPECIFIED"
+  /**
+   * Budget resets or templates trigger every calendar week.
+   */
+  | "WEEKLY"
+  /**
+   * Budget resets or templates trigger every calendar month.
+   */
+  | "MONTHLY"
+  /**
+   * Budget resets or templates trigger every calendar year.
+   */
+  | "YEARLY"
 
 /**
  * Scoped resource view options.
@@ -313,7 +313,7 @@ export interface Budget {
   /**
    * Required. Recurrence interval frequency.
    */
-  interval: RecurrenceInterval
+  interval: Budget_RecurrenceInterval
   /**
    * Optional. Indicates if the budget is active and accepting transaction logging.
    */

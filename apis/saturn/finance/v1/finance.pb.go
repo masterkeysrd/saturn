@@ -25,63 +25,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// RecurrenceInterval defines the frequency of budgeting or transaction execution rules.
-type RecurrenceInterval int32
-
-const (
-	// Default unspecified value. Invalid fallback.
-	RecurrenceInterval_RECURRENCE_INTERVAL_UNSPECIFIED RecurrenceInterval = 0
-	// Budget resets or templates trigger every calendar week.
-	RecurrenceInterval_INTERVAL_WEEKLY RecurrenceInterval = 1
-	// Budget resets or templates trigger every calendar month.
-	RecurrenceInterval_INTERVAL_MONTHLY RecurrenceInterval = 2
-	// Budget resets or templates trigger every calendar year.
-	RecurrenceInterval_INTERVAL_YEARLY RecurrenceInterval = 3
-)
-
-// Enum value maps for RecurrenceInterval.
-var (
-	RecurrenceInterval_name = map[int32]string{
-		0: "RECURRENCE_INTERVAL_UNSPECIFIED",
-		1: "INTERVAL_WEEKLY",
-		2: "INTERVAL_MONTHLY",
-		3: "INTERVAL_YEARLY",
-	}
-	RecurrenceInterval_value = map[string]int32{
-		"RECURRENCE_INTERVAL_UNSPECIFIED": 0,
-		"INTERVAL_WEEKLY":                 1,
-		"INTERVAL_MONTHLY":                2,
-		"INTERVAL_YEARLY":                 3,
-	}
-)
-
-func (x RecurrenceInterval) Enum() *RecurrenceInterval {
-	p := new(RecurrenceInterval)
-	*p = x
-	return p
-}
-
-func (x RecurrenceInterval) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (RecurrenceInterval) Descriptor() protoreflect.EnumDescriptor {
-	return file_saturn_finance_v1_finance_proto_enumTypes[0].Descriptor()
-}
-
-func (RecurrenceInterval) Type() protoreflect.EnumType {
-	return &file_saturn_finance_v1_finance_proto_enumTypes[0]
-}
-
-func (x RecurrenceInterval) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use RecurrenceInterval.Descriptor instead.
-func (RecurrenceInterval) EnumDescriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{0}
-}
-
 // LimitPropagation defines how changes in budget limits propagate to future periods.
 type LimitPropagation int32
 
@@ -119,11 +62,11 @@ func (x LimitPropagation) String() string {
 }
 
 func (LimitPropagation) Descriptor() protoreflect.EnumDescriptor {
-	return file_saturn_finance_v1_finance_proto_enumTypes[1].Descriptor()
+	return file_saturn_finance_v1_finance_proto_enumTypes[0].Descriptor()
 }
 
 func (LimitPropagation) Type() protoreflect.EnumType {
-	return &file_saturn_finance_v1_finance_proto_enumTypes[1]
+	return &file_saturn_finance_v1_finance_proto_enumTypes[0]
 }
 
 func (x LimitPropagation) Number() protoreflect.EnumNumber {
@@ -132,7 +75,7 @@ func (x LimitPropagation) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use LimitPropagation.Descriptor instead.
 func (LimitPropagation) EnumDescriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{1}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{0}
 }
 
 // InsightGranularity defines the grouping interval of aggregated statistical data.
@@ -180,11 +123,11 @@ func (x InsightGranularity) String() string {
 }
 
 func (InsightGranularity) Descriptor() protoreflect.EnumDescriptor {
-	return file_saturn_finance_v1_finance_proto_enumTypes[2].Descriptor()
+	return file_saturn_finance_v1_finance_proto_enumTypes[1].Descriptor()
 }
 
 func (InsightGranularity) Type() protoreflect.EnumType {
-	return &file_saturn_finance_v1_finance_proto_enumTypes[2]
+	return &file_saturn_finance_v1_finance_proto_enumTypes[1]
 }
 
 func (x InsightGranularity) Number() protoreflect.EnumNumber {
@@ -193,7 +136,7 @@ func (x InsightGranularity) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use InsightGranularity.Descriptor instead.
 func (InsightGranularity) EnumDescriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{2}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{1}
 }
 
 // BorrowingDirection defines the type/direction of personal debt agreements.
@@ -233,11 +176,11 @@ func (x BorrowingDirection) String() string {
 }
 
 func (BorrowingDirection) Descriptor() protoreflect.EnumDescriptor {
-	return file_saturn_finance_v1_finance_proto_enumTypes[3].Descriptor()
+	return file_saturn_finance_v1_finance_proto_enumTypes[2].Descriptor()
 }
 
 func (BorrowingDirection) Type() protoreflect.EnumType {
-	return &file_saturn_finance_v1_finance_proto_enumTypes[3]
+	return &file_saturn_finance_v1_finance_proto_enumTypes[2]
 }
 
 func (x BorrowingDirection) Number() protoreflect.EnumNumber {
@@ -246,7 +189,7 @@ func (x BorrowingDirection) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use BorrowingDirection.Descriptor instead.
 func (BorrowingDirection) EnumDescriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{3}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{2}
 }
 
 // BorrowingStatus defines the lifecycle status of debt agreements.
@@ -286,11 +229,11 @@ func (x BorrowingStatus) String() string {
 }
 
 func (BorrowingStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_saturn_finance_v1_finance_proto_enumTypes[4].Descriptor()
+	return file_saturn_finance_v1_finance_proto_enumTypes[3].Descriptor()
 }
 
 func (BorrowingStatus) Type() protoreflect.EnumType {
-	return &file_saturn_finance_v1_finance_proto_enumTypes[4]
+	return &file_saturn_finance_v1_finance_proto_enumTypes[3]
 }
 
 func (x BorrowingStatus) Number() protoreflect.EnumNumber {
@@ -299,7 +242,64 @@ func (x BorrowingStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use BorrowingStatus.Descriptor instead.
 func (BorrowingStatus) EnumDescriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{4}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{3}
+}
+
+// RecurrenceInterval defines the frequency of budgeting or transaction execution rules.
+type Budget_RecurrenceInterval int32
+
+const (
+	// Default unspecified value. Invalid fallback.
+	Budget_RECURRENCE_INTERVAL_UNSPECIFIED Budget_RecurrenceInterval = 0
+	// Budget resets or templates trigger every calendar week.
+	Budget_WEEKLY Budget_RecurrenceInterval = 1
+	// Budget resets or templates trigger every calendar month.
+	Budget_MONTHLY Budget_RecurrenceInterval = 2
+	// Budget resets or templates trigger every calendar year.
+	Budget_YEARLY Budget_RecurrenceInterval = 3
+)
+
+// Enum value maps for Budget_RecurrenceInterval.
+var (
+	Budget_RecurrenceInterval_name = map[int32]string{
+		0: "RECURRENCE_INTERVAL_UNSPECIFIED",
+		1: "WEEKLY",
+		2: "MONTHLY",
+		3: "YEARLY",
+	}
+	Budget_RecurrenceInterval_value = map[string]int32{
+		"RECURRENCE_INTERVAL_UNSPECIFIED": 0,
+		"WEEKLY":                          1,
+		"MONTHLY":                         2,
+		"YEARLY":                          3,
+	}
+)
+
+func (x Budget_RecurrenceInterval) Enum() *Budget_RecurrenceInterval {
+	p := new(Budget_RecurrenceInterval)
+	*p = x
+	return p
+}
+
+func (x Budget_RecurrenceInterval) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Budget_RecurrenceInterval) Descriptor() protoreflect.EnumDescriptor {
+	return file_saturn_finance_v1_finance_proto_enumTypes[4].Descriptor()
+}
+
+func (Budget_RecurrenceInterval) Type() protoreflect.EnumType {
+	return &file_saturn_finance_v1_finance_proto_enumTypes[4]
+}
+
+func (x Budget_RecurrenceInterval) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Budget_RecurrenceInterval.Descriptor instead.
+func (Budget_RecurrenceInterval) EnumDescriptor() ([]byte, []int) {
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{1, 0}
 }
 
 // Scoped resource view options.
@@ -352,7 +352,7 @@ func (x Budget_View) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Budget_View.Descriptor instead.
 func (Budget_View) EnumDescriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{1, 0}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{1, 1}
 }
 
 // Type defines the direction and flow of funds.
@@ -1146,7 +1146,7 @@ type Budget struct {
 	// Required. ISO Currency code of the budget limit.
 	Currency string `protobuf:"bytes,5,opt,name=currency,proto3" json:"currency,omitempty"`
 	// Required. Recurrence interval frequency.
-	Interval RecurrenceInterval `protobuf:"varint,6,opt,name=interval,proto3,enum=saturn.finance.v1.RecurrenceInterval" json:"interval,omitempty"`
+	Interval Budget_RecurrenceInterval `protobuf:"varint,6,opt,name=interval,proto3,enum=saturn.finance.v1.Budget_RecurrenceInterval" json:"interval,omitempty"`
 	// Optional. Indicates if the budget is active and accepting transaction logging.
 	IsActive bool `protobuf:"varint,7,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
 	// Optional. Icon identifier for UI rendering.
@@ -1231,11 +1231,11 @@ func (x *Budget) GetCurrency() string {
 	return ""
 }
 
-func (x *Budget) GetInterval() RecurrenceInterval {
+func (x *Budget) GetInterval() Budget_RecurrenceInterval {
 	if x != nil {
 		return x.Interval
 	}
-	return RecurrenceInterval_RECURRENCE_INTERVAL_UNSPECIFIED
+	return Budget_RECURRENCE_INTERVAL_UNSPECIFIED
 }
 
 func (x *Budget) GetIsActive() bool {
@@ -7849,14 +7849,14 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\vcreate_time\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"createTime\x12@\n" +
 	"\vupdate_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
-	"updateTime\"\x80\b\n" +
+	"updateTime\"\xe7\b\n" +
 	"\x06Budget\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x1e\n" +
 	"\bspace_id\x18\x02 \x01(\tB\x03\xe0A\x03R\aspaceId\x12\x17\n" +
 	"\x04name\x18\x03 \x01(\tB\x03\xe0A\x02R\x04name\x12&\n" +
 	"\flimit_amount\x18\x04 \x01(\x03B\x03\xe0A\x02R\vlimitAmount\x12\x1f\n" +
-	"\bcurrency\x18\x05 \x01(\tB\x03\xe0A\x02R\bcurrency\x12F\n" +
-	"\binterval\x18\x06 \x01(\x0e2%.saturn.finance.v1.RecurrenceIntervalB\x03\xe0A\x02R\binterval\x12 \n" +
+	"\bcurrency\x18\x05 \x01(\tB\x03\xe0A\x02R\bcurrency\x12M\n" +
+	"\binterval\x18\x06 \x01(\x0e2,.saturn.finance.v1.Budget.RecurrenceIntervalB\x03\xe0A\x02R\binterval\x12 \n" +
 	"\tis_active\x18\a \x01(\bB\x03\xe0A\x01R\bisActive\x12\x17\n" +
 	"\x04icon\x18\b \x01(\tB\x03\xe0A\x01R\x04icon\x12\x19\n" +
 	"\x05color\x18\t \x01(\tB\x03\xe0A\x01R\x05color\x126\n" +
@@ -7875,7 +7875,14 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\rspent_in_base\x18\x04 \x01(\x03B\x03\xe0A\x03R\vspentInBase\x126\n" +
 	"\x15exchange_rate_to_base\x18\x05 \x01(\x01B\x03\xe0A\x03R\x12exchangeRateToBase\x12(\n" +
 	"\rbase_currency\x18\x06 \x01(\tB\x03\xe0A\x03R\fbaseCurrency\x12'\n" +
-	"\rlimit_in_base\x18\a \x01(\x03B\x03\xe0A\x03R\vlimitInBase\"1\n" +
+	"\rlimit_in_base\x18\a \x01(\x03B\x03\xe0A\x03R\vlimitInBase\"^\n" +
+	"\x12RecurrenceInterval\x12#\n" +
+	"\x1fRECURRENCE_INTERVAL_UNSPECIFIED\x10\x00\x12\n" +
+	"\n" +
+	"\x06WEEKLY\x10\x01\x12\v\n" +
+	"\aMONTHLY\x10\x02\x12\n" +
+	"\n" +
+	"\x06YEARLY\x10\x03\"1\n" +
 	"\x04View\x12\x14\n" +
 	"\x10VIEW_UNSPECIFIED\x10\x00\x12\t\n" +
 	"\x05BASIC\x10\x01\x12\b\n" +
@@ -8530,12 +8537,7 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x17ApproveInboxItemRequest\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\".\n" +
 	"\x17DiscardInboxItemRequest\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id*y\n" +
-	"\x12RecurrenceInterval\x12#\n" +
-	"\x1fRECURRENCE_INTERVAL_UNSPECIFIED\x10\x00\x12\x13\n" +
-	"\x0fINTERVAL_WEEKLY\x10\x01\x12\x14\n" +
-	"\x10INTERVAL_MONTHLY\x10\x02\x12\x13\n" +
-	"\x0fINTERVAL_YEARLY\x10\x03*\x84\x01\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id*\x84\x01\n" +
 	"\x10LimitPropagation\x12!\n" +
 	"\x1dLIMIT_PROPAGATION_UNSPECIFIED\x10\x00\x12$\n" +
 	" LIMIT_PROPAGATION_CURRENT_PERIOD\x10\x01\x12'\n" +
@@ -8619,11 +8621,11 @@ func file_saturn_finance_v1_finance_proto_rawDescGZIP() []byte {
 var file_saturn_finance_v1_finance_proto_enumTypes = make([]protoimpl.EnumInfo, 19)
 var file_saturn_finance_v1_finance_proto_msgTypes = make([]protoimpl.MessageInfo, 88)
 var file_saturn_finance_v1_finance_proto_goTypes = []any{
-	(RecurrenceInterval)(0),                       // 0: saturn.finance.v1.RecurrenceInterval
-	(LimitPropagation)(0),                         // 1: saturn.finance.v1.LimitPropagation
-	(InsightGranularity)(0),                       // 2: saturn.finance.v1.InsightGranularity
-	(BorrowingDirection)(0),                       // 3: saturn.finance.v1.BorrowingDirection
-	(BorrowingStatus)(0),                          // 4: saturn.finance.v1.BorrowingStatus
+	(LimitPropagation)(0),                         // 0: saturn.finance.v1.LimitPropagation
+	(InsightGranularity)(0),                       // 1: saturn.finance.v1.InsightGranularity
+	(BorrowingDirection)(0),                       // 2: saturn.finance.v1.BorrowingDirection
+	(BorrowingStatus)(0),                          // 3: saturn.finance.v1.BorrowingStatus
+	(Budget_RecurrenceInterval)(0),                // 4: saturn.finance.v1.Budget.RecurrenceInterval
 	(Budget_View)(0),                              // 5: saturn.finance.v1.Budget.View
 	(Transaction_Type)(0),                         // 6: saturn.finance.v1.Transaction.Type
 	(Transaction_View)(0),                         // 7: saturn.finance.v1.Transaction.View
@@ -8732,7 +8734,7 @@ var file_saturn_finance_v1_finance_proto_goTypes = []any{
 var file_saturn_finance_v1_finance_proto_depIdxs = []int32{
 	107, // 0: saturn.finance.v1.FinanceSettings.create_time:type_name -> google.protobuf.Timestamp
 	107, // 1: saturn.finance.v1.FinanceSettings.update_time:type_name -> google.protobuf.Timestamp
-	0,   // 2: saturn.finance.v1.Budget.interval:type_name -> saturn.finance.v1.RecurrenceInterval
+	4,   // 2: saturn.finance.v1.Budget.interval:type_name -> saturn.finance.v1.Budget.RecurrenceInterval
 	95,  // 3: saturn.finance.v1.Budget.current_period:type_name -> saturn.finance.v1.Budget.ActivePeriod
 	107, // 4: saturn.finance.v1.Budget.create_time:type_name -> google.protobuf.Timestamp
 	107, // 5: saturn.finance.v1.Budget.update_time:type_name -> google.protobuf.Timestamp
@@ -8742,7 +8744,7 @@ var file_saturn_finance_v1_finance_proto_depIdxs = []int32{
 	107, // 9: saturn.finance.v1.BudgetPeriod.update_time:type_name -> google.protobuf.Timestamp
 	20,  // 10: saturn.finance.v1.CreateBudgetRequest.budget:type_name -> saturn.finance.v1.Budget
 	20,  // 11: saturn.finance.v1.UpdateBudgetRequest.budget:type_name -> saturn.finance.v1.Budget
-	1,   // 12: saturn.finance.v1.UpdateBudgetRequest.propagation:type_name -> saturn.finance.v1.LimitPropagation
+	0,   // 12: saturn.finance.v1.UpdateBudgetRequest.propagation:type_name -> saturn.finance.v1.LimitPropagation
 	5,   // 13: saturn.finance.v1.ListBudgetsRequest.view:type_name -> saturn.finance.v1.Budget.View
 	107, // 14: saturn.finance.v1.ListBudgetsRequest.target_date:type_name -> google.protobuf.Timestamp
 	20,  // 15: saturn.finance.v1.ListBudgetsResponse.budgets:type_name -> saturn.finance.v1.Budget
@@ -8766,7 +8768,7 @@ var file_saturn_finance_v1_finance_proto_depIdxs = []int32{
 	7,   // 33: saturn.finance.v1.ListTransactionsRequest.view:type_name -> saturn.finance.v1.Transaction.View
 	6,   // 34: saturn.finance.v1.ListTransactionsRequest.type:type_name -> saturn.finance.v1.Transaction.Type
 	36,  // 35: saturn.finance.v1.ListTransactionsResponse.transactions:type_name -> saturn.finance.v1.Transaction
-	2,   // 36: saturn.finance.v1.GetInsightsRequest.granularity:type_name -> saturn.finance.v1.InsightGranularity
+	1,   // 36: saturn.finance.v1.GetInsightsRequest.granularity:type_name -> saturn.finance.v1.InsightGranularity
 	107, // 37: saturn.finance.v1.GetInsightsRequest.start_date:type_name -> google.protobuf.Timestamp
 	107, // 38: saturn.finance.v1.GetInsightsRequest.end_date:type_name -> google.protobuf.Timestamp
 	45,  // 39: saturn.finance.v1.GetInsightsResponse.spent:type_name -> saturn.finance.v1.SpentInsights
@@ -8798,8 +8800,8 @@ var file_saturn_finance_v1_finance_proto_depIdxs = []int32{
 	48,  // 65: saturn.finance.v1.ListScheduledPaymentsResponse.scheduled_payments:type_name -> saturn.finance.v1.ScheduledPayment
 	107, // 66: saturn.finance.v1.ConfirmScheduledPaymentRequest.transaction_date:type_name -> google.protobuf.Timestamp
 	107, // 67: saturn.finance.v1.ConfirmScheduledPaymentRequest.effective_date:type_name -> google.protobuf.Timestamp
-	3,   // 68: saturn.finance.v1.Borrowing.direction:type_name -> saturn.finance.v1.BorrowingDirection
-	4,   // 69: saturn.finance.v1.Borrowing.status:type_name -> saturn.finance.v1.BorrowingStatus
+	2,   // 68: saturn.finance.v1.Borrowing.direction:type_name -> saturn.finance.v1.BorrowingDirection
+	3,   // 69: saturn.finance.v1.Borrowing.status:type_name -> saturn.finance.v1.BorrowingStatus
 	107, // 70: saturn.finance.v1.Borrowing.established_at:type_name -> google.protobuf.Timestamp
 	107, // 71: saturn.finance.v1.Borrowing.due_at:type_name -> google.protobuf.Timestamp
 	107, // 72: saturn.finance.v1.Borrowing.create_time:type_name -> google.protobuf.Timestamp
@@ -8807,12 +8809,12 @@ var file_saturn_finance_v1_finance_proto_depIdxs = []int32{
 	107, // 74: saturn.finance.v1.BorrowingRepayment.payment_date:type_name -> google.protobuf.Timestamp
 	107, // 75: saturn.finance.v1.BorrowingRepayment.create_time:type_name -> google.protobuf.Timestamp
 	107, // 76: saturn.finance.v1.BorrowingRepayment.update_time:type_name -> google.protobuf.Timestamp
-	3,   // 77: saturn.finance.v1.BorrowingInput.direction:type_name -> saturn.finance.v1.BorrowingDirection
+	2,   // 77: saturn.finance.v1.BorrowingInput.direction:type_name -> saturn.finance.v1.BorrowingDirection
 	107, // 78: saturn.finance.v1.BorrowingInput.established_at:type_name -> google.protobuf.Timestamp
 	107, // 79: saturn.finance.v1.BorrowingInput.due_at:type_name -> google.protobuf.Timestamp
 	60,  // 80: saturn.finance.v1.CreateBorrowingRequest.borrowing:type_name -> saturn.finance.v1.BorrowingInput
-	4,   // 81: saturn.finance.v1.ListBorrowingsRequest.status:type_name -> saturn.finance.v1.BorrowingStatus
-	3,   // 82: saturn.finance.v1.ListBorrowingsRequest.direction:type_name -> saturn.finance.v1.BorrowingDirection
+	3,   // 81: saturn.finance.v1.ListBorrowingsRequest.status:type_name -> saturn.finance.v1.BorrowingStatus
+	2,   // 82: saturn.finance.v1.ListBorrowingsRequest.direction:type_name -> saturn.finance.v1.BorrowingDirection
 	58,  // 83: saturn.finance.v1.ListBorrowingsResponse.borrowings:type_name -> saturn.finance.v1.Borrowing
 	60,  // 84: saturn.finance.v1.UpdateBorrowingRequest.borrowing:type_name -> saturn.finance.v1.BorrowingInput
 	107, // 85: saturn.finance.v1.BorrowingRepaymentInput.payment_date:type_name -> google.protobuf.Timestamp

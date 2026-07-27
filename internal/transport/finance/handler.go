@@ -45,26 +45,26 @@ func toProtoSettings(s *finance.FinanceSettings) *financev1.FinanceSettings {
 	}
 }
 
-func toProtoInterval(interval finance.RecurrenceInterval) financev1.RecurrenceInterval {
+func toProtoInterval(interval finance.RecurrenceInterval) financev1.Budget_RecurrenceInterval {
 	switch interval {
 	case finance.IntervalWeekly:
-		return financev1.RecurrenceInterval_INTERVAL_WEEKLY
+		return financev1.Budget_WEEKLY
 	case finance.IntervalYearly:
-		return financev1.RecurrenceInterval_INTERVAL_YEARLY
+		return financev1.Budget_YEARLY
 	case finance.IntervalMonthly:
-		return financev1.RecurrenceInterval_INTERVAL_MONTHLY
+		return financev1.Budget_MONTHLY
 	default:
-		return financev1.RecurrenceInterval_RECURRENCE_INTERVAL_UNSPECIFIED
+		return financev1.Budget_RECURRENCE_INTERVAL_UNSPECIFIED
 	}
 }
 
-func toDomainInterval(interval financev1.RecurrenceInterval) finance.RecurrenceInterval {
+func toDomainInterval(interval financev1.Budget_RecurrenceInterval) finance.RecurrenceInterval {
 	switch interval {
-	case financev1.RecurrenceInterval_INTERVAL_WEEKLY:
+	case financev1.Budget_WEEKLY:
 		return finance.IntervalWeekly
-	case financev1.RecurrenceInterval_INTERVAL_YEARLY:
+	case financev1.Budget_YEARLY:
 		return finance.IntervalYearly
-	case financev1.RecurrenceInterval_INTERVAL_MONTHLY:
+	case financev1.Budget_MONTHLY:
 		fallthrough
 	default:
 		return finance.IntervalMonthly

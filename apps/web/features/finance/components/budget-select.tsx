@@ -40,8 +40,10 @@ export function BudgetSelect({
   // Formatting helpers for intervals
   const getIntervalColorClass = (interval: string) => {
     switch (interval) {
+      case "WEEKLY":
       case "INTERVAL_WEEKLY":
         return "bg-teal-500/10 text-teal-500 border-teal-500/20"
+      case "YEARLY":
       case "INTERVAL_YEARLY":
         return "bg-purple-500/10 text-purple-500 border-purple-500/20"
       default:

@@ -289,18 +289,6 @@ service Finance {
   }
 }
 
-// RecurrenceInterval defines the frequency of budgeting or transaction execution rules.
-enum RecurrenceInterval {
-  // Default unspecified value. Invalid fallback.
-  RECURRENCE_INTERVAL_UNSPECIFIED = 0;
-  // Budget resets or templates trigger every calendar week.
-  INTERVAL_WEEKLY = 1;
-  // Budget resets or templates trigger every calendar month.
-  INTERVAL_MONTHLY = 2;
-  // Budget resets or templates trigger every calendar year.
-  INTERVAL_YEARLY = 3;
-}
-
 // FinanceSettings represents the workspace configuration.
 message FinanceSettings {
   // Output only. Associated space identifier.
@@ -319,6 +307,18 @@ message FinanceSettings {
 
 // Budget represents a budget template definition.
 message Budget {
+  // RecurrenceInterval defines the frequency of budgeting or transaction execution rules.
+  enum RecurrenceInterval {
+    // Default unspecified value. Invalid fallback.
+    RECURRENCE_INTERVAL_UNSPECIFIED = 0;
+    // Budget resets or templates trigger every calendar week.
+    WEEKLY = 1;
+    // Budget resets or templates trigger every calendar month.
+    MONTHLY = 2;
+    // Budget resets or templates trigger every calendar year.
+    YEARLY = 3;
+  }
+
   // Scoped resource view options.
   enum View {
     // Default view. Resolves only basic configuration fields.

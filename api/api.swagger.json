@@ -4002,6 +4002,15 @@
       },
       "description": "Represents the computed details of the active/current period."
     },
+    "BudgetRecurrenceInterval": {
+      "type": "string",
+      "enum": [
+        "WEEKLY",
+        "MONTHLY",
+        "YEARLY"
+      ],
+      "description": "RecurrenceInterval defines the frequency of budgeting or transaction execution rules.\n\n - WEEKLY: Budget resets or templates trigger every calendar week.\n - MONTHLY: Budget resets or templates trigger every calendar month.\n - YEARLY: Budget resets or templates trigger every calendar year."
+    },
     "FinanceApproveInboxItemBody": {
       "type": "object",
       "description": "The request for\n[ApproveInboxItem][saturn.finance.v1.Finance.ApproveInboxItem]."
@@ -5204,7 +5213,7 @@
           "description": "Required. ISO Currency code of the budget limit."
         },
         "interval": {
-          "$ref": "#/definitions/v1RecurrenceInterval",
+          "$ref": "#/definitions/BudgetRecurrenceInterval",
           "description": "Required. Recurrence interval frequency."
         },
         "isActive": {
@@ -6506,15 +6515,6 @@
           "type": "string"
         }
       }
-    },
-    "v1RecurrenceInterval": {
-      "type": "string",
-      "enum": [
-        "INTERVAL_WEEKLY",
-        "INTERVAL_MONTHLY",
-        "INTERVAL_YEARLY"
-      ],
-      "description": "RecurrenceInterval defines the frequency of budgeting or transaction execution rules.\n\n - INTERVAL_WEEKLY: Budget resets or templates trigger every calendar week.\n - INTERVAL_MONTHLY: Budget resets or templates trigger every calendar month.\n - INTERVAL_YEARLY: Budget resets or templates trigger every calendar year."
     },
     "v1RecurringExpense": {
       "type": "object",

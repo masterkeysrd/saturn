@@ -2,7 +2,7 @@ import { useState, createElement } from "react"
 import {
   useUpdateBudgetMutation,
   type Budget,
-  type RecurrenceInterval,
+  type Budget_RecurrenceInterval,
   type LimitPropagation,
   useListAccountsQuery,
   useListCurrenciesQuery,
@@ -53,10 +53,13 @@ const PROPAGATION_ITEMS: Array<{ value: LimitPropagation; label: string }> = [
   },
 ]
 
-const INTERVAL_ITEMS: Array<{ value: RecurrenceInterval; label: string }> = [
-  { value: "INTERVAL_WEEKLY", label: "Weekly" },
-  { value: "INTERVAL_MONTHLY", label: "Monthly" },
-  { value: "INTERVAL_YEARLY", label: "Yearly" },
+const INTERVAL_ITEMS: Array<{
+  value: Budget_RecurrenceInterval
+  label: string
+}> = [
+  { value: "WEEKLY", label: "Weekly" },
+  { value: "MONTHLY", label: "Monthly" },
+  { value: "YEARLY", label: "Yearly" },
 ]
 
 interface EditBudgetSheetProps {
@@ -119,8 +122,7 @@ export function EditBudgetSheet({
   const [name, setName] = useState("")
   const [limit, setLimit] = useState("")
   const [currency, setCurrency] = useState("USD")
-  const [interval, setInterval] =
-    useState<RecurrenceInterval>("INTERVAL_MONTHLY")
+  const [interval, setInterval] = useState<Budget_RecurrenceInterval>("MONTHLY")
   const [isActive, setIsActive] = useState(true)
   const [propagation, setPropagation] = useState<LimitPropagation>(
     "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
@@ -340,7 +342,7 @@ export function EditBudgetSheet({
               items={INTERVAL_ITEMS}
               value={interval}
               onValueChange={(val) =>
-                val && setInterval(val as RecurrenceInterval)
+                val && setInterval(val as Budget_RecurrenceInterval)
               }
               disabled
             >

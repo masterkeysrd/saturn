@@ -1,7 +1,7 @@
 import { useState, createElement } from "react"
 import {
   useCreateBudgetMutation,
-  type RecurrenceInterval,
+  type Budget_RecurrenceInterval,
   useListAccountsQuery,
   useListCurrenciesQuery,
   useListExchangeRatesQuery,
@@ -95,8 +95,7 @@ export function CreateBudgetSheet({
   const [name, setName] = useState("")
   const [limit, setLimit] = useState("")
   const [currency, setCurrency] = useState(baseCurrency || "USD")
-  const [interval, setInterval] =
-    useState<RecurrenceInterval>("INTERVAL_MONTHLY")
+  const [interval, setInterval] = useState<Budget_RecurrenceInterval>("MONTHLY")
   const [icon, setIcon] = useState("piggy-bank")
   const [color, setColor] = useState("indigo")
   const [defaultAccountId, setDefaultAccountId] = useState("")
@@ -289,7 +288,7 @@ export function CreateBudgetSheet({
             <Select
               value={interval}
               onValueChange={(val) =>
-                val && setInterval(val as RecurrenceInterval)
+                val && setInterval(val as Budget_RecurrenceInterval)
               }
             >
               <SelectTrigger
@@ -299,9 +298,9 @@ export function CreateBudgetSheet({
                 <SelectValue placeholder="Select interval..." />
               </SelectTrigger>
               <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                <SelectItem value="INTERVAL_WEEKLY">Weekly</SelectItem>
-                <SelectItem value="INTERVAL_MONTHLY">Monthly</SelectItem>
-                <SelectItem value="INTERVAL_YEARLY">Yearly</SelectItem>
+                <SelectItem value="WEEKLY">Weekly</SelectItem>
+                <SelectItem value="MONTHLY">Monthly</SelectItem>
+                <SelectItem value="YEARLY">Yearly</SelectItem>
               </SelectContent>
             </Select>
           </div>

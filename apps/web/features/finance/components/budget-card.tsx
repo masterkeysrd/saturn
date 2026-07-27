@@ -38,9 +38,9 @@ export function BudgetCard({
   onViewHistory,
 }: BudgetCardProps) {
   const intervalColorClass =
-    budget.interval === "INTERVAL_WEEKLY"
+    budget.interval === "WEEKLY"
       ? "bg-teal-500/10 text-teal-500 border-teal-500/20"
-      : budget.interval === "INTERVAL_YEARLY"
+      : budget.interval === "YEARLY"
         ? "bg-purple-500/10 text-purple-500 border-purple-500/20"
         : "bg-indigo-500/10 text-indigo-500 border-indigo-500/20"
 
