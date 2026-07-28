@@ -143,7 +143,9 @@ export function InboxItemReviewPanel({
     if (!transactions || transactions.length === 0) return null
 
     if (meta.potential_duplicate_id) {
-      const match = transactions.find((t) => t.id === meta.potential_duplicate_id)
+      const match = transactions.find(
+        (t) => t.id === meta.potential_duplicate_id
+      )
       if (match) return match
     }
 
@@ -674,16 +676,21 @@ export function InboxItemReviewPanel({
               <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border border-blue-500/20 bg-blue-500/10 px-3 py-2 text-xs">
                 <div className="flex min-w-0 items-center gap-2 text-blue-300">
                   <Sparkles className="h-3.5 w-3.5 shrink-0 animate-pulse text-blue-400" />
-                  <span className="shrink-0 font-semibold">Suggested Match:</span>
+                  <span className="shrink-0 font-semibold">
+                    Suggested Match:
+                  </span>
                   <span className="max-w-[150px] truncate font-bold">
                     {candidateTxMatch.description || "Existing Transaction"}
                   </span>
                   <span className="shrink-0 text-[11px]">
                     ({candidateTxMatch.currency}{" "}
-                    {formatCents(candidateTxMatch.amount).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    {formatCents(candidateTxMatch.amount).toLocaleString(
+                      undefined,
+                      {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }
+                    )}
                     )
                   </span>
                 </div>
@@ -1339,7 +1346,9 @@ export function InboxItemReviewPanel({
                   <div className="flex items-center justify-between gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-3 py-2 text-xs">
                     <div className="flex min-w-0 items-center gap-2 text-indigo-300">
                       <Sparkles className="h-3.5 w-3.5 shrink-0 animate-pulse text-indigo-400" />
-                      <span className="shrink-0 font-semibold">Suggested Bill:</span>
+                      <span className="shrink-0 font-semibold">
+                        Suggested Bill:
+                      </span>
                       <span className="max-w-[180px] truncate font-bold">
                         {budgets.find((b) => b.id === suggestedBill.budgetId)
                           ?.name || "Bill Payment"}

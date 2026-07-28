@@ -1357,10 +1357,24 @@ func (s *Service) adjustAccountBalance(ctx context.Context, spaceID SpaceID, acc
 		isOutflow, isInflow = isInflow, isOutflow
 	}
 
-	if isOutflow {
-		acc.CurrentBalance -= amount
-	} else if isInflow {
-		acc.CurrentBalance += amount
+	if acc.Type == AccountTypeCreditCard {
+		// Liability Account Rules (Positive = Debt Owed):
+		// Outflow (Purchase/Expense/TransferOut) INCREASES debt (+amount)
+		// Inflow (Card Payment/Refund/TransferIn) DECREASES debt (-amount)
+		if isOutflow {
+			acc.CurrentBalance += amount
+		} else if isInflow {
+			acc.CurrentBalance -= amount
+		}
+	} else {
+		// Asset Account Rules (Positive = Money Owned):
+		// Outflow (Withdrawal/Expense/TransferOut) DECREASES asset (-amount)
+		// Inflow (Deposit/Income/TransferIn) INCREASES asset (+amount)
+		if isOutflow {
+			acc.CurrentBalance -= amount
+		} else if isInflow {
+			acc.CurrentBalance += amount
+		}
 	}
 
 	acc.UpdateTime = time.Now().UTC()

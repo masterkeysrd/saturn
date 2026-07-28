@@ -26,10 +26,7 @@ import { Loader2 } from "lucide-react"
 import { toCentsString, formatCents } from "../utils"
 import { DatePicker } from "@/components/ui/date-picker"
 import { CurrencyConversionPreview } from "./currency-conversion-preview"
-import {
-  borrowingSchema,
-  type BorrowingFormValues,
-} from "../schemas/borrowing"
+import { borrowingSchema, type BorrowingFormValues } from "../schemas/borrowing"
 
 const DIRECTION_ITEMS = [
   { value: "LENT", label: "I Lent Money" },
@@ -142,7 +139,9 @@ export function CreateBorrowingSheet({
             ? new Date(editBorrowing.establishedAt)
             : new Date(),
           hasDueDate: !!editBorrowing.dueAt,
-          dueAt: editBorrowing.dueAt ? new Date(editBorrowing.dueAt) : undefined,
+          dueAt: editBorrowing.dueAt
+            ? new Date(editBorrowing.dueAt)
+            : undefined,
           notes: editBorrowing.notes || "",
           createAsTransaction: editBorrowing.createAsTransaction ?? false,
         })

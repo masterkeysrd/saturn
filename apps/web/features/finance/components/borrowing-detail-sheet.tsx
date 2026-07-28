@@ -26,10 +26,7 @@ import { formatCents, toCentsString } from "../utils"
 import { DatePicker } from "@/components/ui/date-picker"
 import { CurrencyConversionPreview } from "./currency-conversion-preview"
 import { AccountSelect } from "./account-select"
-import {
-  repaymentSchema,
-  type RepaymentFormValues,
-} from "../schemas/borrowing"
+import { repaymentSchema, type RepaymentFormValues } from "../schemas/borrowing"
 
 interface BorrowingDetailSheetProps {
   open: boolean

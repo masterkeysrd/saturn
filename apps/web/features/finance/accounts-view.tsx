@@ -232,10 +232,18 @@ export function AccountsView() {
           acc.conversion?.balance || acc.currentBalance
         )
 
-        if (baseValue < 0) {
-          totalLiabilities += Math.abs(baseValue)
+        if (acc.type === "CREDIT_CARD") {
+          if (baseValue > 0) {
+            totalLiabilities += baseValue // Positive = Credit Debt Owed
+          } else {
+            totalAssets += Math.abs(baseValue) // Negative = Statement Credit / Overpayment
+          }
         } else {
-          totalAssets += baseValue
+          if (baseValue < 0) {
+            totalLiabilities += Math.abs(baseValue) // Bank Overdraft
+          } else {
+            totalAssets += baseValue // Cash / Checking Asset
+          }
         }
       }
 
@@ -594,15 +602,38 @@ export function AccountsView() {
 
                       <div className="mt-6 flex items-baseline justify-between">
                         <div>
-                          <span className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                            Balance
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                              Balance
+                            </span>
+                            {isCredit && (
+                              <span
+                                className={cn(
+                                  "py-0.2 rounded border px-1.5 text-[9px] font-extrabold uppercase",
+                                  Number(acc.currentBalance || "0") > 0
+                                    ? "border-rose-500/20 bg-rose-500/10 text-rose-400"
+                                    : Number(acc.currentBalance || "0") < 0
+                                      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+                                      : "border-border/30 bg-muted/20 text-muted-foreground"
+                                )}
+                              >
+                                {Number(acc.currentBalance || "0") > 0
+                                  ? "Balance Owed"
+                                  : Number(acc.currentBalance || "0") < 0
+                                    ? "Statement Credit"
+                                    : "Zero Balance"}
+                              </span>
+                            )}
+                          </div>
                           <span
                             className={cn(
                               "text-2xl font-black tracking-tight",
-                              isCredit && Number(acc.currentBalance || "0") < 0
+                              isCredit && Number(acc.currentBalance || "0") > 0
                                 ? "text-rose-500 dark:text-rose-400"
-                                : "text-foreground"
+                                : isCredit &&
+                                    Number(acc.currentBalance || "0") < 0
+                                  ? "text-emerald-500 dark:text-emerald-400"
+                                  : "text-foreground"
                             )}
                           >
                             {formatCents(acc.currentBalance).toLocaleString(
@@ -621,63 +652,88 @@ export function AccountsView() {
 
                       {isCredit && (
                         <div className="mt-5 space-y-2 border-t border-border/30 pt-4">
-                          <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                            <span>
-                              Limit:{" "}
-                              {formatCents(acc.creditLimit).toLocaleString()}{" "}
-                              {acc.currency}
-                            </span>
-                            <span>
-                              Available:{" "}
-                              {(() => {
-                                const limit = Number(acc.creditLimit || "0")
-                                const current = Number(
-                                  acc.currentBalance || "0"
-                                )
-                                const balanceOwed = Math.abs(current)
-                                return formatCents(
-                                  limit - balanceOwed
-                                ).toLocaleString()
-                              })()}{" "}
-                              {acc.currency}
-                            </span>
-                          </div>
                           {(() => {
                             const limit = Number(acc.creditLimit || "0")
-                            const current = Number(acc.currentBalance || "0")
-                            const balanceOwed = Math.abs(current)
+                            const rawBal = Number(acc.currentBalance || "0")
+                            const debtOwed = rawBal > 0 ? rawBal : 0
+                            const overpayment =
+                              rawBal < 0 ? Math.abs(rawBal) : 0
+                            const availableCents = Math.max(
+                              0,
+                              limit - debtOwed + overpayment
+                            )
+                            const isOverLimit = limit > 0 && debtOwed > limit
+                            const overLimitCents = isOverLimit
+                              ? debtOwed - limit
+                              : 0
+
                             const utilizationPercent =
                               limit > 0
                                 ? Math.min(
                                     100,
-                                    Math.max(0, (balanceOwed / limit) * 100)
+                                    Math.max(0, (debtOwed / limit) * 100)
                                   )
                                 : 0
 
                             let barColor = "bg-emerald-500"
-                            if (utilizationPercent > 85) {
+                            if (utilizationPercent > 85 || isOverLimit) {
                               barColor = "bg-rose-500"
                             } else if (utilizationPercent > 50) {
                               barColor = "bg-amber-500"
                             }
 
                             return (
-                              <div className="space-y-1">
-                                <div className="h-2 w-full overflow-hidden rounded-full border border-border/20 bg-muted">
-                                  <div
-                                    className={cn(
-                                      "h-full transition-all duration-500",
-                                      barColor
-                                    )}
-                                    style={{ width: `${utilizationPercent}%` }}
-                                  />
-                                </div>
-                                <div className="flex justify-between text-[9px] font-black text-muted-foreground/70 uppercase">
+                              <>
+                                <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
                                   <span>
-                                    {utilizationPercent.toFixed(0)}% Utilization
+                                    Limit: {formatCents(limit).toLocaleString()}{" "}
+                                    {acc.currency}
+                                  </span>
+                                  <span>
+                                    Available:{" "}
+                                    <span className="font-bold text-foreground">
+                                      {formatCents(
+                                        availableCents
+                                      ).toLocaleString()}{" "}
+                                      {acc.currency}
+                                    </span>
                                   </span>
                                 </div>
-                              </div>
+                                <div className="space-y-1">
+                                  <div className="h-2 w-full overflow-hidden rounded-full border border-border/20 bg-muted">
+                                    <div
+                                      className={cn(
+                                        "h-full transition-all duration-500",
+                                        barColor
+                                      )}
+                                      style={{
+                                        width: `${utilizationPercent}%`,
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="flex justify-between text-[9px] font-black text-muted-foreground/70 uppercase">
+                                    <span>
+                                      {utilizationPercent.toFixed(0)}%
+                                      Utilization
+                                    </span>
+                                    {isOverLimit && (
+                                      <span className="font-bold text-rose-400">
+                                        Over Limit by{" "}
+                                        {formatCents(
+                                          overLimitCents
+                                        ).toLocaleString()}{" "}
+                                        {acc.currency}
+                                      </span>
+                                    )}
+                                    {overpayment > 0 && (
+                                      <span className="font-bold text-emerald-400">
+                                        +{formatCents(overpayment).toFixed(2)}{" "}
+                                        Overpaid
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </>
                             )
                           })()}
                         </div>
@@ -880,7 +936,13 @@ function CreateAccountSheet({
           lastFour: editAccount.lastFour || "",
           type: editAccount.type,
           currency: editAccount.currency,
-          initialBalance: formatCents(editAccount.initialBalance).toString(),
+          initialBalance:
+            editAccount.type === "CREDIT_CARD" &&
+            Number(editAccount.initialBalance) < 0
+              ? formatCents(
+                  Math.abs(Number(editAccount.initialBalance))
+                ).toString()
+              : formatCents(editAccount.initialBalance).toString(),
           creditLimit: editAccount.creditLimit
             ? formatCents(editAccount.creditLimit).toString()
             : "",
@@ -913,7 +975,14 @@ function CreateAccountSheet({
   const isPending = createMutation.isPending || updateMutation.isPending
 
   const onSubmit = async (data: AccountFormValues) => {
-    const centsStr = toCentsString(data.initialBalance || "0")
+    let centsStr = toCentsString(data.initialBalance || "0")
+    if (data.type === "CREDIT_CARD") {
+      const parsedVal = parseFloat(data.initialBalance || "0")
+      if (parsedVal > 0) {
+        centsStr = `-${centsStr}`
+      }
+    }
+
     const limitStr =
       data.type === "CREDIT_CARD" && data.creditLimit
         ? toCentsString(data.creditLimit)
@@ -1033,21 +1102,37 @@ function CreateAccountSheet({
           />
 
           <div className="space-y-2">
-            <Label
-              htmlFor="acc-balance"
-              className="text-xs font-bold tracking-wider text-foreground uppercase"
-            >
-              Initial Balance
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label
+                htmlFor="acc-balance"
+                className="text-xs font-bold tracking-wider text-foreground uppercase"
+              >
+                {accountType === "CREDIT_CARD"
+                  ? "Initial Balance Owed"
+                  : "Initial Balance"}
+              </Label>
+              {accountType === "CREDIT_CARD" && (
+                <span className="text-[10px] font-medium text-muted-foreground">
+                  (Positive = Debt Owed)
+                </span>
+              )}
+            </div>
             <Input
               id="acc-balance"
               type="number"
               step="0.01"
-              placeholder="0.00"
+              placeholder={
+                accountType === "CREDIT_CARD" ? "e.g. 450.00" : "0.00"
+              }
               {...register("initialBalance")}
               className="h-11 rounded-xl"
               disabled={!!editAccount}
             />
+            <p className="text-[10px] text-muted-foreground">
+              {accountType === "CREDIT_CARD"
+                ? "Enter the amount currently owed on the card. Saturn will automatically register it as debt."
+                : "Enter positive for cash/savings assets, or negative for overdraft."}
+            </p>
             {errors.initialBalance && (
               <p className="text-[11px] font-semibold text-destructive">
                 {errors.initialBalance.message}
