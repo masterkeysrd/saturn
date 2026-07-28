@@ -177,6 +177,14 @@ service Finance {
     };
   }
 
+  // Dismisses a pending scheduled payment instance without creating a transaction.
+  rpc SkipScheduledPayment(SkipScheduledPaymentRequest) returns (ScheduledPayment) {
+    option (google.api.http) = {
+      post: "/v1/finance/scheduled-payments/{id}:skip"
+      body: "*"
+    };
+  }
+
   // Logs a new personal debt agreement (lent or borrowed money).
   rpc CreateBorrowing(CreateBorrowingRequest) returns (Borrowing) {
     option (google.api.http) = {
@@ -1327,6 +1335,13 @@ message MatchScheduledPaymentRequest {
   // Required. Existing transaction identifier to match and link.
   // Values are of the form `txn_[a-zA-Z0-9]+`.
   string transaction_id = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// The request for [SkipScheduledPayment][saturn.finance.v1.Finance.SkipScheduledPayment].
+message SkipScheduledPaymentRequest {
+  // Required. Identifier of the scheduled payment instance to skip.
+  // Values are of the form `sch_[a-zA-Z0-9]+`.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 // Borrowing represents a personal lent/borrowed debt agreement.

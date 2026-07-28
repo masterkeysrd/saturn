@@ -1548,6 +1548,17 @@ export interface MatchScheduledPaymentRequest {
 }
 
 /**
+ * The request for [SkipScheduledPayment][saturn.finance.v1.Finance.SkipScheduledPayment].
+ */
+export interface SkipScheduledPaymentRequest {
+  /**
+   * Required. Identifier of the scheduled payment instance to skip.
+   * Values are of the form `sch_[a-zA-Z0-9]+`.
+   */
+  id: string
+}
+
+/**
  * Borrowing represents a personal lent/borrowed debt agreement.
  */
 export interface Borrowing {
@@ -3080,6 +3091,37 @@ export function useMatchScheduledPaymentMutation(
     { payment_id: string; req: MatchScheduledPaymentRequest }
   >({
     mutationFn: ({ payment_id, req }) => matchScheduledPayment(payment_id, req),
+    ...options,
+  })
+}
+
+/**
+ * Dismisses a pending scheduled payment instance without creating a transaction.
+ */
+export async function skipScheduledPayment(
+  id: string,
+  req: SkipScheduledPaymentRequest
+): Promise<ScheduledPayment> {
+  return request<ScheduledPayment>({
+    method: "POST",
+    url: `/api/v1/finance/scheduled-payments/${id}:skip`,
+    data: req,
+  })
+}
+
+export function useSkipScheduledPaymentMutation(
+  options?: UseMutationOptions<
+    ScheduledPayment,
+    Error,
+    { id: string; req: SkipScheduledPaymentRequest }
+  >
+) {
+  return useMutation<
+    ScheduledPayment,
+    Error,
+    { id: string; req: SkipScheduledPaymentRequest }
+  >({
+    mutationFn: ({ id, req }) => skipScheduledPayment(id, req),
     ...options,
   })
 }

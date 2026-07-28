@@ -47,6 +47,7 @@ type FinanceService interface {
 	ListScheduledPayments(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListScheduledPaymentsFilter) (*paging.Page[*finance.ScheduledPayment], error)
 	ConfirmScheduledPayment(ctx context.Context, req finance.ConfirmScheduledPaymentRequest) (*finance.Transaction, error)
 	MatchScheduledPayment(ctx context.Context, req finance.MatchScheduledPaymentRequest) (*finance.Transaction, error)
+	SkipScheduledPayment(ctx context.Context, spaceID finance.SpaceID, id finance.ScheduledPaymentID) (*finance.ScheduledPayment, error)
 	GenerateScheduledPayments(ctx context.Context) error
 
 	CreateBorrowing(ctx context.Context, b *finance.Borrowing, createAsTransaction bool) (*finance.Borrowing, error)

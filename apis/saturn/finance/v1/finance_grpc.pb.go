@@ -46,6 +46,7 @@ const (
 	Finance_ListScheduledPayments_FullMethodName    = "/saturn.finance.v1.Finance/ListScheduledPayments"
 	Finance_ConfirmScheduledPayment_FullMethodName  = "/saturn.finance.v1.Finance/ConfirmScheduledPayment"
 	Finance_MatchScheduledPayment_FullMethodName    = "/saturn.finance.v1.Finance/MatchScheduledPayment"
+	Finance_SkipScheduledPayment_FullMethodName     = "/saturn.finance.v1.Finance/SkipScheduledPayment"
 	Finance_CreateBorrowing_FullMethodName          = "/saturn.finance.v1.Finance/CreateBorrowing"
 	Finance_GetBorrowing_FullMethodName             = "/saturn.finance.v1.Finance/GetBorrowing"
 	Finance_ListBorrowings_FullMethodName           = "/saturn.finance.v1.Finance/ListBorrowings"
@@ -128,6 +129,8 @@ type FinanceClient interface {
 	ConfirmScheduledPayment(ctx context.Context, in *ConfirmScheduledPaymentRequest, opts ...grpc.CallOption) (*Transaction, error)
 	// Links an existing transaction with a pending scheduled payment, marking it cleared.
 	MatchScheduledPayment(ctx context.Context, in *MatchScheduledPaymentRequest, opts ...grpc.CallOption) (*Transaction, error)
+	// Dismisses a pending scheduled payment instance without creating a transaction.
+	SkipScheduledPayment(ctx context.Context, in *SkipScheduledPaymentRequest, opts ...grpc.CallOption) (*ScheduledPayment, error)
 	// Logs a new personal debt agreement (lent or borrowed money).
 	CreateBorrowing(ctx context.Context, in *CreateBorrowingRequest, opts ...grpc.CallOption) (*Borrowing, error)
 	// Retrieves detail metrics of a borrowing record.
@@ -438,6 +441,16 @@ func (c *financeClient) MatchScheduledPayment(ctx context.Context, in *MatchSche
 	return out, nil
 }
 
+func (c *financeClient) SkipScheduledPayment(ctx context.Context, in *SkipScheduledPaymentRequest, opts ...grpc.CallOption) (*ScheduledPayment, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ScheduledPayment)
+	err := c.cc.Invoke(ctx, Finance_SkipScheduledPayment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *financeClient) CreateBorrowing(ctx context.Context, in *CreateBorrowingRequest, opts ...grpc.CallOption) (*Borrowing, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Borrowing)
@@ -698,6 +711,8 @@ type FinanceServer interface {
 	ConfirmScheduledPayment(context.Context, *ConfirmScheduledPaymentRequest) (*Transaction, error)
 	// Links an existing transaction with a pending scheduled payment, marking it cleared.
 	MatchScheduledPayment(context.Context, *MatchScheduledPaymentRequest) (*Transaction, error)
+	// Dismisses a pending scheduled payment instance without creating a transaction.
+	SkipScheduledPayment(context.Context, *SkipScheduledPaymentRequest) (*ScheduledPayment, error)
 	// Logs a new personal debt agreement (lent or borrowed money).
 	CreateBorrowing(context.Context, *CreateBorrowingRequest) (*Borrowing, error)
 	// Retrieves detail metrics of a borrowing record.
@@ -824,6 +839,9 @@ func (UnimplementedFinanceServer) ConfirmScheduledPayment(context.Context, *Conf
 }
 func (UnimplementedFinanceServer) MatchScheduledPayment(context.Context, *MatchScheduledPaymentRequest) (*Transaction, error) {
 	return nil, status.Error(codes.Unimplemented, "method MatchScheduledPayment not implemented")
+}
+func (UnimplementedFinanceServer) SkipScheduledPayment(context.Context, *SkipScheduledPaymentRequest) (*ScheduledPayment, error) {
+	return nil, status.Error(codes.Unimplemented, "method SkipScheduledPayment not implemented")
 }
 func (UnimplementedFinanceServer) CreateBorrowing(context.Context, *CreateBorrowingRequest) (*Borrowing, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateBorrowing not implemented")
@@ -1373,6 +1391,24 @@ func _Finance_MatchScheduledPayment_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Finance_SkipScheduledPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SkipScheduledPaymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).SkipScheduledPayment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_SkipScheduledPayment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).SkipScheduledPayment(ctx, req.(*SkipScheduledPaymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Finance_CreateBorrowing_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateBorrowingRequest)
 	if err := dec(in); err != nil {
@@ -1843,6 +1879,10 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MatchScheduledPayment",
 			Handler:    _Finance_MatchScheduledPayment_Handler,
+		},
+		{
+			MethodName: "SkipScheduledPayment",
+			Handler:    _Finance_SkipScheduledPayment_Handler,
 		},
 		{
 			MethodName: "CreateBorrowing",

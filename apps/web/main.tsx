@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/components/theme-provider.tsx"
 import { AuthProvider } from "@/features/auth/auth-provider.tsx"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { ActiveSpaceProvider } from "@/features/space/use-space"
+import { Toaster } from "@/components/ui/toast"
 
 // Initialize the global React Query client
 const queryClient = new QueryClient({
@@ -30,6 +31,7 @@ createRoot(document.getElementById("root")!).render(
             <BrowserRouter>
               <TooltipProvider>
                 <App />
+                <Toaster />
               </TooltipProvider>
             </BrowserRouter>
           </ActiveSpaceProvider>

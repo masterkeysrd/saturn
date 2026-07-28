@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 import {
   useConfirmScheduledPaymentMutation,
   useMatchScheduledPaymentMutation,
+  useSkipScheduledPaymentMutation,
   useListAccountsQuery,
   useListBudgetsQuery,
   useListRecurringExpensesQuery,
@@ -35,10 +36,12 @@ import {
   Sparkles,
   Link2,
   Search,
+  FastForward,
 } from "lucide-react"
 import { CurrencyConversionPreview } from "./currency-conversion-preview"
 import { AccountSelect } from "./account-select"
 import { BudgetSelect } from "./budget-select"
+import { SkipPaymentDialog } from "./skip-payment-dialog"
 import { cn } from "@/lib/utils"
 import {
   toCentsString,
@@ -148,6 +151,19 @@ export function ConfirmPaymentSheet({
 
   const confirmMutation = useConfirmScheduledPaymentMutation()
   const matchMutation = useMatchScheduledPaymentMutation()
+  const skipMutation = useSkipScheduledPaymentMutation()
+  const [skipDialogOpen, setSkipDialogOpen] = useState(false)
+
+  const handleConfirmSkip = async () => {
+    if (!payment) return
+    await skipMutation.mutateAsync({
+      id: payment.id || "",
+      req: { id: payment.id || "" },
+    })
+    refetchPayments()
+    setSkipDialogOpen(false)
+    onOpenChange(false)
+  }
 
   const [prevPaymentId, setPrevPaymentId] = useState<string | null>(null)
   const [prevOpen, setPrevOpen] = useState(false)
@@ -825,20 +841,32 @@ export function ConfirmPaymentSheet({
                 })()}
             </div>
 
-            <div className="mt-6 flex gap-3 pt-3">
+            <div className="mt-6 flex items-center gap-3 pt-3">
               <Button
+                type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
-                className="h-12 flex-1 cursor-pointer rounded-xl border-border/60 text-xs font-bold hover:bg-muted/10"
-                disabled={isPending || matchMutation.isPending}
+                onClick={() => setSkipDialogOpen(true)}
+                className="h-12 flex-1 cursor-pointer rounded-xl border-amber-500/30 bg-amber-500/10 text-xs font-bold text-amber-600 shadow-sm transition-all hover:bg-amber-500/20 dark:text-amber-400"
+                disabled={
+                  isPending || matchMutation.isPending || skipMutation.isPending
+                }
               >
-                Cancel
+                {skipMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <FastForward className="mr-1.5 h-4 w-4" />
+                    Skip Cycle
+                  </>
+                )}
               </Button>
               <Button
                 type="submit"
                 form="confirm-payment-form"
                 className="h-12 flex-1 cursor-pointer rounded-xl bg-gradient-to-r from-primary to-accent text-xs font-bold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.01] hover:opacity-95"
-                disabled={isPending || matchMutation.isPending}
+                disabled={
+                  isPending || matchMutation.isPending || skipMutation.isPending
+                }
               >
                 {isPending || matchMutation.isPending ? (
                   <>
@@ -855,6 +883,15 @@ export function ConfirmPaymentSheet({
           </div>
         )}
       </SheetContent>
+
+      <SkipPaymentDialog
+        open={skipDialogOpen}
+        onOpenChange={setSkipDialogOpen}
+        onConfirm={handleConfirmSkip}
+        isPending={skipMutation.isPending}
+        amountFormatted={payment ? formatCents(payment.amount).toFixed(2) : undefined}
+        currency={payment?.currency}
+      />
     </Sheet>
   )
 }

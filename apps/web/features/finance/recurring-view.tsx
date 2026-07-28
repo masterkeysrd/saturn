@@ -5,6 +5,7 @@ import {
   useListRecurringExpensesQuery,
   useListScheduledPaymentsQuery,
   useDeleteRecurringExpenseMutation,
+  useSkipScheduledPaymentMutation,
   useListTransactionsQuery,
   type RecurringExpense,
   type ScheduledPayment,
@@ -28,6 +29,7 @@ import {
   History,
   ArrowRight,
   MoreVertical,
+  FastForward,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -40,6 +42,7 @@ import {
 import { CreateRecurringExpenseSheet } from "./components/create-recurring-expense-sheet"
 import { ConfirmPaymentSheet } from "./components/confirm-payment-sheet"
 import { RecurringExpenseHistorySheet } from "./components/recurring-expense-history-sheet"
+import { SkipPaymentDialog } from "./components/skip-payment-dialog"
 import {
   formatCents,
   getBudgetColors,
@@ -133,6 +136,9 @@ export function RecurringView() {
   const [historyExpense, setHistoryExpense] = useState<RecurringExpense | null>(
     null
   )
+  const [paymentToSkip, setPaymentToSkip] = useState<ScheduledPayment | null>(
+    null
+  )
 
   // Fetch lists
   const {
@@ -152,12 +158,23 @@ export function RecurringView() {
   } = useListScheduledPaymentsQuery({
     pageSize: DEFAULT_PAGE_SIZE,
     pageToken: "",
-    status: "STATUS_UNSPECIFIED",
+    status: "PENDING",
     startDate: "",
     endDate: "",
   } as unknown as ListScheduledPaymentsRequest)
 
   const deleteMutation = useDeleteRecurringExpenseMutation()
+  const skipMutation = useSkipScheduledPaymentMutation()
+
+  const handleConfirmSkipPayment = async () => {
+    if (!paymentToSkip) return
+    await skipMutation.mutateAsync({
+      id: paymentToSkip.id || "",
+      req: { id: paymentToSkip.id || "" },
+    })
+    refetchPayments()
+    setPaymentToSkip(null)
+  }
 
   const expenses = expensesData?.recurringExpenses || []
   const payments = paymentsData?.scheduledPayments || []
@@ -658,16 +675,41 @@ export function RecurringView() {
                                   </span>
                                 </div>
 
-                                <Button
-                                  size="sm"
-                                  className="h-7 rounded-lg bg-gradient-to-r from-primary to-accent px-2.5 text-[10px] font-bold text-white shadow shadow-primary/10 transition-all hover:scale-[1.02] hover:opacity-95"
-                                  onClick={() => {
-                                    setSelectedPayment(pay)
-                                    setConfirmDialogOpen(true)
-                                  }}
-                                >
-                                  Confirm
-                                </Button>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger
+                                    render={
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 rounded-lg text-muted-foreground hover:bg-muted/20"
+                                      >
+                                        <MoreVertical className="h-3.5 w-3.5" />
+                                      </Button>
+                                    }
+                                  />
+                                  <DropdownMenuContent
+                                    align="end"
+                                    className="w-40"
+                                  >
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setSelectedPayment(pay)
+                                        setConfirmDialogOpen(true)
+                                      }}
+                                      className="flex cursor-pointer items-center gap-2"
+                                    >
+                                      <CheckCircle2Icon className="h-4 w-4 text-emerald-500" />
+                                      <span>Confirm...</span>
+                                    </DropdownMenuItem>
+                                     <DropdownMenuItem
+                                       onClick={() => setPaymentToSkip(pay)}
+                                       className="flex cursor-pointer items-center gap-2 text-amber-600 focus:bg-amber-500/10 focus:text-amber-600 dark:text-amber-400"
+                                     >
+                                      <FastForward className="h-4 w-4" />
+                                      <span>Skip Cycle</span>
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </div>
                             </div>
                           )
@@ -854,6 +896,22 @@ export function RecurringView() {
         open={historyOpen}
         onOpenChange={setHistoryOpen}
         expense={historyExpense}
+      />
+
+      <SkipPaymentDialog
+        open={!!paymentToSkip}
+        onOpenChange={(open) => {
+          if (!open) setPaymentToSkip(null)
+        }}
+        onConfirm={handleConfirmSkipPayment}
+        isPending={skipMutation.isPending}
+        paymentName={
+          paymentToSkip?.sourceType === "RECURRENT_EXPENSE"
+            ? expenses.find((e) => e.id === paymentToSkip.sourceId)?.name || "Scheduled Bill"
+            : "Scheduled Bill"
+        }
+        amountFormatted={paymentToSkip ? formatCents(paymentToSkip.amount).toFixed(2) : undefined}
+        currency={paymentToSkip?.currency}
       />
     </FinancePageLayout>
   )

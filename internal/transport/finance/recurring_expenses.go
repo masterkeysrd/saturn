@@ -309,6 +309,20 @@ func (h *Handler) MatchScheduledPayment(ctx context.Context, req *financev1.Matc
 	return toProtoTransaction(txn), nil
 }
 
+func (h *Handler) SkipScheduledPayment(ctx context.Context, req *financev1.SkipScheduledPaymentRequest) (*financev1.ScheduledPayment, error) {
+	id, err := finance.ParseScheduledPaymentID(req.GetId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	sp, err := h.Coordinator.SkipScheduledPayment(ctx, id)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoScheduledPayment(sp), nil
+}
+
 // --- Mappers ---
 
 func mapProtoIntervalToDomain(interval financev1.RecurringExpense_Interval) (string, error) {

@@ -1057,6 +1057,32 @@ func (s *Service) MatchScheduledPayment(ctx context.Context, req MatchScheduledP
 	return txn, nil
 }
 
+// SkipScheduledPayment marks a pending scheduled payment as skipped for a cycle.
+func (s *Service) SkipScheduledPayment(ctx context.Context, spaceID SpaceID, id ScheduledPaymentID) (*ScheduledPayment, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, err
+	}
+	if err := id.Validate(); err != nil {
+		return nil, err
+	}
+
+	payment, err := s.deps.ScheduledPaymentStore.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if payment.SpaceID != spaceID {
+		return nil, ErrScheduledPaymentNotFound
+	}
+
+	payment.Status = ScheduledPaymentSkipped
+	if err := s.deps.ScheduledPaymentStore.UpdateStatus(ctx, id, ScheduledPaymentSkipped); err != nil {
+		return nil, fmt.Errorf("update scheduled payment status: %w", err)
+	}
+
+	return payment, nil
+}
+
 // GenerateScheduledPayments performs bulk generation of pending scheduled payments for recurring expenses.
 func (s *Service) GenerateScheduledPayments(ctx context.Context) error {
 	// Query templates due in next 10 days

@@ -129,6 +129,15 @@ func (c *Coordinator) MatchScheduledPayment(ctx context.Context, req *MatchSched
 	})
 }
 
+func (c *Coordinator) SkipScheduledPayment(ctx context.Context, id finance.ScheduledPaymentID) (*finance.ScheduledPayment, error) {
+	rCtx, err := c.resolveContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.financeService.SkipScheduledPayment(ctx, rCtx.SpaceID, id)
+}
+
 func (c *Coordinator) GenerateScheduledPayments(ctx context.Context) error {
 	return c.financeService.GenerateScheduledPayments(ctx)
 }

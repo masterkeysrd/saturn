@@ -8,6 +8,8 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/id"
 )
 
+var ErrScheduledPaymentNotFound = errors.New("scheduled payment not found")
+
 type ScheduledPaymentID string
 
 const scheduledPaymentPrefix = "sch_"

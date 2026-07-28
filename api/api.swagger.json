@@ -2263,6 +2263,46 @@
         ]
       }
     },
+    "/v1/finance/scheduled-payments/{id}:skip": {
+      "post": {
+        "summary": "Dismisses a pending scheduled payment instance without creating a transaction.",
+        "operationId": "Finance_SkipScheduledPayment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ScheduledPayment"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Identifier of the scheduled payment instance to skip.\nValues are of the form `sch_[a-zA-Z0-9]+`.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceSkipScheduledPaymentBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/finance/scheduled-payments/{paymentId}/confirm": {
       "post": {
         "summary": "Clears a scheduled payment instance, converting it into a permanent, reconciled ledger transaction.",
@@ -4179,6 +4219,10 @@
       "required": [
         "transactionId"
       ]
+    },
+    "FinanceSkipScheduledPaymentBody": {
+      "type": "object",
+      "description": "The request for [SkipScheduledPayment][saturn.finance.v1.Finance.SkipScheduledPayment]."
     },
     "FinanceUpdateExpenseBody": {
       "type": "object",
