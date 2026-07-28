@@ -8538,7 +8538,7 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x06WEEKLY\x10\x02\x12\v\n" +
 	"\aMONTHLY\x10\x03\x12\n" +
 	"\n" +
-	"\x06YEARLY\x10\x042\x824\n" +
+	"\x06YEARLY\x10\x042\x8f4\n" +
 	"\aFinance\x12\x83\x01\n" +
 	"\x10ConfigureFinance\x12*.saturn.finance.v1.ConfigureFinanceRequest\x1a\".saturn.finance.v1.FinanceSettings\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/v1/finance/settings\x12\x84\x01\n" +
 	"\x12GetFinanceSettings\x12,.saturn.finance.v1.GetFinanceSettingsRequest\x1a\".saturn.finance.v1.FinanceSettings\"\x1c\x82\xd3\xe4\x93\x02\x16\x12\x14/v1/finance/settings\x12v\n" +
@@ -8552,9 +8552,9 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x0fGetExchangeRate\x12).saturn.finance.v1.GetExchangeRateRequest\x1a\x1f.saturn.finance.v1.ExchangeRate\"'\x82\xd3\xe4\x93\x02!\x12\x1f/v1/finance/exchange-rates/{id}\x12\x9b\x01\n" +
 	"\x12UpdateExchangeRate\x12,.saturn.finance.v1.UpdateExchangeRateRequest\x1a\x1f.saturn.finance.v1.ExchangeRate\"6\x82\xd3\xe4\x93\x020:\rexchange_rate\x1a\x1f/v1/finance/exchange-rates/{id}\x12\x92\x01\n" +
 	"\x11ListExchangeRates\x12+.saturn.finance.v1.ListExchangeRatesRequest\x1a,.saturn.finance.v1.ListExchangeRatesResponse\"\"\x82\xd3\xe4\x93\x02\x1c\x12\x1a/v1/finance/exchange-rates\x12\x83\x01\n" +
-	"\x12DeleteExchangeRate\x12,.saturn.finance.v1.DeleteExchangeRateRequest\x1a\x16.google.protobuf.Empty\"'\x82\xd3\xe4\x93\x02!*\x1f/v1/finance/exchange-rates/{id}\x12y\n" +
-	"\rCreateExpense\x12'.saturn.finance.v1.CreateExpenseRequest\x1a\x1e.saturn.finance.v1.Transaction\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/v1/finance/expenses\x12~\n" +
-	"\rUpdateExpense\x12'.saturn.finance.v1.UpdateExpenseRequest\x1a\x1e.saturn.finance.v1.Transaction\"$\x82\xd3\xe4\x93\x02\x1e:\x01*\x1a\x19/v1/finance/expenses/{id}\x12\x7f\n" +
+	"\x12DeleteExchangeRate\x12,.saturn.finance.v1.DeleteExchangeRateRequest\x1a\x16.google.protobuf.Empty\"'\x82\xd3\xe4\x93\x02!*\x1f/v1/finance/exchange-rates/{id}\x12\x7f\n" +
+	"\rCreateExpense\x12'.saturn.finance.v1.CreateExpenseRequest\x1a\x1e.saturn.finance.v1.Transaction\"%\x82\xd3\xe4\x93\x02\x1f:\aexpense\"\x14/v1/finance/expenses\x12\x84\x01\n" +
+	"\rUpdateExpense\x12'.saturn.finance.v1.UpdateExpenseRequest\x1a\x1e.saturn.finance.v1.Transaction\"*\x82\xd3\xe4\x93\x02$:\aexpense\x1a\x19/v1/finance/expenses/{id}\x12\x7f\n" +
 	"\x11DeleteTransaction\x12+.saturn.finance.v1.DeleteTransactionRequest\x1a\x16.google.protobuf.Empty\"%\x82\xd3\xe4\x93\x02\x1f*\x1d/v1/finance/transactions/{id}\x12\x8d\x01\n" +
 	"\x10ListTransactions\x12*.saturn.finance.v1.ListTransactionsRequest\x1a+.saturn.finance.v1.ListTransactionsResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/v1/finance/transactions\x12\xac\x01\n" +
 	"\x15ListTransactionEvents\x12/.saturn.finance.v1.ListTransactionEventsRequest\x1a0.saturn.finance.v1.ListTransactionEventsResponse\"0\x82\xd3\xe4\x93\x02*\x12(/v1/finance/transactions/{txn_id}/events\x12z\n" +

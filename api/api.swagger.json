@@ -1677,12 +1677,12 @@
         },
         "parameters": [
           {
-            "name": "body",
-            "description": "The request for\n[CreateExpense][saturn.finance.v1.Finance.CreateExpense].",
+            "name": "expense",
+            "description": "Required. Target expense transaction parameters.",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1CreateExpenseRequest"
+              "$ref": "#/definitions/v1ExpenseInput"
             }
           }
         ],
@@ -1718,11 +1718,12 @@
             "type": "string"
           },
           {
-            "name": "body",
+            "name": "expense",
+            "description": "Required. Updated expense transaction parameters.",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/FinanceUpdateExpenseBody"
+              "$ref": "#/definitions/v1ExpenseInput"
             }
           }
         ],
@@ -4224,19 +4225,6 @@
       "type": "object",
       "description": "The request for [SkipScheduledPayment][saturn.finance.v1.Finance.SkipScheduledPayment]."
     },
-    "FinanceUpdateExpenseBody": {
-      "type": "object",
-      "properties": {
-        "expense": {
-          "$ref": "#/definitions/v1ExpenseInput",
-          "description": "Required. Updated expense transaction parameters."
-        }
-      },
-      "description": "The request for\n[UpdateExpense][saturn.finance.v1.Finance.UpdateExpense].",
-      "required": [
-        "expense"
-      ]
-    },
     "IdentityRevokeSessionBody": {
       "type": "object",
       "description": "RevokeSessionRequest targets a specific session to invalidate."
@@ -5487,19 +5475,6 @@
         "name",
         "purpose",
         "modelName"
-      ]
-    },
-    "v1CreateExpenseRequest": {
-      "type": "object",
-      "properties": {
-        "expense": {
-          "$ref": "#/definitions/v1ExpenseInput",
-          "description": "Required. Target expense transaction parameters."
-        }
-      },
-      "description": "The request for\n[CreateExpense][saturn.finance.v1.Finance.CreateExpense].",
-      "required": [
-        "expense"
       ]
     },
     "v1CreateIntegrationTokenResponse": {
