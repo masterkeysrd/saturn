@@ -44,8 +44,8 @@ func (p *TransactionIngestionProvider) Descriptor() integration.Descriptor {
 	return integration.Descriptor{
 		Provider:    "email",
 		Kind:        "transaction_ingestion",
-		Name:        "Email Ingestion",
-		Description: "Forward banking alerts and invoices to automatically draft transactions.",
+		Name:        "Transaction & Receipt Ingestion",
+		Description: "Forward banking alerts, invoices, and purchase receipts to automatically draft transactions.",
 		Icon:        "mail",
 		ConfigSchema: `{
 			"type": "object",

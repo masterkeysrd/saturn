@@ -592,12 +592,12 @@ export function IntegrationSettings() {
                         <Input
                           readOnly
                           className="border-indigo-500/20 bg-background/40 pr-10 font-mono text-xs text-foreground select-all"
-                          value={`alerts+${newlyCreatedToken}@inbound.saturn.com`}
+                          value={`inbound+${newlyCreatedToken}@saturn.masterkeys.dev`}
                         />
                         <button
                           onClick={() => {
                             navigator.clipboard.writeText(
-                              `alerts+${newlyCreatedToken}@inbound.saturn.com`
+                              `inbound+${newlyCreatedToken}@saturn.masterkeys.dev`
                             )
                             setTokenCopied(true)
                             setTimeout(() => setTokenCopied(false), 2000)
@@ -660,7 +660,7 @@ export function IntegrationSettings() {
                   ) : (
                     <div className="no-scrollbar max-h-56 space-y-2 overflow-y-auto rounded-2xl border border-border/10 bg-background/25 p-2 pr-1">
                       {tokensData.tokens.map((tok) => {
-                        const maskedEmail = `alerts+${tok.tokenHash.substring(0, 8)}... @inbound.saturn.com`
+                        const maskedEmail = `inbound+${tok.tokenHash.substring(0, 8)}... @saturn.masterkeys.dev`
                         return (
                           <div
                             key={tok.id}
