@@ -1,4 +1,6 @@
-import { useState } from "react"
+import { useEffect } from "react"
+import { useForm, Controller } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import {
   useListBorrowingRepaymentsQuery,
   useCreateBorrowingRepaymentMutation,
@@ -24,6 +26,10 @@ import { formatCents, toCentsString } from "../utils"
 import { DatePicker } from "@/components/ui/date-picker"
 import { CurrencyConversionPreview } from "./currency-conversion-preview"
 import { AccountSelect } from "./account-select"
+import {
+  repaymentSchema,
+  type RepaymentFormValues,
+} from "../schemas/borrowing"
 
 interface BorrowingDetailSheetProps {
   open: boolean
@@ -73,10 +79,6 @@ export function BorrowingDetailSheet({
       currency: baseCurrency,
     }
   }
-  const [amount, setAmount] = useState("")
-  const [paymentDate, setPaymentDate] = useState<Date>(new Date())
-  const [notes, setNotes] = useState("")
-  const [accountId, setAccountId] = useState("")
 
   const { data: accountsData } = useListAccountsQuery(
     {},
@@ -98,15 +100,43 @@ export function BorrowingDetailSheet({
   const createRepaymentMutation = useCreateBorrowingRepaymentMutation()
   const deleteRepaymentMutation = useDeleteBorrowingRepaymentMutation()
 
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    watch,
+    formState: { errors },
+  } = useForm<RepaymentFormValues>({
+    resolver: zodResolver(repaymentSchema),
+    defaultValues: {
+      amount: "",
+      paymentDate: new Date(),
+      accountId: "",
+      notes: "",
+    },
+  })
+
+  useEffect(() => {
+    if (open) {
+      reset({
+        amount: "",
+        paymentDate: new Date(),
+        accountId: "",
+        notes: "",
+      })
+    }
+  }, [open, borrowing, reset])
+
+  const amountValue = watch("amount")
   const conversion = borrowing
-    ? getConversionPreview(amount, borrowing.currency)
+    ? getConversionPreview(amountValue, borrowing.currency)
     : null
 
-  const handleAddRepayment = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!borrowing || !amount) return
+  const onSubmitRepayment = async (data: RepaymentFormValues) => {
+    if (!borrowing) return
 
-    const cents = parseInt(toCentsString(amount))
+    const cents = parseInt(toCentsString(data.amount))
     if (isNaN(cents) || cents <= 0) return
 
     try {
@@ -117,14 +147,18 @@ export function BorrowingDetailSheet({
           repayment: {
             borrowingId: borrowing.id || "",
             amount: cents.toString(),
-            paymentDate: paymentDate.toISOString(),
-            notes,
-            accountId,
+            paymentDate: data.paymentDate.toISOString(),
+            notes: data.notes || "",
+            accountId: data.accountId || "",
           },
         },
       })
-      setAmount("")
-      setNotes("")
+      reset({
+        amount: "",
+        paymentDate: new Date(),
+        accountId: "",
+        notes: "",
+      })
       refetchRepayments()
       refetchBorrowings()
     } catch (err) {
@@ -350,8 +384,7 @@ export function BorrowingDetailSheet({
             {/* Record Installment Form */}
             {borrowing.status === "ACTIVE" && (
               <form
-                key={`${borrowing.id}-${open}`}
-                onSubmit={handleAddRepayment}
+                onSubmit={handleSubmit(onSubmitRepayment)}
                 className="animate-in space-y-4 border-t border-border/20 pt-4 duration-300 fade-in"
               >
                 <h5 className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
@@ -366,30 +399,40 @@ export function BorrowingDetailSheet({
                         type="number"
                         step="0.01"
                         placeholder="0.00"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        required
+                        {...register("amount")}
                         className="h-full w-full flex-1 bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none"
                       />
                       <span className="flex h-full items-center border-l border-border/40 bg-muted/20 px-3 text-xs font-semibold text-muted-foreground select-none">
                         {borrowing.currency}
                       </span>
                     </div>
+                    {errors.amount && (
+                      <p className="text-[11px] font-semibold text-destructive">
+                        {errors.amount.message}
+                      </p>
+                    )}
                   </div>
                   <div className="flex flex-col space-y-1.5">
                     <Label className="mb-1">Payment Date</Label>
-                    <DatePicker
-                      date={paymentDate}
-                      setDate={(d) => d && setPaymentDate(d)}
+                    <Controller
+                      control={control}
+                      name="paymentDate"
+                      render={({ field }) => (
+                        <DatePicker
+                          date={field.value}
+                          setDate={(d) => d && field.onChange(d)}
+                        />
+                      )}
                     />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="mb-1">Payment Account</Label>
                     <AccountSelect
-                      value={accountId}
-                      onValueChange={setAccountId}
+                      control={control}
+                      name="accountId"
                       accounts={activeAccounts}
                       placeholder="Choose account for transaction"
+                      allowNone
                     />
                   </div>
                 </div>
@@ -408,8 +451,7 @@ export function BorrowingDetailSheet({
                   <Input
                     id="paymentNotes"
                     placeholder="e.g. Installment #1, bank transfer..."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
+                    {...register("notes")}
                     className="h-10 rounded-xl border-border/60 bg-background/50"
                   />
                 </div>

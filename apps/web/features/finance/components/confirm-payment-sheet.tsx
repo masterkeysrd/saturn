@@ -1,5 +1,11 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useForm, Controller } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { useNavigate } from "react-router-dom"
+import {
+  confirmPaymentSchema,
+  type ConfirmPaymentFormValues,
+} from "../schemas/reconciliation"
 import {
   useConfirmScheduledPaymentMutation,
   useMatchScheduledPaymentMutation,
@@ -75,12 +81,25 @@ export function ConfirmPaymentSheet({
   getConversionPreview,
 }: ConfirmPaymentSheetProps) {
   const navigate = useNavigate()
-  const [amount, setAmount] = useState("")
-  const [accountId, setAccountId] = useState("")
-  const [budgetId, setBudgetId] = useState("")
-  const [description, setDescription] = useState("")
-  const [transactionDate, setTransactionDate] = useState<Date>(new Date())
-  const [effectiveDate, setEffectiveDate] = useState<Date>(new Date())
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    watch,
+    formState: { errors },
+  } = useForm<ConfirmPaymentFormValues>({
+    resolver: zodResolver(confirmPaymentSchema),
+    defaultValues: {
+      amount: "",
+      accountId: "",
+      budgetId: "",
+      description: "",
+      transactionDate: new Date(),
+      effectiveDate: new Date(),
+    },
+  })
+
   const [confirmedTxn, setConfirmedTxn] = useState<Transaction | null>(null)
   const [selectedTxnId, setSelectedTxnId] = useState<string>("")
   const [accordionOpen, setAccordionOpen] = useState<boolean>(false)
@@ -165,14 +184,8 @@ export function ConfirmPaymentSheet({
     onOpenChange(false)
   }
 
-  const [prevPaymentId, setPrevPaymentId] = useState<string | null>(null)
-  const [prevOpen, setPrevOpen] = useState(false)
-
-  const currentPaymentId = payment?.id || null
-  if (currentPaymentId !== prevPaymentId || open !== prevOpen) {
-    setPrevPaymentId(currentPaymentId)
-    setPrevOpen(open)
-    if (payment) {
+  useEffect(() => {
+    if (open && payment) {
       const matchedExp = payment.sourceId
         ? expenses.find((e) => e.id === payment.sourceId)
         : null
@@ -194,15 +207,16 @@ export function ConfirmPaymentSheet({
         "Scheduled Payment"
       const defaultDesc = metaDesc || `${name} (${dueFormatted})`
 
-      setAmount(formatCents(payment.amount).toString())
-      setTransactionDate(new Date())
-      setEffectiveDate(new Date(payment.dueDate))
-      setBudgetId(payment.budgetId || "")
-      setAccountId("")
-      setDescription(defaultDesc)
-      setConfirmedTxn(null) // reset success state on reopen
+      reset({
+        amount: formatCents(payment.amount).toString(),
+        transactionDate: new Date(),
+        effectiveDate: new Date(payment.dueDate),
+        budgetId: payment.budgetId || "",
+        accountId: "",
+        description: defaultDesc,
+      })
+      setConfirmedTxn(null)
 
-      // Smart Candidate Initialization
       if (candidateMatch) {
         setSelectedTxnId(candidateMatch.id || "")
         setAccordionOpen(true)
@@ -211,7 +225,10 @@ export function ConfirmPaymentSheet({
         setAccordionOpen(false)
       }
     }
-  }
+  }, [open, payment, expenses, candidateMatch, reset])
+
+  const amountValue = watch("amount")
+  const budgetIdValue = watch("budgetId")
 
   const toLocalISODate = (d: Date): string => {
     const y = d.getFullYear()
@@ -220,12 +237,10 @@ export function ConfirmPaymentSheet({
     return `${y}-${m}-${date}T12:00:00Z`
   }
 
-  const handleConfirmOrMatch = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const onSubmit = async (data: ConfirmPaymentFormValues) => {
     if (!payment) return
 
     if (selectedTxnId) {
-      // Execute Match & Link
       const res = await matchMutation.mutateAsync({
         payment_id: payment.id || "",
         req: {
@@ -236,10 +251,9 @@ export function ConfirmPaymentSheet({
       refetchPayments()
       setConfirmedTxn(res)
     } else {
-      // Execute Create New Transaction
-      const centsAmount = toCentsString(amount)
-      const txDateStr = toLocalISODate(transactionDate)
-      const effDateStr = toLocalISODate(effectiveDate)
+      const centsAmount = toCentsString(data.amount)
+      const txDateStr = toLocalISODate(data.transactionDate)
+      const effDateStr = toLocalISODate(data.effectiveDate)
 
       const res = await confirmMutation.mutateAsync({
         payment_id: payment.id || "",
@@ -248,9 +262,9 @@ export function ConfirmPaymentSheet({
           transactionDate: txDateStr,
           effectiveDate: effDateStr,
           actualAmount: centsAmount,
-          description: description.trim() || undefined,
-          accountId: accountId || undefined,
-          budgetId: budgetId || undefined,
+          description: data.description.trim() || undefined,
+          accountId: data.accountId || undefined,
+          budgetId: data.budgetId || undefined,
         },
       })
       refetchPayments()
@@ -260,7 +274,7 @@ export function ConfirmPaymentSheet({
 
   const isPending = confirmMutation.isPending
   const conversion = payment
-    ? getConversionPreview(amount, payment.currency)
+    ? getConversionPreview(amountValue, payment.currency)
     : null
 
   return (
@@ -382,7 +396,9 @@ export function ConfirmPaymentSheet({
 
                   const budget =
                     payment.budget ||
-                    budgets.find((b) => b.id === (budgetId || payment.budgetId))
+                    budgets.find(
+                      (b) => b.id === (budgetIdValue || payment.budgetId)
+                    )
                   const colors = getBudgetColors(budget?.color || "indigo")
                   const Icon = getBudgetIcon(budget?.icon || "piggy-bank")
 
@@ -396,7 +412,7 @@ export function ConfirmPaymentSheet({
                   return (
                     <form
                       id="confirm-payment-form"
-                      onSubmit={handleConfirmOrMatch}
+                      onSubmit={handleSubmit(onSubmit)}
                       className="mt-6 space-y-5"
                     >
                       {/* Rich Context Card for Scheduled Payment / Recurring Expense */}
@@ -752,9 +768,7 @@ export function ConfirmPaymentSheet({
                                 step="0.01"
                                 min="0.01"
                                 placeholder="0.00"
-                                value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                                required
+                                {...register("amount")}
                                 className="h-full w-full flex-1 bg-transparent px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
                               />
 
@@ -764,6 +778,11 @@ export function ConfirmPaymentSheet({
                                 {payment.currency}
                               </div>
                             </div>
+                            {errors.amount && (
+                              <p className="text-[11px] font-semibold text-destructive">
+                                {errors.amount.message}
+                              </p>
+                            )}
                           </div>
 
                           <CurrencyConversionPreview
@@ -776,8 +795,8 @@ export function ConfirmPaymentSheet({
                               Financial Account (Paid From)
                             </Label>
                             <AccountSelect
-                              value={accountId}
-                              onValueChange={setAccountId}
+                              control={control}
+                              name="accountId"
                               accounts={accounts}
                               allowNone
                               placeholder="Select account used for payment..."
@@ -789,11 +808,16 @@ export function ConfirmPaymentSheet({
                               Budget Category
                             </Label>
                             <BudgetSelect
-                              value={budgetId}
-                              onValueChange={setBudgetId}
+                              control={control}
+                              name="budgetId"
                               budgets={budgets}
                               placeholder="Select budget category..."
                             />
+                            {errors.budgetId && (
+                              <p className="text-[11px] font-semibold text-destructive">
+                                {errors.budgetId.message}
+                              </p>
+                            )}
                           </div>
 
                           <div className="space-y-2">
@@ -807,10 +831,14 @@ export function ConfirmPaymentSheet({
                               id="confirm-description"
                               type="text"
                               placeholder="Optional notes or narration..."
-                              value={description}
-                              onChange={(e) => setDescription(e.target.value)}
+                              {...register("description")}
                               className="h-12 rounded-xl border-border/60 bg-background/50"
                             />
+                            {errors.description && (
+                              <p className="text-[11px] font-semibold text-destructive">
+                                {errors.description.message}
+                              </p>
+                            )}
                           </div>
 
                           <div className="grid grid-cols-2 gap-3">
@@ -818,9 +846,15 @@ export function ConfirmPaymentSheet({
                               <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
                                 Date Cleared
                               </Label>
-                              <DatePicker
-                                date={transactionDate}
-                                setDate={(d) => d && setTransactionDate(d)}
+                              <Controller
+                                control={control}
+                                name="transactionDate"
+                                render={({ field }) => (
+                                  <DatePicker
+                                    date={field.value}
+                                    setDate={(d) => d && field.onChange(d)}
+                                  />
+                                )}
                               />
                             </div>
 
@@ -828,9 +862,15 @@ export function ConfirmPaymentSheet({
                               <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
                                 Effective Date
                               </Label>
-                              <DatePicker
-                                date={effectiveDate}
-                                setDate={(d) => d && setEffectiveDate(d)}
+                              <Controller
+                                control={control}
+                                name="effectiveDate"
+                                render={({ field }) => (
+                                  <DatePicker
+                                    date={field.value}
+                                    setDate={(d) => d && field.onChange(d)}
+                                  />
+                                )}
                               />
                             </div>
                           </div>
@@ -889,7 +929,9 @@ export function ConfirmPaymentSheet({
         onOpenChange={setSkipDialogOpen}
         onConfirm={handleConfirmSkip}
         isPending={skipMutation.isPending}
-        amountFormatted={payment ? formatCents(payment.amount).toFixed(2) : undefined}
+        amountFormatted={
+          payment ? formatCents(payment.amount).toFixed(2) : undefined
+        }
         currency={payment?.currency}
       />
     </Sheet>

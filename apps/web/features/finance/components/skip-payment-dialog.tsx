@@ -43,7 +43,8 @@ export function SkipPaymentDialog({
             <span className="font-bold text-foreground">{paymentName}</span>
             {amountFormatted && (
               <>
-                {" "}for{" "}
+                {" "}
+                for{" "}
                 <span className="font-bold text-foreground">
                   {amountFormatted} {currency}
                 </span>
@@ -54,9 +55,7 @@ export function SkipPaymentDialog({
         </AlertDialogHeader>
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isPending}>
-            Cancel
-          </AlertDialogCancel>
+          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault()

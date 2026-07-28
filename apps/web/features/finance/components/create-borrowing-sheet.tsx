@@ -1,9 +1,10 @@
-import { useState } from "react"
+import { useEffect } from "react"
+import { useForm, Controller } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import {
   useCreateBorrowingMutation,
   useUpdateBorrowingMutation,
   type Borrowing,
-  type Borrowing_Direction,
   useListCurrenciesQuery,
   useListExchangeRatesQuery,
   type ExchangeRate,
@@ -19,17 +20,21 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
+import { FormSelect } from "@/components/ui/form-select"
 import { Loader2 } from "lucide-react"
 import { toCentsString, formatCents } from "../utils"
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select"
 import { DatePicker } from "@/components/ui/date-picker"
 import { CurrencyConversionPreview } from "./currency-conversion-preview"
+import {
+  borrowingSchema,
+  type BorrowingFormValues,
+} from "../schemas/borrowing"
+
+const DIRECTION_ITEMS = [
+  { value: "LENT", label: "I Lent Money" },
+  { value: "BORROWED", label: "I Borrowed Money" },
+]
 
 interface CreateBorrowingSheetProps {
   open: boolean
@@ -81,72 +86,112 @@ export function CreateBorrowingSheet({
       currency: baseCurrency,
     }
   }
-  const fallbackCurrencies = [
+
+  const fallbackCurrencies: Array<{ code: string; name?: string }> = [
     { code: "USD" },
     { code: "EUR" },
     { code: "GBP" },
     { code: "CAD" },
+    { code: "DOP" },
   ]
   const currencyList =
     currencies && currencies.length > 0 ? currencies : fallbackCurrencies
 
-  const [direction, setDirection] = useState<Borrowing_Direction>(
-    () => editBorrowing?.direction || "LENT"
-  )
-  const [counterparty, setCounterparty] = useState(
-    () => editBorrowing?.counterparty || ""
-  )
-  const [contactInfo, setContactInfo] = useState(
-    () => editBorrowing?.contactInfo || ""
-  )
-  const [amount, setAmount] = useState(() =>
-    editBorrowing ? formatCents(editBorrowing.totalAmount).toString() : ""
-  )
-  const [currency, setCurrency] = useState(
-    () => editBorrowing?.currency || baseCurrency || "USD"
-  )
-  const [establishedAt, setEstablishedAt] = useState<Date>(() =>
-    editBorrowing ? new Date(editBorrowing.establishedAt) : new Date()
-  )
-  const [dueAt, setDueAt] = useState<Date | undefined>(() =>
-    editBorrowing?.dueAt ? new Date(editBorrowing.dueAt) : undefined
-  )
-  const [hasDueDate, setHasDueDate] = useState(() => !!editBorrowing?.dueAt)
-  const [notes, setNotes] = useState(() => editBorrowing?.notes || "")
-  const [createAsTransaction, setCreateAsTransaction] = useState(() =>
-    editBorrowing ? editBorrowing.createAsTransaction : true
-  )
+  const currencyItems = currencyList.map((cur) => ({
+    value: cur.code,
+    label: `${cur.code}${cur.name ? ` (${cur.name})` : ""}`,
+  }))
 
   const createBorrowingMutation = useCreateBorrowingMutation()
   const updateBorrowingMutation = useUpdateBorrowingMutation()
 
-  const conversion = createAsTransaction
-    ? getConversionPreview(amount, currency)
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<BorrowingFormValues>({
+    resolver: zodResolver(borrowingSchema),
+    defaultValues: {
+      direction: "LENT",
+      counterparty: "",
+      contactInfo: "",
+      amount: "",
+      currency: baseCurrency || "USD",
+      establishedAt: new Date(),
+      hasDueDate: false,
+      dueAt: undefined,
+      notes: "",
+      createAsTransaction: true,
+    },
+  })
+
+  useEffect(() => {
+    if (open) {
+      if (editBorrowing) {
+        reset({
+          direction: editBorrowing.direction || "LENT",
+          counterparty: editBorrowing.counterparty || "",
+          contactInfo: editBorrowing.contactInfo || "",
+          amount: formatCents(editBorrowing.totalAmount).toString(),
+          currency: editBorrowing.currency || baseCurrency || "USD",
+          establishedAt: editBorrowing.establishedAt
+            ? new Date(editBorrowing.establishedAt)
+            : new Date(),
+          hasDueDate: !!editBorrowing.dueAt,
+          dueAt: editBorrowing.dueAt ? new Date(editBorrowing.dueAt) : undefined,
+          notes: editBorrowing.notes || "",
+          createAsTransaction: editBorrowing.createAsTransaction ?? false,
+        })
+      } else {
+        reset({
+          direction: "LENT",
+          counterparty: "",
+          contactInfo: "",
+          amount: "",
+          currency: baseCurrency || "USD",
+          establishedAt: new Date(),
+          hasDueDate: false,
+          dueAt: undefined,
+          notes: "",
+          createAsTransaction: true,
+        })
+      }
+    }
+  }, [open, editBorrowing, baseCurrency, reset])
+
+  const amountValue = watch("amount")
+  const currencyValue = watch("currency")
+  const hasDueDateValue = watch("hasDueDate")
+  const createAsTxValue = watch("createAsTransaction")
+
+  const conversion = createAsTxValue
+    ? getConversionPreview(amountValue, currencyValue)
     : null
 
   const isPending =
     createBorrowingMutation.isPending || updateBorrowingMutation.isPending
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!counterparty || !amount) return
-
-    const cents = parseInt(toCentsString(amount))
+  const onSubmit = async (data: BorrowingFormValues) => {
+    const cents = parseInt(toCentsString(data.amount))
     if (isNaN(cents) || cents <= 0) return
 
     const borrowingPayload = {
-      direction,
-      counterparty,
-      contactInfo,
+      direction: data.direction,
+      counterparty: data.counterparty,
+      contactInfo: data.contactInfo || "",
       totalAmount: cents.toString(),
-      currency,
+      currency: data.currency,
       status: editBorrowing?.status || "ACTIVE",
-      establishedAt: establishedAt.toISOString(),
-      dueAt: (hasDueDate && dueAt
-        ? dueAt.toISOString()
+      establishedAt: data.establishedAt.toISOString(),
+      dueAt: (data.hasDueDate && data.dueAt
+        ? data.dueAt.toISOString()
         : undefined) as unknown as string,
-      notes,
-      createAsTransaction: !editBorrowing ? createAsTransaction : false,
+      notes: data.notes || "",
+      createAsTransaction: !editBorrowing ? data.createAsTransaction : false,
     }
 
     try {
@@ -184,41 +229,14 @@ export function CreateBorrowingSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <form
-          key={`${editBorrowing?.id || "new"}-${open}`}
-          onSubmit={handleSubmit}
-          className="mt-6 space-y-5"
-        >
-          {/* Type Selector Dropdown */}
-          <div className="space-y-2">
-            <Label
-              htmlFor="direction"
-              className="text-xs font-bold tracking-wider text-muted-foreground uppercase"
-            >
-              Type
-            </Label>
-            <Select
-              value={direction}
-              onValueChange={(val) =>
-                val && setDirection(val as Borrowing_Direction)
-              }
-            >
-              <SelectTrigger
-                id="direction"
-                className="!h-12 w-full rounded-xl border-border/60 bg-background/50"
-              >
-                <SelectValue placeholder="Select type...">
-                  {direction === "LENT" ? "I Lent Money" : "I Borrowed Money"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                <SelectItem value="LENT">I Lent Money</SelectItem>
-                <SelectItem value="BORROWED">I Borrowed Money</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-5">
+          <FormSelect
+            control={control}
+            name="direction"
+            label="Type"
+            items={DIRECTION_ITEMS}
+          />
 
-          {/* Counterparty Name */}
           <div className="space-y-2">
             <Label
               htmlFor="counterparty"
@@ -229,14 +247,16 @@ export function CreateBorrowingSheet({
             <Input
               id="counterparty"
               placeholder="e.g. Uncle Bob, John Doe"
-              value={counterparty}
-              onChange={(e) => setCounterparty(e.target.value)}
-              required
+              {...register("counterparty")}
               className="h-12 rounded-xl border-border/60 bg-background/50"
             />
+            {errors.counterparty && (
+              <p className="text-[11px] font-semibold text-destructive">
+                {errors.counterparty.message}
+              </p>
+            )}
           </div>
 
-          {/* Contact Information */}
           <div className="space-y-2">
             <Label
               htmlFor="contactInfo"
@@ -247,13 +267,11 @@ export function CreateBorrowingSheet({
             <Input
               id="contactInfo"
               placeholder="e.g. bob@email.com, +1 234..."
-              value={contactInfo}
-              onChange={(e) => setContactInfo(e.target.value)}
+              {...register("contactInfo")}
               className="h-12 rounded-xl border-border/60 bg-background/50"
             />
           </div>
 
-          {/* Combined Amount and Currency */}
           <div className="space-y-2">
             <Label
               htmlFor="amount"
@@ -268,55 +286,48 @@ export function CreateBorrowingSheet({
                 step="0.01"
                 min="0.01"
                 placeholder="0.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                required
+                {...register("amount")}
                 className="h-full w-full flex-1 bg-transparent px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
               />
 
               <div className="h-6 w-px shrink-0 bg-border/40" />
 
-              <Select
-                value={currency}
-                onValueChange={(val) => val && setCurrency(val)}
-              >
-                <SelectTrigger
-                  id="currency"
-                  className="!h-full w-24 shrink-0 cursor-pointer rounded-none border-0 bg-transparent px-4 py-2 text-sm font-semibold transition-colors hover:bg-muted/10 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
-                >
-                  <SelectValue placeholder="USD" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                  {currencyList.map((c) => (
-                    <SelectItem key={c.code} value={c.code}>
-                      {c.code}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormSelect
+                control={control}
+                name="currency"
+                items={currencyItems}
+                triggerClassName="!h-full w-28 border-0 bg-transparent focus-visible:ring-0"
+              />
             </div>
+            {errors.amount && (
+              <p className="text-[11px] font-semibold text-destructive">
+                {errors.amount.message}
+              </p>
+            )}
           </div>
 
-          {/* Established Date */}
           <div className="space-y-2">
             <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
               Date Established
             </Label>
-            <DatePicker
-              date={establishedAt}
-              setDate={(d) => d && setEstablishedAt(d)}
+            <Controller
+              control={control}
+              name="establishedAt"
+              render={({ field }) => (
+                <DatePicker
+                  date={field.value}
+                  setDate={(d) => d && field.onChange(d)}
+                />
+              )}
             />
           </div>
 
-          {/* Optional Target Due Date */}
           <div className="space-y-3.5 pt-1">
             <div className="flex items-center gap-2.5 select-none">
-              <input
+              <Checkbox
                 id="hasDueDate"
-                type="checkbox"
-                className="h-4 w-4 cursor-pointer rounded border-border/60 text-primary focus:ring-primary focus:ring-offset-0"
-                checked={hasDueDate}
-                onChange={(e) => setHasDueDate(e.target.checked)}
+                checked={hasDueDateValue}
+                onCheckedChange={(checked) => setValue("hasDueDate", !!checked)}
               />
               <Label
                 htmlFor="hasDueDate"
@@ -325,25 +336,33 @@ export function CreateBorrowingSheet({
                 Set a target due date
               </Label>
             </div>
-            {hasDueDate && (
+            {hasDueDateValue && (
               <div className="slide-in-from-top-1.5 animate-in space-y-2 duration-200 fade-in">
                 <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
                   Due Date
                 </Label>
-                <DatePicker date={dueAt} setDate={setDueAt} />
+                <Controller
+                  control={control}
+                  name="dueAt"
+                  render={({ field }) => (
+                    <DatePicker
+                      date={field.value}
+                      setDate={(d) => field.onChange(d)}
+                    />
+                  )}
+                />
               </div>
             )}
           </div>
 
-          {/* Create as Transaction Toggle */}
           {!editBorrowing && (
             <div className="flex items-center gap-2.5 pt-1 select-none">
-              <input
+              <Checkbox
                 id="createAsTransaction"
-                type="checkbox"
-                className="h-4 w-4 cursor-pointer rounded border-border/60 text-primary focus:ring-primary focus:ring-offset-0"
-                checked={createAsTransaction}
-                onChange={(e) => setCreateAsTransaction(e.target.checked)}
+                checked={createAsTxValue}
+                onCheckedChange={(checked) =>
+                  setValue("createAsTransaction", !!checked)
+                }
               />
               <Label
                 htmlFor="createAsTransaction"
@@ -354,7 +373,6 @@ export function CreateBorrowingSheet({
             </div>
           )}
 
-          {/* Notes Area */}
           <div className="space-y-2">
             <Label
               htmlFor="notes"
@@ -365,8 +383,7 @@ export function CreateBorrowingSheet({
             <textarea
               id="notes"
               placeholder="Add extra context..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              {...register("notes")}
               rows={3}
               className="flex min-h-[90px] w-full rounded-xl border border-border/60 bg-background/50 px-3.5 py-2.5 text-sm text-foreground transition-all outline-none placeholder:text-muted-foreground/50 focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
             />
@@ -374,17 +391,13 @@ export function CreateBorrowingSheet({
 
           <CurrencyConversionPreview
             conversion={conversion}
-            fromCurrency={currency}
+            fromCurrency={currencyValue}
           />
 
           <Button
             type="submit"
             className="mt-8 h-12 w-full rounded-xl bg-gradient-to-r from-primary to-accent font-semibold text-white shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] hover:opacity-95"
-            disabled={
-              isPending ||
-              !counterparty ||
-              !!(conversion && "error" in conversion)
-            }
+            disabled={isPending || !!(conversion && "error" in conversion)}
           >
             {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {editBorrowing ? "Save Changes" : "Create Record"}

@@ -1,4 +1,6 @@
-import { useState } from "react"
+import { useEffect } from "react"
+import { useForm, Controller } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import {
   useCreateExchangeRateMutation,
   type FinanceSettings,
@@ -15,14 +17,13 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { DatePicker } from "@/components/ui/date-picker"
+import { FormSelect } from "@/components/ui/form-select"
 import { Loader2 } from "lucide-react"
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select"
+  exchangeRateSchema,
+  type ExchangeRateFormValues,
+} from "../schemas/exchange-rate"
 
 interface CreateRateSheetProps {
   open: boolean
@@ -53,48 +54,77 @@ export function CreateRateSheet({
   const currencyList =
     currencies && currencies.length > 0 ? currencies : fallbackCurrencies
 
-  const [rateFrom, setRateFrom] = useState("EUR")
-  const [rateTo, setRateTo] = useState(settings?.baseCurrency || "USD")
-  const [rateValue, setRateValue] = useState("")
-  const [rateDateStr, setRateDateStr] = useState(
-    new Date().toISOString().split("T")[0]
-  )
-  const [rateDirection, setRateDirection] = useState<"direct" | "inverse">(
-    "direct"
-  )
-
-  const [prevBase, setPrevBase] = useState<string | undefined>(
-    settings?.baseCurrency
-  )
-  if (settings?.baseCurrency !== prevBase) {
-    setPrevBase(settings?.baseCurrency)
-    setRateTo(settings?.baseCurrency || "USD")
-  }
+  const currencyItems = currencyList.map((c) => ({
+    value: c.code,
+    label: c.code,
+  }))
 
   const createRateMutation = useCreateExchangeRateMutation()
 
-  const handleCreateRate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const parsedInput = parseFloat(rateValue)
+  const baseCurr = settings?.baseCurrency || "USD"
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<ExchangeRateFormValues>({
+    resolver: zodResolver(exchangeRateSchema),
+    defaultValues: {
+      fromCurrency: "EUR",
+      toCurrency: baseCurr,
+      rateValue: "",
+      rateDirection: "direct",
+      rateDate: new Date(),
+    },
+  })
+
+  useEffect(() => {
+    if (open) {
+      reset({
+        fromCurrency: "EUR",
+        toCurrency: baseCurr,
+        rateValue: "",
+        rateDirection: "direct",
+        rateDate: new Date(),
+      })
+    }
+  }, [open, baseCurr, reset])
+
+  const rateFrom = watch("fromCurrency")
+  const rateTo = watch("toCurrency")
+  const rateDirection = watch("rateDirection")
+  const rateValueStr = watch("rateValue")
+
+  const onSubmit = async (data: ExchangeRateFormValues) => {
+    const parsedInput = parseFloat(data.rateValue)
     if (isNaN(parsedInput) || parsedInput <= 0) return
 
     const finalRate =
-      rateDirection === "inverse" ? 1.0 / parsedInput : parsedInput
-    const dateObj = new Date(rateDateStr + "T00:00:00Z")
+      data.rateDirection === "inverse" ? 1.0 / parsedInput : parsedInput
+
+    const y = data.rateDate.getFullYear()
+    const m = String(data.rateDate.getMonth() + 1).padStart(2, "0")
+    const d = String(data.rateDate.getDate()).padStart(2, "0")
+    const dateObj = new Date(`${y}-${m}-${d}T12:00:00Z`)
 
     await createRateMutation.mutateAsync({
       exchangeRate: {
-        fromCurrency: rateFrom,
-        toCurrency: rateTo,
+        fromCurrency: data.fromCurrency,
+        toCurrency: data.toCurrency,
         rate: finalRate,
         rateDate: dateObj.toISOString(),
       },
     })
 
     onOpenChange(false)
-    setRateValue("")
     refetchRates()
   }
+
+  const parsedVal = parseFloat(rateValueStr)
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -108,59 +138,21 @@ export function CreateRateSheet({
             currency.
           </SheetDescription>
         </SheetHeader>
-        <form onSubmit={handleCreateRate} className="mt-8 space-y-5">
-          <div className="space-y-1.5">
-            <Label
-              htmlFor="rateFrom"
-              className="text-xs font-semibold tracking-wider text-muted-foreground/90 uppercase"
-            >
-              From Currency
-            </Label>
-            <Select
-              value={rateFrom}
-              onValueChange={(val) => setRateFrom(val || "")}
-            >
-              <SelectTrigger
-                id="rateFrom"
-                className="!h-11 w-full rounded-xl border-border/60 bg-background/50"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                {currencyList.map((c) => (
-                  <SelectItem key={c.code} value={c.code}>
-                    {c.code}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
+          <FormSelect
+            control={control}
+            name="fromCurrency"
+            label="From Currency"
+            items={currencyItems}
+          />
 
-          <div className="space-y-1.5">
-            <Label
-              htmlFor="rateTo"
-              className="text-xs font-semibold tracking-wider text-muted-foreground/90 uppercase"
-            >
-              To Base Currency
-            </Label>
-            <Select
-              value={rateTo}
-              onValueChange={(val) => setRateTo(val || "")}
-              disabled
-            >
-              <SelectTrigger
-                id="rateTo"
-                className="!h-11 w-full cursor-not-allowed rounded-xl border-border/60 bg-background/50 opacity-80"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                <SelectItem value={settings?.baseCurrency || "USD"}>
-                  {settings?.baseCurrency || "USD"}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <FormSelect
+            control={control}
+            name="toCurrency"
+            label="To Base Currency"
+            items={[{ value: baseCurr, label: baseCurr }]}
+            disabled
+          />
 
           <div className="space-y-2">
             <Label className="text-xs font-semibold tracking-wider text-muted-foreground/90 uppercase">
@@ -169,7 +161,7 @@ export function CreateRateSheet({
             <div className="grid grid-cols-2 gap-2 rounded-xl bg-secondary/40 p-1">
               <button
                 type="button"
-                onClick={() => setRateDirection("direct")}
+                onClick={() => setValue("rateDirection", "direct")}
                 className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
                   rateDirection === "direct"
                     ? "bg-background font-bold text-foreground shadow-sm"
@@ -180,7 +172,7 @@ export function CreateRateSheet({
               </button>
               <button
                 type="button"
-                onClick={() => setRateDirection("inverse")}
+                onClick={() => setValue("rateDirection", "inverse")}
                 className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
                   rateDirection === "inverse"
                     ? "bg-background font-bold text-foreground shadow-sm"
@@ -206,16 +198,19 @@ export function CreateRateSheet({
               type="number"
               step="any"
               min="0.000001"
-              value={rateValue}
-              onChange={(e) => setRateValue(e.target.value)}
+              {...register("rateValue")}
               placeholder={
                 rateDirection === "direct" ? "e.g. 1.0900" : "e.g. 58.0000"
               }
               className="h-11 rounded-xl border-border/60 bg-background/50"
-              required
             />
+            {errors.rateValue && (
+              <p className="text-[11px] font-semibold text-destructive">
+                {errors.rateValue.message}
+              </p>
+            )}
 
-            {parseFloat(rateValue) > 0 && (
+            {!isNaN(parsedVal) && parsedVal > 0 && (
               <div className="mt-2 space-y-1 rounded-xl border border-border/20 bg-secondary/30 p-3 text-xs text-muted-foreground select-none">
                 <div className="font-semibold text-foreground">
                   Live Conversion Preview:
@@ -225,8 +220,8 @@ export function CreateRateSheet({
                   <span className="font-mono font-bold text-foreground">
                     1 {rateFrom} ={" "}
                     {rateDirection === "direct"
-                      ? parseFloat(rateValue).toFixed(6)
-                      : (1.0 / parseFloat(rateValue)).toFixed(6)}{" "}
+                      ? parsedVal.toFixed(6)
+                      : (1.0 / parsedVal).toFixed(6)}{" "}
                     {rateTo}
                   </span>
                 </div>
@@ -235,8 +230,8 @@ export function CreateRateSheet({
                   <span className="font-mono font-bold text-foreground">
                     1 {rateTo} ={" "}
                     {rateDirection === "direct"
-                      ? (1.0 / parseFloat(rateValue)).toFixed(6)
-                      : parseFloat(rateValue).toFixed(6)}{" "}
+                      ? (1.0 / parsedVal).toFixed(6)
+                      : parsedVal.toFixed(6)}{" "}
                     {rateFrom}
                   </span>
                 </div>
@@ -245,20 +240,24 @@ export function CreateRateSheet({
           </div>
 
           <div className="space-y-1.5">
-            <Label
-              htmlFor="rateDate"
-              className="text-xs font-semibold tracking-wider text-muted-foreground/90 uppercase"
-            >
+            <Label className="text-xs font-semibold tracking-wider text-muted-foreground/90 uppercase">
               Rate Date
             </Label>
-            <Input
-              id="rateDate"
-              type="date"
-              value={rateDateStr}
-              onChange={(e) => setRateDateStr(e.target.value)}
-              className="h-11 rounded-xl border-border/60 bg-background/50"
-              required
+            <Controller
+              control={control}
+              name="rateDate"
+              render={({ field }) => (
+                <DatePicker
+                  date={field.value}
+                  setDate={(d) => d && field.onChange(d)}
+                />
+              )}
             />
+            {errors.rateDate && (
+              <p className="text-[11px] font-semibold text-destructive">
+                {errors.rateDate.message}
+              </p>
+            )}
           </div>
 
           <Button

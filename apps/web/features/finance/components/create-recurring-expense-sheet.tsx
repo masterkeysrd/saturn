@@ -1,4 +1,6 @@
-import { useState } from "react"
+import { useEffect } from "react"
+import { useForm, Controller } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import {
   useCreateRecurringExpenseMutation,
   useUpdateRecurringExpenseMutation,
@@ -23,14 +25,24 @@ import { DatePicker } from "@/components/ui/date-picker"
 import { Loader2 } from "lucide-react"
 import { CurrencyConversionPreview } from "./currency-conversion-preview"
 import { BudgetSelect } from "./budget-select"
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select"
+import { FormSelect } from "@/components/ui/form-select"
 import { toCentsString, formatCents } from "../utils"
+import {
+  recurringExpenseSchema,
+  type RecurringExpenseFormValues,
+} from "../schemas/recurring-expense"
+
+const INTERVAL_ITEMS = [
+  { value: "WEEKLY", label: "Weekly" },
+  { value: "MONTHLY", label: "Monthly" },
+  { value: "YEARLY", label: "Yearly" },
+]
+
+const STATUS_ITEMS = [
+  { value: "ACTIVE", label: "Active" },
+  { value: "PAUSED", label: "Paused" },
+  { value: "ENDED", label: "Ended" },
+]
 
 interface CreateRecurringExpenseSheetProps {
   open: boolean
@@ -59,21 +71,13 @@ export function CreateRecurringExpenseSheet({
   getConversionPreview,
   currencies = [],
 }: CreateRecurringExpenseSheetProps) {
-  const [budgetId, setBudgetId] = useState("")
-  const [name, setName] = useState("")
-  const [amount, setAmount] = useState("")
-  const [currency, setCurrency] = useState(baseCurrency || "USD")
-  const [interval, setInterval] = useState("monthly")
-  const [nextDueDate, setNextDueDate] = useState<Date>(new Date())
-  const [isVariable, setIsVariable] = useState(false)
-  const [status, setStatus] = useState("active")
-  const [gracePeriodDays, setGracePeriodDays] = useState(0)
-
   const createMutation = useCreateRecurringExpenseMutation()
   const updateMutation = useUpdateRecurringExpenseMutation()
 
-  const [prevExpenseId, setPrevExpenseId] = useState<string | null>(null)
-  const [prevOpen, setPrevOpen] = useState(false)
+  const currencyItems = currencies.map((cur) => ({
+    value: cur.code,
+    label: `${cur.code}${cur.name ? ` (${cur.name})` : ""}`,
+  }))
 
   const normalizeIntervalVal = (
     intv: string | undefined
@@ -99,43 +103,84 @@ export function CreateRecurringExpenseSheet({
     return "ACTIVE"
   }
 
-  const currentExpenseId = editExpense?.id || null
-  if (currentExpenseId !== prevExpenseId || open !== prevOpen) {
-    setPrevExpenseId(currentExpenseId)
-    setPrevOpen(open)
-    if (editExpense) {
-      setBudgetId(editExpense.budgetId)
-      setName(editExpense.name)
-      setAmount(formatCents(editExpense.amount).toString())
-      setCurrency(editExpense.currency)
-      setInterval(normalizeIntervalVal(editExpense.interval))
-      const rawNextDueDate =
-        editExpense.executionState?.nextDueDate ||
-        ((
-          editExpense.executionState as unknown as
-            Record<string, unknown> | undefined
-        )?.next_due_date as string | undefined) ||
-        ((editExpense as unknown as Record<string, unknown>).nextDueDate as
-          string | undefined) ||
-        ((editExpense as unknown as Record<string, unknown>).next_due_date as
-          string | undefined)
-      const parsedDate = rawNextDueDate ? new Date(rawNextDueDate) : new Date()
-      setNextDueDate(
-        parsedDate && !isNaN(parsedDate.getTime()) ? parsedDate : new Date()
-      )
-      setIsVariable(editExpense.isVariable)
-      setStatus(normalizeStatusVal(editExpense.status))
-      setGracePeriodDays(editExpense.gracePeriodDays || 0)
-    } else {
-      setBudgetId("")
-      setName("")
-      setAmount("")
-      setCurrency(baseCurrency || "USD")
-      setInterval("MONTHLY")
-      setNextDueDate(new Date())
-      setIsVariable(false)
-      setStatus("ACTIVE")
-      setGracePeriodDays(0)
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<RecurringExpenseFormValues>({
+    resolver: zodResolver(recurringExpenseSchema),
+    defaultValues: {
+      budgetId: "",
+      name: "",
+      amount: "",
+      currency: baseCurrency || "USD",
+      interval: "MONTHLY",
+      nextDueDate: new Date(),
+      gracePeriodDays: 0,
+      isVariable: false,
+      status: "ACTIVE",
+    },
+  })
+
+  useEffect(() => {
+    if (open) {
+      if (editExpense) {
+        const rawNextDueDate =
+          editExpense.executionState?.nextDueDate ||
+          ((
+            editExpense.executionState as unknown as
+              Record<string, unknown> | undefined
+          )?.next_due_date as string | undefined) ||
+          ((editExpense as unknown as Record<string, unknown>).nextDueDate as
+            string | undefined) ||
+          ((editExpense as unknown as Record<string, unknown>).next_due_date as
+            string | undefined)
+        const parsedDate = rawNextDueDate
+          ? new Date(rawNextDueDate)
+          : new Date()
+
+        reset({
+          budgetId: editExpense.budgetId,
+          name: editExpense.name,
+          amount: formatCents(editExpense.amount).toString(),
+          currency: editExpense.currency,
+          interval: normalizeIntervalVal(editExpense.interval),
+          nextDueDate:
+            parsedDate && !isNaN(parsedDate.getTime())
+              ? parsedDate
+              : new Date(),
+          gracePeriodDays: editExpense.gracePeriodDays || 0,
+          isVariable: editExpense.isVariable,
+          status: normalizeStatusVal(editExpense.status),
+        })
+      } else {
+        reset({
+          budgetId: "",
+          name: "",
+          amount: "",
+          currency: baseCurrency || "USD",
+          interval: "MONTHLY",
+          nextDueDate: new Date(),
+          gracePeriodDays: 0,
+          isVariable: false,
+          status: "ACTIVE",
+        })
+      }
+    }
+  }, [open, editExpense, baseCurrency, reset])
+
+  const amountValue = watch("amount")
+  const currencyValue = watch("currency")
+  const isVariableValue = watch("isVariable")
+
+  const handleBudgetChange = (newBudgetId: string) => {
+    const b = budgets.find((x) => x.id === newBudgetId)
+    if (b) {
+      setValue("currency", b.currency)
     }
   }
 
@@ -146,38 +191,12 @@ export function CreateRecurringExpenseSheet({
     return `${y}-${m}-${date}T12:00:00Z`
   }
 
-  const handleBudgetChange = (newBudgetId: string) => {
-    setBudgetId(newBudgetId)
-    const b = budgets.find((x) => x.id === newBudgetId)
-    if (b) {
-      setCurrency(b.currency)
-    }
-  }
+  const isPending = createMutation.isPending || updateMutation.isPending
+  const conversion = getConversionPreview(amountValue, currencyValue)
 
-  const mapIntervalToProto = (intv: string): RecurringExpense_Interval => {
-    const clean = intv.replace(/^INTERVAL_/i, "").toUpperCase()
-    if (clean === "WEEKLY" || clean === "MONTHLY" || clean === "YEARLY") {
-      return clean as RecurringExpense_Interval
-    }
-    return "INTERVAL_UNSPECIFIED"
-  }
-
-  const mapStatusToProto = (st: string): RecurringExpense_Status => {
-    const clean = st
-      .replace(/^(STATUS_|RECURRING_EXPENSE_STATUS_)/i, "")
-      .toUpperCase()
-    if (clean === "ACTIVE" || clean === "PAUSED" || clean === "ENDED") {
-      return clean as RecurringExpense_Status
-    }
-    return "STATUS_UNSPECIFIED"
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!budgetId) return
-
-    const centsAmount = toCentsString(amount)
-    const nextDueDateStr = toLocalISODate(nextDueDate)
+  const onSubmit = async (data: RecurringExpenseFormValues) => {
+    const centsAmount = toCentsString(data.amount)
+    const nextDueDateStr = toLocalISODate(data.nextDueDate)
 
     if (editExpense) {
       await updateMutation.mutateAsync({
@@ -187,34 +206,34 @@ export function CreateRecurringExpenseSheet({
           recurringExpense: {
             id: editExpense.id || "",
             spaceId: editExpense.spaceId || "",
-            budgetId,
-            name,
+            budgetId: data.budgetId,
+            name: data.name,
             amount: centsAmount,
-            currency,
-            interval: mapIntervalToProto(interval),
+            currency: data.currency,
+            interval: data.interval,
             executionState: {
               nextDueDate: nextDueDateStr,
             },
-            isVariable,
-            status: mapStatusToProto(status),
-            gracePeriodDays,
+            isVariable: data.isVariable,
+            status: data.status,
+            gracePeriodDays: data.gracePeriodDays,
           },
         },
       })
     } else {
       await createMutation.mutateAsync({
         recurringExpense: {
-          budgetId,
-          name,
+          budgetId: data.budgetId,
+          name: data.name,
           amount: centsAmount,
-          currency,
-          interval: mapIntervalToProto(interval),
+          currency: data.currency,
+          interval: data.interval,
           executionState: {
             nextDueDate: nextDueDateStr,
           },
-          isVariable,
+          isVariable: data.isVariable,
           status: "ACTIVE",
-          gracePeriodDays,
+          gracePeriodDays: data.gracePeriodDays,
         },
       })
     }
@@ -222,10 +241,6 @@ export function CreateRecurringExpenseSheet({
     refetchExpenses()
     onOpenChange(false)
   }
-
-  const isPending = createMutation.isPending || updateMutation.isPending
-
-  const conversion = getConversionPreview(amount, currency)
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -243,7 +258,7 @@ export function CreateRecurringExpenseSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6">
           <div className="space-y-2">
             <Label
               htmlFor="budgetId"
@@ -252,11 +267,17 @@ export function CreateRecurringExpenseSheet({
               Budget
             </Label>
             <BudgetSelect
+              control={control}
+              name="budgetId"
               budgets={budgets}
-              value={budgetId}
-              onValueChange={handleBudgetChange}
+              onBudgetChange={handleBudgetChange}
               placeholder="Select a budget..."
             />
+            {errors.budgetId && (
+              <p className="text-[11px] font-semibold text-destructive">
+                {errors.budgetId.message}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -268,12 +289,15 @@ export function CreateRecurringExpenseSheet({
             </Label>
             <Input
               id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              {...register("name")}
               placeholder="e.g. Office Rent, Netflix"
-              required
               className="h-12 rounded-xl border-border/60 bg-background/50"
             />
+            {errors.name && (
+              <p className="text-[11px] font-semibold text-destructive">
+                {errors.name.message}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -290,74 +314,51 @@ export function CreateRecurringExpenseSheet({
                 step="0.01"
                 min="0.01"
                 placeholder="0.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                required
+                {...register("amount")}
                 className="h-full w-full flex-1 bg-transparent px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
               />
 
               <div className="h-6 w-px shrink-0 bg-border/40" />
 
-              <Select
-                value={currency}
-                onValueChange={(val) => setCurrency(val || "USD")}
-              >
-                <SelectTrigger
-                  id="currency"
-                  className="h-full border-0 bg-transparent px-3 py-2 text-xs font-bold focus:ring-0 focus-visible:ring-0"
-                >
-                  <SelectValue placeholder="USD" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                  {currencies.map((cur) => (
-                    <SelectItem key={cur.code} value={cur.code}>
-                      {cur.code} {cur.name ? `(${cur.name})` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormSelect
+                control={control}
+                name="currency"
+                items={currencyItems}
+                triggerClassName="!h-full w-28 border-0 bg-transparent focus-visible:ring-0"
+              />
             </div>
+            {errors.amount && (
+              <p className="text-[11px] font-semibold text-destructive">
+                {errors.amount.message}
+              </p>
+            )}
           </div>
 
           <CurrencyConversionPreview
             conversion={conversion}
-            fromCurrency={currency}
+            fromCurrency={currencyValue}
           />
 
-          <div className="space-y-2">
-            <Label
-              htmlFor="interval"
-              className="text-xs font-bold tracking-wider text-muted-foreground uppercase"
-            >
-              Interval
-            </Label>
-            <Select
-              value={interval}
-              onValueChange={(val) =>
-                setInterval((val as RecurringExpense_Interval) || "MONTHLY")
-              }
-            >
-              <SelectTrigger
-                id="interval"
-                className="!h-12 w-full rounded-xl border-border/60 bg-background/50"
-              >
-                <SelectValue placeholder="Select interval..." />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                <SelectItem value="WEEKLY">Weekly</SelectItem>
-                <SelectItem value="MONTHLY">Monthly</SelectItem>
-                <SelectItem value="YEARLY">Yearly</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <FormSelect
+            control={control}
+            name="interval"
+            label="Interval"
+            items={INTERVAL_ITEMS}
+          />
 
           <div className="space-y-2">
             <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
               Next Due Date
             </Label>
-            <DatePicker
-              date={nextDueDate}
-              setDate={(d) => d && setNextDueDate(d)}
+            <Controller
+              control={control}
+              name="nextDueDate"
+              render={({ field }) => (
+                <DatePicker
+                  date={field.value}
+                  setDate={(d) => d && field.onChange(d)}
+                />
+              )}
             />
           </div>
 
@@ -373,17 +374,21 @@ export function CreateRecurringExpenseSheet({
               type="number"
               min="0"
               placeholder="e.g. 5"
-              value={gracePeriodDays || ""}
-              onChange={(e) => setGracePeriodDays(Number(e.target.value))}
+              {...register("gracePeriodDays", { valueAsNumber: true })}
               className="h-12 rounded-xl border-border/60 bg-background/50"
             />
+            {errors.gracePeriodDays && (
+              <p className="text-[11px] font-semibold text-destructive">
+                {errors.gracePeriodDays.message}
+              </p>
+            )}
           </div>
 
           <div className="flex items-center gap-3.5 rounded-2xl border border-muted/20 bg-muted/5 p-4 select-none">
             <Checkbox
               id="isVariable"
-              checked={isVariable}
-              onCheckedChange={(checked) => setIsVariable(!!checked)}
+              checked={isVariableValue}
+              onCheckedChange={(checked) => setValue("isVariable", !!checked)}
             />
             <div className="grid gap-1">
               <Label
@@ -400,32 +405,12 @@ export function CreateRecurringExpenseSheet({
           </div>
 
           {editExpense && (
-            <div className="space-y-2">
-              <Label
-                htmlFor="status"
-                className="text-xs font-bold tracking-wider text-muted-foreground uppercase"
-              >
-                Status
-              </Label>
-              <Select
-                value={status}
-                onValueChange={(val) =>
-                  setStatus((val as RecurringExpense_Status) || "ACTIVE")
-                }
-              >
-                <SelectTrigger
-                  id="status"
-                  className="!h-12 w-full rounded-xl border-border/60 bg-background/50"
-                >
-                  <SelectValue placeholder="Select status..." />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                  <SelectItem value="ACTIVE">Active</SelectItem>
-                  <SelectItem value="PAUSED">Paused</SelectItem>
-                  <SelectItem value="ENDED">Ended</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <FormSelect
+              control={control}
+              name="status"
+              label="Status"
+              items={STATUS_ITEMS}
+            />
           )}
 
           <Button

@@ -1,4 +1,9 @@
 import { useState, useMemo, useEffect } from "react"
+import { useForm, Controller } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { FormSelect } from "@/components/ui/form-select"
+import { accountSchema, type AccountFormValues } from "./schemas/account"
+import { transferSchema, type TransferFormValues } from "./schemas/transfer"
 import { useSpacePermissions } from "@/features/space/use-space"
 import {
   type Account,
@@ -34,6 +39,7 @@ import {
   Info,
   ChevronRight,
   History,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -814,6 +820,13 @@ interface CreateAccountSheetProps {
   refetchAccounts: () => void
 }
 
+const ACCOUNT_TYPE_ITEMS = [
+  { value: "BANK", label: "Bank / Checking" },
+  { value: "CREDIT_CARD", label: "Credit Card" },
+  { value: "CASH", label: "Cash Holdings" },
+  { value: "DIGITAL_ACCOUNT", label: "Digital Account" },
+]
+
 function CreateAccountSheet({
   open,
   onOpenChange,
@@ -827,70 +840,84 @@ function CreateAccountSheet({
     { enabled: open && !!spaceId, staleTime: 1000 * 60 * 30 }
   )
   const currencies = currenciesData?.currencies || []
-  const currencyList = currencies || []
-
-  const [name, setName] = useState("")
-  const [type, setType] = useState<Account_Type>("BANK")
-  const [currency, setCurrency] = useState("")
-  const [initialBalance, setInitialBalance] = useState("")
-  const [creditLimit, setCreditLimit] = useState("")
-  const [lastFour, setLastFour] = useState("")
-  const [isDefault, setIsDefault] = useState(false)
-  const [isActive, setIsActive] = useState(true)
-  const [color, setColor] = useState("indigo")
-  const [notes, setNotes] = useState("")
+  const currencyItems = currencies.map((c) => ({
+    value: c.code,
+    label: `${c.code}${c.name ? ` (${c.name})` : ""}`,
+  }))
 
   const createMutation = useCreateAccountMutation()
   const updateMutation = useUpdateAccountMutation()
 
-  const [prevEditAccountId, setPrevEditAccountId] = useState<string | null>(
-    null
-  )
-  const [prevOpen, setPrevOpen] = useState(false)
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<AccountFormValues>({
+    resolver: zodResolver(accountSchema),
+    defaultValues: {
+      name: "",
+      lastFour: "",
+      type: "BANK",
+      currency: baseCurrency || "USD",
+      initialBalance: "0",
+      creditLimit: "",
+      color: "indigo",
+      isDefault: false,
+      isActive: true,
+      notes: "",
+    },
+  })
 
-  if (open !== prevOpen || (editAccount?.id || null) !== prevEditAccountId) {
-    setPrevOpen(open)
-    setPrevEditAccountId(editAccount?.id || null)
+  useEffect(() => {
     if (open) {
       if (editAccount) {
-        setName(editAccount.name)
-        setType(editAccount.type)
-        setCurrency(editAccount.currency)
-        setInitialBalance(formatCents(editAccount.initialBalance).toString())
-        setCreditLimit(
-          editAccount.creditLimit
+        reset({
+          name: editAccount.name,
+          lastFour: editAccount.lastFour || "",
+          type: editAccount.type,
+          currency: editAccount.currency,
+          initialBalance: formatCents(editAccount.initialBalance).toString(),
+          creditLimit: editAccount.creditLimit
             ? formatCents(editAccount.creditLimit).toString()
-            : ""
-        )
-        setLastFour(editAccount.lastFour || "")
-        setIsDefault(editAccount.isDefault)
-        setIsActive(editAccount.isActive)
-        setColor(editAccount.color)
-        setNotes(editAccount.notes)
+            : "",
+          color: editAccount.color || "indigo",
+          isDefault: editAccount.isDefault,
+          isActive: editAccount.isActive,
+          notes: editAccount.notes || "",
+        })
       } else {
-        setName("")
-        setType("BANK")
-        setCurrency(baseCurrency || "USD")
-        setInitialBalance("0")
-        setCreditLimit("")
-        setLastFour("")
-        setIsDefault(false)
-        setIsActive(true)
-        setColor("indigo")
-        setNotes("")
+        reset({
+          name: "",
+          lastFour: "",
+          type: "BANK",
+          currency: baseCurrency || "USD",
+          initialBalance: "0",
+          creditLimit: "",
+          color: "indigo",
+          isDefault: false,
+          isActive: true,
+          notes: "",
+        })
       }
     }
-  }
+  }, [open, editAccount, baseCurrency, reset])
 
+  const accountType = watch("type")
+  const currentColor = watch("color")
+  const isDefaultValue = watch("isDefault")
+  const isActiveValue = watch("isActive")
   const isPending = createMutation.isPending || updateMutation.isPending
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!name.trim()) return
-
-    const centsStr = toCentsString(initialBalance || "0")
+  const onSubmit = async (data: AccountFormValues) => {
+    const centsStr = toCentsString(data.initialBalance || "0")
     const limitStr =
-      type === "CREDIT_CARD" && creditLimit ? toCentsString(creditLimit) : "0"
+      data.type === "CREDIT_CARD" && data.creditLimit
+        ? toCentsString(data.creditLimit)
+        : "0"
 
     try {
       if (editAccount) {
@@ -900,13 +927,13 @@ function CreateAccountSheet({
             id: editAccount.id || "",
             account: {
               ...editAccount,
-              name,
+              name: data.name,
               creditLimit: limitStr,
-              isDefault,
-              isActive,
-              color,
-              notes,
-              lastFour: lastFour || "",
+              isDefault: data.isDefault,
+              isActive: data.isActive,
+              color: data.color,
+              notes: data.notes || "",
+              lastFour: data.lastFour || "",
             },
           },
         })
@@ -915,17 +942,17 @@ function CreateAccountSheet({
           account: {
             id: "",
             spaceId,
-            name,
-            type,
-            currency,
+            name: data.name,
+            type: data.type,
+            currency: data.currency,
             initialBalance: centsStr,
             currentBalance: "0",
             creditLimit: limitStr,
-            isDefault,
+            isDefault: data.isDefault,
             isActive: true,
-            color,
-            notes,
-            lastFour: lastFour || "",
+            color: data.color,
+            notes: data.notes || "",
+            lastFour: data.lastFour || "",
           },
         })
       }
@@ -948,7 +975,7 @@ function CreateAccountSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6">
           <div className="space-y-2">
             <Label
               htmlFor="acc-name"
@@ -959,11 +986,14 @@ function CreateAccountSheet({
             <Input
               id="acc-name"
               placeholder="e.g. Chase Operating, Petty Cash"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              {...register("name")}
               className="h-11 rounded-xl"
-              required
             />
+            {errors.name && (
+              <p className="text-[11px] font-semibold text-destructive">
+                {errors.name.message}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -976,61 +1006,31 @@ function CreateAccountSheet({
             <Input
               id="acc-last-four"
               placeholder="e.g. 1234"
-              value={lastFour}
-              onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, "").slice(0, 4)
-                setLastFour(val)
-              }}
+              {...register("lastFour")}
               className="h-11 rounded-xl"
             />
+            {errors.lastFour && (
+              <p className="text-[11px] font-semibold text-destructive">
+                {errors.lastFour.message}
+              </p>
+            )}
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-xs font-bold tracking-wider text-foreground uppercase">
-              Account Type
-            </Label>
-            <Select
-              value={type}
-              onValueChange={(val) => setType(val as Account_Type)}
-              disabled={!!editAccount}
-            >
-              <SelectTrigger className="!h-11 w-full rounded-xl text-left">
-                <SelectValue placeholder="Select type">
-                  {type && getAccountTypeLabel(type)}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                <SelectItem value="BANK">Bank / Checking</SelectItem>
-                <SelectItem value="CREDIT_CARD">Credit Card</SelectItem>
-                <SelectItem value="CASH">Cash Holdings</SelectItem>
-                <SelectItem value="DIGITAL_ACCOUNT">Digital Account</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <FormSelect
+            control={control}
+            name="type"
+            label="Account Type"
+            disabled={!!editAccount}
+            items={ACCOUNT_TYPE_ITEMS}
+          />
 
-          <div className="space-y-2">
-            <Label className="text-xs font-bold tracking-wider text-foreground uppercase">
-              Currency
-            </Label>
-            <Select
-              value={currency}
-              onValueChange={(val) => setCurrency(val || "")}
-              disabled={!!editAccount}
-            >
-              <SelectTrigger className="!h-11 w-full rounded-xl text-left">
-                <SelectValue placeholder="Select currency">
-                  {currency}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                {currencyList.map((c) => (
-                  <SelectItem key={c.code} value={c.code}>
-                    {c.code}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <FormSelect
+            control={control}
+            name="currency"
+            label="Currency"
+            disabled={!!editAccount}
+            items={currencyItems}
+          />
 
           <div className="space-y-2">
             <Label
@@ -1044,15 +1044,18 @@ function CreateAccountSheet({
               type="number"
               step="0.01"
               placeholder="0.00"
-              value={initialBalance}
-              onChange={(e) => setInitialBalance(e.target.value)}
+              {...register("initialBalance")}
               className="h-11 rounded-xl"
               disabled={!!editAccount}
-              required
             />
+            {errors.initialBalance && (
+              <p className="text-[11px] font-semibold text-destructive">
+                {errors.initialBalance.message}
+              </p>
+            )}
           </div>
 
-          {type === "CREDIT_CARD" && (
+          {accountType === "CREDIT_CARD" && (
             <div className="animate-in space-y-2 duration-200 slide-in-from-top-2">
               <Label
                 htmlFor="acc-limit"
@@ -1065,11 +1068,14 @@ function CreateAccountSheet({
                 type="number"
                 step="0.01"
                 placeholder="e.g. 5000.00"
-                value={creditLimit}
-                onChange={(e) => setCreditLimit(e.target.value)}
+                {...register("creditLimit")}
                 className="h-11 rounded-xl"
-                required
               />
+              {errors.creditLimit && (
+                <p className="text-[11px] font-semibold text-destructive">
+                  {errors.creditLimit.message}
+                </p>
+              )}
             </div>
           )}
 
@@ -1082,12 +1088,12 @@ function CreateAccountSheet({
                 <button
                   key={c.value}
                   type="button"
-                  onClick={() => setColor(c.value)}
+                  onClick={() => setValue("color", c.value)}
                   className={cn(
                     "h-8 w-8 rounded-full border transition-all hover:scale-110",
                     getAccountColors(c.value).bg,
                     getAccountColors(c.value).border,
-                    color === c.value &&
+                    currentColor === c.value &&
                       "ring-2 ring-primary ring-offset-2 dark:ring-offset-card"
                   )}
                 />
@@ -1110,8 +1116,8 @@ function CreateAccountSheet({
               </div>
               <Switch
                 id="is-default-switch"
-                checked={isDefault}
-                onCheckedChange={setIsDefault}
+                checked={isDefaultValue}
+                onCheckedChange={(checked) => setValue("isDefault", checked)}
               />
             </div>
 
@@ -1130,8 +1136,8 @@ function CreateAccountSheet({
                 </div>
                 <Switch
                   id="is-active-switch"
-                  checked={isActive}
-                  onCheckedChange={setIsActive}
+                  checked={isActiveValue}
+                  onCheckedChange={(checked) => setValue("isActive", checked)}
                 />
               </div>
             )}
@@ -1147,8 +1153,7 @@ function CreateAccountSheet({
             <Input
               id="acc-notes"
               placeholder="e.g. Swift codes, secondary card details"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              {...register("notes")}
               className="h-11 rounded-xl"
             />
           </div>
@@ -1191,15 +1196,44 @@ function CreateTransferSheet({
     { enabled: open }
   )
   const rates = ratesData?.exchangeRates || []
-
-  const [srcId, setSrcId] = useState("")
-  const [dstId, setDstId] = useState("")
-  const [srcAmount, setSrcAmount] = useState("")
-  const [dstAmount, setDstAmount] = useState("")
-  const [transferDate, setTransferDate] = useState<Date>(new Date())
-  const [notes, setNotes] = useState("")
-
   const createMutation = useCreateTransferMutation()
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<TransferFormValues>({
+    resolver: zodResolver(transferSchema),
+    defaultValues: {
+      sourceAccountId: "",
+      destinationAccountId: "",
+      sourceAmount: "",
+      destinationAmount: "",
+      transferDate: new Date(),
+      notes: "",
+    },
+  })
+
+  useEffect(() => {
+    if (open) {
+      reset({
+        sourceAccountId: "",
+        destinationAccountId: "",
+        sourceAmount: "",
+        destinationAmount: "",
+        transferDate: new Date(),
+        notes: "",
+      })
+    }
+  }, [open, reset])
+
+  const srcId = watch("sourceAccountId")
+  const dstId = watch("destinationAccountId")
+  const srcAmount = watch("sourceAmount")
 
   const srcAcc = activeAccounts.find((a) => a.id === srcId)
   const dstAcc = activeAccounts.find((a) => a.id === dstId)
@@ -1214,9 +1248,8 @@ function CreateTransferSheet({
     if (isNaN(srcVal) || srcVal <= 0) return
 
     if (sAcc.currency === dAcc.currency) {
-      setDstAmount(amountStr)
+      setValue("destinationAmount", amountStr)
     } else {
-      // Find exchange rate: src -> dst
       const rate = rates
         .filter(
           (r) =>
@@ -1228,35 +1261,29 @@ function CreateTransferSheet({
         )[0]
 
       if (rate) {
-        setDstAmount((srcVal * rate.rate).toFixed(2))
+        setValue("destinationAmount", (srcVal * rate.rate).toFixed(2))
       }
     }
   }
 
-  const handleTransfer = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!srcId || !dstId || !srcAmount || !dstAmount) return
-
-    if (srcId === dstId) {
-      alert("Source and destination accounts must be different.")
-      return
+  useEffect(() => {
+    if (srcId && dstId && srcAmount) {
+      updateTargetAmount(srcAmount, srcId, dstId)
     }
+  }, [srcId, dstId, srcAmount])
 
+  const onSubmit = async (data: TransferFormValues) => {
     try {
       await createMutation.mutateAsync({
-        sourceAccountId: srcId,
-        destinationAccountId: dstId,
-        sourceAmount: toCentsString(srcAmount),
-        destinationAmount: toCentsString(dstAmount),
-        transferDate: transferDate.toISOString(),
-        notes,
+        sourceAccountId: data.sourceAccountId,
+        destinationAccountId: data.destinationAccountId,
+        sourceAmount: toCentsString(data.sourceAmount),
+        destinationAmount: toCentsString(data.destinationAmount),
+        transferDate: data.transferDate.toISOString(),
+        notes: data.notes || "",
       })
       onOpenChange(false)
-      setSrcId("")
-      setDstId("")
-      setSrcAmount("")
-      setDstAmount("")
-      setNotes("")
+      reset()
       refetchAccounts()
       refetchTransfers()
     } catch (err: unknown) {
@@ -1277,20 +1304,22 @@ function CreateTransferSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleTransfer} className="mt-8 space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6">
           <div className="space-y-2">
             <Label className="text-xs font-bold tracking-wider text-foreground uppercase">
               Source Account (Withdraw From)
             </Label>
             <AccountSelect
-              value={srcId}
-              onValueChange={(val) => {
-                setSrcId(val)
-                updateTargetAmount(srcAmount, val, dstId)
-              }}
+              control={control}
+              name="sourceAccountId"
               accounts={activeAccounts.filter((a) => a.id !== dstId)}
               placeholder="Choose source account"
             />
+            {errors.sourceAccountId && (
+              <p className="text-[11px] font-semibold text-destructive">
+                {errors.sourceAccountId.message}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -1298,14 +1327,16 @@ function CreateTransferSheet({
               Destination Account (Deposit To)
             </Label>
             <AccountSelect
-              value={dstId}
-              onValueChange={(val) => {
-                setDstId(val)
-                updateTargetAmount(srcAmount, srcId, val)
-              }}
+              control={control}
+              name="destinationAccountId"
               accounts={activeAccounts.filter((a) => a.id !== srcId)}
               placeholder="Choose target account"
             />
+            {errors.destinationAccountId && (
+              <p className="text-[11px] font-semibold text-destructive">
+                {errors.destinationAccountId.message}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -1316,15 +1347,17 @@ function CreateTransferSheet({
               type="number"
               step="0.01"
               placeholder="0.00"
-              value={srcAmount}
-              onChange={(e) => {
-                const val = e.target.value
-                setSrcAmount(val)
-                updateTargetAmount(val, srcId, dstId)
-              }}
+              {...register("sourceAmount", {
+                onChange: (e) =>
+                  updateTargetAmount(e.target.value, srcId, dstId),
+              })}
               className="h-11 rounded-xl"
-              required
             />
+            {errors.sourceAmount && (
+              <p className="text-[11px] font-semibold text-destructive">
+                {errors.sourceAmount.message}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -1335,11 +1368,14 @@ function CreateTransferSheet({
               type="number"
               step="0.01"
               placeholder="0.00"
-              value={dstAmount}
-              onChange={(e) => setDstAmount(e.target.value)}
+              {...register("destinationAmount")}
               className="h-11 rounded-xl"
-              required
             />
+            {errors.destinationAmount && (
+              <p className="text-[11px] font-semibold text-destructive">
+                {errors.destinationAmount.message}
+              </p>
+            )}
           </div>
 
           {srcAcc && dstAcc && srcAcc.currency !== dstAcc.currency && (
@@ -1359,9 +1395,15 @@ function CreateTransferSheet({
             <Label className="block text-xs font-bold tracking-wider text-foreground uppercase">
               Transfer Date
             </Label>
-            <DatePicker
-              date={transferDate}
-              setDate={(d) => d && setTransferDate(d)}
+            <Controller
+              control={control}
+              name="transferDate"
+              render={({ field }) => (
+                <DatePicker
+                  date={field.value}
+                  setDate={(d) => d && field.onChange(d)}
+                />
+              )}
             />
           </div>
 
@@ -1374,9 +1416,8 @@ function CreateTransferSheet({
             </Label>
             <Input
               id="transfer-notes"
-              placeholder="e.g. Monthly savings sweep, budget buffer"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. Monthly savings allocation"
+              {...register("notes")}
               className="h-11 rounded-xl"
             />
           </div>
@@ -1385,9 +1426,12 @@ function CreateTransferSheet({
             <Button
               type="submit"
               disabled={createMutation.isPending}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent font-semibold text-white shadow-lg shadow-primary/10 transition-all"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent font-semibold text-white shadow-lg shadow-primary/10 transition-all hover:scale-[1.01]"
             >
-              Confirm Transfer
+              {createMutation.isPending && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
+              Perform Transfer
             </Button>
           </div>
         </form>

@@ -2732,7 +2732,7 @@ export async function createExpense(
   return request<Transaction>({
     method: "POST",
     url: "/api/v1/finance/expenses",
-    data: req,
+    data: req.expense,
   })
 }
 
@@ -2755,7 +2755,7 @@ export async function updateExpense(
   return request<Transaction>({
     method: "PUT",
     url: `/api/v1/finance/expenses/${id}`,
-    data: req,
+    data: req.expense,
   })
 }
 

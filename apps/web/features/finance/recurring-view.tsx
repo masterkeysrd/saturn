@@ -701,10 +701,10 @@ export function RecurringView() {
                                       <CheckCircle2Icon className="h-4 w-4 text-emerald-500" />
                                       <span>Confirm...</span>
                                     </DropdownMenuItem>
-                                     <DropdownMenuItem
-                                       onClick={() => setPaymentToSkip(pay)}
-                                       className="flex cursor-pointer items-center gap-2 text-amber-600 focus:bg-amber-500/10 focus:text-amber-600 dark:text-amber-400"
-                                     >
+                                    <DropdownMenuItem
+                                      onClick={() => setPaymentToSkip(pay)}
+                                      className="flex cursor-pointer items-center gap-2 text-amber-600 focus:bg-amber-500/10 focus:text-amber-600 dark:text-amber-400"
+                                    >
                                       <FastForward className="h-4 w-4" />
                                       <span>Skip Cycle</span>
                                     </DropdownMenuItem>
@@ -907,10 +907,15 @@ export function RecurringView() {
         isPending={skipMutation.isPending}
         paymentName={
           paymentToSkip?.sourceType === "RECURRENT_EXPENSE"
-            ? expenses.find((e) => e.id === paymentToSkip.sourceId)?.name || "Scheduled Bill"
+            ? expenses.find((e) => e.id === paymentToSkip.sourceId)?.name ||
+              "Scheduled Bill"
             : "Scheduled Bill"
         }
-        amountFormatted={paymentToSkip ? formatCents(paymentToSkip.amount).toFixed(2) : undefined}
+        amountFormatted={
+          paymentToSkip
+            ? formatCents(paymentToSkip.amount).toFixed(2)
+            : undefined
+        }
         currency={paymentToSkip?.currency}
       />
     </FinancePageLayout>

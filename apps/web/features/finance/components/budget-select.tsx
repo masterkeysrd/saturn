@@ -14,18 +14,101 @@ import {
   formatInterval,
 } from "../utils"
 import { PauseCircle } from "lucide-react"
+import {
+  Controller,
+  type Control,
+  type FieldValues,
+  type Path,
+} from "react-hook-form"
 
-interface BudgetSelectProps {
-  value: string
-  onValueChange: (value: string) => void
+interface BaseBudgetSelectProps {
   budgets: Budget[]
   placeholder?: string
   disabled?: boolean
   className?: string
   allowNone?: boolean
+  onBudgetChange?: (budgetId: string) => void
 }
 
-export function BudgetSelect({
+type BudgetSelectProps<TFieldValues extends FieldValues = FieldValues> =
+  | (BaseBudgetSelectProps & {
+      control?: undefined
+      name?: undefined
+      value: string
+      onValueChange: (value: string) => void
+    })
+  | (BaseBudgetSelectProps & {
+      control: Control<TFieldValues, any, any>
+      name: Path<TFieldValues>
+      value?: undefined
+      onValueChange?: undefined
+    })
+
+export function BudgetSelect<TFieldValues extends FieldValues = FieldValues>(
+  props: BudgetSelectProps<TFieldValues>
+) {
+  if ("control" in props && props.control && props.name) {
+    const {
+      control,
+      name,
+      budgets,
+      placeholder,
+      disabled,
+      className,
+      allowNone,
+      onBudgetChange,
+    } = props
+    return (
+      <Controller
+        control={control}
+        name={name}
+        render={({ field, fieldState }) => (
+          <div>
+            <BudgetSelectInner
+              value={field.value || ""}
+              onValueChange={(val) => {
+                field.onChange(val)
+                onBudgetChange?.(val)
+              }}
+              budgets={budgets}
+              placeholder={placeholder}
+              disabled={disabled}
+              className={className}
+              allowNone={allowNone}
+            />
+            {fieldState.error && (
+              <p className="mt-1 text-[11px] font-semibold text-destructive">
+                {fieldState.error.message}
+              </p>
+            )}
+          </div>
+        )}
+      />
+    )
+  }
+
+  const controlledProps = props as BaseBudgetSelectProps & {
+    value: string
+    onValueChange: (value: string) => void
+  }
+
+  return (
+    <BudgetSelectInner
+      value={controlledProps.value}
+      onValueChange={(val) => {
+        controlledProps.onValueChange(val)
+        controlledProps.onBudgetChange?.(val)
+      }}
+      budgets={controlledProps.budgets}
+      placeholder={controlledProps.placeholder}
+      disabled={controlledProps.disabled}
+      className={controlledProps.className}
+      allowNone={controlledProps.allowNone}
+    />
+  )
+}
+
+function BudgetSelectInner({
   value,
   onValueChange,
   budgets,
@@ -33,7 +116,10 @@ export function BudgetSelect({
   disabled = false,
   className,
   allowNone = false,
-}: BudgetSelectProps) {
+}: BaseBudgetSelectProps & {
+  value: string
+  onValueChange: (value: string) => void
+}) {
   const selectedBudget =
     value && value !== "_none" ? budgets.find((b) => b.id === value) : null
 

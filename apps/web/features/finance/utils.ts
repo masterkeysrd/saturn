@@ -151,12 +151,17 @@ export function formatSourceType(
     .join(" ")
 }
 
-export function decodeBase64Utf8(base64: string): string {
+export function decodeBase64Utf8(base64: string | undefined | null): string {
+  if (!base64) return ""
   try {
     const binString = atob(base64)
     const bytes = Uint8Array.from(binString, (m) => m.charCodeAt(0))
-    return new TextDecoder().decode(bytes)
+    const decoded = new TextDecoder().decode(bytes)
+    if (decoded && decoded.trim().length > 0) {
+      return decoded
+    }
   } catch {
-    return ""
+    // If not base64 encoded text, return the raw string directly
   }
+  return base64
 }

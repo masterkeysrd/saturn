@@ -1,7 +1,8 @@
-import { useState, createElement } from "react"
+import { createElement, useEffect } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import {
   useCreateBudgetMutation,
-  type Budget_RecurrenceInterval,
   useListAccountsQuery,
   useListCurrenciesQuery,
   useListExchangeRatesQuery,
@@ -23,16 +24,10 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { FormSelect } from "@/components/ui/form-select"
 import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AccountSelect } from "./account-select"
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select"
 import {
   BUDGET_COLORS,
   BUDGET_ICONS,
@@ -40,6 +35,13 @@ import {
   getBudgetIcon,
   toCentsString,
 } from "../utils"
+import { budgetSchema, type BudgetFormValues } from "../schemas/budget"
+
+const INTERVAL_ITEMS = [
+  { value: "WEEKLY", label: "Weekly" },
+  { value: "MONTHLY", label: "Monthly" },
+  { value: "YEARLY", label: "Yearly" },
+]
 
 interface CreateBudgetSheetProps {
   open: boolean
@@ -60,6 +62,57 @@ export function CreateBudgetSheet({
     { pageSize: 100, pageToken: "" },
     { enabled: open }
   )
+
+  const { data: currenciesData } = useListCurrenciesQuery(
+    {},
+    { enabled: open && !!spaceId, staleTime: 1000 * 60 * 30 }
+  )
+  const currencies = currenciesData?.currencies || []
+  const currencyItems = currencies.map((cur) => ({
+    value: cur.code,
+    label: `${cur.code}${cur.name ? ` (${cur.name})` : ""}`,
+  }))
+
+  const { data: accountsData } = useListAccountsQuery(
+    {},
+    { enabled: open && !!spaceId }
+  )
+  const activeAccounts = accountsData?.accounts?.filter((a) => a.isActive) || []
+
+  const createMutation = useCreateBudgetMutation()
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<BudgetFormValues>({
+    resolver: zodResolver(budgetSchema),
+    defaultValues: {
+      name: "",
+      limit: "",
+      currency: baseCurrency || "USD",
+      interval: "MONTHLY",
+      icon: "piggy-bank",
+      color: "indigo",
+      defaultAccountId: "",
+    },
+  })
+
+  // Sync currency when baseCurrency is ready
+  useEffect(() => {
+    if (baseCurrency) {
+      setValue("currency", baseCurrency)
+    }
+  }, [baseCurrency, setValue])
+
+  const limitValue = watch("limit")
+  const currencyValue = watch("currency")
+  const iconValue = watch("icon")
+  const colorValue = watch("color")
 
   const getConversionPreview = (amountStr: string, fromCurr: string) => {
     const amount = parseFloat(amountStr)
@@ -87,47 +140,30 @@ export function CreateBudgetSheet({
       currency: baseCurrency,
     }
   }
-  const { data: currenciesData } = useListCurrenciesQuery(
-    {},
-    { enabled: open && !!spaceId, staleTime: 1000 * 60 * 30 }
-  )
-  const currencies = currenciesData?.currencies || []
-  const [name, setName] = useState("")
-  const [limit, setLimit] = useState("")
-  const [currency, setCurrency] = useState(baseCurrency || "USD")
-  const [interval, setInterval] = useState<Budget_RecurrenceInterval>("MONTHLY")
-  const [icon, setIcon] = useState("piggy-bank")
-  const [color, setColor] = useState("indigo")
-  const [defaultAccountId, setDefaultAccountId] = useState("")
 
-  const { data: accountsData } = useListAccountsQuery(
-    {},
-    { enabled: open && !!spaceId }
-  )
-  const activeAccounts = accountsData?.accounts?.filter((a) => a.isActive) || []
-
-  const createMutation = useCreateBudgetMutation()
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const onSubmit = async (data: BudgetFormValues) => {
     await createMutation.mutateAsync({
       budget: {
-        name,
-        limitAmount: toCentsString(limit),
-        currency,
-        interval,
+        name: data.name,
+        limitAmount: toCentsString(data.limit),
+        currency: data.currency,
+        interval: data.interval,
         isActive: true,
-        icon,
-        color,
-        defaultAccountId: defaultAccountId || undefined,
+        icon: data.icon,
+        color: data.color,
+        defaultAccountId: data.defaultAccountId || undefined,
       },
     })
     onOpenChange(false)
-    setName("")
-    setLimit("")
-    setIcon("piggy-bank")
-    setColor("indigo")
-    setDefaultAccountId("")
+    reset({
+      name: "",
+      limit: "",
+      currency: baseCurrency || "USD",
+      interval: "MONTHLY",
+      icon: "piggy-bank",
+      color: "indigo",
+      defaultAccountId: "",
+    })
     refetchBudgets()
   }
 
@@ -143,7 +179,7 @@ export function CreateBudgetSheet({
             transactions occur.
           </SheetDescription>
         </SheetHeader>
-        <form onSubmit={handleCreate} className="mt-8 space-y-5">
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
           {/* Budget Name and Category Icon Input */}
           <div className="space-y-1.5">
             <Label
@@ -155,11 +191,9 @@ export function CreateBudgetSheet({
             <div className="flex h-11 items-center overflow-hidden rounded-xl border border-border/60 bg-background/50 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20">
               <input
                 id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                {...register("name")}
                 placeholder="e.g. Dining Out, Groceries"
                 className="order-2 h-full w-full flex-1 bg-transparent px-3.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
-                required
               />
 
               <DropdownMenu>
@@ -170,12 +204,12 @@ export function CreateBudgetSheet({
                       variant="ghost"
                       className={cn(
                         "order-1 flex h-full shrink-0 cursor-pointer items-center justify-center rounded-none border-y-0 border-r border-l-0 border-border/30 px-4 transition-all hover:bg-muted/20 focus:border-r-primary/50 focus:bg-muted/40 focus:outline-none",
-                        getBudgetColors(color).text,
-                        getBudgetColors(color).bg
+                        getBudgetColors(colorValue).text,
+                        getBudgetColors(colorValue).bg
                       )}
                       title="Choose category icon"
                     >
-                      {createElement(getBudgetIcon(icon), {
+                      {createElement(getBudgetIcon(iconValue), {
                         className:
                           "h-5 w-5 transition-transform duration-200 group-focus/button:scale-110",
                       })}
@@ -189,10 +223,10 @@ export function CreateBudgetSheet({
                   {BUDGET_ICONS.map((i) => (
                     <DropdownMenuItem
                       key={i.value}
-                      onClick={() => setIcon(i.value)}
+                      onClick={() => setValue("icon", i.value)}
                       title={i.label}
                       className={`flex cursor-pointer items-center justify-center rounded-lg p-2.5 transition-all hover:bg-muted/60 ${
-                        icon === i.value
+                        iconValue === i.value
                           ? "bg-primary font-bold text-primary-foreground hover:bg-primary/90"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
@@ -203,6 +237,11 @@ export function CreateBudgetSheet({
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+            {errors.name && (
+              <p className="text-[11px] font-semibold text-destructive">
+                {errors.name.message}
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -217,14 +256,17 @@ export function CreateBudgetSheet({
               type="number"
               step="0.01"
               min="0.01"
-              value={limit}
-              onChange={(e) => setLimit(e.target.value)}
+              {...register("limit")}
               placeholder="0.00"
               className="h-11 rounded-xl border-border/60 bg-background/50"
-              required
             />
+            {errors.limit && (
+              <p className="text-[11px] font-semibold text-destructive">
+                {errors.limit.message}
+              </p>
+            )}
             {(() => {
-              const preview = getConversionPreview(limit, currency)
+              const preview = getConversionPreview(limitValue, currencyValue)
               if (!preview) return null
               if ("error" in preview) {
                 return (
@@ -244,66 +286,27 @@ export function CreateBudgetSheet({
                     {preview.currency}
                   </span>{" "}
                   <span className="text-[10px] opacity-70">
-                    (at 1 {currency} = {preview.rate} {preview.currency})
+                    (at 1 {currencyValue} = {preview.rate} {preview.currency})
                   </span>
                 </span>
               )
             })()}
           </div>
 
-          <div className="space-y-1.5">
-            <Label
-              htmlFor="currency"
-              className="text-xs font-semibold tracking-wider text-muted-foreground/90 uppercase"
-            >
-              Currency
-            </Label>
-            <Select
-              value={currency}
-              onValueChange={(val) => setCurrency(val || "")}
-            >
-              <SelectTrigger
-                id="currency"
-                className="!h-11 w-full rounded-xl border-border/60 bg-background/50"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                {currencies.map((cur) => (
-                  <SelectItem key={cur.code} value={cur.code}>
-                    {cur.code} {cur.name ? `(${cur.name})` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <FormSelect
+            control={control}
+            name="currency"
+            label="Currency"
+            items={currencyItems}
+          />
 
-          <div className="space-y-1.5">
-            <Label
-              htmlFor="interval"
-              className="text-xs font-semibold tracking-wider text-muted-foreground/90 uppercase"
-            >
-              Interval
-            </Label>
-            <Select
-              value={interval}
-              onValueChange={(val) =>
-                val && setInterval(val as Budget_RecurrenceInterval)
-              }
-            >
-              <SelectTrigger
-                id="interval"
-                className="!h-11 w-full rounded-xl border-border/60 bg-background/50"
-              >
-                <SelectValue placeholder="Select interval..." />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                <SelectItem value="WEEKLY">Weekly</SelectItem>
-                <SelectItem value="MONTHLY">Monthly</SelectItem>
-                <SelectItem value="YEARLY">Yearly</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <FormSelect
+            control={control}
+            name="interval"
+            label="Interval"
+            placeholder="Select interval..."
+            items={INTERVAL_ITEMS}
+          />
 
           <div className="space-y-1.5">
             <Label
@@ -313,8 +316,8 @@ export function CreateBudgetSheet({
               Default Account (Optional)
             </Label>
             <AccountSelect
-              value={defaultAccountId}
-              onValueChange={setDefaultAccountId}
+              control={control}
+              name="defaultAccountId"
               accounts={activeAccounts}
               placeholder="Pre-fills forms with this account"
               allowNone
@@ -330,10 +333,10 @@ export function CreateBudgetSheet({
                 <button
                   key={c.value}
                   type="button"
-                  onClick={() => setColor(c.value)}
+                  onClick={() => setValue("color", c.value)}
                   className={`relative h-7 w-7 cursor-pointer rounded-full transition-all hover:scale-110 ${c.bar}`}
                 >
-                  {color === c.value && (
+                  {colorValue === c.value && (
                     <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white">
                       ✓
                     </span>

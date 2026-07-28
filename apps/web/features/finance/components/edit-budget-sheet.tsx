@@ -1,8 +1,9 @@
-import { useState, createElement } from "react"
+import { useState, useEffect, createElement } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import {
   useUpdateBudgetMutation,
   type Budget,
-  type Budget_RecurrenceInterval,
   type LimitPropagation,
   useListAccountsQuery,
   useListCurrenciesQuery,
@@ -25,6 +26,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { FormSelect } from "@/components/ui/form-select"
 import { Loader2 } from "lucide-react"
 import { AccountSelect } from "./account-select"
 import {
@@ -41,6 +43,7 @@ import {
   formatCents,
   toCentsString,
 } from "../utils"
+import { budgetSchema, type BudgetFormValues } from "../schemas/budget"
 
 const PROPAGATION_ITEMS: Array<{ value: LimitPropagation; label: string }> = [
   {
@@ -53,10 +56,7 @@ const PROPAGATION_ITEMS: Array<{ value: LimitPropagation; label: string }> = [
   },
 ]
 
-const INTERVAL_ITEMS: Array<{
-  value: Budget_RecurrenceInterval
-  label: string
-}> = [
+const INTERVAL_ITEMS = [
   { value: "WEEKLY", label: "Weekly" },
   { value: "MONTHLY", label: "Monthly" },
   { value: "YEARLY", label: "Yearly" },
@@ -84,6 +84,71 @@ export function EditBudgetSheet({
     { enabled: open }
   )
 
+  const { data: currenciesData } = useListCurrenciesQuery(
+    {},
+    { enabled: open && !!spaceId, staleTime: 1000 * 60 * 30 }
+  )
+  const currencies = currenciesData?.currencies || []
+  const currencyItems = currencies.map((cur) => ({
+    value: cur.code,
+    label: `${cur.code}${cur.name ? ` (${cur.name})` : ""}`,
+  }))
+
+  const { data: accountsData } = useListAccountsQuery(
+    {},
+    { enabled: open && !!spaceId }
+  )
+  const activeAccounts = accountsData?.accounts?.filter((a) => a.isActive) || []
+
+  const [isActive, setIsActive] = useState(true)
+  const [propagation, setPropagation] = useState<LimitPropagation>(
+    "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
+  )
+
+  const updateMutation = useUpdateBudgetMutation()
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<BudgetFormValues>({
+    resolver: zodResolver(budgetSchema),
+    defaultValues: {
+      name: "",
+      limit: "",
+      currency: "USD",
+      interval: "MONTHLY",
+      icon: "piggy-bank",
+      color: "indigo",
+      defaultAccountId: "",
+    },
+  })
+
+  // Sync form values whenever activeBudget changes
+  useEffect(() => {
+    if (activeBudget) {
+      reset({
+        name: activeBudget.name,
+        limit: formatCents(activeBudget.limitAmount).toString(),
+        currency: activeBudget.currency,
+        interval: activeBudget.interval,
+        icon: activeBudget.icon || "piggy-bank",
+        color: activeBudget.color || "indigo",
+        defaultAccountId: activeBudget.defaultAccountId || "",
+      })
+      setIsActive(activeBudget.isActive)
+    }
+  }, [activeBudget, reset])
+
+  const limitValue = watch("limit")
+  const currencyValue = watch("currency")
+  const iconValue = watch("icon")
+  const colorValue = watch("color")
+
   const getConversionPreview = (amountStr: string, fromCurr: string) => {
     const amount = parseFloat(amountStr)
     if (isNaN(amount) || amount <= 0) return null
@@ -110,56 +175,8 @@ export function EditBudgetSheet({
       currency: baseCurrency,
     }
   }
-  const { data: currenciesData } = useListCurrenciesQuery(
-    {},
-    { enabled: open && !!spaceId, staleTime: 1000 * 60 * 30 }
-  )
-  const currencies = currenciesData?.currencies || []
-  const currencyItems = currencies.map((cur) => ({
-    value: cur.code,
-    label: `${cur.code}${cur.name ? ` (${cur.name})` : ""}`,
-  }))
-  const [name, setName] = useState("")
-  const [limit, setLimit] = useState("")
-  const [currency, setCurrency] = useState("USD")
-  const [interval, setInterval] = useState<Budget_RecurrenceInterval>("MONTHLY")
-  const [isActive, setIsActive] = useState(true)
-  const [propagation, setPropagation] = useState<LimitPropagation>(
-    "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
-  )
-  const [icon, setIcon] = useState("piggy-bank")
-  const [color, setColor] = useState("indigo")
-  const [defaultAccountId, setDefaultAccountId] = useState("")
 
-  const { data: accountsData } = useListAccountsQuery(
-    {},
-    { enabled: open && !!spaceId }
-  )
-  const activeAccounts = accountsData?.accounts?.filter((a) => a.isActive) || []
-
-  const [prevBudgetId, setPrevBudgetId] = useState<string | null>(null)
-  const [prevOpen, setPrevOpen] = useState(false)
-
-  if (
-    activeBudget &&
-    ((activeBudget.id || "") !== prevBudgetId || open !== prevOpen)
-  ) {
-    setPrevBudgetId(activeBudget.id || null)
-    setPrevOpen(open)
-    setName(activeBudget.name)
-    setLimit(formatCents(activeBudget.limitAmount).toString())
-    setCurrency(activeBudget.currency)
-    setInterval(activeBudget.interval)
-    setIsActive(activeBudget.isActive)
-    setIcon(activeBudget.icon || "piggy-bank")
-    setColor(activeBudget.color || "indigo")
-    setDefaultAccountId(activeBudget.defaultAccountId || "")
-  }
-
-  const updateMutation = useUpdateBudgetMutation()
-
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const onSubmit = async (data: BudgetFormValues) => {
     if (!activeBudget) return
 
     await updateMutation.mutateAsync({
@@ -167,14 +184,14 @@ export function EditBudgetSheet({
       req: {
         id: activeBudget.id || "",
         budget: {
-          name,
-          limitAmount: toCentsString(limit),
-          currency,
-          interval,
+          name: data.name,
+          limitAmount: toCentsString(data.limit),
+          currency: data.currency,
+          interval: data.interval,
           isActive,
-          icon,
-          color,
-          defaultAccountId: defaultAccountId || undefined,
+          icon: data.icon,
+          color: data.color,
+          defaultAccountId: data.defaultAccountId || undefined,
         },
         propagation,
       },
@@ -195,7 +212,7 @@ export function EditBudgetSheet({
             propagation.
           </SheetDescription>
         </SheetHeader>
-        <form onSubmit={handleUpdate} className="mt-8 space-y-5">
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
           {/* Budget Name and Category Icon Input */}
           <div className="space-y-1.5">
             <Label
@@ -214,7 +231,7 @@ export function EditBudgetSheet({
                       className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border/60 bg-background/50 p-0 text-primary transition-all hover:bg-muted/20"
                       title="Choose category icon"
                     >
-                      {createElement(getBudgetIcon(icon), {
+                      {createElement(getBudgetIcon(iconValue), {
                         className: "h-5 w-5",
                       })}
                     </Button>
@@ -227,10 +244,10 @@ export function EditBudgetSheet({
                   {BUDGET_ICONS.map((i) => (
                     <DropdownMenuItem
                       key={i.value}
-                      onClick={() => setIcon(i.value)}
+                      onClick={() => setValue("icon", i.value)}
                       title={i.label}
                       className={`flex cursor-pointer items-center justify-center rounded-lg p-2.5 transition-all hover:bg-muted/60 ${
-                        icon === i.value
+                        iconValue === i.value
                           ? "bg-primary font-bold text-primary-foreground hover:bg-primary/90"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
@@ -241,15 +258,20 @@ export function EditBudgetSheet({
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <Input
-                id="editName"
-                placeholder="e.g. Groceries, Dining Out"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="h-11 rounded-xl border-border/60 bg-background/50"
-                required
-              />
+              <div className="w-full">
+                <Input
+                  id="editName"
+                  placeholder="e.g. Groceries, Dining Out"
+                  {...register("name")}
+                  className="h-11 rounded-xl border-border/60 bg-background/50"
+                />
+              </div>
             </div>
+            {errors.name && (
+              <p className="text-[11px] font-semibold text-destructive">
+                {errors.name.message}
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -257,7 +279,7 @@ export function EditBudgetSheet({
               htmlFor="editLimit"
               className="text-xs font-semibold tracking-wider text-muted-foreground/90 uppercase"
             >
-              Limit Amount ({currency})
+              Limit Amount ({currencyValue})
             </Label>
             <Input
               id="editLimit"
@@ -265,13 +287,16 @@ export function EditBudgetSheet({
               step="0.01"
               min="0"
               placeholder="0.00"
-              value={limit}
-              onChange={(e) => setLimit(e.target.value)}
+              {...register("limit")}
               className="h-11 rounded-xl border-border/60 bg-background/50"
-              required
             />
+            {errors.limit && (
+              <p className="text-[11px] font-semibold text-destructive">
+                {errors.limit.message}
+              </p>
+            )}
             {(() => {
-              const preview = getConversionPreview(limit, currency)
+              const preview = getConversionPreview(limitValue, currencyValue)
               if (!preview) return null
               if ("error" in preview) {
                 return (
@@ -291,80 +316,30 @@ export function EditBudgetSheet({
                     {preview.currency}
                   </span>{" "}
                   <span className="text-[10px] opacity-70">
-                    (at 1 {currency} = {preview.rate} {preview.currency})
+                    (at 1 {currencyValue} = {preview.rate} {preview.currency})
                   </span>
                 </span>
               )
             })()}
           </div>
 
-          <div className="space-y-1.5">
-            <Label
-              htmlFor="editCurrency"
-              className="text-xs font-semibold tracking-wider text-muted-foreground/90 uppercase"
-            >
-              Currency
-            </Label>
-            <Select
-              items={currencyItems}
-              value={currency}
-              onValueChange={(val) => setCurrency(val || "")}
-              disabled
-            >
-              <SelectTrigger
-                id="editCurrency"
-                className="!h-11 w-full rounded-xl border-border/60 bg-background/50 opacity-70"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                {currencyItems.map((cur) => (
-                  <SelectItem key={cur.value} value={cur.value}>
-                    {cur.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <span className="mt-1 block text-[10px] text-muted-foreground/75">
-              Currency cannot be modified after creation to protect historical
-              calculations.
-            </span>
-          </div>
+          <FormSelect
+            control={control}
+            name="currency"
+            label="Currency"
+            disabled
+            items={currencyItems}
+            helperText="Currency cannot be modified after creation to protect historical calculations."
+          />
 
-          <div className="space-y-1.5">
-            <Label
-              htmlFor="editInterval"
-              className="text-xs font-semibold tracking-wider text-muted-foreground/90 uppercase"
-            >
-              Interval
-            </Label>
-            <Select
-              items={INTERVAL_ITEMS}
-              value={interval}
-              onValueChange={(val) =>
-                val && setInterval(val as Budget_RecurrenceInterval)
-              }
-              disabled
-            >
-              <SelectTrigger
-                id="editInterval"
-                className="!h-11 w-full rounded-xl border-border/60 bg-background/50 opacity-70"
-              >
-                <SelectValue placeholder="Select interval..." />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                {INTERVAL_ITEMS.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <span className="mt-1 block text-[10px] text-muted-foreground/75">
-              Interval cannot be modified after creation to protect historical
-              reports.
-            </span>
-          </div>
+          <FormSelect
+            control={control}
+            name="interval"
+            label="Interval"
+            disabled
+            items={INTERVAL_ITEMS}
+            helperText="Interval cannot be modified after creation to protect historical reports."
+          />
 
           <div className="flex items-center space-x-2.5 py-2">
             <input
@@ -420,8 +395,8 @@ export function EditBudgetSheet({
               Default Account (Optional)
             </Label>
             <AccountSelect
-              value={defaultAccountId}
-              onValueChange={setDefaultAccountId}
+              control={control}
+              name="defaultAccountId"
               accounts={activeAccounts}
               placeholder="Pre-fills forms with this account"
               allowNone
@@ -437,10 +412,10 @@ export function EditBudgetSheet({
                 <button
                   key={c.value}
                   type="button"
-                  onClick={() => setColor(c.value)}
+                  onClick={() => setValue("color", c.value)}
                   className={`relative h-7 w-7 cursor-pointer rounded-full transition-all hover:scale-110 ${c.bar}`}
                 >
-                  {color === c.value && (
+                  {colorValue === c.value && (
                     <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white">
                       ✓
                     </span>

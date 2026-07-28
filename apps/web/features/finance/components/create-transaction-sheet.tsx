@@ -1,4 +1,6 @@
-import { useState } from "react"
+import { useEffect } from "react"
+import { useForm, Controller } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import {
   useCreateExpenseMutation,
   useUpdateExpenseMutation,
@@ -24,15 +26,13 @@ import { CurrencyConversionPreview } from "./currency-conversion-preview"
 import { toCentsString, formatCents } from "../utils"
 import { AccountSelect } from "./account-select"
 import { BudgetSelect } from "./budget-select"
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select"
+import { FormSelect } from "@/components/ui/form-select"
 import { DatePicker } from "@/components/ui/date-picker"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  transactionSchema,
+  type TransactionFormValues,
+} from "../schemas/transaction"
 
 interface CreateTransactionSheetProps {
   open: boolean
@@ -62,6 +62,110 @@ export function CreateTransactionSheet({
     { enabled: open }
   )
 
+  const { data: currenciesData } = useListCurrenciesQuery(
+    {},
+    { enabled: open && !!spaceId, staleTime: 1000 * 60 * 30 }
+  )
+  const currencies = currenciesData?.currencies || []
+  const currencyItems = currencies.map((c) => ({
+    value: c.code,
+    label: c.code,
+  }))
+
+  const { data: accountsData } = useListAccountsQuery(
+    {},
+    { enabled: open && !!spaceId }
+  )
+  const activeAccounts = accountsData?.accounts?.filter((a) => a.isActive) || []
+
+  const createExpenseMutation = useCreateExpenseMutation()
+  const updateExpenseMutation = useUpdateExpenseMutation()
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<TransactionFormValues>({
+    resolver: zodResolver(transactionSchema),
+    defaultValues: {
+      budgetId:
+        preselectedBudgetId || (budgets.length > 0 ? budgets[0].id || "" : ""),
+      accountId: "",
+      description: "",
+      amount: "",
+      currency: baseCurrency || "USD",
+      transactionDate: new Date(),
+      hasCustomEffectiveDate: false,
+      effectiveDate: new Date(),
+    },
+  })
+
+  // Synchronize form on sheet opening / editing
+  useEffect(() => {
+    if (open) {
+      if (editTransaction) {
+        const isCustomEff =
+          new Date(
+            editTransaction.effectiveDate || editTransaction.transactionDate
+          )
+            .toISOString()
+            .split("T")[0] !==
+          new Date(editTransaction.transactionDate).toISOString().split("T")[0]
+
+        reset({
+          budgetId: editTransaction.budgetId,
+          accountId: editTransaction.accountId || "",
+          description: editTransaction.description,
+          amount: formatCents(editTransaction.amount).toString(),
+          currency: editTransaction.currency,
+          transactionDate: new Date(editTransaction.transactionDate),
+          hasCustomEffectiveDate: isCustomEff,
+          effectiveDate: new Date(
+            editTransaction.effectiveDate || editTransaction.transactionDate
+          ),
+        })
+      } else {
+        const selected =
+          preselectedBudgetId || (budgets.length > 0 ? budgets[0].id || "" : "")
+        const b = budgets.find((x) => x.id === selected)
+        const globalDefault = activeAccounts.find((a) => a.isDefault)
+
+        reset({
+          budgetId: selected,
+          accountId: b?.defaultAccountId || globalDefault?.id || "",
+          description: "",
+          amount: "",
+          currency: b?.currency || baseCurrency || "USD",
+          transactionDate: new Date(),
+          hasCustomEffectiveDate: false,
+          effectiveDate: new Date(),
+        })
+      }
+    }
+  }, [open, editTransaction, preselectedBudgetId, baseCurrency, budgets, reset])
+
+  const budgetIdValue = watch("budgetId")
+  const amountValue = watch("amount")
+  const currencyValue = watch("currency")
+  const transactionDateValue = watch("transactionDate")
+  const hasCustomEffectiveDate = watch("hasCustomEffectiveDate")
+
+  // Sync currency & default account when selected budget changes
+  const handleBudgetChange = (newBudgetId: string) => {
+    const b = budgets.find((x) => x.id === newBudgetId)
+    if (b) {
+      setValue("currency", b.currency)
+      const globalDefault = activeAccounts.find((a) => a.isDefault)
+      if (b.defaultAccountId || globalDefault?.id) {
+        setValue("accountId", b.defaultAccountId || globalDefault?.id || "")
+      }
+    }
+  }
+
   const getConversionPreview = (amountStr: string, fromCurr: string) => {
     const amount = parseFloat(amountStr)
     if (isNaN(amount) || amount <= 0) return null
@@ -88,141 +192,11 @@ export function CreateTransactionSheet({
       currency: baseCurrency,
     }
   }
-  const { data: currenciesData } = useListCurrenciesQuery(
-    {},
-    { enabled: open && !!spaceId, staleTime: 1000 * 60 * 30 }
-  )
-  const currencies = currenciesData?.currencies || []
-  const fallbackCurrencies = [
-    { code: "USD" },
-    { code: "EUR" },
-    { code: "GBP" },
-    { code: "CAD" },
-    { code: "JPY" },
-    { code: "DOP" },
-  ]
-  const currencyList =
-    currencies && currencies.length > 0 ? currencies : fallbackCurrencies
-  const [transactionDate, setTransactionDate] = useState<Date>(new Date())
-  const [effectiveDate, setEffectiveDate] = useState<Date>(new Date())
-  const [hasCustomEffectiveDate, setHasCustomEffectiveDate] = useState(false)
-
-  const [budgetId, setBudgetId] = useState(preselectedBudgetId || "")
-  const [description, setDescription] = useState("")
-  const [amount, setAmount] = useState("")
-  const [currency, setCurrency] = useState(baseCurrency || "USD")
-  const [accountId, setAccountId] = useState("")
-  const [hasPrefilledAccount, setHasPrefilledAccount] = useState(false)
-  const [prevOpen, setPrevOpen] = useState(false)
-  const [prevPreselectedBudgetId, setPrevPreselectedBudgetId] = useState<
-    string | undefined
-  >(undefined)
-  const [prevEditTransaction, setPrevEditTransaction] = useState<
-    Transaction | null | undefined
-  >(undefined)
-
-  const { data: accountsData } = useListAccountsQuery(
-    {},
-    { enabled: open && !!spaceId }
-  )
-  const activeAccounts = accountsData?.accounts?.filter((a) => a.isActive) || []
-
-  if (
-    open &&
-    (open !== prevOpen ||
-      preselectedBudgetId !== prevPreselectedBudgetId ||
-      editTransaction !== prevEditTransaction)
-  ) {
-    setPrevOpen(open)
-    setPrevPreselectedBudgetId(preselectedBudgetId)
-    setPrevEditTransaction(editTransaction)
-
-    if (editTransaction) {
-      setBudgetId(editTransaction.budgetId)
-      setDescription(editTransaction.description)
-      setAmount(formatCents(editTransaction.amount).toString())
-      setCurrency(editTransaction.currency)
-      setAccountId(editTransaction.accountId || "")
-      setTransactionDate(new Date(editTransaction.transactionDate))
-      const isCustomEff =
-        new Date(
-          editTransaction.effectiveDate || editTransaction.transactionDate
-        )
-          .toISOString()
-          .split("T")[0] !==
-        new Date(editTransaction.transactionDate).toISOString().split("T")[0]
-      setHasCustomEffectiveDate(isCustomEff)
-      setEffectiveDate(
-        new Date(
-          editTransaction.effectiveDate || editTransaction.transactionDate
-        )
-      )
-    } else {
-      const selected =
-        preselectedBudgetId || (budgets.length > 0 ? budgets[0].id || "" : "")
-      setBudgetId(selected)
-      setDescription("")
-      setAmount("")
-      setTransactionDate(new Date())
-      setEffectiveDate(new Date())
-      setHasCustomEffectiveDate(false)
-
-      const b = budgets.find((x) => x.id === selected)
-      if (b) {
-        setCurrency(b.currency)
-        const globalDefault = activeAccounts.find((a) => a.isDefault)
-        setAccountId(b.defaultAccountId || globalDefault?.id || "")
-        setHasPrefilledAccount(false)
-      } else {
-        setCurrency(baseCurrency || "USD")
-        setAccountId("")
-        setHasPrefilledAccount(false)
-      }
-    }
-  } else if (!open && open !== prevOpen) {
-    setPrevOpen(open)
-    setHasPrefilledAccount(false)
-  }
-
-  // Prefill default account once accountsData loads (async safe)
-  if (
-    open &&
-    !editTransaction &&
-    !accountId &&
-    !hasPrefilledAccount &&
-    activeAccounts.length > 0
-  ) {
-    const b = budgets.find((x) => x.id === budgetId)
-    const globalDefault = activeAccounts.find((a) => a.isDefault)
-    const defaultAcc = b?.defaultAccountId || globalDefault?.id || ""
-    if (defaultAcc) {
-      setAccountId(defaultAcc)
-      setHasPrefilledAccount(true)
-    }
-  }
-
-  // Sync currency when selected budget changes
-  const handleBudgetChange = (newBudgetId: string) => {
-    setBudgetId(newBudgetId)
-    const b = budgets.find((x) => x.id === newBudgetId)
-    if (b) {
-      setCurrency(b.currency)
-      const globalDefault = activeAccounts.find((a) => a.isDefault)
-      setAccountId(b.defaultAccountId || globalDefault?.id || "")
-    }
-  }
-
-  const createExpenseMutation = useCreateExpenseMutation()
-  const updateExpenseMutation = useUpdateExpenseMutation()
 
   const isPending =
     createExpenseMutation.isPending || updateExpenseMutation.isPending
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!budgetId) return
-
-    // Format dates to stable ISO-8601 without local timezone shift
+  const onSubmit = async (data: TransactionFormValues) => {
     const toLocalISODate = (d: Date): string => {
       const y = d.getFullYear()
       const m = String(d.getMonth() + 1).padStart(2, "0")
@@ -230,9 +204,9 @@ export function CreateTransactionSheet({
       return `${y}-${m}-${date}T12:00:00Z`
     }
 
-    const txDateStr = toLocalISODate(transactionDate)
+    const txDateStr = toLocalISODate(data.transactionDate)
     const effDateStr = toLocalISODate(
-      hasCustomEffectiveDate ? effectiveDate : transactionDate
+      data.hasCustomEffectiveDate ? data.effectiveDate : data.transactionDate
     )
 
     if (editTransaction) {
@@ -241,26 +215,26 @@ export function CreateTransactionSheet({
         req: {
           id: editTransaction.id || "",
           expense: {
-            budgetId,
-            amount: toCentsString(amount),
-            currency,
-            description,
+            budgetId: data.budgetId,
+            amount: toCentsString(data.amount),
+            currency: data.currency,
+            description: data.description,
             transactionDate: txDateStr,
             effectiveDate: effDateStr,
-            accountId: accountId || undefined,
+            accountId: data.accountId || undefined,
           },
         },
       })
     } else {
       await createExpenseMutation.mutateAsync({
         expense: {
-          budgetId,
-          amount: toCentsString(amount),
-          currency,
-          description,
+          budgetId: data.budgetId,
+          amount: toCentsString(data.amount),
+          currency: data.currency,
+          description: data.description,
           transactionDate: txDateStr,
           effectiveDate: effDateStr,
-          accountId: accountId || undefined,
+          accountId: data.accountId || undefined,
         },
       })
     }
@@ -270,7 +244,7 @@ export function CreateTransactionSheet({
     refetchBudgets()
   }
 
-  const conversion = getConversionPreview(amount, currency)
+  const conversion = getConversionPreview(amountValue, currencyValue)
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -286,7 +260,7 @@ export function CreateTransactionSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6">
           {/* Budget Dropdown */}
           <div className="space-y-2">
             <Label
@@ -296,11 +270,17 @@ export function CreateTransactionSheet({
               Budget
             </Label>
             <BudgetSelect
+              control={control}
+              name="budgetId"
               budgets={budgets}
-              value={budgetId}
-              onValueChange={handleBudgetChange}
+              onBudgetChange={handleBudgetChange}
               placeholder="Select a budget..."
             />
+            {errors.budgetId && (
+              <p className="text-[11px] font-semibold text-destructive">
+                {errors.budgetId.message}
+              </p>
+            )}
           </div>
 
           {/* Account selector */}
@@ -312,8 +292,8 @@ export function CreateTransactionSheet({
               Account / Payment Method (Optional)
             </Label>
             <AccountSelect
-              value={accountId}
-              onValueChange={setAccountId}
+              control={control}
+              name="accountId"
               accounts={activeAccounts}
               placeholder="Choose account to impact balance"
               allowNone
@@ -330,11 +310,15 @@ export function CreateTransactionSheet({
             </Label>
             <Input
               id="txDescription"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              {...register("description")}
               placeholder="e.g. Amazon Web Services, Restaurant Dinner"
               className="h-12 rounded-xl border-border/60 bg-background/50"
             />
+            {errors.description && (
+              <p className="text-[11px] font-semibold text-destructive">
+                {errors.description.message}
+              </p>
+            )}
           </div>
 
           {/* Date Configurations Grouped */}
@@ -347,17 +331,22 @@ export function CreateTransactionSheet({
               >
                 Transaction Date
               </Label>
-              <DatePicker
-                date={transactionDate}
-                setDate={(newDate) => {
-                  if (newDate) {
-                    setTransactionDate(newDate)
-                    // Keep effective date aligned unless they manually customized it
-                    if (!hasCustomEffectiveDate) {
-                      setEffectiveDate(newDate)
-                    }
-                  }
-                }}
+              <Controller
+                control={control}
+                name="transactionDate"
+                render={({ field }) => (
+                  <DatePicker
+                    date={field.value}
+                    setDate={(newDate) => {
+                      if (newDate) {
+                        field.onChange(newDate)
+                        if (!hasCustomEffectiveDate) {
+                          setValue("effectiveDate", newDate)
+                        }
+                      }
+                    }}
+                  />
+                )}
               />
             </div>
 
@@ -367,9 +356,10 @@ export function CreateTransactionSheet({
                 id="txCustomEffective"
                 checked={hasCustomEffectiveDate}
                 onCheckedChange={(checked) => {
-                  setHasCustomEffectiveDate(!!checked)
-                  if (!checked) {
-                    setEffectiveDate(transactionDate)
+                  const isChecked = !!checked
+                  setValue("hasCustomEffectiveDate", isChecked)
+                  if (!isChecked) {
+                    setValue("effectiveDate", transactionDateValue)
                   }
                 }}
               />
@@ -390,13 +380,15 @@ export function CreateTransactionSheet({
                 >
                   Effective Date
                 </Label>
-                <DatePicker
-                  date={effectiveDate}
-                  setDate={(newDate) => {
-                    if (newDate) {
-                      setEffectiveDate(newDate)
-                    }
-                  }}
+                <Controller
+                  control={control}
+                  name="effectiveDate"
+                  render={({ field }) => (
+                    <DatePicker
+                      date={field.value}
+                      setDate={(newDate) => newDate && field.onChange(newDate)}
+                    />
+                  )}
                 />
               </div>
             )}
@@ -417,45 +409,38 @@ export function CreateTransactionSheet({
                 step="0.01"
                 min="0.01"
                 placeholder="0.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                required
+                {...register("amount")}
                 className="h-full w-full flex-1 bg-transparent px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
               />
 
               <div className="h-6 w-px shrink-0 bg-border/40" />
 
-              <Select
-                value={currency}
-                onValueChange={(val) => setCurrency(val || "")}
-              >
-                <SelectTrigger
-                  id="txCurrency"
-                  className="!h-full w-24 shrink-0 cursor-pointer rounded-none border-0 bg-transparent px-4 py-2 text-sm font-semibold transition-colors hover:bg-muted/10 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                  {currencyList.map((c) => (
-                    <SelectItem key={c.code} value={c.code}>
-                      {c.code}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormSelect
+                control={control}
+                name="currency"
+                items={currencyItems}
+                triggerClassName="!h-full w-28 border-0 bg-transparent focus-visible:ring-0"
+              />
             </div>
+            {errors.amount && (
+              <p className="text-[11px] font-semibold text-destructive">
+                {errors.amount.message}
+              </p>
+            )}
           </div>
 
           <CurrencyConversionPreview
             conversion={conversion}
-            fromCurrency={currency}
+            fromCurrency={currencyValue}
           />
 
           {/* Submit */}
           <Button
             type="submit"
             disabled={
-              isPending || !budgetId || !!(conversion && "error" in conversion)
+              isPending ||
+              !budgetIdValue ||
+              !!(conversion && "error" in conversion)
             }
             className="h-12 w-full rounded-xl bg-gradient-to-r from-primary to-accent font-semibold text-white shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] hover:opacity-95"
           >

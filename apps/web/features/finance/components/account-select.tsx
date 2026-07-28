@@ -8,21 +8,39 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { Building2, CreditCard, Coins, Wallet } from "lucide-react"
+import {
+  Controller,
+  type Control,
+  type FieldValues,
+  type Path,
+} from "react-hook-form"
 
 // Formatting helper
 const formatCents = (cents: string | number) => {
   return Number(cents) / 100
 }
 
-interface AccountSelectProps {
-  value: string
-  onValueChange: (value: string) => void
+interface BaseAccountSelectProps {
   accounts: Account[]
   placeholder?: string
   disabled?: boolean
   className?: string
   allowNone?: boolean
 }
+
+type AccountSelectProps<TFieldValues extends FieldValues = FieldValues> =
+  | (BaseAccountSelectProps & {
+      control?: undefined
+      name?: undefined
+      value: string
+      onValueChange: (value: string) => void
+    })
+  | (BaseAccountSelectProps & {
+      control: Control<TFieldValues, any, any>
+      name: Path<TFieldValues>
+      value?: undefined
+      onValueChange?: undefined
+    })
 
 function getAccountTypeIcon(type: Account_Type) {
   switch (type) {
@@ -43,100 +61,163 @@ function getAccountColorClasses(colorName: string) {
     case "rose":
     case "red":
       return {
-        bg: "bg-rose-500/10 dark:bg-rose-500/15",
-        text: "text-rose-500 dark:text-rose-400",
+        bg: "bg-rose-500/10 dark:bg-rose-500/20",
         border: "border-rose-500/20 dark:border-rose-500/30",
-        solidBg: "bg-rose-500",
+        text: "text-rose-600 dark:text-rose-400",
+      }
+    case "amber":
+    case "yellow":
+    case "orange":
+      return {
+        bg: "bg-amber-500/10 dark:bg-amber-500/20",
+        border: "border-amber-500/20 dark:border-amber-500/30",
+        text: "text-amber-600 dark:text-amber-400",
       }
     case "emerald":
     case "green":
       return {
-        bg: "bg-emerald-500/10 dark:bg-emerald-500/15",
-        text: "text-emerald-500 dark:text-emerald-400",
+        bg: "bg-emerald-500/10 dark:bg-emerald-500/20",
         border: "border-emerald-500/20 dark:border-emerald-500/30",
-        solidBg: "bg-emerald-500",
+        text: "text-emerald-600 dark:text-emerald-400",
       }
-    case "amber":
-    case "orange":
-    case "yellow":
-      return {
-        bg: "bg-amber-500/10 dark:bg-amber-500/15",
-        text: "text-amber-500 dark:text-amber-400",
-        border: "border-amber-500/20 dark:border-amber-500/30",
-        solidBg: "bg-amber-500",
-      }
-    case "blue":
     case "sky":
+    case "blue":
+    case "cyan":
       return {
-        bg: "bg-blue-500/10 dark:bg-blue-500/15",
-        text: "text-blue-500 dark:text-blue-400",
-        border: "border-blue-500/20 dark:border-blue-500/30",
-        solidBg: "bg-blue-500",
+        bg: "bg-sky-500/10 dark:bg-sky-500/20",
+        border: "border-sky-500/20 dark:border-sky-500/30",
+        text: "text-sky-600 dark:text-sky-400",
       }
-    case "purple":
     case "violet":
+    case "purple":
       return {
-        bg: "bg-purple-500/10 dark:bg-purple-500/15",
-        text: "text-purple-500 dark:text-purple-400",
-        border: "border-purple-500/20 dark:border-purple-500/30",
-        solidBg: "bg-purple-500",
+        bg: "bg-violet-500/10 dark:bg-violet-500/20",
+        border: "border-violet-500/20 dark:border-violet-500/30",
+        text: "text-violet-600 dark:text-violet-400",
       }
-    default: // indigo or fallback
+    case "indigo":
+    default:
       return {
-        bg: "bg-indigo-500/10 dark:bg-indigo-500/15",
-        text: "text-indigo-500 dark:text-indigo-400",
+        bg: "bg-indigo-500/10 dark:bg-indigo-500/20",
         border: "border-indigo-500/20 dark:border-indigo-500/30",
-        solidBg: "bg-indigo-500",
+        text: "text-indigo-600 dark:text-indigo-400",
       }
   }
 }
 
-export function AccountSelect({
+export function AccountSelect<TFieldValues extends FieldValues = FieldValues>(
+  props: AccountSelectProps<TFieldValues>
+) {
+  if ("control" in props && props.control && props.name) {
+    const {
+      control,
+      name,
+      accounts,
+      placeholder,
+      disabled,
+      className,
+      allowNone,
+    } = props
+    return (
+      <Controller
+        control={control}
+        name={name}
+        render={({ field, fieldState }) => (
+          <div>
+            <AccountSelectInner
+              value={field.value || ""}
+              onValueChange={field.onChange}
+              accounts={accounts}
+              placeholder={placeholder}
+              disabled={disabled}
+              className={className}
+              allowNone={allowNone}
+            />
+            {fieldState.error && (
+              <p className="mt-1 text-[11px] font-semibold text-destructive">
+                {fieldState.error.message}
+              </p>
+            )}
+          </div>
+        )}
+      />
+    )
+  }
+
+  const controlledProps = props as BaseAccountSelectProps & {
+    value: string
+    onValueChange: (value: string) => void
+  }
+
+  return (
+    <AccountSelectInner
+      value={controlledProps.value}
+      onValueChange={controlledProps.onValueChange}
+      accounts={controlledProps.accounts}
+      placeholder={controlledProps.placeholder}
+      disabled={controlledProps.disabled}
+      className={controlledProps.className}
+      allowNone={controlledProps.allowNone}
+    />
+  )
+}
+
+function AccountSelectInner({
   value,
   onValueChange,
   accounts,
-  placeholder = "Select account",
+  placeholder = "Select an account...",
   disabled = false,
   className,
   allowNone = false,
-}: AccountSelectProps) {
-  const selectedAccount =
-    value && value !== "_none" ? accounts.find((a) => a.id === value) : null
+}: BaseAccountSelectProps & {
+  value: string
+  onValueChange: (value: string) => void
+}) {
+  const selectedAccount = accounts.find((a) => a.id === value)
+  const SelectedIcon = selectedAccount
+    ? getAccountTypeIcon(selectedAccount.type)
+    : null
+  const selectedColors = selectedAccount
+    ? getAccountColorClasses(selectedAccount.color)
+    : null
+
+  const handleValueChange = (val: string | null) => {
+    if (!val || val === "_none") {
+      onValueChange("")
+    } else {
+      onValueChange(val)
+    }
+  }
+
+  const selectValue = allowNone && !value ? "_none" : value
 
   return (
     <Select
-      value={selectedAccount ? value : allowNone ? "_none" : ""}
-      onValueChange={(val: string | null) => {
-        onValueChange(val === "_none" || !val ? "" : val)
-      }}
+      value={selectValue}
+      onValueChange={handleValueChange}
       disabled={disabled}
     >
       <SelectTrigger
         className={cn(
-          "!h-12 w-full rounded-xl border border-border/50 bg-background/50 text-left transition-all hover:bg-background/80 focus:ring-1 focus:ring-ring",
+          "!h-11 w-full rounded-xl border-border/60 bg-background/50 text-left transition-all hover:border-border focus:ring-1 focus:ring-primary/20",
           className
         )}
       >
         <SelectValue placeholder={placeholder}>
-          {selectedAccount ? (
-            <div className="flex w-full items-center justify-between pr-2">
-              <div className="flex min-w-0 items-center gap-2.5">
-                {(() => {
-                  const Icon = getAccountTypeIcon(selectedAccount.type)
-                  const colors = getAccountColorClasses(selectedAccount.color)
-                  return (
-                    <div
-                      className={cn(
-                        "shrink-0 rounded-lg border p-1",
-                        colors.bg,
-                        colors.text,
-                        colors.border
-                      )}
-                    >
-                      <Icon className="h-4 w-4" />
-                    </div>
-                  )
-                })()}
+          {selectedAccount && SelectedIcon && selectedColors ? (
+            <div className="flex w-full items-center justify-between">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <div
+                  className={cn(
+                    "shrink-0 rounded-lg border p-1",
+                    selectedColors.bg,
+                    selectedColors.text,
+                    selectedColors.border
+                  )}
+                >
+                  <SelectedIcon className="h-3.5 w-3.5" />
+                </div>
                 <span className="truncate text-xs font-semibold text-foreground">
                   {selectedAccount.name}
                   {selectedAccount.lastFour && (
