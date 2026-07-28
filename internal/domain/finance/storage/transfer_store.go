@@ -43,10 +43,10 @@ func (s *TransferStore) Create(ctx context.Context, t *finance.Transfer) error {
 	return err
 }
 
-func (s *TransferStore) GetByID(ctx context.Context, id finance.TransferID) (*finance.Transfer, error) {
+func (s *TransferStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.TransferID) (*finance.Transfer, error) {
 	var row transferDB
-	query := `SELECT * FROM finance.transfer WHERE id = $1`
-	if err := s.db.GetContext(ctx, &row, query, string(id)); err != nil {
+	query := `SELECT * FROM finance.transfer WHERE space_id = $1 AND id = $2`
+	if err := s.db.GetContext(ctx, &row, query, string(spaceID), string(id)); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, finance.ErrTransferNotFound
 		}

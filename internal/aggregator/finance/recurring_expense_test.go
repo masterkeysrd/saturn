@@ -21,7 +21,7 @@ func (m *mockRecurringExpenseStore) Create(ctx context.Context, re *finance.Recu
 	return nil
 }
 
-func (m *mockRecurringExpenseStore) GetByID(ctx context.Context, id finance.RecurringExpenseID) (*finance.RecurringExpense, error) {
+func (m *mockRecurringExpenseStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.RecurringExpenseID) (*finance.RecurringExpense, error) {
 	re, ok := m.expenses[id]
 	if !ok {
 		return nil, errors.New("recurring expense not found")
@@ -29,7 +29,7 @@ func (m *mockRecurringExpenseStore) GetByID(ctx context.Context, id finance.Recu
 	return re, nil
 }
 
-func (m *mockRecurringExpenseStore) GetByIDs(ctx context.Context, ids []finance.RecurringExpenseID) ([]*finance.RecurringExpense, error) {
+func (m *mockRecurringExpenseStore) GetByIDs(ctx context.Context, spaceID finance.SpaceID, ids []finance.RecurringExpenseID) ([]*finance.RecurringExpense, error) {
 	var list []*finance.RecurringExpense
 	for _, id := range ids {
 		if re, ok := m.expenses[id]; ok {
@@ -78,7 +78,7 @@ func (m *mockScheduledPaymentStore) Create(ctx context.Context, sp *finance.Sche
 	return nil
 }
 
-func (m *mockScheduledPaymentStore) GetByID(ctx context.Context, id finance.ScheduledPaymentID) (*finance.ScheduledPayment, error) {
+func (m *mockScheduledPaymentStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.ScheduledPaymentID) (*finance.ScheduledPayment, error) {
 	sp, ok := m.payments[id]
 	if !ok {
 		return nil, errors.New("scheduled payment not found")

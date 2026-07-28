@@ -78,7 +78,7 @@ func (c *Coordinator) UpdateBudget(ctx context.Context, req *UpdateBudgetRequest
 
 	// Handle limit propagation to the current active period if requested
 	if req.Propagation == finance.PropagationCurrentPeriod && req.LimitAmount > 0 {
-		period, err := c.financeService.GetOrCreatePeriod(ctx, updated.ID, time.Now())
+		period, err := c.financeService.GetOrCreatePeriod(ctx, updated.SpaceID, updated.ID, time.Now())
 		if err == nil {
 			// Update the current period's limit in the database
 			_ = c.financeService.UpdatePeriodLimit(ctx, period.ID, req.LimitAmount)
@@ -90,12 +90,12 @@ func (c *Coordinator) UpdateBudget(ctx context.Context, req *UpdateBudgetRequest
 
 // GetBudget orchestrates fetching a single budget template.
 func (c *Coordinator) GetBudget(ctx context.Context, id finance.BudgetID) (*finance.Budget, error) {
-	_, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.financeService.GetBudget(ctx, id)
+	return c.financeService.GetBudget(ctx, rCtx.SpaceID, id)
 }
 
 // DeleteBudget orchestrates budget template deletion.

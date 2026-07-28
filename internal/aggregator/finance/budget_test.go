@@ -41,14 +41,14 @@ func (m *mockBudgetStore) Create(ctx context.Context, b *finance.Budget) error {
 	m.budgets[b.ID] = b
 	return nil
 }
-func (m *mockBudgetStore) GetByID(ctx context.Context, id finance.BudgetID) (*finance.Budget, error) {
+func (m *mockBudgetStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.BudgetID) (*finance.Budget, error) {
 	b, ok := m.budgets[id]
 	if !ok {
 		return nil, finance.ErrBudgetNotFound
 	}
 	return b, nil
 }
-func (m *mockBudgetStore) GetByIDs(ctx context.Context, ids []finance.BudgetID) ([]*finance.Budget, error) {
+func (m *mockBudgetStore) GetByIDs(ctx context.Context, spaceID finance.SpaceID, ids []finance.BudgetID) ([]*finance.Budget, error) {
 	var list []*finance.Budget
 	for _, id := range ids {
 		if b, ok := m.budgets[id]; ok {
@@ -192,7 +192,7 @@ func (m *mockPeriodStore) ListByBudget(ctx context.Context, budgetID finance.Bud
 type mockTransactionStore struct{}
 
 func (m *mockTransactionStore) Create(ctx context.Context, t *finance.Transaction) error { return nil }
-func (m *mockTransactionStore) GetByID(ctx context.Context, id finance.TransactionID) (*finance.Transaction, error) {
+func (m *mockTransactionStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.TransactionID) (*finance.Transaction, error) {
 	return nil, nil
 }
 func (m *mockTransactionStore) Update(ctx context.Context, t *finance.Transaction) error { return nil }

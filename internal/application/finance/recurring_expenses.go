@@ -95,12 +95,13 @@ func (c *Coordinator) DeleteRecurringExpense(ctx context.Context, id finance.Rec
 }
 
 func (c *Coordinator) ConfirmScheduledPayment(ctx context.Context, req *ConfirmScheduledPaymentRequest) (*finance.Transaction, error) {
-	_, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	return c.financeService.ConfirmScheduledPayment(ctx, finance.ConfirmScheduledPaymentRequest{
+		SpaceID:         rCtx.SpaceID,
 		PaymentID:       req.PaymentID,
 		TransactionDate: req.TransactionDate,
 		EffectiveDate:   req.EffectiveDate,
@@ -118,12 +119,13 @@ type MatchScheduledPaymentRequest struct {
 }
 
 func (c *Coordinator) MatchScheduledPayment(ctx context.Context, req *MatchScheduledPaymentRequest) (*finance.Transaction, error) {
-	_, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	return c.financeService.MatchScheduledPayment(ctx, finance.MatchScheduledPaymentRequest{
+		SpaceID:       rCtx.SpaceID,
 		PaymentID:     req.PaymentID,
 		TransactionID: req.TransactionID,
 	})

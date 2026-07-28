@@ -63,10 +63,10 @@ func (s *ScheduledPaymentStore) Create(ctx context.Context, sp *finance.Schedule
 	return err
 }
 
-func (s *ScheduledPaymentStore) GetByID(ctx context.Context, id finance.ScheduledPaymentID) (*finance.ScheduledPayment, error) {
+func (s *ScheduledPaymentStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.ScheduledPaymentID) (*finance.ScheduledPayment, error) {
 	var row scheduledPaymentDB
-	query := `SELECT * FROM finance.scheduled_payment WHERE id = $1`
-	if err := s.db.GetContext(ctx, &row, query, string(id)); err != nil {
+	query := `SELECT * FROM finance.scheduled_payment WHERE space_id = $1 AND id = $2`
+	if err := s.db.GetContext(ctx, &row, query, string(spaceID), string(id)); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.New("scheduled payment not found")
 		}

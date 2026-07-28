@@ -24,8 +24,8 @@ type FinanceService interface {
 	UpdateBudget(ctx context.Context, budget *finance.Budget) (*finance.Budget, error)
 	DeleteBudget(ctx context.Context, id finance.BudgetID) error
 	ListBudgets(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBudgetsFilter) (*paging.Page[*finance.Budget], error)
-	GetBudget(ctx context.Context, id finance.BudgetID) (*finance.Budget, error)
-	GetOrCreatePeriod(ctx context.Context, budgetID finance.BudgetID, date time.Time) (*finance.BudgetPeriod, error)
+	GetBudget(ctx context.Context, spaceID finance.SpaceID, id finance.BudgetID) (*finance.Budget, error)
+	GetOrCreatePeriod(ctx context.Context, spaceID finance.SpaceID, budgetID finance.BudgetID, date time.Time) (*finance.BudgetPeriod, error)
 	UpdatePeriodLimit(ctx context.Context, id finance.PeriodID, limit int64) error
 	CreateExchangeRate(ctx context.Context, rate *finance.ExchangeRate) (*finance.ExchangeRate, error)
 	GetExchangeRateByID(ctx context.Context, spaceID finance.SpaceID, id string) (*finance.ExchangeRate, error)
@@ -33,14 +33,15 @@ type FinanceService interface {
 	ListExchangeRates(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListExchangeRatesFilter) ([]*finance.ExchangeRate, string, error)
 	DeleteExchangeRateByID(ctx context.Context, spaceID finance.SpaceID, id string) error
 	CreateExpense(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error)
+	GetTransaction(ctx context.Context, spaceID finance.SpaceID, id finance.TransactionID) (*finance.Transaction, error)
 	UpdateExpense(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error)
-	DeleteTransaction(ctx context.Context, id finance.TransactionID) error
+	DeleteTransaction(ctx context.Context, spaceID finance.SpaceID, id finance.TransactionID) error
 	ListTransactions(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListTransactionsFilter) (*paging.Page[*finance.Transaction], error)
 	ListTransactionEvents(ctx context.Context, spaceID finance.SpaceID, txnID finance.TransactionID) ([]*finance.TransactionEvent, error)
 	GetSpentInsights(ctx context.Context, req *finance.GetSpentInsightsRequest) (*finance.SpentInsights, error)
 
 	CreateRecurringExpense(ctx context.Context, expense *finance.RecurringExpense) (*finance.RecurringExpense, error)
-	GetRecurringExpense(ctx context.Context, id finance.RecurringExpenseID) (*finance.RecurringExpense, error)
+	GetRecurringExpense(ctx context.Context, spaceID finance.SpaceID, id finance.RecurringExpenseID) (*finance.RecurringExpense, error)
 	UpdateRecurringExpense(ctx context.Context, expense *finance.RecurringExpense) (*finance.RecurringExpense, error)
 	DeleteRecurringExpense(ctx context.Context, id finance.RecurringExpenseID) error
 	ListRecurringExpenses(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListRecurringExpensesFilter) (*paging.Page[*finance.RecurringExpense], error)
@@ -66,8 +67,8 @@ type FinanceService interface {
 	DeleteAccount(ctx context.Context, spaceID finance.SpaceID, id finance.AccountID) error
 	ListAccounts(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error)
 	CreateTransfer(ctx context.Context, transfer *finance.Transfer) (*finance.Transfer, error)
-	GetTransfer(ctx context.Context, id finance.TransferID) (*finance.Transfer, error)
-	DeleteTransfer(ctx context.Context, id finance.TransferID) error
+	GetTransfer(ctx context.Context, spaceID finance.SpaceID, id finance.TransferID) (*finance.Transfer, error)
+	DeleteTransfer(ctx context.Context, spaceID finance.SpaceID, id finance.TransferID) error
 	ListTransfers(ctx context.Context, spaceID finance.SpaceID, limit int32, pageToken string) ([]*finance.Transfer, string, error)
 
 	StageInboxItem(ctx context.Context, spaceID string, req *finance.StageInboxItem) (*finance.InboxItem, error)

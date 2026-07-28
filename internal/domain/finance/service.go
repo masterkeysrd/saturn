@@ -124,7 +124,7 @@ func (s *Service) CreateBudget(ctx context.Context, budget *Budget) (*Budget, er
 
 // UpdateBudget modifies an existing budget template.
 func (s *Service) UpdateBudget(ctx context.Context, budget *Budget) (*Budget, error) {
-	existing, err := s.deps.BudgetStore.GetByID(ctx, budget.ID)
+	existing, err := s.deps.BudgetStore.GetByID(ctx, budget.SpaceID, budget.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -171,8 +171,8 @@ func (s *Service) ListBudgets(ctx context.Context, spaceID SpaceID, filter *List
 }
 
 // GetOrCreatePeriod retrieves or lazily spawns a budget period for a target date.
-func (s *Service) GetOrCreatePeriod(ctx context.Context, budgetID BudgetID, date time.Time) (*BudgetPeriod, error) {
-	budget, err := s.deps.BudgetStore.GetByID(ctx, budgetID)
+func (s *Service) GetOrCreatePeriod(ctx context.Context, spaceID SpaceID, budgetID BudgetID, date time.Time) (*BudgetPeriod, error) {
+	budget, err := s.deps.BudgetStore.GetByID(ctx, spaceID, budgetID)
 	if err != nil {
 		return nil, err
 	}
@@ -473,12 +473,26 @@ func (s *Service) CreateExpense(ctx context.Context, txn *Transaction) (*Transac
 	return txn, nil
 }
 
+// GetTransaction retrieves a transaction by ID for a space.
+func (s *Service) GetTransaction(ctx context.Context, spaceID SpaceID, id TransactionID) (*Transaction, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, fmt.Errorf("validate space ID: %w", err)
+	}
+	if err := id.Validate(); err != nil {
+		return nil, fmt.Errorf("validate transaction ID: %w", err)
+	}
+	return s.deps.TransactionStore.GetByID(ctx, spaceID, id)
+}
+
 // DeleteTransaction removes any logged transaction and reverts its account balance impact.
-func (s *Service) DeleteTransaction(ctx context.Context, id TransactionID) error {
+func (s *Service) DeleteTransaction(ctx context.Context, spaceID SpaceID, id TransactionID) error {
+	if err := spaceID.Validate(); err != nil {
+		return fmt.Errorf("validate space ID: %w", err)
+	}
 	if err := id.Validate(); err != nil {
 		return fmt.Errorf("validate transaction ID: %w", err)
 	}
-	existing, err := s.deps.TransactionStore.GetByID(ctx, id)
+	existing, err := s.deps.TransactionStore.GetByID(ctx, spaceID, id)
 	if err != nil {
 		return fmt.Errorf("fetch existing transaction to delete: %w", err)
 	}
@@ -492,7 +506,7 @@ func (s *Service) UpdateExpense(ctx context.Context, txn *Transaction) (*Transac
 		return nil, errors.New("expense transaction requires a budget ID")
 	}
 
-	existing, err := s.deps.TransactionStore.GetByID(ctx, txn.ID)
+	existing, err := s.deps.TransactionStore.GetByID(ctx, txn.SpaceID, txn.ID)
 	if err != nil {
 		return nil, fmt.Errorf("fetch existing transaction: %w", err)
 	}
@@ -783,27 +797,33 @@ func (s *Service) CreateRecurringExpense(ctx context.Context, re *RecurringExpen
 	return re, nil
 }
 
-// GetRecurringExpense retrieves a recurring expense by ID.
-func (s *Service) GetRecurringExpense(ctx context.Context, id RecurringExpenseID) (*RecurringExpense, error) {
+// GetRecurringExpense retrieves a recurring expense by ID for a space.
+func (s *Service) GetRecurringExpense(ctx context.Context, spaceID SpaceID, id RecurringExpenseID) (*RecurringExpense, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, err
+	}
 	if err := id.Validate(); err != nil {
 		return nil, err
 	}
-	return s.deps.RecurringExpenseStore.GetByID(ctx, id)
+	return s.deps.RecurringExpenseStore.GetByID(ctx, spaceID, id)
 }
 
-// GetRecurringExpenses retrieves a batch of recurring expenses by their IDs.
-func (s *Service) GetRecurringExpenses(ctx context.Context, ids []RecurringExpenseID) ([]*RecurringExpense, error) {
+// GetRecurringExpenses retrieves a batch of recurring expenses by their IDs for a space.
+func (s *Service) GetRecurringExpenses(ctx context.Context, spaceID SpaceID, ids []RecurringExpenseID) ([]*RecurringExpense, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, err
+	}
 	for _, id := range ids {
 		if err := id.Validate(); err != nil {
 			return nil, err
 		}
 	}
-	return s.deps.RecurringExpenseStore.GetByIDs(ctx, ids)
+	return s.deps.RecurringExpenseStore.GetByIDs(ctx, spaceID, ids)
 }
 
-// UpdateRecurringExpense modifies an existing recurring expense rule.
+// UpdateRecurringExpense updates an existing recurring expense template.
 func (s *Service) UpdateRecurringExpense(ctx context.Context, re *RecurringExpense) (*RecurringExpense, error) {
-	existing, err := s.deps.RecurringExpenseStore.GetByID(ctx, re.ID)
+	existing, err := s.deps.RecurringExpenseStore.GetByID(ctx, re.SpaceID, re.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -847,6 +867,7 @@ func (s *Service) ListScheduledPayments(ctx context.Context, spaceID SpaceID, fi
 
 // ConfirmScheduledPaymentRequest represents parameters to confirm a scheduled payment.
 type ConfirmScheduledPaymentRequest struct {
+	SpaceID         SpaceID
 	PaymentID       ScheduledPaymentID
 	TransactionDate time.Time
 	EffectiveDate   time.Time
@@ -859,7 +880,7 @@ type ConfirmScheduledPaymentRequest struct {
 
 // ConfirmScheduledPayment clears a scheduled payment by promoting it to a permanent transaction.
 func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmScheduledPaymentRequest) (*Transaction, error) {
-	payment, err := s.deps.ScheduledPaymentStore.GetByID(ctx, req.PaymentID)
+	payment, err := s.deps.ScheduledPaymentStore.GetByID(ctx, req.SpaceID, req.PaymentID)
 	if err != nil {
 		return nil, err
 	}
@@ -879,13 +900,13 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 		currency = *req.Currency
 	}
 
-	budget, err := s.deps.BudgetStore.GetByID(ctx, budgetID)
+	budget, err := s.deps.BudgetStore.GetByID(ctx, payment.SpaceID, budgetID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Resolve budget period for the transaction based on effectiveDate
-	period, err := s.GetOrCreatePeriod(ctx, budget.ID, req.EffectiveDate)
+	period, err := s.GetOrCreatePeriod(ctx, payment.SpaceID, budget.ID, req.EffectiveDate)
 	if err != nil {
 		return nil, err
 	}
@@ -920,7 +941,7 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 	}
 
 	if description == "" && payment.SourceType == SourceTypeRecurrentExpense {
-		if exp, err := s.deps.RecurringExpenseStore.GetByID(ctx, RecurringExpenseID(payment.SourceID)); err == nil {
+		if exp, err := s.deps.RecurringExpenseStore.GetByID(ctx, payment.SpaceID, RecurringExpenseID(payment.SourceID)); err == nil {
 			description = exp.Name
 		}
 	} else if description == "" && payment.SourceType == "invoice" {
@@ -1006,18 +1027,19 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 
 // MatchScheduledPaymentRequest represents parameters to link an existing transaction to a scheduled payment.
 type MatchScheduledPaymentRequest struct {
+	SpaceID       SpaceID
 	PaymentID     ScheduledPaymentID
 	TransactionID TransactionID
 }
 
 // MatchScheduledPayment links an existing transaction with a pending scheduled payment, marking the payment cleared.
 func (s *Service) MatchScheduledPayment(ctx context.Context, req MatchScheduledPaymentRequest) (*Transaction, error) {
-	payment, err := s.deps.ScheduledPaymentStore.GetByID(ctx, req.PaymentID)
+	payment, err := s.deps.ScheduledPaymentStore.GetByID(ctx, req.SpaceID, req.PaymentID)
 	if err != nil {
 		return nil, fmt.Errorf("scheduled payment not found: %w", err)
 	}
 
-	txn, err := s.deps.TransactionStore.GetByID(ctx, req.TransactionID)
+	txn, err := s.deps.TransactionStore.GetByID(ctx, req.SpaceID, req.TransactionID)
 	if err != nil {
 		return nil, fmt.Errorf("transaction not found: %w", err)
 	}
@@ -1066,7 +1088,7 @@ func (s *Service) SkipScheduledPayment(ctx context.Context, spaceID SpaceID, id 
 		return nil, err
 	}
 
-	payment, err := s.deps.ScheduledPaymentStore.GetByID(ctx, id)
+	payment, err := s.deps.ScheduledPaymentStore.GetByID(ctx, spaceID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -1187,11 +1209,11 @@ func (s *Service) createTransaction(ctx context.Context, txn *Transaction) error
 
 	// 3. Centralized Budget Period Resolution
 	if txn.BudgetID != nil {
-		budget, err := s.deps.BudgetStore.GetByID(ctx, *txn.BudgetID)
+		budget, err := s.deps.BudgetStore.GetByID(ctx, txn.SpaceID, *txn.BudgetID)
 		if err != nil {
 			return fmt.Errorf("fetch budget template: %w", err)
 		}
-		period, err := s.GetOrCreatePeriod(ctx, budget.ID, txn.EffectiveDate)
+		period, err := s.GetOrCreatePeriod(ctx, txn.SpaceID, budget.ID, txn.EffectiveDate)
 		if err != nil {
 			return fmt.Errorf("resolve active budget period: %w", err)
 		}
@@ -1251,11 +1273,11 @@ func (s *Service) updateTransaction(ctx context.Context, txn *Transaction, exist
 
 	// 3. Centralized Budget Period Resolution
 	if txn.BudgetID != nil {
-		budget, err := s.deps.BudgetStore.GetByID(ctx, *txn.BudgetID)
+		budget, err := s.deps.BudgetStore.GetByID(ctx, txn.SpaceID, *txn.BudgetID)
 		if err != nil {
 			return fmt.Errorf("fetch budget template: %w", err)
 		}
-		period, err := s.GetOrCreatePeriod(ctx, budget.ID, txn.EffectiveDate)
+		period, err := s.GetOrCreatePeriod(ctx, txn.SpaceID, budget.ID, txn.EffectiveDate)
 		if err != nil {
 			return fmt.Errorf("resolve active budget period: %w", err)
 		}
@@ -2012,17 +2034,20 @@ func (s *Service) CreateTransfer(ctx context.Context, t *Transfer) (*Transfer, e
 	return t, nil
 }
 
-// GetTransfer retrieves a transfer.
-func (s *Service) GetTransfer(ctx context.Context, id TransferID) (*Transfer, error) {
+// GetTransfer retrieves a transfer for a space.
+func (s *Service) GetTransfer(ctx context.Context, spaceID SpaceID, id TransferID) (*Transfer, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, err
+	}
 	if err := id.Validate(); err != nil {
 		return nil, err
 	}
-	return s.deps.TransferStore.GetByID(ctx, id)
+	return s.deps.TransferStore.GetByID(ctx, spaceID, id)
 }
 
 // DeleteTransfer deletes a transfer parent and deletes both linked ledger entries.
-func (s *Service) DeleteTransfer(ctx context.Context, id TransferID) error {
-	t, err := s.deps.TransferStore.GetByID(ctx, id)
+func (s *Service) DeleteTransfer(ctx context.Context, spaceID SpaceID, id TransferID) error {
+	t, err := s.deps.TransferStore.GetByID(ctx, spaceID, id)
 	if err != nil {
 		return err
 	}
@@ -2120,7 +2145,7 @@ func (s *Service) StageInboxItem(ctx context.Context, spaceID string, req *Stage
 	if req.SuggestedBudget != "" {
 		bID, err := ParseBudgetID(req.SuggestedBudget)
 		if err == nil {
-			budget, err := s.deps.BudgetStore.GetByID(ctx, bID)
+			budget, err := s.deps.BudgetStore.GetByID(ctx, SpaceID(spaceID), bID)
 			if err == nil && budget != nil && string(budget.SpaceID) == spaceID {
 				bIDStr := string(budget.ID)
 				budgetID = &bIDStr
@@ -2224,7 +2249,7 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, id strin
 		if err != nil {
 			return fmt.Errorf("invalid transaction ID: %w", err)
 		}
-		txn, err := s.deps.TransactionStore.GetByID(ctx, txnID)
+		txn, err := s.deps.TransactionStore.GetByID(ctx, SpaceID(spaceID), txnID)
 		if err != nil {
 			return fmt.Errorf("get transaction: %w", err)
 		}
@@ -2309,7 +2334,7 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, id strin
 		if item.DocType == InboxItemDocInvoice {
 			// A. If it's an unpaid INVOICE: do NOT create a transaction.
 			// Just update the scheduled payment amount and metadata to the actual values.
-			payment, err := s.deps.ScheduledPaymentStore.GetByID(ctx, payID)
+			payment, err := s.deps.ScheduledPaymentStore.GetByID(ctx, SpaceID(spaceID), payID)
 			if err != nil {
 				return fmt.Errorf("get scheduled payment: %w", err)
 			}
@@ -2518,11 +2543,11 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, id strin
 			if err != nil {
 				return fmt.Errorf("parse budget ID: %w", err)
 			}
-			budget, err := s.deps.BudgetStore.GetByID(ctx, bID)
+			budget, err := s.deps.BudgetStore.GetByID(ctx, SpaceID(spaceID), bID)
 			if err != nil {
 				return fmt.Errorf("get budget: %w", err)
 			}
-			period, err := s.GetOrCreatePeriod(ctx, budget.ID, item.TransactionDate)
+			period, err := s.GetOrCreatePeriod(ctx, SpaceID(spaceID), budget.ID, item.TransactionDate)
 			if err != nil {
 				return fmt.Errorf("get or create period: %w", err)
 			}
@@ -2535,11 +2560,11 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, id strin
 			if err != nil {
 				return fmt.Errorf("parse budget ID: %w", err)
 			}
-			budget, err := s.deps.BudgetStore.GetByID(ctx, bID)
+			budget, err := s.deps.BudgetStore.GetByID(ctx, SpaceID(spaceID), bID)
 			if err != nil {
 				return fmt.Errorf("get budget: %w", err)
 			}
-			period, err := s.GetOrCreatePeriod(ctx, budget.ID, item.TransactionDate)
+			period, err := s.GetOrCreatePeriod(ctx, SpaceID(spaceID), budget.ID, item.TransactionDate)
 			if err != nil {
 				return fmt.Errorf("get or create period: %w", err)
 			}
@@ -2615,12 +2640,21 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, id strin
 	return nil
 }
 
-// GetBudget retrieves a budget by its unique identifier.
-func (s *Service) GetBudget(ctx context.Context, id BudgetID) (*Budget, error) {
-	return s.deps.BudgetStore.GetByID(ctx, id)
+// GetBudget retrieves a budget by its unique identifier for a space.
+func (s *Service) GetBudget(ctx context.Context, spaceID SpaceID, id BudgetID) (*Budget, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, err
+	}
+	if err := id.Validate(); err != nil {
+		return nil, err
+	}
+	return s.deps.BudgetStore.GetByID(ctx, spaceID, id)
 }
 
-// GetBudgets retrieves a list of budgets by their identifiers.
-func (s *Service) GetBudgets(ctx context.Context, ids []BudgetID) ([]*Budget, error) {
-	return s.deps.BudgetStore.GetByIDs(ctx, ids)
+// GetBudgets retrieves a list of budgets by their identifiers for a space.
+func (s *Service) GetBudgets(ctx context.Context, spaceID SpaceID, ids []BudgetID) ([]*Budget, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, err
+	}
+	return s.deps.BudgetStore.GetByIDs(ctx, spaceID, ids)
 }

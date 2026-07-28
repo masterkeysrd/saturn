@@ -69,10 +69,10 @@ func (s *BudgetStore) Create(ctx context.Context, b *finance.Budget) error {
 	return err
 }
 
-func (s *BudgetStore) GetByID(ctx context.Context, id finance.BudgetID) (*finance.Budget, error) {
+func (s *BudgetStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.BudgetID) (*finance.Budget, error) {
 	var row budgetDB
-	query := `SELECT * FROM finance.budget WHERE id = $1`
-	if err := s.db.GetContext(ctx, &row, query, string(id)); err != nil {
+	query := `SELECT * FROM finance.budget WHERE space_id = $1 AND id = $2`
+	if err := s.db.GetContext(ctx, &row, query, string(spaceID), string(id)); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, finance.ErrBudgetNotFound
 		}
@@ -178,7 +178,7 @@ func (s *BudgetStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, 
 	return page, nil
 }
 
-func (s *BudgetStore) GetByIDs(ctx context.Context, ids []finance.BudgetID) ([]*finance.Budget, error) {
+func (s *BudgetStore) GetByIDs(ctx context.Context, spaceID finance.SpaceID, ids []finance.BudgetID) ([]*finance.Budget, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
@@ -189,7 +189,7 @@ func (s *BudgetStore) GetByIDs(ctx context.Context, ids []finance.BudgetID) ([]*
 
 	ds := pgDialect.From(goqu.S("finance").Table("budget")).
 		Select("*").
-		Where(goqu.Ex{"id": idStrings})
+		Where(goqu.Ex{"space_id": string(spaceID), "id": idStrings})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, err

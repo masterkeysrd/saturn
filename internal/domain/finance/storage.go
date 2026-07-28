@@ -17,8 +17,8 @@ type SettingsStore interface {
 // BudgetStore defines persistence for budget templates.
 type BudgetStore interface {
 	Create(ctx context.Context, budget *Budget) error
-	GetByID(ctx context.Context, id BudgetID) (*Budget, error)
-	GetByIDs(ctx context.Context, ids []BudgetID) ([]*Budget, error)
+	GetByID(ctx context.Context, spaceID SpaceID, id BudgetID) (*Budget, error)
+	GetByIDs(ctx context.Context, spaceID SpaceID, ids []BudgetID) ([]*Budget, error)
 	Update(ctx context.Context, budget *Budget) error
 	Delete(ctx context.Context, id BudgetID) error
 	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListBudgetsFilter) (*paging.Page[*Budget], error)
@@ -70,7 +70,7 @@ type PeriodSpent struct {
 // TransactionStore defines persistence for transactions.
 type TransactionStore interface {
 	Create(ctx context.Context, txn *Transaction) error
-	GetByID(ctx context.Context, id TransactionID) (*Transaction, error)
+	GetByID(ctx context.Context, spaceID SpaceID, id TransactionID) (*Transaction, error)
 	Delete(ctx context.Context, id TransactionID) error
 	Update(ctx context.Context, txn *Transaction) error
 	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListTransactionsFilter) (*paging.Page[*Transaction], error)
@@ -163,8 +163,8 @@ type ListTransactionsFilter struct {
 // RecurringExpenseStore defines persistence for recurring expense templates.
 type RecurringExpenseStore interface {
 	Create(ctx context.Context, expense *RecurringExpense) error
-	GetByID(ctx context.Context, id RecurringExpenseID) (*RecurringExpense, error)
-	GetByIDs(ctx context.Context, ids []RecurringExpenseID) ([]*RecurringExpense, error)
+	GetByID(ctx context.Context, spaceID SpaceID, id RecurringExpenseID) (*RecurringExpense, error)
+	GetByIDs(ctx context.Context, spaceID SpaceID, ids []RecurringExpenseID) ([]*RecurringExpense, error)
 	Update(ctx context.Context, expense *RecurringExpense) error
 	Delete(ctx context.Context, id RecurringExpenseID) error
 	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListRecurringExpensesFilter) (*paging.Page[*RecurringExpense], error)
@@ -174,7 +174,7 @@ type RecurringExpenseStore interface {
 // ScheduledPaymentStore defines persistence for scheduled payment instances.
 type ScheduledPaymentStore interface {
 	Create(ctx context.Context, payment *ScheduledPayment) error
-	GetByID(ctx context.Context, id ScheduledPaymentID) (*ScheduledPayment, error)
+	GetByID(ctx context.Context, spaceID SpaceID, id ScheduledPaymentID) (*ScheduledPayment, error)
 	UpdateStatus(ctx context.Context, id ScheduledPaymentID, status ScheduledPaymentStatus) error
 	Delete(ctx context.Context, id ScheduledPaymentID) error
 	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListScheduledPaymentsFilter) (*paging.Page[*ScheduledPayment], error)
@@ -233,7 +233,7 @@ type AccountStore interface {
 // TransferStore defines persistence for parent transfer logs.
 type TransferStore interface {
 	Create(ctx context.Context, transfer *Transfer) error
-	GetByID(ctx context.Context, id TransferID) (*Transfer, error)
+	GetByID(ctx context.Context, spaceID SpaceID, id TransferID) (*Transfer, error)
 	Delete(ctx context.Context, id TransferID) error
 	ListBySpace(ctx context.Context, spaceID SpaceID, limit int32, pageToken string) ([]*Transfer, string, error)
 }

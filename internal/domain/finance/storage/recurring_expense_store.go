@@ -64,10 +64,10 @@ func (s *RecurringExpenseStore) Create(ctx context.Context, re *finance.Recurrin
 	return err
 }
 
-func (s *RecurringExpenseStore) GetByID(ctx context.Context, id finance.RecurringExpenseID) (*finance.RecurringExpense, error) {
+func (s *RecurringExpenseStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.RecurringExpenseID) (*finance.RecurringExpense, error) {
 	var row recurringExpenseDB
-	query := `SELECT * FROM finance.recurring_expense WHERE id = $1`
-	if err := s.db.GetContext(ctx, &row, query, string(id)); err != nil {
+	query := `SELECT * FROM finance.recurring_expense WHERE space_id = $1 AND id = $2`
+	if err := s.db.GetContext(ctx, &row, query, string(spaceID), string(id)); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.New("recurring expense not found")
 		}
@@ -76,7 +76,7 @@ func (s *RecurringExpenseStore) GetByID(ctx context.Context, id finance.Recurrin
 	return row.toDomain(), nil
 }
 
-func (s *RecurringExpenseStore) GetByIDs(ctx context.Context, ids []finance.RecurringExpenseID) ([]*finance.RecurringExpense, error) {
+func (s *RecurringExpenseStore) GetByIDs(ctx context.Context, spaceID finance.SpaceID, ids []finance.RecurringExpenseID) ([]*finance.RecurringExpense, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
@@ -87,7 +87,7 @@ func (s *RecurringExpenseStore) GetByIDs(ctx context.Context, ids []finance.Recu
 
 	ds := pgDialect.From(goqu.S("finance").Table("recurring_expense")).
 		Select("*").
-		Where(goqu.Ex{"id": idStrings})
+		Where(goqu.Ex{"space_id": string(spaceID), "id": idStrings})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, err

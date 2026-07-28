@@ -124,8 +124,8 @@ func (row *transactionDB) toDomain() *finance.Transaction {
 	}
 }
 
-func (s *TransactionStore) GetByID(ctx context.Context, id finance.TransactionID) (*finance.Transaction, error) {
-	ds := pgDialect.From(goqu.S("finance").Table("transaction")).Select("*").Where(goqu.Ex{"id": string(id)})
+func (s *TransactionStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.TransactionID) (*finance.Transaction, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("transaction")).Select("*").Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, err

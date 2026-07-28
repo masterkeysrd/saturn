@@ -48,11 +48,11 @@ func (c *Coordinator) CreateExpense(ctx context.Context, req *CreateExpenseReque
 }
 
 func (c *Coordinator) DeleteTransaction(ctx context.Context, id finance.TransactionID) error {
-	_, err := c.resolveContext(ctx)
+	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return err
 	}
-	return c.financeService.DeleteTransaction(ctx, id)
+	return c.financeService.DeleteTransaction(ctx, rCtx.SpaceID, id)
 }
 
 type UpdateExpenseRequest struct {

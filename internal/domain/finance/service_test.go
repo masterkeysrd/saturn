@@ -40,7 +40,7 @@ func (m *mockBudgetStore) Create(ctx context.Context, b *Budget) error {
 	return nil
 }
 
-func (m *mockBudgetStore) GetByID(ctx context.Context, id BudgetID) (*Budget, error) {
+func (m *mockBudgetStore) GetByID(ctx context.Context, spaceID SpaceID, id BudgetID) (*Budget, error) {
 	b, ok := m.data[id]
 	if !ok {
 		return nil, ErrBudgetNotFound
@@ -48,7 +48,7 @@ func (m *mockBudgetStore) GetByID(ctx context.Context, id BudgetID) (*Budget, er
 	return b, nil
 }
 
-func (m *mockBudgetStore) GetByIDs(ctx context.Context, ids []BudgetID) ([]*Budget, error) {
+func (m *mockBudgetStore) GetByIDs(ctx context.Context, spaceID SpaceID, ids []BudgetID) ([]*Budget, error) {
 	var list []*Budget
 	for _, id := range ids {
 		if b, ok := m.data[id]; ok {
@@ -250,7 +250,7 @@ func (m *mockTransactionStore) Create(ctx context.Context, t *Transaction) error
 	return nil
 }
 
-func (m *mockTransactionStore) GetByID(ctx context.Context, id TransactionID) (*Transaction, error) {
+func (m *mockTransactionStore) GetByID(ctx context.Context, spaceID SpaceID, id TransactionID) (*Transaction, error) {
 	t, ok := m.txns[id]
 	if !ok {
 		return nil, ErrTransactionNotFound
@@ -457,7 +457,7 @@ func (m *mockTransferStore) Create(ctx context.Context, t *Transfer) error {
 	return nil
 }
 
-func (m *mockTransferStore) GetByID(ctx context.Context, id TransferID) (*Transfer, error) {
+func (m *mockTransferStore) GetByID(ctx context.Context, spaceID SpaceID, id TransferID) (*Transfer, error) {
 	t, ok := m.data[id]
 	if !ok {
 		return nil, ErrTransferNotFound
@@ -658,7 +658,7 @@ func TestGetOrCreatePeriod(t *testing.T) {
 
 	// 4. Trigger JIT period creation
 	targetDate := time.Date(2026, 2, 15, 12, 0, 0, 0, time.UTC)
-	period, err := svc.GetOrCreatePeriod(ctx, budget.ID, targetDate)
+	period, err := svc.GetOrCreatePeriod(ctx, spID, budget.ID, targetDate)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -674,7 +674,7 @@ func TestGetOrCreatePeriod(t *testing.T) {
 	}
 
 	// 5. Query again (should return the same period without recreating)
-	period2, err := svc.GetOrCreatePeriod(ctx, budget.ID, targetDate)
+	period2, err := svc.GetOrCreatePeriod(ctx, spID, budget.ID, targetDate)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -759,7 +759,7 @@ func TestTransactions(t *testing.T) {
 		t.Errorf("AmountInBase = %d, want 1100", createdTxn.AmountInBase)
 	}
 
-	period, err := svc.GetOrCreatePeriod(ctx, budget.ID, targetDate)
+	period, err := svc.GetOrCreatePeriod(ctx, spID, budget.ID, targetDate)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -803,7 +803,7 @@ func TestTransactions(t *testing.T) {
 	}
 
 	// 5. Delete transaction
-	err = svc.DeleteTransaction(ctx, createdTxn.ID)
+	err = svc.DeleteTransaction(ctx, spID, createdTxn.ID)
 	if err != nil {
 		t.Fatal(err)
 	}

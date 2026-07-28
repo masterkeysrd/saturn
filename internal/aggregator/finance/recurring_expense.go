@@ -45,7 +45,7 @@ func (s *Service) ListRecurringExpenses(ctx context.Context, spaceID finance.Spa
 	budgetIDs := budgetIDsSet.ToSlice()
 	budgetsMap := make(map[finance.BudgetID]*AggregatedBudget)
 	if len(budgetIDs) > 0 {
-		budgetsList, err := s.financeService.GetBudgets(ctx, budgetIDs)
+		budgetsList, err := s.financeService.GetBudgets(ctx, spaceID, budgetIDs)
 		if err == nil {
 			for _, b := range budgetsList {
 				budgetsMap[b.ID] = &AggregatedBudget{
@@ -112,7 +112,7 @@ func (s *Service) ListScheduledPayments(ctx context.Context, spaceID finance.Spa
 	budgetIDs := budgetIDsSet.ToSlice()
 	budgetsMap := make(map[finance.BudgetID]*AggregatedBudget)
 	if len(budgetIDs) > 0 {
-		budgetsList, err := s.financeService.GetBudgets(ctx, budgetIDs)
+		budgetsList, err := s.financeService.GetBudgets(ctx, spaceID, budgetIDs)
 		if err == nil {
 			for _, b := range budgetsList {
 				budgetsMap[b.ID] = &AggregatedBudget{
@@ -126,7 +126,7 @@ func (s *Service) ListScheduledPayments(ctx context.Context, spaceID finance.Spa
 	recurringIDs := recurringIDsSet.ToSlice()
 	recurringMap := make(map[finance.RecurringExpenseID]*AggregatedRecurringExpense)
 	if len(recurringIDs) > 0 {
-		recurringList, err := s.financeService.GetRecurringExpenses(ctx, recurringIDs)
+		recurringList, err := s.financeService.GetRecurringExpenses(ctx, spaceID, recurringIDs)
 		if err == nil {
 			for _, re := range recurringList {
 				recurringMap[re.ID] = &AggregatedRecurringExpense{

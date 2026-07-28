@@ -46,16 +46,7 @@ func (c *Coordinator) GetTransfer(ctx context.Context, id finance.TransferID) (*
 		return nil, err
 	}
 
-	t, err := c.financeService.GetTransfer(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	if t.SpaceID != rCtx.SpaceID {
-		return nil, finance.ErrTransferNotFound
-	}
-
-	return t, nil
+	return c.financeService.GetTransfer(ctx, rCtx.SpaceID, id)
 }
 
 func (c *Coordinator) DeleteTransfer(ctx context.Context, id finance.TransferID) error {
@@ -64,16 +55,7 @@ func (c *Coordinator) DeleteTransfer(ctx context.Context, id finance.TransferID)
 		return err
 	}
 
-	t, err := c.financeService.GetTransfer(ctx, id)
-	if err != nil {
-		return err
-	}
-
-	if t.SpaceID != rCtx.SpaceID {
-		return finance.ErrTransferNotFound
-	}
-
-	return c.financeService.DeleteTransfer(ctx, id)
+	return c.financeService.DeleteTransfer(ctx, rCtx.SpaceID, id)
 }
 
 func (c *Coordinator) ListTransfers(ctx context.Context, req *ListTransfersRequest) ([]*finance.Transfer, string, error) {

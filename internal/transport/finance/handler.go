@@ -334,6 +334,12 @@ func (h *Handler) ListBudgets(ctx context.Context, req *financev1.ListBudgetsReq
 }
 
 func (h *Handler) GetBudgetPeriod(ctx context.Context, req *financev1.GetBudgetPeriodRequest) (*financev1.BudgetPeriod, error) {
+	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "space ID required")
+	}
+	spaceID := finance.SpaceID(spaceIDStr)
+
 	var targetDate time.Time
 	if req.GetDate() != nil {
 		targetDate = req.GetDate().AsTime()
@@ -342,7 +348,7 @@ func (h *Handler) GetBudgetPeriod(ctx context.Context, req *financev1.GetBudgetP
 	}
 
 	bID := finance.BudgetID(req.GetBudgetId())
-	period, err := h.Aggregator.GetBudgetPeriod(ctx, bID, targetDate)
+	period, err := h.Aggregator.GetBudgetPeriod(ctx, spaceID, bID, targetDate)
 	if err != nil {
 		return nil, h.mapError(err)
 	}

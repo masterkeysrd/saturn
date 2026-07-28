@@ -74,7 +74,7 @@ func (s *Service) ListTransactions(ctx context.Context, spaceID finance.SpaceID,
 	budgetIDs := budgetIDsSet.ToSlice()
 	budgetsMap := make(map[finance.BudgetID]*AggregatedBudget)
 	if len(budgetIDs) > 0 {
-		budgetsList, err := s.financeService.GetBudgets(ctx, budgetIDs)
+		budgetsList, err := s.financeService.GetBudgets(ctx, spaceID, budgetIDs)
 		if err == nil {
 			for _, b := range budgetsList {
 				budgetsMap[b.ID] = &AggregatedBudget{

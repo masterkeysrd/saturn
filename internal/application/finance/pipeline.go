@@ -255,7 +255,7 @@ func (c *Coordinator) pipelineResolveNode(ctx context.Context, state *IngestionS
 	if state.SuggestedBudget != "" {
 		bID, err := finance.ParseBudgetID(state.SuggestedBudget)
 		if err == nil {
-			budget, err := c.financeService.GetBudget(ctx, bID)
+			budget, err := c.financeService.GetBudget(ctx, finance.SpaceID(state.SpaceID), bID)
 			if err == nil && budget != nil && string(budget.SpaceID) == state.SpaceID {
 				val := string(budget.ID)
 				budgetID = &val

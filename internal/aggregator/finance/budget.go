@@ -94,8 +94,8 @@ func (s *Service) ListBudgets(
 }
 
 // GetBudgetPeriod retrieves or lazily spawns a budget period, hydrating its spent progress.
-func (s *Service) GetBudgetPeriod(ctx context.Context, budgetID finance.BudgetID, date time.Time) (*AggregatedBudgetPeriod, error) {
-	budget, err := s.financeService.GetBudget(ctx, budgetID)
+func (s *Service) GetBudgetPeriod(ctx context.Context, spaceID finance.SpaceID, budgetID finance.BudgetID, date time.Time) (*AggregatedBudgetPeriod, error) {
+	budget, err := s.financeService.GetBudget(ctx, spaceID, budgetID)
 	if err != nil {
 		return nil, err
 	}
