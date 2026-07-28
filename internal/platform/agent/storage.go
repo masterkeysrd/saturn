@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/masterkeysrd/saturn/internal/platform/id"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
 // Store handles SQL operations for the agents and LLM providers tables.
@@ -230,15 +232,49 @@ func (s *Store) LogRun(ctx context.Context, agentID string, spaceID string, stat
 	return &r, nil
 }
 
-// ListRuns lists execution logs for an agent.
-func (s *Store) ListRuns(ctx context.Context, q ListAgentRuns) ([]*AgentRun, error) {
+// ListRuns lists execution logs for an agent with cursor-based pagination.
+func (s *Store) ListRuns(ctx context.Context, q ListAgentRuns) (*paging.Page[*AgentRun], error) {
+	pageSize := int(q.PageSize)
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+
+	cursor, err := paging.Decode(q.PageToken)
+	if err != nil {
+		return nil, fmt.Errorf("invalid page token: %w", err)
+	}
+
 	query := `SELECT id, agent_id, space_id, status, input_raw, output_raw, error_message, tokens_used, create_time
-	          FROM platform.agent_runs WHERE space_id = $1 AND agent_id = $2 ORDER BY create_time DESC LIMIT 100`
+	          FROM platform.agent_runs WHERE space_id = $1 AND agent_id = $2`
+
+	args := []any{q.SpaceID, q.AgentID}
+	argIdx := 3
+
+	if cursor != nil {
+		cursorTime, err := time.Parse(time.RFC3339Nano, cursor.SortValue)
+		if err == nil {
+			query += fmt.Sprintf(" AND (create_time, id) < ($%d, $%d)", argIdx, argIdx+1)
+			args = append(args, cursorTime, cursor.ID)
+			argIdx += 2
+		}
+	}
+
+	query += fmt.Sprintf(" ORDER BY create_time DESC, id DESC LIMIT $%d", argIdx)
+	args = append(args, pageSize+1)
 
 	var list []*AgentRun
-	err := s.db.SelectContext(ctx, &list, query, q.SpaceID, q.AgentID)
+	err = s.db.SelectContext(ctx, &list, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list agent runs: %w", err)
 	}
-	return list, nil
+
+	return paging.NewPage(list, pageSize, func(item *AgentRun) paging.Cursor {
+		return paging.Cursor{
+			SortValue: item.CreateTime.Format(time.RFC3339Nano),
+			ID:        item.ID,
+		}
+	}), nil
 }

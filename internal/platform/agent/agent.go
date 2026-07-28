@@ -80,6 +80,8 @@ type GetAgent struct {
 }
 
 type ListAgentRuns struct {
-	SpaceID string
-	AgentID string
+	SpaceID   string
+	AgentID   string
+	PageSize  int32
+	PageToken string
 }

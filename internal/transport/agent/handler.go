@@ -325,13 +325,20 @@ func (h *Handler) ListAgentRuns(ctx context.Context, req *agentv1.ListAgentRunsR
 		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
 	}
 
-	list, err := h.coordinator.GetStore().ListRuns(ctx, agent.ListAgentRuns{SpaceID: spaceID, AgentID: req.GetAgentId()})
+	page, err := h.coordinator.GetStore().ListRuns(ctx, agent.ListAgentRuns{
+		SpaceID:   spaceID,
+		AgentID:   req.GetAgentId(),
+		PageSize:  req.GetPageSize(),
+		PageToken: req.GetPageToken(),
+	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list agent runs: %v", err)
 	}
 
-	res := &agentv1.ListAgentRunsResponse{}
-	for _, r := range list {
+	res := &agentv1.ListAgentRunsResponse{
+		NextPageToken: page.NextPageToken,
+	}
+	for _, r := range page.Items {
 		res.Runs = append(res.Runs, toProtoAgentRun(r))
 	}
 	return res, nil

@@ -191,10 +191,13 @@ message DeleteAgentRequest {
 
 message ListAgentRunsRequest {
   string agent_id = 1 [(google.api.field_behavior) = REQUIRED];
+  int32 page_size = 2;
+  string page_token = 3;
 }
 
 message ListAgentRunsResponse {
   repeated AgentRun runs = 1;
+  string next_page_token = 2;
 }
 
 message AgentBlueprintDescriptor {

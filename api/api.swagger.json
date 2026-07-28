@@ -3198,6 +3198,19 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -6245,6 +6258,9 @@
             "type": "object",
             "$ref": "#/definitions/v1AgentRun"
           }
+        },
+        "nextPageToken": {
+          "type": "string"
         }
       }
     },

@@ -983,6 +983,8 @@ func (x *DeleteAgentRequest) GetId() string {
 type ListAgentRunsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AgentId       string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	PageSize      int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageToken     string                 `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1024,9 +1026,24 @@ func (x *ListAgentRunsRequest) GetAgentId() string {
 	return ""
 }
 
+func (x *ListAgentRunsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListAgentRunsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
 type ListAgentRunsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Runs          []*AgentRun            `protobuf:"bytes,1,rep,name=runs,proto3" json:"runs,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1066,6 +1083,13 @@ func (x *ListAgentRunsResponse) GetRuns() []*AgentRun {
 		return x.Runs
 	}
 	return nil
+}
+
+func (x *ListAgentRunsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
 }
 
 type AgentBlueprintDescriptor struct {
@@ -1423,11 +1447,15 @@ const file_saturn_platform_agent_v1_agent_proto_rawDesc = "" +
 	"\n" +
 	"is_enabled\x18\t \x01(\bR\tisEnabled\")\n" +
 	"\x12DeleteAgentRequest\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"6\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"r\n" +
 	"\x14ListAgentRunsRequest\x12\x1e\n" +
-	"\bagent_id\x18\x01 \x01(\tB\x03\xe0A\x02R\aagentId\"O\n" +
+	"\bagent_id\x18\x01 \x01(\tB\x03\xe0A\x02R\aagentId\x12\x1b\n" +
+	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x03 \x01(\tR\tpageToken\"w\n" +
 	"\x15ListAgentRunsResponse\x126\n" +
-	"\x04runs\x18\x01 \x03(\v2\".saturn.platform.agent.v1.AgentRunR\x04runs\"\x94\x02\n" +
+	"\x04runs\x18\x01 \x03(\v2\".saturn.platform.agent.v1.AgentRunR\x04runs\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\x94\x02\n" +
 	"\x18AgentBlueprintDescriptor\x12\x18\n" +
 	"\apurpose\x18\x01 \x01(\tR\apurpose\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12 \n" +

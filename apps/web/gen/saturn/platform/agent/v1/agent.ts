@@ -111,10 +111,13 @@ export interface DeleteAgentRequest {
 
 export interface ListAgentRunsRequest {
   agentId: string
+  pageSize: number
+  pageToken: string
 }
 
 export interface ListAgentRunsResponse {
   runs: AgentRun[]
+  nextPageToken: string
 }
 
 export interface AgentBlueprintDescriptor {
@@ -412,11 +415,14 @@ export function useDeleteAgentMutation(
  */
 export async function listAgentRuns(
   agent_id: string,
-  _req: ListAgentRunsRequest
+  req: ListAgentRunsRequest
 ): Promise<ListAgentRunsResponse> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).agentId
   return request<ListAgentRunsResponse>({
     method: "GET",
     url: `/api/v1/platform/agent/agents/${agent_id}/runs`,
+    params: params,
   })
 }
 

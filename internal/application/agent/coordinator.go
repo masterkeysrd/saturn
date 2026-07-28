@@ -8,6 +8,7 @@ import (
 	"text/template"
 
 	"github.com/masterkeysrd/saturn/internal/platform/agent"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
 // AgentStore abstracts database operations for retrieving configurations and logging runs.
@@ -26,7 +27,7 @@ type AgentStore interface {
 	UpdateAgent(ctx context.Context, spaceID string, id string, providerID *string, name string, desc *string, tags []string, model string, prompt *string, temp float64, isEnabled bool) (*agent.Agent, error)
 	DeleteAgent(ctx context.Context, spaceID string, id string) error
 
-	ListRuns(ctx context.Context, q agent.ListAgentRuns) ([]*agent.AgentRun, error)
+	ListRuns(ctx context.Context, q agent.ListAgentRuns) (*paging.Page[*agent.AgentRun], error)
 }
 
 // Coordinator orchestrates AI agent blueprints, LLM providers, and audit runs.
