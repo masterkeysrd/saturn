@@ -36,6 +36,10 @@ import {
   Repeat,
   MoreVertical,
   History,
+  TrendingUp,
+  Calculator,
+  Hash,
+  Filter,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -212,10 +216,78 @@ export function TransactionsView() {
       title="Transactions"
       description="View your ledger history, check exchange conversions, and manage expenses."
       icon={Receipt}
+      actions={
+        isWritable && (
+          <Button
+            onClick={handleCreateTrigger}
+            className="flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent pt-0.5 font-semibold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.02] hover:opacity-95 sm:w-auto"
+          >
+            <Plus className="h-4 w-4" />
+            Record Expense
+          </Button>
+        )
+      }
     >
-      <div className="mt-2 animate-in duration-300 fade-in">
+      <div className="mt-2 animate-in space-y-6 duration-300 fade-in">
+        {/* Top Summary Stat Cards Grid */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="flex items-center gap-4 rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm backdrop-blur-xl select-none">
+            <div className="rounded-2xl bg-primary/10 p-3.5 text-primary">
+              <TrendingUp className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">
+                Total Outflow
+              </p>
+              <h4 className="mt-0.5 text-2xl font-bold text-foreground">
+                {totalSpent.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{" "}
+                <span className="text-xs font-bold text-muted-foreground uppercase">
+                  {settings?.baseCurrency}
+                </span>
+              </h4>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm backdrop-blur-xl select-none">
+            <div className="rounded-2xl bg-indigo-500/10 p-3.5 text-indigo-500">
+              <Calculator className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">
+                Average Cost
+              </p>
+              <h4 className="mt-0.5 text-2xl font-bold text-foreground">
+                {avgSpent.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{" "}
+                <span className="text-xs font-bold text-muted-foreground uppercase">
+                  {settings?.baseCurrency}
+                </span>
+              </h4>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm backdrop-blur-xl select-none">
+            <div className="rounded-2xl bg-emerald-500/10 p-3.5 text-emerald-500">
+              <Hash className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">
+                Total Transactions
+              </p>
+              <h4 className="mt-0.5 text-2xl font-bold text-foreground">
+                {txCount}
+              </h4>
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          {/* Left Column: Analytics & Controls (Sticky) */}
+          {/* Left Column: Dedicated Search & Filter Controls (Sticky) */}
           <div className="space-y-6 self-start lg:sticky lg:top-6 lg:col-span-1">
             {pendingCount > 0 && (
               <div className="overflow-hidden rounded-3xl border border-indigo-500/30 bg-indigo-500/5 p-6 shadow-lg backdrop-blur-xl">
@@ -245,238 +317,183 @@ export function TransactionsView() {
               </div>
             )}
             <div className="overflow-hidden rounded-3xl border border-border/40 bg-card/45 p-6 shadow-xl backdrop-blur-xl md:p-8">
-              <h3 className="text-lg font-bold text-foreground">
-                Ledger Overview
+              <h3 className="flex items-center gap-2 text-base font-bold text-foreground">
+                <Filter className="h-4 w-4 text-primary" />
+                Filter & Search
               </h3>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Real-time summary and workspace transaction controls.
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Refine transaction history by category, account, or notes.
               </p>
 
-              <div className="mt-8 space-y-6">
-                {/* Total Outflow Display */}
-                <div>
-                  <span className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                    Total Outflow
-                  </span>
-                  <span className="mt-1 block text-2xl font-black tracking-tight whitespace-nowrap text-foreground sm:text-3xl">
-                    {totalSpent.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}{" "}
-                    <span className="text-xs font-bold text-muted-foreground uppercase sm:text-sm">
-                      {settings?.baseCurrency}
-                    </span>
-                  </span>
+              <div className="mt-6 space-y-4">
+                {/* Search query */}
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                    Search Notes
+                  </label>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search description..."
+                    className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold placeholder:text-muted-foreground/50 focus:ring-1 focus:ring-primary focus:outline-none"
+                  />
                 </div>
 
-                {/* Sub-stats Grid */}
-                <div className="grid grid-cols-2 gap-4 border-t border-border/20 pt-4">
-                  <div>
-                    <span className="block text-[9px] font-bold text-muted-foreground uppercase">
-                      Average Cost
-                    </span>
-                    <span className="mt-0.5 block text-sm font-extrabold whitespace-nowrap text-foreground">
-                      {avgSpent.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="block text-[9px] font-bold text-muted-foreground uppercase">
-                      Total Transactions
-                    </span>
-                    <span className="mt-0.5 block text-sm font-extrabold whitespace-nowrap text-foreground">
-                      {txCount}
-                    </span>
-                  </div>
-                </div>
-                {/* Filters */}
-                <div className="block space-y-4 border-t border-border/20 pt-4">
-                  {/* Search query */}
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                      Search Notes
-                    </label>
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search description..."
-                      className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold placeholder:text-muted-foreground/50 focus:ring-1 focus:ring-primary focus:outline-none"
-                    />
-                  </div>
-
-                  {/* Flow Type filter */}
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                      Flow Type
-                    </label>
-                    <Select
-                      value={urlState.type}
-                      onValueChange={(val) =>
-                        setUrlState({ type: val || "TYPE_UNSPECIFIED" })
-                      }
-                    >
-                      <SelectTrigger className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold">
-                        <SelectValue placeholder="All Flows">
-                          {urlState.type === "TYPE_UNSPECIFIED"
-                            ? "All Flows"
-                            : urlState.type === "EXPENSE"
-                              ? "Expense"
-                              : urlState.type === "INCOME"
-                                ? "Income"
-                                : urlState.type === "TRANSFER_OUT"
-                                  ? "Transfer Out"
-                                  : urlState.type === "TRANSFER_IN"
-                                    ? "Transfer In"
-                                    : "All Flows"}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                        <SelectItem value="TYPE_UNSPECIFIED">
-                          All Flows
-                        </SelectItem>
-                        <SelectItem value="EXPENSE">Expense</SelectItem>
-                        <SelectItem value="INCOME">Income</SelectItem>
-                        <SelectItem value="TRANSFER_OUT">
-                          Transfer Out
-                        </SelectItem>
-                        <SelectItem value="TRANSFER_IN">Transfer In</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Budget Category filter */}
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                      Budget Category
-                    </label>
-                    <Select
-                      value={urlState.budgetId}
-                      onValueChange={(val) =>
-                        setUrlState({ budgetId: val || "_all" })
-                      }
-                    >
-                      <SelectTrigger className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold">
-                        <SelectValue placeholder="All Budgets">
-                          {urlState.budgetId === "_all"
-                            ? "All Budgets"
-                            : budgets.find((b) => b.id === urlState.budgetId)
-                                ?.name || "All Budgets"}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                        <SelectItem value="_all">All Budgets</SelectItem>
-                        {budgets.map((b) => (
-                          <SelectItem key={b.id} value={b.id}>
-                            {b.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Asset Account filter */}
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                      Asset Account
-                    </label>
-                    <Select
-                      value={urlState.accountId}
-                      onValueChange={(val) =>
-                        setUrlState({ accountId: val || "_all" })
-                      }
-                    >
-                      <SelectTrigger className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold">
-                        <SelectValue placeholder="All Accounts">
-                          {urlState.accountId === "_all"
-                            ? "All Accounts"
-                            : accounts.find((a) => a.id === urlState.accountId)
-                                ?.name || "All Accounts"}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                        <SelectItem value="_all">All Accounts</SelectItem>
-                        {accounts.map((a) => (
-                          <SelectItem key={a.id} value={a.id}>
-                            {a.name} ({a.currency})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Sort Order filter */}
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                      Sort Order
-                    </label>
-                    <Select
-                      value={urlState.sort}
-                      onValueChange={(val) =>
-                        setUrlState({ sort: val || "_default" })
-                      }
-                    >
-                      <SelectTrigger className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold">
-                        <SelectValue placeholder="Newest first">
-                          {urlState.sort === "_default"
-                            ? "Newest first"
-                            : urlState.sort === "transaction_date:asc"
-                              ? "Oldest first"
-                              : urlState.sort === "effective_date:desc"
-                                ? "Effective: Newest"
-                                : urlState.sort === "effective_date:asc"
-                                  ? "Effective: Oldest"
-                                  : urlState.sort === "amount:desc"
-                                    ? "Highest Amount"
-                                    : urlState.sort === "amount:asc"
-                                      ? "Lowest Amount"
-                                      : urlState.sort === "description:asc"
-                                        ? "Description: A-Z"
-                                        : urlState.sort === "description:desc"
-                                          ? "Description: Z-A"
-                                          : "Newest first"}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                        <SelectItem value="_default">Newest first</SelectItem>
-                        <SelectItem value="transaction_date:asc">
-                          Oldest first
-                        </SelectItem>
-                        <SelectItem value="effective_date:desc">
-                          Effective: Newest
-                        </SelectItem>
-                        <SelectItem value="effective_date:asc">
-                          Effective: Oldest
-                        </SelectItem>
-                        <SelectItem value="amount:desc">
-                          Highest Amount
-                        </SelectItem>
-                        <SelectItem value="amount:asc">
-                          Lowest Amount
-                        </SelectItem>
-                        <SelectItem value="description:asc">
-                          Description: A-Z
-                        </SelectItem>
-                        <SelectItem value="description:desc">
-                          Description: Z-A
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Add Expense Action Button */}
-                {isWritable && (
-                  <Button
-                    onClick={handleCreateTrigger}
-                    className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent pt-0.5 font-semibold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.02] hover:opacity-95"
+                {/* Flow Type filter */}
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                    Flow Type
+                  </label>
+                  <Select
+                    value={urlState.type}
+                    onValueChange={(val) =>
+                      setUrlState({ type: val || "TYPE_UNSPECIFIED" })
+                    }
                   >
-                    <Plus className="h-4.5 w-4.5" />
-                    Record Expense
-                  </Button>
-                )}
+                    <SelectTrigger className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold">
+                      <SelectValue placeholder="All Flows">
+                        {urlState.type === "TYPE_UNSPECIFIED"
+                          ? "All Flows"
+                          : urlState.type === "EXPENSE"
+                            ? "Expense"
+                            : urlState.type === "INCOME"
+                              ? "Income"
+                              : urlState.type === "TRANSFER_OUT"
+                                ? "Transfer Out"
+                                : urlState.type === "TRANSFER_IN"
+                                  ? "Transfer In"
+                                  : "All Flows"}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                      <SelectItem value="TYPE_UNSPECIFIED">
+                        All Flows
+                      </SelectItem>
+                      <SelectItem value="EXPENSE">Expense</SelectItem>
+                      <SelectItem value="INCOME">Income</SelectItem>
+                      <SelectItem value="TRANSFER_OUT">Transfer Out</SelectItem>
+                      <SelectItem value="TRANSFER_IN">Transfer In</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Budget Category filter */}
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                    Budget Category
+                  </label>
+                  <Select
+                    value={urlState.budgetId}
+                    onValueChange={(val) =>
+                      setUrlState({ budgetId: val || "_all" })
+                    }
+                  >
+                    <SelectTrigger className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold">
+                      <SelectValue placeholder="All Budgets">
+                        {urlState.budgetId === "_all"
+                          ? "All Budgets"
+                          : budgets.find((b) => b.id === urlState.budgetId)
+                              ?.name || "All Budgets"}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                      <SelectItem value="_all">All Budgets</SelectItem>
+                      {budgets.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Asset Account filter */}
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                    Asset Account
+                  </label>
+                  <Select
+                    value={urlState.accountId}
+                    onValueChange={(val) =>
+                      setUrlState({ accountId: val || "_all" })
+                    }
+                  >
+                    <SelectTrigger className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold">
+                      <SelectValue placeholder="All Accounts">
+                        {urlState.accountId === "_all"
+                          ? "All Accounts"
+                          : accounts.find((a) => a.id === urlState.accountId)
+                              ?.name || "All Accounts"}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                      <SelectItem value="_all">All Accounts</SelectItem>
+                      {accounts.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.name} ({a.currency})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Sort Order filter */}
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                    Sort Order
+                  </label>
+                  <Select
+                    value={urlState.sort}
+                    onValueChange={(val) =>
+                      setUrlState({ sort: val || "_default" })
+                    }
+                  >
+                    <SelectTrigger className="h-9 w-full rounded-xl border border-border/50 bg-background/30 px-3 text-xs font-semibold">
+                      <SelectValue placeholder="Newest first">
+                        {urlState.sort === "_default"
+                          ? "Newest first"
+                          : urlState.sort === "transaction_date:asc"
+                            ? "Oldest first"
+                            : urlState.sort === "effective_date:desc"
+                              ? "Effective: Newest"
+                              : urlState.sort === "effective_date:asc"
+                                ? "Effective: Oldest"
+                                : urlState.sort === "amount:desc"
+                                  ? "Highest Amount"
+                                  : urlState.sort === "amount:asc"
+                                    ? "Lowest Amount"
+                                    : urlState.sort === "description:asc"
+                                      ? "Description: A-Z"
+                                      : urlState.sort === "description:desc"
+                                        ? "Description: Z-A"
+                                        : "Newest first"}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                      <SelectItem value="_default">Newest first</SelectItem>
+                      <SelectItem value="transaction_date:asc">
+                        Oldest first
+                      </SelectItem>
+                      <SelectItem value="effective_date:desc">
+                        Effective: Newest
+                      </SelectItem>
+                      <SelectItem value="effective_date:asc">
+                        Effective: Oldest
+                      </SelectItem>
+                      <SelectItem value="amount:desc">
+                        Highest Amount
+                      </SelectItem>
+                      <SelectItem value="amount:asc">Lowest Amount</SelectItem>
+                      <SelectItem value="description:asc">
+                        Description: A-Z
+                      </SelectItem>
+                      <SelectItem value="description:desc">
+                        Description: Z-A
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           </div>
