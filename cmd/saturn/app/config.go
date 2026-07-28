@@ -54,6 +54,12 @@ type Config struct {
 	Auth     AuthConfig
 	Backup   BackupConfig
 	Webhook  WebhookConfig
+	Security SecurityConfig
+}
+
+// SecurityConfig holds encryption and security settings.
+type SecurityConfig struct {
+	EncryptionKey string `mapstructure:"encryption_key"`
 }
 
 // WebhookConfig holds webhook processing and secret configuration.
@@ -167,6 +173,7 @@ func NewViper() *viper.Viper {
 	v.SetDefault("backup.s3_endpoint", "")
 
 	v.SetDefault("webhook.secret", "dev_webhook_secret")
+	v.SetDefault("security.encryption_key", "")
 
 	return v
 }

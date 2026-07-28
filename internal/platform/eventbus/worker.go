@@ -215,6 +215,7 @@ func (e *Engine) executeDelivery(ctx context.Context, record DeliveryRecord) {
 	}()
 
 	if execErr != nil {
+		slog.Error("eventbus subscriber delivery execution failed", "subscriber_id", record.SubscriberID, "topic", record.Topic, "message_id", record.MessageID, "err", execErr)
 		nextAttempt := record.Attempts + 1
 		status := "pending"
 		if nextAttempt >= record.MaxAttempts {

@@ -238,7 +238,11 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	integrationRegistry := integration.NewRegistry(sqlxDB)
 	s.IntegrationRegistry = integrationRegistry
 
-	agentStore := agent.NewStore(sqlxDB)
+	rawAgentStore := agent.NewStore(sqlxDB)
+	agentStore, err := agent.NewEncryptedStore(rawAgentStore, cfg.Security.EncryptionKey)
+	if err != nil {
+		return fmt.Errorf("init encrypted agent store: %w", err)
+	}
 	agentClient := agent.NewClient()
 	agentCoordinator := agentapp.NewCoordinator(agentStore, agentClient)
 
