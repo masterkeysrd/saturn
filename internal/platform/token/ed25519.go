@@ -395,7 +395,6 @@ func LoadPublicKeys(paths map[string]string) (map[string]ed25519.PublicKey, erro
 	return keys, nil
 }
 
-
 // NewTestService creates an Ed25519Service configured for testing.
 func NewTestService() (*Ed25519Service, error) {
 	pub, priv, err := ed25519.GenerateKey(nil)

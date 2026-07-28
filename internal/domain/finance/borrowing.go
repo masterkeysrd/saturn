@@ -200,11 +200,11 @@ func (r *BorrowingRepayment) Validate() error {
 }
 
 // DefaultBorrowingSortField represents the fallback sorting column name for borrowings.
-const DefaultBorrowingSortField = "created_at"
+const DefaultBorrowingSortField = "create_time"
 
 // BorrowingSortFields registry maps sortable borrowing field names to cursor strings.
 var BorrowingSortFields = map[string]func(*Borrowing) string{
-	"created_at":     func(b *Borrowing) string { return b.CreateTime.Format(time.RFC3339) },
+	"create_time":    func(b *Borrowing) string { return b.CreateTime.Format(time.RFC3339) },
 	"counterparty":   func(b *Borrowing) string { return b.Counterparty },
 	"total_amount":   func(b *Borrowing) string { return fmt.Sprintf("%019d", b.TotalAmount) },
 	"established_at": func(b *Borrowing) string { return b.EstablishedAt.Format(time.RFC3339) },
