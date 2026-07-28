@@ -36,22 +36,22 @@ type AccountSelectProps<TFieldValues extends FieldValues = FieldValues> =
       onValueChange: (value: string) => void
     })
   | (BaseAccountSelectProps & {
-      control: Control<TFieldValues, any, any>
+      control: Control<TFieldValues>
       name: Path<TFieldValues>
       value?: undefined
       onValueChange?: undefined
     })
 
-function getAccountTypeIcon(type: Account_Type) {
+function renderAccountTypeIcon(type: Account_Type, className?: string) {
   switch (type) {
     case "CREDIT_CARD":
-      return CreditCard
+      return <CreditCard className={className} />
     case "CASH":
-      return Coins
+      return <Coins className={className} />
     case "DIGITAL_ACCOUNT":
-      return Wallet
+      return <Wallet className={className} />
     default:
-      return Building2
+      return <Building2 className={className} />
   }
 }
 
@@ -175,9 +175,6 @@ function AccountSelectInner({
   onValueChange: (value: string) => void
 }) {
   const selectedAccount = accounts.find((a) => a.id === value)
-  const SelectedIcon = selectedAccount
-    ? getAccountTypeIcon(selectedAccount.type)
-    : null
   const selectedColors = selectedAccount
     ? getAccountColorClasses(selectedAccount.color)
     : null
@@ -205,7 +202,7 @@ function AccountSelectInner({
         )}
       >
         <SelectValue placeholder={placeholder}>
-          {selectedAccount && SelectedIcon && selectedColors ? (
+          {selectedAccount && selectedColors ? (
             <div className="flex w-full items-center justify-between">
               <div className="flex items-center gap-2 overflow-hidden">
                 <div
@@ -216,7 +213,7 @@ function AccountSelectInner({
                     selectedColors.border
                   )}
                 >
-                  <SelectedIcon className="h-3.5 w-3.5" />
+                  {renderAccountTypeIcon(selectedAccount.type, "h-3.5 w-3.5")}
                 </div>
                 <span className="truncate text-xs font-semibold text-foreground">
                   {selectedAccount.name}
@@ -255,7 +252,6 @@ function AccountSelectInner({
           </SelectItem>
         )}
         {accounts.map((acc) => {
-          const Icon = getAccountTypeIcon(acc.type)
           const colors = getAccountColorClasses(acc.color)
           return (
             <SelectItem
@@ -273,7 +269,7 @@ function AccountSelectInner({
                       colors.border
                     )}
                   >
-                    <Icon className="h-4 w-4" />
+                    {renderAccountTypeIcon(acc.type, "h-4 w-4")}
                   </div>
                   <div className="flex min-w-0 flex-col text-left">
                     <span className="truncate text-xs font-semibold text-foreground">

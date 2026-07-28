@@ -38,7 +38,7 @@ type BudgetSelectProps<TFieldValues extends FieldValues = FieldValues> =
       onValueChange: (value: string) => void
     })
   | (BaseBudgetSelectProps & {
-      control: Control<TFieldValues, any, any>
+      control: Control<TFieldValues>
       name: Path<TFieldValues>
       value?: undefined
       onValueChange?: undefined

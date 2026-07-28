@@ -1,5 +1,5 @@
 import { useState, useEffect, createElement } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
   useUpdateBudgetMutation,
@@ -113,7 +113,6 @@ export function EditBudgetSheet({
     control,
     reset,
     setValue,
-    watch,
     formState: { errors },
   } = useForm<BudgetFormValues>({
     resolver: zodResolver(budgetSchema),
@@ -128,6 +127,12 @@ export function EditBudgetSheet({
     },
   })
 
+  const [prevBudget, setPrevBudget] = useState(activeBudget)
+  if (activeBudget && activeBudget !== prevBudget) {
+    setPrevBudget(activeBudget)
+    setIsActive(activeBudget.isActive)
+  }
+
   // Sync form values whenever activeBudget changes
   useEffect(() => {
     if (activeBudget) {
@@ -140,14 +145,13 @@ export function EditBudgetSheet({
         color: activeBudget.color || "indigo",
         defaultAccountId: activeBudget.defaultAccountId || "",
       })
-      setIsActive(activeBudget.isActive)
     }
   }, [activeBudget, reset])
 
-  const limitValue = watch("limit")
-  const currencyValue = watch("currency")
-  const iconValue = watch("icon")
-  const colorValue = watch("color")
+  const limitValue = useWatch({ control, name: "limit" })
+  const currencyValue = useWatch({ control, name: "currency" })
+  const iconValue = useWatch({ control, name: "icon" })
+  const colorValue = useWatch({ control, name: "color" })
 
   const getConversionPreview = (amountStr: string, fromCurr: string) => {
     const amount = parseFloat(amountStr)

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
   inboxReviewSchema,
@@ -87,6 +87,7 @@ export function InboxItemReviewPanel({
   hasMore,
   error,
 }: InboxItemReviewPanelProps) {
+  const [nowTime] = useState(() => Date.now())
   const [rawOpen, setRawOpen] = useState(false)
   const [popoverOpen, setPopoverOpen] = useState(false)
   const [txSearch, setTxSearch] = useState("")
@@ -103,7 +104,6 @@ export function InboxItemReviewPanel({
     control,
     reset,
     setValue,
-    watch,
     formState: { errors },
   } = useForm<InboxReviewFormValues>({
     resolver: zodResolver(inboxReviewSchema),
@@ -291,7 +291,10 @@ export function InboxItemReviewPanel({
     })
   }, [selectedItem, suggestedBill, suggestedBorrowing, reset])
 
-  const currentScheduledPaymentId = watch("scheduledPaymentId")
+  const currentScheduledPaymentId = useWatch({
+    control,
+    name: "scheduledPaymentId",
+  })
 
   const filteredPayments = useMemo(() => {
     const q = billSearch.toLowerCase().trim()
@@ -315,7 +318,7 @@ export function InboxItemReviewPanel({
     })
   }, [payments, budgets, billSearch])
 
-  const currentBorrowingId = watch("borrowingId")
+  const currentBorrowingId = useWatch({ control, name: "borrowingId" })
 
   const filteredBorrowings = useMemo(() => {
     const q = borrowingSearch.toLowerCase().trim()
@@ -336,12 +339,16 @@ export function InboxItemReviewPanel({
     })
   }, [borrowings, borrowingSearch])
 
-  const selectedTxId = watch("selectedTxId")
-  const overwriteLinkedTx = watch("overwriteLinkedTx")
-  const currentDocType = watch("docType")
-  const currentTxnType = watch("transactionType")
-  const transferLeg = watch("transferLeg")
-  const hasScheduledBill = !!watch("scheduledPaymentId")
+  const selectedTxId = useWatch({ control, name: "selectedTxId" })
+  const overwriteLinkedTx = useWatch({ control, name: "overwriteLinkedTx" })
+  const currentDocType = useWatch({ control, name: "docType" })
+  const currentTxnType = useWatch({ control, name: "transactionType" })
+  const transferLeg = useWatch({ control, name: "transferLeg" })
+  const scheduledPaymentIdVal = useWatch({
+    control,
+    name: "scheduledPaymentId",
+  })
+  const hasScheduledBill = !!scheduledPaymentIdVal
   const isLinking = !!(selectedTxId && selectedTxId !== "none")
 
   const dupTx = meta.potential_duplicate_id
@@ -1100,7 +1107,7 @@ export function InboxItemReviewPanel({
                                   currentScheduledPaymentId === p.id
                                 const isOverdue =
                                   p.dueDate &&
-                                  new Date(p.dueDate).getTime() < Date.now()
+                                  new Date(p.dueDate).getTime() < nowTime
                                 const formattedDate = p.dueDate
                                   ? new Date(p.dueDate).toLocaleDateString(
                                       undefined,

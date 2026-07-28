@@ -1,5 +1,5 @@
-import { useEffect } from "react"
-import { useForm, Controller } from "react-hook-form"
+import { useEffect, useMemo } from "react"
+import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
   useCreateExpenseMutation,
@@ -76,7 +76,10 @@ export function CreateTransactionSheet({
     {},
     { enabled: open && !!spaceId }
   )
-  const activeAccounts = accountsData?.accounts?.filter((a) => a.isActive) || []
+  const activeAccounts = useMemo(
+    () => accountsData?.accounts?.filter((a) => a.isActive) || [],
+    [accountsData?.accounts]
+  )
 
   const createExpenseMutation = useCreateExpenseMutation()
   const updateExpenseMutation = useUpdateExpenseMutation()
@@ -87,7 +90,6 @@ export function CreateTransactionSheet({
     control,
     reset,
     setValue,
-    watch,
     formState: { errors },
   } = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
@@ -146,13 +148,24 @@ export function CreateTransactionSheet({
         })
       }
     }
-  }, [open, editTransaction, preselectedBudgetId, baseCurrency, budgets, reset])
+  }, [
+    open,
+    editTransaction,
+    preselectedBudgetId,
+    baseCurrency,
+    budgets,
+    activeAccounts,
+    reset,
+  ])
 
-  const budgetIdValue = watch("budgetId")
-  const amountValue = watch("amount")
-  const currencyValue = watch("currency")
-  const transactionDateValue = watch("transactionDate")
-  const hasCustomEffectiveDate = watch("hasCustomEffectiveDate")
+  const budgetIdValue = useWatch({ control, name: "budgetId" })
+  const amountValue = useWatch({ control, name: "amount" })
+  const currencyValue = useWatch({ control, name: "currency" })
+  const transactionDateValue = useWatch({ control, name: "transactionDate" })
+  const hasCustomEffectiveDate = useWatch({
+    control,
+    name: "hasCustomEffectiveDate",
+  })
 
   // Sync currency & default account when selected budget changes
   const handleBudgetChange = (newBudgetId: string) => {

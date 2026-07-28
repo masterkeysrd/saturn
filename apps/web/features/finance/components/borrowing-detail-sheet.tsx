@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { useForm, Controller } from "react-hook-form"
+import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
   useListBorrowingRepaymentsQuery,
@@ -102,7 +102,6 @@ export function BorrowingDetailSheet({
     handleSubmit,
     control,
     reset,
-    watch,
     formState: { errors },
   } = useForm<RepaymentFormValues>({
     resolver: zodResolver(repaymentSchema),
@@ -125,7 +124,7 @@ export function BorrowingDetailSheet({
     }
   }, [open, borrowing, reset])
 
-  const amountValue = watch("amount")
+  const amountValue = useWatch({ control, name: "amount" })
   const conversion = borrowing
     ? getConversionPreview(amountValue, borrowing.currency)
     : null

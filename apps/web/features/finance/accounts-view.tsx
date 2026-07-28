@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from "react"
-import { useForm, Controller } from "react-hook-form"
+import { useState, useMemo, useEffect, useCallback } from "react"
+import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
 import { accountSchema, type AccountFormValues } from "./schemas/account"
@@ -910,7 +910,6 @@ function CreateAccountSheet({
     control,
     reset,
     setValue,
-    watch,
     formState: { errors },
   } = useForm<AccountFormValues>({
     resolver: zodResolver(accountSchema),
@@ -968,10 +967,10 @@ function CreateAccountSheet({
     }
   }, [open, editAccount, baseCurrency, reset])
 
-  const accountType = watch("type")
-  const currentColor = watch("color")
-  const isDefaultValue = watch("isDefault")
-  const isActiveValue = watch("isActive")
+  const accountType = useWatch({ control, name: "type" })
+  const currentColor = useWatch({ control, name: "color" })
+  const isDefaultValue = useWatch({ control, name: "isDefault" })
+  const isActiveValue = useWatch({ control, name: "isActive" })
   const isPending = createMutation.isPending || updateMutation.isPending
 
   const onSubmit = async (data: AccountFormValues) => {
@@ -1280,7 +1279,10 @@ function CreateTransferSheet({
     { pageSize: 100, pageToken: "" },
     { enabled: open }
   )
-  const rates = ratesData?.exchangeRates || []
+  const rates = useMemo(
+    () => ratesData?.exchangeRates || [],
+    [ratesData?.exchangeRates]
+  )
   const createMutation = useCreateTransferMutation()
 
   const {
@@ -1289,7 +1291,6 @@ function CreateTransferSheet({
     control,
     reset,
     setValue,
-    watch,
     formState: { errors },
   } = useForm<TransferFormValues>({
     resolver: zodResolver(transferSchema),
@@ -1316,46 +1317,49 @@ function CreateTransferSheet({
     }
   }, [open, reset])
 
-  const srcId = watch("sourceAccountId")
-  const dstId = watch("destinationAccountId")
-  const srcAmount = watch("sourceAmount")
+  const srcId = useWatch({ control, name: "sourceAccountId" })
+  const dstId = useWatch({ control, name: "destinationAccountId" })
+  const srcAmount = useWatch({ control, name: "sourceAmount" })
 
   const srcAcc = activeAccounts.find((a) => a.id === srcId)
   const dstAcc = activeAccounts.find((a) => a.id === dstId)
 
   // Autocalculate target amount if currencies match, or apply exchange rate
-  const updateTargetAmount = (amountStr: string, sId: string, dId: string) => {
-    const sAcc = activeAccounts.find((a) => a.id === sId)
-    const dAcc = activeAccounts.find((a) => a.id === dId)
-    if (!sAcc || !dAcc || !amountStr) return
+  const updateTargetAmount = useCallback(
+    (amountStr: string, sId: string, dId: string) => {
+      const sAcc = activeAccounts.find((a) => a.id === sId)
+      const dAcc = activeAccounts.find((a) => a.id === dId)
+      if (!sAcc || !dAcc || !amountStr) return
 
-    const srcVal = parseFloat(amountStr)
-    if (isNaN(srcVal) || srcVal <= 0) return
+      const srcVal = parseFloat(amountStr)
+      if (isNaN(srcVal) || srcVal <= 0) return
 
-    if (sAcc.currency === dAcc.currency) {
-      setValue("destinationAmount", amountStr)
-    } else {
-      const rate = rates
-        .filter(
-          (r) =>
-            r.fromCurrency === sAcc.currency && r.toCurrency === dAcc.currency
-        )
-        .sort(
-          (a, b) =>
-            new Date(b.rateDate).getTime() - new Date(a.rateDate).getTime()
-        )[0]
+      if (sAcc.currency === dAcc.currency) {
+        setValue("destinationAmount", amountStr)
+      } else {
+        const rate = rates
+          .filter(
+            (r) =>
+              r.fromCurrency === sAcc.currency && r.toCurrency === dAcc.currency
+          )
+          .sort(
+            (a, b) =>
+              new Date(b.rateDate).getTime() - new Date(a.rateDate).getTime()
+          )[0]
 
-      if (rate) {
-        setValue("destinationAmount", (srcVal * rate.rate).toFixed(2))
+        if (rate) {
+          setValue("destinationAmount", (srcVal * rate.rate).toFixed(2))
+        }
       }
-    }
-  }
+    },
+    [activeAccounts, rates, setValue]
+  )
 
   useEffect(() => {
     if (srcId && dstId && srcAmount) {
       updateTargetAmount(srcAmount, srcId, dstId)
     }
-  }, [srcId, dstId, srcAmount])
+  }, [srcId, dstId, srcAmount, updateTargetAmount])
 
   const onSubmit = async (data: TransferFormValues) => {
     try {

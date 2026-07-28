@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { useForm, Controller } from "react-hook-form"
+import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
   useCreateRecurringExpenseMutation,
@@ -109,7 +109,6 @@ export function CreateRecurringExpenseSheet({
     control,
     reset,
     setValue,
-    watch,
     formState: { errors },
   } = useForm<RecurringExpenseFormValues>({
     resolver: zodResolver(recurringExpenseSchema),
@@ -173,9 +172,9 @@ export function CreateRecurringExpenseSheet({
     }
   }, [open, editExpense, baseCurrency, reset])
 
-  const amountValue = watch("amount")
-  const currencyValue = watch("currency")
-  const isVariableValue = watch("isVariable")
+  const amountValue = useWatch({ control, name: "amount" })
+  const currencyValue = useWatch({ control, name: "currency" })
+  const isVariableValue = useWatch({ control, name: "isVariable" })
 
   const handleBudgetChange = (newBudgetId: string) => {
     const b = budgets.find((x) => x.id === newBudgetId)

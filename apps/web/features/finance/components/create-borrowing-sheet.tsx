@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { useForm, Controller } from "react-hook-form"
+import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
   useCreateBorrowingMutation,
@@ -108,7 +108,6 @@ export function CreateBorrowingSheet({
     control,
     reset,
     setValue,
-    watch,
     formState: { errors },
   } = useForm<BorrowingFormValues>({
     resolver: zodResolver(borrowingSchema),
@@ -162,10 +161,10 @@ export function CreateBorrowingSheet({
     }
   }, [open, editBorrowing, baseCurrency, reset])
 
-  const amountValue = watch("amount")
-  const currencyValue = watch("currency")
-  const hasDueDateValue = watch("hasDueDate")
-  const createAsTxValue = watch("createAsTransaction")
+  const amountValue = useWatch({ control, name: "amount" })
+  const currencyValue = useWatch({ control, name: "currency" })
+  const hasDueDateValue = useWatch({ control, name: "hasDueDate" })
+  const createAsTxValue = useWatch({ control, name: "createAsTransaction" })
 
   const conversion = createAsTxValue
     ? getConversionPreview(amountValue, currencyValue)

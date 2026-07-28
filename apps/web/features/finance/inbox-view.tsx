@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import type { InboxReviewFormValues } from "./schemas/inbox-review"
 import { InboxItemReviewPanel } from "./components/inbox-item-review-panel"
 import { useUrlState } from "@/lib/use-url-state"
@@ -59,12 +59,9 @@ export function InboxView() {
   const [pageToken, setPageToken] = useState("")
   const [allStagedItems, setAllStagedItems] = useState<InboxItem[]>([])
 
-  const prevSearchFilter = useRef({ search, docType })
-  if (
-    prevSearchFilter.current.search !== search ||
-    prevSearchFilter.current.docType !== docType
-  ) {
-    prevSearchFilter.current = { search, docType }
+  const [prevFilter, setPrevFilter] = useState({ search, docType })
+  if (prevFilter.search !== search || prevFilter.docType !== docType) {
+    setPrevFilter({ search, docType })
     setPageToken("")
     setAllStagedItems([])
   }
@@ -93,24 +90,22 @@ export function InboxView() {
     }
   )
 
-  const prevInboxDataRef = useRef<typeof inboxData>(undefined)
-
-  useEffect(() => {
-    if (inboxData && inboxData !== prevInboxDataRef.current) {
-      prevInboxDataRef.current = inboxData
-      if (pageToken === "") {
-        setAllStagedItems(inboxData.inboxItems || [])
-      } else {
-        setAllStagedItems((prev) => {
-          const existingIds = new Set(prev.map((item) => item.id))
-          const uniqueNew = (inboxData.inboxItems || []).filter(
-            (item) => item.id && !existingIds.has(item.id)
-          )
-          return [...prev, ...uniqueNew]
-        })
-      }
+  const [prevInboxData, setPrevInboxData] =
+    useState<typeof inboxData>(undefined)
+  if (inboxData && inboxData !== prevInboxData) {
+    setPrevInboxData(inboxData)
+    if (pageToken === "") {
+      setAllStagedItems(inboxData.inboxItems || [])
+    } else {
+      setAllStagedItems((prev) => {
+        const existingIds = new Set(prev.map((item) => item.id))
+        const uniqueNew = (inboxData.inboxItems || []).filter(
+          (item) => item.id && !existingIds.has(item.id)
+        )
+        return [...prev, ...uniqueNew]
+      })
     }
-  }, [inboxData, pageToken])
+  }
 
   const inboxItems = allStagedItems
 

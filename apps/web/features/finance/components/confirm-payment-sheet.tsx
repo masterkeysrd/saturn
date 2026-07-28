@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react"
-import { useForm, Controller } from "react-hook-form"
+import { useState, useEffect, useMemo } from "react"
+import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useNavigate } from "react-router-dom"
 import {
@@ -86,7 +86,6 @@ export function ConfirmPaymentSheet({
     handleSubmit,
     control,
     reset,
-    watch,
     formState: { errors },
   } = useForm<ConfirmPaymentFormValues>({
     resolver: zodResolver(confirmPaymentSchema),
@@ -125,7 +124,10 @@ export function ConfirmPaymentSheet({
 
   const accounts = accountsData?.accounts || []
   const budgets = budgetsData?.budgets || []
-  const expenses = expensesData?.recurringExpenses || []
+  const expenses = useMemo(
+    () => expensesData?.recurringExpenses || [],
+    [expensesData?.recurringExpenses]
+  )
   const transactions = transactionsData?.transactions || []
 
   // Filter unlinked expense transactions
@@ -184,6 +186,19 @@ export function ConfirmPaymentSheet({
     onOpenChange(false)
   }
 
+  const [prevPayment, setPrevPayment] = useState<typeof payment>(null)
+  if (open && payment && payment !== prevPayment) {
+    setPrevPayment(payment)
+    setConfirmedTxn(null)
+    if (candidateMatch) {
+      setSelectedTxnId(candidateMatch.id || "")
+      setAccordionOpen(true)
+    } else {
+      setSelectedTxnId("")
+      setAccordionOpen(false)
+    }
+  }
+
   useEffect(() => {
     if (open && payment) {
       const matchedExp = payment.sourceId
@@ -192,7 +207,7 @@ export function ConfirmPaymentSheet({
       const metaDesc = payment.metadata
         ? (() => {
             try {
-              const decoded = JSON.parse(decodeBase64Utf8(payment.metadata))
+              const decoded = JSON.parse(payment.metadata)
               return decoded?.description || null
             } catch {
               return null
@@ -215,20 +230,11 @@ export function ConfirmPaymentSheet({
         accountId: "",
         description: defaultDesc,
       })
-      setConfirmedTxn(null)
-
-      if (candidateMatch) {
-        setSelectedTxnId(candidateMatch.id || "")
-        setAccordionOpen(true)
-      } else {
-        setSelectedTxnId("")
-        setAccordionOpen(false)
-      }
     }
-  }, [open, payment, expenses, candidateMatch, reset])
+  }, [open, payment, expenses, reset])
 
-  const amountValue = watch("amount")
-  const budgetIdValue = watch("budgetId")
+  const amountValue = useWatch({ control, name: "amount" })
+  const budgetIdValue = useWatch({ control, name: "budgetId" })
 
   const toLocalISODate = (d: Date): string => {
     const y = d.getFullYear()

@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { useForm, Controller } from "react-hook-form"
+import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
   useCreateExchangeRateMutation,
@@ -69,7 +69,6 @@ export function CreateRateSheet({
     control,
     reset,
     setValue,
-    watch,
     formState: { errors },
   } = useForm<ExchangeRateFormValues>({
     resolver: zodResolver(exchangeRateSchema),
@@ -94,10 +93,10 @@ export function CreateRateSheet({
     }
   }, [open, baseCurr, reset])
 
-  const rateFrom = watch("fromCurrency")
-  const rateTo = watch("toCurrency")
-  const rateDirection = watch("rateDirection")
-  const rateValueStr = watch("rateValue")
+  const rateFrom = useWatch({ control, name: "fromCurrency" })
+  const rateTo = useWatch({ control, name: "toCurrency" })
+  const rateDirection = useWatch({ control, name: "rateDirection" })
+  const rateValueStr = useWatch({ control, name: "rateValue" })
 
   const onSubmit = async (data: ExchangeRateFormValues) => {
     const parsedInput = parseFloat(data.rateValue)

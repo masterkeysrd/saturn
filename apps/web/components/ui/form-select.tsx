@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 
 interface FormSelectProps<TFieldValues extends FieldValues = FieldValues> {
-  control: Control<TFieldValues, any, any>
+  control: Control<TFieldValues>
   name: Path<TFieldValues>
   label?: string
   placeholder?: string
