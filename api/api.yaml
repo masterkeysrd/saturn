@@ -20,6 +20,11 @@ securityDefinitions:
     in: "header"
     name: "space-id"
     description: "Enter active workspace KSUID (e.g. spc_1234567890abcdef)"
+  webhookAuth:
+    type: "apiKey"
+    in: "header"
+    name: "Authorization"
+    description: "Webhook shared secret authentication: Bearer <SATURN_WEBHOOK_SECRET>"
 
 authentication:
   rules:

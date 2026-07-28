@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package saturn.platform.message.v1;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/masterkeysrd/saturn/apis/saturn/platform/message/v1;messagev1";
+
+extend google.protobuf.MessageOptions {
+  // Binds this message payload to a specific event topic key
+  string topic = 50002;
+}

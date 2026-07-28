@@ -24,6 +24,9 @@
       "name": "IntegrationService"
     },
     {
+      "name": "MessageAdmin"
+    },
+    {
       "name": "SchedulerAdmin"
     },
     {
@@ -354,6 +357,125 @@
         ],
         "tags": [
           "AdminIdentity"
+        ]
+      }
+    },
+    "/v1/admin/messages/deliveries": {
+      "get": {
+        "summary": "ListDeliveries retrieves a paginated list of message delivery records filtered by topic or status.",
+        "operationId": "MessageAdmin_ListDeliveries",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListDeliveriesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "topic",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "subscriberId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MessageAdmin"
+        ]
+      }
+    },
+    "/v1/admin/messages/deliveries/{id}/retry": {
+      "post": {
+        "summary": "RetryDelivery resets a failed or stuck delivery record so it can be re-processed immediately.",
+        "operationId": "MessageAdmin_RetryDelivery",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MessageAdminRetryDeliveryBody"
+            }
+          }
+        ],
+        "tags": [
+          "MessageAdmin"
+        ]
+      }
+    },
+    "/v1/admin/messages/metrics": {
+      "get": {
+        "summary": "GetQueueMetrics returns aggregate and per-topic status counters for message deliveries.",
+        "operationId": "MessageAdmin_GetQueueMetrics",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetQueueMetricsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "MessageAdmin"
         ]
       }
     },
@@ -4308,6 +4430,9 @@
         "password"
       ]
     },
+    "MessageAdminRetryDeliveryBody": {
+      "type": "object"
+    },
     "RecurringExpenseExecutionState": {
       "type": "object",
       "properties": {
@@ -5589,6 +5714,49 @@
       "type": "object",
       "description": "DeleteSpaceResponse is empty on success."
     },
+    "v1DeliveryInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "messageId": {
+          "type": "string"
+        },
+        "subscriberId": {
+          "type": "string"
+        },
+        "topic": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "attempts": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "maxAttempts": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "lastError": {
+          "type": "string"
+        },
+        "scheduleTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
     "v1ExchangeRate": {
       "type": "object",
       "properties": {
@@ -5737,6 +5905,38 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1ProviderBlueprintDescriptor"
+          }
+        }
+      }
+    },
+    "v1GetQueueMetricsResponse": {
+      "type": "object",
+      "properties": {
+        "totalPending": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalProcessing": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalCompleted": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalFailed": {
+          "type": "string",
+          "format": "int64"
+        },
+        "totalDeliveries": {
+          "type": "string",
+          "format": "int64"
+        },
+        "topics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1TopicMetrics"
           }
         }
       }
@@ -6151,6 +6351,21 @@
         }
       },
       "description": "The response for\n[ListCurrencies][saturn.finance.v1.Finance.ListCurrencies]."
+    },
+    "v1ListDeliveriesResponse": {
+      "type": "object",
+      "properties": {
+        "deliveries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1DeliveryInfo"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      }
     },
     "v1ListExchangeRatesResponse": {
       "type": "object",
@@ -6975,6 +7190,34 @@
         }
       },
       "description": "SpentInsights aggregates workspace statistics."
+    },
+    "v1TopicMetrics": {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string"
+        },
+        "pending": {
+          "type": "string",
+          "format": "int64"
+        },
+        "processing": {
+          "type": "string",
+          "format": "int64"
+        },
+        "completed": {
+          "type": "string",
+          "format": "int64"
+        },
+        "failed": {
+          "type": "string",
+          "format": "int64"
+        },
+        "total": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
     },
     "v1Transaction": {
       "type": "object",

@@ -27,7 +27,7 @@ type Provider interface {
 	Kind() string
 	Descriptor() Descriptor
 	Verify(ctx context.Context, headers map[string][]string, body []byte) error
-	Process(ctx context.Context, spaceID string, headers map[string][]string, body []byte) error
+	Process(ctx context.Context, headers map[string][]string, body []byte) error
 }
 
 // Integration represents a configured connection in the database.

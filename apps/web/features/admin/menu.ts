@@ -17,6 +17,10 @@ export const menu: FeatureMenu = {
       url: "/admin/scheduler",
     },
     {
+      title: "Message Queue",
+      url: "/admin/messages",
+    },
+    {
       title: "Database Backups",
       url: "/admin/backups",
     },

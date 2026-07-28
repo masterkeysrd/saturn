@@ -53,6 +53,12 @@ type Config struct {
 	Swagger  SwaggerConfig
 	Auth     AuthConfig
 	Backup   BackupConfig
+	Webhook  WebhookConfig
+}
+
+// WebhookConfig holds webhook processing and secret configuration.
+type WebhookConfig struct {
+	Secret string `mapstructure:"secret"`
 }
 
 // BackupConfig holds database backup and sync configurations.
@@ -159,6 +165,8 @@ func NewViper() *viper.Viper {
 	v.SetDefault("backup.s3_bucket", "")
 	v.SetDefault("backup.s3_region", "us-east-1")
 	v.SetDefault("backup.s3_endpoint", "")
+
+	v.SetDefault("webhook.secret", "dev_webhook_secret")
 
 	return v
 }

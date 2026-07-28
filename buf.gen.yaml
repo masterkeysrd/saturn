@@ -25,4 +25,9 @@ plugins:
     out: apis
     opt:
       - paths=source_relative
+  - local: ./bin/protoc-gen-go-message
+    out: apis
+    opt:
+      - paths=source_relative
+
 

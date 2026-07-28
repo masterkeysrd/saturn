@@ -40,6 +40,7 @@ services:
       SATURN_BACKUP_S3_ENDPOINT: ${SATURN_BACKUP_S3_ENDPOINT:-}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      SATURN_WEBHOOK_SECRET: ${SATURN_WEBHOOK_SECRET:-}
     volumes:
        - saturn-data:/data
     networks:

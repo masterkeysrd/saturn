@@ -126,6 +126,13 @@ export interface DeleteIntegrationTokenRequest {
   kind: string
 }
 
+export interface WebhookReceivedEvent {
+  source: string
+  spaceId: string
+  headers: Record<string, string>
+  body: string
+}
+
 /**
  * IntegrationService handles configuring, getting, and managing active integrations and their keys.
  */

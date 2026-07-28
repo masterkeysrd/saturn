@@ -19,7 +19,9 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/api"
 	"github.com/masterkeysrd/saturn/apps/web"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/backup"
+	"github.com/masterkeysrd/saturn/internal/platform/eventbus"
 	"github.com/masterkeysrd/saturn/internal/platform/token"
 	transportauth "github.com/masterkeysrd/saturn/internal/transport/auth"
 	"golang.org/x/sync/errgroup"
@@ -32,6 +34,7 @@ import (
 	agentv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/agent/v1"
 	backupv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/backup/v1"
 	integrationv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/integration/v1"
+	messagev1 "github.com/masterkeysrd/saturn/apis/saturn/platform/message/v1"
 	schedulerv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/scheduler/v1"
 	spacev1 "github.com/masterkeysrd/saturn/apis/saturn/space/v1"
 	financeaggregator "github.com/masterkeysrd/saturn/internal/aggregator/finance"
@@ -56,6 +59,7 @@ import (
 	financegrpc "github.com/masterkeysrd/saturn/internal/transport/finance"
 	identitygrpc "github.com/masterkeysrd/saturn/internal/transport/identity"
 	integrationgrpc "github.com/masterkeysrd/saturn/internal/transport/integration"
+	messagegrpc "github.com/masterkeysrd/saturn/internal/transport/message"
 	schedulergrpc "github.com/masterkeysrd/saturn/internal/transport/scheduler"
 	spacegrpc "github.com/masterkeysrd/saturn/internal/transport/space"
 	"github.com/masterkeysrd/saturn/internal/transport/webhook"
@@ -68,6 +72,7 @@ type GRPCServer struct {
 	grpc                *grpc.Server
 	TokenService        token.Service
 	IntegrationRegistry *integration.Registry
+	EventBus            *eventbus.Engine
 }
 
 // NewGRPCServer creates a new GRPCServer instance.
@@ -231,6 +236,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	})
 
 	integrationRegistry := integration.NewRegistry(sqlxDB)
+	s.IntegrationRegistry = integrationRegistry
 
 	agentStore := agent.NewStore(sqlxDB)
 	agentClient := agent.NewClient()
@@ -249,7 +255,10 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	})
 
 	// Register email forwarding provider
-	emailSecret := os.Getenv("SATURN_WEBHOOK_SECRET")
+	emailSecret := cfg.Webhook.Secret
+	if emailSecret == "" {
+		emailSecret = os.Getenv("SATURN_WEBHOOK_SECRET")
+	}
 	if emailSecret == "" {
 		emailSecret = "dev_webhook_secret"
 	}
@@ -263,12 +272,25 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	agentHandler := agentgrpc.NewHandler(agentCoordinator)
 	agentv1.RegisterAgentServiceServer(s.grpc, agentHandler)
 
+	// Wire Integration service
 	integrationCoordinator := integrationapp.NewCoordinator(integrationapp.Dependencies{
 		Registry: integrationRegistry,
 	})
 
 	integrationHandler := integrationgrpc.NewHandler(integrationCoordinator)
 	integrationv1.RegisterIntegrationServiceServer(s.grpc, integrationHandler)
+
+	// Wire EventBus service & register space context propagation middlewares
+	eventBusEngine := eventbus.NewEngine(sqlxDB)
+	eventBusEngine.UseProducer(eventbus.HeaderContextInjector("space_id", auth.SpaceIDFromContext))
+	eventBusEngine.UseConsumer(eventbus.HeaderContextUnpacker("space_id", auth.WithSpaceID))
+	eventBusEngine.Start(ctx)
+	s.EventBus = eventBusEngine
+
+	// Register webhook eventbus subscribers
+	webhook.RegisterSubscribers(eventBusEngine, integrationRegistry)
+	messageHandler := messagegrpc.NewHandler(eventBusEngine)
+	messagev1.RegisterMessageAdminServer(s.grpc, messageHandler)
 
 	// Wire Scheduler service & start workers
 	schedulerEngine := scheduler.NewEngine(sqlxDB)
@@ -348,17 +370,19 @@ type GRPCGatewayServer struct {
 	swaggerPath         string
 	tokenService        token.Service
 	integrationRegistry *integration.Registry
+	eventBus            *eventbus.Engine
 	config              *Config
 }
 
 // NewGRPCGatewayServer creates a new GRPCGatewayServer instance.
-func NewGRPCGatewayServer(cfg *Config, tokenService token.Service, integrationRegistry *integration.Registry) *GRPCGatewayServer {
+func NewGRPCGatewayServer(cfg *Config, tokenService token.Service, integrationRegistry *integration.Registry, eventBus *eventbus.Engine) *GRPCGatewayServer {
 	return &GRPCGatewayServer{
 		addr:                cfg.Gateway.Addr,
 		swaggerEnabled:      cfg.Swagger.Enabled,
 		swaggerPath:         cfg.Swagger.Path,
 		tokenService:        tokenService,
 		integrationRegistry: integrationRegistry,
+		eventBus:            eventBus,
 		config:              cfg,
 	}
 }
@@ -398,6 +422,9 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 	if err := schedulerv1.RegisterSchedulerAdminHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
 		return fmt.Errorf("register scheduler admin gateway handler: %w", err)
 	}
+	if err := messagev1.RegisterMessageAdminHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
+		return fmt.Errorf("register message admin gateway handler: %w", err)
+	}
 
 	if err := backupv1.RegisterBackupAdminHandlerFromEndpoint(ctx, s.mux, "unix:"+cfg.GRPC.Socket, []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}); err != nil {
 		return fmt.Errorf("register backup admin gateway handler: %w", err)
@@ -415,7 +442,7 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 	handler.Handle("/api/v1/", apiV1Handler(s.mux))
 
 	// Register unified webhooks handler
-	webhookDispatcher := webhook.NewDispatcher(s.integrationRegistry)
+	webhookDispatcher := webhook.NewDispatcher(s.integrationRegistry, s.eventBus)
 	handler.Handle("/api/v1/webhooks/", webhookDispatcher)
 	if s.swaggerEnabled {
 		swaggerPath := strings.TrimRight(s.swaggerPath, "/") + "/"
@@ -491,7 +518,7 @@ func StartAll(ctx context.Context, mgr *shutdown.Manager, cfg *Config) error {
 		return fmt.Errorf("grpc: %w", err)
 	}
 
-	gwSrv := NewGRPCGatewayServer(cfg, grpcSrv.TokenService, grpcSrv.IntegrationRegistry)
+	gwSrv := NewGRPCGatewayServer(cfg, grpcSrv.TokenService, grpcSrv.IntegrationRegistry, grpcSrv.EventBus)
 
 	// Register shutdown callbacks (LIFO order: gateway first, then gRPC).
 	mgr.Register(grpcSrv.Shutdown)

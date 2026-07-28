@@ -7,32 +7,23 @@ import (
 	"net/http"
 	"strings"
 
+	integrationv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/integration/v1"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
+	"github.com/masterkeysrd/saturn/internal/platform/eventbus"
 	"github.com/masterkeysrd/saturn/internal/platform/integration"
 )
-
-type contextKey string
-
-const spaceIDContextKey contextKey = "space_id"
-
-// GetSpaceID retrieves the Space ID from the context if present.
-func GetSpaceID(ctx context.Context) string {
-	if val := ctx.Value(spaceIDContextKey); val != nil {
-		if idStr, ok := val.(string); ok {
-			return idStr
-		}
-	}
-	return ""
-}
 
 // Dispatcher handles the unified HTTP routing for both application-level and space-level webhooks.
 type Dispatcher struct {
 	registry *integration.Registry
+	eventBus *eventbus.Engine
 }
 
-// NewDispatcher instantiates a new HTTP Webhook Dispatcher.
-func NewDispatcher(registry *integration.Registry) *Dispatcher {
+// NewDispatcher instantiates a new HTTP Webhook Dispatcher backed by the Event Bus.
+func NewDispatcher(registry *integration.Registry, eventBus *eventbus.Engine) *Dispatcher {
 	return &Dispatcher{
 		registry: registry,
+		eventBus: eventBus,
 	}
 }
 
@@ -82,19 +73,26 @@ func (d *Dispatcher) handleApplicationWebhook(w http.ResponseWriter, ctx context
 		return
 	}
 
-	// 1. Verify Request authenticity
+	// 1. Instant Verification check
 	if err := provider.Verify(ctx, headers, body); err != nil {
 		http.Error(w, fmt.Sprintf("unauthorized: %v", err), http.StatusUnauthorized)
 		return
 	}
 
-	// 2. Process payload
-	if err := provider.Process(ctx, "", headers, body); err != nil {
-		http.Error(w, fmt.Sprintf("processing error: %v", err), http.StatusInternalServerError)
+	// 2. Publish WebhookReceivedEvent to EventBus
+	flatHeaders := flattenHeaders(headers)
+	evt := &integrationv1.WebhookReceivedEvent{
+		Source:  source,
+		Headers: flatHeaders,
+		Body:    body,
+	}
+
+	if err := integrationv1.PublishWebhookReceivedEvent(ctx, d.eventBus, evt); err != nil {
+		http.Error(w, fmt.Sprintf("queue error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusAccepted)
 }
 
 func (d *Dispatcher) handleUserWebhook(w http.ResponseWriter, ctx context.Context, source, spaceID string, headers map[string][]string, body []byte) {
@@ -104,19 +102,37 @@ func (d *Dispatcher) handleUserWebhook(w http.ResponseWriter, ctx context.Contex
 		return
 	}
 
-	ctx = context.WithValue(ctx, spaceIDContextKey, spaceID)
+	ctx = auth.WithSpaceID(ctx, spaceID)
 
-	// 1. Verify Request authenticity
+	// 1. Instant Verification check
 	if err := provider.Verify(ctx, headers, body); err != nil {
 		http.Error(w, fmt.Sprintf("unauthorized: %v", err), http.StatusUnauthorized)
 		return
 	}
 
-	// 2. Process payload
-	if err := provider.Process(ctx, spaceID, headers, body); err != nil {
-		http.Error(w, fmt.Sprintf("processing error: %v", err), http.StatusInternalServerError)
+	// 2. Publish WebhookReceivedEvent to EventBus
+	flatHeaders := flattenHeaders(headers)
+	evt := &integrationv1.WebhookReceivedEvent{
+		Source:  source,
+		SpaceId: spaceID,
+		Headers: flatHeaders,
+		Body:    body,
+	}
+
+	if err := integrationv1.PublishWebhookReceivedEvent(ctx, d.eventBus, evt); err != nil {
+		http.Error(w, fmt.Sprintf("queue error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusAccepted)
+}
+
+func flattenHeaders(headers map[string][]string) map[string]string {
+	res := make(map[string]string, len(headers))
+	for k, v := range headers {
+		if len(v) > 0 {
+			res[k] = v[0]
+		}
+	}
+	return res
 }

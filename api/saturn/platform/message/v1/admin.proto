@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package saturn.platform.message.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/masterkeysrd/saturn/apis/saturn/platform/message/v1;messagev1";
+
+// MessageAdmin service provides administrative endpoints for monitoring event bus message queues.
+service MessageAdmin {
+  // GetQueueMetrics returns aggregate and per-topic status counters for message deliveries.
+  rpc GetQueueMetrics(GetQueueMetricsRequest) returns (GetQueueMetricsResponse) {
+    option (google.api.http) = {get: "/v1/admin/messages/metrics"};
+  }
+
+  // ListDeliveries retrieves a paginated list of message delivery records filtered by topic or status.
+  rpc ListDeliveries(ListDeliveriesRequest) returns (ListDeliveriesResponse) {
+    option (google.api.http) = {get: "/v1/admin/messages/deliveries"};
+  }
+
+  // RetryDelivery resets a failed or stuck delivery record so it can be re-processed immediately.
+  rpc RetryDelivery(RetryDeliveryRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/admin/messages/deliveries/{id}/retry"
+      body: "*"
+    };
+  }
+}
+
+message GetQueueMetricsRequest {}
+
+message TopicMetrics {
+  string topic = 1;
+  int64 pending = 2;
+  int64 processing = 3;
+  int64 completed = 4;
+  int64 failed = 5;
+  int64 total = 6;
+}
+
+message GetQueueMetricsResponse {
+  int64 total_pending = 1;
+  int64 total_processing = 2;
+  int64 total_completed = 3;
+  int64 total_failed = 4;
+  int64 total_deliveries = 5;
+  repeated TopicMetrics topics = 6;
+}
+
+message ListDeliveriesRequest {
+  string topic = 1;
+  string status = 2;
+  string subscriber_id = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+}
+
+message DeliveryInfo {
+  string id = 1;
+  string message_id = 2;
+  string subscriber_id = 3;
+  string topic = 4;
+  string status = 5;
+  int32 attempts = 6;
+  int32 max_attempts = 7;
+  string last_error = 8;
+  google.protobuf.Timestamp schedule_time = 9;
+  google.protobuf.Timestamp create_time = 10;
+  google.protobuf.Timestamp update_time = 11;
+}
+
+message ListDeliveriesResponse {
+  repeated DeliveryInfo deliveries = 1;
+  string next_page_token = 2;
+}
+
+message RetryDeliveryRequest {
+  string id = 1;
+}

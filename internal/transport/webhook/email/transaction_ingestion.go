@@ -9,6 +9,7 @@ import (
 	"mime"
 	"mime/multipart"
 	"net/mail"
+	"regexp"
 	"strings"
 
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
@@ -107,19 +108,32 @@ func (p *TransactionIngestionProvider) Verify(ctx context.Context, headers map[s
 }
 
 // Process parses the raw multipart SMTP message, resolves the Space, and triggers ingestion.
-func (p *TransactionIngestionProvider) Process(ctx context.Context, spaceID string, headers map[string][]string, body []byte) error {
+func (p *TransactionIngestionProvider) Process(ctx context.Context, headers map[string][]string, body []byte) error {
 	// Parse the top-level SMTP headers first to locate the recipient address
 	msg, err := mail.ReadMessage(bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("read email message headers: %w", err)
 	}
 
-	toHeader := msg.Header.Get("To")
-	toAddr, err := mail.ParseAddress(toHeader)
-	if err != nil {
-		return fmt.Errorf("parse recipient address: %w", err)
+	toHeader := strings.TrimSpace(msg.Header.Get("To"))
+	if toHeader == "" {
+		for k, v := range headers {
+			if strings.EqualFold(k, "To") && len(v) > 0 {
+				toHeader = strings.TrimSpace(v[0])
+				break
+			}
+		}
 	}
-	toEmail := toAddr.Address
+
+	if toHeader == "" {
+		return errors.New("missing recipient 'To' address in both email body and HTTP headers")
+	}
+
+	toEmail := toHeader
+	toAddr, err := mail.ParseAddress(toHeader)
+	if err == nil {
+		toEmail = toAddr.Address
+	}
 
 	// Extract integration token from the suffix recipient address (e.g. alerts+saturn_int_xxx@yourdomain.com)
 	plusIdx := strings.Index(toEmail, "+")
@@ -165,9 +179,15 @@ func (p *TransactionIngestionProvider) Process(ctx context.Context, spaceID stri
 	senderAddr, err := mail.ParseAddress(parsedEmail.Sender)
 	if err == nil {
 		fromLower = strings.ToLower(senderAddr.Address)
+	} else {
+		// Regex fallback to extract clean email address if header contains extra text/newlines
+		reEmail := regexp.MustCompile(`[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}`)
+		if match := reEmail.FindString(parsedEmail.Sender); match != "" {
+			fromLower = strings.ToLower(match)
+		}
 	}
 	for _, allowedEmail := range cfg.AllowedSenders {
-		if strings.ToLower(allowedEmail) == fromLower {
+		if strings.EqualFold(allowedEmail, fromLower) {
 			allowed = true
 			break
 		}

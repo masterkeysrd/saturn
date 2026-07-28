@@ -7,6 +7,7 @@
 package integrationv1
 
 import (
+	_ "github.com/masterkeysrd/saturn/apis/saturn/platform/message/v1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -1025,11 +1026,79 @@ func (x *DeleteIntegrationTokenRequest) GetKind() string {
 	return ""
 }
 
+type WebhookReceivedEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Source        string                 `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`
+	SpaceId       string                 `protobuf:"bytes,2,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
+	Headers       map[string]string      `protobuf:"bytes,3,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Body          []byte                 `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WebhookReceivedEvent) Reset() {
+	*x = WebhookReceivedEvent{}
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WebhookReceivedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WebhookReceivedEvent) ProtoMessage() {}
+
+func (x *WebhookReceivedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WebhookReceivedEvent.ProtoReflect.Descriptor instead.
+func (*WebhookReceivedEvent) Descriptor() ([]byte, []int) {
+	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *WebhookReceivedEvent) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *WebhookReceivedEvent) GetSpaceId() string {
+	if x != nil {
+		return x.SpaceId
+	}
+	return ""
+}
+
+func (x *WebhookReceivedEvent) GetHeaders() map[string]string {
+	if x != nil {
+		return x.Headers
+	}
+	return nil
+}
+
+func (x *WebhookReceivedEvent) GetBody() []byte {
+	if x != nil {
+		return x.Body
+	}
+	return nil
+}
+
 var File_saturn_platform_integration_v1_integration_proto protoreflect.FileDescriptor
 
 const file_saturn_platform_integration_v1_integration_proto_rawDesc = "" +
 	"\n" +
-	"0saturn/platform/integration/v1/integration.proto\x12\x1esaturn.platform.integration.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb8\x02\n" +
+	"0saturn/platform/integration/v1/integration.proto\x12\x1esaturn.platform.integration.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a(saturn/platform/message/v1/options.proto\"\xb8\x02\n" +
 	"\vIntegration\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bspace_id\x18\x02 \x01(\tR\aspaceId\x12\x12\n" +
@@ -1109,7 +1178,15 @@ const file_saturn_platform_integration_v1_integration_proto_rawDesc = "" +
 	"\x1dDeleteIntegrationTokenRequest\x12\x1f\n" +
 	"\bprovider\x18\x01 \x01(\tB\x03\xe0A\x02R\bprovider\x12\x13\n" +
 	"\x02id\x18\x02 \x01(\tB\x03\xe0A\x02R\x02id\x12\x12\n" +
-	"\x04kind\x18\x03 \x01(\tR\x04kind2\xd5\f\n" +
+	"\x04kind\x18\x03 \x01(\tR\x04kind\"\x8c\x02\n" +
+	"\x14WebhookReceivedEvent\x12\x16\n" +
+	"\x06source\x18\x01 \x01(\tR\x06source\x12\x19\n" +
+	"\bspace_id\x18\x02 \x01(\tR\aspaceId\x12[\n" +
+	"\aheaders\x18\x03 \x03(\v2A.saturn.platform.integration.v1.WebhookReceivedEvent.HeadersEntryR\aheaders\x12\x12\n" +
+	"\x04body\x18\x04 \x01(\fR\x04body\x1a:\n" +
+	"\fHeadersEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x14\x92\xb5\x18\x10webhook.received2\xd5\f\n" +
 	"\x12IntegrationService\x12\xa2\x01\n" +
 	"\x0eGetIntegration\x125.saturn.platform.integration.v1.GetIntegrationRequest\x1a+.saturn.platform.integration.v1.Integration\",\x82\xd3\xe4\x93\x02&\x12$/v1/platform/integrations/{provider}\x12\xa6\x01\n" +
 	"\x14ConfigureIntegration\x12;.saturn.platform.integration.v1.ConfigureIntegrationRequest\x1a+.saturn.platform.integration.v1.Integration\"$\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/v1/platform/integrations\x12\xd5\x01\n" +
@@ -1133,7 +1210,7 @@ func file_saturn_platform_integration_v1_integration_proto_rawDescGZIP() []byte 
 	return file_saturn_platform_integration_v1_integration_proto_rawDescData
 }
 
-var file_saturn_platform_integration_v1_integration_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_saturn_platform_integration_v1_integration_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_saturn_platform_integration_v1_integration_proto_goTypes = []any{
 	(*Integration)(nil),                    // 0: saturn.platform.integration.v1.Integration
 	(*IntegrationToken)(nil),               // 1: saturn.platform.integration.v1.IntegrationToken
@@ -1151,45 +1228,48 @@ var file_saturn_platform_integration_v1_integration_proto_goTypes = []any{
 	(*ListIntegrationTokensRequest)(nil),   // 13: saturn.platform.integration.v1.ListIntegrationTokensRequest
 	(*ListIntegrationTokensResponse)(nil),  // 14: saturn.platform.integration.v1.ListIntegrationTokensResponse
 	(*DeleteIntegrationTokenRequest)(nil),  // 15: saturn.platform.integration.v1.DeleteIntegrationTokenRequest
-	nil,                                    // 16: saturn.platform.integration.v1.SimulateWebhookRequest.HeadersEntry
-	(*timestamppb.Timestamp)(nil),          // 17: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),                // 18: google.protobuf.Struct
-	(*emptypb.Empty)(nil),                  // 19: google.protobuf.Empty
+	(*WebhookReceivedEvent)(nil),           // 16: saturn.platform.integration.v1.WebhookReceivedEvent
+	nil,                                    // 17: saturn.platform.integration.v1.SimulateWebhookRequest.HeadersEntry
+	nil,                                    // 18: saturn.platform.integration.v1.WebhookReceivedEvent.HeadersEntry
+	(*timestamppb.Timestamp)(nil),          // 19: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),                // 20: google.protobuf.Struct
+	(*emptypb.Empty)(nil),                  // 21: google.protobuf.Empty
 }
 var file_saturn_platform_integration_v1_integration_proto_depIdxs = []int32{
-	17, // 0: saturn.platform.integration.v1.Integration.create_time:type_name -> google.protobuf.Timestamp
-	17, // 1: saturn.platform.integration.v1.Integration.update_time:type_name -> google.protobuf.Timestamp
-	17, // 2: saturn.platform.integration.v1.IntegrationToken.create_time:type_name -> google.protobuf.Timestamp
-	17, // 3: saturn.platform.integration.v1.IntegrationToken.last_used_time:type_name -> google.protobuf.Timestamp
-	16, // 4: saturn.platform.integration.v1.SimulateWebhookRequest.headers:type_name -> saturn.platform.integration.v1.SimulateWebhookRequest.HeadersEntry
-	18, // 5: saturn.platform.integration.v1.SimulateWebhookResponse.result:type_name -> google.protobuf.Struct
+	19, // 0: saturn.platform.integration.v1.Integration.create_time:type_name -> google.protobuf.Timestamp
+	19, // 1: saturn.platform.integration.v1.Integration.update_time:type_name -> google.protobuf.Timestamp
+	19, // 2: saturn.platform.integration.v1.IntegrationToken.create_time:type_name -> google.protobuf.Timestamp
+	19, // 3: saturn.platform.integration.v1.IntegrationToken.last_used_time:type_name -> google.protobuf.Timestamp
+	17, // 4: saturn.platform.integration.v1.SimulateWebhookRequest.headers:type_name -> saturn.platform.integration.v1.SimulateWebhookRequest.HeadersEntry
+	20, // 5: saturn.platform.integration.v1.SimulateWebhookResponse.result:type_name -> google.protobuf.Struct
 	8,  // 6: saturn.platform.integration.v1.ListCatalogResponse.catalog:type_name -> saturn.platform.integration.v1.CatalogDescriptor
 	0,  // 7: saturn.platform.integration.v1.ListIntegrationsResponse.integrations:type_name -> saturn.platform.integration.v1.Integration
 	1,  // 8: saturn.platform.integration.v1.CreateIntegrationTokenResponse.token:type_name -> saturn.platform.integration.v1.IntegrationToken
 	1,  // 9: saturn.platform.integration.v1.ListIntegrationTokensResponse.tokens:type_name -> saturn.platform.integration.v1.IntegrationToken
-	2,  // 10: saturn.platform.integration.v1.IntegrationService.GetIntegration:input_type -> saturn.platform.integration.v1.GetIntegrationRequest
-	3,  // 11: saturn.platform.integration.v1.IntegrationService.ConfigureIntegration:input_type -> saturn.platform.integration.v1.ConfigureIntegrationRequest
-	4,  // 12: saturn.platform.integration.v1.IntegrationService.RotateIntegrationToken:input_type -> saturn.platform.integration.v1.RotateIntegrationTokenRequest
-	6,  // 13: saturn.platform.integration.v1.IntegrationService.SimulateWebhook:input_type -> saturn.platform.integration.v1.SimulateWebhookRequest
-	19, // 14: saturn.platform.integration.v1.IntegrationService.ListCatalog:input_type -> google.protobuf.Empty
-	19, // 15: saturn.platform.integration.v1.IntegrationService.ListIntegrations:input_type -> google.protobuf.Empty
-	11, // 16: saturn.platform.integration.v1.IntegrationService.CreateIntegrationToken:input_type -> saturn.platform.integration.v1.CreateIntegrationTokenRequest
-	13, // 17: saturn.platform.integration.v1.IntegrationService.ListIntegrationTokens:input_type -> saturn.platform.integration.v1.ListIntegrationTokensRequest
-	15, // 18: saturn.platform.integration.v1.IntegrationService.DeleteIntegrationToken:input_type -> saturn.platform.integration.v1.DeleteIntegrationTokenRequest
-	0,  // 19: saturn.platform.integration.v1.IntegrationService.GetIntegration:output_type -> saturn.platform.integration.v1.Integration
-	0,  // 20: saturn.platform.integration.v1.IntegrationService.ConfigureIntegration:output_type -> saturn.platform.integration.v1.Integration
-	5,  // 21: saturn.platform.integration.v1.IntegrationService.RotateIntegrationToken:output_type -> saturn.platform.integration.v1.RotateIntegrationTokenResponse
-	7,  // 22: saturn.platform.integration.v1.IntegrationService.SimulateWebhook:output_type -> saturn.platform.integration.v1.SimulateWebhookResponse
-	9,  // 23: saturn.platform.integration.v1.IntegrationService.ListCatalog:output_type -> saturn.platform.integration.v1.ListCatalogResponse
-	10, // 24: saturn.platform.integration.v1.IntegrationService.ListIntegrations:output_type -> saturn.platform.integration.v1.ListIntegrationsResponse
-	12, // 25: saturn.platform.integration.v1.IntegrationService.CreateIntegrationToken:output_type -> saturn.platform.integration.v1.CreateIntegrationTokenResponse
-	14, // 26: saturn.platform.integration.v1.IntegrationService.ListIntegrationTokens:output_type -> saturn.platform.integration.v1.ListIntegrationTokensResponse
-	19, // 27: saturn.platform.integration.v1.IntegrationService.DeleteIntegrationToken:output_type -> google.protobuf.Empty
-	19, // [19:28] is the sub-list for method output_type
-	10, // [10:19] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	18, // 10: saturn.platform.integration.v1.WebhookReceivedEvent.headers:type_name -> saturn.platform.integration.v1.WebhookReceivedEvent.HeadersEntry
+	2,  // 11: saturn.platform.integration.v1.IntegrationService.GetIntegration:input_type -> saturn.platform.integration.v1.GetIntegrationRequest
+	3,  // 12: saturn.platform.integration.v1.IntegrationService.ConfigureIntegration:input_type -> saturn.platform.integration.v1.ConfigureIntegrationRequest
+	4,  // 13: saturn.platform.integration.v1.IntegrationService.RotateIntegrationToken:input_type -> saturn.platform.integration.v1.RotateIntegrationTokenRequest
+	6,  // 14: saturn.platform.integration.v1.IntegrationService.SimulateWebhook:input_type -> saturn.platform.integration.v1.SimulateWebhookRequest
+	21, // 15: saturn.platform.integration.v1.IntegrationService.ListCatalog:input_type -> google.protobuf.Empty
+	21, // 16: saturn.platform.integration.v1.IntegrationService.ListIntegrations:input_type -> google.protobuf.Empty
+	11, // 17: saturn.platform.integration.v1.IntegrationService.CreateIntegrationToken:input_type -> saturn.platform.integration.v1.CreateIntegrationTokenRequest
+	13, // 18: saturn.platform.integration.v1.IntegrationService.ListIntegrationTokens:input_type -> saturn.platform.integration.v1.ListIntegrationTokensRequest
+	15, // 19: saturn.platform.integration.v1.IntegrationService.DeleteIntegrationToken:input_type -> saturn.platform.integration.v1.DeleteIntegrationTokenRequest
+	0,  // 20: saturn.platform.integration.v1.IntegrationService.GetIntegration:output_type -> saturn.platform.integration.v1.Integration
+	0,  // 21: saturn.platform.integration.v1.IntegrationService.ConfigureIntegration:output_type -> saturn.platform.integration.v1.Integration
+	5,  // 22: saturn.platform.integration.v1.IntegrationService.RotateIntegrationToken:output_type -> saturn.platform.integration.v1.RotateIntegrationTokenResponse
+	7,  // 23: saturn.platform.integration.v1.IntegrationService.SimulateWebhook:output_type -> saturn.platform.integration.v1.SimulateWebhookResponse
+	9,  // 24: saturn.platform.integration.v1.IntegrationService.ListCatalog:output_type -> saturn.platform.integration.v1.ListCatalogResponse
+	10, // 25: saturn.platform.integration.v1.IntegrationService.ListIntegrations:output_type -> saturn.platform.integration.v1.ListIntegrationsResponse
+	12, // 26: saturn.platform.integration.v1.IntegrationService.CreateIntegrationToken:output_type -> saturn.platform.integration.v1.CreateIntegrationTokenResponse
+	14, // 27: saturn.platform.integration.v1.IntegrationService.ListIntegrationTokens:output_type -> saturn.platform.integration.v1.ListIntegrationTokensResponse
+	21, // 28: saturn.platform.integration.v1.IntegrationService.DeleteIntegrationToken:output_type -> google.protobuf.Empty
+	20, // [20:29] is the sub-list for method output_type
+	11, // [11:20] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_saturn_platform_integration_v1_integration_proto_init() }
@@ -1203,7 +1283,7 @@ func file_saturn_platform_integration_v1_integration_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_platform_integration_v1_integration_proto_rawDesc), len(file_saturn_platform_integration_v1_integration_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   17,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

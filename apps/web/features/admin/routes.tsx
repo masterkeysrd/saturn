@@ -3,6 +3,7 @@ import { AdminView } from "./admin-view"
 import { SchedulerAdminView } from "./scheduler-view"
 import { BackupAdminView } from "./backup-view"
 import { AdminSecurityView } from "./security-view"
+import { MessageQueueAdminView } from "./message-view"
 import { AdminGuard } from "./admin-guard"
 import type { RouteObject } from "react-router-dom"
 
@@ -28,6 +29,14 @@ export const routes: RouteObject[] = [
     element: (
       <AdminGuard>
         <SchedulerAdminView />
+      </AdminGuard>
+    ),
+  },
+  {
+    path: "/admin/messages",
+    element: (
+      <AdminGuard>
+        <MessageQueueAdminView />
       </AdminGuard>
     ),
   },
