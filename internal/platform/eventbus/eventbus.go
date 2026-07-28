@@ -107,9 +107,9 @@ func (e *Engine) Subscribe(topic string, subscriberID string, handler Handler) {
 	defer e.mu.Unlock()
 
 	regs := e.subscribers[topic]
-	for _, r := range regs {
-		if r.subscriberID == subscriberID {
-			r.handler = handler
+	for i := range regs {
+		if regs[i].subscriberID == subscriberID {
+			regs[i].handler = handler
 			return
 		}
 	}

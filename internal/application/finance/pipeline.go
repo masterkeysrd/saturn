@@ -124,23 +124,20 @@ func (c *Coordinator) RunIngestionPipeline(ctx context.Context, spaceID string, 
 		return nil, fmt.Errorf("compile ingestion graph: %w", err)
 	}
 
-	// Initialize workflow state
-	initialState := &IngestionState{
-		SpaceID:       spaceID,
-		IntegrationID: integrationID,
-		Sender:        sender,
-		Subject:       subject,
-		RawPayload:    body,
-		Metadata: map[string]any{
-			"sender":   sender,
-			"subject":  subject,
-			"received": time.Now().Format(time.RFC3339),
-		},
-	}
-
 	// Execute graph synchronously
 	snapshot, err := g.Execute(ctx, graph.Update[*IngestionState](func(s *IngestionState) *IngestionState {
-		return initialState
+		return &IngestionState{
+			SpaceID:       spaceID,
+			IntegrationID: integrationID,
+			Sender:        sender,
+			Subject:       subject,
+			RawPayload:    body,
+			Metadata: map[string]any{
+				"sender":   sender,
+				"subject":  subject,
+				"received": time.Now().Format(time.RFC3339),
+			},
+		}
 	}), nil)
 	if err != nil {
 		return nil, fmt.Errorf("execute ingestion graph: %w", err)
@@ -288,19 +285,28 @@ func (c *Coordinator) pipelineResolveNode(ctx context.Context, state *IngestionS
 
 	var budgetID *string
 	if state.SuggestedBudget != "" {
-		bID, err := finance.ParseBudgetID(state.SuggestedBudget)
-		if err == nil {
-			budget, err := c.financeService.GetBudget(ctx, finance.SpaceID(state.SpaceID), bID)
-			if err == nil && budget != nil && string(budget.SpaceID) == state.SpaceID {
-				val := string(budget.ID)
-				budgetID = &val
+		if bID, err := finance.ParseBudgetID(state.SuggestedBudget); err == nil {
+			if budget, err := c.financeService.GetBudget(ctx, finance.SpaceID(state.SpaceID), bID); err == nil && budget != nil && string(budget.SpaceID) == state.SpaceID {
+				idStr := string(budget.ID)
+				budgetID = &idStr
+			}
+		} else if page, err := c.financeService.ListBudgets(ctx, finance.SpaceID(state.SpaceID), &finance.ListBudgetsFilter{PageSize: 1000}); err == nil {
+			for _, b := range page.Items {
+				if strings.EqualFold(b.Name, state.SuggestedBudget) {
+					idStr := string(b.ID)
+					budgetID = &idStr
+					break
+				}
 			}
 		}
 	}
 
+	resAccountID := accountID
+	resBudgetID := budgetID
+
 	return graph.Update[*IngestionState](func(s *IngestionState) *IngestionState {
-		s.AccountID = accountID
-		s.BudgetID = budgetID
+		s.AccountID = resAccountID
+		s.BudgetID = resBudgetID
 		return s
 	}), nil
 }
