@@ -10,6 +10,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/mail"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -22,6 +23,8 @@ import (
 type FinanceService interface {
 	IngestEmail(ctx context.Context, spaceID string, integrationID string, sender, subject, body string) (*finance.InboxItem, error)
 }
+
+var reGoogleVerificationURL = regexp.MustCompile(`(?:^|[\s<"'])(https://mail-settings\.google\.com/mail/vf-[a-zA-Z0-9_-]+)`)
 
 // TransactionIngestionProvider implements integration.Provider for email forwarding.
 type TransactionIngestionProvider struct {
@@ -309,15 +312,17 @@ func (p *TransactionIngestionProvider) Process(ctx context.Context, headers map[
 
 	// Auto-confirm Google forwarding confirmation URL if present in email body
 	if isSystemVerification {
-		reGoogleURL := regexp.MustCompile(`https://mail-settings\.google\.com/mail/vf-[a-zA-Z0-9_-]+`)
-		if googleURL := reGoogleURL.FindString(fullBody); googleURL != "" {
-			req, reqErr := http.NewRequestWithContext(ctx, http.MethodGet, googleURL, nil)
-			if reqErr == nil {
-				req.Header.Set("User-Agent", "Saturn-Email-Forwarding-Verifier/1.0")
-				resp, httpErr := http.DefaultClient.Do(req)
-				if httpErr == nil {
-					_ = resp.Body.Close()
-					fullBody += fmt.Sprintf("\n\n[Saturn Auto-Verification: Successfully fetched Google confirmation URL (%d OK)]", resp.StatusCode)
+		if matches := reGoogleVerificationURL.FindStringSubmatch(fullBody); len(matches) > 1 {
+			googleURL := matches[1]
+			if parsedURL, parseErr := url.Parse(googleURL); parseErr == nil && parsedURL.Scheme == "https" && parsedURL.Host == "mail-settings.google.com" && strings.HasPrefix(parsedURL.Path, "/mail/vf-") {
+				req, reqErr := http.NewRequestWithContext(ctx, http.MethodGet, parsedURL.String(), nil)
+				if reqErr == nil {
+					req.Header.Set("User-Agent", "Saturn-Email-Forwarding-Verifier/1.0")
+					resp, httpErr := http.DefaultClient.Do(req)
+					if httpErr == nil {
+						_ = resp.Body.Close()
+						fullBody += fmt.Sprintf("\n\n[Saturn Auto-Verification: Successfully fetched Google confirmation URL (%d OK)]", resp.StatusCode)
+					}
 				}
 			}
 		}
@@ -468,15 +473,17 @@ func (p *TransactionIngestionProvider) Simulate(ctx context.Context, spaceID str
 	}
 
 	if isSystemVerification {
-		reGoogleURL := regexp.MustCompile(`https://mail-settings\.google\.com/mail/vf-[a-zA-Z0-9_-]+`)
-		if googleURL := reGoogleURL.FindString(text); googleURL != "" {
-			req, reqErr := http.NewRequestWithContext(ctx, http.MethodGet, googleURL, nil)
-			if reqErr == nil {
-				req.Header.Set("User-Agent", "Saturn-Email-Forwarding-Verifier/1.0")
-				resp, httpErr := http.DefaultClient.Do(req)
-				if httpErr == nil {
-					_ = resp.Body.Close()
-					text += fmt.Sprintf("\n\n[Saturn Auto-Verification: Successfully fetched Google confirmation URL (%d OK)]", resp.StatusCode)
+		if matches := reGoogleVerificationURL.FindStringSubmatch(text); len(matches) > 1 {
+			googleURL := matches[1]
+			if parsedURL, parseErr := url.Parse(googleURL); parseErr == nil && parsedURL.Scheme == "https" && parsedURL.Host == "mail-settings.google.com" && strings.HasPrefix(parsedURL.Path, "/mail/vf-") {
+				req, reqErr := http.NewRequestWithContext(ctx, http.MethodGet, parsedURL.String(), nil)
+				if reqErr == nil {
+					req.Header.Set("User-Agent", "Saturn-Email-Forwarding-Verifier/1.0")
+					resp, httpErr := http.DefaultClient.Do(req)
+					if httpErr == nil {
+						_ = resp.Body.Close()
+						text += fmt.Sprintf("\n\n[Saturn Auto-Verification: Successfully fetched Google confirmation URL (%d OK)]", resp.StatusCode)
+					}
 				}
 			}
 		}

@@ -11,6 +11,8 @@ import (
 	"io"
 	"os"
 	"strings"
+
+	"golang.org/x/crypto/hkdf"
 )
 
 // Prefix identifies AES-256-GCM encrypted strings in Saturn storage.
@@ -18,9 +20,14 @@ const Prefix = "enc:v1:"
 
 const defaultDevSecret = "saturn-dev-master-encryption-key-fallback"
 
-// Cipher provides AES-256-GCM encryption and decryption.
+const (
+	saltSize   = 16
+	infoString = "saturn-aes-256-gcm-key"
+)
+
+// Cipher provides AES-256-GCM encryption and decryption with per-field random HKDF salt derivation.
 type Cipher struct {
-	key []byte
+	secretKey string
 }
 
 // NewCipher creates a Cipher using secretKey. If secretKey is empty,
@@ -33,12 +40,20 @@ func NewCipher(secretKey string) (*Cipher, error) {
 		secretKey = defaultDevSecret
 	}
 
-	hash := sha256.Sum256([]byte(secretKey))
-	return &Cipher{key: hash[:]}, nil
+	return &Cipher{secretKey: secretKey}, nil
 }
 
-// Encrypt encrypts a plaintext string using AES-256-GCM.
-// Returns enc:v1:<base64(nonce + ciphertext + tag)>.
+func (c *Cipher) deriveKey(salt []byte) ([]byte, error) {
+	hkdfReader := hkdf.New(sha256.New, []byte(c.secretKey), salt, []byte(infoString))
+	key := make([]byte, 32)
+	if _, err := io.ReadFull(hkdfReader, key); err != nil {
+		return nil, fmt.Errorf("derive key via hkdf: %w", err)
+	}
+	return key, nil
+}
+
+// Encrypt encrypts a plaintext string using AES-256-GCM with a random per-field HKDF salt.
+// Returns enc:v1:<base64(salt)>:<base64(nonce + ciphertext + tag)>.
 func (c *Cipher) Encrypt(plaintext string) (string, error) {
 	if plaintext == "" {
 		return "", nil
@@ -48,7 +63,17 @@ func (c *Cipher) Encrypt(plaintext string) (string, error) {
 		return plaintext, nil
 	}
 
-	block, err := aes.NewCipher(c.key)
+	salt := make([]byte, saltSize)
+	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
+		return "", fmt.Errorf("generate random salt: %w", err)
+	}
+
+	key, err := c.deriveKey(salt)
+	if err != nil {
+		return "", err
+	}
+
+	block, err := aes.NewCipher(key)
 	if err != nil {
 		return "", fmt.Errorf("create aes cipher: %w", err)
 	}
@@ -64,11 +89,11 @@ func (c *Cipher) Encrypt(plaintext string) (string, error) {
 	}
 
 	ciphertext := gcm.Seal(nonce, nonce, []byte(plaintext), nil)
-	return Prefix + base64.StdEncoding.EncodeToString(ciphertext), nil
+	return Prefix + base64.StdEncoding.EncodeToString(salt) + ":" + base64.StdEncoding.EncodeToString(ciphertext), nil
 }
 
-// Decrypt decrypts an enc:v1:<base64> string.
-// If the string does not have the enc:v1: prefix, it is returned as-is for backward compatibility.
+// Decrypt decrypts an enc:v1:<salt_b64>:<payload_b64> string.
+// If the string does not have the enc:v1: prefix, it is returned as-is for backward compatibility with unencrypted rows.
 func (c *Cipher) Decrypt(ciphertext string) (string, error) {
 	if ciphertext == "" {
 		return "", nil
@@ -79,12 +104,27 @@ func (c *Cipher) Decrypt(ciphertext string) (string, error) {
 	}
 
 	raw := strings.TrimPrefix(ciphertext, Prefix)
-	data, err := base64.StdEncoding.DecodeString(raw)
-	if err != nil {
-		return "", fmt.Errorf("decode base64: %w", err)
+	parts := strings.SplitN(raw, ":", 2)
+	if len(parts) < 2 {
+		return "", errors.New("invalid ciphertext format")
 	}
 
-	block, err := aes.NewCipher(c.key)
+	salt, err := base64.StdEncoding.DecodeString(parts[0])
+	if err != nil {
+		return "", fmt.Errorf("decode salt base64: %w", err)
+	}
+
+	data, err := base64.StdEncoding.DecodeString(parts[1])
+	if err != nil {
+		return "", fmt.Errorf("decode payload base64: %w", err)
+	}
+
+	key, err := c.deriveKey(salt)
+	if err != nil {
+		return "", err
+	}
+
+	block, err := aes.NewCipher(key)
 	if err != nil {
 		return "", fmt.Errorf("create aes cipher: %w", err)
 	}
