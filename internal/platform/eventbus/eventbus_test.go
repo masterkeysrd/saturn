@@ -8,5 +8,5 @@ import (
 
 // TestEventBus_CompileVerify verifies structural API definitions.
 func TestEventBus_CompileVerify(t *testing.T) {
-	var _ *eventbus.Engine = (*eventbus.Engine)(nil)
+	var _ = (*eventbus.Engine)(nil)
 }

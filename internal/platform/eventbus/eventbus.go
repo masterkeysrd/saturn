@@ -272,7 +272,7 @@ func (e *Engine) GetMetrics(ctx context.Context) (*QueueMetrics, error) {
 	if err != nil {
 		return nil, fmt.Errorf("query queue metrics: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	topicMap := make(map[string]*TopicMetrics)
 	metrics := &QueueMetrics{

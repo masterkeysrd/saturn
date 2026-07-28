@@ -216,11 +216,9 @@ func (e *Engine) executeDelivery(ctx context.Context, record DeliveryRecord) {
 
 	if execErr != nil {
 		nextAttempt := record.Attempts + 1
-		status := "failed"
+		status := "pending"
 		if nextAttempt >= record.MaxAttempts {
 			status = "failed"
-		} else {
-			status = "pending" // Set back to pending for next retry attempt
 		}
 
 		// Exponential backoff retry calculation: 1m, 2m, 4m, 8m...
