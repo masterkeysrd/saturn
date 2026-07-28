@@ -110,7 +110,7 @@ export function MessageQueueAdminView() {
       topic: selectedTopic,
       status: selectedStatus,
       subscriberId: "",
-      pageSize: 20,
+      pageSize: 10,
       pageToken: pageToken,
     },
     { refetchInterval: 5000 }
@@ -414,13 +414,15 @@ export function MessageQueueAdminView() {
                 <table className="w-full table-fixed border-collapse text-left text-xs">
                   <thead className="border-b border-border/40 bg-muted/40 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
                     <tr>
-                      <th className="w-40 px-4 py-3">Delivery ID</th>
+                      <th className="w-40 px-4 py-3 pl-6">Delivery ID</th>
                       <th className="w-48 px-4 py-3">Topic / Subscriber</th>
                       <th className="w-28 px-4 py-3">Status</th>
                       <th className="w-20 px-4 py-3">Attempts</th>
                       <th className="px-4 py-3">Last Error</th>
                       <th className="w-32 px-4 py-3">Created</th>
-                      <th className="w-28 px-4 py-3 text-right">Actions</th>
+                      <th className="w-28 px-4 py-3 pr-6 text-right">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/30">
@@ -459,7 +461,7 @@ export function MessageQueueAdminView() {
                           onClick={() => setSelectedDelivery(item)}
                           className="cursor-pointer transition-colors hover:bg-muted/20"
                         >
-                          <td className="overflow-hidden px-4 py-3 font-mono text-xs font-medium text-foreground">
+                          <td className="overflow-hidden px-4 py-3 pl-6 font-mono text-xs font-medium text-foreground">
                             <Tooltip>
                               <TooltipTrigger>
                                 <span className="block truncate">
@@ -510,7 +512,7 @@ export function MessageQueueAdminView() {
                             {formatRelativeTime(item.createTime, now)}
                           </td>
                           <td
-                            className="px-4 py-3 text-right"
+                            className="px-4 py-3 pr-6 text-right"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <div className="flex items-center justify-end gap-1">

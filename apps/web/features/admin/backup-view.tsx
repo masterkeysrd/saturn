@@ -181,23 +181,23 @@ export function BackupAdminView() {
       {/* Backups List Table */}
       <div className="overflow-hidden rounded-3xl border border-border/50 bg-card/45 shadow-xl backdrop-blur-xl">
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left">
+          <table className="w-full table-fixed border-collapse text-left text-xs">
             <thead>
               <tr className="border-b border-border/40 bg-muted/20 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                <th className="px-6 py-4">Snapshot Name</th>
-                <th className="px-6 py-4">Size</th>
-                <th className="px-6 py-4">Triggered By</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">SHA256 Checksum</th>
-                <th className="px-6 py-4">Created At</th>
+                <th className="px-5 py-4">Snapshot Name</th>
+                <th className="w-28 px-5 py-4">Size</th>
+                <th className="w-32 px-5 py-4">Triggered By</th>
+                <th className="w-28 px-5 py-4">Status</th>
+                <th className="w-44 px-5 py-4">SHA256 Checksum</th>
+                <th className="w-44 px-5 py-4">Created At</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/30 text-sm">
+            <tbody className="divide-y divide-border/30 text-xs">
               {isLoading ? (
                 <tr>
                   <td
                     colSpan={6}
-                    className="px-6 py-10 text-center text-muted-foreground"
+                    className="px-5 py-10 text-center text-muted-foreground"
                   >
                     <RefreshCwIcon className="mx-auto mb-2 h-6 w-6 animate-spin text-muted-foreground/60" />
                     Loading backups list...
@@ -207,7 +207,7 @@ export function BackupAdminView() {
                 <tr>
                   <td
                     colSpan={6}
-                    className="px-6 py-12 text-center text-muted-foreground"
+                    className="px-5 py-12 text-center text-muted-foreground"
                   >
                     <DatabaseIcon className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
                     No backups found. Click "Backup Now" to trigger your first
@@ -223,18 +223,20 @@ export function BackupAdminView() {
                       key={b.id}
                       className="transition-colors hover:bg-muted/10"
                     >
-                      <td className="px-6 py-4 font-mono font-medium text-foreground">
-                        {b.filename}
+                      <td className="overflow-hidden px-5 py-3.5 font-mono font-medium text-foreground">
+                        <span className="block truncate" title={b.filename}>
+                          {b.filename}
+                        </span>
                       </td>
-                      <td className="px-6 py-4 text-muted-foreground">
+                      <td className="px-5 py-3.5 whitespace-nowrap text-muted-foreground">
                         {formatBytes(b.sizeBytes)}
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="rounded-lg bg-muted/65 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                      <td className="px-5 py-3.5">
+                        <span className="block max-w-fit truncate rounded-lg bg-muted/65 px-2.5 py-1 text-xs font-medium text-muted-foreground">
                           {b.triggeredBy}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-3.5">
                         {b.status === "success" ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
@@ -247,8 +249,8 @@ export function BackupAdminView() {
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex max-w-[180px] items-center gap-2">
+                      <td className="overflow-hidden px-5 py-3.5">
+                        <div className="flex min-w-0 items-center gap-1.5">
                           <span
                             className="truncate font-mono text-xs text-muted-foreground/75"
                             title={b.sha256}
@@ -257,7 +259,7 @@ export function BackupAdminView() {
                           </span>
                           <button
                             onClick={() => handleCopy(b.sha256, b.id)}
-                            className="cursor-pointer rounded p-1 text-muted-foreground/50 transition-all hover:bg-muted/60 hover:text-foreground"
+                            className="shrink-0 cursor-pointer rounded p-1 text-muted-foreground/50 transition-all hover:bg-muted/60 hover:text-foreground"
                             title="Copy Checksum"
                           >
                             {copiedId === b.id ? (
@@ -268,7 +270,7 @@ export function BackupAdminView() {
                           </button>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-xs whitespace-nowrap text-muted-foreground">
+                      <td className="px-5 py-3.5 text-xs whitespace-nowrap text-muted-foreground">
                         {formatDateTime(b.createdAt)}
                       </td>
                     </tr>
