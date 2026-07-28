@@ -1862,6 +1862,7 @@ message InboxItem {
     RECEIPT = 2;
     BANK_NOTIFICATION = 3;
     UNKNOWN = 4;
+    SYSTEM_VERIFICATION = 5;
   }
 
   // Output only. Unique identifier.

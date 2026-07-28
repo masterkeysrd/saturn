@@ -703,7 +703,8 @@ export function IntegrationSettings() {
                       </h4>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         Requests sent from unlisted addresses are immediately
-                        blocked for database safety.
+                        blocked. System verification emails (Gmail & Outlook
+                        forwarding setup) are permitted automatically.
                       </p>
                     </div>
 

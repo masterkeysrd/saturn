@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"strings"
 	"time"
 
 	"github.com/masterkeysrd/loom/graph"
@@ -153,8 +154,23 @@ func (c *Coordinator) RunIngestionPipeline(ctx context.Context, spaceID string, 
 	return snapshot.State.StagedItem, nil
 }
 
-// 1. Classifier Node: Decides if document is INVOICE, RECEIPT, BANK_NOTIFICATION, or UNKNOWN.
+// 1. Classifier Node: Decides if document is INVOICE, RECEIPT, BANK_NOTIFICATION, SYSTEM_VERIFICATION, or UNKNOWN.
 func (c *Coordinator) pipelineClassifyNode(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
+	bodyLower := strings.ToLower(state.RawPayload)
+	subjectLower := strings.ToLower(state.Subject)
+	senderLower := strings.ToLower(state.Sender)
+
+	if strings.Contains(bodyLower, "forwarding confirmation") ||
+		strings.Contains(subjectLower, "forwarding confirmation") ||
+		strings.Contains(bodyLower, "verification code") ||
+		strings.Contains(senderLower, "forwarding-noreply") ||
+		strings.Contains(senderLower, "no-reply@microsoft.com") {
+		return graph.Update[*IngestionState](func(s *IngestionState) *IngestionState {
+			s.Classification = "SYSTEM_VERIFICATION"
+			return s
+		}), nil
+	}
+
 	cls, err := c.classifier.Classify(ctx, state.SpaceID, state.RawPayload)
 	if err != nil {
 		return nil, fmt.Errorf("classification agent failed: %w", err)
@@ -168,6 +184,25 @@ func (c *Coordinator) pipelineClassifyNode(ctx context.Context, state *Ingestion
 
 // 2. Extractor Node: Runs Hyperion to pull structured transaction details.
 func (c *Coordinator) pipelineExtractNode(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
+	if state.Classification == "SYSTEM_VERIFICATION" {
+		return graph.Update[*IngestionState](func(s *IngestionState) *IngestionState {
+			vendor := "Email Forwarding Verification"
+			senderLower := strings.ToLower(s.Sender)
+			payloadLower := strings.ToLower(s.RawPayload)
+			if strings.Contains(senderLower, "google") || strings.Contains(payloadLower, "google") {
+				vendor = "Google Email Forwarding"
+			} else if strings.Contains(senderLower, "microsoft") {
+				vendor = "Microsoft Email Forwarding"
+			}
+			s.Vendor = vendor
+			s.Amount = 0
+			s.Currency = "USD"
+			s.Date = time.Now().Format(time.RFC3339)
+			s.Metadata["transaction_type"] = "SYSTEM_VERIFICATION"
+			return s
+		}), nil
+	}
+
 	// Fetch active budgets, accounts, scheduled payments, and recurring expenses to guide matching context
 	page, err := c.financeService.ListBudgets(ctx, finance.SpaceID(state.SpaceID), &finance.ListBudgetsFilter{})
 	if err != nil {
@@ -351,6 +386,8 @@ func (c *Coordinator) pipelineStageNode(ctx context.Context, state *IngestionSta
 		docType = "invoice"
 	case "BANK_NOTIFICATION":
 		docType = "bank_notification"
+	case "SYSTEM_VERIFICATION":
+		docType = "system_verification"
 	}
 
 	staged, err := c.financeService.StageInboxItem(ctx, state.SpaceID, &finance.StageInboxItem{

@@ -960,6 +960,7 @@ const (
 	InboxItem_RECEIPT              InboxItem_DocType = 2
 	InboxItem_BANK_NOTIFICATION    InboxItem_DocType = 3
 	InboxItem_UNKNOWN              InboxItem_DocType = 4
+	InboxItem_SYSTEM_VERIFICATION  InboxItem_DocType = 5
 )
 
 // Enum value maps for InboxItem_DocType.
@@ -970,6 +971,7 @@ var (
 		2: "RECEIPT",
 		3: "BANK_NOTIFICATION",
 		4: "UNKNOWN",
+		5: "SYSTEM_VERIFICATION",
 	}
 	InboxItem_DocType_value = map[string]int32{
 		"DOC_TYPE_UNSPECIFIED": 0,
@@ -977,6 +979,7 @@ var (
 		"RECEIPT":              2,
 		"BANK_NOTIFICATION":    3,
 		"UNKNOWN":              4,
+		"SYSTEM_VERIFICATION":  5,
 	}
 )
 

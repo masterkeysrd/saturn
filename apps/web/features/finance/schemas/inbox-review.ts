@@ -3,7 +3,13 @@ import { z } from "zod"
 export const inboxReviewSchema = z.object({
   selectedTxId: z.string().optional(),
   overwriteLinkedTx: z.boolean(),
-  docType: z.enum(["RECEIPT", "INVOICE", "BANK_NOTIFICATION", "UNKNOWN"]),
+  docType: z.enum([
+    "RECEIPT",
+    "INVOICE",
+    "BANK_NOTIFICATION",
+    "UNKNOWN",
+    "SYSTEM_VERIFICATION",
+  ]),
   transactionType: z.enum(["EXPENSE", "INCOME", "TRANSFER"]),
   description: z.string().trim().min(1, "Vendor / Description is required"),
   amountStr: z

@@ -17,10 +17,11 @@ const (
 type InboxItemDocType string
 
 const (
-	InboxItemDocInvoice          InboxItemDocType = "invoice"
-	InboxItemDocReceipt          InboxItemDocType = "receipt"
-	InboxItemDocBankNotification InboxItemDocType = "bank_notification"
-	InboxItemDocUnknown          InboxItemDocType = "unknown"
+	InboxItemDocInvoice            InboxItemDocType = "invoice"
+	InboxItemDocReceipt            InboxItemDocType = "receipt"
+	InboxItemDocBankNotification   InboxItemDocType = "bank_notification"
+	InboxItemDocUnknown            InboxItemDocType = "unknown"
+	InboxItemDocSystemVerification InboxItemDocType = "system_verification"
 )
 
 // InboxItem represents a parsed inbound signal waiting in the staging queue.

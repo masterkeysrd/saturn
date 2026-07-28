@@ -16,7 +16,11 @@ export const routes: RouteObject[] = [
     path: "/admin/users",
     element: (
       <AdminGuard>
-        {createElement(lazy(() => import("./admin-view").then((m) => ({ default: m.AdminView }))))}
+        {createElement(
+          lazy(() =>
+            import("./admin-view").then((m) => ({ default: m.AdminView }))
+          )
+        )}
       </AdminGuard>
     ),
   },
@@ -24,7 +28,13 @@ export const routes: RouteObject[] = [
     path: "/admin/scheduler",
     element: (
       <AdminGuard>
-        {createElement(lazy(() => import("./scheduler-view").then((m) => ({ default: m.SchedulerAdminView }))))}
+        {createElement(
+          lazy(() =>
+            import("./scheduler-view").then((m) => ({
+              default: m.SchedulerAdminView,
+            }))
+          )
+        )}
       </AdminGuard>
     ),
   },
@@ -32,7 +42,13 @@ export const routes: RouteObject[] = [
     path: "/admin/messages",
     element: (
       <AdminGuard>
-        {createElement(lazy(() => import("./message-view").then((m) => ({ default: m.MessageQueueAdminView }))))}
+        {createElement(
+          lazy(() =>
+            import("./message-view").then((m) => ({
+              default: m.MessageQueueAdminView,
+            }))
+          )
+        )}
       </AdminGuard>
     ),
   },
@@ -40,7 +56,13 @@ export const routes: RouteObject[] = [
     path: "/admin/backups",
     element: (
       <AdminGuard>
-        {createElement(lazy(() => import("./backup-view").then((m) => ({ default: m.BackupAdminView }))))}
+        {createElement(
+          lazy(() =>
+            import("./backup-view").then((m) => ({
+              default: m.BackupAdminView,
+            }))
+          )
+        )}
       </AdminGuard>
     ),
   },
@@ -48,7 +70,13 @@ export const routes: RouteObject[] = [
     path: "/admin/security",
     element: (
       <AdminGuard>
-        {createElement(lazy(() => import("./security-view").then((m) => ({ default: m.AdminSecurityView }))))}
+        {createElement(
+          lazy(() =>
+            import("./security-view").then((m) => ({
+              default: m.AdminSecurityView,
+            }))
+          )
+        )}
       </AdminGuard>
     ),
   },

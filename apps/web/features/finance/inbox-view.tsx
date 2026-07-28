@@ -399,6 +399,7 @@ export function InboxView() {
                         {docType === "RECEIPT" && "Receipt"}
                         {docType === "INVOICE" && "Invoice"}
                         {docType === "BANK_NOTIFICATION" && "Notification"}
+                        {docType === "SYSTEM_VERIFICATION" && "Verification"}
                         {docType === "UNKNOWN" && "Unknown"}
                       </SelectValue>
                     </SelectTrigger>
@@ -423,6 +424,12 @@ export function InboxView() {
                         className="rounded-xl text-xs"
                       >
                         Notification
+                      </SelectItem>
+                      <SelectItem
+                        value="SYSTEM_VERIFICATION"
+                        className="rounded-xl text-xs"
+                      >
+                        Verification
                       </SelectItem>
                       <SelectItem
                         value="UNKNOWN"

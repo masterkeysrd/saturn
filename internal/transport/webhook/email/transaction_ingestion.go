@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"mime"
 	"mime/multipart"
+	"net/http"
 	"net/mail"
 	"regexp"
 	"strings"
@@ -87,7 +88,99 @@ func (p *TransactionIngestionProvider) Descriptor() integration.Descriptor {
 	}
 }
 
-// Verify authenticates that the incoming request originates from a trusted forwarder using the global secret.
+// extractRecipientAndToken extracts the recipient email, token, and optional Cloudflare worker JSON event.
+func extractRecipientAndToken(body []byte, headers map[string][]string) (recipient string, token string, cfEvent *struct {
+	RcptTo   string `json:"rcptTo"`
+	MailFrom string `json:"mailFrom"`
+	Subject  string `json:"subject"`
+	Raw      string `json:"raw"`
+}, err error) {
+	var wrapper struct {
+		Event struct {
+			RcptTo   string `json:"rcptTo"`
+			MailFrom string `json:"mailFrom"`
+			Subject  string `json:"subject"`
+			Raw      string `json:"raw"`
+		} `json:"event"`
+		RcptTo   string `json:"rcptTo"`
+		MailFrom string `json:"mailFrom"`
+		Subject  string `json:"subject"`
+		Raw      string `json:"raw"`
+	}
+
+	if jsonErr := json.Unmarshal(body, &wrapper); jsonErr == nil {
+		rcpt := wrapper.Event.RcptTo
+		if rcpt == "" {
+			rcpt = wrapper.RcptTo
+		}
+		if rcpt != "" {
+			recipient = rcpt
+			evt := &struct {
+				RcptTo   string `json:"rcptTo"`
+				MailFrom string `json:"mailFrom"`
+				Subject  string `json:"subject"`
+				Raw      string `json:"raw"`
+			}{
+				RcptTo:   rcpt,
+				MailFrom: wrapper.Event.MailFrom,
+				Subject:  wrapper.Event.Subject,
+				Raw:      wrapper.Event.Raw,
+			}
+			if evt.MailFrom == "" {
+				evt.MailFrom = wrapper.MailFrom
+			}
+			if evt.Subject == "" {
+				evt.Subject = wrapper.Subject
+			}
+			if evt.Raw == "" {
+				evt.Raw = wrapper.Raw
+			}
+			cfEvent = evt
+		}
+	}
+
+	if recipient == "" {
+		if msg, mimeErr := mail.ReadMessage(bytes.NewReader(body)); mimeErr == nil {
+			recipient = strings.TrimSpace(msg.Header.Get("To"))
+		}
+	}
+
+	if recipient == "" {
+		for k, v := range headers {
+			if (strings.EqualFold(k, "To") || strings.EqualFold(k, "X-Rcpt-To")) && len(v) > 0 {
+				recipient = strings.TrimSpace(v[0])
+				break
+			}
+		}
+	}
+
+	if recipient == "" {
+		return "", "", nil, errors.New("missing recipient 'To' address in both email body and HTTP headers")
+	}
+
+	toEmail := recipient
+	if toAddr, addrErr := mail.ParseAddress(recipient); addrErr == nil {
+		toEmail = toAddr.Address
+	}
+
+	plusIdx := strings.Index(toEmail, "+")
+	if plusIdx == -1 {
+		return "", "", nil, fmt.Errorf("invalid recipient email format, missing + symbol: %q", toEmail)
+	}
+	atIdx := strings.Index(toEmail[plusIdx:], "@")
+	if atIdx == -1 {
+		return "", "", nil, fmt.Errorf("invalid recipient email format, missing @ symbol: %q", toEmail)
+	}
+	parsedToken := toEmail[plusIdx+1 : plusIdx+atIdx]
+	if parsedToken == "" {
+		return "", "", nil, fmt.Errorf("empty integration token in recipient email: %q", toEmail)
+	}
+
+	return recipient, parsedToken, cfEvent, nil
+}
+
+// Verify authenticates that the incoming request originates from a trusted forwarder using the global secret
+// and verifies that the recipient integration token exists in the database.
 func (p *TransactionIngestionProvider) Verify(ctx context.Context, headers map[string][]string, body []byte) error {
 	auths, exists := headers["Authorization"]
 	if !exists || len(auths) == 0 {
@@ -99,54 +192,28 @@ func (p *TransactionIngestionProvider) Verify(ctx context.Context, headers map[s
 		return errors.New("authorization header must be a Bearer token")
 	}
 
-	token := strings.TrimPrefix(authVal, "Bearer ")
-	if token != p.globalSecret {
+	tokenVal := strings.TrimPrefix(authVal, "Bearer ")
+	if tokenVal != p.globalSecret {
 		return errors.New("invalid global webhook secret")
+	}
+
+	_, token, _, err := extractRecipientAndToken(body, headers)
+	if err != nil {
+		return fmt.Errorf("invalid payload: %w", err)
+	}
+
+	if _, err := p.registry.ResolveByToken(ctx, token); err != nil {
+		return fmt.Errorf("invalid recipient integration token: %w", err)
 	}
 
 	return nil
 }
 
-// Process parses the raw multipart SMTP message, resolves the Space, and triggers ingestion.
+// Process parses the raw multipart SMTP message or Cloudflare Worker JSON payload, resolves the Space, and triggers ingestion.
 func (p *TransactionIngestionProvider) Process(ctx context.Context, headers map[string][]string, body []byte) error {
-	// Parse the top-level SMTP headers first to locate the recipient address
-	msg, err := mail.ReadMessage(bytes.NewReader(body))
+	_, token, cfEvent, err := extractRecipientAndToken(body, headers)
 	if err != nil {
-		return fmt.Errorf("read email message headers: %w", err)
-	}
-
-	toHeader := strings.TrimSpace(msg.Header.Get("To"))
-	if toHeader == "" {
-		for k, v := range headers {
-			if strings.EqualFold(k, "To") && len(v) > 0 {
-				toHeader = strings.TrimSpace(v[0])
-				break
-			}
-		}
-	}
-
-	if toHeader == "" {
-		return errors.New("missing recipient 'To' address in both email body and HTTP headers")
-	}
-
-	toEmail := toHeader
-	toAddr, err := mail.ParseAddress(toHeader)
-	if err == nil {
-		toEmail = toAddr.Address
-	}
-
-	// Extract integration token from the suffix recipient address (e.g. alerts+saturn_int_xxx@yourdomain.com)
-	plusIdx := strings.Index(toEmail, "+")
-	if plusIdx == -1 {
-		return fmt.Errorf("invalid recipient email format, missing + symbol: %q", toEmail)
-	}
-	atIdx := strings.Index(toEmail[plusIdx:], "@")
-	if atIdx == -1 {
-		return fmt.Errorf("invalid recipient email format, missing @ symbol: %q", toEmail)
-	}
-	token := toEmail[plusIdx+1 : plusIdx+atIdx]
-	if token == "" {
-		return fmt.Errorf("empty integration token in recipient email: %q", toEmail)
+		return err
 	}
 
 	// Resolve the integration settings and space ID via the hashed token lookup
@@ -168,40 +235,91 @@ func (p *TransactionIngestionProvider) Process(ctx context.Context, headers map[
 		return fmt.Errorf("unmarshal integration config: %w", err)
 	}
 
-	// Parse the email body and decrypt attachments using configured keys
-	parsedEmail, err := email.Parse(bytes.NewReader(body), cfg.PDFPasswords)
-	if err != nil {
-		return fmt.Errorf("parse email: %w", err)
+	var parsedSender, parsedSubject, fullBody string
+	if cfEvent != nil {
+		if strings.Contains(cfEvent.Raw, "Content-Type:") || strings.HasPrefix(cfEvent.Raw, "From:") || strings.HasPrefix(cfEvent.Raw, "Received:") {
+			pe, parseErr := email.Parse(strings.NewReader(cfEvent.Raw), cfg.PDFPasswords)
+			if parseErr == nil {
+				parsedSender = pe.Sender
+				parsedSubject = pe.Subject
+				fullBody = pe.Body
+				for _, att := range pe.Attachments {
+					if att.Text != "" {
+						fullBody += "\n\n--- Attachment: " + att.Filename + " ---\n" + att.Text
+					}
+				}
+			}
+		}
+		if parsedSender == "" {
+			parsedSender = cfEvent.MailFrom
+			parsedSubject = cfEvent.Subject
+			fullBody = cfEvent.Raw
+		}
+	} else {
+		pe, parseErr := email.Parse(bytes.NewReader(body), cfg.PDFPasswords)
+		if parseErr != nil {
+			return fmt.Errorf("parse email: %w", parseErr)
+		}
+		parsedSender = pe.Sender
+		parsedSubject = pe.Subject
+		fullBody = pe.Body
+		for _, att := range pe.Attachments {
+			if att.Text != "" {
+				fullBody += "\n\n--- Attachment: " + att.Filename + " ---\n" + att.Text
+			}
+		}
 	}
 
 	allowed := false
-	fromLower := strings.ToLower(parsedEmail.Sender)
-	senderAddr, err := mail.ParseAddress(parsedEmail.Sender)
+	fromLower := strings.ToLower(parsedSender)
+	senderAddr, err := mail.ParseAddress(parsedSender)
 	if err == nil {
 		fromLower = strings.ToLower(senderAddr.Address)
 	} else {
 		// Regex fallback to extract clean email address if header contains extra text/newlines
 		reEmail := regexp.MustCompile(`[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}`)
-		if match := reEmail.FindString(parsedEmail.Sender); match != "" {
+		if match := reEmail.FindString(parsedSender); match != "" {
 			fromLower = strings.ToLower(match)
 		}
 	}
+	var systemSenders = map[string]bool{
+		"forwarding-noreply@google.com":                            true,
+		"forwarding-noreply@gmail.com":                             true,
+		"no-reply@microsoft.com":                                   true,
+		"account-security-noreply@accountprotection.microsoft.com": true,
+	}
+
+	isSystemVerification := systemSenders[fromLower] ||
+		strings.Contains(strings.ToLower(parsedSubject), "forwarding confirmation") ||
+		strings.Contains(strings.ToLower(parsedSubject), "verification code")
+
 	for _, allowedEmail := range cfg.AllowedSenders {
 		if strings.EqualFold(allowedEmail, fromLower) {
 			allowed = true
 			break
 		}
 	}
-
-	if !allowed {
-		return fmt.Errorf("sender %q is not whitelisted for this space integration", parsedEmail.Sender)
+	if isSystemVerification {
+		allowed = true
 	}
 
-	// Append any decrypted PDF text contents to the main body payload for LLM extraction
-	fullBody := parsedEmail.Body
-	for _, att := range parsedEmail.Attachments {
-		if att.Text != "" {
-			fullBody += "\n\n--- Attachment: " + att.Filename + " ---\n" + att.Text
+	if !allowed {
+		return fmt.Errorf("sender %q is not whitelisted for this space integration", parsedSender)
+	}
+
+	// Auto-confirm Google forwarding confirmation URL if present in email body
+	if isSystemVerification {
+		reGoogleURL := regexp.MustCompile(`https://mail-settings\.google\.com/mail/vf-[a-zA-Z0-9_-]+`)
+		if googleURL := reGoogleURL.FindString(fullBody); googleURL != "" {
+			req, reqErr := http.NewRequestWithContext(ctx, http.MethodGet, googleURL, nil)
+			if reqErr == nil {
+				req.Header.Set("User-Agent", "Saturn-Email-Forwarding-Verifier/1.0")
+				resp, httpErr := http.DefaultClient.Do(req)
+				if httpErr == nil {
+					_ = resp.Body.Close()
+					fullBody += fmt.Sprintf("\n\n[Saturn Auto-Verification: Successfully fetched Google confirmation URL (%d OK)]", resp.StatusCode)
+				}
+			}
 		}
 	}
 
@@ -211,7 +329,7 @@ func (p *TransactionIngestionProvider) Process(ctx context.Context, headers map[
 	}
 
 	// Trigger core finance ingestion logic
-	_, err = p.financeService.IngestEmail(ctx, integrationRecord.SpaceID, integrationRecord.ID, fromLower, parsedEmail.Subject, fullBody)
+	_, err = p.financeService.IngestEmail(ctx, integrationRecord.SpaceID, integrationRecord.ID, fromLower, parsedSubject, fullBody)
 	if err != nil {
 		return fmt.Errorf("ingest email transaction: %w", err)
 	}
@@ -324,15 +442,44 @@ func (p *TransactionIngestionProvider) Simulate(ctx context.Context, spaceID str
 
 	allowed := false
 	fromLower := strings.ToLower(sender)
+	var systemSenders = map[string]bool{
+		"forwarding-noreply@google.com":                            true,
+		"forwarding-noreply@gmail.com":                             true,
+		"no-reply@microsoft.com":                                   true,
+		"account-security-noreply@accountprotection.microsoft.com": true,
+	}
+
+	isSystemVerification := systemSenders[fromLower] ||
+		strings.Contains(strings.ToLower(subject), "forwarding confirmation") ||
+		strings.Contains(strings.ToLower(subject), "verification code")
+
 	for _, allowedEmail := range cfg.AllowedSenders {
 		if strings.ToLower(allowedEmail) == fromLower {
 			allowed = true
 			break
 		}
 	}
+	if isSystemVerification {
+		allowed = true
+	}
 
 	if !allowed {
 		return nil, fmt.Errorf("sender %q is not whitelisted for this space integration", sender)
+	}
+
+	if isSystemVerification {
+		reGoogleURL := regexp.MustCompile(`https://mail-settings\.google\.com/mail/vf-[a-zA-Z0-9_-]+`)
+		if googleURL := reGoogleURL.FindString(text); googleURL != "" {
+			req, reqErr := http.NewRequestWithContext(ctx, http.MethodGet, googleURL, nil)
+			if reqErr == nil {
+				req.Header.Set("User-Agent", "Saturn-Email-Forwarding-Verifier/1.0")
+				resp, httpErr := http.DefaultClient.Do(req)
+				if httpErr == nil {
+					_ = resp.Body.Close()
+					text += fmt.Sprintf("\n\n[Saturn Auto-Verification: Successfully fetched Google confirmation URL (%d OK)]", resp.StatusCode)
+				}
+			}
+		}
 	}
 
 	// Safeguard: truncate extremely large email bodies before sending to LLM
