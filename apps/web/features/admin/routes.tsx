@@ -1,9 +1,5 @@
+import { lazy, createElement } from "react"
 import { Navigate } from "react-router-dom"
-import { AdminView } from "./admin-view"
-import { SchedulerAdminView } from "./scheduler-view"
-import { BackupAdminView } from "./backup-view"
-import { AdminSecurityView } from "./security-view"
-import { MessageQueueAdminView } from "./message-view"
 import { AdminGuard } from "./admin-guard"
 import type { RouteObject } from "react-router-dom"
 
@@ -20,7 +16,7 @@ export const routes: RouteObject[] = [
     path: "/admin/users",
     element: (
       <AdminGuard>
-        <AdminView />
+        {createElement(lazy(() => import("./admin-view").then((m) => ({ default: m.AdminView }))))}
       </AdminGuard>
     ),
   },
@@ -28,7 +24,7 @@ export const routes: RouteObject[] = [
     path: "/admin/scheduler",
     element: (
       <AdminGuard>
-        <SchedulerAdminView />
+        {createElement(lazy(() => import("./scheduler-view").then((m) => ({ default: m.SchedulerAdminView }))))}
       </AdminGuard>
     ),
   },
@@ -36,7 +32,7 @@ export const routes: RouteObject[] = [
     path: "/admin/messages",
     element: (
       <AdminGuard>
-        <MessageQueueAdminView />
+        {createElement(lazy(() => import("./message-view").then((m) => ({ default: m.MessageQueueAdminView }))))}
       </AdminGuard>
     ),
   },
@@ -44,7 +40,7 @@ export const routes: RouteObject[] = [
     path: "/admin/backups",
     element: (
       <AdminGuard>
-        <BackupAdminView />
+        {createElement(lazy(() => import("./backup-view").then((m) => ({ default: m.BackupAdminView }))))}
       </AdminGuard>
     ),
   },
@@ -52,7 +48,7 @@ export const routes: RouteObject[] = [
     path: "/admin/security",
     element: (
       <AdminGuard>
-        <AdminSecurityView />
+        {createElement(lazy(() => import("./security-view").then((m) => ({ default: m.AdminSecurityView }))))}
       </AdminGuard>
     ),
   },

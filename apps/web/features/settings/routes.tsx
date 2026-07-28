@@ -1,16 +1,15 @@
-import { SettingsView } from "./settings-view"
-import { SpaceSettingsView } from "./space-settings-view"
+import { lazy, createElement } from "react"
 import type { SaturnRouteObject } from "@/lib/navigation"
 
 export const routes: SaturnRouteObject[] = [
   {
     path: "/settings",
-    element: <SettingsView />,
+    element: createElement(lazy(() => import("./settings-view").then((m) => ({ default: m.SettingsView })))),
     requiresSpace: false,
   },
   {
     path: "/space/settings",
-    element: <SpaceSettingsView />,
+    element: createElement(lazy(() => import("./space-settings-view").then((m) => ({ default: m.SpaceSettingsView })))),
     requiresSpace: true,
   },
 ]

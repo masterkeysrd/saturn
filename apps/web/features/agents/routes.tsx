@@ -1,22 +1,20 @@
-import { AgentsListView } from "./agents-list-view"
-import { ConnectionsListView } from "./connections-list-view"
-import { AgentRunsListView } from "./runs-list-view"
+import { lazy, createElement } from "react"
 import type { SaturnRouteObject } from "@/lib/navigation"
 
 export const routes: SaturnRouteObject[] = [
   {
     path: "/space/agents",
-    element: <AgentsListView />,
+    element: createElement(lazy(() => import("./agents-list-view").then((m) => ({ default: m.AgentsListView })))),
     requiresSpace: true,
   },
   {
     path: "/space/agents/connections",
-    element: <ConnectionsListView />,
+    element: createElement(lazy(() => import("./connections-list-view").then((m) => ({ default: m.ConnectionsListView })))),
     requiresSpace: true,
   },
   {
     path: "/space/agents/runs",
-    element: <AgentRunsListView />,
+    element: createElement(lazy(() => import("./runs-list-view").then((m) => ({ default: m.AgentRunsListView })))),
     requiresSpace: true,
   },
 ]

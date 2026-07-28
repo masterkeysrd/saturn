@@ -1,58 +1,50 @@
-import { InsightsView } from "./insights-view"
-import { BudgetsView } from "./budgets-view"
-import { RatesView } from "./rates-view"
-import { TransactionsView } from "./transactions-view"
-import { SettingsView as FinanceSettingsView } from "./settings-view"
-import { RecurringView } from "./recurring-view"
-import { BorrowingView } from "./borrowing-view"
-import { AccountsView } from "./accounts-view"
-import { InboxView } from "./inbox-view"
+import { lazy, createElement } from "react"
 import type { SaturnRouteObject } from "@/lib/navigation"
 
 export const routes: SaturnRouteObject[] = [
   {
     path: "/finance",
-    element: <InsightsView />,
+    element: createElement(lazy(() => import("./insights-view").then((m) => ({ default: m.InsightsView })))),
     requiresSpace: true,
   },
   {
     path: "/finance/inbox",
-    element: <InboxView />,
+    element: createElement(lazy(() => import("./inbox-view").then((m) => ({ default: m.InboxView })))),
     requiresSpace: true,
   },
   {
     path: "/finance/accounts",
-    element: <AccountsView />,
+    element: createElement(lazy(() => import("./accounts-view").then((m) => ({ default: m.AccountsView })))),
     requiresSpace: true,
   },
   {
     path: "/finance/recurring",
-    element: <RecurringView />,
+    element: createElement(lazy(() => import("./recurring-view").then((m) => ({ default: m.RecurringView })))),
     requiresSpace: true,
   },
   {
     path: "/finance/budgets",
-    element: <BudgetsView />,
+    element: createElement(lazy(() => import("./budgets-view").then((m) => ({ default: m.BudgetsView })))),
     requiresSpace: true,
   },
   {
     path: "/finance/rates",
-    element: <RatesView />,
+    element: createElement(lazy(() => import("./rates-view").then((m) => ({ default: m.RatesView })))),
     requiresSpace: true,
   },
   {
     path: "/finance/borrowings",
-    element: <BorrowingView />,
+    element: createElement(lazy(() => import("./borrowing-view").then((m) => ({ default: m.BorrowingView })))),
     requiresSpace: true,
   },
   {
     path: "/finance/transactions",
-    element: <TransactionsView />,
+    element: createElement(lazy(() => import("./transactions-view").then((m) => ({ default: m.TransactionsView })))),
     requiresSpace: true,
   },
   {
     path: "/finance/settings",
-    element: <FinanceSettingsView />,
+    element: createElement(lazy(() => import("./settings-view").then((m) => ({ default: m.SettingsView })))),
     requiresSpace: true,
   },
 ]

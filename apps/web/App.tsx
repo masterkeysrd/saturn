@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect } from "react"
+import { type ReactNode, useEffect, Suspense } from "react"
 import {
   Routes,
   Route,
@@ -169,11 +169,19 @@ export function App() {
               key={i}
               path={route.path}
               element={
-                route.requiresSpace ? (
-                  <SpaceGuard>{route.element}</SpaceGuard>
-                ) : (
-                  route.element
-                )
+                <Suspense
+                  fallback={
+                    <div className="flex flex-1 items-center justify-center p-8">
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    </div>
+                  }
+                >
+                  {route.requiresSpace ? (
+                    <SpaceGuard>{route.element}</SpaceGuard>
+                  ) : (
+                    route.element
+                  )}
+                </Suspense>
               }
             />
           ))}
