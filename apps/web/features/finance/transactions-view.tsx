@@ -40,6 +40,7 @@ import {
   Calculator,
   Hash,
   Filter,
+  Scale,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -374,6 +375,9 @@ export function TransactionsView() {
                       <SelectItem value="INCOME">Income</SelectItem>
                       <SelectItem value="TRANSFER_OUT">Transfer Out</SelectItem>
                       <SelectItem value="TRANSFER_IN">Transfer In</SelectItem>
+                      <SelectItem value="BALANCE_ADJUSTMENT">
+                        Adjustment
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -589,6 +593,13 @@ export function TransactionsView() {
                                 Repayment
                               </span>
                             )}
+                            {(t.sourceType === "SYSTEM_BALANCE_ADJUSTMENT" ||
+                              t.type === "BALANCE_ADJUSTMENT") && (
+                              <span className="inline-flex items-center gap-1 rounded bg-teal-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-teal-400 uppercase select-none">
+                                <Scale className="h-2.5 w-2.5" />
+                                Adjustment
+                              </span>
+                            )}
                           </span>
                           <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs font-semibold text-muted-foreground">
                             <span
@@ -630,10 +641,16 @@ export function TransactionsView() {
                               ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
                               : t.type === "EXPENSE"
                                 ? "border-rose-500/20 bg-rose-500/10 text-rose-500"
-                                : "border-border/30 bg-muted text-muted-foreground"
+                                : t.type === "BALANCE_ADJUSTMENT" ||
+                                    t.type === "TYPE_UNSPECIFIED"
+                                  ? "border-teal-500/20 bg-teal-500/10 text-teal-400"
+                                  : "border-border/30 bg-muted text-muted-foreground"
                           }`}
                         >
-                          {t.type}
+                          {t.type === "BALANCE_ADJUSTMENT" ||
+                          t.type === "TYPE_UNSPECIFIED"
+                            ? "ADJUSTMENT"
+                            : t.type.replaceAll("_", " ")}
                         </span>
                       </div>
 
@@ -650,38 +667,48 @@ export function TransactionsView() {
                         )}
                       </div>
 
-                      {/* Column 4: Amount (col-span-2 text-right) */}
-                      <div className="min-w-0 shrink-0 pr-1 text-right sm:col-span-2 sm:pr-2">
-                        <span
-                          className={`block text-sm font-extrabold tracking-tight sm:text-base ${
-                            t.type === "INCOME"
-                              ? "text-emerald-500"
-                              : "text-foreground"
-                          } truncate`}
-                        >
-                          {t.type === "INCOME" ? "+" : "-"}
-                          {amtLocal.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                          <span className="ml-1 text-[9px] font-bold text-muted-foreground uppercase sm:text-[10px]">
-                            {t.currency}
-                          </span>
-                        </span>
-                        {isCrossCurrency && (
-                          <span className="mt-0.5 flex items-center justify-end gap-0.5 truncate font-mono text-[9px] text-muted-foreground sm:text-[10px]">
-                            {t.type === "INCOME" ? "+" : "-"}
-                            {amtBase.toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}{" "}
-                            {settings?.baseCurrency}
-                          </span>
-                        )}
-                      </div>
+                      {/* Column 4: Amount & Actions (col-span-3 text-right) */}
+                      <div className="flex shrink-0 items-center justify-end gap-1 sm:col-span-3">
+                        <div className="min-w-0 pr-1 text-right">
+                          {(() => {
+                            const isNegative = amtLocal < 0
+                            const displaySign = isNegative
+                              ? "-"
+                              : t.type === "INCOME"
+                                ? "+"
+                                : t.type === "BALANCE_ADJUSTMENT"
+                                  ? "+"
+                                  : "-"
+                            const absAmtLocal = Math.abs(amtLocal)
+                            const absAmtBase = Math.abs(amtBase)
 
-                      {/* Column 5: Actions (col-span-1 text-right) */}
-                      <div className="flex shrink-0 justify-end sm:col-span-1">
+                            return (
+                              <>
+                                <span className="block truncate text-sm font-extrabold tracking-tight text-foreground sm:text-base">
+                                  {displaySign}
+                                  {absAmtLocal.toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                  <span className="ml-1 text-[9px] font-bold text-muted-foreground uppercase sm:text-[10px]">
+                                    {t.currency}
+                                  </span>
+                                </span>
+                                {isCrossCurrency && (
+                                  <span className="mt-0.5 flex items-center justify-end gap-0.5 truncate font-mono text-[9px] text-muted-foreground sm:text-[10px]">
+                                    {displaySign}
+                                    {absAmtBase.toLocaleString(undefined, {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}{" "}
+                                    {settings?.baseCurrency}
+                                  </span>
+                                )}
+                              </>
+                            )
+                          })()}
+                        </div>
+
                         {isWritable && (
                           <DropdownMenu>
                             <DropdownMenuTrigger
@@ -703,13 +730,18 @@ export function TransactionsView() {
                                 <History className="h-4 w-4" />
                                 <span>Timeline</span>
                               </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleEditTrigger(t)}
-                                className="flex cursor-pointer items-center gap-2"
-                              >
-                                <Edit2 className="h-4 w-4" />
-                                <span>Edit</span>
-                              </DropdownMenuItem>
+                              {t.type !== "BALANCE_ADJUSTMENT" &&
+                                t.type !== "TYPE_UNSPECIFIED" &&
+                                t.sourceType !==
+                                  "SYSTEM_BALANCE_ADJUSTMENT" && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleEditTrigger(t)}
+                                    className="flex cursor-pointer items-center gap-2"
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                    <span>Edit</span>
+                                  </DropdownMenuItem>
+                                )}
                               <DropdownMenuItem
                                 onClick={() => handleDelete(t.id || "")}
                                 disabled={deleteMutation.isPending}

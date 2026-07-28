@@ -255,6 +255,14 @@ service Finance {
     };
   }
 
+  // Adjusts an account's live balance to a target amount by creating a system reconciliation transaction.
+  rpc AdjustAccountBalance(AdjustAccountBalanceRequest) returns (Account) {
+    option (google.api.http) = {
+      post: "/v1/finance/accounts/{account_id}:adjust-balance"
+      body: "*"
+    };
+  }
+
   // Deletes a payment account. Default accounts cannot be deleted until another default is nominated.
   rpc DeleteAccount(DeleteAccountRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {delete: "/v1/finance/accounts/{id}"};
@@ -669,6 +677,8 @@ message Transaction {
     TRANSFER_OUT = 3;
     // Transfer in transaction, receiving funds from another account.
     TRANSFER_IN = 4;
+    // Balance adjustment transaction, reconciling account to real-world balance.
+    BALANCE_ADJUSTMENT = 5;
   }
 
   // View controls the hydration of related metadata.
@@ -1684,6 +1694,22 @@ message UpdateAccountRequest {
 
   // Required. Updated account parameters.
   Account account = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// The request for
+// [AdjustAccountBalance][saturn.finance.v1.Finance.AdjustAccountBalance].
+message AdjustAccountBalanceRequest {
+  // Required. Target account identifier to adjust balance for.
+  string account_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Target balance in cents.
+  int64 target_balance = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. ISO timestamp of the adjustment date.
+  optional string adjustment_date = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Reason or note for reconciliation.
+  optional string note = 4 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // The request for

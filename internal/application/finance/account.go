@@ -87,3 +87,12 @@ func (c *Coordinator) DeleteAccount(ctx context.Context, id finance.AccountID) e
 
 	return c.financeService.DeleteAccount(ctx, rCtx.SpaceID, id)
 }
+
+func (c *Coordinator) AdjustAccountBalance(ctx context.Context, id finance.AccountID, targetBalance int64, adjustmentDate string, note string) (*finance.Account, error) {
+	rCtx, err := c.resolveContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.financeService.AdjustAccountBalance(ctx, rCtx.SpaceID, id, targetBalance, adjustmentDate, note)
+}

@@ -12,6 +12,7 @@ import {
   useCreateAccountMutation,
   useUpdateAccountMutation,
   useDeleteAccountMutation,
+  useAdjustAccountBalanceMutation,
   useCreateTransferMutation,
   useListTransfersQuery,
   useGetFinanceSettingsQuery,
@@ -40,6 +41,7 @@ import {
   ChevronRight,
   History,
   Loader2,
+  Scale,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -60,6 +62,13 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -214,6 +223,59 @@ export function AccountsView() {
   const [transferOpen, setTransferOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [historyAccount, setHistoryAccount] = useState<Account | null>(null)
+
+  const [adjustOpen, setAdjustOpen] = useState(false)
+  const [adjustingAccount, setAdjustingAccount] = useState<Account | null>(null)
+  const [targetBalanceStr, setTargetBalanceStr] = useState("")
+  const [adjustNote, setAdjustNote] = useState("")
+  const [adjustError, setAdjustError] = useState<string | null>(null)
+
+  const adjustMutation = useAdjustAccountBalanceMutation({
+    onSuccess: () => {
+      refetchAccounts()
+      refetchTransfers()
+      setAdjustOpen(false)
+      setAdjustingAccount(null)
+      setTargetBalanceStr("")
+      setAdjustNote("")
+      setAdjustError(null)
+    },
+    onError: (err: unknown) => {
+      setAdjustError(
+        err instanceof Error ? err.message : "Failed to adjust balance"
+      )
+    },
+  })
+
+  const handleOpenAdjust = (acc: Account) => {
+    setAdjustingAccount(acc)
+    setTargetBalanceStr((Number(acc.currentBalance || 0) / 100).toFixed(2))
+    setAdjustNote("")
+    setAdjustError(null)
+    setAdjustOpen(true)
+  }
+
+  const handleConfirmAdjust = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!adjustingAccount?.id) return
+
+    const parsedNum = parseFloat(targetBalanceStr)
+    if (isNaN(parsedNum)) {
+      setAdjustError("Please enter a valid numeric target balance")
+      return
+    }
+
+    const targetBalanceCents = Math.round(parsedNum * 100)
+    setAdjustError(null)
+    adjustMutation.mutate({
+      account_id: adjustingAccount.id,
+      req: {
+        accountId: adjustingAccount.id,
+        targetBalance: targetBalanceCents.toString(),
+        note: adjustNote || undefined,
+      },
+    })
+  }
 
   const accounts = useMemo(() => accountsData?.accounts || [], [accountsData])
   const transfers = transfersData?.transfers || []
@@ -575,6 +637,13 @@ export function AccountsView() {
                               {isWritable && (
                                 <>
                                   <DropdownMenuItem
+                                    onClick={() => handleOpenAdjust(acc)}
+                                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-emerald-400 focus:bg-emerald-500/10"
+                                  >
+                                    <Scale className="h-3.5 w-3.5" />
+                                    Adjust Balance
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
                                     onClick={() => {
                                       setEditingAccount(acc)
                                       setCreateOpen(true)
@@ -862,6 +931,144 @@ export function AccountsView() {
         onOpenChange={setHistoryOpen}
         account={historyAccount}
       />
+
+      {/* Adjust Balance Modal */}
+      <Dialog open={adjustOpen} onOpenChange={setAdjustOpen}>
+        <DialogContent className="max-w-md rounded-3xl border-border/60 bg-background/95 p-6 backdrop-blur-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
+              <Scale className="h-5 w-5 text-emerald-400" />
+              Adjust Account Balance
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Enter the current real-world balance for{" "}
+              <span className="font-semibold text-foreground">
+                {adjustingAccount?.name}
+              </span>
+              . Saturn will log a system reconciliation transaction to match.
+            </DialogDescription>
+          </DialogHeader>
+
+          {adjustingAccount &&
+            (() => {
+              const currentCents = Number(adjustingAccount.currentBalance || 0)
+              const parsedNum = parseFloat(targetBalanceStr)
+              const targetCents = isNaN(parsedNum)
+                ? currentCents
+                : Math.round(parsedNum * 100)
+              const deltaCents = targetCents - currentCents
+              const deltaStr = (Math.abs(deltaCents) / 100).toFixed(2)
+
+              return (
+                <form onSubmit={handleConfirmAdjust} className="space-y-4 pt-2">
+                  {/* Current vs Target Card */}
+                  <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border/40 bg-muted/20 p-3.5">
+                    <div>
+                      <span className="block text-[10px] font-bold text-muted-foreground uppercase">
+                        Current Saturn Balance
+                      </span>
+                      <span className="text-sm font-extrabold text-foreground">
+                        ${(currentCents / 100).toFixed(2)}{" "}
+                        {adjustingAccount.currency}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] font-bold text-muted-foreground uppercase">
+                        Target Real-World Balance
+                      </span>
+                      <span className="text-sm font-extrabold text-foreground">
+                        ${(targetCents / 100).toFixed(2)}{" "}
+                        {adjustingAccount.currency}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Live Preview Delta Callout */}
+                  <div
+                    className={cn(
+                      "flex items-center justify-between rounded-xl border p-3 text-xs font-semibold transition-all",
+                      deltaCents > 0
+                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                        : deltaCents < 0
+                          ? "border-rose-500/30 bg-rose-500/10 text-rose-400"
+                          : "border-border/40 bg-muted/20 text-muted-foreground"
+                    )}
+                  >
+                    <span>Adjustment Type</span>
+                    <span className="font-bold">
+                      {deltaCents > 0
+                        ? `+$${deltaStr} ${adjustingAccount.currency} (Income)`
+                        : deltaCents < 0
+                          ? `-$${deltaStr} ${adjustingAccount.currency} (Expense)`
+                          : "$0.00 (No Change)"}
+                    </span>
+                  </div>
+
+                  {/* Inputs */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-muted-foreground uppercase">
+                      Actual Real-World Balance
+                    </Label>
+                    <div className="relative">
+                      <span className="absolute top-1/2 left-3 -translate-y-1/2 text-sm font-bold text-muted-foreground">
+                        $
+                      </span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={targetBalanceStr}
+                        onChange={(e) => setTargetBalanceStr(e.target.value)}
+                        placeholder="0.00"
+                        className="h-11 rounded-xl pl-7 font-bold text-foreground"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-muted-foreground uppercase">
+                      Reconciliation Note (Optional)
+                    </Label>
+                    <Input
+                      value={adjustNote}
+                      onChange={(e) => setAdjustNote(e.target.value)}
+                      placeholder="e.g. Monthly statement reconciliation"
+                      className="h-11 rounded-xl text-xs"
+                    />
+                  </div>
+
+                  {adjustError && (
+                    <div className="flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs font-semibold text-rose-400">
+                      <AlertTriangle className="h-4 w-4 shrink-0" />
+                      <span>{adjustError}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-3 pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setAdjustOpen(false)}
+                      className="cursor-pointer rounded-xl"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={adjustMutation.isPending || deltaCents === 0}
+                      className="flex cursor-pointer items-center gap-2 rounded-xl bg-primary text-white shadow-lg"
+                    >
+                      {adjustMutation.isPending && (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      )}
+                      Confirm & Adjust Balance
+                    </Button>
+                  </div>
+                </form>
+              )
+            })()}
+        </DialogContent>
+      </Dialog>
     </FinancePageLayout>
   )
 }

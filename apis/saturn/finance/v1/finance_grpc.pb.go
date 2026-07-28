@@ -58,6 +58,7 @@ const (
 	Finance_CreateAccount_FullMethodName            = "/saturn.finance.v1.Finance/CreateAccount"
 	Finance_GetAccount_FullMethodName               = "/saturn.finance.v1.Finance/GetAccount"
 	Finance_UpdateAccount_FullMethodName            = "/saturn.finance.v1.Finance/UpdateAccount"
+	Finance_AdjustAccountBalance_FullMethodName     = "/saturn.finance.v1.Finance/AdjustAccountBalance"
 	Finance_DeleteAccount_FullMethodName            = "/saturn.finance.v1.Finance/DeleteAccount"
 	Finance_ListAccounts_FullMethodName             = "/saturn.finance.v1.Finance/ListAccounts"
 	Finance_CreateTransfer_FullMethodName           = "/saturn.finance.v1.Finance/CreateTransfer"
@@ -153,6 +154,8 @@ type FinanceClient interface {
 	GetAccount(ctx context.Context, in *GetAccountRequest, opts ...grpc.CallOption) (*Account, error)
 	// Updates details of a payment account (such as notes, active flags, or default overrides).
 	UpdateAccount(ctx context.Context, in *UpdateAccountRequest, opts ...grpc.CallOption) (*Account, error)
+	// Adjusts an account's live balance to a target amount by creating a system reconciliation transaction.
+	AdjustAccountBalance(ctx context.Context, in *AdjustAccountBalanceRequest, opts ...grpc.CallOption) (*Account, error)
 	// Deletes a payment account. Default accounts cannot be deleted until another default is nominated.
 	DeleteAccount(ctx context.Context, in *DeleteAccountRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Lists payment accounts in the workspace, supporting optional currency conversion hydration.
@@ -561,6 +564,16 @@ func (c *financeClient) UpdateAccount(ctx context.Context, in *UpdateAccountRequ
 	return out, nil
 }
 
+func (c *financeClient) AdjustAccountBalance(ctx context.Context, in *AdjustAccountBalanceRequest, opts ...grpc.CallOption) (*Account, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Account)
+	err := c.cc.Invoke(ctx, Finance_AdjustAccountBalance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *financeClient) DeleteAccount(ctx context.Context, in *DeleteAccountRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
@@ -735,6 +748,8 @@ type FinanceServer interface {
 	GetAccount(context.Context, *GetAccountRequest) (*Account, error)
 	// Updates details of a payment account (such as notes, active flags, or default overrides).
 	UpdateAccount(context.Context, *UpdateAccountRequest) (*Account, error)
+	// Adjusts an account's live balance to a target amount by creating a system reconciliation transaction.
+	AdjustAccountBalance(context.Context, *AdjustAccountBalanceRequest) (*Account, error)
 	// Deletes a payment account. Default accounts cannot be deleted until another default is nominated.
 	DeleteAccount(context.Context, *DeleteAccountRequest) (*emptypb.Empty, error)
 	// Lists payment accounts in the workspace, supporting optional currency conversion hydration.
@@ -875,6 +890,9 @@ func (UnimplementedFinanceServer) GetAccount(context.Context, *GetAccountRequest
 }
 func (UnimplementedFinanceServer) UpdateAccount(context.Context, *UpdateAccountRequest) (*Account, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateAccount not implemented")
+}
+func (UnimplementedFinanceServer) AdjustAccountBalance(context.Context, *AdjustAccountBalanceRequest) (*Account, error) {
+	return nil, status.Error(codes.Unimplemented, "method AdjustAccountBalance not implemented")
 }
 func (UnimplementedFinanceServer) DeleteAccount(context.Context, *DeleteAccountRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteAccount not implemented")
@@ -1607,6 +1625,24 @@ func _Finance_UpdateAccount_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Finance_AdjustAccountBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdjustAccountBalanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).AdjustAccountBalance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_AdjustAccountBalance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).AdjustAccountBalance(ctx, req.(*AdjustAccountBalanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Finance_DeleteAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DeleteAccountRequest)
 	if err := dec(in); err != nil {
@@ -1927,6 +1963,10 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateAccount",
 			Handler:    _Finance_UpdateAccount_Handler,
+		},
+		{
+			MethodName: "AdjustAccountBalance",
+			Handler:    _Finance_AdjustAccountBalance_Handler,
 		},
 		{
 			MethodName: "DeleteAccount",

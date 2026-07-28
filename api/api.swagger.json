@@ -853,6 +853,46 @@
         ]
       }
     },
+    "/v1/finance/accounts/{accountId}:adjust-balance": {
+      "post": {
+        "summary": "Adjusts an account's live balance to a target amount by creating a system reconciliation transaction.",
+        "operationId": "Finance_AdjustAccountBalance",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Account"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "accountId",
+            "description": "Required. Target account identifier to adjust balance for.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceAdjustAccountBalanceBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/finance/accounts/{id}": {
       "get": {
         "summary": "Retrieves details of a specific payment account.",
@@ -1918,7 +1958,8 @@
               "INVOICE",
               "RECEIPT",
               "BANK_NOTIFICATION",
-              "UNKNOWN"
+              "UNKNOWN",
+              "SYSTEM_VERIFICATION"
             ]
           },
           {
@@ -2600,7 +2641,7 @@
           },
           {
             "name": "type",
-            "description": "Optional. Target transaction flow type filter.\n\n - EXPENSE: Expense transaction, subtracting from the account balance.\n - INCOME: Income transaction, adding to the account balance.\n - TRANSFER_OUT: Transfer out transaction, moving funds to another account.\n - TRANSFER_IN: Transfer in transaction, receiving funds from another account.",
+            "description": "Optional. Target transaction flow type filter.\n\n - EXPENSE: Expense transaction, subtracting from the account balance.\n - INCOME: Income transaction, adding to the account balance.\n - TRANSFER_OUT: Transfer out transaction, moving funds to another account.\n - TRANSFER_IN: Transfer in transaction, receiving funds from another account.\n - BALANCE_ADJUSTMENT: Balance adjustment transaction, reconciling account to real-world balance.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -2608,7 +2649,8 @@
               "EXPENSE",
               "INCOME",
               "TRANSFER_OUT",
-              "TRANSFER_IN"
+              "TRANSFER_IN",
+              "BALANCE_ADJUSTMENT"
             ]
           },
           {
@@ -4297,6 +4339,28 @@
       ],
       "description": "RecurrenceInterval defines the frequency of budgeting or transaction execution rules.\n\n - WEEKLY: Budget resets or templates trigger every calendar week.\n - MONTHLY: Budget resets or templates trigger every calendar month.\n - YEARLY: Budget resets or templates trigger every calendar year."
     },
+    "FinanceAdjustAccountBalanceBody": {
+      "type": "object",
+      "properties": {
+        "targetBalance": {
+          "type": "string",
+          "format": "int64",
+          "description": "Required. Target balance in cents."
+        },
+        "adjustmentDate": {
+          "type": "string",
+          "description": "Optional. ISO timestamp of the adjustment date."
+        },
+        "note": {
+          "type": "string",
+          "description": "Optional. Reason or note for reconciliation."
+        }
+      },
+      "description": "The request for\n[AdjustAccountBalance][saturn.finance.v1.Finance.AdjustAccountBalance].",
+      "required": [
+        "targetBalance"
+      ]
+    },
     "FinanceApproveInboxItemBody": {
       "type": "object",
       "description": "The request for\n[ApproveInboxItem][saturn.finance.v1.Finance.ApproveInboxItem]."
@@ -4370,7 +4434,8 @@
         "INVOICE",
         "RECEIPT",
         "BANK_NOTIFICATION",
-        "UNKNOWN"
+        "UNKNOWN",
+        "SYSTEM_VERIFICATION"
       ],
       "description": "Document category classification enum."
     },
@@ -7398,9 +7463,10 @@
         "EXPENSE",
         "INCOME",
         "TRANSFER_OUT",
-        "TRANSFER_IN"
+        "TRANSFER_IN",
+        "BALANCE_ADJUSTMENT"
       ],
-      "description": "Type defines the direction and flow of funds.\n\n - EXPENSE: Expense transaction, subtracting from the account balance.\n - INCOME: Income transaction, adding to the account balance.\n - TRANSFER_OUT: Transfer out transaction, moving funds to another account.\n - TRANSFER_IN: Transfer in transaction, receiving funds from another account."
+      "description": "Type defines the direction and flow of funds.\n\n - EXPENSE: Expense transaction, subtracting from the account balance.\n - INCOME: Income transaction, adding to the account balance.\n - TRANSFER_OUT: Transfer out transaction, moving funds to another account.\n - TRANSFER_IN: Transfer in transaction, receiving funds from another account.\n - BALANCE_ADJUSTMENT: Balance adjustment transaction, reconciling account to real-world balance."
     },
     "v1TransactionView": {
       "type": "string",

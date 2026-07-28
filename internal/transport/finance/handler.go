@@ -686,6 +686,8 @@ func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTrans
 			t = finance.TransactionTypeTransferOut
 		case financev1.Transaction_TRANSFER_IN:
 			t = finance.TransactionTypeTransferIn
+		case financev1.Transaction_BALANCE_ADJUSTMENT:
+			t = finance.TransactionTypeBalanceAdjustment
 		}
 		txnType = &t
 	}
@@ -749,6 +751,8 @@ func toProtoTransaction(t *finance.Transaction) *financev1.Transaction {
 		protoType = financev1.Transaction_TRANSFER_OUT
 	case finance.TransactionTypeTransferIn:
 		protoType = financev1.Transaction_TRANSFER_IN
+	case finance.TransactionTypeBalanceAdjustment:
+		protoType = financev1.Transaction_BALANCE_ADJUSTMENT
 	default:
 		protoType = financev1.Transaction_TYPE_UNSPECIFIED
 	}
@@ -1121,6 +1125,24 @@ func (h *Handler) UpdateAccount(ctx context.Context, req *financev1.UpdateAccoun
 	}
 
 	acc, err := h.Coordinator.UpdateAccount(ctx, appReq)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoAccount(acc), nil
+}
+
+func (h *Handler) AdjustAccountBalance(ctx context.Context, req *financev1.AdjustAccountBalanceRequest) (*financev1.Account, error) {
+	if req.GetAccountId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "account_id is required")
+	}
+
+	aID, err := finance.ParseAccountID(req.GetAccountId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	acc, err := h.Coordinator.AdjustAccountBalance(ctx, aID, req.GetTargetBalance(), req.GetAdjustmentDate(), req.GetNote())
 	if err != nil {
 		return nil, h.mapError(err)
 	}

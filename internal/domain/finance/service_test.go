@@ -903,3 +903,88 @@ func TestExchangeRateFallback(t *testing.T) {
 		t.Errorf("Test Case 3: rate = %f, want 1.10 (most recent past rate)", r.Rate)
 	}
 }
+
+func TestAdjustAccountBalance(t *testing.T) {
+	ctx := context.Background()
+	spIDStr, _ := id.Generate("spc_")
+	spaceID := SpaceID(spIDStr)
+
+	accIDStr, _ := id.Generate("acc_")
+	accID := AccountID(accIDStr)
+
+	accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
+	txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
+	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+	eventStore := &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)}
+
+	_ = settingsStore.Create(ctx, &FinanceSettings{
+		SpaceID:      spaceID,
+		BaseCurrency: "USD",
+	})
+
+	initialAcc := &Account{
+		ID:             accID,
+		SpaceID:        spaceID,
+		Name:           "Checking",
+		Type:           AccountTypeBank,
+		Currency:       "USD",
+		CurrentBalance: 5000, // $50.00
+		IsActive:       true,
+	}
+	_ = accountStore.Create(ctx, initialAcc)
+
+	svc := NewService(Dependencies{
+		SettingsStore:         settingsStore,
+		AccountStore:          accountStore,
+		TransactionStore:      txnStore,
+		TransactionEventStore: eventStore,
+	})
+
+	// Test Case 1: Positive Adjustment ($50.00 -> $120.00, Delta = +$70.00)
+	updatedAcc, err := svc.AdjustAccountBalance(ctx, spaceID, accID, 12000, "", "Statement reconciliation")
+	if err != nil {
+		t.Fatalf("AdjustAccountBalance failed: %v", err)
+	}
+
+	if updatedAcc.CurrentBalance != 12000 {
+		t.Errorf("CurrentBalance = %d, want 12000", updatedAcc.CurrentBalance)
+	}
+
+	// Verify logged transaction
+	if len(txnStore.txns) != 1 {
+		t.Fatalf("expected 1 logged transaction, got %d", len(txnStore.txns))
+	}
+
+	var loggedTxn *Transaction
+	for _, tx := range txnStore.txns {
+		loggedTxn = tx
+	}
+
+	if loggedTxn.Type != TransactionTypeBalanceAdjustment {
+		t.Errorf("Type = %s, want BALANCE_ADJUSTMENT", loggedTxn.Type)
+	}
+	if loggedTxn.Amount != 7000 {
+		t.Errorf("Amount = %d, want 7000", loggedTxn.Amount)
+	}
+	if loggedTxn.SourceType == nil || *loggedTxn.SourceType != "SYSTEM_BALANCE_ADJUSTMENT" {
+		t.Errorf("SourceType = %v, want SYSTEM_BALANCE_ADJUSTMENT", loggedTxn.SourceType)
+	}
+
+	// Test Case 2: Negative Adjustment ($120.00 -> $80.00, Delta = -$40.00)
+	updatedAcc2, err := svc.AdjustAccountBalance(ctx, spaceID, accID, 8000, "", "Fee adjustment")
+	if err != nil {
+		t.Fatalf("AdjustAccountBalance negative failed: %v", err)
+	}
+
+	if updatedAcc2.CurrentBalance != 8000 {
+		t.Errorf("CurrentBalance = %d, want 8000", updatedAcc2.CurrentBalance)
+	}
+
+	// Test Case 3: Prevent Manual Editing of Balance Adjustment
+	err = svc.updateTransaction(ctx, loggedTxn, loggedTxn)
+	if err == nil {
+		t.Error("expected error when attempting to update balance adjustment transaction, got nil")
+	} else if !strings.Contains(err.Error(), "balance adjustment transactions cannot be edited directly") {
+		t.Errorf("unexpected error message: %v", err)
+	}
+}

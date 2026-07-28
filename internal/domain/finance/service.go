@@ -1259,6 +1259,10 @@ func (s *Service) createTransaction(ctx context.Context, txn *Transaction) error
 
 // updateTransaction updates a transaction and recalculates account balances.
 func (s *Service) updateTransaction(ctx context.Context, txn *Transaction, existing *Transaction) error {
+	if existing.Type == TransactionTypeBalanceAdjustment || (existing.SourceType != nil && *existing.SourceType == "SYSTEM_BALANCE_ADJUSTMENT") {
+		return errors.New("balance adjustment transactions cannot be edited directly; perform a new balance adjustment or delete this record to revert")
+	}
+
 	// 1. Set dates
 	if txn.EffectiveDate.IsZero() {
 		txn.EffectiveDate = txn.TransactionDate
@@ -1346,6 +1350,16 @@ func (s *Service) adjustAccountBalance(ctx context.Context, spaceID SpaceID, acc
 	acc, err := s.deps.AccountStore.GetByID(ctx, spaceID, accountID)
 	if err != nil {
 		return err
+	}
+
+	if txnType == TransactionTypeBalanceAdjustment {
+		if revert {
+			acc.CurrentBalance -= amount
+		} else {
+			acc.CurrentBalance += amount
+		}
+		acc.UpdateTime = time.Now().UTC()
+		return s.deps.AccountStore.Update(ctx, acc)
 	}
 
 	// Determine if the transaction is an inflow or an outflow
@@ -1927,6 +1941,66 @@ func (s *Service) UpdateAccount(ctx context.Context, a *Account) (*Account, erro
 	}
 
 	return a, nil
+}
+
+// AdjustAccountBalance reconciles an account's live balance to a target balance by logging a system reconciliation transaction.
+func (s *Service) AdjustAccountBalance(ctx context.Context, spaceID SpaceID, accountID AccountID, targetBalance int64, adjustmentDate string, note string) (*Account, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, err
+	}
+	if err := accountID.Validate(); err != nil {
+		return nil, err
+	}
+
+	acc, err := s.deps.AccountStore.GetByID(ctx, spaceID, accountID)
+	if err != nil {
+		return nil, fmt.Errorf("fetch target account: %w", err)
+	}
+
+	delta := targetBalance - acc.CurrentBalance
+	if delta == 0 {
+		return acc, nil
+	}
+
+	txnID, err := NewTransactionID()
+	if err != nil {
+		return nil, err
+	}
+
+	parsedDate := time.Now().UTC()
+	if adjustmentDate != "" {
+		if t, parseErr := time.Parse(time.RFC3339, adjustmentDate); parseErr == nil {
+			parsedDate = t
+		} else if t, parseErr := time.Parse("2006-01-02", adjustmentDate); parseErr == nil {
+			parsedDate = t
+		}
+	}
+
+	description := "Balance Adjustment"
+	if note != "" {
+		description += " (" + note + ")"
+	}
+
+	sourceType := "SYSTEM_BALANCE_ADJUSTMENT"
+	accIDVal := accountID
+	txn := &Transaction{
+		ID:              txnID,
+		SpaceID:         spaceID,
+		AccountID:       &accIDVal,
+		Type:            TransactionTypeBalanceAdjustment,
+		Amount:          delta,
+		Currency:        acc.Currency,
+		Description:     description,
+		TransactionDate: parsedDate,
+		EffectiveDate:   parsedDate,
+		SourceType:      &sourceType,
+	}
+
+	if err := s.createTransaction(ctx, txn); err != nil {
+		return nil, fmt.Errorf("record balance adjustment transaction: %w", err)
+	}
+
+	return s.deps.AccountStore.GetByID(ctx, spaceID, accountID)
 }
 
 // DeleteAccount deletes an account and moves default status if necessary.

@@ -21,6 +21,7 @@ import {
   TrendingDown,
   TrendingUp,
   Tag,
+  Scale,
 } from "lucide-react"
 import { formatCents } from "../utils"
 import { cn } from "@/lib/utils"
@@ -105,8 +106,14 @@ export function AccountHistorySheet({
               {transactions.map((txn) => {
                 const conversionPreview = txn.currency !== baseCurrency
                 const budget = budgets.find((b) => b.id === txn.budgetId)
+                const rawAmt = formatCents(txn.amount)
+                const isNegative = rawAmt < 0
                 const isExpense =
                   txn.type === "EXPENSE" || txn.type === "TRANSFER_OUT"
+                const isAdjustment =
+                  txn.type === "BALANCE_ADJUSTMENT" ||
+                  txn.type === "TYPE_UNSPECIFIED" ||
+                  txn.sourceType === "SYSTEM_BALANCE_ADJUSTMENT"
 
                 return (
                   <div
@@ -117,10 +124,12 @@ export function AccountHistorySheet({
                       <div className="flex min-w-0 items-center gap-3">
                         {/* Transaction Type Indicator Icon */}
                         <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-border/50 bg-muted/30 text-muted-foreground">
-                          {isExpense ? (
-                            <TrendingDown className="h-4 w-4" />
+                          {isAdjustment ? (
+                            <Scale className="h-4 w-4 text-teal-400" />
+                          ) : isExpense ? (
+                            <TrendingDown className="h-4 w-4 text-rose-400" />
                           ) : (
-                            <TrendingUp className="h-4 w-4" />
+                            <TrendingUp className="h-4 w-4 text-emerald-400" />
                           )}
                         </div>
 
@@ -156,14 +165,9 @@ export function AccountHistorySheet({
                       </div>
 
                       <div className="text-right">
-                        <span
-                          className={cn(
-                            "block text-xs font-black",
-                            isExpense ? "text-rose-500" : "text-emerald-500"
-                          )}
-                        >
-                          {isExpense ? "-" : "+"}
-                          {formatCents(txn.amount).toLocaleString(undefined, {
+                        <span className="block text-xs font-black text-foreground">
+                          {isNegative ? "-" : "+"}
+                          {Math.abs(rawAmt).toLocaleString(undefined, {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           })}{" "}
@@ -197,12 +201,18 @@ export function AccountHistorySheet({
                           "rounded px-2 py-0.5 text-[8px] font-black tracking-wider uppercase",
                           txn.type === "EXPENSE" || txn.type === "TRANSFER_OUT"
                             ? "bg-rose-500/10 text-rose-500"
-                            : "bg-emerald-500/10 text-emerald-500"
+                            : txn.type === "BALANCE_ADJUSTMENT" ||
+                                txn.type === "TYPE_UNSPECIFIED"
+                              ? "bg-teal-500/10 text-teal-400"
+                              : "bg-emerald-500/10 text-emerald-500"
                         )}
                       >
-                        {txn.type
-                          .replace("TRANSACTION_TYPE_", "")
-                          .replace("_", " ")}
+                        {txn.type === "BALANCE_ADJUSTMENT" ||
+                        txn.type === "TYPE_UNSPECIFIED"
+                          ? "ADJUSTMENT"
+                          : txn.type
+                              .replace("TRANSACTION_TYPE_", "")
+                              .replaceAll("_", " ")}
                       </span>
                     </div>
                   </div>

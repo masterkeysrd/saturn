@@ -11,10 +11,11 @@ import (
 type TransactionType string
 
 const (
-	TransactionTypeExpense     TransactionType = "EXPENSE"
-	TransactionTypeIncome      TransactionType = "INCOME"
-	TransactionTypeTransferOut TransactionType = "TRANSFER_OUT"
-	TransactionTypeTransferIn  TransactionType = "TRANSFER_IN"
+	TransactionTypeExpense           TransactionType = "EXPENSE"
+	TransactionTypeIncome            TransactionType = "INCOME"
+	TransactionTypeTransferOut       TransactionType = "TRANSFER_OUT"
+	TransactionTypeTransferIn        TransactionType = "TRANSFER_IN"
+	TransactionTypeBalanceAdjustment TransactionType = "BALANCE_ADJUSTMENT"
 
 	SourceTypeBorrowing          = "borrowing"
 	SourceTypeBorrowingRepayment = "borrowing_repayment"
@@ -94,16 +95,16 @@ func (t *Transaction) Validate() error {
 	if err := t.SpaceID.Validate(); err != nil {
 		return fmt.Errorf("validate space ID: %w", err)
 	}
-	if t.Type != TransactionTypeExpense && t.Type != TransactionTypeIncome && t.Type != TransactionTypeTransferOut && t.Type != TransactionTypeTransferIn {
+	if t.Type != TransactionTypeExpense && t.Type != TransactionTypeIncome && t.Type != TransactionTypeTransferOut && t.Type != TransactionTypeTransferIn && t.Type != TransactionTypeBalanceAdjustment {
 		return fmt.Errorf("invalid transaction type: %s", t.Type)
 	}
-	if t.Amount <= 0 {
+	if t.Type != TransactionTypeBalanceAdjustment && t.Amount <= 0 {
 		return errors.New("transaction amount must be greater than zero")
 	}
 	if err := t.Currency.Validate(); err != nil {
 		return fmt.Errorf("validate currency: %w", err)
 	}
-	if t.AmountInBase <= 0 {
+	if t.Type != TransactionTypeBalanceAdjustment && t.AmountInBase <= 0 {
 		return errors.New("transaction amount in base currency must be greater than zero")
 	}
 	if t.AccountID != nil {

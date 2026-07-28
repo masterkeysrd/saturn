@@ -113,6 +113,10 @@ export type Transaction_Type =
    * Transfer in transaction, receiving funds from another account.
    */
   | "TRANSFER_IN"
+  /**
+   * Balance adjustment transaction, reconciling account to real-world balance.
+   */
+  | "BALANCE_ADJUSTMENT"
 
 /**
  * View controls the hydration of related metadata.
@@ -256,6 +260,7 @@ export type InboxItem_DocType =
   | "RECEIPT"
   | "BANK_NOTIFICATION"
   | "UNKNOWN"
+  | "SYSTEM_VERIFICATION"
 
 /**
  * Optional representation view.
@@ -1987,6 +1992,29 @@ export interface UpdateAccountRequest {
 
 /**
  * The request for
+ * [AdjustAccountBalance][saturn.finance.v1.Finance.AdjustAccountBalance].
+ */
+export interface AdjustAccountBalanceRequest {
+  /**
+   * Required. Target account identifier to adjust balance for.
+   */
+  accountId: string
+  /**
+   * Required. Target balance in cents.
+   */
+  targetBalance: string
+  /**
+   * Optional. ISO timestamp of the adjustment date.
+   */
+  adjustmentDate?: string
+  /**
+   * Optional. Reason or note for reconciliation.
+   */
+  note?: string
+}
+
+/**
+ * The request for
  * [DeleteAccount][saturn.finance.v1.Finance.DeleteAccount].
  */
 export interface DeleteAccountRequest {
@@ -3428,6 +3456,37 @@ export function useUpdateAccountMutation(
       ...options,
     }
   )
+}
+
+/**
+ * Adjusts an account's live balance to a target amount by creating a system reconciliation transaction.
+ */
+export async function adjustAccountBalance(
+  account_id: string,
+  req: AdjustAccountBalanceRequest
+): Promise<Account> {
+  return request<Account>({
+    method: "POST",
+    url: `/api/v1/finance/accounts/${account_id}:adjust-balance`,
+    data: req,
+  })
+}
+
+export function useAdjustAccountBalanceMutation(
+  options?: UseMutationOptions<
+    Account,
+    Error,
+    { account_id: string; req: AdjustAccountBalanceRequest }
+  >
+) {
+  return useMutation<
+    Account,
+    Error,
+    { account_id: string; req: AdjustAccountBalanceRequest }
+  >({
+    mutationFn: ({ account_id, req }) => adjustAccountBalance(account_id, req),
+    ...options,
+  })
 }
 
 /**

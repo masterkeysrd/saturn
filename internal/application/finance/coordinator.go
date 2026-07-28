@@ -64,6 +64,7 @@ type FinanceService interface {
 	CreateAccount(ctx context.Context, account *finance.Account) (*finance.Account, error)
 	GetAccount(ctx context.Context, spaceID finance.SpaceID, id finance.AccountID) (*finance.Account, error)
 	UpdateAccount(ctx context.Context, account *finance.Account) (*finance.Account, error)
+	AdjustAccountBalance(ctx context.Context, spaceID finance.SpaceID, accountID finance.AccountID, targetBalance int64, adjustmentDate string, note string) (*finance.Account, error)
 	DeleteAccount(ctx context.Context, spaceID finance.SpaceID, id finance.AccountID) error
 	ListAccounts(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error)
 	CreateTransfer(ctx context.Context, transfer *finance.Transfer) (*finance.Transfer, error)
