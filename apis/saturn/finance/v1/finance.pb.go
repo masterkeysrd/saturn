@@ -139,112 +139,6 @@ func (InsightGranularity) EnumDescriptor() ([]byte, []int) {
 	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{1}
 }
 
-// BorrowingDirection defines the type/direction of personal debt agreements.
-type BorrowingDirection int32
-
-const (
-	// Default unspecified value. Invalid fallback.
-	BorrowingDirection_BORROWING_DIRECTION_UNSPECIFIED BorrowingDirection = 0
-	// Funds borrowed from an external entity (payable liability).
-	BorrowingDirection_BORROWING_DIRECTION_BORROWED BorrowingDirection = 1
-	// Funds lent to an external entity (receivable asset).
-	BorrowingDirection_BORROWING_DIRECTION_LENT BorrowingDirection = 2
-)
-
-// Enum value maps for BorrowingDirection.
-var (
-	BorrowingDirection_name = map[int32]string{
-		0: "BORROWING_DIRECTION_UNSPECIFIED",
-		1: "BORROWING_DIRECTION_BORROWED",
-		2: "BORROWING_DIRECTION_LENT",
-	}
-	BorrowingDirection_value = map[string]int32{
-		"BORROWING_DIRECTION_UNSPECIFIED": 0,
-		"BORROWING_DIRECTION_BORROWED":    1,
-		"BORROWING_DIRECTION_LENT":        2,
-	}
-)
-
-func (x BorrowingDirection) Enum() *BorrowingDirection {
-	p := new(BorrowingDirection)
-	*p = x
-	return p
-}
-
-func (x BorrowingDirection) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (BorrowingDirection) Descriptor() protoreflect.EnumDescriptor {
-	return file_saturn_finance_v1_finance_proto_enumTypes[2].Descriptor()
-}
-
-func (BorrowingDirection) Type() protoreflect.EnumType {
-	return &file_saturn_finance_v1_finance_proto_enumTypes[2]
-}
-
-func (x BorrowingDirection) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use BorrowingDirection.Descriptor instead.
-func (BorrowingDirection) EnumDescriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{2}
-}
-
-// BorrowingStatus defines the lifecycle status of debt agreements.
-type BorrowingStatus int32
-
-const (
-	// Default unspecified value. Invalid fallback.
-	BorrowingStatus_BORROWING_STATUS_UNSPECIFIED BorrowingStatus = 0
-	// Active borrowing with pending outstanding balances.
-	BorrowingStatus_BORROWING_STATUS_ACTIVE BorrowingStatus = 1
-	// Paid-off borrowing with zero remaining balance.
-	BorrowingStatus_BORROWING_STATUS_PAID_OFF BorrowingStatus = 2
-)
-
-// Enum value maps for BorrowingStatus.
-var (
-	BorrowingStatus_name = map[int32]string{
-		0: "BORROWING_STATUS_UNSPECIFIED",
-		1: "BORROWING_STATUS_ACTIVE",
-		2: "BORROWING_STATUS_PAID_OFF",
-	}
-	BorrowingStatus_value = map[string]int32{
-		"BORROWING_STATUS_UNSPECIFIED": 0,
-		"BORROWING_STATUS_ACTIVE":      1,
-		"BORROWING_STATUS_PAID_OFF":    2,
-	}
-)
-
-func (x BorrowingStatus) Enum() *BorrowingStatus {
-	p := new(BorrowingStatus)
-	*p = x
-	return p
-}
-
-func (x BorrowingStatus) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (BorrowingStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_saturn_finance_v1_finance_proto_enumTypes[3].Descriptor()
-}
-
-func (BorrowingStatus) Type() protoreflect.EnumType {
-	return &file_saturn_finance_v1_finance_proto_enumTypes[3]
-}
-
-func (x BorrowingStatus) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use BorrowingStatus.Descriptor instead.
-func (BorrowingStatus) EnumDescriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{3}
-}
-
 // RecurrenceInterval defines the frequency of budgeting or transaction execution rules.
 type Budget_RecurrenceInterval int32
 
@@ -286,11 +180,11 @@ func (x Budget_RecurrenceInterval) String() string {
 }
 
 func (Budget_RecurrenceInterval) Descriptor() protoreflect.EnumDescriptor {
-	return file_saturn_finance_v1_finance_proto_enumTypes[4].Descriptor()
+	return file_saturn_finance_v1_finance_proto_enumTypes[2].Descriptor()
 }
 
 func (Budget_RecurrenceInterval) Type() protoreflect.EnumType {
-	return &file_saturn_finance_v1_finance_proto_enumTypes[4]
+	return &file_saturn_finance_v1_finance_proto_enumTypes[2]
 }
 
 func (x Budget_RecurrenceInterval) Number() protoreflect.EnumNumber {
@@ -339,11 +233,11 @@ func (x Budget_View) String() string {
 }
 
 func (Budget_View) Descriptor() protoreflect.EnumDescriptor {
-	return file_saturn_finance_v1_finance_proto_enumTypes[5].Descriptor()
+	return file_saturn_finance_v1_finance_proto_enumTypes[3].Descriptor()
 }
 
 func (Budget_View) Type() protoreflect.EnumType {
-	return &file_saturn_finance_v1_finance_proto_enumTypes[5]
+	return &file_saturn_finance_v1_finance_proto_enumTypes[3]
 }
 
 func (x Budget_View) Number() protoreflect.EnumNumber {
@@ -400,11 +294,11 @@ func (x Transaction_Type) String() string {
 }
 
 func (Transaction_Type) Descriptor() protoreflect.EnumDescriptor {
-	return file_saturn_finance_v1_finance_proto_enumTypes[6].Descriptor()
+	return file_saturn_finance_v1_finance_proto_enumTypes[4].Descriptor()
 }
 
 func (Transaction_Type) Type() protoreflect.EnumType {
-	return &file_saturn_finance_v1_finance_proto_enumTypes[6]
+	return &file_saturn_finance_v1_finance_proto_enumTypes[4]
 }
 
 func (x Transaction_Type) Number() protoreflect.EnumNumber {
@@ -453,11 +347,11 @@ func (x Transaction_View) String() string {
 }
 
 func (Transaction_View) Descriptor() protoreflect.EnumDescriptor {
-	return file_saturn_finance_v1_finance_proto_enumTypes[7].Descriptor()
+	return file_saturn_finance_v1_finance_proto_enumTypes[5].Descriptor()
 }
 
 func (Transaction_View) Type() protoreflect.EnumType {
-	return &file_saturn_finance_v1_finance_proto_enumTypes[7]
+	return &file_saturn_finance_v1_finance_proto_enumTypes[5]
 }
 
 func (x Transaction_View) Number() protoreflect.EnumNumber {
@@ -503,11 +397,11 @@ func (x RecurringExpense_View) String() string {
 }
 
 func (RecurringExpense_View) Descriptor() protoreflect.EnumDescriptor {
-	return file_saturn_finance_v1_finance_proto_enumTypes[8].Descriptor()
+	return file_saturn_finance_v1_finance_proto_enumTypes[6].Descriptor()
 }
 
 func (RecurringExpense_View) Type() protoreflect.EnumType {
-	return &file_saturn_finance_v1_finance_proto_enumTypes[8]
+	return &file_saturn_finance_v1_finance_proto_enumTypes[6]
 }
 
 func (x RecurringExpense_View) Number() protoreflect.EnumNumber {
@@ -556,11 +450,11 @@ func (x RecurringExpense_Interval) String() string {
 }
 
 func (RecurringExpense_Interval) Descriptor() protoreflect.EnumDescriptor {
-	return file_saturn_finance_v1_finance_proto_enumTypes[9].Descriptor()
+	return file_saturn_finance_v1_finance_proto_enumTypes[7].Descriptor()
 }
 
 func (RecurringExpense_Interval) Type() protoreflect.EnumType {
-	return &file_saturn_finance_v1_finance_proto_enumTypes[9]
+	return &file_saturn_finance_v1_finance_proto_enumTypes[7]
 }
 
 func (x RecurringExpense_Interval) Number() protoreflect.EnumNumber {
@@ -609,11 +503,11 @@ func (x RecurringExpense_Status) String() string {
 }
 
 func (RecurringExpense_Status) Descriptor() protoreflect.EnumDescriptor {
-	return file_saturn_finance_v1_finance_proto_enumTypes[10].Descriptor()
+	return file_saturn_finance_v1_finance_proto_enumTypes[8].Descriptor()
 }
 
 func (RecurringExpense_Status) Type() protoreflect.EnumType {
-	return &file_saturn_finance_v1_finance_proto_enumTypes[10]
+	return &file_saturn_finance_v1_finance_proto_enumTypes[8]
 }
 
 func (x RecurringExpense_Status) Number() protoreflect.EnumNumber {
@@ -659,11 +553,11 @@ func (x ScheduledPayment_View) String() string {
 }
 
 func (ScheduledPayment_View) Descriptor() protoreflect.EnumDescriptor {
-	return file_saturn_finance_v1_finance_proto_enumTypes[11].Descriptor()
+	return file_saturn_finance_v1_finance_proto_enumTypes[9].Descriptor()
 }
 
 func (ScheduledPayment_View) Type() protoreflect.EnumType {
-	return &file_saturn_finance_v1_finance_proto_enumTypes[11]
+	return &file_saturn_finance_v1_finance_proto_enumTypes[9]
 }
 
 func (x ScheduledPayment_View) Number() protoreflect.EnumNumber {
@@ -712,11 +606,11 @@ func (x ScheduledPayment_SourceType) String() string {
 }
 
 func (ScheduledPayment_SourceType) Descriptor() protoreflect.EnumDescriptor {
-	return file_saturn_finance_v1_finance_proto_enumTypes[12].Descriptor()
+	return file_saturn_finance_v1_finance_proto_enumTypes[10].Descriptor()
 }
 
 func (ScheduledPayment_SourceType) Type() protoreflect.EnumType {
-	return &file_saturn_finance_v1_finance_proto_enumTypes[12]
+	return &file_saturn_finance_v1_finance_proto_enumTypes[10]
 }
 
 func (x ScheduledPayment_SourceType) Number() protoreflect.EnumNumber {
@@ -765,11 +659,11 @@ func (x ScheduledPayment_Status) String() string {
 }
 
 func (ScheduledPayment_Status) Descriptor() protoreflect.EnumDescriptor {
-	return file_saturn_finance_v1_finance_proto_enumTypes[13].Descriptor()
+	return file_saturn_finance_v1_finance_proto_enumTypes[11].Descriptor()
 }
 
 func (ScheduledPayment_Status) Type() protoreflect.EnumType {
-	return &file_saturn_finance_v1_finance_proto_enumTypes[13]
+	return &file_saturn_finance_v1_finance_proto_enumTypes[11]
 }
 
 func (x ScheduledPayment_Status) Number() protoreflect.EnumNumber {
@@ -779,6 +673,112 @@ func (x ScheduledPayment_Status) Number() protoreflect.EnumNumber {
 // Deprecated: Use ScheduledPayment_Status.Descriptor instead.
 func (ScheduledPayment_Status) EnumDescriptor() ([]byte, []int) {
 	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{31, 2}
+}
+
+// BorrowingDirection defines the type/direction of personal debt agreements.
+type Borrowing_Direction int32
+
+const (
+	// Default unspecified value. Invalid fallback.
+	Borrowing_DIRECTION_UNSPECIFIED Borrowing_Direction = 0
+	// Funds borrowed from an external entity (payable liability).
+	Borrowing_BORROWED Borrowing_Direction = 1
+	// Funds lent to an external entity (receivable asset).
+	Borrowing_LENT Borrowing_Direction = 2
+)
+
+// Enum value maps for Borrowing_Direction.
+var (
+	Borrowing_Direction_name = map[int32]string{
+		0: "DIRECTION_UNSPECIFIED",
+		1: "BORROWED",
+		2: "LENT",
+	}
+	Borrowing_Direction_value = map[string]int32{
+		"DIRECTION_UNSPECIFIED": 0,
+		"BORROWED":              1,
+		"LENT":                  2,
+	}
+)
+
+func (x Borrowing_Direction) Enum() *Borrowing_Direction {
+	p := new(Borrowing_Direction)
+	*p = x
+	return p
+}
+
+func (x Borrowing_Direction) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Borrowing_Direction) Descriptor() protoreflect.EnumDescriptor {
+	return file_saturn_finance_v1_finance_proto_enumTypes[12].Descriptor()
+}
+
+func (Borrowing_Direction) Type() protoreflect.EnumType {
+	return &file_saturn_finance_v1_finance_proto_enumTypes[12]
+}
+
+func (x Borrowing_Direction) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Borrowing_Direction.Descriptor instead.
+func (Borrowing_Direction) EnumDescriptor() ([]byte, []int) {
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{41, 0}
+}
+
+// BorrowingStatus defines the lifecycle status of debt agreements.
+type Borrowing_Status int32
+
+const (
+	// Default unspecified value. Invalid fallback.
+	Borrowing_STATUS_UNSPECIFIED Borrowing_Status = 0
+	// Active borrowing with pending outstanding balances.
+	Borrowing_ACTIVE Borrowing_Status = 1
+	// Paid-off borrowing with zero remaining balance.
+	Borrowing_PAID_OFF Borrowing_Status = 2
+)
+
+// Enum value maps for Borrowing_Status.
+var (
+	Borrowing_Status_name = map[int32]string{
+		0: "STATUS_UNSPECIFIED",
+		1: "ACTIVE",
+		2: "PAID_OFF",
+	}
+	Borrowing_Status_value = map[string]int32{
+		"STATUS_UNSPECIFIED": 0,
+		"ACTIVE":             1,
+		"PAID_OFF":           2,
+	}
+)
+
+func (x Borrowing_Status) Enum() *Borrowing_Status {
+	p := new(Borrowing_Status)
+	*p = x
+	return p
+}
+
+func (x Borrowing_Status) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Borrowing_Status) Descriptor() protoreflect.EnumDescriptor {
+	return file_saturn_finance_v1_finance_proto_enumTypes[13].Descriptor()
+}
+
+func (Borrowing_Status) Type() protoreflect.EnumType {
+	return &file_saturn_finance_v1_finance_proto_enumTypes[13]
+}
+
+func (x Borrowing_Status) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Borrowing_Status.Descriptor instead.
+func (Borrowing_Status) EnumDescriptor() ([]byte, []int) {
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{41, 1}
 }
 
 // Type defines the classification of payment accounts.
@@ -839,7 +839,7 @@ func (x Account_Type) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Account_Type.Descriptor instead.
 func (Account_Type) EnumDescriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{58, 0}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{56, 0}
 }
 
 // View controls the hydration of related metadata.
@@ -892,7 +892,7 @@ func (x Account_View) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Account_View.Descriptor instead.
 func (Account_View) EnumDescriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{58, 1}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{56, 1}
 }
 
 // Staging lifecycle status enum.
@@ -948,7 +948,7 @@ func (x InboxItem_Status) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use InboxItem_Status.Descriptor instead.
 func (InboxItem_Status) EnumDescriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{72, 0}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{70, 0}
 }
 
 // Document category classification enum.
@@ -1004,7 +1004,7 @@ func (x InboxItem_DocType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use InboxItem_DocType.Descriptor instead.
 func (InboxItem_DocType) EnumDescriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{72, 1}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{70, 1}
 }
 
 // Optional representation view.
@@ -1054,7 +1054,7 @@ func (x InboxItem_View) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use InboxItem_View.Descriptor instead.
 func (InboxItem_View) EnumDescriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{72, 2}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{70, 2}
 }
 
 // FinanceSettings represents the workspace configuration.
@@ -4285,7 +4285,7 @@ type Borrowing struct {
 	// Output only. Space identifier.
 	SpaceId string `protobuf:"bytes,2,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
 	// Required. Direction flow of the debt.
-	Direction BorrowingDirection `protobuf:"varint,3,opt,name=direction,proto3,enum=saturn.finance.v1.BorrowingDirection" json:"direction,omitempty"`
+	Direction Borrowing_Direction `protobuf:"varint,3,opt,name=direction,proto3,enum=saturn.finance.v1.Borrowing_Direction" json:"direction,omitempty"`
 	// Required. Name of the counterparty entity.
 	Counterparty string `protobuf:"bytes,4,opt,name=counterparty,proto3" json:"counterparty,omitempty"`
 	// Optional. Contact information.
@@ -4297,7 +4297,7 @@ type Borrowing struct {
 	// Required. Currency code.
 	Currency string `protobuf:"bytes,8,opt,name=currency,proto3" json:"currency,omitempty"`
 	// Required. Lifecycle status.
-	Status BorrowingStatus `protobuf:"varint,9,opt,name=status,proto3,enum=saturn.finance.v1.BorrowingStatus" json:"status,omitempty"`
+	Status Borrowing_Status `protobuf:"varint,9,opt,name=status,proto3,enum=saturn.finance.v1.Borrowing_Status" json:"status,omitempty"`
 	// Required. Date established.
 	EstablishedAt *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=established_at,json=establishedAt,proto3" json:"established_at,omitempty"`
 	// Optional. Target repayment due date.
@@ -4309,7 +4309,10 @@ type Borrowing struct {
 	// Output only. Creation timestamp.
 	CreateTime *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
 	// Output only. Last update timestamp.
-	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	UpdateTime *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	// Optional. Source account identifier for transaction creation.
+	// Values are of the form `acc_[a-zA-Z0-9]+`.
+	AccountId     *string `protobuf:"bytes,16,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4358,11 +4361,11 @@ func (x *Borrowing) GetSpaceId() string {
 	return ""
 }
 
-func (x *Borrowing) GetDirection() BorrowingDirection {
+func (x *Borrowing) GetDirection() Borrowing_Direction {
 	if x != nil {
 		return x.Direction
 	}
-	return BorrowingDirection_BORROWING_DIRECTION_UNSPECIFIED
+	return Borrowing_DIRECTION_UNSPECIFIED
 }
 
 func (x *Borrowing) GetCounterparty() string {
@@ -4400,11 +4403,11 @@ func (x *Borrowing) GetCurrency() string {
 	return ""
 }
 
-func (x *Borrowing) GetStatus() BorrowingStatus {
+func (x *Borrowing) GetStatus() Borrowing_Status {
 	if x != nil {
 		return x.Status
 	}
-	return BorrowingStatus_BORROWING_STATUS_UNSPECIFIED
+	return Borrowing_STATUS_UNSPECIFIED
 }
 
 func (x *Borrowing) GetEstablishedAt() *timestamppb.Timestamp {
@@ -4447,6 +4450,13 @@ func (x *Borrowing) GetUpdateTime() *timestamppb.Timestamp {
 		return x.UpdateTime
 	}
 	return nil
+}
+
+func (x *Borrowing) GetAccountId() string {
+	if x != nil && x.AccountId != nil {
+		return *x.AccountId
+	}
+	return ""
 }
 
 // BorrowingRepayment represents an installment payment towards a borrowing.
@@ -4570,147 +4580,19 @@ func (x *BorrowingRepayment) GetAccountId() string {
 	return ""
 }
 
-// BorrowingInput encapsulates fields for configuring borrowing records.
-type BorrowingInput struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Required. Direction flow of the debt.
-	Direction BorrowingDirection `protobuf:"varint,1,opt,name=direction,proto3,enum=saturn.finance.v1.BorrowingDirection" json:"direction,omitempty"`
-	// Required. Name of the counterparty.
-	Counterparty string `protobuf:"bytes,2,opt,name=counterparty,proto3" json:"counterparty,omitempty"`
-	// Optional. Contact information.
-	ContactInfo string `protobuf:"bytes,3,opt,name=contact_info,json=contactInfo,proto3" json:"contact_info,omitempty"`
-	// Required. Initial loan amount in cents.
-	TotalAmount int64 `protobuf:"varint,4,opt,name=total_amount,json=totalAmount,proto3" json:"total_amount,omitempty"`
-	// Required. Currency code.
-	Currency string `protobuf:"bytes,5,opt,name=currency,proto3" json:"currency,omitempty"`
-	// Required. Date established.
-	EstablishedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=established_at,json=establishedAt,proto3" json:"established_at,omitempty"`
-	// Optional. Target repayment due date.
-	DueAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=due_at,json=dueAt,proto3" json:"due_at,omitempty"`
-	// Optional. Narration notes.
-	Notes string `protobuf:"bytes,8,opt,name=notes,proto3" json:"notes,omitempty"`
-	// Optional. Automatically create a parallel transaction entry in the ledger.
-	CreateAsTransaction bool `protobuf:"varint,9,opt,name=create_as_transaction,json=createAsTransaction,proto3" json:"create_as_transaction,omitempty"`
-	// Optional. Source account identifier.
-	// Values are of the form `acc_[a-zA-Z0-9]+`.
-	AccountId     *string `protobuf:"bytes,10,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *BorrowingInput) Reset() {
-	*x = BorrowingInput{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[43]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *BorrowingInput) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*BorrowingInput) ProtoMessage() {}
-
-func (x *BorrowingInput) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[43]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use BorrowingInput.ProtoReflect.Descriptor instead.
-func (*BorrowingInput) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{43}
-}
-
-func (x *BorrowingInput) GetDirection() BorrowingDirection {
-	if x != nil {
-		return x.Direction
-	}
-	return BorrowingDirection_BORROWING_DIRECTION_UNSPECIFIED
-}
-
-func (x *BorrowingInput) GetCounterparty() string {
-	if x != nil {
-		return x.Counterparty
-	}
-	return ""
-}
-
-func (x *BorrowingInput) GetContactInfo() string {
-	if x != nil {
-		return x.ContactInfo
-	}
-	return ""
-}
-
-func (x *BorrowingInput) GetTotalAmount() int64 {
-	if x != nil {
-		return x.TotalAmount
-	}
-	return 0
-}
-
-func (x *BorrowingInput) GetCurrency() string {
-	if x != nil {
-		return x.Currency
-	}
-	return ""
-}
-
-func (x *BorrowingInput) GetEstablishedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.EstablishedAt
-	}
-	return nil
-}
-
-func (x *BorrowingInput) GetDueAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.DueAt
-	}
-	return nil
-}
-
-func (x *BorrowingInput) GetNotes() string {
-	if x != nil {
-		return x.Notes
-	}
-	return ""
-}
-
-func (x *BorrowingInput) GetCreateAsTransaction() bool {
-	if x != nil {
-		return x.CreateAsTransaction
-	}
-	return false
-}
-
-func (x *BorrowingInput) GetAccountId() string {
-	if x != nil && x.AccountId != nil {
-		return *x.AccountId
-	}
-	return ""
-}
-
 // The request for
 // [CreateBorrowing][saturn.finance.v1.Finance.CreateBorrowing].
 type CreateBorrowingRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Required. Target borrowing parameters.
-	Borrowing     *BorrowingInput `protobuf:"bytes,1,opt,name=borrowing,proto3" json:"borrowing,omitempty"`
+	Borrowing     *Borrowing `protobuf:"bytes,1,opt,name=borrowing,proto3" json:"borrowing,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateBorrowingRequest) Reset() {
 	*x = CreateBorrowingRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[44]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4722,7 +4604,7 @@ func (x *CreateBorrowingRequest) String() string {
 func (*CreateBorrowingRequest) ProtoMessage() {}
 
 func (x *CreateBorrowingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[44]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4735,10 +4617,10 @@ func (x *CreateBorrowingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateBorrowingRequest.ProtoReflect.Descriptor instead.
 func (*CreateBorrowingRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{44}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{43}
 }
 
-func (x *CreateBorrowingRequest) GetBorrowing() *BorrowingInput {
+func (x *CreateBorrowingRequest) GetBorrowing() *Borrowing {
 	if x != nil {
 		return x.Borrowing
 	}
@@ -4758,7 +4640,7 @@ type GetBorrowingRequest struct {
 
 func (x *GetBorrowingRequest) Reset() {
 	*x = GetBorrowingRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[45]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4770,7 +4652,7 @@ func (x *GetBorrowingRequest) String() string {
 func (*GetBorrowingRequest) ProtoMessage() {}
 
 func (x *GetBorrowingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[45]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4783,7 +4665,7 @@ func (x *GetBorrowingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBorrowingRequest.ProtoReflect.Descriptor instead.
 func (*GetBorrowingRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{45}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *GetBorrowingRequest) GetId() string {
@@ -4798,20 +4680,22 @@ func (x *GetBorrowingRequest) GetId() string {
 type ListBorrowingsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Optional. Filter by debt status.
-	Status *BorrowingStatus `protobuf:"varint,1,opt,name=status,proto3,enum=saturn.finance.v1.BorrowingStatus,oneof" json:"status,omitempty"`
+	Status *Borrowing_Status `protobuf:"varint,1,opt,name=status,proto3,enum=saturn.finance.v1.Borrowing_Status,oneof" json:"status,omitempty"`
 	// Optional. Filter by debt flow direction.
-	Direction *BorrowingDirection `protobuf:"varint,2,opt,name=direction,proto3,enum=saturn.finance.v1.BorrowingDirection,oneof" json:"direction,omitempty"`
+	Direction *Borrowing_Direction `protobuf:"varint,2,opt,name=direction,proto3,enum=saturn.finance.v1.Borrowing_Direction,oneof" json:"direction,omitempty"`
 	// Optional. Maximum number of items to return.
-	PageSize int32 `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageSize *int32 `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3,oneof" json:"page_size,omitempty"`
 	// Optional. Keyset page token.
-	PageToken     string `protobuf:"bytes,4,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PageToken *string `protobuf:"bytes,4,opt,name=page_token,json=pageToken,proto3,oneof" json:"page_token,omitempty"`
+	// Optional. Sort order for results.
+	OrderBy       *string `protobuf:"bytes,5,opt,name=order_by,json=orderBy,proto3,oneof" json:"order_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListBorrowingsRequest) Reset() {
 	*x = ListBorrowingsRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[46]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4823,7 +4707,7 @@ func (x *ListBorrowingsRequest) String() string {
 func (*ListBorrowingsRequest) ProtoMessage() {}
 
 func (x *ListBorrowingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[46]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4836,33 +4720,40 @@ func (x *ListBorrowingsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBorrowingsRequest.ProtoReflect.Descriptor instead.
 func (*ListBorrowingsRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{46}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{45}
 }
 
-func (x *ListBorrowingsRequest) GetStatus() BorrowingStatus {
+func (x *ListBorrowingsRequest) GetStatus() Borrowing_Status {
 	if x != nil && x.Status != nil {
 		return *x.Status
 	}
-	return BorrowingStatus_BORROWING_STATUS_UNSPECIFIED
+	return Borrowing_STATUS_UNSPECIFIED
 }
 
-func (x *ListBorrowingsRequest) GetDirection() BorrowingDirection {
+func (x *ListBorrowingsRequest) GetDirection() Borrowing_Direction {
 	if x != nil && x.Direction != nil {
 		return *x.Direction
 	}
-	return BorrowingDirection_BORROWING_DIRECTION_UNSPECIFIED
+	return Borrowing_DIRECTION_UNSPECIFIED
 }
 
 func (x *ListBorrowingsRequest) GetPageSize() int32 {
-	if x != nil {
-		return x.PageSize
+	if x != nil && x.PageSize != nil {
+		return *x.PageSize
 	}
 	return 0
 }
 
 func (x *ListBorrowingsRequest) GetPageToken() string {
-	if x != nil {
-		return x.PageToken
+	if x != nil && x.PageToken != nil {
+		return *x.PageToken
+	}
+	return ""
+}
+
+func (x *ListBorrowingsRequest) GetOrderBy() string {
+	if x != nil && x.OrderBy != nil {
+		return *x.OrderBy
 	}
 	return ""
 }
@@ -4881,7 +4772,7 @@ type ListBorrowingsResponse struct {
 
 func (x *ListBorrowingsResponse) Reset() {
 	*x = ListBorrowingsResponse{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[47]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4893,7 +4784,7 @@ func (x *ListBorrowingsResponse) String() string {
 func (*ListBorrowingsResponse) ProtoMessage() {}
 
 func (x *ListBorrowingsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[47]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4906,7 +4797,7 @@ func (x *ListBorrowingsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBorrowingsResponse.ProtoReflect.Descriptor instead.
 func (*ListBorrowingsResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{47}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *ListBorrowingsResponse) GetBorrowings() []*Borrowing {
@@ -4931,14 +4822,14 @@ type UpdateBorrowingRequest struct {
 	// Values are of the form `bor_[a-zA-Z0-9]+`.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Required. Updated borrowing parameters.
-	Borrowing     *BorrowingInput `protobuf:"bytes,2,opt,name=borrowing,proto3" json:"borrowing,omitempty"`
+	Borrowing     *Borrowing `protobuf:"bytes,2,opt,name=borrowing,proto3" json:"borrowing,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateBorrowingRequest) Reset() {
 	*x = UpdateBorrowingRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[48]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4950,7 +4841,7 @@ func (x *UpdateBorrowingRequest) String() string {
 func (*UpdateBorrowingRequest) ProtoMessage() {}
 
 func (x *UpdateBorrowingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[48]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4963,7 +4854,7 @@ func (x *UpdateBorrowingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateBorrowingRequest.ProtoReflect.Descriptor instead.
 func (*UpdateBorrowingRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{48}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *UpdateBorrowingRequest) GetId() string {
@@ -4973,7 +4864,7 @@ func (x *UpdateBorrowingRequest) GetId() string {
 	return ""
 }
 
-func (x *UpdateBorrowingRequest) GetBorrowing() *BorrowingInput {
+func (x *UpdateBorrowingRequest) GetBorrowing() *Borrowing {
 	if x != nil {
 		return x.Borrowing
 	}
@@ -4993,7 +4884,7 @@ type DeleteBorrowingRequest struct {
 
 func (x *DeleteBorrowingRequest) Reset() {
 	*x = DeleteBorrowingRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[49]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5005,7 +4896,7 @@ func (x *DeleteBorrowingRequest) String() string {
 func (*DeleteBorrowingRequest) ProtoMessage() {}
 
 func (x *DeleteBorrowingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[49]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5018,86 +4909,12 @@ func (x *DeleteBorrowingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteBorrowingRequest.ProtoReflect.Descriptor instead.
 func (*DeleteBorrowingRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{49}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *DeleteBorrowingRequest) GetId() string {
 	if x != nil {
 		return x.Id
-	}
-	return ""
-}
-
-// BorrowingRepaymentInput encapsulates fields for configuring installment payments.
-type BorrowingRepaymentInput struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Required. Repayment amount in cents.
-	Amount int64 `protobuf:"varint,1,opt,name=amount,proto3" json:"amount,omitempty"`
-	// Required. Repayment date.
-	PaymentDate *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=payment_date,json=paymentDate,proto3" json:"payment_date,omitempty"`
-	// Optional. Narration notes.
-	Notes string `protobuf:"bytes,3,opt,name=notes,proto3" json:"notes,omitempty"`
-	// Required. Target account identifier.
-	// Values are of the form `acc_[a-zA-Z0-9]+`.
-	AccountId     string `protobuf:"bytes,4,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *BorrowingRepaymentInput) Reset() {
-	*x = BorrowingRepaymentInput{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[50]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *BorrowingRepaymentInput) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*BorrowingRepaymentInput) ProtoMessage() {}
-
-func (x *BorrowingRepaymentInput) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[50]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use BorrowingRepaymentInput.ProtoReflect.Descriptor instead.
-func (*BorrowingRepaymentInput) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{50}
-}
-
-func (x *BorrowingRepaymentInput) GetAmount() int64 {
-	if x != nil {
-		return x.Amount
-	}
-	return 0
-}
-
-func (x *BorrowingRepaymentInput) GetPaymentDate() *timestamppb.Timestamp {
-	if x != nil {
-		return x.PaymentDate
-	}
-	return nil
-}
-
-func (x *BorrowingRepaymentInput) GetNotes() string {
-	if x != nil {
-		return x.Notes
-	}
-	return ""
-}
-
-func (x *BorrowingRepaymentInput) GetAccountId() string {
-	if x != nil {
-		return x.AccountId
 	}
 	return ""
 }
@@ -5110,14 +4927,14 @@ type CreateBorrowingRepaymentRequest struct {
 	// Values are of the form `bor_[a-zA-Z0-9]+`.
 	BorrowingId string `protobuf:"bytes,1,opt,name=borrowing_id,json=borrowingId,proto3" json:"borrowing_id,omitempty"`
 	// Required. Updated repayment parameters.
-	Repayment     *BorrowingRepaymentInput `protobuf:"bytes,2,opt,name=repayment,proto3" json:"repayment,omitempty"`
+	Repayment     *BorrowingRepayment `protobuf:"bytes,2,opt,name=repayment,proto3" json:"repayment,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateBorrowingRepaymentRequest) Reset() {
 	*x = CreateBorrowingRepaymentRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[51]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5129,7 +4946,7 @@ func (x *CreateBorrowingRepaymentRequest) String() string {
 func (*CreateBorrowingRepaymentRequest) ProtoMessage() {}
 
 func (x *CreateBorrowingRepaymentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[51]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5142,7 +4959,7 @@ func (x *CreateBorrowingRepaymentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateBorrowingRepaymentRequest.ProtoReflect.Descriptor instead.
 func (*CreateBorrowingRepaymentRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{51}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *CreateBorrowingRepaymentRequest) GetBorrowingId() string {
@@ -5152,7 +4969,7 @@ func (x *CreateBorrowingRepaymentRequest) GetBorrowingId() string {
 	return ""
 }
 
-func (x *CreateBorrowingRepaymentRequest) GetRepayment() *BorrowingRepaymentInput {
+func (x *CreateBorrowingRepaymentRequest) GetRepayment() *BorrowingRepayment {
 	if x != nil {
 		return x.Repayment
 	}
@@ -5172,7 +4989,7 @@ type ListBorrowingRepaymentsRequest struct {
 
 func (x *ListBorrowingRepaymentsRequest) Reset() {
 	*x = ListBorrowingRepaymentsRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[52]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5184,7 +5001,7 @@ func (x *ListBorrowingRepaymentsRequest) String() string {
 func (*ListBorrowingRepaymentsRequest) ProtoMessage() {}
 
 func (x *ListBorrowingRepaymentsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[52]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5197,7 +5014,7 @@ func (x *ListBorrowingRepaymentsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBorrowingRepaymentsRequest.ProtoReflect.Descriptor instead.
 func (*ListBorrowingRepaymentsRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{52}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *ListBorrowingRepaymentsRequest) GetBorrowingId() string {
@@ -5219,7 +5036,7 @@ type ListBorrowingRepaymentsResponse struct {
 
 func (x *ListBorrowingRepaymentsResponse) Reset() {
 	*x = ListBorrowingRepaymentsResponse{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[53]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5231,7 +5048,7 @@ func (x *ListBorrowingRepaymentsResponse) String() string {
 func (*ListBorrowingRepaymentsResponse) ProtoMessage() {}
 
 func (x *ListBorrowingRepaymentsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[53]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5244,7 +5061,7 @@ func (x *ListBorrowingRepaymentsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBorrowingRepaymentsResponse.ProtoReflect.Descriptor instead.
 func (*ListBorrowingRepaymentsResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{53}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *ListBorrowingRepaymentsResponse) GetRepayments() []*BorrowingRepayment {
@@ -5270,7 +5087,7 @@ type DeleteBorrowingRepaymentRequest struct {
 
 func (x *DeleteBorrowingRepaymentRequest) Reset() {
 	*x = DeleteBorrowingRepaymentRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[54]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5282,7 +5099,7 @@ func (x *DeleteBorrowingRepaymentRequest) String() string {
 func (*DeleteBorrowingRepaymentRequest) ProtoMessage() {}
 
 func (x *DeleteBorrowingRepaymentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[54]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5295,7 +5112,7 @@ func (x *DeleteBorrowingRepaymentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteBorrowingRepaymentRequest.ProtoReflect.Descriptor instead.
 func (*DeleteBorrowingRepaymentRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{54}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *DeleteBorrowingRepaymentRequest) GetBorrowingId() string {
@@ -5325,7 +5142,7 @@ type CurrencyInfo struct {
 
 func (x *CurrencyInfo) Reset() {
 	*x = CurrencyInfo{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[55]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5337,7 +5154,7 @@ func (x *CurrencyInfo) String() string {
 func (*CurrencyInfo) ProtoMessage() {}
 
 func (x *CurrencyInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[55]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5350,7 +5167,7 @@ func (x *CurrencyInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CurrencyInfo.ProtoReflect.Descriptor instead.
 func (*CurrencyInfo) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{55}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *CurrencyInfo) GetCode() string {
@@ -5377,7 +5194,7 @@ type ListCurrenciesRequest struct {
 
 func (x *ListCurrenciesRequest) Reset() {
 	*x = ListCurrenciesRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[56]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5389,7 +5206,7 @@ func (x *ListCurrenciesRequest) String() string {
 func (*ListCurrenciesRequest) ProtoMessage() {}
 
 func (x *ListCurrenciesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[56]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5402,7 +5219,7 @@ func (x *ListCurrenciesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCurrenciesRequest.ProtoReflect.Descriptor instead.
 func (*ListCurrenciesRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{56}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{54}
 }
 
 // The response for
@@ -5417,7 +5234,7 @@ type ListCurrenciesResponse struct {
 
 func (x *ListCurrenciesResponse) Reset() {
 	*x = ListCurrenciesResponse{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[57]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5429,7 +5246,7 @@ func (x *ListCurrenciesResponse) String() string {
 func (*ListCurrenciesResponse) ProtoMessage() {}
 
 func (x *ListCurrenciesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[57]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5442,7 +5259,7 @@ func (x *ListCurrenciesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCurrenciesResponse.ProtoReflect.Descriptor instead.
 func (*ListCurrenciesResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{57}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *ListCurrenciesResponse) GetCurrencies() []*CurrencyInfo {
@@ -5496,7 +5313,7 @@ type Account struct {
 
 func (x *Account) Reset() {
 	*x = Account{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[58]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5508,7 +5325,7 @@ func (x *Account) String() string {
 func (*Account) ProtoMessage() {}
 
 func (x *Account) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[58]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5521,7 +5338,7 @@ func (x *Account) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Account.ProtoReflect.Descriptor instead.
 func (*Account) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{58}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *Account) GetId() string {
@@ -5648,7 +5465,7 @@ type CreateAccountRequest struct {
 
 func (x *CreateAccountRequest) Reset() {
 	*x = CreateAccountRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[59]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5660,7 +5477,7 @@ func (x *CreateAccountRequest) String() string {
 func (*CreateAccountRequest) ProtoMessage() {}
 
 func (x *CreateAccountRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[59]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5673,7 +5490,7 @@ func (x *CreateAccountRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAccountRequest.ProtoReflect.Descriptor instead.
 func (*CreateAccountRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{59}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *CreateAccountRequest) GetAccount() *Account {
@@ -5698,7 +5515,7 @@ type GetAccountRequest struct {
 
 func (x *GetAccountRequest) Reset() {
 	*x = GetAccountRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[60]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5710,7 +5527,7 @@ func (x *GetAccountRequest) String() string {
 func (*GetAccountRequest) ProtoMessage() {}
 
 func (x *GetAccountRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[60]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5723,7 +5540,7 @@ func (x *GetAccountRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAccountRequest.ProtoReflect.Descriptor instead.
 func (*GetAccountRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{60}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *GetAccountRequest) GetId() string {
@@ -5755,7 +5572,7 @@ type UpdateAccountRequest struct {
 
 func (x *UpdateAccountRequest) Reset() {
 	*x = UpdateAccountRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[61]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5767,7 +5584,7 @@ func (x *UpdateAccountRequest) String() string {
 func (*UpdateAccountRequest) ProtoMessage() {}
 
 func (x *UpdateAccountRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[61]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5780,7 +5597,7 @@ func (x *UpdateAccountRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAccountRequest.ProtoReflect.Descriptor instead.
 func (*UpdateAccountRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{61}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *UpdateAccountRequest) GetId() string {
@@ -5810,7 +5627,7 @@ type DeleteAccountRequest struct {
 
 func (x *DeleteAccountRequest) Reset() {
 	*x = DeleteAccountRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[62]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5822,7 +5639,7 @@ func (x *DeleteAccountRequest) String() string {
 func (*DeleteAccountRequest) ProtoMessage() {}
 
 func (x *DeleteAccountRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[62]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5835,7 +5652,7 @@ func (x *DeleteAccountRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAccountRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAccountRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{62}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *DeleteAccountRequest) GetId() string {
@@ -5867,7 +5684,7 @@ type ListAccountsRequest struct {
 
 func (x *ListAccountsRequest) Reset() {
 	*x = ListAccountsRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[63]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5879,7 +5696,7 @@ func (x *ListAccountsRequest) String() string {
 func (*ListAccountsRequest) ProtoMessage() {}
 
 func (x *ListAccountsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[63]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5892,7 +5709,7 @@ func (x *ListAccountsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAccountsRequest.ProtoReflect.Descriptor instead.
 func (*ListAccountsRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{63}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *ListAccountsRequest) GetView() Account_View {
@@ -5951,7 +5768,7 @@ type ListAccountsResponse struct {
 
 func (x *ListAccountsResponse) Reset() {
 	*x = ListAccountsResponse{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[64]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5963,7 +5780,7 @@ func (x *ListAccountsResponse) String() string {
 func (*ListAccountsResponse) ProtoMessage() {}
 
 func (x *ListAccountsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[64]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5976,7 +5793,7 @@ func (x *ListAccountsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAccountsResponse.ProtoReflect.Descriptor instead.
 func (*ListAccountsResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{64}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *ListAccountsResponse) GetAccounts() []*Account {
@@ -6025,7 +5842,7 @@ type Transfer struct {
 
 func (x *Transfer) Reset() {
 	*x = Transfer{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[65]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6037,7 +5854,7 @@ func (x *Transfer) String() string {
 func (*Transfer) ProtoMessage() {}
 
 func (x *Transfer) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[65]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6050,7 +5867,7 @@ func (x *Transfer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Transfer.ProtoReflect.Descriptor instead.
 func (*Transfer) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{65}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *Transfer) GetId() string {
@@ -6147,7 +5964,7 @@ type CreateTransferRequest struct {
 
 func (x *CreateTransferRequest) Reset() {
 	*x = CreateTransferRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[66]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6159,7 +5976,7 @@ func (x *CreateTransferRequest) String() string {
 func (*CreateTransferRequest) ProtoMessage() {}
 
 func (x *CreateTransferRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[66]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6172,7 +5989,7 @@ func (x *CreateTransferRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTransferRequest.ProtoReflect.Descriptor instead.
 func (*CreateTransferRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{66}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *CreateTransferRequest) GetSourceAccountId() string {
@@ -6231,7 +6048,7 @@ type ListTransfersRequest struct {
 
 func (x *ListTransfersRequest) Reset() {
 	*x = ListTransfersRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[67]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6243,7 +6060,7 @@ func (x *ListTransfersRequest) String() string {
 func (*ListTransfersRequest) ProtoMessage() {}
 
 func (x *ListTransfersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[67]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6256,7 +6073,7 @@ func (x *ListTransfersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTransfersRequest.ProtoReflect.Descriptor instead.
 func (*ListTransfersRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{67}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *ListTransfersRequest) GetPageSize() int32 {
@@ -6287,7 +6104,7 @@ type ListTransfersResponse struct {
 
 func (x *ListTransfersResponse) Reset() {
 	*x = ListTransfersResponse{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[68]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6299,7 +6116,7 @@ func (x *ListTransfersResponse) String() string {
 func (*ListTransfersResponse) ProtoMessage() {}
 
 func (x *ListTransfersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[68]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6312,7 +6129,7 @@ func (x *ListTransfersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTransfersResponse.ProtoReflect.Descriptor instead.
 func (*ListTransfersResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{68}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *ListTransfersResponse) GetTransfers() []*Transfer {
@@ -6342,7 +6159,7 @@ type ListTransactionEventsRequest struct {
 
 func (x *ListTransactionEventsRequest) Reset() {
 	*x = ListTransactionEventsRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[69]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6354,7 +6171,7 @@ func (x *ListTransactionEventsRequest) String() string {
 func (*ListTransactionEventsRequest) ProtoMessage() {}
 
 func (x *ListTransactionEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[69]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6367,7 +6184,7 @@ func (x *ListTransactionEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTransactionEventsRequest.ProtoReflect.Descriptor instead.
 func (*ListTransactionEventsRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{69}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *ListTransactionEventsRequest) GetTxnId() string {
@@ -6400,7 +6217,7 @@ type TransactionEvent struct {
 
 func (x *TransactionEvent) Reset() {
 	*x = TransactionEvent{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[70]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6412,7 +6229,7 @@ func (x *TransactionEvent) String() string {
 func (*TransactionEvent) ProtoMessage() {}
 
 func (x *TransactionEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[70]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6425,7 +6242,7 @@ func (x *TransactionEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransactionEvent.ProtoReflect.Descriptor instead.
 func (*TransactionEvent) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{70}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *TransactionEvent) GetId() string {
@@ -6482,7 +6299,7 @@ type ListTransactionEventsResponse struct {
 
 func (x *ListTransactionEventsResponse) Reset() {
 	*x = ListTransactionEventsResponse{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[71]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6494,7 +6311,7 @@ func (x *ListTransactionEventsResponse) String() string {
 func (*ListTransactionEventsResponse) ProtoMessage() {}
 
 func (x *ListTransactionEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[71]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6507,7 +6324,7 @@ func (x *ListTransactionEventsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTransactionEventsResponse.ProtoReflect.Descriptor instead.
 func (*ListTransactionEventsResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{71}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *ListTransactionEventsResponse) GetEvents() []*TransactionEvent {
@@ -6563,7 +6380,7 @@ type InboxItem struct {
 
 func (x *InboxItem) Reset() {
 	*x = InboxItem{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[72]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6575,7 +6392,7 @@ func (x *InboxItem) String() string {
 func (*InboxItem) ProtoMessage() {}
 
 func (x *InboxItem) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[72]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6588,7 +6405,7 @@ func (x *InboxItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InboxItem.ProtoReflect.Descriptor instead.
 func (*InboxItem) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{72}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *InboxItem) GetId() string {
@@ -6727,7 +6544,7 @@ type ListInboxItemsRequest struct {
 
 func (x *ListInboxItemsRequest) Reset() {
 	*x = ListInboxItemsRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[73]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6739,7 +6556,7 @@ func (x *ListInboxItemsRequest) String() string {
 func (*ListInboxItemsRequest) ProtoMessage() {}
 
 func (x *ListInboxItemsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[73]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6752,7 +6569,7 @@ func (x *ListInboxItemsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListInboxItemsRequest.ProtoReflect.Descriptor instead.
 func (*ListInboxItemsRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{73}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *ListInboxItemsRequest) GetPageSize() int32 {
@@ -6818,7 +6635,7 @@ type ListInboxItemsResponse struct {
 
 func (x *ListInboxItemsResponse) Reset() {
 	*x = ListInboxItemsResponse{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[74]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6830,7 +6647,7 @@ func (x *ListInboxItemsResponse) String() string {
 func (*ListInboxItemsResponse) ProtoMessage() {}
 
 func (x *ListInboxItemsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[74]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6843,7 +6660,7 @@ func (x *ListInboxItemsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListInboxItemsResponse.ProtoReflect.Descriptor instead.
 func (*ListInboxItemsResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{74}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *ListInboxItemsResponse) GetInboxItems() []*InboxItem {
@@ -6875,7 +6692,7 @@ type UpdateInboxItemRequest struct {
 
 func (x *UpdateInboxItemRequest) Reset() {
 	*x = UpdateInboxItemRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[75]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6887,7 +6704,7 @@ func (x *UpdateInboxItemRequest) String() string {
 func (*UpdateInboxItemRequest) ProtoMessage() {}
 
 func (x *UpdateInboxItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[75]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6900,7 +6717,7 @@ func (x *UpdateInboxItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateInboxItemRequest.ProtoReflect.Descriptor instead.
 func (*UpdateInboxItemRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{75}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *UpdateInboxItemRequest) GetId() string {
@@ -6930,7 +6747,7 @@ type ApproveInboxItemRequest struct {
 
 func (x *ApproveInboxItemRequest) Reset() {
 	*x = ApproveInboxItemRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[76]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6942,7 +6759,7 @@ func (x *ApproveInboxItemRequest) String() string {
 func (*ApproveInboxItemRequest) ProtoMessage() {}
 
 func (x *ApproveInboxItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[76]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6955,7 +6772,7 @@ func (x *ApproveInboxItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveInboxItemRequest.ProtoReflect.Descriptor instead.
 func (*ApproveInboxItemRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{76}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *ApproveInboxItemRequest) GetId() string {
@@ -6978,7 +6795,7 @@ type DiscardInboxItemRequest struct {
 
 func (x *DiscardInboxItemRequest) Reset() {
 	*x = DiscardInboxItemRequest{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[77]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6990,7 +6807,7 @@ func (x *DiscardInboxItemRequest) String() string {
 func (*DiscardInboxItemRequest) ProtoMessage() {}
 
 func (x *DiscardInboxItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[77]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7003,7 +6820,7 @@ func (x *DiscardInboxItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DiscardInboxItemRequest.ProtoReflect.Descriptor instead.
 func (*DiscardInboxItemRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{77}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *DiscardInboxItemRequest) GetId() string {
@@ -7036,7 +6853,7 @@ type Budget_ActivePeriod struct {
 
 func (x *Budget_ActivePeriod) Reset() {
 	*x = Budget_ActivePeriod{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[78]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7048,7 +6865,7 @@ func (x *Budget_ActivePeriod) String() string {
 func (*Budget_ActivePeriod) ProtoMessage() {}
 
 func (x *Budget_ActivePeriod) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[78]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7130,7 +6947,7 @@ type Transaction_AccountInfo struct {
 
 func (x *Transaction_AccountInfo) Reset() {
 	*x = Transaction_AccountInfo{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[79]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7142,7 +6959,7 @@ func (x *Transaction_AccountInfo) String() string {
 func (*Transaction_AccountInfo) ProtoMessage() {}
 
 func (x *Transaction_AccountInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[79]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7199,7 +7016,7 @@ type Transaction_BudgetInfo struct {
 
 func (x *Transaction_BudgetInfo) Reset() {
 	*x = Transaction_BudgetInfo{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[80]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7211,7 +7028,7 @@ func (x *Transaction_BudgetInfo) String() string {
 func (*Transaction_BudgetInfo) ProtoMessage() {}
 
 func (x *Transaction_BudgetInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[80]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7264,7 +7081,7 @@ type SpentInsights_BudgetContribution struct {
 
 func (x *SpentInsights_BudgetContribution) Reset() {
 	*x = SpentInsights_BudgetContribution{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[81]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7276,7 +7093,7 @@ func (x *SpentInsights_BudgetContribution) String() string {
 func (*SpentInsights_BudgetContribution) ProtoMessage() {}
 
 func (x *SpentInsights_BudgetContribution) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[81]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7360,7 +7177,7 @@ type SpentInsights_TrendDataPoint struct {
 
 func (x *SpentInsights_TrendDataPoint) Reset() {
 	*x = SpentInsights_TrendDataPoint{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[82]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7372,7 +7189,7 @@ func (x *SpentInsights_TrendDataPoint) String() string {
 func (*SpentInsights_TrendDataPoint) ProtoMessage() {}
 
 func (x *SpentInsights_TrendDataPoint) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[82]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7448,7 +7265,7 @@ type SpentInsights_BudgetUsage struct {
 
 func (x *SpentInsights_BudgetUsage) Reset() {
 	*x = SpentInsights_BudgetUsage{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[83]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7460,7 +7277,7 @@ func (x *SpentInsights_BudgetUsage) String() string {
 func (*SpentInsights_BudgetUsage) ProtoMessage() {}
 
 func (x *SpentInsights_BudgetUsage) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[83]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7557,7 +7374,7 @@ type SpentInsights_HighValueExpense struct {
 
 func (x *SpentInsights_HighValueExpense) Reset() {
 	*x = SpentInsights_HighValueExpense{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[84]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7569,7 +7386,7 @@ func (x *SpentInsights_HighValueExpense) String() string {
 func (*SpentInsights_HighValueExpense) ProtoMessage() {}
 
 func (x *SpentInsights_HighValueExpense) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[84]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7654,7 +7471,7 @@ type RecurringExpense_BudgetInfo struct {
 
 func (x *RecurringExpense_BudgetInfo) Reset() {
 	*x = RecurringExpense_BudgetInfo{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[85]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[83]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7666,7 +7483,7 @@ func (x *RecurringExpense_BudgetInfo) String() string {
 func (*RecurringExpense_BudgetInfo) ProtoMessage() {}
 
 func (x *RecurringExpense_BudgetInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[85]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[83]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7723,7 +7540,7 @@ type RecurringExpense_ExecutionState struct {
 
 func (x *RecurringExpense_ExecutionState) Reset() {
 	*x = RecurringExpense_ExecutionState{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[86]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7735,7 +7552,7 @@ func (x *RecurringExpense_ExecutionState) String() string {
 func (*RecurringExpense_ExecutionState) ProtoMessage() {}
 
 func (x *RecurringExpense_ExecutionState) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[86]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7778,7 +7595,7 @@ type ScheduledPayment_BudgetInfo struct {
 
 func (x *ScheduledPayment_BudgetInfo) Reset() {
 	*x = ScheduledPayment_BudgetInfo{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[87]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7790,7 +7607,7 @@ func (x *ScheduledPayment_BudgetInfo) String() string {
 func (*ScheduledPayment_BudgetInfo) ProtoMessage() {}
 
 func (x *ScheduledPayment_BudgetInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[87]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7846,7 +7663,7 @@ type ScheduledPayment_RecurringExpenseInfo struct {
 
 func (x *ScheduledPayment_RecurringExpenseInfo) Reset() {
 	*x = ScheduledPayment_RecurringExpenseInfo{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[88]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[86]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7858,7 +7675,7 @@ func (x *ScheduledPayment_RecurringExpenseInfo) String() string {
 func (*ScheduledPayment_RecurringExpenseInfo) ProtoMessage() {}
 
 func (x *ScheduledPayment_RecurringExpenseInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[88]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[86]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7908,7 +7725,7 @@ type Account_Conversion struct {
 
 func (x *Account_Conversion) Reset() {
 	*x = Account_Conversion{}
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[89]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[87]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7920,7 +7737,7 @@ func (x *Account_Conversion) String() string {
 func (*Account_Conversion) ProtoMessage() {}
 
 func (x *Account_Conversion) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_finance_v1_finance_proto_msgTypes[89]
+	mi := &file_saturn_finance_v1_finance_proto_msgTypes[87]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7933,7 +7750,7 @@ func (x *Account_Conversion) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Account_Conversion.ProtoReflect.Descriptor instead.
 func (*Account_Conversion) Descriptor() ([]byte, []int) {
-	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{58, 0}
+	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{56, 0}
 }
 
 func (x *Account_Conversion) GetBalance() int64 {
@@ -8397,17 +8214,17 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x1cMatchScheduledPaymentRequest\x12\"\n" +
 	"\n" +
 	"payment_id\x18\x01 \x01(\tB\x03\xe0A\x02R\tpaymentId\x12*\n" +
-	"\x0etransaction_id\x18\x02 \x01(\tB\x03\xe0A\x02R\rtransactionId\"\xed\x05\n" +
+	"\x0etransaction_id\x18\x02 \x01(\tB\x03\xe0A\x02R\rtransactionId\"\xa3\a\n" +
 	"\tBorrowing\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x1e\n" +
-	"\bspace_id\x18\x02 \x01(\tB\x03\xe0A\x03R\aspaceId\x12H\n" +
-	"\tdirection\x18\x03 \x01(\x0e2%.saturn.finance.v1.BorrowingDirectionB\x03\xe0A\x02R\tdirection\x12'\n" +
+	"\bspace_id\x18\x02 \x01(\tB\x03\xe0A\x03R\aspaceId\x12I\n" +
+	"\tdirection\x18\x03 \x01(\x0e2&.saturn.finance.v1.Borrowing.DirectionB\x03\xe0A\x02R\tdirection\x12'\n" +
 	"\fcounterparty\x18\x04 \x01(\tB\x03\xe0A\x02R\fcounterparty\x12&\n" +
 	"\fcontact_info\x18\x05 \x01(\tB\x03\xe0A\x01R\vcontactInfo\x12&\n" +
 	"\ftotal_amount\x18\x06 \x01(\x03B\x03\xe0A\x02R\vtotalAmount\x12.\n" +
 	"\x10remaining_amount\x18\a \x01(\x03B\x03\xe0A\x03R\x0fremainingAmount\x12\x1f\n" +
-	"\bcurrency\x18\b \x01(\tB\x03\xe0A\x02R\bcurrency\x12?\n" +
-	"\x06status\x18\t \x01(\x0e2\".saturn.finance.v1.BorrowingStatusB\x03\xe0A\x02R\x06status\x12F\n" +
+	"\bcurrency\x18\b \x01(\tB\x03\xe0A\x02R\bcurrency\x12@\n" +
+	"\x06status\x18\t \x01(\x0e2#.saturn.finance.v1.Borrowing.StatusB\x03\xe0A\x02R\x06status\x12F\n" +
 	"\x0eestablished_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x02R\restablishedAt\x126\n" +
 	"\x06due_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x01R\x05dueAt\x127\n" +
@@ -8416,7 +8233,19 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\vcreate_time\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"createTime\x12@\n" +
 	"\vupdate_time\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
-	"updateTime\"\x95\x03\n" +
+	"updateTime\x12'\n" +
+	"\n" +
+	"account_id\x18\x10 \x01(\tB\x03\xe0A\x01H\x00R\taccountId\x88\x01\x01\">\n" +
+	"\tDirection\x12\x19\n" +
+	"\x15DIRECTION_UNSPECIFIED\x10\x00\x12\f\n" +
+	"\bBORROWED\x10\x01\x12\b\n" +
+	"\x04LENT\x10\x02\":\n" +
+	"\x06Status\x12\x16\n" +
+	"\x12STATUS_UNSPECIFIED\x10\x00\x12\n" +
+	"\n" +
+	"\x06ACTIVE\x10\x01\x12\f\n" +
+	"\bPAID_OFF\x10\x02B\r\n" +
+	"\v_account_id\"\x95\x03\n" +
 	"\x12BorrowingRepayment\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12&\n" +
 	"\fborrowing_id\x18\x02 \x01(\tB\x03\xe0A\x02R\vborrowingId\x12\x1e\n" +
@@ -8429,53 +8258,38 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\vupdate_time\x18\b \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"updateTime\x12\"\n" +
 	"\n" +
-	"account_id\x18\t \x01(\tB\x03\xe0A\x02R\taccountId\"\x80\x04\n" +
-	"\x0eBorrowingInput\x12H\n" +
-	"\tdirection\x18\x01 \x01(\x0e2%.saturn.finance.v1.BorrowingDirectionB\x03\xe0A\x02R\tdirection\x12'\n" +
-	"\fcounterparty\x18\x02 \x01(\tB\x03\xe0A\x02R\fcounterparty\x12&\n" +
-	"\fcontact_info\x18\x03 \x01(\tB\x03\xe0A\x01R\vcontactInfo\x12&\n" +
-	"\ftotal_amount\x18\x04 \x01(\x03B\x03\xe0A\x02R\vtotalAmount\x12\x1f\n" +
-	"\bcurrency\x18\x05 \x01(\tB\x03\xe0A\x02R\bcurrency\x12F\n" +
-	"\x0eestablished_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x02R\restablishedAt\x126\n" +
-	"\x06due_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x01R\x05dueAt\x12\x19\n" +
-	"\x05notes\x18\b \x01(\tB\x03\xe0A\x01R\x05notes\x127\n" +
-	"\x15create_as_transaction\x18\t \x01(\bB\x03\xe0A\x01R\x13createAsTransaction\x12'\n" +
-	"\n" +
-	"account_id\x18\n" +
-	" \x01(\tB\x03\xe0A\x01H\x00R\taccountId\x88\x01\x01B\r\n" +
-	"\v_account_id\"^\n" +
-	"\x16CreateBorrowingRequest\x12D\n" +
-	"\tborrowing\x18\x01 \x01(\v2!.saturn.finance.v1.BorrowingInputB\x03\xe0A\x02R\tborrowing\"*\n" +
+	"account_id\x18\t \x01(\tB\x03\xe0A\x02R\taccountId\"Y\n" +
+	"\x16CreateBorrowingRequest\x12?\n" +
+	"\tborrowing\x18\x01 \x01(\v2\x1c.saturn.finance.v1.BorrowingB\x03\xe0A\x02R\tborrowing\"*\n" +
 	"\x13GetBorrowingRequest\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"\x8b\x02\n" +
-	"\x15ListBorrowingsRequest\x12D\n" +
-	"\x06status\x18\x01 \x01(\x0e2\".saturn.finance.v1.BorrowingStatusB\x03\xe0A\x01H\x00R\x06status\x88\x01\x01\x12M\n" +
-	"\tdirection\x18\x02 \x01(\x0e2%.saturn.finance.v1.BorrowingDirectionB\x03\xe0A\x01H\x01R\tdirection\x88\x01\x01\x12 \n" +
-	"\tpage_size\x18\x03 \x01(\x05B\x03\xe0A\x01R\bpageSize\x12\"\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"\xe6\x02\n" +
+	"\x15ListBorrowingsRequest\x12E\n" +
+	"\x06status\x18\x01 \x01(\x0e2#.saturn.finance.v1.Borrowing.StatusB\x03\xe0A\x01H\x00R\x06status\x88\x01\x01\x12N\n" +
+	"\tdirection\x18\x02 \x01(\x0e2&.saturn.finance.v1.Borrowing.DirectionB\x03\xe0A\x01H\x01R\tdirection\x88\x01\x01\x12%\n" +
+	"\tpage_size\x18\x03 \x01(\x05B\x03\xe0A\x01H\x02R\bpageSize\x88\x01\x01\x12'\n" +
 	"\n" +
-	"page_token\x18\x04 \x01(\tB\x03\xe0A\x01R\tpageTokenB\t\n" +
+	"page_token\x18\x04 \x01(\tB\x03\xe0A\x01H\x03R\tpageToken\x88\x01\x01\x12#\n" +
+	"\border_by\x18\x05 \x01(\tB\x03\xe0A\x01H\x04R\aorderBy\x88\x01\x01B\t\n" +
 	"\a_statusB\f\n" +
 	"\n" +
-	"_direction\"~\n" +
+	"_directionB\f\n" +
+	"\n" +
+	"_page_sizeB\r\n" +
+	"\v_page_tokenB\v\n" +
+	"\t_order_by\"~\n" +
 	"\x16ListBorrowingsResponse\x12<\n" +
 	"\n" +
 	"borrowings\x18\x01 \x03(\v2\x1c.saturn.finance.v1.BorrowingR\n" +
 	"borrowings\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"s\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"n\n" +
 	"\x16UpdateBorrowingRequest\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x12D\n" +
-	"\tborrowing\x18\x02 \x01(\v2!.saturn.finance.v1.BorrowingInputB\x03\xe0A\x02R\tborrowing\"-\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x12?\n" +
+	"\tborrowing\x18\x02 \x01(\v2\x1c.saturn.finance.v1.BorrowingB\x03\xe0A\x02R\tborrowing\"-\n" +
 	"\x16DeleteBorrowingRequest\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"\xb9\x01\n" +
-	"\x17BorrowingRepaymentInput\x12\x1b\n" +
-	"\x06amount\x18\x01 \x01(\x03B\x03\xe0A\x02R\x06amount\x12B\n" +
-	"\fpayment_date\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x02R\vpaymentDate\x12\x19\n" +
-	"\x05notes\x18\x03 \x01(\tB\x03\xe0A\x01R\x05notes\x12\"\n" +
-	"\n" +
-	"account_id\x18\x04 \x01(\tB\x03\xe0A\x02R\taccountId\"\x98\x01\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"\x93\x01\n" +
 	"\x1fCreateBorrowingRepaymentRequest\x12&\n" +
-	"\fborrowing_id\x18\x01 \x01(\tB\x03\xe0A\x02R\vborrowingId\x12M\n" +
-	"\trepayment\x18\x02 \x01(\v2*.saturn.finance.v1.BorrowingRepaymentInputB\x03\xe0A\x02R\trepayment\"H\n" +
+	"\fborrowing_id\x18\x01 \x01(\tB\x03\xe0A\x02R\vborrowingId\x12H\n" +
+	"\trepayment\x18\x02 \x01(\v2%.saturn.finance.v1.BorrowingRepaymentB\x03\xe0A\x02R\trepayment\"H\n" +
 	"\x1eListBorrowingRepaymentsRequest\x12&\n" +
 	"\fborrowing_id\x18\x01 \x01(\tB\x03\xe0A\x02R\vborrowingId\"h\n" +
 	"\x1fListBorrowingRepaymentsResponse\x12E\n" +
@@ -8675,15 +8489,7 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x06WEEKLY\x10\x02\x12\v\n" +
 	"\aMONTHLY\x10\x03\x12\n" +
 	"\n" +
-	"\x06YEARLY\x10\x04*y\n" +
-	"\x12BorrowingDirection\x12#\n" +
-	"\x1fBORROWING_DIRECTION_UNSPECIFIED\x10\x00\x12 \n" +
-	"\x1cBORROWING_DIRECTION_BORROWED\x10\x01\x12\x1c\n" +
-	"\x18BORROWING_DIRECTION_LENT\x10\x02*o\n" +
-	"\x0fBorrowingStatus\x12 \n" +
-	"\x1cBORROWING_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n" +
-	"\x17BORROWING_STATUS_ACTIVE\x10\x01\x12\x1d\n" +
-	"\x19BORROWING_STATUS_PAID_OFF\x10\x022\xc62\n" +
+	"\x06YEARLY\x10\x042\xdf2\n" +
 	"\aFinance\x12\x83\x01\n" +
 	"\x10ConfigureFinance\x12*.saturn.finance.v1.ConfigureFinanceRequest\x1a\".saturn.finance.v1.FinanceSettings\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/v1/finance/settings\x12\x84\x01\n" +
 	"\x12GetFinanceSettings\x12,.saturn.finance.v1.GetFinanceSettingsRequest\x1a\".saturn.finance.v1.FinanceSettings\"\x1c\x82\xd3\xe4\x93\x02\x16\x12\x14/v1/finance/settings\x12v\n" +
@@ -8710,13 +8516,13 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x15ListRecurringExpenses\x12/.saturn.finance.v1.ListRecurringExpensesRequest\x1a0.saturn.finance.v1.ListRecurringExpensesResponse\"&\x82\xd3\xe4\x93\x02 \x12\x1e/v1/finance/recurring-expenses\x12\xa2\x01\n" +
 	"\x15ListScheduledPayments\x12/.saturn.finance.v1.ListScheduledPaymentsRequest\x1a0.saturn.finance.v1.ListScheduledPaymentsResponse\"&\x82\xd3\xe4\x93\x02 \x12\x1e/v1/finance/scheduled-payments\x12\xac\x01\n" +
 	"\x17ConfirmScheduledPayment\x121.saturn.finance.v1.ConfirmScheduledPaymentRequest\x1a\x1e.saturn.finance.v1.Transaction\">\x82\xd3\xe4\x93\x028:\x01*\"3/v1/finance/scheduled-payments/{payment_id}/confirm\x12\xa6\x01\n" +
-	"\x15MatchScheduledPayment\x12/.saturn.finance.v1.MatchScheduledPaymentRequest\x1a\x1e.saturn.finance.v1.Transaction\"<\x82\xd3\xe4\x93\x026:\x01*\"1/v1/finance/scheduled-payments/{payment_id}/match\x12}\n" +
-	"\x0fCreateBorrowing\x12).saturn.finance.v1.CreateBorrowingRequest\x1a\x1c.saturn.finance.v1.Borrowing\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/v1/finance/borrowings\x12y\n" +
+	"\x15MatchScheduledPayment\x12/.saturn.finance.v1.MatchScheduledPaymentRequest\x1a\x1e.saturn.finance.v1.Transaction\"<\x82\xd3\xe4\x93\x026:\x01*\"1/v1/finance/scheduled-payments/{payment_id}/match\x12\x85\x01\n" +
+	"\x0fCreateBorrowing\x12).saturn.finance.v1.CreateBorrowingRequest\x1a\x1c.saturn.finance.v1.Borrowing\")\x82\xd3\xe4\x93\x02#:\tborrowing\"\x16/v1/finance/borrowings\x12y\n" +
 	"\fGetBorrowing\x12&.saturn.finance.v1.GetBorrowingRequest\x1a\x1c.saturn.finance.v1.Borrowing\"#\x82\xd3\xe4\x93\x02\x1d\x12\x1b/v1/finance/borrowings/{id}\x12\x85\x01\n" +
-	"\x0eListBorrowings\x12(.saturn.finance.v1.ListBorrowingsRequest\x1a).saturn.finance.v1.ListBorrowingsResponse\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/v1/finance/borrowings\x12\x82\x01\n" +
-	"\x0fUpdateBorrowing\x12).saturn.finance.v1.UpdateBorrowingRequest\x1a\x1c.saturn.finance.v1.Borrowing\"&\x82\xd3\xe4\x93\x02 :\x01*\x1a\x1b/v1/finance/borrowings/{id}\x12y\n" +
-	"\x0fDeleteBorrowing\x12).saturn.finance.v1.DeleteBorrowingRequest\x1a\x16.google.protobuf.Empty\"#\x82\xd3\xe4\x93\x02\x1d*\x1b/v1/finance/borrowings/{id}\x12\xb2\x01\n" +
-	"\x18CreateBorrowingRepayment\x122.saturn.finance.v1.CreateBorrowingRepaymentRequest\x1a%.saturn.finance.v1.BorrowingRepayment\";\x82\xd3\xe4\x93\x025:\x01*\"0/v1/finance/borrowings/{borrowing_id}/repayments\x12\xba\x01\n" +
+	"\x0eListBorrowings\x12(.saturn.finance.v1.ListBorrowingsRequest\x1a).saturn.finance.v1.ListBorrowingsResponse\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/v1/finance/borrowings\x12\x8a\x01\n" +
+	"\x0fUpdateBorrowing\x12).saturn.finance.v1.UpdateBorrowingRequest\x1a\x1c.saturn.finance.v1.Borrowing\".\x82\xd3\xe4\x93\x02(:\tborrowing\x1a\x1b/v1/finance/borrowings/{id}\x12y\n" +
+	"\x0fDeleteBorrowing\x12).saturn.finance.v1.DeleteBorrowingRequest\x1a\x16.google.protobuf.Empty\"#\x82\xd3\xe4\x93\x02\x1d*\x1b/v1/finance/borrowings/{id}\x12\xba\x01\n" +
+	"\x18CreateBorrowingRepayment\x122.saturn.finance.v1.CreateBorrowingRepaymentRequest\x1a%.saturn.finance.v1.BorrowingRepayment\"C\x82\xd3\xe4\x93\x02=:\trepayment\"0/v1/finance/borrowings/{borrowing_id}/repayments\x12\xba\x01\n" +
 	"\x17ListBorrowingRepayments\x121.saturn.finance.v1.ListBorrowingRepaymentsRequest\x1a2.saturn.finance.v1.ListBorrowingRepaymentsResponse\"8\x82\xd3\xe4\x93\x022\x120/v1/finance/borrowings/{borrowing_id}/repayments\x12\xa5\x01\n" +
 	"\x18DeleteBorrowingRepayment\x122.saturn.finance.v1.DeleteBorrowingRepaymentRequest\x1a\x16.google.protobuf.Empty\"=\x82\xd3\xe4\x93\x027*5/v1/finance/borrowings/{borrowing_id}/repayments/{id}\x12{\n" +
 	"\rCreateAccount\x12'.saturn.finance.v1.CreateAccountRequest\x1a\x1a.saturn.finance.v1.Account\"%\x82\xd3\xe4\x93\x02\x1f:\aaccount\"\x14/v1/finance/accounts\x12q\n" +
@@ -8747,22 +8553,22 @@ func file_saturn_finance_v1_finance_proto_rawDescGZIP() []byte {
 }
 
 var file_saturn_finance_v1_finance_proto_enumTypes = make([]protoimpl.EnumInfo, 19)
-var file_saturn_finance_v1_finance_proto_msgTypes = make([]protoimpl.MessageInfo, 90)
+var file_saturn_finance_v1_finance_proto_msgTypes = make([]protoimpl.MessageInfo, 88)
 var file_saturn_finance_v1_finance_proto_goTypes = []any{
 	(LimitPropagation)(0),                         // 0: saturn.finance.v1.LimitPropagation
 	(InsightGranularity)(0),                       // 1: saturn.finance.v1.InsightGranularity
-	(BorrowingDirection)(0),                       // 2: saturn.finance.v1.BorrowingDirection
-	(BorrowingStatus)(0),                          // 3: saturn.finance.v1.BorrowingStatus
-	(Budget_RecurrenceInterval)(0),                // 4: saturn.finance.v1.Budget.RecurrenceInterval
-	(Budget_View)(0),                              // 5: saturn.finance.v1.Budget.View
-	(Transaction_Type)(0),                         // 6: saturn.finance.v1.Transaction.Type
-	(Transaction_View)(0),                         // 7: saturn.finance.v1.Transaction.View
-	(RecurringExpense_View)(0),                    // 8: saturn.finance.v1.RecurringExpense.View
-	(RecurringExpense_Interval)(0),                // 9: saturn.finance.v1.RecurringExpense.Interval
-	(RecurringExpense_Status)(0),                  // 10: saturn.finance.v1.RecurringExpense.Status
-	(ScheduledPayment_View)(0),                    // 11: saturn.finance.v1.ScheduledPayment.View
-	(ScheduledPayment_SourceType)(0),              // 12: saturn.finance.v1.ScheduledPayment.SourceType
-	(ScheduledPayment_Status)(0),                  // 13: saturn.finance.v1.ScheduledPayment.Status
+	(Budget_RecurrenceInterval)(0),                // 2: saturn.finance.v1.Budget.RecurrenceInterval
+	(Budget_View)(0),                              // 3: saturn.finance.v1.Budget.View
+	(Transaction_Type)(0),                         // 4: saturn.finance.v1.Transaction.Type
+	(Transaction_View)(0),                         // 5: saturn.finance.v1.Transaction.View
+	(RecurringExpense_View)(0),                    // 6: saturn.finance.v1.RecurringExpense.View
+	(RecurringExpense_Interval)(0),                // 7: saturn.finance.v1.RecurringExpense.Interval
+	(RecurringExpense_Status)(0),                  // 8: saturn.finance.v1.RecurringExpense.Status
+	(ScheduledPayment_View)(0),                    // 9: saturn.finance.v1.ScheduledPayment.View
+	(ScheduledPayment_SourceType)(0),              // 10: saturn.finance.v1.ScheduledPayment.SourceType
+	(ScheduledPayment_Status)(0),                  // 11: saturn.finance.v1.ScheduledPayment.Status
+	(Borrowing_Direction)(0),                      // 12: saturn.finance.v1.Borrowing.Direction
+	(Borrowing_Status)(0),                         // 13: saturn.finance.v1.Borrowing.Status
 	(Account_Type)(0),                             // 14: saturn.finance.v1.Account.Type
 	(Account_View)(0),                             // 15: saturn.finance.v1.Account.View
 	(InboxItem_Status)(0),                         // 16: saturn.finance.v1.InboxItem.Status
@@ -8811,278 +8617,272 @@ var file_saturn_finance_v1_finance_proto_goTypes = []any{
 	(*MatchScheduledPaymentRequest)(nil),          // 59: saturn.finance.v1.MatchScheduledPaymentRequest
 	(*Borrowing)(nil),                             // 60: saturn.finance.v1.Borrowing
 	(*BorrowingRepayment)(nil),                    // 61: saturn.finance.v1.BorrowingRepayment
-	(*BorrowingInput)(nil),                        // 62: saturn.finance.v1.BorrowingInput
-	(*CreateBorrowingRequest)(nil),                // 63: saturn.finance.v1.CreateBorrowingRequest
-	(*GetBorrowingRequest)(nil),                   // 64: saturn.finance.v1.GetBorrowingRequest
-	(*ListBorrowingsRequest)(nil),                 // 65: saturn.finance.v1.ListBorrowingsRequest
-	(*ListBorrowingsResponse)(nil),                // 66: saturn.finance.v1.ListBorrowingsResponse
-	(*UpdateBorrowingRequest)(nil),                // 67: saturn.finance.v1.UpdateBorrowingRequest
-	(*DeleteBorrowingRequest)(nil),                // 68: saturn.finance.v1.DeleteBorrowingRequest
-	(*BorrowingRepaymentInput)(nil),               // 69: saturn.finance.v1.BorrowingRepaymentInput
-	(*CreateBorrowingRepaymentRequest)(nil),       // 70: saturn.finance.v1.CreateBorrowingRepaymentRequest
-	(*ListBorrowingRepaymentsRequest)(nil),        // 71: saturn.finance.v1.ListBorrowingRepaymentsRequest
-	(*ListBorrowingRepaymentsResponse)(nil),       // 72: saturn.finance.v1.ListBorrowingRepaymentsResponse
-	(*DeleteBorrowingRepaymentRequest)(nil),       // 73: saturn.finance.v1.DeleteBorrowingRepaymentRequest
-	(*CurrencyInfo)(nil),                          // 74: saturn.finance.v1.CurrencyInfo
-	(*ListCurrenciesRequest)(nil),                 // 75: saturn.finance.v1.ListCurrenciesRequest
-	(*ListCurrenciesResponse)(nil),                // 76: saturn.finance.v1.ListCurrenciesResponse
-	(*Account)(nil),                               // 77: saturn.finance.v1.Account
-	(*CreateAccountRequest)(nil),                  // 78: saturn.finance.v1.CreateAccountRequest
-	(*GetAccountRequest)(nil),                     // 79: saturn.finance.v1.GetAccountRequest
-	(*UpdateAccountRequest)(nil),                  // 80: saturn.finance.v1.UpdateAccountRequest
-	(*DeleteAccountRequest)(nil),                  // 81: saturn.finance.v1.DeleteAccountRequest
-	(*ListAccountsRequest)(nil),                   // 82: saturn.finance.v1.ListAccountsRequest
-	(*ListAccountsResponse)(nil),                  // 83: saturn.finance.v1.ListAccountsResponse
-	(*Transfer)(nil),                              // 84: saturn.finance.v1.Transfer
-	(*CreateTransferRequest)(nil),                 // 85: saturn.finance.v1.CreateTransferRequest
-	(*ListTransfersRequest)(nil),                  // 86: saturn.finance.v1.ListTransfersRequest
-	(*ListTransfersResponse)(nil),                 // 87: saturn.finance.v1.ListTransfersResponse
-	(*ListTransactionEventsRequest)(nil),          // 88: saturn.finance.v1.ListTransactionEventsRequest
-	(*TransactionEvent)(nil),                      // 89: saturn.finance.v1.TransactionEvent
-	(*ListTransactionEventsResponse)(nil),         // 90: saturn.finance.v1.ListTransactionEventsResponse
-	(*InboxItem)(nil),                             // 91: saturn.finance.v1.InboxItem
-	(*ListInboxItemsRequest)(nil),                 // 92: saturn.finance.v1.ListInboxItemsRequest
-	(*ListInboxItemsResponse)(nil),                // 93: saturn.finance.v1.ListInboxItemsResponse
-	(*UpdateInboxItemRequest)(nil),                // 94: saturn.finance.v1.UpdateInboxItemRequest
-	(*ApproveInboxItemRequest)(nil),               // 95: saturn.finance.v1.ApproveInboxItemRequest
-	(*DiscardInboxItemRequest)(nil),               // 96: saturn.finance.v1.DiscardInboxItemRequest
-	(*Budget_ActivePeriod)(nil),                   // 97: saturn.finance.v1.Budget.ActivePeriod
-	(*Transaction_AccountInfo)(nil),               // 98: saturn.finance.v1.Transaction.AccountInfo
-	(*Transaction_BudgetInfo)(nil),                // 99: saturn.finance.v1.Transaction.BudgetInfo
-	(*SpentInsights_BudgetContribution)(nil),      // 100: saturn.finance.v1.SpentInsights.BudgetContribution
-	(*SpentInsights_TrendDataPoint)(nil),          // 101: saturn.finance.v1.SpentInsights.TrendDataPoint
-	(*SpentInsights_BudgetUsage)(nil),             // 102: saturn.finance.v1.SpentInsights.BudgetUsage
-	(*SpentInsights_HighValueExpense)(nil),        // 103: saturn.finance.v1.SpentInsights.HighValueExpense
-	(*RecurringExpense_BudgetInfo)(nil),           // 104: saturn.finance.v1.RecurringExpense.BudgetInfo
-	(*RecurringExpense_ExecutionState)(nil),       // 105: saturn.finance.v1.RecurringExpense.ExecutionState
-	(*ScheduledPayment_BudgetInfo)(nil),           // 106: saturn.finance.v1.ScheduledPayment.BudgetInfo
-	(*ScheduledPayment_RecurringExpenseInfo)(nil), // 107: saturn.finance.v1.ScheduledPayment.RecurringExpenseInfo
-	(*Account_Conversion)(nil),                    // 108: saturn.finance.v1.Account.Conversion
-	(*timestamppb.Timestamp)(nil),                 // 109: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                         // 110: google.protobuf.Empty
+	(*CreateBorrowingRequest)(nil),                // 62: saturn.finance.v1.CreateBorrowingRequest
+	(*GetBorrowingRequest)(nil),                   // 63: saturn.finance.v1.GetBorrowingRequest
+	(*ListBorrowingsRequest)(nil),                 // 64: saturn.finance.v1.ListBorrowingsRequest
+	(*ListBorrowingsResponse)(nil),                // 65: saturn.finance.v1.ListBorrowingsResponse
+	(*UpdateBorrowingRequest)(nil),                // 66: saturn.finance.v1.UpdateBorrowingRequest
+	(*DeleteBorrowingRequest)(nil),                // 67: saturn.finance.v1.DeleteBorrowingRequest
+	(*CreateBorrowingRepaymentRequest)(nil),       // 68: saturn.finance.v1.CreateBorrowingRepaymentRequest
+	(*ListBorrowingRepaymentsRequest)(nil),        // 69: saturn.finance.v1.ListBorrowingRepaymentsRequest
+	(*ListBorrowingRepaymentsResponse)(nil),       // 70: saturn.finance.v1.ListBorrowingRepaymentsResponse
+	(*DeleteBorrowingRepaymentRequest)(nil),       // 71: saturn.finance.v1.DeleteBorrowingRepaymentRequest
+	(*CurrencyInfo)(nil),                          // 72: saturn.finance.v1.CurrencyInfo
+	(*ListCurrenciesRequest)(nil),                 // 73: saturn.finance.v1.ListCurrenciesRequest
+	(*ListCurrenciesResponse)(nil),                // 74: saturn.finance.v1.ListCurrenciesResponse
+	(*Account)(nil),                               // 75: saturn.finance.v1.Account
+	(*CreateAccountRequest)(nil),                  // 76: saturn.finance.v1.CreateAccountRequest
+	(*GetAccountRequest)(nil),                     // 77: saturn.finance.v1.GetAccountRequest
+	(*UpdateAccountRequest)(nil),                  // 78: saturn.finance.v1.UpdateAccountRequest
+	(*DeleteAccountRequest)(nil),                  // 79: saturn.finance.v1.DeleteAccountRequest
+	(*ListAccountsRequest)(nil),                   // 80: saturn.finance.v1.ListAccountsRequest
+	(*ListAccountsResponse)(nil),                  // 81: saturn.finance.v1.ListAccountsResponse
+	(*Transfer)(nil),                              // 82: saturn.finance.v1.Transfer
+	(*CreateTransferRequest)(nil),                 // 83: saturn.finance.v1.CreateTransferRequest
+	(*ListTransfersRequest)(nil),                  // 84: saturn.finance.v1.ListTransfersRequest
+	(*ListTransfersResponse)(nil),                 // 85: saturn.finance.v1.ListTransfersResponse
+	(*ListTransactionEventsRequest)(nil),          // 86: saturn.finance.v1.ListTransactionEventsRequest
+	(*TransactionEvent)(nil),                      // 87: saturn.finance.v1.TransactionEvent
+	(*ListTransactionEventsResponse)(nil),         // 88: saturn.finance.v1.ListTransactionEventsResponse
+	(*InboxItem)(nil),                             // 89: saturn.finance.v1.InboxItem
+	(*ListInboxItemsRequest)(nil),                 // 90: saturn.finance.v1.ListInboxItemsRequest
+	(*ListInboxItemsResponse)(nil),                // 91: saturn.finance.v1.ListInboxItemsResponse
+	(*UpdateInboxItemRequest)(nil),                // 92: saturn.finance.v1.UpdateInboxItemRequest
+	(*ApproveInboxItemRequest)(nil),               // 93: saturn.finance.v1.ApproveInboxItemRequest
+	(*DiscardInboxItemRequest)(nil),               // 94: saturn.finance.v1.DiscardInboxItemRequest
+	(*Budget_ActivePeriod)(nil),                   // 95: saturn.finance.v1.Budget.ActivePeriod
+	(*Transaction_AccountInfo)(nil),               // 96: saturn.finance.v1.Transaction.AccountInfo
+	(*Transaction_BudgetInfo)(nil),                // 97: saturn.finance.v1.Transaction.BudgetInfo
+	(*SpentInsights_BudgetContribution)(nil),      // 98: saturn.finance.v1.SpentInsights.BudgetContribution
+	(*SpentInsights_TrendDataPoint)(nil),          // 99: saturn.finance.v1.SpentInsights.TrendDataPoint
+	(*SpentInsights_BudgetUsage)(nil),             // 100: saturn.finance.v1.SpentInsights.BudgetUsage
+	(*SpentInsights_HighValueExpense)(nil),        // 101: saturn.finance.v1.SpentInsights.HighValueExpense
+	(*RecurringExpense_BudgetInfo)(nil),           // 102: saturn.finance.v1.RecurringExpense.BudgetInfo
+	(*RecurringExpense_ExecutionState)(nil),       // 103: saturn.finance.v1.RecurringExpense.ExecutionState
+	(*ScheduledPayment_BudgetInfo)(nil),           // 104: saturn.finance.v1.ScheduledPayment.BudgetInfo
+	(*ScheduledPayment_RecurringExpenseInfo)(nil), // 105: saturn.finance.v1.ScheduledPayment.RecurringExpenseInfo
+	(*Account_Conversion)(nil),                    // 106: saturn.finance.v1.Account.Conversion
+	(*timestamppb.Timestamp)(nil),                 // 107: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                         // 108: google.protobuf.Empty
 }
 var file_saturn_finance_v1_finance_proto_depIdxs = []int32{
-	109, // 0: saturn.finance.v1.FinanceSettings.create_time:type_name -> google.protobuf.Timestamp
-	109, // 1: saturn.finance.v1.FinanceSettings.update_time:type_name -> google.protobuf.Timestamp
-	4,   // 2: saturn.finance.v1.Budget.interval:type_name -> saturn.finance.v1.Budget.RecurrenceInterval
-	97,  // 3: saturn.finance.v1.Budget.current_period:type_name -> saturn.finance.v1.Budget.ActivePeriod
-	109, // 4: saturn.finance.v1.Budget.create_time:type_name -> google.protobuf.Timestamp
-	109, // 5: saturn.finance.v1.Budget.update_time:type_name -> google.protobuf.Timestamp
-	109, // 6: saturn.finance.v1.BudgetPeriod.start_date:type_name -> google.protobuf.Timestamp
-	109, // 7: saturn.finance.v1.BudgetPeriod.end_date:type_name -> google.protobuf.Timestamp
-	109, // 8: saturn.finance.v1.BudgetPeriod.create_time:type_name -> google.protobuf.Timestamp
-	109, // 9: saturn.finance.v1.BudgetPeriod.update_time:type_name -> google.protobuf.Timestamp
+	107, // 0: saturn.finance.v1.FinanceSettings.create_time:type_name -> google.protobuf.Timestamp
+	107, // 1: saturn.finance.v1.FinanceSettings.update_time:type_name -> google.protobuf.Timestamp
+	2,   // 2: saturn.finance.v1.Budget.interval:type_name -> saturn.finance.v1.Budget.RecurrenceInterval
+	95,  // 3: saturn.finance.v1.Budget.current_period:type_name -> saturn.finance.v1.Budget.ActivePeriod
+	107, // 4: saturn.finance.v1.Budget.create_time:type_name -> google.protobuf.Timestamp
+	107, // 5: saturn.finance.v1.Budget.update_time:type_name -> google.protobuf.Timestamp
+	107, // 6: saturn.finance.v1.BudgetPeriod.start_date:type_name -> google.protobuf.Timestamp
+	107, // 7: saturn.finance.v1.BudgetPeriod.end_date:type_name -> google.protobuf.Timestamp
+	107, // 8: saturn.finance.v1.BudgetPeriod.create_time:type_name -> google.protobuf.Timestamp
+	107, // 9: saturn.finance.v1.BudgetPeriod.update_time:type_name -> google.protobuf.Timestamp
 	20,  // 10: saturn.finance.v1.CreateBudgetRequest.budget:type_name -> saturn.finance.v1.Budget
 	20,  // 11: saturn.finance.v1.UpdateBudgetRequest.budget:type_name -> saturn.finance.v1.Budget
 	0,   // 12: saturn.finance.v1.UpdateBudgetRequest.propagation:type_name -> saturn.finance.v1.LimitPropagation
-	5,   // 13: saturn.finance.v1.ListBudgetsRequest.view:type_name -> saturn.finance.v1.Budget.View
-	109, // 14: saturn.finance.v1.ListBudgetsRequest.target_date:type_name -> google.protobuf.Timestamp
+	3,   // 13: saturn.finance.v1.ListBudgetsRequest.view:type_name -> saturn.finance.v1.Budget.View
+	107, // 14: saturn.finance.v1.ListBudgetsRequest.target_date:type_name -> google.protobuf.Timestamp
 	20,  // 15: saturn.finance.v1.ListBudgetsResponse.budgets:type_name -> saturn.finance.v1.Budget
-	109, // 16: saturn.finance.v1.GetBudgetPeriodRequest.date:type_name -> google.protobuf.Timestamp
-	109, // 17: saturn.finance.v1.ExchangeRate.rate_date:type_name -> google.protobuf.Timestamp
-	109, // 18: saturn.finance.v1.ExchangeRate.create_time:type_name -> google.protobuf.Timestamp
+	107, // 16: saturn.finance.v1.GetBudgetPeriodRequest.date:type_name -> google.protobuf.Timestamp
+	107, // 17: saturn.finance.v1.ExchangeRate.rate_date:type_name -> google.protobuf.Timestamp
+	107, // 18: saturn.finance.v1.ExchangeRate.create_time:type_name -> google.protobuf.Timestamp
 	31,  // 19: saturn.finance.v1.CreateExchangeRateRequest.exchange_rate:type_name -> saturn.finance.v1.ExchangeRate
 	31,  // 20: saturn.finance.v1.UpdateExchangeRateRequest.exchange_rate:type_name -> saturn.finance.v1.ExchangeRate
-	109, // 21: saturn.finance.v1.ListExchangeRatesRequest.start_date:type_name -> google.protobuf.Timestamp
-	109, // 22: saturn.finance.v1.ListExchangeRatesRequest.end_date:type_name -> google.protobuf.Timestamp
+	107, // 21: saturn.finance.v1.ListExchangeRatesRequest.start_date:type_name -> google.protobuf.Timestamp
+	107, // 22: saturn.finance.v1.ListExchangeRatesRequest.end_date:type_name -> google.protobuf.Timestamp
 	31,  // 23: saturn.finance.v1.ListExchangeRatesResponse.exchange_rates:type_name -> saturn.finance.v1.ExchangeRate
-	6,   // 24: saturn.finance.v1.Transaction.type:type_name -> saturn.finance.v1.Transaction.Type
-	109, // 25: saturn.finance.v1.Transaction.transaction_date:type_name -> google.protobuf.Timestamp
-	109, // 26: saturn.finance.v1.Transaction.create_time:type_name -> google.protobuf.Timestamp
-	109, // 27: saturn.finance.v1.Transaction.update_time:type_name -> google.protobuf.Timestamp
-	109, // 28: saturn.finance.v1.Transaction.effective_date:type_name -> google.protobuf.Timestamp
-	98,  // 29: saturn.finance.v1.Transaction.account:type_name -> saturn.finance.v1.Transaction.AccountInfo
-	99,  // 30: saturn.finance.v1.Transaction.budget:type_name -> saturn.finance.v1.Transaction.BudgetInfo
-	109, // 31: saturn.finance.v1.ExpenseInput.transaction_date:type_name -> google.protobuf.Timestamp
-	109, // 32: saturn.finance.v1.ExpenseInput.effective_date:type_name -> google.protobuf.Timestamp
+	4,   // 24: saturn.finance.v1.Transaction.type:type_name -> saturn.finance.v1.Transaction.Type
+	107, // 25: saturn.finance.v1.Transaction.transaction_date:type_name -> google.protobuf.Timestamp
+	107, // 26: saturn.finance.v1.Transaction.create_time:type_name -> google.protobuf.Timestamp
+	107, // 27: saturn.finance.v1.Transaction.update_time:type_name -> google.protobuf.Timestamp
+	107, // 28: saturn.finance.v1.Transaction.effective_date:type_name -> google.protobuf.Timestamp
+	96,  // 29: saturn.finance.v1.Transaction.account:type_name -> saturn.finance.v1.Transaction.AccountInfo
+	97,  // 30: saturn.finance.v1.Transaction.budget:type_name -> saturn.finance.v1.Transaction.BudgetInfo
+	107, // 31: saturn.finance.v1.ExpenseInput.transaction_date:type_name -> google.protobuf.Timestamp
+	107, // 32: saturn.finance.v1.ExpenseInput.effective_date:type_name -> google.protobuf.Timestamp
 	39,  // 33: saturn.finance.v1.CreateExpenseRequest.expense:type_name -> saturn.finance.v1.ExpenseInput
 	39,  // 34: saturn.finance.v1.UpdateExpenseRequest.expense:type_name -> saturn.finance.v1.ExpenseInput
-	7,   // 35: saturn.finance.v1.ListTransactionsRequest.view:type_name -> saturn.finance.v1.Transaction.View
-	6,   // 36: saturn.finance.v1.ListTransactionsRequest.type:type_name -> saturn.finance.v1.Transaction.Type
+	5,   // 35: saturn.finance.v1.ListTransactionsRequest.view:type_name -> saturn.finance.v1.Transaction.View
+	4,   // 36: saturn.finance.v1.ListTransactionsRequest.type:type_name -> saturn.finance.v1.Transaction.Type
 	38,  // 37: saturn.finance.v1.ListTransactionsResponse.transactions:type_name -> saturn.finance.v1.Transaction
 	1,   // 38: saturn.finance.v1.GetInsightsRequest.granularity:type_name -> saturn.finance.v1.InsightGranularity
-	109, // 39: saturn.finance.v1.GetInsightsRequest.start_date:type_name -> google.protobuf.Timestamp
-	109, // 40: saturn.finance.v1.GetInsightsRequest.end_date:type_name -> google.protobuf.Timestamp
+	107, // 39: saturn.finance.v1.GetInsightsRequest.start_date:type_name -> google.protobuf.Timestamp
+	107, // 40: saturn.finance.v1.GetInsightsRequest.end_date:type_name -> google.protobuf.Timestamp
 	47,  // 41: saturn.finance.v1.GetInsightsResponse.spent:type_name -> saturn.finance.v1.SpentInsights
-	101, // 42: saturn.finance.v1.SpentInsights.trend:type_name -> saturn.finance.v1.SpentInsights.TrendDataPoint
-	102, // 43: saturn.finance.v1.SpentInsights.distributions:type_name -> saturn.finance.v1.SpentInsights.BudgetUsage
-	103, // 44: saturn.finance.v1.SpentInsights.top_expenses:type_name -> saturn.finance.v1.SpentInsights.HighValueExpense
-	9,   // 45: saturn.finance.v1.RecurringExpense.interval:type_name -> saturn.finance.v1.RecurringExpense.Interval
-	105, // 46: saturn.finance.v1.RecurringExpense.execution_state:type_name -> saturn.finance.v1.RecurringExpense.ExecutionState
-	10,  // 47: saturn.finance.v1.RecurringExpense.status:type_name -> saturn.finance.v1.RecurringExpense.Status
-	109, // 48: saturn.finance.v1.RecurringExpense.create_time:type_name -> google.protobuf.Timestamp
-	109, // 49: saturn.finance.v1.RecurringExpense.update_time:type_name -> google.protobuf.Timestamp
-	104, // 50: saturn.finance.v1.RecurringExpense.budget:type_name -> saturn.finance.v1.RecurringExpense.BudgetInfo
-	12,  // 51: saturn.finance.v1.ScheduledPayment.source_type:type_name -> saturn.finance.v1.ScheduledPayment.SourceType
-	109, // 52: saturn.finance.v1.ScheduledPayment.due_date:type_name -> google.protobuf.Timestamp
-	13,  // 53: saturn.finance.v1.ScheduledPayment.status:type_name -> saturn.finance.v1.ScheduledPayment.Status
-	109, // 54: saturn.finance.v1.ScheduledPayment.create_time:type_name -> google.protobuf.Timestamp
-	109, // 55: saturn.finance.v1.ScheduledPayment.update_time:type_name -> google.protobuf.Timestamp
-	106, // 56: saturn.finance.v1.ScheduledPayment.budget:type_name -> saturn.finance.v1.ScheduledPayment.BudgetInfo
-	107, // 57: saturn.finance.v1.ScheduledPayment.recurring_expense:type_name -> saturn.finance.v1.ScheduledPayment.RecurringExpenseInfo
+	99,  // 42: saturn.finance.v1.SpentInsights.trend:type_name -> saturn.finance.v1.SpentInsights.TrendDataPoint
+	100, // 43: saturn.finance.v1.SpentInsights.distributions:type_name -> saturn.finance.v1.SpentInsights.BudgetUsage
+	101, // 44: saturn.finance.v1.SpentInsights.top_expenses:type_name -> saturn.finance.v1.SpentInsights.HighValueExpense
+	7,   // 45: saturn.finance.v1.RecurringExpense.interval:type_name -> saturn.finance.v1.RecurringExpense.Interval
+	103, // 46: saturn.finance.v1.RecurringExpense.execution_state:type_name -> saturn.finance.v1.RecurringExpense.ExecutionState
+	8,   // 47: saturn.finance.v1.RecurringExpense.status:type_name -> saturn.finance.v1.RecurringExpense.Status
+	107, // 48: saturn.finance.v1.RecurringExpense.create_time:type_name -> google.protobuf.Timestamp
+	107, // 49: saturn.finance.v1.RecurringExpense.update_time:type_name -> google.protobuf.Timestamp
+	102, // 50: saturn.finance.v1.RecurringExpense.budget:type_name -> saturn.finance.v1.RecurringExpense.BudgetInfo
+	10,  // 51: saturn.finance.v1.ScheduledPayment.source_type:type_name -> saturn.finance.v1.ScheduledPayment.SourceType
+	107, // 52: saturn.finance.v1.ScheduledPayment.due_date:type_name -> google.protobuf.Timestamp
+	11,  // 53: saturn.finance.v1.ScheduledPayment.status:type_name -> saturn.finance.v1.ScheduledPayment.Status
+	107, // 54: saturn.finance.v1.ScheduledPayment.create_time:type_name -> google.protobuf.Timestamp
+	107, // 55: saturn.finance.v1.ScheduledPayment.update_time:type_name -> google.protobuf.Timestamp
+	104, // 56: saturn.finance.v1.ScheduledPayment.budget:type_name -> saturn.finance.v1.ScheduledPayment.BudgetInfo
+	105, // 57: saturn.finance.v1.ScheduledPayment.recurring_expense:type_name -> saturn.finance.v1.ScheduledPayment.RecurringExpenseInfo
 	49,  // 58: saturn.finance.v1.CreateRecurringExpenseRequest.recurring_expense:type_name -> saturn.finance.v1.RecurringExpense
 	49,  // 59: saturn.finance.v1.UpdateRecurringExpenseRequest.recurring_expense:type_name -> saturn.finance.v1.RecurringExpense
-	10,  // 60: saturn.finance.v1.ListRecurringExpensesRequest.status:type_name -> saturn.finance.v1.RecurringExpense.Status
-	8,   // 61: saturn.finance.v1.ListRecurringExpensesRequest.view:type_name -> saturn.finance.v1.RecurringExpense.View
+	8,   // 60: saturn.finance.v1.ListRecurringExpensesRequest.status:type_name -> saturn.finance.v1.RecurringExpense.Status
+	6,   // 61: saturn.finance.v1.ListRecurringExpensesRequest.view:type_name -> saturn.finance.v1.RecurringExpense.View
 	49,  // 62: saturn.finance.v1.ListRecurringExpensesResponse.recurring_expenses:type_name -> saturn.finance.v1.RecurringExpense
-	13,  // 63: saturn.finance.v1.ListScheduledPaymentsRequest.status:type_name -> saturn.finance.v1.ScheduledPayment.Status
-	109, // 64: saturn.finance.v1.ListScheduledPaymentsRequest.start_date:type_name -> google.protobuf.Timestamp
-	109, // 65: saturn.finance.v1.ListScheduledPaymentsRequest.end_date:type_name -> google.protobuf.Timestamp
-	11,  // 66: saturn.finance.v1.ListScheduledPaymentsRequest.view:type_name -> saturn.finance.v1.ScheduledPayment.View
+	11,  // 63: saturn.finance.v1.ListScheduledPaymentsRequest.status:type_name -> saturn.finance.v1.ScheduledPayment.Status
+	107, // 64: saturn.finance.v1.ListScheduledPaymentsRequest.start_date:type_name -> google.protobuf.Timestamp
+	107, // 65: saturn.finance.v1.ListScheduledPaymentsRequest.end_date:type_name -> google.protobuf.Timestamp
+	9,   // 66: saturn.finance.v1.ListScheduledPaymentsRequest.view:type_name -> saturn.finance.v1.ScheduledPayment.View
 	50,  // 67: saturn.finance.v1.ListScheduledPaymentsResponse.scheduled_payments:type_name -> saturn.finance.v1.ScheduledPayment
-	109, // 68: saturn.finance.v1.ConfirmScheduledPaymentRequest.transaction_date:type_name -> google.protobuf.Timestamp
-	109, // 69: saturn.finance.v1.ConfirmScheduledPaymentRequest.effective_date:type_name -> google.protobuf.Timestamp
-	2,   // 70: saturn.finance.v1.Borrowing.direction:type_name -> saturn.finance.v1.BorrowingDirection
-	3,   // 71: saturn.finance.v1.Borrowing.status:type_name -> saturn.finance.v1.BorrowingStatus
-	109, // 72: saturn.finance.v1.Borrowing.established_at:type_name -> google.protobuf.Timestamp
-	109, // 73: saturn.finance.v1.Borrowing.due_at:type_name -> google.protobuf.Timestamp
-	109, // 74: saturn.finance.v1.Borrowing.create_time:type_name -> google.protobuf.Timestamp
-	109, // 75: saturn.finance.v1.Borrowing.update_time:type_name -> google.protobuf.Timestamp
-	109, // 76: saturn.finance.v1.BorrowingRepayment.payment_date:type_name -> google.protobuf.Timestamp
-	109, // 77: saturn.finance.v1.BorrowingRepayment.create_time:type_name -> google.protobuf.Timestamp
-	109, // 78: saturn.finance.v1.BorrowingRepayment.update_time:type_name -> google.protobuf.Timestamp
-	2,   // 79: saturn.finance.v1.BorrowingInput.direction:type_name -> saturn.finance.v1.BorrowingDirection
-	109, // 80: saturn.finance.v1.BorrowingInput.established_at:type_name -> google.protobuf.Timestamp
-	109, // 81: saturn.finance.v1.BorrowingInput.due_at:type_name -> google.protobuf.Timestamp
-	62,  // 82: saturn.finance.v1.CreateBorrowingRequest.borrowing:type_name -> saturn.finance.v1.BorrowingInput
-	3,   // 83: saturn.finance.v1.ListBorrowingsRequest.status:type_name -> saturn.finance.v1.BorrowingStatus
-	2,   // 84: saturn.finance.v1.ListBorrowingsRequest.direction:type_name -> saturn.finance.v1.BorrowingDirection
-	60,  // 85: saturn.finance.v1.ListBorrowingsResponse.borrowings:type_name -> saturn.finance.v1.Borrowing
-	62,  // 86: saturn.finance.v1.UpdateBorrowingRequest.borrowing:type_name -> saturn.finance.v1.BorrowingInput
-	109, // 87: saturn.finance.v1.BorrowingRepaymentInput.payment_date:type_name -> google.protobuf.Timestamp
-	69,  // 88: saturn.finance.v1.CreateBorrowingRepaymentRequest.repayment:type_name -> saturn.finance.v1.BorrowingRepaymentInput
-	61,  // 89: saturn.finance.v1.ListBorrowingRepaymentsResponse.repayments:type_name -> saturn.finance.v1.BorrowingRepayment
-	74,  // 90: saturn.finance.v1.ListCurrenciesResponse.currencies:type_name -> saturn.finance.v1.CurrencyInfo
-	14,  // 91: saturn.finance.v1.Account.type:type_name -> saturn.finance.v1.Account.Type
-	109, // 92: saturn.finance.v1.Account.create_time:type_name -> google.protobuf.Timestamp
-	109, // 93: saturn.finance.v1.Account.update_time:type_name -> google.protobuf.Timestamp
-	108, // 94: saturn.finance.v1.Account.conversion:type_name -> saturn.finance.v1.Account.Conversion
-	77,  // 95: saturn.finance.v1.CreateAccountRequest.account:type_name -> saturn.finance.v1.Account
-	15,  // 96: saturn.finance.v1.GetAccountRequest.view:type_name -> saturn.finance.v1.Account.View
-	77,  // 97: saturn.finance.v1.UpdateAccountRequest.account:type_name -> saturn.finance.v1.Account
-	15,  // 98: saturn.finance.v1.ListAccountsRequest.view:type_name -> saturn.finance.v1.Account.View
-	77,  // 99: saturn.finance.v1.ListAccountsResponse.accounts:type_name -> saturn.finance.v1.Account
-	109, // 100: saturn.finance.v1.Transfer.transfer_date:type_name -> google.protobuf.Timestamp
-	109, // 101: saturn.finance.v1.Transfer.create_time:type_name -> google.protobuf.Timestamp
-	109, // 102: saturn.finance.v1.Transfer.update_time:type_name -> google.protobuf.Timestamp
-	109, // 103: saturn.finance.v1.CreateTransferRequest.transfer_date:type_name -> google.protobuf.Timestamp
-	84,  // 104: saturn.finance.v1.ListTransfersResponse.transfers:type_name -> saturn.finance.v1.Transfer
-	109, // 105: saturn.finance.v1.TransactionEvent.create_time:type_name -> google.protobuf.Timestamp
-	89,  // 106: saturn.finance.v1.ListTransactionEventsResponse.events:type_name -> saturn.finance.v1.TransactionEvent
-	16,  // 107: saturn.finance.v1.InboxItem.status:type_name -> saturn.finance.v1.InboxItem.Status
-	17,  // 108: saturn.finance.v1.InboxItem.doc_type:type_name -> saturn.finance.v1.InboxItem.DocType
-	109, // 109: saturn.finance.v1.InboxItem.transaction_date:type_name -> google.protobuf.Timestamp
-	109, // 110: saturn.finance.v1.InboxItem.create_time:type_name -> google.protobuf.Timestamp
-	16,  // 111: saturn.finance.v1.ListInboxItemsRequest.status:type_name -> saturn.finance.v1.InboxItem.Status
-	17,  // 112: saturn.finance.v1.ListInboxItemsRequest.doc_type:type_name -> saturn.finance.v1.InboxItem.DocType
-	18,  // 113: saturn.finance.v1.ListInboxItemsRequest.view:type_name -> saturn.finance.v1.InboxItem.View
-	91,  // 114: saturn.finance.v1.ListInboxItemsResponse.inbox_items:type_name -> saturn.finance.v1.InboxItem
-	91,  // 115: saturn.finance.v1.UpdateInboxItemRequest.inbox_item:type_name -> saturn.finance.v1.InboxItem
-	109, // 116: saturn.finance.v1.Budget.ActivePeriod.start_date:type_name -> google.protobuf.Timestamp
-	109, // 117: saturn.finance.v1.Budget.ActivePeriod.end_date:type_name -> google.protobuf.Timestamp
-	100, // 118: saturn.finance.v1.SpentInsights.TrendDataPoint.contributions:type_name -> saturn.finance.v1.SpentInsights.BudgetContribution
-	109, // 119: saturn.finance.v1.SpentInsights.HighValueExpense.transaction_date:type_name -> google.protobuf.Timestamp
-	109, // 120: saturn.finance.v1.SpentInsights.HighValueExpense.effective_date:type_name -> google.protobuf.Timestamp
-	109, // 121: saturn.finance.v1.RecurringExpense.ExecutionState.next_due_date:type_name -> google.protobuf.Timestamp
-	109, // 122: saturn.finance.v1.RecurringExpense.ExecutionState.last_payment_date:type_name -> google.protobuf.Timestamp
-	9,   // 123: saturn.finance.v1.ScheduledPayment.RecurringExpenseInfo.interval:type_name -> saturn.finance.v1.RecurringExpense.Interval
-	22,  // 124: saturn.finance.v1.Finance.ConfigureFinance:input_type -> saturn.finance.v1.ConfigureFinanceRequest
-	23,  // 125: saturn.finance.v1.Finance.GetFinanceSettings:input_type -> saturn.finance.v1.GetFinanceSettingsRequest
-	25,  // 126: saturn.finance.v1.Finance.CreateBudget:input_type -> saturn.finance.v1.CreateBudgetRequest
-	24,  // 127: saturn.finance.v1.Finance.GetBudget:input_type -> saturn.finance.v1.GetBudgetRequest
-	26,  // 128: saturn.finance.v1.Finance.UpdateBudget:input_type -> saturn.finance.v1.UpdateBudgetRequest
-	27,  // 129: saturn.finance.v1.Finance.DeleteBudget:input_type -> saturn.finance.v1.DeleteBudgetRequest
-	28,  // 130: saturn.finance.v1.Finance.ListBudgets:input_type -> saturn.finance.v1.ListBudgetsRequest
-	30,  // 131: saturn.finance.v1.Finance.GetBudgetPeriod:input_type -> saturn.finance.v1.GetBudgetPeriodRequest
-	32,  // 132: saturn.finance.v1.Finance.CreateExchangeRate:input_type -> saturn.finance.v1.CreateExchangeRateRequest
-	33,  // 133: saturn.finance.v1.Finance.GetExchangeRate:input_type -> saturn.finance.v1.GetExchangeRateRequest
-	34,  // 134: saturn.finance.v1.Finance.UpdateExchangeRate:input_type -> saturn.finance.v1.UpdateExchangeRateRequest
-	35,  // 135: saturn.finance.v1.Finance.ListExchangeRates:input_type -> saturn.finance.v1.ListExchangeRatesRequest
-	37,  // 136: saturn.finance.v1.Finance.DeleteExchangeRate:input_type -> saturn.finance.v1.DeleteExchangeRateRequest
-	40,  // 137: saturn.finance.v1.Finance.CreateExpense:input_type -> saturn.finance.v1.CreateExpenseRequest
-	41,  // 138: saturn.finance.v1.Finance.UpdateExpense:input_type -> saturn.finance.v1.UpdateExpenseRequest
-	42,  // 139: saturn.finance.v1.Finance.DeleteTransaction:input_type -> saturn.finance.v1.DeleteTransactionRequest
-	43,  // 140: saturn.finance.v1.Finance.ListTransactions:input_type -> saturn.finance.v1.ListTransactionsRequest
-	88,  // 141: saturn.finance.v1.Finance.ListTransactionEvents:input_type -> saturn.finance.v1.ListTransactionEventsRequest
-	45,  // 142: saturn.finance.v1.Finance.GetInsights:input_type -> saturn.finance.v1.GetInsightsRequest
-	51,  // 143: saturn.finance.v1.Finance.CreateRecurringExpense:input_type -> saturn.finance.v1.CreateRecurringExpenseRequest
-	52,  // 144: saturn.finance.v1.Finance.UpdateRecurringExpense:input_type -> saturn.finance.v1.UpdateRecurringExpenseRequest
-	53,  // 145: saturn.finance.v1.Finance.DeleteRecurringExpense:input_type -> saturn.finance.v1.DeleteRecurringExpenseRequest
-	54,  // 146: saturn.finance.v1.Finance.ListRecurringExpenses:input_type -> saturn.finance.v1.ListRecurringExpensesRequest
-	56,  // 147: saturn.finance.v1.Finance.ListScheduledPayments:input_type -> saturn.finance.v1.ListScheduledPaymentsRequest
-	58,  // 148: saturn.finance.v1.Finance.ConfirmScheduledPayment:input_type -> saturn.finance.v1.ConfirmScheduledPaymentRequest
-	59,  // 149: saturn.finance.v1.Finance.MatchScheduledPayment:input_type -> saturn.finance.v1.MatchScheduledPaymentRequest
-	63,  // 150: saturn.finance.v1.Finance.CreateBorrowing:input_type -> saturn.finance.v1.CreateBorrowingRequest
-	64,  // 151: saturn.finance.v1.Finance.GetBorrowing:input_type -> saturn.finance.v1.GetBorrowingRequest
-	65,  // 152: saturn.finance.v1.Finance.ListBorrowings:input_type -> saturn.finance.v1.ListBorrowingsRequest
-	67,  // 153: saturn.finance.v1.Finance.UpdateBorrowing:input_type -> saturn.finance.v1.UpdateBorrowingRequest
-	68,  // 154: saturn.finance.v1.Finance.DeleteBorrowing:input_type -> saturn.finance.v1.DeleteBorrowingRequest
-	70,  // 155: saturn.finance.v1.Finance.CreateBorrowingRepayment:input_type -> saturn.finance.v1.CreateBorrowingRepaymentRequest
-	71,  // 156: saturn.finance.v1.Finance.ListBorrowingRepayments:input_type -> saturn.finance.v1.ListBorrowingRepaymentsRequest
-	73,  // 157: saturn.finance.v1.Finance.DeleteBorrowingRepayment:input_type -> saturn.finance.v1.DeleteBorrowingRepaymentRequest
-	78,  // 158: saturn.finance.v1.Finance.CreateAccount:input_type -> saturn.finance.v1.CreateAccountRequest
-	79,  // 159: saturn.finance.v1.Finance.GetAccount:input_type -> saturn.finance.v1.GetAccountRequest
-	80,  // 160: saturn.finance.v1.Finance.UpdateAccount:input_type -> saturn.finance.v1.UpdateAccountRequest
-	81,  // 161: saturn.finance.v1.Finance.DeleteAccount:input_type -> saturn.finance.v1.DeleteAccountRequest
-	82,  // 162: saturn.finance.v1.Finance.ListAccounts:input_type -> saturn.finance.v1.ListAccountsRequest
-	85,  // 163: saturn.finance.v1.Finance.CreateTransfer:input_type -> saturn.finance.v1.CreateTransferRequest
-	86,  // 164: saturn.finance.v1.Finance.ListTransfers:input_type -> saturn.finance.v1.ListTransfersRequest
-	75,  // 165: saturn.finance.v1.Finance.ListCurrencies:input_type -> saturn.finance.v1.ListCurrenciesRequest
-	92,  // 166: saturn.finance.v1.Finance.ListInboxItems:input_type -> saturn.finance.v1.ListInboxItemsRequest
-	94,  // 167: saturn.finance.v1.Finance.UpdateInboxItem:input_type -> saturn.finance.v1.UpdateInboxItemRequest
-	95,  // 168: saturn.finance.v1.Finance.ApproveInboxItem:input_type -> saturn.finance.v1.ApproveInboxItemRequest
-	96,  // 169: saturn.finance.v1.Finance.DiscardInboxItem:input_type -> saturn.finance.v1.DiscardInboxItemRequest
-	19,  // 170: saturn.finance.v1.Finance.ConfigureFinance:output_type -> saturn.finance.v1.FinanceSettings
-	19,  // 171: saturn.finance.v1.Finance.GetFinanceSettings:output_type -> saturn.finance.v1.FinanceSettings
-	20,  // 172: saturn.finance.v1.Finance.CreateBudget:output_type -> saturn.finance.v1.Budget
-	20,  // 173: saturn.finance.v1.Finance.GetBudget:output_type -> saturn.finance.v1.Budget
-	20,  // 174: saturn.finance.v1.Finance.UpdateBudget:output_type -> saturn.finance.v1.Budget
-	110, // 175: saturn.finance.v1.Finance.DeleteBudget:output_type -> google.protobuf.Empty
-	29,  // 176: saturn.finance.v1.Finance.ListBudgets:output_type -> saturn.finance.v1.ListBudgetsResponse
-	21,  // 177: saturn.finance.v1.Finance.GetBudgetPeriod:output_type -> saturn.finance.v1.BudgetPeriod
-	31,  // 178: saturn.finance.v1.Finance.CreateExchangeRate:output_type -> saturn.finance.v1.ExchangeRate
-	31,  // 179: saturn.finance.v1.Finance.GetExchangeRate:output_type -> saturn.finance.v1.ExchangeRate
-	31,  // 180: saturn.finance.v1.Finance.UpdateExchangeRate:output_type -> saturn.finance.v1.ExchangeRate
-	36,  // 181: saturn.finance.v1.Finance.ListExchangeRates:output_type -> saturn.finance.v1.ListExchangeRatesResponse
-	110, // 182: saturn.finance.v1.Finance.DeleteExchangeRate:output_type -> google.protobuf.Empty
-	38,  // 183: saturn.finance.v1.Finance.CreateExpense:output_type -> saturn.finance.v1.Transaction
-	38,  // 184: saturn.finance.v1.Finance.UpdateExpense:output_type -> saturn.finance.v1.Transaction
-	110, // 185: saturn.finance.v1.Finance.DeleteTransaction:output_type -> google.protobuf.Empty
-	44,  // 186: saturn.finance.v1.Finance.ListTransactions:output_type -> saturn.finance.v1.ListTransactionsResponse
-	90,  // 187: saturn.finance.v1.Finance.ListTransactionEvents:output_type -> saturn.finance.v1.ListTransactionEventsResponse
-	46,  // 188: saturn.finance.v1.Finance.GetInsights:output_type -> saturn.finance.v1.GetInsightsResponse
-	49,  // 189: saturn.finance.v1.Finance.CreateRecurringExpense:output_type -> saturn.finance.v1.RecurringExpense
-	49,  // 190: saturn.finance.v1.Finance.UpdateRecurringExpense:output_type -> saturn.finance.v1.RecurringExpense
-	110, // 191: saturn.finance.v1.Finance.DeleteRecurringExpense:output_type -> google.protobuf.Empty
-	55,  // 192: saturn.finance.v1.Finance.ListRecurringExpenses:output_type -> saturn.finance.v1.ListRecurringExpensesResponse
-	57,  // 193: saturn.finance.v1.Finance.ListScheduledPayments:output_type -> saturn.finance.v1.ListScheduledPaymentsResponse
-	38,  // 194: saturn.finance.v1.Finance.ConfirmScheduledPayment:output_type -> saturn.finance.v1.Transaction
-	38,  // 195: saturn.finance.v1.Finance.MatchScheduledPayment:output_type -> saturn.finance.v1.Transaction
-	60,  // 196: saturn.finance.v1.Finance.CreateBorrowing:output_type -> saturn.finance.v1.Borrowing
-	60,  // 197: saturn.finance.v1.Finance.GetBorrowing:output_type -> saturn.finance.v1.Borrowing
-	66,  // 198: saturn.finance.v1.Finance.ListBorrowings:output_type -> saturn.finance.v1.ListBorrowingsResponse
-	60,  // 199: saturn.finance.v1.Finance.UpdateBorrowing:output_type -> saturn.finance.v1.Borrowing
-	110, // 200: saturn.finance.v1.Finance.DeleteBorrowing:output_type -> google.protobuf.Empty
-	61,  // 201: saturn.finance.v1.Finance.CreateBorrowingRepayment:output_type -> saturn.finance.v1.BorrowingRepayment
-	72,  // 202: saturn.finance.v1.Finance.ListBorrowingRepayments:output_type -> saturn.finance.v1.ListBorrowingRepaymentsResponse
-	110, // 203: saturn.finance.v1.Finance.DeleteBorrowingRepayment:output_type -> google.protobuf.Empty
-	77,  // 204: saturn.finance.v1.Finance.CreateAccount:output_type -> saturn.finance.v1.Account
-	77,  // 205: saturn.finance.v1.Finance.GetAccount:output_type -> saturn.finance.v1.Account
-	77,  // 206: saturn.finance.v1.Finance.UpdateAccount:output_type -> saturn.finance.v1.Account
-	110, // 207: saturn.finance.v1.Finance.DeleteAccount:output_type -> google.protobuf.Empty
-	83,  // 208: saturn.finance.v1.Finance.ListAccounts:output_type -> saturn.finance.v1.ListAccountsResponse
-	84,  // 209: saturn.finance.v1.Finance.CreateTransfer:output_type -> saturn.finance.v1.Transfer
-	87,  // 210: saturn.finance.v1.Finance.ListTransfers:output_type -> saturn.finance.v1.ListTransfersResponse
-	76,  // 211: saturn.finance.v1.Finance.ListCurrencies:output_type -> saturn.finance.v1.ListCurrenciesResponse
-	93,  // 212: saturn.finance.v1.Finance.ListInboxItems:output_type -> saturn.finance.v1.ListInboxItemsResponse
-	91,  // 213: saturn.finance.v1.Finance.UpdateInboxItem:output_type -> saturn.finance.v1.InboxItem
-	110, // 214: saturn.finance.v1.Finance.ApproveInboxItem:output_type -> google.protobuf.Empty
-	110, // 215: saturn.finance.v1.Finance.DiscardInboxItem:output_type -> google.protobuf.Empty
-	170, // [170:216] is the sub-list for method output_type
-	124, // [124:170] is the sub-list for method input_type
-	124, // [124:124] is the sub-list for extension type_name
-	124, // [124:124] is the sub-list for extension extendee
-	0,   // [0:124] is the sub-list for field type_name
+	107, // 68: saturn.finance.v1.ConfirmScheduledPaymentRequest.transaction_date:type_name -> google.protobuf.Timestamp
+	107, // 69: saturn.finance.v1.ConfirmScheduledPaymentRequest.effective_date:type_name -> google.protobuf.Timestamp
+	12,  // 70: saturn.finance.v1.Borrowing.direction:type_name -> saturn.finance.v1.Borrowing.Direction
+	13,  // 71: saturn.finance.v1.Borrowing.status:type_name -> saturn.finance.v1.Borrowing.Status
+	107, // 72: saturn.finance.v1.Borrowing.established_at:type_name -> google.protobuf.Timestamp
+	107, // 73: saturn.finance.v1.Borrowing.due_at:type_name -> google.protobuf.Timestamp
+	107, // 74: saturn.finance.v1.Borrowing.create_time:type_name -> google.protobuf.Timestamp
+	107, // 75: saturn.finance.v1.Borrowing.update_time:type_name -> google.protobuf.Timestamp
+	107, // 76: saturn.finance.v1.BorrowingRepayment.payment_date:type_name -> google.protobuf.Timestamp
+	107, // 77: saturn.finance.v1.BorrowingRepayment.create_time:type_name -> google.protobuf.Timestamp
+	107, // 78: saturn.finance.v1.BorrowingRepayment.update_time:type_name -> google.protobuf.Timestamp
+	60,  // 79: saturn.finance.v1.CreateBorrowingRequest.borrowing:type_name -> saturn.finance.v1.Borrowing
+	13,  // 80: saturn.finance.v1.ListBorrowingsRequest.status:type_name -> saturn.finance.v1.Borrowing.Status
+	12,  // 81: saturn.finance.v1.ListBorrowingsRequest.direction:type_name -> saturn.finance.v1.Borrowing.Direction
+	60,  // 82: saturn.finance.v1.ListBorrowingsResponse.borrowings:type_name -> saturn.finance.v1.Borrowing
+	60,  // 83: saturn.finance.v1.UpdateBorrowingRequest.borrowing:type_name -> saturn.finance.v1.Borrowing
+	61,  // 84: saturn.finance.v1.CreateBorrowingRepaymentRequest.repayment:type_name -> saturn.finance.v1.BorrowingRepayment
+	61,  // 85: saturn.finance.v1.ListBorrowingRepaymentsResponse.repayments:type_name -> saturn.finance.v1.BorrowingRepayment
+	72,  // 86: saturn.finance.v1.ListCurrenciesResponse.currencies:type_name -> saturn.finance.v1.CurrencyInfo
+	14,  // 87: saturn.finance.v1.Account.type:type_name -> saturn.finance.v1.Account.Type
+	107, // 88: saturn.finance.v1.Account.create_time:type_name -> google.protobuf.Timestamp
+	107, // 89: saturn.finance.v1.Account.update_time:type_name -> google.protobuf.Timestamp
+	106, // 90: saturn.finance.v1.Account.conversion:type_name -> saturn.finance.v1.Account.Conversion
+	75,  // 91: saturn.finance.v1.CreateAccountRequest.account:type_name -> saturn.finance.v1.Account
+	15,  // 92: saturn.finance.v1.GetAccountRequest.view:type_name -> saturn.finance.v1.Account.View
+	75,  // 93: saturn.finance.v1.UpdateAccountRequest.account:type_name -> saturn.finance.v1.Account
+	15,  // 94: saturn.finance.v1.ListAccountsRequest.view:type_name -> saturn.finance.v1.Account.View
+	75,  // 95: saturn.finance.v1.ListAccountsResponse.accounts:type_name -> saturn.finance.v1.Account
+	107, // 96: saturn.finance.v1.Transfer.transfer_date:type_name -> google.protobuf.Timestamp
+	107, // 97: saturn.finance.v1.Transfer.create_time:type_name -> google.protobuf.Timestamp
+	107, // 98: saturn.finance.v1.Transfer.update_time:type_name -> google.protobuf.Timestamp
+	107, // 99: saturn.finance.v1.CreateTransferRequest.transfer_date:type_name -> google.protobuf.Timestamp
+	82,  // 100: saturn.finance.v1.ListTransfersResponse.transfers:type_name -> saturn.finance.v1.Transfer
+	107, // 101: saturn.finance.v1.TransactionEvent.create_time:type_name -> google.protobuf.Timestamp
+	87,  // 102: saturn.finance.v1.ListTransactionEventsResponse.events:type_name -> saturn.finance.v1.TransactionEvent
+	16,  // 103: saturn.finance.v1.InboxItem.status:type_name -> saturn.finance.v1.InboxItem.Status
+	17,  // 104: saturn.finance.v1.InboxItem.doc_type:type_name -> saturn.finance.v1.InboxItem.DocType
+	107, // 105: saturn.finance.v1.InboxItem.transaction_date:type_name -> google.protobuf.Timestamp
+	107, // 106: saturn.finance.v1.InboxItem.create_time:type_name -> google.protobuf.Timestamp
+	16,  // 107: saturn.finance.v1.ListInboxItemsRequest.status:type_name -> saturn.finance.v1.InboxItem.Status
+	17,  // 108: saturn.finance.v1.ListInboxItemsRequest.doc_type:type_name -> saturn.finance.v1.InboxItem.DocType
+	18,  // 109: saturn.finance.v1.ListInboxItemsRequest.view:type_name -> saturn.finance.v1.InboxItem.View
+	89,  // 110: saturn.finance.v1.ListInboxItemsResponse.inbox_items:type_name -> saturn.finance.v1.InboxItem
+	89,  // 111: saturn.finance.v1.UpdateInboxItemRequest.inbox_item:type_name -> saturn.finance.v1.InboxItem
+	107, // 112: saturn.finance.v1.Budget.ActivePeriod.start_date:type_name -> google.protobuf.Timestamp
+	107, // 113: saturn.finance.v1.Budget.ActivePeriod.end_date:type_name -> google.protobuf.Timestamp
+	98,  // 114: saturn.finance.v1.SpentInsights.TrendDataPoint.contributions:type_name -> saturn.finance.v1.SpentInsights.BudgetContribution
+	107, // 115: saturn.finance.v1.SpentInsights.HighValueExpense.transaction_date:type_name -> google.protobuf.Timestamp
+	107, // 116: saturn.finance.v1.SpentInsights.HighValueExpense.effective_date:type_name -> google.protobuf.Timestamp
+	107, // 117: saturn.finance.v1.RecurringExpense.ExecutionState.next_due_date:type_name -> google.protobuf.Timestamp
+	107, // 118: saturn.finance.v1.RecurringExpense.ExecutionState.last_payment_date:type_name -> google.protobuf.Timestamp
+	7,   // 119: saturn.finance.v1.ScheduledPayment.RecurringExpenseInfo.interval:type_name -> saturn.finance.v1.RecurringExpense.Interval
+	22,  // 120: saturn.finance.v1.Finance.ConfigureFinance:input_type -> saturn.finance.v1.ConfigureFinanceRequest
+	23,  // 121: saturn.finance.v1.Finance.GetFinanceSettings:input_type -> saturn.finance.v1.GetFinanceSettingsRequest
+	25,  // 122: saturn.finance.v1.Finance.CreateBudget:input_type -> saturn.finance.v1.CreateBudgetRequest
+	24,  // 123: saturn.finance.v1.Finance.GetBudget:input_type -> saturn.finance.v1.GetBudgetRequest
+	26,  // 124: saturn.finance.v1.Finance.UpdateBudget:input_type -> saturn.finance.v1.UpdateBudgetRequest
+	27,  // 125: saturn.finance.v1.Finance.DeleteBudget:input_type -> saturn.finance.v1.DeleteBudgetRequest
+	28,  // 126: saturn.finance.v1.Finance.ListBudgets:input_type -> saturn.finance.v1.ListBudgetsRequest
+	30,  // 127: saturn.finance.v1.Finance.GetBudgetPeriod:input_type -> saturn.finance.v1.GetBudgetPeriodRequest
+	32,  // 128: saturn.finance.v1.Finance.CreateExchangeRate:input_type -> saturn.finance.v1.CreateExchangeRateRequest
+	33,  // 129: saturn.finance.v1.Finance.GetExchangeRate:input_type -> saturn.finance.v1.GetExchangeRateRequest
+	34,  // 130: saturn.finance.v1.Finance.UpdateExchangeRate:input_type -> saturn.finance.v1.UpdateExchangeRateRequest
+	35,  // 131: saturn.finance.v1.Finance.ListExchangeRates:input_type -> saturn.finance.v1.ListExchangeRatesRequest
+	37,  // 132: saturn.finance.v1.Finance.DeleteExchangeRate:input_type -> saturn.finance.v1.DeleteExchangeRateRequest
+	40,  // 133: saturn.finance.v1.Finance.CreateExpense:input_type -> saturn.finance.v1.CreateExpenseRequest
+	41,  // 134: saturn.finance.v1.Finance.UpdateExpense:input_type -> saturn.finance.v1.UpdateExpenseRequest
+	42,  // 135: saturn.finance.v1.Finance.DeleteTransaction:input_type -> saturn.finance.v1.DeleteTransactionRequest
+	43,  // 136: saturn.finance.v1.Finance.ListTransactions:input_type -> saturn.finance.v1.ListTransactionsRequest
+	86,  // 137: saturn.finance.v1.Finance.ListTransactionEvents:input_type -> saturn.finance.v1.ListTransactionEventsRequest
+	45,  // 138: saturn.finance.v1.Finance.GetInsights:input_type -> saturn.finance.v1.GetInsightsRequest
+	51,  // 139: saturn.finance.v1.Finance.CreateRecurringExpense:input_type -> saturn.finance.v1.CreateRecurringExpenseRequest
+	52,  // 140: saturn.finance.v1.Finance.UpdateRecurringExpense:input_type -> saturn.finance.v1.UpdateRecurringExpenseRequest
+	53,  // 141: saturn.finance.v1.Finance.DeleteRecurringExpense:input_type -> saturn.finance.v1.DeleteRecurringExpenseRequest
+	54,  // 142: saturn.finance.v1.Finance.ListRecurringExpenses:input_type -> saturn.finance.v1.ListRecurringExpensesRequest
+	56,  // 143: saturn.finance.v1.Finance.ListScheduledPayments:input_type -> saturn.finance.v1.ListScheduledPaymentsRequest
+	58,  // 144: saturn.finance.v1.Finance.ConfirmScheduledPayment:input_type -> saturn.finance.v1.ConfirmScheduledPaymentRequest
+	59,  // 145: saturn.finance.v1.Finance.MatchScheduledPayment:input_type -> saturn.finance.v1.MatchScheduledPaymentRequest
+	62,  // 146: saturn.finance.v1.Finance.CreateBorrowing:input_type -> saturn.finance.v1.CreateBorrowingRequest
+	63,  // 147: saturn.finance.v1.Finance.GetBorrowing:input_type -> saturn.finance.v1.GetBorrowingRequest
+	64,  // 148: saturn.finance.v1.Finance.ListBorrowings:input_type -> saturn.finance.v1.ListBorrowingsRequest
+	66,  // 149: saturn.finance.v1.Finance.UpdateBorrowing:input_type -> saturn.finance.v1.UpdateBorrowingRequest
+	67,  // 150: saturn.finance.v1.Finance.DeleteBorrowing:input_type -> saturn.finance.v1.DeleteBorrowingRequest
+	68,  // 151: saturn.finance.v1.Finance.CreateBorrowingRepayment:input_type -> saturn.finance.v1.CreateBorrowingRepaymentRequest
+	69,  // 152: saturn.finance.v1.Finance.ListBorrowingRepayments:input_type -> saturn.finance.v1.ListBorrowingRepaymentsRequest
+	71,  // 153: saturn.finance.v1.Finance.DeleteBorrowingRepayment:input_type -> saturn.finance.v1.DeleteBorrowingRepaymentRequest
+	76,  // 154: saturn.finance.v1.Finance.CreateAccount:input_type -> saturn.finance.v1.CreateAccountRequest
+	77,  // 155: saturn.finance.v1.Finance.GetAccount:input_type -> saturn.finance.v1.GetAccountRequest
+	78,  // 156: saturn.finance.v1.Finance.UpdateAccount:input_type -> saturn.finance.v1.UpdateAccountRequest
+	79,  // 157: saturn.finance.v1.Finance.DeleteAccount:input_type -> saturn.finance.v1.DeleteAccountRequest
+	80,  // 158: saturn.finance.v1.Finance.ListAccounts:input_type -> saturn.finance.v1.ListAccountsRequest
+	83,  // 159: saturn.finance.v1.Finance.CreateTransfer:input_type -> saturn.finance.v1.CreateTransferRequest
+	84,  // 160: saturn.finance.v1.Finance.ListTransfers:input_type -> saturn.finance.v1.ListTransfersRequest
+	73,  // 161: saturn.finance.v1.Finance.ListCurrencies:input_type -> saturn.finance.v1.ListCurrenciesRequest
+	90,  // 162: saturn.finance.v1.Finance.ListInboxItems:input_type -> saturn.finance.v1.ListInboxItemsRequest
+	92,  // 163: saturn.finance.v1.Finance.UpdateInboxItem:input_type -> saturn.finance.v1.UpdateInboxItemRequest
+	93,  // 164: saturn.finance.v1.Finance.ApproveInboxItem:input_type -> saturn.finance.v1.ApproveInboxItemRequest
+	94,  // 165: saturn.finance.v1.Finance.DiscardInboxItem:input_type -> saturn.finance.v1.DiscardInboxItemRequest
+	19,  // 166: saturn.finance.v1.Finance.ConfigureFinance:output_type -> saturn.finance.v1.FinanceSettings
+	19,  // 167: saturn.finance.v1.Finance.GetFinanceSettings:output_type -> saturn.finance.v1.FinanceSettings
+	20,  // 168: saturn.finance.v1.Finance.CreateBudget:output_type -> saturn.finance.v1.Budget
+	20,  // 169: saturn.finance.v1.Finance.GetBudget:output_type -> saturn.finance.v1.Budget
+	20,  // 170: saturn.finance.v1.Finance.UpdateBudget:output_type -> saturn.finance.v1.Budget
+	108, // 171: saturn.finance.v1.Finance.DeleteBudget:output_type -> google.protobuf.Empty
+	29,  // 172: saturn.finance.v1.Finance.ListBudgets:output_type -> saturn.finance.v1.ListBudgetsResponse
+	21,  // 173: saturn.finance.v1.Finance.GetBudgetPeriod:output_type -> saturn.finance.v1.BudgetPeriod
+	31,  // 174: saturn.finance.v1.Finance.CreateExchangeRate:output_type -> saturn.finance.v1.ExchangeRate
+	31,  // 175: saturn.finance.v1.Finance.GetExchangeRate:output_type -> saturn.finance.v1.ExchangeRate
+	31,  // 176: saturn.finance.v1.Finance.UpdateExchangeRate:output_type -> saturn.finance.v1.ExchangeRate
+	36,  // 177: saturn.finance.v1.Finance.ListExchangeRates:output_type -> saturn.finance.v1.ListExchangeRatesResponse
+	108, // 178: saturn.finance.v1.Finance.DeleteExchangeRate:output_type -> google.protobuf.Empty
+	38,  // 179: saturn.finance.v1.Finance.CreateExpense:output_type -> saturn.finance.v1.Transaction
+	38,  // 180: saturn.finance.v1.Finance.UpdateExpense:output_type -> saturn.finance.v1.Transaction
+	108, // 181: saturn.finance.v1.Finance.DeleteTransaction:output_type -> google.protobuf.Empty
+	44,  // 182: saturn.finance.v1.Finance.ListTransactions:output_type -> saturn.finance.v1.ListTransactionsResponse
+	88,  // 183: saturn.finance.v1.Finance.ListTransactionEvents:output_type -> saturn.finance.v1.ListTransactionEventsResponse
+	46,  // 184: saturn.finance.v1.Finance.GetInsights:output_type -> saturn.finance.v1.GetInsightsResponse
+	49,  // 185: saturn.finance.v1.Finance.CreateRecurringExpense:output_type -> saturn.finance.v1.RecurringExpense
+	49,  // 186: saturn.finance.v1.Finance.UpdateRecurringExpense:output_type -> saturn.finance.v1.RecurringExpense
+	108, // 187: saturn.finance.v1.Finance.DeleteRecurringExpense:output_type -> google.protobuf.Empty
+	55,  // 188: saturn.finance.v1.Finance.ListRecurringExpenses:output_type -> saturn.finance.v1.ListRecurringExpensesResponse
+	57,  // 189: saturn.finance.v1.Finance.ListScheduledPayments:output_type -> saturn.finance.v1.ListScheduledPaymentsResponse
+	38,  // 190: saturn.finance.v1.Finance.ConfirmScheduledPayment:output_type -> saturn.finance.v1.Transaction
+	38,  // 191: saturn.finance.v1.Finance.MatchScheduledPayment:output_type -> saturn.finance.v1.Transaction
+	60,  // 192: saturn.finance.v1.Finance.CreateBorrowing:output_type -> saturn.finance.v1.Borrowing
+	60,  // 193: saturn.finance.v1.Finance.GetBorrowing:output_type -> saturn.finance.v1.Borrowing
+	65,  // 194: saturn.finance.v1.Finance.ListBorrowings:output_type -> saturn.finance.v1.ListBorrowingsResponse
+	60,  // 195: saturn.finance.v1.Finance.UpdateBorrowing:output_type -> saturn.finance.v1.Borrowing
+	108, // 196: saturn.finance.v1.Finance.DeleteBorrowing:output_type -> google.protobuf.Empty
+	61,  // 197: saturn.finance.v1.Finance.CreateBorrowingRepayment:output_type -> saturn.finance.v1.BorrowingRepayment
+	70,  // 198: saturn.finance.v1.Finance.ListBorrowingRepayments:output_type -> saturn.finance.v1.ListBorrowingRepaymentsResponse
+	108, // 199: saturn.finance.v1.Finance.DeleteBorrowingRepayment:output_type -> google.protobuf.Empty
+	75,  // 200: saturn.finance.v1.Finance.CreateAccount:output_type -> saturn.finance.v1.Account
+	75,  // 201: saturn.finance.v1.Finance.GetAccount:output_type -> saturn.finance.v1.Account
+	75,  // 202: saturn.finance.v1.Finance.UpdateAccount:output_type -> saturn.finance.v1.Account
+	108, // 203: saturn.finance.v1.Finance.DeleteAccount:output_type -> google.protobuf.Empty
+	81,  // 204: saturn.finance.v1.Finance.ListAccounts:output_type -> saturn.finance.v1.ListAccountsResponse
+	82,  // 205: saturn.finance.v1.Finance.CreateTransfer:output_type -> saturn.finance.v1.Transfer
+	85,  // 206: saturn.finance.v1.Finance.ListTransfers:output_type -> saturn.finance.v1.ListTransfersResponse
+	74,  // 207: saturn.finance.v1.Finance.ListCurrencies:output_type -> saturn.finance.v1.ListCurrenciesResponse
+	91,  // 208: saturn.finance.v1.Finance.ListInboxItems:output_type -> saturn.finance.v1.ListInboxItemsResponse
+	89,  // 209: saturn.finance.v1.Finance.UpdateInboxItem:output_type -> saturn.finance.v1.InboxItem
+	108, // 210: saturn.finance.v1.Finance.ApproveInboxItem:output_type -> google.protobuf.Empty
+	108, // 211: saturn.finance.v1.Finance.DiscardInboxItem:output_type -> google.protobuf.Empty
+	166, // [166:212] is the sub-list for method output_type
+	120, // [120:166] is the sub-list for method input_type
+	120, // [120:120] is the sub-list for extension type_name
+	120, // [120:120] is the sub-list for extension extendee
+	0,   // [0:120] is the sub-list for field type_name
 }
 
 func init() { file_saturn_finance_v1_finance_proto_init() }
@@ -9101,18 +8901,18 @@ func file_saturn_finance_v1_finance_proto_init() {
 	file_saturn_finance_v1_finance_proto_msgTypes[35].OneofWrappers = []any{}
 	file_saturn_finance_v1_finance_proto_msgTypes[37].OneofWrappers = []any{}
 	file_saturn_finance_v1_finance_proto_msgTypes[39].OneofWrappers = []any{}
-	file_saturn_finance_v1_finance_proto_msgTypes[43].OneofWrappers = []any{}
-	file_saturn_finance_v1_finance_proto_msgTypes[46].OneofWrappers = []any{}
-	file_saturn_finance_v1_finance_proto_msgTypes[60].OneofWrappers = []any{}
-	file_saturn_finance_v1_finance_proto_msgTypes[63].OneofWrappers = []any{}
-	file_saturn_finance_v1_finance_proto_msgTypes[73].OneofWrappers = []any{}
+	file_saturn_finance_v1_finance_proto_msgTypes[41].OneofWrappers = []any{}
+	file_saturn_finance_v1_finance_proto_msgTypes[45].OneofWrappers = []any{}
+	file_saturn_finance_v1_finance_proto_msgTypes[58].OneofWrappers = []any{}
+	file_saturn_finance_v1_finance_proto_msgTypes[61].OneofWrappers = []any{}
+	file_saturn_finance_v1_finance_proto_msgTypes[71].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_finance_v1_finance_proto_rawDesc), len(file_saturn_finance_v1_finance_proto_rawDesc)),
 			NumEnums:      19,
-			NumMessages:   90,
+			NumMessages:   88,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

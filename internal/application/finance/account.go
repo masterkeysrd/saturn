@@ -85,14 +85,5 @@ func (c *Coordinator) DeleteAccount(ctx context.Context, id finance.AccountID) e
 		return err
 	}
 
-	acc, err := c.financeService.GetAccount(ctx, id)
-	if err != nil {
-		return err
-	}
-
-	if acc.SpaceID != rCtx.SpaceID {
-		return finance.ErrAccountNotFound
-	}
-
-	return c.financeService.DeleteAccount(ctx, id)
+	return c.financeService.DeleteAccount(ctx, rCtx.SpaceID, id)
 }

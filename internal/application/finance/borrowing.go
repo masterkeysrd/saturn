@@ -42,53 +42,6 @@ func (c *Coordinator) CreateBorrowing(ctx context.Context, req *CreateBorrowingR
 	return c.financeService.CreateBorrowing(ctx, b, req.CreateAsTransaction)
 }
 
-func (c *Coordinator) GetBorrowing(ctx context.Context, id finance.BorrowingID) (*finance.Borrowing, error) {
-	rCtx, err := c.resolveContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	b, err := c.financeService.GetBorrowing(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	if b.SpaceID != rCtx.SpaceID {
-		return nil, finance.ErrBorrowingNotFound
-	}
-
-	return b, nil
-}
-
-type ListBorrowingsRequest struct {
-	Status        *string
-	Direction     *string
-	PageSize      int32
-	NextPageToken string
-}
-
-func (c *Coordinator) ListBorrowings(ctx context.Context, req *ListBorrowingsRequest) ([]*finance.Borrowing, string, error) {
-	rCtx, err := c.resolveContext(ctx)
-	if err != nil {
-		return nil, "", err
-	}
-
-	filter := &finance.ListBorrowingsFilter{
-		PageSize:      req.PageSize,
-		NextPageToken: req.NextPageToken,
-	}
-	if req.Status != nil {
-		status := finance.BorrowingStatus(*req.Status)
-		filter.Status = &status
-	}
-	if req.Direction != nil {
-		direction := finance.BorrowingDirection(*req.Direction)
-		filter.Direction = &direction
-	}
-
-	return c.financeService.ListBorrowings(ctx, rCtx.SpaceID, filter)
-}
-
 type UpdateBorrowingRequest struct {
 	ID            finance.BorrowingID
 	Direction     string
@@ -158,15 +111,6 @@ func (c *Coordinator) CreateBorrowingRepayment(ctx context.Context, req *CreateB
 	}
 
 	return c.financeService.CreateBorrowingRepayment(ctx, r)
-}
-
-func (c *Coordinator) ListBorrowingRepayments(ctx context.Context, borrowingID finance.BorrowingID) ([]*finance.BorrowingRepayment, error) {
-	rCtx, err := c.resolveContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return c.financeService.ListBorrowingRepayments(ctx, rCtx.SpaceID, borrowingID)
 }
 
 type DeleteBorrowingRepaymentRequest struct {

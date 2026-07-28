@@ -203,7 +203,7 @@ type ListScheduledPaymentsFilter struct {
 // BorrowingStore defines persistence for personal borrowing/lending agreements.
 type BorrowingStore interface {
 	Create(ctx context.Context, b *Borrowing) error
-	GetByID(ctx context.Context, id BorrowingID) (*Borrowing, error)
+	GetByID(ctx context.Context, spaceID SpaceID, id BorrowingID) (*Borrowing, error)
 	Update(ctx context.Context, b *Borrowing) error
 	Delete(ctx context.Context, id BorrowingID) error
 	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListBorrowingsFilter) ([]*Borrowing, string, error)
@@ -212,7 +212,7 @@ type BorrowingStore interface {
 // BorrowingRepaymentStore defines persistence for repayments.
 type BorrowingRepaymentStore interface {
 	Create(ctx context.Context, r *BorrowingRepayment) error
-	GetByID(ctx context.Context, id BorrowingRepaymentID) (*BorrowingRepayment, error)
+	GetByID(ctx context.Context, spaceID SpaceID, id BorrowingRepaymentID) (*BorrowingRepayment, error)
 	Delete(ctx context.Context, id BorrowingRepaymentID) error
 	ListByBorrowing(ctx context.Context, spaceID SpaceID, borrowingID BorrowingID) ([]*BorrowingRepayment, error)
 }
@@ -220,8 +220,8 @@ type BorrowingRepaymentStore interface {
 // AccountStore defines persistence for physical or digital payment accounts.
 type AccountStore interface {
 	Create(ctx context.Context, account *Account) error
-	GetByID(ctx context.Context, id AccountID) (*Account, error)
-	GetByIDs(ctx context.Context, ids []AccountID) ([]*Account, error)
+	GetByID(ctx context.Context, spaceID SpaceID, id AccountID) (*Account, error)
+	GetByIDs(ctx context.Context, spaceID SpaceID, ids []AccountID) ([]*Account, error)
 	Update(ctx context.Context, account *Account) error
 	Delete(ctx context.Context, id AccountID) error
 	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListAccountsFilter) (*paging.Page[*Account], error)

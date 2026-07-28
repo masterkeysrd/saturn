@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/id"
+	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
 
 type BorrowingDirection string
@@ -198,10 +199,42 @@ func (r *BorrowingRepayment) Validate() error {
 	return nil
 }
 
+// DefaultBorrowingSortField represents the fallback sorting column name for borrowings.
+const DefaultBorrowingSortField = "created_at"
+
+// BorrowingSortFields registry maps sortable borrowing field names to cursor strings.
+var BorrowingSortFields = map[string]func(*Borrowing) string{
+	"created_at":     func(b *Borrowing) string { return b.CreateTime.Format(time.RFC3339) },
+	"counterparty":   func(b *Borrowing) string { return b.Counterparty },
+	"total_amount":   func(b *Borrowing) string { return fmt.Sprintf("%019d", b.TotalAmount) },
+	"established_at": func(b *Borrowing) string { return b.EstablishedAt.Format(time.RFC3339) },
+	"due_at": func(b *Borrowing) string {
+		if b.DueAt != nil {
+			return b.DueAt.Format(time.RFC3339)
+		}
+		return ""
+	},
+}
+
+// IsBorrowingSortField validates if a sort column name is allowed.
+func IsBorrowingSortField(field string) bool {
+	_, ok := BorrowingSortFields[field]
+	return ok
+}
+
+// GetSortValue extracts the sort value string for pagination cursor generation.
+func (b *Borrowing) GetSortValue(field string) string {
+	if fn, ok := BorrowingSortFields[field]; ok {
+		return fn(b)
+	}
+	return b.GetSortValue(DefaultBorrowingSortField)
+}
+
 // ListBorrowingsFilter encapsulates filtering parameters for listing borrowings.
 type ListBorrowingsFilter struct {
 	Status        *BorrowingStatus
 	Direction     *BorrowingDirection
 	PageSize      int32
 	NextPageToken string
+	Sort          sorting.SortOrder
 }

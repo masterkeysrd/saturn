@@ -3,14 +3,15 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"encoding/base64"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
+	"github.com/doug-martin/goqu/v9"
+	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
 type borrowingDB struct {
@@ -30,34 +31,7 @@ type borrowingDB struct {
 	UpdateTime      sql.NullTime `db:"update_time"`
 }
 
-type BorrowingStore struct {
-	db *sqlx.DB
-}
-
-func NewBorrowingStore(db *sqlx.DB) *BorrowingStore {
-	return &BorrowingStore{db: db}
-}
-
-func (s *BorrowingStore) Create(ctx context.Context, b *finance.Borrowing) error {
-	query := `INSERT INTO finance.borrowing (id, space_id, direction, counterparty, contact_info, total_amount, remaining_amount, currency, status, established_at, due_at, notes, create_time, update_time)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`
-	_, err := s.db.ExecContext(ctx, query,
-		string(b.ID), string(b.SpaceID), string(b.Direction), b.Counterparty, b.ContactInfo,
-		b.TotalAmount, b.RemainingAmount, string(b.Currency), string(b.Status),
-		timeToNullTime(b.EstablishedAt), timeToNullTime(ptrToTime(b.DueAt)), b.Notes, b.CreateTime, b.UpdateTime)
-	return err
-}
-
-func (s *BorrowingStore) GetByID(ctx context.Context, id finance.BorrowingID) (*finance.Borrowing, error) {
-	var row borrowingDB
-	query := `SELECT * FROM finance.borrowing WHERE id = $1`
-	if err := s.db.GetContext(ctx, &row, query, string(id)); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, finance.ErrBorrowingNotFound
-		}
-		return nil, err
-	}
-
+func (row *borrowingDB) toDomain() *finance.Borrowing {
 	var dueAtPtr *time.Time
 	if row.DueAt.Valid {
 		dueAtPtr = &row.DueAt.Time
@@ -78,16 +52,88 @@ func (s *BorrowingStore) GetByID(ctx context.Context, id finance.BorrowingID) (*
 		Notes:           row.Notes,
 		CreateTime:      nullTimeToTime(row.CreateTime),
 		UpdateTime:      nullTimeToTime(row.UpdateTime),
-	}, nil
+	}
+}
+
+type BorrowingStore struct {
+	db *sqlx.DB
+}
+
+func NewBorrowingStore(db *sqlx.DB) *BorrowingStore {
+	return &BorrowingStore{db: db}
+}
+
+func (s *BorrowingStore) Create(ctx context.Context, b *finance.Borrowing) error {
+	ds := pgDialect.Insert(goqu.S("finance").Table("borrowing")).Rows(goqu.Record{
+		"id":               string(b.ID),
+		"space_id":         string(b.SpaceID),
+		"direction":        string(b.Direction),
+		"counterparty":     b.Counterparty,
+		"contact_info":     b.ContactInfo,
+		"total_amount":     b.TotalAmount,
+		"remaining_amount": b.RemainingAmount,
+		"currency":         string(b.Currency),
+		"status":           string(b.Status),
+		"established_at":   timeToNullTime(b.EstablishedAt),
+		"due_at":           timeToNullTime(ptrToTime(b.DueAt)),
+		"notes":            b.Notes,
+		"create_time":      b.CreateTime,
+		"update_time":      b.UpdateTime,
+	})
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return fmt.Errorf("build sql query: %w", err)
+	}
+
+	_, err = s.db.ExecContext(ctx, query, args...)
+	return err
+}
+
+func (s *BorrowingStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.BorrowingID) (*finance.Borrowing, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("borrowing")).
+		Select("*").
+		Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)})
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("build sql query: %w", err)
+	}
+
+	var row borrowingDB
+	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, finance.ErrBorrowingNotFound
+		}
+		return nil, err
+	}
+
+	return row.toDomain(), nil
 }
 
 func (s *BorrowingStore) Update(ctx context.Context, b *finance.Borrowing) error {
-	query := `UPDATE finance.borrowing 
-		SET direction = $1, counterparty = $2, contact_info = $3, total_amount = $4, remaining_amount = $5, currency = $6, status = $7, established_at = $8, due_at = $9, notes = $10, update_time = $11 
-		WHERE id = $12`
-	res, err := s.db.ExecContext(ctx, query,
-		string(b.Direction), b.Counterparty, b.ContactInfo, b.TotalAmount, b.RemainingAmount, string(b.Currency), string(b.Status),
-		timeToNullTime(b.EstablishedAt), timeToNullTime(ptrToTime(b.DueAt)), b.Notes, b.UpdateTime, string(b.ID))
+	ds := pgDialect.Update(goqu.S("finance").Table("borrowing")).
+		Set(goqu.Record{
+			"direction":        string(b.Direction),
+			"counterparty":     b.Counterparty,
+			"contact_info":     b.ContactInfo,
+			"total_amount":     b.TotalAmount,
+			"remaining_amount": b.RemainingAmount,
+			"currency":         string(b.Currency),
+			"status":           string(b.Status),
+			"established_at":   timeToNullTime(b.EstablishedAt),
+			"due_at":           timeToNullTime(ptrToTime(b.DueAt)),
+			"notes":            b.Notes,
+			"update_time":      b.UpdateTime,
+		}).
+		Where(goqu.Ex{"id": string(b.ID)})
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return fmt.Errorf("build sql query: %w", err)
+	}
+
+	res, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -102,8 +148,14 @@ func (s *BorrowingStore) Update(ctx context.Context, b *finance.Borrowing) error
 }
 
 func (s *BorrowingStore) Delete(ctx context.Context, id finance.BorrowingID) error {
-	query := `DELETE FROM finance.borrowing WHERE id = $1`
-	res, err := s.db.ExecContext(ctx, query, string(id))
+	ds := pgDialect.Delete(goqu.S("finance").Table("borrowing")).Where(goqu.Ex{"id": string(id)})
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return fmt.Errorf("build sql query: %w", err)
+	}
+
+	res, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -118,82 +170,55 @@ func (s *BorrowingStore) Delete(ctx context.Context, id finance.BorrowingID) err
 }
 
 func (s *BorrowingStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBorrowingsFilter) ([]*finance.Borrowing, string, error) {
-	if filter.PageSize <= 0 || filter.PageSize > 100 {
+	if filter.PageSize <= 0 {
 		filter.PageSize = 20
 	}
 
-	var cursorID string
-	if filter.NextPageToken != "" {
-		if decoded, err := base64.URLEncoding.DecodeString(filter.NextPageToken); err == nil {
-			cursorID = string(decoded)
-		}
-	}
-
-	conditions := []string{"space_id = $1"}
-	args := []any{string(spaceID)}
-	argIndex := 2
+	ds := pgDialect.From(goqu.S("finance").Table("borrowing")).Select("*").Where(goqu.Ex{"space_id": string(spaceID)})
 
 	if filter.Status != nil {
-		conditions = append(conditions, fmt.Sprintf("status = $%d", argIndex))
-		args = append(args, string(*filter.Status))
-		argIndex++
+		ds = ds.Where(goqu.Ex{"status": string(*filter.Status)})
 	}
 	if filter.Direction != nil {
-		conditions = append(conditions, fmt.Sprintf("direction = $%d", argIndex))
-		args = append(args, string(*filter.Direction))
-		argIndex++
-	}
-	if cursorID != "" {
-		conditions = append(conditions, fmt.Sprintf("id > $%d", argIndex))
-		args = append(args, cursorID)
-		argIndex++
+		ds = ds.Where(goqu.Ex{"direction": string(*filter.Direction)})
 	}
 
-	query := fmt.Sprintf(`SELECT * FROM finance.borrowing WHERE %s ORDER BY id LIMIT $%d`, strings.Join(conditions, " AND "), argIndex)
-	args = append(args, filter.PageSize+1)
+	cursor, _ := paging.Decode(filter.NextPageToken)
+
+	sortOrder := filter.Sort
+	if !finance.IsBorrowingSortField(sortOrder.Field) {
+		sortOrder.Field = finance.DefaultBorrowingSortField
+	}
+
+	ds = paging.ApplyPagination(ds, paging.Options{
+		Sort:     sortOrder,
+		Cursor:   cursor,
+		PageSize: uint(filter.PageSize),
+	})
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, "", fmt.Errorf("build sql query: %w", err)
+	}
 
 	var rows []borrowingDB
 	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
-		return nil, "", err
+		return nil, "", fmt.Errorf("select context: %w", err)
 	}
 
-	hasMore := len(rows) > int(filter.PageSize)
-	if hasMore {
-		rows = rows[:filter.PageSize]
-	}
-
-	borrowings := make([]*finance.Borrowing, 0, len(rows))
+	borrowings := make([]*finance.Borrowing, len(rows))
 	for i := range rows {
-		var dueAtPtr *time.Time
-		if rows[i].DueAt.Valid {
-			dueAtPtr = &rows[i].DueAt.Time
+		borrowings[i] = rows[i].toDomain()
+	}
+
+	page := paging.NewPage(borrowings, int(filter.PageSize), func(b *finance.Borrowing) paging.Cursor {
+		return paging.Cursor{
+			SortValue: b.GetSortValue(sortOrder.Field),
+			ID:        string(b.ID),
 		}
+	})
 
-		borrowings = append(borrowings, &finance.Borrowing{
-			ID:              finance.BorrowingID(rows[i].ID),
-			SpaceID:         finance.SpaceID(rows[i].SpaceID),
-			Direction:       finance.BorrowingDirection(rows[i].Direction),
-			Counterparty:    rows[i].Counterparty,
-			ContactInfo:     rows[i].ContactInfo,
-			TotalAmount:     rows[i].TotalAmount,
-			RemainingAmount: rows[i].RemainingAmount,
-			Currency:        finance.Currency(rows[i].Currency),
-			Status:          finance.BorrowingStatus(rows[i].Status),
-			EstablishedAt:   nullTimeToTime(rows[i].EstablishedAt),
-			DueAt:           dueAtPtr,
-			Notes:           rows[i].Notes,
-			CreateTime:      nullTimeToTime(rows[i].CreateTime),
-			UpdateTime:      nullTimeToTime(rows[i].UpdateTime),
-		})
-	}
-
-	var nextToken string
-	if hasMore && len(rows) > 0 {
-		lastRow := rows[len(rows)-1]
-		nextToken = base64.URLEncoding.EncodeToString([]byte(lastRow.ID))
-	}
-
-	return borrowings, nextToken, nil
+	return page.Items, page.NextPageToken, nil
 }
 
 type borrowingRepaymentDB struct {
@@ -208,37 +233,7 @@ type borrowingRepaymentDB struct {
 	UpdateTime  sql.NullTime   `db:"update_time"`
 }
 
-type BorrowingRepaymentStore struct {
-	db *sqlx.DB
-}
-
-func NewBorrowingRepaymentStore(db *sqlx.DB) *BorrowingRepaymentStore {
-	return &BorrowingRepaymentStore{db: db}
-}
-
-func (s *BorrowingRepaymentStore) Create(ctx context.Context, r *finance.BorrowingRepayment) error {
-	query := `INSERT INTO finance.borrowing_repayment (id, borrowing_id, space_id, amount, payment_date, notes, account_id, create_time, update_time)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
-	var accountID sql.NullString
-	if r.AccountID != nil {
-		accountID = sql.NullString{String: string(*r.AccountID), Valid: true}
-	}
-	_, err := s.db.ExecContext(ctx, query,
-		string(r.ID), string(r.BorrowingID), string(r.SpaceID), r.Amount,
-		timeToNullTime(r.PaymentDate), r.Notes, accountID, r.CreateTime, r.UpdateTime)
-	return err
-}
-
-func (s *BorrowingRepaymentStore) GetByID(ctx context.Context, id finance.BorrowingRepaymentID) (*finance.BorrowingRepayment, error) {
-	var row borrowingRepaymentDB
-	query := `SELECT * FROM finance.borrowing_repayment WHERE id = $1`
-	if err := s.db.GetContext(ctx, &row, query, string(id)); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, finance.ErrRepaymentNotFound
-		}
-		return nil, err
-	}
-
+func (row *borrowingRepaymentDB) toDomain() *finance.BorrowingRepayment {
 	var accountIDPtr *finance.AccountID
 	if row.AccountID.Valid {
 		aID := finance.AccountID(row.AccountID.String)
@@ -255,12 +250,74 @@ func (s *BorrowingRepaymentStore) GetByID(ctx context.Context, id finance.Borrow
 		AccountID:   accountIDPtr,
 		CreateTime:  nullTimeToTime(row.CreateTime),
 		UpdateTime:  nullTimeToTime(row.UpdateTime),
-	}, nil
+	}
+}
+
+type BorrowingRepaymentStore struct {
+	db *sqlx.DB
+}
+
+func NewBorrowingRepaymentStore(db *sqlx.DB) *BorrowingRepaymentStore {
+	return &BorrowingRepaymentStore{db: db}
+}
+
+func (s *BorrowingRepaymentStore) Create(ctx context.Context, r *finance.BorrowingRepayment) error {
+	var accountID sql.NullString
+	if r.AccountID != nil {
+		accountID = sql.NullString{String: string(*r.AccountID), Valid: true}
+	}
+
+	ds := pgDialect.Insert(goqu.S("finance").Table("borrowing_repayment")).Rows(goqu.Record{
+		"id":           string(r.ID),
+		"borrowing_id": string(r.BorrowingID),
+		"space_id":     string(r.SpaceID),
+		"amount":       r.Amount,
+		"payment_date": timeToNullTime(r.PaymentDate),
+		"notes":        r.Notes,
+		"account_id":   accountID,
+		"create_time":  r.CreateTime,
+		"update_time":  r.UpdateTime,
+	})
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return fmt.Errorf("build sql query: %w", err)
+	}
+
+	_, err = s.db.ExecContext(ctx, query, args...)
+	return err
+}
+
+func (s *BorrowingRepaymentStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.BorrowingRepaymentID) (*finance.BorrowingRepayment, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("borrowing_repayment")).
+		Select("*").
+		Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)})
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("build sql query: %w", err)
+	}
+
+	var row borrowingRepaymentDB
+	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, finance.ErrRepaymentNotFound
+		}
+		return nil, err
+	}
+
+	return row.toDomain(), nil
 }
 
 func (s *BorrowingRepaymentStore) Delete(ctx context.Context, id finance.BorrowingRepaymentID) error {
-	query := `DELETE FROM finance.borrowing_repayment WHERE id = $1`
-	res, err := s.db.ExecContext(ctx, query, string(id))
+	ds := pgDialect.Delete(goqu.S("finance").Table("borrowing_repayment")).Where(goqu.Ex{"id": string(id)})
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return fmt.Errorf("build sql query: %w", err)
+	}
+
+	res, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -275,30 +332,24 @@ func (s *BorrowingRepaymentStore) Delete(ctx context.Context, id finance.Borrowi
 }
 
 func (s *BorrowingRepaymentStore) ListByBorrowing(ctx context.Context, spaceID finance.SpaceID, borrowingID finance.BorrowingID) ([]*finance.BorrowingRepayment, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("borrowing_repayment")).
+		Select("*").
+		Where(goqu.Ex{"space_id": string(spaceID), "borrowing_id": string(borrowingID)}).
+		Order(goqu.I("payment_date").Asc(), goqu.I("id").Asc())
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("build sql query: %w", err)
+	}
+
 	var rows []borrowingRepaymentDB
-	query := `SELECT * FROM finance.borrowing_repayment WHERE space_id = $1 AND borrowing_id = $2 ORDER BY payment_date ASC, id ASC`
-	if err := s.db.SelectContext(ctx, &rows, query, string(spaceID), string(borrowingID)); err != nil {
+	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
 		return nil, err
 	}
 
-	repayments := make([]*finance.BorrowingRepayment, 0, len(rows))
+	repayments := make([]*finance.BorrowingRepayment, len(rows))
 	for i := range rows {
-		var accountIDPtr *finance.AccountID
-		if rows[i].AccountID.Valid {
-			aID := finance.AccountID(rows[i].AccountID.String)
-			accountIDPtr = &aID
-		}
-		repayments = append(repayments, &finance.BorrowingRepayment{
-			ID:          finance.BorrowingRepaymentID(rows[i].ID),
-			BorrowingID: finance.BorrowingID(rows[i].BorrowingID),
-			SpaceID:     finance.SpaceID(rows[i].SpaceID),
-			Amount:      rows[i].Amount,
-			PaymentDate: nullTimeToTime(rows[i].PaymentDate),
-			Notes:       rows[i].Notes,
-			AccountID:   accountIDPtr,
-			CreateTime:  nullTimeToTime(rows[i].CreateTime),
-			UpdateTime:  nullTimeToTime(rows[i].UpdateTime),
-		})
+		repayments[i] = rows[i].toDomain()
 	}
 	return repayments, nil
 }

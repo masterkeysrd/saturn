@@ -10,14 +10,17 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	financev1 "github.com/masterkeysrd/saturn/apis/saturn/finance/v1"
+	financeaggregator "github.com/masterkeysrd/saturn/internal/aggregator/finance"
 	financeapp "github.com/masterkeysrd/saturn/internal/application/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/foundation/auth"
+	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
 
 func (h *Handler) CreateBorrowing(ctx context.Context, req *financev1.CreateBorrowingRequest) (*financev1.Borrowing, error) {
 	input := req.GetBorrowing()
 	if input == nil {
-		return nil, status.Error(codes.InvalidArgument, "missing borrowing input")
+		return nil, status.Error(codes.InvalidArgument, "missing borrowing payload")
 	}
 
 	currency, err := finance.ParseCurrency(input.GetCurrency())
@@ -39,7 +42,7 @@ func (h *Handler) CreateBorrowing(ctx context.Context, req *financev1.CreateBorr
 	}
 
 	var accountID *finance.AccountID
-	if input.AccountId != nil {
+	if input.AccountId != nil && *input.AccountId != "" {
 		idVal := finance.AccountID(*input.AccountId)
 		accountID = &idVal
 	}
@@ -71,7 +74,13 @@ func (h *Handler) GetBorrowing(ctx context.Context, req *financev1.GetBorrowingR
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	b, err := h.Coordinator.GetBorrowing(ctx, bID)
+	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	}
+	spaceID := finance.SpaceID(spaceIDStr)
+
+	b, err := h.Aggregator.GetBorrowing(ctx, spaceID, bID)
 	if err != nil {
 		return nil, h.mapError(err)
 	}
@@ -80,39 +89,45 @@ func (h *Handler) GetBorrowing(ctx context.Context, req *financev1.GetBorrowingR
 }
 
 func (h *Handler) ListBorrowings(ctx context.Context, req *financev1.ListBorrowingsRequest) (*financev1.ListBorrowingsResponse, error) {
-	var statusFilter *string
-	if req.Status != nil && *req.Status != financev1.BorrowingStatus_BORROWING_STATUS_UNSPECIFIED {
+	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	}
+	spaceID := finance.SpaceID(spaceIDStr)
+
+	filter := financeaggregator.ListBorrowingsFilter{
+		ListBorrowingsFilter: finance.ListBorrowingsFilter{
+			PageSize:      req.GetPageSize(),
+			NextPageToken: req.GetPageToken(),
+			Sort:          sorting.Parse(req.GetOrderBy()),
+		},
+	}
+
+	if req.Status != nil && *req.Status != financev1.Borrowing_STATUS_UNSPECIFIED {
 		sStr := req.Status.String()
-		// Convert proto enum string representation (e.g. BORROWING_STATUS_ACTIVE) to ACTIVE/PAID_OFF
 		switch *req.Status {
-		case financev1.BorrowingStatus_BORROWING_STATUS_ACTIVE:
+		case financev1.Borrowing_ACTIVE:
 			sStr = "ACTIVE"
-		case financev1.BorrowingStatus_BORROWING_STATUS_PAID_OFF:
+		case financev1.Borrowing_PAID_OFF:
 			sStr = "PAID_OFF"
 		}
-		statusFilter = &sStr
+		statusVal := finance.BorrowingStatus(sStr)
+		filter.Status = &statusVal
 	}
 
-	var directionFilter *string
-	if req.Direction != nil && *req.Direction != financev1.BorrowingDirection_BORROWING_DIRECTION_UNSPECIFIED {
+	if req.Direction != nil && *req.Direction != financev1.Borrowing_DIRECTION_UNSPECIFIED {
 		dStr := req.Direction.String()
 		switch *req.Direction {
-		case financev1.BorrowingDirection_BORROWING_DIRECTION_BORROWED:
+		case financev1.Borrowing_BORROWED:
 			dStr = "BORROWED"
-		case financev1.BorrowingDirection_BORROWING_DIRECTION_LENT:
+		case financev1.Borrowing_LENT:
 			dStr = "LENT"
 		}
-		directionFilter = &dStr
+		directionVal := finance.BorrowingDirection(dStr)
+		filter.Direction = &directionVal
 	}
 
-	appReq := &financeapp.ListBorrowingsRequest{
-		Status:        statusFilter,
-		Direction:     directionFilter,
-		PageSize:      req.GetPageSize(),
-		NextPageToken: req.GetPageToken(),
-	}
-
-	list, nextToken, err := h.Coordinator.ListBorrowings(ctx, appReq)
+	list, nextToken, err := h.Aggregator.ListBorrowings(ctx, spaceID, filter)
 	if err != nil {
 		return nil, h.mapError(err)
 	}
@@ -131,7 +146,7 @@ func (h *Handler) ListBorrowings(ctx context.Context, req *financev1.ListBorrowi
 func (h *Handler) UpdateBorrowing(ctx context.Context, req *financev1.UpdateBorrowingRequest) (*financev1.Borrowing, error) {
 	input := req.GetBorrowing()
 	if input == nil {
-		return nil, status.Error(codes.InvalidArgument, "missing borrowing input")
+		return nil, status.Error(codes.InvalidArgument, "missing borrowing payload")
 	}
 
 	currency, err := finance.ParseCurrency(input.GetCurrency())
@@ -158,7 +173,7 @@ func (h *Handler) UpdateBorrowing(ctx context.Context, req *financev1.UpdateBorr
 	}
 
 	var accountID *finance.AccountID
-	if input.AccountId != nil {
+	if input.AccountId != nil && *input.AccountId != "" {
 		idVal := finance.AccountID(*input.AccountId)
 		accountID = &idVal
 	}
@@ -201,14 +216,7 @@ func (h *Handler) DeleteBorrowing(ctx context.Context, req *financev1.DeleteBorr
 func (h *Handler) CreateBorrowingRepayment(ctx context.Context, req *financev1.CreateBorrowingRepaymentRequest) (*financev1.BorrowingRepayment, error) {
 	input := req.GetRepayment()
 	if input == nil {
-		return nil, status.Error(codes.InvalidArgument, "missing repayment input")
-	}
-
-	var paymentDate time.Time
-	if input.GetPaymentDate() != nil {
-		paymentDate = input.GetPaymentDate().AsTime()
-	} else {
-		paymentDate = time.Now().UTC()
+		return nil, status.Error(codes.InvalidArgument, "missing repayment payload")
 	}
 
 	bID, err := finance.ParseBorrowingID(req.GetBorrowingId())
@@ -219,6 +227,13 @@ func (h *Handler) CreateBorrowingRepayment(ctx context.Context, req *financev1.C
 	aID, err := finance.ParseAccountID(input.GetAccountId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	var paymentDate time.Time
+	if input.GetPaymentDate() != nil {
+		paymentDate = input.GetPaymentDate().AsTime()
+	} else {
+		paymentDate = time.Now().UTC()
 	}
 
 	appReq := &financeapp.CreateBorrowingRepaymentRequest{
@@ -243,7 +258,13 @@ func (h *Handler) ListBorrowingRepayments(ctx context.Context, req *financev1.Li
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	list, err := h.Coordinator.ListBorrowingRepayments(ctx, bID)
+	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	}
+	spaceID := finance.SpaceID(spaceIDStr)
+
+	list, err := h.Aggregator.ListBorrowingRepayments(ctx, spaceID, bID)
 	if err != nil {
 		return nil, h.mapError(err)
 	}
@@ -281,36 +302,36 @@ func (h *Handler) DeleteBorrowingRepayment(ctx context.Context, req *financev1.D
 }
 
 // Mappers
-func toDomainBorrowingDirection(d financev1.BorrowingDirection) string {
+func toDomainBorrowingDirection(d financev1.Borrowing_Direction) string {
 	switch d {
-	case financev1.BorrowingDirection_BORROWING_DIRECTION_BORROWED:
+	case financev1.Borrowing_BORROWED:
 		return string(finance.BorrowingDirectionBorrowed)
-	case financev1.BorrowingDirection_BORROWING_DIRECTION_LENT:
+	case financev1.Borrowing_LENT:
 		return string(finance.BorrowingDirectionLent)
 	default:
 		return ""
 	}
 }
 
-func toProtoBorrowingDirection(d finance.BorrowingDirection) financev1.BorrowingDirection {
+func toProtoBorrowingDirection(d finance.BorrowingDirection) financev1.Borrowing_Direction {
 	switch d {
 	case finance.BorrowingDirectionBorrowed:
-		return financev1.BorrowingDirection_BORROWING_DIRECTION_BORROWED
+		return financev1.Borrowing_BORROWED
 	case finance.BorrowingDirectionLent:
-		return financev1.BorrowingDirection_BORROWING_DIRECTION_LENT
+		return financev1.Borrowing_LENT
 	default:
-		return financev1.BorrowingDirection_BORROWING_DIRECTION_UNSPECIFIED
+		return financev1.Borrowing_DIRECTION_UNSPECIFIED
 	}
 }
 
-func toProtoBorrowingStatus(s finance.BorrowingStatus) financev1.BorrowingStatus {
+func toProtoBorrowingStatus(s finance.BorrowingStatus) financev1.Borrowing_Status {
 	switch s {
 	case finance.BorrowingStatusActive:
-		return financev1.BorrowingStatus_BORROWING_STATUS_ACTIVE
+		return financev1.Borrowing_ACTIVE
 	case finance.BorrowingStatusPaidOff:
-		return financev1.BorrowingStatus_BORROWING_STATUS_PAID_OFF
+		return financev1.Borrowing_PAID_OFF
 	default:
-		return financev1.BorrowingStatus_BORROWING_STATUS_UNSPECIFIED
+		return financev1.Borrowing_STATUS_UNSPECIFIED
 	}
 }
 

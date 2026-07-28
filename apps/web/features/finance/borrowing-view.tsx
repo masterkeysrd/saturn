@@ -1,11 +1,13 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useUrlState } from "@/lib/use-url-state"
+import { useDebounce } from "@/lib/use-debounce"
 import { useSpacePermissions } from "@/features/space/use-space"
 import {
   useListBorrowingsQuery,
   useDeleteBorrowingMutation,
   type Borrowing,
-  type BorrowingStatus,
-  type BorrowingDirection,
+  type Borrowing_Status,
+  type Borrowing_Direction,
   useGetFinanceSettingsQuery,
 } from "@/gen/saturn/finance/v1/finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
@@ -31,6 +33,13 @@ import {
   User,
 } from "lucide-react"
 
+const BORROWING_FILTER_DEFAULTS = {
+  q: "",
+  status: "ALL",
+  direction: "ALL",
+  sort: "_default",
+}
+
 export function BorrowingView() {
   const [now] = useState(() => Date.now())
   const { spaceId, isWritable } = useSpacePermissions()
@@ -41,9 +50,19 @@ export function BorrowingView() {
   )
   const baseCurrency = settings?.baseCurrency || "USD"
 
-  const [search, setSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("ALL")
-  const [directionFilter, setDirectionFilter] = useState<string>("ALL")
+  const [urlState, setUrlState] = useUrlState(BORROWING_FILTER_DEFAULTS)
+  const [searchQuery, setSearchQuery] = useState(urlState.q)
+  const debouncedSearchQuery = useDebounce(searchQuery, 300)
+
+  useEffect(() => {
+    setUrlState({ q: debouncedSearchQuery })
+  }, [debouncedSearchQuery, setUrlState])
+
+  const [prevUrlQ, setPrevUrlQ] = useState(urlState.q)
+  if (urlState.q !== prevUrlQ) {
+    setPrevUrlQ(urlState.q)
+    setSearchQuery(urlState.q)
+  }
 
   const [createOpen, setCreateOpen] = useState(false)
   const [detailOpen, setDetailOpen] = useState(false)
@@ -55,11 +74,14 @@ export function BorrowingView() {
   const { data, refetch: refetchBorrowings } = useListBorrowingsQuery(
     {
       status:
-        statusFilter === "ALL" ? undefined : (statusFilter as BorrowingStatus),
-      direction:
-        directionFilter === "ALL"
+        urlState.status === "ALL"
           ? undefined
-          : (directionFilter as BorrowingDirection),
+          : (urlState.status as Borrowing_Status),
+      direction:
+        urlState.direction === "ALL"
+          ? undefined
+          : (urlState.direction as Borrowing_Direction),
+      orderBy: urlState.sort === "_default" ? undefined : urlState.sort,
       pageSize: 100,
       pageToken: "",
     },
@@ -92,18 +114,16 @@ export function BorrowingView() {
 
   const borrowings = data?.borrowings || []
   const filteredBorrowings = borrowings.filter((b) =>
-    b.counterparty.toLowerCase().includes(search.toLowerCase())
+    b.counterparty.toLowerCase().includes(urlState.q.toLowerCase())
   )
 
   // Calculate totals for active borrowings
-  const activeBorrowings = borrowings.filter(
-    (b) => b.status === "BORROWING_STATUS_ACTIVE"
-  )
+  const activeBorrowings = borrowings.filter((b) => b.status === "ACTIVE")
   const totalLent = activeBorrowings
-    .filter((b) => b.direction === "BORROWING_DIRECTION_LENT")
+    .filter((b) => b.direction === "LENT")
     .reduce((sum, b) => sum + parseFloat(b.remainingAmount || "0"), 0)
   const totalBorrowed = activeBorrowings
-    .filter((b) => b.direction === "BORROWING_DIRECTION_BORROWED")
+    .filter((b) => b.direction === "BORROWED")
     .reduce((sum, b) => sum + parseFloat(b.remainingAmount || "0"), 0)
 
   const handleOpenCreate = () => {
@@ -194,8 +214,8 @@ export function BorrowingView() {
           <InputGroup className="w-full max-w-sm">
             <InputGroupInput
               placeholder="Search counterparty name..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
             <InputGroupAddon align="inline-end">
               <Search size={16} />
@@ -205,23 +225,19 @@ export function BorrowingView() {
           <div className="flex flex-wrap items-center gap-3">
             {/* Status Filters */}
             <div className="flex rounded-xl border border-border/30 bg-muted/65 p-1">
-              {[
-                "ALL",
-                "BORROWING_STATUS_ACTIVE",
-                "BORROWING_STATUS_PAID_OFF",
-              ].map((status) => (
+              {["ALL", "ACTIVE", "PAID_OFF"].map((status) => (
                 <button
                   key={status}
-                  onClick={() => setStatusFilter(status)}
+                  onClick={() => setUrlState({ status })}
                   className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide transition-all ${
-                    statusFilter === status
+                    urlState.status === status
                       ? "bg-background text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {status === "ALL"
                     ? "All"
-                    : status === "BORROWING_STATUS_ACTIVE"
+                    : status === "ACTIVE"
                       ? "Active"
                       : "Paid Off"}
                 </button>
@@ -230,25 +246,17 @@ export function BorrowingView() {
 
             {/* Direction Filters */}
             <div className="flex rounded-xl border border-border/30 bg-muted/65 p-1">
-              {[
-                "ALL",
-                "BORROWING_DIRECTION_LENT",
-                "BORROWING_DIRECTION_BORROWED",
-              ].map((dir) => (
+              {["ALL", "LENT", "BORROWED"].map((dir) => (
                 <button
                   key={dir}
-                  onClick={() => setDirectionFilter(dir)}
+                  onClick={() => setUrlState({ direction: dir })}
                   className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold tracking-wide transition-all ${
-                    directionFilter === dir
+                    urlState.direction === dir
                       ? "bg-background text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  {dir === "ALL"
-                    ? "All"
-                    : dir === "BORROWING_DIRECTION_LENT"
-                      ? "Lent"
-                      : "Borrowed"}
+                  {dir === "ALL" ? "All" : dir === "LENT" ? "Lent" : "Borrowed"}
                 </button>
               ))}
             </div>
@@ -278,12 +286,12 @@ export function BorrowingView() {
                 Math.max(0, (paid / total) * 100)
               )
 
-              const isLent = b.direction === "BORROWING_DIRECTION_LENT"
-              const isPaid = b.status === "BORROWING_STATUS_PAID_OFF"
+              const isLent = b.direction === "LENT"
+              const isPaid = b.status === "PAID_OFF"
 
               // Check if overdue
               const isOverdue =
-                b.status === "BORROWING_STATUS_ACTIVE" &&
+                b.status === "ACTIVE" &&
                 b.dueAt &&
                 new Date(b.dueAt).getTime() < now
 

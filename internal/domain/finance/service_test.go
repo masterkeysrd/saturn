@@ -375,9 +375,9 @@ func (m *mockAccountStore) Create(ctx context.Context, a *Account) error {
 	return nil
 }
 
-func (m *mockAccountStore) GetByID(ctx context.Context, id AccountID) (*Account, error) {
+func (m *mockAccountStore) GetByID(ctx context.Context, spaceID SpaceID, id AccountID) (*Account, error) {
 	a, ok := m.data[id]
-	if !ok {
+	if !ok || a.SpaceID != spaceID {
 		return nil, ErrAccountNotFound
 	}
 	return a, nil
@@ -420,10 +420,10 @@ func (m *mockAccountStore) HasDefault(ctx context.Context, spaceID SpaceID) (boo
 	return false, nil
 }
 
-func (m *mockAccountStore) GetByIDs(ctx context.Context, ids []AccountID) ([]*Account, error) {
+func (m *mockAccountStore) GetByIDs(ctx context.Context, spaceID SpaceID, ids []AccountID) ([]*Account, error) {
 	var list []*Account
 	for _, id := range ids {
-		if a, ok := m.data[id]; ok {
+		if a, ok := m.data[id]; ok && a.SpaceID == spaceID {
 			list = append(list, a)
 		}
 	}

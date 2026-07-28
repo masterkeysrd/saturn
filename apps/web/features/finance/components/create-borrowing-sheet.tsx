@@ -3,7 +3,7 @@ import {
   useCreateBorrowingMutation,
   useUpdateBorrowingMutation,
   type Borrowing,
-  type BorrowingDirection,
+  type Borrowing_Direction,
   useListCurrenciesQuery,
   useListExchangeRatesQuery,
   type ExchangeRate,
@@ -90,8 +90,8 @@ export function CreateBorrowingSheet({
   const currencyList =
     currencies && currencies.length > 0 ? currencies : fallbackCurrencies
 
-  const [direction, setDirection] = useState<BorrowingDirection>(
-    () => editBorrowing?.direction || "BORROWING_DIRECTION_LENT"
+  const [direction, setDirection] = useState<Borrowing_Direction>(
+    () => editBorrowing?.direction || "LENT"
   )
   const [counterparty, setCounterparty] = useState(
     () => editBorrowing?.counterparty || ""
@@ -134,12 +134,13 @@ export function CreateBorrowingSheet({
     const cents = parseInt(toCentsString(amount))
     if (isNaN(cents) || cents <= 0) return
 
-    const borrowingInput = {
+    const borrowingPayload = {
       direction,
       counterparty,
       contactInfo,
       totalAmount: cents.toString(),
       currency,
+      status: editBorrowing?.status || "ACTIVE",
       establishedAt: establishedAt.toISOString(),
       dueAt: (hasDueDate && dueAt
         ? dueAt.toISOString()
@@ -154,12 +155,12 @@ export function CreateBorrowingSheet({
           id: editBorrowing.id || "",
           req: {
             id: editBorrowing.id || "",
-            borrowing: borrowingInput,
+            borrowing: borrowingPayload,
           },
         })
       } else {
         await createBorrowingMutation.mutateAsync({
-          borrowing: borrowingInput,
+          borrowing: borrowingPayload,
         })
       }
       refetchBorrowings()
@@ -173,20 +174,20 @@ export function CreateBorrowingSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto rounded-none border-none border-border/40 bg-card/95 p-6 shadow-2xl backdrop-blur-xl sm:max-w-lg sm:rounded-l-3xl sm:border-l md:p-8">
         <SheetHeader className="p-0">
-          <SheetTitle className="text-xl font-bold">
-            {editBorrowing ? "Edit Borrowing" : "Record Borrowing"}
+          <SheetTitle className="text-xl font-bold tracking-tight">
+            {editBorrowing ? "Edit Debt Agreement" : "Log Debt Agreement"}
           </SheetTitle>
-          <SheetDescription className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+          <SheetDescription className="text-xs text-muted-foreground">
             {editBorrowing
               ? "Modify logged lending or borrowing agreement details. Saturn will recompute general ledger entries automatically."
-              : "Record a new personal lent or borrowed money record. This will log corresponding transaction flows in your general ledger."}
+              : "Track personal money lent to or borrowed from contacts. Optionally post initial balance movement to a payment account."}
           </SheetDescription>
         </SheetHeader>
 
         <form
           key={`${editBorrowing?.id || "new"}-${open}`}
           onSubmit={handleSubmit}
-          className="mt-8 space-y-6"
+          className="mt-6 space-y-5"
         >
           {/* Type Selector Dropdown */}
           <div className="space-y-2">
@@ -199,7 +200,7 @@ export function CreateBorrowingSheet({
             <Select
               value={direction}
               onValueChange={(val) =>
-                val && setDirection(val as BorrowingDirection)
+                val && setDirection(val as Borrowing_Direction)
               }
             >
               <SelectTrigger
@@ -207,18 +208,12 @@ export function CreateBorrowingSheet({
                 className="!h-12 w-full rounded-xl border-border/60 bg-background/50"
               >
                 <SelectValue placeholder="Select type...">
-                  {direction === "BORROWING_DIRECTION_LENT"
-                    ? "I Lent Money"
-                    : "I Borrowed Money"}
+                  {direction === "LENT" ? "I Lent Money" : "I Borrowed Money"}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                <SelectItem value="BORROWING_DIRECTION_LENT">
-                  I Lent Money
-                </SelectItem>
-                <SelectItem value="BORROWING_DIRECTION_BORROWED">
-                  I Borrowed Money
-                </SelectItem>
+                <SelectItem value="LENT">I Lent Money</SelectItem>
+                <SelectItem value="BORROWED">I Borrowed Money</SelectItem>
               </SelectContent>
             </Select>
           </div>

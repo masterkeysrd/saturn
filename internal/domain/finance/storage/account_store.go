@@ -84,8 +84,8 @@ func (s *AccountStore) Create(ctx context.Context, a *finance.Account) error {
 	return err
 }
 
-func (s *AccountStore) GetByID(ctx context.Context, id finance.AccountID) (*finance.Account, error) {
-	ds := pgDialect.From(goqu.S("finance").Table("account")).Select("*").Where(goqu.Ex{"id": string(id)})
+func (s *AccountStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.AccountID) (*finance.Account, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("account")).Select("*").Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, err
@@ -261,7 +261,7 @@ func (s *AccountStore) HasAny(ctx context.Context, spaceID finance.SpaceID) (boo
 	return true, nil
 }
 
-func (s *AccountStore) GetByIDs(ctx context.Context, ids []finance.AccountID) ([]*finance.Account, error) {
+func (s *AccountStore) GetByIDs(ctx context.Context, spaceID finance.SpaceID, ids []finance.AccountID) ([]*finance.Account, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
@@ -272,7 +272,7 @@ func (s *AccountStore) GetByIDs(ctx context.Context, ids []finance.AccountID) ([
 
 	ds := pgDialect.From(goqu.S("finance").Table("account")).
 		Select("*").
-		Where(goqu.Ex{"id": idStrings})
+		Where(goqu.Ex{"space_id": string(spaceID), "id": idStrings})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, err

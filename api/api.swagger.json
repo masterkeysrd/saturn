@@ -865,24 +865,24 @@
         "parameters": [
           {
             "name": "status",
-            "description": "Optional. Filter by debt status.\n\n - BORROWING_STATUS_ACTIVE: Active borrowing with pending outstanding balances.\n - BORROWING_STATUS_PAID_OFF: Paid-off borrowing with zero remaining balance.",
+            "description": "Optional. Filter by debt status.\n\n - ACTIVE: Active borrowing with pending outstanding balances.\n - PAID_OFF: Paid-off borrowing with zero remaining balance.",
             "in": "query",
             "required": false,
             "type": "string",
             "enum": [
-              "BORROWING_STATUS_ACTIVE",
-              "BORROWING_STATUS_PAID_OFF"
+              "ACTIVE",
+              "PAID_OFF"
             ]
           },
           {
             "name": "direction",
-            "description": "Optional. Filter by debt flow direction.\n\n - BORROWING_DIRECTION_BORROWED: Funds borrowed from an external entity (payable liability).\n - BORROWING_DIRECTION_LENT: Funds lent to an external entity (receivable asset).",
+            "description": "Optional. Filter by debt flow direction.\n\n - BORROWED: Funds borrowed from an external entity (payable liability).\n - LENT: Funds lent to an external entity (receivable asset).",
             "in": "query",
             "required": false,
             "type": "string",
             "enum": [
-              "BORROWING_DIRECTION_BORROWED",
-              "BORROWING_DIRECTION_LENT"
+              "BORROWED",
+              "LENT"
             ]
           },
           {
@@ -896,6 +896,13 @@
           {
             "name": "pageToken",
             "description": "Optional. Keyset page token.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "orderBy",
+            "description": "Optional. Sort order for results.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -924,12 +931,12 @@
         },
         "parameters": [
           {
-            "name": "body",
-            "description": "The request for\n[CreateBorrowing][saturn.finance.v1.Finance.CreateBorrowing].",
+            "name": "borrowing",
+            "description": "Required. Target borrowing parameters.",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1CreateBorrowingRequest"
+              "$ref": "#/definitions/v1Borrowing"
             }
           }
         ],
@@ -995,11 +1002,12 @@
             "type": "string"
           },
           {
-            "name": "body",
+            "name": "repayment",
+            "description": "Required. Updated repayment parameters.",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/FinanceCreateBorrowingRepaymentBody"
+              "$ref": "#/definitions/v1BorrowingRepayment"
             }
           }
         ],
@@ -1136,11 +1144,12 @@
             "type": "string"
           },
           {
-            "name": "body",
+            "name": "borrowing",
+            "description": "Required. Updated borrowing parameters.",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/FinanceUpdateBorrowingBody"
+              "$ref": "#/definitions/v1Borrowing"
             }
           }
         ],
@@ -4048,6 +4057,14 @@
         "name"
       ]
     },
+    "BorrowingDirection": {
+      "type": "string",
+      "enum": [
+        "BORROWED",
+        "LENT"
+      ],
+      "description": "BorrowingDirection defines the type/direction of personal debt agreements.\n\n - BORROWED: Funds borrowed from an external entity (payable liability).\n - LENT: Funds lent to an external entity (receivable asset)."
+    },
     "BudgetActivePeriod": {
       "type": "object",
       "properties": {
@@ -4150,19 +4167,6 @@
         "actualAmount"
       ]
     },
-    "FinanceCreateBorrowingRepaymentBody": {
-      "type": "object",
-      "properties": {
-        "repayment": {
-          "$ref": "#/definitions/v1BorrowingRepaymentInput",
-          "description": "Required. Updated repayment parameters."
-        }
-      },
-      "description": "The request for\n[CreateBorrowingRepayment][saturn.finance.v1.Finance.CreateBorrowingRepayment].",
-      "required": [
-        "repayment"
-      ]
-    },
     "FinanceMatchScheduledPaymentBody": {
       "type": "object",
       "properties": {
@@ -4174,19 +4178,6 @@
       "description": "The request for [MatchScheduledPayment][saturn.finance.v1.Finance.MatchScheduledPayment].",
       "required": [
         "transactionId"
-      ]
-    },
-    "FinanceUpdateBorrowingBody": {
-      "type": "object",
-      "properties": {
-        "borrowing": {
-          "$ref": "#/definitions/v1BorrowingInput",
-          "description": "Required. Updated borrowing parameters."
-        }
-      },
-      "description": "The request for\n[UpdateBorrowing][saturn.finance.v1.Finance.UpdateBorrowing].",
-      "required": [
-        "borrowing"
       ]
     },
     "FinanceUpdateExpenseBody": {
@@ -5051,7 +5042,7 @@
           "readOnly": true
         },
         "direction": {
-          "$ref": "#/definitions/v1BorrowingDirection",
+          "$ref": "#/definitions/BorrowingDirection",
           "description": "Required. Direction flow of the debt."
         },
         "counterparty": {
@@ -5110,6 +5101,10 @@
           "format": "date-time",
           "description": "Output only. Last update timestamp.",
           "readOnly": true
+        },
+        "accountId": {
+          "type": "string",
+          "description": "Optional. Source account identifier for transaction creation.\nValues are of the form `acc_[a-zA-Z0-9]+`."
         }
       },
       "description": "Borrowing represents a personal lent/borrowed debt agreement.",
@@ -5119,70 +5114,6 @@
         "totalAmount",
         "currency",
         "status",
-        "establishedAt"
-      ]
-    },
-    "v1BorrowingDirection": {
-      "type": "string",
-      "enum": [
-        "BORROWING_DIRECTION_BORROWED",
-        "BORROWING_DIRECTION_LENT"
-      ],
-      "description": "BorrowingDirection defines the type/direction of personal debt agreements.\n\n - BORROWING_DIRECTION_BORROWED: Funds borrowed from an external entity (payable liability).\n - BORROWING_DIRECTION_LENT: Funds lent to an external entity (receivable asset)."
-    },
-    "v1BorrowingInput": {
-      "type": "object",
-      "properties": {
-        "direction": {
-          "$ref": "#/definitions/v1BorrowingDirection",
-          "description": "Required. Direction flow of the debt."
-        },
-        "counterparty": {
-          "type": "string",
-          "description": "Required. Name of the counterparty."
-        },
-        "contactInfo": {
-          "type": "string",
-          "description": "Optional. Contact information."
-        },
-        "totalAmount": {
-          "type": "string",
-          "format": "int64",
-          "description": "Required. Initial loan amount in cents."
-        },
-        "currency": {
-          "type": "string",
-          "description": "Required. Currency code."
-        },
-        "establishedAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Required. Date established."
-        },
-        "dueAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Optional. Target repayment due date."
-        },
-        "notes": {
-          "type": "string",
-          "description": "Optional. Narration notes."
-        },
-        "createAsTransaction": {
-          "type": "boolean",
-          "description": "Optional. Automatically create a parallel transaction entry in the ledger."
-        },
-        "accountId": {
-          "type": "string",
-          "description": "Optional. Source account identifier.\nValues are of the form `acc_[a-zA-Z0-9]+`."
-        }
-      },
-      "description": "BorrowingInput encapsulates fields for configuring borrowing records.",
-      "required": [
-        "direction",
-        "counterparty",
-        "totalAmount",
-        "currency",
         "establishedAt"
       ]
     },
@@ -5242,42 +5173,13 @@
         "accountId"
       ]
     },
-    "v1BorrowingRepaymentInput": {
-      "type": "object",
-      "properties": {
-        "amount": {
-          "type": "string",
-          "format": "int64",
-          "description": "Required. Repayment amount in cents."
-        },
-        "paymentDate": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Required. Repayment date."
-        },
-        "notes": {
-          "type": "string",
-          "description": "Optional. Narration notes."
-        },
-        "accountId": {
-          "type": "string",
-          "description": "Required. Target account identifier.\nValues are of the form `acc_[a-zA-Z0-9]+`."
-        }
-      },
-      "description": "BorrowingRepaymentInput encapsulates fields for configuring installment payments.",
-      "required": [
-        "amount",
-        "paymentDate",
-        "accountId"
-      ]
-    },
     "v1BorrowingStatus": {
       "type": "string",
       "enum": [
-        "BORROWING_STATUS_ACTIVE",
-        "BORROWING_STATUS_PAID_OFF"
+        "ACTIVE",
+        "PAID_OFF"
       ],
-      "description": "BorrowingStatus defines the lifecycle status of debt agreements.\n\n - BORROWING_STATUS_ACTIVE: Active borrowing with pending outstanding balances.\n - BORROWING_STATUS_PAID_OFF: Paid-off borrowing with zero remaining balance."
+      "description": "BorrowingStatus defines the lifecycle status of debt agreements.\n\n - ACTIVE: Active borrowing with pending outstanding balances.\n - PAID_OFF: Paid-off borrowing with zero remaining balance."
     },
     "v1Budget": {
       "type": "object",
@@ -5541,19 +5443,6 @@
         "name",
         "purpose",
         "modelName"
-      ]
-    },
-    "v1CreateBorrowingRequest": {
-      "type": "object",
-      "properties": {
-        "borrowing": {
-          "$ref": "#/definitions/v1BorrowingInput",
-          "description": "Required. Target borrowing parameters."
-        }
-      },
-      "description": "The request for\n[CreateBorrowing][saturn.finance.v1.Finance.CreateBorrowing].",
-      "required": [
-        "borrowing"
       ]
     },
     "v1CreateExpenseRequest": {

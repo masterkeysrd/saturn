@@ -47,13 +47,9 @@ func (s *Service) ListAccounts(ctx context.Context, spaceID finance.SpaceID, vie
 
 // GetAccount retrieves a single account, optionally hydrating conversion metrics.
 func (s *Service) GetAccount(ctx context.Context, spaceID finance.SpaceID, id finance.AccountID, view ViewType) (*AggregatedAccount, error) {
-	acc, err := s.financeService.GetAccount(ctx, id)
+	acc, err := s.financeService.GetAccount(ctx, spaceID, id)
 	if err != nil {
 		return nil, err
-	}
-
-	if acc.SpaceID != spaceID {
-		return nil, finance.ErrAccountNotFound
 	}
 
 	aggregated, err := s.hydrateAccounts(ctx, spaceID, []*finance.Account{acc}, view)
@@ -70,7 +66,7 @@ func (s *Service) GetAccounts(ctx context.Context, spaceID finance.SpaceID, ids 
 		return nil, nil
 	}
 
-	accounts, err := s.financeService.GetAccounts(ctx, ids)
+	accounts, err := s.financeService.GetAccounts(ctx, spaceID, ids)
 	if err != nil {
 		return nil, err
 	}

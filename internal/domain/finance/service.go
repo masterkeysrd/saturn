@@ -968,7 +968,7 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 	}
 
 	if req.AccountID != nil && *req.AccountID != "" {
-		if err := s.adjustAccountBalance(ctx, *req.AccountID, req.ActualAmount, TransactionTypeExpense, false); err != nil {
+		if err := s.adjustAccountBalance(ctx, payment.SpaceID, *req.AccountID, req.ActualAmount, TransactionTypeExpense, false); err != nil {
 			return nil, fmt.Errorf("failed to adjust account balance: %w", err)
 		}
 	}
@@ -1201,7 +1201,7 @@ func (s *Service) createTransaction(ctx context.Context, txn *Transaction) error
 
 	// 6. Adjust account balance
 	if txn.AccountID != nil {
-		if err := s.adjustAccountBalance(ctx, *txn.AccountID, txn.Amount, txn.Type, false); err != nil {
+		if err := s.adjustAccountBalance(ctx, txn.SpaceID, *txn.AccountID, txn.Amount, txn.Type, false); err != nil {
 			return fmt.Errorf("failed to adjust account balance: %w", err)
 		}
 	}
@@ -1260,7 +1260,7 @@ func (s *Service) updateTransaction(ctx context.Context, txn *Transaction, exist
 
 	// 5. Revert the old transaction's balance impact
 	if existing.AccountID != nil {
-		if err := s.adjustAccountBalance(ctx, *existing.AccountID, existing.Amount, existing.Type, true); err != nil {
+		if err := s.adjustAccountBalance(ctx, existing.SpaceID, *existing.AccountID, existing.Amount, existing.Type, true); err != nil {
 			return fmt.Errorf("failed to revert account balance: %w", err)
 		}
 	}
@@ -1272,7 +1272,7 @@ func (s *Service) updateTransaction(ctx context.Context, txn *Transaction, exist
 
 	// 7. Apply the new transaction's balance impact
 	if txn.AccountID != nil {
-		if err := s.adjustAccountBalance(ctx, *txn.AccountID, txn.Amount, txn.Type, false); err != nil {
+		if err := s.adjustAccountBalance(ctx, txn.SpaceID, *txn.AccountID, txn.Amount, txn.Type, false); err != nil {
 			return fmt.Errorf("failed to apply updated account balance: %w", err)
 		}
 	}
@@ -1284,7 +1284,7 @@ func (s *Service) updateTransaction(ctx context.Context, txn *Transaction, exist
 func (s *Service) deleteTransaction(ctx context.Context, txn *Transaction) error {
 	// 1. Revert the balance impact
 	if txn.AccountID != nil {
-		if err := s.adjustAccountBalance(ctx, *txn.AccountID, txn.Amount, txn.Type, true); err != nil {
+		if err := s.adjustAccountBalance(ctx, txn.SpaceID, *txn.AccountID, txn.Amount, txn.Type, true); err != nil {
 			return fmt.Errorf("failed to revert account balance on deletion: %w", err)
 		}
 	}
@@ -1294,8 +1294,8 @@ func (s *Service) deleteTransaction(ctx context.Context, txn *Transaction) error
 }
 
 // adjustAccountBalance updates the balance of the specified account based on transaction changes.
-func (s *Service) adjustAccountBalance(ctx context.Context, accountID AccountID, amount int64, txnType TransactionType, revert bool) error {
-	acc, err := s.deps.AccountStore.GetByID(ctx, accountID)
+func (s *Service) adjustAccountBalance(ctx context.Context, spaceID SpaceID, accountID AccountID, amount int64, txnType TransactionType, revert bool) error {
+	acc, err := s.deps.AccountStore.GetByID(ctx, spaceID, accountID)
 	if err != nil {
 		return err
 	}
@@ -1480,11 +1480,14 @@ func (s *Service) CreateBorrowing(ctx context.Context, b *Borrowing, createAsTra
 }
 
 // GetBorrowing retrieves a borrowing record.
-func (s *Service) GetBorrowing(ctx context.Context, id BorrowingID) (*Borrowing, error) {
+func (s *Service) GetBorrowing(ctx context.Context, spaceID SpaceID, id BorrowingID) (*Borrowing, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, err
+	}
 	if err := id.Validate(); err != nil {
 		return nil, err
 	}
-	return s.deps.BorrowingStore.GetByID(ctx, id)
+	return s.deps.BorrowingStore.GetByID(ctx, spaceID, id)
 }
 
 // ListBorrowings lists borrowing records with filters.
@@ -1497,7 +1500,7 @@ func (s *Service) ListBorrowings(ctx context.Context, spaceID SpaceID, filter *L
 
 // UpdateBorrowing updates a borrowing record and its associated transaction.
 func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing) (*Borrowing, error) {
-	existing, err := s.deps.BorrowingStore.GetByID(ctx, b.ID)
+	existing, err := s.deps.BorrowingStore.GetByID(ctx, b.SpaceID, b.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -1580,7 +1583,7 @@ func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing) (*Borrowing
 
 // DeleteBorrowing removes a borrowing, its repayments, and their transactions.
 func (s *Service) DeleteBorrowing(ctx context.Context, spaceID SpaceID, id BorrowingID) error {
-	b, err := s.deps.BorrowingStore.GetByID(ctx, id)
+	b, err := s.deps.BorrowingStore.GetByID(ctx, spaceID, id)
 	if err != nil {
 		return err
 	}
@@ -1606,7 +1609,7 @@ func (s *Service) DeleteBorrowing(ctx context.Context, spaceID SpaceID, id Borro
 
 // CreateBorrowingRepayment logs an installment repayment towards a borrowing.
 func (s *Service) CreateBorrowingRepayment(ctx context.Context, r *BorrowingRepayment) (*BorrowingRepayment, error) {
-	b, err := s.deps.BorrowingStore.GetByID(ctx, r.BorrowingID)
+	b, err := s.deps.BorrowingStore.GetByID(ctx, r.SpaceID, r.BorrowingID)
 	if err != nil {
 		return nil, err
 	}
@@ -1718,7 +1721,7 @@ type DeleteBorrowingRepaymentRequest struct {
 
 // DeleteBorrowingRepayment deletes a repayment installment, restoring balance.
 func (s *Service) DeleteBorrowingRepayment(ctx context.Context, req DeleteBorrowingRepaymentRequest) error {
-	b, err := s.deps.BorrowingStore.GetByID(ctx, req.BorrowingID)
+	b, err := s.deps.BorrowingStore.GetByID(ctx, req.SpaceID, req.BorrowingID)
 	if err != nil {
 		return err
 	}
@@ -1727,7 +1730,7 @@ func (s *Service) DeleteBorrowingRepayment(ctx context.Context, req DeleteBorrow
 		return errors.New("borrowing does not belong to space")
 	}
 
-	r, err := s.deps.BorrowingRepaymentStore.GetByID(ctx, req.ID)
+	r, err := s.deps.BorrowingRepaymentStore.GetByID(ctx, req.SpaceID, req.ID)
 	if err != nil {
 		return err
 	}
@@ -1810,21 +1813,27 @@ func (s *Service) CreateAccount(ctx context.Context, a *Account) (*Account, erro
 }
 
 // GetAccount retrieves an account.
-func (s *Service) GetAccount(ctx context.Context, id AccountID) (*Account, error) {
+func (s *Service) GetAccount(ctx context.Context, spaceID SpaceID, id AccountID) (*Account, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, err
+	}
 	if err := id.Validate(); err != nil {
 		return nil, err
 	}
-	return s.deps.AccountStore.GetByID(ctx, id)
+	return s.deps.AccountStore.GetByID(ctx, spaceID, id)
 }
 
-// GetAccounts retrieves a list of accounts by their identifiers.
-func (s *Service) GetAccounts(ctx context.Context, ids []AccountID) ([]*Account, error) {
-	return s.deps.AccountStore.GetByIDs(ctx, ids)
+// GetAccounts retrieves a list of accounts by their identifiers for a space.
+func (s *Service) GetAccounts(ctx context.Context, spaceID SpaceID, ids []AccountID) ([]*Account, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, err
+	}
+	return s.deps.AccountStore.GetByIDs(ctx, spaceID, ids)
 }
 
 // UpdateAccount updates account metadata and handles default flag adjustments.
 func (s *Service) UpdateAccount(ctx context.Context, a *Account) (*Account, error) {
-	existing, err := s.deps.AccountStore.GetByID(ctx, a.ID)
+	existing, err := s.deps.AccountStore.GetByID(ctx, a.SpaceID, a.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -1859,8 +1868,8 @@ func (s *Service) UpdateAccount(ctx context.Context, a *Account) (*Account, erro
 }
 
 // DeleteAccount deletes an account and moves default status if necessary.
-func (s *Service) DeleteAccount(ctx context.Context, id AccountID) error {
-	existing, err := s.deps.AccountStore.GetByID(ctx, id)
+func (s *Service) DeleteAccount(ctx context.Context, spaceID SpaceID, id AccountID) error {
+	existing, err := s.deps.AccountStore.GetByID(ctx, spaceID, id)
 	if err != nil {
 		return err
 	}
@@ -1905,11 +1914,11 @@ func (s *Service) CreateTransfer(ctx context.Context, t *Transfer) (*Transfer, e
 	}
 
 	// Fetch both accounts to verify existence and check currencies
-	srcAcc, err := s.deps.AccountStore.GetByID(ctx, t.SourceAccountID)
+	srcAcc, err := s.deps.AccountStore.GetByID(ctx, t.SpaceID, t.SourceAccountID)
 	if err != nil {
 		return nil, fmt.Errorf("source account: %w", err)
 	}
-	destAcc, err := s.deps.AccountStore.GetByID(ctx, t.DestinationAccountID)
+	destAcc, err := s.deps.AccountStore.GetByID(ctx, t.SpaceID, t.DestinationAccountID)
 	if err != nil {
 		return nil, fmt.Errorf("destination account: %w", err)
 	}

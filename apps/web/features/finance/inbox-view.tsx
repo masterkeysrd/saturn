@@ -203,7 +203,7 @@ export function InboxView() {
   const payments = paymentsData?.scheduledPayments || []
 
   const { data: borrowingsData } = useListBorrowingsQuery(
-    { status: "BORROWING_STATUS_ACTIVE", pageSize: 100, pageToken: "" },
+    { status: "ACTIVE", pageSize: 100, pageToken: "" },
     { enabled: !!spaceId }
   )
   const borrowings = borrowingsData?.borrowings || []
@@ -426,6 +426,7 @@ export function InboxView() {
           req: {
             borrowingId,
             repayment: {
+              borrowingId,
               amount: finalAmount,
               paymentDate: tx.transactionDate || new Date().toISOString(),
               notes: `Inbox payment match for vendor: ${desc || tx.vendorName}`,
@@ -1718,7 +1719,7 @@ export function InboxView() {
                                           (borrow) => borrow.id === matchedVal
                                         )
                                         return b
-                                          ? `${b.counterparty} (${b.direction === "BORROWING_DIRECTION_LENT" ? "Lent out" : "Borrowed"}) - Bal: ${b.currency} ${formatCents(b.remainingAmount)}`
+                                          ? `${b.counterparty} (${b.direction === "LENT" ? "Lent out" : "Borrowed"}) - Bal: ${b.currency} ${formatCents(b.remainingAmount)}`
                                           : "None / General ledger"
                                       })()}
                                     </SelectValue>
@@ -1733,8 +1734,7 @@ export function InboxView() {
                                         value={b.id || ""}
                                       >
                                         {b.counterparty} (
-                                        {b.direction ===
-                                        "BORROWING_DIRECTION_LENT"
+                                        {b.direction === "LENT"
                                           ? "Lent out"
                                           : "Borrowed"}
                                         ) - Bal: {b.currency}{" "}

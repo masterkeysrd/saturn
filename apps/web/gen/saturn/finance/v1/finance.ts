@@ -52,40 +52,6 @@ export type InsightGranularity =
   | "YEARLY"
 
 /**
- * BorrowingDirection defines the type/direction of personal debt agreements.
- */
-export type BorrowingDirection =
-  /**
-   * Default unspecified value. Invalid fallback.
-   */
-  | "BORROWING_DIRECTION_UNSPECIFIED"
-  /**
-   * Funds borrowed from an external entity (payable liability).
-   */
-  | "BORROWING_DIRECTION_BORROWED"
-  /**
-   * Funds lent to an external entity (receivable asset).
-   */
-  | "BORROWING_DIRECTION_LENT"
-
-/**
- * BorrowingStatus defines the lifecycle status of debt agreements.
- */
-export type BorrowingStatus =
-  /**
-   * Default unspecified value. Invalid fallback.
-   */
-  | "BORROWING_STATUS_UNSPECIFIED"
-  /**
-   * Active borrowing with pending outstanding balances.
-   */
-  | "BORROWING_STATUS_ACTIVE"
-  /**
-   * Paid-off borrowing with zero remaining balance.
-   */
-  | "BORROWING_STATUS_PAID_OFF"
-
-/**
  * RecurrenceInterval defines the frequency of budgeting or transaction execution rules.
  */
 export type Budget_RecurrenceInterval =
@@ -198,6 +164,40 @@ export type ScheduledPayment_SourceType =
  */
 export type ScheduledPayment_Status =
   "STATUS_UNSPECIFIED" | "PENDING" | "PROCESSING" | "SKIPPED"
+
+/**
+ * BorrowingDirection defines the type/direction of personal debt agreements.
+ */
+export type Borrowing_Direction =
+  /**
+   * Default unspecified value. Invalid fallback.
+   */
+  | "DIRECTION_UNSPECIFIED"
+  /**
+   * Funds borrowed from an external entity (payable liability).
+   */
+  | "BORROWED"
+  /**
+   * Funds lent to an external entity (receivable asset).
+   */
+  | "LENT"
+
+/**
+ * BorrowingStatus defines the lifecycle status of debt agreements.
+ */
+export type Borrowing_Status =
+  /**
+   * Default unspecified value. Invalid fallback.
+   */
+  | "STATUS_UNSPECIFIED"
+  /**
+   * Active borrowing with pending outstanding balances.
+   */
+  | "ACTIVE"
+  /**
+   * Paid-off borrowing with zero remaining balance.
+   */
+  | "PAID_OFF"
 
 /**
  * Type defines the classification of payment accounts.
@@ -1563,7 +1563,7 @@ export interface Borrowing {
   /**
    * Required. Direction flow of the debt.
    */
-  direction: BorrowingDirection
+  direction: Borrowing_Direction
   /**
    * Required. Name of the counterparty entity.
    */
@@ -1587,7 +1587,7 @@ export interface Borrowing {
   /**
    * Required. Lifecycle status.
    */
-  status: BorrowingStatus
+  status: Borrowing_Status
   /**
    * Required. Date established.
    */
@@ -1612,6 +1612,11 @@ export interface Borrowing {
    * Output only. Last update timestamp.
    */
   updateTime?: string
+  /**
+   * Optional. Source account identifier for transaction creation.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
+  accountId?: string
 }
 
 /**
@@ -1660,53 +1665,6 @@ export interface BorrowingRepayment {
 }
 
 /**
- * BorrowingInput encapsulates fields for configuring borrowing records.
- */
-export interface BorrowingInput {
-  /**
-   * Required. Direction flow of the debt.
-   */
-  direction: BorrowingDirection
-  /**
-   * Required. Name of the counterparty.
-   */
-  counterparty: string
-  /**
-   * Optional. Contact information.
-   */
-  contactInfo: string
-  /**
-   * Required. Initial loan amount in cents.
-   */
-  totalAmount: string
-  /**
-   * Required. Currency code.
-   */
-  currency: string
-  /**
-   * Required. Date established.
-   */
-  establishedAt: string
-  /**
-   * Optional. Target repayment due date.
-   */
-  dueAt: string
-  /**
-   * Optional. Narration notes.
-   */
-  notes: string
-  /**
-   * Optional. Automatically create a parallel transaction entry in the ledger.
-   */
-  createAsTransaction: boolean
-  /**
-   * Optional. Source account identifier.
-   * Values are of the form `acc_[a-zA-Z0-9]+`.
-   */
-  accountId?: string
-}
-
-/**
  * The request for
  * [CreateBorrowing][saturn.finance.v1.Finance.CreateBorrowing].
  */
@@ -1714,7 +1672,7 @@ export interface CreateBorrowingRequest {
   /**
    * Required. Target borrowing parameters.
    */
-  borrowing: BorrowingInput
+  borrowing: Borrowing
 }
 
 /**
@@ -1737,19 +1695,23 @@ export interface ListBorrowingsRequest {
   /**
    * Optional. Filter by debt status.
    */
-  status?: BorrowingStatus
+  status?: Borrowing_Status
   /**
    * Optional. Filter by debt flow direction.
    */
-  direction?: BorrowingDirection
+  direction?: Borrowing_Direction
   /**
    * Optional. Maximum number of items to return.
    */
-  pageSize: number
+  pageSize?: number
   /**
    * Optional. Keyset page token.
    */
-  pageToken: string
+  pageToken?: string
+  /**
+   * Optional. Sort order for results.
+   */
+  orderBy?: string
 }
 
 /**
@@ -1780,7 +1742,7 @@ export interface UpdateBorrowingRequest {
   /**
    * Required. Updated borrowing parameters.
    */
-  borrowing: BorrowingInput
+  borrowing: Borrowing
 }
 
 /**
@@ -1796,29 +1758,6 @@ export interface DeleteBorrowingRequest {
 }
 
 /**
- * BorrowingRepaymentInput encapsulates fields for configuring installment payments.
- */
-export interface BorrowingRepaymentInput {
-  /**
-   * Required. Repayment amount in cents.
-   */
-  amount: string
-  /**
-   * Required. Repayment date.
-   */
-  paymentDate: string
-  /**
-   * Optional. Narration notes.
-   */
-  notes: string
-  /**
-   * Required. Target account identifier.
-   * Values are of the form `acc_[a-zA-Z0-9]+`.
-   */
-  accountId: string
-}
-
-/**
  * The request for
  * [CreateBorrowingRepayment][saturn.finance.v1.Finance.CreateBorrowingRepayment].
  */
@@ -1831,7 +1770,7 @@ export interface CreateBorrowingRepaymentRequest {
   /**
    * Required. Updated repayment parameters.
    */
-  repayment: BorrowingRepaymentInput
+  repayment: BorrowingRepayment
 }
 
 /**
@@ -3154,7 +3093,7 @@ export async function createBorrowing(
   return request<Borrowing>({
     method: "POST",
     url: "/api/v1/finance/borrowings",
-    data: req,
+    data: req.borrowing,
   })
 }
 
@@ -3229,7 +3168,7 @@ export async function updateBorrowing(
   return request<Borrowing>({
     method: "PUT",
     url: `/api/v1/finance/borrowings/${id}`,
-    data: req,
+    data: req.borrowing,
   })
 }
 
@@ -3290,7 +3229,7 @@ export async function createBorrowingRepayment(
   return request<BorrowingRepayment>({
     method: "POST",
     url: `/api/v1/finance/borrowings/${borrowing_id}/repayments`,
-    data: req,
+    data: req.repayment,
   })
 }
 

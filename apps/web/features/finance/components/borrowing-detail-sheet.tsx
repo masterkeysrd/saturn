@@ -115,6 +115,7 @@ export function BorrowingDetailSheet({
         req: {
           borrowingId: borrowing.id || "",
           repayment: {
+            borrowingId: borrowing.id || "",
             amount: cents.toString(),
             paymentDate: paymentDate.toISOString(),
             notes,
@@ -152,9 +153,7 @@ export function BorrowingDetailSheet({
   const repayments = repaymentsData?.repayments || []
   const currency = borrowing?.currency || "USD"
   const directionLabel =
-    borrowing?.direction === "BORROWING_DIRECTION_LENT"
-      ? "Lent to"
-      : "Borrowed from"
+    borrowing?.direction === "LENT" ? "Lent to" : "Borrowed from"
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -195,14 +194,12 @@ export function BorrowingDetailSheet({
                   <span className="mt-1 block">
                     <span
                       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs leading-5 font-semibold ${
-                        borrowing.status === "BORROWING_STATUS_ACTIVE"
+                        borrowing.status === "ACTIVE"
                           ? "bg-emerald-500/10 text-emerald-500"
                           : "bg-muted text-muted-foreground"
                       }`}
                     >
-                      {borrowing.status === "BORROWING_STATUS_ACTIVE"
-                        ? "Active"
-                        : "Settled"}
+                      {borrowing.status === "ACTIVE" ? "Active" : "Settled"}
                     </span>
                   </span>
                 </div>
@@ -351,7 +348,7 @@ export function BorrowingDetailSheet({
             </div>
 
             {/* Record Installment Form */}
-            {borrowing.status === "BORROWING_STATUS_ACTIVE" && (
+            {borrowing.status === "ACTIVE" && (
               <form
                 key={`${borrowing.id}-${open}`}
                 onSubmit={handleAddRepayment}

@@ -181,7 +181,7 @@ service Finance {
   rpc CreateBorrowing(CreateBorrowingRequest) returns (Borrowing) {
     option (google.api.http) = {
       post: "/v1/finance/borrowings"
-      body: "*"
+      body: "borrowing"
     };
   }
 
@@ -199,7 +199,7 @@ service Finance {
   rpc UpdateBorrowing(UpdateBorrowingRequest) returns (Borrowing) {
     option (google.api.http) = {
       put: "/v1/finance/borrowings/{id}"
-      body: "*"
+      body: "borrowing"
     };
   }
 
@@ -212,7 +212,7 @@ service Finance {
   rpc CreateBorrowingRepayment(CreateBorrowingRepaymentRequest) returns (BorrowingRepayment) {
     option (google.api.http) = {
       post: "/v1/finance/borrowings/{borrowing_id}/repayments"
-      body: "*"
+      body: "repayment"
     };
   }
 
@@ -1329,28 +1329,28 @@ message MatchScheduledPaymentRequest {
   string transaction_id = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
-// BorrowingDirection defines the type/direction of personal debt agreements.
-enum BorrowingDirection {
-  // Default unspecified value. Invalid fallback.
-  BORROWING_DIRECTION_UNSPECIFIED = 0;
-  // Funds borrowed from an external entity (payable liability).
-  BORROWING_DIRECTION_BORROWED = 1;
-  // Funds lent to an external entity (receivable asset).
-  BORROWING_DIRECTION_LENT = 2;
-}
-
-// BorrowingStatus defines the lifecycle status of debt agreements.
-enum BorrowingStatus {
-  // Default unspecified value. Invalid fallback.
-  BORROWING_STATUS_UNSPECIFIED = 0;
-  // Active borrowing with pending outstanding balances.
-  BORROWING_STATUS_ACTIVE = 1;
-  // Paid-off borrowing with zero remaining balance.
-  BORROWING_STATUS_PAID_OFF = 2;
-}
-
 // Borrowing represents a personal lent/borrowed debt agreement.
 message Borrowing {
+  // BorrowingDirection defines the type/direction of personal debt agreements.
+  enum Direction {
+    // Default unspecified value. Invalid fallback.
+    DIRECTION_UNSPECIFIED = 0;
+    // Funds borrowed from an external entity (payable liability).
+    BORROWED = 1;
+    // Funds lent to an external entity (receivable asset).
+    LENT = 2;
+  }
+
+  // BorrowingStatus defines the lifecycle status of debt agreements.
+  enum Status {
+    // Default unspecified value. Invalid fallback.
+    STATUS_UNSPECIFIED = 0;
+    // Active borrowing with pending outstanding balances.
+    ACTIVE = 1;
+    // Paid-off borrowing with zero remaining balance.
+    PAID_OFF = 2;
+  }
+
   // Output only. Unique identifier.
   // Values are of the form `bor_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
@@ -1359,7 +1359,7 @@ message Borrowing {
   string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Required. Direction flow of the debt.
-  BorrowingDirection direction = 3 [(google.api.field_behavior) = REQUIRED];
+  Direction direction = 3 [(google.api.field_behavior) = REQUIRED];
 
   // Required. Name of the counterparty entity.
   string counterparty = 4 [(google.api.field_behavior) = REQUIRED];
@@ -1377,7 +1377,7 @@ message Borrowing {
   string currency = 8 [(google.api.field_behavior) = REQUIRED];
 
   // Required. Lifecycle status.
-  BorrowingStatus status = 9 [(google.api.field_behavior) = REQUIRED];
+  Status status = 9 [(google.api.field_behavior) = REQUIRED];
 
   // Required. Date established.
   google.protobuf.Timestamp established_at = 10 [(google.api.field_behavior) = REQUIRED];
@@ -1396,6 +1396,10 @@ message Borrowing {
 
   // Output only. Last update timestamp.
   google.protobuf.Timestamp update_time = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. Source account identifier for transaction creation.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
+  optional string account_id = 16 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // BorrowingRepayment represents an installment payment towards a borrowing.
@@ -1431,45 +1435,11 @@ message BorrowingRepayment {
   string account_id = 9 [(google.api.field_behavior) = REQUIRED];
 }
 
-// BorrowingInput encapsulates fields for configuring borrowing records.
-message BorrowingInput {
-  // Required. Direction flow of the debt.
-  BorrowingDirection direction = 1 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. Name of the counterparty.
-  string counterparty = 2 [(google.api.field_behavior) = REQUIRED];
-
-  // Optional. Contact information.
-  string contact_info = 3 [(google.api.field_behavior) = OPTIONAL];
-
-  // Required. Initial loan amount in cents.
-  int64 total_amount = 4 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. Currency code.
-  string currency = 5 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. Date established.
-  google.protobuf.Timestamp established_at = 6 [(google.api.field_behavior) = REQUIRED];
-
-  // Optional. Target repayment due date.
-  google.protobuf.Timestamp due_at = 7 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Narration notes.
-  string notes = 8 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Automatically create a parallel transaction entry in the ledger.
-  bool create_as_transaction = 9 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Source account identifier.
-  // Values are of the form `acc_[a-zA-Z0-9]+`.
-  optional string account_id = 10 [(google.api.field_behavior) = OPTIONAL];
-}
-
 // The request for
 // [CreateBorrowing][saturn.finance.v1.Finance.CreateBorrowing].
 message CreateBorrowingRequest {
   // Required. Target borrowing parameters.
-  BorrowingInput borrowing = 1 [(google.api.field_behavior) = REQUIRED];
+  Borrowing borrowing = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 // The request for
@@ -1484,16 +1454,19 @@ message GetBorrowingRequest {
 // [ListBorrowings][saturn.finance.v1.Finance.ListBorrowings].
 message ListBorrowingsRequest {
   // Optional. Filter by debt status.
-  optional BorrowingStatus status = 1 [(google.api.field_behavior) = OPTIONAL];
+  optional Borrowing.Status status = 1 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Filter by debt flow direction.
-  optional BorrowingDirection direction = 2 [(google.api.field_behavior) = OPTIONAL];
+  optional Borrowing.Direction direction = 2 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Maximum number of items to return.
-  int32 page_size = 3 [(google.api.field_behavior) = OPTIONAL];
+  optional int32 page_size = 3 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Keyset page token.
-  string page_token = 4 [(google.api.field_behavior) = OPTIONAL];
+  optional string page_token = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Sort order for results.
+  optional string order_by = 5 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // The response for
@@ -1514,7 +1487,7 @@ message UpdateBorrowingRequest {
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 
   // Required. Updated borrowing parameters.
-  BorrowingInput borrowing = 2 [(google.api.field_behavior) = REQUIRED];
+  Borrowing borrowing = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 // The request for
@@ -1525,22 +1498,6 @@ message DeleteBorrowingRequest {
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
-// BorrowingRepaymentInput encapsulates fields for configuring installment payments.
-message BorrowingRepaymentInput {
-  // Required. Repayment amount in cents.
-  int64 amount = 1 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. Repayment date.
-  google.protobuf.Timestamp payment_date = 2 [(google.api.field_behavior) = REQUIRED];
-
-  // Optional. Narration notes.
-  string notes = 3 [(google.api.field_behavior) = OPTIONAL];
-
-  // Required. Target account identifier.
-  // Values are of the form `acc_[a-zA-Z0-9]+`.
-  string account_id = 4 [(google.api.field_behavior) = REQUIRED];
-}
-
 // The request for
 // [CreateBorrowingRepayment][saturn.finance.v1.Finance.CreateBorrowingRepayment].
 message CreateBorrowingRepaymentRequest {
@@ -1549,7 +1506,7 @@ message CreateBorrowingRepaymentRequest {
   string borrowing_id = 1 [(google.api.field_behavior) = REQUIRED];
 
   // Required. Updated repayment parameters.
-  BorrowingRepaymentInput repayment = 2 [(google.api.field_behavior) = REQUIRED];
+  BorrowingRepayment repayment = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 // The request for
