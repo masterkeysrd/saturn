@@ -2331,6 +2331,15 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, id strin
 		return fmt.Errorf("inbox item is already processed: status = %s", item.Status)
 	}
 
+	// 1b. If it is a system verification email: mark resolved immediately
+	if item.DocType == InboxItemDocSystemVerification {
+		item.Status = InboxItemResolved
+		if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
+			return fmt.Errorf("resolve verification inbox item: %w", err)
+		}
+		return nil
+	}
+
 	// 2. If it is linked to an existing transaction:
 	if item.TransactionID != nil && *item.TransactionID != "" {
 		txnID, err := ParseTransactionID(*item.TransactionID)

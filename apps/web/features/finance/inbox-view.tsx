@@ -197,8 +197,12 @@ export function InboxView() {
     const overwriteLinkedTx = values.overwriteLinkedTx
 
     // Validate required fields and present explicit user feedback
+    const isVerificationItem =
+      tx.docType === "SYSTEM_VERIFICATION" ||
+      docType === "SYSTEM_VERIFICATION"
+
     const isLinking = txnId && txnId !== "none"
-    if (!isLinking) {
+    if (!isLinking && !isVerificationItem) {
       if (txnType === "TRANSFER") {
         if (!accId || !destAccId) {
           const errMsg =
