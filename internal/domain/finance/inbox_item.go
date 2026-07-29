@@ -2,6 +2,7 @@ package finance
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -23,6 +24,22 @@ const (
 	InboxItemDocUnknown            InboxItemDocType = "unknown"
 	InboxItemDocSystemVerification InboxItemDocType = "system_verification"
 )
+
+// ParseInboxItemDocType converts string classifications into strongly-typed InboxItemDocType constants.
+func ParseInboxItemDocType(s string) InboxItemDocType {
+	switch strings.ToUpper(strings.TrimSpace(s)) {
+	case "INVOICE":
+		return InboxItemDocInvoice
+	case "RECEIPT":
+		return InboxItemDocReceipt
+	case "BANK_NOTIFICATION":
+		return InboxItemDocBankNotification
+	case "SYSTEM_VERIFICATION":
+		return InboxItemDocSystemVerification
+	default:
+		return InboxItemDocUnknown
+	}
+}
 
 // InboxItem represents a parsed inbound signal waiting in the staging queue.
 type InboxItem struct {
@@ -47,7 +64,7 @@ type InboxItem struct {
 // StageInboxItem defines parameters to draft and stage an inbox item.
 type StageInboxItem struct {
 	IntegrationID   string
-	DocType         string
+	DocType         InboxItemDocType
 	Vendor          string
 	Amount          int64
 	Currency        string
@@ -66,7 +83,7 @@ type ApproveInboxItem struct {
 	ScheduledPaymentID         string
 	Amount                     int64
 	Description                string
-	DocType                    string
+	DocType                    InboxItemDocType
 	DestinationAccountID       string
 	TransactionType            string
 	TransactionID              string

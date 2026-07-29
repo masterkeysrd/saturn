@@ -2,6 +2,8 @@ package financeapp
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
@@ -11,22 +13,22 @@ func cleanJSON(s string) string {
 	s = strings.TrimSpace(s)
 	s = strings.TrimPrefix(s, "json")
 	s = strings.TrimSpace(s)
-	if strings.HasPrefix(s, "```") {
+	if after, ok := strings.CutPrefix(s, "```"); ok {
 		if idx := strings.Index(s, "\n"); idx != -1 {
 			s = s[idx+1:]
 		} else {
-			s = strings.TrimPrefix(s, "```")
+			s = after
 		}
 		s = strings.TrimSuffix(s, "```")
 		s = strings.TrimSpace(s)
 	}
 	s = strings.TrimPrefix(s, "json")
 	s = strings.TrimSpace(s)
-	if strings.HasPrefix(s, "```") {
+	if after, ok := strings.CutPrefix(s, "```"); ok {
 		if idx := strings.Index(s, "\n"); idx != -1 {
 			s = s[idx+1:]
 		} else {
-			s = strings.TrimPrefix(s, "```")
+			s = after
 		}
 		s = strings.TrimSuffix(s, "```")
 		s = strings.TrimSpace(s)
@@ -36,7 +38,50 @@ func cleanJSON(s string) string {
 
 // IngestEmail parses incoming email data, matches budgets/accounts/payments, and inserts it into the staging queue.
 func (c *Coordinator) IngestEmail(ctx context.Context, spaceID string, integrationID string, sender, subject, body string) (*finance.InboxItem, error) {
-	return c.RunIngestionPipeline(ctx, spaceID, integrationID, sender, subject, body)
+	req := &IngestionRequest{
+		TextContent: body,
+		Metadata: map[string]any{
+			"integration_id": integrationID,
+			"sender":         sender,
+			"subject":        subject,
+		},
+	}
+
+	state, err := c.ProcessSignalPipeline(ctx, spaceID, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if state.Classification == "UNKNOWN" {
+		return nil, fmt.Errorf("signal classification unknown")
+	}
+
+	metaBytes, _ := json.Marshal(state.Metadata)
+
+	docType := finance.ParseInboxItemDocType(state.Classification)
+
+	rawPayload := ""
+	if state.Request != nil {
+		rawPayload = state.Request.TextContent
+	}
+
+	staged, err := c.financeService.StageInboxItem(ctx, spaceID, &finance.StageInboxItem{
+		IntegrationID:   integrationID,
+		DocType:         docType,
+		Vendor:          state.Vendor,
+		Amount:          state.Amount,
+		Currency:        state.Currency,
+		CardLastFour:    state.CardLastFour,
+		SuggestedBudget: state.SuggestedBudget,
+		Date:            state.Date,
+		RawPayload:      rawPayload,
+		MetadataJSON:    string(metaBytes),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("stage inbox item: %w", err)
+	}
+
+	return staged, nil
 }
 
 // DiscardInboxItem deletes a staging inbox item without ledger modification.

@@ -2,7 +2,6 @@ package financeapp
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"maps"
 	"strings"
@@ -20,25 +19,35 @@ const (
 	dedupMaxCandidates   = 10   // Maximum candidate transactions to send to the deduplication agent
 )
 
-// IngestionState maintains context across the financial document ingestion stages.
+// DocumentFile represents an individual attached file (receipt image, invoice PDF, etc.).
+type DocumentFile struct {
+	Filename    string `json:"filename"`
+	ContentType string `json:"contentType"`
+	Content     []byte `json:"content"`
+}
+
+// IngestionRequest holds generic incoming signal data for processing.
+type IngestionRequest struct {
+	TextContent string         `json:"textContent"`
+	Documents   []DocumentFile `json:"documents"`
+	Metadata    map[string]any `json:"metadata"`
+}
+
+// IngestionState maintains context across the financial signal processing stages.
 type IngestionState struct {
-	SpaceID       string
-	IntegrationID string
-	Sender        string
-	Subject       string
-	RawPayload    string
+	SpaceID string
+	Request *IngestionRequest
 
 	// Node 1: Classifier Output
-	Classification string // INVOICE, RECEIPT, BANK_NOTIFICATION, UNKNOWN
+	Classification string // INVOICE, RECEIPT, BANK_NOTIFICATION, SYSTEM_VERIFICATION, UNKNOWN
 
-	// Node 2: Extractor (Hyperion) Output
+	// Node 2: Extractor Output
 	Vendor          string
 	Amount          int64
 	Currency        string
 	Date            string
 	CardLastFour    string
 	SuggestedBudget string
-	Metadata        map[string]any
 
 	// Node 3: Database Entity Resolution Mappings
 	AccountID *string
@@ -47,8 +56,11 @@ type IngestionState struct {
 	// Node 4: Deduplication Warnings
 	PotentialDuplicateID *string
 
-	// Node 5: Staging Output
+	// Node 5: Staging Output (optional, populated when staged)
 	StagedItem *finance.InboxItem
+
+	// Extracted metadata accumulators
+	Metadata map[string]any
 }
 
 // Copy implements graph.State constraint for IngestionState.
@@ -78,10 +90,8 @@ func (s *IngestionState) Copy() *IngestionState {
 
 	return &IngestionState{
 		SpaceID:              s.SpaceID,
-		IntegrationID:        s.IntegrationID,
-		Sender:               s.Sender,
-		Subject:              s.Subject,
-		RawPayload:           s.RawPayload,
+		Request:              s.Request,
+		Metadata:             metaCopy,
 		Classification:       s.Classification,
 		Vendor:               s.Vendor,
 		Amount:               s.Amount,
@@ -89,7 +99,6 @@ func (s *IngestionState) Copy() *IngestionState {
 		Date:                 s.Date,
 		CardLastFour:         s.CardLastFour,
 		SuggestedBudget:      s.SuggestedBudget,
-		Metadata:             metaCopy,
 		AccountID:            accID,
 		BudgetID:             budID,
 		PotentialDuplicateID: dupID,
@@ -97,16 +106,27 @@ func (s *IngestionState) Copy() *IngestionState {
 	}
 }
 
-// RunIngestionPipeline executes the multi-stage Loom Graph (Classifier -> Extractor -> Resolver -> Deduplicator -> Stager).
-func (c *Coordinator) RunIngestionPipeline(ctx context.Context, spaceID string, integrationID string, sender, subject, body string) (*finance.InboxItem, error) {
+// ProcessSignalPipeline executes the core Loom Graph (Classifier -> Extractor -> Resolver -> Deduplicator).
+// Returns the enriched IngestionState without performing side-effects (e.g. DB staging).
+func (c *Coordinator) ProcessSignalPipeline(ctx context.Context, spaceID string, req *IngestionRequest) (*IngestionState, error) {
+	if req == nil {
+		req = &IngestionRequest{}
+	}
+	meta := make(map[string]any)
+	if req.Metadata != nil {
+		maps.Copy(meta, req.Metadata)
+	}
+	if _, ok := meta["received"]; !ok {
+		meta["received"] = time.Now().Format(time.RFC3339)
+	}
+
 	// Build the Loom Graph
 	g, err := graph.New[*IngestionState]().
-		WithName("finance-ingestion").
+		WithName("finance-signal-processing").
 		AddNode("classify", graph.NodeFunc(c.pipelineClassifyNode)).
 		AddNode("extract", graph.NodeFunc(c.pipelineExtractNode)).
 		AddNode("resolve", graph.NodeFunc(c.pipelineResolveNode)).
 		AddNode("deduplicate", graph.NodeFunc(c.pipelineDeduplicateNode)).
-		AddNode("stage", graph.NodeFunc(c.pipelineStageNode)).
 		AddEdge(graph.START, "classify").
 		AddConditionalEdge("classify", "extract", func(s *IngestionState) bool {
 			return s.Classification != "UNKNOWN"
@@ -116,46 +136,83 @@ func (c *Coordinator) RunIngestionPipeline(ctx context.Context, spaceID string, 
 		}).
 		AddEdge("extract", "resolve").
 		AddEdge("resolve", "deduplicate").
-		AddEdge("deduplicate", "stage").
-		AddEdge("stage", graph.END).
+		AddEdge("deduplicate", graph.END).
 		Build()
 
 	if err != nil {
-		return nil, fmt.Errorf("compile ingestion graph: %w", err)
+		return nil, fmt.Errorf("compile signal processing graph: %w", err)
 	}
 
 	// Execute graph synchronously
 	snapshot, err := g.Execute(ctx, graph.Update[*IngestionState](func(s *IngestionState) *IngestionState {
 		return &IngestionState{
-			SpaceID:       spaceID,
-			IntegrationID: integrationID,
-			Sender:        sender,
-			Subject:       subject,
-			RawPayload:    body,
-			Metadata: map[string]any{
-				"sender":   sender,
-				"subject":  subject,
-				"received": time.Now().Format(time.RFC3339),
-			},
+			SpaceID:  spaceID,
+			Request:  req,
+			Metadata: meta,
 		}
 	}), nil)
 	if err != nil {
-		return nil, fmt.Errorf("execute ingestion graph: %w", err)
+		return nil, fmt.Errorf("execute signal processing graph: %w", err)
 	}
 
-	// Return the staged item compiled in the final node
-	if snapshot.State.StagedItem == nil {
-		return nil, fmt.Errorf("ingestion graph finished without staging an item (classification: %s)", snapshot.State.Classification)
+	return snapshot.State, nil
+}
+
+// SignalSuggestion contains the processed AI suggestions and database match resolution for form prefilling.
+type SignalSuggestion struct {
+	Classification       string         `json:"classification"`
+	Vendor               string         `json:"vendor"`
+	Amount               int64          `json:"amount"`
+	Currency             string         `json:"currency"`
+	Date                 string         `json:"date"`
+	CardLastFour         string         `json:"cardLastFour,omitempty"`
+	SuggestedBudget      string         `json:"suggestedBudget,omitempty"`
+	AccountID            *string        `json:"accountId,omitempty"`
+	BudgetID             *string        `json:"budgetId,omitempty"`
+	PotentialDuplicateID *string        `json:"potentialDuplicateId,omitempty"`
+	Metadata             map[string]any `json:"metadata,omitempty"`
+}
+
+// GetSignalSuggestions runs the signal pipeline without side-effects and returns prefill suggestions.
+func (c *Coordinator) GetSignalSuggestions(ctx context.Context, spaceID string, req *IngestionRequest) (*SignalSuggestion, error) {
+	state, err := c.ProcessSignalPipeline(ctx, spaceID, req)
+	if err != nil {
+		return nil, err
 	}
 
-	return snapshot.State.StagedItem, nil
+	return &SignalSuggestion{
+		Classification:       state.Classification,
+		Vendor:               state.Vendor,
+		Amount:               state.Amount,
+		Currency:             state.Currency,
+		Date:                 state.Date,
+		CardLastFour:         state.CardLastFour,
+		SuggestedBudget:      state.SuggestedBudget,
+		AccountID:            state.AccountID,
+		BudgetID:             state.BudgetID,
+		PotentialDuplicateID: state.PotentialDuplicateID,
+		Metadata:             state.Metadata,
+	}, nil
 }
 
 // 1. Classifier Node: Decides if document is INVOICE, RECEIPT, BANK_NOTIFICATION, SYSTEM_VERIFICATION, or UNKNOWN.
 func (c *Coordinator) pipelineClassifyNode(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
-	bodyLower := strings.ToLower(state.RawPayload)
-	subjectLower := strings.ToLower(state.Subject)
-	senderLower := strings.ToLower(state.Sender)
+	textContent := ""
+	if state.Request != nil {
+		textContent = state.Request.TextContent
+	}
+	bodyLower := strings.ToLower(textContent)
+
+	subjectLower := ""
+	senderLower := ""
+	if state.Request != nil && state.Request.Metadata != nil {
+		if subj, ok := state.Request.Metadata["subject"].(string); ok {
+			subjectLower = strings.ToLower(subj)
+		}
+		if snd, ok := state.Request.Metadata["sender"].(string); ok {
+			senderLower = strings.ToLower(snd)
+		}
+	}
 
 	if strings.Contains(bodyLower, "forwarding confirmation") ||
 		strings.Contains(subjectLower, "forwarding confirmation") ||
@@ -168,7 +225,7 @@ func (c *Coordinator) pipelineClassifyNode(ctx context.Context, state *Ingestion
 		}), nil
 	}
 
-	cls, err := c.classifier.Classify(ctx, state.SpaceID, state.RawPayload)
+	cls, err := c.classifier.Classify(ctx, state.SpaceID, textContent)
 	if err != nil {
 		return nil, fmt.Errorf("classification agent failed: %w", err)
 	}
@@ -181,11 +238,19 @@ func (c *Coordinator) pipelineClassifyNode(ctx context.Context, state *Ingestion
 
 // 2. Extractor Node: Runs Hyperion to pull structured transaction details.
 func (c *Coordinator) pipelineExtractNode(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
+	textContent := ""
+	if state.Request != nil {
+		textContent = state.Request.TextContent
+	}
+
 	if state.Classification == "SYSTEM_VERIFICATION" {
 		return graph.Update[*IngestionState](func(s *IngestionState) *IngestionState {
 			vendor := "Email Forwarding Verification"
-			senderLower := strings.ToLower(s.Sender)
-			payloadLower := strings.ToLower(s.RawPayload)
+			senderLower := ""
+			if snd, ok := s.Metadata["sender"].(string); ok {
+				senderLower = strings.ToLower(snd)
+			}
+			payloadLower := strings.ToLower(textContent)
 			if strings.Contains(senderLower, "google") || strings.Contains(payloadLower, "google") {
 				vendor = "Google Email Forwarding"
 			} else if strings.Contains(senderLower, "microsoft") {
@@ -238,7 +303,7 @@ func (c *Coordinator) pipelineExtractNode(ctx context.Context, state *IngestionS
 		borrowings = nil
 	}
 
-	result, err := c.parser.Parse(ctx, state.SpaceID, state.RawPayload, IngestionContext{
+	result, err := c.parser.Parse(ctx, state.SpaceID, textContent, IngestionContext{
 		Budgets:           budgets,
 		Accounts:          accounts,
 		ScheduledPayments: payments,
@@ -301,9 +366,12 @@ func (c *Coordinator) pipelineResolveNode(ctx context.Context, state *IngestionS
 		}
 	}
 
+	resAccountID := accountID
+	resBudgetID := budgetID
+
 	return graph.Update[*IngestionState](func(s *IngestionState) *IngestionState {
-		s.AccountID = accountID
-		s.BudgetID = budgetID
+		s.AccountID = resAccountID
+		s.BudgetID = resBudgetID
 		return s
 	}), nil
 }
@@ -375,42 +443,6 @@ func (c *Coordinator) pipelineDeduplicateNode(ctx context.Context, state *Ingest
 			s.Metadata["potential_duplicate_id"] = dupID
 			s.Metadata["duplicate_reason"] = res.Reason
 		}
-		return s
-	}), nil
-}
-
-// 5. Stage Node: Inserts the resolved entity into Postgres via Domain Service.
-func (c *Coordinator) pipelineStageNode(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
-	metaBytes, _ := json.Marshal(state.Metadata)
-
-	docType := "receipt"
-	switch state.Classification {
-	case "INVOICE":
-		docType = "invoice"
-	case "BANK_NOTIFICATION":
-		docType = "bank_notification"
-	case "SYSTEM_VERIFICATION":
-		docType = "system_verification"
-	}
-
-	staged, err := c.financeService.StageInboxItem(ctx, state.SpaceID, &finance.StageInboxItem{
-		IntegrationID:   state.IntegrationID,
-		DocType:         docType,
-		Vendor:          state.Vendor,
-		Amount:          state.Amount,
-		Currency:        state.Currency,
-		CardLastFour:    state.CardLastFour,
-		SuggestedBudget: state.SuggestedBudget,
-		Date:            state.Date,
-		RawPayload:      state.RawPayload,
-		MetadataJSON:    string(metaBytes),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("stage inbox item: %w", err)
-	}
-
-	return graph.Update[*IngestionState](func(s *IngestionState) *IngestionState {
-		s.StagedItem = staged
 		return s
 	}), nil
 }

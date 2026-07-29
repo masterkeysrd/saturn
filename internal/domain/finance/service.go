@@ -2255,7 +2255,7 @@ func (s *Service) StageInboxItem(ctx context.Context, spaceID string, req *Stage
 		SpaceID:         spaceID,
 		IntegrationID:   req.IntegrationID,
 		Status:          InboxItemPending,
-		DocType:         InboxItemDocType(req.DocType),
+		DocType:         req.DocType,
 		Amount:          req.Amount,
 		Currency:        req.Currency,
 		VendorName:      req.Vendor,
