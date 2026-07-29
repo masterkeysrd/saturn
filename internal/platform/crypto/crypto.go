@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"golang.org/x/crypto/hkdf"
@@ -31,11 +30,8 @@ type Cipher struct {
 }
 
 // NewCipher creates a Cipher using secretKey. If secretKey is empty,
-// it checks the SATURN_ENCRYPTION_KEY env var, falling back to a default dev seed.
+// it falls back to a default dev seed for local development.
 func NewCipher(secretKey string) (*Cipher, error) {
-	if secretKey == "" {
-		secretKey = os.Getenv("SATURN_ENCRYPTION_KEY")
-	}
 	if secretKey == "" {
 		secretKey = defaultDevSecret
 	}
