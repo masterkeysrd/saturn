@@ -400,7 +400,7 @@ func (c *Coordinator) pipelineDeduplicateNode(ctx context.Context, state *Ingest
 		searchQuery = &state.Vendor
 	}
 
-	filter := &finance.ListTransactionsFilter{
+	filter := &finance.TransactionFilter{
 		PageSize:  dedupMaxCandidates,
 		MinAmount: &minAmt,
 		MaxAmount: &maxAmt,

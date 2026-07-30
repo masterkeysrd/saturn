@@ -1528,6 +1528,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "version",
+            "description": "Optional. Version number for optimistic concurrency control during deletion.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -1578,6 +1586,21 @@
               "LIMIT_PROPAGATION_CURRENT_PERIOD",
               "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
             ]
+          },
+          {
+            "name": "updateMask",
+            "description": "Optional. Field mask defining which fields to update for partial updates.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "description": "Optional. Version number for optimistic concurrency control.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -5511,6 +5534,12 @@
           "type": "string",
           "format": "date-time",
           "description": "Output only. Last update time of the budget.",
+          "readOnly": true
+        },
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "Output only. Monotonic version counter for optimistic concurrency control.",
           "readOnly": true
         }
       },

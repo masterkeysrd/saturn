@@ -99,6 +99,18 @@ func (m *mockScheduledPaymentStore) Delete(ctx context.Context, id finance.Sched
 	return nil
 }
 
+func (m *mockScheduledPaymentStore) HasScheduledPayments(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListScheduledPaymentsFilter) (bool, error) {
+	for _, sp := range m.payments {
+		if sp.SpaceID == spaceID {
+			if filter != nil && filter.BudgetID != nil && sp.BudgetID != *filter.BudgetID {
+				continue
+			}
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (m *mockScheduledPaymentStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListScheduledPaymentsFilter) (*paging.Page[*finance.ScheduledPayment], error) {
 	var list []*finance.ScheduledPayment
 	for _, sp := range m.payments {

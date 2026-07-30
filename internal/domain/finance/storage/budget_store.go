@@ -24,6 +24,7 @@ type budgetDB struct {
 	Icon             string         `db:"icon"`
 	Color            string         `db:"color"`
 	DefaultAccountID sql.NullString `db:"default_account_id"`
+	Version          int64          `db:"version"`
 	CreateTime       sql.NullTime   `db:"create_time"`
 	UpdateTime       sql.NullTime   `db:"update_time"`
 }
@@ -45,8 +46,31 @@ func (row *budgetDB) toDomain() *finance.Budget {
 		Icon:             row.Icon,
 		Color:            row.Color,
 		DefaultAccountID: defaultAccountID,
+		Version:          row.Version,
 		CreateTime:       nullTimeToTime(row.CreateTime),
 		UpdateTime:       nullTimeToTime(row.UpdateTime),
+	}
+}
+
+func toDB(b *finance.Budget) budgetDB {
+	var defaultAccountID sql.NullString
+	if b.DefaultAccountID != nil {
+		defaultAccountID = sql.NullString{String: string(*b.DefaultAccountID), Valid: true}
+	}
+	return budgetDB{
+		ID:               string(b.ID),
+		SpaceID:          string(b.SpaceID),
+		Name:             b.Name,
+		LimitAmount:      b.LimitAmount,
+		Currency:         string(b.Currency),
+		Interval:         string(b.Interval),
+		IsActive:         b.IsActive,
+		Icon:             b.Icon,
+		Color:            b.Color,
+		DefaultAccountID: defaultAccountID,
+		Version:          b.Version,
+		CreateTime:       sql.NullTime{Time: b.CreateTime, Valid: !b.CreateTime.IsZero()},
+		UpdateTime:       sql.NullTime{Time: b.UpdateTime, Valid: !b.UpdateTime.IsZero()},
 	}
 }
 
@@ -59,20 +83,29 @@ func NewBudgetStore(db *sqlx.DB) *BudgetStore {
 }
 
 func (s *BudgetStore) Create(ctx context.Context, b *finance.Budget) error {
-	query := `INSERT INTO finance.budget (id, space_id, name, limit_amount, currency, interval, is_active, icon, color, default_account_id, create_time, update_time)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
-	var defaultAccountID sql.NullString
-	if b.DefaultAccountID != nil {
-		defaultAccountID = sql.NullString{String: string(*b.DefaultAccountID), Valid: true}
+	if b.Version == 0 {
+		b.Version = 1
 	}
-	_, err := s.db.ExecContext(ctx, query, string(b.ID), string(b.SpaceID), b.Name, b.LimitAmount, string(b.Currency), string(b.Interval), b.IsActive, b.Icon, b.Color, defaultAccountID, b.CreateTime, b.UpdateTime)
+	query, args, err := pgDialect.Insert(goqu.S("finance").Table("budget")).
+		Rows(toDB(b)).
+		ToSQL()
+	if err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, query, args...)
 	return err
 }
 
 func (s *BudgetStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.BudgetID) (*finance.Budget, error) {
+	query, args, err := pgDialect.From(goqu.S("finance").Table("budget")).
+		Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)}).
+		ToSQL()
+	if err != nil {
+		return nil, err
+	}
+
 	var row budgetDB
-	query := `SELECT * FROM finance.budget WHERE space_id = $1 AND id = $2`
-	if err := s.db.GetContext(ctx, &row, query, string(spaceID), string(id)); err != nil {
+	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, finance.ErrBudgetNotFound
 		}
@@ -82,14 +115,30 @@ func (s *BudgetStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id f
 }
 
 func (s *BudgetStore) Update(ctx context.Context, b *finance.Budget) error {
-	query := `UPDATE finance.budget 
-		SET name = $1, limit_amount = $2, currency = $3, interval = $4, is_active = $5, icon = $6, color = $7, default_account_id = $8, update_time = $9 
-		WHERE id = $10`
-	var defaultAccountID sql.NullString
-	if b.DefaultAccountID != nil {
-		defaultAccountID = sql.NullString{String: string(*b.DefaultAccountID), Valid: true}
+	row := toDB(b)
+	query, args, err := pgDialect.Update(goqu.S("finance").Table("budget")).
+		Set(goqu.Record{
+			"name":               row.Name,
+			"limit_amount":       row.LimitAmount,
+			"currency":           row.Currency,
+			"interval":           row.Interval,
+			"is_active":          row.IsActive,
+			"icon":               row.Icon,
+			"color":              row.Color,
+			"default_account_id": row.DefaultAccountID,
+			"version":            goqu.L("version + 1"),
+			"update_time":        row.UpdateTime,
+		}).
+		Where(goqu.Ex{
+			"id":      row.ID,
+			"version": row.Version,
+		}).
+		ToSQL()
+	if err != nil {
+		return err
 	}
-	res, err := s.db.ExecContext(ctx, query, b.Name, b.LimitAmount, string(b.Currency), string(b.Interval), b.IsActive, b.Icon, b.Color, defaultAccountID, b.UpdateTime, string(b.ID))
+
+	res, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -98,14 +147,29 @@ func (s *BudgetStore) Update(ctx context.Context, b *finance.Budget) error {
 		return err
 	}
 	if rows == 0 {
-		return finance.ErrBudgetNotFound
+		return finance.ErrBudgetVersionMismatch
 	}
+	b.Version++
 	return nil
 }
 
-func (s *BudgetStore) Delete(ctx context.Context, id finance.BudgetID) error {
-	query := `DELETE FROM finance.budget WHERE id = $1`
-	res, err := s.db.ExecContext(ctx, query, string(id))
+func (s *BudgetStore) Delete(ctx context.Context, spaceID finance.SpaceID, id finance.BudgetID, opts finance.DeleteOptions) error {
+	ex := goqu.Ex{
+		"space_id": string(spaceID),
+		"id":       string(id),
+	}
+	if opts.Version > 0 {
+		ex["version"] = opts.Version
+	}
+
+	query, args, err := pgDialect.Delete(goqu.S("finance").Table("budget")).
+		Where(ex).
+		ToSQL()
+	if err != nil {
+		return err
+	}
+
+	res, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -114,6 +178,9 @@ func (s *BudgetStore) Delete(ctx context.Context, id finance.BudgetID) error {
 		return err
 	}
 	if rows == 0 {
+		if opts.Version > 0 {
+			return finance.ErrBudgetVersionMismatch
+		}
 		return finance.ErrBudgetNotFound
 	}
 	return nil

@@ -15,6 +15,17 @@ import { EditBudgetSheet } from "./components/edit-budget-sheet"
 import { CreateTransactionSheet } from "./components/create-transaction-sheet"
 import { BudgetHistorySheet } from "./components/budget-history-sheet"
 import { formatCents } from "./utils"
+import { toast } from "@/components/ui/toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export function BudgetsView() {
   const { spaceId, isWritable } = useSpacePermissions()
@@ -62,15 +73,43 @@ export function BudgetsView() {
 
   const handlePeriodLoaded = () => {}
 
+  const [deleteTarget, setDeleteTarget] = useState<Budget | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
   const deleteMutation = useDeleteBudgetMutation()
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this budget?")) return
-    await deleteMutation.mutateAsync({
-      id,
-      req: { id },
-    })
-    refetchBudgets()
+  const handleDelete = (budget: Budget) => {
+    setDeleteTarget(budget)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return
+    setIsDeleting(true)
+    try {
+      await deleteMutation.mutateAsync({
+        id: deleteTarget.id || "",
+        req: {
+          id: deleteTarget.id || "",
+          version: deleteTarget.version,
+        },
+      })
+      toast.add({
+        type: "success",
+        title: "Budget deleted",
+        description: `Budget template "${deleteTarget.name}" has been deleted.`,
+      })
+      setDeleteTarget(null)
+      refetchBudgets()
+    } catch (err) {
+      toast.add({
+        type: "error",
+        title: "Delete Failed",
+        description:
+          err instanceof Error ? err.message : "Failed to delete budget.",
+      })
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   const handleEditTrigger = (budget: Budget) => {
@@ -213,6 +252,37 @@ export function BudgetsView() {
           onOpenChange={setHistoryOpen}
           budget={activeBudget}
         />
+
+        {/* Delete Confirmation Alert Dialog */}
+        <AlertDialog
+          open={!!deleteTarget}
+          onOpenChange={(open) => !open && setDeleteTarget(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Budget Template</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete{" "}
+                <span className="font-semibold text-foreground">
+                  {deleteTarget?.name}
+                </span>
+                ? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                disabled={isDeleting}
+                onClick={handleConfirmDelete}
+              >
+                {isDeleting ? "Deleting..." : "Delete Budget"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </FinancePageLayout>
   )

@@ -187,6 +187,7 @@ export function EditBudgetSheet({
       id: activeBudget.id || "",
       req: {
         id: activeBudget.id || "",
+        version: activeBudget.version,
         budget: {
           name: data.name,
           limitAmount: toCentsString(data.limit),

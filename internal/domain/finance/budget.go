@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/id"
+	"github.com/masterkeysrd/saturn/internal/platform/patch"
 )
 
 type RecurrenceInterval string
@@ -77,6 +78,7 @@ type Budget struct {
 	Icon             string
 	Color            string
 	DefaultAccountID *AccountID // Nullable default account for spending
+	Version          int64
 	CreateTime       time.Time
 	UpdateTime       time.Time
 }
@@ -173,4 +175,24 @@ func (b *Budget) CalculateBounds(t time.Time) (time.Time, time.Time) {
 		end := start.AddDate(0, 1, 0).Add(-time.Second)
 		return start, end
 	}
+}
+
+// BudgetPatchSchema defines all patchable fields for a Budget entity.
+var BudgetPatchSchema = patch.NewSchema[Budget]().
+	Register("name", patch.Field(func(b *Budget) *string { return &b.Name })).
+	Register("limit_amount", patch.Field(func(b *Budget) *int64 { return &b.LimitAmount })).
+	Register("currency", patch.Field(func(b *Budget) *Currency { return &b.Currency })).
+	Register("interval", patch.Field(func(b *Budget) *RecurrenceInterval { return &b.Interval })).
+	Register("is_active", patch.Field(func(b *Budget) *bool { return &b.IsActive })).
+	Register("icon", patch.Field(func(b *Budget) *string { return &b.Icon })).
+	Register("color", patch.Field(func(b *Budget) *string { return &b.Color })).
+	Register("default_account_id", patch.Field(func(b *Budget) **AccountID { return &b.DefaultAccountID }))
+
+// ApplyPatch applies partial updates from an incoming budget based on the field mask.
+func (b *Budget) ApplyPatch(incoming *Budget, mask []string) error {
+	if err := BudgetPatchSchema.Apply(b, incoming, mask); err != nil {
+		return err
+	}
+	b.UpdateTime = time.Now().UTC()
+	return b.Validate()
 }

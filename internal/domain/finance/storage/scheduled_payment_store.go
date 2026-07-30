@@ -167,3 +167,37 @@ func (s *ScheduledPaymentStore) ListBySpace(ctx context.Context, spaceID finance
 		}
 	}), nil
 }
+
+func (s *ScheduledPaymentStore) HasScheduledPayments(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListScheduledPaymentsFilter) (bool, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("scheduled_payment")).Select(goqu.L("1")).Where(goqu.Ex{"space_id": string(spaceID)})
+
+	if filter != nil {
+		if filter.BudgetID != nil {
+			ds = ds.Where(goqu.Ex{"budget_id": string(*filter.BudgetID)})
+		}
+		if filter.Status != nil {
+			ds = ds.Where(goqu.Ex{"status": string(*filter.Status)})
+		}
+		if filter.StartDate != nil {
+			ds = ds.Where(goqu.I("due_date").Gte(*filter.StartDate))
+		}
+		if filter.EndDate != nil {
+			ds = ds.Where(goqu.I("due_date").Lte(*filter.EndDate))
+		}
+	}
+
+	query, args, err := ds.Limit(1).ToSQL()
+	if err != nil {
+		return false, err
+	}
+
+	var exists int
+	err = s.db.QueryRowContext(ctx, query, args...).Scan(&exists)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}

@@ -22,7 +22,7 @@ interface BudgetCardProps {
   budget: Budget
   isWritable: boolean
   onEdit: (budget: Budget) => void
-  onDelete: (id: string) => void
+  onDelete: (budget: Budget) => void
   onPeriodLoaded: (budgetId: string, limitInBase: number) => void
   onAddExpense?: (budget: Budget) => void
   onViewHistory: (budget: Budget) => void
@@ -130,7 +130,7 @@ export function BudgetCard({
                     Edit Template
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => onDelete(budget.id || "")}
+                    onClick={() => onDelete(budget)}
                     className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-destructive hover:bg-destructive/10"
                   >
                     <Trash2 className="h-3.5 w-3.5" />

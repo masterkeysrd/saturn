@@ -101,7 +101,43 @@ func toProtoBudget(b *finance.Budget) *financev1.Budget {
 		Icon:             b.Icon,
 		Color:            b.Color,
 		DefaultAccountId: defaultAccountID,
+		Version:          b.Version,
 	}
+}
+
+func toDomainBudget(pb *financev1.Budget) (*finance.Budget, error) {
+	if pb == nil {
+		return nil, status.Error(codes.InvalidArgument, "budget payload is required")
+	}
+
+	var currency finance.Currency
+	if pb.GetCurrency() != "" {
+		var err error
+		currency, err = finance.ParseCurrency(pb.GetCurrency())
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+	}
+
+	var defaultAccountID *finance.AccountID
+	if pb.DefaultAccountId != nil {
+		idVal := finance.AccountID(*pb.DefaultAccountId)
+		defaultAccountID = &idVal
+	}
+
+	return &finance.Budget{
+		ID:               finance.BudgetID(pb.GetId()),
+		SpaceID:          finance.SpaceID(pb.GetSpaceId()),
+		Name:             pb.GetName(),
+		LimitAmount:      pb.GetLimitAmount(),
+		Currency:         currency,
+		Interval:         toDomainInterval(pb.GetInterval()),
+		IsActive:         pb.GetIsActive(),
+		Icon:             pb.GetIcon(),
+		Color:            pb.GetColor(),
+		DefaultAccountID: defaultAccountID,
+		Version:          pb.GetVersion(),
+	}, nil
 }
 
 func toProtoBudgetPeriod(p *financeaggregator.AggregatedBudgetPeriod) *financev1.BudgetPeriod {
@@ -171,30 +207,13 @@ func (h *Handler) ListCurrencies(ctx context.Context, req *financev1.ListCurrenc
 }
 
 func (h *Handler) CreateBudget(ctx context.Context, req *financev1.CreateBudgetRequest) (*financev1.Budget, error) {
-	bInput := req.GetBudget()
-	if bInput == nil {
-		return nil, status.Error(codes.InvalidArgument, "budget payload is required")
-	}
-
-	currency, err := finance.ParseCurrency(bInput.GetCurrency())
+	bInput, err := toDomainBudget(req.GetBudget())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
-	var defaultAccountID *finance.AccountID
-	if bInput.DefaultAccountId != nil {
-		idVal := finance.AccountID(*bInput.DefaultAccountId)
-		defaultAccountID = &idVal
+		return nil, err
 	}
 
 	appReq := &financeapp.CreateBudgetRequest{
-		Name:             bInput.GetName(),
-		LimitAmount:      bInput.GetLimitAmount(),
-		Currency:         currency,
-		Interval:         toDomainInterval(bInput.GetInterval()),
-		Icon:             bInput.GetIcon(),
-		Color:            bInput.GetColor(),
-		DefaultAccountID: defaultAccountID,
+		Budget: bInput,
 	}
 
 	budget, err := h.Coordinator.CreateBudget(ctx, appReq)
@@ -215,33 +234,21 @@ func (h *Handler) GetBudget(ctx context.Context, req *financev1.GetBudgetRequest
 }
 
 func (h *Handler) UpdateBudget(ctx context.Context, req *financev1.UpdateBudgetRequest) (*financev1.Budget, error) {
-	bInput := req.GetBudget()
-	if bInput == nil {
-		return nil, status.Error(codes.InvalidArgument, "budget payload is required")
-	}
-
-	currency, err := finance.ParseCurrency(bInput.GetCurrency())
+	bInput, err := toDomainBudget(req.GetBudget())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, err
 	}
-
-	var defaultAccountID *finance.AccountID
-	if bInput.DefaultAccountId != nil {
-		idVal := finance.AccountID(*bInput.DefaultAccountId)
-		defaultAccountID = &idVal
+	if req.GetId() != "" {
+		bInput.ID = finance.BudgetID(req.GetId())
+	}
+	if req.Version != nil {
+		bInput.Version = req.GetVersion()
 	}
 
 	appReq := &financeapp.UpdateBudgetRequest{
-		ID:               finance.BudgetID(req.GetId()),
-		Name:             bInput.GetName(),
-		LimitAmount:      bInput.GetLimitAmount(),
-		Currency:         currency,
-		Interval:         toDomainInterval(bInput.GetInterval()),
-		IsActive:         bInput.GetIsActive(),
-		Propagation:      toDomainPropagation(req.GetPropagation()),
-		Icon:             bInput.GetIcon(),
-		Color:            bInput.GetColor(),
-		DefaultAccountID: defaultAccountID,
+		Budget:      bInput,
+		Propagation: toDomainPropagation(req.GetPropagation()),
+		UpdateMask:  req.GetUpdateMask().GetPaths(),
 	}
 
 	budget, err := h.Coordinator.UpdateBudget(ctx, appReq)
@@ -253,7 +260,11 @@ func (h *Handler) UpdateBudget(ctx context.Context, req *financev1.UpdateBudgetR
 }
 
 func (h *Handler) DeleteBudget(ctx context.Context, req *financev1.DeleteBudgetRequest) (*emptypb.Empty, error) {
-	if err := h.Coordinator.DeleteBudget(ctx, finance.BudgetID(req.GetId())); err != nil {
+	appReq := &financeapp.DeleteBudgetRequest{
+		ID:      finance.BudgetID(req.GetId()),
+		Version: req.GetVersion(),
+	}
+	if err := h.Coordinator.DeleteBudget(ctx, appReq); err != nil {
 		return nil, h.mapError(err)
 	}
 
@@ -704,7 +715,7 @@ func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTrans
 		searchQuery = &val
 	}
 
-	filter := finance.ListTransactionsFilter{
+	filter := finance.TransactionFilter{
 		BudgetID:      budgetID,
 		Type:          txnType,
 		SourceType:    req.SourceType,

@@ -16,7 +16,7 @@ type AggregatedTransaction struct {
 }
 
 // ListTransactions retrieves space transactions, optionally hydrating associated accounts and budgets.
-func (s *Service) ListTransactions(ctx context.Context, spaceID finance.SpaceID, view ViewType, filter finance.ListTransactionsFilter) (*paging.Page[*AggregatedTransaction], error) {
+func (s *Service) ListTransactions(ctx context.Context, spaceID finance.SpaceID, view ViewType, filter finance.TransactionFilter) (*paging.Page[*AggregatedTransaction], error) {
 	page, err := s.financeService.ListTransactions(ctx, spaceID, &filter)
 	if err != nil {
 		return nil, err

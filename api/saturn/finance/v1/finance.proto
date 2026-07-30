@@ -5,6 +5,7 @@ package saturn.finance.v1;
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
 import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
 import "saturn/platform/scheduler/v1/options.proto";
 
@@ -422,6 +423,9 @@ message Budget {
 
   // Output only. Last update time of the budget.
   google.protobuf.Timestamp update_time = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Monotonic version counter for optimistic concurrency control.
+  int64 version = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // BudgetPeriod represents an active instantiation of a budget.
@@ -517,6 +521,12 @@ message UpdateBudgetRequest {
 
   // Optional. Limit propagation logic determining how future periods are affected.
   LimitPropagation propagation = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Field mask defining which fields to update for partial updates.
+  optional google.protobuf.FieldMask update_mask = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Version number for optimistic concurrency control.
+  optional int64 version = 5 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // The request for
@@ -525,6 +535,9 @@ message DeleteBudgetRequest {
   // Required. ID of the budget to delete.
   // Values are of the form `bud_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Version number for optimistic concurrency control during deletion.
+  optional int64 version = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // The request for

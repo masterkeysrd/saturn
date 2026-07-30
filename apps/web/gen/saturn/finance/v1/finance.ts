@@ -348,6 +348,10 @@ export interface Budget {
    * Output only. Last update time of the budget.
    */
   updateTime?: string
+  /**
+   * Output only. Monotonic version counter for optimistic concurrency control.
+   */
+  version?: string
 }
 
 /**
@@ -503,6 +507,14 @@ export interface UpdateBudgetRequest {
    * Optional. Limit propagation logic determining how future periods are affected.
    */
   propagation: LimitPropagation
+  /**
+   * Optional. Field mask defining which fields to update for partial updates.
+   */
+  updateMask?: { paths?: string[] }
+  /**
+   * Optional. Version number for optimistic concurrency control.
+   */
+  version?: string
 }
 
 /**
@@ -515,6 +527,10 @@ export interface DeleteBudgetRequest {
    * Values are of the form `bud_[a-zA-Z0-9]+`.
    */
   id: string
+  /**
+   * Optional. Version number for optimistic concurrency control during deletion.
+   */
+  version?: string
 }
 
 /**
@@ -2536,11 +2552,14 @@ export function useUpdateBudgetMutation(
  */
 export async function deleteBudget(
   id: string,
-  _req: DeleteBudgetRequest
+  req: DeleteBudgetRequest
 ): Promise<Record<string, never>> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
   return request<Record<string, never>>({
     method: "DELETE",
     url: `/api/v1/finance/budgets/${id}`,
+    params: params,
   })
 }
 

@@ -66,9 +66,13 @@ func (m *mockBudgetStore) Update(ctx context.Context, b *Budget) error {
 	return nil
 }
 
-func (m *mockBudgetStore) Delete(ctx context.Context, id BudgetID) error {
-	if _, ok := m.data[id]; !ok {
+func (m *mockBudgetStore) Delete(ctx context.Context, spaceID SpaceID, id BudgetID, opts DeleteOptions) error {
+	existing, ok := m.data[id]
+	if !ok {
 		return ErrBudgetNotFound
+	}
+	if opts.Version > 0 && existing.Version != opts.Version {
+		return ErrBudgetVersionMismatch
 	}
 	delete(m.data, id)
 	return nil
@@ -258,6 +262,19 @@ func (m *mockTransactionStore) GetByID(ctx context.Context, spaceID SpaceID, id 
 	return t, nil
 }
 
+func (m *mockTransactionStore) HasTransactions(ctx context.Context, spaceID SpaceID, filter *TransactionFilter) (bool, error) {
+	for _, t := range m.txns {
+		if t.SpaceID != spaceID {
+			continue
+		}
+		if filter != nil && filter.BudgetID != nil && (t.BudgetID == nil || *t.BudgetID != *filter.BudgetID) {
+			continue
+		}
+		return true, nil
+	}
+	return false, nil
+}
+
 func (m *mockTransactionStore) Delete(ctx context.Context, id TransactionID) error {
 	if _, ok := m.txns[id]; !ok {
 		return ErrTransactionNotFound
@@ -274,7 +291,7 @@ func (m *mockTransactionStore) Update(ctx context.Context, t *Transaction) error
 	return nil
 }
 
-func (m *mockTransactionStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListTransactionsFilter) (*paging.Page[*Transaction], error) {
+func (m *mockTransactionStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *TransactionFilter) (*paging.Page[*Transaction], error) {
 	var list []*Transaction
 	for _, t := range m.txns {
 		if t.SpaceID == spaceID {

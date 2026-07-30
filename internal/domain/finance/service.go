@@ -122,28 +122,19 @@ func (s *Service) CreateBudget(ctx context.Context, budget *Budget) (*Budget, er
 	return budget, nil
 }
 
-// UpdateBudget modifies an existing budget template.
-func (s *Service) UpdateBudget(ctx context.Context, budget *Budget) (*Budget, error) {
+// UpdateBudget modifies an existing budget template, optionally applying a field mask.
+// If mask is nil or empty, all registered patchable fields are updated.
+func (s *Service) UpdateBudget(ctx context.Context, budget *Budget, mask []string) (*Budget, error) {
 	existing, err := s.deps.BudgetStore.GetByID(ctx, budget.SpaceID, budget.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	if existing.Currency != budget.Currency {
-		return nil, errors.New("budget currency is immutable after creation")
-	}
-	if existing.Interval != budget.Interval {
-		return nil, errors.New("budget interval is immutable after creation")
+	if budget.Version > 0 && budget.Version != existing.Version {
+		return nil, ErrBudgetVersionMismatch
 	}
 
-	existing.Name = budget.Name
-	existing.LimitAmount = budget.LimitAmount
-	existing.IsActive = budget.IsActive
-	existing.Icon = budget.Icon
-	existing.Color = budget.Color
-	existing.UpdateTime = time.Now().UTC()
-
-	if err := existing.Validate(); err != nil {
+	if err := existing.ApplyPatch(budget, mask); err != nil {
 		return nil, err
 	}
 
@@ -155,11 +146,32 @@ func (s *Service) UpdateBudget(ctx context.Context, budget *Budget) (*Budget, er
 }
 
 // DeleteBudget removes a budget.
-func (s *Service) DeleteBudget(ctx context.Context, id BudgetID) error {
+func (s *Service) DeleteBudget(ctx context.Context, spaceID SpaceID, id BudgetID, opts DeleteOptions) error {
 	if string(id) == "" {
 		return errors.New("budget ID is required")
 	}
-	return s.deps.BudgetStore.Delete(ctx, id)
+
+	hasTxns, err := s.deps.TransactionStore.HasTransactions(ctx, spaceID, &TransactionFilter{
+		BudgetID: &id,
+	})
+	if err != nil {
+		return err
+	}
+	if hasTxns {
+		return ErrBudgetHasTransactions
+	}
+
+	hasScheduled, err := s.deps.ScheduledPaymentStore.HasScheduledPayments(ctx, spaceID, &ListScheduledPaymentsFilter{
+		BudgetID: &id,
+	})
+	if err != nil {
+		return err
+	}
+	if hasScheduled {
+		return ErrBudgetHasScheduledPayments
+	}
+
+	return s.deps.BudgetStore.Delete(ctx, spaceID, id, opts)
 }
 
 // ListBudgets returns the workspace's budgets.
@@ -557,7 +569,7 @@ func (s *Service) UpdateExpense(ctx context.Context, txn *Transaction) (*Transac
 }
 
 // ListTransactions retrieves paginated transactions.
-func (s *Service) ListTransactions(ctx context.Context, spaceID SpaceID, filter *ListTransactionsFilter) (*paging.Page[*Transaction], error) {
+func (s *Service) ListTransactions(ctx context.Context, spaceID SpaceID, filter *TransactionFilter) (*paging.Page[*Transaction], error) {
 	if err := spaceID.Validate(); err != nil {
 		return nil, fmt.Errorf("validate space ID: %w", err)
 	}
@@ -1412,7 +1424,7 @@ func (s *Service) syncTransaction(ctx context.Context, params syncTransactionPar
 	// Find if transaction already exists
 	st := params.SourceType
 	si := params.SourceID
-	page, err := s.deps.TransactionStore.ListBySpace(ctx, params.SpaceID, &ListTransactionsFilter{
+	page, err := s.deps.TransactionStore.ListBySpace(ctx, params.SpaceID, &TransactionFilter{
 		SourceType: &st,
 		SourceID:   &si,
 		PageSize:   1,
@@ -1468,7 +1480,7 @@ func (s *Service) syncTransaction(ctx context.Context, params syncTransactionPar
 func (s *Service) deleteTransactionBySource(ctx context.Context, spaceID SpaceID, sourceID string, sourceType string) error {
 	st := sourceType
 	si := sourceID
-	page, err := s.deps.TransactionStore.ListBySpace(ctx, spaceID, &ListTransactionsFilter{
+	page, err := s.deps.TransactionStore.ListBySpace(ctx, spaceID, &TransactionFilter{
 		SourceType: &st,
 		SourceID:   &si,
 		PageSize:   10,
@@ -1599,7 +1611,7 @@ func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing) (*Borrowing
 	// Check if a transaction already exists for this borrowing
 	st := SourceTypeBorrowing
 	si := string(b.ID)
-	page, err := s.deps.TransactionStore.ListBySpace(ctx, b.SpaceID, &ListTransactionsFilter{
+	page, err := s.deps.TransactionStore.ListBySpace(ctx, b.SpaceID, &TransactionFilter{
 		SourceType: &st,
 		SourceID:   &si,
 		PageSize:   1,
@@ -2141,7 +2153,7 @@ func (s *Service) DeleteTransfer(ctx context.Context, spaceID SpaceID, id Transf
 	}
 
 	// Find the associated transaction legs using TransferID
-	page, err := s.deps.TransactionStore.ListBySpace(ctx, t.SpaceID, &ListTransactionsFilter{
+	page, err := s.deps.TransactionStore.ListBySpace(ctx, t.SpaceID, &TransactionFilter{
 		TransferID: &id,
 		PageSize:   10,
 	})
@@ -2593,7 +2605,7 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, id strin
 			targetAccID = destAccID
 		}
 
-		page, err := s.deps.TransactionStore.ListBySpace(ctx, SpaceID(spaceID), &ListTransactionsFilter{
+		page, err := s.deps.TransactionStore.ListBySpace(ctx, SpaceID(spaceID), &TransactionFilter{
 			TransferID: &newT.ID,
 		})
 		var txs []*Transaction

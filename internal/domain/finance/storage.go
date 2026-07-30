@@ -14,13 +14,18 @@ type SettingsStore interface {
 	GetByID(ctx context.Context, spaceID SpaceID) (*FinanceSettings, error)
 }
 
+// DeleteOptions defines optional parameters for entity deletion (e.g. optimistic lock version checks).
+type DeleteOptions struct {
+	Version int64
+}
+
 // BudgetStore defines persistence for budget templates.
 type BudgetStore interface {
 	Create(ctx context.Context, budget *Budget) error
 	GetByID(ctx context.Context, spaceID SpaceID, id BudgetID) (*Budget, error)
 	GetByIDs(ctx context.Context, spaceID SpaceID, ids []BudgetID) ([]*Budget, error)
 	Update(ctx context.Context, budget *Budget) error
-	Delete(ctx context.Context, id BudgetID) error
+	Delete(ctx context.Context, spaceID SpaceID, id BudgetID, opts DeleteOptions) error
 	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListBudgetsFilter) (*paging.Page[*Budget], error)
 }
 
@@ -73,7 +78,8 @@ type TransactionStore interface {
 	GetByID(ctx context.Context, spaceID SpaceID, id TransactionID) (*Transaction, error)
 	Delete(ctx context.Context, id TransactionID) error
 	Update(ctx context.Context, txn *Transaction) error
-	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListTransactionsFilter) (*paging.Page[*Transaction], error)
+	ListBySpace(ctx context.Context, spaceID SpaceID, filter *TransactionFilter) (*paging.Page[*Transaction], error)
+	HasTransactions(ctx context.Context, spaceID SpaceID, filter *TransactionFilter) (bool, error)
 	AggregateSpent(ctx context.Context, periodID PeriodID, budgetCurrency Currency, exchangeRateToBase float64) (spentInBase int64, spentAmount int64, err error)
 	AggregateSpentBatch(ctx context.Context, periodIDs []PeriodID) ([]PeriodSpent, error)
 }
@@ -140,8 +146,8 @@ type ListExchangeRatesFilter struct {
 	Sort          sorting.SortOrder
 }
 
-// ListTransactionsFilter encapsulates filtering parameters for transactions.
-type ListTransactionsFilter struct {
+// TransactionFilter encapsulates filtering parameters for transactions.
+type TransactionFilter struct {
 	BudgetID      *BudgetID
 	Type          *TransactionType
 	SourceType    *string
@@ -178,6 +184,7 @@ type ScheduledPaymentStore interface {
 	UpdateStatus(ctx context.Context, id ScheduledPaymentID, status ScheduledPaymentStatus) error
 	Delete(ctx context.Context, id ScheduledPaymentID) error
 	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListScheduledPaymentsFilter) (*paging.Page[*ScheduledPayment], error)
+	HasScheduledPayments(ctx context.Context, spaceID SpaceID, filter *ListScheduledPaymentsFilter) (bool, error)
 }
 
 // ListRecurringExpensesFilter encapsulates filtering parameters for recurring expenses.
@@ -191,6 +198,7 @@ type ListRecurringExpensesFilter struct {
 
 // ListScheduledPaymentsFilter encapsulates filtering parameters for scheduled payments.
 type ListScheduledPaymentsFilter struct {
+	BudgetID      *BudgetID
 	Status        *ScheduledPaymentStatus
 	StartDate     *time.Time
 	EndDate       *time.Time

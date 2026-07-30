@@ -194,7 +194,7 @@ func (s *TransactionStore) Update(ctx context.Context, t *finance.Transaction) e
 	return nil
 }
 
-func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListTransactionsFilter) (*paging.Page[*finance.Transaction], error) {
+func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
 	if filter.PageSize <= 0 || filter.PageSize > 100 {
 		filter.PageSize = 20
 	}
@@ -356,4 +356,44 @@ func (s *TransactionStore) AggregateSpentBatch(ctx context.Context, periodIDs []
 		}
 	}
 	return results, nil
+}
+
+func (s *TransactionStore) HasTransactions(ctx context.Context, spaceID finance.SpaceID, filter *finance.TransactionFilter) (bool, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("transaction")).Select(goqu.L("1")).Where(goqu.Ex{"space_id": string(spaceID)})
+
+	if filter != nil {
+		if filter.BudgetID != nil {
+			ds = ds.Where(goqu.Ex{"budget_id": string(*filter.BudgetID)})
+		}
+		if filter.Type != nil {
+			ds = ds.Where(goqu.Ex{"type": string(*filter.Type)})
+		}
+		if filter.SourceType != nil {
+			ds = ds.Where(goqu.Ex{"source_type": *filter.SourceType})
+		}
+		if filter.SourceID != nil {
+			ds = ds.Where(goqu.Ex{"source_id": *filter.SourceID})
+		}
+		if filter.AccountID != nil {
+			ds = ds.Where(goqu.Ex{"account_id": string(*filter.AccountID)})
+		}
+		if filter.TransferID != nil {
+			ds = ds.Where(goqu.Ex{"transfer_id": string(*filter.TransferID)})
+		}
+	}
+
+	query, args, err := ds.Limit(1).ToSQL()
+	if err != nil {
+		return false, err
+	}
+
+	var exists int
+	err = s.db.QueryRowContext(ctx, query, args...).Scan(&exists)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }

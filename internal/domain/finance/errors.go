@@ -14,4 +14,7 @@ var (
 	ErrAccountNotFound            = errors.New("account not found")
 	ErrTransferNotFound           = errors.New("transfer not found")
 	ErrCannotDeleteDefaultAccount = errors.New("cannot delete the default account. please select another account as default first")
+	ErrBudgetVersionMismatch      = errors.New("update failed: budget not found or version mismatch")
+	ErrBudgetHasTransactions      = errors.New("cannot delete budget with existing transactions. deactivate it instead")
+	ErrBudgetHasScheduledPayments = errors.New("cannot delete budget with active scheduled payments. cancel or reassign scheduled payments first")
 )

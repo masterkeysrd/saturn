@@ -61,7 +61,7 @@ func (m *mockBudgetStore) Update(ctx context.Context, b *finance.Budget) error {
 	m.budgets[b.ID] = b
 	return nil
 }
-func (m *mockBudgetStore) Delete(ctx context.Context, id finance.BudgetID) error {
+func (m *mockBudgetStore) Delete(ctx context.Context, spaceID finance.SpaceID, id finance.BudgetID, opts finance.DeleteOptions) error {
 	delete(m.budgets, id)
 	return nil
 }
@@ -199,8 +199,11 @@ func (m *mockTransactionStore) Update(ctx context.Context, t *finance.Transactio
 func (m *mockTransactionStore) Delete(ctx context.Context, id finance.TransactionID) error {
 	return nil
 }
-func (m *mockTransactionStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListTransactionsFilter) (*paging.Page[*finance.Transaction], error) {
+func (m *mockTransactionStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
 	return nil, nil
+}
+func (m *mockTransactionStore) HasTransactions(ctx context.Context, spaceID finance.SpaceID, filter *finance.TransactionFilter) (bool, error) {
+	return false, nil
 }
 func (m *mockTransactionStore) AggregateSpent(ctx context.Context, periodID finance.PeriodID, budgetCurrency finance.Currency, exchangeRateToBase float64) (int64, int64, error) {
 	return 1500, 1500, nil // Mock $15.00 spent
