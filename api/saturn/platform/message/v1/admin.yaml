@@ -1,0 +1,25 @@
+# MessageAdmin service API configuration overlay.
+#
+# MessageAdmin queue operations are global (non space-scoped) and require authorization.
+
+name: saturn.platform.message.v1
+title: "Platform Message Admin API"
+apis:
+   - saturn.platform.message.v1.MessageAdmin
+
+documentation:
+  summary: "Provides administrative endpoints for monitoring event bus message queues."
+
+authentication:
+  rules:
+     # All message admin operations require authentication and admin access level
+     - selector: "saturn.platform.message.v1.MessageAdmin.*"
+       auth_required: true
+       access_levels:
+         - admin
+
+space:
+  rules:
+     # Message admin queue operations are global (non space-scoped)
+     - selector: "saturn.platform.message.v1.MessageAdmin.*"
+       scoped: false
