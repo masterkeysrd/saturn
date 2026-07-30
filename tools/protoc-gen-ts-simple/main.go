@@ -139,7 +139,7 @@ func generateMessage(g *protogen.GeneratedFile, msg *protogen.Message) {
 			fieldName := field.Desc.JSONName()
 			tsType := mapType(field)
 
-			isOptional := field.Desc.HasOptionalKeyword() || field.Oneof != nil || isOutputOnly(field)
+			isOptional := isOptionalField(field)
 
 			writeFieldComments(g, field.Comments)
 			suffix := ""
@@ -463,6 +463,9 @@ func mapMessageName(msg *protogen.Message) string {
 	if fullName == "google.protobuf.Timestamp" {
 		return "string"
 	}
+	if fullName == "google.protobuf.FieldMask" {
+		return "{ paths?: string[] }"
+	}
 	if fullName == "google.protobuf.Empty" {
 		return "Record<string, never>"
 	}
@@ -505,12 +508,19 @@ func mapBaseTypeForKind(kind protoreflect.Kind, msg protoreflect.MessageDescript
 			if string(msg.FullName()) == "google.protobuf.Timestamp" {
 				return "string"
 			}
+			if string(msg.FullName()) == "google.protobuf.FieldMask" {
+				return "{ paths?: string[] }"
+			}
 			return string(msg.Name())
 		}
 		return "unknown"
 	default:
 		return "unknown"
 	}
+}
+
+func isOptionalField(field *protogen.Field) bool {
+	return field.Desc.HasOptionalKeyword() || field.Oneof != nil || isOutputOnly(field)
 }
 
 func isOutputOnly(field *protogen.Field) bool {
