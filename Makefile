@@ -117,6 +117,7 @@ codegen:
 	go build -o ./bin/protoc-gen-ts-simple ./tools/protoc-gen-ts-simple
 	go build -o ./bin/protoc-gen-go-scheduler ./tools/protoc-gen-go-scheduler
 	go build -o ./bin/protoc-gen-go-message ./tools/protoc-gen-go-message
+	go build -o ./bin/protoc-gen-go-sdk ./tools/protoc-gen-go-sdk
 	buf generate
 
 ## Show this help
