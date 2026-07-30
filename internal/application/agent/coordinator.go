@@ -30,18 +30,53 @@ type AgentStore interface {
 	ListRuns(ctx context.Context, q agent.ListAgentRuns) (*paging.Page[*agent.AgentRun], error)
 }
 
+// DocumentFile represents an attached file payload for signal analysis.
+type DocumentFile struct {
+	Filename    string `json:"filename"`
+	ContentType string `json:"contentType"`
+	Content     []byte `json:"content"`
+}
+
+// SuggestionRequest holds generic incoming signal data for suggestion processing.
+type SuggestionRequest struct {
+	TextContent string         `json:"textContent"`
+	Documents   []DocumentFile `json:"documents"`
+	Metadata    map[string]any `json:"metadata"`
+}
+
+// SuggestionProcessor interface abstracts purpose-based suggestion engines.
+type SuggestionProcessor interface {
+	ProcessSuggestions(ctx context.Context, spaceID string, req *SuggestionRequest) (map[string]any, error)
+}
+
 // Coordinator orchestrates AI agent blueprints, LLM providers, and audit runs.
 type Coordinator struct {
-	store  AgentStore
-	client *agent.Client
+	store      AgentStore
+	client     *agent.Client
+	processors map[string]SuggestionProcessor
 }
 
 // NewCoordinator creates a new Agent Coordinator instance.
 func NewCoordinator(store AgentStore, client *agent.Client) *Coordinator {
 	return &Coordinator{
-		store:  store,
-		client: client,
+		store:      store,
+		client:     client,
+		processors: make(map[string]SuggestionProcessor),
 	}
+}
+
+// RegisterSuggestionProcessor registers a suggestion engine for a specific purpose key (e.g. "transaction_extractor").
+func (c *Coordinator) RegisterSuggestionProcessor(purpose string, processor SuggestionProcessor) {
+	c.processors[purpose] = processor
+}
+
+// GetSuggestions dispatches a suggestion request to the registered processor for the target purpose.
+func (c *Coordinator) GetSuggestions(ctx context.Context, spaceID string, purpose string, req *SuggestionRequest) (map[string]any, error) {
+	processor, ok := c.processors[purpose]
+	if !ok {
+		return nil, fmt.Errorf("no suggestion processor registered for purpose %q", purpose)
+	}
+	return processor.ProcessSuggestions(ctx, spaceID, req)
 }
 
 // ExecutionRequest defines options for running an agent with parameters.

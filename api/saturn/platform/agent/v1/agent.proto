@@ -5,6 +5,7 @@ package saturn.platform.agent.v1;
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
 import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/masterkeysrd/saturn/apis/saturn/platform/agent/v1;agentv1";
@@ -86,6 +87,14 @@ service AgentService {
   // GetProviderCatalog retrieves standard connection type templates.
   rpc GetProviderCatalog(google.protobuf.Empty) returns (GetProviderCatalogResponse) {
     option (google.api.http) = {get: "/v1/platform/agent/providers-catalog"};
+  }
+
+  // Analyzes signal content against a target agent purpose blueprint and returns structured suggestions.
+  rpc GetSuggestions(GetSuggestionsRequest) returns (GetSuggestionsResponse) {
+    option (google.api.http) = {
+      post: "/v1/platform/agent/suggestions"
+      body: "*"
+    };
   }
 }
 
@@ -225,4 +234,24 @@ message ProviderBlueprintDescriptor {
 
 message GetProviderCatalogResponse {
   repeated ProviderBlueprintDescriptor blueprints = 1;
+}
+
+// DocumentFilePayload represents an uploaded file for signal analysis.
+message DocumentFilePayload {
+  string filename = 1;
+  string content_type = 2;
+  bytes content = 3;
+}
+
+// Request message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions].
+message GetSuggestionsRequest {
+  string purpose = 1;
+  string text_content = 2;
+  repeated DocumentFilePayload documents = 3;
+}
+
+// Response message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions].
+message GetSuggestionsResponse {
+  string raw_output = 1;
+  google.protobuf.Struct structured_suggestion = 2;
 }

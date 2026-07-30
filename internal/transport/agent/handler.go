@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -375,4 +376,49 @@ func (h *Handler) GetProviderCatalog(ctx context.Context, _ *emptypb.Empty) (*ag
 		})
 	}
 	return res, nil
+}
+
+func (h *Handler) GetSuggestions(ctx context.Context, req *agentv1.GetSuggestionsRequest) (*agentv1.GetSuggestionsResponse, error) {
+	spaceID, ok := auth.SpaceIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "unauthenticated")
+	}
+
+	if req.GetPurpose() == "" {
+		return nil, status.Error(codes.InvalidArgument, "purpose is required")
+	}
+
+	docs := make([]agentapp.DocumentFile, len(req.GetDocuments()))
+	for i, d := range req.GetDocuments() {
+		docs[i] = agentapp.DocumentFile{
+			Filename:    d.GetFilename(),
+			ContentType: d.GetContentType(),
+			Content:     d.GetContent(),
+		}
+	}
+
+	appReq := &agentapp.SuggestionRequest{
+		TextContent: req.GetTextContent(),
+		Documents:   docs,
+	}
+
+	resMap, err := h.coordinator.GetSuggestions(ctx, string(spaceID), req.GetPurpose(), appReq)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "process suggestions: %v", err)
+	}
+
+	stStruct, err := structpb.NewStruct(resMap)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "encode structured suggestion: %v", err)
+	}
+
+	rawOutput := ""
+	if vendor, ok := resMap["vendor"].(string); ok {
+		rawOutput = vendor
+	}
+
+	return &agentv1.GetSuggestionsResponse{
+		RawOutput:            rawOutput,
+		StructuredSuggestion: stStruct,
+	}, nil
 }

@@ -198,8 +198,7 @@ export function InboxView() {
 
     // Validate required fields and present explicit user feedback
     const isVerificationItem =
-      tx.docType === "SYSTEM_VERIFICATION" ||
-      docType === "SYSTEM_VERIFICATION"
+      tx.docType === "SYSTEM_VERIFICATION" || docType === "SYSTEM_VERIFICATION"
 
     const isLinking = txnId && txnId !== "none"
     if (!isLinking && !isVerificationItem) {

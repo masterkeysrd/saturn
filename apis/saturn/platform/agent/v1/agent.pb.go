@@ -11,6 +11,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -1356,11 +1357,186 @@ func (x *GetProviderCatalogResponse) GetBlueprints() []*ProviderBlueprintDescrip
 	return nil
 }
 
+// DocumentFilePayload represents an uploaded file for signal analysis.
+type DocumentFilePayload struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Filename      string                 `protobuf:"bytes,1,opt,name=filename,proto3" json:"filename,omitempty"`
+	ContentType   string                 `protobuf:"bytes,2,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	Content       []byte                 `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DocumentFilePayload) Reset() {
+	*x = DocumentFilePayload{}
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DocumentFilePayload) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DocumentFilePayload) ProtoMessage() {}
+
+func (x *DocumentFilePayload) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DocumentFilePayload.ProtoReflect.Descriptor instead.
+func (*DocumentFilePayload) Descriptor() ([]byte, []int) {
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *DocumentFilePayload) GetFilename() string {
+	if x != nil {
+		return x.Filename
+	}
+	return ""
+}
+
+func (x *DocumentFilePayload) GetContentType() string {
+	if x != nil {
+		return x.ContentType
+	}
+	return ""
+}
+
+func (x *DocumentFilePayload) GetContent() []byte {
+	if x != nil {
+		return x.Content
+	}
+	return nil
+}
+
+// Request message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions].
+type GetSuggestionsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Purpose       string                 `protobuf:"bytes,1,opt,name=purpose,proto3" json:"purpose,omitempty"`
+	TextContent   string                 `protobuf:"bytes,2,opt,name=text_content,json=textContent,proto3" json:"text_content,omitempty"`
+	Documents     []*DocumentFilePayload `protobuf:"bytes,3,rep,name=documents,proto3" json:"documents,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSuggestionsRequest) Reset() {
+	*x = GetSuggestionsRequest{}
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSuggestionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSuggestionsRequest) ProtoMessage() {}
+
+func (x *GetSuggestionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSuggestionsRequest.ProtoReflect.Descriptor instead.
+func (*GetSuggestionsRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *GetSuggestionsRequest) GetPurpose() string {
+	if x != nil {
+		return x.Purpose
+	}
+	return ""
+}
+
+func (x *GetSuggestionsRequest) GetTextContent() string {
+	if x != nil {
+		return x.TextContent
+	}
+	return ""
+}
+
+func (x *GetSuggestionsRequest) GetDocuments() []*DocumentFilePayload {
+	if x != nil {
+		return x.Documents
+	}
+	return nil
+}
+
+// Response message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions].
+type GetSuggestionsResponse struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	RawOutput            string                 `protobuf:"bytes,1,opt,name=raw_output,json=rawOutput,proto3" json:"raw_output,omitempty"`
+	StructuredSuggestion *structpb.Struct       `protobuf:"bytes,2,opt,name=structured_suggestion,json=structuredSuggestion,proto3" json:"structured_suggestion,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *GetSuggestionsResponse) Reset() {
+	*x = GetSuggestionsResponse{}
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSuggestionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSuggestionsResponse) ProtoMessage() {}
+
+func (x *GetSuggestionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSuggestionsResponse.ProtoReflect.Descriptor instead.
+func (*GetSuggestionsResponse) Descriptor() ([]byte, []int) {
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *GetSuggestionsResponse) GetRawOutput() string {
+	if x != nil {
+		return x.RawOutput
+	}
+	return ""
+}
+
+func (x *GetSuggestionsResponse) GetStructuredSuggestion() *structpb.Struct {
+	if x != nil {
+		return x.StructuredSuggestion
+	}
+	return nil
+}
+
 var File_saturn_platform_agent_v1_agent_proto protoreflect.FileDescriptor
 
 const file_saturn_platform_agent_v1_agent_proto_rawDesc = "" +
 	"\n" +
-	"$saturn/platform/agent/v1/agent.proto\x12\x18saturn.platform.agent.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa7\x02\n" +
+	"$saturn/platform/agent/v1/agent.proto\x12\x18saturn.platform.agent.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa7\x02\n" +
 	"\vLLMProvider\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bspace_id\x18\x02 \x01(\tR\aspaceId\x12\x12\n" +
@@ -1478,7 +1654,19 @@ const file_saturn_platform_agent_v1_agent_proto_rawDesc = "" +
 	"\x1aGetProviderCatalogResponse\x12U\n" +
 	"\n" +
 	"blueprints\x18\x01 \x03(\v25.saturn.platform.agent.v1.ProviderBlueprintDescriptorR\n" +
-	"blueprints2\x98\x0e\n" +
+	"blueprints\"n\n" +
+	"\x13DocumentFilePayload\x12\x1a\n" +
+	"\bfilename\x18\x01 \x01(\tR\bfilename\x12!\n" +
+	"\fcontent_type\x18\x02 \x01(\tR\vcontentType\x12\x18\n" +
+	"\acontent\x18\x03 \x01(\fR\acontent\"\xa1\x01\n" +
+	"\x15GetSuggestionsRequest\x12\x18\n" +
+	"\apurpose\x18\x01 \x01(\tR\apurpose\x12!\n" +
+	"\ftext_content\x18\x02 \x01(\tR\vtextContent\x12K\n" +
+	"\tdocuments\x18\x03 \x03(\v2-.saturn.platform.agent.v1.DocumentFilePayloadR\tdocuments\"\x85\x01\n" +
+	"\x16GetSuggestionsResponse\x12\x1d\n" +
+	"\n" +
+	"raw_output\x18\x01 \x01(\tR\trawOutput\x12L\n" +
+	"\x15structured_suggestion\x18\x02 \x01(\v2\x17.google.protobuf.StructR\x14structuredSuggestion2\xb9\x0f\n" +
 	"\fAgentService\x12\x91\x01\n" +
 	"\x0eCreateProvider\x12/.saturn.platform.agent.v1.CreateProviderRequest\x1a%.saturn.platform.agent.v1.LLMProvider\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/platform/agent/providers\x12\x8d\x01\n" +
 	"\vGetProvider\x12,.saturn.platform.agent.v1.GetProviderRequest\x1a%.saturn.platform.agent.v1.LLMProvider\")\x82\xd3\xe4\x93\x02#\x12!/v1/platform/agent/providers/{id}\x12~\n" +
@@ -1493,7 +1681,8 @@ const file_saturn_platform_agent_v1_agent_proto_rawDesc = "" +
 	"\vDeleteAgent\x12,.saturn.platform.agent.v1.DeleteAgentRequest\x1a\x16.google.protobuf.Empty\"&\x82\xd3\xe4\x93\x02 *\x1e/v1/platform/agent/agents/{id}\x12\xa3\x01\n" +
 	"\rListAgentRuns\x12..saturn.platform.agent.v1.ListAgentRunsRequest\x1a/.saturn.platform.agent.v1.ListAgentRunsResponse\"1\x82\xd3\xe4\x93\x02+\x12)/v1/platform/agent/agents/{agent_id}/runs\x12\x87\x01\n" +
 	"\x0fGetAgentCatalog\x12\x16.google.protobuf.Empty\x1a1.saturn.platform.agent.v1.GetAgentCatalogResponse\")\x82\xd3\xe4\x93\x02#\x12!/v1/platform/agent/agents-catalog\x12\x90\x01\n" +
-	"\x12GetProviderCatalog\x12\x16.google.protobuf.Empty\x1a4.saturn.platform.agent.v1.GetProviderCatalogResponse\",\x82\xd3\xe4\x93\x02&\x12$/v1/platform/agent/providers-catalogBFZDgithub.com/masterkeysrd/saturn/apis/saturn/platform/agent/v1;agentv1b\x06proto3"
+	"\x12GetProviderCatalog\x12\x16.google.protobuf.Empty\x1a4.saturn.platform.agent.v1.GetProviderCatalogResponse\",\x82\xd3\xe4\x93\x02&\x12$/v1/platform/agent/providers-catalog\x12\x9e\x01\n" +
+	"\x0eGetSuggestions\x12/.saturn.platform.agent.v1.GetSuggestionsRequest\x1a0.saturn.platform.agent.v1.GetSuggestionsResponse\")\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/v1/platform/agent/suggestionsBFZDgithub.com/masterkeysrd/saturn/apis/saturn/platform/agent/v1;agentv1b\x06proto3"
 
 var (
 	file_saturn_platform_agent_v1_agent_proto_rawDescOnce sync.Once
@@ -1507,7 +1696,7 @@ func file_saturn_platform_agent_v1_agent_proto_rawDescGZIP() []byte {
 	return file_saturn_platform_agent_v1_agent_proto_rawDescData
 }
 
-var file_saturn_platform_agent_v1_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_saturn_platform_agent_v1_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_saturn_platform_agent_v1_agent_proto_goTypes = []any{
 	(*LLMProvider)(nil),                 // 0: saturn.platform.agent.v1.LLMProvider
 	(*Agent)(nil),                       // 1: saturn.platform.agent.v1.Agent
@@ -1528,51 +1717,59 @@ var file_saturn_platform_agent_v1_agent_proto_goTypes = []any{
 	(*GetAgentCatalogResponse)(nil),     // 16: saturn.platform.agent.v1.GetAgentCatalogResponse
 	(*ProviderBlueprintDescriptor)(nil), // 17: saturn.platform.agent.v1.ProviderBlueprintDescriptor
 	(*GetProviderCatalogResponse)(nil),  // 18: saturn.platform.agent.v1.GetProviderCatalogResponse
-	(*timestamppb.Timestamp)(nil),       // 19: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),               // 20: google.protobuf.Empty
+	(*DocumentFilePayload)(nil),         // 19: saturn.platform.agent.v1.DocumentFilePayload
+	(*GetSuggestionsRequest)(nil),       // 20: saturn.platform.agent.v1.GetSuggestionsRequest
+	(*GetSuggestionsResponse)(nil),      // 21: saturn.platform.agent.v1.GetSuggestionsResponse
+	(*timestamppb.Timestamp)(nil),       // 22: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),             // 23: google.protobuf.Struct
+	(*emptypb.Empty)(nil),               // 24: google.protobuf.Empty
 }
 var file_saturn_platform_agent_v1_agent_proto_depIdxs = []int32{
-	19, // 0: saturn.platform.agent.v1.LLMProvider.create_time:type_name -> google.protobuf.Timestamp
-	19, // 1: saturn.platform.agent.v1.LLMProvider.update_time:type_name -> google.protobuf.Timestamp
-	19, // 2: saturn.platform.agent.v1.Agent.create_time:type_name -> google.protobuf.Timestamp
-	19, // 3: saturn.platform.agent.v1.Agent.update_time:type_name -> google.protobuf.Timestamp
-	19, // 4: saturn.platform.agent.v1.AgentRun.create_time:type_name -> google.protobuf.Timestamp
+	22, // 0: saturn.platform.agent.v1.LLMProvider.create_time:type_name -> google.protobuf.Timestamp
+	22, // 1: saturn.platform.agent.v1.LLMProvider.update_time:type_name -> google.protobuf.Timestamp
+	22, // 2: saturn.platform.agent.v1.Agent.create_time:type_name -> google.protobuf.Timestamp
+	22, // 3: saturn.platform.agent.v1.Agent.update_time:type_name -> google.protobuf.Timestamp
+	22, // 4: saturn.platform.agent.v1.AgentRun.create_time:type_name -> google.protobuf.Timestamp
 	0,  // 5: saturn.platform.agent.v1.ListProvidersResponse.providers:type_name -> saturn.platform.agent.v1.LLMProvider
 	1,  // 6: saturn.platform.agent.v1.ListAgentsResponse.agents:type_name -> saturn.platform.agent.v1.Agent
 	2,  // 7: saturn.platform.agent.v1.ListAgentRunsResponse.runs:type_name -> saturn.platform.agent.v1.AgentRun
 	15, // 8: saturn.platform.agent.v1.GetAgentCatalogResponse.blueprints:type_name -> saturn.platform.agent.v1.AgentBlueprintDescriptor
 	17, // 9: saturn.platform.agent.v1.GetProviderCatalogResponse.blueprints:type_name -> saturn.platform.agent.v1.ProviderBlueprintDescriptor
-	3,  // 10: saturn.platform.agent.v1.AgentService.CreateProvider:input_type -> saturn.platform.agent.v1.CreateProviderRequest
-	4,  // 11: saturn.platform.agent.v1.AgentService.GetProvider:input_type -> saturn.platform.agent.v1.GetProviderRequest
-	20, // 12: saturn.platform.agent.v1.AgentService.ListProviders:input_type -> google.protobuf.Empty
-	6,  // 13: saturn.platform.agent.v1.AgentService.UpdateProvider:input_type -> saturn.platform.agent.v1.UpdateProviderRequest
-	7,  // 14: saturn.platform.agent.v1.AgentService.DeleteProvider:input_type -> saturn.platform.agent.v1.DeleteProviderRequest
-	8,  // 15: saturn.platform.agent.v1.AgentService.CreateAgent:input_type -> saturn.platform.agent.v1.CreateAgentRequest
-	9,  // 16: saturn.platform.agent.v1.AgentService.GetAgent:input_type -> saturn.platform.agent.v1.GetAgentRequest
-	20, // 17: saturn.platform.agent.v1.AgentService.ListAgents:input_type -> google.protobuf.Empty
-	11, // 18: saturn.platform.agent.v1.AgentService.UpdateAgent:input_type -> saturn.platform.agent.v1.UpdateAgentRequest
-	12, // 19: saturn.platform.agent.v1.AgentService.DeleteAgent:input_type -> saturn.platform.agent.v1.DeleteAgentRequest
-	13, // 20: saturn.platform.agent.v1.AgentService.ListAgentRuns:input_type -> saturn.platform.agent.v1.ListAgentRunsRequest
-	20, // 21: saturn.platform.agent.v1.AgentService.GetAgentCatalog:input_type -> google.protobuf.Empty
-	20, // 22: saturn.platform.agent.v1.AgentService.GetProviderCatalog:input_type -> google.protobuf.Empty
-	0,  // 23: saturn.platform.agent.v1.AgentService.CreateProvider:output_type -> saturn.platform.agent.v1.LLMProvider
-	0,  // 24: saturn.platform.agent.v1.AgentService.GetProvider:output_type -> saturn.platform.agent.v1.LLMProvider
-	5,  // 25: saturn.platform.agent.v1.AgentService.ListProviders:output_type -> saturn.platform.agent.v1.ListProvidersResponse
-	0,  // 26: saturn.platform.agent.v1.AgentService.UpdateProvider:output_type -> saturn.platform.agent.v1.LLMProvider
-	20, // 27: saturn.platform.agent.v1.AgentService.DeleteProvider:output_type -> google.protobuf.Empty
-	1,  // 28: saturn.platform.agent.v1.AgentService.CreateAgent:output_type -> saturn.platform.agent.v1.Agent
-	1,  // 29: saturn.platform.agent.v1.AgentService.GetAgent:output_type -> saturn.platform.agent.v1.Agent
-	10, // 30: saturn.platform.agent.v1.AgentService.ListAgents:output_type -> saturn.platform.agent.v1.ListAgentsResponse
-	1,  // 31: saturn.platform.agent.v1.AgentService.UpdateAgent:output_type -> saturn.platform.agent.v1.Agent
-	20, // 32: saturn.platform.agent.v1.AgentService.DeleteAgent:output_type -> google.protobuf.Empty
-	14, // 33: saturn.platform.agent.v1.AgentService.ListAgentRuns:output_type -> saturn.platform.agent.v1.ListAgentRunsResponse
-	16, // 34: saturn.platform.agent.v1.AgentService.GetAgentCatalog:output_type -> saturn.platform.agent.v1.GetAgentCatalogResponse
-	18, // 35: saturn.platform.agent.v1.AgentService.GetProviderCatalog:output_type -> saturn.platform.agent.v1.GetProviderCatalogResponse
-	23, // [23:36] is the sub-list for method output_type
-	10, // [10:23] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	19, // 10: saturn.platform.agent.v1.GetSuggestionsRequest.documents:type_name -> saturn.platform.agent.v1.DocumentFilePayload
+	23, // 11: saturn.platform.agent.v1.GetSuggestionsResponse.structured_suggestion:type_name -> google.protobuf.Struct
+	3,  // 12: saturn.platform.agent.v1.AgentService.CreateProvider:input_type -> saturn.platform.agent.v1.CreateProviderRequest
+	4,  // 13: saturn.platform.agent.v1.AgentService.GetProvider:input_type -> saturn.platform.agent.v1.GetProviderRequest
+	24, // 14: saturn.platform.agent.v1.AgentService.ListProviders:input_type -> google.protobuf.Empty
+	6,  // 15: saturn.platform.agent.v1.AgentService.UpdateProvider:input_type -> saturn.platform.agent.v1.UpdateProviderRequest
+	7,  // 16: saturn.platform.agent.v1.AgentService.DeleteProvider:input_type -> saturn.platform.agent.v1.DeleteProviderRequest
+	8,  // 17: saturn.platform.agent.v1.AgentService.CreateAgent:input_type -> saturn.platform.agent.v1.CreateAgentRequest
+	9,  // 18: saturn.platform.agent.v1.AgentService.GetAgent:input_type -> saturn.platform.agent.v1.GetAgentRequest
+	24, // 19: saturn.platform.agent.v1.AgentService.ListAgents:input_type -> google.protobuf.Empty
+	11, // 20: saturn.platform.agent.v1.AgentService.UpdateAgent:input_type -> saturn.platform.agent.v1.UpdateAgentRequest
+	12, // 21: saturn.platform.agent.v1.AgentService.DeleteAgent:input_type -> saturn.platform.agent.v1.DeleteAgentRequest
+	13, // 22: saturn.platform.agent.v1.AgentService.ListAgentRuns:input_type -> saturn.platform.agent.v1.ListAgentRunsRequest
+	24, // 23: saturn.platform.agent.v1.AgentService.GetAgentCatalog:input_type -> google.protobuf.Empty
+	24, // 24: saturn.platform.agent.v1.AgentService.GetProviderCatalog:input_type -> google.protobuf.Empty
+	20, // 25: saturn.platform.agent.v1.AgentService.GetSuggestions:input_type -> saturn.platform.agent.v1.GetSuggestionsRequest
+	0,  // 26: saturn.platform.agent.v1.AgentService.CreateProvider:output_type -> saturn.platform.agent.v1.LLMProvider
+	0,  // 27: saturn.platform.agent.v1.AgentService.GetProvider:output_type -> saturn.platform.agent.v1.LLMProvider
+	5,  // 28: saturn.platform.agent.v1.AgentService.ListProviders:output_type -> saturn.platform.agent.v1.ListProvidersResponse
+	0,  // 29: saturn.platform.agent.v1.AgentService.UpdateProvider:output_type -> saturn.platform.agent.v1.LLMProvider
+	24, // 30: saturn.platform.agent.v1.AgentService.DeleteProvider:output_type -> google.protobuf.Empty
+	1,  // 31: saturn.platform.agent.v1.AgentService.CreateAgent:output_type -> saturn.platform.agent.v1.Agent
+	1,  // 32: saturn.platform.agent.v1.AgentService.GetAgent:output_type -> saturn.platform.agent.v1.Agent
+	10, // 33: saturn.platform.agent.v1.AgentService.ListAgents:output_type -> saturn.platform.agent.v1.ListAgentsResponse
+	1,  // 34: saturn.platform.agent.v1.AgentService.UpdateAgent:output_type -> saturn.platform.agent.v1.Agent
+	24, // 35: saturn.platform.agent.v1.AgentService.DeleteAgent:output_type -> google.protobuf.Empty
+	14, // 36: saturn.platform.agent.v1.AgentService.ListAgentRuns:output_type -> saturn.platform.agent.v1.ListAgentRunsResponse
+	16, // 37: saturn.platform.agent.v1.AgentService.GetAgentCatalog:output_type -> saturn.platform.agent.v1.GetAgentCatalogResponse
+	18, // 38: saturn.platform.agent.v1.AgentService.GetProviderCatalog:output_type -> saturn.platform.agent.v1.GetProviderCatalogResponse
+	21, // 39: saturn.platform.agent.v1.AgentService.GetSuggestions:output_type -> saturn.platform.agent.v1.GetSuggestionsResponse
+	26, // [26:40] is the sub-list for method output_type
+	12, // [12:26] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_saturn_platform_agent_v1_agent_proto_init() }
@@ -1586,7 +1783,7 @@ func file_saturn_platform_agent_v1_agent_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_platform_agent_v1_agent_proto_rawDesc), len(file_saturn_platform_agent_v1_agent_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

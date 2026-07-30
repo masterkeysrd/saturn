@@ -273,6 +273,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	financeHandler := financegrpc.NewHandler(financeCoordinator, financeAggregator)
 	financev1.RegisterFinanceServer(s.grpc, financeHandler)
 
+	agentCoordinator.RegisterSuggestionProcessor("transaction_extractor", financeCoordinator)
 	agentHandler := agentgrpc.NewHandler(agentCoordinator)
 	agentv1.RegisterAgentServiceServer(s.grpc, agentHandler)
 

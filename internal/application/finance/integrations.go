@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	agentapp "github.com/masterkeysrd/saturn/internal/application/agent"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 )
 
@@ -91,6 +92,59 @@ func (c *Coordinator) DiscardInboxItem(ctx context.Context, id string) error {
 		return err
 	}
 	return c.financeService.DiscardInboxItem(ctx, string(rctx.SpaceID), id)
+}
+
+// GetTransactionSuggestions analyzes raw signal payloads and returns real-time form prefill suggestions.
+func (c *Coordinator) GetTransactionSuggestions(ctx context.Context, req *IngestionRequest) (*SignalSuggestion, error) {
+	rctx, err := c.resolveContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return c.GetSignalSuggestions(ctx, string(rctx.SpaceID), req)
+}
+
+// ProcessSuggestions implements agentapp.SuggestionProcessor for transaction_extractor purpose.
+func (c *Coordinator) ProcessSuggestions(ctx context.Context, spaceID string, req *agentapp.SuggestionRequest) (map[string]any, error) {
+	ingReq := &IngestionRequest{
+		TextContent: req.TextContent,
+		Metadata:    req.Metadata,
+	}
+	for _, d := range req.Documents {
+		ingReq.Documents = append(ingReq.Documents, DocumentFile{
+			Filename:    d.Filename,
+			ContentType: d.ContentType,
+			Content:     d.Content,
+		})
+	}
+
+	sug, err := c.GetSignalSuggestions(ctx, spaceID, ingReq)
+	if err != nil {
+		return nil, err
+	}
+
+	res := map[string]any{
+		"classification": sug.Classification,
+		"vendor":         sug.Vendor,
+		"amount":         sug.Amount,
+		"currency":       sug.Currency,
+		"date":           sug.Date,
+	}
+	if sug.CardLastFour != "" {
+		res["cardLastFour"] = sug.CardLastFour
+	}
+	if sug.SuggestedBudget != "" {
+		res["suggestedBudget"] = sug.SuggestedBudget
+	}
+	if sug.AccountID != nil {
+		res["accountId"] = *sug.AccountID
+	}
+	if sug.BudgetID != nil {
+		res["budgetId"] = *sug.BudgetID
+	}
+	if sug.PotentialDuplicateID != nil {
+		res["potentialDuplicateId"] = *sug.PotentialDuplicateID
+	}
+	return res, nil
 }
 
 // UpdateInboxItem updates a staging inbox item's draft properties.

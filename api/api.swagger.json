@@ -3533,6 +3533,40 @@
         ]
       }
     },
+    "/v1/platform/agent/suggestions": {
+      "post": {
+        "summary": "Analyzes signal content against a target agent purpose blueprint and returns structured suggestions.",
+        "operationId": "AgentService_GetSuggestions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetSuggestionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "Request message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions].",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1GetSuggestionsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentService"
+        ]
+      }
+    },
     "/v1/platform/integrations": {
       "get": {
         "summary": "ListIntegrations retrieves all configured integrations for the active Space.",
@@ -5835,6 +5869,22 @@
         }
       }
     },
+    "v1DocumentFilePayload": {
+      "type": "object",
+      "properties": {
+        "filename": {
+          "type": "string"
+        },
+        "contentType": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string",
+          "format": "byte"
+        }
+      },
+      "description": "DocumentFilePayload represents an uploaded file for signal analysis."
+    },
     "v1ExchangeRate": {
       "type": "object",
       "properties": {
@@ -6031,6 +6081,37 @@
           "format": "int32"
         }
       }
+    },
+    "v1GetSuggestionsRequest": {
+      "type": "object",
+      "properties": {
+        "purpose": {
+          "type": "string"
+        },
+        "textContent": {
+          "type": "string"
+        },
+        "documents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1DocumentFilePayload"
+          }
+        }
+      },
+      "description": "Request message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions]."
+    },
+    "v1GetSuggestionsResponse": {
+      "type": "object",
+      "properties": {
+        "rawOutput": {
+          "type": "string"
+        },
+        "structuredSuggestion": {
+          "type": "object"
+        }
+      },
+      "description": "Response message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions]."
     },
     "v1InboxItem": {
       "type": "object",

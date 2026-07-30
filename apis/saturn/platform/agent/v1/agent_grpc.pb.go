@@ -33,6 +33,7 @@ const (
 	AgentService_ListAgentRuns_FullMethodName      = "/saturn.platform.agent.v1.AgentService/ListAgentRuns"
 	AgentService_GetAgentCatalog_FullMethodName    = "/saturn.platform.agent.v1.AgentService/GetAgentCatalog"
 	AgentService_GetProviderCatalog_FullMethodName = "/saturn.platform.agent.v1.AgentService/GetProviderCatalog"
+	AgentService_GetSuggestions_FullMethodName     = "/saturn.platform.agent.v1.AgentService/GetSuggestions"
 )
 
 // AgentServiceClient is the client API for AgentService service.
@@ -67,6 +68,8 @@ type AgentServiceClient interface {
 	GetAgentCatalog(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetAgentCatalogResponse, error)
 	// GetProviderCatalog retrieves standard connection type templates.
 	GetProviderCatalog(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetProviderCatalogResponse, error)
+	// Analyzes signal content against a target agent purpose blueprint and returns structured suggestions.
+	GetSuggestions(ctx context.Context, in *GetSuggestionsRequest, opts ...grpc.CallOption) (*GetSuggestionsResponse, error)
 }
 
 type agentServiceClient struct {
@@ -207,6 +210,16 @@ func (c *agentServiceClient) GetProviderCatalog(ctx context.Context, in *emptypb
 	return out, nil
 }
 
+func (c *agentServiceClient) GetSuggestions(ctx context.Context, in *GetSuggestionsRequest, opts ...grpc.CallOption) (*GetSuggestionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetSuggestionsResponse)
+	err := c.cc.Invoke(ctx, AgentService_GetSuggestions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgentServiceServer is the server API for AgentService service.
 // All implementations should embed UnimplementedAgentServiceServer
 // for forward compatibility.
@@ -239,6 +252,8 @@ type AgentServiceServer interface {
 	GetAgentCatalog(context.Context, *emptypb.Empty) (*GetAgentCatalogResponse, error)
 	// GetProviderCatalog retrieves standard connection type templates.
 	GetProviderCatalog(context.Context, *emptypb.Empty) (*GetProviderCatalogResponse, error)
+	// Analyzes signal content against a target agent purpose blueprint and returns structured suggestions.
+	GetSuggestions(context.Context, *GetSuggestionsRequest) (*GetSuggestionsResponse, error)
 }
 
 // UnimplementedAgentServiceServer should be embedded to have
@@ -286,6 +301,9 @@ func (UnimplementedAgentServiceServer) GetAgentCatalog(context.Context, *emptypb
 }
 func (UnimplementedAgentServiceServer) GetProviderCatalog(context.Context, *emptypb.Empty) (*GetProviderCatalogResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetProviderCatalog not implemented")
+}
+func (UnimplementedAgentServiceServer) GetSuggestions(context.Context, *GetSuggestionsRequest) (*GetSuggestionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSuggestions not implemented")
 }
 func (UnimplementedAgentServiceServer) testEmbeddedByValue() {}
 
@@ -541,6 +559,24 @@ func _AgentService_GetProviderCatalog_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentService_GetSuggestions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSuggestionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).GetSuggestions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentService_GetSuggestions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).GetSuggestions(ctx, req.(*GetSuggestionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgentService_ServiceDesc is the grpc.ServiceDesc for AgentService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -599,6 +635,10 @@ var AgentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetProviderCatalog",
 			Handler:    _AgentService_GetProviderCatalog_Handler,
+		},
+		{
+			MethodName: "GetSuggestions",
+			Handler:    _AgentService_GetSuggestions_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

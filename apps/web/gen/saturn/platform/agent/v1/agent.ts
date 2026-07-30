@@ -148,6 +148,32 @@ export interface GetProviderCatalogResponse {
 }
 
 /**
+ * DocumentFilePayload represents an uploaded file for signal analysis.
+ */
+export interface DocumentFilePayload {
+  filename: string
+  contentType: string
+  content: string
+}
+
+/**
+ * Request message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions].
+ */
+export interface GetSuggestionsRequest {
+  purpose: string
+  textContent: string
+  documents: DocumentFilePayload[]
+}
+
+/**
+ * Response message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions].
+ */
+export interface GetSuggestionsResponse {
+  rawOutput: string
+  structuredSuggestion: Record<string, unknown>
+}
+
+/**
  * AgentService manages LLM connection providers, AI agent instances, and logs.
  */
 /**
@@ -488,6 +514,32 @@ export function useGetProviderCatalogQuery(
   return useQuery<GetProviderCatalogResponse, Error>({
     queryKey: ["/api/v1/platform/agent/providers-catalog", req],
     queryFn: () => getProviderCatalog(req),
+    ...options,
+  })
+}
+
+/**
+ * Analyzes signal content against a target agent purpose blueprint and returns structured suggestions.
+ */
+export async function getSuggestions(
+  req: GetSuggestionsRequest
+): Promise<GetSuggestionsResponse> {
+  return request<GetSuggestionsResponse>({
+    method: "POST",
+    url: "/api/v1/platform/agent/suggestions",
+    data: req,
+  })
+}
+
+export function useGetSuggestionsMutation(
+  options?: UseMutationOptions<
+    GetSuggestionsResponse,
+    Error,
+    GetSuggestionsRequest
+  >
+) {
+  return useMutation<GetSuggestionsResponse, Error, GetSuggestionsRequest>({
+    mutationFn: (req) => getSuggestions(req),
     ...options,
   })
 }
