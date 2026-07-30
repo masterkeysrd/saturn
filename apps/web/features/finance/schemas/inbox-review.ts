@@ -29,6 +29,9 @@ export const inboxReviewSchema = z.object({
   budgetId: z.string().optional(),
   scheduledPaymentId: z.string().optional(),
   borrowingId: z.string().optional(),
+  borrowingLinkType: z
+    .enum(["INITIAL_RECEIPT", "REPAYMENT", "ADDITIONAL_LOAN"])
+    .optional(),
 })
 
 export type InboxReviewFormValues = z.infer<typeof inboxReviewSchema>

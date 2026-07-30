@@ -16,6 +16,7 @@ import (
 	financeapp "github.com/masterkeysrd/saturn/internal/application/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
+	"github.com/masterkeysrd/saturn/internal/platform/conv"
 	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
 
@@ -1340,8 +1341,44 @@ func toDomainInboxDocType(d financev1.InboxItem_DocType) finance.InboxItemDocTyp
 	}
 }
 
+func toProtoBorrowingLinkType(l *finance.BorrowingLinkType) *financev1.BorrowingLinkType {
+	if l == nil {
+		return nil
+	}
+	switch *l {
+	case finance.BorrowingLinkTypeInitialReceipt:
+		v := financev1.BorrowingLinkType_BORROWING_LINK_TYPE_INITIAL_RECEIPT
+		return &v
+	case finance.BorrowingLinkTypeRepayment:
+		v := financev1.BorrowingLinkType_BORROWING_LINK_TYPE_REPAYMENT
+		return &v
+	case finance.BorrowingLinkTypeAdditionalLoan:
+		v := financev1.BorrowingLinkType_BORROWING_LINK_TYPE_ADDITIONAL_LOAN
+		return &v
+	default:
+		v := financev1.BorrowingLinkType_BORROWING_LINK_TYPE_UNSPECIFIED
+		return &v
+	}
+}
+
+func toDomainBorrowingLinkType(l financev1.BorrowingLinkType) *finance.BorrowingLinkType {
+	switch l {
+	case financev1.BorrowingLinkType_BORROWING_LINK_TYPE_INITIAL_RECEIPT:
+		v := finance.BorrowingLinkTypeInitialReceipt
+		return &v
+	case financev1.BorrowingLinkType_BORROWING_LINK_TYPE_REPAYMENT:
+		v := finance.BorrowingLinkTypeRepayment
+		return &v
+	case financev1.BorrowingLinkType_BORROWING_LINK_TYPE_ADDITIONAL_LOAN:
+		v := finance.BorrowingLinkTypeAdditionalLoan
+		return &v
+	default:
+		return nil
+	}
+}
+
 func toProtoInboxItem(pt *finance.InboxItem) *financev1.InboxItem {
-	var accountID, budgetID, paymentID, transactionID string
+	var accountID, budgetID, paymentID, transactionID, borrowingID string
 	if pt.AccountID != nil {
 		accountID = *pt.AccountID
 	}
@@ -1353,6 +1390,9 @@ func toProtoInboxItem(pt *finance.InboxItem) *financev1.InboxItem {
 	}
 	if pt.TransactionID != nil {
 		transactionID = *pt.TransactionID
+	}
+	if pt.BorrowingID != nil {
+		borrowingID = *pt.BorrowingID
 	}
 
 	var txDate *timestamppb.Timestamp
@@ -1374,6 +1414,8 @@ func toProtoInboxItem(pt *finance.InboxItem) *financev1.InboxItem {
 		BudgetId:           budgetID,
 		ScheduledPaymentId: paymentID,
 		TransactionId:      transactionID,
+		BorrowingId:        conv.Ptr(borrowingID),
+		BorrowingLinkType:  toProtoBorrowingLinkType(pt.BorrowingLinkType),
 		RawPayload:         pt.RawPayload,
 		MetadataJson:       pt.MetadataJSON,
 		CreateTime:         timestamppb.New(pt.CreateTime),
@@ -1381,7 +1423,7 @@ func toProtoInboxItem(pt *finance.InboxItem) *financev1.InboxItem {
 }
 
 func toDomainInboxItem(pb *financev1.InboxItem) *finance.InboxItem {
-	var accountID, budgetID, paymentID, transactionID *string
+	var accountID, budgetID, paymentID, transactionID, borrowingID *string
 	if pb.GetAccountId() != "" {
 		val := pb.GetAccountId()
 		accountID = &val
@@ -1397,6 +1439,10 @@ func toDomainInboxItem(pb *financev1.InboxItem) *finance.InboxItem {
 	if pb.GetTransactionId() != "" {
 		val := pb.GetTransactionId()
 		transactionID = &val
+	}
+	if pb.GetBorrowingId() != "" {
+		val := pb.GetBorrowingId()
+		borrowingID = &val
 	}
 
 	var txDate time.Time
@@ -1418,6 +1464,8 @@ func toDomainInboxItem(pb *financev1.InboxItem) *finance.InboxItem {
 		BudgetID:           budgetID,
 		ScheduledPaymentID: paymentID,
 		TransactionID:      transactionID,
+		BorrowingID:        borrowingID,
+		BorrowingLinkType:  toDomainBorrowingLinkType(pb.GetBorrowingLinkType()),
 		RawPayload:         pb.GetRawPayload(),
 		MetadataJSON:       pb.GetMetadataJson(),
 	}

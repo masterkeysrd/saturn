@@ -5409,6 +5409,15 @@
         "establishedAt"
       ]
     },
+    "v1BorrowingLinkType": {
+      "type": "string",
+      "enum": [
+        "BORROWING_LINK_TYPE_INITIAL_RECEIPT",
+        "BORROWING_LINK_TYPE_REPAYMENT",
+        "BORROWING_LINK_TYPE_ADDITIONAL_LOAN"
+      ],
+      "description": "Borrowing link classification type.\n\n - BORROWING_LINK_TYPE_INITIAL_RECEIPT: Original funding proof ($0 balance adjustment)\n - BORROWING_LINK_TYPE_REPAYMENT: Installment payback (reduces remaining balance)\n - BORROWING_LINK_TYPE_ADDITIONAL_LOAN: Top-up / extra drawdown (increases balance)"
+    },
     "v1BorrowingRepayment": {
       "type": "object",
       "properties": {
@@ -6217,6 +6226,14 @@
           "format": "date-time",
           "description": "Output only. Ingestion stage timestamp.",
           "readOnly": true
+        },
+        "borrowingId": {
+          "type": "string",
+          "description": "Optional. Associated borrowing/lending agreement identifier.\nValues are of the form `bor_[a-zA-Z0-9]+`."
+        },
+        "borrowingLinkType": {
+          "$ref": "#/definitions/v1BorrowingLinkType",
+          "description": "Optional. Relationship classification for borrowing link (e.g., initial receipt, repayment, additional loan)."
         }
       },
       "description": "InboxItem represents an ingested invoice, receipt, or notification in processing staging."

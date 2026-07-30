@@ -372,6 +372,10 @@ export function InboxItemReviewPanel({
   }, [payments, budgets, billSearch])
 
   const currentBorrowingId = useWatch({ control, name: "borrowingId" })
+  const currentBorrowingLinkType = useWatch({
+    control,
+    name: "borrowingLinkType",
+  })
 
   const filteredBorrowings = useMemo(() => {
     const q = borrowingSearch.toLowerCase().trim()
@@ -407,6 +411,34 @@ export function InboxItemReviewPanel({
   })
   const hasScheduledBill = !!scheduledPaymentIdVal
   const isLinking = !!(selectedTxId && selectedTxId !== "none")
+
+  const matchedTransaction = useMemo(() => {
+    if (!selectedTxId || selectedTxId === "none") return null
+    return transactions.find((t) => t.id === selectedTxId) || null
+  }, [transactions, selectedTxId])
+
+  const isMatchedAlreadyScheduled = useMemo(() => {
+    if (!matchedTransaction) return false
+    return !!(
+      matchedTransaction.sourceType === "scheduled_payment" ||
+      (matchedTransaction.sourceType &&
+        matchedTransaction.sourceType.startsWith("scheduled_payment"))
+    )
+  }, [matchedTransaction])
+
+  const isMatchedAlreadyBorrowing = useMemo(() => {
+    if (!matchedTransaction) return false
+    return !!(
+      matchedTransaction.sourceType === "borrowing" ||
+      matchedTransaction.sourceType === "borrowing_repayment" ||
+      matchedTransaction.sourceType === "borrowing_additional" ||
+      (matchedTransaction.sourceType &&
+        matchedTransaction.sourceType.startsWith("borrowing"))
+    )
+  }, [matchedTransaction])
+
+  const showScheduledPaymentSection = !isLinking || !isMatchedAlreadyScheduled
+  const showBorrowingSection = !isLinking || !isMatchedAlreadyBorrowing
 
   const dupTx = meta.potential_duplicate_id
     ? transactions.find((t) => t.id === meta.potential_duplicate_id)
@@ -1110,450 +1142,524 @@ export function InboxItemReviewPanel({
             )}
 
             {/* Integrations Section */}
-            <div className="space-y-3 pt-1 md:col-span-2">
-              <span className="block text-[10px] font-black tracking-widest text-muted-foreground uppercase">
-                Advanced Mappings
-              </span>
+            {(showScheduledPaymentSection || showBorrowingSection) && (
+              <div className="space-y-3 pt-1 md:col-span-2">
+                <span className="block text-[10px] font-black tracking-widest text-muted-foreground uppercase">
+                  Advanced Mappings
+                </span>
 
-              <div className="grid grid-cols-1 gap-x-6 gap-y-3.5 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground uppercase">
-                    <Calendar className="h-3.5 w-3.5 text-indigo-400" />
-                    Link Scheduled Bill
-                  </Label>
+                <div className="grid grid-cols-1 gap-x-6 gap-y-3.5 sm:grid-cols-2">
+                  {showScheduledPaymentSection && (
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground uppercase">
+                        <Calendar className="h-3.5 w-3.5 text-indigo-400" />
+                        Link Scheduled Bill
+                      </Label>
 
-                  {(() => {
-                    const selectedPaymentObj = payments.find(
-                      (p) => p.id === currentScheduledPaymentId
-                    )
-                    const selectedPaymentBudget = selectedPaymentObj
-                      ? budgets.find(
-                          (b) => b.id === selectedPaymentObj.budgetId
+                      {(() => {
+                        const selectedPaymentObj = payments.find(
+                          (p) => p.id === currentScheduledPaymentId
                         )
-                      : null
+                        const selectedPaymentBudget = selectedPaymentObj
+                          ? budgets.find(
+                              (b) => b.id === selectedPaymentObj.budgetId
+                            )
+                          : null
 
-                    return (
-                      <Popover
-                        open={billPopoverOpen}
-                        onOpenChange={setBillPopoverOpen}
-                        modal={false}
-                      >
-                        <PopoverTrigger className="flex h-10 w-full cursor-pointer items-center justify-between rounded-xl border border-border/60 bg-background/40 px-3 text-left font-normal text-foreground hover:bg-background/50 focus:ring-1 focus:ring-ring">
-                          {selectedPaymentObj ? (
-                            <div className="flex w-full items-center justify-between pr-1 text-xs">
-                              <div className="flex min-w-0 items-center gap-2">
-                                <Calendar className="h-3.5 w-3.5 shrink-0 text-indigo-400" />
-                                <span className="truncate font-semibold text-foreground">
-                                  {selectedPaymentBudget?.name ||
-                                    "Scheduled Bill"}
-                                </span>
-                                <span className="shrink-0 text-[10px] text-muted-foreground">
-                                  (Due{" "}
-                                  {new Date(
-                                    selectedPaymentObj.dueDate
-                                  ).toLocaleDateString()}
-                                  )
-                                </span>
-                              </div>
-                              <span className="shrink-0 pl-2 font-bold text-foreground">
-                                {formatCents(
-                                  selectedPaymentObj.amount
-                                ).toLocaleString(undefined, {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}{" "}
-                                {selectedPaymentObj.currency}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">
-                              Search or select a scheduled bill...
-                            </span>
-                          )}
-                          <ChevronDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
-                        </PopoverTrigger>
-                        <PopoverContent
-                          align="start"
-                          className="flex w-[var(--anchor-width)] min-w-[320px] flex-col gap-2 rounded-2xl border border-border/50 bg-card/95 p-2 shadow-2xl backdrop-blur-xl"
-                        >
-                          <Input
-                            placeholder="Type to filter (vendor, category, amount, date...)"
-                            className="h-9 rounded-xl border-border/50 bg-background/50 text-xs focus-visible:ring-ring"
-                            value={billSearch}
-                            onChange={(e) => setBillSearch(e.target.value)}
-                            autoFocus
-                          />
-                          <ScrollArea className="h-60">
-                            <div className="flex flex-col gap-1 pr-1">
-                              <button
-                                type="button"
-                                className="flex w-full cursor-pointer items-center justify-between rounded-xl px-2.5 py-2 text-left text-xs text-rose-400 transition-colors hover:bg-rose-500/10"
-                                onClick={() => {
-                                  setValue("scheduledPaymentId", "", {
-                                    shouldValidate: true,
-                                  })
-                                  setBillPopoverOpen(false)
-                                }}
-                              >
-                                <span>None / Standalone Expense</span>
-                              </button>
-                              <Separator className="my-1 bg-border/10" />
-                              {filteredPayments.length === 0 ? (
-                                <div className="p-4 text-center text-xs text-muted-foreground">
-                                  No matching scheduled bills found.
+                        return (
+                          <Popover
+                            open={billPopoverOpen}
+                            onOpenChange={setBillPopoverOpen}
+                            modal={false}
+                          >
+                            <PopoverTrigger className="flex h-10 w-full cursor-pointer items-center justify-between rounded-xl border border-border/60 bg-background/40 px-3 text-left font-normal text-foreground hover:bg-background/50 focus:ring-1 focus:ring-ring">
+                              {selectedPaymentObj ? (
+                                <div className="flex w-full items-center justify-between pr-1 text-xs">
+                                  <div className="flex min-w-0 items-center gap-2">
+                                    <Calendar className="h-3.5 w-3.5 shrink-0 text-indigo-400" />
+                                    <span className="truncate font-semibold text-foreground">
+                                      {selectedPaymentBudget?.name ||
+                                        "Scheduled Bill"}
+                                    </span>
+                                    <span className="shrink-0 text-[10px] text-muted-foreground">
+                                      (Due{" "}
+                                      {new Date(
+                                        selectedPaymentObj.dueDate
+                                      ).toLocaleDateString()}
+                                      )
+                                    </span>
+                                  </div>
+                                  <span className="shrink-0 pl-2 font-bold text-foreground">
+                                    {formatCents(
+                                      selectedPaymentObj.amount
+                                    ).toLocaleString(undefined, {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}{" "}
+                                    {selectedPaymentObj.currency}
+                                  </span>
                                 </div>
                               ) : (
-                                filteredPayments.map((p) => {
-                                  const budget = budgets.find(
-                                    (b) => b.id === p.budgetId
-                                  )
-                                  const isSelected =
-                                    currentScheduledPaymentId === p.id
-                                  const isOverdue =
-                                    p.dueDate &&
-                                    new Date(p.dueDate).getTime() < nowTime
-                                  const formattedDate = p.dueDate
-                                    ? new Date(p.dueDate).toLocaleDateString(
-                                        undefined,
-                                        { month: "short", day: "numeric" }
-                                      )
-                                    : "N/A"
-
-                                  return (
-                                    <button
-                                      key={p.id}
-                                      type="button"
-                                      className={cn(
-                                        "flex w-full cursor-pointer items-center justify-between rounded-xl px-2.5 py-2 text-left text-xs transition-colors",
-                                        isSelected
-                                          ? "border border-indigo-500/30 bg-indigo-500/15 font-semibold text-indigo-400"
-                                          : "text-foreground hover:bg-muted/10"
-                                      )}
-                                      onClick={() => {
-                                        setValue(
-                                          "scheduledPaymentId",
-                                          p.id || "",
-                                          { shouldValidate: true }
-                                        )
-                                        setBillPopoverOpen(false)
-                                      }}
-                                    >
-                                      <div className="flex min-w-0 flex-col gap-0.5">
-                                        <div className="flex items-center gap-1.5 truncate pr-2 font-semibold text-foreground">
-                                          <Calendar className="h-3.5 w-3.5 shrink-0 text-indigo-400" />
-                                          <span className="truncate">
-                                            {budget?.name || "Scheduled Bill"}
-                                          </span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                                          <span>Due {formattedDate}</span>
-                                          {isOverdue && (
-                                            <span className="rounded border border-rose-500/20 bg-rose-500/10 px-1 text-[9px] font-bold text-rose-400">
-                                              Overdue
-                                            </span>
-                                          )}
-                                          {p.sourceType && (
-                                            <>
-                                              <span>•</span>
-                                              <span className="text-[9px] font-medium text-muted-foreground/80">
-                                                {formatSourceType(p.sourceType)}
-                                              </span>
-                                            </>
-                                          )}
-                                        </div>
-                                      </div>
-                                      <div className="flex shrink-0 flex-col items-end gap-0.5 pl-2 text-right">
-                                        <span className="font-bold text-foreground">
-                                          {formatCents(p.amount).toLocaleString(
-                                            undefined,
-                                            {
-                                              minimumFractionDigits: 2,
-                                              maximumFractionDigits: 2,
-                                            }
-                                          )}{" "}
-                                          {p.currency}
-                                        </span>
-                                      </div>
-                                    </button>
-                                  )
-                                })
-                              )}
-                            </div>
-                          </ScrollArea>
-                        </PopoverContent>
-                      </Popover>
-                    )
-                  })()}
-                </div>
-
-                {currentDocType !== "INVOICE" && (
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground uppercase">
-                      <ArrowLeftRight className="h-3.5 w-3.5 text-teal-400" />
-                      Link Debt / Borrowing
-                    </Label>
-
-                    {(() => {
-                      const selectedBorrowingObj = borrowings.find(
-                        (b) => b.id === currentBorrowingId
-                      )
-
-                      return (
-                        <Popover
-                          open={borrowingPopoverOpen}
-                          onOpenChange={setBorrowingPopoverOpen}
-                          modal={false}
-                        >
-                          <PopoverTrigger className="flex h-10 w-full cursor-pointer items-center justify-between rounded-xl border border-border/60 bg-background/40 px-3 text-left font-normal text-foreground hover:bg-background/50 focus:ring-1 focus:ring-ring">
-                            {selectedBorrowingObj ? (
-                              <div className="flex w-full items-center justify-between pr-1 text-xs">
-                                <div className="flex min-w-0 items-center gap-2">
-                                  <ArrowLeftRight className="h-3.5 w-3.5 shrink-0 text-teal-400" />
-                                  <span className="truncate font-semibold text-foreground">
-                                    {selectedBorrowingObj.counterparty}
-                                  </span>
-                                  <span
-                                    className={cn(
-                                      "rounded border px-1.5 text-[9px] font-bold",
-                                      selectedBorrowingObj.direction === "LENT"
-                                        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
-                                        : "border-amber-500/20 bg-amber-500/10 text-amber-400"
-                                    )}
-                                  >
-                                    {selectedBorrowingObj.direction === "LENT"
-                                      ? "Lent out"
-                                      : "Borrowed"}
-                                  </span>
-                                </div>
-                                <span className="shrink-0 pl-2 font-bold text-foreground">
-                                  Bal:{" "}
-                                  {formatCents(
-                                    selectedBorrowingObj.remainingAmount
-                                  ).toLocaleString(undefined, {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  })}{" "}
-                                  {selectedBorrowingObj.currency}
+                                <span className="text-xs text-muted-foreground">
+                                  Search or select a scheduled bill...
                                 </span>
-                              </div>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">
-                                Search or select debt / borrowing...
-                              </span>
-                            )}
-                            <ChevronDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
-                          </PopoverTrigger>
-                          <PopoverContent
-                            align="start"
-                            className="flex w-[var(--anchor-width)] min-w-[320px] flex-col gap-2 rounded-2xl border border-border/50 bg-card/95 p-2 shadow-2xl backdrop-blur-xl"
-                          >
-                            <Input
-                              placeholder="Type to filter (counterparty, amount...)"
-                              className="h-9 rounded-xl border-border/50 bg-background/50 text-xs focus-visible:ring-ring"
-                              value={borrowingSearch}
-                              onChange={(e) =>
-                                setBorrowingSearch(e.target.value)
-                              }
-                              autoFocus
-                            />
-                            <ScrollArea className="h-60">
-                              <div className="flex flex-col gap-1 pr-1">
-                                <button
-                                  type="button"
-                                  className="flex w-full cursor-pointer items-center justify-between rounded-xl px-2.5 py-2 text-left text-xs text-rose-400 transition-colors hover:bg-rose-500/10"
-                                  onClick={() => {
-                                    setValue("borrowingId", "", {
-                                      shouldValidate: true,
+                              )}
+                              <ChevronDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
+                            </PopoverTrigger>
+                            <PopoverContent
+                              align="start"
+                              className="flex w-[var(--anchor-width)] min-w-[320px] flex-col gap-2 rounded-2xl border border-border/50 bg-card/95 p-2 shadow-2xl backdrop-blur-xl"
+                            >
+                              <Input
+                                placeholder="Type to filter (vendor, category, amount, date...)"
+                                className="h-9 rounded-xl border-border/50 bg-background/50 text-xs focus-visible:ring-ring"
+                                value={billSearch}
+                                onChange={(e) => setBillSearch(e.target.value)}
+                                autoFocus
+                              />
+                              <ScrollArea className="h-60">
+                                <div className="flex flex-col gap-1 pr-1">
+                                  <button
+                                    type="button"
+                                    className="flex w-full cursor-pointer items-center justify-between rounded-xl px-2.5 py-2 text-left text-xs text-rose-400 transition-colors hover:bg-rose-500/10"
+                                    onClick={() => {
+                                      setValue("scheduledPaymentId", "", {
+                                        shouldValidate: true,
+                                      })
+                                      setBillPopoverOpen(false)
+                                    }}
+                                  >
+                                    <span>None / Standalone Expense</span>
+                                  </button>
+                                  <Separator className="my-1 bg-border/10" />
+                                  {filteredPayments.length === 0 ? (
+                                    <div className="p-4 text-center text-xs text-muted-foreground">
+                                      No matching scheduled bills found.
+                                    </div>
+                                  ) : (
+                                    filteredPayments.map((p) => {
+                                      const budget = budgets.find(
+                                        (b) => b.id === p.budgetId
+                                      )
+                                      const isSelected =
+                                        currentScheduledPaymentId === p.id
+                                      const isOverdue =
+                                        p.dueDate &&
+                                        new Date(p.dueDate).getTime() < nowTime
+                                      const formattedDate = p.dueDate
+                                        ? new Date(
+                                            p.dueDate
+                                          ).toLocaleDateString(undefined, {
+                                            month: "short",
+                                            day: "numeric",
+                                          })
+                                        : "N/A"
+
+                                      return (
+                                        <button
+                                          key={p.id}
+                                          type="button"
+                                          className={cn(
+                                            "flex w-full cursor-pointer items-center justify-between rounded-xl px-2.5 py-2 text-left text-xs transition-colors",
+                                            isSelected
+                                              ? "border border-indigo-500/30 bg-indigo-500/15 font-semibold text-indigo-400"
+                                              : "text-foreground hover:bg-muted/10"
+                                          )}
+                                          onClick={() => {
+                                            setValue(
+                                              "scheduledPaymentId",
+                                              p.id || "",
+                                              { shouldValidate: true }
+                                            )
+                                            setBillPopoverOpen(false)
+                                          }}
+                                        >
+                                          <div className="flex min-w-0 flex-col gap-0.5">
+                                            <div className="flex items-center gap-1.5 truncate pr-2 font-semibold text-foreground">
+                                              <Calendar className="h-3.5 w-3.5 shrink-0 text-indigo-400" />
+                                              <span className="truncate">
+                                                {budget?.name ||
+                                                  "Scheduled Bill"}
+                                              </span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                              <span>Due {formattedDate}</span>
+                                              {isOverdue && (
+                                                <span className="rounded border border-rose-500/20 bg-rose-500/10 px-1 text-[9px] font-bold text-rose-400">
+                                                  Overdue
+                                                </span>
+                                              )}
+                                              {p.sourceType && (
+                                                <>
+                                                  <span>•</span>
+                                                  <span className="text-[9px] font-medium text-muted-foreground/80">
+                                                    {formatSourceType(
+                                                      p.sourceType
+                                                    )}
+                                                  </span>
+                                                </>
+                                              )}
+                                            </div>
+                                          </div>
+                                          <div className="flex shrink-0 flex-col items-end gap-0.5 pl-2 text-right">
+                                            <span className="font-bold text-foreground">
+                                              {formatCents(
+                                                p.amount
+                                              ).toLocaleString(undefined, {
+                                                minimumFractionDigits: 2,
+                                                maximumFractionDigits: 2,
+                                              })}{" "}
+                                              {p.currency}
+                                            </span>
+                                          </div>
+                                        </button>
+                                      )
                                     })
-                                    setBorrowingPopoverOpen(false)
-                                  }}
-                                >
-                                  <span>None / General ledger</span>
-                                </button>
-                                <Separator className="my-1 bg-border/10" />
-                                {filteredBorrowings.length === 0 ? (
-                                  <div className="p-4 text-center text-xs text-muted-foreground">
-                                    No active debt agreements found.
+                                  )}
+                                </div>
+                              </ScrollArea>
+                            </PopoverContent>
+                          </Popover>
+                        )
+                      })()}
+                    </div>
+                  )}
+
+                  {showBorrowingSection && currentDocType !== "INVOICE" && (
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground uppercase">
+                        <ArrowLeftRight className="h-3.5 w-3.5 text-teal-400" />
+                        Link Debt / Borrowing
+                      </Label>
+
+                      {(() => {
+                        const selectedBorrowingObj = borrowings.find(
+                          (b) => b.id === currentBorrowingId
+                        )
+
+                        return (
+                          <>
+                            <Popover
+                              open={borrowingPopoverOpen}
+                              onOpenChange={setBorrowingPopoverOpen}
+                              modal={false}
+                            >
+                              <PopoverTrigger className="flex h-10 w-full cursor-pointer items-center justify-between rounded-xl border border-border/60 bg-background/40 px-3 text-left font-normal text-foreground hover:bg-background/50 focus:ring-1 focus:ring-ring">
+                                {selectedBorrowingObj ? (
+                                  <div className="flex w-full items-center justify-between pr-1 text-xs">
+                                    <div className="flex min-w-0 items-center gap-2">
+                                      <ArrowLeftRight className="h-3.5 w-3.5 shrink-0 text-teal-400" />
+                                      <span className="truncate font-semibold text-foreground">
+                                        {selectedBorrowingObj.counterparty}
+                                      </span>
+                                      <span
+                                        className={cn(
+                                          "rounded border px-1.5 text-[9px] font-bold",
+                                          selectedBorrowingObj.direction ===
+                                            "LENT"
+                                            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+                                            : "border-amber-500/20 bg-amber-500/10 text-amber-400"
+                                        )}
+                                      >
+                                        {selectedBorrowingObj.direction ===
+                                        "LENT"
+                                          ? "Lent out"
+                                          : "Borrowed"}
+                                      </span>
+                                    </div>
+                                    <span className="shrink-0 pl-2 font-bold text-foreground">
+                                      Bal:{" "}
+                                      {formatCents(
+                                        selectedBorrowingObj.remainingAmount
+                                      ).toLocaleString(undefined, {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}{" "}
+                                      {selectedBorrowingObj.currency}
+                                    </span>
                                   </div>
                                 ) : (
-                                  filteredBorrowings.map((b) => {
-                                    const isSelected =
-                                      currentBorrowingId === b.id
-                                    const isLent = b.direction === "LENT"
-
-                                    return (
-                                      <button
-                                        key={b.id}
-                                        type="button"
-                                        className={cn(
-                                          "flex w-full cursor-pointer items-center justify-between rounded-xl px-2.5 py-2 text-left text-xs transition-colors",
-                                          isSelected
-                                            ? "border border-teal-500/30 bg-teal-500/15 font-semibold text-teal-400"
-                                            : "text-foreground hover:bg-muted/10"
-                                        )}
-                                        onClick={() => {
-                                          setValue("borrowingId", b.id || "", {
-                                            shouldValidate: true,
-                                          })
-                                          setBorrowingPopoverOpen(false)
-                                        }}
-                                      >
-                                        <div className="flex min-w-0 flex-col gap-0.5">
-                                          <div className="flex items-center gap-1.5 truncate pr-2 font-semibold text-foreground">
-                                            <ArrowLeftRight className="h-3.5 w-3.5 shrink-0 text-teal-400" />
-                                            <span className="truncate">
-                                              {b.counterparty}
-                                            </span>
-                                          </div>
-                                          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                                            <span
-                                              className={cn(
-                                                "rounded border px-1 text-[9px] font-bold",
-                                                isLent
-                                                  ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
-                                                  : "border-amber-500/20 bg-amber-500/10 text-amber-400"
-                                              )}
-                                            >
-                                              {isLent
-                                                ? "Lent out (Receivable)"
-                                                : "Borrowed (Payable)"}
-                                            </span>
-                                          </div>
-                                        </div>
-                                        <div className="flex shrink-0 flex-col items-end gap-0.5 pl-2 text-right">
-                                          <span className="font-bold text-foreground">
-                                            Bal:{" "}
-                                            {formatCents(
-                                              b.remainingAmount
-                                            ).toLocaleString(undefined, {
-                                              minimumFractionDigits: 2,
-                                              maximumFractionDigits: 2,
-                                            })}{" "}
-                                            {b.currency}
-                                          </span>
-                                          <span className="text-[9px] text-muted-foreground">
-                                            Total:{" "}
-                                            {formatCents(
-                                              b.totalAmount
-                                            ).toLocaleString(undefined, {
-                                              minimumFractionDigits: 2,
-                                              maximumFractionDigits: 2,
-                                            })}
-                                          </span>
-                                        </div>
-                                      </button>
-                                    )
-                                  })
+                                  <span className="text-xs text-muted-foreground">
+                                    Search or select debt / borrowing...
+                                  </span>
                                 )}
-                              </div>
-                            </ScrollArea>
-                          </PopoverContent>
-                        </Popover>
-                      )
-                    })()}
-                  </div>
-                )}
+                                <ChevronDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
+                              </PopoverTrigger>
+                              <PopoverContent
+                                align="start"
+                                className="flex w-[var(--anchor-width)] min-w-[320px] flex-col gap-2 rounded-2xl border border-border/50 bg-card/95 p-2 shadow-2xl backdrop-blur-xl"
+                              >
+                                <Input
+                                  placeholder="Type to filter (counterparty, amount...)"
+                                  className="h-9 rounded-xl border-border/50 bg-background/50 text-xs focus-visible:ring-ring"
+                                  value={borrowingSearch}
+                                  onChange={(e) =>
+                                    setBorrowingSearch(e.target.value)
+                                  }
+                                  autoFocus
+                                />
+                                <ScrollArea className="h-60">
+                                  <div className="flex flex-col gap-1 pr-1">
+                                    <button
+                                      type="button"
+                                      className="flex w-full cursor-pointer items-center justify-between rounded-xl px-2.5 py-2 text-left text-xs text-rose-400 transition-colors hover:bg-rose-500/10"
+                                      onClick={() => {
+                                        setValue("borrowingId", "", {
+                                          shouldValidate: true,
+                                        })
+                                        setBorrowingPopoverOpen(false)
+                                      }}
+                                    >
+                                      <span>None / General ledger</span>
+                                    </button>
+                                    <Separator className="my-1 bg-border/10" />
+                                    {filteredBorrowings.length === 0 ? (
+                                      <div className="p-4 text-center text-xs text-muted-foreground">
+                                        No active debt agreements found.
+                                      </div>
+                                    ) : (
+                                      filteredBorrowings.map((b) => {
+                                        const isSelected =
+                                          currentBorrowingId === b.id
+                                        const isLent = b.direction === "LENT"
 
-                {/* Full-width Suggestion Banners in their own row */}
-                {suggestedBill && (
-                  <div className="sm:col-span-2">
-                    <div className="flex items-center justify-between gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-3 py-2 text-xs">
-                      <div className="flex min-w-0 items-center gap-2 text-indigo-300">
-                        <Sparkles className="h-3.5 w-3.5 shrink-0 animate-pulse text-indigo-400" />
-                        <span className="shrink-0 font-semibold">
-                          Suggested Bill:
-                        </span>
-                        <span className="max-w-[180px] truncate font-bold">
-                          {budgets.find((b) => b.id === suggestedBill.budgetId)
-                            ?.name || "Bill Payment"}
-                        </span>
-                        <span className="shrink-0 text-[11px]">
-                          ({suggestedBill.currency}{" "}
-                          {formatCents(suggestedBill.amount).toLocaleString(
-                            undefined,
-                            {
+                                        return (
+                                          <button
+                                            key={b.id}
+                                            type="button"
+                                            className={cn(
+                                              "flex w-full cursor-pointer items-center justify-between rounded-xl px-2.5 py-2 text-left text-xs transition-colors",
+                                              isSelected
+                                                ? "border border-teal-500/30 bg-teal-500/15 font-semibold text-teal-400"
+                                                : "text-foreground hover:bg-muted/10"
+                                            )}
+                                            onClick={() => {
+                                              setValue(
+                                                "borrowingId",
+                                                b.id || "",
+                                                {
+                                                  shouldValidate: true,
+                                                }
+                                              )
+                                              setBorrowingPopoverOpen(false)
+                                            }}
+                                          >
+                                            <div className="flex min-w-0 flex-col gap-0.5">
+                                              <div className="flex items-center gap-1.5 truncate pr-2 font-semibold text-foreground">
+                                                <ArrowLeftRight className="h-3.5 w-3.5 shrink-0 text-teal-400" />
+                                                <span className="truncate">
+                                                  {b.counterparty}
+                                                </span>
+                                              </div>
+                                              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                                <span
+                                                  className={cn(
+                                                    "rounded border px-1 text-[9px] font-bold",
+                                                    isLent
+                                                      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+                                                      : "border-amber-500/20 bg-amber-500/10 text-amber-400"
+                                                  )}
+                                                >
+                                                  {isLent
+                                                    ? "Lent out (Receivable)"
+                                                    : "Borrowed (Payable)"}
+                                                </span>
+                                              </div>
+                                            </div>
+                                            <div className="flex shrink-0 flex-col items-end gap-0.5 pl-2 text-right">
+                                              <span className="font-bold text-foreground">
+                                                Bal:{" "}
+                                                {formatCents(
+                                                  b.remainingAmount
+                                                ).toLocaleString(undefined, {
+                                                  minimumFractionDigits: 2,
+                                                  maximumFractionDigits: 2,
+                                                })}{" "}
+                                                {b.currency}
+                                              </span>
+                                              <span className="text-[9px] text-muted-foreground">
+                                                Total:{" "}
+                                                {formatCents(
+                                                  b.totalAmount
+                                                ).toLocaleString(undefined, {
+                                                  minimumFractionDigits: 2,
+                                                  maximumFractionDigits: 2,
+                                                })}
+                                              </span>
+                                            </div>
+                                          </button>
+                                        )
+                                      })
+                                    )}
+                                  </div>
+                                </ScrollArea>
+                              </PopoverContent>
+                            </Popover>
+
+                            {currentBorrowingId && (
+                              <div className="mt-2.5 space-y-1.5 rounded-xl border border-teal-500/20 bg-teal-500/5 p-2.5">
+                                <Label className="text-[11px] font-semibold text-teal-400">
+                                  Borrowing Link Action
+                                </Label>
+                                <RadioGroup
+                                  value={
+                                    currentBorrowingLinkType ||
+                                    "INITIAL_RECEIPT"
+                                  }
+                                  onValueChange={(val) =>
+                                    setValue("borrowingLinkType", val as any, {
+                                      shouldValidate: true,
+                                    })
+                                  }
+                                  className="grid grid-cols-1 gap-1.5 sm:grid-cols-3"
+                                >
+                                  <div className="flex cursor-pointer items-center space-x-1.5 rounded-lg border border-border/40 bg-background/50 px-2 py-1.5 hover:bg-background/80">
+                                    <RadioGroupItem
+                                      value="INITIAL_RECEIPT"
+                                      id="bt-initial"
+                                    />
+                                    <label
+                                      htmlFor="bt-initial"
+                                      className="cursor-pointer text-[10px] leading-none font-medium"
+                                    >
+                                      Original Receipt ($0)
+                                    </label>
+                                  </div>
+                                  <div className="flex cursor-pointer items-center space-x-1.5 rounded-lg border border-border/40 bg-background/50 px-2 py-1.5 hover:bg-background/80">
+                                    <RadioGroupItem
+                                      value="REPAYMENT"
+                                      id="bt-repay"
+                                    />
+                                    <label
+                                      htmlFor="bt-repay"
+                                      className="cursor-pointer text-[10px] leading-none font-medium"
+                                    >
+                                      Repayment (-bal)
+                                    </label>
+                                  </div>
+                                  <div className="flex cursor-pointer items-center space-x-1.5 rounded-lg border border-border/40 bg-background/50 px-2 py-1.5 hover:bg-background/80">
+                                    <RadioGroupItem
+                                      value="ADDITIONAL_LOAN"
+                                      id="bt-add"
+                                    />
+                                    <label
+                                      htmlFor="bt-add"
+                                      className="cursor-pointer text-[10px] leading-none font-medium"
+                                    >
+                                      Top-Up (+bal)
+                                    </label>
+                                  </div>
+                                </RadioGroup>
+                              </div>
+                            )}
+                          </>
+                        )
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Full-width Suggestion Banners in their own row */}
+                  {suggestedBill && (
+                    <div className="sm:col-span-2">
+                      <div className="flex items-center justify-between gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-3 py-2 text-xs">
+                        <div className="flex min-w-0 items-center gap-2 text-indigo-300">
+                          <Sparkles className="h-3.5 w-3.5 shrink-0 animate-pulse text-indigo-400" />
+                          <span className="shrink-0 font-semibold">
+                            Suggested Bill:
+                          </span>
+                          <span className="max-w-[180px] truncate font-bold">
+                            {budgets.find(
+                              (b) => b.id === suggestedBill.budgetId
+                            )?.name || "Bill Payment"}
+                          </span>
+                          <span className="shrink-0 text-[11px]">
+                            ({suggestedBill.currency}{" "}
+                            {formatCents(suggestedBill.amount).toLocaleString(
+                              undefined,
+                              {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              }
+                            )}
+                            )
+                          </span>
+                        </div>
+                        {currentScheduledPaymentId !== suggestedBill.id ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-6 shrink-0 cursor-pointer rounded-lg border-indigo-500/30 px-2 text-[10px] font-bold text-indigo-300 hover:bg-indigo-500/20"
+                            onClick={() =>
+                              setValue(
+                                "scheduledPaymentId",
+                                suggestedBill.id || "",
+                                { shouldValidate: true }
+                              )
+                            }
+                          >
+                            Link Match
+                          </Button>
+                        ) : (
+                          <span className="flex shrink-0 items-center gap-1 text-[10px] font-bold tracking-wider text-emerald-400 uppercase">
+                            <Check className="h-3 w-3" /> Linked
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {suggestedBorrowing && (
+                    <div className="sm:col-span-2">
+                      <div className="flex items-center justify-between gap-2 rounded-xl border border-teal-500/20 bg-teal-500/10 px-3 py-2 text-xs">
+                        <div className="flex min-w-0 items-center gap-2 text-teal-300">
+                          <Sparkles className="h-3.5 w-3.5 shrink-0 animate-pulse text-teal-400" />
+                          <span className="shrink-0 font-semibold">
+                            Suggested Debt:
+                          </span>
+                          <span className="max-w-[180px] truncate font-bold">
+                            {suggestedBorrowing.counterparty}
+                          </span>
+                          <span className="shrink-0 text-[11px]">
+                            ({suggestedBorrowing.currency}{" "}
+                            {formatCents(
+                              suggestedBorrowing.remainingAmount
+                            ).toLocaleString(undefined, {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2,
+                            })}
+                            )
+                          </span>
+                        </div>
+                        {currentBorrowingId !== suggestedBorrowing.id ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-6 shrink-0 cursor-pointer rounded-lg border-teal-500/30 px-2 text-[10px] font-bold text-teal-300 hover:bg-teal-500/20"
+                            onClick={() =>
+                              setValue(
+                                "borrowingId",
+                                suggestedBorrowing.id || "",
+                                {
+                                  shouldValidate: true,
+                                }
+                              )
                             }
-                          )}
-                          )
-                        </span>
+                          >
+                            Link Match
+                          </Button>
+                        ) : (
+                          <span className="flex shrink-0 items-center gap-1 text-[10px] font-bold tracking-wider text-emerald-400 uppercase">
+                            <Check className="h-3 w-3" /> Linked
+                          </span>
+                        )}
                       </div>
-                      {currentScheduledPaymentId !== suggestedBill.id ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-6 shrink-0 cursor-pointer rounded-lg border-indigo-500/30 px-2 text-[10px] font-bold text-indigo-300 hover:bg-indigo-500/20"
-                          onClick={() =>
-                            setValue(
-                              "scheduledPaymentId",
-                              suggestedBill.id || "",
-                              { shouldValidate: true }
-                            )
-                          }
-                        >
-                          Link Match
-                        </Button>
-                      ) : (
-                        <span className="flex shrink-0 items-center gap-1 text-[10px] font-bold tracking-wider text-emerald-400 uppercase">
-                          <Check className="h-3 w-3" /> Linked
-                        </span>
-                      )}
                     </div>
-                  </div>
-                )}
-
-                {suggestedBorrowing && (
-                  <div className="sm:col-span-2">
-                    <div className="flex items-center justify-between gap-2 rounded-xl border border-teal-500/20 bg-teal-500/10 px-3 py-2 text-xs">
-                      <div className="flex min-w-0 items-center gap-2 text-teal-300">
-                        <Sparkles className="h-3.5 w-3.5 shrink-0 animate-pulse text-teal-400" />
-                        <span className="shrink-0 font-semibold">
-                          Suggested Debt:
-                        </span>
-                        <span className="max-w-[180px] truncate font-bold">
-                          {suggestedBorrowing.counterparty}
-                        </span>
-                        <span className="shrink-0 text-[11px]">
-                          ({suggestedBorrowing.currency}{" "}
-                          {formatCents(
-                            suggestedBorrowing.remainingAmount
-                          ).toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                          )
-                        </span>
-                      </div>
-                      {currentBorrowingId !== suggestedBorrowing.id ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-6 shrink-0 cursor-pointer rounded-lg border-teal-500/30 px-2 text-[10px] font-bold text-teal-300 hover:bg-teal-500/20"
-                          onClick={() =>
-                            setValue(
-                              "borrowingId",
-                              suggestedBorrowing.id || "",
-                              {
-                                shouldValidate: true,
-                              }
-                            )
-                          }
-                        >
-                          Link Match
-                        </Button>
-                      ) : (
-                        <span className="flex shrink-0 items-center gap-1 text-[10px] font-bold tracking-wider text-emerald-400 uppercase">
-                          <Check className="h-3 w-3" /> Linked
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 

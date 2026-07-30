@@ -29,13 +29,16 @@ type inboxItemDB struct {
 	BudgetID           sql.NullString `db:"budget_id"`
 	ScheduledPaymentID sql.NullString `db:"scheduled_payment_id"`
 	TransactionID      sql.NullString `db:"transaction_id"`
+	BorrowingID        sql.NullString `db:"borrowing_id"`
+	BorrowingLinkType  sql.NullString `db:"borrowing_link_type"`
 	RawPayload         string         `db:"raw_payload"`
 	MetadataJSON       string         `db:"metadata"`
 	CreateTime         sql.NullTime   `db:"create_time"`
 }
 
 func toInboxItemDomain(db inboxItemDB) *finance.InboxItem {
-	var accountID, budgetID, paymentID, transactionID *string
+	var accountID, budgetID, paymentID, transactionID, borrowingID *string
+	var linkType *finance.BorrowingLinkType
 	if db.AccountID.Valid {
 		accountID = &db.AccountID.String
 	}
@@ -47,6 +50,13 @@ func toInboxItemDomain(db inboxItemDB) *finance.InboxItem {
 	}
 	if db.TransactionID.Valid {
 		transactionID = &db.TransactionID.String
+	}
+	if db.BorrowingID.Valid {
+		borrowingID = &db.BorrowingID.String
+	}
+	if db.BorrowingLinkType.Valid {
+		lt := finance.BorrowingLinkType(db.BorrowingLinkType.String)
+		linkType = &lt
 	}
 
 	var amount int64
@@ -68,6 +78,8 @@ func toInboxItemDomain(db inboxItemDB) *finance.InboxItem {
 		BudgetID:           budgetID,
 		ScheduledPaymentID: paymentID,
 		TransactionID:      transactionID,
+		BorrowingID:        borrowingID,
+		BorrowingLinkType:  linkType,
 		RawPayload:         db.RawPayload,
 		MetadataJSON:       db.MetadataJSON,
 		CreateTime:         db.CreateTime.Time,
@@ -90,6 +102,12 @@ func (s *InboxItemStore) Insert(ctx context.Context, item *finance.InboxItem) er
 		createTime = item.CreateTime
 	}
 
+	var linkTypeStr *string
+	if item.BorrowingLinkType != nil {
+		s := string(*item.BorrowingLinkType)
+		linkTypeStr = &s
+	}
+
 	ds := pgDialect.Insert(goqu.S("finance").Table("inbox_item")).Rows(goqu.Record{
 		"id":                   item.ID,
 		"space_id":             item.SpaceID,
@@ -104,6 +122,8 @@ func (s *InboxItemStore) Insert(ctx context.Context, item *finance.InboxItem) er
 		"budget_id":            conv.StringPtr(item.BudgetID),
 		"scheduled_payment_id": conv.StringPtr(item.ScheduledPaymentID),
 		"transaction_id":       conv.StringPtr(item.TransactionID),
+		"borrowing_id":         conv.StringPtr(item.BorrowingID),
+		"borrowing_link_type":  conv.StringPtr(linkTypeStr),
 		"raw_payload":          item.RawPayload,
 		"metadata":             item.MetadataJSON,
 		"create_time":          createTime,
@@ -239,6 +259,12 @@ func (s *InboxItemStore) Delete(ctx context.Context, spaceID, id string) error {
 }
 
 func (s *InboxItemStore) Update(ctx context.Context, item *finance.InboxItem) error {
+	var linkTypeStr *string
+	if item.BorrowingLinkType != nil {
+		s := string(*item.BorrowingLinkType)
+		linkTypeStr = &s
+	}
+
 	ds := pgDialect.Update(goqu.S("finance").Table("inbox_item")).
 		Set(goqu.Record{
 			"status":               string(item.Status),
@@ -251,6 +277,8 @@ func (s *InboxItemStore) Update(ctx context.Context, item *finance.InboxItem) er
 			"budget_id":            conv.StringPtr(item.BudgetID),
 			"scheduled_payment_id": conv.StringPtr(item.ScheduledPaymentID),
 			"transaction_id":       conv.StringPtr(item.TransactionID),
+			"borrowing_id":         conv.StringPtr(item.BorrowingID),
+			"borrowing_link_type":  conv.StringPtr(linkTypeStr),
 			"raw_payload":          item.RawPayload,
 			"metadata":             item.MetadataJSON,
 		}).

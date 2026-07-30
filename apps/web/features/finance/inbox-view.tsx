@@ -262,6 +262,10 @@ export function InboxView() {
             budgetId: budId || "",
             scheduledPaymentId: payId || "",
             transactionId: txnId || "",
+            borrowingId: values.borrowingId || "",
+            borrowingLinkType: values.borrowingLinkType
+              ? (`BORROWING_LINK_TYPE_${values.borrowingLinkType}` as any)
+              : undefined,
             rawPayload: tx.rawPayload,
             metadataJson: JSON.stringify(metadataObj),
           },

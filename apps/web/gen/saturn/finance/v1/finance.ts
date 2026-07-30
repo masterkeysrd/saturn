@@ -52,6 +52,15 @@ export type InsightGranularity =
   | "YEARLY"
 
 /**
+ * Borrowing link classification type.
+ */
+export type BorrowingLinkType =
+  | "BORROWING_LINK_TYPE_UNSPECIFIED"
+  | "BORROWING_LINK_TYPE_INITIAL_RECEIPT"
+  | "BORROWING_LINK_TYPE_REPAYMENT"
+  | "BORROWING_LINK_TYPE_ADDITIONAL_LOAN"
+
+/**
  * RecurrenceInterval defines the frequency of budgeting or transaction execution rules.
  */
 export type Budget_RecurrenceInterval =
@@ -2327,6 +2336,15 @@ export interface InboxItem {
    * Output only. Ingestion stage timestamp.
    */
   createTime?: string
+  /**
+   * Optional. Associated borrowing/lending agreement identifier.
+   * Values are of the form `bor_[a-zA-Z0-9]+`.
+   */
+  borrowingId?: string
+  /**
+   * Optional. Relationship classification for borrowing link (e.g., initial receipt, repayment, additional loan).
+   */
+  borrowingLinkType?: BorrowingLinkType
 }
 
 /**

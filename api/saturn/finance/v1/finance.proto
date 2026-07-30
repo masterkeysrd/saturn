@@ -1957,12 +1957,27 @@ message InboxItem {
   // Output only. Ingestion stage timestamp.
   google.protobuf.Timestamp create_time = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
 
+  // Optional. Associated borrowing/lending agreement identifier.
+  // Values are of the form `bor_[a-zA-Z0-9]+`.
+  optional string borrowing_id = 17;
+
+  // Optional. Relationship classification for borrowing link (e.g., initial receipt, repayment, additional loan).
+  optional BorrowingLinkType borrowing_link_type = 18;
+
   // Optional representation view.
   enum View {
     VIEW_UNSPECIFIED = 0;
     BASIC = 1; // Excludes raw_payload and metadata_json
     FULL = 2; // Returns complete fields
   }
+}
+
+// Borrowing link classification type.
+enum BorrowingLinkType {
+  BORROWING_LINK_TYPE_UNSPECIFIED = 0;
+  BORROWING_LINK_TYPE_INITIAL_RECEIPT = 1; // Original funding proof ($0 balance adjustment)
+  BORROWING_LINK_TYPE_REPAYMENT = 2;       // Installment payback (reduces remaining balance)
+  BORROWING_LINK_TYPE_ADDITIONAL_LOAN = 3;  // Top-up / extra drawdown (increases balance)
 }
 
 // The request for

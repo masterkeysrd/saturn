@@ -25,6 +25,14 @@ const (
 	InboxItemDocSystemVerification InboxItemDocType = "system_verification"
 )
 
+type BorrowingLinkType string
+
+const (
+	BorrowingLinkTypeInitialReceipt BorrowingLinkType = "INITIAL_RECEIPT"
+	BorrowingLinkTypeRepayment      BorrowingLinkType = "REPAYMENT"
+	BorrowingLinkTypeAdditionalLoan BorrowingLinkType = "ADDITIONAL_LOAN"
+)
+
 // ParseInboxItemDocType converts string classifications into strongly-typed InboxItemDocType constants.
 func ParseInboxItemDocType(s string) InboxItemDocType {
 	switch strings.ToUpper(strings.TrimSpace(s)) {
@@ -43,22 +51,24 @@ func ParseInboxItemDocType(s string) InboxItemDocType {
 
 // InboxItem represents a parsed inbound signal waiting in the staging queue.
 type InboxItem struct {
-	ID                 string           `json:"id"`
-	SpaceID            string           `json:"spaceId"`
-	IntegrationID      string           `json:"integrationId"`
-	Status             InboxItemStatus  `json:"status"`
-	DocType            InboxItemDocType `json:"docType"`
-	Amount             int64            `json:"amount"`
-	Currency           string           `json:"currency"`
-	VendorName         string           `json:"vendorName"`
-	TransactionDate    time.Time        `json:"transactionDate"`
-	AccountID          *string          `json:"accountId,omitempty"`
-	BudgetID           *string          `json:"budgetId,omitempty"`
-	ScheduledPaymentID *string          `json:"scheduledPaymentId,omitempty"`
-	TransactionID      *string          `json:"transactionId,omitempty"`
-	RawPayload         string           `json:"rawPayload"`
-	MetadataJSON       string           `json:"metadataJson"`
-	CreateTime         time.Time        `json:"createTime"`
+	ID                 string             `json:"id"`
+	SpaceID            string             `json:"spaceId"`
+	IntegrationID      string             `json:"integrationId"`
+	Status             InboxItemStatus    `json:"status"`
+	DocType            InboxItemDocType   `json:"docType"`
+	Amount             int64              `json:"amount"`
+	Currency           string             `json:"currency"`
+	VendorName         string             `json:"vendorName"`
+	TransactionDate    time.Time          `json:"transactionDate"`
+	AccountID          *string            `json:"accountId,omitempty"`
+	BudgetID           *string            `json:"budgetId,omitempty"`
+	ScheduledPaymentID *string            `json:"scheduledPaymentId,omitempty"`
+	TransactionID      *string            `json:"transactionId,omitempty"`
+	BorrowingID        *string            `json:"borrowingId,omitempty"`
+	BorrowingLinkType  *BorrowingLinkType `json:"borrowingLinkType,omitempty"`
+	RawPayload         string             `json:"rawPayload"`
+	MetadataJSON       string             `json:"metadataJson"`
+	CreateTime         time.Time          `json:"createTime"`
 }
 
 // StageInboxItem defines parameters to draft and stage an inbox item.
@@ -87,6 +97,8 @@ type ApproveInboxItem struct {
 	DestinationAccountID       string
 	TransactionType            string
 	TransactionID              string
+	BorrowingID                string
+	BorrowingLinkType          BorrowingLinkType
 	OverwriteLinkedTransaction bool
 	TransferLeg                string
 	Currency                   string

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/platform/conv"
 	"github.com/masterkeysrd/saturn/internal/platform/id"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
@@ -2391,6 +2392,17 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, id strin
 			txn = &updatedTxn
 		}
 
+		// Handle optional borrowing link for existing transaction
+		if item.BorrowingID != nil && *item.BorrowingID != "" {
+			linkType := BorrowingLinkTypeInitialReceipt
+			if item.BorrowingLinkType != nil {
+				linkType = *item.BorrowingLinkType
+			}
+			if err := s.handleBorrowingLinkForTransaction(ctx, SpaceID(spaceID), txn, *item.BorrowingID, linkType); err != nil {
+				return fmt.Errorf("link borrowing to existing transaction: %w", err)
+			}
+		}
+
 		// Mark inbox item as resolved and link it
 		item.Status = InboxItemResolved
 		if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
@@ -2738,12 +2750,101 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID string, id strin
 		return err
 	}
 
+	// Handle optional borrowing link for newly promoted transaction
+	if item.BorrowingID != nil && *item.BorrowingID != "" {
+		linkType := BorrowingLinkTypeInitialReceipt
+		if item.BorrowingLinkType != nil {
+			linkType = *item.BorrowingLinkType
+		}
+		if err := s.handleBorrowingLinkForTransaction(ctx, SpaceID(spaceID), txn, *item.BorrowingID, linkType); err != nil {
+			return fmt.Errorf("link borrowing to new transaction: %w", err)
+		}
+	}
+
 	// Mark inbox item as resolved and link it
 	item.Status = InboxItemResolved
 	tIDStr := string(txn.ID)
 	item.TransactionID = &tIDStr
 	if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
 		return fmt.Errorf("resolve inbox item: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Service) handleBorrowingLinkForTransaction(ctx context.Context, spaceID SpaceID, txn *Transaction, borrowingIDStr string, linkType BorrowingLinkType) error {
+	if borrowingIDStr == "" {
+		return nil
+	}
+	bID, err := ParseBorrowingID(borrowingIDStr)
+	if err != nil {
+		return fmt.Errorf("invalid borrowing ID: %w", err)
+	}
+	borrowing, err := s.deps.BorrowingStore.GetByID(ctx, spaceID, bID)
+	if err != nil {
+		return fmt.Errorf("get borrowing: %w", err)
+	}
+
+	switch linkType {
+	case BorrowingLinkTypeInitialReceipt:
+		// Tag as original funding proof ($0 balance change)
+		txn.SourceType = conv.Ptr(SourceTypeBorrowing)
+		txn.SourceID = conv.Ptr(string(borrowing.ID))
+		if err := s.deps.TransactionStore.Update(ctx, txn); err != nil {
+			return fmt.Errorf("update transaction borrowing source: %w", err)
+		}
+
+	case BorrowingLinkTypeRepayment:
+		// Create repayment record and deduct remaining balance
+		rID, err := NewBorrowingRepaymentID()
+		if err != nil {
+			return err
+		}
+		repayment := &BorrowingRepayment{
+			ID:          rID,
+			BorrowingID: borrowing.ID,
+			SpaceID:     spaceID,
+			Amount:      txn.Amount,
+			PaymentDate: txn.TransactionDate,
+			Notes:       txn.Description,
+			AccountID:   txn.AccountID,
+			CreateTime:  time.Now().UTC(),
+			UpdateTime:  time.Now().UTC(),
+		}
+		if err := s.deps.BorrowingRepaymentStore.Create(ctx, repayment); err != nil {
+			return fmt.Errorf("create borrowing repayment: %w", err)
+		}
+
+		borrowing.RemainingAmount -= txn.Amount
+		if borrowing.RemainingAmount <= 0 {
+			borrowing.RemainingAmount = 0
+			borrowing.Status = BorrowingStatusPaidOff
+		}
+		borrowing.UpdateTime = time.Now().UTC()
+		if err := s.deps.BorrowingStore.Update(ctx, borrowing); err != nil {
+			return fmt.Errorf("update borrowing remaining balance: %w", err)
+		}
+
+		txn.SourceType = conv.Ptr(SourceTypeBorrowingRepayment)
+		txn.SourceID = conv.Ptr(string(repayment.ID))
+		if err := s.deps.TransactionStore.Update(ctx, txn); err != nil {
+			return fmt.Errorf("update transaction repayment source: %w", err)
+		}
+
+	case BorrowingLinkTypeAdditionalLoan:
+		// Top-up loan (increases total & remaining balance)
+		borrowing.TotalAmount += txn.Amount
+		borrowing.RemainingAmount += txn.Amount
+		borrowing.UpdateTime = time.Now().UTC()
+		if err := s.deps.BorrowingStore.Update(ctx, borrowing); err != nil {
+			return fmt.Errorf("update borrowing total balance: %w", err)
+		}
+
+		txn.SourceType = conv.Ptr(SourceTypeBorrowingAdditional)
+		txn.SourceID = conv.Ptr(string(borrowing.ID))
+		if err := s.deps.TransactionStore.Update(ctx, txn); err != nil {
+			return fmt.Errorf("update transaction additional source: %w", err)
+		}
 	}
 
 	return nil
