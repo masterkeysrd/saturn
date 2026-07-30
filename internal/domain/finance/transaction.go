@@ -81,6 +81,7 @@ type Transaction struct {
 	EffectiveDate   time.Time
 	SourceType      *string // Nullable
 	SourceID        *string // Nullable
+	MetadataJson    string
 	CreateTime      time.Time
 	UpdateTime      time.Time
 }

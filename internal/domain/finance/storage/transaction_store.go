@@ -30,6 +30,7 @@ type transactionDB struct {
 	EffectiveDate   sql.NullTime   `db:"effective_date"`
 	SourceType      sql.NullString `db:"source_type"`
 	SourceID        sql.NullString `db:"source_id"`
+	Metadata        sql.NullString `db:"metadata"`
 	CreateTime      sql.NullTime   `db:"create_time"`
 	UpdateTime      sql.NullTime   `db:"update_time"`
 }
@@ -43,6 +44,10 @@ func NewTransactionStore(db *sqlx.DB) *TransactionStore {
 }
 
 func (s *TransactionStore) Create(ctx context.Context, t *finance.Transaction) error {
+	metaJSON := t.MetadataJson
+	if metaJSON == "" {
+		metaJSON = "{}"
+	}
 
 	ds := pgDialect.Insert(goqu.S("finance").Table("transaction")).Rows(goqu.Record{
 		"id":               string(t.ID),
@@ -60,6 +65,7 @@ func (s *TransactionStore) Create(ctx context.Context, t *finance.Transaction) e
 		"effective_date":   t.EffectiveDate,
 		"source_type":      t.SourceType,
 		"source_id":        t.SourceID,
+		"metadata":         goqu.L("?::jsonb", metaJSON),
 		"create_time":      t.CreateTime,
 		"update_time":      t.UpdateTime,
 	})
@@ -119,6 +125,7 @@ func (row *transactionDB) toDomain() *finance.Transaction {
 		EffectiveDate:   nullTimeToTime(row.EffectiveDate),
 		SourceType:      sourceTypePtr,
 		SourceID:        sourceIDPtr,
+		MetadataJson:    row.Metadata.String,
 		CreateTime:      nullTimeToTime(row.CreateTime),
 		UpdateTime:      nullTimeToTime(row.UpdateTime),
 	}
@@ -161,6 +168,11 @@ func (s *TransactionStore) Delete(ctx context.Context, id finance.TransactionID)
 }
 
 func (s *TransactionStore) Update(ctx context.Context, t *finance.Transaction) error {
+	metaJSON := t.MetadataJson
+	if metaJSON == "" {
+		metaJSON = "{}"
+	}
+
 	ds := pgDialect.Update(goqu.S("finance").Table("transaction")).
 		Set(goqu.Record{
 			"budget_id":        conv.StringPtr(t.BudgetID),
@@ -173,6 +185,7 @@ func (s *TransactionStore) Update(ctx context.Context, t *finance.Transaction) e
 			"description":      t.Description,
 			"transaction_date": t.TransactionDate,
 			"effective_date":   t.EffectiveDate,
+			"metadata":         goqu.L("?::jsonb", metaJSON),
 			"update_time":      t.UpdateTime,
 		}).
 		Where(goqu.Ex{"id": string(t.ID)})
@@ -221,6 +234,12 @@ func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 	}
 	if filter.TransferID != nil {
 		ds = ds.Where(goqu.Ex{"transfer_id": string(*filter.TransferID)})
+	}
+	if filter.BorrowingID != nil {
+		ds = ds.Where(goqu.L("metadata->>'borrowing_id'").Eq(*filter.BorrowingID))
+	}
+	if filter.ScheduledPaymentID != nil {
+		ds = ds.Where(goqu.L("metadata->>'scheduled_payment_id'").Eq(*filter.ScheduledPaymentID))
 	}
 	if filter.MinAmount != nil {
 		ds = ds.Where(goqu.I("amount").Gte(*filter.MinAmount))

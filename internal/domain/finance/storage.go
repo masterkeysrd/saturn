@@ -148,15 +148,17 @@ type ListExchangeRatesFilter struct {
 
 // TransactionFilter encapsulates filtering parameters for transactions.
 type TransactionFilter struct {
-	BudgetID      *BudgetID
-	Type          *TransactionType
-	SourceType    *string
-	SourceID      *string
-	AccountID     *AccountID
-	TransferID    *TransferID
-	PageSize      int32
-	NextPageToken string
-	Sort          sorting.SortOrder
+	BudgetID           *BudgetID
+	Type               *TransactionType
+	SourceType         *string
+	SourceID           *string
+	AccountID          *AccountID
+	TransferID         *TransferID
+	BorrowingID        *string
+	ScheduledPaymentID *string
+	PageSize           int32
+	NextPageToken      string
+	Sort               sorting.SortOrder
 
 	// Deduplication / search filters
 	MinAmount   *int64

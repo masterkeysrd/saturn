@@ -64,46 +64,23 @@ func (bid BorrowingID) Validate() error {
 
 const borrowingPrefix = "bor_"
 
-// BorrowingRepaymentID is a custom string type representing a repayment's unique identifier.
-type BorrowingRepaymentID string
+// BorrowingRepaymentID is a type alias for TransactionID since all repayments are transactions.
+type BorrowingRepaymentID = TransactionID
 
-// NewBorrowingRepaymentID creates a new BorrowingRepaymentID using the default ID generator.
+// NewBorrowingRepaymentID creates a new repayment TransactionID.
 func NewBorrowingRepaymentID() (BorrowingRepaymentID, error) {
-	raw, err := id.Generate(repaymentPrefix)
-	if err != nil {
-		return "", err
-	}
-	return BorrowingRepaymentID(raw), nil
+	return NewTransactionID()
 }
 
-// ParseBorrowingRepaymentID parses a string into a BorrowingRepaymentID and validates it.
+// ParseBorrowingRepaymentID parses a string into a BorrowingRepaymentID (TransactionID).
 func ParseBorrowingRepaymentID(s string) (BorrowingRepaymentID, error) {
-	if err := id.Validate(s, repaymentPrefix); err != nil {
-		return "", fmt.Errorf("invalid borrowing repayment ID: %w", err)
-	}
-	return BorrowingRepaymentID(s), nil
+	return ParseTransactionID(s)
 }
 
 // MustBorrowingRepaymentID panics if the string is not a valid BorrowingRepaymentID.
 func MustBorrowingRepaymentID(s string) BorrowingRepaymentID {
-	rID, err := ParseBorrowingRepaymentID(s)
-	if err != nil {
-		panic(err)
-	}
-	return rID
+	return MustTransactionID(s)
 }
-
-// String returns the string representation.
-func (rid BorrowingRepaymentID) String() string {
-	return string(rid)
-}
-
-// Validate checks if the BorrowingRepaymentID is valid.
-func (rid BorrowingRepaymentID) Validate() error {
-	return id.Validate(string(rid), repaymentPrefix)
-}
-
-const repaymentPrefix = "brp_"
 
 // Borrowing represents a personal borrowing or lending agreement.
 type Borrowing struct {

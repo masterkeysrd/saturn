@@ -519,6 +519,53 @@ func (m *mockTransactionEventStore) ListByTransaction(ctx context.Context, space
 	return list, nil
 }
 
+type mockBorrowingStore struct {
+	data map[BorrowingID]*Borrowing
+}
+
+func (m *mockBorrowingStore) Create(ctx context.Context, b *Borrowing) error {
+	m.data[b.ID] = b
+	return nil
+}
+
+func (m *mockBorrowingStore) GetByID(ctx context.Context, spaceID SpaceID, id BorrowingID) (*Borrowing, error) {
+	b, ok := m.data[id]
+	if !ok {
+		return nil, ErrBorrowingNotFound
+	}
+	return b, nil
+}
+
+func (m *mockBorrowingStore) GetByIDs(ctx context.Context, spaceID SpaceID, ids []BorrowingID) ([]*Borrowing, error) {
+	var list []*Borrowing
+	for _, id := range ids {
+		if b, ok := m.data[id]; ok {
+			list = append(list, b)
+		}
+	}
+	return list, nil
+}
+
+func (m *mockBorrowingStore) Update(ctx context.Context, b *Borrowing) error {
+	m.data[b.ID] = b
+	return nil
+}
+
+func (m *mockBorrowingStore) Delete(ctx context.Context, id BorrowingID) error {
+	delete(m.data, id)
+	return nil
+}
+
+func (m *mockBorrowingStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListBorrowingsFilter) ([]*Borrowing, string, error) {
+	var list []*Borrowing
+	for _, b := range m.data {
+		if b.SpaceID == spaceID {
+			list = append(list, b)
+		}
+	}
+	return list, "", nil
+}
+
 // --- Test Cases ---
 
 func TestCalculateBounds(t *testing.T) {
@@ -1003,5 +1050,178 @@ func TestAdjustAccountBalance(t *testing.T) {
 		t.Error("expected error when attempting to update balance adjustment transaction, got nil")
 	} else if !strings.Contains(err.Error(), "balance adjustment transactions cannot be edited directly") {
 		t.Errorf("unexpected error message: %v", err)
+	}
+}
+
+func TestCreateBorrowingRepayment_SameCurrencyLent(t *testing.T) {
+	ctx := context.Background()
+	spaceID := SpaceID("sp_test123")
+	accID := AccountID("acc_bank123")
+	borID, _ := NewBorrowingID()
+
+	accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
+	txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
+	borrowingStore := &mockBorrowingStore{data: make(map[BorrowingID]*Borrowing)}
+	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+
+	_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
+	_ = accountStore.Create(ctx, &Account{
+		ID:             accID,
+		SpaceID:        spaceID,
+		Name:           "Checking Account",
+		Type:           AccountTypeBank,
+		Currency:       "USD",
+		CurrentBalance: 50000, // $500.00
+		IsActive:       true,
+	})
+	_ = borrowingStore.Create(ctx, &Borrowing{
+		ID:              borID,
+		SpaceID:         spaceID,
+		Direction:       BorrowingDirectionLent,
+		Counterparty:    "John",
+		TotalAmount:     10000, // $100.00
+		RemainingAmount: 10000, // $100.00
+		Currency:        "USD",
+		Status:          BorrowingStatusActive,
+		EstablishedAt:   time.Now().UTC(),
+	})
+
+	svc := NewService(Dependencies{
+		SettingsStore:    settingsStore,
+		AccountStore:     accountStore,
+		BorrowingStore:   borrowingStore,
+		TransactionStore: txnStore,
+	})
+
+	repayment, err := svc.CreateBorrowingRepayment(ctx, &BorrowingRepayment{
+		BorrowingID: borID,
+		SpaceID:     spaceID,
+		Amount:      3000, // $30.00 repayment
+		PaymentDate: time.Now().UTC(),
+		AccountID:   &accID,
+		Notes:       "Part payment from John",
+	})
+	if err != nil {
+		t.Fatalf("CreateBorrowingRepayment failed: %v", err)
+	}
+
+	// Verify Borrowing remaining balance (10000 - 3000 = 7000)
+	b, _ := borrowingStore.GetByID(ctx, spaceID, borID)
+	if b.RemainingAmount != 7000 {
+		t.Errorf("Borrowing remaining balance = %d, want 7000", b.RemainingAmount)
+	}
+
+	// Verify Account balance (50000 + 3000 = 53000 because LENT repayment is INFLOW)
+	acc, _ := accountStore.GetByID(ctx, spaceID, accID)
+	if acc.CurrentBalance != 53000 {
+		t.Errorf("Account balance = %d, want 53000", acc.CurrentBalance)
+	}
+
+	// Verify Repayment Transaction logged
+	txn, err := txnStore.GetByID(ctx, spaceID, TransactionID(repayment.ID))
+	if err != nil {
+		t.Fatalf("Repayment transaction not found: %v", err)
+	}
+	if txn.Type != TransactionTypeIncome {
+		t.Errorf("Transaction type = %s, want INCOME", txn.Type)
+	}
+	if txn.Amount != 3000 {
+		t.Errorf("Transaction amount = %d, want 3000", txn.Amount)
+	}
+}
+
+func TestCreateBorrowingRepayment_MultiCurrency(t *testing.T) {
+	ctx := context.Background()
+	spaceID := SpaceID("sp_test456")
+	accID := AccountID("acc_dop123")
+	borID, _ := NewBorrowingID()
+
+	accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
+	txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
+	borrowingStore := &mockBorrowingStore{data: make(map[BorrowingID]*Borrowing)}
+	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+	rateStore := &mockExchangeRateStore{rates: make(map[string]*ExchangeRate)}
+
+	_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
+	_ = rateStore.Create(ctx, &ExchangeRate{
+		SpaceID:      spaceID,
+		FromCurrency: "USD",
+		ToCurrency:   "DOP",
+		Rate:         60.0,
+		RateDate:     time.Now().UTC(),
+	})
+
+	_ = accountStore.Create(ctx, &Account{
+		ID:             accID,
+		SpaceID:        spaceID,
+		Name:           "Dominican Bank Account",
+		Type:           AccountTypeBank,
+		Currency:       "DOP",
+		CurrentBalance: 5000000, // 50,000.00 DOP
+		IsActive:       true,
+	})
+	_ = borrowingStore.Create(ctx, &Borrowing{
+		ID:              borID,
+		SpaceID:         spaceID,
+		Direction:       BorrowingDirectionLent,
+		Counterparty:    "Maria",
+		TotalAmount:     10000, // $100.00 USD
+		RemainingAmount: 10000, // $100.00 USD
+		Currency:        "USD",
+		Status:          BorrowingStatusActive,
+		EstablishedAt:   time.Now().UTC(),
+	})
+
+	svc := NewService(Dependencies{
+		SettingsStore:     settingsStore,
+		ExchangeRateStore: rateStore,
+		AccountStore:      accountStore,
+		BorrowingStore:    borrowingStore,
+		TransactionStore:  txnStore,
+	})
+
+	repayment, err := svc.CreateBorrowingRepayment(ctx, &BorrowingRepayment{
+		BorrowingID: borID,
+		SpaceID:     spaceID,
+		Amount:      1000, // $10.00 USD repayment
+		PaymentDate: time.Now().UTC(),
+		AccountID:   &accID,
+		Notes:       "Repayment from Maria in DOP",
+	})
+	if err != nil {
+		t.Fatalf("CreateBorrowingRepayment multi-currency failed: %v", err)
+	}
+
+	// Verify Borrowing remaining balance ($100 - $10 = $90 USD)
+	b, _ := borrowingStore.GetByID(ctx, spaceID, borID)
+	if b.RemainingAmount != 9000 {
+		t.Errorf("Borrowing remaining balance = %d, want 9000 USD", b.RemainingAmount)
+	}
+
+	// Verify DOP Account balance: 50,000 DOP + ($10 * 60 = 600 DOP = 60000 DOP cents)
+	acc, _ := accountStore.GetByID(ctx, spaceID, accID)
+	expectedDOPBalance := int64(5000000 + 60000)
+	if acc.CurrentBalance != expectedDOPBalance {
+		t.Errorf("Account DOP balance = %d, want %d", acc.CurrentBalance, expectedDOPBalance)
+	}
+
+	// Verify Deleting Repayment rolls back both DOP Account and USD Borrowing
+	err = svc.DeleteBorrowingRepayment(ctx, DeleteBorrowingRepaymentRequest{
+		SpaceID:     spaceID,
+		BorrowingID: borID,
+		ID:          repayment.ID,
+	})
+	if err != nil {
+		t.Fatalf("DeleteBorrowingRepayment failed: %v", err)
+	}
+
+	bAfterDelete, _ := borrowingStore.GetByID(ctx, spaceID, borID)
+	if bAfterDelete.RemainingAmount != 10000 {
+		t.Errorf("Borrowing balance after deletion = %d, want 10000 USD", bAfterDelete.RemainingAmount)
+	}
+
+	accAfterDelete, _ := accountStore.GetByID(ctx, spaceID, accID)
+	if accAfterDelete.CurrentBalance != 5000000 {
+		t.Errorf("Account DOP balance after deletion = %d, want 5000000 DOP", accAfterDelete.CurrentBalance)
 	}
 }

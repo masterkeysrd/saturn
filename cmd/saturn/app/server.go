@@ -212,27 +212,25 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	recurringExpenseStore := financestorage.NewRecurringExpenseStore(sqlxDB)
 	scheduledPaymentStore := financestorage.NewScheduledPaymentStore(sqlxDB)
 	borrowingStore := financestorage.NewBorrowingStore(sqlxDB)
-	borrowingRepaymentStore := financestorage.NewBorrowingRepaymentStore(sqlxDB)
 	accountStore := financestorage.NewAccountStore(sqlxDB)
 	transferStore := financestorage.NewTransferStore(sqlxDB)
 	transactionEventStore := financestorage.NewTransactionEventStore(sqlxDB)
 	inboxItemStore := financestorage.NewInboxItemStore(sqlxDB)
 
 	financeService := finance.NewService(finance.Dependencies{
-		SettingsStore:           settingsStore,
-		BudgetStore:             budgetStore,
-		PeriodStore:             periodStore,
-		ExchangeRateStore:       rateStore,
-		TransactionStore:        transactionStore,
-		InsightsStore:           insightsStore,
-		RecurringExpenseStore:   recurringExpenseStore,
-		ScheduledPaymentStore:   scheduledPaymentStore,
-		BorrowingStore:          borrowingStore,
-		BorrowingRepaymentStore: borrowingRepaymentStore,
-		AccountStore:            accountStore,
-		TransferStore:           transferStore,
-		TransactionEventStore:   transactionEventStore,
-		InboxItemStore:          inboxItemStore,
+		SettingsStore:         settingsStore,
+		BudgetStore:           budgetStore,
+		PeriodStore:           periodStore,
+		ExchangeRateStore:     rateStore,
+		TransactionStore:      transactionStore,
+		InsightsStore:         insightsStore,
+		RecurringExpenseStore: recurringExpenseStore,
+		ScheduledPaymentStore: scheduledPaymentStore,
+		BorrowingStore:        borrowingStore,
+		AccountStore:          accountStore,
+		TransferStore:         transferStore,
+		TransactionEventStore: transactionEventStore,
+		InboxItemStore:        inboxItemStore,
 	})
 
 	integrationRegistry := integration.NewRegistry(sqlxDB)
@@ -352,6 +350,18 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	s.IntegrationRegistry = integrationRegistry
 
 	return nil
+}
+
+// ServeListener runs the gRPC server loop.
+func (s *GRPCServer) ServeListener() error {
+	if s.grpc == nil || s.listener == nil {
+		return nil
+	}
+	err := s.grpc.Serve(s.listener)
+	if err == grpc.ErrServerStopped {
+		return nil
+	}
+	return err
 }
 
 // Shutdown gracefully stops the gRPC server.
@@ -487,6 +497,18 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 
 	s.server = &http.Server{Addr: s.addr, Handler: handler}
 	return nil
+}
+
+// ServeHTTP starts listening and serving HTTP gateway requests.
+func (s *GRPCGatewayServer) ServeHTTP() error {
+	if s.server == nil {
+		return nil
+	}
+	err := s.server.ListenAndServe()
+	if err == http.ErrServerClosed {
+		return nil
+	}
+	return err
 }
 
 // Shutdown gracefully stops the HTTP server and closes the gRPC connection.
