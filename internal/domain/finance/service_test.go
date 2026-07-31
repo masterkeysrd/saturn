@@ -1564,3 +1564,379 @@ func TestCreateBorrowingRepayment_MultiCurrency(t *testing.T) {
 		t.Errorf("Account DOP balance after deletion = %d, want 5000000 DOP", accAfterDelete.CurrentBalance)
 	}
 }
+
+func TestService_CreateTransfer(t *testing.T) {
+	spIDStr, _ := id.Generate("spc_")
+	spID := SpaceID(spIDStr)
+	otherSpIDStr, _ := id.Generate("spc_")
+	otherSpID := SpaceID(otherSpIDStr)
+
+	ctx := context.Background()
+
+	srcUSD, _ := NewAccountID()
+	dstUSD, _ := NewAccountID()
+	dstEUR, _ := NewAccountID()
+	otherSpaceAcc, _ := NewAccountID()
+
+	tests := []struct {
+		name               string
+		transfer           *Transfer
+		setupAccounts      func(accStore *mockAccountStore)
+		wantErr            bool
+		errContains        string
+		expectedSrcBalance int64
+		expectedDstBalance int64
+	}{
+		{
+			name: "Success - Single Currency (USD to USD)",
+			transfer: &Transfer{
+				SpaceID:              spID,
+				SourceAccountID:      srcUSD,
+				DestinationAccountID: dstUSD,
+				SourceAmount:         40000,
+				DestinationAmount:    40000,
+				TransferDate:         time.Now().UTC(),
+				Notes:                "Single currency savings transfer",
+			},
+			setupAccounts: func(as *mockAccountStore) {
+				_ = as.Create(ctx, &Account{ID: srcUSD, SpaceID: spID, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
+				_ = as.Create(ctx, &Account{ID: dstUSD, SpaceID: spID, Name: "Savings USD", Currency: "USD", CurrentBalance: 0, IsActive: true})
+			},
+			wantErr:            false,
+			expectedSrcBalance: 60000,
+			expectedDstBalance: 40000,
+		},
+		{
+			name: "Success - Multi Currency (EUR to USD)",
+			transfer: &Transfer{
+				SpaceID:              spID,
+				SourceAccountID:      srcUSD,
+				DestinationAccountID: dstEUR,
+				SourceAmount:         50000, // €500
+				DestinationAmount:    54000, // $540
+				TransferDate:         time.Now().UTC(),
+				Notes:                "Multi currency transfer",
+			},
+			setupAccounts: func(as *mockAccountStore) {
+				_ = as.Create(ctx, &Account{ID: srcUSD, SpaceID: spID, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
+				_ = as.Create(ctx, &Account{ID: dstEUR, SpaceID: spID, Name: "Savings EUR", Currency: "EUR", CurrentBalance: 0, IsActive: true})
+			},
+			wantErr:            false,
+			expectedSrcBalance: 50000,
+			expectedDstBalance: 54000,
+		},
+		{
+			name: "Err - Same Source and Destination Account",
+			transfer: &Transfer{
+				SpaceID:              spID,
+				SourceAccountID:      srcUSD,
+				DestinationAccountID: srcUSD,
+				SourceAmount:         10000,
+				DestinationAmount:    10000,
+				TransferDate:         time.Now().UTC(),
+			},
+			setupAccounts: func(as *mockAccountStore) {
+				_ = as.Create(ctx, &Account{ID: srcUSD, SpaceID: spID, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
+			},
+			wantErr:     true,
+			errContains: "source and destination accounts must be different",
+		},
+		{
+			name: "Err - Single Currency Mismatched Amounts",
+			transfer: &Transfer{
+				SpaceID:              spID,
+				SourceAccountID:      srcUSD,
+				DestinationAccountID: dstUSD,
+				SourceAmount:         50000,
+				DestinationAmount:    40000,
+				TransferDate:         time.Now().UTC(),
+			},
+			setupAccounts: func(as *mockAccountStore) {
+				_ = as.Create(ctx, &Account{ID: srcUSD, SpaceID: spID, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
+				_ = as.Create(ctx, &Account{ID: dstUSD, SpaceID: spID, Name: "Savings USD", Currency: "USD", CurrentBalance: 0, IsActive: true})
+			},
+			wantErr:     true,
+			errContains: "source and destination amounts must match for single-currency transfers",
+		},
+		{
+			name: "Err - Zero or Negative Source Amount",
+			transfer: &Transfer{
+				SpaceID:              spID,
+				SourceAccountID:      srcUSD,
+				DestinationAccountID: dstUSD,
+				SourceAmount:         0,
+				DestinationAmount:    10000,
+				TransferDate:         time.Now().UTC(),
+			},
+			setupAccounts: func(as *mockAccountStore) {
+				_ = as.Create(ctx, &Account{ID: srcUSD, SpaceID: spID, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
+				_ = as.Create(ctx, &Account{ID: dstUSD, SpaceID: spID, Name: "Savings USD", Currency: "USD", CurrentBalance: 0, IsActive: true})
+			},
+			wantErr:     true,
+			errContains: "source amount must be greater than zero",
+		},
+		{
+			name: "Err - Account From Different Space",
+			transfer: &Transfer{
+				SpaceID:              spID,
+				SourceAccountID:      srcUSD,
+				DestinationAccountID: otherSpaceAcc,
+				SourceAmount:         10000,
+				DestinationAmount:    10000,
+				TransferDate:         time.Now().UTC(),
+			},
+			setupAccounts: func(as *mockAccountStore) {
+				_ = as.Create(ctx, &Account{ID: srcUSD, SpaceID: spID, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
+				_ = as.Create(ctx, &Account{ID: otherSpaceAcc, SpaceID: otherSpID, Name: "Foreign Space Account", Currency: "USD", CurrentBalance: 0, IsActive: true})
+			},
+			wantErr:     true,
+			errContains: "destination account",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spID, BaseCurrency: "USD"})
+			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: otherSpID, BaseCurrency: "USD"})
+
+			rateStore := &mockExchangeRateStore{rates: make(map[string]*ExchangeRate)}
+			_ = rateStore.Create(ctx, &ExchangeRate{
+				SpaceID:      spID,
+				FromCurrency: "EUR",
+				ToCurrency:   "USD",
+				Rate:         1.08,
+				RateDate:     time.Now().UTC(),
+			})
+
+			accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
+			tt.setupAccounts(accountStore)
+
+			transactionStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
+			transferStore := &mockTransferStore{data: make(map[TransferID]*Transfer)}
+
+			svc := NewService(Dependencies{
+				SettingsStore:         settingsStore,
+				ExchangeRateStore:     rateStore,
+				AccountStore:          accountStore,
+				TransactionStore:      transactionStore,
+				TransferStore:         transferStore,
+				TransactionEventStore: &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)},
+			})
+
+			res, err := svc.CreateTransfer(ctx, tt.transfer)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tt.errContains)
+				}
+				if !strings.Contains(err.Error(), tt.errContains) {
+					t.Fatalf("error = %v, want error containing %q", err, tt.errContains)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected CreateTransfer error: %v", err)
+			}
+
+			// Verify balances
+			srcAcc, _ := accountStore.GetByID(ctx, spID, tt.transfer.SourceAccountID)
+			if srcAcc.CurrentBalance != tt.expectedSrcBalance {
+				t.Errorf("Source account balance = %d, want %d", srcAcc.CurrentBalance, tt.expectedSrcBalance)
+			}
+
+			dstAcc, _ := accountStore.GetByID(ctx, spID, tt.transfer.DestinationAccountID)
+			if dstAcc.CurrentBalance != tt.expectedDstBalance {
+				t.Errorf("Destination account balance = %d, want %d", dstAcc.CurrentBalance, tt.expectedDstBalance)
+			}
+
+			// Verify transaction legs
+			var outflow, inflow *Transaction
+			for _, tx := range transactionStore.txns {
+				if tx.Metadata.TransferID != nil && *tx.Metadata.TransferID == res.ID {
+					if tx.Type == TransactionTypeTransferOut {
+						outflow = tx
+					} else if tx.Type == TransactionTypeTransferIn {
+						inflow = tx
+					}
+				}
+			}
+			if outflow == nil || inflow == nil {
+				t.Fatalf("expected both outflow and inflow transaction legs created")
+			}
+			if *outflow.Metadata.CounterpartAccountID != tt.transfer.DestinationAccountID {
+				t.Errorf("outflow counterpart = %s, want %s", *outflow.Metadata.CounterpartAccountID, tt.transfer.DestinationAccountID)
+			}
+			if *inflow.Metadata.CounterpartAccountID != tt.transfer.SourceAccountID {
+				t.Errorf("inflow counterpart = %s, want %s", *inflow.Metadata.CounterpartAccountID, tt.transfer.SourceAccountID)
+			}
+		})
+	}
+}
+
+func TestService_DeleteTransfer(t *testing.T) {
+	ctx := context.Background()
+	spIDStr, _ := id.Generate("spc_")
+	spID := SpaceID(spIDStr)
+
+	srcAccID, _ := NewAccountID()
+	dstAccID, _ := NewAccountID()
+
+	tests := []struct {
+		name        string
+		transferID  TransferID
+		setupData   func(svc *Service, accStore *mockAccountStore) TransferID
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name: "Success - Delete Existing Transfer & Roll Back Balances",
+			setupData: func(svc *Service, as *mockAccountStore) TransferID {
+				_ = as.Create(ctx, &Account{ID: srcAccID, SpaceID: spID, Name: "Checking", Currency: "USD", CurrentBalance: 100000, IsActive: true})
+				_ = as.Create(ctx, &Account{ID: dstAccID, SpaceID: spID, Name: "Savings", Currency: "USD", CurrentBalance: 0, IsActive: true})
+				tr, _ := svc.CreateTransfer(ctx, &Transfer{
+					SpaceID:              spID,
+					SourceAccountID:      srcAccID,
+					DestinationAccountID: dstAccID,
+					SourceAmount:         30000,
+					DestinationAmount:    30000,
+					TransferDate:         time.Now().UTC(),
+				})
+				return tr.ID
+			},
+			wantErr: false,
+		},
+		{
+			name: "Err - Transfer Not Found",
+			setupData: func(svc *Service, as *mockAccountStore) TransferID {
+				dummyID, _ := NewTransferID()
+				return dummyID
+			},
+			wantErr:     true,
+			errContains: "transfer not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spID, BaseCurrency: "USD"})
+
+			accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
+			transactionStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
+			transferStore := &mockTransferStore{data: make(map[TransferID]*Transfer)}
+
+			svc := NewService(Dependencies{
+				SettingsStore:         settingsStore,
+				AccountStore:          accountStore,
+				TransactionStore:      transactionStore,
+				TransferStore:         transferStore,
+				TransactionEventStore: &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)},
+			})
+
+			targetID := tt.setupData(svc, accountStore)
+
+			err := svc.DeleteTransfer(ctx, spID, targetID)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tt.errContains)
+				}
+				if !strings.Contains(err.Error(), tt.errContains) {
+					t.Fatalf("error = %v, want error containing %q", err, tt.errContains)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected DeleteTransfer error: %v", err)
+			}
+
+			// Assert Transfer record deleted
+			_, err = transferStore.GetByID(ctx, spID, targetID)
+			if err == nil {
+				t.Errorf("expected transfer record to be deleted")
+			}
+
+			// Assert Account Balances restored ($1000 and $0)
+			sAcc, _ := accountStore.GetByID(ctx, spID, srcAccID)
+			if sAcc.CurrentBalance != 100000 {
+				t.Errorf("Source account balance after deletion = %d, want 100000", sAcc.CurrentBalance)
+			}
+			dAcc, _ := accountStore.GetByID(ctx, spID, dstAccID)
+			if dAcc.CurrentBalance != 0 {
+				t.Errorf("Destination account balance after deletion = %d, want 0", dAcc.CurrentBalance)
+			}
+		})
+	}
+}
+
+func TestService_GetAndListTransfers(t *testing.T) {
+	ctx := context.Background()
+	spIDStr, _ := id.Generate("spc_")
+	spID := SpaceID(spIDStr)
+
+	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+	_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spID, BaseCurrency: "USD"})
+
+	accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
+	transactionStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
+	transferStore := &mockTransferStore{data: make(map[TransferID]*Transfer)}
+
+	svc := NewService(Dependencies{
+		SettingsStore:         settingsStore,
+		AccountStore:          accountStore,
+		TransactionStore:      transactionStore,
+		TransferStore:         transferStore,
+		TransactionEventStore: &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)},
+	})
+
+	srcAccID, _ := NewAccountID()
+	dstAccID, _ := NewAccountID()
+
+	srcAcc := &Account{
+		ID:             srcAccID,
+		SpaceID:        spID,
+		Name:           "Checking",
+		Currency:       Currency("USD"),
+		CurrentBalance: 100000,
+		IsActive:       true,
+	}
+	dstAcc := &Account{
+		ID:             dstAccID,
+		SpaceID:        spID,
+		Name:           "Savings",
+		Currency:       Currency("USD"),
+		CurrentBalance: 0,
+		IsActive:       true,
+	}
+	_ = accountStore.Create(ctx, srcAcc)
+	_ = accountStore.Create(ctx, dstAcc)
+
+	tr, err := svc.CreateTransfer(ctx, &Transfer{
+		SpaceID:              spID,
+		SourceAccountID:      srcAcc.ID,
+		DestinationAccountID: dstAcc.ID,
+		SourceAmount:         15000,
+		DestinationAmount:    15000,
+		TransferDate:         time.Now().UTC(),
+	})
+	if err != nil {
+		t.Fatalf("CreateTransfer failed: %v", err)
+	}
+
+	// Test GetTransfer
+	fetched, err := svc.GetTransfer(ctx, spID, tr.ID)
+	if err != nil {
+		t.Fatalf("GetTransfer failed: %v", err)
+	}
+	if fetched.ID != tr.ID {
+		t.Errorf("GetTransfer ID = %s, want %s", fetched.ID, tr.ID)
+	}
+
+	// Test ListTransfers
+	list, _, err := svc.ListTransfers(ctx, spID, 10, "")
+	if err != nil {
+		t.Fatalf("ListTransfers failed: %v", err)
+	}
+	if len(list) != 1 {
+		t.Errorf("ListTransfers count = %d, want 1", len(list))
+	}
+}

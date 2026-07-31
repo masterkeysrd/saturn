@@ -786,9 +786,7 @@ message Transaction {
   // Values are of the form `acc_[a-zA-Z0-9]+`.
   optional string account_id = 16 [(google.api.field_behavior) = OPTIONAL];
 
-  // Optional. Associated transfer transaction ID.
-  // Values are of the form `txn_[a-zA-Z0-9]+`.
-  optional string transfer_id = 17 [(google.api.field_behavior) = OPTIONAL];
+
 
   // Output only. Hydrated minimal account info. Available only on FULL view.
   optional AccountInfo account = 18 [(google.api.field_behavior) = OUTPUT_ONLY];
@@ -893,6 +891,10 @@ message ListTransactionsRequest {
 
   // Optional. Sort order string.
   optional string sort = 10 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Target transfer ID filter.
+  // Values are of the form `trn_[a-zA-Z0-9]+`.
+  optional string transfer_id = 11 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // The response for

@@ -2538,9 +2538,6 @@ type Transaction struct {
 	// Optional. Associated account ID.
 	// Values are of the form `acc_[a-zA-Z0-9]+`.
 	AccountId *string `protobuf:"bytes,16,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
-	// Optional. Associated transfer transaction ID.
-	// Values are of the form `txn_[a-zA-Z0-9]+`.
-	TransferId *string `protobuf:"bytes,17,opt,name=transfer_id,json=transferId,proto3,oneof" json:"transfer_id,omitempty"`
 	// Output only. Hydrated minimal account info. Available only on FULL view.
 	Account *Transaction_AccountInfo `protobuf:"bytes,18,opt,name=account,proto3,oneof" json:"account,omitempty"`
 	// Output only. Hydrated minimal budget info. Available only on FULL view.
@@ -2675,13 +2672,6 @@ func (x *Transaction) GetEffectiveDate() *timestamppb.Timestamp {
 func (x *Transaction) GetAccountId() string {
 	if x != nil && x.AccountId != nil {
 		return *x.AccountId
-	}
-	return ""
-}
-
-func (x *Transaction) GetTransferId() string {
-	if x != nil && x.TransferId != nil {
-		return *x.TransferId
 	}
 	return ""
 }
@@ -3039,7 +3029,10 @@ type ListTransactionsRequest struct {
 	// Optional. Keyset page token.
 	PageToken string `protobuf:"bytes,9,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	// Optional. Sort order string.
-	Sort          *string `protobuf:"bytes,10,opt,name=sort,proto3,oneof" json:"sort,omitempty"`
+	Sort *string `protobuf:"bytes,10,opt,name=sort,proto3,oneof" json:"sort,omitempty"`
+	// Optional. Target transfer ID filter.
+	// Values are of the form `trn_[a-zA-Z0-9]+`.
+	TransferId    *string `protobuf:"bytes,11,opt,name=transfer_id,json=transferId,proto3,oneof" json:"transfer_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3126,6 +3119,13 @@ func (x *ListTransactionsRequest) GetPageToken() string {
 func (x *ListTransactionsRequest) GetSort() string {
 	if x != nil && x.Sort != nil {
 		return *x.Sort
+	}
+	return ""
+}
+
+func (x *ListTransactionsRequest) GetTransferId() string {
+	if x != nil && x.TransferId != nil {
+		return *x.TransferId
 	}
 	return ""
 }
@@ -8235,7 +8235,7 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x0eexchange_rates\x18\x01 \x03(\v2\x1f.saturn.finance.v1.ExchangeRateR\rexchangeRates\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"0\n" +
 	"\x19DeleteExchangeRateRequest\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"\xf1\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"\xb6\n" +
 	"\n" +
 	"\vTransaction\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x1e\n" +
@@ -8255,11 +8255,9 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"updateTime\x12F\n" +
 	"\x0eeffective_date\x18\r \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x02R\reffectiveDate\x12'\n" +
 	"\n" +
-	"account_id\x18\x10 \x01(\tB\x03\xe0A\x01H\x00R\taccountId\x88\x01\x01\x12)\n" +
-	"\vtransfer_id\x18\x11 \x01(\tB\x03\xe0A\x01H\x01R\n" +
-	"transferId\x88\x01\x01\x12N\n" +
-	"\aaccount\x18\x12 \x01(\v2*.saturn.finance.v1.Transaction.AccountInfoB\x03\xe0A\x03H\x02R\aaccount\x88\x01\x01\x12K\n" +
-	"\x06budget\x18\x13 \x01(\v2).saturn.finance.v1.Transaction.BudgetInfoB\x03\xe0A\x03H\x03R\x06budget\x88\x01\x01\x12M\n" +
+	"account_id\x18\x10 \x01(\tB\x03\xe0A\x01H\x00R\taccountId\x88\x01\x01\x12N\n" +
+	"\aaccount\x18\x12 \x01(\v2*.saturn.finance.v1.Transaction.AccountInfoB\x03\xe0A\x03H\x01R\aaccount\x88\x01\x01\x12K\n" +
+	"\x06budget\x18\x13 \x01(\v2).saturn.finance.v1.Transaction.BudgetInfoB\x03\xe0A\x03H\x02R\x06budget\x88\x01\x01\x12M\n" +
 	"\bmetadata\x18\x14 \x03(\v2,.saturn.finance.v1.Transaction.MetadataEntryB\x03\xe0A\x01R\bmetadata\x1ao\n" +
 	"\vAccountInfo\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x17\n" +
@@ -8285,8 +8283,7 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x10VIEW_UNSPECIFIED\x10\x00\x12\t\n" +
 	"\x05BASIC\x10\x01\x12\b\n" +
 	"\x04FULL\x10\x02B\r\n" +
-	"\v_account_idB\x0e\n" +
-	"\f_transfer_idB\n" +
+	"\v_account_idB\n" +
 	"\n" +
 	"\b_accountB\t\n" +
 	"\a_budget\"\xe1\x02\n" +
@@ -8310,7 +8307,7 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x15GetTransactionRequest\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x12A\n" +
 	"\x04view\x18\x02 \x01(\x0e2#.saturn.finance.v1.Transaction.ViewB\x03\xe0A\x01H\x00R\x04view\x88\x01\x01B\a\n" +
-	"\x05_view\"\xa8\x03\n" +
+	"\x05_view\"\xe3\x03\n" +
 	"\x17ListTransactionsRequest\x12A\n" +
 	"\x04view\x18\x01 \x01(\x0e2#.saturn.finance.v1.Transaction.ViewB\x03\xe0A\x01H\x00R\x04view\x88\x01\x01\x12 \n" +
 	"\tbudget_id\x18\x02 \x01(\tB\x03\xe0A\x01R\bbudgetId\x12<\n" +
@@ -8322,11 +8319,14 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\n" +
 	"page_token\x18\t \x01(\tB\x03\xe0A\x01R\tpageToken\x12\x1c\n" +
 	"\x04sort\x18\n" +
-	" \x01(\tB\x03\xe0A\x01H\x03R\x04sort\x88\x01\x01B\a\n" +
+	" \x01(\tB\x03\xe0A\x01H\x03R\x04sort\x88\x01\x01\x12)\n" +
+	"\vtransfer_id\x18\v \x01(\tB\x03\xe0A\x01H\x04R\n" +
+	"transferId\x88\x01\x01B\a\n" +
 	"\x05_viewB\r\n" +
 	"\v_account_idB\x0f\n" +
 	"\r_search_queryB\a\n" +
-	"\x05_sort\"\x86\x01\n" +
+	"\x05_sortB\x0e\n" +
+	"\f_transfer_id\"\x86\x01\n" +
 	"\x18ListTransactionsResponse\x12B\n" +
 	"\ftransactions\x18\x01 \x03(\v2\x1e.saturn.finance.v1.TransactionR\ftransactions\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xde\x01\n" +

@@ -32,6 +32,15 @@ type RepaymentInfo struct {
 	Amount      int64
 }
 
+// TransferInfo stores registered transfer metadata.
+type TransferInfo struct {
+	ID                   string
+	SourceAccountID      string
+	DestinationAccountID string
+	SourceAmount         int64
+	DestinationAmount    int64
+}
+
 // State manages internal session and entity registries for a test run.
 type State struct {
 	T            *testing.T
@@ -43,11 +52,13 @@ type State struct {
 	Accounts   map[string]*AccountInfo
 	Borrowings map[string]*BorrowingInfo
 	Repayments map[string]*RepaymentInfo
+	Transfers  map[string]*financev1.Transfer
 	Budgets    map[string]string
 
 	LastAccount                     *AccountInfo
 	LastBorrowing                   *BorrowingInfo
 	LastRepayment                   *RepaymentInfo
+	LastTransfer                    *financev1.Transfer
 	LastTransaction                 *financev1.Transaction
 	LastRecurringExpenseID          string
 	LastConfirmedScheduledPaymentID string
@@ -59,6 +70,7 @@ func newState(t *testing.T) *State {
 		Accounts:   make(map[string]*AccountInfo),
 		Borrowings: make(map[string]*BorrowingInfo),
 		Repayments: make(map[string]*RepaymentInfo),
+		Transfers:  make(map[string]*financev1.Transfer),
 		Budgets:    make(map[string]string),
 	}
 }
@@ -72,9 +84,13 @@ func (s *State) ClearRegistries() {
 	s.Accounts = make(map[string]*AccountInfo)
 	s.Borrowings = make(map[string]*BorrowingInfo)
 	s.Repayments = make(map[string]*RepaymentInfo)
+	s.Transfers = make(map[string]*financev1.Transfer)
 	s.Budgets = make(map[string]string)
 	s.LastAccount = nil
 	s.LastBorrowing = nil
 	s.LastRepayment = nil
+	s.LastTransfer = nil
 	s.LastTransaction = nil
+	s.LastRecurringExpenseID = ""
+	s.LastConfirmedScheduledPaymentID = ""
 }

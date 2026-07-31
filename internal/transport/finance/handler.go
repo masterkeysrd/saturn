@@ -744,10 +744,17 @@ func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTrans
 		searchQuery = &val
 	}
 
+	var transferID *finance.TransferID
+	if req.TransferId != nil {
+		idVal := finance.TransferID(*req.TransferId)
+		transferID = &idVal
+	}
+
 	filter := finance.TransactionFilter{
 		BudgetID:      budgetID,
 		Type:          txnType,
 		AccountID:     accountID,
+		TransferID:    transferID,
 		PageSize:      req.GetPageSize(),
 		NextPageToken: req.GetPageToken(),
 		Sort:          sorting.Parse(req.GetSort()),
@@ -795,7 +802,7 @@ func toProtoTransaction(t *finance.Transaction) *financev1.Transaction {
 		protoType = financev1.Transaction_TYPE_UNSPECIFIED
 	}
 
-	var budgetID, periodID, accountID, transferID string
+	var budgetID, periodID, accountID string
 	if t.BudgetID != nil {
 		budgetID = string(*t.BudgetID)
 	}
@@ -805,16 +812,9 @@ func toProtoTransaction(t *finance.Transaction) *financev1.Transaction {
 	if t.AccountID != nil {
 		accountID = string(*t.AccountID)
 	}
-	if t.TransferID != nil {
-		transferID = string(*t.TransferID)
-	}
-
-	var accountIDPtr, transferIDPtr *string
+	var accountIDPtr *string
 	if accountID != "" {
 		accountIDPtr = &accountID
-	}
-	if transferID != "" {
-		transferIDPtr = &transferID
 	}
 
 	metaMap := make(map[string]string)
@@ -829,6 +829,12 @@ func toProtoTransaction(t *finance.Transaction) *financev1.Transaction {
 	}
 	if t.Metadata.BorrowingRole != "" {
 		metaMap["borrowing_role"] = t.Metadata.BorrowingRole
+	}
+	if t.Metadata.TransferID != nil {
+		metaMap["transfer_id"] = string(*t.Metadata.TransferID)
+	}
+	if t.Metadata.CounterpartAccountID != nil {
+		metaMap["counterpart_account_id"] = string(*t.Metadata.CounterpartAccountID)
 	}
 	if t.Metadata.Notes != "" {
 		metaMap["notes"] = t.Metadata.Notes
@@ -847,7 +853,6 @@ func toProtoTransaction(t *finance.Transaction) *financev1.Transaction {
 		TransactionDate: timestamppb.New(t.TransactionDate),
 		EffectiveDate:   timestamppb.New(t.EffectiveDate),
 		AccountId:       accountIDPtr,
-		TransferId:      transferIDPtr,
 		Metadata:        metaMap,
 		CreateTime:      timestamppb.New(t.CreateTime),
 		UpdateTime:      timestamppb.New(t.UpdateTime),

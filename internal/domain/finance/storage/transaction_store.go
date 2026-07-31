@@ -22,7 +22,6 @@ type transactionDB struct {
 	BudgetID        sql.NullString `db:"budget_id"`
 	PeriodID        sql.NullString `db:"period_id"`
 	AccountID       sql.NullString `db:"account_id"`
-	TransferID      sql.NullString `db:"transfer_id"`
 	Amount          int64          `db:"amount"`
 	Currency        string         `db:"currency"`
 	AmountInBase    int64          `db:"amount_in_base"`
@@ -55,7 +54,6 @@ func (s *TransactionStore) Create(ctx context.Context, t *finance.Transaction) e
 		"budget_id":        conv.StringPtr(t.BudgetID),
 		"period_id":        conv.StringPtr(t.PeriodID),
 		"account_id":       conv.StringPtr(t.AccountID),
-		"transfer_id":      conv.StringPtr(t.TransferID),
 		"amount":           t.Amount,
 		"currency":         string(t.Currency),
 		"amount_in_base":   t.AmountInBase,
@@ -90,11 +88,6 @@ func (row *transactionDB) toDomain() *finance.Transaction {
 		aID := finance.AccountID(row.AccountID.String)
 		accountIDPtr = &aID
 	}
-	var transferIDPtr *finance.TransferID
-	if row.TransferID.Valid {
-		tID := finance.TransferID(row.TransferID.String)
-		transferIDPtr = &tID
-	}
 
 	var meta finance.TransactionMetadata
 	if row.Metadata.Valid && row.Metadata.String != "" {
@@ -108,7 +101,6 @@ func (row *transactionDB) toDomain() *finance.Transaction {
 		BudgetID:        budgetIDPtr,
 		PeriodID:        periodIDPtr,
 		AccountID:       accountIDPtr,
-		TransferID:      transferIDPtr,
 		Amount:          row.Amount,
 		Currency:        finance.Currency(row.Currency),
 		AmountInBase:    row.AmountInBase,
@@ -168,7 +160,6 @@ func (s *TransactionStore) Update(ctx context.Context, t *finance.Transaction) e
 			"budget_id":        conv.StringPtr(t.BudgetID),
 			"period_id":        conv.StringPtr(t.PeriodID),
 			"account_id":       conv.StringPtr(t.AccountID),
-			"transfer_id":      conv.StringPtr(t.TransferID),
 			"amount":           t.Amount,
 			"currency":         string(t.Currency),
 			"amount_in_base":   t.AmountInBase,
@@ -217,7 +208,7 @@ func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 		ds = ds.Where(goqu.Ex{"account_id": string(*filter.AccountID)})
 	}
 	if filter.TransferID != nil {
-		ds = ds.Where(goqu.Ex{"transfer_id": string(*filter.TransferID)})
+		ds = ds.Where(goqu.L("metadata->>'transfer_id'").Eq(*filter.TransferID))
 	}
 	if filter.BorrowingID != nil {
 		ds = ds.Where(goqu.L("metadata->>'borrowing_id'").Eq(*filter.BorrowingID))
@@ -375,7 +366,7 @@ func (s *TransactionStore) HasTransactions(ctx context.Context, spaceID finance.
 			ds = ds.Where(goqu.Ex{"account_id": string(*filter.AccountID)})
 		}
 		if filter.TransferID != nil {
-			ds = ds.Where(goqu.Ex{"transfer_id": string(*filter.TransferID)})
+			ds = ds.Where(goqu.L("metadata->>'transfer_id'").Eq(*filter.TransferID))
 		}
 	}
 

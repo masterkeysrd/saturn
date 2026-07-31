@@ -2200,9 +2200,13 @@ func (s *Service) CreateTransfer(ctx context.Context, t *Transfer) (*Transfer, e
 		TransactionDate: t.TransferDate,
 		EffectiveDate:   t.TransferDate,
 		AccountID:       &t.SourceAccountID,
-		TransferID:      &t.ID,
-		CreateTime:      t.CreateTime,
-		UpdateTime:      t.UpdateTime,
+		Metadata: TransactionMetadata{
+			TransferID:           &t.ID,
+			CounterpartAccountID: &t.DestinationAccountID,
+			Notes:                t.Notes,
+		},
+		CreateTime: t.CreateTime,
+		UpdateTime: t.UpdateTime,
 	}
 	if err := s.createTransaction(ctx, outflowTxn); err != nil {
 		return nil, fmt.Errorf("failed to log transfer outflow leg: %w", err)
@@ -2223,9 +2227,13 @@ func (s *Service) CreateTransfer(ctx context.Context, t *Transfer) (*Transfer, e
 		TransactionDate: t.TransferDate,
 		EffectiveDate:   t.TransferDate,
 		AccountID:       &t.DestinationAccountID,
-		TransferID:      &t.ID,
-		CreateTime:      t.CreateTime,
-		UpdateTime:      t.UpdateTime,
+		Metadata: TransactionMetadata{
+			TransferID:           &t.ID,
+			CounterpartAccountID: &t.SourceAccountID,
+			Notes:                t.Notes,
+		},
+		CreateTime: t.CreateTime,
+		UpdateTime: t.UpdateTime,
 	}
 	if err := s.createTransaction(ctx, inflowTxn); err != nil {
 		return nil, fmt.Errorf("failed to log transfer inflow leg: %w", err)

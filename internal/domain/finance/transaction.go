@@ -66,13 +66,15 @@ const transactionPrefix = "txn_"
 
 // TransactionMetadata contains strongly typed domain context metadata associated with a transaction.
 type TransactionMetadata struct {
-	ScheduledPaymentID  *ScheduledPaymentID `json:"scheduled_payment_id,omitempty"`
-	RecurringExpenseID  *RecurringExpenseID `json:"recurring_expense_id,omitempty"`
-	BorrowingID         *BorrowingID        `json:"borrowing_id,omitempty"`
-	BorrowingRole       string              `json:"borrowing_role,omitempty"` // "INITIAL_FUNDING", "REPAYMENT", "ADDITIONAL_LOAN"
-	BorrowingAmount     int64               `json:"borrowing_amount,omitempty"`
-	AccountImpactAmount int64               `json:"account_impact_amount,omitempty"`
-	Notes               string              `json:"notes,omitempty"`
+	ScheduledPaymentID   *ScheduledPaymentID `json:"scheduled_payment_id,omitempty"`
+	RecurringExpenseID   *RecurringExpenseID `json:"recurring_expense_id,omitempty"`
+	BorrowingID          *BorrowingID        `json:"borrowing_id,omitempty"`
+	BorrowingRole        string              `json:"borrowing_role,omitempty"` // "INITIAL_FUNDING", "REPAYMENT", "ADDITIONAL_LOAN"
+	BorrowingAmount      int64               `json:"borrowing_amount,omitempty"`
+	AccountImpactAmount  int64               `json:"account_impact_amount,omitempty"`
+	TransferID           *TransferID         `json:"transfer_id,omitempty"`
+	CounterpartAccountID *AccountID          `json:"counterpart_account_id,omitempty"`
+	Notes                string              `json:"notes,omitempty"`
 }
 
 // Transaction represents a financial record in the space ledger.
@@ -80,11 +82,10 @@ type Transaction struct {
 	ID              TransactionID
 	SpaceID         SpaceID
 	Type            TransactionType
-	BudgetID        *BudgetID   // Nullable
-	PeriodID        *PeriodID   // Nullable
-	AccountID       *AccountID  // Nullable
-	TransferID      *TransferID // Nullable
-	Amount          int64       // Unsigned in local currency cents
+	BudgetID        *BudgetID  // Nullable
+	PeriodID        *PeriodID  // Nullable
+	AccountID       *AccountID // Nullable
+	Amount          int64      // Unsigned in local currency cents
 	Currency        Currency
 	AmountInBase    int64 // Unsigned in workspace base currency cents
 	Description     string
@@ -123,8 +124,8 @@ func (t *Transaction) Validate() error {
 			return fmt.Errorf("validate account ID: %w", err)
 		}
 	}
-	if t.TransferID != nil {
-		if err := t.TransferID.Validate(); err != nil {
+	if t.Metadata.TransferID != nil {
+		if err := t.Metadata.TransferID.Validate(); err != nil {
 			return fmt.Errorf("validate transfer ID: %w", err)
 		}
 	}

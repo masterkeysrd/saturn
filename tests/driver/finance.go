@@ -415,34 +415,125 @@ func (f *FinanceDriver) AssertTransactionCount(tb testing.TB, expectedCount int)
 	return f
 }
 
-// CreateTransfer executes an internal account transfer between two named accounts.
-func (f *FinanceDriver) CreateTransfer(tb testing.TB, fromAccountName, toAccountName string, amount int64, notes string) *FinanceDriver {
+// TransferOptions parameters for executing an account transfer.
+type TransferOptions struct {
+	Key               string // Optional: key to register transfer in driver state
+	FromAccount       string
+	ToAccount         string
+	SourceAmount      int64
+	DestinationAmount int64 // Optional: defaults to SourceAmount if 0
+	Notes             string
+	ExpectErr         string
+}
+
+// CreateTransfer executes an internal account transfer using TransferOptions struct.
+func (f *FinanceDriver) CreateTransfer(tb testing.TB, opts TransferOptions) *FinanceDriver {
 	tb.Helper()
 	if tb.Failed() {
 		return f
 	}
-	srcAcc, ok := f.driver.state.Accounts[fromAccountName]
+	srcAcc, ok := f.driver.state.Accounts[opts.FromAccount]
 	if !ok {
-		tb.Fatalf("account named %q not found in state registry", fromAccountName)
+		tb.Fatalf("account named %q not found in state registry", opts.FromAccount)
 		return f
 	}
-	dstAcc, ok := f.driver.state.Accounts[toAccountName]
+	dstAcc, ok := f.driver.state.Accounts[opts.ToAccount]
 	if !ok {
-		tb.Fatalf("account named %q not found in state registry", toAccountName)
+		tb.Fatalf("account named %q not found in state registry", opts.ToAccount)
 		return f
 	}
 
+	destAmount := opts.DestinationAmount
+	if destAmount == 0 {
+		destAmount = opts.SourceAmount
+	}
+
 	client := f.getClient()
-	_, err := client.CreateTransfer(tb.Context(), &financev1.CreateTransferRequest{
+	transfer, err := client.CreateTransfer(tb.Context(), &financev1.CreateTransferRequest{
 		SourceAccountId:      srcAcc.ID,
 		DestinationAccountId: dstAcc.ID,
-		SourceAmount:         amount,
-		DestinationAmount:    amount,
-		Notes:                notes,
+		SourceAmount:         opts.SourceAmount,
+		DestinationAmount:    destAmount,
+		Notes:                opts.Notes,
 	})
+	if opts.ExpectErr != "" {
+		if err == nil {
+			tb.Fatalf("CreateTransfer succeeded, but expected error containing %q", opts.ExpectErr)
+			return f
+		}
+		if !strings.Contains(err.Error(), opts.ExpectErr) {
+			tb.Fatalf("CreateTransfer error = %v, want error containing %q", err, opts.ExpectErr)
+		}
+		return f
+	}
 	if err != nil {
 		tb.Fatalf("CreateTransfer SDK call failed: %v", err)
+		return f
 	}
+
+	if transfer != nil {
+		if opts.Key != "" {
+			f.driver.state.Transfers[opts.Key] = transfer
+		}
+		f.driver.state.LastTransfer = transfer
+	}
+	return f
+}
+
+// AssertTransfer fluently fetches a Transfer and its two transaction legs (outflow & inflow) using transfer_id, passing them to a callback.
+func (f *FinanceDriver) AssertTransfer(tb testing.TB, transferKey string, fn func(transfer *financev1.Transfer, outflowLeg, inflowLeg *financev1.Transaction)) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+
+	var transfer *financev1.Transfer
+	if transferKey != "" {
+		var ok bool
+		transfer, ok = f.driver.state.Transfers[transferKey]
+		if !ok {
+			tb.Fatalf("AssertTransfer: transfer key %q not found in state registry", transferKey)
+			return f
+		}
+	} else {
+		transfer = f.driver.state.LastTransfer
+		if transfer == nil {
+			tb.Fatalf("AssertTransfer called, but no transfer has been created yet")
+			return f
+		}
+	}
+
+	client := f.getClient()
+	ctx := tb.Context()
+
+	// 1. Query Transaction legs using transfer_id filter
+	txResp, err := client.ListTransactions(ctx, &financev1.ListTransactionsRequest{
+		TransferId: &transfer.Id,
+	})
+	if err != nil {
+		tb.Fatalf("AssertTransfer: ListTransactions SDK call failed for transfer_id %s: %v", transfer.Id, err)
+		return f
+	}
+
+	var outflowLeg, inflowLeg *financev1.Transaction
+	for _, tx := range txResp.Transactions {
+		if tx.Type == financev1.Transaction_TRANSFER_OUT {
+			outflowLeg = tx
+		} else if tx.Type == financev1.Transaction_TRANSFER_IN {
+			inflowLeg = tx
+		}
+	}
+
+	if outflowLeg == nil {
+		tb.Fatalf("AssertTransfer: missing TRANSFER_OUT leg for transfer %s", transfer.Id)
+		return f
+	}
+	if inflowLeg == nil {
+		tb.Fatalf("AssertTransfer: missing TRANSFER_IN leg for transfer %s", transfer.Id)
+		return f
+	}
+
+	fn(transfer, outflowLeg, inflowLeg)
 	return f
 }
 
