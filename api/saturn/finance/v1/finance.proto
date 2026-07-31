@@ -121,6 +121,11 @@ service Finance {
     option (google.api.http) = {get: "/v1/finance/transactions"};
   }
 
+  // Retrieves details of a specific logged transaction record by ID.
+  rpc GetTransaction(GetTransactionRequest) returns (Transaction) {
+    option (google.api.http) = {get: "/v1/finance/transactions/{id}"};
+  }
+
   // Lists historical lifecycle events tracking mutations and updates applied to a transaction.
   rpc ListTransactionEvents(ListTransactionEventsRequest) returns (ListTransactionEventsResponse) {
     option (google.api.http) = {get: "/v1/finance/transactions/{txn_id}/events"};
@@ -160,6 +165,11 @@ service Finance {
   // Lists scheduled payment instances spawned by recurring templates.
   rpc ListScheduledPayments(ListScheduledPaymentsRequest) returns (ListScheduledPaymentsResponse) {
     option (google.api.http) = {get: "/v1/finance/scheduled-payments"};
+  }
+
+  // Retrieves details of a specific scheduled payment by ID.
+  rpc GetScheduledPayment(GetScheduledPaymentRequest) returns (ScheduledPayment) {
+    option (google.api.http) = {get: "/v1/finance/scheduled-payments/{id}"};
   }
 
   // Clears a scheduled payment instance, converting it into a permanent, reconciled ledger transaction.
@@ -770,11 +780,7 @@ message Transaction {
   // Required. Execution/posting date (when funds reconcile in account balance).
   google.protobuf.Timestamp effective_date = 13 [(google.api.field_behavior) = REQUIRED];
 
-  // Optional. Integration source type (e.g. "plaid").
-  optional string source_type = 14 [(google.api.field_behavior) = OPTIONAL];
 
-  // Optional. Integration source record ID.
-  optional string source_id = 15 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Associated account ID.
   // Values are of the form `acc_[a-zA-Z0-9]+`.
@@ -789,6 +795,9 @@ message Transaction {
 
   // Output only. Hydrated minimal budget info. Available only on FULL view.
   optional BudgetInfo budget = 19 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. Context metadata key-value pairs.
+  map<string, string> metadata = 20 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // ExpenseInput encapsulates fields representing an expense record payload.
@@ -844,6 +853,17 @@ message DeleteTransactionRequest {
 }
 
 // The request for
+// [GetTransaction][saturn.finance.v1.Finance.GetTransaction].
+message GetTransactionRequest {
+  // Required. Unique identifier of the transaction record to retrieve.
+  // Values are of the form `txn_[a-zA-Z0-9]+`.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Scoped budget representation view type.
+  optional Transaction.View view = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// The request for
 // [ListTransactions][saturn.finance.v1.Finance.ListTransactions].
 message ListTransactionsRequest {
   // Optional. Scoped budget representation view type.
@@ -856,11 +876,7 @@ message ListTransactionsRequest {
   // Optional. Target transaction flow type filter.
   Transaction.Type type = 3 [(google.api.field_behavior) = OPTIONAL];
 
-  // Optional. Integration source type.
-  optional string source_type = 4 [(google.api.field_behavior) = OPTIONAL];
 
-  // Optional. Integration source record ID.
-  optional string source_id = 5 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Target account identifier.
   // Values are of the form `acc_[a-zA-Z0-9]+`.
@@ -1313,6 +1329,14 @@ message ListScheduledPaymentsResponse {
 
   // Next page keyset token. Empty if no more pages are available.
   string next_page_token = 2;
+}
+
+// The request for
+// [GetScheduledPayment][saturn.finance.v1.Finance.GetScheduledPayment].
+message GetScheduledPaymentRequest {
+  // Required. Unique identifier of the scheduled payment to retrieve.
+  // Values are of the form `sch_[a-zA-Z0-9]+`.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 // The request for

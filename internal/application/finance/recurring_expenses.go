@@ -48,6 +48,11 @@ func (c *Coordinator) CreateRecurringExpense(ctx context.Context, req *CreateRec
 		return nil, err
 	}
 
+	dueDate := req.DueDate
+	if dueDate.IsZero() {
+		dueDate = time.Now().UTC()
+	}
+
 	expense := &finance.RecurringExpense{
 		SpaceID:         rCtx.SpaceID,
 		BudgetID:        req.BudgetID,
@@ -55,12 +60,18 @@ func (c *Coordinator) CreateRecurringExpense(ctx context.Context, req *CreateRec
 		Amount:          req.Amount,
 		Currency:        req.Currency,
 		Interval:        req.Interval,
-		NextDueDate:     req.DueDate,
+		NextDueDate:     dueDate,
 		IsVariable:      req.IsVariable,
 		GracePeriodDays: req.GracePeriodDays,
 	}
 
-	return c.financeService.CreateRecurringExpense(ctx, expense)
+	res, err := c.financeService.CreateRecurringExpense(ctx, expense)
+	if err != nil {
+		return nil, err
+	}
+
+	_ = c.financeService.GenerateScheduledPayments(ctx)
+	return res, nil
 }
 
 func (c *Coordinator) UpdateRecurringExpense(ctx context.Context, req *UpdateRecurringExpenseRequest) (*finance.RecurringExpense, error) {
@@ -138,6 +149,15 @@ func (c *Coordinator) SkipScheduledPayment(ctx context.Context, id finance.Sched
 	}
 
 	return c.financeService.SkipScheduledPayment(ctx, rCtx.SpaceID, id)
+}
+
+func (c *Coordinator) GetScheduledPayment(ctx context.Context, id finance.ScheduledPaymentID) (*finance.ScheduledPayment, error) {
+	rCtx, err := c.resolveContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.financeService.GetScheduledPayment(ctx, rCtx.SpaceID, id)
 }
 
 func (c *Coordinator) GenerateScheduledPayments(ctx context.Context) error {

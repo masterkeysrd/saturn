@@ -1,0 +1,171 @@
+package finance
+
+import (
+	"testing"
+	"time"
+
+	"github.com/masterkeysrd/saturn/internal/platform/id"
+)
+
+func TestBorrowingID(t *testing.T) {
+	bID, err := NewBorrowingID()
+	if err != nil {
+		t.Fatalf("unexpected error creating borrowing ID: %v", err)
+	}
+	if err := bID.Validate(); err != nil {
+		t.Errorf("expected valid borrowing ID, got: %v", err)
+	}
+	if bID.String() == "" {
+		t.Error("expected non-empty string representation")
+	}
+
+	parsed, err := ParseBorrowingID(string(bID))
+	if err != nil || parsed != bID {
+		t.Errorf("failed to parse borrowing ID: %v", err)
+	}
+
+	mustID := MustBorrowingID(string(bID))
+	if mustID != bID {
+		t.Errorf("MustBorrowingID mismatch: got %v, want %v", mustID, bID)
+	}
+}
+
+func TestBorrowing_Validate(t *testing.T) {
+	bID, _ := NewBorrowingID()
+	rawSpace, _ := id.Generate("spc_")
+	spaceID := SpaceID(rawSpace)
+	accID, _ := NewAccountID()
+	now := time.Now()
+
+	tests := []struct {
+		name      string
+		borrowing Borrowing
+		wantErr   bool
+	}{
+		{
+			name: "valid borrowing lent",
+			borrowing: Borrowing{
+				ID:              bID,
+				SpaceID:         spaceID,
+				Direction:       BorrowingDirectionLent,
+				Counterparty:    "John Doe",
+				TotalAmount:     10000,
+				RemainingAmount: 10000,
+				Currency:        "USD",
+				Status:          BorrowingStatusActive,
+				EstablishedAt:   now,
+				AccountID:       &accID,
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid borrowing borrowed paid off",
+			borrowing: Borrowing{
+				ID:              bID,
+				SpaceID:         spaceID,
+				Direction:       BorrowingDirectionBorrowed,
+				Counterparty:    "Bank",
+				TotalAmount:     50000,
+				RemainingAmount: 0,
+				Currency:        "USD",
+				Status:          BorrowingStatusPaidOff,
+				EstablishedAt:   now,
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid direction",
+			borrowing: Borrowing{
+				ID:              bID,
+				SpaceID:         spaceID,
+				Direction:       "INVALID",
+				Counterparty:    "John",
+				TotalAmount:     10000,
+				RemainingAmount: 10000,
+				Currency:        "USD",
+				Status:          BorrowingStatusActive,
+				EstablishedAt:   now,
+			},
+			wantErr: true,
+		},
+		{
+			name: "missing counterparty",
+			borrowing: Borrowing{
+				ID:              bID,
+				SpaceID:         spaceID,
+				Direction:       BorrowingDirectionLent,
+				Counterparty:    "",
+				TotalAmount:     10000,
+				RemainingAmount: 10000,
+				Currency:        "USD",
+				Status:          BorrowingStatusActive,
+				EstablishedAt:   now,
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid remaining amount greater than total",
+			borrowing: Borrowing{
+				ID:              bID,
+				SpaceID:         spaceID,
+				Direction:       BorrowingDirectionLent,
+				Counterparty:    "John",
+				TotalAmount:     10000,
+				RemainingAmount: 15000,
+				Currency:        "USD",
+				Status:          BorrowingStatusActive,
+				EstablishedAt:   now,
+			},
+			wantErr: true,
+		},
+		{
+			name: "negative remaining amount",
+			borrowing: Borrowing{
+				ID:              bID,
+				SpaceID:         spaceID,
+				Direction:       BorrowingDirectionLent,
+				Counterparty:    "John",
+				TotalAmount:     10000,
+				RemainingAmount: -100,
+				Currency:        "USD",
+				Status:          BorrowingStatusActive,
+				EstablishedAt:   now,
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.borrowing.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Borrowing.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestBorrowingRepayment_Validate(t *testing.T) {
+	bID, _ := NewBorrowingID()
+	rawSpace, _ := id.Generate("spc_")
+	spaceID := SpaceID(rawSpace)
+	repID, _ := NewBorrowingRepaymentID()
+	now := time.Now()
+
+	rep := BorrowingRepayment{
+		ID:          repID,
+		BorrowingID: bID,
+		SpaceID:     spaceID,
+		Amount:      3000,
+		PaymentDate: now,
+	}
+
+	if err := rep.Validate(); err != nil {
+		t.Errorf("unexpected error validating repayment: %v", err)
+	}
+
+	rep.Amount = 0
+	if err := rep.Validate(); err == nil {
+		t.Error("expected error for zero amount repayment, got nil")
+	}
+}

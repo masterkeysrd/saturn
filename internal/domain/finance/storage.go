@@ -150,8 +150,6 @@ type ListExchangeRatesFilter struct {
 type TransactionFilter struct {
 	BudgetID           *BudgetID
 	Type               *TransactionType
-	SourceType         *string
-	SourceID           *string
 	AccountID          *AccountID
 	TransferID         *TransferID
 	BorrowingID        *string

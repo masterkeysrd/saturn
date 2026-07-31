@@ -225,6 +225,16 @@ func (c *Client) ListTransactions(ctx context.Context, req *ListTransactionsRequ
 	return &resp, nil
 }
 
+// GetTransaction executes GET /api/v1/finance/transactions/{id}.
+func (c *Client) GetTransaction(ctx context.Context, req *GetTransactionRequest) (*Transaction, error) {
+	var resp Transaction
+	path := fmt.Sprintf("/api/v1/finance/transactions/%s", req.GetId())
+	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
 // ListTransactionEvents executes GET /api/v1/finance/transactions/{txn_id}/events.
 func (c *Client) ListTransactionEvents(ctx context.Context, req *ListTransactionEventsRequest) (*ListTransactionEventsResponse, error) {
 	var resp ListTransactionEventsResponse
@@ -297,6 +307,16 @@ func (c *Client) ListRecurringExpenses(ctx context.Context, req *ListRecurringEx
 func (c *Client) ListScheduledPayments(ctx context.Context, req *ListScheduledPaymentsRequest) (*ListScheduledPaymentsResponse, error) {
 	var resp ListScheduledPaymentsResponse
 	path := "/api/v1/finance/scheduled-payments"
+	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// GetScheduledPayment executes GET /api/v1/finance/scheduled-payments/{id}.
+func (c *Client) GetScheduledPayment(ctx context.Context, req *GetScheduledPaymentRequest) (*ScheduledPayment, error) {
+	var resp ScheduledPayment
+	path := fmt.Sprintf("/api/v1/finance/scheduled-payments/%s", req.GetId())
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}

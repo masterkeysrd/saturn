@@ -226,6 +226,20 @@ func (h *Handler) ListScheduledPayments(ctx context.Context, req *financev1.List
 	}, nil
 }
 
+func (h *Handler) GetScheduledPayment(ctx context.Context, req *financev1.GetScheduledPaymentRequest) (*financev1.ScheduledPayment, error) {
+	spID, err := finance.ParseScheduledPaymentID(req.GetId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid scheduled payment id: %v", err)
+	}
+
+	sp, err := h.Coordinator.GetScheduledPayment(ctx, spID)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoScheduledPayment(sp), nil
+}
+
 func (h *Handler) ConfirmScheduledPayment(ctx context.Context, req *financev1.ConfirmScheduledPaymentRequest) (*financev1.Transaction, error) {
 	paymentID, err := finance.ParseScheduledPaymentID(req.GetPaymentId())
 	if err != nil {

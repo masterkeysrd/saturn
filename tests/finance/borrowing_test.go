@@ -3,6 +3,7 @@ package finance_test
 import (
 	"testing"
 
+	financev1 "github.com/masterkeysrd/saturn/apis/saturn/finance/v1"
 	"github.com/masterkeysrd/saturn/tests/driver"
 )
 
@@ -18,9 +19,25 @@ func TestBorrowingRepayment_MultiAccountAndRollbackFlow(t *testing.T) {
 
 	d.Finance().
 		InitSettings(t, "USD").
-		CreateAccount(t, "Checking Account", "BANK", "USD", 50000).    // $500.00 initial
-		CreateAccount(t, "Savings Account", "BANK", "USD", 100000).    // $1,000.00 initial
-		CreateBorrowing(t, "John Loan", "John", "LENT", "USD", 10000). // $100.00 lent
+		CreateAccount(t, driver.AccountOptions{
+			Name:           "Checking Account",
+			Type:           financev1.Account_BANK,
+			Currency:       "USD",
+			InitialBalance: 50000,
+		}).
+		CreateAccount(t, driver.AccountOptions{
+			Name:           "Savings Account",
+			Type:           financev1.Account_BANK,
+			Currency:       "USD",
+			InitialBalance: 100000,
+		}).
+		CreateBorrowing(t, driver.BorrowingOptions{
+			Name:         "John Loan",
+			Counterparty: "John",
+			Direction:    financev1.Borrowing_LENT,
+			Currency:     "USD",
+			TotalAmount:  10000,
+		}).
 		CreateRepayment(t, driver.RepaymentOptions{
 			Borrowing: "John Loan",
 			Account:   "Checking Account",

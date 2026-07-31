@@ -2450,6 +2450,38 @@
         ]
       }
     },
+    "/v1/finance/scheduled-payments/{id}": {
+      "get": {
+        "summary": "Retrieves details of a specific scheduled payment by ID.",
+        "operationId": "Finance_GetScheduledPayment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ScheduledPayment"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Unique identifier of the scheduled payment to retrieve.\nValues are of the form `sch_[a-zA-Z0-9]+`.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/finance/scheduled-payments/{id}:skip": {
       "post": {
         "summary": "Dismisses a pending scheduled payment instance without creating a transaction.",
@@ -2677,20 +2709,6 @@
             ]
           },
           {
-            "name": "sourceType",
-            "description": "Optional. Integration source type.",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "sourceId",
-            "description": "Optional. Integration source record ID.",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
             "name": "accountId",
             "description": "Optional. Target account identifier.\nValues are of the form `acc_[a-zA-Z0-9]+`.",
             "in": "query",
@@ -2733,6 +2751,47 @@
       }
     },
     "/v1/finance/transactions/{id}": {
+      "get": {
+        "summary": "Retrieves details of a specific logged transaction record by ID.",
+        "operationId": "Finance_GetTransaction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Transaction"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Unique identifier of the transaction record to retrieve.\nValues are of the form `txn_[a-zA-Z0-9]+`.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "view",
+            "description": "Optional. Scoped budget representation view type.\n\n - BASIC: Returns transaction details without related account or budget info.\n - FULL: Hydrates complete structure including account and budget details.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "BASIC",
+              "FULL"
+            ]
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
       "delete": {
         "summary": "Deletes a transaction, reversing all changes to budget period consumption and account balances.",
         "operationId": "Finance_DeleteTransaction",
@@ -7493,14 +7552,6 @@
           "format": "date-time",
           "description": "Required. Execution/posting date (when funds reconcile in account balance)."
         },
-        "sourceType": {
-          "type": "string",
-          "description": "Optional. Integration source type (e.g. \"plaid\")."
-        },
-        "sourceId": {
-          "type": "string",
-          "description": "Optional. Integration source record ID."
-        },
         "accountId": {
           "type": "string",
           "description": "Optional. Associated account ID.\nValues are of the form `acc_[a-zA-Z0-9]+`."
@@ -7518,6 +7569,13 @@
           "$ref": "#/definitions/v1TransactionBudgetInfo",
           "description": "Output only. Hydrated minimal budget info. Available only on FULL view.",
           "readOnly": true
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Optional. Context metadata key-value pairs."
         }
       },
       "description": "Transaction represents a financial record in the space ledger.",

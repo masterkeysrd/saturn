@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/masterkeysrd/saturn/internal/platform/conv"
 	"github.com/masterkeysrd/saturn/internal/platform/id"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
@@ -596,18 +595,18 @@ func (s *Service) GetSpentInsights(ctx context.Context, req *GetSpentInsightsReq
 	if start.IsZero() {
 		switch g {
 		case GranularityDaily:
-			start = time.Now().AddDate(0, 0, -30)
+			start = time.Now().UTC().AddDate(0, 0, -30)
 		case GranularityWeekly:
-			start = time.Now().AddDate(0, 0, -84) // 12 weeks
+			start = time.Now().UTC().AddDate(0, 0, -84) // 12 weeks
 		case GranularityMonthly:
-			start = time.Now().AddDate(-1, 0, 0) // 12 months
+			start = time.Now().UTC().AddDate(-1, 0, 0) // 12 months
 		case GranularityYearly:
-			start = time.Now().AddDate(-5, 0, 0) // 5 years
+			start = time.Now().UTC().AddDate(-5, 0, 0) // 5 years
 		}
 	}
 	end := req.EndDate
 	if end.IsZero() {
-		end = time.Now()
+		end = time.Now().UTC()
 	}
 
 	// Fetch trend, distributions, and top expenses from storage
@@ -917,8 +916,23 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 		return nil, err
 	}
 
+	actualAmount := req.ActualAmount
+	if actualAmount <= 0 {
+		actualAmount = payment.Amount
+	}
+
+	txnDate := req.TransactionDate
+	if txnDate.IsZero() {
+		txnDate = time.Now().UTC()
+	}
+
+	effDate := req.EffectiveDate
+	if effDate.IsZero() {
+		effDate = txnDate
+	}
+
 	// Resolve budget period for the transaction based on effectiveDate
-	period, err := s.GetOrCreatePeriod(ctx, payment.SpaceID, budget.ID, req.EffectiveDate)
+	period, err := s.GetOrCreatePeriod(ctx, payment.SpaceID, budget.ID, effDate)
 	if err != nil {
 		return nil, err
 	}
@@ -930,7 +944,7 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 			SpaceID:      payment.SpaceID,
 			FromCurrency: currency,
 			ToCurrency:   settings.BaseCurrency,
-			RateDate:     req.TransactionDate,
+			RateDate:     txnDate,
 		})
 		if err != nil {
 			return nil, err
@@ -938,7 +952,7 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 		rate = rateRecord.Rate
 	}
 
-	amountInBase := int64(float64(req.ActualAmount) * rate)
+	amountInBase := int64(float64(actualAmount) * rate)
 
 	description := ""
 	if req.Description != "" {
@@ -973,6 +987,7 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 		return nil, err
 	}
 
+	reID := RecurringExpenseID(payment.SourceID)
 	txn := &Transaction{
 		ID:              tID,
 		SpaceID:         payment.SpaceID,
@@ -980,16 +995,18 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 		Type:            TransactionTypeExpense,
 		BudgetID:        &budgetID,
 		PeriodID:        &period.ID,
-		Amount:          req.ActualAmount,
+		Amount:          actualAmount,
 		Currency:        currency,
 		AmountInBase:    amountInBase,
 		Description:     description,
-		TransactionDate: req.TransactionDate,
-		EffectiveDate:   req.EffectiveDate,
-		SourceType:      &payment.SourceType,
-		SourceID:        &payment.SourceID,
-		CreateTime:      time.Now().UTC(),
-		UpdateTime:      time.Now().UTC(),
+		TransactionDate: txnDate,
+		EffectiveDate:   effDate,
+		Metadata: TransactionMetadata{
+			ScheduledPaymentID: &payment.ID,
+			RecurringExpenseID: &reID,
+		},
+		CreateTime: time.Now().UTC(),
+		UpdateTime: time.Now().UTC(),
 	}
 
 	if err := txn.Validate(); err != nil {
@@ -1001,7 +1018,7 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 	}
 
 	if req.AccountID != nil && *req.AccountID != "" {
-		if err := s.adjustAccountBalance(ctx, payment.SpaceID, *req.AccountID, req.ActualAmount, TransactionTypeExpense, false); err != nil {
+		if err := s.adjustAccountBalance(ctx, payment.SpaceID, *req.AccountID, actualAmount, TransactionTypeExpense, false); err != nil {
 			return nil, fmt.Errorf("failed to adjust account balance: %w", err)
 		}
 	}
@@ -1023,8 +1040,8 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 		SpaceID:       payment.SpaceID,
 		TransactionID: txn.ID,
 		EventType:     "BANK_CONFIRM_RECEIVED",
-		CreateTime:    req.TransactionDate,
-		Metadata:      map[string]any{"actual_amount": req.ActualAmount},
+		CreateTime:    txnDate,
+		Metadata:      map[string]any{"actual_amount": actualAmount},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to log payment confirmation event: %w", err)
@@ -1060,11 +1077,10 @@ func (s *Service) MatchScheduledPayment(ctx context.Context, req MatchScheduledP
 		return nil, errors.New("transaction and scheduled payment belong to different spaces")
 	}
 
-	// Update transaction link properties
-	st := payment.SourceType
-	sid := payment.SourceID
-	txn.SourceType = &st
-	txn.SourceID = &sid
+	// Update transaction link properties in metadata
+	reID := RecurringExpenseID(payment.SourceID)
+	txn.Metadata.ScheduledPaymentID = &payment.ID
+	txn.Metadata.RecurringExpenseID = &reID
 	txn.UpdateTime = time.Now().UTC()
 
 	if err := s.deps.TransactionStore.Update(ctx, txn); err != nil {
@@ -1089,6 +1105,17 @@ func (s *Service) MatchScheduledPayment(ctx context.Context, req MatchScheduledP
 	}
 
 	return txn, nil
+}
+
+// GetScheduledPayment retrieves a scheduled payment by ID for a space.
+func (s *Service) GetScheduledPayment(ctx context.Context, spaceID SpaceID, id ScheduledPaymentID) (*ScheduledPayment, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, fmt.Errorf("validate space ID: %w", err)
+	}
+	if err := id.Validate(); err != nil {
+		return nil, fmt.Errorf("validate scheduled payment ID: %w", err)
+	}
+	return s.deps.ScheduledPaymentStore.GetByID(ctx, spaceID, id)
 }
 
 // SkipScheduledPayment marks a pending scheduled payment as skipped for a cycle.
@@ -1205,6 +1232,9 @@ func (s *Service) GenerateScheduledPayments(ctx context.Context) error {
 // createTransaction persists a transaction and adjusts the account balance.
 func (s *Service) createTransaction(ctx context.Context, txn *Transaction) error {
 	// 1. Set dates
+	if txn.TransactionDate.IsZero() {
+		txn.TransactionDate = time.Now().UTC()
+	}
 	if txn.EffectiveDate.IsZero() {
 		txn.EffectiveDate = txn.TransactionDate
 	}
@@ -1271,7 +1301,7 @@ func (s *Service) createTransaction(ctx context.Context, txn *Transaction) error
 
 // updateTransaction updates a transaction and recalculates account balances.
 func (s *Service) updateTransaction(ctx context.Context, txn *Transaction, existing *Transaction) error {
-	if existing.Type == TransactionTypeBalanceAdjustment || (existing.SourceType != nil && *existing.SourceType == "SYSTEM_BALANCE_ADJUSTMENT") {
+	if existing.Type == TransactionTypeBalanceAdjustment {
 		return errors.New("balance adjustment transactions cannot be edited directly; perform a new balance adjustment or delete this record to revert")
 	}
 
@@ -1349,15 +1379,8 @@ func (s *Service) deleteTransaction(ctx context.Context, txn *Transaction) error
 	// 1. Revert the account balance impact using account_impact_amount if present
 	if txn.AccountID != nil && *txn.AccountID != "" {
 		impactAmount := txn.Amount
-		if txn.MetadataJson != "" {
-			var meta map[string]interface{}
-			if err := json.Unmarshal([]byte(txn.MetadataJson), &meta); err == nil {
-				if val, ok := meta["account_impact_amount"].(int64); ok && val > 0 {
-					impactAmount = val
-				} else if floatVal, ok := meta["account_impact_amount"].(float64); ok && int64(floatVal) > 0 {
-					impactAmount = int64(floatVal)
-				}
-			}
+		if txn.Metadata.AccountImpactAmount > 0 {
+			impactAmount = txn.Metadata.AccountImpactAmount
 		}
 		if err := s.adjustAccountBalance(ctx, txn.SpaceID, *txn.AccountID, impactAmount, txn.Type, true); err != nil {
 			return fmt.Errorf("failed to revert account balance on deletion: %w", err)
@@ -1365,39 +1388,29 @@ func (s *Service) deleteTransaction(ctx context.Context, txn *Transaction) error
 	}
 
 	// 2. Revert borrowing remaining balance if linked via metadata
-	if txn.MetadataJson != "" {
-		var meta map[string]interface{}
-		if err := json.Unmarshal([]byte(txn.MetadataJson), &meta); err == nil {
-			if bIDStr, ok := meta["borrowing_id"].(string); ok && bIDStr != "" {
-				role, _ := meta["borrowing_role"].(string)
-				borrowingAmount := txn.Amount
-				if val, ok := meta["borrowing_amount"].(int64); ok && val > 0 {
-					borrowingAmount = val
-				} else if floatVal, ok := meta["borrowing_amount"].(float64); ok && int64(floatVal) > 0 {
-					borrowingAmount = int64(floatVal)
-				}
+	if txn.Metadata.BorrowingID != nil && *txn.Metadata.BorrowingID != "" {
+		role := txn.Metadata.BorrowingRole
+		borrowingAmount := txn.Amount
+		if txn.Metadata.BorrowingAmount > 0 {
+			borrowingAmount = txn.Metadata.BorrowingAmount
+		}
 
-				if bID, err := ParseBorrowingID(bIDStr); err == nil {
-					if b, err := s.deps.BorrowingStore.GetByID(ctx, txn.SpaceID, bID); err == nil {
-						switch role {
-						case "REPAYMENT":
-							b.RemainingAmount += borrowingAmount
-							if b.RemainingAmount > 0 && b.Status == BorrowingStatusPaidOff {
-								b.Status = BorrowingStatusActive
-							}
-							b.UpdateTime = time.Now().UTC()
-							_ = s.deps.BorrowingStore.Update(ctx, b)
-						case "ADDITIONAL_LOAN":
-							b.TotalAmount -= borrowingAmount
-							b.RemainingAmount -= borrowingAmount
-							if b.RemainingAmount < 0 {
-								b.RemainingAmount = 0
-							}
-							b.UpdateTime = time.Now().UTC()
-							_ = s.deps.BorrowingStore.Update(ctx, b)
-						}
-					}
+		if b, err := s.deps.BorrowingStore.GetByID(ctx, txn.SpaceID, *txn.Metadata.BorrowingID); err == nil {
+			switch role {
+			case "REPAYMENT":
+				b.RemainingAmount += borrowingAmount
+				if b.RemainingAmount > b.TotalAmount {
+					b.RemainingAmount = b.TotalAmount
 				}
+				b.Status = BorrowingStatusActive
+				b.UpdateTime = time.Now().UTC()
+				_ = s.deps.BorrowingStore.Update(ctx, b)
+
+			case "INITIAL_FUNDING":
+				b.RemainingAmount = 0
+				b.Status = BorrowingStatusPaidOff
+				b.UpdateTime = time.Now().UTC()
+				_ = s.deps.BorrowingStore.Update(ctx, b)
 			}
 		}
 	}
@@ -1458,8 +1471,7 @@ func (s *Service) adjustAccountBalance(ctx context.Context, spaceID SpaceID, acc
 
 type syncTransactionParams struct {
 	SpaceID         SpaceID
-	SourceID        string
-	SourceType      string
+	BorrowingID     string
 	Amount          int64
 	Currency        Currency
 	TransactionDate time.Time
@@ -1471,12 +1483,10 @@ type syncTransactionParams struct {
 // Helper to create or update associated transaction
 func (s *Service) syncTransaction(ctx context.Context, params syncTransactionParams) error {
 	// Find if transaction already exists
-	st := params.SourceType
-	si := params.SourceID
+	bID := params.BorrowingID
 	page, err := s.deps.TransactionStore.ListBySpace(ctx, params.SpaceID, &TransactionFilter{
-		SourceType: &st,
-		SourceID:   &si,
-		PageSize:   1,
+		BorrowingID: &bID,
+		PageSize:    1,
 	})
 	if err != nil {
 		return fmt.Errorf("list existing transactions: %w", err)
@@ -1504,6 +1514,7 @@ func (s *Service) syncTransaction(ctx context.Context, params syncTransactionPar
 		if err != nil {
 			return err
 		}
+		bID := BorrowingID(params.BorrowingID)
 		txn := &Transaction{
 			ID:              tID,
 			SpaceID:         params.SpaceID,
@@ -1513,11 +1524,13 @@ func (s *Service) syncTransaction(ctx context.Context, params syncTransactionPar
 			Description:     params.Description,
 			TransactionDate: params.TransactionDate,
 			EffectiveDate:   params.TransactionDate,
-			SourceType:      &params.SourceType,
-			SourceID:        &params.SourceID,
 			AccountID:       params.AccountID,
-			CreateTime:      time.Now().UTC(),
-			UpdateTime:      time.Now().UTC(),
+			Metadata: TransactionMetadata{
+				BorrowingID:   &bID,
+				BorrowingRole: "INITIAL_FUNDING",
+			},
+			CreateTime: time.Now().UTC(),
+			UpdateTime: time.Now().UTC(),
 		}
 		if err := s.createTransaction(ctx, txn); err != nil {
 			return fmt.Errorf("create transaction: %w", err)
@@ -1526,21 +1539,18 @@ func (s *Service) syncTransaction(ctx context.Context, params syncTransactionPar
 	return nil
 }
 
-func (s *Service) deleteTransactionBySource(ctx context.Context, spaceID SpaceID, sourceID string, sourceType string) error {
-	st := sourceType
-	si := sourceID
+func (s *Service) deleteTransactionByBorrowingID(ctx context.Context, spaceID SpaceID, borrowingID string) error {
+	bID := borrowingID
 	page, err := s.deps.TransactionStore.ListBySpace(ctx, spaceID, &TransactionFilter{
-		SourceType: &st,
-		SourceID:   &si,
-		PageSize:   10,
+		BorrowingID: &bID,
+		PageSize:    50,
 	})
 	if err != nil {
 		return err
 	}
-	existingTxs := page.Items
-	for _, txn := range existingTxs {
+	for _, txn := range page.Items {
 		if err := s.deleteTransaction(ctx, txn); err != nil {
-			return err
+			return fmt.Errorf("delete borrowing transaction %s: %w", txn.ID, err)
 		}
 	}
 	return nil
@@ -1599,8 +1609,7 @@ func (s *Service) CreateBorrowing(ctx context.Context, b *Borrowing, createAsTra
 
 		err = s.syncTransaction(ctx, syncTransactionParams{
 			SpaceID:         b.SpaceID,
-			SourceID:        string(b.ID),
-			SourceType:      SourceTypeBorrowing,
+			BorrowingID:     string(b.ID),
 			Amount:          b.TotalAmount,
 			Currency:        b.Currency,
 			TransactionDate: b.EstablishedAt,
@@ -1658,12 +1667,10 @@ func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing) (*Borrowing
 	}
 
 	// Check if a transaction already exists for this borrowing
-	st := SourceTypeBorrowing
-	si := string(b.ID)
+	bID := string(b.ID)
 	page, err := s.deps.TransactionStore.ListBySpace(ctx, b.SpaceID, &TransactionFilter{
-		SourceType: &st,
-		SourceID:   &si,
-		PageSize:   1,
+		BorrowingID: &bID,
+		PageSize:    1,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("check existing transaction: %w", err)
@@ -1701,8 +1708,7 @@ func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing) (*Borrowing
 
 		err = s.syncTransaction(ctx, syncTransactionParams{
 			SpaceID:         b.SpaceID,
-			SourceID:        string(b.ID),
-			SourceType:      SourceTypeBorrowing,
+			BorrowingID:     string(b.ID),
 			Amount:          b.TotalAmount,
 			Currency:        b.Currency,
 			TransactionDate: b.EstablishedAt,
@@ -1729,9 +1735,8 @@ func (s *Service) DeleteBorrowing(ctx context.Context, spaceID SpaceID, id Borro
 		return errors.New("borrowing does not belong to space")
 	}
 
-	// 1. Delete associated initial loan transaction
-	_ = s.deleteTransactionBySource(ctx, spaceID, string(id), SourceTypeBorrowing)
-	_ = s.deleteTransactionBySource(ctx, spaceID, string(id), SourceTypeBorrowingRepayment)
+	// 1. Delete associated transactions for borrowing
+	_ = s.deleteTransactionByBorrowingID(ctx, spaceID, string(id))
 
 	// 2. Delete borrowing agreement from DB
 	return s.deps.BorrowingStore.Delete(ctx, id)
@@ -1831,15 +1836,6 @@ func (s *Service) CreateBorrowingRepayment(ctx context.Context, r *BorrowingRepa
 		desc = r.Notes
 	}
 
-	metaMap := map[string]interface{}{
-		"borrowing_id":          string(b.ID),
-		"borrowing_role":        "REPAYMENT",
-		"borrowing_amount":      r.Amount,
-		"account_impact_amount": accountImpactAmount,
-		"notes":                 r.Notes,
-	}
-	metaBytes, _ := json.Marshal(metaMap)
-
 	txnID, err := NewTransactionID()
 	if err != nil {
 		return nil, err
@@ -1856,11 +1852,15 @@ func (s *Service) CreateBorrowingRepayment(ctx context.Context, r *BorrowingRepa
 		Description:     desc,
 		TransactionDate: r.PaymentDate,
 		EffectiveDate:   time.Now().UTC(),
-		SourceType:      conv.Ptr(SourceTypeBorrowingRepayment),
-		SourceID:        conv.Ptr(string(b.ID)),
-		MetadataJson:    string(metaBytes),
-		CreateTime:      time.Now().UTC(),
-		UpdateTime:      time.Now().UTC(),
+		Metadata: TransactionMetadata{
+			BorrowingID:         &b.ID,
+			BorrowingRole:       "REPAYMENT",
+			BorrowingAmount:     r.Amount,
+			AccountImpactAmount: accountImpactAmount,
+			Notes:               r.Notes,
+		},
+		CreateTime: time.Now().UTC(),
+		UpdateTime: time.Now().UTC(),
 	}
 
 	if err := s.deps.TransactionStore.Create(ctx, txn); err != nil {
@@ -1897,17 +1897,11 @@ func (s *Service) ListBorrowingRepayments(ctx context.Context, spaceID SpaceID, 
 
 	var result []*BorrowingRepayment
 	for _, t := range page.Items {
-		var meta map[string]interface{}
-		if t.MetadataJson != "" {
-			_ = json.Unmarshal([]byte(t.MetadataJson), &meta)
-		}
-		if role, ok := meta["borrowing_role"].(string); ok && role != "REPAYMENT" {
+		if t.Metadata.BorrowingRole != "REPAYMENT" {
 			continue
 		}
-		notes := ""
-		if n, ok := meta["notes"].(string); ok {
-			notes = n
-		} else {
+		notes := t.Metadata.Notes
+		if notes == "" {
 			notes = t.Description
 		}
 
@@ -2101,7 +2095,6 @@ func (s *Service) AdjustAccountBalance(ctx context.Context, spaceID SpaceID, acc
 		description += " (" + note + ")"
 	}
 
-	sourceType := "SYSTEM_BALANCE_ADJUSTMENT"
 	accIDVal := accountID
 	txn := &Transaction{
 		ID:              txnID,
@@ -2113,7 +2106,6 @@ func (s *Service) AdjustAccountBalance(ctx context.Context, spaceID SpaceID, acc
 		Description:     description,
 		TransactionDate: parsedDate,
 		EffectiveDate:   parsedDate,
-		SourceType:      &sourceType,
 	}
 
 	if err := s.createTransaction(ctx, txn); err != nil {
@@ -2896,8 +2888,6 @@ func (s *Service) handleBorrowingLinkForTransaction(ctx context.Context, spaceID
 	switch linkType {
 	case BorrowingLinkTypeInitialReceipt:
 		role = "INITIAL_FUNDING"
-		txn.SourceType = conv.Ptr(SourceTypeBorrowing)
-		txn.SourceID = conv.Ptr(string(borrowing.ID))
 
 	case BorrowingLinkTypeRepayment:
 		role = "REPAYMENT"
@@ -2910,8 +2900,6 @@ func (s *Service) handleBorrowingLinkForTransaction(ctx context.Context, spaceID
 		if err := s.deps.BorrowingStore.Update(ctx, borrowing); err != nil {
 			return fmt.Errorf("update borrowing remaining balance: %w", err)
 		}
-		txn.SourceType = conv.Ptr(SourceTypeBorrowingRepayment)
-		txn.SourceID = conv.Ptr(string(borrowing.ID))
 
 	case BorrowingLinkTypeAdditionalLoan:
 		role = "ADDITIONAL_LOAN"
@@ -2921,19 +2909,12 @@ func (s *Service) handleBorrowingLinkForTransaction(ctx context.Context, spaceID
 		if err := s.deps.BorrowingStore.Update(ctx, borrowing); err != nil {
 			return fmt.Errorf("update borrowing total balance: %w", err)
 		}
-		txn.SourceType = conv.Ptr(SourceTypeBorrowingAdditional)
-		txn.SourceID = conv.Ptr(string(borrowing.ID))
 	}
 
-	// Update metadata JSON with borrowing link details
-	metaMap := make(map[string]interface{})
-	if txn.MetadataJson != "" {
-		_ = json.Unmarshal([]byte(txn.MetadataJson), &metaMap)
-	}
-	metaMap["borrowing_id"] = string(borrowing.ID)
-	metaMap["borrowing_role"] = role
-	bytes, _ := json.Marshal(metaMap)
-	txn.MetadataJson = string(bytes)
+	// Update metadata with borrowing link details
+	txn.Metadata.BorrowingID = &borrowing.ID
+	txn.Metadata.BorrowingRole = role
+	txn.UpdateTime = time.Now().UTC()
 
 	if err := s.deps.TransactionStore.Update(ctx, txn); err != nil {
 		return fmt.Errorf("update transaction borrowing metadata: %w", err)

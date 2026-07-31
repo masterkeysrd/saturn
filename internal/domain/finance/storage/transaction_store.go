@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -28,8 +29,6 @@ type transactionDB struct {
 	Description     string         `db:"description"`
 	TransactionDate sql.NullTime   `db:"transaction_date"`
 	EffectiveDate   sql.NullTime   `db:"effective_date"`
-	SourceType      sql.NullString `db:"source_type"`
-	SourceID        sql.NullString `db:"source_id"`
 	Metadata        sql.NullString `db:"metadata"`
 	CreateTime      sql.NullTime   `db:"create_time"`
 	UpdateTime      sql.NullTime   `db:"update_time"`
@@ -44,9 +43,9 @@ func NewTransactionStore(db *sqlx.DB) *TransactionStore {
 }
 
 func (s *TransactionStore) Create(ctx context.Context, t *finance.Transaction) error {
-	metaJSON := t.MetadataJson
-	if metaJSON == "" {
-		metaJSON = "{}"
+	metaJSON, _ := json.Marshal(t.Metadata)
+	if len(metaJSON) == 0 || string(metaJSON) == "null" {
+		metaJSON = []byte("{}")
 	}
 
 	ds := pgDialect.Insert(goqu.S("finance").Table("transaction")).Rows(goqu.Record{
@@ -63,9 +62,7 @@ func (s *TransactionStore) Create(ctx context.Context, t *finance.Transaction) e
 		"description":      t.Description,
 		"transaction_date": t.TransactionDate,
 		"effective_date":   t.EffectiveDate,
-		"source_type":      t.SourceType,
-		"source_id":        t.SourceID,
-		"metadata":         goqu.L("?::jsonb", metaJSON),
+		"metadata":         goqu.L("?::jsonb", string(metaJSON)),
 		"create_time":      t.CreateTime,
 		"update_time":      t.UpdateTime,
 	})
@@ -98,15 +95,10 @@ func (row *transactionDB) toDomain() *finance.Transaction {
 		tID := finance.TransferID(row.TransferID.String)
 		transferIDPtr = &tID
 	}
-	var sourceTypePtr *string
-	if row.SourceType.Valid {
-		sT := row.SourceType.String
-		sourceTypePtr = &sT
-	}
-	var sourceIDPtr *string
-	if row.SourceID.Valid {
-		sI := row.SourceID.String
-		sourceIDPtr = &sI
+
+	var meta finance.TransactionMetadata
+	if row.Metadata.Valid && row.Metadata.String != "" {
+		_ = json.Unmarshal([]byte(row.Metadata.String), &meta)
 	}
 
 	return &finance.Transaction{
@@ -123,9 +115,7 @@ func (row *transactionDB) toDomain() *finance.Transaction {
 		Description:     row.Description,
 		TransactionDate: nullTimeToTime(row.TransactionDate),
 		EffectiveDate:   nullTimeToTime(row.EffectiveDate),
-		SourceType:      sourceTypePtr,
-		SourceID:        sourceIDPtr,
-		MetadataJson:    row.Metadata.String,
+		Metadata:        meta,
 		CreateTime:      nullTimeToTime(row.CreateTime),
 		UpdateTime:      nullTimeToTime(row.UpdateTime),
 	}
@@ -168,9 +158,9 @@ func (s *TransactionStore) Delete(ctx context.Context, id finance.TransactionID)
 }
 
 func (s *TransactionStore) Update(ctx context.Context, t *finance.Transaction) error {
-	metaJSON := t.MetadataJson
-	if metaJSON == "" {
-		metaJSON = "{}"
+	metaJSON, _ := json.Marshal(t.Metadata)
+	if len(metaJSON) == 0 || string(metaJSON) == "null" {
+		metaJSON = []byte("{}")
 	}
 
 	ds := pgDialect.Update(goqu.S("finance").Table("transaction")).
@@ -185,7 +175,7 @@ func (s *TransactionStore) Update(ctx context.Context, t *finance.Transaction) e
 			"description":      t.Description,
 			"transaction_date": t.TransactionDate,
 			"effective_date":   t.EffectiveDate,
-			"metadata":         goqu.L("?::jsonb", metaJSON),
+			"metadata":         goqu.L("?::jsonb", string(metaJSON)),
 			"update_time":      t.UpdateTime,
 		}).
 		Where(goqu.Ex{"id": string(t.ID)})
@@ -222,12 +212,6 @@ func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 	}
 	if filter.Type != nil {
 		ds = ds.Where(goqu.Ex{"type": string(*filter.Type)})
-	}
-	if filter.SourceType != nil {
-		ds = ds.Where(goqu.Ex{"source_type": *filter.SourceType})
-	}
-	if filter.SourceID != nil {
-		ds = ds.Where(goqu.Ex{"source_id": *filter.SourceID})
 	}
 	if filter.AccountID != nil {
 		ds = ds.Where(goqu.Ex{"account_id": string(*filter.AccountID)})
@@ -386,12 +370,6 @@ func (s *TransactionStore) HasTransactions(ctx context.Context, spaceID finance.
 		}
 		if filter.Type != nil {
 			ds = ds.Where(goqu.Ex{"type": string(*filter.Type)})
-		}
-		if filter.SourceType != nil {
-			ds = ds.Where(goqu.Ex{"source_type": *filter.SourceType})
-		}
-		if filter.SourceID != nil {
-			ds = ds.Where(goqu.Ex{"source_id": *filter.SourceID})
 		}
 		if filter.AccountID != nil {
 			ds = ds.Where(goqu.Ex{"account_id": string(*filter.AccountID)})

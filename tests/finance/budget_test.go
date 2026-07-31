@@ -3,6 +3,7 @@ package finance_test
 import (
 	"testing"
 
+	financev1 "github.com/masterkeysrd/saturn/apis/saturn/finance/v1"
 	"github.com/masterkeysrd/saturn/tests/driver"
 )
 
@@ -19,16 +20,25 @@ func TestMonthlyBudget_ExpenseTracking(t *testing.T) {
 
 	d.Finance().
 		InitSettings(t, "USD").
-		CreateAccount(t, "Checking Account", "BANK", "USD", 100000). // $1,000.00
-		CreateBudget(t, "Groceries", 50000, "USD").                  // $500.00 monthly budget
+		CreateAccount(t, driver.AccountOptions{
+			Name:           "Checking Account",
+			Type:           financev1.Account_BANK,
+			Currency:       "USD",
+			InitialBalance: 100000,
+		}).
+		CreateBudget(t, driver.BudgetOptions{
+			Name:        "Groceries",
+			LimitAmount: 50000,
+			Currency:    "USD",
+		}).
 		CreateExpense(t, driver.ExpenseOptions{
 			Account:     "Checking Account",
 			Budget:      "Groceries",
 			Amount:      15000,
 			Description: "Supermarket shopping",
 		}).
-		AssertAccountBalance(t, "Checking Account", 85000).          // $850.00 remaining balance
-		AssertBudgetProgress(t, "Groceries", 15000, 35000)           // $150 spent, $350 remaining
+		AssertAccountBalance(t, "Checking Account", 85000). // $850.00 remaining balance
+		AssertBudgetProgress(t, "Groceries", 15000, 35000)  // $150 spent, $350 remaining
 }
 
 // TestBudgetDeletion_WithActiveTransactions_Fails tests that attempting to delete a budget with active transactions is rejected.
@@ -44,8 +54,17 @@ func TestBudgetDeletion_WithActiveTransactions_Fails(t *testing.T) {
 
 	d.Finance().
 		InitSettings(t, "USD").
-		CreateAccount(t, "Checking Account", "BANK", "USD", 100000).
-		CreateBudget(t, "Groceries", 50000, "USD").
+		CreateAccount(t, driver.AccountOptions{
+			Name:           "Checking Account",
+			Type:           financev1.Account_BANK,
+			Currency:       "USD",
+			InitialBalance: 100000,
+		}).
+		CreateBudget(t, driver.BudgetOptions{
+			Name:        "Groceries",
+			LimitAmount: 50000,
+			Currency:    "USD",
+		}).
 		CreateExpense(t, driver.ExpenseOptions{
 			Account:     "Checking Account",
 			Budget:      "Groceries",

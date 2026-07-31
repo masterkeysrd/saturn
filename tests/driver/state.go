@@ -1,12 +1,16 @@
 package driver
 
-import "testing"
+import (
+	"testing"
+
+	financev1 "github.com/masterkeysrd/saturn/apis/saturn/finance/v1"
+)
 
 // AccountInfo stores registered account metadata.
 type AccountInfo struct {
 	ID             string
 	Name           string
-	Type           string
+	Type           financev1.Account_Type
 	Currency       string
 	InitialBalance int64
 }
@@ -15,7 +19,7 @@ type AccountInfo struct {
 type BorrowingInfo struct {
 	ID           string
 	Counterparty string
-	Direction    string
+	Direction    financev1.Borrowing_Direction
 	Currency     string
 	TotalAmount  int64
 }
@@ -41,9 +45,12 @@ type State struct {
 	Repayments map[string]*RepaymentInfo
 	Budgets    map[string]string
 
-	LastAccount   *AccountInfo
-	LastBorrowing *BorrowingInfo
-	LastRepayment *RepaymentInfo
+	LastAccount                     *AccountInfo
+	LastBorrowing                   *BorrowingInfo
+	LastRepayment                   *RepaymentInfo
+	LastTransaction                 *financev1.Transaction
+	LastRecurringExpenseID          string
+	LastConfirmedScheduledPaymentID string
 }
 
 func newState(t *testing.T) *State {
@@ -69,4 +76,5 @@ func (s *State) ClearRegistries() {
 	s.LastAccount = nil
 	s.LastBorrowing = nil
 	s.LastRepayment = nil
+	s.LastTransaction = nil
 }

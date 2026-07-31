@@ -58,8 +58,11 @@ func (s *InsightsStore) GetSpentTrend(ctx context.Context, filter *finance.Spent
 	GROUP BY interval_start, t.budget_id, b.name, b.color, b.currency
 	ORDER BY interval_start ASC`, trunc)
 
+	startDateStr := filter.StartDate.UTC().Format("2006-01-02")
+	endDateStr := filter.EndDate.UTC().Format("2006-01-02")
+
 	var rows []*spentTrendRow
-	if err := s.db.SelectContext(ctx, &rows, query, string(filter.SpaceID), filter.StartDate, filter.EndDate); err != nil {
+	if err := s.db.SelectContext(ctx, &rows, query, string(filter.SpaceID), startDateStr, endDateStr); err != nil {
 		return nil, err
 	}
 
@@ -118,8 +121,11 @@ func (s *InsightsStore) GetBudgetDistribution(ctx context.Context, filter *finan
 	) bp ON TRUE
 	WHERE b.space_id = $1 AND b.is_active = true`
 
+	startDateStr := filter.StartDate.UTC().Format("2006-01-02")
+	endDateStr := filter.EndDate.UTC().Format("2006-01-02")
+
 	var rows []*budgetDistributionRow
-	if err := s.db.SelectContext(ctx, &rows, query, string(filter.SpaceID), filter.StartDate, filter.EndDate); err != nil {
+	if err := s.db.SelectContext(ctx, &rows, query, string(filter.SpaceID), startDateStr, endDateStr); err != nil {
 		return nil, err
 	}
 
@@ -167,8 +173,11 @@ func (s *InsightsStore) GetTopExpenses(ctx context.Context, filter *finance.TopE
 	ORDER BY t.amount_in_base DESC
 	LIMIT $4`
 
+	startDateStr := filter.StartDate.UTC().Format("2006-01-02")
+	endDateStr := filter.EndDate.UTC().Format("2006-01-02")
+
 	var rows []*topExpenseRow
-	if err := s.db.SelectContext(ctx, &rows, query, string(filter.SpaceID), filter.StartDate, filter.EndDate, filter.Limit); err != nil {
+	if err := s.db.SelectContext(ctx, &rows, query, string(filter.SpaceID), startDateStr, endDateStr, filter.Limit); err != nil {
 		return nil, err
 	}
 

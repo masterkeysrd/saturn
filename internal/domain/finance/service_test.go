@@ -2,6 +2,7 @@ package finance
 
 import (
 	"context"
+	"errors"
 	"math"
 	"slices"
 	"strings"
@@ -566,6 +567,347 @@ func (m *mockBorrowingStore) ListBySpace(ctx context.Context, spaceID SpaceID, f
 	return list, "", nil
 }
 
+type mockScheduledPaymentStore struct {
+	payments map[ScheduledPaymentID]*ScheduledPayment
+}
+
+func (m *mockScheduledPaymentStore) Create(ctx context.Context, payment *ScheduledPayment) error {
+	if m.payments == nil {
+		m.payments = make(map[ScheduledPaymentID]*ScheduledPayment)
+	}
+	m.payments[payment.ID] = payment
+	return nil
+}
+
+func (m *mockScheduledPaymentStore) GetByID(ctx context.Context, spaceID SpaceID, id ScheduledPaymentID) (*ScheduledPayment, error) {
+	p, ok := m.payments[id]
+	if !ok || p.SpaceID != spaceID {
+		return nil, ErrScheduledPaymentNotFound
+	}
+	return p, nil
+}
+
+func (m *mockScheduledPaymentStore) UpdateStatus(ctx context.Context, id ScheduledPaymentID, status ScheduledPaymentStatus) error {
+	p, ok := m.payments[id]
+	if !ok {
+		return ErrScheduledPaymentNotFound
+	}
+	p.Status = status
+	return nil
+}
+
+func (m *mockScheduledPaymentStore) Delete(ctx context.Context, id ScheduledPaymentID) error {
+	delete(m.payments, id)
+	return nil
+}
+
+func (m *mockScheduledPaymentStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListScheduledPaymentsFilter) (*paging.Page[*ScheduledPayment], error) {
+	var list []*ScheduledPayment
+	for _, p := range m.payments {
+		if p.SpaceID == spaceID {
+			list = append(list, p)
+		}
+	}
+	return &paging.Page[*ScheduledPayment]{Items: list}, nil
+}
+
+func (m *mockScheduledPaymentStore) HasScheduledPayments(ctx context.Context, spaceID SpaceID, filter *ListScheduledPaymentsFilter) (bool, error) {
+	for _, p := range m.payments {
+		if p.SpaceID == spaceID {
+			if filter != nil && filter.BudgetID != nil && p.BudgetID != *filter.BudgetID {
+				continue
+			}
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// --- Test Cases ---
+
+func TestUpdateBudget(t *testing.T) {
+	ctx := context.Background()
+	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	bID, _ := NewBudgetID()
+
+	budgetStore := &mockBudgetStore{data: make(map[BudgetID]*Budget)}
+	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+	_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
+
+	_ = budgetStore.Create(ctx, &Budget{
+		ID:          bID,
+		SpaceID:     spaceID,
+		Name:        "Dining Out",
+		LimitAmount: 30000,
+		Currency:    "USD",
+		Interval:    IntervalMonthly,
+		Version:     2,
+	})
+
+	svc := NewService(Dependencies{
+		BudgetStore:   budgetStore,
+		SettingsStore: settingsStore,
+	})
+
+	tests := []struct {
+		name      string
+		update    *Budget
+		mask      []string
+		wantErr   error
+		wantName  string
+		wantLimit int64
+	}{
+		{
+			name: "stale version returns ErrBudgetVersionMismatch",
+			update: &Budget{
+				ID:          bID,
+				SpaceID:     spaceID,
+				Name:        "Stale Update",
+				LimitAmount: 40000,
+				Version:     1,
+			},
+			wantErr: ErrBudgetVersionMismatch,
+		},
+		{
+			name: "valid matching version succeeds and updates fields",
+			update: &Budget{
+				ID:          bID,
+				SpaceID:     spaceID,
+				Name:        "Dining Out New",
+				LimitAmount: 35000,
+				Version:     2,
+			},
+			mask:      []string{"name", "limit_amount"},
+			wantErr:   nil,
+			wantName:  "Dining Out New",
+			wantLimit: 35000,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, err := svc.UpdateBudget(ctx, tt.update, tt.mask)
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Errorf("UpdateBudget error = %v, want %v", err, tt.wantErr)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if res.Name != tt.wantName {
+					t.Errorf("Name = %s, want %s", res.Name, tt.wantName)
+				}
+				if res.LimitAmount != tt.wantLimit {
+					t.Errorf("LimitAmount = %d, want %d", res.LimitAmount, tt.wantLimit)
+				}
+			}
+		})
+	}
+}
+
+func TestDeleteBudget(t *testing.T) {
+	ctx := context.Background()
+	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+
+	bIDClean, _ := NewBudgetID()
+	bIDTxns, _ := NewBudgetID()
+	bIDSched, _ := NewBudgetID()
+
+	budgetStore := &mockBudgetStore{data: make(map[BudgetID]*Budget)}
+	txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
+	schedStore := &mockScheduledPaymentStore{payments: make(map[ScheduledPaymentID]*ScheduledPayment)}
+
+	_ = budgetStore.Create(ctx, &Budget{ID: bIDClean, SpaceID: spaceID, Name: "Clean Budget", IsActive: true})
+	_ = budgetStore.Create(ctx, &Budget{ID: bIDTxns, SpaceID: spaceID, Name: "Txn Budget", IsActive: true})
+	_ = budgetStore.Create(ctx, &Budget{ID: bIDSched, SpaceID: spaceID, Name: "Sched Budget", IsActive: true})
+
+	_ = txnStore.Create(ctx, &Transaction{
+		ID:       TransactionID("txn_1"),
+		SpaceID:  spaceID,
+		BudgetID: &bIDTxns,
+		Type:     TransactionTypeExpense,
+		Amount:   500,
+	})
+
+	_ = schedStore.Create(ctx, &ScheduledPayment{
+		ID:       ScheduledPaymentID("sch_1"),
+		SpaceID:  spaceID,
+		BudgetID: bIDSched,
+		Status:   ScheduledPaymentPending,
+	})
+
+	svc := NewService(Dependencies{
+		BudgetStore:           budgetStore,
+		TransactionStore:      txnStore,
+		ScheduledPaymentStore: schedStore,
+	})
+
+	tests := []struct {
+		name    string
+		bID     BudgetID
+		wantErr error
+	}{
+		{
+			name:    "deleting budget with active transactions fails",
+			bID:     bIDTxns,
+			wantErr: ErrBudgetHasTransactions,
+		},
+		{
+			name:    "deleting budget with active scheduled payments fails",
+			bID:     bIDSched,
+			wantErr: ErrBudgetHasScheduledPayments,
+		},
+		{
+			name:    "deleting clean budget succeeds",
+			bID:     bIDClean,
+			wantErr: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := svc.DeleteBudget(ctx, spaceID, tt.bID, DeleteOptions{})
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Errorf("DeleteBudget error = %v, want %v", err, tt.wantErr)
+				}
+			} else if err != nil {
+				t.Errorf("unexpected DeleteBudget error: %v", err)
+			}
+		})
+	}
+}
+
+func TestGetScheduledPayment(t *testing.T) {
+	ctx := context.Background()
+	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	spID := ScheduledPaymentID("sch_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+
+	mockStore := &mockScheduledPaymentStore{
+		payments: map[ScheduledPaymentID]*ScheduledPayment{
+			spID: {
+				ID:       spID,
+				SpaceID:  spaceID,
+				Amount:   1500,
+				Currency: Currency("USD"),
+				Status:   ScheduledPaymentPending,
+			},
+		},
+	}
+
+	svc := NewService(Dependencies{
+		ScheduledPaymentStore: mockStore,
+	})
+
+	tests := []struct {
+		name    string
+		spaceID SpaceID
+		id      ScheduledPaymentID
+		wantErr bool
+	}{
+		{
+			name:    "valid query returns scheduled payment",
+			spaceID: spaceID,
+			id:      spID,
+			wantErr: false,
+		},
+		{
+			name:    "invalid space ID returns validation error",
+			spaceID: SpaceID("invalid"),
+			id:      spID,
+			wantErr: true,
+		},
+		{
+			name:    "invalid scheduled payment ID returns validation error",
+			spaceID: spaceID,
+			id:      ScheduledPaymentID("invalid"),
+			wantErr: true,
+		},
+		{
+			name:    "missing scheduled payment returns not found error",
+			spaceID: spaceID,
+			id:      ScheduledPaymentID("sch_2dE1V8ZqWz4eS2N9yX3bL999999"),
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := svc.GetScheduledPayment(ctx, tt.spaceID, tt.id)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("GetScheduledPayment expected error, got nil")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("unexpected GetScheduledPayment error: %v", err)
+				}
+				if got == nil || got.ID != spID {
+					t.Errorf("GetScheduledPayment got = %v, want ID %s", got, spID)
+				}
+			}
+		})
+	}
+}
+
+func TestGetOrCreatePeriod_MultiCurrencyRateResolution(t *testing.T) {
+	ctx := context.Background()
+	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	bID, _ := NewBudgetID()
+	now := time.Now().UTC()
+
+	budgetStore := &mockBudgetStore{data: make(map[BudgetID]*Budget)}
+	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+	periodStore := &mockPeriodStore{data: make(map[string]*BudgetPeriod)}
+	rateStore := &mockExchangeRateStore{rates: make(map[string]*ExchangeRate)}
+
+	_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
+	_ = budgetStore.Create(ctx, &Budget{
+		ID:          bID,
+		SpaceID:     spaceID,
+		Name:        "Travel EUR",
+		LimitAmount: 100000,
+		Currency:    "EUR",
+		Interval:    IntervalMonthly,
+		IsActive:    true,
+	})
+
+	svc := NewService(Dependencies{
+		BudgetStore:       budgetStore,
+		SettingsStore:     settingsStore,
+		PeriodStore:       periodStore,
+		ExchangeRateStore: rateStore,
+	})
+
+	t.Run("missing exchange rate returns validation error", func(t *testing.T) {
+		_, err := svc.GetOrCreatePeriod(ctx, spaceID, bID, now)
+		if err == nil || !strings.Contains(err.Error(), "exchange rate must be greater than zero") {
+			t.Fatalf("expected exchange rate error, got %v", err)
+		}
+	})
+
+	t.Run("registered exchange rate sets rate on period", func(t *testing.T) {
+		_ = rateStore.Create(ctx, &ExchangeRate{
+			SpaceID:      spaceID,
+			FromCurrency: "EUR",
+			ToCurrency:   "USD",
+			Rate:         1.10,
+			RateDate:     now,
+		})
+
+		// Create period for next month with registered rate
+		nextMonth := now.AddDate(0, 1, 0)
+		p, err := svc.GetOrCreatePeriod(ctx, spaceID, bID, nextMonth)
+		if err != nil {
+			t.Fatalf("GetOrCreatePeriod failed: %v", err)
+		}
+		if p.ExchangeRateToBase != 1.10 {
+			t.Errorf("ExchangeRateToBase = %f, want 1.10", p.ExchangeRateToBase)
+		}
+	})
+}
+
 // --- Test Cases ---
 
 func TestCalculateBounds(t *testing.T) {
@@ -1029,9 +1371,6 @@ func TestAdjustAccountBalance(t *testing.T) {
 	}
 	if loggedTxn.Amount != 7000 {
 		t.Errorf("Amount = %d, want 7000", loggedTxn.Amount)
-	}
-	if loggedTxn.SourceType == nil || *loggedTxn.SourceType != "SYSTEM_BALANCE_ADJUSTMENT" {
-		t.Errorf("SourceType = %v, want SYSTEM_BALANCE_ADJUSTMENT", loggedTxn.SourceType)
 	}
 
 	// Test Case 2: Negative Adjustment ($120.00 -> $80.00, Delta = -$40.00)

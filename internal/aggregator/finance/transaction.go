@@ -15,15 +15,30 @@ type AggregatedTransaction struct {
 	Budget  *AggregatedBudget
 }
 
+// GetTransaction retrieves a single transaction by ID for a space, optionally hydrating associated accounts and budgets.
+func (s *Service) GetTransaction(ctx context.Context, spaceID finance.SpaceID, view ViewType, id finance.TransactionID) (*AggregatedTransaction, error) {
+	txn, err := s.financeService.GetTransaction(ctx, spaceID, id)
+	if err != nil {
+		return nil, err
+	}
+
+	page, err := s.hydrateTransactions(ctx, spaceID, view, []*finance.Transaction{txn}, "")
+	if err != nil || len(page.Items) == 0 {
+		return &AggregatedTransaction{Transaction: txn}, nil
+	}
+	return page.Items[0], nil
+}
+
 // ListTransactions retrieves space transactions, optionally hydrating associated accounts and budgets.
 func (s *Service) ListTransactions(ctx context.Context, spaceID finance.SpaceID, view ViewType, filter finance.TransactionFilter) (*paging.Page[*AggregatedTransaction], error) {
 	page, err := s.financeService.ListTransactions(ctx, spaceID, &filter)
 	if err != nil {
 		return nil, err
 	}
-	txns := page.Items
-	nextToken := page.NextPageToken
+	return s.hydrateTransactions(ctx, spaceID, view, page.Items, page.NextPageToken)
+}
 
+func (s *Service) hydrateTransactions(ctx context.Context, spaceID finance.SpaceID, view ViewType, txns []*finance.Transaction, nextToken string) (*paging.Page[*AggregatedTransaction], error) {
 	if len(txns) == 0 {
 		return &paging.Page[*AggregatedTransaction]{
 			Items:         []*AggregatedTransaction{},

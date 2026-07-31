@@ -37,6 +37,7 @@ const (
 	Finance_UpdateExpense_FullMethodName            = "/saturn.finance.v1.Finance/UpdateExpense"
 	Finance_DeleteTransaction_FullMethodName        = "/saturn.finance.v1.Finance/DeleteTransaction"
 	Finance_ListTransactions_FullMethodName         = "/saturn.finance.v1.Finance/ListTransactions"
+	Finance_GetTransaction_FullMethodName           = "/saturn.finance.v1.Finance/GetTransaction"
 	Finance_ListTransactionEvents_FullMethodName    = "/saturn.finance.v1.Finance/ListTransactionEvents"
 	Finance_GetInsights_FullMethodName              = "/saturn.finance.v1.Finance/GetInsights"
 	Finance_CreateRecurringExpense_FullMethodName   = "/saturn.finance.v1.Finance/CreateRecurringExpense"
@@ -44,6 +45,7 @@ const (
 	Finance_DeleteRecurringExpense_FullMethodName   = "/saturn.finance.v1.Finance/DeleteRecurringExpense"
 	Finance_ListRecurringExpenses_FullMethodName    = "/saturn.finance.v1.Finance/ListRecurringExpenses"
 	Finance_ListScheduledPayments_FullMethodName    = "/saturn.finance.v1.Finance/ListScheduledPayments"
+	Finance_GetScheduledPayment_FullMethodName      = "/saturn.finance.v1.Finance/GetScheduledPayment"
 	Finance_ConfirmScheduledPayment_FullMethodName  = "/saturn.finance.v1.Finance/ConfirmScheduledPayment"
 	Finance_MatchScheduledPayment_FullMethodName    = "/saturn.finance.v1.Finance/MatchScheduledPayment"
 	Finance_SkipScheduledPayment_FullMethodName     = "/saturn.finance.v1.Finance/SkipScheduledPayment"
@@ -112,6 +114,8 @@ type FinanceClient interface {
 	DeleteTransaction(ctx context.Context, in *DeleteTransactionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Lists paginated transaction records matching specific budget, account, source, or text queries.
 	ListTransactions(ctx context.Context, in *ListTransactionsRequest, opts ...grpc.CallOption) (*ListTransactionsResponse, error)
+	// Retrieves details of a specific logged transaction record by ID.
+	GetTransaction(ctx context.Context, in *GetTransactionRequest, opts ...grpc.CallOption) (*Transaction, error)
 	// Lists historical lifecycle events tracking mutations and updates applied to a transaction.
 	ListTransactionEvents(ctx context.Context, in *ListTransactionEventsRequest, opts ...grpc.CallOption) (*ListTransactionEventsResponse, error)
 	// Aggregates space spend patterns, limits, remaining budgets, burn rates, and budget category distributions.
@@ -126,6 +130,8 @@ type FinanceClient interface {
 	ListRecurringExpenses(ctx context.Context, in *ListRecurringExpensesRequest, opts ...grpc.CallOption) (*ListRecurringExpensesResponse, error)
 	// Lists scheduled payment instances spawned by recurring templates.
 	ListScheduledPayments(ctx context.Context, in *ListScheduledPaymentsRequest, opts ...grpc.CallOption) (*ListScheduledPaymentsResponse, error)
+	// Retrieves details of a specific scheduled payment by ID.
+	GetScheduledPayment(ctx context.Context, in *GetScheduledPaymentRequest, opts ...grpc.CallOption) (*ScheduledPayment, error)
 	// Clears a scheduled payment instance, converting it into a permanent, reconciled ledger transaction.
 	ConfirmScheduledPayment(ctx context.Context, in *ConfirmScheduledPaymentRequest, opts ...grpc.CallOption) (*Transaction, error)
 	// Links an existing transaction with a pending scheduled payment, marking it cleared.
@@ -354,6 +360,16 @@ func (c *financeClient) ListTransactions(ctx context.Context, in *ListTransactio
 	return out, nil
 }
 
+func (c *financeClient) GetTransaction(ctx context.Context, in *GetTransactionRequest, opts ...grpc.CallOption) (*Transaction, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Transaction)
+	err := c.cc.Invoke(ctx, Finance_GetTransaction_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *financeClient) ListTransactionEvents(ctx context.Context, in *ListTransactionEventsRequest, opts ...grpc.CallOption) (*ListTransactionEventsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListTransactionEventsResponse)
@@ -418,6 +434,16 @@ func (c *financeClient) ListScheduledPayments(ctx context.Context, in *ListSched
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListScheduledPaymentsResponse)
 	err := c.cc.Invoke(ctx, Finance_ListScheduledPayments_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) GetScheduledPayment(ctx context.Context, in *GetScheduledPaymentRequest, opts ...grpc.CallOption) (*ScheduledPayment, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ScheduledPayment)
+	err := c.cc.Invoke(ctx, Finance_GetScheduledPayment_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -706,6 +732,8 @@ type FinanceServer interface {
 	DeleteTransaction(context.Context, *DeleteTransactionRequest) (*emptypb.Empty, error)
 	// Lists paginated transaction records matching specific budget, account, source, or text queries.
 	ListTransactions(context.Context, *ListTransactionsRequest) (*ListTransactionsResponse, error)
+	// Retrieves details of a specific logged transaction record by ID.
+	GetTransaction(context.Context, *GetTransactionRequest) (*Transaction, error)
 	// Lists historical lifecycle events tracking mutations and updates applied to a transaction.
 	ListTransactionEvents(context.Context, *ListTransactionEventsRequest) (*ListTransactionEventsResponse, error)
 	// Aggregates space spend patterns, limits, remaining budgets, burn rates, and budget category distributions.
@@ -720,6 +748,8 @@ type FinanceServer interface {
 	ListRecurringExpenses(context.Context, *ListRecurringExpensesRequest) (*ListRecurringExpensesResponse, error)
 	// Lists scheduled payment instances spawned by recurring templates.
 	ListScheduledPayments(context.Context, *ListScheduledPaymentsRequest) (*ListScheduledPaymentsResponse, error)
+	// Retrieves details of a specific scheduled payment by ID.
+	GetScheduledPayment(context.Context, *GetScheduledPaymentRequest) (*ScheduledPayment, error)
 	// Clears a scheduled payment instance, converting it into a permanent, reconciled ledger transaction.
 	ConfirmScheduledPayment(context.Context, *ConfirmScheduledPaymentRequest) (*Transaction, error)
 	// Links an existing transaction with a pending scheduled payment, marking it cleared.
@@ -828,6 +858,9 @@ func (UnimplementedFinanceServer) DeleteTransaction(context.Context, *DeleteTran
 func (UnimplementedFinanceServer) ListTransactions(context.Context, *ListTransactionsRequest) (*ListTransactionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListTransactions not implemented")
 }
+func (UnimplementedFinanceServer) GetTransaction(context.Context, *GetTransactionRequest) (*Transaction, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetTransaction not implemented")
+}
 func (UnimplementedFinanceServer) ListTransactionEvents(context.Context, *ListTransactionEventsRequest) (*ListTransactionEventsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListTransactionEvents not implemented")
 }
@@ -848,6 +881,9 @@ func (UnimplementedFinanceServer) ListRecurringExpenses(context.Context, *ListRe
 }
 func (UnimplementedFinanceServer) ListScheduledPayments(context.Context, *ListScheduledPaymentsRequest) (*ListScheduledPaymentsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListScheduledPayments not implemented")
+}
+func (UnimplementedFinanceServer) GetScheduledPayment(context.Context, *GetScheduledPaymentRequest) (*ScheduledPayment, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetScheduledPayment not implemented")
 }
 func (UnimplementedFinanceServer) ConfirmScheduledPayment(context.Context, *ConfirmScheduledPaymentRequest) (*Transaction, error) {
 	return nil, status.Error(codes.Unimplemented, "method ConfirmScheduledPayment not implemented")
@@ -1247,6 +1283,24 @@ func _Finance_ListTransactions_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Finance_GetTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTransactionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).GetTransaction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_GetTransaction_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).GetTransaction(ctx, req.(*GetTransactionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Finance_ListTransactionEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListTransactionEventsRequest)
 	if err := dec(in); err != nil {
@@ -1369,6 +1423,24 @@ func _Finance_ListScheduledPayments_Handler(srv interface{}, ctx context.Context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(FinanceServer).ListScheduledPayments(ctx, req.(*ListScheduledPaymentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_GetScheduledPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetScheduledPaymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).GetScheduledPayment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_GetScheduledPayment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).GetScheduledPayment(ctx, req.(*GetScheduledPaymentRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1881,6 +1953,10 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Finance_ListTransactions_Handler,
 		},
 		{
+			MethodName: "GetTransaction",
+			Handler:    _Finance_GetTransaction_Handler,
+		},
+		{
 			MethodName: "ListTransactionEvents",
 			Handler:    _Finance_ListTransactionEvents_Handler,
 		},
@@ -1907,6 +1983,10 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListScheduledPayments",
 			Handler:    _Finance_ListScheduledPayments_Handler,
+		},
+		{
+			MethodName: "GetScheduledPayment",
+			Handler:    _Finance_GetScheduledPayment_Handler,
 		},
 		{
 			MethodName: "ConfirmScheduledPayment",

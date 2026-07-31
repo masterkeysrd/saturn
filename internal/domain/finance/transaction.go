@@ -64,6 +64,17 @@ func (tid TransactionID) Validate() error {
 
 const transactionPrefix = "txn_"
 
+// TransactionMetadata contains strongly typed domain context metadata associated with a transaction.
+type TransactionMetadata struct {
+	ScheduledPaymentID  *ScheduledPaymentID `json:"scheduled_payment_id,omitempty"`
+	RecurringExpenseID  *RecurringExpenseID `json:"recurring_expense_id,omitempty"`
+	BorrowingID         *BorrowingID        `json:"borrowing_id,omitempty"`
+	BorrowingRole       string              `json:"borrowing_role,omitempty"` // "INITIAL_FUNDING", "REPAYMENT", "ADDITIONAL_LOAN"
+	BorrowingAmount     int64               `json:"borrowing_amount,omitempty"`
+	AccountImpactAmount int64               `json:"account_impact_amount,omitempty"`
+	Notes               string              `json:"notes,omitempty"`
+}
+
 // Transaction represents a financial record in the space ledger.
 type Transaction struct {
 	ID              TransactionID
@@ -79,9 +90,7 @@ type Transaction struct {
 	Description     string
 	TransactionDate time.Time
 	EffectiveDate   time.Time
-	SourceType      *string // Nullable
-	SourceID        *string // Nullable
-	MetadataJson    string
+	Metadata        TransactionMetadata
 	CreateTime      time.Time
 	UpdateTime      time.Time
 }
@@ -120,7 +129,7 @@ func (t *Transaction) Validate() error {
 		}
 	}
 	if t.Type == TransactionTypeExpense {
-		isBorrowing := t.SourceType != nil && (*t.SourceType == SourceTypeBorrowing || *t.SourceType == SourceTypeBorrowingRepayment)
+		isBorrowing := t.Metadata.BorrowingID != nil && *t.Metadata.BorrowingID != ""
 		if !isBorrowing {
 			if t.BudgetID == nil {
 				return errors.New("expense transaction requires a budget ID")

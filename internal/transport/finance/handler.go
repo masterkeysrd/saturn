@@ -577,11 +577,15 @@ func (h *Handler) CreateExpense(ctx context.Context, req *financev1.CreateExpens
 	var transactionDate time.Time
 	if expense.GetTransactionDate() != nil {
 		transactionDate = expense.GetTransactionDate().AsTime()
+	} else {
+		transactionDate = time.Now().UTC()
 	}
 
 	var effectiveDate time.Time
 	if expense.GetEffectiveDate() != nil {
 		effectiveDate = expense.GetEffectiveDate().AsTime()
+	} else {
+		effectiveDate = transactionDate
 	}
 
 	var accountID *finance.AccountID
@@ -673,6 +677,30 @@ func (h *Handler) DeleteTransaction(ctx context.Context, req *financev1.DeleteTr
 	return &emptypb.Empty{}, nil
 }
 
+func (h *Handler) GetTransaction(ctx context.Context, req *financev1.GetTransactionRequest) (*financev1.Transaction, error) {
+	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	}
+	spaceID := finance.SpaceID(spaceIDStr)
+
+	tID, err := finance.ParseTransactionID(req.GetId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid transaction id: %v", err)
+	}
+
+	view := financeaggregator.ViewBasic
+	if req.GetView() == financev1.Transaction_FULL {
+		view = financeaggregator.ViewFull
+	}
+	aggTxn, err := h.Aggregator.GetTransaction(ctx, spaceID, view, tID)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoAggregatedTransaction(aggTxn), nil
+}
+
 func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTransactionsRequest) (*financev1.ListTransactionsResponse, error) {
 	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
 	if !ok {
@@ -719,8 +747,6 @@ func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTrans
 	filter := finance.TransactionFilter{
 		BudgetID:      budgetID,
 		Type:          txnType,
-		SourceType:    req.SourceType,
-		SourceID:      req.SourceId,
 		AccountID:     accountID,
 		PageSize:      req.GetPageSize(),
 		NextPageToken: req.GetPageToken(),
@@ -791,6 +817,23 @@ func toProtoTransaction(t *finance.Transaction) *financev1.Transaction {
 		transferIDPtr = &transferID
 	}
 
+	metaMap := make(map[string]string)
+	if t.Metadata.ScheduledPaymentID != nil {
+		metaMap["scheduled_payment_id"] = string(*t.Metadata.ScheduledPaymentID)
+	}
+	if t.Metadata.RecurringExpenseID != nil {
+		metaMap["recurring_expense_id"] = string(*t.Metadata.RecurringExpenseID)
+	}
+	if t.Metadata.BorrowingID != nil {
+		metaMap["borrowing_id"] = string(*t.Metadata.BorrowingID)
+	}
+	if t.Metadata.BorrowingRole != "" {
+		metaMap["borrowing_role"] = t.Metadata.BorrowingRole
+	}
+	if t.Metadata.Notes != "" {
+		metaMap["notes"] = t.Metadata.Notes
+	}
+
 	return &financev1.Transaction{
 		Id:              string(t.ID),
 		SpaceId:         string(t.SpaceID),
@@ -803,10 +846,9 @@ func toProtoTransaction(t *finance.Transaction) *financev1.Transaction {
 		Description:     t.Description,
 		TransactionDate: timestamppb.New(t.TransactionDate),
 		EffectiveDate:   timestamppb.New(t.EffectiveDate),
-		SourceType:      t.SourceType,
-		SourceId:        t.SourceID,
 		AccountId:       accountIDPtr,
 		TransferId:      transferIDPtr,
+		Metadata:        metaMap,
 		CreateTime:      timestamppb.New(t.CreateTime),
 		UpdateTime:      timestamppb.New(t.UpdateTime),
 	}
