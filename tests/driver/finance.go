@@ -1,6 +1,7 @@
 package driver
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/masterkeysrd/saturn/apis/saturn"
 	financev1 "github.com/masterkeysrd/saturn/apis/saturn/finance/v1"
+	"github.com/masterkeysrd/saturn/internal/platform/id"
 )
 
 // ExpenseOptions encapsulates parameters for logging an expense transaction.
@@ -42,6 +44,10 @@ type FinanceDriver struct {
 	client      *financev1.Client
 	lastToken   string
 	lastSpaceID string
+}
+
+func (f *FinanceDriver) GetClient() *financev1.Client {
+	return f.getClient()
 }
 
 func (f *FinanceDriver) getClient() *financev1.Client {
@@ -85,6 +91,7 @@ type AccountOptions struct {
 	Type           financev1.Account_Type
 	Currency       string
 	InitialBalance int64
+	LastFour       string
 	ExpectErr      string
 	Assert         func(tb testing.TB, acc *financev1.Account)
 }
@@ -102,6 +109,7 @@ func (f *FinanceDriver) CreateAccount(tb testing.TB, opts AccountOptions) *Finan
 			Type:           opts.Type,
 			Currency:       opts.Currency,
 			InitialBalance: opts.InitialBalance,
+			LastFour:       opts.LastFour,
 		},
 	})
 	if opts.ExpectErr != "" {
@@ -137,6 +145,7 @@ func (f *FinanceDriver) CreateAccount(tb testing.TB, opts AccountOptions) *Finan
 		Type:           opts.Type,
 		Currency:       opts.Currency,
 		InitialBalance: opts.InitialBalance,
+		LastFour:       opts.LastFour,
 	}
 	f.driver.state.Accounts[opts.Name] = accInfo
 	f.driver.state.LastAccount = accInfo
@@ -317,6 +326,29 @@ func (f *FinanceDriver) AssertAccountBalance(tb testing.TB, accountName string, 
 	return f
 }
 
+// AssertAccount fetches a named account live from the API and executes an assertion callback against it.
+func (f *FinanceDriver) AssertAccount(tb testing.TB, accountName string, fn func(acc *financev1.Account)) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+	accInfo, ok := f.driver.state.Accounts[accountName]
+	if !ok {
+		tb.Fatalf("AssertAccount: account named %q not found in state registry", accountName)
+		return f
+	}
+	client := f.getClient()
+	resp, err := client.GetAccount(tb.Context(), &financev1.GetAccountRequest{
+		Id: accInfo.ID,
+	})
+	if err != nil {
+		tb.Fatalf("AssertAccount: GetAccount API call failed for %q (ID %s): %v", accountName, accInfo.ID, err)
+		return f
+	}
+	fn(resp)
+	return f
+}
+
 // AssertBorrowingBalance verifies that a named borrowing agreement matches expected remaining balance.
 func (f *FinanceDriver) AssertBorrowingBalance(tb testing.TB, borrowingName string, expectedRemaining int64) *FinanceDriver {
 	tb.Helper()
@@ -476,6 +508,18 @@ func (f *FinanceDriver) CreateTransfer(tb testing.TB, opts TransferOptions) *Fin
 			f.driver.state.Transfers[opts.Key] = transfer
 		}
 		f.driver.state.LastTransfer = transfer
+		trfID := transfer.GetId()
+		txns, listErr := client.ListTransactions(tb.Context(), &financev1.ListTransactionsRequest{
+			TransferId: &trfID,
+		})
+		if listErr == nil {
+			for _, txn := range txns.GetTransactions() {
+				if txn.GetType() == financev1.Transaction_TRANSFER_OUT {
+					f.driver.state.LastTransactionID = txn.GetId()
+					break
+				}
+			}
+		}
 	}
 	return f
 }
@@ -517,9 +561,10 @@ func (f *FinanceDriver) AssertTransfer(tb testing.TB, transferKey string, fn fun
 
 	var outflowLeg, inflowLeg *financev1.Transaction
 	for _, tx := range txResp.Transactions {
-		if tx.Type == financev1.Transaction_TRANSFER_OUT {
+		switch tx.Type {
+		case financev1.Transaction_TRANSFER_OUT:
 			outflowLeg = tx
-		} else if tx.Type == financev1.Transaction_TRANSFER_IN {
+		case financev1.Transaction_TRANSFER_IN:
 			inflowLeg = tx
 		}
 	}
@@ -666,10 +711,28 @@ func (f *FinanceDriver) CreateExpense(tb testing.TB, opts ExpenseOptions) *Finan
 		tb.Errorf("CreateExpense BudgetId = %s, want %s", txn.GetBudgetId(), budID)
 	}
 
-	f.driver.state.LastTransaction = txn
+	f.driver.state.LastTransactionID = txn.GetId()
 	if opts.Assert != nil {
 		opts.Assert(tb, txn)
 	}
+	return f
+}
+
+// AssertTransaction executes an assertion callback against a transaction fetched live by ID from the API.
+func (f *FinanceDriver) AssertTransaction(tb testing.TB, txnID string, fn func(txn *financev1.Transaction)) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+	client := f.getClient()
+	txn, err := client.GetTransaction(tb.Context(), &financev1.GetTransactionRequest{
+		Id: txnID,
+	})
+	if err != nil {
+		tb.Fatalf("AssertTransaction: GetTransaction API call failed for ID %s: %v", txnID, err)
+		return f
+	}
+	fn(txn)
 	return f
 }
 
@@ -679,13 +742,13 @@ func (f *FinanceDriver) AssertLastTransaction(tb testing.TB, fn func(txn *financ
 	if tb.Failed() {
 		return f
 	}
-	if f.driver.state.LastTransaction == nil {
-		tb.Fatalf("AssertLastTransaction called, but no transaction has been created yet")
+	if f.driver.state.LastTransactionID == "" {
+		tb.Fatalf("AssertLastTransaction called, but no LastTransactionID recorded in driver state")
 		return f
 	}
 
-	targetID := f.driver.state.LastTransaction.GetId()
 	client := f.getClient()
+	targetID := f.driver.state.LastTransactionID
 	txn, err := client.GetTransaction(tb.Context(), &financev1.GetTransactionRequest{
 		Id: targetID,
 	})
@@ -819,6 +882,19 @@ func (f *FinanceDriver) CreateRecurringExpense(tb testing.TB, expenseName, budge
 	}
 
 	f.driver.state.LastRecurringExpenseID = resp.GetId()
+
+	listResp, err := client.ListScheduledPayments(tb.Context(), &financev1.ListScheduledPaymentsRequest{
+		Status: financev1.ScheduledPayment_PENDING,
+	})
+	if err == nil {
+		for _, sp := range listResp.GetScheduledPayments() {
+			if sp.GetSourceId() == resp.GetId() {
+				f.driver.state.ScheduledPayments[expenseName] = sp.GetId()
+				f.driver.state.LastScheduledPaymentID = sp.GetId()
+				break
+			}
+		}
+	}
 	return f
 }
 
@@ -830,7 +906,10 @@ func (f *FinanceDriver) AssertPendingScheduledPaymentsCount(tb testing.TB, expec
 	}
 
 	client := f.getClient()
-	listResp, err := client.ListScheduledPayments(tb.Context(), &financev1.ListScheduledPaymentsRequest{})
+	pendingStatus := financev1.ScheduledPayment_PENDING
+	listResp, err := client.ListScheduledPayments(tb.Context(), &financev1.ListScheduledPaymentsRequest{
+		Status: pendingStatus,
+	})
 	if err != nil {
 		tb.Fatalf("AssertPendingScheduledPaymentsCount SDK call failed: %v", err)
 		return f
@@ -846,11 +925,13 @@ func (f *FinanceDriver) AssertPendingScheduledPaymentsCount(tb testing.TB, expec
 
 // ConfirmScheduledPaymentOptions parameters for confirming scheduled payments.
 type ConfirmScheduledPaymentOptions struct {
-	PaymentID string
-	Account   string
-	Currency  string
-	Amount    int64
-	ExpectErr string
+	PaymentID              string
+	ScheduledPaymentName   string
+	ScheduledPaymentAmount int64
+	Account                string
+	Currency               string
+	Amount                 int64
+	ExpectErr              string
 }
 
 // ConfirmScheduledPayment confirms a scheduled payment using ConfirmScheduledPaymentOptions struct.
@@ -869,18 +950,18 @@ func (f *FinanceDriver) ConfirmScheduledPayment(tb testing.TB, opts ConfirmSched
 	client := f.getClient()
 	targetPaymentID := opts.PaymentID
 	if targetPaymentID == "" {
-		listResp, err := client.ListScheduledPayments(tb.Context(), &financev1.ListScheduledPaymentsRequest{})
-		if err != nil {
-			tb.Fatalf("ListScheduledPayments SDK call failed: %v", err)
-			return f
+		if opts.ScheduledPaymentName != "" {
+			if id, ok := f.driver.state.ScheduledPayments[opts.ScheduledPaymentName]; ok {
+				targetPaymentID = id
+			}
 		}
-
-		if len(listResp.GetScheduledPayments()) == 0 {
-			tb.Fatalf("ConfirmScheduledPayment called, but no pending scheduled payments found")
-			return f
+		if targetPaymentID == "" {
+			targetPaymentID = f.driver.state.LastScheduledPaymentID
 		}
-
-		targetPaymentID = listResp.GetScheduledPayments()[0].GetId()
+	}
+	if targetPaymentID == "" {
+		tb.Fatalf("ConfirmScheduledPayment requires explicit PaymentID or active state scheduled payment")
+		return f
 	}
 
 	accID := acc.ID
@@ -916,7 +997,7 @@ func (f *FinanceDriver) ConfirmScheduledPayment(tb testing.TB, opts ConfirmSched
 		return f
 	}
 
-	f.driver.state.LastTransaction = txn
+	f.driver.state.LastTransactionID = txn.GetId()
 	f.driver.state.LastConfirmedScheduledPaymentID = targetPaymentID
 	return f
 }
@@ -996,55 +1077,62 @@ func (f *FinanceDriver) AssertScheduledPayment(tb testing.TB, paymentID string, 
 	return f
 }
 
-// GetLastRecurringExpense fetches details of the last created recurring expense via live API.
-func (f *FinanceDriver) GetLastRecurringExpense(tb testing.TB) *financev1.RecurringExpense {
-	tb.Helper()
-	if f.driver.state.LastRecurringExpenseID == "" {
-		tb.Fatalf("GetLastRecurringExpense: no recurring expense created in driver state")
-		return nil
-	}
-	client := f.getClient()
-	resp, err := client.ListRecurringExpenses(tb.Context(), &financev1.ListRecurringExpensesRequest{})
-	if err != nil {
-		tb.Fatalf("GetLastRecurringExpense: ListRecurringExpenses API call failed: %v", err)
-		return nil
-	}
-	for _, re := range resp.GetRecurringExpenses() {
-		if re.GetId() == f.driver.state.LastRecurringExpenseID {
-			return re
-		}
-	}
-	tb.Fatalf("GetLastRecurringExpense: recurring expense %s not found", f.driver.state.LastRecurringExpenseID)
-	return nil
-}
-
 // AssertLastRecurringExpense fluently queries the live API for the last created recurring expense and runs an assertion callback.
 func (f *FinanceDriver) AssertLastRecurringExpense(tb testing.TB, fn func(re *financev1.RecurringExpense)) *FinanceDriver {
 	tb.Helper()
 	if tb.Failed() {
 		return f
 	}
-	re := f.GetLastRecurringExpense(tb)
-	if re != nil {
-		fn(re)
+	if f.driver.state.LastRecurringExpenseID == "" {
+		tb.Fatalf("AssertLastRecurringExpense: no recurring expense created in driver state")
+		return f
 	}
+	client := f.getClient()
+	resp, err := client.ListRecurringExpenses(tb.Context(), &financev1.ListRecurringExpensesRequest{})
+	if err != nil {
+		tb.Fatalf("AssertLastRecurringExpense: ListRecurringExpenses API call failed: %v", err)
+		return f
+	}
+	var matched *financev1.RecurringExpense
+	for _, re := range resp.GetRecurringExpenses() {
+		if re.GetId() == f.driver.state.LastRecurringExpenseID {
+			matched = re
+			break
+		}
+	}
+	if matched == nil {
+		tb.Fatalf("AssertLastRecurringExpense: recurring expense %s not found", f.driver.state.LastRecurringExpenseID)
+		return f
+	}
+	fn(matched)
 	return f
 }
 
-// GetPendingScheduledPayment queries the live API and returns the first pending scheduled payment proto object.
-func (f *FinanceDriver) GetPendingScheduledPayment(tb testing.TB) *financev1.ScheduledPayment {
+// AssertScheduledPaymentByAmount queries the live API for a scheduled payment matching the amount and executes an assertion callback.
+func (f *FinanceDriver) AssertScheduledPaymentByAmount(tb testing.TB, amount int64, fn func(sp *financev1.ScheduledPayment)) *FinanceDriver {
 	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
 	client := f.getClient()
 	listResp, err := client.ListScheduledPayments(tb.Context(), &financev1.ListScheduledPaymentsRequest{})
 	if err != nil {
-		tb.Fatalf("GetPendingScheduledPayment: ListScheduledPayments API call failed: %v", err)
-		return nil
+		tb.Fatalf("AssertScheduledPaymentByAmount: ListScheduledPayments API call failed: %v", err)
+		return f
 	}
-	if len(listResp.GetScheduledPayments()) == 0 {
-		tb.Fatalf("GetPendingScheduledPayment: expected pending scheduled payment, got none")
-		return nil
+	var matched *financev1.ScheduledPayment
+	for _, sp := range listResp.GetScheduledPayments() {
+		if sp.GetAmount() == amount {
+			matched = sp
+			break
+		}
 	}
-	return listResp.GetScheduledPayments()[0]
+	if matched == nil {
+		tb.Fatalf("AssertScheduledPaymentByAmount: no scheduled payment found matching amount %d", amount)
+		return f
+	}
+	fn(matched)
+	return f
 }
 
 // AssertPendingScheduledPayment fluently queries the live API for the first pending scheduled payment and runs an assertion callback.
@@ -1053,9 +1141,432 @@ func (f *FinanceDriver) AssertPendingScheduledPayment(tb testing.TB, fn func(sp 
 	if tb.Failed() {
 		return f
 	}
-	sp := f.GetPendingScheduledPayment(tb)
-	if sp != nil {
-		fn(sp)
+	client := f.getClient()
+	listResp, err := client.ListScheduledPayments(tb.Context(), &financev1.ListScheduledPaymentsRequest{})
+	if err != nil {
+		tb.Fatalf("AssertPendingScheduledPayment API call failed: %v", err)
+		return f
+	}
+	if len(listResp.GetScheduledPayments()) == 0 {
+		tb.Fatalf("AssertPendingScheduledPayment: no scheduled payments found")
+		return f
+	}
+	fn(listResp.GetScheduledPayments()[0])
+	return f
+}
+
+// StageInboxItemOptions parameters for staging a raw inbox item into the DB staging table.
+type StageInboxItemOptions struct {
+	Key                        string
+	DocType                    financev1.InboxItem_DocType
+	Amount                     int64
+	Currency                   string
+	Vendor                     string
+	AccountName                string
+	BudgetName                 string
+	CardLastFour               string
+	ScheduledPaymentID         string
+	ScheduledPaymentName       string
+	ScheduledPaymentAmount     int64
+	TransactionID              string
+	LinkToLastTransaction      bool
+	BorrowingID                string
+	BorrowingLinkType          financev1.BorrowingLinkType
+	OverwriteLinkedTransaction bool
+	TransactionType            string
+	DestinationAccountName     string
+	TransferLeg                string
+}
+
+// StageInboxItem inserts a raw staging inbox item into the space's inbox staging queue in PostgreSQL.
+func (f *FinanceDriver) StageInboxItem(tb testing.TB, opts StageInboxItemOptions) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+
+	spaceID := f.driver.state.SpaceID
+	if spaceID == "" {
+		tb.Fatalf("StageInboxItem called without active space context")
+		return f
+	}
+
+	integrationID := f.driver.state.LastIntegrationID
+	if integrationID == "" {
+		tb.Fatalf("StageInboxItem called, but no platform integration channel has been ensured in driver state")
+		return f
+	}
+
+	currency := opts.Currency
+	if currency == "" {
+		currency = "USD"
+	}
+
+	var accountID *string
+	if opts.AccountName != "" {
+		acc, ok := f.driver.state.Accounts[opts.AccountName]
+		if !ok {
+			tb.Fatalf("StageInboxItem: account named %q not found in state registry", opts.AccountName)
+			return f
+		}
+		accountID = &acc.ID
+	} else if opts.CardLastFour != "" {
+		var selected *AccountInfo
+		for _, acc := range f.driver.state.Accounts {
+			if acc.LastFour == opts.CardLastFour {
+				if selected == nil || acc.Currency == currency {
+					selected = acc
+					if acc.Currency == currency {
+						break
+					}
+				}
+			}
+		}
+		if selected != nil {
+			accountID = &selected.ID
+		}
+	}
+
+	var budgetID *string
+	if opts.BudgetName != "" {
+		bID, ok := f.driver.state.Budgets[opts.BudgetName]
+		if !ok {
+			tb.Fatalf("StageInboxItem: budget named %q not found in state registry", opts.BudgetName)
+			return f
+		}
+		budgetID = &bID
+	}
+
+	docTypeStr := "unknown"
+	switch opts.DocType {
+	case financev1.InboxItem_INVOICE:
+		docTypeStr = "invoice"
+	case financev1.InboxItem_RECEIPT:
+		docTypeStr = "receipt"
+	case financev1.InboxItem_BANK_NOTIFICATION:
+		docTypeStr = "bank_notification"
+	case financev1.InboxItem_SYSTEM_VERIFICATION:
+		docTypeStr = "system_verification"
+	}
+
+	inboxID, _ := id.Generate("ibx_")
+	txDate := time.Now().UTC()
+
+	_, err := f.driver.env.DB.Exec(`
+		INSERT INTO finance.inbox_item 
+		(id, space_id, integration_id, status, doc_type, amount, currency, vendor_name, transaction_date, account_id, budget_id, raw_payload, metadata, create_time)
+		VALUES ($1, $2, $3, 'pending', $4, $5, $6, $7, $8, $9, $10, '', '{}', $11)
+	`, inboxID, spaceID, integrationID, docTypeStr, opts.Amount, currency, opts.Vendor, txDate, accountID, budgetID, txDate)
+	if err != nil {
+		tb.Fatalf("StageInboxItem: failed to insert inbox item into database: %v", err)
+		return f
+	}
+
+	info := &InboxItemInfo{
+		ID:        inboxID,
+		DocType:   opts.DocType,
+		Amount:    opts.Amount,
+		Vendor:    opts.Vendor,
+		AccountID: unptr(accountID),
+		BudgetID:  unptr(budgetID),
+	}
+
+	if opts.Key != "" {
+		f.driver.state.InboxItems[opts.Key] = info
+	}
+	f.driver.state.LastInboxItem = info
+	return f
+}
+
+// AssertInboxItemCount queries ListInboxItems API for a given status and asserts the expected count.
+func (f *FinanceDriver) AssertInboxItemCount(tb testing.TB, status financev1.InboxItem_Status, expectedCount int) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+
+	client := f.getClient()
+	resp, err := client.ListInboxItems(tb.Context(), &financev1.ListInboxItemsRequest{
+		Status: &status,
+	})
+	if err != nil {
+		tb.Fatalf("AssertInboxItemCount: ListInboxItems API call failed: %v", err)
+		return f
+	}
+	if len(resp.GetInboxItems()) != expectedCount {
+		statuses := []string{}
+		for _, item := range resp.GetInboxItems() {
+			statuses = append(statuses, fmt.Sprintf("id=%s status=%s", item.GetId(), item.GetStatus()))
+		}
+		tb.Errorf("AssertInboxItemCount for status %s = %d, want %d (items: %s)", status, len(resp.GetInboxItems()), expectedCount, strings.Join(statuses, ", "))
 	}
 	return f
+}
+
+// AssertInboxItem fluently fetches an InboxItem from the API and runs an assertion callback.
+func (f *FinanceDriver) AssertInboxItem(tb testing.TB, key string, fn func(item *financev1.InboxItem)) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+
+	var info *InboxItemInfo
+	if key != "" {
+		var ok bool
+		info, ok = f.driver.state.InboxItems[key]
+		if !ok {
+			tb.Fatalf("AssertInboxItem: key %q not found in state registry", key)
+			return f
+		}
+	} else {
+		info = f.driver.state.LastInboxItem
+		if info == nil {
+			tb.Fatalf("AssertInboxItem: no inbox item staged in driver state")
+			return f
+		}
+	}
+
+	client := f.getClient()
+	resp, err := client.ListInboxItems(tb.Context(), &financev1.ListInboxItemsRequest{})
+	if err != nil {
+		tb.Fatalf("AssertInboxItem: ListInboxItems API call failed: %v", err)
+		return f
+	}
+
+	var matched *financev1.InboxItem
+	for _, item := range resp.GetInboxItems() {
+		if item.GetId() == info.ID {
+			matched = item
+			break
+		}
+	}
+	if matched == nil {
+		tb.Fatalf("AssertInboxItem: item ID %s not found in ListInboxItems response", info.ID)
+		return f
+	}
+
+	fn(matched)
+	return f
+}
+
+// GetInboxItemID returns the ID of a staged inbox item by key.
+func (f *FinanceDriver) GetInboxItemID(key string) string {
+	if info, ok := f.driver.state.InboxItems[key]; ok {
+		return info.ID
+	}
+	return ""
+}
+
+// UpdateInboxItem updates a staged inbox item's draft properties via API.
+func (f *FinanceDriver) UpdateInboxItem(tb testing.TB, key string, opts StageInboxItemOptions) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+
+	var info *InboxItemInfo
+	if key != "" {
+		var ok bool
+		info, ok = f.driver.state.InboxItems[key]
+		if !ok {
+			tb.Fatalf("UpdateInboxItem: key %q not found in state registry", key)
+			return f
+		}
+	} else {
+		info = f.driver.state.LastInboxItem
+		if info == nil {
+			tb.Fatalf("UpdateInboxItem: no inbox item staged in driver state")
+			return f
+		}
+	}
+
+	var accountID *string
+	if opts.AccountName != "" {
+		acc, ok := f.driver.state.Accounts[opts.AccountName]
+		if !ok {
+			tb.Fatalf("UpdateInboxItem: account named %q not found in state registry", opts.AccountName)
+			return f
+		}
+		accountID = &acc.ID
+	}
+
+	var budgetID *string
+	if opts.BudgetName != "" {
+		bID, ok := f.driver.state.Budgets[opts.BudgetName]
+		if !ok {
+			tb.Fatalf("UpdateInboxItem: budget named %q not found in state registry", opts.BudgetName)
+			return f
+		}
+		budgetID = &bID
+	}
+
+	client := f.getClient()
+
+	spID := opts.ScheduledPaymentID
+	if spID == "" {
+		if opts.ScheduledPaymentName != "" {
+			if id, ok := f.driver.state.ScheduledPayments[opts.ScheduledPaymentName]; ok {
+				spID = id
+			}
+		}
+		if spID == "" && opts.ScheduledPaymentAmount > 0 {
+			spID = f.driver.state.LastScheduledPaymentID
+		}
+	}
+
+	txnID := opts.TransactionID
+	if txnID == "" && opts.LinkToLastTransaction {
+		txnID = f.driver.state.LastTransactionID
+	}
+
+	item := &financev1.InboxItem{
+		Id:                 info.ID,
+		AccountId:          unptr(accountID),
+		BudgetId:           unptr(budgetID),
+		ScheduledPaymentId: spID,
+		TransactionId:      txnID,
+	}
+
+	bID := opts.BorrowingID
+	if bID != "" {
+		if borInfo, ok := f.driver.state.Borrowings[bID]; ok {
+			bID = borInfo.ID
+		}
+		item.BorrowingId = &bID
+		lt := opts.BorrowingLinkType
+		if lt == financev1.BorrowingLinkType_BORROWING_LINK_TYPE_UNSPECIFIED {
+			lt = financev1.BorrowingLinkType_BORROWING_LINK_TYPE_REPAYMENT
+		}
+		item.BorrowingLinkType = &lt
+	}
+
+	if item.Metadata == nil {
+		item.Metadata = make(map[string]string)
+	}
+	if opts.OverwriteLinkedTransaction {
+		item.Metadata["overwrite_linked_transaction"] = "true"
+	}
+	if opts.TransactionType != "" {
+		item.Metadata["transaction_type"] = opts.TransactionType
+	}
+	if opts.DestinationAccountName != "" {
+		if destAcc, ok := f.driver.state.Accounts[opts.DestinationAccountName]; ok {
+			item.Metadata["destination_account_id"] = destAcc.ID
+		} else {
+			item.Metadata["destination_account_id"] = opts.DestinationAccountName
+		}
+	}
+	if opts.TransferLeg != "" {
+		item.Metadata["transfer_leg"] = opts.TransferLeg
+	}
+
+	amt := opts.Amount
+	if amt == 0 {
+		amt = info.Amount
+	}
+	item.Amount = amt
+
+	vendor := opts.Vendor
+	if vendor == "" {
+		vendor = info.Vendor
+	}
+	item.VendorName = vendor
+
+	_, err := client.UpdateInboxItem(tb.Context(), &financev1.UpdateInboxItemRequest{
+		Id:        info.ID,
+		InboxItem: item,
+	})
+	if err != nil {
+		tb.Fatalf("UpdateInboxItem API call failed: %v", err)
+	}
+	return f
+}
+
+// ApproveInboxItem approves a staged inbox item via API.
+func (f *FinanceDriver) ApproveInboxItem(tb testing.TB, key string, expectErr ...string) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+
+	var info *InboxItemInfo
+	if key != "" {
+		var ok bool
+		info, ok = f.driver.state.InboxItems[key]
+		if !ok {
+			tb.Fatalf("ApproveInboxItem: key %q not found in state registry", key)
+			return f
+		}
+	} else {
+		info = f.driver.state.LastInboxItem
+		if info == nil {
+			tb.Fatalf("ApproveInboxItem: no inbox item staged in driver state")
+			return f
+		}
+	}
+
+	client := f.getClient()
+	item, err := client.ApproveInboxItem(tb.Context(), &financev1.ApproveInboxItemRequest{
+		Id: info.ID,
+	})
+	if len(expectErr) > 0 && expectErr[0] != "" {
+		if err == nil {
+			tb.Fatalf("ApproveInboxItem succeeded, but expected error containing %q", expectErr[0])
+			return f
+		}
+		if !strings.Contains(err.Error(), expectErr[0]) {
+			tb.Fatalf("ApproveInboxItem error = %v, want error containing %q", err, expectErr[0])
+			return f
+		}
+		return f
+	}
+	if err != nil {
+		tb.Fatalf("ApproveInboxItem API call failed for ID %s: %v", info.ID, err)
+		return f
+	}
+
+	if item != nil && item.GetTransactionId() != "" {
+		f.driver.state.LastTransactionID = item.GetTransactionId()
+	}
+	return f
+}
+
+// DiscardInboxItem discards a staged inbox item via API.
+func (f *FinanceDriver) DiscardInboxItem(tb testing.TB, key string) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+
+	var info *InboxItemInfo
+	if key != "" {
+		var ok bool
+		info, ok = f.driver.state.InboxItems[key]
+		if !ok {
+			tb.Fatalf("DiscardInboxItem: key %q not found in state registry", key)
+			return f
+		}
+	} else {
+		info = f.driver.state.LastInboxItem
+		if info == nil {
+			tb.Fatalf("DiscardInboxItem: no inbox item staged in driver state")
+			return f
+		}
+	}
+
+	client := f.getClient()
+	_, err := client.DiscardInboxItem(tb.Context(), &financev1.DiscardInboxItemRequest{
+		Id: info.ID,
+	})
+	if err != nil {
+		tb.Fatalf("DiscardInboxItem API call failed for ID %s: %v", info.ID, err)
+	}
+	return f
+}
+
+func unptr(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

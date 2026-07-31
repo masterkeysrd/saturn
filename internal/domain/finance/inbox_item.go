@@ -67,8 +67,26 @@ type InboxItem struct {
 	BorrowingID        *string            `json:"borrowingId,omitempty"`
 	BorrowingLinkType  *BorrowingLinkType `json:"borrowingLinkType,omitempty"`
 	RawPayload         string             `json:"rawPayload"`
-	MetadataJSON       string             `json:"metadataJson"`
+	Metadata           map[string]any     `json:"metadata"`
 	CreateTime         time.Time          `json:"createTime"`
+}
+
+// MetadataBool retrieves a boolean value from the metadata map safely.
+func (i *InboxItem) MetadataBool(key string) bool {
+	if i == nil || i.Metadata == nil {
+		return false
+	}
+	v, _ := i.Metadata[key].(bool)
+	return v
+}
+
+// MetadataString retrieves a string value from the metadata map safely.
+func (i *InboxItem) MetadataString(key string) string {
+	if i == nil || i.Metadata == nil {
+		return ""
+	}
+	v, _ := i.Metadata[key].(string)
+	return v
 }
 
 // StageInboxItem defines parameters to draft and stage an inbox item.
@@ -78,11 +96,12 @@ type StageInboxItem struct {
 	Vendor          string
 	Amount          int64
 	Currency        string
+	AccountID       *string
 	CardLastFour    string
 	SuggestedBudget string
 	Date            string
 	RawPayload      string
-	MetadataJSON    string
+	Metadata        map[string]any
 }
 
 // ApproveInboxItem holds fields mapping override values during inbox confirmation.

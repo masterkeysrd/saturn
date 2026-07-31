@@ -86,6 +86,14 @@ func (m *mockScheduledPaymentStore) GetByID(ctx context.Context, spaceID finance
 	return sp, nil
 }
 
+func (m *mockScheduledPaymentStore) Update(ctx context.Context, sp *finance.ScheduledPayment) error {
+	if _, ok := m.payments[sp.ID]; ok {
+		m.payments[sp.ID] = sp
+		return nil
+	}
+	return errors.New("scheduled payment not found")
+}
+
 func (m *mockScheduledPaymentStore) UpdateStatus(ctx context.Context, id finance.ScheduledPaymentID, status finance.ScheduledPaymentStatus) error {
 	if p, ok := m.payments[id]; ok {
 		p.Status = status

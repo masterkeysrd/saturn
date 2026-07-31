@@ -3,6 +3,7 @@ package finance
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -750,15 +751,29 @@ func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTrans
 		transferID = &idVal
 	}
 
+	var scheduledPaymentID *string
+	if req.ScheduledPaymentId != nil && *req.ScheduledPaymentId != "" {
+		val := *req.ScheduledPaymentId
+		scheduledPaymentID = &val
+	}
+
+	var borrowingID *string
+	if req.BorrowingId != nil && *req.BorrowingId != "" {
+		val := *req.BorrowingId
+		borrowingID = &val
+	}
+
 	filter := finance.TransactionFilter{
-		BudgetID:      budgetID,
-		Type:          txnType,
-		AccountID:     accountID,
-		TransferID:    transferID,
-		PageSize:      req.GetPageSize(),
-		NextPageToken: req.GetPageToken(),
-		Sort:          sorting.Parse(req.GetSort()),
-		SearchQuery:   searchQuery,
+		BudgetID:           budgetID,
+		Type:               txnType,
+		AccountID:          accountID,
+		TransferID:         transferID,
+		ScheduledPaymentID: scheduledPaymentID,
+		BorrowingID:        borrowingID,
+		PageSize:           req.GetPageSize(),
+		NextPageToken:      req.GetPageToken(),
+		Sort:               sorting.Parse(req.GetSort()),
+		SearchQuery:        searchQuery,
 	}
 
 	view := financeaggregator.ViewBasic
@@ -1354,7 +1369,7 @@ func toDomainInboxStatus(s financev1.InboxItem_Status) finance.InboxItemStatus {
 	case financev1.InboxItem_ARCHIVED:
 		return finance.InboxItemArchived
 	default:
-		return finance.InboxItemPending
+		return ""
 	}
 }
 
@@ -1366,6 +1381,8 @@ func toProtoInboxDocType(d finance.InboxItemDocType) financev1.InboxItem_DocType
 		return financev1.InboxItem_RECEIPT
 	case finance.InboxItemDocBankNotification:
 		return financev1.InboxItem_BANK_NOTIFICATION
+	case finance.InboxItemDocSystemVerification:
+		return financev1.InboxItem_SYSTEM_VERIFICATION
 	case finance.InboxItemDocUnknown:
 		return financev1.InboxItem_UNKNOWN
 	default:
@@ -1381,6 +1398,8 @@ func toDomainInboxDocType(d financev1.InboxItem_DocType) finance.InboxItemDocTyp
 		return finance.InboxItemDocReceipt
 	case financev1.InboxItem_BANK_NOTIFICATION:
 		return finance.InboxItemDocBankNotification
+	case financev1.InboxItem_SYSTEM_VERIFICATION:
+		return finance.InboxItemDocSystemVerification
 	case financev1.InboxItem_UNKNOWN:
 		return finance.InboxItemDocUnknown
 	default:
@@ -1447,6 +1466,13 @@ func toProtoInboxItem(pt *finance.InboxItem) *financev1.InboxItem {
 		txDate = timestamppb.New(pt.TransactionDate)
 	}
 
+	protoMeta := make(map[string]string)
+	if pt.Metadata != nil {
+		for k, v := range pt.Metadata {
+			protoMeta[k] = fmt.Sprintf("%v", v)
+		}
+	}
+
 	return &financev1.InboxItem{
 		Id:                 pt.ID,
 		SpaceId:            pt.SpaceID,
@@ -1464,7 +1490,7 @@ func toProtoInboxItem(pt *finance.InboxItem) *financev1.InboxItem {
 		BorrowingId:        conv.Ptr(borrowingID),
 		BorrowingLinkType:  toProtoBorrowingLinkType(pt.BorrowingLinkType),
 		RawPayload:         pt.RawPayload,
-		MetadataJson:       pt.MetadataJSON,
+		Metadata:           protoMeta,
 		CreateTime:         timestamppb.New(pt.CreateTime),
 	}
 }
@@ -1497,6 +1523,19 @@ func toDomainInboxItem(pb *financev1.InboxItem) *finance.InboxItem {
 		txDate = pb.GetTransactionDate().AsTime()
 	}
 
+	domainMeta := make(map[string]any)
+	if pb.GetMetadata() != nil {
+		for k, v := range pb.GetMetadata() {
+			if v == "true" {
+				domainMeta[k] = true
+			} else if v == "false" {
+				domainMeta[k] = false
+			} else {
+				domainMeta[k] = v
+			}
+		}
+	}
+
 	return &finance.InboxItem{
 		ID:                 pb.GetId(),
 		SpaceID:            pb.GetSpaceId(),
@@ -1514,7 +1553,7 @@ func toDomainInboxItem(pb *financev1.InboxItem) *finance.InboxItem {
 		BorrowingID:        borrowingID,
 		BorrowingLinkType:  toDomainBorrowingLinkType(pb.GetBorrowingLinkType()),
 		RawPayload:         pb.GetRawPayload(),
-		MetadataJSON:       pb.GetMetadataJson(),
+		Metadata:           domainMeta,
 	}
 }
 
@@ -1547,7 +1586,9 @@ func (h *Handler) ListInboxItems(ctx context.Context, req *financev1.ListInboxIt
 	var status *finance.InboxItemStatus
 	if req.Status != nil {
 		sVal := toDomainInboxStatus(*req.Status)
-		status = &sVal
+		if sVal != "" {
+			status = &sVal
+		}
 	}
 
 	var docType *finance.InboxItemDocType
@@ -1590,17 +1631,17 @@ func (h *Handler) ListInboxItems(ctx context.Context, req *financev1.ListInboxIt
 	}, nil
 }
 
-func (h *Handler) ApproveInboxItem(ctx context.Context, req *financev1.ApproveInboxItemRequest) (*emptypb.Empty, error) {
+func (h *Handler) ApproveInboxItem(ctx context.Context, req *financev1.ApproveInboxItemRequest) (*financev1.InboxItem, error) {
 	if req.GetId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "id is required")
 	}
 
-	err := h.Coordinator.ApproveInboxItem(ctx, req.GetId())
+	item, err := h.Coordinator.ApproveInboxItem(ctx, req.GetId())
 	if err != nil {
 		return nil, h.mapError(err)
 	}
 
-	return &emptypb.Empty{}, nil
+	return toProtoInboxItem(item), nil
 }
 
 func (h *Handler) DiscardInboxItem(ctx context.Context, req *financev1.DiscardInboxItemRequest) (*emptypb.Empty, error) {

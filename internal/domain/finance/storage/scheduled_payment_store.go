@@ -75,6 +75,30 @@ func (s *ScheduledPaymentStore) GetByID(ctx context.Context, spaceID finance.Spa
 	return row.toDomain(), nil
 }
 
+func (s *ScheduledPaymentStore) Update(ctx context.Context, payment *finance.ScheduledPayment) error {
+	query := `
+		UPDATE finance.scheduled_payment 
+		SET budget_id = $3, source_type = $4, source_id = $5, amount = $6, currency = $7, due_date = $8, status = $9, metadata = $10, update_time = NOW() 
+		WHERE id = $1 AND space_id = $2
+	`
+	res, err := s.db.ExecContext(ctx, query,
+		string(payment.ID), string(payment.SpaceID), string(payment.BudgetID),
+		payment.SourceType, payment.SourceID, payment.Amount, string(payment.Currency),
+		payment.DueDate, string(payment.Status), payment.Metadata,
+	)
+	if err != nil {
+		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return errors.New("scheduled payment not found")
+	}
+	return nil
+}
+
 func (s *ScheduledPaymentStore) UpdateStatus(ctx context.Context, id finance.ScheduledPaymentID, status finance.ScheduledPaymentStatus) error {
 	query := `UPDATE finance.scheduled_payment SET status = $2, update_time = NOW() WHERE id = $1`
 	res, err := s.db.ExecContext(ctx, query, string(id), string(status))

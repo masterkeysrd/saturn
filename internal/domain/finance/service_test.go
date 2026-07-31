@@ -421,6 +421,12 @@ func (m *mockAccountStore) ListBySpace(ctx context.Context, spaceID SpaceID, fil
 	var list []*Account
 	for _, a := range m.data {
 		if a.SpaceID == spaceID {
+			if filter != nil && filter.ActiveOnly != nil && *filter.ActiveOnly && !a.IsActive {
+				continue
+			}
+			if filter != nil && filter.LastFour != nil && *filter.LastFour != "" && a.LastFour != *filter.LastFour {
+				continue
+			}
 			list = append(list, a)
 		}
 	}
@@ -585,6 +591,14 @@ func (m *mockScheduledPaymentStore) GetByID(ctx context.Context, spaceID SpaceID
 		return nil, ErrScheduledPaymentNotFound
 	}
 	return p, nil
+}
+
+func (m *mockScheduledPaymentStore) Update(ctx context.Context, payment *ScheduledPayment) error {
+	if _, ok := m.payments[payment.ID]; !ok {
+		return ErrScheduledPaymentNotFound
+	}
+	m.payments[payment.ID] = payment
+	return nil
 }
 
 func (m *mockScheduledPaymentStore) UpdateStatus(ctx context.Context, id ScheduledPaymentID, status ScheduledPaymentStatus) error {
@@ -1753,9 +1767,10 @@ func TestService_CreateTransfer(t *testing.T) {
 			var outflow, inflow *Transaction
 			for _, tx := range transactionStore.txns {
 				if tx.Metadata.TransferID != nil && *tx.Metadata.TransferID == res.ID {
-					if tx.Type == TransactionTypeTransferOut {
+					switch tx.Type {
+					case TransactionTypeTransferOut:
 						outflow = tx
-					} else if tx.Type == TransactionTypeTransferIn {
+					case TransactionTypeTransferIn:
 						inflow = tx
 					}
 				}
@@ -1938,5 +1953,593 @@ func TestService_GetAndListTransfers(t *testing.T) {
 	}
 	if len(list) != 1 {
 		t.Errorf("ListTransfers count = %d, want 1", len(list))
+	}
+}
+
+type mockInboxItemStore struct {
+	items map[string]*InboxItem
+}
+
+func (m *mockInboxItemStore) Insert(ctx context.Context, item *InboxItem) error {
+	if m.items == nil {
+		m.items = make(map[string]*InboxItem)
+	}
+	m.items[item.ID] = item
+	return nil
+}
+
+func (m *mockInboxItemStore) Get(ctx context.Context, spaceID SpaceID, id string) (*InboxItem, error) {
+	item, ok := m.items[id]
+	if !ok || item.SpaceID != string(spaceID) {
+		return nil, errors.New("inbox item not found")
+	}
+	return item, nil
+}
+
+func (m *mockInboxItemStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListInboxItemsFilter) (*paging.Page[*InboxItem], error) {
+	var list []*InboxItem
+	for _, item := range m.items {
+		if item.SpaceID == string(spaceID) {
+			list = append(list, item)
+		}
+	}
+	return &paging.Page[*InboxItem]{Items: list}, nil
+}
+
+func (m *mockInboxItemStore) Update(ctx context.Context, item *InboxItem) error {
+	m.items[item.ID] = item
+	return nil
+}
+
+func (m *mockInboxItemStore) Delete(ctx context.Context, spaceID SpaceID, id string) error {
+	delete(m.items, id)
+	return nil
+}
+
+func TestService_ApproveInboxItem(t *testing.T) {
+	ctx := context.Background()
+	spIDStr, _ := id.Generate("spc_")
+	spID := SpaceID(spIDStr)
+
+	tests := []struct {
+		name                 string
+		docType              InboxItemDocType
+		metadata             map[string]any
+		linkExistingTxn      bool
+		initialTxnAmount     int64
+		initialTxnDesc       string
+		expectedTxnAmount    int64
+		expectedTxnDesc      string
+		expectedTransferMade bool
+		expectErr            bool
+	}{
+		{
+			name:    "Receipt linked transaction with overwrite_linked_transaction = true",
+			docType: InboxItemDocReceipt,
+			metadata: map[string]any{
+				"overwrite_linked_transaction": true,
+			},
+			linkExistingTxn:   true,
+			initialTxnAmount:  1000,
+			initialTxnDesc:    "Old Merchant",
+			expectedTxnAmount: 4500,
+			expectedTxnDesc:   "New Supermarket",
+			expectErr:         false,
+		},
+		{
+			name:    "Receipt linked transaction with overwrite_linked_transaction = false",
+			docType: InboxItemDocReceipt,
+			metadata: map[string]any{
+				"overwrite_linked_transaction": false,
+			},
+			linkExistingTxn:   true,
+			initialTxnAmount:  1000,
+			initialTxnDesc:    "Old Merchant",
+			expectedTxnAmount: 1000,
+			expectedTxnDesc:   "Old Merchant",
+			expectErr:         false,
+		},
+		{
+			name:    "System verification docType resolves immediately",
+			docType: InboxItemDocSystemVerification,
+			metadata: map[string]any{
+				"verification_code": "123456",
+			},
+			linkExistingTxn: false,
+			expectErr:       false,
+		},
+		{
+			name:    "Transfer transaction_type creates ledger transfer",
+			docType: InboxItemDocReceipt,
+			metadata: map[string]any{
+				"transaction_type":       "TRANSFER",
+				"destination_account_id": "DESTINATION_ACCOUNT_PLACEHOLDER",
+			},
+			linkExistingTxn:      false,
+			expectedTransferMade: true,
+			expectErr:            false,
+		},
+		{
+			name:    "Bank Notification transfer source leg creates ledger transfer",
+			docType: InboxItemDocBankNotification,
+			metadata: map[string]any{
+				"transaction_type":       "TRANSFER",
+				"destination_account_id": "DESTINATION_ACCOUNT_PLACEHOLDER",
+				"transfer_leg":           "SOURCE",
+			},
+			linkExistingTxn:      false,
+			expectedTransferMade: true,
+			expectErr:            false,
+		},
+		{
+			name:    "Bank Notification transfer destination leg creates ledger transfer",
+			docType: InboxItemDocBankNotification,
+			metadata: map[string]any{
+				"transaction_type":       "TRANSFER",
+				"destination_account_id": "DESTINATION_ACCOUNT_PLACEHOLDER",
+				"transfer_leg":           "DESTINATION",
+			},
+			linkExistingTxn:      false,
+			expectedTransferMade: true,
+			expectErr:            false,
+		},
+		{
+			name:    "Bank Notification standalone income",
+			docType: InboxItemDocBankNotification,
+			metadata: map[string]any{
+				"transaction_type": "INCOME",
+			},
+			linkExistingTxn: false,
+			expectErr:       false,
+		},
+		{
+			name:    "Bank Notification standalone expense",
+			docType: InboxItemDocBankNotification,
+			metadata: map[string]any{
+				"transaction_type": "EXPENSE",
+			},
+			linkExistingTxn: false,
+			expectErr:       false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spID, BaseCurrency: Currency("USD")})
+
+			accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
+			srcAccID, _ := NewAccountID()
+			srcAcc := &Account{
+				ID:             srcAccID,
+				SpaceID:        spID,
+				Name:           "Checking",
+				Currency:       Currency("USD"),
+				CurrentBalance: 100000,
+				IsActive:       true,
+			}
+			_ = accountStore.Create(ctx, srcAcc)
+
+			dstAccID, _ := NewAccountID()
+			dstAcc := &Account{
+				ID:             dstAccID,
+				SpaceID:        spID,
+				Name:           "Savings",
+				Currency:       Currency("USD"),
+				CurrentBalance: 0,
+				IsActive:       true,
+			}
+			_ = accountStore.Create(ctx, dstAcc)
+
+			budgetStore := &mockBudgetStore{data: make(map[BudgetID]*Budget)}
+			bID, _ := NewBudgetID()
+			bg := &Budget{
+				ID:          bID,
+				SpaceID:     spID,
+				Name:        "General",
+				LimitAmount: 50000,
+				Currency:    Currency("USD"),
+			}
+			_ = budgetStore.Create(ctx, bg)
+
+			periodStore := &mockPeriodStore{data: make(map[string]*BudgetPeriod)}
+
+			txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
+			eventStore := &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)}
+			transferStore := &mockTransferStore{data: make(map[TransferID]*Transfer)}
+			scheduledStore := &mockScheduledPaymentStore{payments: make(map[ScheduledPaymentID]*ScheduledPayment)}
+			inboxStore := &mockInboxItemStore{items: make(map[string]*InboxItem)}
+
+			svc := NewService(Dependencies{
+				SettingsStore:         settingsStore,
+				AccountStore:          accountStore,
+				TransactionStore:      txnStore,
+				TransactionEventStore: eventStore,
+				TransferStore:         transferStore,
+				ScheduledPaymentStore: scheduledStore,
+				InboxItemStore:        inboxStore,
+				BudgetStore:           budgetStore,
+				PeriodStore:           periodStore,
+			})
+
+			// Prepare metadata overrides with valid destination account ID
+			metadata := make(map[string]any)
+			for k, v := range tt.metadata {
+				if v == "DESTINATION_ACCOUNT_PLACEHOLDER" {
+					metadata[k] = string(dstAccID)
+				} else {
+					metadata[k] = v
+				}
+			}
+
+			// Stage item
+			srcAccStr := string(srcAccID)
+			bIDStr := string(bID)
+			staged, err := svc.StageInboxItem(ctx, spID, &StageInboxItem{
+				DocType:    tt.docType,
+				Vendor:     "New Supermarket",
+				Amount:     4500,
+				Currency:   "USD",
+				AccountID:  &srcAccStr,
+				RawPayload: "{}",
+				Metadata:   metadata,
+			})
+			if err != nil {
+				t.Fatalf("StageInboxItem failed: %v", err)
+			}
+			if err != nil {
+				t.Fatalf("StageInboxItem failed: %v", err)
+			}
+			staged.BudgetID = &bIDStr
+			_, _ = svc.UpdateInboxItem(ctx, spID, staged)
+
+			var existingTxnID TransactionID
+			if tt.linkExistingTxn {
+				existingTxnID, _ = NewTransactionID()
+				txn := &Transaction{
+					ID:              existingTxnID,
+					SpaceID:         spID,
+					AccountID:       &srcAccID,
+					Amount:          tt.initialTxnAmount,
+					Currency:        Currency("USD"),
+					Description:     tt.initialTxnDesc,
+					TransactionDate: time.Now().UTC(),
+				}
+				_ = txnStore.Create(ctx, txn)
+
+				txnIDStr := string(existingTxnID)
+				staged.TransactionID = &txnIDStr
+				_, _ = svc.UpdateInboxItem(ctx, spID, staged)
+			}
+
+			_, err = svc.ApproveInboxItem(ctx, spID, staged.ID)
+			if (err != nil) != tt.expectErr {
+				t.Fatalf("ApproveInboxItem error = %v, expectErr = %v", err, tt.expectErr)
+			}
+
+			if tt.linkExistingTxn && !tt.expectErr {
+				updatedTxn, err := txnStore.GetByID(ctx, spID, existingTxnID)
+				if err != nil {
+					t.Fatalf("GetByID failed: %v", err)
+				}
+				if updatedTxn.Amount != tt.expectedTxnAmount {
+					t.Errorf("Txn Amount = %d, want %d", updatedTxn.Amount, tt.expectedTxnAmount)
+				}
+				if updatedTxn.Description != tt.expectedTxnDesc {
+					t.Errorf("Txn Description = %q, want %q", updatedTxn.Description, tt.expectedTxnDesc)
+				}
+			}
+
+			if tt.expectedTransferMade {
+				if len(transferStore.data) != 1 {
+					t.Errorf("Transfer count = %d, want 1", len(transferStore.data))
+				}
+			}
+
+			// Verify status marked resolved
+			finalItem, err := inboxStore.Get(ctx, spID, staged.ID)
+			if err != nil {
+				t.Fatalf("Get inbox item failed: %v", err)
+			}
+			if finalItem.Status != InboxItemResolved {
+				t.Errorf("InboxItem Status = %s, want %s", finalItem.Status, InboxItemResolved)
+			}
+		})
+	}
+}
+
+func TestService_SystemVerification(t *testing.T) {
+	ctx := context.Background()
+	spIDStr, _ := id.Generate("spc_")
+	spID := SpaceID(spIDStr)
+
+	tests := []struct {
+		name     string
+		action   string // "approve" or "discard"
+		docType  InboxItemDocType
+		metadata map[string]any
+	}{
+		{
+			name:    "Approve system verification email resolves without ledger changes",
+			action:  "approve",
+			docType: InboxItemDocSystemVerification,
+			metadata: map[string]any{
+				"verification_code": "987654",
+				"sender":            "no-reply@auth.com",
+			},
+		},
+		{
+			name:    "Discard system verification email deletes item from queue",
+			action:  "discard",
+			docType: InboxItemDocSystemVerification,
+			metadata: map[string]any{
+				"verification_link": "https://auth.com/verify?token=abc",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spID, BaseCurrency: Currency("USD")})
+
+			txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
+			eventStore := &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)}
+			transferStore := &mockTransferStore{data: make(map[TransferID]*Transfer)}
+			scheduledStore := &mockScheduledPaymentStore{payments: make(map[ScheduledPaymentID]*ScheduledPayment)}
+			inboxStore := &mockInboxItemStore{items: make(map[string]*InboxItem)}
+
+			svc := NewService(Dependencies{
+				SettingsStore:         settingsStore,
+				TransactionStore:      txnStore,
+				TransactionEventStore: eventStore,
+				TransferStore:         transferStore,
+				ScheduledPaymentStore: scheduledStore,
+				InboxItemStore:        inboxStore,
+			})
+
+			// Stage system verification item
+			staged, err := svc.StageInboxItem(ctx, spID, &StageInboxItem{
+				DocType:    tt.docType,
+				Vendor:     "Auth System",
+				RawPayload: "Your verification code is 987654",
+				Metadata:   tt.metadata,
+			})
+			if err != nil {
+				t.Fatalf("StageInboxItem failed: %v", err)
+			}
+
+			if staged.DocType != InboxItemDocSystemVerification {
+				t.Fatalf("DocType = %s, want %s", staged.DocType, InboxItemDocSystemVerification)
+			}
+
+			switch tt.action {
+			case "approve":
+				_, err := svc.ApproveInboxItem(ctx, spID, staged.ID)
+				if err != nil {
+					t.Fatalf("ApproveInboxItem failed: %v", err)
+				}
+
+				// Verify item status resolved
+				item, err := inboxStore.Get(ctx, spID, staged.ID)
+				if err != nil {
+					t.Fatalf("Get inbox item failed: %v", err)
+				}
+				if item.Status != InboxItemResolved {
+					t.Errorf("Status = %s, want %s", item.Status, InboxItemResolved)
+				}
+
+			case "discard":
+				err := svc.DiscardInboxItem(ctx, spID, staged.ID)
+				if err != nil {
+					t.Fatalf("DiscardInboxItem failed: %v", err)
+				}
+
+				// Verify item deleted from store
+				_, err = inboxStore.Get(ctx, spID, staged.ID)
+				if err == nil {
+					t.Errorf("Expected error fetching discarded item, got nil")
+				}
+			}
+
+			// Assert 0 side-effect ledger entities created across all cases
+			if len(txnStore.txns) != 0 {
+				t.Errorf("Transactions created = %d, want 0", len(txnStore.txns))
+			}
+			if len(transferStore.data) != 0 {
+				t.Errorf("Transfers created = %d, want 0", len(transferStore.data))
+			}
+			if len(scheduledStore.payments) != 0 {
+				t.Errorf("Scheduled payments created = %d, want 0", len(scheduledStore.payments))
+			}
+		})
+	}
+}
+
+func TestService_InvoiceBranch(t *testing.T) {
+	ctx := context.Background()
+	spIDStr, _ := id.Generate("spc_")
+	spID := SpaceID(spIDStr)
+
+	tests := []struct {
+		name                     string
+		action                   string // "approve" or "discard"
+		linkScheduledPayment     bool
+		paymentInitialStatus     ScheduledPaymentStatus
+		expectedScheduledCount   int
+		expectedTransactionCount int
+		expectPaidTxnLinked      bool
+	}{
+		{
+			name:                     "Unlinked invoice creates new scheduled payment",
+			action:                   "approve",
+			linkScheduledPayment:     false,
+			expectedScheduledCount:   1,
+			expectedTransactionCount: 0,
+			expectPaidTxnLinked:      false,
+		},
+		{
+			name:                     "Linked invoice to unpaid scheduled payment updates bill figures",
+			action:                   "approve",
+			linkScheduledPayment:     true,
+			paymentInitialStatus:     ScheduledPaymentPending,
+			expectedScheduledCount:   1,
+			expectedTransactionCount: 0,
+			expectPaidTxnLinked:      false,
+		},
+		{
+			name:                     "Linked invoice to already paid scheduled payment attaches audit link to paid transaction",
+			action:                   "approve",
+			linkScheduledPayment:     true,
+			paymentInitialStatus:     ScheduledPaymentStatus("paid"),
+			expectedScheduledCount:   1,
+			expectedTransactionCount: 1,
+			expectPaidTxnLinked:      true,
+		},
+		{
+			name:                     "Discard invoice deletes item from queue",
+			action:                   "discard",
+			linkScheduledPayment:     false,
+			expectedScheduledCount:   0,
+			expectedTransactionCount: 0,
+			expectPaidTxnLinked:      false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spID, BaseCurrency: Currency("USD")})
+
+			accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
+			accID, _ := NewAccountID()
+			_ = accountStore.Create(ctx, &Account{
+				ID:             accID,
+				SpaceID:        spID,
+				Name:           "Checking",
+				Currency:       Currency("USD"),
+				CurrentBalance: 100000,
+				IsActive:       true,
+			})
+
+			txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
+			eventStore := &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)}
+			transferStore := &mockTransferStore{data: make(map[TransferID]*Transfer)}
+			scheduledStore := &mockScheduledPaymentStore{payments: make(map[ScheduledPaymentID]*ScheduledPayment)}
+			inboxStore := &mockInboxItemStore{items: make(map[string]*InboxItem)}
+
+			svc := NewService(Dependencies{
+				SettingsStore:         settingsStore,
+				AccountStore:          accountStore,
+				TransactionStore:      txnStore,
+				TransactionEventStore: eventStore,
+				TransferStore:         transferStore,
+				ScheduledPaymentStore: scheduledStore,
+				InboxItemStore:        inboxStore,
+			})
+
+			var preExistingPayID ScheduledPaymentID
+			var preExistingTxnID TransactionID
+
+			if tt.linkScheduledPayment {
+				preExistingPayID, _ = NewScheduledPaymentID()
+				pay := &ScheduledPayment{
+					ID:         preExistingPayID,
+					SpaceID:    spID,
+					SourceType: "Electric Co",
+					SourceID:   "src_elec",
+					Amount:     10000,
+					Currency:   Currency("USD"),
+					DueDate:    time.Now().UTC(),
+					Status:     tt.paymentInitialStatus,
+				}
+
+				if tt.expectPaidTxnLinked {
+					preExistingTxnID, _ = NewTransactionID()
+					txn := &Transaction{
+						ID:              preExistingTxnID,
+						SpaceID:         spID,
+						AccountID:       &accID,
+						Amount:          10000,
+						Currency:        Currency("USD"),
+						Description:     "Electric Co Bill Paid",
+						TransactionDate: time.Now().UTC(),
+					}
+					_ = txnStore.Create(ctx, txn)
+				}
+
+				_ = scheduledStore.Create(ctx, pay)
+			}
+
+			bID, _ := NewBudgetID()
+			bIDStr := string(bID)
+
+			// Stage Invoice item
+			accIDStr := string(accID)
+			staged, err := svc.StageInboxItem(ctx, spID, &StageInboxItem{
+				DocType:    InboxItemDocInvoice,
+				Vendor:     "Electric Co",
+				Amount:     12500, // $125.00
+				Currency:   "USD",
+				AccountID:  &accIDStr,
+				Date:       time.Now().UTC().Format(time.RFC3339),
+				RawPayload: "{}",
+			})
+			if err != nil {
+				t.Fatalf("StageInboxItem failed: %v", err)
+			}
+			staged.BudgetID = &bIDStr
+			_, _ = svc.UpdateInboxItem(ctx, spID, staged)
+
+			if tt.linkScheduledPayment {
+				pIDStr := string(preExistingPayID)
+				staged.ScheduledPaymentID = &pIDStr
+				if tt.expectPaidTxnLinked {
+					tIDStr := string(preExistingTxnID)
+					staged.TransactionID = &tIDStr
+				}
+				_, _ = svc.UpdateInboxItem(ctx, spID, staged)
+			}
+
+			switch tt.action {
+			case "approve":
+				_, err := svc.ApproveInboxItem(ctx, spID, staged.ID)
+				if err != nil {
+					t.Fatalf("ApproveInboxItem failed: %v", err)
+				}
+
+				item, err := inboxStore.Get(ctx, spID, staged.ID)
+				if err != nil {
+					t.Fatalf("Get inbox item failed: %v", err)
+				}
+				if item.Status != InboxItemResolved {
+					t.Errorf("InboxItem Status = %s, want %s", item.Status, InboxItemResolved)
+				}
+
+				if tt.expectPaidTxnLinked {
+					if item.TransactionID == nil || *item.TransactionID != string(preExistingTxnID) {
+						t.Errorf("Item TransactionID = %v, want %s", item.TransactionID, preExistingTxnID)
+					}
+				}
+
+			case "discard":
+				err := svc.DiscardInboxItem(ctx, spID, staged.ID)
+				if err != nil {
+					t.Fatalf("DiscardInboxItem failed: %v", err)
+				}
+
+				_, err = inboxStore.Get(ctx, spID, staged.ID)
+				if err == nil {
+					t.Errorf("Expected error fetching discarded invoice, got nil")
+				}
+			}
+
+			if len(scheduledStore.payments) != tt.expectedScheduledCount {
+				t.Errorf("Scheduled Payments count = %d, want %d", len(scheduledStore.payments), tt.expectedScheduledCount)
+			}
+			if len(txnStore.txns) != tt.expectedTransactionCount {
+				t.Errorf("Transactions count = %d, want %d", len(txnStore.txns), tt.expectedTransactionCount)
+			}
+		})
 	}
 }

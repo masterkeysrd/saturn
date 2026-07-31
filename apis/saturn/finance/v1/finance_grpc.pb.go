@@ -176,8 +176,8 @@ type FinanceClient interface {
 	ListInboxItems(ctx context.Context, in *ListInboxItemsRequest, opts ...grpc.CallOption) (*ListInboxItemsResponse, error)
 	// Updates a staged inbox item's draft properties.
 	UpdateInboxItem(ctx context.Context, in *UpdateInboxItemRequest, opts ...grpc.CallOption) (*InboxItem, error)
-	// Approves and promotes an ingested inbox item.
-	ApproveInboxItem(ctx context.Context, in *ApproveInboxItemRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Approves a staged inbox item and commits it to the ledger, returning the updated item with links.
+	ApproveInboxItem(ctx context.Context, in *ApproveInboxItemRequest, opts ...grpc.CallOption) (*InboxItem, error)
 	// Discards an ingested inbox item from the staging queue, preventing classification.
 	DiscardInboxItem(ctx context.Context, in *DiscardInboxItemRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
@@ -670,9 +670,9 @@ func (c *financeClient) UpdateInboxItem(ctx context.Context, in *UpdateInboxItem
 	return out, nil
 }
 
-func (c *financeClient) ApproveInboxItem(ctx context.Context, in *ApproveInboxItemRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *financeClient) ApproveInboxItem(ctx context.Context, in *ApproveInboxItemRequest, opts ...grpc.CallOption) (*InboxItem, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
+	out := new(InboxItem)
 	err := c.cc.Invoke(ctx, Finance_ApproveInboxItem_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -794,8 +794,8 @@ type FinanceServer interface {
 	ListInboxItems(context.Context, *ListInboxItemsRequest) (*ListInboxItemsResponse, error)
 	// Updates a staged inbox item's draft properties.
 	UpdateInboxItem(context.Context, *UpdateInboxItemRequest) (*InboxItem, error)
-	// Approves and promotes an ingested inbox item.
-	ApproveInboxItem(context.Context, *ApproveInboxItemRequest) (*emptypb.Empty, error)
+	// Approves a staged inbox item and commits it to the ledger, returning the updated item with links.
+	ApproveInboxItem(context.Context, *ApproveInboxItemRequest) (*InboxItem, error)
 	// Discards an ingested inbox item from the staging queue, preventing classification.
 	DiscardInboxItem(context.Context, *DiscardInboxItemRequest) (*emptypb.Empty, error)
 }
@@ -951,7 +951,7 @@ func (UnimplementedFinanceServer) ListInboxItems(context.Context, *ListInboxItem
 func (UnimplementedFinanceServer) UpdateInboxItem(context.Context, *UpdateInboxItemRequest) (*InboxItem, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateInboxItem not implemented")
 }
-func (UnimplementedFinanceServer) ApproveInboxItem(context.Context, *ApproveInboxItemRequest) (*emptypb.Empty, error) {
+func (UnimplementedFinanceServer) ApproveInboxItem(context.Context, *ApproveInboxItemRequest) (*InboxItem, error) {
 	return nil, status.Error(codes.Unimplemented, "method ApproveInboxItem not implemented")
 }
 func (UnimplementedFinanceServer) DiscardInboxItem(context.Context, *DiscardInboxItemRequest) (*emptypb.Empty, error) {

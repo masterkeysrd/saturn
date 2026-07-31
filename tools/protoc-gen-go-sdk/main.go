@@ -135,6 +135,17 @@ func generateSDKMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 			g.P("	if req.View != nil {")
 			g.P("		path += \"?view=\" + req.GetView().String()")
 			g.P("	}")
+		} else if method.GoName == "ListInboxItems" {
+			g.P("	var query []string")
+			g.P("	if req.Status != nil {")
+			g.P("		query = append(query, fmt.Sprintf(\"status=%s\", req.GetStatus().String()))")
+			g.P("	}")
+			g.P("	if req.DocType != nil {")
+			g.P("		query = append(query, fmt.Sprintf(\"doc_type=%s\", req.GetDocType().String()))")
+			g.P("	}")
+			g.P("	if len(query) > 0 {")
+			g.P("		path += \"?\" + strings.Join(query, \"&\")")
+			g.P("	}")
 		}
 		g.P("	if err := c.base.Do(ctx, ", quote(httpMethod), ", path, nil, &resp); err != nil {")
 	} else if bodyField != "" && bodyField != "*" {

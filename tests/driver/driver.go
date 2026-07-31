@@ -16,9 +16,10 @@ type Driver struct {
 	state      *State
 	httpClient *http.Client
 
-	authSubdriver    *AuthDriver
-	spaceSubdriver   *SpaceDriver
-	financeSubdriver *FinanceDriver
+	authSubdriver     *AuthDriver
+	spaceSubdriver    *SpaceDriver
+	financeSubdriver  *FinanceDriver
+	platformSubdriver *PlatformDriver
 }
 
 // New creates a fresh Driver instance for a test run and automatically resets the database.
@@ -33,6 +34,7 @@ func New(t *testing.T, env *TestEnv) *Driver {
 	d.authSubdriver = &AuthDriver{driver: d}
 	d.spaceSubdriver = &SpaceDriver{driver: d}
 	d.financeSubdriver = &FinanceDriver{driver: d}
+	d.platformSubdriver = &PlatformDriver{driver: d}
 
 	// Auto-reset database & state before each test
 	d.ResetDB()
@@ -57,6 +59,11 @@ func (d *Driver) Space() *SpaceDriver {
 // Finance returns the Finance domain sub-driver.
 func (d *Driver) Finance() *FinanceDriver {
 	return d.financeSubdriver
+}
+
+// Platform returns the Platform domain sub-driver.
+func (d *Driver) Platform() *PlatformDriver {
+	return d.platformSubdriver
 }
 
 const truncateSQL = `

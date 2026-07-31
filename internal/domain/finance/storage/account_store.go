@@ -167,6 +167,10 @@ func (s *AccountStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID,
 		ds = ds.Where(goqu.Ex{"is_active": true})
 	}
 
+	if filter.LastFour != nil && *filter.LastFour != "" {
+		ds = ds.Where(goqu.Ex{"last_four": *filter.LastFour})
+	}
+
 	if filter.SearchQuery != nil && *filter.SearchQuery != "" {
 		ds = ds.Where(goqu.I("name").ILike("%" + *filter.SearchQuery + "%"))
 	}

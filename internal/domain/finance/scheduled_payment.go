@@ -39,6 +39,7 @@ const (
 	ScheduledPaymentPending    ScheduledPaymentStatus = "pending"
 	ScheduledPaymentProcessing ScheduledPaymentStatus = "processing"
 	ScheduledPaymentSkipped    ScheduledPaymentStatus = "skipped"
+	ScheduledPaymentPaid       ScheduledPaymentStatus = "paid"
 )
 
 type ScheduledPayment struct {

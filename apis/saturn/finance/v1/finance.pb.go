@@ -688,6 +688,7 @@ const (
 	ScheduledPayment_PENDING            ScheduledPayment_Status = 1
 	ScheduledPayment_PROCESSING         ScheduledPayment_Status = 2
 	ScheduledPayment_SKIPPED            ScheduledPayment_Status = 3
+	ScheduledPayment_PAID               ScheduledPayment_Status = 4
 )
 
 // Enum value maps for ScheduledPayment_Status.
@@ -697,12 +698,14 @@ var (
 		1: "PENDING",
 		2: "PROCESSING",
 		3: "SKIPPED",
+		4: "PAID",
 	}
 	ScheduledPayment_Status_value = map[string]int32{
 		"STATUS_UNSPECIFIED": 0,
 		"PENDING":            1,
 		"PROCESSING":         2,
 		"SKIPPED":            3,
+		"PAID":               4,
 	}
 )
 
@@ -1073,7 +1076,7 @@ type InboxItem_View int32
 
 const (
 	InboxItem_VIEW_UNSPECIFIED InboxItem_View = 0
-	InboxItem_BASIC            InboxItem_View = 1 // Excludes raw_payload and metadata_json
+	InboxItem_BASIC            InboxItem_View = 1 // Excludes raw_payload and metadata
 	InboxItem_FULL             InboxItem_View = 2 // Returns complete fields
 )
 
@@ -3032,7 +3035,13 @@ type ListTransactionsRequest struct {
 	Sort *string `protobuf:"bytes,10,opt,name=sort,proto3,oneof" json:"sort,omitempty"`
 	// Optional. Target transfer ID filter.
 	// Values are of the form `trn_[a-zA-Z0-9]+`.
-	TransferId    *string `protobuf:"bytes,11,opt,name=transfer_id,json=transferId,proto3,oneof" json:"transfer_id,omitempty"`
+	TransferId *string `protobuf:"bytes,11,opt,name=transfer_id,json=transferId,proto3,oneof" json:"transfer_id,omitempty"`
+	// Optional. Target scheduled payment ID filter.
+	// Values are of the form `sch_[a-zA-Z0-9]+`.
+	ScheduledPaymentId *string `protobuf:"bytes,13,opt,name=scheduled_payment_id,json=scheduledPaymentId,proto3,oneof" json:"scheduled_payment_id,omitempty"`
+	// Optional. Target borrowing ID filter.
+	// Values are of the form `bor_[a-zA-Z0-9]+`.
+	BorrowingId   *string `protobuf:"bytes,14,opt,name=borrowing_id,json=borrowingId,proto3,oneof" json:"borrowing_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3126,6 +3135,20 @@ func (x *ListTransactionsRequest) GetSort() string {
 func (x *ListTransactionsRequest) GetTransferId() string {
 	if x != nil && x.TransferId != nil {
 		return *x.TransferId
+	}
+	return ""
+}
+
+func (x *ListTransactionsRequest) GetScheduledPaymentId() string {
+	if x != nil && x.ScheduledPaymentId != nil {
+		return *x.ScheduledPaymentId
+	}
+	return ""
+}
+
+func (x *ListTransactionsRequest) GetBorrowingId() string {
+	if x != nil && x.BorrowingId != nil {
+		return *x.BorrowingId
 	}
 	return ""
 }
@@ -6666,8 +6689,8 @@ type InboxItem struct {
 	TransactionId string `protobuf:"bytes,13,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
 	// Output only. Ingestion raw notification payload details.
 	RawPayload string `protobuf:"bytes,14,opt,name=raw_payload,json=rawPayload,proto3" json:"raw_payload,omitempty"`
-	// Optional. Additional extracted metadata payload (JSON format).
-	MetadataJson string `protobuf:"bytes,15,opt,name=metadata_json,json=metadataJson,proto3" json:"metadata_json,omitempty"`
+	// Optional. Additional extracted metadata payload key-value pairs.
+	Metadata map[string]string `protobuf:"bytes,15,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// Output only. Ingestion stage timestamp.
 	CreateTime *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
 	// Optional. Associated borrowing/lending agreement identifier.
@@ -6807,11 +6830,11 @@ func (x *InboxItem) GetRawPayload() string {
 	return ""
 }
 
-func (x *InboxItem) GetMetadataJson() string {
+func (x *InboxItem) GetMetadata() map[string]string {
 	if x != nil {
-		return x.MetadataJson
+		return x.Metadata
 	}
-	return ""
+	return nil
 }
 
 func (x *InboxItem) GetCreateTime() *timestamppb.Timestamp {
@@ -8307,7 +8330,7 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x15GetTransactionRequest\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x12A\n" +
 	"\x04view\x18\x02 \x01(\x0e2#.saturn.finance.v1.Transaction.ViewB\x03\xe0A\x01H\x00R\x04view\x88\x01\x01B\a\n" +
-	"\x05_view\"\xe3\x03\n" +
+	"\x05_view\"\xf6\x04\n" +
 	"\x17ListTransactionsRequest\x12A\n" +
 	"\x04view\x18\x01 \x01(\x0e2#.saturn.finance.v1.Transaction.ViewB\x03\xe0A\x01H\x00R\x04view\x88\x01\x01\x12 \n" +
 	"\tbudget_id\x18\x02 \x01(\tB\x03\xe0A\x01R\bbudgetId\x12<\n" +
@@ -8321,12 +8344,16 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x04sort\x18\n" +
 	" \x01(\tB\x03\xe0A\x01H\x03R\x04sort\x88\x01\x01\x12)\n" +
 	"\vtransfer_id\x18\v \x01(\tB\x03\xe0A\x01H\x04R\n" +
-	"transferId\x88\x01\x01B\a\n" +
+	"transferId\x88\x01\x01\x12:\n" +
+	"\x14scheduled_payment_id\x18\r \x01(\tB\x03\xe0A\x01H\x05R\x12scheduledPaymentId\x88\x01\x01\x12+\n" +
+	"\fborrowing_id\x18\x0e \x01(\tB\x03\xe0A\x01H\x06R\vborrowingId\x88\x01\x01B\a\n" +
 	"\x05_viewB\r\n" +
 	"\v_account_idB\x0f\n" +
 	"\r_search_queryB\a\n" +
 	"\x05_sortB\x0e\n" +
-	"\f_transfer_id\"\x86\x01\n" +
+	"\f_transfer_idB\x17\n" +
+	"\x15_scheduled_payment_idB\x0f\n" +
+	"\r_borrowing_id\"\x86\x01\n" +
 	"\x18ListTransactionsResponse\x12B\n" +
 	"\ftransactions\x18\x01 \x03(\v2\x1e.saturn.finance.v1.TransactionR\ftransactions\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xde\x01\n" +
@@ -8431,7 +8458,7 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\n" +
 	"\x06PAUSED\x10\x02\x12\t\n" +
 	"\x05ENDED\x10\x03B\t\n" +
-	"\a_budget\"\xe4\t\n" +
+	"\a_budget\"\xee\t\n" +
 	"\x10ScheduledPayment\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x1e\n" +
 	"\bspace_id\x18\x02 \x01(\tB\x03\xe0A\x03R\aspaceId\x12 \n" +
@@ -8470,13 +8497,14 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x17SOURCE_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11RECURRENT_EXPENSE\x10\x01\x12\b\n" +
 	"\x04LOAN\x10\x02\x12\a\n" +
-	"\x03TAX\x10\x03\"J\n" +
+	"\x03TAX\x10\x03\"T\n" +
 	"\x06Status\x12\x16\n" +
 	"\x12STATUS_UNSPECIFIED\x10\x00\x12\v\n" +
 	"\aPENDING\x10\x01\x12\x0e\n" +
 	"\n" +
 	"PROCESSING\x10\x02\x12\v\n" +
-	"\aSKIPPED\x10\x03B\t\n" +
+	"\aSKIPPED\x10\x03\x12\b\n" +
+	"\x04PAID\x10\x04B\t\n" +
 	"\a_budgetB\x14\n" +
 	"\x12_recurring_expense\"v\n" +
 	"\x1dCreateRecurringExpenseRequest\x12U\n" +
@@ -8748,7 +8776,7 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\vcreate_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"createTime\"\\\n" +
 	"\x1dListTransactionEventsResponse\x12;\n" +
-	"\x06events\x18\x01 \x03(\v2#.saturn.finance.v1.TransactionEventR\x06events\"\xe3\b\n" +
+	"\x06events\x18\x01 \x03(\v2#.saturn.finance.v1.TransactionEventR\x06events\"\xc3\t\n" +
 	"\tInboxItem\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x1e\n" +
 	"\bspace_id\x18\x02 \x01(\tB\x03\xe0A\x03R\aspaceId\x12*\n" +
@@ -8767,12 +8795,15 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x14scheduled_payment_id\x18\f \x01(\tR\x12scheduledPaymentId\x12%\n" +
 	"\x0etransaction_id\x18\r \x01(\tR\rtransactionId\x12$\n" +
 	"\vraw_payload\x18\x0e \x01(\tB\x03\xe0A\x03R\n" +
-	"rawPayload\x12#\n" +
-	"\rmetadata_json\x18\x0f \x01(\tR\fmetadataJson\x12@\n" +
+	"rawPayload\x12F\n" +
+	"\bmetadata\x18\x0f \x03(\v2*.saturn.finance.v1.InboxItem.MetadataEntryR\bmetadata\x12@\n" +
 	"\vcreate_time\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"createTime\x12&\n" +
 	"\fborrowing_id\x18\x11 \x01(\tH\x00R\vborrowingId\x88\x01\x01\x12Y\n" +
-	"\x13borrowing_link_type\x18\x12 \x01(\x0e2$.saturn.finance.v1.BorrowingLinkTypeH\x01R\x11borrowingLinkType\x88\x01\x01\"Y\n" +
+	"\x13borrowing_link_type\x18\x12 \x01(\x0e2$.saturn.finance.v1.BorrowingLinkTypeH\x01R\x11borrowingLinkType\x88\x01\x01\x1a;\n" +
+	"\rMetadataEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"Y\n" +
 	"\x06Status\x12\x16\n" +
 	"\x12STATUS_UNSPECIFIED\x10\x00\x12\v\n" +
 	"\aPENDING\x10\x01\x12\x0e\n" +
@@ -8833,7 +8864,7 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x1fBORROWING_LINK_TYPE_UNSPECIFIED\x10\x00\x12'\n" +
 	"#BORROWING_LINK_TYPE_INITIAL_RECEIPT\x10\x01\x12!\n" +
 	"\x1dBORROWING_LINK_TYPE_REPAYMENT\x10\x02\x12'\n" +
-	"#BORROWING_LINK_TYPE_ADDITIONAL_LOAN\x10\x032\xce7\n" +
+	"#BORROWING_LINK_TYPE_ADDITIONAL_LOAN\x10\x032\xd47\n" +
 	"\aFinance\x12\x83\x01\n" +
 	"\x10ConfigureFinance\x12*.saturn.finance.v1.ConfigureFinanceRequest\x1a\".saturn.finance.v1.FinanceSettings\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/v1/finance/settings\x12\x84\x01\n" +
 	"\x12GetFinanceSettings\x12,.saturn.finance.v1.GetFinanceSettingsRequest\x1a\".saturn.finance.v1.FinanceSettings\"\x1c\x82\xd3\xe4\x93\x02\x16\x12\x14/v1/finance/settings\x12v\n" +
@@ -8884,8 +8915,8 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x0eListCurrencies\x12(.saturn.finance.v1.ListCurrenciesRequest\x1a).saturn.finance.v1.ListCurrenciesResponse\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/v1/finance/currencies\x12\x86\x01\n" +
 	"\x0eListInboxItems\x12(.saturn.finance.v1.ListInboxItemsRequest\x1a).saturn.finance.v1.ListInboxItemsResponse\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/v1/finance/inbox-items\x12\x8c\x01\n" +
 	"\x0fUpdateInboxItem\x12).saturn.finance.v1.UpdateInboxItemRequest\x1a\x1c.saturn.finance.v1.InboxItem\"0\x82\xd3\xe4\x93\x02*:\n" +
-	"inbox_item\x1a\x1c/v1/finance/inbox-items/{id}\x12\x87\x01\n" +
-	"\x10ApproveInboxItem\x12*.saturn.finance.v1.ApproveInboxItemRequest\x1a\x16.google.protobuf.Empty\"/\x82\xd3\xe4\x93\x02):\x01*\"$/v1/finance/inbox-items/{id}:approve\x12|\n" +
+	"inbox_item\x1a\x1c/v1/finance/inbox-items/{id}\x12\x8d\x01\n" +
+	"\x10ApproveInboxItem\x12*.saturn.finance.v1.ApproveInboxItemRequest\x1a\x1c.saturn.finance.v1.InboxItem\"/\x82\xd3\xe4\x93\x02):\x01*\"$/v1/finance/inbox-items/{id}:approve\x12|\n" +
 	"\x10DiscardInboxItem\x12*.saturn.finance.v1.DiscardInboxItemRequest\x1a\x16.google.protobuf.Empty\"$\x82\xd3\xe4\x93\x02\x1e*\x1c/v1/finance/inbox-items/{id}BAZ?github.com/masterkeysrd/saturn/apis/saturn/finance/v1;financev1b\x06proto3"
 
 var (
@@ -8901,7 +8932,7 @@ func file_saturn_finance_v1_finance_proto_rawDescGZIP() []byte {
 }
 
 var file_saturn_finance_v1_finance_proto_enumTypes = make([]protoimpl.EnumInfo, 20)
-var file_saturn_finance_v1_finance_proto_msgTypes = make([]protoimpl.MessageInfo, 93)
+var file_saturn_finance_v1_finance_proto_msgTypes = make([]protoimpl.MessageInfo, 94)
 var file_saturn_finance_v1_finance_proto_goTypes = []any{
 	(LimitPropagation)(0),                         // 0: saturn.finance.v1.LimitPropagation
 	(InsightGranularity)(0),                       // 1: saturn.finance.v1.InsightGranularity
@@ -9016,46 +9047,47 @@ var file_saturn_finance_v1_finance_proto_goTypes = []any{
 	(*ScheduledPayment_BudgetInfo)(nil),           // 110: saturn.finance.v1.ScheduledPayment.BudgetInfo
 	(*ScheduledPayment_RecurringExpenseInfo)(nil), // 111: saturn.finance.v1.ScheduledPayment.RecurringExpenseInfo
 	(*Account_Conversion)(nil),                    // 112: saturn.finance.v1.Account.Conversion
-	(*timestamppb.Timestamp)(nil),                 // 113: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil),                 // 114: google.protobuf.FieldMask
-	(*emptypb.Empty)(nil),                         // 115: google.protobuf.Empty
+	nil,                                           // 113: saturn.finance.v1.InboxItem.MetadataEntry
+	(*timestamppb.Timestamp)(nil),                 // 114: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),                 // 115: google.protobuf.FieldMask
+	(*emptypb.Empty)(nil),                         // 116: google.protobuf.Empty
 }
 var file_saturn_finance_v1_finance_proto_depIdxs = []int32{
-	113, // 0: saturn.finance.v1.FinanceSettings.create_time:type_name -> google.protobuf.Timestamp
-	113, // 1: saturn.finance.v1.FinanceSettings.update_time:type_name -> google.protobuf.Timestamp
+	114, // 0: saturn.finance.v1.FinanceSettings.create_time:type_name -> google.protobuf.Timestamp
+	114, // 1: saturn.finance.v1.FinanceSettings.update_time:type_name -> google.protobuf.Timestamp
 	3,   // 2: saturn.finance.v1.Budget.interval:type_name -> saturn.finance.v1.Budget.RecurrenceInterval
 	100, // 3: saturn.finance.v1.Budget.current_period:type_name -> saturn.finance.v1.Budget.ActivePeriod
-	113, // 4: saturn.finance.v1.Budget.create_time:type_name -> google.protobuf.Timestamp
-	113, // 5: saturn.finance.v1.Budget.update_time:type_name -> google.protobuf.Timestamp
-	113, // 6: saturn.finance.v1.BudgetPeriod.start_date:type_name -> google.protobuf.Timestamp
-	113, // 7: saturn.finance.v1.BudgetPeriod.end_date:type_name -> google.protobuf.Timestamp
-	113, // 8: saturn.finance.v1.BudgetPeriod.create_time:type_name -> google.protobuf.Timestamp
-	113, // 9: saturn.finance.v1.BudgetPeriod.update_time:type_name -> google.protobuf.Timestamp
+	114, // 4: saturn.finance.v1.Budget.create_time:type_name -> google.protobuf.Timestamp
+	114, // 5: saturn.finance.v1.Budget.update_time:type_name -> google.protobuf.Timestamp
+	114, // 6: saturn.finance.v1.BudgetPeriod.start_date:type_name -> google.protobuf.Timestamp
+	114, // 7: saturn.finance.v1.BudgetPeriod.end_date:type_name -> google.protobuf.Timestamp
+	114, // 8: saturn.finance.v1.BudgetPeriod.create_time:type_name -> google.protobuf.Timestamp
+	114, // 9: saturn.finance.v1.BudgetPeriod.update_time:type_name -> google.protobuf.Timestamp
 	21,  // 10: saturn.finance.v1.CreateBudgetRequest.budget:type_name -> saturn.finance.v1.Budget
 	21,  // 11: saturn.finance.v1.UpdateBudgetRequest.budget:type_name -> saturn.finance.v1.Budget
 	0,   // 12: saturn.finance.v1.UpdateBudgetRequest.propagation:type_name -> saturn.finance.v1.LimitPropagation
-	114, // 13: saturn.finance.v1.UpdateBudgetRequest.update_mask:type_name -> google.protobuf.FieldMask
+	115, // 13: saturn.finance.v1.UpdateBudgetRequest.update_mask:type_name -> google.protobuf.FieldMask
 	4,   // 14: saturn.finance.v1.ListBudgetsRequest.view:type_name -> saturn.finance.v1.Budget.View
-	113, // 15: saturn.finance.v1.ListBudgetsRequest.target_date:type_name -> google.protobuf.Timestamp
+	114, // 15: saturn.finance.v1.ListBudgetsRequest.target_date:type_name -> google.protobuf.Timestamp
 	21,  // 16: saturn.finance.v1.ListBudgetsResponse.budgets:type_name -> saturn.finance.v1.Budget
-	113, // 17: saturn.finance.v1.GetBudgetPeriodRequest.date:type_name -> google.protobuf.Timestamp
-	113, // 18: saturn.finance.v1.ExchangeRate.rate_date:type_name -> google.protobuf.Timestamp
-	113, // 19: saturn.finance.v1.ExchangeRate.create_time:type_name -> google.protobuf.Timestamp
+	114, // 17: saturn.finance.v1.GetBudgetPeriodRequest.date:type_name -> google.protobuf.Timestamp
+	114, // 18: saturn.finance.v1.ExchangeRate.rate_date:type_name -> google.protobuf.Timestamp
+	114, // 19: saturn.finance.v1.ExchangeRate.create_time:type_name -> google.protobuf.Timestamp
 	32,  // 20: saturn.finance.v1.CreateExchangeRateRequest.exchange_rate:type_name -> saturn.finance.v1.ExchangeRate
 	32,  // 21: saturn.finance.v1.UpdateExchangeRateRequest.exchange_rate:type_name -> saturn.finance.v1.ExchangeRate
-	113, // 22: saturn.finance.v1.ListExchangeRatesRequest.start_date:type_name -> google.protobuf.Timestamp
-	113, // 23: saturn.finance.v1.ListExchangeRatesRequest.end_date:type_name -> google.protobuf.Timestamp
+	114, // 22: saturn.finance.v1.ListExchangeRatesRequest.start_date:type_name -> google.protobuf.Timestamp
+	114, // 23: saturn.finance.v1.ListExchangeRatesRequest.end_date:type_name -> google.protobuf.Timestamp
 	32,  // 24: saturn.finance.v1.ListExchangeRatesResponse.exchange_rates:type_name -> saturn.finance.v1.ExchangeRate
 	5,   // 25: saturn.finance.v1.Transaction.type:type_name -> saturn.finance.v1.Transaction.Type
-	113, // 26: saturn.finance.v1.Transaction.transaction_date:type_name -> google.protobuf.Timestamp
-	113, // 27: saturn.finance.v1.Transaction.create_time:type_name -> google.protobuf.Timestamp
-	113, // 28: saturn.finance.v1.Transaction.update_time:type_name -> google.protobuf.Timestamp
-	113, // 29: saturn.finance.v1.Transaction.effective_date:type_name -> google.protobuf.Timestamp
+	114, // 26: saturn.finance.v1.Transaction.transaction_date:type_name -> google.protobuf.Timestamp
+	114, // 27: saturn.finance.v1.Transaction.create_time:type_name -> google.protobuf.Timestamp
+	114, // 28: saturn.finance.v1.Transaction.update_time:type_name -> google.protobuf.Timestamp
+	114, // 29: saturn.finance.v1.Transaction.effective_date:type_name -> google.protobuf.Timestamp
 	101, // 30: saturn.finance.v1.Transaction.account:type_name -> saturn.finance.v1.Transaction.AccountInfo
 	102, // 31: saturn.finance.v1.Transaction.budget:type_name -> saturn.finance.v1.Transaction.BudgetInfo
 	103, // 32: saturn.finance.v1.Transaction.metadata:type_name -> saturn.finance.v1.Transaction.MetadataEntry
-	113, // 33: saturn.finance.v1.ExpenseInput.transaction_date:type_name -> google.protobuf.Timestamp
-	113, // 34: saturn.finance.v1.ExpenseInput.effective_date:type_name -> google.protobuf.Timestamp
+	114, // 33: saturn.finance.v1.ExpenseInput.transaction_date:type_name -> google.protobuf.Timestamp
+	114, // 34: saturn.finance.v1.ExpenseInput.effective_date:type_name -> google.protobuf.Timestamp
 	40,  // 35: saturn.finance.v1.CreateExpenseRequest.expense:type_name -> saturn.finance.v1.ExpenseInput
 	40,  // 36: saturn.finance.v1.UpdateExpenseRequest.expense:type_name -> saturn.finance.v1.ExpenseInput
 	6,   // 37: saturn.finance.v1.GetTransactionRequest.view:type_name -> saturn.finance.v1.Transaction.View
@@ -9063,8 +9095,8 @@ var file_saturn_finance_v1_finance_proto_depIdxs = []int32{
 	5,   // 39: saturn.finance.v1.ListTransactionsRequest.type:type_name -> saturn.finance.v1.Transaction.Type
 	39,  // 40: saturn.finance.v1.ListTransactionsResponse.transactions:type_name -> saturn.finance.v1.Transaction
 	1,   // 41: saturn.finance.v1.GetInsightsRequest.granularity:type_name -> saturn.finance.v1.InsightGranularity
-	113, // 42: saturn.finance.v1.GetInsightsRequest.start_date:type_name -> google.protobuf.Timestamp
-	113, // 43: saturn.finance.v1.GetInsightsRequest.end_date:type_name -> google.protobuf.Timestamp
+	114, // 42: saturn.finance.v1.GetInsightsRequest.start_date:type_name -> google.protobuf.Timestamp
+	114, // 43: saturn.finance.v1.GetInsightsRequest.end_date:type_name -> google.protobuf.Timestamp
 	49,  // 44: saturn.finance.v1.GetInsightsResponse.spent:type_name -> saturn.finance.v1.SpentInsights
 	105, // 45: saturn.finance.v1.SpentInsights.trend:type_name -> saturn.finance.v1.SpentInsights.TrendDataPoint
 	106, // 46: saturn.finance.v1.SpentInsights.distributions:type_name -> saturn.finance.v1.SpentInsights.BudgetUsage
@@ -9072,14 +9104,14 @@ var file_saturn_finance_v1_finance_proto_depIdxs = []int32{
 	8,   // 48: saturn.finance.v1.RecurringExpense.interval:type_name -> saturn.finance.v1.RecurringExpense.Interval
 	109, // 49: saturn.finance.v1.RecurringExpense.execution_state:type_name -> saturn.finance.v1.RecurringExpense.ExecutionState
 	9,   // 50: saturn.finance.v1.RecurringExpense.status:type_name -> saturn.finance.v1.RecurringExpense.Status
-	113, // 51: saturn.finance.v1.RecurringExpense.create_time:type_name -> google.protobuf.Timestamp
-	113, // 52: saturn.finance.v1.RecurringExpense.update_time:type_name -> google.protobuf.Timestamp
+	114, // 51: saturn.finance.v1.RecurringExpense.create_time:type_name -> google.protobuf.Timestamp
+	114, // 52: saturn.finance.v1.RecurringExpense.update_time:type_name -> google.protobuf.Timestamp
 	108, // 53: saturn.finance.v1.RecurringExpense.budget:type_name -> saturn.finance.v1.RecurringExpense.BudgetInfo
 	11,  // 54: saturn.finance.v1.ScheduledPayment.source_type:type_name -> saturn.finance.v1.ScheduledPayment.SourceType
-	113, // 55: saturn.finance.v1.ScheduledPayment.due_date:type_name -> google.protobuf.Timestamp
+	114, // 55: saturn.finance.v1.ScheduledPayment.due_date:type_name -> google.protobuf.Timestamp
 	12,  // 56: saturn.finance.v1.ScheduledPayment.status:type_name -> saturn.finance.v1.ScheduledPayment.Status
-	113, // 57: saturn.finance.v1.ScheduledPayment.create_time:type_name -> google.protobuf.Timestamp
-	113, // 58: saturn.finance.v1.ScheduledPayment.update_time:type_name -> google.protobuf.Timestamp
+	114, // 57: saturn.finance.v1.ScheduledPayment.create_time:type_name -> google.protobuf.Timestamp
+	114, // 58: saturn.finance.v1.ScheduledPayment.update_time:type_name -> google.protobuf.Timestamp
 	110, // 59: saturn.finance.v1.ScheduledPayment.budget:type_name -> saturn.finance.v1.ScheduledPayment.BudgetInfo
 	111, // 60: saturn.finance.v1.ScheduledPayment.recurring_expense:type_name -> saturn.finance.v1.ScheduledPayment.RecurringExpenseInfo
 	51,  // 61: saturn.finance.v1.CreateRecurringExpenseRequest.recurring_expense:type_name -> saturn.finance.v1.RecurringExpense
@@ -9088,21 +9120,21 @@ var file_saturn_finance_v1_finance_proto_depIdxs = []int32{
 	7,   // 64: saturn.finance.v1.ListRecurringExpensesRequest.view:type_name -> saturn.finance.v1.RecurringExpense.View
 	51,  // 65: saturn.finance.v1.ListRecurringExpensesResponse.recurring_expenses:type_name -> saturn.finance.v1.RecurringExpense
 	12,  // 66: saturn.finance.v1.ListScheduledPaymentsRequest.status:type_name -> saturn.finance.v1.ScheduledPayment.Status
-	113, // 67: saturn.finance.v1.ListScheduledPaymentsRequest.start_date:type_name -> google.protobuf.Timestamp
-	113, // 68: saturn.finance.v1.ListScheduledPaymentsRequest.end_date:type_name -> google.protobuf.Timestamp
+	114, // 67: saturn.finance.v1.ListScheduledPaymentsRequest.start_date:type_name -> google.protobuf.Timestamp
+	114, // 68: saturn.finance.v1.ListScheduledPaymentsRequest.end_date:type_name -> google.protobuf.Timestamp
 	10,  // 69: saturn.finance.v1.ListScheduledPaymentsRequest.view:type_name -> saturn.finance.v1.ScheduledPayment.View
 	52,  // 70: saturn.finance.v1.ListScheduledPaymentsResponse.scheduled_payments:type_name -> saturn.finance.v1.ScheduledPayment
-	113, // 71: saturn.finance.v1.ConfirmScheduledPaymentRequest.transaction_date:type_name -> google.protobuf.Timestamp
-	113, // 72: saturn.finance.v1.ConfirmScheduledPaymentRequest.effective_date:type_name -> google.protobuf.Timestamp
+	114, // 71: saturn.finance.v1.ConfirmScheduledPaymentRequest.transaction_date:type_name -> google.protobuf.Timestamp
+	114, // 72: saturn.finance.v1.ConfirmScheduledPaymentRequest.effective_date:type_name -> google.protobuf.Timestamp
 	13,  // 73: saturn.finance.v1.Borrowing.direction:type_name -> saturn.finance.v1.Borrowing.Direction
 	14,  // 74: saturn.finance.v1.Borrowing.status:type_name -> saturn.finance.v1.Borrowing.Status
-	113, // 75: saturn.finance.v1.Borrowing.established_at:type_name -> google.protobuf.Timestamp
-	113, // 76: saturn.finance.v1.Borrowing.due_at:type_name -> google.protobuf.Timestamp
-	113, // 77: saturn.finance.v1.Borrowing.create_time:type_name -> google.protobuf.Timestamp
-	113, // 78: saturn.finance.v1.Borrowing.update_time:type_name -> google.protobuf.Timestamp
-	113, // 79: saturn.finance.v1.BorrowingRepayment.payment_date:type_name -> google.protobuf.Timestamp
-	113, // 80: saturn.finance.v1.BorrowingRepayment.create_time:type_name -> google.protobuf.Timestamp
-	113, // 81: saturn.finance.v1.BorrowingRepayment.update_time:type_name -> google.protobuf.Timestamp
+	114, // 75: saturn.finance.v1.Borrowing.established_at:type_name -> google.protobuf.Timestamp
+	114, // 76: saturn.finance.v1.Borrowing.due_at:type_name -> google.protobuf.Timestamp
+	114, // 77: saturn.finance.v1.Borrowing.create_time:type_name -> google.protobuf.Timestamp
+	114, // 78: saturn.finance.v1.Borrowing.update_time:type_name -> google.protobuf.Timestamp
+	114, // 79: saturn.finance.v1.BorrowingRepayment.payment_date:type_name -> google.protobuf.Timestamp
+	114, // 80: saturn.finance.v1.BorrowingRepayment.create_time:type_name -> google.protobuf.Timestamp
+	114, // 81: saturn.finance.v1.BorrowingRepayment.update_time:type_name -> google.protobuf.Timestamp
 	64,  // 82: saturn.finance.v1.CreateBorrowingRequest.borrowing:type_name -> saturn.finance.v1.Borrowing
 	14,  // 83: saturn.finance.v1.ListBorrowingsRequest.status:type_name -> saturn.finance.v1.Borrowing.Status
 	13,  // 84: saturn.finance.v1.ListBorrowingsRequest.direction:type_name -> saturn.finance.v1.Borrowing.Direction
@@ -9112,144 +9144,145 @@ var file_saturn_finance_v1_finance_proto_depIdxs = []int32{
 	65,  // 88: saturn.finance.v1.ListBorrowingRepaymentsResponse.repayments:type_name -> saturn.finance.v1.BorrowingRepayment
 	76,  // 89: saturn.finance.v1.ListCurrenciesResponse.currencies:type_name -> saturn.finance.v1.CurrencyInfo
 	15,  // 90: saturn.finance.v1.Account.type:type_name -> saturn.finance.v1.Account.Type
-	113, // 91: saturn.finance.v1.Account.create_time:type_name -> google.protobuf.Timestamp
-	113, // 92: saturn.finance.v1.Account.update_time:type_name -> google.protobuf.Timestamp
+	114, // 91: saturn.finance.v1.Account.create_time:type_name -> google.protobuf.Timestamp
+	114, // 92: saturn.finance.v1.Account.update_time:type_name -> google.protobuf.Timestamp
 	112, // 93: saturn.finance.v1.Account.conversion:type_name -> saturn.finance.v1.Account.Conversion
 	79,  // 94: saturn.finance.v1.CreateAccountRequest.account:type_name -> saturn.finance.v1.Account
 	16,  // 95: saturn.finance.v1.GetAccountRequest.view:type_name -> saturn.finance.v1.Account.View
 	79,  // 96: saturn.finance.v1.UpdateAccountRequest.account:type_name -> saturn.finance.v1.Account
 	16,  // 97: saturn.finance.v1.ListAccountsRequest.view:type_name -> saturn.finance.v1.Account.View
 	79,  // 98: saturn.finance.v1.ListAccountsResponse.accounts:type_name -> saturn.finance.v1.Account
-	113, // 99: saturn.finance.v1.Transfer.transfer_date:type_name -> google.protobuf.Timestamp
-	113, // 100: saturn.finance.v1.Transfer.create_time:type_name -> google.protobuf.Timestamp
-	113, // 101: saturn.finance.v1.Transfer.update_time:type_name -> google.protobuf.Timestamp
-	113, // 102: saturn.finance.v1.CreateTransferRequest.transfer_date:type_name -> google.protobuf.Timestamp
+	114, // 99: saturn.finance.v1.Transfer.transfer_date:type_name -> google.protobuf.Timestamp
+	114, // 100: saturn.finance.v1.Transfer.create_time:type_name -> google.protobuf.Timestamp
+	114, // 101: saturn.finance.v1.Transfer.update_time:type_name -> google.protobuf.Timestamp
+	114, // 102: saturn.finance.v1.CreateTransferRequest.transfer_date:type_name -> google.protobuf.Timestamp
 	87,  // 103: saturn.finance.v1.ListTransfersResponse.transfers:type_name -> saturn.finance.v1.Transfer
-	113, // 104: saturn.finance.v1.TransactionEvent.create_time:type_name -> google.protobuf.Timestamp
+	114, // 104: saturn.finance.v1.TransactionEvent.create_time:type_name -> google.protobuf.Timestamp
 	92,  // 105: saturn.finance.v1.ListTransactionEventsResponse.events:type_name -> saturn.finance.v1.TransactionEvent
 	17,  // 106: saturn.finance.v1.InboxItem.status:type_name -> saturn.finance.v1.InboxItem.Status
 	18,  // 107: saturn.finance.v1.InboxItem.doc_type:type_name -> saturn.finance.v1.InboxItem.DocType
-	113, // 108: saturn.finance.v1.InboxItem.transaction_date:type_name -> google.protobuf.Timestamp
-	113, // 109: saturn.finance.v1.InboxItem.create_time:type_name -> google.protobuf.Timestamp
-	2,   // 110: saturn.finance.v1.InboxItem.borrowing_link_type:type_name -> saturn.finance.v1.BorrowingLinkType
-	17,  // 111: saturn.finance.v1.ListInboxItemsRequest.status:type_name -> saturn.finance.v1.InboxItem.Status
-	18,  // 112: saturn.finance.v1.ListInboxItemsRequest.doc_type:type_name -> saturn.finance.v1.InboxItem.DocType
-	19,  // 113: saturn.finance.v1.ListInboxItemsRequest.view:type_name -> saturn.finance.v1.InboxItem.View
-	94,  // 114: saturn.finance.v1.ListInboxItemsResponse.inbox_items:type_name -> saturn.finance.v1.InboxItem
-	94,  // 115: saturn.finance.v1.UpdateInboxItemRequest.inbox_item:type_name -> saturn.finance.v1.InboxItem
-	113, // 116: saturn.finance.v1.Budget.ActivePeriod.start_date:type_name -> google.protobuf.Timestamp
-	113, // 117: saturn.finance.v1.Budget.ActivePeriod.end_date:type_name -> google.protobuf.Timestamp
-	104, // 118: saturn.finance.v1.SpentInsights.TrendDataPoint.contributions:type_name -> saturn.finance.v1.SpentInsights.BudgetContribution
-	113, // 119: saturn.finance.v1.SpentInsights.HighValueExpense.transaction_date:type_name -> google.protobuf.Timestamp
-	113, // 120: saturn.finance.v1.SpentInsights.HighValueExpense.effective_date:type_name -> google.protobuf.Timestamp
-	113, // 121: saturn.finance.v1.RecurringExpense.ExecutionState.next_due_date:type_name -> google.protobuf.Timestamp
-	113, // 122: saturn.finance.v1.RecurringExpense.ExecutionState.last_payment_date:type_name -> google.protobuf.Timestamp
-	8,   // 123: saturn.finance.v1.ScheduledPayment.RecurringExpenseInfo.interval:type_name -> saturn.finance.v1.RecurringExpense.Interval
-	23,  // 124: saturn.finance.v1.Finance.ConfigureFinance:input_type -> saturn.finance.v1.ConfigureFinanceRequest
-	24,  // 125: saturn.finance.v1.Finance.GetFinanceSettings:input_type -> saturn.finance.v1.GetFinanceSettingsRequest
-	26,  // 126: saturn.finance.v1.Finance.CreateBudget:input_type -> saturn.finance.v1.CreateBudgetRequest
-	25,  // 127: saturn.finance.v1.Finance.GetBudget:input_type -> saturn.finance.v1.GetBudgetRequest
-	27,  // 128: saturn.finance.v1.Finance.UpdateBudget:input_type -> saturn.finance.v1.UpdateBudgetRequest
-	28,  // 129: saturn.finance.v1.Finance.DeleteBudget:input_type -> saturn.finance.v1.DeleteBudgetRequest
-	29,  // 130: saturn.finance.v1.Finance.ListBudgets:input_type -> saturn.finance.v1.ListBudgetsRequest
-	31,  // 131: saturn.finance.v1.Finance.GetBudgetPeriod:input_type -> saturn.finance.v1.GetBudgetPeriodRequest
-	33,  // 132: saturn.finance.v1.Finance.CreateExchangeRate:input_type -> saturn.finance.v1.CreateExchangeRateRequest
-	34,  // 133: saturn.finance.v1.Finance.GetExchangeRate:input_type -> saturn.finance.v1.GetExchangeRateRequest
-	35,  // 134: saturn.finance.v1.Finance.UpdateExchangeRate:input_type -> saturn.finance.v1.UpdateExchangeRateRequest
-	36,  // 135: saturn.finance.v1.Finance.ListExchangeRates:input_type -> saturn.finance.v1.ListExchangeRatesRequest
-	38,  // 136: saturn.finance.v1.Finance.DeleteExchangeRate:input_type -> saturn.finance.v1.DeleteExchangeRateRequest
-	41,  // 137: saturn.finance.v1.Finance.CreateExpense:input_type -> saturn.finance.v1.CreateExpenseRequest
-	42,  // 138: saturn.finance.v1.Finance.UpdateExpense:input_type -> saturn.finance.v1.UpdateExpenseRequest
-	43,  // 139: saturn.finance.v1.Finance.DeleteTransaction:input_type -> saturn.finance.v1.DeleteTransactionRequest
-	45,  // 140: saturn.finance.v1.Finance.ListTransactions:input_type -> saturn.finance.v1.ListTransactionsRequest
-	44,  // 141: saturn.finance.v1.Finance.GetTransaction:input_type -> saturn.finance.v1.GetTransactionRequest
-	91,  // 142: saturn.finance.v1.Finance.ListTransactionEvents:input_type -> saturn.finance.v1.ListTransactionEventsRequest
-	47,  // 143: saturn.finance.v1.Finance.GetInsights:input_type -> saturn.finance.v1.GetInsightsRequest
-	53,  // 144: saturn.finance.v1.Finance.CreateRecurringExpense:input_type -> saturn.finance.v1.CreateRecurringExpenseRequest
-	54,  // 145: saturn.finance.v1.Finance.UpdateRecurringExpense:input_type -> saturn.finance.v1.UpdateRecurringExpenseRequest
-	55,  // 146: saturn.finance.v1.Finance.DeleteRecurringExpense:input_type -> saturn.finance.v1.DeleteRecurringExpenseRequest
-	56,  // 147: saturn.finance.v1.Finance.ListRecurringExpenses:input_type -> saturn.finance.v1.ListRecurringExpensesRequest
-	58,  // 148: saturn.finance.v1.Finance.ListScheduledPayments:input_type -> saturn.finance.v1.ListScheduledPaymentsRequest
-	60,  // 149: saturn.finance.v1.Finance.GetScheduledPayment:input_type -> saturn.finance.v1.GetScheduledPaymentRequest
-	61,  // 150: saturn.finance.v1.Finance.ConfirmScheduledPayment:input_type -> saturn.finance.v1.ConfirmScheduledPaymentRequest
-	62,  // 151: saturn.finance.v1.Finance.MatchScheduledPayment:input_type -> saturn.finance.v1.MatchScheduledPaymentRequest
-	63,  // 152: saturn.finance.v1.Finance.SkipScheduledPayment:input_type -> saturn.finance.v1.SkipScheduledPaymentRequest
-	66,  // 153: saturn.finance.v1.Finance.CreateBorrowing:input_type -> saturn.finance.v1.CreateBorrowingRequest
-	67,  // 154: saturn.finance.v1.Finance.GetBorrowing:input_type -> saturn.finance.v1.GetBorrowingRequest
-	68,  // 155: saturn.finance.v1.Finance.ListBorrowings:input_type -> saturn.finance.v1.ListBorrowingsRequest
-	70,  // 156: saturn.finance.v1.Finance.UpdateBorrowing:input_type -> saturn.finance.v1.UpdateBorrowingRequest
-	71,  // 157: saturn.finance.v1.Finance.DeleteBorrowing:input_type -> saturn.finance.v1.DeleteBorrowingRequest
-	72,  // 158: saturn.finance.v1.Finance.CreateBorrowingRepayment:input_type -> saturn.finance.v1.CreateBorrowingRepaymentRequest
-	73,  // 159: saturn.finance.v1.Finance.ListBorrowingRepayments:input_type -> saturn.finance.v1.ListBorrowingRepaymentsRequest
-	75,  // 160: saturn.finance.v1.Finance.DeleteBorrowingRepayment:input_type -> saturn.finance.v1.DeleteBorrowingRepaymentRequest
-	80,  // 161: saturn.finance.v1.Finance.CreateAccount:input_type -> saturn.finance.v1.CreateAccountRequest
-	81,  // 162: saturn.finance.v1.Finance.GetAccount:input_type -> saturn.finance.v1.GetAccountRequest
-	82,  // 163: saturn.finance.v1.Finance.UpdateAccount:input_type -> saturn.finance.v1.UpdateAccountRequest
-	83,  // 164: saturn.finance.v1.Finance.AdjustAccountBalance:input_type -> saturn.finance.v1.AdjustAccountBalanceRequest
-	84,  // 165: saturn.finance.v1.Finance.DeleteAccount:input_type -> saturn.finance.v1.DeleteAccountRequest
-	85,  // 166: saturn.finance.v1.Finance.ListAccounts:input_type -> saturn.finance.v1.ListAccountsRequest
-	88,  // 167: saturn.finance.v1.Finance.CreateTransfer:input_type -> saturn.finance.v1.CreateTransferRequest
-	89,  // 168: saturn.finance.v1.Finance.ListTransfers:input_type -> saturn.finance.v1.ListTransfersRequest
-	77,  // 169: saturn.finance.v1.Finance.ListCurrencies:input_type -> saturn.finance.v1.ListCurrenciesRequest
-	95,  // 170: saturn.finance.v1.Finance.ListInboxItems:input_type -> saturn.finance.v1.ListInboxItemsRequest
-	97,  // 171: saturn.finance.v1.Finance.UpdateInboxItem:input_type -> saturn.finance.v1.UpdateInboxItemRequest
-	98,  // 172: saturn.finance.v1.Finance.ApproveInboxItem:input_type -> saturn.finance.v1.ApproveInboxItemRequest
-	99,  // 173: saturn.finance.v1.Finance.DiscardInboxItem:input_type -> saturn.finance.v1.DiscardInboxItemRequest
-	20,  // 174: saturn.finance.v1.Finance.ConfigureFinance:output_type -> saturn.finance.v1.FinanceSettings
-	20,  // 175: saturn.finance.v1.Finance.GetFinanceSettings:output_type -> saturn.finance.v1.FinanceSettings
-	21,  // 176: saturn.finance.v1.Finance.CreateBudget:output_type -> saturn.finance.v1.Budget
-	21,  // 177: saturn.finance.v1.Finance.GetBudget:output_type -> saturn.finance.v1.Budget
-	21,  // 178: saturn.finance.v1.Finance.UpdateBudget:output_type -> saturn.finance.v1.Budget
-	115, // 179: saturn.finance.v1.Finance.DeleteBudget:output_type -> google.protobuf.Empty
-	30,  // 180: saturn.finance.v1.Finance.ListBudgets:output_type -> saturn.finance.v1.ListBudgetsResponse
-	22,  // 181: saturn.finance.v1.Finance.GetBudgetPeriod:output_type -> saturn.finance.v1.BudgetPeriod
-	32,  // 182: saturn.finance.v1.Finance.CreateExchangeRate:output_type -> saturn.finance.v1.ExchangeRate
-	32,  // 183: saturn.finance.v1.Finance.GetExchangeRate:output_type -> saturn.finance.v1.ExchangeRate
-	32,  // 184: saturn.finance.v1.Finance.UpdateExchangeRate:output_type -> saturn.finance.v1.ExchangeRate
-	37,  // 185: saturn.finance.v1.Finance.ListExchangeRates:output_type -> saturn.finance.v1.ListExchangeRatesResponse
-	115, // 186: saturn.finance.v1.Finance.DeleteExchangeRate:output_type -> google.protobuf.Empty
-	39,  // 187: saturn.finance.v1.Finance.CreateExpense:output_type -> saturn.finance.v1.Transaction
-	39,  // 188: saturn.finance.v1.Finance.UpdateExpense:output_type -> saturn.finance.v1.Transaction
-	115, // 189: saturn.finance.v1.Finance.DeleteTransaction:output_type -> google.protobuf.Empty
-	46,  // 190: saturn.finance.v1.Finance.ListTransactions:output_type -> saturn.finance.v1.ListTransactionsResponse
-	39,  // 191: saturn.finance.v1.Finance.GetTransaction:output_type -> saturn.finance.v1.Transaction
-	93,  // 192: saturn.finance.v1.Finance.ListTransactionEvents:output_type -> saturn.finance.v1.ListTransactionEventsResponse
-	48,  // 193: saturn.finance.v1.Finance.GetInsights:output_type -> saturn.finance.v1.GetInsightsResponse
-	51,  // 194: saturn.finance.v1.Finance.CreateRecurringExpense:output_type -> saturn.finance.v1.RecurringExpense
-	51,  // 195: saturn.finance.v1.Finance.UpdateRecurringExpense:output_type -> saturn.finance.v1.RecurringExpense
-	115, // 196: saturn.finance.v1.Finance.DeleteRecurringExpense:output_type -> google.protobuf.Empty
-	57,  // 197: saturn.finance.v1.Finance.ListRecurringExpenses:output_type -> saturn.finance.v1.ListRecurringExpensesResponse
-	59,  // 198: saturn.finance.v1.Finance.ListScheduledPayments:output_type -> saturn.finance.v1.ListScheduledPaymentsResponse
-	52,  // 199: saturn.finance.v1.Finance.GetScheduledPayment:output_type -> saturn.finance.v1.ScheduledPayment
-	39,  // 200: saturn.finance.v1.Finance.ConfirmScheduledPayment:output_type -> saturn.finance.v1.Transaction
-	39,  // 201: saturn.finance.v1.Finance.MatchScheduledPayment:output_type -> saturn.finance.v1.Transaction
-	52,  // 202: saturn.finance.v1.Finance.SkipScheduledPayment:output_type -> saturn.finance.v1.ScheduledPayment
-	64,  // 203: saturn.finance.v1.Finance.CreateBorrowing:output_type -> saturn.finance.v1.Borrowing
-	64,  // 204: saturn.finance.v1.Finance.GetBorrowing:output_type -> saturn.finance.v1.Borrowing
-	69,  // 205: saturn.finance.v1.Finance.ListBorrowings:output_type -> saturn.finance.v1.ListBorrowingsResponse
-	64,  // 206: saturn.finance.v1.Finance.UpdateBorrowing:output_type -> saturn.finance.v1.Borrowing
-	115, // 207: saturn.finance.v1.Finance.DeleteBorrowing:output_type -> google.protobuf.Empty
-	65,  // 208: saturn.finance.v1.Finance.CreateBorrowingRepayment:output_type -> saturn.finance.v1.BorrowingRepayment
-	74,  // 209: saturn.finance.v1.Finance.ListBorrowingRepayments:output_type -> saturn.finance.v1.ListBorrowingRepaymentsResponse
-	115, // 210: saturn.finance.v1.Finance.DeleteBorrowingRepayment:output_type -> google.protobuf.Empty
-	79,  // 211: saturn.finance.v1.Finance.CreateAccount:output_type -> saturn.finance.v1.Account
-	79,  // 212: saturn.finance.v1.Finance.GetAccount:output_type -> saturn.finance.v1.Account
-	79,  // 213: saturn.finance.v1.Finance.UpdateAccount:output_type -> saturn.finance.v1.Account
-	79,  // 214: saturn.finance.v1.Finance.AdjustAccountBalance:output_type -> saturn.finance.v1.Account
-	115, // 215: saturn.finance.v1.Finance.DeleteAccount:output_type -> google.protobuf.Empty
-	86,  // 216: saturn.finance.v1.Finance.ListAccounts:output_type -> saturn.finance.v1.ListAccountsResponse
-	87,  // 217: saturn.finance.v1.Finance.CreateTransfer:output_type -> saturn.finance.v1.Transfer
-	90,  // 218: saturn.finance.v1.Finance.ListTransfers:output_type -> saturn.finance.v1.ListTransfersResponse
-	78,  // 219: saturn.finance.v1.Finance.ListCurrencies:output_type -> saturn.finance.v1.ListCurrenciesResponse
-	96,  // 220: saturn.finance.v1.Finance.ListInboxItems:output_type -> saturn.finance.v1.ListInboxItemsResponse
-	94,  // 221: saturn.finance.v1.Finance.UpdateInboxItem:output_type -> saturn.finance.v1.InboxItem
-	115, // 222: saturn.finance.v1.Finance.ApproveInboxItem:output_type -> google.protobuf.Empty
-	115, // 223: saturn.finance.v1.Finance.DiscardInboxItem:output_type -> google.protobuf.Empty
-	174, // [174:224] is the sub-list for method output_type
-	124, // [124:174] is the sub-list for method input_type
-	124, // [124:124] is the sub-list for extension type_name
-	124, // [124:124] is the sub-list for extension extendee
-	0,   // [0:124] is the sub-list for field type_name
+	114, // 108: saturn.finance.v1.InboxItem.transaction_date:type_name -> google.protobuf.Timestamp
+	113, // 109: saturn.finance.v1.InboxItem.metadata:type_name -> saturn.finance.v1.InboxItem.MetadataEntry
+	114, // 110: saturn.finance.v1.InboxItem.create_time:type_name -> google.protobuf.Timestamp
+	2,   // 111: saturn.finance.v1.InboxItem.borrowing_link_type:type_name -> saturn.finance.v1.BorrowingLinkType
+	17,  // 112: saturn.finance.v1.ListInboxItemsRequest.status:type_name -> saturn.finance.v1.InboxItem.Status
+	18,  // 113: saturn.finance.v1.ListInboxItemsRequest.doc_type:type_name -> saturn.finance.v1.InboxItem.DocType
+	19,  // 114: saturn.finance.v1.ListInboxItemsRequest.view:type_name -> saturn.finance.v1.InboxItem.View
+	94,  // 115: saturn.finance.v1.ListInboxItemsResponse.inbox_items:type_name -> saturn.finance.v1.InboxItem
+	94,  // 116: saturn.finance.v1.UpdateInboxItemRequest.inbox_item:type_name -> saturn.finance.v1.InboxItem
+	114, // 117: saturn.finance.v1.Budget.ActivePeriod.start_date:type_name -> google.protobuf.Timestamp
+	114, // 118: saturn.finance.v1.Budget.ActivePeriod.end_date:type_name -> google.protobuf.Timestamp
+	104, // 119: saturn.finance.v1.SpentInsights.TrendDataPoint.contributions:type_name -> saturn.finance.v1.SpentInsights.BudgetContribution
+	114, // 120: saturn.finance.v1.SpentInsights.HighValueExpense.transaction_date:type_name -> google.protobuf.Timestamp
+	114, // 121: saturn.finance.v1.SpentInsights.HighValueExpense.effective_date:type_name -> google.protobuf.Timestamp
+	114, // 122: saturn.finance.v1.RecurringExpense.ExecutionState.next_due_date:type_name -> google.protobuf.Timestamp
+	114, // 123: saturn.finance.v1.RecurringExpense.ExecutionState.last_payment_date:type_name -> google.protobuf.Timestamp
+	8,   // 124: saturn.finance.v1.ScheduledPayment.RecurringExpenseInfo.interval:type_name -> saturn.finance.v1.RecurringExpense.Interval
+	23,  // 125: saturn.finance.v1.Finance.ConfigureFinance:input_type -> saturn.finance.v1.ConfigureFinanceRequest
+	24,  // 126: saturn.finance.v1.Finance.GetFinanceSettings:input_type -> saturn.finance.v1.GetFinanceSettingsRequest
+	26,  // 127: saturn.finance.v1.Finance.CreateBudget:input_type -> saturn.finance.v1.CreateBudgetRequest
+	25,  // 128: saturn.finance.v1.Finance.GetBudget:input_type -> saturn.finance.v1.GetBudgetRequest
+	27,  // 129: saturn.finance.v1.Finance.UpdateBudget:input_type -> saturn.finance.v1.UpdateBudgetRequest
+	28,  // 130: saturn.finance.v1.Finance.DeleteBudget:input_type -> saturn.finance.v1.DeleteBudgetRequest
+	29,  // 131: saturn.finance.v1.Finance.ListBudgets:input_type -> saturn.finance.v1.ListBudgetsRequest
+	31,  // 132: saturn.finance.v1.Finance.GetBudgetPeriod:input_type -> saturn.finance.v1.GetBudgetPeriodRequest
+	33,  // 133: saturn.finance.v1.Finance.CreateExchangeRate:input_type -> saturn.finance.v1.CreateExchangeRateRequest
+	34,  // 134: saturn.finance.v1.Finance.GetExchangeRate:input_type -> saturn.finance.v1.GetExchangeRateRequest
+	35,  // 135: saturn.finance.v1.Finance.UpdateExchangeRate:input_type -> saturn.finance.v1.UpdateExchangeRateRequest
+	36,  // 136: saturn.finance.v1.Finance.ListExchangeRates:input_type -> saturn.finance.v1.ListExchangeRatesRequest
+	38,  // 137: saturn.finance.v1.Finance.DeleteExchangeRate:input_type -> saturn.finance.v1.DeleteExchangeRateRequest
+	41,  // 138: saturn.finance.v1.Finance.CreateExpense:input_type -> saturn.finance.v1.CreateExpenseRequest
+	42,  // 139: saturn.finance.v1.Finance.UpdateExpense:input_type -> saturn.finance.v1.UpdateExpenseRequest
+	43,  // 140: saturn.finance.v1.Finance.DeleteTransaction:input_type -> saturn.finance.v1.DeleteTransactionRequest
+	45,  // 141: saturn.finance.v1.Finance.ListTransactions:input_type -> saturn.finance.v1.ListTransactionsRequest
+	44,  // 142: saturn.finance.v1.Finance.GetTransaction:input_type -> saturn.finance.v1.GetTransactionRequest
+	91,  // 143: saturn.finance.v1.Finance.ListTransactionEvents:input_type -> saturn.finance.v1.ListTransactionEventsRequest
+	47,  // 144: saturn.finance.v1.Finance.GetInsights:input_type -> saturn.finance.v1.GetInsightsRequest
+	53,  // 145: saturn.finance.v1.Finance.CreateRecurringExpense:input_type -> saturn.finance.v1.CreateRecurringExpenseRequest
+	54,  // 146: saturn.finance.v1.Finance.UpdateRecurringExpense:input_type -> saturn.finance.v1.UpdateRecurringExpenseRequest
+	55,  // 147: saturn.finance.v1.Finance.DeleteRecurringExpense:input_type -> saturn.finance.v1.DeleteRecurringExpenseRequest
+	56,  // 148: saturn.finance.v1.Finance.ListRecurringExpenses:input_type -> saturn.finance.v1.ListRecurringExpensesRequest
+	58,  // 149: saturn.finance.v1.Finance.ListScheduledPayments:input_type -> saturn.finance.v1.ListScheduledPaymentsRequest
+	60,  // 150: saturn.finance.v1.Finance.GetScheduledPayment:input_type -> saturn.finance.v1.GetScheduledPaymentRequest
+	61,  // 151: saturn.finance.v1.Finance.ConfirmScheduledPayment:input_type -> saturn.finance.v1.ConfirmScheduledPaymentRequest
+	62,  // 152: saturn.finance.v1.Finance.MatchScheduledPayment:input_type -> saturn.finance.v1.MatchScheduledPaymentRequest
+	63,  // 153: saturn.finance.v1.Finance.SkipScheduledPayment:input_type -> saturn.finance.v1.SkipScheduledPaymentRequest
+	66,  // 154: saturn.finance.v1.Finance.CreateBorrowing:input_type -> saturn.finance.v1.CreateBorrowingRequest
+	67,  // 155: saturn.finance.v1.Finance.GetBorrowing:input_type -> saturn.finance.v1.GetBorrowingRequest
+	68,  // 156: saturn.finance.v1.Finance.ListBorrowings:input_type -> saturn.finance.v1.ListBorrowingsRequest
+	70,  // 157: saturn.finance.v1.Finance.UpdateBorrowing:input_type -> saturn.finance.v1.UpdateBorrowingRequest
+	71,  // 158: saturn.finance.v1.Finance.DeleteBorrowing:input_type -> saturn.finance.v1.DeleteBorrowingRequest
+	72,  // 159: saturn.finance.v1.Finance.CreateBorrowingRepayment:input_type -> saturn.finance.v1.CreateBorrowingRepaymentRequest
+	73,  // 160: saturn.finance.v1.Finance.ListBorrowingRepayments:input_type -> saturn.finance.v1.ListBorrowingRepaymentsRequest
+	75,  // 161: saturn.finance.v1.Finance.DeleteBorrowingRepayment:input_type -> saturn.finance.v1.DeleteBorrowingRepaymentRequest
+	80,  // 162: saturn.finance.v1.Finance.CreateAccount:input_type -> saturn.finance.v1.CreateAccountRequest
+	81,  // 163: saturn.finance.v1.Finance.GetAccount:input_type -> saturn.finance.v1.GetAccountRequest
+	82,  // 164: saturn.finance.v1.Finance.UpdateAccount:input_type -> saturn.finance.v1.UpdateAccountRequest
+	83,  // 165: saturn.finance.v1.Finance.AdjustAccountBalance:input_type -> saturn.finance.v1.AdjustAccountBalanceRequest
+	84,  // 166: saturn.finance.v1.Finance.DeleteAccount:input_type -> saturn.finance.v1.DeleteAccountRequest
+	85,  // 167: saturn.finance.v1.Finance.ListAccounts:input_type -> saturn.finance.v1.ListAccountsRequest
+	88,  // 168: saturn.finance.v1.Finance.CreateTransfer:input_type -> saturn.finance.v1.CreateTransferRequest
+	89,  // 169: saturn.finance.v1.Finance.ListTransfers:input_type -> saturn.finance.v1.ListTransfersRequest
+	77,  // 170: saturn.finance.v1.Finance.ListCurrencies:input_type -> saturn.finance.v1.ListCurrenciesRequest
+	95,  // 171: saturn.finance.v1.Finance.ListInboxItems:input_type -> saturn.finance.v1.ListInboxItemsRequest
+	97,  // 172: saturn.finance.v1.Finance.UpdateInboxItem:input_type -> saturn.finance.v1.UpdateInboxItemRequest
+	98,  // 173: saturn.finance.v1.Finance.ApproveInboxItem:input_type -> saturn.finance.v1.ApproveInboxItemRequest
+	99,  // 174: saturn.finance.v1.Finance.DiscardInboxItem:input_type -> saturn.finance.v1.DiscardInboxItemRequest
+	20,  // 175: saturn.finance.v1.Finance.ConfigureFinance:output_type -> saturn.finance.v1.FinanceSettings
+	20,  // 176: saturn.finance.v1.Finance.GetFinanceSettings:output_type -> saturn.finance.v1.FinanceSettings
+	21,  // 177: saturn.finance.v1.Finance.CreateBudget:output_type -> saturn.finance.v1.Budget
+	21,  // 178: saturn.finance.v1.Finance.GetBudget:output_type -> saturn.finance.v1.Budget
+	21,  // 179: saturn.finance.v1.Finance.UpdateBudget:output_type -> saturn.finance.v1.Budget
+	116, // 180: saturn.finance.v1.Finance.DeleteBudget:output_type -> google.protobuf.Empty
+	30,  // 181: saturn.finance.v1.Finance.ListBudgets:output_type -> saturn.finance.v1.ListBudgetsResponse
+	22,  // 182: saturn.finance.v1.Finance.GetBudgetPeriod:output_type -> saturn.finance.v1.BudgetPeriod
+	32,  // 183: saturn.finance.v1.Finance.CreateExchangeRate:output_type -> saturn.finance.v1.ExchangeRate
+	32,  // 184: saturn.finance.v1.Finance.GetExchangeRate:output_type -> saturn.finance.v1.ExchangeRate
+	32,  // 185: saturn.finance.v1.Finance.UpdateExchangeRate:output_type -> saturn.finance.v1.ExchangeRate
+	37,  // 186: saturn.finance.v1.Finance.ListExchangeRates:output_type -> saturn.finance.v1.ListExchangeRatesResponse
+	116, // 187: saturn.finance.v1.Finance.DeleteExchangeRate:output_type -> google.protobuf.Empty
+	39,  // 188: saturn.finance.v1.Finance.CreateExpense:output_type -> saturn.finance.v1.Transaction
+	39,  // 189: saturn.finance.v1.Finance.UpdateExpense:output_type -> saturn.finance.v1.Transaction
+	116, // 190: saturn.finance.v1.Finance.DeleteTransaction:output_type -> google.protobuf.Empty
+	46,  // 191: saturn.finance.v1.Finance.ListTransactions:output_type -> saturn.finance.v1.ListTransactionsResponse
+	39,  // 192: saturn.finance.v1.Finance.GetTransaction:output_type -> saturn.finance.v1.Transaction
+	93,  // 193: saturn.finance.v1.Finance.ListTransactionEvents:output_type -> saturn.finance.v1.ListTransactionEventsResponse
+	48,  // 194: saturn.finance.v1.Finance.GetInsights:output_type -> saturn.finance.v1.GetInsightsResponse
+	51,  // 195: saturn.finance.v1.Finance.CreateRecurringExpense:output_type -> saturn.finance.v1.RecurringExpense
+	51,  // 196: saturn.finance.v1.Finance.UpdateRecurringExpense:output_type -> saturn.finance.v1.RecurringExpense
+	116, // 197: saturn.finance.v1.Finance.DeleteRecurringExpense:output_type -> google.protobuf.Empty
+	57,  // 198: saturn.finance.v1.Finance.ListRecurringExpenses:output_type -> saturn.finance.v1.ListRecurringExpensesResponse
+	59,  // 199: saturn.finance.v1.Finance.ListScheduledPayments:output_type -> saturn.finance.v1.ListScheduledPaymentsResponse
+	52,  // 200: saturn.finance.v1.Finance.GetScheduledPayment:output_type -> saturn.finance.v1.ScheduledPayment
+	39,  // 201: saturn.finance.v1.Finance.ConfirmScheduledPayment:output_type -> saturn.finance.v1.Transaction
+	39,  // 202: saturn.finance.v1.Finance.MatchScheduledPayment:output_type -> saturn.finance.v1.Transaction
+	52,  // 203: saturn.finance.v1.Finance.SkipScheduledPayment:output_type -> saturn.finance.v1.ScheduledPayment
+	64,  // 204: saturn.finance.v1.Finance.CreateBorrowing:output_type -> saturn.finance.v1.Borrowing
+	64,  // 205: saturn.finance.v1.Finance.GetBorrowing:output_type -> saturn.finance.v1.Borrowing
+	69,  // 206: saturn.finance.v1.Finance.ListBorrowings:output_type -> saturn.finance.v1.ListBorrowingsResponse
+	64,  // 207: saturn.finance.v1.Finance.UpdateBorrowing:output_type -> saturn.finance.v1.Borrowing
+	116, // 208: saturn.finance.v1.Finance.DeleteBorrowing:output_type -> google.protobuf.Empty
+	65,  // 209: saturn.finance.v1.Finance.CreateBorrowingRepayment:output_type -> saturn.finance.v1.BorrowingRepayment
+	74,  // 210: saturn.finance.v1.Finance.ListBorrowingRepayments:output_type -> saturn.finance.v1.ListBorrowingRepaymentsResponse
+	116, // 211: saturn.finance.v1.Finance.DeleteBorrowingRepayment:output_type -> google.protobuf.Empty
+	79,  // 212: saturn.finance.v1.Finance.CreateAccount:output_type -> saturn.finance.v1.Account
+	79,  // 213: saturn.finance.v1.Finance.GetAccount:output_type -> saturn.finance.v1.Account
+	79,  // 214: saturn.finance.v1.Finance.UpdateAccount:output_type -> saturn.finance.v1.Account
+	79,  // 215: saturn.finance.v1.Finance.AdjustAccountBalance:output_type -> saturn.finance.v1.Account
+	116, // 216: saturn.finance.v1.Finance.DeleteAccount:output_type -> google.protobuf.Empty
+	86,  // 217: saturn.finance.v1.Finance.ListAccounts:output_type -> saturn.finance.v1.ListAccountsResponse
+	87,  // 218: saturn.finance.v1.Finance.CreateTransfer:output_type -> saturn.finance.v1.Transfer
+	90,  // 219: saturn.finance.v1.Finance.ListTransfers:output_type -> saturn.finance.v1.ListTransfersResponse
+	78,  // 220: saturn.finance.v1.Finance.ListCurrencies:output_type -> saturn.finance.v1.ListCurrenciesResponse
+	96,  // 221: saturn.finance.v1.Finance.ListInboxItems:output_type -> saturn.finance.v1.ListInboxItemsResponse
+	94,  // 222: saturn.finance.v1.Finance.UpdateInboxItem:output_type -> saturn.finance.v1.InboxItem
+	94,  // 223: saturn.finance.v1.Finance.ApproveInboxItem:output_type -> saturn.finance.v1.InboxItem
+	116, // 224: saturn.finance.v1.Finance.DiscardInboxItem:output_type -> google.protobuf.Empty
+	175, // [175:225] is the sub-list for method output_type
+	125, // [125:175] is the sub-list for method input_type
+	125, // [125:125] is the sub-list for extension type_name
+	125, // [125:125] is the sub-list for extension extendee
+	0,   // [0:125] is the sub-list for field type_name
 }
 
 func init() { file_saturn_finance_v1_finance_proto_init() }
@@ -9284,7 +9317,7 @@ func file_saturn_finance_v1_finance_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_finance_v1_finance_proto_rawDesc), len(file_saturn_finance_v1_finance_proto_rawDesc)),
 			NumEnums:      20,
-			NumMessages:   93,
+			NumMessages:   94,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

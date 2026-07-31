@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -64,6 +65,14 @@ func toInboxItemDomain(db inboxItemDB) *finance.InboxItem {
 		amount = db.Amount.Int64
 	}
 
+	var metadata map[string]any
+	if db.MetadataJSON != "" {
+		_ = json.Unmarshal([]byte(db.MetadataJSON), &metadata)
+	}
+	if metadata == nil {
+		metadata = make(map[string]any)
+	}
+
 	return &finance.InboxItem{
 		ID:                 db.ID,
 		SpaceID:            db.SpaceID,
@@ -81,7 +90,7 @@ func toInboxItemDomain(db inboxItemDB) *finance.InboxItem {
 		BorrowingID:        borrowingID,
 		BorrowingLinkType:  linkType,
 		RawPayload:         db.RawPayload,
-		MetadataJSON:       db.MetadataJSON,
+		Metadata:           metadata,
 		CreateTime:         db.CreateTime.Time,
 	}
 }
@@ -95,17 +104,22 @@ func NewInboxItemStore(db *sqlx.DB) *InboxItemStore {
 }
 
 func (s *InboxItemStore) Insert(ctx context.Context, item *finance.InboxItem) error {
-	var createTime time.Time
-	if item.CreateTime.IsZero() {
+	createTime := item.CreateTime
+	if createTime.IsZero() {
 		createTime = time.Now().UTC()
-	} else {
-		createTime = item.CreateTime
 	}
 
 	var linkTypeStr *string
 	if item.BorrowingLinkType != nil {
 		s := string(*item.BorrowingLinkType)
 		linkTypeStr = &s
+	}
+
+	metaJSON := "{}"
+	if item.Metadata != nil {
+		if b, err := json.Marshal(item.Metadata); err == nil {
+			metaJSON = string(b)
+		}
 	}
 
 	ds := pgDialect.Insert(goqu.S("finance").Table("inbox_item")).Rows(goqu.Record{
@@ -125,7 +139,7 @@ func (s *InboxItemStore) Insert(ctx context.Context, item *finance.InboxItem) er
 		"borrowing_id":         conv.StringPtr(item.BorrowingID),
 		"borrowing_link_type":  conv.StringPtr(linkTypeStr),
 		"raw_payload":          item.RawPayload,
-		"metadata":             item.MetadataJSON,
+		"metadata":             metaJSON,
 		"create_time":          createTime,
 	})
 	query, args, err := ds.Prepared(true).ToSQL()
@@ -139,9 +153,9 @@ func (s *InboxItemStore) Insert(ctx context.Context, item *finance.InboxItem) er
 	return nil
 }
 
-func (s *InboxItemStore) Get(ctx context.Context, spaceID, id string) (*finance.InboxItem, error) {
+func (s *InboxItemStore) Get(ctx context.Context, spaceID finance.SpaceID, id string) (*finance.InboxItem, error) {
 	ds := pgDialect.From(goqu.S("finance").Table("inbox_item")).Select("*").Where(goqu.Ex{
-		"space_id": spaceID,
+		"space_id": string(spaceID),
 		"id":       id,
 	})
 	query, args, err := ds.Prepared(true).ToSQL()
@@ -159,7 +173,7 @@ func (s *InboxItemStore) Get(ctx context.Context, spaceID, id string) (*finance.
 	return toInboxItemDomain(db), nil
 }
 
-func (s *InboxItemStore) ListBySpace(ctx context.Context, spaceID string, filter *finance.ListInboxItemsFilter) (*paging.Page[*finance.InboxItem], error) {
+func (s *InboxItemStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListInboxItemsFilter) (*paging.Page[*finance.InboxItem], error) {
 	if filter.PageSize <= 0 || filter.PageSize > 100 {
 		filter.PageSize = 20
 	}
@@ -235,9 +249,9 @@ func (s *InboxItemStore) ListBySpace(ctx context.Context, spaceID string, filter
 	return page, nil
 }
 
-func (s *InboxItemStore) Delete(ctx context.Context, spaceID, id string) error {
+func (s *InboxItemStore) Delete(ctx context.Context, spaceID finance.SpaceID, id string) error {
 	ds := pgDialect.Delete(goqu.S("finance").Table("inbox_item")).Where(goqu.Ex{
-		"space_id": spaceID,
+		"space_id": string(spaceID),
 		"id":       id,
 	})
 	query, args, err := ds.Prepared(true).ToSQL()
@@ -261,8 +275,15 @@ func (s *InboxItemStore) Delete(ctx context.Context, spaceID, id string) error {
 func (s *InboxItemStore) Update(ctx context.Context, item *finance.InboxItem) error {
 	var linkTypeStr *string
 	if item.BorrowingLinkType != nil {
-		s := string(*item.BorrowingLinkType)
-		linkTypeStr = &s
+		str := string(*item.BorrowingLinkType)
+		linkTypeStr = &str
+	}
+
+	metaJSON := "{}"
+	if item.Metadata != nil {
+		if b, err := json.Marshal(item.Metadata); err == nil {
+			metaJSON = string(b)
+		}
 	}
 
 	ds := pgDialect.Update(goqu.S("finance").Table("inbox_item")).
@@ -280,7 +301,7 @@ func (s *InboxItemStore) Update(ctx context.Context, item *finance.InboxItem) er
 			"borrowing_id":         conv.StringPtr(item.BorrowingID),
 			"borrowing_link_type":  conv.StringPtr(linkTypeStr),
 			"raw_payload":          item.RawPayload,
-			"metadata":             item.MetadataJSON,
+			"metadata":             metaJSON,
 		}).
 		Where(goqu.Ex{
 			"space_id": item.SpaceID,

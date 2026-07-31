@@ -1994,7 +1994,7 @@
           },
           {
             "name": "view",
-            "description": "Optional. Representation view.\n\n - BASIC: Excludes raw_payload and metadata_json\n - FULL: Returns complete fields",
+            "description": "Optional. Representation view.\n\n - BASIC: Excludes raw_payload and metadata\n - FULL: Returns complete fields",
             "in": "query",
             "required": false,
             "type": "string",
@@ -2083,14 +2083,13 @@
     },
     "/v1/finance/inbox-items/{id}:approve": {
       "post": {
-        "summary": "Approves and promotes an ingested inbox item.",
+        "summary": "Approves a staged inbox item and commits it to the ledger, returning the updated item with links.",
         "operationId": "Finance_ApproveInboxItem",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
-              "properties": {}
+              "$ref": "#/definitions/v1InboxItem"
             }
           },
           "default": {
@@ -2385,7 +2384,8 @@
             "enum": [
               "PENDING",
               "PROCESSING",
-              "SKIPPED"
+              "SKIPPED",
+              "PAID"
             ]
           },
           {
@@ -2740,6 +2740,27 @@
           {
             "name": "sort",
             "description": "Optional. Sort order string.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "transferId",
+            "description": "Optional. Target transfer ID filter.\nValues are of the form `trn_[a-zA-Z0-9]+`.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "scheduledPaymentId",
+            "description": "Optional. Target scheduled payment ID filter.\nValues are of the form `sch_[a-zA-Z0-9]+`.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "borrowingId",
+            "description": "Optional. Target borrowing ID filter.\nValues are of the form `bor_[a-zA-Z0-9]+`.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -6276,9 +6297,12 @@
           "description": "Output only. Ingestion raw notification payload details.",
           "readOnly": true
         },
-        "metadataJson": {
-          "type": "string",
-          "description": "Optional. Additional extracted metadata payload (JSON format)."
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Optional. Additional extracted metadata payload key-value pairs."
         },
         "createTime": {
           "type": "string",
@@ -6313,7 +6337,7 @@
         "BASIC",
         "FULL"
       ],
-      "description": "Optional representation view.\n\n - BASIC: Excludes raw_payload and metadata_json\n - FULL: Returns complete fields"
+      "description": "Optional representation view.\n\n - BASIC: Excludes raw_payload and metadata\n - FULL: Returns complete fields"
     },
     "v1InsightGranularity": {
       "type": "string",
@@ -7308,7 +7332,8 @@
       "enum": [
         "PENDING",
         "PROCESSING",
-        "SKIPPED"
+        "SKIPPED",
+        "PAID"
       ],
       "description": "Instance execution status."
     },
@@ -7555,10 +7580,6 @@
         "accountId": {
           "type": "string",
           "description": "Optional. Associated account ID.\nValues are of the form `acc_[a-zA-Z0-9]+`."
-        },
-        "transferId": {
-          "type": "string",
-          "description": "Optional. Associated transfer transaction ID.\nValues are of the form `txn_[a-zA-Z0-9]+`."
         },
         "account": {
           "$ref": "#/definitions/TransactionAccountInfo",

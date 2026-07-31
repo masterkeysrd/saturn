@@ -73,10 +73,10 @@ type FinanceService interface {
 	DeleteTransfer(ctx context.Context, spaceID finance.SpaceID, id finance.TransferID) error
 	ListTransfers(ctx context.Context, spaceID finance.SpaceID, limit int32, pageToken string) ([]*finance.Transfer, string, error)
 
-	StageInboxItem(ctx context.Context, spaceID string, req *finance.StageInboxItem) (*finance.InboxItem, error)
-	UpdateInboxItem(ctx context.Context, spaceID string, item *finance.InboxItem) (*finance.InboxItem, error)
-	DiscardInboxItem(ctx context.Context, spaceID, id string) error
-	ApproveInboxItem(ctx context.Context, spaceID string, id string) error
+	StageInboxItem(ctx context.Context, spaceID finance.SpaceID, req *finance.StageInboxItem) (*finance.InboxItem, error)
+	UpdateInboxItem(ctx context.Context, spaceID finance.SpaceID, item *finance.InboxItem) (*finance.InboxItem, error)
+	DiscardInboxItem(ctx context.Context, spaceID finance.SpaceID, id string) error
+	ApproveInboxItem(ctx context.Context, spaceID finance.SpaceID, id string) (*finance.InboxItem, error)
 }
 
 // ParsedTransaction represents structured transaction data parsed by an ingestion agent.

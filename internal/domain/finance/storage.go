@@ -131,6 +131,7 @@ type ListAccountsFilter struct {
 	PageSize      int32
 	NextPageToken string
 	ActiveOnly    *bool
+	LastFour      *string
 	SearchQuery   *string
 	Sort          sorting.SortOrder
 }
@@ -181,6 +182,7 @@ type RecurringExpenseStore interface {
 type ScheduledPaymentStore interface {
 	Create(ctx context.Context, payment *ScheduledPayment) error
 	GetByID(ctx context.Context, spaceID SpaceID, id ScheduledPaymentID) (*ScheduledPayment, error)
+	Update(ctx context.Context, payment *ScheduledPayment) error
 	UpdateStatus(ctx context.Context, id ScheduledPaymentID, status ScheduledPaymentStatus) error
 	Delete(ctx context.Context, id ScheduledPaymentID) error
 	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListScheduledPaymentsFilter) (*paging.Page[*ScheduledPayment], error)
@@ -259,8 +261,8 @@ type ListInboxItemsFilter struct {
 // InboxItemStore defines repository operations for staged inbox items.
 type InboxItemStore interface {
 	Insert(ctx context.Context, item *InboxItem) error
-	Get(ctx context.Context, spaceID, id string) (*InboxItem, error)
-	ListBySpace(ctx context.Context, spaceID string, filter *ListInboxItemsFilter) (*paging.Page[*InboxItem], error)
+	Get(ctx context.Context, spaceID SpaceID, id string) (*InboxItem, error)
+	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListInboxItemsFilter) (*paging.Page[*InboxItem], error)
 	Update(ctx context.Context, item *InboxItem) error
-	Delete(ctx context.Context, spaceID, id string) error
+	Delete(ctx context.Context, spaceID SpaceID, id string) error
 }

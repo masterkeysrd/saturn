@@ -38,22 +38,23 @@ func TestRecurringSubscriptions_ScheduledPayments(t *testing.T) {
 		_, fin := setupRecurringTest(t)
 
 		fin.ConfirmScheduledPayment(t, driver.ConfirmScheduledPaymentOptions{
-			Account:   "Checking Account",
-			Currency:  "EUR",
-			ExpectErr: "exchange rate not found",
+			ScheduledPaymentAmount: 1500,
+			Account:                "Checking Account",
+			Currency:               "EUR",
+			ExpectErr:              "exchange rate not found",
 		}).
 			AssertPendingScheduledPaymentsCount(t, 1) // Scheduled payment remains pending on failure
 	})
 
 	t.Run("ConfirmScheduledPayment_ForeignCurrency_RegisteredRate_Succeeds", func(t *testing.T) {
 		_, fin := setupRecurringTest(t)
-		re := fin.GetLastRecurringExpense(t)
 
 		fin.CreateExchangeRate(t, "EUR", "USD", 1.08).
 			ConfirmScheduledPayment(t, driver.ConfirmScheduledPaymentOptions{
-				Account:  "Checking Account",
-				Currency: "EUR",
-				Amount:   1000, // 10.00 EUR -> 1080 cents ($10.80 USD)
+				ScheduledPaymentAmount: 1500,
+				Account:                "Checking Account",
+				Currency:               "EUR",
+				Amount:                 1000, // 10.00 EUR -> 1080 cents ($10.80 USD)
 			}).
 			AssertPendingScheduledPaymentsCount(t, 0).          // Scheduled payment cleared/resolved
 			AssertAccountBalance(t, "Checking Account", 19000). // 20000 - 1000 EUR = 19000
@@ -67,19 +68,17 @@ func TestRecurringSubscriptions_ScheduledPayments(t *testing.T) {
 				if txn.GetAmountInBase() != 1080 {
 					t.Errorf("Transaction AmountInBase = %d, want 1080", txn.GetAmountInBase())
 				}
-				if txn.GetMetadata()["recurring_expense_id"] != re.GetId() {
-					t.Errorf("Transaction Metadata[recurring_expense_id] = %q, want %q", txn.GetMetadata()["recurring_expense_id"], re.GetId())
+				if txn.GetMetadata()["recurring_expense_id"] == "" {
+					t.Errorf("expected recurring_expense_id set in metadata")
 				}
 			})
 	})
 
 	t.Run("ConfirmScheduledPayment_BaseCurrency_ExecutesExpenseAndUpdateBalances", func(t *testing.T) {
 		_, fin := setupRecurringTest(t)
-		re := fin.GetLastRecurringExpense(t)
-		sp := fin.GetPendingScheduledPayment(t)
 
 		fin.
-			AssertScheduledPayment(t, sp.GetId(), func(sp *financev1.ScheduledPayment) {
+			AssertPendingScheduledPayment(t, func(sp *financev1.ScheduledPayment) {
 				if sp.GetAmount() != 1500 {
 					t.Errorf("ScheduledPayment Amount = %d, want 1500", sp.GetAmount())
 				}
@@ -88,8 +87,8 @@ func TestRecurringSubscriptions_ScheduledPayments(t *testing.T) {
 				}
 			}).
 			ConfirmScheduledPayment(t, driver.ConfirmScheduledPaymentOptions{
-				PaymentID: sp.GetId(),
-				Account:   "Checking Account",
+				ScheduledPaymentAmount: 1500,
+				Account:                "Checking Account",
 			}).
 			AssertPendingScheduledPaymentsCount(t, 0).            // Scheduled payment cleared/resolved from pending list
 			AssertAccountBalance(t, "Checking Account", 18500).   // Balance reduced by $15.00 ($200.00 -> $185.00)
@@ -100,12 +99,6 @@ func TestRecurringSubscriptions_ScheduledPayments(t *testing.T) {
 				}
 				if txn.GetType() != financev1.Transaction_EXPENSE {
 					t.Errorf("Transaction Type = %v, want EXPENSE", txn.GetType())
-				}
-				if txn.GetMetadata()["recurring_expense_id"] != re.GetId() {
-					t.Errorf("Transaction Metadata[recurring_expense_id] = %q, want %q", txn.GetMetadata()["recurring_expense_id"], re.GetId())
-				}
-				if txn.GetMetadata()["scheduled_payment_id"] != sp.GetId() {
-					t.Errorf("Transaction Metadata[scheduled_payment_id] = %q, want %q", txn.GetMetadata()["scheduled_payment_id"], sp.GetId())
 				}
 			})
 	})

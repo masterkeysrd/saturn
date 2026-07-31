@@ -315,8 +315,8 @@ service Finance {
     };
   }
 
-  // Approves and promotes an ingested inbox item.
-  rpc ApproveInboxItem(ApproveInboxItemRequest) returns (google.protobuf.Empty) {
+  // Approves a staged inbox item and commits it to the ledger, returning the updated item with links.
+  rpc ApproveInboxItem(ApproveInboxItemRequest) returns (InboxItem) {
     option (google.api.http) = {
       post: "/v1/finance/inbox-items/{id}:approve"
       body: "*"
@@ -780,13 +780,9 @@ message Transaction {
   // Required. Execution/posting date (when funds reconcile in account balance).
   google.protobuf.Timestamp effective_date = 13 [(google.api.field_behavior) = REQUIRED];
 
-
-
   // Optional. Associated account ID.
   // Values are of the form `acc_[a-zA-Z0-9]+`.
   optional string account_id = 16 [(google.api.field_behavior) = OPTIONAL];
-
-
 
   // Output only. Hydrated minimal account info. Available only on FULL view.
   optional AccountInfo account = 18 [(google.api.field_behavior) = OUTPUT_ONLY];
@@ -874,8 +870,6 @@ message ListTransactionsRequest {
   // Optional. Target transaction flow type filter.
   Transaction.Type type = 3 [(google.api.field_behavior) = OPTIONAL];
 
-
-
   // Optional. Target account identifier.
   // Values are of the form `acc_[a-zA-Z0-9]+`.
   optional string account_id = 6 [(google.api.field_behavior) = OPTIONAL];
@@ -895,6 +889,14 @@ message ListTransactionsRequest {
   // Optional. Target transfer ID filter.
   // Values are of the form `trn_[a-zA-Z0-9]+`.
   optional string transfer_id = 11 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Target scheduled payment ID filter.
+  // Values are of the form `sch_[a-zA-Z0-9]+`.
+  optional string scheduled_payment_id = 13 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Target borrowing ID filter.
+  // Values are of the form `bor_[a-zA-Z0-9]+`.
+  optional string borrowing_id = 14 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // The response for
@@ -1217,6 +1219,7 @@ message ScheduledPayment {
     PENDING = 1;
     PROCESSING = 2;
     SKIPPED = 3;
+    PAID = 4;
   }
 
   // Required. Instance execution status.
@@ -1977,8 +1980,8 @@ message InboxItem {
   // Output only. Ingestion raw notification payload details.
   string raw_payload = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
 
-  // Optional. Additional extracted metadata payload (JSON format).
-  string metadata_json = 15;
+  // Optional. Additional extracted metadata payload key-value pairs.
+  map<string, string> metadata = 15;
 
   // Output only. Ingestion stage timestamp.
   google.protobuf.Timestamp create_time = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
@@ -1993,7 +1996,7 @@ message InboxItem {
   // Optional representation view.
   enum View {
     VIEW_UNSPECIFIED = 0;
-    BASIC = 1; // Excludes raw_payload and metadata_json
+    BASIC = 1; // Excludes raw_payload and metadata
     FULL = 2; // Returns complete fields
   }
 }
@@ -2002,8 +2005,8 @@ message InboxItem {
 enum BorrowingLinkType {
   BORROWING_LINK_TYPE_UNSPECIFIED = 0;
   BORROWING_LINK_TYPE_INITIAL_RECEIPT = 1; // Original funding proof ($0 balance adjustment)
-  BORROWING_LINK_TYPE_REPAYMENT = 2;       // Installment payback (reduces remaining balance)
-  BORROWING_LINK_TYPE_ADDITIONAL_LOAN = 3;  // Top-up / extra drawdown (increases balance)
+  BORROWING_LINK_TYPE_REPAYMENT = 2; // Installment payback (reduces remaining balance)
+  BORROWING_LINK_TYPE_ADDITIONAL_LOAN = 3; // Top-up / extra drawdown (increases balance)
 }
 
 // The request for

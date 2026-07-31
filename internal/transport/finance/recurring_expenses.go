@@ -183,6 +183,9 @@ func (h *Handler) ListScheduledPayments(ctx context.Context, req *financev1.List
 		}
 		st := string(domainStatus)
 		statusFilter = &st
+	} else {
+		st := string(finance.ScheduledPaymentPending)
+		statusFilter = &st
 	}
 
 	var startDate, endDate *time.Time
@@ -411,6 +414,8 @@ func mapProtoPaymentStatusToDomain(st financev1.ScheduledPayment_Status) (financ
 		return finance.ScheduledPaymentProcessing, nil
 	case financev1.ScheduledPayment_SKIPPED:
 		return finance.ScheduledPaymentSkipped, nil
+	case financev1.ScheduledPayment_PAID:
+		return finance.ScheduledPaymentPaid, nil
 	default:
 		return "", status.Error(codes.InvalidArgument, "invalid scheduled payment status")
 	}
@@ -424,6 +429,8 @@ func mapDomainPaymentStatusToProto(st finance.ScheduledPaymentStatus) financev1.
 		return financev1.ScheduledPayment_PROCESSING
 	case finance.ScheduledPaymentSkipped:
 		return financev1.ScheduledPayment_SKIPPED
+	case finance.ScheduledPaymentPaid:
+		return financev1.ScheduledPayment_PAID
 	default:
 		return financev1.ScheduledPayment_STATUS_UNSPECIFIED
 	}

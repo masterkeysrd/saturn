@@ -2,7 +2,6 @@ package financeapp
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -57,8 +56,6 @@ func (c *Coordinator) IngestEmail(ctx context.Context, spaceID string, integrati
 		return nil, fmt.Errorf("signal classification unknown")
 	}
 
-	metaBytes, _ := json.Marshal(state.Metadata)
-
 	docType := finance.ParseInboxItemDocType(state.Classification)
 
 	rawPayload := ""
@@ -66,17 +63,18 @@ func (c *Coordinator) IngestEmail(ctx context.Context, spaceID string, integrati
 		rawPayload = state.Request.TextContent
 	}
 
-	staged, err := c.financeService.StageInboxItem(ctx, spaceID, &finance.StageInboxItem{
+	staged, err := c.financeService.StageInboxItem(ctx, finance.SpaceID(spaceID), &finance.StageInboxItem{
 		IntegrationID:   integrationID,
 		DocType:         docType,
 		Vendor:          state.Vendor,
 		Amount:          state.Amount,
 		Currency:        state.Currency,
+		AccountID:       state.AccountID,
 		CardLastFour:    state.CardLastFour,
 		SuggestedBudget: state.SuggestedBudget,
 		Date:            state.Date,
 		RawPayload:      rawPayload,
-		MetadataJSON:    string(metaBytes),
+		Metadata:        state.Metadata,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("stage inbox item: %w", err)
@@ -91,7 +89,7 @@ func (c *Coordinator) DiscardInboxItem(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	return c.financeService.DiscardInboxItem(ctx, string(rctx.SpaceID), id)
+	return c.financeService.DiscardInboxItem(ctx, rctx.SpaceID, id)
 }
 
 // GetTransactionSuggestions analyzes raw signal payloads and returns real-time form prefill suggestions.
@@ -153,14 +151,14 @@ func (c *Coordinator) UpdateInboxItem(ctx context.Context, item *finance.InboxIt
 	if err != nil {
 		return nil, err
 	}
-	return c.financeService.UpdateInboxItem(ctx, string(rctx.SpaceID), item)
+	return c.financeService.UpdateInboxItem(ctx, rctx.SpaceID, item)
 }
 
-// ApproveInboxItem commits a staged inbox item to the main transaction ledger.
-func (c *Coordinator) ApproveInboxItem(ctx context.Context, id string) error {
+// ApproveInboxItem commits a staged inbox item to the main transaction ledger, returning the updated item.
+func (c *Coordinator) ApproveInboxItem(ctx context.Context, id string) (*finance.InboxItem, error) {
 	rctx, err := c.resolveContext(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return c.financeService.ApproveInboxItem(ctx, string(rctx.SpaceID), id)
+	return c.financeService.ApproveInboxItem(ctx, rctx.SpaceID, id)
 }

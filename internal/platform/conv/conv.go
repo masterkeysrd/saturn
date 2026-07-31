@@ -6,9 +6,9 @@ func String[T ~string](v T) string {
 }
 
 // StringPtr converts a pointer to a string-ish type to a pointer to a standard string.
-// If the input pointer is nil, nil is returned.
+// If the input pointer is nil or points to an empty string, nil is returned.
 func StringPtr[T ~string](p *T) *string {
-	if p == nil {
+	if p == nil || string(*p) == "" {
 		return nil
 	}
 	s := string(*p)
