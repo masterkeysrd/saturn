@@ -29,5 +29,9 @@ plugins:
     out: apis
     opt:
       - paths=source_relative
+  - local: ./bin/protoc-gen-go-sdk
+    out: apis
+    opt:
+      - paths=source_relative
 
 
