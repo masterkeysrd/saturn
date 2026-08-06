@@ -366,12 +366,9 @@ func (c *Coordinator) pipelineResolveNode(ctx context.Context, state *IngestionS
 		}
 	}
 
-	resAccountID := accountID
-	resBudgetID := budgetID
-
 	return graph.Update[*IngestionState](func(s *IngestionState) *IngestionState {
-		s.AccountID = resAccountID
-		s.BudgetID = resBudgetID
+		s.AccountID = accountID
+		s.BudgetID = budgetID
 		return s
 	}), nil
 }
