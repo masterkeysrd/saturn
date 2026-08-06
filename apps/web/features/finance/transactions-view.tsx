@@ -735,7 +735,8 @@ export function TransactionsView() {
                               </DropdownMenuItem>
                               {t.type !== "BALANCE_ADJUSTMENT" &&
                                 t.type !== "TYPE_UNSPECIFIED" &&
-                                t.sourceType !==
+                                (t.metadata?.source_type ??
+                                  t.metadata?.sourceType) !==
                                   "SYSTEM_BALANCE_ADJUSTMENT" && (
                                   <DropdownMenuItem
                                     onClick={() => handleEditTrigger(t)}

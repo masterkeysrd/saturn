@@ -136,12 +136,8 @@ export function InboxItemReviewPanel({
     suggested_borrowing_id?: string
     transaction_type?: string
   } = {}
-  try {
-    if (selectedItem.metadataJson) {
-      meta = JSON.parse(selectedItem.metadataJson)
-    }
-  } catch {
-    // Ignore JSON parse errors
+  if (selectedItem.metadata) {
+    meta = selectedItem.metadata as typeof meta
   }
 
   // Calculate candidate match for existing transactions
@@ -286,12 +282,8 @@ export function InboxItemReviewPanel({
       transaction_type?: string
       potential_duplicate_id?: string
     } = {}
-    try {
-      if (selectedItem.metadataJson) {
-        itemMeta = JSON.parse(selectedItem.metadataJson)
-      }
-    } catch {
-      // Ignore JSON parse errors
+    if (selectedItem.metadata) {
+      itemMeta = selectedItem.metadata as typeof itemMeta
     }
 
     const isSystemDoc =
@@ -1497,9 +1489,13 @@ export function InboxItemReviewPanel({
                                     "INITIAL_RECEIPT"
                                   }
                                   onValueChange={(val) =>
-                                    setValue("borrowingLinkType", val as any, {
-                                      shouldValidate: true,
-                                    })
+                                    setValue(
+                                      "borrowingLinkType",
+                                      val as InboxReviewFormValues["borrowingLinkType"],
+                                      {
+                                        shouldValidate: true,
+                                      }
+                                    )
                                   }
                                   className="grid grid-cols-1 gap-1.5 sm:grid-cols-3"
                                 >

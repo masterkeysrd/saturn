@@ -15,6 +15,7 @@ import {
   useListBudgetsQuery,
   useListTransactionsQuery,
   type InboxItem,
+  type BorrowingLinkType,
 } from "@/gen/saturn/finance/v1/finance"
 import { useActiveSpaceContext } from "@/features/space/use-space"
 import { FinancePageLayout } from "./components/finance-page-layout"
@@ -234,11 +235,11 @@ export function InboxView() {
 
     try {
       // 1. Save refined draft fields via UpdateInboxItem
-      const metadataObj: Record<string, unknown> = {}
-      if (txnType) metadataObj["transaction_type"] = txnType
-      if (destAccId) metadataObj["destination_account_id"] = destAccId
-      if (transferLeg) metadataObj["transfer_leg"] = transferLeg
-      metadataObj["overwrite_linked_transaction"] = overwriteLinkedTx
+      const metadataObj: Record<string, string> = {}
+      if (txnType) metadataObj["transaction_type"] = String(txnType)
+      if (destAccId) metadataObj["destination_account_id"] = String(destAccId)
+      if (transferLeg) metadataObj["transfer_leg"] = String(transferLeg)
+      metadataObj["overwrite_linked_transaction"] = String(overwriteLinkedTx)
 
       await updateInboxMutation.mutateAsync({
         id,
@@ -262,10 +263,10 @@ export function InboxView() {
             transactionId: txnId || "",
             borrowingId: values.borrowingId || "",
             borrowingLinkType: values.borrowingLinkType
-              ? (`BORROWING_LINK_TYPE_${values.borrowingLinkType}` as any)
+              ? (`BORROWING_LINK_TYPE_${values.borrowingLinkType}` as BorrowingLinkType)
               : undefined,
             rawPayload: tx.rawPayload,
-            metadataJson: JSON.stringify(metadataObj),
+            metadata: metadataObj,
           },
         },
       })
@@ -460,13 +461,9 @@ export function InboxView() {
                       undefined,
                       { minimumFractionDigits: 2 }
                     )
-                    let meta: { duplicate_warning?: boolean } = {}
-                    try {
-                      if (tx.metadataJson) {
-                        meta = JSON.parse(tx.metadataJson)
-                      }
-                    } catch {
-                      // Ignore JSON parse errors
+                    const meta = {
+                      duplicate_warning:
+                        tx.metadata?.duplicate_warning === "true",
                     }
 
                     return (

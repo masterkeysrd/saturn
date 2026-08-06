@@ -754,7 +754,9 @@ export function RecurringView() {
                     <div className="flex flex-col">
                       {historyTransactions.map((txn) => {
                         const matchedExpense = expenses.find(
-                          (e) => e.id === txn.sourceId
+                          (e) =>
+                            e.id ===
+                            (txn.metadata?.source_id ?? txn.metadata?.sourceId)
                         )
                         const budget = budgets.find(
                           (b) => b.id === txn.budgetId

@@ -1,4 +1,4 @@
-import { useQueryClient, useMutation } from "@tanstack/react-query"
+import { useQueryClient, useMutation, type QueryKey } from "@tanstack/react-query"
 
 export interface PatchOptions<TData, TVariables> {
   entityKey: string
@@ -15,7 +15,7 @@ export interface PatchOptions<TData, TVariables> {
 export interface PerformPatchParams<TData> {
   id: string
   payload: Partial<TData>
-  dirtyFields: Record<string, any>
+  dirtyFields: Record<string, boolean | undefined | unknown>
   expectedVersion?: number
 }
 
@@ -30,7 +30,7 @@ export function usePatch<
     TData,
     Error,
     PerformPatchParams<TData>,
-    { previousItem?: TData; previousLists?: [unknown, unknown][] }
+    { previousItem?: TData; previousLists?: [QueryKey, unknown][] }
   >({
     mutationFn: async ({ id, payload, dirtyFields, expectedVersion }) => {
       const dirtyPaths = Object.keys(dirtyFields).filter((key) =>
@@ -50,7 +50,7 @@ export function usePatch<
       // 2. Snapshot current state for potential rollback
       const singleKey = [entityKey, id]
       const previousItem = queryClient.getQueryData<TData>(singleKey)
-      const previousLists = queryClient.getQueriesData<any>({
+      const previousLists = queryClient.getQueriesData<unknown>({
         queryKey: [entityKey],
       })
 
@@ -63,15 +63,21 @@ export function usePatch<
       }
 
       // 4. Optimistically update list & paginated caches
-      queryClient.setQueriesData<any>(
+      queryClient.setQueriesData<unknown>(
         { queryKey: [entityKey] },
-        (oldData: any) => {
+        (oldData: unknown) => {
           if (!oldData) return oldData
 
-          if (Array.isArray(oldData.items)) {
+          if (
+            typeof oldData === "object" &&
+            oldData !== null &&
+            "items" in oldData &&
+            Array.isArray((oldData as { items: unknown[] }).items)
+          ) {
+            const container = oldData as { items: TData[] }
             return {
-              ...oldData,
-              items: oldData.items.map((item: TData) =>
+              ...container,
+              items: container.items.map((item: TData) =>
                 item.id === id ? { ...item, ...payload } : item
               ),
             }
@@ -100,8 +106,8 @@ export function usePatch<
 
       // Rollback list caches
       if (context?.previousLists) {
-        context.previousLists.forEach(([key, data]: [any, any]) => {
-          queryClient.setQueryData(key as any, data)
+        context.previousLists.forEach(([key, data]) => {
+          queryClient.setQueryData(key, data)
         })
       }
 

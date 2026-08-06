@@ -111,7 +111,8 @@ export function AccountHistorySheet({
                 const isAdjustment =
                   txn.type === "BALANCE_ADJUSTMENT" ||
                   txn.type === "TYPE_UNSPECIFIED" ||
-                  txn.sourceType === "SYSTEM_BALANCE_ADJUSTMENT"
+                  (txn.metadata?.source_type ?? txn.metadata?.sourceType) ===
+                    "SYSTEM_BALANCE_ADJUSTMENT"
 
                 return (
                   <div
