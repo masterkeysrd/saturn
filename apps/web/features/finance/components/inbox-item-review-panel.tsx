@@ -252,29 +252,6 @@ export function InboxItemReviewPanel({
     )
   }, [selectedItem.rawPayload])
 
-  const systemVerificationInfo = useMemo(() => {
-    const textLower = decodedRawText.toLowerCase()
-    const isVerification =
-      textLower.includes("forwarding confirmation") ||
-      textLower.includes("verification code") ||
-      textLower.includes("auto-verification") ||
-      (selectedItem.vendorName || "").toLowerCase().includes("google")
-
-    if (!isVerification) return null
-
-    const codeMatch = decodedRawText.match(
-      /(?:confirmation code|code):\s*([0-9a-zA-Z]+)/i
-    )
-    const autoVerified = decodedRawText.includes(
-      "Auto-Verification: Successfully fetched"
-    )
-
-    return {
-      code: codeMatch ? codeMatch[1] : null,
-      autoVerified,
-    }
-  }, [decodedRawText, selectedItem.vendorName])
-
   // Synchronize form when selectedItem changes
   useEffect(() => {
     let itemMeta: {
@@ -286,18 +263,9 @@ export function InboxItemReviewPanel({
       itemMeta = selectedItem.metadata as typeof itemMeta
     }
 
-    const isSystemDoc =
-      systemVerificationInfo !== null ||
-      (selectedItem.docType || "").toLowerCase() === "system_verification" ||
-      (selectedItem.vendorName || "").toLowerCase().includes("forwarding")
-
-    let docTypeVal = (
+    const docTypeVal = (
       selectedItem.docType || "RECEIPT"
     ).toUpperCase() as InboxReviewFormValues["docType"]
-
-    if (isSystemDoc) {
-      docTypeVal = "SYSTEM_VERIFICATION"
-    }
 
     const txnTypeVal = (
       itemMeta.transaction_type || "EXPENSE"
@@ -328,13 +296,7 @@ export function InboxItemReviewPanel({
       scheduledPaymentId: initialScheduledPaymentId,
       borrowingId: initialBorrowingId,
     })
-  }, [
-    selectedItem,
-    suggestedBill,
-    suggestedBorrowing,
-    systemVerificationInfo,
-    reset,
-  ])
+  }, [selectedItem, suggestedBill, suggestedBorrowing, reset])
 
   const currentScheduledPaymentId = useWatch({
     control,
@@ -391,10 +353,23 @@ export function InboxItemReviewPanel({
   const selectedTxId = useWatch({ control, name: "selectedTxId" })
   const overwriteLinkedTx = useWatch({ control, name: "overwriteLinkedTx" })
   const currentDocType = useWatch({ control, name: "docType" })
-  const isVerificationItem =
-    currentDocType === "SYSTEM_VERIFICATION" ||
-    systemVerificationInfo !== null ||
-    (selectedItem.docType || "").toLowerCase() === "system_verification"
+  const isVerificationItem = currentDocType === "SYSTEM_VERIFICATION"
+
+  const systemVerificationInfo = useMemo(() => {
+    if (!isVerificationItem) return null
+
+    const codeMatch = decodedRawText.match(
+      /(?:confirmation code|code):\s*([0-9a-zA-Z]+)/i
+    )
+    const autoVerified = decodedRawText.includes(
+      "Auto-Verification: Successfully fetched"
+    )
+
+    return {
+      code: codeMatch ? codeMatch[1] : null,
+      autoVerified,
+    }
+  }, [decodedRawText, isVerificationItem])
   const currentTxnType = useWatch({ control, name: "transactionType" })
   const transferLeg = useWatch({ control, name: "transferLeg" })
   const scheduledPaymentIdVal = useWatch({
@@ -629,6 +604,16 @@ export function InboxItemReviewPanel({
         )}
 
         <Separator className="bg-border/20" />
+
+        {/* Document Classification Selector - Always visible */}
+        <div className="grid grid-cols-1 gap-x-6 gap-y-3.5 md:grid-cols-2">
+          <FormSelect
+            control={control}
+            name="docType"
+            label="Document Classification"
+            items={DOC_TYPE_ITEMS}
+          />
+        </div>
 
         {/* Form Fields - Hidden for System Verification Emails */}
         {!isVerificationItem && (
@@ -954,13 +939,6 @@ export function InboxItemReviewPanel({
                 )
               })()}
             </div>
-
-            <FormSelect
-              control={control}
-              name="docType"
-              label="Document Classification"
-              items={DOC_TYPE_ITEMS}
-            />
 
             <FormSelect
               control={control}

@@ -1,4 +1,8 @@
-import { useQueryClient, useMutation, type QueryKey } from "@tanstack/react-query"
+import {
+  useQueryClient,
+  useMutation,
+  type QueryKey,
+} from "@tanstack/react-query"
 
 export interface PatchOptions<TData, TVariables> {
   entityKey: string
