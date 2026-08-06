@@ -419,22 +419,12 @@ export function InboxItemReviewPanel({
 
   const isMatchedAlreadyScheduled = useMemo(() => {
     if (!matchedTransaction) return false
-    return !!(
-      matchedTransaction.sourceType === "scheduled_payment" ||
-      (matchedTransaction.sourceType &&
-        matchedTransaction.sourceType.startsWith("scheduled_payment"))
-    )
+    return Boolean(matchedTransaction.metadata?.scheduled_payment_id)
   }, [matchedTransaction])
 
   const isMatchedAlreadyBorrowing = useMemo(() => {
     if (!matchedTransaction) return false
-    return !!(
-      matchedTransaction.sourceType === "borrowing" ||
-      matchedTransaction.sourceType === "borrowing_repayment" ||
-      matchedTransaction.sourceType === "borrowing_additional" ||
-      (matchedTransaction.sourceType &&
-        matchedTransaction.sourceType.startsWith("borrowing"))
-    )
+    return Boolean(matchedTransaction.metadata?.borrowing_id)
   }, [matchedTransaction])
 
   const showScheduledPaymentSection = !isLinking || !isMatchedAlreadyScheduled

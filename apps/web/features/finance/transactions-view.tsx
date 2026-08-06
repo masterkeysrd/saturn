@@ -567,34 +567,37 @@ export function TransactionsView() {
                                 </span>
                               )}
                             </span>
-                            {t.sourceType === "recurrent_expense" && (
+                            {Boolean(t.metadata?.recurring_expense_id) && (
                               <span className="inline-flex items-center gap-1 rounded bg-indigo-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-indigo-500 uppercase select-none">
                                 <Repeat className="h-2.5 w-2.5" />
                                 Recurring
                               </span>
                             )}
-                            {t.sourceType === "borrowing" &&
+                            {Boolean(t.metadata?.borrowing_id) &&
+                              t.metadata?.borrowing_role ===
+                                "INITIAL_FUNDING" &&
                               t.type === "EXPENSE" && (
                                 <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-amber-500 uppercase select-none">
                                   <ArrowUpRight className="h-2.5 w-2.5" />
                                   Lend
                                 </span>
                               )}
-                            {t.sourceType === "borrowing" &&
+                            {Boolean(t.metadata?.borrowing_id) &&
+                              t.metadata?.borrowing_role ===
+                                "INITIAL_FUNDING" &&
                               t.type === "INCOME" && (
                                 <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-emerald-500 uppercase select-none">
                                   <ArrowDownLeft className="h-2.5 w-2.5" />
                                   Borrow
                                 </span>
                               )}
-                            {t.sourceType === "borrowing_repayment" && (
+                            {t.metadata?.borrowing_role === "REPAYMENT" && (
                               <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-blue-500 uppercase select-none">
                                 <Coins className="h-2.5 w-2.5" />
                                 Repayment
                               </span>
                             )}
-                            {(t.sourceType === "SYSTEM_BALANCE_ADJUSTMENT" ||
-                              t.type === "BALANCE_ADJUSTMENT") && (
+                            {t.type === "BALANCE_ADJUSTMENT" && (
                               <span className="inline-flex items-center gap-1 rounded bg-teal-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-teal-400 uppercase select-none">
                                 <Scale className="h-2.5 w-2.5" />
                                 Adjustment

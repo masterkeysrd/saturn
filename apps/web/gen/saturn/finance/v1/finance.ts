@@ -176,7 +176,7 @@ export type ScheduledPayment_SourceType =
  * Instance execution status.
  */
 export type ScheduledPayment_Status =
-  "STATUS_UNSPECIFIED" | "PENDING" | "PROCESSING" | "SKIPPED"
+  "STATUS_UNSPECIFIED" | "PENDING" | "PROCESSING" | "SKIPPED" | "PAID"
 
 /**
  * BorrowingDirection defines the type/direction of personal debt agreements.
@@ -800,23 +800,10 @@ export interface Transaction {
    */
   effectiveDate: string
   /**
-   * Optional. Integration source type (e.g. "plaid").
-   */
-  sourceType?: string
-  /**
-   * Optional. Integration source record ID.
-   */
-  sourceId?: string
-  /**
    * Optional. Associated account ID.
    * Values are of the form `acc_[a-zA-Z0-9]+`.
    */
   accountId?: string
-  /**
-   * Optional. Associated transfer transaction ID.
-   * Values are of the form `txn_[a-zA-Z0-9]+`.
-   */
-  transferId?: string
   /**
    * Output only. Hydrated minimal account info. Available only on FULL view.
    */
@@ -825,6 +812,10 @@ export interface Transaction {
    * Output only. Hydrated minimal budget info. Available only on FULL view.
    */
   budget?: Transaction_BudgetInfo
+  /**
+   * Optional. Context metadata key-value pairs.
+   */
+  metadata: Record<string, string>
 }
 
 /**
@@ -940,6 +931,22 @@ export interface DeleteTransactionRequest {
 
 /**
  * The request for
+ * [GetTransaction][saturn.finance.v1.Finance.GetTransaction].
+ */
+export interface GetTransactionRequest {
+  /**
+   * Required. Unique identifier of the transaction record to retrieve.
+   * Values are of the form `txn_[a-zA-Z0-9]+`.
+   */
+  id: string
+  /**
+   * Optional. Scoped budget representation view type.
+   */
+  view?: Transaction_View
+}
+
+/**
+ * The request for
  * [ListTransactions][saturn.finance.v1.Finance.ListTransactions].
  */
 export interface ListTransactionsRequest {
@@ -956,14 +963,6 @@ export interface ListTransactionsRequest {
    * Optional. Target transaction flow type filter.
    */
   type: Transaction_Type
-  /**
-   * Optional. Integration source type.
-   */
-  sourceType?: string
-  /**
-   * Optional. Integration source record ID.
-   */
-  sourceId?: string
   /**
    * Optional. Target account identifier.
    * Values are of the form `acc_[a-zA-Z0-9]+`.
@@ -985,6 +984,21 @@ export interface ListTransactionsRequest {
    * Optional. Sort order string.
    */
   sort?: string
+  /**
+   * Optional. Target transfer ID filter.
+   * Values are of the form `trn_[a-zA-Z0-9]+`.
+   */
+  transferId?: string
+  /**
+   * Optional. Target scheduled payment ID filter.
+   * Values are of the form `sch_[a-zA-Z0-9]+`.
+   */
+  scheduledPaymentId?: string
+  /**
+   * Optional. Target borrowing ID filter.
+   * Values are of the form `bor_[a-zA-Z0-9]+`.
+   */
+  borrowingId?: string
 }
 
 /**
@@ -1514,6 +1528,18 @@ export interface ListScheduledPaymentsResponse {
    * Next page keyset token. Empty if no more pages are available.
    */
   nextPageToken: string
+}
+
+/**
+ * The request for
+ * [GetScheduledPayment][saturn.finance.v1.Finance.GetScheduledPayment].
+ */
+export interface GetScheduledPaymentRequest {
+  /**
+   * Required. Unique identifier of the scheduled payment to retrieve.
+   * Values are of the form `sch_[a-zA-Z0-9]+`.
+   */
+  id: string
 }
 
 /**
@@ -2329,9 +2355,9 @@ export interface InboxItem {
    */
   rawPayload?: string
   /**
-   * Optional. Additional extracted metadata payload (JSON format).
+   * Optional. Additional extracted metadata payload key-value pairs.
    */
-  metadataJson: string
+  metadata: Record<string, string>
   /**
    * Output only. Ingestion stage timestamp.
    */
@@ -2900,6 +2926,33 @@ export function useListTransactionsQuery(
 }
 
 /**
+ * Retrieves details of a specific logged transaction record by ID.
+ */
+export async function getTransaction(
+  id: string,
+  req: GetTransactionRequest
+): Promise<Transaction> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
+  return request<Transaction>({
+    method: "GET",
+    url: `/api/v1/finance/transactions/${id}`,
+    params: params,
+  })
+}
+
+export function useGetTransactionQuery(
+  req: GetTransactionRequest,
+  options?: Omit<UseQueryOptions<Transaction, Error>, "queryKey" | "queryFn">
+) {
+  return useQuery<Transaction, Error>({
+    queryKey: [`/api/v1/finance/transactions/${req.id}`, req],
+    queryFn: () => getTransaction(req.id, req),
+    ...options,
+  })
+}
+
+/**
  * Lists historical lifecycle events tracking mutations and updates applied to a transaction.
  */
 export async function listTransactionEvents(
@@ -3093,6 +3146,33 @@ export function useListScheduledPaymentsQuery(
   return useQuery<ListScheduledPaymentsResponse, Error>({
     queryKey: ["/api/v1/finance/scheduled-payments", req],
     queryFn: () => listScheduledPayments(req),
+    ...options,
+  })
+}
+
+/**
+ * Retrieves details of a specific scheduled payment by ID.
+ */
+export async function getScheduledPayment(
+  id: string,
+  _req: GetScheduledPaymentRequest
+): Promise<ScheduledPayment> {
+  return request<ScheduledPayment>({
+    method: "GET",
+    url: `/api/v1/finance/scheduled-payments/${id}`,
+  })
+}
+
+export function useGetScheduledPaymentQuery(
+  req: GetScheduledPaymentRequest,
+  options?: Omit<
+    UseQueryOptions<ScheduledPayment, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ScheduledPayment, Error>({
+    queryKey: [`/api/v1/finance/scheduled-payments/${req.id}`, req],
+    queryFn: () => getScheduledPayment(req.id, req),
     ...options,
   })
 }
@@ -3720,13 +3800,13 @@ export function useUpdateInboxItemMutation(
 }
 
 /**
- * Approves and promotes an ingested inbox item.
+ * Approves a staged inbox item and commits it to the ledger, returning the updated item with links.
  */
 export async function approveInboxItem(
   id: string,
   req: ApproveInboxItemRequest
-): Promise<Record<string, never>> {
-  return request<Record<string, never>>({
+): Promise<InboxItem> {
+  return request<InboxItem>({
     method: "POST",
     url: `/api/v1/finance/inbox-items/${id}:approve`,
     data: req,
@@ -3735,13 +3815,13 @@ export async function approveInboxItem(
 
 export function useApproveInboxItemMutation(
   options?: UseMutationOptions<
-    Record<string, never>,
+    InboxItem,
     Error,
     { id: string; req: ApproveInboxItemRequest }
   >
 ) {
   return useMutation<
-    Record<string, never>,
+    InboxItem,
     Error,
     { id: string; req: ApproveInboxItemRequest }
   >({

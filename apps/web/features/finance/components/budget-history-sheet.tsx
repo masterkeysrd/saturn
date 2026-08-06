@@ -50,8 +50,6 @@ export function BudgetHistorySheet({
       type: "TYPE_UNSPECIFIED",
       pageSize: 100,
       pageToken: "",
-      sourceType: "",
-      sourceId: "",
     },
     { enabled: open && !!budget?.id && !!spaceId }
   )

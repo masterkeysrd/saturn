@@ -190,13 +190,13 @@ export function RecurringView() {
       type: "TYPE_UNSPECIFIED",
       pageSize: HISTORY_PAGE_SIZE,
       pageToken: "",
-      sourceType: "recurrent_expense",
-      sourceId: "",
     },
     { enabled: !!spaceId }
   )
 
-  const historyTransactions = historyData?.transactions || []
+  const historyTransactions = (historyData?.transactions || []).filter((t) =>
+    Boolean(t.metadata?.recurring_expense_id)
+  )
 
   const handleDeleteExpense = async (id: string) => {
     if (

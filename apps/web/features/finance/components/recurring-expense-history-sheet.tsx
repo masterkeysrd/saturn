@@ -38,15 +38,15 @@ export function RecurringExpenseHistorySheet({
     {
       budgetId: "",
       type: "TYPE_UNSPECIFIED",
-      pageSize: 50,
+      pageSize: 100,
       pageToken: "",
-      sourceType: "recurrent_expense",
-      sourceId: expense?.id || "",
     },
     { enabled: open && !!expense?.id && !!spaceId }
   )
 
-  const transactions = data?.transactions || []
+  const transactions = (data?.transactions || []).filter(
+    (t) => t.metadata?.recurring_expense_id === expense?.id
+  )
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

@@ -132,7 +132,7 @@ export function ConfirmPaymentSheet({
 
   // Filter unlinked expense transactions
   const unlinkedTransactions = transactions.filter(
-    (t) => !t.sourceType && t.type === "EXPENSE"
+    (t) => !t.metadata?.scheduled_payment_id && t.type === "EXPENSE"
   )
 
   // Reconciliation Queue style multi-field search filter

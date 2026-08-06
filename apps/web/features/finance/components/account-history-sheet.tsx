@@ -51,8 +51,6 @@ export function AccountHistorySheet({
       type: "TYPE_UNSPECIFIED",
       pageSize: 100,
       pageToken: "",
-      sourceType: "",
-      sourceId: "",
       accountId: account?.id || "",
     },
     { enabled: open && !!account?.id && !!spaceId }

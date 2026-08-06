@@ -163,8 +163,6 @@ export function InboxView() {
       type: "TYPE_UNSPECIFIED",
       pageSize: 100,
       pageToken: "",
-      sourceType: "",
-      sourceId: "",
     },
     { enabled: !!spaceId }
   )
