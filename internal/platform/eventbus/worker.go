@@ -53,11 +53,11 @@ func (e *Engine) pollerLoop(ctx context.Context) {
 	}
 }
 
-// RecoverStaleDeliveries resets deliveries stuck in 'processing' state for longer than 30 minutes back to 'pending'.
+// RecoverStaleDeliveries resets deliveries stuck in 'processing' state for longer than 5 minutes back to 'pending'.
 func (e *Engine) RecoverStaleDeliveries(ctx context.Context) error {
 	query := `UPDATE platform.message_deliveries 
 		SET status = 'pending', schedule_time = NOW(), update_time = NOW() 
-		WHERE status = 'processing' AND update_time < NOW() - INTERVAL '30 minutes'`
+		WHERE status = 'processing' AND update_time < NOW() - INTERVAL '5 minutes'`
 	_, err := e.db.ExecContext(ctx, query)
 	if err != nil {
 		return fmt.Errorf("recover stale deliveries: %w", err)
@@ -142,7 +142,7 @@ func (e *Engine) claimAndExecuteNextDelivery(ctx context.Context) (bool, error) 
 		m.topic, m.headers AS headers_json, m.payload
 		FROM platform.message_deliveries d
 		JOIN platform.messages m ON d.message_id = m.id
-		WHERE d.schedule_time <= NOW() AND d.status IN ('pending', 'failed')
+		WHERE d.schedule_time <= NOW() AND d.status = 'pending'
 		ORDER BY d.schedule_time ASC
 		LIMIT 1
 		FOR UPDATE OF d SKIP LOCKED`
@@ -195,7 +195,7 @@ func (e *Engine) executeDelivery(ctx context.Context, record DeliveryRecord) {
 
 	if handler == nil {
 		errMsg := fmt.Sprintf("no handler registered for subscriber %q on topic %q", record.SubscriberID, record.Topic)
-		_, _ = e.db.ExecContext(ctx, `UPDATE platform.message_deliveries SET status = 'failed', last_error = $1, update_time = NOW() WHERE id = $2`, errMsg, record.ID)
+		_, _ = e.db.ExecContext(context.Background(), `UPDATE platform.message_deliveries SET status = 'failed', last_error = $1, update_time = NOW() WHERE id = $2`, errMsg, record.ID)
 		return
 	}
 
@@ -226,12 +226,12 @@ func (e *Engine) executeDelivery(ctx context.Context, record DeliveryRecord) {
 		backoffMinutes := 1 << (nextAttempt - 1)
 		scheduleTime := time.Now().Add(time.Duration(backoffMinutes) * time.Minute).UTC()
 
-		_, _ = e.db.ExecContext(ctx, `UPDATE platform.message_deliveries 
+		_, _ = e.db.ExecContext(context.Background(), `UPDATE platform.message_deliveries 
 			SET status = $1, attempts = $2, schedule_time = $3, last_error = $4, update_time = NOW() 
 			WHERE id = $5`, status, nextAttempt, scheduleTime, execErr.Error(), record.ID)
 	} else {
 		// Mark completed
-		_, _ = e.db.ExecContext(ctx, `UPDATE platform.message_deliveries 
+		_, _ = e.db.ExecContext(context.Background(), `UPDATE platform.message_deliveries 
 			SET status = 'completed', update_time = NOW() WHERE id = $1`, record.ID)
 	}
 }
