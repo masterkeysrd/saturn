@@ -84,11 +84,15 @@ type SwaggerConfig struct {
 
 // DBConfig holds database connection settings.
 type DBConfig struct {
-	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
-	User     string `mapstructure:"user"`
-	Password string `mapstructure:"password"`
-	Name     string `mapstructure:"name"`
+	Host            string        `mapstructure:"host"`
+	Port            int           `mapstructure:"port"`
+	User            string        `mapstructure:"user"`
+	Password        string        `mapstructure:"password"`
+	Name            string        `mapstructure:"name"`
+	MaxOpenConns    int           `mapstructure:"max_open_conns"`
+	MaxIdleConns    int           `mapstructure:"max_idle_conns"`
+	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"`
+	ConnMaxIdleTime time.Duration `mapstructure:"conn_max_idle_time"`
 }
 
 // DSN returns the PostgreSQL data source name for connecting to the database.
@@ -147,6 +151,10 @@ func NewViper() *viper.Viper {
 	v.SetDefault("db.user", defaultDBUser)
 	v.SetDefault("db.password", defaultDBPassword)
 	v.SetDefault("db.name", defaultDBName)
+	v.SetDefault("db.max_open_conns", 25)
+	v.SetDefault("db.max_idle_conns", 10)
+	v.SetDefault("db.conn_max_lifetime", 15*time.Minute)
+	v.SetDefault("db.conn_max_idle_time", 5*time.Minute)
 
 	v.SetDefault("grpc.socket", defaultGRPCSocket)
 	v.SetDefault("gateway.addr", defaultGatewayAddr)
