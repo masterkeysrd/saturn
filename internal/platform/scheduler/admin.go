@@ -43,17 +43,17 @@ func (e *Engine) ListSchedules(ctx context.Context) ([]ScheduleInfo, error) {
 	return schedules, err
 }
 
-// ListJobs retrieves all queued jobs, optionally filtered by status.
+// ListJobs retrieves all queued jobs, optionally filtered by status, ordered with latest first.
 func (e *Engine) ListJobs(ctx context.Context, status string) ([]JobInfo, error) {
 	var jobs []JobInfo
 	var err error
 	if status != "" {
 		query := `SELECT id, schedule_id, job_type, payload::text as payload, run_at, status, attempts, max_attempts, last_error, create_time, update_time 
-			FROM platform.job WHERE status = $1 ORDER BY run_at ASC`
+			FROM platform.job WHERE status = $1 ORDER BY run_at DESC, id DESC`
 		err = e.db.SelectContext(ctx, &jobs, query, status)
 	} else {
 		query := `SELECT id, schedule_id, job_type, payload::text as payload, run_at, status, attempts, max_attempts, last_error, create_time, update_time 
-			FROM platform.job ORDER BY run_at ASC`
+			FROM platform.job ORDER BY run_at DESC, id DESC`
 		err = e.db.SelectContext(ctx, &jobs, query)
 	}
 	return jobs, err
