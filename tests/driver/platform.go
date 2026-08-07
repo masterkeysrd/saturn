@@ -27,18 +27,15 @@ func (p *PlatformDriver) EnsureIntegration(tb testing.TB, opts IntegrationOption
 	spaceID := p.driver.state.SpaceID
 	if spaceID == "" {
 		tb.Fatalf("EnsureIntegration called without active space context")
-		return p
 	}
 
 	kind := opts.Kind
 	if kind == "" {
 		tb.Fatalf("EnsureIntegration: Kind option is required")
-		return p
 	}
 	provider := opts.Provider
 	if provider == "" {
 		tb.Fatalf("EnsureIntegration: Provider option is required")
-		return p
 	}
 
 	integrationID, _ := id.Generate("itg_")
@@ -49,7 +46,6 @@ func (p *PlatformDriver) EnsureIntegration(tb testing.TB, opts IntegrationOption
 	`, integrationID, spaceID, kind, provider)
 	if err != nil {
 		tb.Fatalf("EnsureIntegration: failed to insert platform integration: %v", err)
-		return p
 	}
 
 	var resolvedID string
@@ -58,7 +54,6 @@ func (p *PlatformDriver) EnsureIntegration(tb testing.TB, opts IntegrationOption
 	`, spaceID, kind, provider)
 	if err != nil {
 		tb.Fatalf("EnsureIntegration: failed to query platform integration: %v", err)
-		return p
 	}
 
 	p.driver.state.LastIntegrationID = resolvedID

@@ -39,7 +39,6 @@ func (s *SpaceDriver) Ensure(tb testing.TB, spaceName string) *SpaceDriver {
 	})
 	if err != nil {
 		tb.Fatalf("CreateSpace SDK call failed: %v", err)
-		return s
 	}
 
 	s.driver.state.SpaceID = space.GetId()

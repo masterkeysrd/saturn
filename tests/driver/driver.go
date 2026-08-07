@@ -1,9 +1,6 @@
 package driver
 
 import (
-	"bytes"
-	"encoding/json"
-	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -104,51 +101,4 @@ func (d *Driver) ResetDB() *Driver {
 	}
 	d.state.ClearRegistries()
 	return d
-}
-
-// doRequest performs an HTTP request against the Saturn test server.
-func (d *Driver) doRequest(method, path string, payload any, target any, requireAuth bool) {
-	if d.t.Failed() {
-		return
-	}
-
-	var bodyReader io.Reader
-	if payload != nil {
-		data, err := json.Marshal(payload)
-		if err != nil {
-			d.t.Fatalf("Failed to marshal JSON payload for %s %s: %v", method, path, err)
-		}
-		bodyReader = bytes.NewReader(data)
-	}
-
-	url := d.env.ServerURL + path
-	req, err := http.NewRequest(method, url, bodyReader)
-	if err != nil {
-		d.t.Fatalf("Failed to construct HTTP request %s %s: %v", method, path, err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	if requireAuth && d.state.AccessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+d.state.AccessToken)
-	}
-	if requireAuth && d.state.SpaceID != "" {
-		req.Header.Set("Space-Id", d.state.SpaceID)
-	}
-
-	resp, err := d.httpClient.Do(req)
-	if err != nil {
-		d.t.Fatalf("HTTP request %s %s failed: %v", method, path, err)
-	}
-	defer resp.Body.Close()
-
-	respBody, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode >= 400 {
-		d.t.Fatalf("HTTP %s %s returned error status %d: %s", method, path, resp.StatusCode, string(respBody))
-	}
-
-	if target != nil && len(respBody) > 0 {
-		if err := json.Unmarshal(respBody, target); err != nil {
-			d.t.Fatalf("Failed to unmarshal response for %s %s: %v (raw body: %s)", method, path, err, string(respBody))
-		}
-	}
 }

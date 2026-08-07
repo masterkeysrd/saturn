@@ -115,18 +115,15 @@ func (f *FinanceDriver) CreateAccount(tb testing.TB, opts AccountOptions) *Finan
 	if opts.ExpectErr != "" {
 		if err == nil {
 			tb.Fatalf("CreateAccount succeeded, but expected error containing %q", opts.ExpectErr)
-			return f
 		}
 		if !strings.Contains(err.Error(), opts.ExpectErr) {
 			tb.Fatalf("CreateAccount error = %v, want error containing %q", err, opts.ExpectErr)
-			return f
 		}
 		return f
 	}
 
 	if err != nil {
 		tb.Fatalf("CreateAccount SDK call failed: %v", err)
-		return f
 	}
 
 	if acc.GetName() != opts.Name {
@@ -185,17 +182,14 @@ func (f *FinanceDriver) CreateBorrowing(tb testing.TB, opts BorrowingOptions) *F
 	if opts.ExpectErr != "" {
 		if err == nil {
 			tb.Fatalf("CreateBorrowing succeeded, but expected error containing %q", opts.ExpectErr)
-			return f
 		}
 		if !strings.Contains(err.Error(), opts.ExpectErr) {
 			tb.Fatalf("CreateBorrowing error = %v, want error containing %q", err, opts.ExpectErr)
-			return f
 		}
 		return f
 	}
 	if err != nil {
 		tb.Fatalf("CreateBorrowing SDK call failed: %v", err)
-		return f
 	}
 
 	borInfo := &BorrowingInfo{
@@ -227,12 +221,10 @@ func (f *FinanceDriver) CreateRepayment(tb testing.TB, opts RepaymentOptions) *F
 	bor, ok := f.driver.state.Borrowings[opts.Borrowing]
 	if !ok {
 		tb.Fatalf("borrowing named %q not found in state registry", opts.Borrowing)
-		return f
 	}
 	acc, ok := f.driver.state.Accounts[opts.Account]
 	if !ok {
 		tb.Fatalf("account named %q not found in state registry", opts.Account)
-		return f
 	}
 
 	client := f.getClient()
@@ -246,7 +238,6 @@ func (f *FinanceDriver) CreateRepayment(tb testing.TB, opts RepaymentOptions) *F
 	})
 	if err != nil {
 		tb.Fatalf("CreateBorrowingRepayment SDK call failed: %v", err)
-		return f
 	}
 
 	repKey := opts.Borrowing + "_repayment"
@@ -271,7 +262,6 @@ func (f *FinanceDriver) DeleteRepayment(tb testing.TB, repaymentKey string) *Fin
 	rep, ok := f.driver.state.Repayments[repaymentKey]
 	if !ok {
 		tb.Fatalf("repayment key %q not found in state registry", repaymentKey)
-		return f
 	}
 
 	client := f.getClient()
@@ -280,7 +270,6 @@ func (f *FinanceDriver) DeleteRepayment(tb testing.TB, repaymentKey string) *Fin
 	})
 	if err != nil {
 		tb.Fatalf("DeleteTransaction SDK call failed for repayment: %v", err)
-		return f
 	}
 
 	delete(f.driver.state.Repayments, repaymentKey)
@@ -297,14 +286,12 @@ func (f *FinanceDriver) AssertAccountBalance(tb testing.TB, accountName string, 
 	accInfo, ok := f.driver.state.Accounts[accountName]
 	if !ok {
 		tb.Fatalf("account named %q not found in state registry", accountName)
-		return f
 	}
 
 	client := f.getClient()
 	resp, err := client.ListAccounts(tb.Context(), &financev1.ListAccountsRequest{})
 	if err != nil {
 		tb.Fatalf("ListAccounts SDK call failed: %v", err)
-		return f
 	}
 
 	var foundAcc *financev1.Account
@@ -317,7 +304,6 @@ func (f *FinanceDriver) AssertAccountBalance(tb testing.TB, accountName string, 
 
 	if foundAcc == nil {
 		tb.Fatalf("account %q with ID %s not found in ListAccounts response", accountName, accInfo.ID)
-		return f
 	}
 
 	if foundAcc.GetCurrentBalance() != expectedBalance {
@@ -335,7 +321,6 @@ func (f *FinanceDriver) AssertAccount(tb testing.TB, accountName string, fn func
 	accInfo, ok := f.driver.state.Accounts[accountName]
 	if !ok {
 		tb.Fatalf("AssertAccount: account named %q not found in state registry", accountName)
-		return f
 	}
 	client := f.getClient()
 	resp, err := client.GetAccount(tb.Context(), &financev1.GetAccountRequest{
@@ -343,7 +328,6 @@ func (f *FinanceDriver) AssertAccount(tb testing.TB, accountName string, fn func
 	})
 	if err != nil {
 		tb.Fatalf("AssertAccount: GetAccount API call failed for %q (ID %s): %v", accountName, accInfo.ID, err)
-		return f
 	}
 	fn(resp)
 	return f
@@ -359,14 +343,12 @@ func (f *FinanceDriver) AssertBorrowingBalance(tb testing.TB, borrowingName stri
 	borInfo, ok := f.driver.state.Borrowings[borrowingName]
 	if !ok {
 		tb.Fatalf("borrowing named %q not found in state registry", borrowingName)
-		return f
 	}
 
 	client := f.getClient()
 	resp, err := client.ListBorrowings(tb.Context(), &financev1.ListBorrowingsRequest{})
 	if err != nil {
 		tb.Fatalf("ListBorrowings SDK call failed: %v", err)
-		return f
 	}
 
 	var foundBor *financev1.Borrowing
@@ -379,7 +361,6 @@ func (f *FinanceDriver) AssertBorrowingBalance(tb testing.TB, borrowingName stri
 
 	if foundBor == nil {
 		tb.Fatalf("borrowing %q with ID %s not found in ListBorrowings response", borrowingName, borInfo.ID)
-		return f
 	}
 
 	if foundBor.GetRemainingAmount() != expectedRemaining {
@@ -398,14 +379,12 @@ func (f *FinanceDriver) AssertRepaymentTransaction(tb testing.TB, repaymentKey s
 	rep, ok := f.driver.state.Repayments[repaymentKey]
 	if !ok {
 		tb.Fatalf("repayment key %q not found in state registry", repaymentKey)
-		return f
 	}
 
 	client := f.getClient()
 	resp, err := client.ListTransactions(tb.Context(), &financev1.ListTransactionsRequest{})
 	if err != nil {
 		tb.Fatalf("ListTransactions SDK call failed: %v", err)
-		return f
 	}
 
 	var foundTx *financev1.Transaction
@@ -418,7 +397,6 @@ func (f *FinanceDriver) AssertRepaymentTransaction(tb testing.TB, repaymentKey s
 
 	if foundTx == nil {
 		tb.Fatalf("transaction with ID %s for repayment %q not found in ListTransactions response", rep.ID, repaymentKey)
-		return f
 	}
 
 	if foundTx.GetAmount() != expectedAmount {
@@ -437,7 +415,6 @@ func (f *FinanceDriver) AssertTransactionCount(tb testing.TB, expectedCount int)
 	resp, err := client.ListTransactions(tb.Context(), &financev1.ListTransactionsRequest{})
 	if err != nil {
 		tb.Fatalf("ListTransactions SDK call failed: %v", err)
-		return f
 	}
 
 	count := len(resp.GetTransactions())
@@ -467,12 +444,10 @@ func (f *FinanceDriver) CreateTransfer(tb testing.TB, opts TransferOptions) *Fin
 	srcAcc, ok := f.driver.state.Accounts[opts.FromAccount]
 	if !ok {
 		tb.Fatalf("account named %q not found in state registry", opts.FromAccount)
-		return f
 	}
 	dstAcc, ok := f.driver.state.Accounts[opts.ToAccount]
 	if !ok {
 		tb.Fatalf("account named %q not found in state registry", opts.ToAccount)
-		return f
 	}
 
 	destAmount := opts.DestinationAmount
@@ -491,7 +466,6 @@ func (f *FinanceDriver) CreateTransfer(tb testing.TB, opts TransferOptions) *Fin
 	if opts.ExpectErr != "" {
 		if err == nil {
 			tb.Fatalf("CreateTransfer succeeded, but expected error containing %q", opts.ExpectErr)
-			return f
 		}
 		if !strings.Contains(err.Error(), opts.ExpectErr) {
 			tb.Fatalf("CreateTransfer error = %v, want error containing %q", err, opts.ExpectErr)
@@ -500,7 +474,6 @@ func (f *FinanceDriver) CreateTransfer(tb testing.TB, opts TransferOptions) *Fin
 	}
 	if err != nil {
 		tb.Fatalf("CreateTransfer SDK call failed: %v", err)
-		return f
 	}
 
 	if transfer != nil {
@@ -537,13 +510,11 @@ func (f *FinanceDriver) AssertTransfer(tb testing.TB, transferKey string, fn fun
 		transfer, ok = f.driver.state.Transfers[transferKey]
 		if !ok {
 			tb.Fatalf("AssertTransfer: transfer key %q not found in state registry", transferKey)
-			return f
 		}
 	} else {
 		transfer = f.driver.state.LastTransfer
 		if transfer == nil {
 			tb.Fatalf("AssertTransfer called, but no transfer has been created yet")
-			return f
 		}
 	}
 
@@ -556,7 +527,6 @@ func (f *FinanceDriver) AssertTransfer(tb testing.TB, transferKey string, fn fun
 	})
 	if err != nil {
 		tb.Fatalf("AssertTransfer: ListTransactions SDK call failed for transfer_id %s: %v", transfer.Id, err)
-		return f
 	}
 
 	var outflowLeg, inflowLeg *financev1.Transaction
@@ -571,11 +541,9 @@ func (f *FinanceDriver) AssertTransfer(tb testing.TB, transferKey string, fn fun
 
 	if outflowLeg == nil {
 		tb.Fatalf("AssertTransfer: missing TRANSFER_OUT leg for transfer %s", transfer.Id)
-		return f
 	}
 	if inflowLeg == nil {
 		tb.Fatalf("AssertTransfer: missing TRANSFER_IN leg for transfer %s", transfer.Id)
-		return f
 	}
 
 	fn(transfer, outflowLeg, inflowLeg)
@@ -617,18 +585,15 @@ func (f *FinanceDriver) CreateBudget(tb testing.TB, opts BudgetOptions) *Finance
 	if opts.ExpectErr != "" {
 		if err == nil {
 			tb.Fatalf("CreateBudget succeeded, but expected error containing %q", opts.ExpectErr)
-			return f
 		}
 		if !strings.Contains(err.Error(), opts.ExpectErr) {
 			tb.Fatalf("CreateBudget error = %v, want error containing %q", err, opts.ExpectErr)
-			return f
 		}
 		return f
 	}
 
 	if err != nil {
 		tb.Fatalf("CreateBudget SDK call failed: %v", err)
-		return f
 	}
 
 	if bud.GetName() != opts.Name {
@@ -657,12 +622,10 @@ func (f *FinanceDriver) CreateExpense(tb testing.TB, opts ExpenseOptions) *Finan
 	acc, ok := f.driver.state.Accounts[opts.Account]
 	if !ok {
 		tb.Fatalf("account named %q not found in state registry", opts.Account)
-		return f
 	}
 	budID, ok := f.driver.state.Budgets[opts.Budget]
 	if !ok {
 		tb.Fatalf("budget named %q not found in state registry", opts.Budget)
-		return f
 	}
 
 	currency := opts.Currency
@@ -684,18 +647,15 @@ func (f *FinanceDriver) CreateExpense(tb testing.TB, opts ExpenseOptions) *Finan
 	if opts.ExpectErr != "" {
 		if err == nil {
 			tb.Fatalf("CreateExpense succeeded, but expected error containing %q", opts.ExpectErr)
-			return f
 		}
 		if !strings.Contains(err.Error(), opts.ExpectErr) {
 			tb.Fatalf("CreateExpense error = %v, want error containing %q", err, opts.ExpectErr)
-			return f
 		}
 		return f
 	}
 
 	if err != nil {
 		tb.Fatalf("CreateExpense SDK call failed: %v", err)
-		return f
 	}
 
 	if txn.GetAmount() != opts.Amount {
@@ -730,7 +690,6 @@ func (f *FinanceDriver) AssertTransaction(tb testing.TB, txnID string, fn func(t
 	})
 	if err != nil {
 		tb.Fatalf("AssertTransaction: GetTransaction API call failed for ID %s: %v", txnID, err)
-		return f
 	}
 	fn(txn)
 	return f
@@ -744,7 +703,6 @@ func (f *FinanceDriver) AssertLastTransaction(tb testing.TB, fn func(txn *financ
 	}
 	if f.driver.state.LastTransactionID == "" {
 		tb.Fatalf("AssertLastTransaction called, but no LastTransactionID recorded in driver state")
-		return f
 	}
 
 	client := f.getClient()
@@ -754,7 +712,6 @@ func (f *FinanceDriver) AssertLastTransaction(tb testing.TB, fn func(txn *financ
 	})
 	if err != nil {
 		tb.Fatalf("AssertLastTransaction: GetTransaction API call failed for ID %s: %v", targetID, err)
-		return f
 	}
 
 	fn(txn)
@@ -770,7 +727,6 @@ func (f *FinanceDriver) AssertBudgetProgress(tb testing.TB, budgetName string, e
 	budID, ok := f.driver.state.Budgets[budgetName]
 	if !ok {
 		tb.Fatalf("budget named %q not found in state registry", budgetName)
-		return f
 	}
 
 	client := f.getClient()
@@ -780,7 +736,6 @@ func (f *FinanceDriver) AssertBudgetProgress(tb testing.TB, budgetName string, e
 	})
 	if err != nil {
 		tb.Fatalf("ListBudgets SDK call failed: %v", err)
-		return f
 	}
 
 	var targetBud *financev1.Budget
@@ -793,13 +748,11 @@ func (f *FinanceDriver) AssertBudgetProgress(tb testing.TB, budgetName string, e
 
 	if targetBud == nil {
 		tb.Fatalf("budget %q with ID %s not found in ListBudgets response", budgetName, budID)
-		return f
 	}
 
 	curPeriod := targetBud.GetCurrentPeriod()
 	if curPeriod == nil {
 		tb.Fatalf("budget %q has no active period info", budgetName)
-		return f
 	}
 
 	remaining := targetBud.GetLimitAmount() - curPeriod.GetSpentAmount()
@@ -821,7 +774,6 @@ func (f *FinanceDriver) DeleteBudget(tb testing.TB, opts BudgetDeleteOptions) *F
 	budID, ok := f.driver.state.Budgets[opts.Budget]
 	if !ok {
 		tb.Fatalf("budget named %q not found in state registry", opts.Budget)
-		return f
 	}
 
 	client := f.getClient()
@@ -832,18 +784,15 @@ func (f *FinanceDriver) DeleteBudget(tb testing.TB, opts BudgetDeleteOptions) *F
 	if opts.ExpectErr != "" {
 		if err == nil {
 			tb.Fatalf("DeleteBudget succeeded, but expected error containing %q", opts.ExpectErr)
-			return f
 		}
 		if !strings.Contains(err.Error(), opts.ExpectErr) {
 			tb.Fatalf("DeleteBudget error = %v, want error containing %q", err, opts.ExpectErr)
-			return f
 		}
 		return f
 	}
 
 	if err != nil {
 		tb.Fatalf("DeleteBudget SDK call failed: %v", err)
-		return f
 	}
 
 	delete(f.driver.state.Budgets, opts.Budget)
@@ -859,7 +808,6 @@ func (f *FinanceDriver) CreateRecurringExpense(tb testing.TB, expenseName, budge
 	budID, ok := f.driver.state.Budgets[budgetName]
 	if !ok {
 		tb.Fatalf("budget named %q not found in state registry", budgetName)
-		return f
 	}
 
 	client := f.getClient()
@@ -878,7 +826,6 @@ func (f *FinanceDriver) CreateRecurringExpense(tb testing.TB, expenseName, budge
 	})
 	if err != nil {
 		tb.Fatalf("CreateRecurringExpense SDK call failed: %v", err)
-		return f
 	}
 
 	f.driver.state.LastRecurringExpenseID = resp.GetId()
@@ -912,7 +859,6 @@ func (f *FinanceDriver) AssertPendingScheduledPaymentsCount(tb testing.TB, expec
 	})
 	if err != nil {
 		tb.Fatalf("AssertPendingScheduledPaymentsCount SDK call failed: %v", err)
-		return f
 	}
 
 	actualCount := len(listResp.GetScheduledPayments())
@@ -944,7 +890,6 @@ func (f *FinanceDriver) ConfirmScheduledPayment(tb testing.TB, opts ConfirmSched
 	acc, ok := f.driver.state.Accounts[opts.Account]
 	if !ok {
 		tb.Fatalf("account named %q not found in state registry", opts.Account)
-		return f
 	}
 
 	client := f.getClient()
@@ -961,7 +906,6 @@ func (f *FinanceDriver) ConfirmScheduledPayment(tb testing.TB, opts ConfirmSched
 	}
 	if targetPaymentID == "" {
 		tb.Fatalf("ConfirmScheduledPayment requires explicit PaymentID or active state scheduled payment")
-		return f
 	}
 
 	accID := acc.ID
@@ -983,18 +927,15 @@ func (f *FinanceDriver) ConfirmScheduledPayment(tb testing.TB, opts ConfirmSched
 	if opts.ExpectErr != "" {
 		if err == nil {
 			tb.Fatalf("ConfirmScheduledPayment succeeded, but expected error containing %q", opts.ExpectErr)
-			return f
 		}
 		if !strings.Contains(err.Error(), opts.ExpectErr) {
 			tb.Fatalf("ConfirmScheduledPayment error = %v, want error containing %q", err, opts.ExpectErr)
-			return f
 		}
 		return f
 	}
 
 	if err != nil {
 		tb.Fatalf("ConfirmScheduledPayment SDK call failed: %v", err)
-		return f
 	}
 
 	f.driver.state.LastTransactionID = txn.GetId()
@@ -1042,13 +983,11 @@ func (f *FinanceDriver) AssertSpentInsights(tb testing.TB, expectedTotalSpent in
 	})
 	if err != nil {
 		tb.Fatalf("GetInsights SDK call failed: %v", err)
-		return f
 	}
 
 	spent := resp.GetSpent()
 	if spent == nil {
 		tb.Fatalf("GetInsights returned nil spent statistics")
-		return f
 	}
 
 	if spent.GetTotalSpent() != expectedTotalSpent {
@@ -1070,7 +1009,6 @@ func (f *FinanceDriver) AssertScheduledPayment(tb testing.TB, paymentID string, 
 	})
 	if err != nil {
 		tb.Fatalf("AssertScheduledPayment: GetScheduledPayment API call failed for ID %s: %v", paymentID, err)
-		return f
 	}
 
 	fn(sp)
@@ -1085,13 +1023,11 @@ func (f *FinanceDriver) AssertLastRecurringExpense(tb testing.TB, fn func(re *fi
 	}
 	if f.driver.state.LastRecurringExpenseID == "" {
 		tb.Fatalf("AssertLastRecurringExpense: no recurring expense created in driver state")
-		return f
 	}
 	client := f.getClient()
 	resp, err := client.ListRecurringExpenses(tb.Context(), &financev1.ListRecurringExpensesRequest{})
 	if err != nil {
 		tb.Fatalf("AssertLastRecurringExpense: ListRecurringExpenses API call failed: %v", err)
-		return f
 	}
 	var matched *financev1.RecurringExpense
 	for _, re := range resp.GetRecurringExpenses() {
@@ -1102,7 +1038,6 @@ func (f *FinanceDriver) AssertLastRecurringExpense(tb testing.TB, fn func(re *fi
 	}
 	if matched == nil {
 		tb.Fatalf("AssertLastRecurringExpense: recurring expense %s not found", f.driver.state.LastRecurringExpenseID)
-		return f
 	}
 	fn(matched)
 	return f
@@ -1118,7 +1053,6 @@ func (f *FinanceDriver) AssertScheduledPaymentByAmount(tb testing.TB, amount int
 	listResp, err := client.ListScheduledPayments(tb.Context(), &financev1.ListScheduledPaymentsRequest{})
 	if err != nil {
 		tb.Fatalf("AssertScheduledPaymentByAmount: ListScheduledPayments API call failed: %v", err)
-		return f
 	}
 	var matched *financev1.ScheduledPayment
 	for _, sp := range listResp.GetScheduledPayments() {
@@ -1129,7 +1063,6 @@ func (f *FinanceDriver) AssertScheduledPaymentByAmount(tb testing.TB, amount int
 	}
 	if matched == nil {
 		tb.Fatalf("AssertScheduledPaymentByAmount: no scheduled payment found matching amount %d", amount)
-		return f
 	}
 	fn(matched)
 	return f
@@ -1145,11 +1078,9 @@ func (f *FinanceDriver) AssertPendingScheduledPayment(tb testing.TB, fn func(sp 
 	listResp, err := client.ListScheduledPayments(tb.Context(), &financev1.ListScheduledPaymentsRequest{})
 	if err != nil {
 		tb.Fatalf("AssertPendingScheduledPayment API call failed: %v", err)
-		return f
 	}
 	if len(listResp.GetScheduledPayments()) == 0 {
 		tb.Fatalf("AssertPendingScheduledPayment: no scheduled payments found")
-		return f
 	}
 	fn(listResp.GetScheduledPayments()[0])
 	return f
@@ -1188,13 +1119,11 @@ func (f *FinanceDriver) StageInboxItem(tb testing.TB, opts StageInboxItemOptions
 	spaceID := f.driver.state.SpaceID
 	if spaceID == "" {
 		tb.Fatalf("StageInboxItem called without active space context")
-		return f
 	}
 
 	integrationID := f.driver.state.LastIntegrationID
 	if integrationID == "" {
 		tb.Fatalf("StageInboxItem called, but no platform integration channel has been ensured in driver state")
-		return f
 	}
 
 	currency := opts.Currency
@@ -1207,7 +1136,6 @@ func (f *FinanceDriver) StageInboxItem(tb testing.TB, opts StageInboxItemOptions
 		acc, ok := f.driver.state.Accounts[opts.AccountName]
 		if !ok {
 			tb.Fatalf("StageInboxItem: account named %q not found in state registry", opts.AccountName)
-			return f
 		}
 		accountID = &acc.ID
 	} else if opts.CardLastFour != "" {
@@ -1232,7 +1160,6 @@ func (f *FinanceDriver) StageInboxItem(tb testing.TB, opts StageInboxItemOptions
 		bID, ok := f.driver.state.Budgets[opts.BudgetName]
 		if !ok {
 			tb.Fatalf("StageInboxItem: budget named %q not found in state registry", opts.BudgetName)
-			return f
 		}
 		budgetID = &bID
 	}
@@ -1259,7 +1186,6 @@ func (f *FinanceDriver) StageInboxItem(tb testing.TB, opts StageInboxItemOptions
 	`, inboxID, spaceID, integrationID, docTypeStr, opts.Amount, currency, opts.Vendor, txDate, accountID, budgetID, txDate)
 	if err != nil {
 		tb.Fatalf("StageInboxItem: failed to insert inbox item into database: %v", err)
-		return f
 	}
 
 	info := &InboxItemInfo{
@@ -1291,7 +1217,6 @@ func (f *FinanceDriver) AssertInboxItemCount(tb testing.TB, status financev1.Inb
 	})
 	if err != nil {
 		tb.Fatalf("AssertInboxItemCount: ListInboxItems API call failed: %v", err)
-		return f
 	}
 	if len(resp.GetInboxItems()) != expectedCount {
 		statuses := []string{}
@@ -1316,13 +1241,11 @@ func (f *FinanceDriver) AssertInboxItem(tb testing.TB, key string, fn func(item 
 		info, ok = f.driver.state.InboxItems[key]
 		if !ok {
 			tb.Fatalf("AssertInboxItem: key %q not found in state registry", key)
-			return f
 		}
 	} else {
 		info = f.driver.state.LastInboxItem
 		if info == nil {
 			tb.Fatalf("AssertInboxItem: no inbox item staged in driver state")
-			return f
 		}
 	}
 
@@ -1330,7 +1253,6 @@ func (f *FinanceDriver) AssertInboxItem(tb testing.TB, key string, fn func(item 
 	resp, err := client.ListInboxItems(tb.Context(), &financev1.ListInboxItemsRequest{})
 	if err != nil {
 		tb.Fatalf("AssertInboxItem: ListInboxItems API call failed: %v", err)
-		return f
 	}
 
 	var matched *financev1.InboxItem
@@ -1342,7 +1264,6 @@ func (f *FinanceDriver) AssertInboxItem(tb testing.TB, key string, fn func(item 
 	}
 	if matched == nil {
 		tb.Fatalf("AssertInboxItem: item ID %s not found in ListInboxItems response", info.ID)
-		return f
 	}
 
 	fn(matched)
@@ -1370,13 +1291,11 @@ func (f *FinanceDriver) UpdateInboxItem(tb testing.TB, key string, opts StageInb
 		info, ok = f.driver.state.InboxItems[key]
 		if !ok {
 			tb.Fatalf("UpdateInboxItem: key %q not found in state registry", key)
-			return f
 		}
 	} else {
 		info = f.driver.state.LastInboxItem
 		if info == nil {
 			tb.Fatalf("UpdateInboxItem: no inbox item staged in driver state")
-			return f
 		}
 	}
 
@@ -1385,7 +1304,6 @@ func (f *FinanceDriver) UpdateInboxItem(tb testing.TB, key string, opts StageInb
 		acc, ok := f.driver.state.Accounts[opts.AccountName]
 		if !ok {
 			tb.Fatalf("UpdateInboxItem: account named %q not found in state registry", opts.AccountName)
-			return f
 		}
 		accountID = &acc.ID
 	}
@@ -1395,7 +1313,6 @@ func (f *FinanceDriver) UpdateInboxItem(tb testing.TB, key string, opts StageInb
 		bID, ok := f.driver.state.Budgets[opts.BudgetName]
 		if !ok {
 			tb.Fatalf("UpdateInboxItem: budget named %q not found in state registry", opts.BudgetName)
-			return f
 		}
 		budgetID = &bID
 	}
@@ -1495,13 +1412,11 @@ func (f *FinanceDriver) ApproveInboxItem(tb testing.TB, key string, expectErr ..
 		info, ok = f.driver.state.InboxItems[key]
 		if !ok {
 			tb.Fatalf("ApproveInboxItem: key %q not found in state registry", key)
-			return f
 		}
 	} else {
 		info = f.driver.state.LastInboxItem
 		if info == nil {
 			tb.Fatalf("ApproveInboxItem: no inbox item staged in driver state")
-			return f
 		}
 	}
 
@@ -1512,17 +1427,14 @@ func (f *FinanceDriver) ApproveInboxItem(tb testing.TB, key string, expectErr ..
 	if len(expectErr) > 0 && expectErr[0] != "" {
 		if err == nil {
 			tb.Fatalf("ApproveInboxItem succeeded, but expected error containing %q", expectErr[0])
-			return f
 		}
 		if !strings.Contains(err.Error(), expectErr[0]) {
 			tb.Fatalf("ApproveInboxItem error = %v, want error containing %q", err, expectErr[0])
-			return f
 		}
 		return f
 	}
 	if err != nil {
 		tb.Fatalf("ApproveInboxItem API call failed for ID %s: %v", info.ID, err)
-		return f
 	}
 
 	if item != nil && item.GetTransactionId() != "" {
@@ -1544,13 +1456,11 @@ func (f *FinanceDriver) DiscardInboxItem(tb testing.TB, key string) *FinanceDriv
 		info, ok = f.driver.state.InboxItems[key]
 		if !ok {
 			tb.Fatalf("DiscardInboxItem: key %q not found in state registry", key)
-			return f
 		}
 	} else {
 		info = f.driver.state.LastInboxItem
 		if info == nil {
 			tb.Fatalf("DiscardInboxItem: no inbox item staged in driver state")
-			return f
 		}
 	}
 

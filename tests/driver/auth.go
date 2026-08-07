@@ -50,7 +50,6 @@ func (a *AuthDriver) Register(tb testing.TB) *AuthDriver {
 	})
 	if err != nil {
 		tb.Fatalf("RegisterUser SDK call failed: %v", err)
-		return a
 	}
 
 	a.pendingUserID = regResp.GetId()
@@ -80,7 +79,6 @@ func (a *AuthDriver) Approve(tb testing.TB) *AuthDriver {
 	})
 	if err != nil {
 		tb.Fatalf("ApproveUser Admin SDK call failed for user %s: %v", a.pendingUserID, err)
-		return a
 	}
 	return a
 }
@@ -109,7 +107,6 @@ func (a *AuthDriver) Login(tb testing.TB) *AuthDriver {
 	})
 	if err != nil {
 		tb.Fatalf("LoginUser SDK call failed: %v", err)
-		return a
 	}
 
 	a.driver.state.AccessToken = resp.GetAccessToken()
