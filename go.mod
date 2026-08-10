@@ -5,7 +5,7 @@ go 1.26.5
 require (
 	github.com/JohannesKaufmann/html-to-markdown v1.6.0
 	github.com/anthropics/anthropic-sdk-go v1.61.0
-	github.com/aws/aws-sdk-go-v2 v1.43.3
+	github.com/aws/aws-sdk-go-v2 v1.43.4
 	github.com/aws/aws-sdk-go-v2/config v1.32.34
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.106.4
 	github.com/doug-martin/goqu/v9 v9.19.0
