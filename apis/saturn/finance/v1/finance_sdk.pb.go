@@ -32,6 +32,10 @@ func NewClient(cfg saturn.Config) *Client {
 func (c *Client) ConfigureFinance(ctx context.Context, req *ConfigureFinanceRequest) (*FinanceSettings, error) {
 	var resp FinanceSettings
 	path := "/api/v1/finance/settings"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -42,6 +46,10 @@ func (c *Client) ConfigureFinance(ctx context.Context, req *ConfigureFinanceRequ
 func (c *Client) GetFinanceSettings(ctx context.Context, req *GetFinanceSettingsRequest) (*FinanceSettings, error) {
 	var resp FinanceSettings
 	path := "/api/v1/finance/settings"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -52,6 +60,10 @@ func (c *Client) GetFinanceSettings(ctx context.Context, req *GetFinanceSettings
 func (c *Client) CreateBudget(ctx context.Context, req *CreateBudgetRequest) (*Budget, error) {
 	var resp Budget
 	path := "/api/v1/finance/budgets"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	payload := req.GetBudget()
 	if payload == nil {
 		return nil, fmt.Errorf("budget payload is required")
@@ -66,6 +78,10 @@ func (c *Client) CreateBudget(ctx context.Context, req *CreateBudgetRequest) (*B
 func (c *Client) GetBudget(ctx context.Context, req *GetBudgetRequest) (*Budget, error) {
 	var resp Budget
 	path := fmt.Sprintf("/api/v1/finance/budgets/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -76,6 +92,18 @@ func (c *Client) GetBudget(ctx context.Context, req *GetBudgetRequest) (*Budget,
 func (c *Client) UpdateBudget(ctx context.Context, req *UpdateBudgetRequest) (*Budget, error) {
 	var resp Budget
 	path := fmt.Sprintf("/api/v1/finance/budgets/%s", req.GetId())
+	var query []string
+	if req.Version != nil {
+		query = append(query, fmt.Sprintf("version=%d", req.GetVersion()))
+	}
+	if req.UpdateMask != nil {
+		for _, p := range req.GetUpdateMask().GetPaths() {
+			query = append(query, fmt.Sprintf("update_mask.paths=%s", p))
+		}
+	}
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	payload := req.GetBudget()
 	if payload == nil {
 		return nil, fmt.Errorf("budget payload is required")
@@ -90,6 +118,13 @@ func (c *Client) UpdateBudget(ctx context.Context, req *UpdateBudgetRequest) (*B
 func (c *Client) DeleteBudget(ctx context.Context, req *DeleteBudgetRequest) (*emptypb.Empty, error) {
 	var resp emptypb.Empty
 	path := fmt.Sprintf("/api/v1/finance/budgets/%s", req.GetId())
+	var query []string
+	if req.Version != nil {
+		query = append(query, fmt.Sprintf("version=%d", req.GetVersion()))
+	}
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -120,6 +155,10 @@ func (c *Client) ListBudgets(ctx context.Context, req *ListBudgetsRequest) (*Lis
 func (c *Client) GetBudgetPeriod(ctx context.Context, req *GetBudgetPeriodRequest) (*BudgetPeriod, error) {
 	var resp BudgetPeriod
 	path := fmt.Sprintf("/api/v1/finance/budgets/%s/period", req.GetBudgetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -130,6 +169,10 @@ func (c *Client) GetBudgetPeriod(ctx context.Context, req *GetBudgetPeriodReques
 func (c *Client) CreateExchangeRate(ctx context.Context, req *CreateExchangeRateRequest) (*ExchangeRate, error) {
 	var resp ExchangeRate
 	path := "/api/v1/finance/exchange-rates"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	payload := req.GetExchangeRate()
 	if payload == nil {
 		return nil, fmt.Errorf("exchange_rate payload is required")
@@ -144,6 +187,10 @@ func (c *Client) CreateExchangeRate(ctx context.Context, req *CreateExchangeRate
 func (c *Client) GetExchangeRate(ctx context.Context, req *GetExchangeRateRequest) (*ExchangeRate, error) {
 	var resp ExchangeRate
 	path := fmt.Sprintf("/api/v1/finance/exchange-rates/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -154,6 +201,10 @@ func (c *Client) GetExchangeRate(ctx context.Context, req *GetExchangeRateReques
 func (c *Client) UpdateExchangeRate(ctx context.Context, req *UpdateExchangeRateRequest) (*ExchangeRate, error) {
 	var resp ExchangeRate
 	path := fmt.Sprintf("/api/v1/finance/exchange-rates/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	payload := req.GetExchangeRate()
 	if payload == nil {
 		return nil, fmt.Errorf("exchange_rate payload is required")
@@ -168,6 +219,10 @@ func (c *Client) UpdateExchangeRate(ctx context.Context, req *UpdateExchangeRate
 func (c *Client) ListExchangeRates(ctx context.Context, req *ListExchangeRatesRequest) (*ListExchangeRatesResponse, error) {
 	var resp ListExchangeRatesResponse
 	path := "/api/v1/finance/exchange-rates"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -178,6 +233,10 @@ func (c *Client) ListExchangeRates(ctx context.Context, req *ListExchangeRatesRe
 func (c *Client) DeleteExchangeRate(ctx context.Context, req *DeleteExchangeRateRequest) (*emptypb.Empty, error) {
 	var resp emptypb.Empty
 	path := fmt.Sprintf("/api/v1/finance/exchange-rates/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -188,6 +247,10 @@ func (c *Client) DeleteExchangeRate(ctx context.Context, req *DeleteExchangeRate
 func (c *Client) CreateExpense(ctx context.Context, req *CreateExpenseRequest) (*Transaction, error) {
 	var resp Transaction
 	path := "/api/v1/finance/expenses"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	payload := req.GetExpense()
 	if payload == nil {
 		return nil, fmt.Errorf("expense payload is required")
@@ -202,6 +265,10 @@ func (c *Client) CreateExpense(ctx context.Context, req *CreateExpenseRequest) (
 func (c *Client) UpdateExpense(ctx context.Context, req *UpdateExpenseRequest) (*Transaction, error) {
 	var resp Transaction
 	path := fmt.Sprintf("/api/v1/finance/expenses/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	payload := req.GetExpense()
 	if payload == nil {
 		return nil, fmt.Errorf("expense payload is required")
@@ -216,6 +283,10 @@ func (c *Client) UpdateExpense(ctx context.Context, req *UpdateExpenseRequest) (
 func (c *Client) DeleteTransaction(ctx context.Context, req *DeleteTransactionRequest) (*emptypb.Empty, error) {
 	var resp emptypb.Empty
 	path := fmt.Sprintf("/api/v1/finance/transactions/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -226,6 +297,10 @@ func (c *Client) DeleteTransaction(ctx context.Context, req *DeleteTransactionRe
 func (c *Client) ListTransactions(ctx context.Context, req *ListTransactionsRequest) (*ListTransactionsResponse, error) {
 	var resp ListTransactionsResponse
 	path := "/api/v1/finance/transactions"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -236,6 +311,10 @@ func (c *Client) ListTransactions(ctx context.Context, req *ListTransactionsRequ
 func (c *Client) GetTransaction(ctx context.Context, req *GetTransactionRequest) (*Transaction, error) {
 	var resp Transaction
 	path := fmt.Sprintf("/api/v1/finance/transactions/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -246,6 +325,10 @@ func (c *Client) GetTransaction(ctx context.Context, req *GetTransactionRequest)
 func (c *Client) ListTransactionEvents(ctx context.Context, req *ListTransactionEventsRequest) (*ListTransactionEventsResponse, error) {
 	var resp ListTransactionEventsResponse
 	path := fmt.Sprintf("/api/v1/finance/transactions/%s/events", req.GetTxnId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -256,6 +339,10 @@ func (c *Client) ListTransactionEvents(ctx context.Context, req *ListTransaction
 func (c *Client) GetInsights(ctx context.Context, req *GetInsightsRequest) (*GetInsightsResponse, error) {
 	var resp GetInsightsResponse
 	path := "/api/v1/finance/insights"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -266,6 +353,10 @@ func (c *Client) GetInsights(ctx context.Context, req *GetInsightsRequest) (*Get
 func (c *Client) CreateRecurringExpense(ctx context.Context, req *CreateRecurringExpenseRequest) (*RecurringExpense, error) {
 	var resp RecurringExpense
 	path := "/api/v1/finance/recurring-expenses"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	payload := req.GetRecurringExpense()
 	if payload == nil {
 		return nil, fmt.Errorf("recurring_expense payload is required")
@@ -280,6 +371,10 @@ func (c *Client) CreateRecurringExpense(ctx context.Context, req *CreateRecurrin
 func (c *Client) UpdateRecurringExpense(ctx context.Context, req *UpdateRecurringExpenseRequest) (*RecurringExpense, error) {
 	var resp RecurringExpense
 	path := fmt.Sprintf("/api/v1/finance/recurring-expenses/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	payload := req.GetRecurringExpense()
 	if payload == nil {
 		return nil, fmt.Errorf("recurring_expense payload is required")
@@ -294,6 +389,10 @@ func (c *Client) UpdateRecurringExpense(ctx context.Context, req *UpdateRecurrin
 func (c *Client) DeleteRecurringExpense(ctx context.Context, req *DeleteRecurringExpenseRequest) (*emptypb.Empty, error) {
 	var resp emptypb.Empty
 	path := fmt.Sprintf("/api/v1/finance/recurring-expenses/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -304,6 +403,10 @@ func (c *Client) DeleteRecurringExpense(ctx context.Context, req *DeleteRecurrin
 func (c *Client) ListRecurringExpenses(ctx context.Context, req *ListRecurringExpensesRequest) (*ListRecurringExpensesResponse, error) {
 	var resp ListRecurringExpensesResponse
 	path := "/api/v1/finance/recurring-expenses"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -314,6 +417,10 @@ func (c *Client) ListRecurringExpenses(ctx context.Context, req *ListRecurringEx
 func (c *Client) ListScheduledPayments(ctx context.Context, req *ListScheduledPaymentsRequest) (*ListScheduledPaymentsResponse, error) {
 	var resp ListScheduledPaymentsResponse
 	path := "/api/v1/finance/scheduled-payments"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -324,6 +431,10 @@ func (c *Client) ListScheduledPayments(ctx context.Context, req *ListScheduledPa
 func (c *Client) GetScheduledPayment(ctx context.Context, req *GetScheduledPaymentRequest) (*ScheduledPayment, error) {
 	var resp ScheduledPayment
 	path := fmt.Sprintf("/api/v1/finance/scheduled-payments/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -334,6 +445,10 @@ func (c *Client) GetScheduledPayment(ctx context.Context, req *GetScheduledPayme
 func (c *Client) ConfirmScheduledPayment(ctx context.Context, req *ConfirmScheduledPaymentRequest) (*Transaction, error) {
 	var resp Transaction
 	path := fmt.Sprintf("/api/v1/finance/scheduled-payments/%s/confirm", req.GetPaymentId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -344,6 +459,10 @@ func (c *Client) ConfirmScheduledPayment(ctx context.Context, req *ConfirmSchedu
 func (c *Client) MatchScheduledPayment(ctx context.Context, req *MatchScheduledPaymentRequest) (*Transaction, error) {
 	var resp Transaction
 	path := fmt.Sprintf("/api/v1/finance/scheduled-payments/%s/match", req.GetPaymentId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -354,6 +473,10 @@ func (c *Client) MatchScheduledPayment(ctx context.Context, req *MatchScheduledP
 func (c *Client) SkipScheduledPayment(ctx context.Context, req *SkipScheduledPaymentRequest) (*ScheduledPayment, error) {
 	var resp ScheduledPayment
 	path := fmt.Sprintf("/api/v1/finance/scheduled-payments/%s:skip", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -364,6 +487,10 @@ func (c *Client) SkipScheduledPayment(ctx context.Context, req *SkipScheduledPay
 func (c *Client) CreateBorrowing(ctx context.Context, req *CreateBorrowingRequest) (*Borrowing, error) {
 	var resp Borrowing
 	path := "/api/v1/finance/borrowings"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	payload := req.GetBorrowing()
 	if payload == nil {
 		return nil, fmt.Errorf("borrowing payload is required")
@@ -378,6 +505,10 @@ func (c *Client) CreateBorrowing(ctx context.Context, req *CreateBorrowingReques
 func (c *Client) GetBorrowing(ctx context.Context, req *GetBorrowingRequest) (*Borrowing, error) {
 	var resp Borrowing
 	path := fmt.Sprintf("/api/v1/finance/borrowings/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -388,6 +519,10 @@ func (c *Client) GetBorrowing(ctx context.Context, req *GetBorrowingRequest) (*B
 func (c *Client) ListBorrowings(ctx context.Context, req *ListBorrowingsRequest) (*ListBorrowingsResponse, error) {
 	var resp ListBorrowingsResponse
 	path := "/api/v1/finance/borrowings"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -398,6 +533,10 @@ func (c *Client) ListBorrowings(ctx context.Context, req *ListBorrowingsRequest)
 func (c *Client) UpdateBorrowing(ctx context.Context, req *UpdateBorrowingRequest) (*Borrowing, error) {
 	var resp Borrowing
 	path := fmt.Sprintf("/api/v1/finance/borrowings/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	payload := req.GetBorrowing()
 	if payload == nil {
 		return nil, fmt.Errorf("borrowing payload is required")
@@ -412,6 +551,10 @@ func (c *Client) UpdateBorrowing(ctx context.Context, req *UpdateBorrowingReques
 func (c *Client) DeleteBorrowing(ctx context.Context, req *DeleteBorrowingRequest) (*emptypb.Empty, error) {
 	var resp emptypb.Empty
 	path := fmt.Sprintf("/api/v1/finance/borrowings/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -422,6 +565,10 @@ func (c *Client) DeleteBorrowing(ctx context.Context, req *DeleteBorrowingReques
 func (c *Client) CreateBorrowingRepayment(ctx context.Context, req *CreateBorrowingRepaymentRequest) (*BorrowingRepayment, error) {
 	var resp BorrowingRepayment
 	path := fmt.Sprintf("/api/v1/finance/borrowings/%s/repayments", req.GetBorrowingId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	payload := req.GetRepayment()
 	if payload == nil {
 		return nil, fmt.Errorf("repayment payload is required")
@@ -436,6 +583,10 @@ func (c *Client) CreateBorrowingRepayment(ctx context.Context, req *CreateBorrow
 func (c *Client) ListBorrowingRepayments(ctx context.Context, req *ListBorrowingRepaymentsRequest) (*ListBorrowingRepaymentsResponse, error) {
 	var resp ListBorrowingRepaymentsResponse
 	path := fmt.Sprintf("/api/v1/finance/borrowings/%s/repayments", req.GetBorrowingId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -446,6 +597,10 @@ func (c *Client) ListBorrowingRepayments(ctx context.Context, req *ListBorrowing
 func (c *Client) DeleteBorrowingRepayment(ctx context.Context, req *DeleteBorrowingRepaymentRequest) (*emptypb.Empty, error) {
 	var resp emptypb.Empty
 	path := fmt.Sprintf("/api/v1/finance/borrowings/%s/repayments/%s", req.GetBorrowingId(), req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -456,6 +611,10 @@ func (c *Client) DeleteBorrowingRepayment(ctx context.Context, req *DeleteBorrow
 func (c *Client) CreateAccount(ctx context.Context, req *CreateAccountRequest) (*Account, error) {
 	var resp Account
 	path := "/api/v1/finance/accounts"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	payload := req.GetAccount()
 	if payload == nil {
 		return nil, fmt.Errorf("account payload is required")
@@ -470,6 +629,10 @@ func (c *Client) CreateAccount(ctx context.Context, req *CreateAccountRequest) (
 func (c *Client) GetAccount(ctx context.Context, req *GetAccountRequest) (*Account, error) {
 	var resp Account
 	path := fmt.Sprintf("/api/v1/finance/accounts/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -480,6 +643,18 @@ func (c *Client) GetAccount(ctx context.Context, req *GetAccountRequest) (*Accou
 func (c *Client) UpdateAccount(ctx context.Context, req *UpdateAccountRequest) (*Account, error) {
 	var resp Account
 	path := fmt.Sprintf("/api/v1/finance/accounts/%s", req.GetId())
+	var query []string
+	if req.Version != nil {
+		query = append(query, fmt.Sprintf("version=%d", req.GetVersion()))
+	}
+	if req.UpdateMask != nil {
+		for _, p := range req.GetUpdateMask().GetPaths() {
+			query = append(query, fmt.Sprintf("update_mask.paths=%s", p))
+		}
+	}
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	payload := req.GetAccount()
 	if payload == nil {
 		return nil, fmt.Errorf("account payload is required")
@@ -494,6 +669,10 @@ func (c *Client) UpdateAccount(ctx context.Context, req *UpdateAccountRequest) (
 func (c *Client) AdjustAccountBalance(ctx context.Context, req *AdjustAccountBalanceRequest) (*Account, error) {
 	var resp Account
 	path := fmt.Sprintf("/api/v1/finance/accounts/%s:adjust-balance", req.GetAccountId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -504,6 +683,13 @@ func (c *Client) AdjustAccountBalance(ctx context.Context, req *AdjustAccountBal
 func (c *Client) DeleteAccount(ctx context.Context, req *DeleteAccountRequest) (*emptypb.Empty, error) {
 	var resp emptypb.Empty
 	path := fmt.Sprintf("/api/v1/finance/accounts/%s", req.GetId())
+	var query []string
+	if req.Version != nil {
+		query = append(query, fmt.Sprintf("version=%d", req.GetVersion()))
+	}
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -514,6 +700,99 @@ func (c *Client) DeleteAccount(ctx context.Context, req *DeleteAccountRequest) (
 func (c *Client) ListAccounts(ctx context.Context, req *ListAccountsRequest) (*ListAccountsResponse, error) {
 	var resp ListAccountsResponse
 	path := "/api/v1/finance/accounts"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// CreateInstitution executes POST /api/v1/finance/institutions.
+func (c *Client) CreateInstitution(ctx context.Context, req *CreateInstitutionRequest) (*Institution, error) {
+	var resp Institution
+	path := "/api/v1/finance/institutions"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	payload := req.GetInstitution()
+	if payload == nil {
+		return nil, fmt.Errorf("institution payload is required")
+	}
+	if err := c.base.Do(ctx, "POST", path, payload, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// UpdateInstitution executes PUT /api/v1/finance/institutions/{id}.
+func (c *Client) UpdateInstitution(ctx context.Context, req *UpdateInstitutionRequest) (*Institution, error) {
+	var resp Institution
+	path := fmt.Sprintf("/api/v1/finance/institutions/%s", req.GetId())
+	var query []string
+	if req.Version != nil {
+		query = append(query, fmt.Sprintf("version=%d", req.GetVersion()))
+	}
+	if req.UpdateMask != nil {
+		for _, p := range req.GetUpdateMask().GetPaths() {
+			query = append(query, fmt.Sprintf("update_mask.paths=%s", p))
+		}
+	}
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	payload := req.GetInstitution()
+	if payload == nil {
+		return nil, fmt.Errorf("institution payload is required")
+	}
+	if err := c.base.Do(ctx, "PUT", path, payload, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// DeleteInstitution executes DELETE /api/v1/finance/institutions/{id}.
+func (c *Client) DeleteInstitution(ctx context.Context, req *DeleteInstitutionRequest) (*emptypb.Empty, error) {
+	var resp emptypb.Empty
+	path := fmt.Sprintf("/api/v1/finance/institutions/%s", req.GetId())
+	var query []string
+	if req.Version != nil {
+		query = append(query, fmt.Sprintf("version=%d", req.GetVersion()))
+	}
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ListInstitutions executes GET /api/v1/finance/institutions.
+func (c *Client) ListInstitutions(ctx context.Context, req *ListInstitutionsRequest) (*ListInstitutionsResponse, error) {
+	var resp ListInstitutionsResponse
+	path := "/api/v1/finance/institutions"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ResolveInstitution executes GET /api/v1/finance/institutions:resolve.
+func (c *Client) ResolveInstitution(ctx context.Context, req *ResolveInstitutionRequest) (*ResolveInstitutionResponse, error) {
+	var resp ResolveInstitutionResponse
+	path := "/api/v1/finance/institutions:resolve"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -524,6 +803,10 @@ func (c *Client) ListAccounts(ctx context.Context, req *ListAccountsRequest) (*L
 func (c *Client) CreateTransfer(ctx context.Context, req *CreateTransferRequest) (*Transfer, error) {
 	var resp Transfer
 	path := "/api/v1/finance/transfers"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -534,6 +817,10 @@ func (c *Client) CreateTransfer(ctx context.Context, req *CreateTransferRequest)
 func (c *Client) ListTransfers(ctx context.Context, req *ListTransfersRequest) (*ListTransfersResponse, error) {
 	var resp ListTransfersResponse
 	path := "/api/v1/finance/transfers"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -544,6 +831,10 @@ func (c *Client) ListTransfers(ctx context.Context, req *ListTransfersRequest) (
 func (c *Client) ListCurrencies(ctx context.Context, req *ListCurrenciesRequest) (*ListCurrenciesResponse, error) {
 	var resp ListCurrenciesResponse
 	path := "/api/v1/finance/currencies"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -574,6 +865,10 @@ func (c *Client) ListInboxItems(ctx context.Context, req *ListInboxItemsRequest)
 func (c *Client) UpdateInboxItem(ctx context.Context, req *UpdateInboxItemRequest) (*InboxItem, error) {
 	var resp InboxItem
 	path := fmt.Sprintf("/api/v1/finance/inbox-items/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	payload := req.GetInboxItem()
 	if payload == nil {
 		return nil, fmt.Errorf("inbox_item payload is required")
@@ -588,6 +883,10 @@ func (c *Client) UpdateInboxItem(ctx context.Context, req *UpdateInboxItemReques
 func (c *Client) ApproveInboxItem(ctx context.Context, req *ApproveInboxItemRequest) (*InboxItem, error) {
 	var resp InboxItem
 	path := fmt.Sprintf("/api/v1/finance/inbox-items/%s:approve", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -598,6 +897,10 @@ func (c *Client) ApproveInboxItem(ctx context.Context, req *ApproveInboxItemRequ
 func (c *Client) DiscardInboxItem(ctx context.Context, req *DiscardInboxItemRequest) (*emptypb.Empty, error) {
 	var resp emptypb.Empty
 	path := fmt.Sprintf("/api/v1/finance/inbox-items/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
 		return nil, err
 	}

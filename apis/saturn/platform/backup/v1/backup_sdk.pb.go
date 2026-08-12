@@ -28,6 +28,10 @@ func NewClient(cfg saturn.Config) *Client {
 func (c *Client) ListBackups(ctx context.Context, req *ListBackupsRequest) (*ListBackupsResponse, error) {
 	var resp ListBackupsResponse
 	path := "/api/v1/admin/backups"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -38,6 +42,10 @@ func (c *Client) ListBackups(ctx context.Context, req *ListBackupsRequest) (*Lis
 func (c *Client) TriggerBackup(ctx context.Context, req *TriggerBackupRequest) (*TriggerBackupResponse, error) {
 	var resp TriggerBackupResponse
 	path := "/api/v1/admin/backups"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}

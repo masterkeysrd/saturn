@@ -1946,10 +1946,6 @@ export interface Account {
    */
   id?: string
   /**
-   * Output only. Space identifier.
-   */
-  spaceId?: string
-  /**
    * Required. User-friendly account name (e.g. "Chase Checking").
    */
   name: string
@@ -1975,6 +1971,22 @@ export interface Account {
    */
   creditLimit: string
   /**
+   * Optional. Associated financial institution ID.
+   */
+  institutionId?: string
+  /**
+   * Output only. Hydrated associated financial institution details.
+   */
+  institution?: Account_InstitutionInfo
+  /**
+   * Optional. Last four digits of card or account number.
+   */
+  lastFour: string
+  /**
+   * Optional. Color HEX code for visual UI identification.
+   */
+  color: string
+  /**
    * Optional. Indicates if the account is the workspace default. Default accounts receive
    * transactions if no explicit account is nominated.
    */
@@ -1984,17 +1996,17 @@ export interface Account {
    */
   isActive: boolean
   /**
-   * Optional. Color HEX code for visual UI identification.
-   */
-  color: string
-  /**
    * Optional. Narration notes.
    */
   notes: string
   /**
-   * Optional. Last four digits of card or account number.
+   * Output only. Concurrency control version.
    */
-  lastFour: string
+  version?: string
+  /**
+   * Output only. Currency conversion statistics.
+   */
+  conversion?: Account_Conversion
   /**
    * Output only. Creation timestamp.
    */
@@ -2003,10 +2015,6 @@ export interface Account {
    * Output only. Last update timestamp.
    */
   updateTime?: string
-  /**
-   * Output only. Currency conversion statistics.
-   */
-  conversion?: Account_Conversion
 }
 
 /**
@@ -2024,12 +2032,173 @@ export interface Account_Conversion {
 }
 
 /**
+ * InstitutionInfo contains inline financial institution metadata.
+ */
+export interface Account_InstitutionInfo {
+  /**
+   * Output only. Unique resource identifier.
+   */
+  id?: string
+  /**
+   * Required. Name of the institution.
+   */
+  name: string
+  /**
+   * Optional. Web domain name.
+   */
+  domain: string
+  /**
+   * Optional. Resolved web logo favicon image URL.
+   */
+  logoUrl: string
+  /**
+   * Optional. Visual theme accent color.
+   */
+  color: string
+}
+
+/**
+ * Institution represents a financial bank, brokerage, or payment platform.
+ */
+export interface Institution {
+  /**
+   * Output only. Unique resource identifier (e.g. "inst_3HnhtBQD...").
+   */
+  id?: string
+  /**
+   * Required. User-friendly name of the institution (e.g. "Chase", "Banco Popular").
+   */
+  name: string
+  /**
+   * Optional. Web domain name used for web logo resolution (e.g. "chase.com").
+   */
+  domain: string
+  /**
+   * Output only/Optional. Resolved web logo favicon image URL.
+   */
+  logoUrl: string
+  /**
+   * Optional. Theme accent color.
+   */
+  color: string
+  /**
+   * Output only. Concurrency control version.
+   */
+  version?: string
+  /**
+   * Output only. Creation timestamp.
+   */
+  createTime?: string
+  /**
+   * Output only. Last update timestamp.
+   */
+  updateTime?: string
+}
+
+export interface CreateInstitutionRequest {
+  /**
+   * Required. The institution payload to create.
+   */
+  institution: Institution
+}
+
+export interface UpdateInstitutionRequest {
+  /**
+   * Required. Identifier of the institution to update.
+   */
+  id: string
+  /**
+   * Required. Updated institution details.
+   */
+  institution: Institution
+  /**
+   * Optional. Field mask specifying fields to update.
+   */
+  updateMask: { paths?: string[] }
+  /**
+   * Optional. Expected resource version for optimistic concurrency control.
+   */
+  version?: string
+}
+
+export interface DeleteInstitutionRequest {
+  /**
+   * Required. Identifier of the institution to delete.
+   */
+  id: string
+  /**
+   * Optional. Expected resource version.
+   */
+  version?: string
+}
+
+export interface ListInstitutionsRequest {
+  /**
+   * Optional. Maximum number of items to return in a single page.
+   */
+  pageSize: number
+  /**
+   * Optional. Keyset page token.
+   */
+  pageToken: string
+  /**
+   * Optional. Search query matching institution names or domains.
+   */
+  searchQuery?: string
+}
+
+export interface ListInstitutionsResponse {
+  /**
+   * List of institutions registered in the space.
+   */
+  institutions: Institution[]
+  /**
+   * Keyset page token.
+   */
+  nextPageToken: string
+}
+
+export interface ResolveInstitutionRequest {
+  /**
+   * Required. Institution name to auto-resolve (e.g. "Chase" or "Banco Popular").
+   */
+  name: string
+}
+
+export interface ResolveInstitutionResponse {
+  /**
+   * Resolved canonical institution name.
+   */
+  name: string
+  /**
+   * Resolved web domain name (e.g. "chase.com").
+   */
+  domain: string
+  /**
+   * Resolved website favicon logo image URL.
+   */
+  logoUrl: string
+  /**
+   * Recommended theme color.
+   */
+  color: string
+  /**
+   * Optional matching existing institution ID if an exact/fuzzy match already exists in the space.
+   */
+  existingInstitutionId?: string
+  /**
+   * Optional existing matching institution name if a near match exists in the space.
+   */
+  existingInstitutionName?: string
+}
+
+/**
  * The request for
  * [CreateAccount][saturn.finance.v1.Finance.CreateAccount].
  */
 export interface CreateAccountRequest {
   /**
-   * Required. Account configuration parameters.
+   * Required. Target account parameters.
    */
   account: Account
 }
@@ -2040,7 +2209,7 @@ export interface CreateAccountRequest {
  */
 export interface GetAccountRequest {
   /**
-   * Required. Target account identifier.
+   * Required. Unique identifier of the account to retrieve.
    * Values are of the form `acc_[a-zA-Z0-9]+`.
    */
   id: string
@@ -2064,6 +2233,14 @@ export interface UpdateAccountRequest {
    * Required. Updated account parameters.
    */
   account: Account
+  /**
+   * Optional. Field mask defining which fields to update for partial updates.
+   */
+  updateMask?: { paths?: string[] }
+  /**
+   * Optional. Version number for optimistic concurrency control.
+   */
+  version?: string
 }
 
 /**
@@ -2099,6 +2276,10 @@ export interface DeleteAccountRequest {
    * Values are of the form `acc_[a-zA-Z0-9]+`.
    */
   id: string
+  /**
+   * Optional. Version number for optimistic concurrency control during deletion.
+   */
+  version?: string
 }
 
 /**
@@ -3578,9 +3759,13 @@ export async function updateAccount(
   id: string,
   req: UpdateAccountRequest
 ): Promise<Account> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
+  delete (params as Record<string, unknown>).account
   return request<Account>({
     method: "PUT",
     url: `/api/v1/finance/accounts/${id}`,
+    params: params,
     data: req.account,
   })
 }
@@ -3636,11 +3821,14 @@ export function useAdjustAccountBalanceMutation(
  */
 export async function deleteAccount(
   id: string,
-  _req: DeleteAccountRequest
+  req: DeleteAccountRequest
 ): Promise<Record<string, never>> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
   return request<Record<string, never>>({
     method: "DELETE",
     url: `/api/v1/finance/accounts/${id}`,
+    params: params,
   })
 }
 
@@ -3685,6 +3873,152 @@ export function useListAccountsQuery(
   return useQuery<ListAccountsResponse, Error>({
     queryKey: ["/api/v1/finance/accounts", req],
     queryFn: () => listAccounts(req),
+    ...options,
+  })
+}
+
+/**
+ * Registers a new financial institution (bank, brokerage, or payment platform) in the space.
+ */
+export async function createInstitution(
+  req: CreateInstitutionRequest
+): Promise<Institution> {
+  return request<Institution>({
+    method: "POST",
+    url: "/api/v1/finance/institutions",
+    data: req.institution,
+  })
+}
+
+export function useCreateInstitutionMutation(
+  options?: UseMutationOptions<Institution, Error, CreateInstitutionRequest>
+) {
+  return useMutation<Institution, Error, CreateInstitutionRequest>({
+    mutationFn: (req) => createInstitution(req),
+    ...options,
+  })
+}
+
+/**
+ * Updates an existing registered institution's properties (e.g. name, domain, logo, color).
+ */
+export async function updateInstitution(
+  id: string,
+  req: UpdateInstitutionRequest
+): Promise<Institution> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
+  delete (params as Record<string, unknown>).institution
+  return request<Institution>({
+    method: "PUT",
+    url: `/api/v1/finance/institutions/${id}`,
+    params: params,
+    data: req.institution,
+  })
+}
+
+export function useUpdateInstitutionMutation(
+  options?: UseMutationOptions<
+    Institution,
+    Error,
+    { id: string; req: UpdateInstitutionRequest }
+  >
+) {
+  return useMutation<
+    Institution,
+    Error,
+    { id: string; req: UpdateInstitutionRequest }
+  >({
+    mutationFn: ({ id, req }) => updateInstitution(id, req),
+    ...options,
+  })
+}
+
+/**
+ * Deletes an institution from the space. Linked accounts will have institution set to null.
+ */
+export async function deleteInstitution(
+  id: string,
+  req: DeleteInstitutionRequest
+): Promise<Record<string, never>> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
+  return request<Record<string, never>>({
+    method: "DELETE",
+    url: `/api/v1/finance/institutions/${id}`,
+    params: params,
+  })
+}
+
+export function useDeleteInstitutionMutation(
+  options?: UseMutationOptions<
+    Record<string, never>,
+    Error,
+    { id: string; req: DeleteInstitutionRequest }
+  >
+) {
+  return useMutation<
+    Record<string, never>,
+    Error,
+    { id: string; req: DeleteInstitutionRequest }
+  >({
+    mutationFn: ({ id, req }) => deleteInstitution(id, req),
+    ...options,
+  })
+}
+
+/**
+ * Lists all institutions registered in the workspace.
+ */
+export async function listInstitutions(
+  req: ListInstitutionsRequest
+): Promise<ListInstitutionsResponse> {
+  const params = { ...req }
+  return request<ListInstitutionsResponse>({
+    method: "GET",
+    url: "/api/v1/finance/institutions",
+    params: params,
+  })
+}
+
+export function useListInstitutionsQuery(
+  req: ListInstitutionsRequest,
+  options?: Omit<
+    UseQueryOptions<ListInstitutionsResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListInstitutionsResponse, Error>({
+    queryKey: ["/api/v1/finance/institutions", req],
+    queryFn: () => listInstitutions(req),
+    ...options,
+  })
+}
+
+/**
+ * Auto-resolves domain, web logo URL, and initial visual attributes for an institution by name.
+ */
+export async function resolveInstitution(
+  req: ResolveInstitutionRequest
+): Promise<ResolveInstitutionResponse> {
+  const params = { ...req }
+  return request<ResolveInstitutionResponse>({
+    method: "GET",
+    url: "/api/v1/finance/institutions:resolve",
+    params: params,
+  })
+}
+
+export function useResolveInstitutionQuery(
+  req: ResolveInstitutionRequest,
+  options?: Omit<
+    UseQueryOptions<ResolveInstitutionResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ResolveInstitutionResponse, Error>({
+    queryKey: ["/api/v1/finance/institutions:resolve", req],
+    queryFn: () => resolveInstitution(req),
     ...options,
   })
 }

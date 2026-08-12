@@ -13,24 +13,31 @@ import (
 )
 
 type accountDB struct {
-	ID             string       `db:"id"`
-	SpaceID        string       `db:"space_id"`
-	Name           string       `db:"name"`
-	Type           string       `db:"type"`
-	Currency       string       `db:"currency"`
-	InitialBalance int64        `db:"initial_balance"`
-	CurrentBalance int64        `db:"current_balance"`
-	CreditLimit    int64        `db:"credit_limit"`
-	IsDefault      bool         `db:"is_default"`
-	IsActive       bool         `db:"is_active"`
-	Color          string       `db:"color"`
-	Notes          string       `db:"notes"`
-	LastFour       string       `db:"last_four"`
-	CreateTime     sql.NullTime `db:"create_time"`
-	UpdateTime     sql.NullTime `db:"update_time"`
+	ID             string         `db:"id"`
+	SpaceID        string         `db:"space_id"`
+	Name           string         `db:"name"`
+	Type           string         `db:"type"`
+	Currency       string         `db:"currency"`
+	InitialBalance int64          `db:"initial_balance"`
+	CurrentBalance int64          `db:"current_balance"`
+	CreditLimit    int64          `db:"credit_limit"`
+	IsDefault      bool           `db:"is_default"`
+	IsActive       bool           `db:"is_active"`
+	Color          string         `db:"color"`
+	Notes          string         `db:"notes"`
+	LastFour       string         `db:"last_four"`
+	InstitutionID  sql.NullString `db:"institution_id"`
+	Version        int64          `db:"version"`
+	CreateTime     sql.NullTime   `db:"create_time"`
+	UpdateTime     sql.NullTime   `db:"update_time"`
 }
 
 func (row *accountDB) toDomain() *finance.Account {
+	var instID *finance.InstitutionID
+	if row.InstitutionID.Valid {
+		idVal := finance.InstitutionID(row.InstitutionID.String)
+		instID = &idVal
+	}
 	return &finance.Account{
 		ID:             finance.AccountID(row.ID),
 		SpaceID:        finance.SpaceID(row.SpaceID),
@@ -45,6 +52,8 @@ func (row *accountDB) toDomain() *finance.Account {
 		Color:          row.Color,
 		Notes:          row.Notes,
 		LastFour:       row.LastFour,
+		InstitutionID:  instID,
+		Version:        row.Version,
 		CreateTime:     nullTimeToTime(row.CreateTime),
 		UpdateTime:     nullTimeToTime(row.UpdateTime),
 	}
@@ -55,10 +64,14 @@ type AccountStore struct {
 }
 
 func NewAccountStore(db *sqlx.DB) *AccountStore {
-	return &AccountStore{db: db}
+	return &AccountStore{db: db.Unsafe()}
 }
 
 func (s *AccountStore) Create(ctx context.Context, a *finance.Account) error {
+	version := a.Version
+	if version <= 0 {
+		version = 1
+	}
 	ds := pgDialect.Insert(goqu.S("finance").Table("account")).Rows(goqu.Record{
 		"id":              string(a.ID),
 		"space_id":        string(a.SpaceID),
@@ -73,6 +86,8 @@ func (s *AccountStore) Create(ctx context.Context, a *finance.Account) error {
 		"color":           a.Color,
 		"notes":           a.Notes,
 		"last_four":       a.LastFour,
+		"institution_id":  toNullString(a.InstitutionID),
+		"version":         version,
 		"create_time":     a.CreateTime,
 		"update_time":     a.UpdateTime,
 	})
@@ -81,6 +96,9 @@ func (s *AccountStore) Create(ctx context.Context, a *finance.Account) error {
 		return err
 	}
 	_, err = s.db.ExecContext(ctx, query, args...)
+	if err == nil {
+		a.Version = version
+	}
 	return err
 }
 
@@ -101,6 +119,9 @@ func (s *AccountStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id 
 }
 
 func (s *AccountStore) Update(ctx context.Context, a *finance.Account) error {
+	currentVersion := a.Version
+	newVersion := currentVersion + 1
+
 	ds := pgDialect.Update(goqu.S("finance").Table("account")).
 		Set(goqu.Record{
 			"name":            a.Name,
@@ -114,9 +135,16 @@ func (s *AccountStore) Update(ctx context.Context, a *finance.Account) error {
 			"color":           a.Color,
 			"notes":           a.Notes,
 			"last_four":       a.LastFour,
+			"institution_id":  toNullString(a.InstitutionID),
+			"version":         newVersion,
 			"update_time":     a.UpdateTime,
 		}).
-		Where(goqu.Ex{"id": string(a.ID)})
+		Where(goqu.Ex{"id": string(a.ID), "space_id": string(a.SpaceID)})
+
+	if currentVersion > 0 {
+		ds = ds.Where(goqu.Ex{"version": currentVersion})
+	}
+
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return err
@@ -130,13 +158,20 @@ func (s *AccountStore) Update(ctx context.Context, a *finance.Account) error {
 		return err
 	}
 	if rows == 0 {
-		return finance.ErrAccountNotFound
+		return finance.ErrAccountVersionMismatch
 	}
+	a.Version = newVersion
 	return nil
 }
 
-func (s *AccountStore) Delete(ctx context.Context, id finance.AccountID) error {
-	ds := pgDialect.Delete(goqu.S("finance").Table("account")).Where(goqu.Ex{"id": string(id)})
+func (s *AccountStore) Delete(ctx context.Context, spaceID finance.SpaceID, id finance.AccountID, opts finance.DeleteOptions) error {
+	ds := pgDialect.Delete(goqu.S("finance").Table("account")).
+		Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)})
+
+	if opts.Version > 0 {
+		ds = ds.Where(goqu.Ex{"version": opts.Version})
+	}
+
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return err
@@ -292,4 +327,11 @@ func (s *AccountStore) GetByIDs(ctx context.Context, spaceID finance.SpaceID, id
 		accounts[i] = rows[i].toDomain()
 	}
 	return accounts, nil
+}
+
+func toNullString(id *finance.InstitutionID) sql.NullString {
+	if id == nil {
+		return sql.NullString{Valid: false}
+	}
+	return sql.NullString{String: string(*id), Valid: true}
 }

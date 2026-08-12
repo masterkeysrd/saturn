@@ -129,40 +129,65 @@ func generateSDKMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 		g.P("	path := ", quote(pathPattern))
 	}
 
-	// Payload extraction
+	var hasVersion, hasUpdateMask bool
+	for _, field := range method.Input.Fields {
+		if field.GoName == "Version" {
+			hasVersion = true
+		}
+		if field.GoName == "UpdateMask" {
+			hasUpdateMask = true
+		}
+	}
+
+	// Query parameters handling
+	g.P("	var query []string")
+	if hasVersion {
+		g.P("	if req.Version != nil {")
+		g.P("		query = append(query, fmt.Sprintf(\"version=%d\", req.GetVersion()))")
+		g.P("	}")
+	}
+	if hasUpdateMask {
+		g.P("	if req.UpdateMask != nil {")
+		g.P("		for _, p := range req.GetUpdateMask().GetPaths() {")
+		g.P("			query = append(query, fmt.Sprintf(\"update_mask.paths=%s\", p))")
+		g.P("		}")
+		g.P("	}")
+	}
+
 	if httpMethod == "GET" || httpMethod == "DELETE" {
 		if method.GoName == "ListBudgets" {
-			g.P("	var query []string")
 			g.P("	if req.View != nil {")
 			g.P("		query = append(query, \"view=\" + req.GetView().String())")
 			g.P("	}")
 			g.P("	for _, st := range req.GetStatuses() {")
 			g.P("		query = append(query, \"statuses=\" + st.String())")
 			g.P("	}")
-			g.P("	if len(query) > 0 {")
-			g.P("		path += \"?\" + strings.Join(query, \"&\")")
-			g.P("	}")
 		} else if method.GoName == "ListInboxItems" {
-			g.P("	var query []string")
 			g.P("	if req.Status != nil {")
 			g.P("		query = append(query, fmt.Sprintf(\"status=%s\", req.GetStatus().String()))")
 			g.P("	}")
 			g.P("	if req.DocType != nil {")
 			g.P("		query = append(query, fmt.Sprintf(\"doc_type=%s\", req.GetDocType().String()))")
 			g.P("	}")
-			g.P("	if len(query) > 0 {")
-			g.P("		path += \"?\" + strings.Join(query, \"&\")")
-			g.P("	}")
 		}
+		g.P("	if len(query) > 0 {")
+		g.P("		path += \"?\" + strings.Join(query, \"&\")")
+		g.P("	}")
 		g.P("	if err := c.base.Do(ctx, ", quote(httpMethod), ", path, nil, &resp); err != nil {")
 	} else if bodyField != "" && bodyField != "*" {
 		getterName := "Get" + snakeToCamel(bodyField)
+		g.P("	if len(query) > 0 {")
+		g.P("		path += \"?\" + strings.Join(query, \"&\")")
+		g.P("	}")
 		g.P("	payload := req.", getterName, "()")
 		g.P("	if payload == nil {")
 		g.P("		return nil, fmt.Errorf(", quote(bodyField+" payload is required"), ")")
 		g.P("	}")
 		g.P("	if err := c.base.Do(ctx, ", quote(httpMethod), ", path, payload, &resp); err != nil {")
 	} else {
+		g.P("	if len(query) > 0 {")
+		g.P("		path += \"?\" + strings.Join(query, \"&\")")
+		g.P("	}")
 		g.P("	if err := c.base.Do(ctx, ", quote(httpMethod), ", path, req, &resp); err != nil {")
 	}
 

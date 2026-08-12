@@ -32,6 +32,10 @@ func NewClient(cfg saturn.Config) *Client {
 func (c *Client) GetIntegration(ctx context.Context, req *GetIntegrationRequest) (*Integration, error) {
 	var resp Integration
 	path := fmt.Sprintf("/api/v1/platform/integrations/%s", req.GetProvider())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -42,6 +46,10 @@ func (c *Client) GetIntegration(ctx context.Context, req *GetIntegrationRequest)
 func (c *Client) ConfigureIntegration(ctx context.Context, req *ConfigureIntegrationRequest) (*Integration, error) {
 	var resp Integration
 	path := "/api/v1/platform/integrations"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -52,6 +60,10 @@ func (c *Client) ConfigureIntegration(ctx context.Context, req *ConfigureIntegra
 func (c *Client) RotateIntegrationToken(ctx context.Context, req *RotateIntegrationTokenRequest) (*RotateIntegrationTokenResponse, error) {
 	var resp RotateIntegrationTokenResponse
 	path := fmt.Sprintf("/api/v1/platform/integrations/%s:rotate-token", req.GetProvider())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -62,6 +74,10 @@ func (c *Client) RotateIntegrationToken(ctx context.Context, req *RotateIntegrat
 func (c *Client) SimulateWebhook(ctx context.Context, req *SimulateWebhookRequest) (*SimulateWebhookResponse, error) {
 	var resp SimulateWebhookResponse
 	path := fmt.Sprintf("/api/v1/platform/integrations/%s:simulate", req.GetProvider())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -72,6 +88,10 @@ func (c *Client) SimulateWebhook(ctx context.Context, req *SimulateWebhookReques
 func (c *Client) ListCatalog(ctx context.Context, req *emptypb.Empty) (*ListCatalogResponse, error) {
 	var resp ListCatalogResponse
 	path := "/api/v1/platform/integrations/catalog"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -82,6 +102,10 @@ func (c *Client) ListCatalog(ctx context.Context, req *emptypb.Empty) (*ListCata
 func (c *Client) ListIntegrations(ctx context.Context, req *emptypb.Empty) (*ListIntegrationsResponse, error) {
 	var resp ListIntegrationsResponse
 	path := "/api/v1/platform/integrations"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -92,6 +116,10 @@ func (c *Client) ListIntegrations(ctx context.Context, req *emptypb.Empty) (*Lis
 func (c *Client) CreateIntegrationToken(ctx context.Context, req *CreateIntegrationTokenRequest) (*CreateIntegrationTokenResponse, error) {
 	var resp CreateIntegrationTokenResponse
 	path := fmt.Sprintf("/api/v1/platform/integrations/%s/tokens", req.GetProvider())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -102,6 +130,10 @@ func (c *Client) CreateIntegrationToken(ctx context.Context, req *CreateIntegrat
 func (c *Client) ListIntegrationTokens(ctx context.Context, req *ListIntegrationTokensRequest) (*ListIntegrationTokensResponse, error) {
 	var resp ListIntegrationTokensResponse
 	path := fmt.Sprintf("/api/v1/platform/integrations/%s/tokens", req.GetProvider())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -112,6 +144,10 @@ func (c *Client) ListIntegrationTokens(ctx context.Context, req *ListIntegration
 func (c *Client) DeleteIntegrationToken(ctx context.Context, req *DeleteIntegrationTokenRequest) (*emptypb.Empty, error) {
 	var resp emptypb.Empty
 	path := fmt.Sprintf("/api/v1/platform/integrations/%s/tokens/%s", req.GetProvider(), req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
 		return nil, err
 	}

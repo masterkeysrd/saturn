@@ -13,6 +13,7 @@ type AggregatedAccount struct {
 	*finance.Account
 	BalanceInBase      int64
 	ExchangeRateToBase float64
+	Institution        *finance.Institution
 }
 
 // ListAccountsFilter contains filtering parameters for listing accounts.
@@ -123,6 +124,24 @@ func (s *Service) hydrateAccounts(ctx context.Context, spaceID finance.SpaceID, 
 		}
 	}
 
+	// Extract unique institution IDs from the batch and hydrate Institutions
+	instIDSet := collections.NewSet[finance.InstitutionID]()
+	for _, acc := range accounts {
+		if acc.InstitutionID != nil && *acc.InstitutionID != "" {
+			instIDSet.Add(*acc.InstitutionID)
+		}
+	}
+	instMap := make(map[finance.InstitutionID]*finance.Institution)
+	instSlice := instIDSet.ToSlice()
+	if len(instSlice) > 0 {
+		insts, err := s.financeService.GetInstitutionsByIDs(ctx, spaceID, instSlice)
+		if err == nil {
+			for _, inst := range insts {
+				instMap[inst.ID] = inst
+			}
+		}
+	}
+
 	// Construct aggregated representations
 	aggregated := make([]*AggregatedAccount, len(accounts))
 	for i, acc := range accounts {
@@ -139,10 +158,16 @@ func (s *Service) hydrateAccounts(ctx context.Context, spaceID finance.SpaceID, 
 			}
 		}
 
+		var inst *finance.Institution
+		if acc.InstitutionID != nil {
+			inst = instMap[*acc.InstitutionID]
+		}
+
 		aggregated[i] = &AggregatedAccount{
 			Account:            acc,
 			BalanceInBase:      balanceInBase,
 			ExchangeRateToBase: rateToBase,
+			Institution:        inst,
 		}
 	}
 

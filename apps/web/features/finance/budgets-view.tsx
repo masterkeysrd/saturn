@@ -197,7 +197,9 @@ export function BudgetsView() {
         {/* Status Filter Tabs */}
         <Tabs
           value={statusFilter}
-          onValueChange={(val) => setStatusFilter(val as any)}
+          onValueChange={(val) =>
+            setStatusFilter(val as "ACTIVE" | "PAUSED" | "CLOSED" | "ALL")
+          }
           className="w-full"
         >
           <TabsList className="rounded-2xl border border-border/40 bg-card/40 p-1 backdrop-blur-sm">

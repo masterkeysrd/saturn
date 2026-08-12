@@ -395,6 +395,9 @@ type mockAccountStore struct {
 }
 
 func (m *mockAccountStore) Create(ctx context.Context, a *Account) error {
+	if a.Version == 0 {
+		a.Version = 1
+	}
 	m.data[a.ID] = a
 	return nil
 }
@@ -408,19 +411,104 @@ func (m *mockAccountStore) GetByID(ctx context.Context, spaceID SpaceID, id Acco
 }
 
 func (m *mockAccountStore) Update(ctx context.Context, a *Account) error {
-	if _, ok := m.data[a.ID]; !ok {
+	existing, ok := m.data[a.ID]
+	if !ok || existing.SpaceID != a.SpaceID {
 		return ErrAccountNotFound
 	}
+	a.Version++
 	m.data[a.ID] = a
 	return nil
 }
 
-func (m *mockAccountStore) Delete(ctx context.Context, id AccountID) error {
-	if _, ok := m.data[id]; !ok {
+func (m *mockAccountStore) Delete(ctx context.Context, spaceID SpaceID, id AccountID, opts DeleteOptions) error {
+	existing, ok := m.data[id]
+	if !ok || existing.SpaceID != spaceID {
 		return ErrAccountNotFound
+	}
+	if opts.Version > 0 && existing.Version != opts.Version {
+		return ErrAccountVersionMismatch
 	}
 	delete(m.data, id)
 	return nil
+}
+
+type mockInstitutionStore struct {
+	data map[InstitutionID]*Institution
+}
+
+func (m *mockInstitutionStore) Create(ctx context.Context, inst *Institution) error {
+	if m.data == nil {
+		m.data = make(map[InstitutionID]*Institution)
+	}
+	if inst.Version == 0 {
+		inst.Version = 1
+	}
+	m.data[inst.ID] = inst
+	return nil
+}
+
+func (m *mockInstitutionStore) GetByID(ctx context.Context, spaceID SpaceID, id InstitutionID) (*Institution, error) {
+	inst, ok := m.data[id]
+	if !ok || inst.SpaceID != spaceID {
+		return nil, errors.New("institution not found")
+	}
+	return inst, nil
+}
+
+func (m *mockInstitutionStore) GetByName(ctx context.Context, spaceID SpaceID, name string) (*Institution, error) {
+	for _, inst := range m.data {
+		if inst.SpaceID == spaceID && strings.EqualFold(inst.Name, name) {
+			return inst, nil
+		}
+	}
+	return nil, errors.New("institution not found")
+}
+
+func (m *mockInstitutionStore) GetByIDs(ctx context.Context, spaceID SpaceID, ids []InstitutionID) ([]*Institution, error) {
+	var list []*Institution
+	for _, id := range ids {
+		if inst, ok := m.data[id]; ok && inst.SpaceID == spaceID {
+			list = append(list, inst)
+		}
+	}
+	return list, nil
+}
+
+func (m *mockInstitutionStore) Update(ctx context.Context, inst *Institution) error {
+	existing, ok := m.data[inst.ID]
+	if !ok || existing.SpaceID != inst.SpaceID {
+		return errors.New("institution not found")
+	}
+	inst.Version++
+	m.data[inst.ID] = inst
+	return nil
+}
+
+func (m *mockInstitutionStore) Delete(ctx context.Context, spaceID SpaceID, id InstitutionID, opts DeleteOptions) error {
+	existing, ok := m.data[id]
+	if !ok || existing.SpaceID != spaceID {
+		return errors.New("institution not found")
+	}
+	if opts.Version > 0 && existing.Version != opts.Version {
+		return ErrInstitutionVersionMismatch
+	}
+	delete(m.data, id)
+	return nil
+}
+
+func (m *mockInstitutionStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListInstitutionsFilter) (*paging.Page[*Institution], error) {
+	var list []*Institution
+	for _, inst := range m.data {
+		if inst.SpaceID == spaceID {
+			if filter != nil && filter.SearchQuery != nil && *filter.SearchQuery != "" {
+				if !strings.Contains(strings.ToLower(inst.Name), strings.ToLower(*filter.SearchQuery)) {
+					continue
+				}
+			}
+			list = append(list, inst)
+		}
+	}
+	return &paging.Page[*Institution]{Items: list}, nil
 }
 
 func (m *mockAccountStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListAccountsFilter) (*paging.Page[*Account], error) {
@@ -2545,6 +2633,301 @@ func TestService_InvoiceBranch(t *testing.T) {
 			}
 			if len(txnStore.txns) != tt.expectedTransactionCount {
 				t.Errorf("Transactions count = %d, want %d", len(txnStore.txns), tt.expectedTransactionCount)
+			}
+		})
+	}
+}
+
+func TestUpdateAccount(t *testing.T) {
+	ctx := context.Background()
+	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	aID, _ := NewAccountID()
+
+	accStore := &mockAccountStore{data: make(map[AccountID]*Account)}
+	_ = accStore.Create(ctx, &Account{
+		ID:             aID,
+		SpaceID:        spaceID,
+		Name:           "Checking",
+		Type:           AccountTypeBank,
+		Currency:       "USD",
+		InitialBalance: 100000,
+		CurrentBalance: 100000,
+		Version:        1,
+	})
+
+	svc := NewService(Dependencies{AccountStore: accStore})
+
+	tests := []struct {
+		name      string
+		update    *Account
+		mask      []string
+		wantErr   error
+		wantColor string
+	}{
+		{
+			name: "stale version returns ErrAccountVersionMismatch",
+			update: &Account{
+				ID:      aID,
+				SpaceID: spaceID,
+				Color:   "#FF0000",
+				Version: 99,
+			},
+			mask:    []string{"color"},
+			wantErr: ErrAccountVersionMismatch,
+		},
+		{
+			name: "valid version applies patch mask",
+			update: &Account{
+				ID:      aID,
+				SpaceID: spaceID,
+				Color:   "#00FF00",
+				Version: 1,
+			},
+			mask:      []string{"color"},
+			wantErr:   nil,
+			wantColor: "#00FF00",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, err := svc.UpdateAccount(ctx, tt.update, tt.mask)
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Errorf("UpdateAccount error = %v, want %v", err, tt.wantErr)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if res.Color != tt.wantColor {
+					t.Errorf("Color = %s, want %s", res.Color, tt.wantColor)
+				}
+			}
+		})
+	}
+}
+
+func TestUpdateInstitution(t *testing.T) {
+	ctx := context.Background()
+	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	iID, _ := NewInstitutionID()
+
+	instStore := &mockInstitutionStore{data: make(map[InstitutionID]*Institution)}
+	_ = instStore.Create(ctx, &Institution{
+		ID:      iID,
+		SpaceID: spaceID,
+		Name:    "Chase",
+		Domain:  "chase.com",
+		Color:   "#0000FF",
+		Version: 1,
+	})
+
+	svc := NewService(Dependencies{InstitutionStore: instStore})
+
+	tests := []struct {
+		name      string
+		update    *Institution
+		mask      []string
+		wantErr   error
+		wantColor string
+	}{
+		{
+			name: "stale version returns ErrInstitutionVersionMismatch",
+			update: &Institution{
+				ID:      iID,
+				SpaceID: spaceID,
+				Color:   "#FF0000",
+				Version: 99,
+			},
+			mask:    []string{"color"},
+			wantErr: ErrInstitutionVersionMismatch,
+		},
+		{
+			name: "valid version applies patch mask",
+			update: &Institution{
+				ID:      iID,
+				SpaceID: spaceID,
+				Color:   "#0000AA",
+				Version: 1,
+			},
+			mask:      []string{"color"},
+			wantErr:   nil,
+			wantColor: "#0000AA",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, err := svc.UpdateInstitution(ctx, tt.update, tt.mask)
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Errorf("UpdateInstitution error = %v, want %v", err, tt.wantErr)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if res.Color != tt.wantColor {
+					t.Errorf("Color = %s, want %s", res.Color, tt.wantColor)
+				}
+			}
+		})
+	}
+}
+
+func TestCreateInstitution(t *testing.T) {
+	ctx := context.Background()
+	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	instStore := &mockInstitutionStore{data: make(map[InstitutionID]*Institution)}
+	svc := NewService(Dependencies{InstitutionStore: instStore})
+
+	tests := []struct {
+		name       string
+		input      *Institution
+		wantErr    bool
+		wantDomain string
+	}{
+		{
+			name: "valid institution creates successfully",
+			input: &Institution{
+				SpaceID: spaceID,
+				Name:    "Chase Bank",
+				Domain:  "chase.com",
+			},
+			wantErr:    false,
+			wantDomain: "chase.com",
+		},
+		{
+			name: "full website URL extracts domain",
+			input: &Institution{
+				SpaceID: spaceID,
+				Name:    "https://www.chase.com/personal/banking",
+			},
+			wantErr:    false,
+			wantDomain: "chase.com",
+		},
+		{
+			name: "empty name returns validation error",
+			input: &Institution{
+				SpaceID: spaceID,
+				Name:    "",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, err := svc.CreateInstitution(ctx, tt.input)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error, got nil")
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if res.Domain != tt.wantDomain {
+					t.Errorf("Domain = %s, want %s", res.Domain, tt.wantDomain)
+				}
+			}
+		})
+	}
+}
+
+func TestDeleteInstitution(t *testing.T) {
+	ctx := context.Background()
+	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	iID, _ := NewInstitutionID()
+
+	instStore := &mockInstitutionStore{data: make(map[InstitutionID]*Institution)}
+	_ = instStore.Create(ctx, &Institution{
+		ID:      iID,
+		SpaceID: spaceID,
+		Name:    "Chase",
+		Version: 2,
+	})
+
+	svc := NewService(Dependencies{InstitutionStore: instStore})
+
+	tests := []struct {
+		name    string
+		opts    DeleteOptions
+		wantErr error
+	}{
+		{
+			name:    "version mismatch returns ErrInstitutionVersionMismatch",
+			opts:    DeleteOptions{Version: 1},
+			wantErr: ErrInstitutionVersionMismatch,
+		},
+		{
+			name:    "matching version succeeds",
+			opts:    DeleteOptions{Version: 2},
+			wantErr: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := svc.DeleteInstitution(ctx, spaceID, iID, tt.opts)
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Errorf("DeleteInstitution error = %v, want %v", err, tt.wantErr)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestDeleteAccount(t *testing.T) {
+	ctx := context.Background()
+	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	aID, _ := NewAccountID()
+
+	accStore := &mockAccountStore{data: make(map[AccountID]*Account)}
+	_ = accStore.Create(ctx, &Account{
+		ID:        aID,
+		SpaceID:   spaceID,
+		Name:      "Savings",
+		IsDefault: false,
+		Version:   2,
+	})
+
+	svc := NewService(Dependencies{AccountStore: accStore})
+
+	tests := []struct {
+		name    string
+		opts    DeleteOptions
+		wantErr error
+	}{
+		{
+			name:    "version mismatch returns ErrAccountVersionMismatch",
+			opts:    DeleteOptions{Version: 1},
+			wantErr: ErrAccountVersionMismatch,
+		},
+		{
+			name:    "matching version succeeds",
+			opts:    DeleteOptions{Version: 2},
+			wantErr: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := svc.DeleteAccount(ctx, spaceID, aID, tt.opts)
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Errorf("DeleteAccount error = %v, want %v", err, tt.wantErr)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
 			}
 		})
 	}

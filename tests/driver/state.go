@@ -14,6 +14,7 @@ type AccountInfo struct {
 	Currency       string
 	InitialBalance int64
 	LastFour       string
+	Version        int64
 }
 
 // BorrowingInfo stores registered borrowing metadata.
@@ -52,6 +53,16 @@ type InboxItemInfo struct {
 	BudgetID  string
 }
 
+// InstitutionInfo stores registered institution metadata.
+type InstitutionInfo struct {
+	ID      string
+	Name    string
+	Domain  string
+	LogoURL string
+	Color   string
+	Version int64
+}
+
 // State manages internal session and entity registries for a test run.
 type State struct {
 	T            *testing.T
@@ -61,6 +72,7 @@ type State struct {
 	UserPassword string
 
 	Accounts          map[string]*AccountInfo
+	Institutions      map[string]*InstitutionInfo
 	Borrowings        map[string]*BorrowingInfo
 	Repayments        map[string]*RepaymentInfo
 	Transfers         map[string]*financev1.Transfer
@@ -69,6 +81,7 @@ type State struct {
 	ScheduledPayments map[string]string
 
 	LastAccount                     *AccountInfo
+	LastInstitution                 *InstitutionInfo
 	LastBorrowing                   *BorrowingInfo
 	LastRepayment                   *RepaymentInfo
 	LastTransfer                    *financev1.Transfer
@@ -84,6 +97,7 @@ func newState(t *testing.T) *State {
 	return &State{
 		T:                 t,
 		Accounts:          make(map[string]*AccountInfo),
+		Institutions:      make(map[string]*InstitutionInfo),
 		Borrowings:        make(map[string]*BorrowingInfo),
 		Repayments:        make(map[string]*RepaymentInfo),
 		Transfers:         make(map[string]*financev1.Transfer),
@@ -100,6 +114,7 @@ func (s *State) ClearRegistries() {
 	s.UserEmail = ""
 	s.UserPassword = ""
 	s.Accounts = make(map[string]*AccountInfo)
+	s.Institutions = make(map[string]*InstitutionInfo)
 	s.Borrowings = make(map[string]*BorrowingInfo)
 	s.Repayments = make(map[string]*RepaymentInfo)
 	s.Transfers = make(map[string]*financev1.Transfer)
@@ -107,6 +122,7 @@ func (s *State) ClearRegistries() {
 	s.Budgets = make(map[string]string)
 	s.ScheduledPayments = make(map[string]string)
 	s.LastAccount = nil
+	s.LastInstitution = nil
 	s.LastBorrowing = nil
 	s.LastRepayment = nil
 	s.LastTransfer = nil

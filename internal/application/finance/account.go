@@ -16,6 +16,7 @@ type CreateAccountRequest struct {
 	Color          string
 	Notes          string
 	LastFour       string
+	InstitutionID  string
 }
 
 type UpdateAccountRequest struct {
@@ -30,12 +31,21 @@ type UpdateAccountRequest struct {
 	Color          string
 	Notes          string
 	LastFour       string
+	InstitutionID  string
+	Mask           []string
+	Version        int64
 }
 
 func (c *Coordinator) CreateAccount(ctx context.Context, req *CreateAccountRequest) (*finance.Account, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	var instID *finance.InstitutionID
+	if req.InstitutionID != "" {
+		parsed := finance.InstitutionID(req.InstitutionID)
+		instID = &parsed
 	}
 
 	acc := &finance.Account{
@@ -50,6 +60,7 @@ func (c *Coordinator) CreateAccount(ctx context.Context, req *CreateAccountReque
 		Color:          req.Color,
 		Notes:          req.Notes,
 		LastFour:       req.LastFour,
+		InstitutionID:  instID,
 	}
 
 	return c.financeService.CreateAccount(ctx, acc)
@@ -61,31 +72,38 @@ func (c *Coordinator) UpdateAccount(ctx context.Context, req *UpdateAccountReque
 		return nil, err
 	}
 
-	acc := &finance.Account{
-		ID:             req.ID,
-		SpaceID:        rCtx.SpaceID,
-		Name:           req.Name,
-		Type:           finance.AccountType(req.Type),
-		Currency:       finance.Currency(req.Currency),
-		InitialBalance: req.InitialBalance,
-		CreditLimit:    req.CreditLimit,
-		IsDefault:      req.IsDefault,
-		IsActive:       req.IsActive,
-		Color:          req.Color,
-		Notes:          req.Notes,
-		LastFour:       req.LastFour,
+	var instID *finance.InstitutionID
+	if req.InstitutionID != "" {
+		parsed := finance.InstitutionID(req.InstitutionID)
+		instID = &parsed
 	}
 
-	return c.financeService.UpdateAccount(ctx, acc)
+	acc := &finance.Account{
+		ID:            req.ID,
+		SpaceID:       rCtx.SpaceID,
+		Name:          req.Name,
+		Type:          finance.AccountType(req.Type),
+		Currency:      finance.Currency(req.Currency),
+		CreditLimit:   req.CreditLimit,
+		IsDefault:     req.IsDefault,
+		IsActive:      req.IsActive,
+		Color:         req.Color,
+		Notes:         req.Notes,
+		LastFour:      req.LastFour,
+		InstitutionID: instID,
+		Version:       req.Version,
+	}
+
+	return c.financeService.UpdateAccount(ctx, acc, req.Mask)
 }
 
-func (c *Coordinator) DeleteAccount(ctx context.Context, id finance.AccountID) error {
+func (c *Coordinator) DeleteAccount(ctx context.Context, id finance.AccountID, opts finance.DeleteOptions) error {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return err
 	}
 
-	return c.financeService.DeleteAccount(ctx, rCtx.SpaceID, id)
+	return c.financeService.DeleteAccount(ctx, rCtx.SpaceID, id, opts)
 }
 
 func (c *Coordinator) AdjustAccountBalance(ctx context.Context, id finance.AccountID, targetBalance int64, adjustmentDate string, note string) (*finance.Account, error) {

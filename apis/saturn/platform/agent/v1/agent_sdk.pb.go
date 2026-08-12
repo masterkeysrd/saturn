@@ -32,6 +32,10 @@ func NewClient(cfg saturn.Config) *Client {
 func (c *Client) CreateProvider(ctx context.Context, req *CreateProviderRequest) (*LLMProvider, error) {
 	var resp LLMProvider
 	path := "/api/v1/platform/agent/providers"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -42,6 +46,10 @@ func (c *Client) CreateProvider(ctx context.Context, req *CreateProviderRequest)
 func (c *Client) GetProvider(ctx context.Context, req *GetProviderRequest) (*LLMProvider, error) {
 	var resp LLMProvider
 	path := fmt.Sprintf("/api/v1/platform/agent/providers/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -52,6 +60,10 @@ func (c *Client) GetProvider(ctx context.Context, req *GetProviderRequest) (*LLM
 func (c *Client) ListProviders(ctx context.Context, req *emptypb.Empty) (*ListProvidersResponse, error) {
 	var resp ListProvidersResponse
 	path := "/api/v1/platform/agent/providers"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -62,6 +74,10 @@ func (c *Client) ListProviders(ctx context.Context, req *emptypb.Empty) (*ListPr
 func (c *Client) UpdateProvider(ctx context.Context, req *UpdateProviderRequest) (*LLMProvider, error) {
 	var resp LLMProvider
 	path := fmt.Sprintf("/api/v1/platform/agent/providers/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "PUT", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -72,6 +88,10 @@ func (c *Client) UpdateProvider(ctx context.Context, req *UpdateProviderRequest)
 func (c *Client) DeleteProvider(ctx context.Context, req *DeleteProviderRequest) (*emptypb.Empty, error) {
 	var resp emptypb.Empty
 	path := fmt.Sprintf("/api/v1/platform/agent/providers/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -82,6 +102,10 @@ func (c *Client) DeleteProvider(ctx context.Context, req *DeleteProviderRequest)
 func (c *Client) CreateAgent(ctx context.Context, req *CreateAgentRequest) (*Agent, error) {
 	var resp Agent
 	path := "/api/v1/platform/agent/agents"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -92,6 +116,10 @@ func (c *Client) CreateAgent(ctx context.Context, req *CreateAgentRequest) (*Age
 func (c *Client) GetAgent(ctx context.Context, req *GetAgentRequest) (*Agent, error) {
 	var resp Agent
 	path := fmt.Sprintf("/api/v1/platform/agent/agents/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -102,6 +130,10 @@ func (c *Client) GetAgent(ctx context.Context, req *GetAgentRequest) (*Agent, er
 func (c *Client) ListAgents(ctx context.Context, req *emptypb.Empty) (*ListAgentsResponse, error) {
 	var resp ListAgentsResponse
 	path := "/api/v1/platform/agent/agents"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -112,6 +144,10 @@ func (c *Client) ListAgents(ctx context.Context, req *emptypb.Empty) (*ListAgent
 func (c *Client) UpdateAgent(ctx context.Context, req *UpdateAgentRequest) (*Agent, error) {
 	var resp Agent
 	path := fmt.Sprintf("/api/v1/platform/agent/agents/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "PUT", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -122,6 +158,10 @@ func (c *Client) UpdateAgent(ctx context.Context, req *UpdateAgentRequest) (*Age
 func (c *Client) DeleteAgent(ctx context.Context, req *DeleteAgentRequest) (*emptypb.Empty, error) {
 	var resp emptypb.Empty
 	path := fmt.Sprintf("/api/v1/platform/agent/agents/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -132,6 +172,10 @@ func (c *Client) DeleteAgent(ctx context.Context, req *DeleteAgentRequest) (*emp
 func (c *Client) ListAgentRuns(ctx context.Context, req *ListAgentRunsRequest) (*ListAgentRunsResponse, error) {
 	var resp ListAgentRunsResponse
 	path := fmt.Sprintf("/api/v1/platform/agent/agents/%s/runs", req.GetAgentId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -142,6 +186,10 @@ func (c *Client) ListAgentRuns(ctx context.Context, req *ListAgentRunsRequest) (
 func (c *Client) GetAgentCatalog(ctx context.Context, req *emptypb.Empty) (*GetAgentCatalogResponse, error) {
 	var resp GetAgentCatalogResponse
 	path := "/api/v1/platform/agent/agents-catalog"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -152,6 +200,10 @@ func (c *Client) GetAgentCatalog(ctx context.Context, req *emptypb.Empty) (*GetA
 func (c *Client) GetProviderCatalog(ctx context.Context, req *emptypb.Empty) (*GetProviderCatalogResponse, error) {
 	var resp GetProviderCatalogResponse
 	path := "/api/v1/platform/agent/providers-catalog"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -162,6 +214,10 @@ func (c *Client) GetProviderCatalog(ctx context.Context, req *emptypb.Empty) (*G
 func (c *Client) GetSuggestions(ctx context.Context, req *GetSuggestionsRequest) (*GetSuggestionsResponse, error) {
 	var resp GetSuggestionsResponse
 	path := "/api/v1/platform/agent/suggestions"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}

@@ -591,6 +591,8 @@ func (h *Handler) mapError(err error) error {
 		return status.Error(codes.NotFound, "borrowing not found")
 	case errors.Is(err, finance.ErrRepaymentNotFound):
 		return status.Error(codes.NotFound, "borrowing repayment not found")
+	case errors.Is(err, finance.ErrBudgetVersionMismatch), errors.Is(err, finance.ErrAccountVersionMismatch), errors.Is(err, finance.ErrInstitutionVersionMismatch):
+		return status.Error(codes.Aborted, err.Error())
 	}
 
 	return status.Error(codes.InvalidArgument, err.Error())
@@ -1108,13 +1110,46 @@ func toDomainAccountType(t financev1.Account_Type) finance.AccountType {
 	}
 }
 
+func toProtoInstitution(i *finance.Institution) *financev1.Institution {
+	if i == nil {
+		return nil
+	}
+	return &financev1.Institution{
+		Id:         string(i.ID),
+		Name:       i.Name,
+		Domain:     i.Domain,
+		LogoUrl:    i.LogoURL,
+		Color:      i.Color,
+		Version:    i.Version,
+		CreateTime: timestamppb.New(i.CreateTime),
+		UpdateTime: timestamppb.New(i.UpdateTime),
+	}
+}
+
+func toProtoAccountInstitutionInfo(i *finance.Institution) *financev1.Account_InstitutionInfo {
+	if i == nil {
+		return nil
+	}
+	return &financev1.Account_InstitutionInfo{
+		Id:      string(i.ID),
+		Name:    i.Name,
+		Domain:  i.Domain,
+		LogoUrl: i.LogoURL,
+		Color:   i.Color,
+	}
+}
+
 func toProtoAccount(a *finance.Account) *financev1.Account {
 	if a == nil {
 		return nil
 	}
+	var instID *string
+	if a.InstitutionID != nil {
+		str := string(*a.InstitutionID)
+		instID = &str
+	}
 	return &financev1.Account{
 		Id:             string(a.ID),
-		SpaceId:        string(a.SpaceID),
 		Name:           a.Name,
 		Type:           toProtoAccountType(a.Type),
 		Currency:       string(a.Currency),
@@ -1126,6 +1161,8 @@ func toProtoAccount(a *finance.Account) *financev1.Account {
 		Color:          a.Color,
 		Notes:          a.Notes,
 		LastFour:       a.LastFour,
+		InstitutionId:  instID,
+		Version:        a.Version,
 		CreateTime:     timestamppb.New(a.CreateTime),
 		UpdateTime:     timestamppb.New(a.UpdateTime),
 	}
@@ -1165,6 +1202,7 @@ func (h *Handler) CreateAccount(ctx context.Context, req *financev1.CreateAccoun
 		Color:          account.GetColor(),
 		Notes:          account.GetNotes(),
 		LastFour:       account.GetLastFour(),
+		InstitutionID:  account.GetInstitutionId(),
 	}
 
 	acc, err := h.Coordinator.CreateAccount(ctx, appReq)
@@ -1173,6 +1211,23 @@ func (h *Handler) CreateAccount(ctx context.Context, req *financev1.CreateAccoun
 	}
 
 	return toProtoAccount(acc), nil
+}
+
+func toProtoAggregatedAccount(a *financeaggregator.AggregatedAccount, viewType financeaggregator.ViewType) *financev1.Account {
+	if a == nil {
+		return nil
+	}
+	pbAcc := toProtoAccount(a.Account)
+	if a.Institution != nil {
+		pbAcc.Institution = toProtoAccountInstitutionInfo(a.Institution)
+	}
+	if viewType == financeaggregator.ViewFull {
+		pbAcc.Conversion = &financev1.Account_Conversion{
+			Balance: a.BalanceInBase,
+			Rate:    a.ExchangeRateToBase,
+		}
+	}
+	return pbAcc
 }
 
 func (h *Handler) GetAccount(ctx context.Context, req *financev1.GetAccountRequest) (*financev1.Account, error) {
@@ -1197,15 +1252,7 @@ func (h *Handler) GetAccount(ctx context.Context, req *financev1.GetAccountReque
 		return nil, h.mapError(err)
 	}
 
-	pbAcc := toProtoAccount(a.Account)
-	if viewType == financeaggregator.ViewFull {
-		pbAcc.Conversion = &financev1.Account_Conversion{
-			Balance: a.BalanceInBase,
-			Rate:    a.ExchangeRateToBase,
-		}
-	}
-
-	return pbAcc, nil
+	return toProtoAggregatedAccount(a, viewType), nil
 }
 
 func (h *Handler) UpdateAccount(ctx context.Context, req *financev1.UpdateAccountRequest) (*financev1.Account, error) {
@@ -1214,20 +1261,33 @@ func (h *Handler) UpdateAccount(ctx context.Context, req *financev1.UpdateAccoun
 		return nil, status.Error(codes.InvalidArgument, "account resource is required")
 	}
 
-	aID, err := finance.ParseAccountID(account.GetId())
+	idStr := req.GetId()
+	if idStr == "" {
+		idStr = account.GetId()
+	}
+
+	aID, err := finance.ParseAccountID(idStr)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
+	var mask []string
+	if req.UpdateMask != nil {
+		mask = req.UpdateMask.Paths
+	}
+
 	appReq := &financeapp.UpdateAccountRequest{
-		ID:          aID,
-		Name:        account.GetName(),
-		CreditLimit: account.GetCreditLimit(),
-		IsDefault:   account.GetIsDefault(),
-		IsActive:    account.GetIsActive(),
-		Color:       account.GetColor(),
-		Notes:       account.GetNotes(),
-		LastFour:    account.GetLastFour(),
+		ID:            aID,
+		Name:          account.GetName(),
+		CreditLimit:   account.GetCreditLimit(),
+		IsDefault:     account.GetIsDefault(),
+		IsActive:      account.GetIsActive(),
+		Color:         account.GetColor(),
+		Notes:         account.GetNotes(),
+		LastFour:      account.GetLastFour(),
+		InstitutionID: account.GetInstitutionId(),
+		Mask:          mask,
+		Version:       req.GetVersion(),
 	}
 
 	acc, err := h.Coordinator.UpdateAccount(ctx, appReq)
@@ -1262,7 +1322,8 @@ func (h *Handler) DeleteAccount(ctx context.Context, req *financev1.DeleteAccoun
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	if err := h.Coordinator.DeleteAccount(ctx, aID); err != nil {
+	opts := finance.DeleteOptions{Version: req.GetVersion()}
+	if err := h.Coordinator.DeleteAccount(ctx, aID, opts); err != nil {
 		return nil, h.mapError(err)
 	}
 
@@ -1310,14 +1371,7 @@ func (h *Handler) ListAccounts(ctx context.Context, req *financev1.ListAccountsR
 
 	protoAccounts := make([]*financev1.Account, 0, len(page.Items))
 	for _, a := range page.Items {
-		pbAcc := toProtoAccount(a.Account)
-		if viewType == financeaggregator.ViewFull {
-			pbAcc.Conversion = &financev1.Account_Conversion{
-				Balance: a.BalanceInBase,
-				Rate:    a.ExchangeRateToBase,
-			}
-		}
-		protoAccounts = append(protoAccounts, pbAcc)
+		protoAccounts = append(protoAccounts, toProtoAggregatedAccount(a, viewType))
 	}
 
 	return &financev1.ListAccountsResponse{
@@ -1687,4 +1741,138 @@ func (h *Handler) DiscardInboxItem(ctx context.Context, req *financev1.DiscardIn
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func (h *Handler) CreateInstitution(ctx context.Context, req *financev1.CreateInstitutionRequest) (*financev1.Institution, error) {
+	pbInst := req.GetInstitution()
+	if pbInst == nil {
+		return nil, status.Error(codes.InvalidArgument, "institution resource is required")
+	}
+
+	inst := &finance.Institution{
+		Name:    pbInst.GetName(),
+		Domain:  pbInst.GetDomain(),
+		LogoURL: pbInst.GetLogoUrl(),
+		Color:   pbInst.GetColor(),
+	}
+
+	created, err := h.Coordinator.CreateInstitution(ctx, inst)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoInstitution(created), nil
+}
+
+func (h *Handler) UpdateInstitution(ctx context.Context, req *financev1.UpdateInstitutionRequest) (*financev1.Institution, error) {
+	pbInst := req.GetInstitution()
+	if pbInst == nil {
+		return nil, status.Error(codes.InvalidArgument, "institution resource is required")
+	}
+
+	iid := finance.InstitutionID(req.GetId())
+	if err := iid.Validate(); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	var version int64
+	if req.Version != nil {
+		version = req.GetVersion()
+	}
+
+	incoming := &finance.Institution{
+		ID:      iid,
+		Name:    pbInst.GetName(),
+		Domain:  pbInst.GetDomain(),
+		LogoURL: pbInst.GetLogoUrl(),
+		Color:   pbInst.GetColor(),
+		Version: version,
+	}
+
+	var mask []string
+	if req.GetUpdateMask() != nil {
+		mask = req.GetUpdateMask().GetPaths()
+	}
+
+	updated, err := h.Coordinator.UpdateInstitution(ctx, incoming, mask)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoInstitution(updated), nil
+}
+
+func (h *Handler) DeleteInstitution(ctx context.Context, req *financev1.DeleteInstitutionRequest) (*emptypb.Empty, error) {
+	iid := finance.InstitutionID(req.GetId())
+	if err := iid.Validate(); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	var version int64
+	if req.Version != nil {
+		version = req.GetVersion()
+	}
+
+	if err := h.Coordinator.DeleteInstitution(ctx, iid, finance.DeleteOptions{Version: version}); err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (h *Handler) ListInstitutions(ctx context.Context, req *financev1.ListInstitutionsRequest) (*financev1.ListInstitutionsResponse, error) {
+	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	}
+	spaceID := finance.SpaceID(spaceIDStr)
+
+	filter := &finance.ListInstitutionsFilter{
+		PageSize:      req.GetPageSize(),
+		NextPageToken: req.GetPageToken(),
+	}
+	if req.SearchQuery != nil {
+		filter.SearchQuery = req.SearchQuery
+	}
+
+	page, err := h.Aggregator.ListInstitutions(ctx, spaceID, filter)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	items := make([]*financev1.Institution, len(page.Items))
+	for i, item := range page.Items {
+		items[i] = toProtoInstitution(item)
+	}
+
+	return &financev1.ListInstitutionsResponse{
+		Institutions:  items,
+		NextPageToken: page.NextPageToken,
+	}, nil
+}
+
+func (h *Handler) ResolveInstitution(ctx context.Context, req *financev1.ResolveInstitutionRequest) (*financev1.ResolveInstitutionResponse, error) {
+	if req.GetName() == "" {
+		return nil, status.Error(codes.InvalidArgument, "name is required")
+	}
+
+	res, err := h.Coordinator.ResolveInstitution(ctx, req.GetName())
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	resp := &financev1.ResolveInstitutionResponse{
+		Name:    res.Name,
+		Domain:  res.Domain,
+		LogoUrl: res.LogoURL,
+		Color:   res.Color,
+	}
+
+	if res.ExistingInstitutionID != nil {
+		exID := string(*res.ExistingInstitutionID)
+		resp.ExistingInstitutionId = &exID
+		resp.ExistingInstitutionName = &res.ExistingInstitutionName
+	}
+
+	return resp, nil
 }

@@ -284,6 +284,37 @@ service Finance {
     option (google.api.http) = {get: "/v1/finance/accounts"};
   }
 
+  // Registers a new financial institution (bank, brokerage, or payment platform) in the space.
+  rpc CreateInstitution(CreateInstitutionRequest) returns (Institution) {
+    option (google.api.http) = {
+      post: "/v1/finance/institutions"
+      body: "institution"
+    };
+  }
+
+  // Updates an existing registered institution's properties (e.g. name, domain, logo, color).
+  rpc UpdateInstitution(UpdateInstitutionRequest) returns (Institution) {
+    option (google.api.http) = {
+      put: "/v1/finance/institutions/{id}"
+      body: "institution"
+    };
+  }
+
+  // Deletes an institution from the space. Linked accounts will have institution set to null.
+  rpc DeleteInstitution(DeleteInstitutionRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/finance/institutions/{id}"};
+  }
+
+  // Lists all institutions registered in the workspace.
+  rpc ListInstitutions(ListInstitutionsRequest) returns (ListInstitutionsResponse) {
+    option (google.api.http) = {get: "/v1/finance/institutions"};
+  }
+
+  // Auto-resolves domain, web logo URL, and initial visual attributes for an institution by name.
+  rpc ResolveInstitution(ResolveInstitutionRequest) returns (ResolveInstitutionResponse) {
+    option (google.api.http) = {get: "/v1/finance/institutions:resolve"};
+  }
+
   // Logs a transfer transaction, shifting funds between a source and destination account.
   rpc CreateTransfer(CreateTransferRequest) returns (Transfer) {
     option (google.api.http) = {
@@ -1663,54 +1694,6 @@ message Account {
     FULL = 2;
   }
 
-  // Output only. Unique identifier of the account.
-  // Values are of the form `acc_[a-zA-Z0-9]+`.
-  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
-
-  // Output only. Space identifier.
-  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
-
-  // Required. User-friendly account name (e.g. "Chase Checking").
-  string name = 3 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. Account classification type.
-  Type type = 4 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. Account currency (e.g. "USD").
-  string currency = 5 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. Initial balance amount in cents (e.g. 500000 for $5,000.00).
-  int64 initial_balance = 6 [(google.api.field_behavior) = REQUIRED];
-
-  // Output only. Computed current balance amount in cents.
-  // Calculated dynamically as `InitialBalance + Sum(Income/TransferIn) - Sum(Expense/TransferOut)`.
-  int64 current_balance = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
-
-  // Optional. Credit limit amount in cents (applicable only if CREDIT_CARD type).
-  int64 credit_limit = 8 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Indicates if the account is the workspace default. Default accounts receive
-  // transactions if no explicit account is nominated.
-  bool is_default = 9 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Indicates if the account is active.
-  bool is_active = 10 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Color HEX code for visual UI identification.
-  string color = 11 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Narration notes.
-  string notes = 12 [(google.api.field_behavior) = OPTIONAL];
-
-  // Optional. Last four digits of card or account number.
-  string last_four = 13 [(google.api.field_behavior) = OPTIONAL];
-
-  // Output only. Creation timestamp.
-  google.protobuf.Timestamp create_time = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
-
-  // Output only. Last update timestamp.
-  google.protobuf.Timestamp update_time = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
-
   // Conversion contains hydrated conversion metrics relative to the workspace base currency.
   message Conversion {
     // Output only. Converted balance in base currency cents.
@@ -1719,21 +1702,192 @@ message Account {
     // Output only. Exchange rate multiplier used.
     double rate = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
   }
+
+  // InstitutionInfo contains inline financial institution metadata.
+  message InstitutionInfo {
+    // Output only. Unique resource identifier.
+    string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Required. Name of the institution.
+    string name = 2 [(google.api.field_behavior) = REQUIRED];
+
+    // Optional. Web domain name.
+    string domain = 3 [(google.api.field_behavior) = OPTIONAL];
+
+    // Optional. Resolved web logo favicon image URL.
+    string logo_url = 4 [(google.api.field_behavior) = OPTIONAL];
+
+    // Optional. Visual theme accent color.
+    string color = 5 [(google.api.field_behavior) = OPTIONAL];
+  }
+
+  // Output only. Unique identifier of the account.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. User-friendly account name (e.g. "Chase Checking").
+  string name = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Account classification type.
+  Type type = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Account currency (e.g. "USD").
+  string currency = 4 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Initial balance amount in cents (e.g. 500000 for $5,000.00).
+  int64 initial_balance = 5 [(google.api.field_behavior) = REQUIRED];
+
+  // Output only. Computed current balance amount in cents.
+  // Calculated dynamically as `InitialBalance + Sum(Income/TransferIn) - Sum(Expense/TransferOut)`.
+  int64 current_balance = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. Credit limit amount in cents (applicable only if CREDIT_CARD type).
+  int64 credit_limit = 7 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Associated financial institution ID.
+  optional string institution_id = 8 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Hydrated associated financial institution details.
+  InstitutionInfo institution = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. Last four digits of card or account number.
+  string last_four = 10 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Color HEX code for visual UI identification.
+  string color = 11 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Indicates if the account is the workspace default. Default accounts receive
+  // transactions if no explicit account is nominated.
+  bool is_default = 12 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Indicates if the account is active.
+  bool is_active = 13 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Narration notes.
+  string notes = 14 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Concurrency control version.
+  int64 version = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+
   // Output only. Currency conversion statistics.
   Conversion conversion = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Creation timestamp.
+  google.protobuf.Timestamp create_time = 17 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Last update timestamp.
+  google.protobuf.Timestamp update_time = 18 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Institution represents a financial bank, brokerage, or payment platform.
+message Institution {
+  // Output only. Unique resource identifier (e.g. "inst_3HnhtBQD...").
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. User-friendly name of the institution (e.g. "Chase", "Banco Popular").
+  string name = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Web domain name used for web logo resolution (e.g. "chase.com").
+  string domain = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only/Optional. Resolved web logo favicon image URL.
+  string logo_url = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Theme accent color.
+  string color = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. Concurrency control version.
+  int64 version = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Creation timestamp.
+  google.protobuf.Timestamp create_time = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Last update timestamp.
+  google.protobuf.Timestamp update_time = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message CreateInstitutionRequest {
+  // Required. The institution payload to create.
+  Institution institution = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message UpdateInstitutionRequest {
+  // Required. Identifier of the institution to update.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Updated institution details.
+  Institution institution = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Field mask specifying fields to update.
+  google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Expected resource version for optimistic concurrency control.
+  optional int64 version = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message DeleteInstitutionRequest {
+  // Required. Identifier of the institution to delete.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Expected resource version.
+  optional int64 version = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message ListInstitutionsRequest {
+  // Optional. Maximum number of items to return in a single page.
+  int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Keyset page token.
+  string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Search query matching institution names or domains.
+  optional string search_query = 3 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message ListInstitutionsResponse {
+  // List of institutions registered in the space.
+  repeated Institution institutions = 1;
+
+  // Keyset page token.
+  string next_page_token = 2;
+}
+
+message ResolveInstitutionRequest {
+  // Required. Institution name to auto-resolve (e.g. "Chase" or "Banco Popular").
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message ResolveInstitutionResponse {
+  // Resolved canonical institution name.
+  string name = 1;
+
+  // Resolved web domain name (e.g. "chase.com").
+  string domain = 2;
+
+  // Resolved website favicon logo image URL.
+  string logo_url = 3;
+
+  // Recommended theme color.
+  string color = 4;
+
+  // Optional matching existing institution ID if an exact/fuzzy match already exists in the space.
+  optional string existing_institution_id = 5;
+
+  // Optional existing matching institution name if a near match exists in the space.
+  optional string existing_institution_name = 6;
 }
 
 // The request for
 // [CreateAccount][saturn.finance.v1.Finance.CreateAccount].
 message CreateAccountRequest {
-  // Required. Account configuration parameters.
+  // Required. Target account parameters.
   Account account = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 // The request for
 // [GetAccount][saturn.finance.v1.Finance.GetAccount].
 message GetAccountRequest {
-  // Required. Target account identifier.
+  // Required. Unique identifier of the account to retrieve.
   // Values are of the form `acc_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 
@@ -1750,6 +1904,12 @@ message UpdateAccountRequest {
 
   // Required. Updated account parameters.
   Account account = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Field mask defining which fields to update for partial updates.
+  optional google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Version number for optimistic concurrency control.
+  optional int64 version = 4 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // The request for
@@ -1774,6 +1934,9 @@ message DeleteAccountRequest {
   // Required. Target account identifier to delete.
   // Values are of the form `acc_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Version number for optimistic concurrency control during deletion.
+  optional int64 version = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // The request for

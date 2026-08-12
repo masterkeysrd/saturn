@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/id"
@@ -26,6 +27,7 @@ type Dependencies struct {
 	TransferStore         TransferStore
 	TransactionEventStore TransactionEventStore
 	InboxItemStore        InboxItemStore
+	InstitutionStore      InstitutionStore
 }
 
 // Service implements the domain-level finance operations.
@@ -2042,40 +2044,36 @@ func (s *Service) GetAccounts(ctx context.Context, spaceID SpaceID, ids []Accoun
 	return s.deps.AccountStore.GetByIDs(ctx, spaceID, ids)
 }
 
-// UpdateAccount updates account metadata and handles default flag adjustments.
-func (s *Service) UpdateAccount(ctx context.Context, a *Account) (*Account, error) {
-	existing, err := s.deps.AccountStore.GetByID(ctx, a.SpaceID, a.ID)
+// UpdateAccount updates account metadata with field masking and optimistic concurrency control.
+func (s *Service) UpdateAccount(ctx context.Context, account *Account, mask []string) (*Account, error) {
+	existing, err := s.deps.AccountStore.GetByID(ctx, account.SpaceID, account.ID)
 	if err != nil {
 		return nil, err
 	}
+	if account.Version > 0 && account.Version != existing.Version {
+		return nil, ErrAccountVersionMismatch
+	}
 
-	// Preserve space identity and internal balances if updated ad-hoc
-	a.SpaceID = existing.SpaceID
-	a.Type = existing.Type
-	a.Currency = existing.Currency
-	a.InitialBalance = existing.InitialBalance
-	a.CurrentBalance = existing.CurrentBalance
-	a.CreateTime = existing.CreateTime
-	a.UpdateTime = time.Now().UTC()
-
-	if err := a.Validate(); err != nil {
+	wasDefault := existing.IsDefault
+	if err := existing.ApplyPatch(account, mask); err != nil {
 		return nil, err
 	}
 
-	if a.IsDefault && !existing.IsDefault {
+	if existing.IsDefault && !wasDefault {
 		// Unset all other defaults space-wide atomically in the DB
-		if err := s.deps.AccountStore.UnsetDefaultsExcept(ctx, a.SpaceID, a.ID); err != nil {
+		if err := s.deps.AccountStore.UnsetDefaultsExcept(ctx, account.SpaceID, account.ID); err != nil {
 			return nil, err
 		}
-	} else if !a.IsDefault && existing.IsDefault {
-		// Override and force it to remain default
-		a.IsDefault = true
+	} else if !existing.IsDefault && wasDefault {
+		// Prevent unsetting default status directly without setting another account as default
+		existing.IsDefault = true
 	}
-	if err := s.deps.AccountStore.Update(ctx, a); err != nil {
+
+	if err := s.deps.AccountStore.Update(ctx, existing); err != nil {
 		return nil, err
 	}
 
-	return a, nil
+	return existing, nil
 }
 
 // AdjustAccountBalance reconciles an account's live balance to a target balance by logging a system reconciliation transaction.
@@ -2137,7 +2135,7 @@ func (s *Service) AdjustAccountBalance(ctx context.Context, spaceID SpaceID, acc
 }
 
 // DeleteAccount deletes an account and moves default status if necessary.
-func (s *Service) DeleteAccount(ctx context.Context, spaceID SpaceID, id AccountID) error {
+func (s *Service) DeleteAccount(ctx context.Context, spaceID SpaceID, id AccountID, opts DeleteOptions) error {
 	existing, err := s.deps.AccountStore.GetByID(ctx, spaceID, id)
 	if err != nil {
 		return err
@@ -2147,7 +2145,7 @@ func (s *Service) DeleteAccount(ctx context.Context, spaceID SpaceID, id Account
 		return ErrCannotDeleteDefaultAccount
 	}
 
-	return s.deps.AccountStore.Delete(ctx, id)
+	return s.deps.AccountStore.Delete(ctx, spaceID, id, opts)
 }
 
 // ListAccounts lists all accounts for a space.
@@ -3078,4 +3076,131 @@ func (s *Service) GetBudgets(ctx context.Context, spaceID SpaceID, ids []BudgetI
 		return nil, err
 	}
 	return s.deps.BudgetStore.GetByIDs(ctx, spaceID, ids)
+}
+
+type ResolveInstitutionResult struct {
+	Name                    string
+	Domain                  string
+	LogoURL                 string
+	Color                   string
+	ExistingInstitutionID   *InstitutionID
+	ExistingInstitutionName string
+}
+
+func AutoResolveInstitutionDomain(nameOrURL string) string {
+	clean := strings.TrimSpace(strings.ToLower(nameOrURL))
+	if clean == "" {
+		return ""
+	}
+	if idx := strings.Index(clean, "://"); idx != -1 {
+		clean = clean[idx+3:]
+	}
+	if idx := strings.IndexAny(clean, "/?#"); idx != -1 {
+		clean = clean[:idx]
+	}
+	clean = strings.TrimPrefix(clean, "www.")
+	if strings.Contains(clean, ".") && !strings.Contains(clean, " ") {
+		return clean
+	}
+	return ""
+}
+
+func BuildInstitutionFaviconURL(domain string) string {
+	if domain == "" {
+		return ""
+	}
+	return fmt.Sprintf("https://www.google.com/s2/favicons?domain=%s&sz=64", domain)
+}
+
+func (s *Service) CreateInstitution(ctx context.Context, inst *Institution) (*Institution, error) {
+	if inst.ID == "" {
+		id, err := NewInstitutionID()
+		if err != nil {
+			return nil, err
+		}
+		inst.ID = id
+	}
+	if inst.Domain == "" {
+		inst.Domain = AutoResolveInstitutionDomain(inst.Name)
+	}
+	if inst.LogoURL == "" && inst.Domain != "" {
+		inst.LogoURL = BuildInstitutionFaviconURL(inst.Domain)
+	}
+	inst.CreateTime = time.Now().UTC()
+	inst.UpdateTime = time.Now().UTC()
+	if err := inst.Validate(); err != nil {
+		return nil, err
+	}
+	if err := s.deps.InstitutionStore.Create(ctx, inst); err != nil {
+		return nil, err
+	}
+	return inst, nil
+}
+
+func (s *Service) GetInstitution(ctx context.Context, spaceID SpaceID, id InstitutionID) (*Institution, error) {
+	return s.deps.InstitutionStore.GetByID(ctx, spaceID, id)
+}
+
+func (s *Service) UpdateInstitution(ctx context.Context, inst *Institution, mask []string) (*Institution, error) {
+	existing, err := s.deps.InstitutionStore.GetByID(ctx, inst.SpaceID, inst.ID)
+	if err != nil {
+		return nil, err
+	}
+	if inst.Version > 0 && inst.Version != existing.Version {
+		return nil, ErrInstitutionVersionMismatch
+	}
+	if err := existing.ApplyPatch(inst, mask); err != nil {
+		return nil, err
+	}
+	if err := s.deps.InstitutionStore.Update(ctx, existing); err != nil {
+		return nil, err
+	}
+	return existing, nil
+}
+
+func (s *Service) DeleteInstitution(ctx context.Context, spaceID SpaceID, id InstitutionID, opts DeleteOptions) error {
+	return s.deps.InstitutionStore.Delete(ctx, spaceID, id, opts)
+}
+
+func (s *Service) ListInstitutions(ctx context.Context, spaceID SpaceID, filter *ListInstitutionsFilter) (*paging.Page[*Institution], error) {
+	if s.deps.InstitutionStore == nil {
+		return &paging.Page[*Institution]{Items: []*Institution{}}, nil
+	}
+	return s.deps.InstitutionStore.ListBySpace(ctx, spaceID, filter)
+}
+
+func (s *Service) GetInstitutionsByIDs(ctx context.Context, spaceID SpaceID, ids []InstitutionID) ([]*Institution, error) {
+	if s.deps.InstitutionStore == nil || len(ids) == 0 {
+		return nil, nil
+	}
+	return s.deps.InstitutionStore.GetByIDs(ctx, spaceID, ids)
+}
+
+func (s *Service) ResolveInstitution(ctx context.Context, spaceID SpaceID, name string) (*ResolveInstitutionResult, error) {
+	cleanName := strings.TrimSpace(name)
+	domain := AutoResolveInstitutionDomain(cleanName)
+	logoURL := ""
+	if domain != "" {
+		logoURL = fmt.Sprintf("https://www.google.com/s2/favicons?domain=%s&sz=64", domain)
+	}
+
+	result := &ResolveInstitutionResult{
+		Name:    cleanName,
+		Domain:  domain,
+		LogoURL: logoURL,
+		Color:   "indigo",
+	}
+
+	if s.deps.InstitutionStore != nil {
+		existing, err := s.deps.InstitutionStore.GetByName(ctx, spaceID, cleanName)
+		if err == nil && existing != nil {
+			result.ExistingInstitutionID = &existing.ID
+			result.ExistingInstitutionName = existing.Name
+			result.Domain = existing.Domain
+			result.LogoURL = existing.LogoURL
+			result.Color = existing.Color
+		}
+	}
+
+	return result, nil
 }

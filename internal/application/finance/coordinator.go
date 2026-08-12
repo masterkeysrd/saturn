@@ -64,9 +64,9 @@ type FinanceService interface {
 
 	CreateAccount(ctx context.Context, account *finance.Account) (*finance.Account, error)
 	GetAccount(ctx context.Context, spaceID finance.SpaceID, id finance.AccountID) (*finance.Account, error)
-	UpdateAccount(ctx context.Context, account *finance.Account) (*finance.Account, error)
+	UpdateAccount(ctx context.Context, account *finance.Account, mask []string) (*finance.Account, error)
 	AdjustAccountBalance(ctx context.Context, spaceID finance.SpaceID, accountID finance.AccountID, targetBalance int64, adjustmentDate string, note string) (*finance.Account, error)
-	DeleteAccount(ctx context.Context, spaceID finance.SpaceID, id finance.AccountID) error
+	DeleteAccount(ctx context.Context, spaceID finance.SpaceID, id finance.AccountID, opts finance.DeleteOptions) error
 	ListAccounts(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error)
 	CreateTransfer(ctx context.Context, transfer *finance.Transfer) (*finance.Transfer, error)
 	GetTransfer(ctx context.Context, spaceID finance.SpaceID, id finance.TransferID) (*finance.Transfer, error)
@@ -77,6 +77,11 @@ type FinanceService interface {
 	UpdateInboxItem(ctx context.Context, spaceID finance.SpaceID, item *finance.InboxItem) (*finance.InboxItem, error)
 	DiscardInboxItem(ctx context.Context, spaceID finance.SpaceID, id string) error
 	ApproveInboxItem(ctx context.Context, spaceID finance.SpaceID, id string) (*finance.InboxItem, error)
+
+	CreateInstitution(ctx context.Context, inst *finance.Institution) (*finance.Institution, error)
+	UpdateInstitution(ctx context.Context, inst *finance.Institution, mask []string) (*finance.Institution, error)
+	DeleteInstitution(ctx context.Context, spaceID finance.SpaceID, id finance.InstitutionID, opts finance.DeleteOptions) error
+	ResolveInstitution(ctx context.Context, spaceID finance.SpaceID, name string) (*finance.ResolveInstitutionResult, error)
 }
 
 // ParsedTransaction represents structured transaction data parsed by an ingestion agent.

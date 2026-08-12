@@ -28,6 +28,10 @@ func NewClient(cfg saturn.Config) *Client {
 func (c *Client) LoginUser(ctx context.Context, req *LoginUserRequest) (*LoginUserResponse, error) {
 	var resp LoginUserResponse
 	path := "/api/v1/identity/users:login"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -38,6 +42,10 @@ func (c *Client) LoginUser(ctx context.Context, req *LoginUserRequest) (*LoginUs
 func (c *Client) RegisterUser(ctx context.Context, req *RegisterUserRequest) (*User, error) {
 	var resp User
 	path := "/api/v1/identity/users:register"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -48,6 +56,10 @@ func (c *Client) RegisterUser(ctx context.Context, req *RegisterUserRequest) (*U
 func (c *Client) RefreshSession(ctx context.Context, req *RefreshSessionRequest) (*RefreshSessionResponse, error) {
 	var resp RefreshSessionResponse
 	path := "/api/v1/identity/sessions:refresh"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -58,6 +70,10 @@ func (c *Client) RefreshSession(ctx context.Context, req *RefreshSessionRequest)
 func (c *Client) Logout(ctx context.Context, req *LogoutRequest) (*LogoutResponse, error) {
 	var resp LogoutResponse
 	path := "/api/v1/identity/sessions:logout"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -68,6 +84,10 @@ func (c *Client) Logout(ctx context.Context, req *LogoutRequest) (*LogoutRespons
 func (c *Client) GetCurrentUser(ctx context.Context, req *GetCurrentUserRequest) (*User, error) {
 	var resp User
 	path := "/api/v1/identity/users/me"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -78,6 +98,10 @@ func (c *Client) GetCurrentUser(ctx context.Context, req *GetCurrentUserRequest)
 func (c *Client) ListActiveSessions(ctx context.Context, req *ListActiveSessionsRequest) (*ListActiveSessionsResponse, error) {
 	var resp ListActiveSessionsResponse
 	path := "/api/v1/identity/sessions"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -88,6 +112,10 @@ func (c *Client) ListActiveSessions(ctx context.Context, req *ListActiveSessions
 func (c *Client) RevokeSession(ctx context.Context, req *RevokeSessionRequest) (*RevokeSessionResponse, error) {
 	var resp RevokeSessionResponse
 	path := fmt.Sprintf("/api/v1/identity/sessions/%s:revoke", req.GetSessionId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -98,6 +126,10 @@ func (c *Client) RevokeSession(ctx context.Context, req *RevokeSessionRequest) (
 func (c *Client) RevokeAllSessions(ctx context.Context, req *RevokeAllSessionsRequest) (*RevokeAllSessionsResponse, error) {
 	var resp RevokeAllSessionsResponse
 	path := "/api/v1/identity/sessions:revoke-all"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -108,6 +140,10 @@ func (c *Client) RevokeAllSessions(ctx context.Context, req *RevokeAllSessionsRe
 func (c *Client) ListMySecurityEvents(ctx context.Context, req *ListMySecurityEventsRequest) (*ListMySecurityEventsResponse, error) {
 	var resp ListMySecurityEventsResponse
 	path := "/api/v1/identity/users/me/security-events"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}

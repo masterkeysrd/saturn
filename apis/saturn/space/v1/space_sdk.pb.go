@@ -28,6 +28,10 @@ func NewClient(cfg saturn.Config) *Client {
 func (c *Client) CreateSpace(ctx context.Context, req *CreateSpaceRequest) (*Space, error) {
 	var resp Space
 	path := "/api/v1/spaces"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -38,6 +42,10 @@ func (c *Client) CreateSpace(ctx context.Context, req *CreateSpaceRequest) (*Spa
 func (c *Client) GetSpace(ctx context.Context, req *GetSpaceRequest) (*Space, error) {
 	var resp Space
 	path := fmt.Sprintf("/api/v1/spaces/%s", req.GetSpaceId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -48,6 +56,10 @@ func (c *Client) GetSpace(ctx context.Context, req *GetSpaceRequest) (*Space, er
 func (c *Client) UpdateSpace(ctx context.Context, req *UpdateSpaceRequest) (*Space, error) {
 	var resp Space
 	path := fmt.Sprintf("/api/v1/spaces/%s", req.GetSpaceId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "PATCH", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -58,6 +70,10 @@ func (c *Client) UpdateSpace(ctx context.Context, req *UpdateSpaceRequest) (*Spa
 func (c *Client) DeleteSpace(ctx context.Context, req *DeleteSpaceRequest) (*DeleteSpaceResponse, error) {
 	var resp DeleteSpaceResponse
 	path := fmt.Sprintf("/api/v1/spaces/%s", req.GetSpaceId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -68,6 +84,10 @@ func (c *Client) DeleteSpace(ctx context.Context, req *DeleteSpaceRequest) (*Del
 func (c *Client) ListSpaces(ctx context.Context, req *ListSpacesRequest) (*ListSpacesResponse, error) {
 	var resp ListSpacesResponse
 	path := "/api/v1/spaces"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -78,6 +98,10 @@ func (c *Client) ListSpaces(ctx context.Context, req *ListSpacesRequest) (*ListS
 func (c *Client) AddSpaceMember(ctx context.Context, req *AddSpaceMemberRequest) (*SpaceMember, error) {
 	var resp SpaceMember
 	path := fmt.Sprintf("/api/v1/spaces/%s/members", req.GetSpaceId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -88,6 +112,10 @@ func (c *Client) AddSpaceMember(ctx context.Context, req *AddSpaceMemberRequest)
 func (c *Client) RemoveSpaceMember(ctx context.Context, req *RemoveSpaceMemberRequest) (*RemoveSpaceMemberResponse, error) {
 	var resp RemoveSpaceMemberResponse
 	path := fmt.Sprintf("/api/v1/spaces/%s/members/%s", req.GetSpaceId(), req.GetUserId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -98,6 +126,10 @@ func (c *Client) RemoveSpaceMember(ctx context.Context, req *RemoveSpaceMemberRe
 func (c *Client) UpdateSpaceMemberRole(ctx context.Context, req *UpdateSpaceMemberRoleRequest) (*SpaceMember, error) {
 	var resp SpaceMember
 	path := fmt.Sprintf("/api/v1/spaces/%s/members/%s", req.GetSpaceId(), req.GetUserId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "PATCH", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -108,6 +140,10 @@ func (c *Client) UpdateSpaceMemberRole(ctx context.Context, req *UpdateSpaceMemb
 func (c *Client) ListSpaceMembers(ctx context.Context, req *ListSpaceMembersRequest) (*ListSpaceMembersResponse, error) {
 	var resp ListSpaceMembersResponse
 	path := fmt.Sprintf("/api/v1/spaces/%s/members", req.GetSpaceId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}

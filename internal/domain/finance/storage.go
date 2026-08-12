@@ -29,6 +29,24 @@ type BudgetStore interface {
 	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListBudgetsFilter) (*paging.Page[*Budget], error)
 }
 
+// ListInstitutionsFilter contains parameters for searching and paging institutions.
+type ListInstitutionsFilter struct {
+	PageSize      int32
+	NextPageToken string
+	SearchQuery   *string
+}
+
+// InstitutionStore defines persistence for financial institutions.
+type InstitutionStore interface {
+	Create(ctx context.Context, inst *Institution) error
+	GetByID(ctx context.Context, spaceID SpaceID, id InstitutionID) (*Institution, error)
+	GetByName(ctx context.Context, spaceID SpaceID, name string) (*Institution, error)
+	GetByIDs(ctx context.Context, spaceID SpaceID, ids []InstitutionID) ([]*Institution, error)
+	Update(ctx context.Context, inst *Institution) error
+	Delete(ctx context.Context, spaceID SpaceID, id InstitutionID, opts DeleteOptions) error
+	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListInstitutionsFilter) (*paging.Page[*Institution], error)
+}
+
 type PeriodRangeKey struct {
 	BudgetID  BudgetID
 	StartDate time.Time
@@ -233,7 +251,7 @@ type AccountStore interface {
 	GetByID(ctx context.Context, spaceID SpaceID, id AccountID) (*Account, error)
 	GetByIDs(ctx context.Context, spaceID SpaceID, ids []AccountID) ([]*Account, error)
 	Update(ctx context.Context, account *Account) error
-	Delete(ctx context.Context, id AccountID) error
+	Delete(ctx context.Context, spaceID SpaceID, id AccountID, opts DeleteOptions) error
 	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListAccountsFilter) (*paging.Page[*Account], error)
 	HasDefault(ctx context.Context, spaceID SpaceID) (bool, error)
 	UnsetDefaultsExcept(ctx context.Context, spaceID SpaceID, id AccountID) error

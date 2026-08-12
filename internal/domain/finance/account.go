@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/id"
+	"github.com/masterkeysrd/saturn/internal/platform/patch"
 )
 
 type AccountType string
@@ -74,8 +75,30 @@ type Account struct {
 	Color          string
 	Notes          string
 	LastFour       string
+	InstitutionID  *InstitutionID
+	Version        int64
 	CreateTime     time.Time
 	UpdateTime     time.Time
+}
+
+// AccountPatchSchema defines patchable fields for an Account entity.
+var AccountPatchSchema = patch.NewSchema[Account]().
+	Register("name", patch.Field(func(a *Account) *string { return &a.Name })).
+	Register("credit_limit", patch.Field(func(a *Account) *int64 { return &a.CreditLimit })).
+	Register("is_default", patch.Field(func(a *Account) *bool { return &a.IsDefault })).
+	Register("is_active", patch.Field(func(a *Account) *bool { return &a.IsActive })).
+	Register("color", patch.Field(func(a *Account) *string { return &a.Color })).
+	Register("notes", patch.Field(func(a *Account) *string { return &a.Notes })).
+	Register("last_four", patch.Field(func(a *Account) *string { return &a.LastFour })).
+	Register("institution_id", patch.Field(func(a *Account) **InstitutionID { return &a.InstitutionID }))
+
+// ApplyPatch applies partial updates to an Account entity based on a field mask.
+func (a *Account) ApplyPatch(incoming *Account, mask []string) error {
+	if err := AccountPatchSchema.Apply(a, incoming, mask); err != nil {
+		return err
+	}
+	a.UpdateTime = time.Now().UTC()
+	return a.Validate()
 }
 
 // Validate checks the account's business rules.

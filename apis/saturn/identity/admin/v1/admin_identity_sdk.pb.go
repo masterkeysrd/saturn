@@ -28,6 +28,10 @@ func NewClient(cfg saturn.Config) *Client {
 func (c *Client) ListUsers(ctx context.Context, req *ListUsersRequest) (*ListUsersResponse, error) {
 	var resp ListUsersResponse
 	path := "/api/v1/admin/identity/users"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -38,6 +42,10 @@ func (c *Client) ListUsers(ctx context.Context, req *ListUsersRequest) (*ListUse
 func (c *Client) ApproveUser(ctx context.Context, req *ApproveUserRequest) (*ApproveUserResponse, error) {
 	var resp ApproveUserResponse
 	path := fmt.Sprintf("/api/v1/admin/identity/users/%s:approve", req.GetUserId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -48,6 +56,10 @@ func (c *Client) ApproveUser(ctx context.Context, req *ApproveUserRequest) (*App
 func (c *Client) RejectUser(ctx context.Context, req *RejectUserRequest) (*ApproveUserResponse, error) {
 	var resp ApproveUserResponse
 	path := fmt.Sprintf("/api/v1/admin/identity/users/%s:reject", req.GetUserId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -58,6 +70,10 @@ func (c *Client) RejectUser(ctx context.Context, req *RejectUserRequest) (*Appro
 func (c *Client) UpdateUserRole(ctx context.Context, req *UpdateUserRoleRequest) (*UpdateUserRoleResponse, error) {
 	var resp UpdateUserRoleResponse
 	path := fmt.Sprintf("/api/v1/admin/identity/users/%s", req.GetUserId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "PATCH", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -68,6 +84,10 @@ func (c *Client) UpdateUserRole(ctx context.Context, req *UpdateUserRoleRequest)
 func (c *Client) RevokeAllSessions(ctx context.Context, req *RevokeAllSessionsRequest) (*RevokeAllSessionsResponse, error) {
 	var resp RevokeAllSessionsResponse
 	path := fmt.Sprintf("/api/v1/admin/identity/users/%s:revoke-sessions", req.GetUserId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -78,6 +98,10 @@ func (c *Client) RevokeAllSessions(ctx context.Context, req *RevokeAllSessionsRe
 func (c *Client) ListSecurityEvents(ctx context.Context, req *ListSecurityEventsRequest) (*ListSecurityEventsResponse, error) {
 	var resp ListSecurityEventsResponse
 	path := "/api/v1/admin/identity/security-events"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}

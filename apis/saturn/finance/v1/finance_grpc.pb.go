@@ -63,6 +63,11 @@ const (
 	Finance_AdjustAccountBalance_FullMethodName     = "/saturn.finance.v1.Finance/AdjustAccountBalance"
 	Finance_DeleteAccount_FullMethodName            = "/saturn.finance.v1.Finance/DeleteAccount"
 	Finance_ListAccounts_FullMethodName             = "/saturn.finance.v1.Finance/ListAccounts"
+	Finance_CreateInstitution_FullMethodName        = "/saturn.finance.v1.Finance/CreateInstitution"
+	Finance_UpdateInstitution_FullMethodName        = "/saturn.finance.v1.Finance/UpdateInstitution"
+	Finance_DeleteInstitution_FullMethodName        = "/saturn.finance.v1.Finance/DeleteInstitution"
+	Finance_ListInstitutions_FullMethodName         = "/saturn.finance.v1.Finance/ListInstitutions"
+	Finance_ResolveInstitution_FullMethodName       = "/saturn.finance.v1.Finance/ResolveInstitution"
 	Finance_CreateTransfer_FullMethodName           = "/saturn.finance.v1.Finance/CreateTransfer"
 	Finance_ListTransfers_FullMethodName            = "/saturn.finance.v1.Finance/ListTransfers"
 	Finance_ListCurrencies_FullMethodName           = "/saturn.finance.v1.Finance/ListCurrencies"
@@ -166,6 +171,16 @@ type FinanceClient interface {
 	DeleteAccount(ctx context.Context, in *DeleteAccountRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Lists payment accounts in the workspace, supporting optional currency conversion hydration.
 	ListAccounts(ctx context.Context, in *ListAccountsRequest, opts ...grpc.CallOption) (*ListAccountsResponse, error)
+	// Registers a new financial institution (bank, brokerage, or payment platform) in the space.
+	CreateInstitution(ctx context.Context, in *CreateInstitutionRequest, opts ...grpc.CallOption) (*Institution, error)
+	// Updates an existing registered institution's properties (e.g. name, domain, logo, color).
+	UpdateInstitution(ctx context.Context, in *UpdateInstitutionRequest, opts ...grpc.CallOption) (*Institution, error)
+	// Deletes an institution from the space. Linked accounts will have institution set to null.
+	DeleteInstitution(ctx context.Context, in *DeleteInstitutionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Lists all institutions registered in the workspace.
+	ListInstitutions(ctx context.Context, in *ListInstitutionsRequest, opts ...grpc.CallOption) (*ListInstitutionsResponse, error)
+	// Auto-resolves domain, web logo URL, and initial visual attributes for an institution by name.
+	ResolveInstitution(ctx context.Context, in *ResolveInstitutionRequest, opts ...grpc.CallOption) (*ResolveInstitutionResponse, error)
 	// Logs a transfer transaction, shifting funds between a source and destination account.
 	CreateTransfer(ctx context.Context, in *CreateTransferRequest, opts ...grpc.CallOption) (*Transfer, error)
 	// Lists all transfer transactions registered in the workspace.
@@ -620,6 +635,56 @@ func (c *financeClient) ListAccounts(ctx context.Context, in *ListAccountsReques
 	return out, nil
 }
 
+func (c *financeClient) CreateInstitution(ctx context.Context, in *CreateInstitutionRequest, opts ...grpc.CallOption) (*Institution, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Institution)
+	err := c.cc.Invoke(ctx, Finance_CreateInstitution_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) UpdateInstitution(ctx context.Context, in *UpdateInstitutionRequest, opts ...grpc.CallOption) (*Institution, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Institution)
+	err := c.cc.Invoke(ctx, Finance_UpdateInstitution_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) DeleteInstitution(ctx context.Context, in *DeleteInstitutionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Finance_DeleteInstitution_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) ListInstitutions(ctx context.Context, in *ListInstitutionsRequest, opts ...grpc.CallOption) (*ListInstitutionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListInstitutionsResponse)
+	err := c.cc.Invoke(ctx, Finance_ListInstitutions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) ResolveInstitution(ctx context.Context, in *ResolveInstitutionRequest, opts ...grpc.CallOption) (*ResolveInstitutionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResolveInstitutionResponse)
+	err := c.cc.Invoke(ctx, Finance_ResolveInstitution_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *financeClient) CreateTransfer(ctx context.Context, in *CreateTransferRequest, opts ...grpc.CallOption) (*Transfer, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Transfer)
@@ -784,6 +849,16 @@ type FinanceServer interface {
 	DeleteAccount(context.Context, *DeleteAccountRequest) (*emptypb.Empty, error)
 	// Lists payment accounts in the workspace, supporting optional currency conversion hydration.
 	ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error)
+	// Registers a new financial institution (bank, brokerage, or payment platform) in the space.
+	CreateInstitution(context.Context, *CreateInstitutionRequest) (*Institution, error)
+	// Updates an existing registered institution's properties (e.g. name, domain, logo, color).
+	UpdateInstitution(context.Context, *UpdateInstitutionRequest) (*Institution, error)
+	// Deletes an institution from the space. Linked accounts will have institution set to null.
+	DeleteInstitution(context.Context, *DeleteInstitutionRequest) (*emptypb.Empty, error)
+	// Lists all institutions registered in the workspace.
+	ListInstitutions(context.Context, *ListInstitutionsRequest) (*ListInstitutionsResponse, error)
+	// Auto-resolves domain, web logo URL, and initial visual attributes for an institution by name.
+	ResolveInstitution(context.Context, *ResolveInstitutionRequest) (*ResolveInstitutionResponse, error)
 	// Logs a transfer transaction, shifting funds between a source and destination account.
 	CreateTransfer(context.Context, *CreateTransferRequest) (*Transfer, error)
 	// Lists all transfer transactions registered in the workspace.
@@ -935,6 +1010,21 @@ func (UnimplementedFinanceServer) DeleteAccount(context.Context, *DeleteAccountR
 }
 func (UnimplementedFinanceServer) ListAccounts(context.Context, *ListAccountsRequest) (*ListAccountsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListAccounts not implemented")
+}
+func (UnimplementedFinanceServer) CreateInstitution(context.Context, *CreateInstitutionRequest) (*Institution, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateInstitution not implemented")
+}
+func (UnimplementedFinanceServer) UpdateInstitution(context.Context, *UpdateInstitutionRequest) (*Institution, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateInstitution not implemented")
+}
+func (UnimplementedFinanceServer) DeleteInstitution(context.Context, *DeleteInstitutionRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteInstitution not implemented")
+}
+func (UnimplementedFinanceServer) ListInstitutions(context.Context, *ListInstitutionsRequest) (*ListInstitutionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListInstitutions not implemented")
+}
+func (UnimplementedFinanceServer) ResolveInstitution(context.Context, *ResolveInstitutionRequest) (*ResolveInstitutionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResolveInstitution not implemented")
 }
 func (UnimplementedFinanceServer) CreateTransfer(context.Context, *CreateTransferRequest) (*Transfer, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateTransfer not implemented")
@@ -1751,6 +1841,96 @@ func _Finance_ListAccounts_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Finance_CreateInstitution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateInstitutionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).CreateInstitution(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_CreateInstitution_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).CreateInstitution(ctx, req.(*CreateInstitutionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_UpdateInstitution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateInstitutionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).UpdateInstitution(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_UpdateInstitution_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).UpdateInstitution(ctx, req.(*UpdateInstitutionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_DeleteInstitution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteInstitutionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).DeleteInstitution(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_DeleteInstitution_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).DeleteInstitution(ctx, req.(*DeleteInstitutionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_ListInstitutions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListInstitutionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).ListInstitutions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_ListInstitutions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).ListInstitutions(ctx, req.(*ListInstitutionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_ResolveInstitution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveInstitutionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).ResolveInstitution(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_ResolveInstitution_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).ResolveInstitution(ctx, req.(*ResolveInstitutionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Finance_CreateTransfer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateTransferRequest)
 	if err := dec(in); err != nil {
@@ -2055,6 +2235,26 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListAccounts",
 			Handler:    _Finance_ListAccounts_Handler,
+		},
+		{
+			MethodName: "CreateInstitution",
+			Handler:    _Finance_CreateInstitution_Handler,
+		},
+		{
+			MethodName: "UpdateInstitution",
+			Handler:    _Finance_UpdateInstitution_Handler,
+		},
+		{
+			MethodName: "DeleteInstitution",
+			Handler:    _Finance_DeleteInstitution_Handler,
+		},
+		{
+			MethodName: "ListInstitutions",
+			Handler:    _Finance_ListInstitutions_Handler,
+		},
+		{
+			MethodName: "ResolveInstitution",
+			Handler:    _Finance_ResolveInstitution_Handler,
 		},
 		{
 			MethodName: "CreateTransfer",

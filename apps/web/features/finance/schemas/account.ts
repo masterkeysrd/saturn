@@ -25,6 +25,7 @@ export const accountSchema = z
     ),
     creditLimit: z.string().optional(),
     color: z.string().min(1, "Color is required"),
+    institutionId: z.string().optional(),
     isDefault: z.boolean(),
     isActive: z.boolean(),
     notes: z.string().optional(),

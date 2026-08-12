@@ -32,6 +32,10 @@ func NewClient(cfg saturn.Config) *Client {
 func (c *Client) ListSchedules(ctx context.Context, req *ListSchedulesRequest) (*ListSchedulesResponse, error) {
 	var resp ListSchedulesResponse
 	path := "/api/v1/admin/scheduler/schedules"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -42,6 +46,10 @@ func (c *Client) ListSchedules(ctx context.Context, req *ListSchedulesRequest) (
 func (c *Client) ListJobs(ctx context.Context, req *ListJobsRequest) (*ListJobsResponse, error) {
 	var resp ListJobsResponse
 	path := "/api/v1/admin/scheduler/jobs"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -52,6 +60,10 @@ func (c *Client) ListJobs(ctx context.Context, req *ListJobsRequest) (*ListJobsR
 func (c *Client) GetSchedulerStatus(ctx context.Context, req *GetSchedulerStatusRequest) (*GetSchedulerStatusResponse, error) {
 	var resp GetSchedulerStatusResponse
 	path := "/api/v1/admin/scheduler/status"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -62,6 +74,10 @@ func (c *Client) GetSchedulerStatus(ctx context.Context, req *GetSchedulerStatus
 func (c *Client) TriggerSchedule(ctx context.Context, req *TriggerScheduleRequest) (*emptypb.Empty, error) {
 	var resp emptypb.Empty
 	path := fmt.Sprintf("/api/v1/admin/scheduler/schedules/%s/trigger", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -72,6 +88,10 @@ func (c *Client) TriggerSchedule(ctx context.Context, req *TriggerScheduleReques
 func (c *Client) PauseSchedule(ctx context.Context, req *PauseScheduleRequest) (*emptypb.Empty, error) {
 	var resp emptypb.Empty
 	path := fmt.Sprintf("/api/v1/admin/scheduler/schedules/%s/pause", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -82,6 +102,10 @@ func (c *Client) PauseSchedule(ctx context.Context, req *PauseScheduleRequest) (
 func (c *Client) ResumeSchedule(ctx context.Context, req *ResumeScheduleRequest) (*emptypb.Empty, error) {
 	var resp emptypb.Empty
 	path := fmt.Sprintf("/api/v1/admin/scheduler/schedules/%s/resume", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -92,6 +116,10 @@ func (c *Client) ResumeSchedule(ctx context.Context, req *ResumeScheduleRequest)
 func (c *Client) RetryJob(ctx context.Context, req *RetryJobRequest) (*emptypb.Empty, error) {
 	var resp emptypb.Empty
 	path := fmt.Sprintf("/api/v1/admin/scheduler/jobs/%s/retry", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
@@ -102,6 +130,10 @@ func (c *Client) RetryJob(ctx context.Context, req *RetryJobRequest) (*emptypb.E
 func (c *Client) DeleteJob(ctx context.Context, req *DeleteJobRequest) (*emptypb.Empty, error) {
 	var resp emptypb.Empty
 	path := fmt.Sprintf("/api/v1/admin/scheduler/jobs/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
 		return nil, err
 	}

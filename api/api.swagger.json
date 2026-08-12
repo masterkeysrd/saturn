@@ -849,7 +849,7 @@
         "parameters": [
           {
             "name": "account",
-            "description": "Required. Account configuration parameters.",
+            "description": "Required. Target account parameters.",
             "in": "body",
             "required": true,
             "schema": {
@@ -923,7 +923,7 @@
         "parameters": [
           {
             "name": "id",
-            "description": "Required. Target account identifier.\nValues are of the form `acc_[a-zA-Z0-9]+`.",
+            "description": "Required. Unique identifier of the account to retrieve.\nValues are of the form `acc_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -969,6 +969,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "version",
+            "description": "Optional. Version number for optimistic concurrency control during deletion.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -1008,6 +1016,21 @@
             "schema": {
               "$ref": "#/definitions/v1Account"
             }
+          },
+          {
+            "name": "updateMask",
+            "description": "Optional. Field mask defining which fields to update for partial updates.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "description": "Optional. Version number for optimistic concurrency control.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -2186,6 +2209,212 @@
             "required": true,
             "type": "string",
             "format": "date-time"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/institutions": {
+      "get": {
+        "summary": "Lists all institutions registered in the workspace.",
+        "operationId": "Finance_ListInstitutions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListInstitutionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pageSize",
+            "description": "Optional. Maximum number of items to return in a single page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "description": "Optional. Keyset page token.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "searchQuery",
+            "description": "Optional. Search query matching institution names or domains.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "post": {
+        "summary": "Registers a new financial institution (bank, brokerage, or payment platform) in the space.",
+        "operationId": "Finance_CreateInstitution",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Institution"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "institution",
+            "description": "Required. The institution payload to create.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Institution"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/institutions/{id}": {
+      "delete": {
+        "summary": "Deletes an institution from the space. Linked accounts will have institution set to null.",
+        "operationId": "Finance_DeleteInstitution",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Identifier of the institution to delete.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "description": "Optional. Expected resource version.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "put": {
+        "summary": "Updates an existing registered institution's properties (e.g. name, domain, logo, color).",
+        "operationId": "Finance_UpdateInstitution",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Institution"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Identifier of the institution to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "institution",
+            "description": "Required. Updated institution details.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Institution"
+            }
+          },
+          {
+            "name": "updateMask",
+            "description": "Optional. Field mask specifying fields to update.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "description": "Optional. Expected resource version for optimistic concurrency control.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/institutions:resolve": {
+      "get": {
+        "summary": "Auto-resolves domain, web logo URL, and initial visual attributes for an institution by name.",
+        "operationId": "Finance_ResolveInstitution",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ResolveInstitutionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "description": "Required. Institution name to auto-resolve (e.g. \"Chase\" or \"Banco Popular\").",
+            "in": "query",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -4359,6 +4588,36 @@
       },
       "description": "Conversion contains hydrated conversion metrics relative to the workspace base currency."
     },
+    "AccountInstitutionInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. Unique resource identifier.",
+          "readOnly": true
+        },
+        "name": {
+          "type": "string",
+          "description": "Required. Name of the institution."
+        },
+        "domain": {
+          "type": "string",
+          "description": "Optional. Web domain name."
+        },
+        "logoUrl": {
+          "type": "string",
+          "description": "Optional. Resolved web logo favicon image URL."
+        },
+        "color": {
+          "type": "string",
+          "description": "Optional. Visual theme accent color."
+        }
+      },
+      "description": "InstitutionInfo contains inline financial institution metadata.",
+      "required": [
+        "name"
+      ]
+    },
     "AdminIdentityApproveUserBody": {
       "type": "object"
     },
@@ -5173,11 +5432,6 @@
           "description": "Output only. Unique identifier of the account.\nValues are of the form `acc_[a-zA-Z0-9]+`.",
           "readOnly": true
         },
-        "spaceId": {
-          "type": "string",
-          "description": "Output only. Space identifier.",
-          "readOnly": true
-        },
         "name": {
           "type": "string",
           "description": "Required. User-friendly account name (e.g. \"Chase Checking\")."
@@ -5206,6 +5460,23 @@
           "format": "int64",
           "description": "Optional. Credit limit amount in cents (applicable only if CREDIT_CARD type)."
         },
+        "institutionId": {
+          "type": "string",
+          "description": "Optional. Associated financial institution ID."
+        },
+        "institution": {
+          "$ref": "#/definitions/AccountInstitutionInfo",
+          "description": "Output only. Hydrated associated financial institution details.",
+          "readOnly": true
+        },
+        "lastFour": {
+          "type": "string",
+          "description": "Optional. Last four digits of card or account number."
+        },
+        "color": {
+          "type": "string",
+          "description": "Optional. Color HEX code for visual UI identification."
+        },
         "isDefault": {
           "type": "boolean",
           "description": "Optional. Indicates if the account is the workspace default. Default accounts receive\ntransactions if no explicit account is nominated."
@@ -5214,17 +5485,20 @@
           "type": "boolean",
           "description": "Optional. Indicates if the account is active."
         },
-        "color": {
-          "type": "string",
-          "description": "Optional. Color HEX code for visual UI identification."
-        },
         "notes": {
           "type": "string",
           "description": "Optional. Narration notes."
         },
-        "lastFour": {
+        "version": {
           "type": "string",
-          "description": "Optional. Last four digits of card or account number."
+          "format": "int64",
+          "description": "Output only. Concurrency control version.",
+          "readOnly": true
+        },
+        "conversion": {
+          "$ref": "#/definitions/AccountConversion",
+          "description": "Output only. Currency conversion statistics.",
+          "readOnly": true
         },
         "createTime": {
           "type": "string",
@@ -5236,11 +5510,6 @@
           "type": "string",
           "format": "date-time",
           "description": "Output only. Last update timestamp.",
-          "readOnly": true
-        },
-        "conversion": {
-          "$ref": "#/definitions/AccountConversion",
-          "description": "Output only. Currency conversion statistics.",
           "readOnly": true
         }
       },
@@ -6377,6 +6646,54 @@
       ],
       "description": "InsightGranularity defines the grouping interval of aggregated statistical data.\n\n - DAILY: Group metrics by calendar day.\n - WEEKLY: Group metrics by calendar week.\n - MONTHLY: Group metrics by calendar month.\n - YEARLY: Group metrics by calendar year."
     },
+    "v1Institution": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. Unique resource identifier (e.g. \"inst_3HnhtBQD...\").",
+          "readOnly": true
+        },
+        "name": {
+          "type": "string",
+          "description": "Required. User-friendly name of the institution (e.g. \"Chase\", \"Banco Popular\")."
+        },
+        "domain": {
+          "type": "string",
+          "description": "Optional. Web domain name used for web logo resolution (e.g. \"chase.com\")."
+        },
+        "logoUrl": {
+          "type": "string",
+          "description": "Output only/Optional. Resolved web logo favicon image URL."
+        },
+        "color": {
+          "type": "string",
+          "description": "Optional. Theme accent color."
+        },
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "Output only. Concurrency control version.",
+          "readOnly": true
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Creation timestamp.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Last update timestamp.",
+          "readOnly": true
+        }
+      },
+      "description": "Institution represents a financial bank, brokerage, or payment platform.",
+      "required": [
+        "name"
+      ]
+    },
     "v1Integration": {
       "type": "object",
       "properties": {
@@ -6721,6 +7038,23 @@
         }
       },
       "description": "The response for\n[ListInboxItems][saturn.finance.v1.Finance.ListInboxItems]."
+    },
+    "v1ListInstitutionsResponse": {
+      "type": "object",
+      "properties": {
+        "institutions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Institution"
+          },
+          "description": "List of institutions registered in the space."
+        },
+        "nextPageToken": {
+          "type": "string",
+          "description": "Keyset page token."
+        }
+      }
     },
     "v1ListIntegrationTokensResponse": {
       "type": "object",
@@ -7208,6 +7542,35 @@
     "v1RemoveSpaceMemberResponse": {
       "type": "object",
       "description": "RemoveSpaceMemberResponse is empty on success."
+    },
+    "v1ResolveInstitutionResponse": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Resolved canonical institution name."
+        },
+        "domain": {
+          "type": "string",
+          "description": "Resolved web domain name (e.g. \"chase.com\")."
+        },
+        "logoUrl": {
+          "type": "string",
+          "description": "Resolved website favicon logo image URL."
+        },
+        "color": {
+          "type": "string",
+          "description": "Recommended theme color."
+        },
+        "existingInstitutionId": {
+          "type": "string",
+          "description": "Optional matching existing institution ID if an exact/fuzzy match already exists in the space."
+        },
+        "existingInstitutionName": {
+          "type": "string",
+          "description": "Optional existing matching institution name if a near match exists in the space."
+        }
+      }
     },
     "v1RevokeSessionResponse": {
       "type": "object",

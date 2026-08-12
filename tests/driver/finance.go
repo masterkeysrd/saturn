@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/masterkeysrd/saturn/apis/saturn"
@@ -144,6 +145,7 @@ func (f *FinanceDriver) CreateAccount(tb testing.TB, opts AccountOptions) *Finan
 		Currency:       opts.Currency,
 		InitialBalance: opts.InitialBalance,
 		LastFour:       opts.LastFour,
+		Version:        acc.GetVersion(),
 	}
 	f.driver.state.Accounts[opts.Name] = accInfo
 	f.driver.state.LastAccount = accInfo
@@ -1478,6 +1480,263 @@ func (f *FinanceDriver) DiscardInboxItem(tb testing.TB, key string) *FinanceDriv
 	if err != nil {
 		tb.Fatalf("DiscardInboxItem API call failed for ID %s: %v", info.ID, err)
 	}
+	return f
+}
+
+// InstitutionOptions parameters for creating an institution.
+type InstitutionOptions struct {
+	Name      string
+	Domain    string
+	LogoURL   string
+	Color     string
+	ExpectErr string
+	Assert    func(tb testing.TB, inst *financev1.Institution)
+}
+
+// CreateInstitution creates a financial institution via API.
+func (f *FinanceDriver) CreateInstitution(tb testing.TB, opts InstitutionOptions) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+	client := f.getClient()
+	inst, err := client.CreateInstitution(tb.Context(), &financev1.CreateInstitutionRequest{
+		Institution: &financev1.Institution{
+			Name:    opts.Name,
+			Domain:  opts.Domain,
+			LogoUrl: opts.LogoURL,
+			Color:   opts.Color,
+		},
+	})
+	if opts.ExpectErr != "" {
+		if err == nil {
+			tb.Fatalf("CreateInstitution succeeded, but expected error containing %q", opts.ExpectErr)
+		}
+		if !strings.Contains(err.Error(), opts.ExpectErr) {
+			tb.Fatalf("CreateInstitution error = %v, want error containing %q", err, opts.ExpectErr)
+		}
+		return f
+	}
+
+	if err != nil {
+		tb.Fatalf("CreateInstitution SDK call failed: %v", err)
+	}
+
+	info := &InstitutionInfo{
+		ID:      inst.GetId(),
+		Name:    inst.GetName(),
+		Domain:  inst.GetDomain(),
+		LogoURL: inst.GetLogoUrl(),
+		Color:   inst.GetColor(),
+		Version: inst.GetVersion(),
+	}
+	f.driver.state.Institutions[opts.Name] = info
+	f.driver.state.LastInstitution = info
+
+	if opts.Assert != nil {
+		opts.Assert(tb, inst)
+	}
+	return f
+}
+
+// InstitutionUpdateOptions parameters for updating an institution.
+type InstitutionUpdateOptions struct {
+	Institution string
+	Name        string
+	Domain      string
+	LogoURL     string
+	Color       string
+	UpdateMask  []string
+	Version     *int64
+	ExpectErr   string
+	Assert      func(tb testing.TB, inst *financev1.Institution)
+}
+
+// UpdateInstitution updates an existing institution via API.
+func (f *FinanceDriver) UpdateInstitution(tb testing.TB, opts InstitutionUpdateOptions) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+	info, ok := f.driver.state.Institutions[opts.Institution]
+	if !ok {
+		info = f.driver.state.LastInstitution
+		if info == nil {
+			tb.Fatalf("UpdateInstitution: institution %q not found in state registry", opts.Institution)
+		}
+	}
+
+	var mask *fieldmaskpb.FieldMask
+	if len(opts.UpdateMask) > 0 {
+		mask = &fieldmaskpb.FieldMask{Paths: opts.UpdateMask}
+	}
+
+	ver := opts.Version
+	if ver == nil {
+		v := info.Version
+		ver = &v
+	}
+
+	name := opts.Name
+	if name == "" {
+		name = info.Name
+	}
+
+	client := f.getClient()
+	updated, err := client.UpdateInstitution(tb.Context(), &financev1.UpdateInstitutionRequest{
+		Id: info.ID,
+		Institution: &financev1.Institution{
+			Id:      info.ID,
+			Name:    name,
+			Domain:  opts.Domain,
+			LogoUrl: opts.LogoURL,
+			Color:   opts.Color,
+		},
+		UpdateMask: mask,
+		Version:    ver,
+	})
+	if opts.ExpectErr != "" {
+		if err == nil {
+			tb.Fatalf("UpdateInstitution succeeded, but expected error containing %q", opts.ExpectErr)
+		}
+		if !strings.Contains(err.Error(), opts.ExpectErr) {
+			tb.Fatalf("UpdateInstitution error = %v, want error containing %q", err, opts.ExpectErr)
+		}
+		return f
+	}
+
+	if err != nil {
+		tb.Fatalf("UpdateInstitution SDK call failed: %v", err)
+	}
+
+	info.Version = updated.GetVersion()
+	if updated.GetName() != "" {
+		info.Name = updated.GetName()
+	}
+	if updated.GetColor() != "" {
+		info.Color = updated.GetColor()
+	}
+
+	if opts.Assert != nil {
+		opts.Assert(tb, updated)
+	}
+	return f
+}
+
+// AccountUpdateOptions parameters for updating an account.
+type AccountUpdateOptions struct {
+	Account     string
+	Name        string
+	CreditLimit int64
+	IsDefault   bool
+	IsActive    bool
+	Color       string
+	Notes       string
+	LastFour    string
+	UpdateMask  []string
+	Version     *int64
+	ExpectErr   string
+	Assert      func(tb testing.TB, acc *financev1.Account)
+}
+
+// UpdateAccount updates an account via API.
+func (f *FinanceDriver) UpdateAccount(tb testing.TB, opts AccountUpdateOptions) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+	info, ok := f.driver.state.Accounts[opts.Account]
+	if !ok {
+		info = f.driver.state.LastAccount
+		if info == nil {
+			tb.Fatalf("UpdateAccount: account %q not found in state registry", opts.Account)
+		}
+	}
+
+	var mask *fieldmaskpb.FieldMask
+	if len(opts.UpdateMask) > 0 {
+		mask = &fieldmaskpb.FieldMask{Paths: opts.UpdateMask}
+	}
+
+	ver := opts.Version
+	if ver == nil {
+		v := info.Version
+		ver = &v
+	}
+
+	accName := opts.Name
+	if accName == "" {
+		accName = info.Name
+	}
+
+	client := f.getClient()
+	updated, err := client.UpdateAccount(tb.Context(), &financev1.UpdateAccountRequest{
+		Id: info.ID,
+		Account: &financev1.Account{
+			Id:          info.ID,
+			Name:        accName,
+			CreditLimit: opts.CreditLimit,
+			IsDefault:   opts.IsDefault,
+			IsActive:    opts.IsActive,
+			Color:       opts.Color,
+			Notes:       opts.Notes,
+			LastFour:    opts.LastFour,
+		},
+		UpdateMask: mask,
+		Version:    ver,
+	})
+	if opts.ExpectErr != "" {
+		if err == nil {
+			tb.Fatalf("UpdateAccount succeeded, but expected error containing %q", opts.ExpectErr)
+		}
+		if !strings.Contains(err.Error(), opts.ExpectErr) {
+			tb.Fatalf("UpdateAccount error = %v, want error containing %q", err, opts.ExpectErr)
+		}
+		return f
+	}
+
+	if err != nil {
+		tb.Fatalf("UpdateAccount SDK call failed: %v", err)
+	}
+
+	info.Version = updated.GetVersion()
+
+	if opts.Assert != nil {
+		opts.Assert(tb, updated)
+	}
+	return f
+}
+
+// DeleteAccount deletes an account via API.
+func (f *FinanceDriver) DeleteAccount(tb testing.TB, accountName string, version *int64, expectErr string) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+	info, ok := f.driver.state.Accounts[accountName]
+	if !ok {
+		tb.Fatalf("DeleteAccount: account %q not found in state registry", accountName)
+	}
+
+	client := f.getClient()
+	_, err := client.DeleteAccount(tb.Context(), &financev1.DeleteAccountRequest{
+		Id:      info.ID,
+		Version: version,
+	})
+	if expectErr != "" {
+		if err == nil {
+			tb.Fatalf("DeleteAccount succeeded, but expected error containing %q", expectErr)
+		}
+		if !strings.Contains(err.Error(), expectErr) {
+			tb.Fatalf("DeleteAccount error = %v, want error containing %q", err, expectErr)
+		}
+		return f
+	}
+
+	if err != nil {
+		tb.Fatalf("DeleteAccount SDK call failed: %v", err)
+	}
+	delete(f.driver.state.Accounts, accountName)
 	return f
 }
 

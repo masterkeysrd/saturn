@@ -32,6 +32,10 @@ func NewClient(cfg saturn.Config) *Client {
 func (c *Client) GetQueueMetrics(ctx context.Context, req *GetQueueMetricsRequest) (*GetQueueMetricsResponse, error) {
 	var resp GetQueueMetricsResponse
 	path := "/api/v1/admin/messages/metrics"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -42,6 +46,10 @@ func (c *Client) GetQueueMetrics(ctx context.Context, req *GetQueueMetricsReques
 func (c *Client) ListDeliveries(ctx context.Context, req *ListDeliveriesRequest) (*ListDeliveriesResponse, error) {
 	var resp ListDeliveriesResponse
 	path := "/api/v1/admin/messages/deliveries"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -52,6 +60,10 @@ func (c *Client) ListDeliveries(ctx context.Context, req *ListDeliveriesRequest)
 func (c *Client) RetryDelivery(ctx context.Context, req *RetryDeliveryRequest) (*emptypb.Empty, error) {
 	var resp emptypb.Empty
 	path := fmt.Sprintf("/api/v1/admin/messages/deliveries/%s/retry", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
 	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}

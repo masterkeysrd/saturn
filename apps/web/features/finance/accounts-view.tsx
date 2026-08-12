@@ -8,6 +8,7 @@ import { useSpacePermissions } from "@/features/space/use-space"
 import {
   type Account,
   type Account_Type,
+  type Institution,
   useListAccountsQuery,
   useCreateAccountMutation,
   useUpdateAccountMutation,
@@ -18,12 +19,15 @@ import {
   useGetFinanceSettingsQuery,
   useListCurrenciesQuery,
   useListExchangeRatesQuery,
+  useListInstitutionsQuery,
 } from "@/gen/saturn/finance/v1/finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import { useDebounce } from "@/lib/use-debounce"
 import { useUrlState } from "@/lib/use-url-state"
 import { AccountSelect } from "./components/account-select"
 import { AccountHistorySheet } from "./components/account-history-sheet"
+import { InstitutionSelect } from "./components/institution-select"
+import { getInstitutionLogoUrl } from "./utils"
 import {
   Landmark,
   CreditCard,
@@ -37,9 +41,7 @@ import {
   MoreVertical,
   Check,
   AlertTriangle,
-  Info,
   ChevronRight,
-  History,
   Loader2,
   Scale,
 } from "lucide-react"
@@ -74,6 +76,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { formatCents, toCentsString } from "./utils"
 import { cn } from "@/lib/utils"
@@ -139,18 +142,33 @@ function getAccountColors(colorName: string) {
   return ACCOUNT_COLORS.find((c) => c.value === colorName) || ACCOUNT_COLORS[0]
 }
 
-function getAccountTypeIcon(type: Account_Type) {
-  switch (type) {
-    case "BANK":
-      return Landmark
-    case "CREDIT_CARD":
-      return CreditCard
-    case "CASH":
-      return Coins
-    case "DIGITAL_ACCOUNT":
-      return Wallet
+function getCardGradient(colorName: string) {
+  switch (colorName) {
+    case "emerald":
+      return {
+        card: "bg-gradient-to-br from-slate-950 via-emerald-950/80 to-slate-900 border-emerald-500/30 shadow-emerald-950/50 hover:border-emerald-400/60",
+      }
+    case "rose":
+      return {
+        card: "bg-gradient-to-br from-slate-950 via-rose-950/80 to-slate-900 border-rose-500/30 shadow-rose-950/50 hover:border-rose-400/60",
+      }
+    case "amber":
+      return {
+        card: "bg-gradient-to-br from-slate-950 via-amber-950/80 to-slate-900 border-amber-500/30 shadow-amber-950/50 hover:border-amber-400/60",
+      }
+    case "sky":
+      return {
+        card: "bg-gradient-to-br from-slate-950 via-sky-950/80 to-slate-900 border-sky-500/30 shadow-sky-950/50 hover:border-sky-400/60",
+      }
+    case "violet":
+      return {
+        card: "bg-gradient-to-br from-slate-950 via-violet-950/80 to-slate-900 border-violet-500/30 shadow-violet-950/50 hover:border-violet-400/60",
+      }
+    case "indigo":
     default:
-      return Landmark
+      return {
+        card: "bg-gradient-to-br from-slate-950 via-indigo-950/80 to-slate-900 border-indigo-500/30 shadow-indigo-950/50 hover:border-indigo-400/60",
+      }
   }
 }
 
@@ -167,6 +185,289 @@ function getAccountTypeLabel(type: Account_Type) {
     default:
       return "Account"
   }
+}
+
+function TypeIcon({
+  type,
+  className,
+}: {
+  type: Account_Type
+  className?: string
+}) {
+  switch (type) {
+    case "BANK":
+      return <Landmark className={className} />
+    case "CREDIT_CARD":
+      return <CreditCard className={className} />
+    case "CASH":
+      return <Coins className={className} />
+    case "DIGITAL_ACCOUNT":
+      return <Wallet className={className} />
+    default:
+      return <Landmark className={className} />
+  }
+}
+
+function CardAccountItem({
+  acc,
+  institution,
+  isWritable,
+  onHistory,
+  onAdjust,
+  onEdit,
+  onSetDefault,
+  onDelete,
+}: {
+  acc: Account
+  institution?: Institution
+  isWritable: boolean
+  onHistory: () => void
+  onAdjust: () => void
+  onEdit: () => void
+  onSetDefault?: () => void
+  onDelete: () => void
+}) {
+  const theme = getCardGradient(acc.color)
+  const isCredit = acc.type === "CREDIT_CARD"
+  const logoUrl = getInstitutionLogoUrl(
+    institution?.domain,
+    institution?.name || acc.name
+  )
+
+  const rawBal = Number(acc.currentBalance || "0")
+  const formattedBal = formatCents(acc.currentBalance).toLocaleString(
+    undefined,
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }
+  )
+
+  const limit = Number(acc.creditLimit || "0")
+  const debtOwed = rawBal > 0 ? rawBal : 0
+  const overpayment = rawBal < 0 ? Math.abs(rawBal) : 0
+  const availableCents = Math.max(0, limit - debtOwed + overpayment)
+  const utilizationPercent =
+    limit > 0 ? Math.min(100, Math.max(0, (debtOwed / limit) * 100)) : 0
+
+  const maskNumber = acc.lastFour
+    ? `•••• •••• •••• ${acc.lastFour}`
+    : `•••• •••• •••• ••••`
+
+  return (
+    <div
+      key={acc.id}
+      onClick={onHistory}
+      className={cn(
+        "group relative flex cursor-pointer flex-col justify-between overflow-hidden rounded-3xl border p-6 shadow-xl backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:shadow-2xl",
+        theme.card,
+        !acc.isActive && "opacity-50 grayscale"
+      )}
+    >
+      {/* Sheen & Ambient Watermark */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-white/[0.08] via-transparent to-white/[0.02]" />
+      <div className="pointer-events-none absolute -right-12 -bottom-12 h-44 w-44 rounded-full bg-white/[0.03] blur-2xl transition-colors group-hover:bg-white/[0.07]" />
+
+      {/* Top Header: Logo / Bank Name & Options */}
+      <div className="relative z-10 flex items-center justify-between">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/15 bg-black/40 shadow-inner backdrop-blur-md">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt=""
+                className="h-5 w-5 object-contain"
+                onError={(e) => {
+                  ;(e.target as HTMLElement).style.display = "none"
+                }}
+              />
+            ) : (
+              <TypeIcon type={acc.type} className="h-5 w-5 text-white/90" />
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="block truncate text-xs font-bold tracking-wide text-white/90 uppercase">
+              {institution?.name || acc.name}
+            </span>
+            <span className="text-[10px] font-medium tracking-wider text-white/50 uppercase">
+              {getAccountTypeLabel(acc.type)}
+            </span>
+          </div>
+        </div>
+
+        <div
+          className="flex shrink-0 items-center gap-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {acc.isDefault && (
+            <span className="rounded-full border border-amber-400/40 bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 px-2.5 py-0.5 text-[9px] font-black tracking-widest text-amber-300 uppercase shadow-sm backdrop-blur-md">
+              Default
+            </span>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full text-white/70 hover:bg-white/10 hover:text-white"
+                >
+                  <MoreVertical className="h-4.5 w-4.5" />
+                </Button>
+              }
+            />
+            <DropdownMenuContent className="rounded-xl border border-border/50 bg-card/95 p-1.5 shadow-xl backdrop-blur-xl">
+              {isWritable && (
+                <>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onAdjust()
+                    }}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-emerald-400 focus:bg-emerald-500/10"
+                  >
+                    <Scale className="h-3.5 w-3.5" />
+                    Adjust Balance
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onEdit()
+                    }}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                    Edit Account
+                  </DropdownMenuItem>
+                  {!acc.isDefault && onSetDefault && (
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onSetDefault()
+                      }}
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-amber-400 focus:bg-amber-500/10"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      Set as Default
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator className="my-1 bg-border/40" />
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDelete()
+                    }}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-rose-500 hover:bg-rose-500/10"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete Account
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Masked Card Number */}
+      <div className="relative z-10 my-4">
+        <span className="block font-mono text-sm font-bold tracking-[0.22em] text-white/85 drop-shadow-sm">
+          {maskNumber}
+        </span>
+      </div>
+
+      {/* Bottom Footer Section */}
+      <div className="relative z-10 space-y-3">
+        {/* Upper Footer Row: Account Name & Balance Display */}
+        <div className="flex items-end justify-between">
+          <div className="min-w-0 flex-1 pr-3">
+            <span className="block truncate text-[10px] font-semibold tracking-wider text-white/40 uppercase">
+              Account Name
+            </span>
+            <span className="block truncate text-xs font-bold text-white/90">
+              {acc.name}
+            </span>
+          </div>
+
+          <div className="shrink-0 text-right">
+            <span className="block text-[10px] font-semibold tracking-wider text-white/40 uppercase">
+              {isCredit
+                ? rawBal > 0
+                  ? "Balance Owed"
+                  : "Current Credit"
+                : "Available Balance"}
+            </span>
+            <div className="flex items-baseline justify-end gap-1">
+              <span
+                className={cn(
+                  "text-xl font-black tracking-tight drop-shadow-sm",
+                  isCredit && rawBal > 0
+                    ? "text-rose-400"
+                    : isCredit && rawBal < 0
+                      ? "text-emerald-400"
+                      : "text-white"
+                )}
+              >
+                {formattedBal}
+              </span>
+              <span className="text-[10px] font-bold text-white/60 uppercase">
+                {acc.currency}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Divider & Utilization Bar */}
+        {isCredit && limit > 0 ? (
+          <div className="space-y-1.5 pt-1">
+            {/* Integrated Progress Bar Divider Line */}
+            <div className="h-1 w-full overflow-hidden rounded-full bg-white/10">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-500",
+                  utilizationPercent > 80
+                    ? "bg-rose-500"
+                    : utilizationPercent > 50
+                      ? "bg-amber-400"
+                      : "bg-emerald-400"
+                )}
+                style={{ width: `${utilizationPercent}%` }}
+              />
+            </div>
+
+            {/* Subtext Row: Available & Limit */}
+            <div className="flex items-center justify-between text-[10px] font-medium text-white/60">
+              <span>
+                Available:{" "}
+                <span className="font-bold text-white">
+                  {formatCents(availableCents).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}{" "}
+                  {acc.currency}
+                </span>
+              </span>
+              <span>
+                Limit:{" "}
+                <span className="font-bold text-white/90">
+                  {formatCents(limit).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}{" "}
+                  {acc.currency}
+                </span>
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between border-t border-white/10 pt-2 text-[10px] font-medium text-white/40">
+            <span>{acc.isActive ? "Active Account" : "Inactive Account"}</span>
+            <span>{acc.currency}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 const ACCOUNTS_FILTER_DEFAULTS = {
@@ -217,6 +518,7 @@ export function AccountsView() {
     )
 
   const deleteAccountMutation = useDeleteAccountMutation()
+  const updateAccountMutation = useUpdateAccountMutation()
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
@@ -277,8 +579,119 @@ export function AccountsView() {
     })
   }
 
+  const [groupBy, setGroupBy] = useState<"INSTITUTION" | "TYPE" | "FLAT">(
+    "INSTITUTION"
+  )
+
+  const { data: instsData } = useListInstitutionsQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: !!spaceId }
+  )
+  const institutions = useMemo(
+    () => instsData?.institutions || [],
+    [instsData?.institutions]
+  )
+  const instMap = useMemo(() => {
+    const map: Record<string, (typeof institutions)[0]> = {}
+    for (const inst of institutions) {
+      if (inst.id) {
+        map[inst.id] = inst
+      }
+    }
+    return map
+  }, [institutions])
+
   const accounts = useMemo(() => accountsData?.accounts || [], [accountsData])
   const transfers = transfersData?.transfers || []
+
+  const handleSetDefault = (acc: Account) => {
+    if (!acc.id) return
+    updateAccountMutation.mutate(
+      {
+        id: acc.id,
+        req: {
+          id: acc.id,
+          account: {
+            ...acc,
+            isDefault: true,
+          },
+        },
+      },
+      {
+        onSuccess: () => {
+          refetchAccounts()
+        },
+      }
+    )
+  }
+
+  const groupedAccounts = useMemo(() => {
+    if (groupBy === "FLAT") return []
+
+    const groups: Record<
+      string,
+      {
+        key: string
+        title: string
+        domain?: string
+        color?: string
+        type?: Account_Type
+        accounts: Account[]
+        totalBalanceInBase: number
+      }
+    > = {}
+
+    for (const acc of accounts) {
+      let groupKey = ""
+      let groupTitle = ""
+      let domain: string | undefined
+      let color = "indigo"
+      let type: Account_Type | undefined
+
+      if (groupBy === "INSTITUTION") {
+        if (acc.institutionId && instMap[acc.institutionId]) {
+          const inst = instMap[acc.institutionId]
+          groupKey = inst.id || "unassigned"
+          groupTitle = inst.name || "Unknown"
+          domain = inst.domain
+          color = inst.color || "indigo"
+        } else {
+          groupKey = "unassigned"
+          groupTitle = "Uncategorized / Cash"
+          domain = ""
+          color = "sky"
+        }
+      } else if (groupBy === "TYPE") {
+        groupKey = acc.type
+        groupTitle = getAccountTypeLabel(acc.type)
+        type = acc.type
+        color =
+          acc.type === "CREDIT_CARD"
+            ? "rose"
+            : acc.type === "BANK"
+              ? "indigo"
+              : "emerald"
+      }
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
+          key: groupKey,
+          title: groupTitle,
+          domain,
+          color,
+          type,
+          accounts: [],
+          totalBalanceInBase: 0,
+        }
+      }
+      groups[groupKey].accounts.push(acc)
+      groups[groupKey].totalBalanceInBase += Number(
+        acc.conversion?.balance || acc.currentBalance || 0
+      )
+    }
+
+    return Object.values(groups)
+  }, [accounts, groupBy, instMap])
 
   // Convert accounts to base currency and calculate metrics
   const metrics = useMemo(() => {
@@ -477,9 +890,48 @@ export function AccountsView() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Accounts List (2 cols) */}
           <div className="space-y-6 lg:col-span-2">
-            <h2 className="text-lg font-black tracking-tight text-foreground uppercase">
-              Workspace Accounts
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-black tracking-tight text-foreground uppercase">
+                Workspace Accounts
+              </h2>
+
+              {/* Grouping Mode Switcher */}
+              <div className="flex items-center rounded-xl border border-border/40 bg-card/50 p-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setGroupBy("INSTITUTION")}
+                  className={`rounded-lg px-3 py-1.5 font-semibold transition-all ${
+                    groupBy === "INSTITUTION"
+                      ? "bg-primary text-white shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  By Bank
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGroupBy("TYPE")}
+                  className={`rounded-lg px-3 py-1.5 font-semibold transition-all ${
+                    groupBy === "TYPE"
+                      ? "bg-primary text-white shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  By Type
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGroupBy("FLAT")}
+                  className={`rounded-lg px-3 py-1.5 font-semibold transition-all ${
+                    groupBy === "FLAT"
+                      ? "bg-primary text-white shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Flat List
+                </button>
+              </div>
+            </div>
 
             {/* Filter Bar */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -562,261 +1014,113 @@ export function AccountsView() {
                   </Button>
                 )}
               </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {accounts.map((acc) => {
-                  const colors = getAccountColors(acc.color)
-                  const Icon = getAccountTypeIcon(acc.type)
-                  const isCredit = acc.type === "CREDIT_CARD"
-
+            ) : groupBy !== "FLAT" ? (
+              /* Grouped View Accordions */
+              <div className="space-y-6">
+                {groupedAccounts.map((group) => {
+                  const logoUrl = getInstitutionLogoUrl(
+                    group.domain,
+                    group.title
+                  )
                   return (
                     <div
-                      key={acc.id}
-                      className={cn(
-                        "group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-border/40 bg-card/45 p-6 transition-all duration-300 hover:border-border/60 hover:shadow-xl",
-                        !acc.isActive && "bg-card/20 opacity-60"
-                      )}
+                      key={group.key}
+                      className="space-y-4 rounded-3xl border border-border/40 bg-card/30 p-5 shadow-sm"
                     >
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-center justify-between border-b border-border/30 pb-3">
                         <div className="flex items-center gap-3">
-                          <div
-                            className={cn(
-                              "rounded-2xl border p-2.5",
-                              colors.bg,
-                              colors.text,
-                              colors.border
+                          <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border border-border/40 bg-card">
+                            {groupBy === "INSTITUTION" && logoUrl ? (
+                              <img
+                                src={logoUrl}
+                                alt=""
+                                className="h-5 w-5 object-contain"
+                                onError={(e) => {
+                                  ;(e.target as HTMLElement).style.display =
+                                    "none"
+                                }}
+                              />
+                            ) : (
+                              <Landmark className="h-5 w-5 text-indigo-500" />
                             )}
-                          >
-                            <Icon className="h-5 w-5 shrink-0" />
                           </div>
                           <div>
-                            <h3 className="flex max-w-[200px] items-center gap-1.5 truncate text-sm font-bold text-foreground">
-                              <span>{acc.name}</span>
-                              {acc.lastFour && (
-                                <span className="shrink-0 text-[10px] font-normal text-muted-foreground/80">
-                                  •••• {acc.lastFour}
-                                </span>
-                              )}
+                            <h3 className="text-base font-bold text-foreground">
+                              {group.title}
                             </h3>
-                            <span className="text-[10px] leading-none text-muted-foreground">
-                              {getAccountTypeLabel(acc.type)}
-                            </span>
+                            <p className="text-xs text-muted-foreground">
+                              {group.accounts.length}{" "}
+                              {group.accounts.length === 1
+                                ? "account"
+                                : "accounts"}
+                            </p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-1.5">
-                          {acc.isDefault && (
-                            <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[8px] font-black tracking-wider text-primary uppercase">
-                              Default
-                            </span>
-                          )}
-                          <DropdownMenu>
-                            <DropdownMenuTrigger
-                              render={
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 rounded-full hover:bg-muted"
-                                >
-                                  <MoreVertical className="h-4.5 w-4.5 text-muted-foreground" />
-                                </Button>
-                              }
-                            />
-                            <DropdownMenuContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setHistoryAccount(acc)
-                                  setHistoryOpen(true)
-                                }}
-                                className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold"
-                              >
-                                <History className="h-3.5 w-3.5" />
-                                View Ledger
-                              </DropdownMenuItem>
-
-                              {isWritable && (
-                                <>
-                                  <DropdownMenuItem
-                                    onClick={() => handleOpenAdjust(acc)}
-                                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-emerald-400 focus:bg-emerald-500/10"
-                                  >
-                                    <Scale className="h-3.5 w-3.5" />
-                                    Adjust Balance
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      setEditingAccount(acc)
-                                      setCreateOpen(true)
-                                    }}
-                                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold"
-                                  >
-                                    <Edit2 className="h-3.5 w-3.5" />
-                                    Edit Account
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      handleDeleteAccount(acc.id || "")
-                                    }
-                                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-rose-500 hover:bg-rose-500/10"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                    Delete Account
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
-
-                      <div className="mt-6 flex items-baseline justify-between">
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                              Balance
-                            </span>
-                            {isCredit && (
-                              <span
-                                className={cn(
-                                  "py-0.2 rounded border px-1.5 text-[9px] font-extrabold uppercase",
-                                  Number(acc.currentBalance || "0") > 0
-                                    ? "border-rose-500/20 bg-rose-500/10 text-rose-400"
-                                    : Number(acc.currentBalance || "0") < 0
-                                      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
-                                      : "border-border/30 bg-muted/20 text-muted-foreground"
-                                )}
-                              >
-                                {Number(acc.currentBalance || "0") > 0
-                                  ? "Balance Owed"
-                                  : Number(acc.currentBalance || "0") < 0
-                                    ? "Statement Credit"
-                                    : "Zero Balance"}
-                              </span>
-                            )}
-                          </div>
-                          <span
-                            className={cn(
-                              "text-2xl font-black tracking-tight",
-                              isCredit && Number(acc.currentBalance || "0") > 0
-                                ? "text-rose-500 dark:text-rose-400"
-                                : isCredit &&
-                                    Number(acc.currentBalance || "0") < 0
-                                  ? "text-emerald-500 dark:text-emerald-400"
-                                  : "text-foreground"
-                            )}
-                          >
-                            {formatCents(acc.currentBalance).toLocaleString(
-                              undefined,
-                              {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              }
-                            )}{" "}
-                            <span className="text-xs leading-none font-bold text-muted-foreground uppercase">
-                              {acc.currency}
+                        <div className="text-right">
+                          <span className="block text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                            Group Total
+                          </span>
+                          <span className="text-lg font-black text-foreground">
+                            {formatCents(
+                              group.totalBalanceInBase
+                            ).toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}{" "}
+                            <span className="text-xs font-bold text-muted-foreground">
+                              {settings?.baseCurrency}
                             </span>
                           </span>
                         </div>
                       </div>
 
-                      {isCredit && (
-                        <div className="mt-5 space-y-2 border-t border-border/30 pt-4">
-                          {(() => {
-                            const limit = Number(acc.creditLimit || "0")
-                            const rawBal = Number(acc.currentBalance || "0")
-                            const debtOwed = rawBal > 0 ? rawBal : 0
-                            const overpayment =
-                              rawBal < 0 ? Math.abs(rawBal) : 0
-                            const availableCents = Math.max(
-                              0,
-                              limit - debtOwed + overpayment
-                            )
-                            const isOverLimit = limit > 0 && debtOwed > limit
-                            const overLimitCents = isOverLimit
-                              ? debtOwed - limit
-                              : 0
-
-                            const utilizationPercent =
-                              limit > 0
-                                ? Math.min(
-                                    100,
-                                    Math.max(0, (debtOwed / limit) * 100)
-                                  )
-                                : 0
-
-                            let barColor = "bg-emerald-500"
-                            if (utilizationPercent > 85 || isOverLimit) {
-                              barColor = "bg-rose-500"
-                            } else if (utilizationPercent > 50) {
-                              barColor = "bg-amber-500"
-                            }
-
-                            return (
-                              <>
-                                <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                                  <span>
-                                    Limit: {formatCents(limit).toLocaleString()}{" "}
-                                    {acc.currency}
-                                  </span>
-                                  <span>
-                                    Available:{" "}
-                                    <span className="font-bold text-foreground">
-                                      {formatCents(
-                                        availableCents
-                                      ).toLocaleString()}{" "}
-                                      {acc.currency}
-                                    </span>
-                                  </span>
-                                </div>
-                                <div className="space-y-1">
-                                  <div className="h-2 w-full overflow-hidden rounded-full border border-border/20 bg-muted">
-                                    <div
-                                      className={cn(
-                                        "h-full transition-all duration-500",
-                                        barColor
-                                      )}
-                                      style={{
-                                        width: `${utilizationPercent}%`,
-                                      }}
-                                    />
-                                  </div>
-                                  <div className="flex justify-between text-[9px] font-black text-muted-foreground/70 uppercase">
-                                    <span>
-                                      {utilizationPercent.toFixed(0)}%
-                                      Utilization
-                                    </span>
-                                    {isOverLimit && (
-                                      <span className="font-bold text-rose-400">
-                                        Over Limit by{" "}
-                                        {formatCents(
-                                          overLimitCents
-                                        ).toLocaleString()}{" "}
-                                        {acc.currency}
-                                      </span>
-                                    )}
-                                    {overpayment > 0 && (
-                                      <span className="font-bold text-emerald-400">
-                                        +{formatCents(overpayment).toFixed(2)}{" "}
-                                        Overpaid
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </>
-                            )
-                          })()}
-                        </div>
-                      )}
-
-                      {acc.notes && (
-                        <div className="mt-4 flex items-start gap-1.5 border-t border-border/30 pt-3 text-[11px] text-muted-foreground">
-                          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
-                          <p className="line-clamp-2">{acc.notes}</p>
-                        </div>
-                      )}
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        {group.accounts.map((acc) => (
+                          <CardAccountItem
+                            key={acc.id}
+                            acc={acc}
+                            institution={instMap[acc.institutionId || ""]}
+                            isWritable={isWritable}
+                            onHistory={() => {
+                              setHistoryAccount(acc)
+                              setHistoryOpen(true)
+                            }}
+                            onAdjust={() => handleOpenAdjust(acc)}
+                            onEdit={() => {
+                              setEditingAccount(acc)
+                              setCreateOpen(true)
+                            }}
+                            onSetDefault={() => handleSetDefault(acc)}
+                            onDelete={() => handleDeleteAccount(acc.id || "")}
+                          />
+                        ))}
+                      </div>
                     </div>
                   )
                 })}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {accounts.map((acc) => (
+                  <CardAccountItem
+                    key={acc.id}
+                    acc={acc}
+                    institution={instMap[acc.institutionId || ""]}
+                    isWritable={isWritable}
+                    onHistory={() => {
+                      setHistoryAccount(acc)
+                      setHistoryOpen(true)
+                    }}
+                    onAdjust={() => handleOpenAdjust(acc)}
+                    onEdit={() => {
+                      setEditingAccount(acc)
+                      setCreateOpen(true)
+                    }}
+                    onSetDefault={() => handleSetDefault(acc)}
+                    onDelete={() => handleDeleteAccount(acc.id || "")}
+                  />
+                ))}
               </div>
             )}
           </div>
@@ -1128,6 +1432,7 @@ function CreateAccountSheet({
       initialBalance: "0",
       creditLimit: "",
       color: "indigo",
+      institutionId: "",
       isDefault: false,
       isActive: true,
       notes: "",
@@ -1153,6 +1458,7 @@ function CreateAccountSheet({
             ? formatCents(editAccount.creditLimit).toString()
             : "",
           color: editAccount.color || "indigo",
+          institutionId: editAccount.institutionId || "",
           isDefault: editAccount.isDefault,
           isActive: editAccount.isActive,
           notes: editAccount.notes || "",
@@ -1166,6 +1472,7 @@ function CreateAccountSheet({
           initialBalance: "0",
           creditLimit: "",
           color: "indigo",
+          institutionId: "",
           isDefault: false,
           isActive: true,
           notes: "",
@@ -1209,6 +1516,7 @@ function CreateAccountSheet({
               color: data.color,
               notes: data.notes || "",
               lastFour: data.lastFour || "",
+              institutionId: data.institutionId || "",
             },
           },
         })
@@ -1216,7 +1524,6 @@ function CreateAccountSheet({
         await createMutation.mutateAsync({
           account: {
             id: "",
-            spaceId,
             name: data.name,
             type: data.type,
             currency: data.currency,
@@ -1228,6 +1535,7 @@ function CreateAccountSheet({
             color: data.color,
             notes: data.notes || "",
             lastFour: data.lastFour || "",
+            institutionId: data.institutionId || "",
           },
         })
       }
@@ -1289,6 +1597,22 @@ function CreateAccountSheet({
                 {errors.lastFour.message}
               </p>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs font-bold tracking-wider text-foreground uppercase">
+              Financial Institution
+            </Label>
+            <Controller
+              control={control}
+              name="institutionId"
+              render={({ field }) => (
+                <InstitutionSelect
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
           </div>
 
           <FormSelect
