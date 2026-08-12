@@ -111,6 +111,89 @@ export function getBudgetColors(colorName: string) {
   return BUDGET_COLORS.find((c) => c.value === colorName) || BUDGET_COLORS[0]
 }
 
+export const ACCOUNT_COLORS = [
+  {
+    value: "indigo",
+    label: "Indigo",
+    bg: "bg-indigo-500",
+    border: "border-indigo-500",
+  },
+  {
+    value: "emerald",
+    label: "Emerald",
+    bg: "bg-emerald-500",
+    border: "border-emerald-500",
+  },
+  {
+    value: "rose",
+    label: "Rose",
+    bg: "bg-rose-500",
+    border: "border-rose-500",
+  },
+  {
+    value: "amber",
+    label: "Amber",
+    bg: "bg-amber-500",
+    border: "border-amber-500",
+  },
+  { value: "sky", label: "Sky", bg: "bg-sky-500", border: "border-sky-500" },
+  {
+    value: "violet",
+    label: "Violet",
+    bg: "bg-violet-500",
+    border: "border-violet-500",
+  },
+]
+
+export function getAccountColors(colorName: string) {
+  return ACCOUNT_COLORS.find((c) => c.value === colorName) || ACCOUNT_COLORS[0]
+}
+
+export function getCardGradient(colorName: string) {
+  switch (colorName) {
+    case "emerald":
+      return {
+        card: "bg-gradient-to-br from-slate-950 via-emerald-950/80 to-slate-900 border-emerald-500/30 shadow-emerald-950/50 hover:border-emerald-400/60",
+      }
+    case "rose":
+      return {
+        card: "bg-gradient-to-br from-slate-950 via-rose-950/80 to-slate-900 border-rose-500/30 shadow-rose-950/50 hover:border-rose-400/60",
+      }
+    case "amber":
+      return {
+        card: "bg-gradient-to-br from-slate-950 via-amber-950/80 to-slate-900 border-amber-500/30 shadow-amber-950/50 hover:border-amber-400/60",
+      }
+    case "sky":
+      return {
+        card: "bg-gradient-to-br from-slate-950 via-sky-950/80 to-slate-900 border-sky-500/30 shadow-sky-950/50 hover:border-sky-400/60",
+      }
+    case "violet":
+      return {
+        card: "bg-gradient-to-br from-slate-950 via-violet-950/80 to-slate-900 border-violet-500/30 shadow-violet-950/50 hover:border-violet-400/60",
+      }
+    case "indigo":
+    default:
+      return {
+        card: "bg-gradient-to-br from-slate-950 via-indigo-950/80 to-slate-900 border-indigo-500/30 shadow-indigo-950/50 hover:border-indigo-400/60",
+      }
+  }
+}
+
+export function getAccountTypeLabel(type: string) {
+  switch (type) {
+    case "BANK":
+      return "Bank / Checking"
+    case "CREDIT_CARD":
+      return "Credit Card"
+    case "CASH":
+      return "Cash"
+    case "DIGITAL_ACCOUNT":
+      return "Digital / E-Wallet"
+    default:
+      return "Account"
+  }
+}
+
 export function getBudgetIcon(iconName: string) {
   return BUDGET_ICONS.find((i) => i.value === iconName)?.icon || PiggyBank
 }

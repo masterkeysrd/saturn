@@ -11,7 +11,7 @@ export interface PatchOptions<TData, TVariables> {
     id: string,
     payload: Partial<TData>,
     dirtyPaths: string[],
-    expectedVersion?: number
+    expectedVersion?: string
   ) => TVariables
   onErrorToast?: (error: Error) => void
 }
@@ -20,11 +20,11 @@ export interface PerformPatchParams<TData> {
   id: string
   payload: Partial<TData>
   dirtyFields: Record<string, boolean | undefined | unknown>
-  expectedVersion?: number
+  expectedVersion?: string
 }
 
 export function usePatch<
-  TData extends { id: string; version?: number },
+  TData extends { id?: string; version?: string },
   TVariables,
 >(options: PatchOptions<TData, TVariables>) {
   const queryClient = useQueryClient()
