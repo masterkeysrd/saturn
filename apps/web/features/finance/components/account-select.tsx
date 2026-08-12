@@ -10,7 +10,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
-import { getInstitutionLogoUrl } from "../utils"
+import { getInstitutionLogoUrl, formatAmount } from "../utils"
 import { cn } from "@/lib/utils"
 import {
   Building2,
@@ -26,11 +26,6 @@ import {
   type FieldValues,
   type Path,
 } from "react-hook-form"
-
-// Formatting helper
-const formatCents = (cents: string | number) => {
-  return Number(cents) / 100
-}
 
 interface BaseAccountSelectProps {
   accounts: Account[]
@@ -317,13 +312,10 @@ function AccountSelectInner({
               {selectedAccount.type === "CREDIT_CARD" &&
                 Number(selectedAccount.currentBalance || "0") > 0 &&
                 "-"}
-              {formatCents(
-                selectedAccount.currentBalance || "0"
-              ).toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}{" "}
-              {selectedAccount.currency}
+              {formatAmount(
+                selectedAccount.currentBalance,
+                selectedAccount.currency
+              )}
             </span>
           </div>
         ) : (
@@ -408,16 +400,7 @@ function AccountSelectInner({
                         {acc.type === "CREDIT_CARD" &&
                           Number(acc.currentBalance || "0") > 0 &&
                           "-"}
-                        {formatCents(acc.currentBalance || "0").toLocaleString(
-                          undefined,
-                          {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          }
-                        )}{" "}
-                        <span className="text-[9px] uppercase opacity-70">
-                          {acc.currency}
-                        </span>
+                        {formatAmount(acc.currentBalance, acc.currency)}
                       </span>
                       {isSelected && (
                         <Check className="h-3.5 w-3.5 text-primary" />

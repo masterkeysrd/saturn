@@ -1,7 +1,7 @@
 import { useEffect } from "react"
 import { type Budget } from "@/gen/saturn/finance/v1/finance"
 import { AlertTriangle, Calendar } from "lucide-react"
-import { formatCents, getBudgetColors } from "../utils"
+import { formatCents, formatAmount, getBudgetColors } from "../utils"
 import { cn } from "@/lib/utils"
 
 interface BudgetPeriodProgressProps {
@@ -98,16 +98,8 @@ export function BudgetPeriodProgress({
                 : "text-foreground"
           )}
         >
-          {spent.toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}{" "}
-          /{" "}
-          {limit.toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}{" "}
-          {budget.currency}
+          {formatAmount(spent * 100)} /{" "}
+          {formatAmount(limit * 100, budget.currency)}
         </span>
       </div>
 
@@ -144,12 +136,7 @@ export function BudgetPeriodProgress({
             {(period.exchangeRateToBase ?? 0).toFixed(4)} {period.baseCurrency}
           </span>
           <span className="font-semibold">
-            Limit:{" "}
-            {baseLimit.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}{" "}
-            {period.baseCurrency}
+            Limit: {formatAmount(baseLimit * 100, period.baseCurrency)}
           </span>
         </div>
       )}

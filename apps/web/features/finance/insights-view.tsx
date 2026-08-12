@@ -6,7 +6,12 @@ import {
   useGetFinanceSettingsQuery,
 } from "@/gen/saturn/finance/v1/finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
-import { formatCents, getBudgetColors, getBudgetIcon } from "./utils"
+import {
+  formatCents,
+  formatAmount,
+  getBudgetColors,
+  getBudgetIcon,
+} from "./utils"
 import { cn } from "@/lib/utils"
 import {
   TrendingDownIcon,
@@ -150,11 +155,7 @@ export function InsightsView() {
               </div>
               <div className="mt-2.5 flex items-baseline gap-1">
                 <span className="text-xl font-bold tracking-tight">
-                  {baseCurrency}{" "}
-                  {formatCents(spentInsights.totalSpent).toLocaleString(
-                    undefined,
-                    { minimumFractionDigits: 2, maximumFractionDigits: 2 }
-                  )}
+                  {formatAmount(spentInsights.totalSpent, baseCurrency)}
                 </span>
               </div>
             </div>
@@ -169,11 +170,7 @@ export function InsightsView() {
               </div>
               <div className="mt-2.5 flex items-baseline gap-1">
                 <span className="text-xl font-bold tracking-tight">
-                  {baseCurrency}{" "}
-                  {formatCents(spentInsights.totalLimit).toLocaleString(
-                    undefined,
-                    { minimumFractionDigits: 2, maximumFractionDigits: 2 }
-                  )}
+                  {formatAmount(spentInsights.totalLimit, baseCurrency)}
                 </span>
               </div>
             </div>
@@ -188,11 +185,7 @@ export function InsightsView() {
               </div>
               <div className="mt-2.5 flex items-baseline gap-1">
                 <span className="text-xl font-bold tracking-tight">
-                  {baseCurrency}{" "}
-                  {formatCents(spentInsights.remainingBudget).toLocaleString(
-                    undefined,
-                    { minimumFractionDigits: 2, maximumFractionDigits: 2 }
-                  )}
+                  {formatAmount(spentInsights.remainingBudget, baseCurrency)}
                 </span>
               </div>
             </div>

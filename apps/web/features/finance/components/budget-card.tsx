@@ -16,7 +16,7 @@ import {
   History,
   Lock,
 } from "lucide-react"
-import { getBudgetColors, getBudgetIcon, formatCents } from "../utils"
+import { getBudgetColors, getBudgetIcon, formatAmount } from "../utils"
 import { BudgetPeriodProgress } from "./budget-period-progress"
 
 interface BudgetCardProps {
@@ -98,13 +98,7 @@ export function BudgetCard({
 
         <div className="flex items-center gap-1.5">
           <span className="text-base font-black tracking-tight text-foreground">
-            {formatCents(budget.limitAmount).toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </span>
-          <span className="text-[10px] font-bold text-muted-foreground uppercase">
-            {budget.currency}
+            {formatAmount(budget.limitAmount, budget.currency)}
           </span>
 
           <DropdownMenu>

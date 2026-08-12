@@ -121,6 +121,18 @@ export function formatCents(cents: string | number | undefined | null): number {
   return isNaN(val) ? 0 : val / 100
 }
 
+export function formatAmount(
+  cents: string | number | undefined | null,
+  currency?: string
+): string {
+  const amount = formatCents(cents)
+  const formatted = amount.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+  return currency ? `${formatted} ${currency}` : formatted
+}
+
 export function toCentsString(amountStr: string | number): string {
   const val = typeof amountStr === "number" ? amountStr : parseFloat(amountStr)
   return isNaN(val) ? "0" : Math.round(val * 100).toString()

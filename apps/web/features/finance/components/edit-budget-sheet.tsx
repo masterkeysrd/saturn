@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { AmountInput } from "@/components/ui/amount-input"
 import { Label } from "@/components/ui/label"
 import { FormSelect } from "@/components/ui/form-select"
 import { Loader2 } from "lucide-react"
@@ -287,13 +288,11 @@ export function EditBudgetSheet({
             >
               Limit Amount ({currencyValue})
             </Label>
-            <Input
+            <AmountInput
+              control={control}
+              name="limit"
               id="editLimit"
-              type="number"
-              step="0.01"
-              min="0"
               placeholder="0.00"
-              {...register("limit")}
               className="h-11 rounded-xl border-border/60 bg-background/50"
             />
             {errors.limit && (

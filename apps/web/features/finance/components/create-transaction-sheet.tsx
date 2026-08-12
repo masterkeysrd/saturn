@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { AmountInput } from "@/components/ui/amount-input"
 import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
 import { CurrencyConversionPreview } from "./currency-conversion-preview"
@@ -416,14 +417,13 @@ export function CreateTransactionSheet({
               Amount
             </Label>
             <div className="flex h-12 items-center overflow-hidden rounded-xl border border-border/60 bg-background/50 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20">
-              <input
+              <AmountInput
+                control={control}
+                name="amount"
                 id="txAmount"
-                type="number"
-                step="0.01"
-                min="0.01"
                 placeholder="0.00"
-                {...register("amount")}
-                className="h-full w-full flex-1 bg-transparent px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+                showError={false}
+                className="h-full w-full flex-1 border-0 bg-transparent px-4 py-2 text-sm text-foreground shadow-none ring-0 focus-visible:ring-0 focus-visible:outline-none"
               />
 
               <div className="h-6 w-px shrink-0 bg-border/40" />

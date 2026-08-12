@@ -47,6 +47,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { AmountInput } from "@/components/ui/amount-input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { DatePicker } from "@/components/ui/date-picker"
@@ -78,7 +79,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { formatCents, toCentsString } from "./utils"
+import { formatCents, formatAmount, toCentsString } from "./utils"
 import { cn } from "@/lib/utils"
 
 const ACCOUNT_COLORS = [
@@ -235,13 +236,7 @@ function CardAccountItem({
   )
 
   const rawBal = Number(acc.currentBalance || "0")
-  const formattedBal = formatCents(acc.currentBalance).toLocaleString(
-    undefined,
-    {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }
-  )
+  const formattedBal = formatAmount(acc.currentBalance)
 
   const limit = Number(acc.creditLimit || "0")
   const debtOwed = rawBal > 0 ? rawBal : 0
@@ -440,21 +435,13 @@ function CardAccountItem({
               <span>
                 Available:{" "}
                 <span className="font-bold text-white">
-                  {formatCents(availableCents).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}{" "}
-                  {acc.currency}
+                  {formatAmount(availableCents, acc.currency)}
                 </span>
               </span>
               <span>
                 Limit:{" "}
                 <span className="font-bold text-white/90">
-                  {formatCents(limit).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}{" "}
-                  {acc.currency}
+                  {formatAmount(limit, acc.currency)}
                 </span>
               </span>
             </div>
@@ -1261,7 +1248,19 @@ export function AccountsView() {
                 ? currentCents
                 : Math.round(parsedNum * 100)
               const deltaCents = targetCents - currentCents
-              const deltaStr = (Math.abs(deltaCents) / 100).toFixed(2)
+
+              const currentBalFormatted = formatAmount(
+                currentCents,
+                adjustingAccount.currency
+              )
+              const targetBalFormatted = formatAmount(
+                targetCents,
+                adjustingAccount.currency
+              )
+              const deltaFormatted = formatAmount(
+                Math.abs(deltaCents),
+                adjustingAccount.currency
+              )
 
               return (
                 <form onSubmit={handleConfirmAdjust} className="space-y-4 pt-2">
@@ -1272,8 +1271,10 @@ export function AccountsView() {
                         Current Saturn Balance
                       </span>
                       <span className="text-sm font-extrabold text-foreground">
-                        ${(currentCents / 100).toFixed(2)}{" "}
-                        {adjustingAccount.currency}
+                        {currentBalFormatted}{" "}
+                        <span className="text-xs font-semibold text-muted-foreground">
+                          {adjustingAccount.currency}
+                        </span>
                       </span>
                     </div>
                     <div>
@@ -1281,8 +1282,10 @@ export function AccountsView() {
                         Target Real-World Balance
                       </span>
                       <span className="text-sm font-extrabold text-foreground">
-                        ${(targetCents / 100).toFixed(2)}{" "}
-                        {adjustingAccount.currency}
+                        {targetBalFormatted}{" "}
+                        <span className="text-xs font-semibold text-muted-foreground">
+                          {adjustingAccount.currency}
+                        </span>
                       </span>
                     </div>
                   </div>
@@ -1301,10 +1304,10 @@ export function AccountsView() {
                     <span>Adjustment Type</span>
                     <span className="font-bold">
                       {deltaCents > 0
-                        ? `+$${deltaStr} ${adjustingAccount.currency} (Income)`
+                        ? `+${deltaFormatted} ${adjustingAccount.currency} (Income)`
                         : deltaCents < 0
-                          ? `-$${deltaStr} ${adjustingAccount.currency} (Expense)`
-                          : "$0.00 (No Change)"}
+                          ? `-${deltaFormatted} ${adjustingAccount.currency} (Expense)`
+                          : `0.00 ${adjustingAccount.currency} (No Change)`}
                     </span>
                   </div>
 
@@ -1313,20 +1316,13 @@ export function AccountsView() {
                     <Label className="text-xs font-bold text-muted-foreground uppercase">
                       Actual Real-World Balance
                     </Label>
-                    <div className="relative">
-                      <span className="absolute top-1/2 left-3 -translate-y-1/2 text-sm font-bold text-muted-foreground">
-                        $
-                      </span>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={targetBalanceStr}
-                        onChange={(e) => setTargetBalanceStr(e.target.value)}
-                        placeholder="0.00"
-                        className="h-11 rounded-xl pl-7 font-bold text-foreground"
-                        autoFocus
-                      />
-                    </div>
+                    <AmountInput
+                      value={targetBalanceStr}
+                      onValueChange={(val) => setTargetBalanceStr(val)}
+                      currency={adjustingAccount.currency}
+                      placeholder="0.00"
+                      autoFocus
+                    />
                   </div>
 
                   <div className="space-y-1.5">
@@ -1647,16 +1643,21 @@ function CreateAccountSheet({
                 </span>
               )}
             </div>
-            <Input
-              id="acc-balance"
-              type="number"
-              step="0.01"
-              placeholder={
-                accountType === "CREDIT_CARD" ? "e.g. 450.00" : "0.00"
-              }
-              {...register("initialBalance")}
-              className="h-11 rounded-xl"
-              disabled={!!editAccount}
+            <Controller
+              control={control}
+              name="initialBalance"
+              render={({ field }) => (
+                <AmountInput
+                  id="acc-balance"
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  placeholder={
+                    accountType === "CREDIT_CARD" ? "e.g. 450.00" : "0.00"
+                  }
+                  className="h-11 rounded-xl"
+                  disabled={!!editAccount}
+                />
+              )}
             />
             <p className="text-[10px] text-muted-foreground">
               {accountType === "CREDIT_CARD"
@@ -1678,13 +1679,18 @@ function CreateAccountSheet({
               >
                 Credit Limit
               </Label>
-              <Input
-                id="acc-limit"
-                type="number"
-                step="0.01"
-                placeholder="e.g. 5000.00"
-                {...register("creditLimit")}
-                className="h-11 rounded-xl"
+              <Controller
+                control={control}
+                name="creditLimit"
+                render={({ field }) => (
+                  <AmountInput
+                    id="acc-limit"
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    placeholder="e.g. 5000.00"
+                    className="h-11 rounded-xl"
+                  />
+                )}
               />
               {errors.creditLimit && (
                 <p className="text-[11px] font-semibold text-destructive">
@@ -1963,14 +1969,14 @@ function CreateTransferSheet({
             <Label className="text-xs font-bold tracking-wider text-foreground uppercase">
               Source Amount ({srcAcc?.currency || ""})
             </Label>
-            <Input
-              type="number"
-              step="0.01"
+            <AmountInput
+              control={control}
+              name="sourceAmount"
+              onValueChange={(val) => {
+                updateTargetAmount(val, srcId, dstId)
+              }}
+              currency={srcAcc?.currency}
               placeholder="0.00"
-              {...register("sourceAmount", {
-                onChange: (e) =>
-                  updateTargetAmount(e.target.value, srcId, dstId),
-              })}
               className="h-11 rounded-xl"
             />
             {errors.sourceAmount && (
@@ -1984,11 +1990,11 @@ function CreateTransferSheet({
             <Label className="text-xs font-bold tracking-wider text-foreground uppercase">
               Target Amount ({dstAcc?.currency || ""})
             </Label>
-            <Input
-              type="number"
-              step="0.01"
+            <AmountInput
+              control={control}
+              name="destinationAmount"
+              currency={dstAcc?.currency}
               placeholder="0.00"
-              {...register("destinationAmount")}
               className="h-11 rounded-xl"
             />
             {errors.destinationAmount && (
