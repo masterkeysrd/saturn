@@ -41,6 +41,7 @@ const INTERVAL_ITEMS = [
   { value: "WEEKLY", label: "Weekly" },
   { value: "MONTHLY", label: "Monthly" },
   { value: "YEARLY", label: "Yearly" },
+  { value: "ONE_TIME", label: "One-Time / Project Budget" },
 ]
 
 interface CreateBudgetSheetProps {

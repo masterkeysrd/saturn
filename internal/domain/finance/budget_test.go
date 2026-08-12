@@ -100,3 +100,41 @@ func TestBudget_ApplyPatch(t *testing.T) {
 		}
 	})
 }
+
+func TestBudget_Validate_OneTime(t *testing.T) {
+	budgetID, err := finance.NewBudgetID()
+	if err != nil {
+		t.Fatalf("failed generating budget ID: %v", err)
+	}
+
+	spaceID := finance.SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+
+	budget := &finance.Budget{
+		ID:          budgetID,
+		SpaceID:     spaceID,
+		Name:        "Event Planning",
+		LimitAmount: 100000,
+		Currency:    finance.Currency("USD"),
+		Interval:    finance.IntervalOneTime,
+		IsActive:    true,
+	}
+
+	if err := budget.Validate(); err != nil {
+		t.Fatalf("expected Validate() to return nil for IntervalOneTime, got: %v", err)
+	}
+}
+
+func TestBudget_CalculateBounds_OneTime(t *testing.T) {
+	budget := &finance.Budget{
+		Interval: finance.IntervalOneTime,
+	}
+	now := time.Now()
+	start, end := budget.CalculateBounds(now)
+
+	if start.Year() != 1970 {
+		t.Errorf("expected start year 1970, got %d", start.Year())
+	}
+	if end.Year() != 9999 {
+		t.Errorf("expected end year 9999, got %d", end.Year())
+	}
+}

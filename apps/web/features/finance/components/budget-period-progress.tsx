@@ -53,6 +53,8 @@ export function BudgetPeriodProgress({
   const spent = formatCents(period.spentAmount || "0")
   const progressPercent = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0
 
+  const isOneTime = budget.interval === "ONE_TIME"
+
   // Bounds display formatting
   const startStr = new Date(period.startDate || "").toLocaleDateString(
     undefined,
@@ -67,6 +69,7 @@ export function BudgetPeriodProgress({
     day: "numeric",
     timeZone: "UTC",
   })
+  const dateRangeStr = isOneTime ? "Lifetime" : `${startStr} - ${endStr}`
 
   const baseLimit = limit * (period.exchangeRateToBase ?? 0)
 
@@ -83,7 +86,7 @@ export function BudgetPeriodProgress({
       <div className="flex items-center justify-between text-xs font-medium text-muted-foreground/80">
         <span className="flex items-center gap-1">
           <Calendar className="h-3 w-3" />
-          {startStr} - {endStr}
+          {dateRangeStr}
         </span>
         <span
           className={cn(

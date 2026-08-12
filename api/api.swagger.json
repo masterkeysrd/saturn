@@ -6,31 +6,40 @@
   },
   "tags": [
     {
-      "name": "Finance"
+      "name": "Finance",
+      "description": "Finance service provides APIs for budgeting, accounts management, transaction\nrecording, daily exchange rate configurations, and analytics insights."
     },
     {
-      "name": "AdminIdentity"
+      "name": "AdminIdentity",
+      "description": "AdminIdentity provides administrative operations for user management."
     },
     {
-      "name": "Identity"
+      "name": "Identity",
+      "description": "Identity service provides user authentication and account management."
     },
     {
-      "name": "AgentService"
+      "name": "AgentService",
+      "description": "AgentService manages LLM connection providers, AI agent instances, and logs."
     },
     {
-      "name": "BackupAdmin"
+      "name": "BackupAdmin",
+      "description": "BackupAdmin service handles manual backup runs and logs list monitoring."
     },
     {
-      "name": "IntegrationService"
+      "name": "IntegrationService",
+      "description": "IntegrationService handles configuring, getting, and managing active integrations and their keys."
     },
     {
-      "name": "MessageAdmin"
+      "name": "MessageAdmin",
+      "description": "MessageAdmin service provides administrative endpoints for monitoring event bus message queues."
     },
     {
-      "name": "SchedulerAdmin"
+      "name": "SchedulerAdmin",
+      "description": "SchedulerAdmin service provides endpoints for operations monitoring,\nscheduling manual runs, and retrying/killing queued jobs."
     },
     {
-      "name": "Spaces"
+      "name": "Spaces",
+      "description": "Spaces provides workspace (space) management including CRUD operations and member management."
     }
   ],
   "consumes": [
@@ -4472,9 +4481,10 @@
       "enum": [
         "WEEKLY",
         "MONTHLY",
-        "YEARLY"
+        "YEARLY",
+        "ONE_TIME"
       ],
-      "description": "RecurrenceInterval defines the frequency of budgeting or transaction execution rules.\n\n - WEEKLY: Budget resets or templates trigger every calendar week.\n - MONTHLY: Budget resets or templates trigger every calendar month.\n - YEARLY: Budget resets or templates trigger every calendar year."
+      "description": "RecurrenceInterval defines the frequency of budgeting or transaction execution rules.\n\n - WEEKLY: Budget resets or templates trigger every calendar week.\n - MONTHLY: Budget resets or templates trigger every calendar month.\n - YEARLY: Budget resets or templates trigger every calendar year.\n - ONE_TIME: Non-recurring single-period allocation"
     },
     "FinanceAdjustAccountBalanceBody": {
       "type": "object",

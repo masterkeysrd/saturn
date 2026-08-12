@@ -55,6 +55,8 @@ func toProtoInterval(interval finance.RecurrenceInterval) financev1.Budget_Recur
 		return financev1.Budget_YEARLY
 	case finance.IntervalMonthly:
 		return financev1.Budget_MONTHLY
+	case finance.IntervalOneTime:
+		return financev1.Budget_ONE_TIME
 	default:
 		return financev1.Budget_RECURRENCE_INTERVAL_UNSPECIFIED
 	}
@@ -66,6 +68,8 @@ func toDomainInterval(interval financev1.Budget_RecurrenceInterval) finance.Recu
 		return finance.IntervalWeekly
 	case financev1.Budget_YEARLY:
 		return finance.IntervalYearly
+	case financev1.Budget_ONE_TIME:
+		return finance.IntervalOneTime
 	case financev1.Budget_MONTHLY:
 		fallthrough
 	default:

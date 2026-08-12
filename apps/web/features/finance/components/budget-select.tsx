@@ -127,11 +127,11 @@ function BudgetSelectInner({
   const getIntervalColorClass = (interval: string) => {
     switch (interval) {
       case "WEEKLY":
-      case "INTERVAL_WEEKLY":
         return "bg-teal-500/10 text-teal-500 border-teal-500/20"
       case "YEARLY":
-      case "INTERVAL_YEARLY":
         return "bg-purple-500/10 text-purple-500 border-purple-500/20"
+      case "ONE_TIME":
+        return "bg-amber-500/10 text-amber-500 border-amber-500/20"
       default:
         return "bg-indigo-500/10 text-indigo-500 border-indigo-500/20"
     }

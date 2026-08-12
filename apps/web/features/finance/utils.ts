@@ -130,6 +130,7 @@ export function formatInterval(interval: string | undefined | null): string {
   if (!interval) return "Monthly"
   const clean = interval.replace(/^(INTERVAL_|STATUS_)/i, "").toLowerCase()
   if (!clean) return "Monthly"
+  if (clean === "one_time") return "One-Time"
   return clean.charAt(0).toUpperCase() + clean.slice(1)
 }
 

@@ -80,6 +80,10 @@ export type Budget_RecurrenceInterval =
    * Budget resets or templates trigger every calendar year.
    */
   | "YEARLY"
+  /**
+   * Non-recurring single-period allocation
+   */
+  | "ONE_TIME"
 
 /**
  * Scoped resource view options.

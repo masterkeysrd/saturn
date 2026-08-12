@@ -18,6 +18,7 @@ export const budgetSchema = z.object({
     "WEEKLY",
     "MONTHLY",
     "YEARLY",
+    "ONE_TIME",
   ]),
   icon: z.string().min(1, "Icon is required"),
   color: z.string().min(1, "Color is required"),

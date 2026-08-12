@@ -16,6 +16,7 @@ const (
 	IntervalWeekly  RecurrenceInterval = "weekly"
 	IntervalMonthly RecurrenceInterval = "monthly"
 	IntervalYearly  RecurrenceInterval = "yearly"
+	IntervalOneTime RecurrenceInterval = "one_time"
 )
 
 type LimitPropagation string
@@ -122,10 +123,10 @@ func (b *Budget) Validate() error {
 		return fmt.Errorf("validate currency: %w", err)
 	}
 	switch b.Interval {
-	case IntervalWeekly, IntervalMonthly, IntervalYearly:
+	case IntervalWeekly, IntervalMonthly, IntervalYearly, IntervalOneTime:
 		// Valid
 	default:
-		return fmt.Errorf("invalid interval %q: must be weekly, monthly, or yearly", b.Interval)
+		return fmt.Errorf("invalid interval %q: must be weekly, monthly, yearly, or one_time", b.Interval)
 	}
 	b.Icon = strings.TrimSpace(b.Icon)
 	if b.Icon == "" {
@@ -153,6 +154,11 @@ func (b *Budget) Validate() error {
 func (b *Budget) CalculateBounds(t time.Time) (time.Time, time.Time) {
 	t = t.UTC()
 	switch b.Interval {
+	case IntervalOneTime:
+		start := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+		end := time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC)
+		return start, end
+
 	case IntervalWeekly:
 		// Go back to Monday
 		offset := int(t.Weekday()) - int(time.Monday)

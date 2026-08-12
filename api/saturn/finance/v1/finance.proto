@@ -357,6 +357,8 @@ message Budget {
     MONTHLY = 2;
     // Budget resets or templates trigger every calendar year.
     YEARLY = 3;
+    // Non-recurring single-period allocation
+    ONE_TIME = 4;
   }
 
   // Scoped resource view options.

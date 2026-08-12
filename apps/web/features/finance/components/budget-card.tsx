@@ -42,7 +42,14 @@ export function BudgetCard({
       ? "bg-teal-500/10 text-teal-500 border-teal-500/20"
       : budget.interval === "YEARLY"
         ? "bg-purple-500/10 text-purple-500 border-purple-500/20"
-        : "bg-indigo-500/10 text-indigo-500 border-indigo-500/20"
+        : budget.interval === "ONE_TIME"
+          ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+          : "bg-indigo-500/10 text-indigo-500 border-indigo-500/20"
+
+  const intervalLabel =
+    budget.interval === "ONE_TIME"
+      ? "One-Time"
+      : budget.interval.replace("INTERVAL_", "").toLowerCase()
 
   return (
     <div
@@ -67,7 +74,7 @@ export function BudgetCard({
               <span
                 className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${intervalColorClass}`}
               >
-                {budget.interval.replace("INTERVAL_", "").toLowerCase()}
+                {intervalLabel}
               </span>
               {!budget.isActive && (
                 <span className="flex items-center gap-1 rounded-full border border-border/40 bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground uppercase">

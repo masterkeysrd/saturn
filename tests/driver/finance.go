@@ -15,13 +15,14 @@ import (
 
 // ExpenseOptions encapsulates parameters for logging an expense transaction.
 type ExpenseOptions struct {
-	Account     string
-	Budget      string
-	Currency    string
-	Amount      int64
-	Description string
-	ExpectErr   string
-	Assert      func(tb testing.TB, txn *financev1.Transaction)
+	Account         string
+	Budget          string
+	Currency        string
+	Amount          int64
+	Description     string
+	TransactionDate time.Time
+	ExpectErr       string
+	Assert          func(tb testing.TB, txn *financev1.Transaction)
 }
 
 // BudgetDeleteOptions encapsulates options for deleting a budget.
@@ -633,14 +634,20 @@ func (f *FinanceDriver) CreateExpense(tb testing.TB, opts ExpenseOptions) *Finan
 		currency = acc.Currency
 	}
 
+	var txnDate *timestamppb.Timestamp
+	if !opts.TransactionDate.IsZero() {
+		txnDate = timestamppb.New(opts.TransactionDate)
+	}
+
 	client := f.getClient()
 	txn, err := client.CreateExpense(tb.Context(), &financev1.CreateExpenseRequest{
 		Expense: &financev1.ExpenseInput{
-			BudgetId:    budID,
-			Amount:      opts.Amount,
-			Currency:    currency,
-			Description: opts.Description,
-			AccountId:   &acc.ID,
+			BudgetId:        budID,
+			Amount:          opts.Amount,
+			Currency:        currency,
+			Description:     opts.Description,
+			AccountId:       &acc.ID,
+			TransactionDate: txnDate,
 		},
 	})
 
