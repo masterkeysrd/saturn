@@ -100,8 +100,15 @@ func (c *Client) DeleteBudget(ctx context.Context, req *DeleteBudgetRequest) (*e
 func (c *Client) ListBudgets(ctx context.Context, req *ListBudgetsRequest) (*ListBudgetsResponse, error) {
 	var resp ListBudgetsResponse
 	path := "/api/v1/finance/budgets"
+	var query []string
 	if req.View != nil {
-		path += "?view=" + req.GetView().String()
+		query = append(query, "view="+req.GetView().String())
+	}
+	for _, st := range req.GetStatuses() {
+		query = append(query, "statuses="+st.String())
+	}
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
 	}
 	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
 		return nil, err

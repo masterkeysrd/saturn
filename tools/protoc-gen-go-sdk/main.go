@@ -132,8 +132,15 @@ func generateSDKMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 	// Payload extraction
 	if httpMethod == "GET" || httpMethod == "DELETE" {
 		if method.GoName == "ListBudgets" {
+			g.P("	var query []string")
 			g.P("	if req.View != nil {")
-			g.P("		path += \"?view=\" + req.GetView().String()")
+			g.P("		query = append(query, \"view=\" + req.GetView().String())")
+			g.P("	}")
+			g.P("	for _, st := range req.GetStatuses() {")
+			g.P("		query = append(query, \"statuses=\" + st.String())")
+			g.P("	}")
+			g.P("	if len(query) > 0 {")
+			g.P("		path += \"?\" + strings.Join(query, \"&\")")
 			g.P("	}")
 		} else if method.GoName == "ListInboxItems" {
 			g.P("	var query []string")

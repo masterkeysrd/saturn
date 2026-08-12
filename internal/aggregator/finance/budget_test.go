@@ -71,8 +71,17 @@ func (m *mockBudgetStore) ListBySpace(ctx context.Context, spaceID finance.Space
 		if b.SpaceID != spaceID {
 			continue
 		}
-		if filter.ActiveOnly != nil && *filter.ActiveOnly && !b.IsActive {
-			continue
+		if len(filter.Statuses) > 0 {
+			matched := false
+			for _, st := range filter.Statuses {
+				if b.Status == st {
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				continue
+			}
 		}
 		if filter.SearchQuery != nil && *filter.SearchQuery != "" {
 			q := strings.ToLower(*filter.SearchQuery)
@@ -256,7 +265,7 @@ func TestListAggregatedBudgets(t *testing.T) {
 		LimitAmount: 5000,
 		Currency:    finance.Currency("USD"),
 		Interval:    finance.IntervalMonthly,
-		IsActive:    true,
+		Status:      finance.BudgetStatusActive,
 	}
 	b2 := &finance.Budget{
 		ID:          b2ID,
@@ -265,7 +274,7 @@ func TestListAggregatedBudgets(t *testing.T) {
 		LimitAmount: 10000,
 		Currency:    finance.Currency("USD"),
 		Interval:    finance.IntervalMonthly,
-		IsActive:    true,
+		Status:      finance.BudgetStatusActive,
 	}
 	b3 := &finance.Budget{
 		ID:          b3ID,
@@ -274,7 +283,7 @@ func TestListAggregatedBudgets(t *testing.T) {
 		LimitAmount: 2000,
 		Currency:    finance.Currency("USD"),
 		Interval:    finance.IntervalMonthly,
-		IsActive:    false, // Inactive
+		Status:      finance.BudgetStatusPaused, // Inactive
 	}
 
 	_ = bs.Create(ctx, b1)
@@ -309,12 +318,11 @@ func TestListAggregatedBudgets(t *testing.T) {
 	_ = ps.Create(ctx, p2)
 
 	t.Run("Basic View - Active Only", func(t *testing.T) {
-		activeOnly := true
 		filter := ListBudgetsFilter{
 			ListBudgetsFilter: finance.ListBudgetsFilter{
-				ActiveOnly: &activeOnly,
-				Sort:       sorting.New("name", true), // A-Z
-				PageSize:   10,
+				Statuses: []finance.BudgetStatus{finance.BudgetStatusActive},
+				Sort:     sorting.New("name", true), // A-Z
+				PageSize: 10,
 			},
 			View: ViewBasic,
 		}
@@ -336,12 +344,11 @@ func TestListAggregatedBudgets(t *testing.T) {
 	})
 
 	t.Run("Full View - Hydrates Period Spent", func(t *testing.T) {
-		activeOnly := true
 		filter := ListBudgetsFilter{
 			ListBudgetsFilter: finance.ListBudgetsFilter{
-				ActiveOnly: &activeOnly,
-				Sort:       sorting.New("limit_amount", false), // Limit desc (Travel first, then Food)
-				PageSize:   10,
+				Statuses: []finance.BudgetStatus{finance.BudgetStatusActive},
+				Sort:     sorting.New("limit_amount", false), // Limit desc (Travel first, then Food)
+				PageSize: 10,
 			},
 			View: ViewFull,
 		}
@@ -369,12 +376,11 @@ func TestListAggregatedBudgets(t *testing.T) {
 	})
 
 	t.Run("Paging - Keeps Order", func(t *testing.T) {
-		activeOnly := true
 		filter := ListBudgetsFilter{
 			ListBudgetsFilter: finance.ListBudgetsFilter{
-				ActiveOnly: &activeOnly,
-				Sort:       sorting.New("name", true), // Food, Travel
-				PageSize:   1,
+				Statuses: []finance.BudgetStatus{finance.BudgetStatusActive},
+				Sort:     sorting.New("name", true), // Food, Travel
+				PageSize: 1,
 			},
 			View: ViewBasic,
 		}

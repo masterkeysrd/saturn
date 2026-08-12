@@ -77,6 +77,32 @@ func toDomainInterval(interval financev1.Budget_RecurrenceInterval) finance.Recu
 	}
 }
 
+func toProtoStatus(s finance.BudgetStatus) financev1.Budget_Status {
+	switch s {
+	case finance.BudgetStatusActive:
+		return financev1.Budget_ACTIVE
+	case finance.BudgetStatusPaused:
+		return financev1.Budget_PAUSED
+	case finance.BudgetStatusClosed:
+		return financev1.Budget_CLOSED
+	default:
+		return financev1.Budget_STATUS_UNSPECIFIED
+	}
+}
+
+func toDomainStatus(s financev1.Budget_Status) finance.BudgetStatus {
+	switch s {
+	case financev1.Budget_ACTIVE:
+		return finance.BudgetStatusActive
+	case financev1.Budget_PAUSED:
+		return finance.BudgetStatusPaused
+	case financev1.Budget_CLOSED:
+		return finance.BudgetStatusClosed
+	default:
+		return finance.BudgetStatusActive
+	}
+}
+
 func toDomainPropagation(p financev1.LimitPropagation) finance.LimitPropagation {
 	switch p {
 	case financev1.LimitPropagation_LIMIT_PROPAGATION_CURRENT_PERIOD:
@@ -101,7 +127,7 @@ func toProtoBudget(b *finance.Budget) *financev1.Budget {
 		LimitAmount:      b.LimitAmount,
 		Currency:         string(b.Currency),
 		Interval:         toProtoInterval(b.Interval),
-		IsActive:         b.IsActive,
+		Status:           toProtoStatus(b.Status),
 		CreateTime:       timestamppb.New(b.CreateTime),
 		UpdateTime:       timestamppb.New(b.UpdateTime),
 		Icon:             b.Icon,
@@ -138,7 +164,7 @@ func toDomainBudget(pb *financev1.Budget) (*finance.Budget, error) {
 		LimitAmount:      pb.GetLimitAmount(),
 		Currency:         currency,
 		Interval:         toDomainInterval(pb.GetInterval()),
-		IsActive:         pb.GetIsActive(),
+		Status:           toDomainStatus(pb.GetStatus()),
 		Icon:             pb.GetIcon(),
 		Color:            pb.GetColor(),
 		DefaultAccountID: defaultAccountID,
@@ -295,12 +321,6 @@ func (h *Handler) ListBudgets(ctx context.Context, req *financev1.ListBudgetsReq
 		targetDate = time.Now()
 	}
 
-	var activeOnly *bool
-	if req.ActiveOnly != nil {
-		val := req.GetActiveOnly()
-		activeOnly = &val
-	}
-
 	var searchQuery *string
 	if req.SearchQuery != nil {
 		val := req.GetSearchQuery()
@@ -312,11 +332,19 @@ func (h *Handler) ListBudgets(ctx context.Context, req *financev1.ListBudgetsReq
 		viewType = financeaggregator.ViewFull
 	}
 
+	var domainStatuses []finance.BudgetStatus
+	for _, st := range req.GetStatuses() {
+		ds := toDomainStatus(st)
+		if ds != "" {
+			domainStatuses = append(domainStatuses, ds)
+		}
+	}
+
 	page, err := h.Aggregator.ListBudgets(ctx, spaceID, financeaggregator.ListBudgetsFilter{
 		ListBudgetsFilter: finance.ListBudgetsFilter{
 			PageSize:      int32(pageSize),
 			NextPageToken: req.GetPageToken(),
-			ActiveOnly:    activeOnly,
+			Statuses:      domainStatuses,
 			SearchQuery:   searchQuery,
 			Sort:          sortOrder,
 		},

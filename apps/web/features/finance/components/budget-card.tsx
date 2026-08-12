@@ -14,6 +14,7 @@ import {
   Trash2,
   Plus,
   History,
+  Lock,
 } from "lucide-react"
 import { getBudgetColors, getBudgetIcon, formatCents } from "../utils"
 import { BudgetPeriodProgress } from "./budget-period-progress"
@@ -51,10 +52,14 @@ export function BudgetCard({
       ? "One-Time"
       : budget.interval.replace("INTERVAL_", "").toLowerCase()
 
+  const isClosed = budget.status === "CLOSED"
+  const isPaused = budget.status === "PAUSED"
+  const isActive = budget.status === "ACTIVE" || !budget.status
+
   return (
     <div
       className={`group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-border/40 bg-card/45 p-6 transition-all duration-300 hover:border-border/60 hover:shadow-xl ${
-        !budget.isActive ? "bg-card/25 opacity-75" : ""
+        !isActive ? "bg-card/25 opacity-75" : ""
       }`}
     >
       <div className="flex items-start justify-between gap-4">
@@ -76,12 +81,17 @@ export function BudgetCard({
               >
                 {intervalLabel}
               </span>
-              {!budget.isActive && (
-                <span className="flex items-center gap-1 rounded-full border border-border/40 bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground uppercase">
+              {isClosed ? (
+                <span className="flex items-center gap-1 rounded-full border border-rose-500/20 bg-rose-500/10 px-2 py-0.5 text-[10px] font-bold text-rose-400 uppercase">
+                  <Lock className="h-3 w-3" />
+                  Closed
+                </span>
+              ) : isPaused ? (
+                <span className="flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-500 uppercase">
                   <PauseCircle className="h-3 w-3" />
                   Paused
                 </span>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
@@ -120,7 +130,7 @@ export function BudgetCard({
 
               {isWritable && (
                 <>
-                  {onAddExpense && (
+                  {onAddExpense && isActive && (
                     <DropdownMenuItem
                       onClick={() => onAddExpense(budget)}
                       className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm hover:bg-muted/60"
@@ -151,7 +161,7 @@ export function BudgetCard({
       </div>
 
       {/* Spawned period details wrapper */}
-      {budget.isActive && (
+      {isActive && (
         <BudgetPeriodProgress
           budget={budget}
           onPeriodLoaded={(limitInBase) =>

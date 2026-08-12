@@ -22,6 +22,9 @@ export const budgetSchema = z.object({
   ]),
   icon: z.string().min(1, "Icon is required"),
   color: z.string().min(1, "Color is required"),
+  status: z
+    .enum(["STATUS_UNSPECIFIED", "ACTIVE", "PAUSED", "CLOSED"])
+    .optional(),
   defaultAccountId: z.string().optional(),
 })
 

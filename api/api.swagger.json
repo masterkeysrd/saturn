@@ -1364,13 +1364,6 @@
             "type": "string"
           },
           {
-            "name": "activeOnly",
-            "description": "Optional. Filter only active budgets.",
-            "in": "query",
-            "required": false,
-            "type": "boolean"
-          },
-          {
             "name": "searchQuery",
             "description": "Optional. Text search query matching budget names.",
             "in": "query",
@@ -1402,6 +1395,22 @@
             "required": false,
             "type": "string",
             "format": "date-time"
+          },
+          {
+            "name": "statuses",
+            "description": "Optional. List of budget statuses to filter by (e.g. ACTIVE, PAUSED, CLOSED).\n\n - ACTIVE: Budget is active and open for transaction logging.\n - PAUSED: Budget is temporarily suspended. Transactions blocked.\n - CLOSED: Budget is closed. Transactions blocked.",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "PAUSED",
+                "CLOSED"
+              ]
+            },
+            "collectionFormat": "multi"
           }
         ],
         "tags": [
@@ -5602,9 +5611,9 @@
           "$ref": "#/definitions/BudgetRecurrenceInterval",
           "description": "Required. Recurrence interval frequency."
         },
-        "isActive": {
-          "type": "boolean",
-          "description": "Optional. Indicates if the budget is active and accepting transaction logging."
+        "status": {
+          "$ref": "#/definitions/v1BudgetStatus",
+          "description": "Optional. Operational lifecycle status of the budget limit allocation."
         },
         "icon": {
           "type": "string",
@@ -5728,6 +5737,15 @@
         }
       },
       "description": "BudgetPeriod represents an active instantiation of a budget."
+    },
+    "v1BudgetStatus": {
+      "type": "string",
+      "enum": [
+        "ACTIVE",
+        "PAUSED",
+        "CLOSED"
+      ],
+      "description": "Status defines the operational lifecycle state of a budget allocation.\n\n - ACTIVE: Budget is active and open for transaction logging.\n - PAUSED: Budget is temporarily suspended. Transactions blocked.\n - CLOSED: Budget is closed. Transactions blocked."
     },
     "v1BudgetView": {
       "type": "string",

@@ -79,7 +79,7 @@ export interface CreateAgentRequest {
   name: string
   description: string
   purpose: string
-  tags: string[]
+  tags?: string[]
   modelName: string
   systemInstruction: string
   temperature: number
@@ -98,7 +98,7 @@ export interface UpdateAgentRequest {
   llmProviderId: string
   name: string
   description: string
-  tags: string[]
+  tags?: string[]
   modelName: string
   systemInstruction: string
   temperature: number
@@ -162,7 +162,7 @@ export interface DocumentFilePayload {
 export interface GetSuggestionsRequest {
   purpose: string
   textContent: string
-  documents: DocumentFilePayload[]
+  documents?: DocumentFilePayload[]
 }
 
 /**

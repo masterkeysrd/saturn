@@ -121,7 +121,7 @@ type TopExpensesFilter struct {
 type ListBudgetsFilter struct {
 	PageSize      int32
 	NextPageToken string
-	ActiveOnly    *bool
+	Statuses      []BudgetStatus
 	SearchQuery   *string
 	Sort          sorting.SortOrder
 }

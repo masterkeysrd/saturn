@@ -14,7 +14,7 @@ import { CreateBudgetSheet } from "./components/create-budget-sheet"
 import { EditBudgetSheet } from "./components/edit-budget-sheet"
 import { CreateTransactionSheet } from "./components/create-transaction-sheet"
 import { BudgetHistorySheet } from "./components/budget-history-sheet"
-import { formatCents } from "./utils"
+import { formatCents, isStatusActive } from "./utils"
 import { toast } from "@/components/ui/toast"
 import {
   AlertDialog,
@@ -26,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export function BudgetsView() {
   const { spaceId, isWritable } = useSpacePermissions()
@@ -36,9 +37,18 @@ export function BudgetsView() {
     { enabled: !!spaceId }
   )
 
-  // 2. Fetch budgets with FULL view
+  const [statusFilter, setStatusFilter] = useState<
+    "ACTIVE" | "PAUSED" | "CLOSED" | "ALL"
+  >("ACTIVE")
+
+  const statusesParam = useMemo(() => {
+    if (statusFilter === "ALL") return []
+    return [statusFilter]
+  }, [statusFilter])
+
+  // 2. Fetch budgets with FULL view and statuses filter
   const { data: budgetsData, refetch: refetchBudgets } = useListBudgetsQuery(
-    { pageSize: 100, pageToken: "", view: "FULL" },
+    { pageSize: 100, pageToken: "", view: "FULL", statuses: statusesParam },
     { enabled: !!settings }
   )
 
@@ -63,7 +73,7 @@ export function BudgetsView() {
   const totalLimitBudgeted = useMemo(() => {
     const budgets = budgetsData?.budgets || []
     return budgets.reduce((acc, b) => {
-      if (!b.isActive) return acc
+      if (!isStatusActive(b.status)) return acc
       if (b.currentPeriod) {
         return acc + formatCents(b.currentPeriod.limitInBase || "0")
       }
@@ -183,6 +193,27 @@ export function BudgetsView() {
             </div>
           </div>
         </div>
+
+        {/* Status Filter Tabs */}
+        <Tabs
+          value={statusFilter}
+          onValueChange={(val) => setStatusFilter(val as any)}
+          className="w-full"
+        >
+          <TabsList className="rounded-2xl border border-border/40 bg-card/40 p-1 backdrop-blur-sm">
+            {(["ACTIVE", "PAUSED", "CLOSED", "ALL"] as const).map((st) => (
+              <TabsTrigger
+                key={st}
+                value={st}
+                className="flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all data-active:bg-primary data-active:text-primary-foreground data-active:shadow-sm"
+              >
+                {st === "ALL"
+                  ? "All Budgets"
+                  : st.charAt(0) + st.slice(1).toLowerCase()}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
 
         {/* Dynamic Budget Template Cards Stream */}
         {!budgetsData?.budgets || budgetsData.budgets.length === 0 ? (

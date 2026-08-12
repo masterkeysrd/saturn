@@ -139,7 +139,7 @@ func generateMessage(g *protogen.GeneratedFile, msg *protogen.Message) {
 			fieldName := field.Desc.JSONName()
 			tsType := mapType(field)
 
-			isOptional := isOptionalField(field)
+			isOptional := isOptionalField(field, msg)
 
 			writeFieldComments(g, field.Comments)
 			suffix := ""
@@ -519,7 +519,10 @@ func mapBaseTypeForKind(kind protoreflect.Kind, msg protoreflect.MessageDescript
 	}
 }
 
-func isOptionalField(field *protogen.Field) bool {
+func isOptionalField(field *protogen.Field, msg *protogen.Message) bool {
+	if field.Desc.IsList() && strings.HasSuffix(msg.GoIdent.GoName, "Request") {
+		return true
+	}
 	return field.Desc.HasOptionalKeyword() || field.Oneof != nil || isOutputOnly(field)
 }
 

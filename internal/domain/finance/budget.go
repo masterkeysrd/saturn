@@ -19,6 +19,14 @@ const (
 	IntervalOneTime RecurrenceInterval = "one_time"
 )
 
+type BudgetStatus string
+
+const (
+	BudgetStatusActive BudgetStatus = "active"
+	BudgetStatusPaused BudgetStatus = "paused"
+	BudgetStatusClosed BudgetStatus = "closed"
+)
+
 type LimitPropagation string
 
 const (
@@ -75,13 +83,18 @@ type Budget struct {
 	LimitAmount      int64
 	Currency         Currency
 	Interval         RecurrenceInterval
-	IsActive         bool
+	Status           BudgetStatus
 	Icon             string
 	Color            string
 	DefaultAccountID *AccountID // Nullable default account for spending
 	Version          int64
 	CreateTime       time.Time
 	UpdateTime       time.Time
+}
+
+// IsActive returns true if the budget status is active.
+func (b *Budget) IsActive() bool {
+	return b.Status == BudgetStatusActive
 }
 
 // DefaultBudgetSortField represents the fallback sorting column name for budgets.
@@ -127,6 +140,14 @@ func (b *Budget) Validate() error {
 		// Valid
 	default:
 		return fmt.Errorf("invalid interval %q: must be weekly, monthly, yearly, or one_time", b.Interval)
+	}
+	switch b.Status {
+	case BudgetStatusActive, BudgetStatusPaused, BudgetStatusClosed:
+		// Valid
+	case "":
+		b.Status = BudgetStatusActive
+	default:
+		return fmt.Errorf("invalid status %q: must be active, paused, or closed", b.Status)
 	}
 	b.Icon = strings.TrimSpace(b.Icon)
 	if b.Icon == "" {
@@ -189,7 +210,7 @@ var BudgetPatchSchema = patch.NewSchema[Budget]().
 	Register("limit_amount", patch.Field(func(b *Budget) *int64 { return &b.LimitAmount })).
 	Register("currency", patch.Field(func(b *Budget) *Currency { return &b.Currency })).
 	Register("interval", patch.Field(func(b *Budget) *RecurrenceInterval { return &b.Interval })).
-	Register("is_active", patch.Field(func(b *Budget) *bool { return &b.IsActive })).
+	Register("status", patch.Field(func(b *Budget) *BudgetStatus { return &b.Status })).
 	Register("icon", patch.Field(func(b *Budget) *string { return &b.Icon })).
 	Register("color", patch.Field(func(b *Budget) *string { return &b.Color })).
 	Register("default_account_id", patch.Field(func(b *Budget) **AccountID { return &b.DefaultAccountID }))

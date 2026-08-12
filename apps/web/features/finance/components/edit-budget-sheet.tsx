@@ -56,6 +56,12 @@ const PROPAGATION_ITEMS: Array<{ value: LimitPropagation; label: string }> = [
   },
 ]
 
+const STATUS_ITEMS = [
+  { value: "ACTIVE", label: "Active" },
+  { value: "PAUSED", label: "Paused" },
+  { value: "CLOSED", label: "Closed" },
+]
+
 const INTERVAL_ITEMS = [
   { value: "WEEKLY", label: "Weekly" },
   { value: "MONTHLY", label: "Monthly" },
@@ -101,7 +107,6 @@ export function EditBudgetSheet({
   )
   const activeAccounts = accountsData?.accounts?.filter((a) => a.isActive) || []
 
-  const [isActive, setIsActive] = useState(true)
   const [propagation, setPropagation] = useState<LimitPropagation>(
     "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
   )
@@ -128,12 +133,6 @@ export function EditBudgetSheet({
     },
   })
 
-  const [prevBudget, setPrevBudget] = useState(activeBudget)
-  if (activeBudget && activeBudget !== prevBudget) {
-    setPrevBudget(activeBudget)
-    setIsActive(activeBudget.isActive)
-  }
-
   // Sync form values whenever activeBudget changes
   useEffect(() => {
     if (activeBudget) {
@@ -142,6 +141,7 @@ export function EditBudgetSheet({
         limit: formatCents(activeBudget.limitAmount).toString(),
         currency: activeBudget.currency,
         interval: activeBudget.interval,
+        status: activeBudget.status || "ACTIVE",
         icon: activeBudget.icon || "piggy-bank",
         color: activeBudget.color || "indigo",
         defaultAccountId: activeBudget.defaultAccountId || "",
@@ -194,7 +194,7 @@ export function EditBudgetSheet({
           limitAmount: toCentsString(data.limit),
           currency: data.currency,
           interval: data.interval,
-          isActive,
+          status: data.status || "ACTIVE",
           icon: data.icon,
           color: data.color,
           defaultAccountId: data.defaultAccountId || undefined,
@@ -347,21 +347,12 @@ export function EditBudgetSheet({
             helperText="Interval cannot be modified after creation to protect historical reports."
           />
 
-          <div className="flex items-center space-x-2.5 py-2">
-            <input
-              id="editIsActive"
-              type="checkbox"
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-              className="h-4.5 w-4.5 cursor-pointer rounded border-border text-primary focus:ring-primary"
-            />
-            <Label
-              htmlFor="editIsActive"
-              className="cursor-pointer text-sm font-semibold"
-            >
-              Template is Active
-            </Label>
-          </div>
+          <FormSelect
+            control={control}
+            name="status"
+            label="Budget Status"
+            items={STATUS_ITEMS}
+          />
 
           <div className="mt-3 space-y-1.5 border-t border-border/20 pt-5">
             <Label

@@ -30,6 +30,10 @@ func (s *Service) ListBudgets(
 	spaceID finance.SpaceID,
 	filter ListBudgetsFilter,
 ) (*paging.Page[*AggregatedBudget], error) {
+	if len(filter.Statuses) == 0 {
+		filter.Statuses = []finance.BudgetStatus{finance.BudgetStatusActive}
+	}
+
 	// 1. Fetch raw budget templates from domain service (pre-filtered, sorted, and paginated!)
 	page, err := s.financeService.ListBudgets(ctx, spaceID, &filter.ListBudgetsFilter)
 	if err != nil {

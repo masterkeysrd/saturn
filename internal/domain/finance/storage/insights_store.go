@@ -119,7 +119,7 @@ func (s *InsightsStore) GetBudgetDistribution(ctx context.Context, filter *finan
 		WHERE bp.budget_id = b.id AND bp.start_date <= $3 AND bp.end_date >= $2
 		ORDER BY bp.start_date DESC LIMIT 1
 	) bp ON TRUE
-	WHERE b.space_id = $1 AND b.is_active = true`
+	WHERE b.space_id = $1`
 
 	startDateStr := filter.StartDate.UTC().Format("2006-01-02")
 	endDateStr := filter.EndDate.UTC().Format("2006-01-02")

@@ -103,6 +103,27 @@ export type Budget_View =
   | "FULL"
 
 /**
+ * Status defines the operational lifecycle state of a budget allocation.
+ */
+export type Budget_Status =
+  /**
+   * Default unspecified status.
+   */
+  | "STATUS_UNSPECIFIED"
+  /**
+   * Budget is active and open for transaction logging.
+   */
+  | "ACTIVE"
+  /**
+   * Budget is temporarily suspended. Transactions blocked.
+   */
+  | "PAUSED"
+  /**
+   * Budget is closed. Transactions blocked.
+   */
+  | "CLOSED"
+
+/**
  * Type defines the direction and flow of funds.
  */
 export type Transaction_Type =
@@ -333,9 +354,9 @@ export interface Budget {
    */
   interval: Budget_RecurrenceInterval
   /**
-   * Optional. Indicates if the budget is active and accepting transaction logging.
+   * Optional. Operational lifecycle status of the budget limit allocation.
    */
-  isActive: boolean
+  status: Budget_Status
   /**
    * Optional. Icon identifier for UI rendering.
    */
@@ -560,10 +581,6 @@ export interface ListBudgetsRequest {
    */
   pageToken: string
   /**
-   * Optional. Filter only active budgets.
-   */
-  activeOnly?: boolean
-  /**
    * Optional. Text search query matching budget names.
    */
   searchQuery?: string
@@ -579,6 +596,10 @@ export interface ListBudgetsRequest {
    * Optional. Specific calculation target date for periods. Defaults to current time if omitted.
    */
   targetDate?: string
+  /**
+   * Optional. List of budget statuses to filter by (e.g. ACTIVE, PAUSED, CLOSED).
+   */
+  statuses?: Budget_Status[]
 }
 
 /**

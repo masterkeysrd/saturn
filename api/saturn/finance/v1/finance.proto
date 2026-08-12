@@ -371,6 +371,18 @@ message Budget {
     FULL = 2;
   }
 
+  // Status defines the operational lifecycle state of a budget allocation.
+  enum Status {
+    // Default unspecified status.
+    STATUS_UNSPECIFIED = 0;
+    // Budget is active and open for transaction logging.
+    ACTIVE = 1;
+    // Budget is temporarily suspended. Transactions blocked.
+    PAUSED = 2;
+    // Budget is closed. Transactions blocked.
+    CLOSED = 3;
+  }
+
   // Represents the computed details of the active/current period.
   message ActivePeriod {
     // Output only. Start date boundary of the current period.
@@ -414,8 +426,8 @@ message Budget {
   // Required. Recurrence interval frequency.
   RecurrenceInterval interval = 6 [(google.api.field_behavior) = REQUIRED];
 
-  // Optional. Indicates if the budget is active and accepting transaction logging.
-  bool is_active = 7 [(google.api.field_behavior) = OPTIONAL];
+  // Optional. Operational lifecycle status of the budget limit allocation.
+  Status status = 7 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Icon identifier for UI rendering.
   string icon = 8 [(google.api.field_behavior) = OPTIONAL];
@@ -561,9 +573,6 @@ message ListBudgetsRequest {
   // Optional. Keyset page token returned by a previous call.
   string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
 
-  // Optional. Filter only active budgets.
-  optional bool active_only = 3 [(google.api.field_behavior) = OPTIONAL];
-
   // Optional. Text search query matching budget names.
   optional string search_query = 4 [(google.api.field_behavior) = OPTIONAL];
 
@@ -575,6 +584,9 @@ message ListBudgetsRequest {
 
   // Optional. Specific calculation target date for periods. Defaults to current time if omitted.
   optional google.protobuf.Timestamp target_date = 7 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. List of budget statuses to filter by (e.g. ACTIVE, PAUSED, CLOSED).
+  repeated Budget.Status statuses = 8 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // The response for

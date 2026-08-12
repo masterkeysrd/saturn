@@ -110,7 +110,9 @@ func (s *Service) CreateBudget(ctx context.Context, budget *Budget) (*Budget, er
 		return nil, fmt.Errorf("verify workspace settings: %w", err)
 	}
 
-	budget.IsActive = true
+	if budget.Status == "" {
+		budget.Status = BudgetStatusActive
+	}
 	budget.CreateTime = time.Now().UTC()
 	budget.UpdateTime = time.Now().UTC()
 
@@ -1260,6 +1262,13 @@ func (s *Service) createTransaction(ctx context.Context, txn *Transaction) error
 		if err != nil {
 			return fmt.Errorf("fetch budget template: %w", err)
 		}
+		st := budget.Status
+		if st == "" {
+			st = BudgetStatusActive
+		}
+		if st != BudgetStatusActive {
+			return fmt.Errorf("cannot log transaction against budget %q with status %q", budget.Name, st)
+		}
 		period, err := s.GetOrCreatePeriod(ctx, txn.SpaceID, budget.ID, txn.EffectiveDate)
 		if err != nil {
 			return fmt.Errorf("resolve active budget period: %w", err)
@@ -1327,6 +1336,13 @@ func (s *Service) updateTransaction(ctx context.Context, txn *Transaction, exist
 		budget, err := s.deps.BudgetStore.GetByID(ctx, txn.SpaceID, *txn.BudgetID)
 		if err != nil {
 			return fmt.Errorf("fetch budget template: %w", err)
+		}
+		st := budget.Status
+		if st == "" {
+			st = BudgetStatusActive
+		}
+		if st != BudgetStatusActive {
+			return fmt.Errorf("cannot log transaction against budget %q with status %q", budget.Name, st)
 		}
 		period, err := s.GetOrCreatePeriod(ctx, txn.SpaceID, budget.ID, txn.EffectiveDate)
 		if err != nil {

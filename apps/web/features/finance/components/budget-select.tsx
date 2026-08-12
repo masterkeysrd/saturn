@@ -12,6 +12,7 @@ import {
   getBudgetColors,
   formatCents,
   formatInterval,
+  isStatusActive,
 } from "../utils"
 import { PauseCircle } from "lucide-react"
 import {
@@ -183,7 +184,7 @@ function BudgetSelectInner({
                   >
                     {formatInterval(selectedBudget.interval)}
                   </span>
-                  {!selectedBudget.isActive && (
+                  {!isStatusActive(selectedBudget.status) && (
                     <span className="flex items-center gap-0.5 rounded-full border border-border/40 bg-muted px-1.5 py-0.5 text-[8px] font-bold text-muted-foreground uppercase">
                       <PauseCircle className="h-2 w-2" />
                       Paused
@@ -216,67 +217,73 @@ function BudgetSelectInner({
             None / Uncategorized
           </SelectItem>
         )}
-        {budgets.map((b) => {
-          const Icon = getBudgetIcon(b.icon)
-          const colors = getBudgetColors(b.color)
-          return (
-            <SelectItem
-              key={b.id}
-              value={b.id}
-              className={cn(
-                "cursor-pointer rounded-lg py-2.5 pr-8 pl-3 focus:bg-accent/80 focus:text-accent-foreground",
-                !b.isActive && "opacity-60"
-              )}
-            >
-              <div className="flex w-full items-center justify-between gap-4">
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <div
-                    className={cn(
-                      "shrink-0 rounded-lg border p-1",
-                      colors.bg,
-                      colors.text,
-                      colors.border
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div className="flex min-w-0 flex-col text-left">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-xs font-semibold text-foreground">
-                        {b.name}
-                      </span>
-                      <span
-                        className={cn(
-                          "rounded-full border px-1.5 py-0.5 text-[8px] font-bold tracking-wider uppercase",
-                          getIntervalColorClass(b.interval)
-                        )}
-                      >
-                        {b.interval.replace("INTERVAL_", "").toLowerCase()}
-                      </span>
-                    </div>
-                    {!b.isActive && (
-                      <span className="mt-0.5 flex w-max items-center gap-0.5 rounded-full border border-border/40 bg-muted px-1.5 py-0.5 text-[8px] font-bold text-muted-foreground uppercase">
-                        <PauseCircle className="h-2 w-2" />
-                        Paused
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="shrink-0 text-right">
-                  <span className="block text-xs font-bold text-foreground tabular-nums">
-                    {formatCents(b.limitAmount).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}{" "}
-                    <span className="text-[9px] text-muted-foreground uppercase">
-                      {b.currency}
-                    </span>
-                  </span>
-                </div>
-              </div>
-            </SelectItem>
+        {budgets
+          .filter(
+            (b) =>
+              b.status === "ACTIVE" ||
+              (!b.status && b.status !== "CLOSED" && b.status !== "PAUSED")
           )
-        })}
+          .map((b) => {
+            const Icon = getBudgetIcon(b.icon)
+            const colors = getBudgetColors(b.color)
+            return (
+              <SelectItem
+                key={b.id}
+                value={b.id}
+                className={cn(
+                  "cursor-pointer rounded-lg py-2.5 pr-8 pl-3 focus:bg-accent/80 focus:text-accent-foreground",
+                  !isStatusActive(b.status) && "opacity-60"
+                )}
+              >
+                <div className="flex w-full items-center justify-between gap-4">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <div
+                      className={cn(
+                        "shrink-0 rounded-lg border p-1",
+                        colors.bg,
+                        colors.text,
+                        colors.border
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="flex min-w-0 flex-col text-left">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate text-xs font-semibold text-foreground">
+                          {b.name}
+                        </span>
+                        <span
+                          className={cn(
+                            "rounded-full border px-1.5 py-0.5 text-[8px] font-bold tracking-wider uppercase",
+                            getIntervalColorClass(b.interval)
+                          )}
+                        >
+                          {b.interval.replace("INTERVAL_", "").toLowerCase()}
+                        </span>
+                      </div>
+                      {!isStatusActive(b.status) && (
+                        <span className="mt-0.5 flex w-max items-center gap-0.5 rounded-full border border-border/40 bg-muted px-1.5 py-0.5 text-[8px] font-bold text-muted-foreground uppercase">
+                          <PauseCircle className="h-2 w-2" />
+                          Paused
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <span className="block text-xs font-bold text-foreground tabular-nums">
+                      {formatCents(b.limitAmount).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}{" "}
+                      <span className="text-[9px] text-muted-foreground uppercase">
+                        {b.currency}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </SelectItem>
+            )
+          })}
       </SelectContent>
     </Select>
   )

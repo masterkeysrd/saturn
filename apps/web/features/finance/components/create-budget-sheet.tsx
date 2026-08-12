@@ -148,7 +148,7 @@ export function CreateBudgetSheet({
         limitAmount: toCentsString(data.limit),
         currency: data.currency,
         interval: data.interval,
-        isActive: true,
+        status: "ACTIVE",
         icon: data.icon,
         color: data.color,
         defaultAccountId: data.defaultAccountId || undefined,

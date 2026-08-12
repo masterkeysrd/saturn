@@ -20,7 +20,7 @@ type budgetDB struct {
 	LimitAmount      int64          `db:"limit_amount"`
 	Currency         string         `db:"currency"`
 	Interval         string         `db:"interval"`
-	IsActive         bool           `db:"is_active"`
+	Status           string         `db:"status"`
 	Icon             string         `db:"icon"`
 	Color            string         `db:"color"`
 	DefaultAccountID sql.NullString `db:"default_account_id"`
@@ -42,7 +42,7 @@ func (row *budgetDB) toDomain() *finance.Budget {
 		LimitAmount:      row.LimitAmount,
 		Currency:         finance.Currency(row.Currency),
 		Interval:         finance.RecurrenceInterval(row.Interval),
-		IsActive:         row.IsActive,
+		Status:           finance.BudgetStatus(row.Status),
 		Icon:             row.Icon,
 		Color:            row.Color,
 		DefaultAccountID: defaultAccountID,
@@ -64,7 +64,7 @@ func toDB(b *finance.Budget) budgetDB {
 		LimitAmount:      b.LimitAmount,
 		Currency:         string(b.Currency),
 		Interval:         string(b.Interval),
-		IsActive:         b.IsActive,
+		Status:           string(b.Status),
 		Icon:             b.Icon,
 		Color:            b.Color,
 		DefaultAccountID: defaultAccountID,
@@ -79,7 +79,7 @@ type BudgetStore struct {
 }
 
 func NewBudgetStore(db *sqlx.DB) *BudgetStore {
-	return &BudgetStore{db: db}
+	return &BudgetStore{db: db.Unsafe()}
 }
 
 func (s *BudgetStore) Create(ctx context.Context, b *finance.Budget) error {
@@ -98,6 +98,21 @@ func (s *BudgetStore) Create(ctx context.Context, b *finance.Budget) error {
 
 func (s *BudgetStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.BudgetID) (*finance.Budget, error) {
 	query, args, err := pgDialect.From(goqu.S("finance").Table("budget")).
+		Select(
+			goqu.C("id"),
+			goqu.C("space_id"),
+			goqu.C("name"),
+			goqu.C("limit_amount"),
+			goqu.C("currency"),
+			goqu.C("interval"),
+			goqu.C("status"),
+			goqu.C("icon"),
+			goqu.C("color"),
+			goqu.C("default_account_id"),
+			goqu.C("version"),
+			goqu.C("create_time"),
+			goqu.C("update_time"),
+		).
 		Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)}).
 		ToSQL()
 	if err != nil {
@@ -122,7 +137,7 @@ func (s *BudgetStore) Update(ctx context.Context, b *finance.Budget) error {
 			"limit_amount":       row.LimitAmount,
 			"currency":           row.Currency,
 			"interval":           row.Interval,
-			"is_active":          row.IsActive,
+			"status":             row.Status,
 			"icon":               row.Icon,
 			"color":              row.Color,
 			"default_account_id": row.DefaultAccountID,
@@ -191,13 +206,31 @@ func (s *BudgetStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, 
 		filter.PageSize = 20
 	}
 
-	ds := pgDialect.From(goqu.S("finance").Table("budget")).Select("*")
+	ds := pgDialect.From(goqu.S("finance").Table("budget")).Select(
+		goqu.C("id"),
+		goqu.C("space_id"),
+		goqu.C("name"),
+		goqu.C("limit_amount"),
+		goqu.C("currency"),
+		goqu.C("interval"),
+		goqu.C("status"),
+		goqu.C("icon"),
+		goqu.C("color"),
+		goqu.C("default_account_id"),
+		goqu.C("version"),
+		goqu.C("create_time"),
+		goqu.C("update_time"),
+	)
 
 	// Apply filter conditions
 	ds = ds.Where(goqu.Ex{"space_id": string(spaceID)})
 
-	if filter.ActiveOnly != nil && *filter.ActiveOnly {
-		ds = ds.Where(goqu.Ex{"is_active": true})
+	if len(filter.Statuses) > 0 {
+		statusStrs := make([]string, len(filter.Statuses))
+		for i, st := range filter.Statuses {
+			statusStrs[i] = string(st)
+		}
+		ds = ds.Where(goqu.Ex{"status": statusStrs})
 	}
 
 	if filter.SearchQuery != nil && *filter.SearchQuery != "" {
@@ -255,7 +288,21 @@ func (s *BudgetStore) GetByIDs(ctx context.Context, spaceID finance.SpaceID, ids
 	}
 
 	ds := pgDialect.From(goqu.S("finance").Table("budget")).
-		Select("*").
+		Select(
+			goqu.C("id"),
+			goqu.C("space_id"),
+			goqu.C("name"),
+			goqu.C("limit_amount"),
+			goqu.C("currency"),
+			goqu.C("interval"),
+			goqu.C("status"),
+			goqu.C("icon"),
+			goqu.C("color"),
+			goqu.C("default_account_id"),
+			goqu.C("version"),
+			goqu.C("create_time"),
+			goqu.C("update_time"),
+		).
 		Where(goqu.Ex{"space_id": string(spaceID), "id": idStrings})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {

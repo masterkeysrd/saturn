@@ -580,7 +580,7 @@ func (f *FinanceDriver) CreateBudget(tb testing.TB, opts BudgetOptions) *Finance
 			LimitAmount: opts.LimitAmount,
 			Currency:    opts.Currency,
 			Interval:    interval,
-			IsActive:    true,
+			Status:      financev1.Budget_ACTIVE,
 		},
 	})
 	if opts.ExpectErr != "" {

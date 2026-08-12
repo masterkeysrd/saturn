@@ -37,6 +37,9 @@ type mockBudgetStore struct {
 }
 
 func (m *mockBudgetStore) Create(ctx context.Context, b *Budget) error {
+	if b.Status == "" {
+		b.Status = BudgetStatusActive
+	}
 	m.data[b.ID] = b
 	return nil
 }
@@ -45,6 +48,9 @@ func (m *mockBudgetStore) GetByID(ctx context.Context, spaceID SpaceID, id Budge
 	b, ok := m.data[id]
 	if !ok {
 		return nil, ErrBudgetNotFound
+	}
+	if b.Status == "" {
+		b.Status = BudgetStatusActive
 	}
 	return b, nil
 }
@@ -732,9 +738,9 @@ func TestDeleteBudget(t *testing.T) {
 	txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
 	schedStore := &mockScheduledPaymentStore{payments: make(map[ScheduledPaymentID]*ScheduledPayment)}
 
-	_ = budgetStore.Create(ctx, &Budget{ID: bIDClean, SpaceID: spaceID, Name: "Clean Budget", IsActive: true})
-	_ = budgetStore.Create(ctx, &Budget{ID: bIDTxns, SpaceID: spaceID, Name: "Txn Budget", IsActive: true})
-	_ = budgetStore.Create(ctx, &Budget{ID: bIDSched, SpaceID: spaceID, Name: "Sched Budget", IsActive: true})
+	_ = budgetStore.Create(ctx, &Budget{ID: bIDClean, SpaceID: spaceID, Name: "Clean Budget", Status: BudgetStatusActive})
+	_ = budgetStore.Create(ctx, &Budget{ID: bIDTxns, SpaceID: spaceID, Name: "Txn Budget", Status: BudgetStatusActive})
+	_ = budgetStore.Create(ctx, &Budget{ID: bIDSched, SpaceID: spaceID, Name: "Sched Budget", Status: BudgetStatusActive})
 
 	_ = txnStore.Create(ctx, &Transaction{
 		ID:       TransactionID("txn_1"),
@@ -884,7 +890,7 @@ func TestGetOrCreatePeriod_MultiCurrencyRateResolution(t *testing.T) {
 		LimitAmount: 100000,
 		Currency:    "EUR",
 		Interval:    IntervalMonthly,
-		IsActive:    true,
+		Status:      BudgetStatusActive,
 	})
 
 	svc := NewService(Dependencies{

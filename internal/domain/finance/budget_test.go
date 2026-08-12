@@ -28,7 +28,7 @@ func TestBudget_ApplyPatch(t *testing.T) {
 		LimitAmount:      50000,
 		Currency:         finance.Currency("USD"),
 		Interval:         finance.IntervalMonthly,
-		IsActive:         true,
+		Status:           finance.BudgetStatusActive,
 		Icon:             "cart",
 		Color:            "green",
 		DefaultAccountID: nil,
@@ -116,7 +116,7 @@ func TestBudget_Validate_OneTime(t *testing.T) {
 		LimitAmount: 100000,
 		Currency:    finance.Currency("USD"),
 		Interval:    finance.IntervalOneTime,
-		IsActive:    true,
+		Status:      finance.BudgetStatusActive,
 	}
 
 	if err := budget.Validate(); err != nil {
