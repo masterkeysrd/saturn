@@ -88,7 +88,7 @@ func (c *Client) GetBudget(ctx context.Context, req *GetBudgetRequest) (*Budget,
 	return &resp, nil
 }
 
-// UpdateBudget executes PUT /api/v1/finance/budgets/{id}.
+// UpdateBudget executes PATCH /api/v1/finance/budgets/{id}.
 func (c *Client) UpdateBudget(ctx context.Context, req *UpdateBudgetRequest) (*Budget, error) {
 	var resp Budget
 	path := fmt.Sprintf("/api/v1/finance/budgets/%s", req.GetId())
@@ -108,7 +108,7 @@ func (c *Client) UpdateBudget(ctx context.Context, req *UpdateBudgetRequest) (*B
 	if payload == nil {
 		return nil, fmt.Errorf("budget payload is required")
 	}
-	if err := c.base.Do(ctx, "PUT", path, payload, &resp); err != nil {
+	if err := c.base.Do(ctx, "PATCH", path, payload, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil
@@ -639,7 +639,7 @@ func (c *Client) GetAccount(ctx context.Context, req *GetAccountRequest) (*Accou
 	return &resp, nil
 }
 
-// UpdateAccount executes PUT /api/v1/finance/accounts/{id}.
+// UpdateAccount executes PATCH /api/v1/finance/accounts/{id}.
 func (c *Client) UpdateAccount(ctx context.Context, req *UpdateAccountRequest) (*Account, error) {
 	var resp Account
 	path := fmt.Sprintf("/api/v1/finance/accounts/%s", req.GetId())
@@ -659,7 +659,7 @@ func (c *Client) UpdateAccount(ctx context.Context, req *UpdateAccountRequest) (
 	if payload == nil {
 		return nil, fmt.Errorf("account payload is required")
 	}
-	if err := c.base.Do(ctx, "PUT", path, payload, &resp); err != nil {
+	if err := c.base.Do(ctx, "PATCH", path, payload, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil
@@ -728,7 +728,7 @@ func (c *Client) CreateInstitution(ctx context.Context, req *CreateInstitutionRe
 	return &resp, nil
 }
 
-// UpdateInstitution executes PUT /api/v1/finance/institutions/{id}.
+// UpdateInstitution executes PATCH /api/v1/finance/institutions/{id}.
 func (c *Client) UpdateInstitution(ctx context.Context, req *UpdateInstitutionRequest) (*Institution, error) {
 	var resp Institution
 	path := fmt.Sprintf("/api/v1/finance/institutions/%s", req.GetId())
@@ -748,7 +748,7 @@ func (c *Client) UpdateInstitution(ctx context.Context, req *UpdateInstitutionRe
 	if payload == nil {
 		return nil, fmt.Errorf("institution payload is required")
 	}
-	if err := c.base.Do(ctx, "PUT", path, payload, &resp); err != nil {
+	if err := c.base.Do(ctx, "PATCH", path, payload, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil

@@ -42,7 +42,14 @@ export function FormSelect<TFieldValues extends FieldValues>({
       control={control}
       name={name}
       render={({ field, fieldState }) => {
-        const selectedItem = items.find((i) => i.value === field.value)
+        const selectedItem =
+          items.find((i) => i.value === field.value) ||
+          items.find(
+            (i) =>
+              field.value &&
+              (String(field.value).endsWith(i.value) ||
+                i.value.endsWith(String(field.value)))
+          )
         return (
           <div className={cn("space-y-1.5", className)}>
             {label && (
@@ -54,7 +61,6 @@ export function FormSelect<TFieldValues extends FieldValues>({
               </Label>
             )}
             <Select
-              items={items}
               value={field.value}
               onValueChange={(val) => field.onChange(val || "")}
               disabled={disabled}
@@ -68,7 +74,7 @@ export function FormSelect<TFieldValues extends FieldValues>({
                 )}
               >
                 <SelectValue placeholder={placeholder}>
-                  {selectedItem ? selectedItem.label : undefined}
+                  {selectedItem ? selectedItem.label : field.value || undefined}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">

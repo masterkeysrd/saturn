@@ -2,6 +2,7 @@ import { useEffect } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
+import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
 import { accountSchema, type AccountFormValues } from "../schemas/account"
 import {
   type Account,
@@ -12,18 +13,10 @@ import {
 } from "@/gen/saturn/finance/v1/finance"
 import { usePatch } from "@/hooks/use-patch"
 import { InstitutionSelect } from "./institution-select"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { AmountInput } from "@/components/ui/amount-input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet"
 import {
   formatCents,
   toCentsString,
@@ -75,15 +68,12 @@ export function CreateAccountSheet({
   >({
     entityKey: "accounts",
     mutationFn: (vars) => updateMutation.mutateAsync(vars),
-    buildVariables: (id, payload, dirtyPaths) => ({
+    buildVariables: (id, payload, _dirtyPaths, expectedVersion) => ({
       id,
       req: {
         id,
-        account: {
-          ...editAccount,
-          ...payload,
-        } as Account,
-        updateMask: { paths: dirtyPaths },
+        account: payload as Account,
+        version: expectedVersion,
       },
     }),
   })
@@ -181,8 +171,8 @@ export function CreateAccountSheet({
       if (editAccount?.id) {
         await patchMutation.mutateAsync({
           id: editAccount.id,
+          expectedVersion: editAccount.version,
           payload: {
-            ...editAccount,
             name: data.name,
             creditLimit: limitStr,
             isDefault: data.isDefault,
@@ -221,236 +211,182 @@ export function CreateAccountSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="rounded-none border-none border-border/40 bg-card/95 p-6 shadow-2xl backdrop-blur-xl sm:rounded-l-3xl sm:border-l md:p-8">
-        <SheetHeader className="p-0">
-          <SheetTitle className="text-xl font-bold">
-            {editAccount ? "Edit Account" : "Create Account"}
-          </SheetTitle>
-          <SheetDescription className="text-xs">
-            Configure ledger entities for liquidity balance adjustments.
-          </SheetDescription>
-        </SheetHeader>
+    <FormDrawer
+      open={open}
+      onOpenChange={onOpenChange}
+      title={editAccount ? "Edit Account" : "Create Account"}
+      description="Configure ledger entities for liquidity balance adjustments."
+      submitLabel={editAccount ? "Save Changes" : "Create Account"}
+      isPending={isPending}
+      onSubmit={handleSubmit(onSubmit)}
+    >
+      <FormFieldItem label="Account Name" error={errors.name?.message}>
+        <Input
+          placeholder="e.g. Chase Operating, Petty Cash"
+          {...register("name")}
+          className="h-11 rounded-xl"
+        />
+      </FormFieldItem>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6">
-          <div className="space-y-2">
-            <Label
-              htmlFor="acc-name"
-              className="text-xs font-bold tracking-wider text-foreground uppercase"
-            >
-              Account Name
-            </Label>
-            <Input
-              id="acc-name"
-              placeholder="e.g. Chase Operating, Petty Cash"
-              {...register("name")}
-              className="h-11 rounded-xl"
-            />
-            {errors.name && (
-              <p className="text-[11px] font-semibold text-destructive">
-                {errors.name.message}
-              </p>
-            )}
-          </div>
+      <FormFieldItem
+        label="Last 4 Digits (Optional)"
+        error={errors.lastFour?.message}
+      >
+        <Input
+          placeholder="e.g. 1234"
+          {...register("lastFour")}
+          className="h-11 rounded-xl"
+        />
+      </FormFieldItem>
 
-          <div className="space-y-2">
-            <Label
-              htmlFor="acc-last-four"
-              className="text-xs font-bold tracking-wider text-foreground uppercase"
-            >
-              Last 4 Digits (Optional)
-            </Label>
-            <Input
-              id="acc-last-four"
-              placeholder="e.g. 1234"
-              {...register("lastFour")}
-              className="h-11 rounded-xl"
-            />
-            {errors.lastFour && (
-              <p className="text-[11px] font-semibold text-destructive">
-                {errors.lastFour.message}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs font-bold tracking-wider text-foreground uppercase">
-              Financial Institution
-            </Label>
-            <Controller
-              control={control}
-              name="institutionId"
-              render={({ field }) => (
-                <InstitutionSelect
-                  value={field.value}
-                  onChange={field.onChange}
-                />
-              )}
-            />
-          </div>
-
-          <FormSelect
-            control={control}
-            name="type"
-            label="Account Type"
-            disabled={!!editAccount}
-            items={ACCOUNT_TYPE_ITEMS}
-          />
-
-          <FormSelect
-            control={control}
-            name="currency"
-            label="Currency"
-            disabled={!!editAccount}
-            items={currencyItems}
-          />
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label
-                htmlFor="acc-balance"
-                className="text-xs font-bold tracking-wider text-foreground uppercase"
-              >
-                {accountType === "CREDIT_CARD"
-                  ? "Initial Balance Owed"
-                  : "Initial Balance"}
-              </Label>
-              {accountType === "CREDIT_CARD" && (
-                <span className="text-[10px] font-medium text-muted-foreground">
-                  (Positive = Debt Owed)
-                </span>
-              )}
-            </div>
-            <AmountInput
-              control={control}
-              name="initialBalance"
-              placeholder={
-                accountType === "CREDIT_CARD" ? "e.g. 450.00" : "0.00"
-              }
-              className="h-11 rounded-xl"
-              disabled={!!editAccount}
-            />
-            <p className="text-[10px] text-muted-foreground">
-              {accountType === "CREDIT_CARD"
-                ? "Enter the amount currently owed on the card. Saturn will automatically register it as debt."
-                : "Enter positive for cash/savings assets, or negative for overdraft."}
-            </p>
-          </div>
-
-          {accountType === "CREDIT_CARD" && (
-            <div className="animate-in space-y-2 duration-200 slide-in-from-top-2">
-              <Label
-                htmlFor="acc-limit"
-                className="text-xs font-bold tracking-wider text-foreground uppercase"
-              >
-                Credit Limit
-              </Label>
-              <AmountInput
-                control={control}
-                name="creditLimit"
-                placeholder="e.g. 5000.00"
-                className="h-11 rounded-xl"
-              />
-            </div>
+      <FormFieldItem label="Financial Institution">
+        <Controller
+          control={control}
+          name="institutionId"
+          render={({ field }) => (
+            <InstitutionSelect value={field.value} onChange={field.onChange} />
           )}
+        />
+      </FormFieldItem>
 
-          <div className="space-y-2">
-            <Label className="mb-2 block text-xs font-bold tracking-wider text-foreground uppercase">
-              Card Theme Color
-            </Label>
-            <div className="flex gap-2">
-              {ACCOUNT_COLORS.map(
-                (c: {
-                  value: string
-                  label: string
-                  bg: string
-                  border: string
-                }) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    onClick={() => setValue("color", c.value)}
-                    className={cn(
-                      "h-8 w-8 rounded-full border transition-all hover:scale-110",
-                      getAccountColors(c.value).bg,
-                      getAccountColors(c.value).border,
-                      currentColor === c.value &&
-                        "ring-2 ring-primary ring-offset-2 dark:ring-offset-card"
-                    )}
-                  />
-                )
-              )}
-            </div>
-          </div>
+      <FormSelect
+        control={control}
+        name="type"
+        label="Account Type"
+        disabled={!!editAccount}
+        items={ACCOUNT_TYPE_ITEMS}
+      />
 
-          <div className="space-y-4 rounded-2xl border border-border/40 bg-muted/40 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label
-                  htmlFor="is-default-switch"
-                  className="block text-xs font-bold text-foreground"
-                >
-                  Set as Default Account
-                </Label>
-                <span className="block text-[10px] text-muted-foreground">
-                  Pre-populates new transaction forms
-                </span>
-              </div>
-              <Switch
-                id="is-default-switch"
-                checked={isDefaultValue}
-                onCheckedChange={(checked) => setValue("isDefault", checked)}
+      <FormSelect
+        control={control}
+        name="currency"
+        label="Currency"
+        disabled={!!editAccount}
+        items={currencyItems}
+      />
+
+      <FormFieldItem
+        label={
+          accountType === "CREDIT_CARD"
+            ? "Initial Balance Owed"
+            : "Initial Balance"
+        }
+        optionalText={
+          accountType === "CREDIT_CARD" ? "(Positive = Debt Owed)" : undefined
+        }
+        subtext={
+          accountType === "CREDIT_CARD"
+            ? "Enter the amount currently owed on the card. Saturn will automatically register it as debt."
+            : "Enter positive for cash/savings assets, or negative for overdraft."
+        }
+      >
+        <AmountInput
+          control={control}
+          name="initialBalance"
+          placeholder={accountType === "CREDIT_CARD" ? "e.g. 450.00" : "0.00"}
+          className="h-11 rounded-xl"
+          disabled={!!editAccount}
+        />
+      </FormFieldItem>
+
+      {accountType === "CREDIT_CARD" && (
+        <FormFieldItem
+          label="Credit Limit"
+          className="animate-in duration-200 slide-in-from-top-2"
+        >
+          <AmountInput
+            control={control}
+            name="creditLimit"
+            placeholder="e.g. 5000.00"
+            className="h-11 rounded-xl"
+          />
+        </FormFieldItem>
+      )}
+
+      <div className="space-y-2">
+        <Label className="mb-2 block text-xs font-bold tracking-wider text-foreground uppercase">
+          Card Theme Color
+        </Label>
+        <div className="flex gap-2">
+          {ACCOUNT_COLORS.map(
+            (c: {
+              value: string
+              label: string
+              bg: string
+              border: string
+            }) => (
+              <button
+                key={c.value}
+                type="button"
+                onClick={() =>
+                  setValue("color", c.value, { shouldDirty: true })
+                }
+                className={cn(
+                  "h-8 w-8 rounded-full border transition-all hover:scale-110",
+                  getAccountColors(c.value).bg,
+                  getAccountColors(c.value).border,
+                  currentColor === c.value &&
+                    "ring-2 ring-primary ring-offset-2 dark:ring-offset-card"
+                )}
               />
-            </div>
+            )
+          )}
+        </div>
+      </div>
 
-            {editAccount && (
-              <div className="flex items-center justify-between border-t border-border/20 pt-3">
-                <div>
-                  <Label
-                    htmlFor="is-active-switch"
-                    className="block text-xs font-bold text-foreground"
-                  >
-                    Account Active Status
-                  </Label>
-                  <span className="block text-[10px] text-muted-foreground">
-                    Inactive accounts are hidden from transaction inputs
-                  </span>
-                </div>
-                <Switch
-                  id="is-active-switch"
-                  checked={isActiveValue}
-                  onCheckedChange={(checked) => setValue("isActive", checked)}
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-2">
+      <div className="space-y-4 rounded-2xl border border-border/40 bg-muted/40 p-4">
+        <div className="flex items-center justify-between">
+          <div>
             <Label
-              htmlFor="acc-notes"
-              className="text-xs font-bold tracking-wider text-foreground uppercase"
+              htmlFor="is-default-switch"
+              className="block text-xs font-bold text-foreground"
             >
-              Notes
+              Set as Default Account
             </Label>
-            <Input
-              id="acc-notes"
-              placeholder="e.g. Swift codes, secondary card details"
-              {...register("notes")}
-              className="h-11 rounded-xl"
+            <span className="block text-[10px] text-muted-foreground">
+              Pre-populates new transaction forms
+            </span>
+          </div>
+          <Switch
+            id="is-default-switch"
+            checked={isDefaultValue}
+            onCheckedChange={(checked) =>
+              setValue("isDefault", checked, { shouldDirty: true })
+            }
+          />
+        </div>
+
+        {editAccount && (
+          <div className="flex items-center justify-between border-t border-border/20 pt-3">
+            <div>
+              <Label
+                htmlFor="is-active-switch"
+                className="block text-xs font-bold text-foreground"
+              >
+                Account Active Status
+              </Label>
+              <span className="block text-[10px] text-muted-foreground">
+                Inactive accounts are hidden from transaction inputs
+              </span>
+            </div>
+            <Switch
+              id="is-active-switch"
+              checked={isActiveValue}
+              onCheckedChange={(checked) =>
+                setValue("isActive", checked, { shouldDirty: true })
+              }
             />
           </div>
+        )}
+      </div>
 
-          <div className="w-full pt-4">
-            <Button
-              type="submit"
-              disabled={isPending}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent font-semibold text-white shadow-lg shadow-primary/10 transition-all"
-            >
-              {editAccount ? "Save Changes" : "Create Account"}
-            </Button>
-          </div>
-        </form>
-      </SheetContent>
-    </Sheet>
+      <FormFieldItem label="Notes">
+        <Input
+          placeholder="e.g. Swift codes, secondary card details"
+          {...register("notes")}
+          className="h-11 rounded-xl"
+        />
+      </FormFieldItem>
+    </FormDrawer>
   )
 }

@@ -1687,7 +1687,7 @@ export interface Borrowing {
   /**
    * Optional. Target repayment due date.
    */
-  dueAt: string
+  dueAt?: string
   /**
    * Optional. Automatically create a parallel transaction entry in the ledger.
    */
@@ -2777,7 +2777,7 @@ export async function updateBudget(
   delete (params as Record<string, unknown>).id
   delete (params as Record<string, unknown>).budget
   return request<Budget>({
-    method: "PUT",
+    method: "PATCH",
     url: `/api/v1/finance/budgets/${id}`,
     params: params,
     data: req.budget,
@@ -3763,7 +3763,7 @@ export async function updateAccount(
   delete (params as Record<string, unknown>).id
   delete (params as Record<string, unknown>).account
   return request<Account>({
-    method: "PUT",
+    method: "PATCH",
     url: `/api/v1/finance/accounts/${id}`,
     params: params,
     data: req.account,
@@ -3910,7 +3910,7 @@ export async function updateInstitution(
   delete (params as Record<string, unknown>).id
   delete (params as Record<string, unknown>).institution
   return request<Institution>({
-    method: "PUT",
+    method: "PATCH",
     url: `/api/v1/finance/institutions/${id}`,
     params: params,
     data: req.institution,

@@ -58,7 +58,24 @@ export async function request<TResponse, TData = unknown, TParams = unknown>({
     Object.entries(params as Record<string, unknown>).forEach(
       ([key, value]) => {
         if (value !== undefined && value !== null && value !== "") {
-          searchParams.append(key, String(value))
+          if (
+            typeof value === "object" &&
+            value !== null &&
+            "paths" in value &&
+            Array.isArray((value as { paths?: unknown }).paths)
+          ) {
+            const paths = (value as { paths: string[] }).paths
+            if (paths.length > 0) {
+              const formattedPaths = paths.map((p) =>
+                p.replace(/([A-Z])/g, "_$1").toLowerCase()
+              )
+              searchParams.append(key, formattedPaths.join(","))
+            }
+          } else if (Array.isArray(value)) {
+            searchParams.append(key, value.join(","))
+          } else {
+            searchParams.append(key, String(value))
+          }
         }
       }
     )

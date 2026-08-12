@@ -127,7 +127,9 @@ export function AdjustBalanceModal({
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
             Enter the current real-world balance for{" "}
-            <span className="font-semibold text-foreground">{account.name}</span>
+            <span className="font-semibold text-foreground">
+              {account.name}
+            </span>
             . Saturn will log a system reconciliation transaction to match.
           </DialogDescription>
         </DialogHeader>

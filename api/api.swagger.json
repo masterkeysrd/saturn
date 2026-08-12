@@ -983,7 +983,7 @@
           "Finance"
         ]
       },
-      "put": {
+      "patch": {
         "summary": "Updates details of a payment account (such as notes, active flags, or default overrides).",
         "operationId": "Finance_UpdateAccount",
         "responses": {
@@ -1016,13 +1016,6 @@
             "schema": {
               "$ref": "#/definitions/v1Account"
             }
-          },
-          {
-            "name": "updateMask",
-            "description": "Optional. Field mask defining which fields to update for partial updates.",
-            "in": "query",
-            "required": false,
-            "type": "string"
           },
           {
             "name": "version",
@@ -1583,7 +1576,7 @@
           "Finance"
         ]
       },
-      "put": {
+      "patch": {
         "summary": "Updates an existing budget template's properties, such as visual parameters or limit propagation policies.",
         "operationId": "Finance_UpdateBudget",
         "responses": {
@@ -1627,13 +1620,6 @@
               "LIMIT_PROPAGATION_CURRENT_PERIOD",
               "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
             ]
-          },
-          {
-            "name": "updateMask",
-            "description": "Optional. Field mask defining which fields to update for partial updates.",
-            "in": "query",
-            "required": false,
-            "type": "string"
           },
           {
             "name": "version",
@@ -2335,7 +2321,7 @@
           "Finance"
         ]
       },
-      "put": {
+      "patch": {
         "summary": "Updates an existing registered institution's properties (e.g. name, domain, logo, color).",
         "operationId": "Finance_UpdateInstitution",
         "responses": {
@@ -2368,13 +2354,6 @@
             "schema": {
               "$ref": "#/definitions/v1Institution"
             }
-          },
-          {
-            "name": "updateMask",
-            "description": "Optional. Field mask specifying fields to update.",
-            "in": "query",
-            "required": false,
-            "type": "string"
           },
           {
             "name": "version",

@@ -4607,7 +4607,7 @@ type Borrowing struct {
 	// Required. Date established.
 	EstablishedAt *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=established_at,json=establishedAt,proto3" json:"established_at,omitempty"`
 	// Optional. Target repayment due date.
-	DueAt *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=due_at,json=dueAt,proto3" json:"due_at,omitempty"`
+	DueAt *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=due_at,json=dueAt,proto3,oneof" json:"due_at,omitempty"`
 	// Optional. Automatically create a parallel transaction entry in the ledger.
 	CreateAsTransaction bool `protobuf:"varint,12,opt,name=create_as_transaction,json=createAsTransaction,proto3" json:"create_as_transaction,omitempty"`
 	// Optional. Narration notes.
@@ -9295,7 +9295,7 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"payment_id\x18\x01 \x01(\tB\x03\xe0A\x02R\tpaymentId\x12*\n" +
 	"\x0etransaction_id\x18\x02 \x01(\tB\x03\xe0A\x02R\rtransactionId\"2\n" +
 	"\x1bSkipScheduledPaymentRequest\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"\xa3\a\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"\xb3\a\n" +
 	"\tBorrowing\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x1e\n" +
 	"\bspace_id\x18\x02 \x01(\tB\x03\xe0A\x03R\aspaceId\x12I\n" +
@@ -9307,8 +9307,8 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\bcurrency\x18\b \x01(\tB\x03\xe0A\x02R\bcurrency\x12@\n" +
 	"\x06status\x18\t \x01(\x0e2#.saturn.finance.v1.Borrowing.StatusB\x03\xe0A\x02R\x06status\x12F\n" +
 	"\x0eestablished_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x02R\restablishedAt\x126\n" +
-	"\x06due_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x01R\x05dueAt\x127\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x02R\restablishedAt\x12;\n" +
+	"\x06due_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x01H\x00R\x05dueAt\x88\x01\x01\x127\n" +
 	"\x15create_as_transaction\x18\f \x01(\bB\x03\xe0A\x01R\x13createAsTransaction\x12\x19\n" +
 	"\x05notes\x18\r \x01(\tB\x03\xe0A\x01R\x05notes\x12@\n" +
 	"\vcreate_time\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
@@ -9316,7 +9316,7 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\vupdate_time\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"updateTime\x12'\n" +
 	"\n" +
-	"account_id\x18\x10 \x01(\tB\x03\xe0A\x01H\x00R\taccountId\x88\x01\x01\">\n" +
+	"account_id\x18\x10 \x01(\tB\x03\xe0A\x01H\x01R\taccountId\x88\x01\x01\">\n" +
 	"\tDirection\x12\x19\n" +
 	"\x15DIRECTION_UNSPECIFIED\x10\x00\x12\f\n" +
 	"\bBORROWED\x10\x01\x12\b\n" +
@@ -9325,7 +9325,8 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x12STATUS_UNSPECIFIED\x10\x00\x12\n" +
 	"\n" +
 	"\x06ACTIVE\x10\x01\x12\f\n" +
-	"\bPAID_OFF\x10\x02B\r\n" +
+	"\bPAID_OFF\x10\x02B\t\n" +
+	"\a_due_atB\r\n" +
 	"\v_account_id\"\x95\x03\n" +
 	"\x12BorrowingRepayment\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12&\n" +
@@ -9661,7 +9662,7 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x12GetFinanceSettings\x12,.saturn.finance.v1.GetFinanceSettingsRequest\x1a\".saturn.finance.v1.FinanceSettings\"\x1c\x82\xd3\xe4\x93\x02\x16\x12\x14/v1/finance/settings\x12v\n" +
 	"\fCreateBudget\x12&.saturn.finance.v1.CreateBudgetRequest\x1a\x19.saturn.finance.v1.Budget\"#\x82\xd3\xe4\x93\x02\x1d:\x06budget\"\x13/v1/finance/budgets\x12m\n" +
 	"\tGetBudget\x12#.saturn.finance.v1.GetBudgetRequest\x1a\x19.saturn.finance.v1.Budget\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/v1/finance/budgets/{id}\x12{\n" +
-	"\fUpdateBudget\x12&.saturn.finance.v1.UpdateBudgetRequest\x1a\x19.saturn.finance.v1.Budget\"(\x82\xd3\xe4\x93\x02\":\x06budget\x1a\x18/v1/finance/budgets/{id}\x12p\n" +
+	"\fUpdateBudget\x12&.saturn.finance.v1.UpdateBudgetRequest\x1a\x19.saturn.finance.v1.Budget\"(\x82\xd3\xe4\x93\x02\":\x06budget2\x18/v1/finance/budgets/{id}\x12p\n" +
 	"\fDeleteBudget\x12&.saturn.finance.v1.DeleteBudgetRequest\x1a\x16.google.protobuf.Empty\" \x82\xd3\xe4\x93\x02\x1a*\x18/v1/finance/budgets/{id}\x12y\n" +
 	"\vListBudgets\x12%.saturn.finance.v1.ListBudgetsRequest\x1a&.saturn.finance.v1.ListBudgetsResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/v1/finance/budgets\x12\x8d\x01\n" +
 	"\x0fGetBudgetPeriod\x12).saturn.finance.v1.GetBudgetPeriodRequest\x1a\x1f.saturn.finance.v1.BudgetPeriod\".\x82\xd3\xe4\x93\x02(\x12&/v1/finance/budgets/{budget_id}/period\x12\x96\x01\n" +
@@ -9697,12 +9698,12 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\rCreateAccount\x12'.saturn.finance.v1.CreateAccountRequest\x1a\x1a.saturn.finance.v1.Account\"%\x82\xd3\xe4\x93\x02\x1f:\aaccount\"\x14/v1/finance/accounts\x12q\n" +
 	"\n" +
 	"GetAccount\x12$.saturn.finance.v1.GetAccountRequest\x1a\x1a.saturn.finance.v1.Account\"!\x82\xd3\xe4\x93\x02\x1b\x12\x19/v1/finance/accounts/{id}\x12\x80\x01\n" +
-	"\rUpdateAccount\x12'.saturn.finance.v1.UpdateAccountRequest\x1a\x1a.saturn.finance.v1.Account\"*\x82\xd3\xe4\x93\x02$:\aaccount\x1a\x19/v1/finance/accounts/{id}\x12\x9f\x01\n" +
+	"\rUpdateAccount\x12'.saturn.finance.v1.UpdateAccountRequest\x1a\x1a.saturn.finance.v1.Account\"*\x82\xd3\xe4\x93\x02$:\aaccount2\x19/v1/finance/accounts/{id}\x12\x9f\x01\n" +
 	"\x14AdjustAccountBalance\x12..saturn.finance.v1.AdjustAccountBalanceRequest\x1a\x1a.saturn.finance.v1.Account\";\x82\xd3\xe4\x93\x025:\x01*\"0/v1/finance/accounts/{account_id}:adjust-balance\x12s\n" +
 	"\rDeleteAccount\x12'.saturn.finance.v1.DeleteAccountRequest\x1a\x16.google.protobuf.Empty\"!\x82\xd3\xe4\x93\x02\x1b*\x19/v1/finance/accounts/{id}\x12}\n" +
 	"\fListAccounts\x12&.saturn.finance.v1.ListAccountsRequest\x1a'.saturn.finance.v1.ListAccountsResponse\"\x1c\x82\xd3\xe4\x93\x02\x16\x12\x14/v1/finance/accounts\x12\x8f\x01\n" +
 	"\x11CreateInstitution\x12+.saturn.finance.v1.CreateInstitutionRequest\x1a\x1e.saturn.finance.v1.Institution\"-\x82\xd3\xe4\x93\x02':\vinstitution\"\x18/v1/finance/institutions\x12\x94\x01\n" +
-	"\x11UpdateInstitution\x12+.saturn.finance.v1.UpdateInstitutionRequest\x1a\x1e.saturn.finance.v1.Institution\"2\x82\xd3\xe4\x93\x02,:\vinstitution\x1a\x1d/v1/finance/institutions/{id}\x12\x7f\n" +
+	"\x11UpdateInstitution\x12+.saturn.finance.v1.UpdateInstitutionRequest\x1a\x1e.saturn.finance.v1.Institution\"2\x82\xd3\xe4\x93\x02,:\vinstitution2\x1d/v1/finance/institutions/{id}\x12\x7f\n" +
 	"\x11DeleteInstitution\x12+.saturn.finance.v1.DeleteInstitutionRequest\x1a\x16.google.protobuf.Empty\"%\x82\xd3\xe4\x93\x02\x1f*\x1d/v1/finance/institutions/{id}\x12\x8d\x01\n" +
 	"\x10ListInstitutions\x12*.saturn.finance.v1.ListInstitutionsRequest\x1a+.saturn.finance.v1.ListInstitutionsResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/v1/finance/institutions\x12\x9b\x01\n" +
 	"\x12ResolveInstitution\x12,.saturn.finance.v1.ResolveInstitutionRequest\x1a-.saturn.finance.v1.ResolveInstitutionResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /v1/finance/institutions:resolve\x12y\n" +

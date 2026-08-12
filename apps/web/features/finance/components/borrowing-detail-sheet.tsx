@@ -8,9 +8,8 @@ import {
   type Borrowing,
   useListAccountsQuery,
   useGetFinanceSettingsQuery,
-  useListExchangeRatesQuery,
-  type ExchangeRate,
 } from "@/gen/saturn/finance/v1/finance"
+import { useCurrencyConversionPreview } from "@/hooks/use-currency-conversion"
 import {
   Sheet,
   SheetContent,
@@ -49,33 +48,11 @@ export function BorrowingDetailSheet({
   )
   const baseCurrency = settings?.baseCurrency || "USD"
 
-  const { data: ratesData } = useListExchangeRatesQuery(
-    { pageSize: 100, pageToken: "" },
-    { enabled: open && !!spaceId }
-  )
-
-  const getConversionPreview = (amountStr: string, fromCurr: string) => {
-    const amount = parseFloat(amountStr)
-    if (isNaN(amount) || amount <= 0) return null
-    if (!baseCurrency || fromCurr === baseCurrency) return null
-
-    const matchingRates =
-      ratesData?.exchangeRates?.filter(
-        (r: ExchangeRate) =>
-          r.fromCurrency === fromCurr && r.toCurrency === baseCurrency
-      ) || []
-
-    if (matchingRates.length === 0) return null
-
-    const latestRate = [...matchingRates].sort(
-      (a, b) => new Date(b.rateDate).getTime() - new Date(a.rateDate).getTime()
-    )[0]
-    return {
-      amount: amount * latestRate.rate,
-      rate: latestRate.rate,
-      currency: baseCurrency,
-    }
-  }
+  const { getConversionPreview } = useCurrencyConversionPreview({
+    spaceId,
+    enabled: open,
+    baseCurrency,
+  })
 
   const { data: accountsData } = useListAccountsQuery(
     {},

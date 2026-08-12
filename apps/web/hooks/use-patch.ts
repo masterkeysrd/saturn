@@ -43,7 +43,13 @@ export function usePatch<
       if (dirtyPaths.length === 0) {
         throw new Error("No fields modified")
       }
-      const vars = buildVariables(id, payload, dirtyPaths, expectedVersion)
+      const dirtyPayload: Partial<TData> = {}
+      for (const key of dirtyPaths) {
+        if (key in (payload as Record<string, unknown>)) {
+          dirtyPayload[key as keyof TData] = payload[key as keyof TData]
+        }
+      }
+      const vars = buildVariables(id, dirtyPayload, dirtyPaths, expectedVersion)
       return mutationFn(vars)
     },
 

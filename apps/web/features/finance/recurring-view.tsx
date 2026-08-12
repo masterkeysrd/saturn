@@ -12,10 +12,9 @@ import {
   type ListScheduledPaymentsRequest,
   useGetFinanceSettingsQuery,
   useListBudgetsQuery,
-  useListExchangeRatesQuery,
   useListCurrenciesQuery,
-  type ExchangeRate,
 } from "@/gen/saturn/finance/v1/finance"
+import { useCurrencyConversionPreview } from "@/hooks/use-currency-conversion"
 import {
   TrendingDownIcon,
   CalendarIcon,
@@ -98,33 +97,11 @@ export function RecurringView() {
   )
   const currencies = currenciesData?.currencies || []
 
-  const { data: ratesData } = useListExchangeRatesQuery(
-    { pageSize: 100, pageToken: "" },
-    { enabled: !!settings }
-  )
-
-  const getConversionPreview = (amountStr: string, fromCurr: string) => {
-    const amount = parseFloat(amountStr)
-    if (isNaN(amount) || amount <= 0) return null
-    if (!baseCurrency || fromCurr === baseCurrency) return null
-
-    const matchingRates =
-      ratesData?.exchangeRates?.filter(
-        (r: ExchangeRate) =>
-          r.fromCurrency === fromCurr && r.toCurrency === baseCurrency
-      ) || []
-
-    if (matchingRates.length === 0) return null
-
-    const latestRate = [...matchingRates].sort(
-      (a, b) => new Date(b.rateDate).getTime() - new Date(a.rateDate).getTime()
-    )[0]
-    return {
-      amount: amount * latestRate.rate,
-      rate: latestRate.rate,
-      currency: baseCurrency,
-    }
-  }
+  const { getConversionPreview } = useCurrencyConversionPreview({
+    spaceId,
+    enabled: !!settings,
+    baseCurrency,
+  })
 
   // Sheets and Dialogs state
   const [expenseSheetOpen, setExpenseSheetOpen] = useState(false)
@@ -220,7 +197,7 @@ export function RecurringView() {
       return amountVal
     }
     const preview = getConversionPreview(amountVal.toString(), fromCurrency)
-    if (preview && typeof preview.amount === "number") {
+    if (preview && "amount" in preview && typeof preview.amount === "number") {
       return preview.amount
     }
     return amountVal // Fallback if rate not configured yet

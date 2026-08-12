@@ -44,7 +44,7 @@ service Finance {
   // Updates an existing budget template's properties, such as visual parameters or limit propagation policies.
   rpc UpdateBudget(UpdateBudgetRequest) returns (Budget) {
     option (google.api.http) = {
-      put: "/v1/finance/budgets/{id}"
+      patch: "/v1/finance/budgets/{id}"
       body: "budget"
     };
   }
@@ -261,7 +261,7 @@ service Finance {
   // Updates details of a payment account (such as notes, active flags, or default overrides).
   rpc UpdateAccount(UpdateAccountRequest) returns (Account) {
     option (google.api.http) = {
-      put: "/v1/finance/accounts/{id}"
+      patch: "/v1/finance/accounts/{id}"
       body: "account"
     };
   }
@@ -295,7 +295,7 @@ service Finance {
   // Updates an existing registered institution's properties (e.g. name, domain, logo, color).
   rpc UpdateInstitution(UpdateInstitutionRequest) returns (Institution) {
     option (google.api.http) = {
-      put: "/v1/finance/institutions/{id}"
+      patch: "/v1/finance/institutions/{id}"
       body: "institution"
     };
   }
@@ -1495,7 +1495,7 @@ message Borrowing {
   google.protobuf.Timestamp established_at = 10 [(google.api.field_behavior) = REQUIRED];
 
   // Optional. Target repayment due date.
-  google.protobuf.Timestamp due_at = 11 [(google.api.field_behavior) = OPTIONAL];
+  optional google.protobuf.Timestamp due_at = 11 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Automatically create a parallel transaction entry in the ledger.
   bool create_as_transaction = 12 [(google.api.field_behavior) = OPTIONAL];
