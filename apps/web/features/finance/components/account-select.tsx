@@ -1,13 +1,25 @@
-import type { Account, Account_Type } from "@/gen/saturn/finance/v1/finance"
+import { useState, useMemo } from "react"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+  useListInstitutionsQuery,
+  type Account,
+  type Account_Type,
+} from "@/gen/saturn/finance/v1/finance"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Input } from "@/components/ui/input"
+import { getInstitutionLogoUrl } from "../utils"
 import { cn } from "@/lib/utils"
-import { Building2, CreditCard, Coins, Wallet } from "lucide-react"
+import {
+  Building2,
+  CreditCard,
+  Coins,
+  Wallet,
+  ChevronsUpDown,
+  Check,
+} from "lucide-react"
 import {
   Controller,
   type Control,
@@ -105,6 +117,54 @@ function getAccountColorClasses(colorName: string) {
   }
 }
 
+function AccountItemLogo({
+  institutionDomain,
+  institutionName,
+  accountName,
+  type,
+  colors,
+}: {
+  institutionDomain?: string
+  institutionName?: string
+  accountName: string
+  type: Account_Type
+  colors: { bg: string; border: string; text: string }
+}) {
+  const logoUrl = getInstitutionLogoUrl(
+    institutionDomain,
+    institutionName || accountName
+  )
+  const [prevLogoUrl, setPrevLogoUrl] = useState(logoUrl)
+  const [failed, setFailed] = useState(false)
+
+  if (prevLogoUrl !== logoUrl) {
+    setPrevLogoUrl(logoUrl)
+    setFailed(false)
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-lg p-0.5",
+        logoUrl && !failed
+          ? "border border-border/30 bg-card/60"
+          : cn("border", colors.bg, colors.text, colors.border)
+      )}
+    >
+      {logoUrl && !failed ? (
+        <img
+          src={logoUrl}
+          alt=""
+          className="h-full w-full object-contain"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        renderAccountTypeIcon(type, "h-3.5 w-3.5")
+      )}
+    </div>
+  )
+}
+
 export function AccountSelect<TFieldValues extends FieldValues = FieldValues>(
   props: AccountSelectProps<TFieldValues>
 ) {
@@ -174,136 +234,202 @@ function AccountSelectInner({
   value: string
   onValueChange: (value: string) => void
 }) {
-  const selectedAccount = accounts.find((a) => a.id === value)
-  const selectedColors = selectedAccount
-    ? getAccountColorClasses(selectedAccount.color)
-    : null
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState("")
 
-  const handleValueChange = (val: string | null) => {
-    if (!val || val === "_none") {
-      onValueChange("")
-    } else {
-      onValueChange(val)
+  const { data: instData } = useListInstitutionsQuery({
+    pageSize: 100,
+    pageToken: "",
+  })
+
+  const instMap = useMemo(() => {
+    const map: Record<string, { domain?: string; name?: string }> = {}
+    if (instData?.institutions) {
+      for (const inst of instData.institutions) {
+        if (inst.id) {
+          map[inst.id] = { domain: inst.domain, name: inst.name }
+        }
+      }
     }
+    return map
+  }, [instData])
+
+  const selectedAccount = useMemo(
+    () => accounts.find((a) => a.id === value),
+    [accounts, value]
+  )
+  const selectedColors = useMemo(
+    () =>
+      selectedAccount ? getAccountColorClasses(selectedAccount.color) : null,
+    [selectedAccount]
+  )
+
+  const filteredAccounts = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return accounts
+    return accounts.filter((acc) => {
+      const nameMatch = (acc.name || "").toLowerCase().includes(q)
+      const lastFourMatch = (acc.lastFour || "").toLowerCase().includes(q)
+      const currencyMatch = (acc.currency || "").toLowerCase().includes(q)
+      return nameMatch || lastFourMatch || currencyMatch
+    })
+  }, [accounts, search])
+
+  const handleSelect = (accId: string) => {
+    onValueChange(accId === "_none" ? "" : accId)
+    setOpen(false)
+    setSearch("")
   }
 
-  const selectValue = allowNone && !value ? "_none" : value
+  const selectedInst = selectedAccount?.institutionId
+    ? instMap[selectedAccount.institutionId]
+    : undefined
 
   return (
-    <Select
-      value={selectValue}
-      onValueChange={handleValueChange}
-      disabled={disabled}
-    >
-      <SelectTrigger
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        disabled={disabled}
         className={cn(
-          "!h-11 w-full rounded-xl border-border/60 bg-background/50 text-left transition-all hover:border-border focus:ring-1 focus:ring-primary/20",
+          "flex h-11 w-full items-center justify-between rounded-xl border border-border/60 bg-background/50 px-3 text-left font-normal transition-all hover:border-border focus:ring-1 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50",
           className
         )}
       >
-        <SelectValue placeholder={placeholder}>
-          {selectedAccount && selectedColors ? (
-            <div className="flex w-full items-center justify-between">
-              <div className="flex items-center gap-2 overflow-hidden">
-                <div
-                  className={cn(
-                    "shrink-0 rounded-lg border p-1",
-                    selectedColors.bg,
-                    selectedColors.text,
-                    selectedColors.border
-                  )}
-                >
-                  {renderAccountTypeIcon(selectedAccount.type, "h-3.5 w-3.5")}
-                </div>
-                <span className="truncate text-xs font-semibold text-foreground">
-                  {selectedAccount.name}
-                  {selectedAccount.lastFour && (
-                    <span className="ml-1 text-[10px] font-normal text-muted-foreground">
-                      •••• {selectedAccount.lastFour}
-                    </span>
-                  )}
-                </span>
-              </div>
-              <span className="ml-2 shrink-0 text-[10px] font-bold text-muted-foreground tabular-nums">
-                {selectedAccount.type === "CREDIT_CARD" &&
-                  Number(selectedAccount.currentBalance || "0") > 0 &&
-                  "-"}
-                {formatCents(
-                  selectedAccount.currentBalance || "0"
-                ).toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}{" "}
-                {selectedAccount.currency}
+        {selectedAccount && selectedColors ? (
+          <div className="flex w-full min-w-0 items-center justify-between pr-1">
+            <div className="flex min-w-0 items-center gap-2 overflow-hidden">
+              <AccountItemLogo
+                institutionDomain={selectedInst?.domain}
+                institutionName={selectedInst?.name}
+                accountName={selectedAccount.name}
+                type={selectedAccount.type}
+                colors={selectedColors}
+              />
+              <span className="truncate text-xs font-semibold text-foreground">
+                {selectedAccount.name}
+                {selectedAccount.lastFour && (
+                  <span className="ml-1 text-[10px] font-normal text-muted-foreground">
+                    •••• {selectedAccount.lastFour}
+                  </span>
+                )}
               </span>
             </div>
-          ) : (
-            <span className="text-xs text-muted-foreground">{placeholder}</span>
-          )}
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent className="max-h-[300px] rounded-xl border border-border/50 bg-card/95 p-1 shadow-xl backdrop-blur-xl">
-        {allowNone && (
-          <SelectItem
-            value="_none"
-            className="cursor-pointer rounded-lg py-2 pr-8 pl-3 text-xs font-semibold text-muted-foreground focus:bg-accent/80 focus:text-accent-foreground"
-          >
-            None / No Account
-          </SelectItem>
+            <span className="ml-2 shrink-0 text-[10px] font-bold text-muted-foreground tabular-nums">
+              {selectedAccount.type === "CREDIT_CARD" &&
+                Number(selectedAccount.currentBalance || "0") > 0 &&
+                "-"}
+              {formatCents(
+                selectedAccount.currentBalance || "0"
+              ).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}{" "}
+              {selectedAccount.currency}
+            </span>
+          </div>
+        ) : (
+          <span className="text-xs text-muted-foreground">{placeholder}</span>
         )}
-        {accounts.map((acc) => {
-          const colors = getAccountColorClasses(acc.color)
-          return (
-            <SelectItem
-              key={acc.id}
-              value={acc.id}
-              className="cursor-pointer rounded-lg py-2.5 pr-8 pl-3 focus:bg-accent/80 focus:text-accent-foreground"
-            >
-              <div className="flex w-full items-center justify-between gap-4">
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <div
+        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[340px] rounded-xl border border-border/50 bg-card/95 p-2 shadow-xl backdrop-blur-xl"
+        align="start"
+      >
+        <div className="space-y-2">
+          <Input
+            placeholder="Search account name, ending digits..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-9 bg-muted/40 text-xs"
+            autoFocus
+          />
+
+          <div className="max-h-[220px] space-y-1 overflow-y-auto pr-1">
+            {allowNone && (
+              <button
+                type="button"
+                onClick={() => handleSelect("_none")}
+                className={cn(
+                  "flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-xs transition-colors",
+                  !value
+                    ? "bg-primary/10 font-medium text-primary"
+                    : "text-muted-foreground hover:bg-accent/60"
+                )}
+              >
+                <span>None / No Account</span>
+                {!value && <Check className="h-3.5 w-3.5 text-primary" />}
+              </button>
+            )}
+
+            {filteredAccounts.length === 0 ? (
+              <div className="py-4 text-center text-xs text-muted-foreground">
+                No accounts found
+              </div>
+            ) : (
+              filteredAccounts.map((acc) => {
+                const colors = getAccountColorClasses(acc.color)
+                const isSelected = acc.id === value
+                const inst = acc.institutionId
+                  ? instMap[acc.institutionId]
+                  : undefined
+                return (
+                  <button
+                    key={acc.id}
+                    type="button"
+                    onClick={() => handleSelect(acc.id || "")}
                     className={cn(
-                      "shrink-0 rounded-lg border p-1",
-                      colors.bg,
-                      colors.text,
-                      colors.border
+                      "flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-xs transition-colors",
+                      isSelected
+                        ? "bg-primary/10 font-medium text-primary"
+                        : "text-foreground hover:bg-accent/60"
                     )}
                   >
-                    {renderAccountTypeIcon(acc.type, "h-4 w-4")}
-                  </div>
-                  <div className="flex min-w-0 flex-col text-left">
-                    <span className="truncate text-xs font-semibold text-foreground">
-                      {acc.name}
-                    </span>
-                    {acc.lastFour && (
-                      <span className="text-[9px] text-muted-foreground">
-                        Ending in {acc.lastFour}
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <AccountItemLogo
+                        institutionDomain={inst?.domain}
+                        institutionName={inst?.name}
+                        accountName={acc.name}
+                        type={acc.type}
+                        colors={colors}
+                      />
+                      <div className="flex min-w-0 flex-col text-left">
+                        <span className="truncate text-xs font-semibold">
+                          {acc.name}
+                        </span>
+                        {acc.lastFour && (
+                          <span className="text-[9px] text-muted-foreground">
+                            Ending in {acc.lastFour}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2 text-right">
+                      <span className="text-xs font-bold tabular-nums">
+                        {acc.type === "CREDIT_CARD" &&
+                          Number(acc.currentBalance || "0") > 0 &&
+                          "-"}
+                        {formatCents(acc.currentBalance || "0").toLocaleString(
+                          undefined,
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }
+                        )}{" "}
+                        <span className="text-[9px] uppercase opacity-70">
+                          {acc.currency}
+                        </span>
                       </span>
-                    )}
-                  </div>
-                </div>
-                <div className="shrink-0 text-right">
-                  <span className="block text-xs font-bold text-foreground tabular-nums">
-                    {acc.type === "CREDIT_CARD" &&
-                      Number(acc.currentBalance || "0") > 0 &&
-                      "-"}
-                    {formatCents(acc.currentBalance || "0").toLocaleString(
-                      undefined,
-                      {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      }
-                    )}{" "}
-                    <span className="text-[9px] text-muted-foreground uppercase">
-                      {acc.currency}
-                    </span>
-                  </span>
-                </div>
-              </div>
-            </SelectItem>
-          )
-        })}
-      </SelectContent>
-    </Select>
+                      {isSelected && (
+                        <Check className="h-3.5 w-3.5 text-primary" />
+                      )}
+                    </div>
+                  </button>
+                )
+              })
+            )}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   )
 }
