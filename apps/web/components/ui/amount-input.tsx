@@ -81,17 +81,56 @@ const AmountInputInner = React.forwardRef<
       disabled,
       ...props
     },
-    ref
+    forwardedRef
   ) => {
+    const inputRef = React.useRef<HTMLInputElement | null>(null)
+
+    React.useImperativeHandle(forwardedRef, () => inputRef.current!)
+
     const displayValue = React.useMemo(() => {
       const strVal = typeof value === "number" ? value.toString() : value || ""
       return formatAmountString(strVal)
     }, [value])
 
+    const cursorRef = React.useRef<number | null>(null)
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const inputVal = e.target.value
-      const rawVal = inputVal ? parseAmountString(inputVal) : ""
-      e.target.value = rawVal
+      const inputEl = e.target
+      const newVal = inputEl.value
+      const selectionStart = inputEl.selectionStart ?? newVal.length
+
+      const digitsBeforeCursor = newVal
+        .slice(0, selectionStart)
+        .replace(/[^0-9.]/g, "").length
+
+      const rawVal = newVal ? parseAmountString(newVal) : ""
+      const formattedNew = formatAmountString(rawVal)
+
+      let newCursorPos = 0
+      let digitCount = 0
+      for (let i = 0; i < formattedNew.length; i++) {
+        if (digitCount === digitsBeforeCursor) {
+          break
+        }
+        if (formattedNew[i] !== ",") {
+          digitCount++
+        }
+        newCursorPos = i + 1
+      }
+
+      cursorRef.current = newCursorPos
+
+      // If the formatted value doesn't change (e.g. typing an invalid letter),
+      // React will not re-render and useLayoutEffect won't trigger.
+      // Reset DOM value and cursor synchronously right now:
+      if (formattedNew === displayValue) {
+        inputEl.value = formattedNew
+        inputEl.setSelectionRange(newCursorPos, newCursorPos)
+        cursorRef.current = null
+        return
+      }
+
+      inputEl.value = rawVal
 
       if (onValueChange) {
         onValueChange(rawVal)
@@ -101,6 +140,14 @@ const AmountInputInner = React.forwardRef<
       }
     }
 
+    React.useLayoutEffect(() => {
+      if (cursorRef.current !== null && inputRef.current) {
+        const pos = cursorRef.current
+        inputRef.current.setSelectionRange(pos, pos)
+        cursorRef.current = null
+      }
+    }, [displayValue])
+
     return (
       <div className="relative flex w-full items-center">
         {currency && (
@@ -109,7 +156,7 @@ const AmountInputInner = React.forwardRef<
           </span>
         )}
         <Input
-          ref={ref}
+          ref={inputRef}
           type="text"
           inputMode="decimal"
           value={displayValue}
