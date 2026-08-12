@@ -217,11 +217,16 @@ export function CardAccountItem({
 
       {/* Bottom Footer Section */}
       <div className="relative z-10 space-y-3">
+        {/* Spacer for non-credit accounts to push name & balance to the end */}
+        {!(isCredit && limit > 0) && (
+          <div className="h-[30px]" aria-hidden="true" />
+        )}
+
         {/* Upper Footer Row: Account Name & Balance Display */}
         <div className="flex items-end justify-between">
           <div className="min-w-0 flex-1 pr-3">
             <span className="block truncate text-[10px] font-semibold tracking-wider text-white/40 uppercase">
-              Account Name
+              Name
             </span>
             <span className="block truncate text-xs font-bold text-white/90">
               {acc.name}
@@ -234,7 +239,7 @@ export function CardAccountItem({
                 ? rawBal > 0
                   ? "Balance Owed"
                   : "Current Credit"
-                : "Available Balance"}
+                : "Balance"}
             </span>
             <div className="flex items-baseline justify-end gap-1">
               <span
@@ -257,7 +262,7 @@ export function CardAccountItem({
         </div>
 
         {/* Divider & Utilization Bar */}
-        {isCredit && limit > 0 ? (
+        {isCredit && limit > 0 && (
           <div className="space-y-1.5 pt-1">
             {/* Integrated Progress Bar Divider Line */}
             <div className="h-1 w-full overflow-hidden rounded-full bg-white/10">
@@ -289,11 +294,6 @@ export function CardAccountItem({
                 </span>
               </span>
             </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between border-t border-white/10 pt-2 text-[10px] font-medium text-white/40">
-            <span>{acc.isActive ? "Active Account" : "Inactive Account"}</span>
-            <span>{acc.currency}</span>
           </div>
         )}
       </div>

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { useSpacePermissions } from "@/features/space/use-space"
 import {
   type Account,
@@ -13,6 +13,8 @@ import {
 import { FinancePageLayout } from "./components/finance-page-layout"
 import { useDebounce } from "@/lib/use-debounce"
 import { useUrlState } from "@/lib/use-url-state"
+import { useCurrencyConversionPreview } from "@/hooks/use-currency-conversion"
+import { cn } from "@/lib/utils"
 import { CardAccountItem } from "./components/card-account-item"
 import { CreateAccountSheet } from "./components/create-account-sheet"
 import { CreateTransferSheet } from "./components/create-transfer-sheet"
@@ -154,6 +156,38 @@ export function AccountsView() {
     )
   }
 
+  const { getConversionPreview } = useCurrencyConversionPreview({
+    spaceId,
+    enabled: !!spaceId,
+    baseCurrency: settings?.baseCurrency,
+  })
+
+  const getAccountBaseCents = useCallback(
+    (acc: Account): number => {
+      const rawCents = Number(acc.currentBalance || 0)
+      const baseCurr = settings?.baseCurrency || "USD"
+      if (!acc.currency || acc.currency === baseCurr) {
+        return rawCents
+      }
+      if (acc.conversion?.balance) {
+        return Number(acc.conversion.balance)
+      }
+      const preview = getConversionPreview(
+        formatCents(rawCents).toString(),
+        acc.currency
+      )
+      if (
+        preview &&
+        "amount" in preview &&
+        typeof preview.amount === "number"
+      ) {
+        return Math.round(preview.amount * 100)
+      }
+      return rawCents
+    },
+    [settings?.baseCurrency, getConversionPreview]
+  )
+
   const groupedAccounts = useMemo(() => {
     if (groupBy === "FLAT") return []
 
@@ -166,7 +200,6 @@ export function AccountsView() {
         color?: string
         type?: Account_Type
         accounts: Account[]
-        totalBalanceInBase: number
       }
     > = {}
 
@@ -210,17 +243,31 @@ export function AccountsView() {
           color,
           type,
           accounts: [],
-          totalBalanceInBase: 0,
         }
       }
       groups[groupKey].accounts.push(acc)
-      groups[groupKey].totalBalanceInBase += Number(
-        acc.conversion?.balance || acc.currentBalance || 0
-      )
     }
 
-    return Object.values(groups)
-  }, [accounts, groupBy, instMap])
+    return Object.values(groups).map((group) => {
+      const groupCurrency = settings?.baseCurrency || "USD"
+
+      let totalCents = 0
+      group.accounts.forEach((acc) => {
+        const baseCents = getAccountBaseCents(acc)
+        if (acc.type === "CREDIT_CARD") {
+          totalCents -= baseCents // Debt owed is a negative contribution
+        } else {
+          totalCents += baseCents
+        }
+      })
+
+      return {
+        ...group,
+        totalCents,
+        groupCurrency,
+      }
+    })
+  }, [accounts, groupBy, instMap, settings?.baseCurrency, getAccountBaseCents])
 
   // Convert accounts to base currency and calculate metrics
   const metrics = useMemo(() => {
@@ -232,9 +279,7 @@ export function AccountsView() {
     accounts.forEach((acc) => {
       if (acc.isActive) {
         activeCount++
-        const baseValue = formatCents(
-          acc.conversion?.balance || acc.currentBalance
-        )
+        const baseValue = formatCents(getAccountBaseCents(acc))
 
         if (acc.type === "CREDIT_CARD") {
           if (baseValue > 0) {
@@ -263,7 +308,7 @@ export function AccountsView() {
       activeCount,
       defaultAccount,
     }
-  }, [accounts])
+  }, [accounts, getAccountBaseCents])
 
   const handleDeleteAccount = async (id: string) => {
     const acc = accounts.find((a) => a.id === id)
@@ -609,12 +654,27 @@ export function AccountsView() {
 
                         <div className="text-right">
                           <span className="block text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                            Group Total
+                            {group.type === "CREDIT_CARD"
+                              ? group.totalCents < 0
+                                ? "Total Debt"
+                                : "Net Credit"
+                              : "Group Total"}
                           </span>
-                          <span className="text-lg font-black text-foreground">
+                          <span
+                            className={cn(
+                              "text-lg font-black",
+                              group.type === "CREDIT_CARD" &&
+                                group.totalCents < 0
+                                ? "text-rose-500"
+                                : group.type === "CREDIT_CARD" &&
+                                    group.totalCents > 0
+                                  ? "text-emerald-500"
+                                  : "text-foreground"
+                            )}
+                          >
                             {formatAmount(
-                              group.totalBalanceInBase,
-                              settings?.baseCurrency
+                              group.totalCents,
+                              group.groupCurrency
                             )}
                           </span>
                         </div>

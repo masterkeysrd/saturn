@@ -38,8 +38,16 @@ export function useCurrencyConversionPreview({
   ): ConversionPreviewResult | null => {
     if (!amountStr || !fromCurrency || !baseCurrency) return null
     const amount = parseFloat(amountStr)
-    if (isNaN(amount) || amount <= 0) return null
+    if (isNaN(amount)) return null
     if (fromCurrency === baseCurrency) return null
+
+    if (amount === 0) {
+      return {
+        amount: 0,
+        rate: 1,
+        currency: baseCurrency,
+      }
+    }
 
     const matchingRates = exchangeRates.filter(
       (r: ExchangeRate) =>
