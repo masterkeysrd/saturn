@@ -4,21 +4,16 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
 import { ArrowLeft } from "lucide-react"
-import {
-  transactionSchema,
-  type TransactionFormValues,
-} from "../schemas/transaction"
+import { incomeSchema, type IncomeFormValues } from "../schemas/transaction"
 import {
   type Account,
-  type Budget,
   type Transaction,
-  useCreateExpenseMutation,
-  useUpdateExpenseMutation,
+  useCreateIncomeMutation,
+  useUpdateIncomeMutation,
   useListCurrenciesQuery,
   useListAccountsQuery,
 } from "@/gen/saturn/finance/v1/finance"
 import { useCurrencyConversionPreview } from "@/hooks/use-currency-conversion"
-import { BudgetSelect } from "./budget-select"
 import { AccountSelect } from "./account-select"
 import { CurrencyConversionPreview } from "./currency-conversion-preview"
 import { Input } from "@/components/ui/input"
@@ -28,31 +23,27 @@ import { Label } from "@/components/ui/label"
 import { DatePicker } from "@/components/ui/date-picker"
 import { toCentsString, formatCents } from "../utils"
 
-interface CreateExpenseFormProps {
+interface CreateIncomeFormProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   spaceId?: string
   baseCurrency?: string
-  budgets?: Budget[]
   accounts?: Account[]
   editTransaction?: Transaction | null
-  preselectedBudgetId?: string
   refetchData?: () => void
   onBack?: () => void
 }
 
-export function CreateExpenseForm({
+export function CreateIncomeForm({
   open,
   onOpenChange,
   spaceId,
   baseCurrency,
-  budgets = [],
   accounts: initialAccounts,
   editTransaction,
-  preselectedBudgetId,
   refetchData,
   onBack,
-}: CreateExpenseFormProps) {
+}: CreateIncomeFormProps) {
   const { data: accountsData } = useListAccountsQuery(
     {},
     { enabled: open && !initialAccounts }
@@ -60,23 +51,23 @@ export function CreateExpenseForm({
   const accountsList = initialAccounts || accountsData?.accounts || []
   const activeAccounts = accountsList.filter((a) => a.isActive)
 
-  const createExpenseMutation = useCreateExpenseMutation({
+  const createIncomeMutation = useCreateIncomeMutation({
     onSuccess: () => {
       refetchData?.()
       onOpenChange(false)
     },
     onError: (err: unknown) => {
-      alert(err instanceof Error ? err.message : "Failed to record expense.")
+      alert(err instanceof Error ? err.message : "Failed to record income.")
     },
   })
 
-  const updateExpenseMutation = useUpdateExpenseMutation({
+  const updateIncomeMutation = useUpdateIncomeMutation({
     onSuccess: () => {
       refetchData?.()
       onOpenChange(false)
     },
     onError: (err: unknown) => {
-      alert(err instanceof Error ? err.message : "Failed to update expense.")
+      alert(err instanceof Error ? err.message : "Failed to update income.")
     },
   })
 
@@ -98,10 +89,9 @@ export function CreateExpenseForm({
     reset,
     setValue,
     formState: { errors },
-  } = useForm<TransactionFormValues>({
-    resolver: zodResolver(transactionSchema),
+  } = useForm<IncomeFormValues>({
+    resolver: zodResolver(incomeSchema),
     defaultValues: {
-      budgetId: "",
       accountId: "",
       description: "",
       amount: "",
@@ -124,7 +114,6 @@ export function CreateExpenseForm({
         const isDiff = txDate.toDateString() !== effDate.toDateString()
 
         reset({
-          budgetId: editTransaction.budgetId || "",
           amount: formatCents(editTransaction.amount).toString(),
           currency: editTransaction.currency || baseCurrency || "USD",
           description: editTransaction.description || "",
@@ -134,20 +123,12 @@ export function CreateExpenseForm({
           accountId: editTransaction.accountId || "",
         })
       } else {
-        const selectedBudgetId =
-          preselectedBudgetId || (budgets.length > 0 ? budgets[0].id : "")
-        const initialBudget = budgets.find((b) => b.id === selectedBudgetId)
-
-        const defaultCurrency = initialBudget?.currency || baseCurrency || "USD"
-
         const defaultAcc = activeAccounts.find((a) => a.isDefault)
-        const initialAccId =
-          initialBudget?.defaultAccountId || defaultAcc?.id || ""
+        const initialAccId = defaultAcc?.id || ""
 
         reset({
-          budgetId: selectedBudgetId || "",
           amount: "",
-          currency: defaultCurrency,
+          currency: baseCurrency || "USD",
           description: "",
           transactionDate: new Date(),
           effectiveDate: new Date(),
@@ -157,9 +138,8 @@ export function CreateExpenseForm({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, editTransaction, preselectedBudgetId, baseCurrency, reset])
+  }, [open, editTransaction, baseCurrency, reset])
 
-  const budgetIdValue = useWatch({ control, name: "budgetId" })
   const amountValue = useWatch({ control, name: "amount" })
   const currencyValue = useWatch({ control, name: "currency" })
   const transactionDateValue = useWatch({ control, name: "transactionDate" })
@@ -168,17 +148,6 @@ export function CreateExpenseForm({
     name: "hasCustomEffectiveDate",
   })
 
-  const handleBudgetChange = (newBudgetId: string) => {
-    const b = budgets.find((x) => x.id === newBudgetId)
-    if (b) {
-      setValue("currency", b.currency)
-      const globalDefault = activeAccounts.find((a) => a.isDefault)
-      if (b.defaultAccountId || globalDefault?.id) {
-        setValue("accountId", b.defaultAccountId || globalDefault?.id || "")
-      }
-    }
-  }
-
   const { getConversionPreview } = useCurrencyConversionPreview({
     spaceId,
     enabled: open,
@@ -186,9 +155,9 @@ export function CreateExpenseForm({
   })
 
   const isPending =
-    createExpenseMutation.isPending || updateExpenseMutation.isPending
+    createIncomeMutation.isPending || updateIncomeMutation.isPending
 
-  const onSubmit = async (data: TransactionFormValues) => {
+  const onSubmit = async (data: IncomeFormValues) => {
     const toLocalISODate = (d: Date): string => {
       const y = d.getFullYear()
       const m = String(d.getMonth() + 1).padStart(2, "0")
@@ -202,12 +171,11 @@ export function CreateExpenseForm({
     )
 
     if (editTransaction) {
-      await updateExpenseMutation.mutateAsync({
+      await updateIncomeMutation.mutateAsync({
         id: editTransaction.id || "",
         req: {
           id: editTransaction.id || "",
-          expense: {
-            budgetId: data.budgetId,
+          income: {
             amount: toCentsString(data.amount),
             currency: data.currency,
             description: data.description,
@@ -218,9 +186,8 @@ export function CreateExpenseForm({
         },
       })
     } else {
-      await createExpenseMutation.mutateAsync({
-        expense: {
-          budgetId: data.budgetId,
+      await createIncomeMutation.mutateAsync({
+        income: {
           amount: toCentsString(data.amount),
           currency: data.currency,
           description: data.description,
@@ -247,8 +214,8 @@ export function CreateExpenseForm({
       )}
       <span>
         {editTransaction
-          ? "Edit Standalone Expense"
-          : "Record Standalone Expense"}
+          ? "Edit Standalone Income"
+          : "Record Standalone Income"}
       </span>
     </div>
   )
@@ -260,29 +227,17 @@ export function CreateExpenseForm({
       title={customTitle}
       description={
         editTransaction
-          ? "Modify logged expense details. Saturn will recompute currency base aggregates automatically."
-          : "Record a new standalone expense. The amount will be deducted from the active period of the selected budget template."
+          ? "Modify logged income details. Saturn will recompute currency base aggregates automatically."
+          : "Record standalone manual income. The amount will be added to the target ledger account balance."
       }
       submitLabel={
-        editTransaction
-          ? "Update Standalone Expense"
-          : "Save Standalone Expense"
+        editTransaction ? "Update Standalone Income" : "Save Standalone Income"
       }
       isPending={isPending}
-      disabled={!budgetIdValue || !!(conversion && "error" in conversion)}
+      disabled={!!(conversion && "error" in conversion)}
       onSubmit={handleSubmit(onSubmit)}
     >
-      <FormFieldItem label="Budget" error={errors.budgetId?.message}>
-        <BudgetSelect
-          control={control}
-          name="budgetId"
-          budgets={budgets}
-          onBudgetChange={handleBudgetChange}
-          placeholder="Select a budget..."
-        />
-      </FormFieldItem>
-
-      <FormFieldItem label="Account / Payment Method (Optional)">
+      <FormFieldItem label="Deposit Account (Optional)">
         <AccountSelect
           control={control}
           name="accountId"
@@ -295,7 +250,7 @@ export function CreateExpenseForm({
       <FormFieldItem label="Description" error={errors.description?.message}>
         <Input
           {...register("description")}
-          placeholder="e.g. Amazon Web Services, Restaurant Dinner"
+          placeholder="e.g. Freelance Consulting, Salary Payout"
           className="h-12 rounded-xl border-border/60 bg-background/50"
         />
       </FormFieldItem>

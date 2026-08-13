@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react"
 import { FormDrawer } from "@/components/ui/form-drawer"
-import { ArrowDownLeft, ArrowUpRight, ShieldAlert } from "lucide-react"
+import { ArrowDownLeft, ArrowUpRight } from "lucide-react"
 import {
   type Account,
   type Budget,
   type Transaction,
 } from "@/gen/saturn/finance/v1/finance"
 import { CreateExpenseForm } from "./create-expense-form"
+import { CreateIncomeForm } from "./create-income-form"
 
 interface CreateTransactionSheetProps {
   open: boolean
@@ -47,7 +48,11 @@ export function CreateTransactionSheet({
   useEffect(() => {
     if (open) {
       if (editTransaction) {
-        setStep("EXPENSE")
+        if (editTransaction.type === "INCOME") {
+          setStep("INCOME")
+        } else {
+          setStep("EXPENSE")
+        }
       } else if (preselectedBudgetId) {
         setStep("EXPENSE")
       } else {
@@ -74,40 +79,19 @@ export function CreateTransactionSheet({
     )
   }
 
-  // Placeholder for Income form
+  // Render Income form
   if (step === "INCOME") {
     return (
-      <FormDrawer
+      <CreateIncomeForm
         open={open}
         onOpenChange={onOpenChange}
-        title={
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setStep("SELECT")}
-              className="rounded-lg p-1 transition-colors hover:bg-muted-foreground/10"
-            >
-              <ArrowDownLeft className="h-4.5 w-4.5 rotate-135 text-muted-foreground" />
-            </button>
-            <span>Record Income</span>
-          </div>
-        }
-        description="Record an inbound transaction."
-        submitLabel="Save Income"
-        disabled
-        hideSubmitButton
-        onSubmit={(e) => e.preventDefault()}
-      >
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <ShieldAlert className="h-10 w-10 text-muted-foreground/60" />
-          <h3 className="mt-4 text-sm font-semibold text-foreground">
-            Income Form Coming Soon
-          </h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            We are polishing the manual income registration. Stay tuned!
-          </p>
-        </div>
-      </FormDrawer>
+        spaceId={spaceId}
+        baseCurrency={baseCurrency}
+        accounts={accounts}
+        editTransaction={editTransaction}
+        refetchData={handleRefetch}
+        onBack={editTransaction ? undefined : () => setStep("SELECT")}
+      />
     )
   }
 
@@ -135,7 +119,7 @@ export function CreateTransactionSheet({
           </div>
           <div className="flex-1">
             <h3 className="text-sm font-bold text-foreground">
-              Record Expense
+              Standalone Expense
             </h3>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
               Record an outbound payment, fee, or purchase. Deducted from a
@@ -154,7 +138,9 @@ export function CreateTransactionSheet({
             <ArrowUpRight className="h-5 w-5" />
           </div>
           <div className="flex-1">
-            <h3 className="text-sm font-bold text-foreground">Record Income</h3>
+            <h3 className="text-sm font-bold text-foreground">
+              Standalone Income
+            </h3>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
               Record an inbound salary deposit, client payment, or refund.
               Increases account balance.

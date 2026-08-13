@@ -3396,9 +3396,9 @@ type ListTransactionsRequest struct {
 	// Optional. Target transfer ID filter.
 	// Values are of the form `trn_[a-zA-Z0-9]+`.
 	TransferId *string `protobuf:"bytes,11,opt,name=transfer_id,json=transferId,proto3,oneof" json:"transfer_id,omitempty"`
-	// Optional. Target scheduled payment ID filter.
+	// Optional. Target scheduled transaction ID filter.
 	// Values are of the form `sch_[a-zA-Z0-9]+`.
-	ScheduledPaymentId *string `protobuf:"bytes,13,opt,name=scheduled_payment_id,json=scheduledPaymentId,proto3,oneof" json:"scheduled_payment_id,omitempty"`
+	ScheduledTransactionId *string `protobuf:"bytes,13,opt,name=scheduled_transaction_id,json=scheduledTransactionId,proto3,oneof" json:"scheduled_transaction_id,omitempty"`
 	// Optional. Target borrowing ID filter.
 	// Values are of the form `bor_[a-zA-Z0-9]+`.
 	BorrowingId   *string `protobuf:"bytes,14,opt,name=borrowing_id,json=borrowingId,proto3,oneof" json:"borrowing_id,omitempty"`
@@ -3499,9 +3499,9 @@ func (x *ListTransactionsRequest) GetTransferId() string {
 	return ""
 }
 
-func (x *ListTransactionsRequest) GetScheduledPaymentId() string {
-	if x != nil && x.ScheduledPaymentId != nil {
-		return *x.ScheduledPaymentId
+func (x *ListTransactionsRequest) GetScheduledTransactionId() string {
+	if x != nil && x.ScheduledTransactionId != nil {
+		return *x.ScheduledTransactionId
 	}
 	return ""
 }
@@ -7725,9 +7725,9 @@ type InboxItem struct {
 	// Optional. Suggested budget category ID.
 	// Values are of the form `bud_[a-zA-Z0-9]+`.
 	BudgetId string `protobuf:"bytes,11,opt,name=budget_id,json=budgetId,proto3" json:"budget_id,omitempty"`
-	// Optional. Associated scheduled payment identifier to clear.
+	// Optional. Associated scheduled transaction identifier to clear.
 	// Values are of the form `sch_[a-zA-Z0-9]+`.
-	ScheduledPaymentId string `protobuf:"bytes,12,opt,name=scheduled_payment_id,json=scheduledPaymentId,proto3" json:"scheduled_payment_id,omitempty"`
+	ScheduledTransactionId string `protobuf:"bytes,12,opt,name=scheduled_transaction_id,json=scheduledTransactionId,proto3" json:"scheduled_transaction_id,omitempty"`
 	// Optional. Associated completed transaction ledger ID.
 	// Values are of the form `txn_[a-zA-Z0-9]+`.
 	TransactionId string `protobuf:"bytes,13,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
@@ -7853,9 +7853,9 @@ func (x *InboxItem) GetBudgetId() string {
 	return ""
 }
 
-func (x *InboxItem) GetScheduledPaymentId() string {
+func (x *InboxItem) GetScheduledTransactionId() string {
 	if x != nil {
-		return x.ScheduledPaymentId
+		return x.ScheduledTransactionId
 	}
 	return ""
 }
@@ -9562,7 +9562,7 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x15GetTransactionRequest\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x12A\n" +
 	"\x04view\x18\x02 \x01(\x0e2#.saturn.finance.v1.Transaction.ViewB\x03\xe0A\x01H\x00R\x04view\x88\x01\x01B\a\n" +
-	"\x05_view\"\xbe\x05\n" +
+	"\x05_view\"\xca\x05\n" +
 	"\x17ListTransactionsRequest\x12A\n" +
 	"\x04view\x18\x01 \x01(\x0e2#.saturn.finance.v1.Transaction.ViewB\x03\xe0A\x01H\x00R\x04view\x88\x01\x01\x12%\n" +
 	"\tbudget_id\x18\x02 \x01(\tB\x03\xe0A\x01H\x01R\bbudgetId\x88\x01\x01\x12A\n" +
@@ -9576,8 +9576,8 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\x04sort\x18\n" +
 	" \x01(\tB\x03\xe0A\x01H\aR\x04sort\x88\x01\x01\x12)\n" +
 	"\vtransfer_id\x18\v \x01(\tB\x03\xe0A\x01H\bR\n" +
-	"transferId\x88\x01\x01\x12:\n" +
-	"\x14scheduled_payment_id\x18\r \x01(\tB\x03\xe0A\x01H\tR\x12scheduledPaymentId\x88\x01\x01\x12+\n" +
+	"transferId\x88\x01\x01\x12B\n" +
+	"\x18scheduled_transaction_id\x18\r \x01(\tB\x03\xe0A\x01H\tR\x16scheduledTransactionId\x88\x01\x01\x12+\n" +
 	"\fborrowing_id\x18\x0e \x01(\tB\x03\xe0A\x01H\n" +
 	"R\vborrowingId\x88\x01\x01B\a\n" +
 	"\x05_viewB\f\n" +
@@ -9590,8 +9590,8 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"_page_sizeB\r\n" +
 	"\v_page_tokenB\a\n" +
 	"\x05_sortB\x0e\n" +
-	"\f_transfer_idB\x17\n" +
-	"\x15_scheduled_payment_idB\x0f\n" +
+	"\f_transfer_idB\x1b\n" +
+	"\x19_scheduled_transaction_idB\x0f\n" +
 	"\r_borrowing_id\"\x86\x01\n" +
 	"\x18ListTransactionsResponse\x12B\n" +
 	"\ftransactions\x18\x01 \x03(\v2\x1e.saturn.finance.v1.TransactionR\ftransactions\x12&\n" +
@@ -10122,7 +10122,7 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\vcreate_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"createTime\"\\\n" +
 	"\x1dListTransactionEventsResponse\x12;\n" +
-	"\x06events\x18\x01 \x03(\v2#.saturn.finance.v1.TransactionEventR\x06events\"\xc3\t\n" +
+	"\x06events\x18\x01 \x03(\v2#.saturn.finance.v1.TransactionEventR\x06events\"\xcb\t\n" +
 	"\tInboxItem\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x1e\n" +
 	"\bspace_id\x18\x02 \x01(\tB\x03\xe0A\x03R\aspaceId\x12*\n" +
@@ -10137,8 +10137,8 @@ const file_saturn_finance_v1_finance_proto_rawDesc = "" +
 	"\n" +
 	"account_id\x18\n" +
 	" \x01(\tR\taccountId\x12\x1b\n" +
-	"\tbudget_id\x18\v \x01(\tR\bbudgetId\x120\n" +
-	"\x14scheduled_payment_id\x18\f \x01(\tR\x12scheduledPaymentId\x12%\n" +
+	"\tbudget_id\x18\v \x01(\tR\bbudgetId\x128\n" +
+	"\x18scheduled_transaction_id\x18\f \x01(\tR\x16scheduledTransactionId\x12%\n" +
 	"\x0etransaction_id\x18\r \x01(\tR\rtransactionId\x12$\n" +
 	"\vraw_payload\x18\x0e \x01(\tB\x03\xe0A\x03R\n" +
 	"rawPayload\x12F\n" +

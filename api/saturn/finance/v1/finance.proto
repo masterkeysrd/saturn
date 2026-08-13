@@ -1002,9 +1002,9 @@ message ListTransactionsRequest {
   // Values are of the form `trn_[a-zA-Z0-9]+`.
   optional string transfer_id = 11 [(google.api.field_behavior) = OPTIONAL];
 
-  // Optional. Target scheduled payment ID filter.
+  // Optional. Target scheduled transaction ID filter.
   // Values are of the form `sch_[a-zA-Z0-9]+`.
-  optional string scheduled_payment_id = 13 [(google.api.field_behavior) = OPTIONAL];
+  optional string scheduled_transaction_id = 13 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Target borrowing ID filter.
   // Values are of the form `bor_[a-zA-Z0-9]+`.
@@ -2271,9 +2271,9 @@ message InboxItem {
   // Values are of the form `bud_[a-zA-Z0-9]+`.
   string budget_id = 11;
 
-  // Optional. Associated scheduled payment identifier to clear.
+  // Optional. Associated scheduled transaction identifier to clear.
   // Values are of the form `sch_[a-zA-Z0-9]+`.
-  string scheduled_payment_id = 12;
+  string scheduled_transaction_id = 12;
 
   // Optional. Associated completed transaction ledger ID.
   // Values are of the form `txn_[a-zA-Z0-9]+`.

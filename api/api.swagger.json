@@ -3133,8 +3133,8 @@
             "type": "string"
           },
           {
-            "name": "scheduledPaymentId",
-            "description": "Optional. Target scheduled payment ID filter.\nValues are of the form `sch_[a-zA-Z0-9]+`.",
+            "name": "scheduledTransactionId",
+            "description": "Optional. Target scheduled transaction ID filter.\nValues are of the form `sch_[a-zA-Z0-9]+`.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -6754,9 +6754,9 @@
           "type": "string",
           "description": "Optional. Suggested budget category ID.\nValues are of the form `bud_[a-zA-Z0-9]+`."
         },
-        "scheduledPaymentId": {
+        "scheduledTransactionId": {
           "type": "string",
-          "description": "Optional. Associated scheduled payment identifier to clear.\nValues are of the form `sch_[a-zA-Z0-9]+`."
+          "description": "Optional. Associated scheduled transaction identifier to clear.\nValues are of the form `sch_[a-zA-Z0-9]+`."
         },
         "transactionId": {
           "type": "string",
