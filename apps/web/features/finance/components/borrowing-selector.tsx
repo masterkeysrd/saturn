@@ -127,7 +127,7 @@ export function BorrowingSelector({
                   key={b.id}
                   type="button"
                   onClick={() => onSelect(b)}
-                  className="group flex w-full items-center justify-between rounded-xl border border-border/60 bg-background/40 p-4.5 text-left transition-all hover:scale-[1.005] hover:border-primary/40 hover:bg-primary/5 focus:outline-none"
+                  className="group flex w-full items-center justify-between rounded-xl border border-border/60 bg-background/40 p-4.5 text-left transition-all outline-none hover:scale-[1.005] hover:border-primary/40 hover:bg-primary/5 focus:outline-none focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   <div className="flex min-w-0 items-center gap-3">
                     <div

@@ -233,7 +233,7 @@ export function CreateTransactionSheet({
         <button
           type="button"
           onClick={() => setStep("EXPENSE")}
-          className="group flex w-full items-start gap-4 rounded-2xl border border-border/60 bg-background/40 p-5 text-left transition-all hover:scale-[1.01] hover:border-primary/40 hover:bg-primary/5 focus:outline-none"
+          className="group flex w-full items-start gap-4 rounded-2xl border border-border/60 bg-background/40 p-5 text-left transition-all outline-none hover:scale-[1.01] hover:border-primary/40 hover:bg-primary/5 focus:outline-none focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-primary"
         >
           <div className="shrink-0 rounded-xl bg-rose-500/10 p-2.5 text-rose-500 dark:bg-rose-500/20">
             <ArrowDownLeft className="h-5 w-5" />
@@ -253,7 +253,7 @@ export function CreateTransactionSheet({
         <button
           type="button"
           onClick={() => setStep("INCOME")}
-          className="group hover:border-emerald/40 hover:bg-emerald/5 flex w-full items-start gap-4 rounded-2xl border border-border/60 bg-background/40 p-5 text-left transition-all hover:scale-[1.01] focus:outline-none"
+          className="group hover:border-emerald/40 hover:bg-emerald/5 flex w-full items-start gap-4 rounded-2xl border border-border/60 bg-background/40 p-5 text-left transition-all outline-none hover:scale-[1.01] focus:outline-none focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-primary"
         >
           <div className="shrink-0 rounded-xl bg-emerald-500/10 p-2.5 text-emerald-500 dark:bg-emerald-500/20">
             <ArrowUpRight className="h-5 w-5" />
@@ -273,7 +273,7 @@ export function CreateTransactionSheet({
         <button
           type="button"
           onClick={() => setStep("SCHEDULE_SELECT")}
-          className="group flex w-full items-start gap-4 rounded-2xl border border-border/60 bg-background/40 p-5 text-left transition-all hover:scale-[1.01] hover:border-indigo-500/40 hover:bg-indigo-500/5 focus:outline-none"
+          className="group flex w-full items-start gap-4 rounded-2xl border border-border/60 bg-background/40 p-5 text-left transition-all outline-none hover:scale-[1.01] hover:border-indigo-500/40 hover:bg-indigo-500/5 focus:outline-none focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-primary"
         >
           <div className="shrink-0 rounded-xl bg-indigo-500/10 p-2.5 text-indigo-500 dark:bg-indigo-500/20">
             <CalendarClock className="h-5 w-5" />
@@ -293,7 +293,7 @@ export function CreateTransactionSheet({
         <button
           type="button"
           onClick={() => setStep("BORROWING_SELECT")}
-          className="group flex w-full items-start gap-4 rounded-2xl border border-border/60 bg-background/40 p-5 text-left transition-all hover:scale-[1.01] hover:border-amber-500/40 hover:bg-amber-500/5 focus:outline-none"
+          className="group flex w-full items-start gap-4 rounded-2xl border border-border/60 bg-background/40 p-5 text-left transition-all outline-none hover:scale-[1.01] hover:border-amber-500/40 hover:bg-amber-500/5 focus:outline-none focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-primary"
         >
           <div className="shrink-0 rounded-xl bg-amber-500/10 p-2.5 text-amber-500 dark:bg-amber-500/20">
             <HandCoins className="h-5 w-5" />
@@ -313,7 +313,7 @@ export function CreateTransactionSheet({
         <button
           type="button"
           onClick={() => setStep("TRANSFER")}
-          className="group flex w-full items-start gap-4 rounded-2xl border border-border/60 bg-background/40 p-5 text-left transition-all hover:scale-[1.01] hover:border-sky-500/40 hover:bg-sky-500/5 focus:outline-none"
+          className="group flex w-full items-start gap-4 rounded-2xl border border-border/60 bg-background/40 p-5 text-left transition-all outline-none hover:scale-[1.01] hover:border-sky-500/40 hover:bg-sky-500/5 focus:outline-none focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-primary"
         >
           <div className="shrink-0 rounded-xl bg-sky-500/10 p-2.5 text-sky-500 dark:bg-sky-500/20">
             <ArrowRightLeft className="h-5 w-5" />

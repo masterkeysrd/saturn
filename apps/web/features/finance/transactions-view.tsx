@@ -36,7 +36,6 @@ import {
   Repeat,
   MoreVertical,
   History,
-  TrendingUp,
   Calculator,
   Hash,
   Filter,
@@ -201,10 +200,16 @@ export function TransactionsView() {
         }
   }
 
-  // Calculate stats from queried stream (filtered by EXPENSE type for outflow calculations)
+  // Calculate stats from queried stream
   const transactions = txnData?.transactions || []
   const expenseTransactions = transactions.filter((t) => t.type === "EXPENSE")
+  const incomeTransactions = transactions.filter((t) => t.type === "INCOME")
+
   const totalSpent = expenseTransactions.reduce(
+    (acc, t) => acc + formatCents(t.amountInBase),
+    0
+  )
+  const totalInflow = incomeTransactions.reduce(
     (acc, t) => acc + formatCents(t.amountInBase),
     0
   )
@@ -232,10 +237,32 @@ export function TransactionsView() {
     >
       <div className="mt-2 animate-in space-y-6 duration-300 fade-in">
         {/* Top Summary Stat Cards Grid */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {/* Card 1: Total Inflow */}
           <div className="flex items-center gap-4 rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm backdrop-blur-xl select-none">
-            <div className="rounded-2xl bg-primary/10 p-3.5 text-primary">
-              <TrendingUp className="h-6 w-6" />
+            <div className="rounded-2xl bg-emerald-500/10 p-3.5 text-emerald-500">
+              <ArrowUpRight className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">
+                Total Inflow
+              </p>
+              <h4 className="mt-0.5 text-2xl font-bold text-foreground">
+                {totalInflow.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{" "}
+                <span className="text-xs font-bold text-muted-foreground uppercase">
+                  {settings?.baseCurrency}
+                </span>
+              </h4>
+            </div>
+          </div>
+
+          {/* Card 2: Total Outflow */}
+          <div className="flex items-center gap-4 rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm backdrop-blur-xl select-none">
+            <div className="rounded-2xl bg-rose-500/10 p-3.5 text-rose-500">
+              <ArrowDownLeft className="h-6 w-6" />
             </div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">
@@ -253,6 +280,7 @@ export function TransactionsView() {
             </div>
           </div>
 
+          {/* Card 3: Avg. per Expense */}
           <div className="flex items-center gap-4 rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm backdrop-blur-xl select-none">
             <div className="rounded-2xl bg-indigo-500/10 p-3.5 text-indigo-500">
               <Calculator className="h-6 w-6" />
@@ -273,8 +301,9 @@ export function TransactionsView() {
             </div>
           </div>
 
+          {/* Card 4: Total Transactions */}
           <div className="flex items-center gap-4 rounded-3xl border border-border/40 bg-card/45 p-6 shadow-sm backdrop-blur-xl select-none">
-            <div className="rounded-2xl bg-emerald-500/10 p-3.5 text-emerald-500">
+            <div className="rounded-2xl bg-zinc-500/10 p-3.5 text-zinc-500 dark:text-zinc-400">
               <Hash className="h-6 w-6" />
             </div>
             <div>

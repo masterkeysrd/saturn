@@ -1,5 +1,6 @@
 import { useEffect } from "react"
 import { useForm, Controller } from "react-hook-form"
+import { useQueryClient } from "@tanstack/react-query"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ArrowLeft } from "lucide-react"
 import { FormDrawer } from "@/components/ui/form-drawer"
@@ -56,6 +57,7 @@ export function CreateBorrowingTransactionForm({
   refetchData,
   onBack,
 }: CreateBorrowingTransactionFormProps) {
+  const queryClient = useQueryClient()
   const logTransactionMutation = useLogBorrowingTransactionMutation()
 
   const defaultAccount =
@@ -107,6 +109,16 @@ export function CreateBorrowingTransactionForm({
             accountId: values.accountId,
           },
         },
+      })
+
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/borrowings"],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/transactions"],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/accounts"],
       })
 
       refetchData?.()

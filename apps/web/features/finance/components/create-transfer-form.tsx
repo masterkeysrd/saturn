@@ -1,5 +1,6 @@
 import { useMemo, useEffect, useCallback } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
+import { useQueryClient } from "@tanstack/react-query"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ArrowLeft, AlertTriangle } from "lucide-react"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
@@ -31,6 +32,7 @@ export function CreateTransferForm({
   refetchData,
   onBack,
 }: CreateTransferFormProps) {
+  const queryClient = useQueryClient()
   const activeAccounts = accounts.filter((a) => a.isActive)
 
   const { data: ratesData } = useListExchangeRatesQuery(
@@ -129,6 +131,13 @@ export function CreateTransferForm({
         transferDate: data.transferDate.toISOString(),
         notes: data.notes || "",
       })
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/transactions"],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/accounts"],
+      })
+
       refetchData?.()
       onOpenChange(false)
     } catch (err: unknown) {
