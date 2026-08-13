@@ -105,6 +105,82 @@ func (i *InboxItem) MarkResolved(txnID *TransactionID) {
 	}
 }
 
+// NewReceiptIngestedEvent constructs a RECEIPT_INGESTED transaction event.
+func (i *InboxItem) NewReceiptIngestedEvent(txnID TransactionID) *TransactionEvent {
+	return &TransactionEvent{
+		SpaceID:       SpaceID(i.SpaceID),
+		TransactionID: txnID,
+		EventType:     "RECEIPT_INGESTED",
+		Metadata: map[string]any{
+			"amount_cents": i.Amount,
+			"currency":     i.Currency,
+			"vendor_name":  i.VendorName,
+			"description":  "Receipt/Document ingested into staging queue",
+		},
+		CreateTime: i.CreateTime,
+	}
+}
+
+// NewTransactionLinkedEvent constructs a TRANSACTION_LINKED transaction event.
+func (i *InboxItem) NewTransactionLinkedEvent(txnID TransactionID, overwrite bool) *TransactionEvent {
+	linkedDesc := "Staged document linked to existing ledger entry"
+	if overwrite {
+		linkedDesc = "Staged document linked to existing ledger entry and updated transaction details"
+	}
+	return &TransactionEvent{
+		SpaceID:       SpaceID(i.SpaceID),
+		TransactionID: txnID,
+		EventType:     "TRANSACTION_LINKED",
+		Metadata: map[string]any{
+			"inbox_item_id":                i.ID,
+			"overwrite_linked_transaction": overwrite,
+			"description":                  linkedDesc,
+		},
+		CreateTime: time.Now().UTC(),
+	}
+}
+
+// NewScheduledPaymentFromInvoice constructs and initializes a ScheduledPayment from an invoice inbox item.
+func (i *InboxItem) NewScheduledPaymentFromInvoice(spaceID SpaceID) (*ScheduledPayment, error) {
+	var bID BudgetID
+	if i.BudgetID != nil && *i.BudgetID != "" {
+		var err error
+		bID, err = ParseBudgetID(*i.BudgetID)
+		if err != nil {
+			return nil, fmt.Errorf("parse budget ID: %w", err)
+		}
+	}
+
+	dueDate := i.TransactionDate
+	if dueDate.IsZero() {
+		dueDate = time.Now().UTC()
+	}
+
+	payment := &ScheduledPayment{
+		SpaceID:    spaceID,
+		BudgetID:   bID,
+		SourceType: "invoice",
+		SourceID:   i.ID,
+		Amount:     i.Amount,
+		Currency:   Currency(i.Currency),
+		DueDate:    dueDate,
+		Metadata: ScheduledPaymentMetadata{
+			VendorName:  i.VendorName,
+			DueDate:     dueDate.Format("2006-01-02"),
+			Description: i.VendorName,
+			InvoiceID:   i.ID,
+		},
+	}
+
+	if err := payment.Init(); err != nil {
+		return nil, fmt.Errorf("init scheduled payment: %w", err)
+	}
+	if err := payment.Validate(); err != nil {
+		return nil, fmt.Errorf("validate new scheduled payment: %w", err)
+	}
+	return payment, nil
+}
+
 // StageInboxItem defines parameters to draft and stage an inbox item.
 type StageInboxItem struct {
 	IntegrationID   string

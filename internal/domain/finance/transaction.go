@@ -96,6 +96,29 @@ type Transaction struct {
 	UpdateTime      time.Time
 }
 
+// Init populates default timestamps and generates an ID if unpopulated.
+func (t *Transaction) Init() error {
+	if string(t.ID) == "" {
+		tID, err := NewTransactionID()
+		if err != nil {
+			return fmt.Errorf("generate transaction ID: %w", err)
+		}
+		t.ID = tID
+	}
+	now := time.Now().UTC()
+	if t.TransactionDate.IsZero() {
+		t.TransactionDate = now
+	}
+	if t.EffectiveDate.IsZero() {
+		t.EffectiveDate = t.TransactionDate
+	}
+	if t.CreateTime.IsZero() {
+		t.CreateTime = now
+	}
+	t.UpdateTime = now
+	return nil
+}
+
 // Validate checks basic properties of a transaction.
 func (t *Transaction) Validate() error {
 	if t.EffectiveDate.IsZero() {

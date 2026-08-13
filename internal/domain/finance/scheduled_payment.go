@@ -95,6 +95,29 @@ func (sp *ScheduledPayment) Validate() error {
 	return nil
 }
 
+// Init sets default fields, ID, and timestamps for a ScheduledPayment.
+func (sp *ScheduledPayment) Init() error {
+	if string(sp.ID) == "" {
+		id, err := NewScheduledPaymentID()
+		if err != nil {
+			return fmt.Errorf("generate scheduled payment ID: %w", err)
+		}
+		sp.ID = id
+	}
+	now := time.Now().UTC()
+	if sp.DueDate.IsZero() {
+		sp.DueDate = now
+	}
+	if sp.Status == "" {
+		sp.Status = ScheduledPaymentPending
+	}
+	if sp.CreateTime.IsZero() {
+		sp.CreateTime = now
+	}
+	sp.UpdateTime = now
+	return nil
+}
+
 // MarkPaid transitions status to paid and updates timestamp.
 func (sp *ScheduledPayment) MarkPaid() error {
 	if sp.Status == ScheduledPaymentPaid {
@@ -131,11 +154,6 @@ type ConfirmOpts struct {
 
 // NewConfirmationTransaction constructs an expense transaction for a confirmed scheduled payment.
 func (sp *ScheduledPayment) NewConfirmationTransaction(opts ConfirmOpts) (*Transaction, error) {
-	txnID, err := NewTransactionID()
-	if err != nil {
-		return nil, err
-	}
-
 	date := opts.TransactionDate
 	if date.IsZero() {
 		date = time.Now().UTC()
@@ -181,7 +199,6 @@ func (sp *ScheduledPayment) NewConfirmationTransaction(opts ConfirmOpts) (*Trans
 	}
 
 	t := &Transaction{
-		ID:              txnID,
 		SpaceID:         sp.SpaceID,
 		Type:            TransactionTypeExpense,
 		BudgetID:        budgetID,
@@ -191,11 +208,13 @@ func (sp *ScheduledPayment) NewConfirmationTransaction(opts ConfirmOpts) (*Trans
 		Currency:        curr,
 		AmountInBase:    opts.AmountInBase,
 		Description:     desc,
-		TransactionDate: date,
-		EffectiveDate:   effDate,
+		TransactionDate: opts.TransactionDate,
+		EffectiveDate:   opts.EffectiveDate,
 		Metadata:        meta,
-		CreateTime:      time.Now().UTC(),
-		UpdateTime:      time.Now().UTC(),
+	}
+
+	if err := t.Init(); err != nil {
+		return nil, fmt.Errorf("init confirmation transaction: %w", err)
 	}
 
 	if opts.PeriodID != nil {

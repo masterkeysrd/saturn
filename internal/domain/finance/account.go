@@ -238,11 +238,6 @@ func (a *Account) ReconcileBalance(opts ReconcileAccountOpts) (*Transaction, err
 		return nil, nil
 	}
 
-	txnID, err := NewTransactionID()
-	if err != nil {
-		return nil, err
-	}
-
 	adjDate := opts.AdjustmentDate
 	if adjDate.IsZero() {
 		adjDate = time.Now().UTC()
@@ -254,8 +249,7 @@ func (a *Account) ReconcileBalance(opts ReconcileAccountOpts) (*Transaction, err
 	}
 
 	accID := a.ID
-	return &Transaction{
-		ID:              txnID,
+	t := &Transaction{
 		SpaceID:         a.SpaceID,
 		AccountID:       &accID,
 		Type:            TransactionTypeBalanceAdjustment,
@@ -264,7 +258,11 @@ func (a *Account) ReconcileBalance(opts ReconcileAccountOpts) (*Transaction, err
 		Description:     desc,
 		TransactionDate: adjDate,
 		EffectiveDate:   adjDate,
-	}, nil
+	}
+	if err := t.Init(); err != nil {
+		return nil, fmt.Errorf("init adjustment transaction: %w", err)
+	}
+	return t, nil
 }
 
 // SetAsDefault sets account as default, enforcing that inactive accounts cannot be default.

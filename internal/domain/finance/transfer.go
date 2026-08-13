@@ -153,8 +153,9 @@ func (t *Transfer) NewLegTransactions(opts TransferLegOpts) (sourceTxn *Transact
 			AccountImpactAmount:  t.SourceAmount,
 			Notes:                t.Notes,
 		},
-		CreateTime: time.Now().UTC(),
-		UpdateTime: time.Now().UTC(),
+	}
+	if err := sourceTxn.Init(); err != nil {
+		return nil, nil, fmt.Errorf("init source transfer transaction: %w", err)
 	}
 
 	destTxn = &Transaction{
@@ -174,8 +175,9 @@ func (t *Transfer) NewLegTransactions(opts TransferLegOpts) (sourceTxn *Transact
 			AccountImpactAmount:  t.DestinationAmount,
 			Notes:                t.Notes,
 		},
-		CreateTime: time.Now().UTC(),
-		UpdateTime: time.Now().UTC(),
+	}
+	if err := destTxn.Init(); err != nil {
+		return nil, nil, fmt.Errorf("init destination transfer transaction: %w", err)
 	}
 
 	if err := sourceTxn.Validate(); err != nil {

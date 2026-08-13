@@ -709,11 +709,12 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 
 	sourceFallback := ""
 	if req.Description == "" && payment.Metadata.Description == "" {
-		if payment.SourceType == SourceTypeRecurrentExpense {
+		switch payment.SourceType {
+		case SourceTypeRecurrentExpense:
 			if exp, err := s.deps.RecurringExpenseStore.GetByID(ctx, payment.SpaceID, RecurringExpenseID(payment.SourceID)); err == nil {
 				sourceFallback = exp.Name
 			}
-		} else if payment.SourceType == "invoice" {
+		case "invoice":
 			if item, err := s.deps.InboxItemStore.Get(ctx, payment.SpaceID, payment.SourceID); err == nil {
 				if item.VendorName != "" {
 					sourceFallback = item.VendorName
@@ -907,17 +908,10 @@ func (s *Service) GenerateScheduledPayments(ctx context.Context) error {
 
 // createTransaction persists a transaction and adjusts the account balance.
 func (s *Service) createTransaction(ctx context.Context, txn *Transaction) error {
-	// 1. Set dates
-	if txn.TransactionDate.IsZero() {
-		txn.TransactionDate = time.Now().UTC()
+	// 1. Initialize transaction lifecycle defaults
+	if err := txn.Init(); err != nil {
+		return err
 	}
-	if txn.EffectiveDate.IsZero() {
-		txn.EffectiveDate = txn.TransactionDate
-	}
-	if txn.CreateTime.IsZero() {
-		txn.CreateTime = time.Now().UTC()
-	}
-	txn.UpdateTime = time.Now().UTC()
 
 	// 2. Fetch workspace settings
 	settings, err := s.deps.SettingsStore.GetByID(ctx, txn.SpaceID)
@@ -993,12 +987,8 @@ func (s *Service) updateTransaction(ctx context.Context, txn *Transaction, exist
 		if err != nil {
 			return fmt.Errorf("fetch budget template: %w", err)
 		}
-		st := budget.Status
-		if st == "" {
-			st = BudgetStatusActive
-		}
-		if st != BudgetStatusActive {
-			return fmt.Errorf("cannot log transaction against budget %q with status %q", budget.Name, st)
+		if err := budget.EnsureActive(); err != nil {
+			return err
 		}
 		period, err := s.GetOrCreatePeriod(ctx, txn.SpaceID, budget.ID, txn.EffectiveDate)
 		if err != nil {
@@ -1214,8 +1204,8 @@ func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing, mask []stri
 	if err != nil {
 		return nil, fmt.Errorf("check existing transaction: %w", err)
 	}
-	hasInitialTxn := len(page.Items) > 0
 
+	hasInitialTxn := len(page.Items) > 0
 	if hasInitialTxn || existing.HasLinkedAccount() {
 		if _, err := s.resolveExchangeRate(ctx, existing.SpaceID, existing.Currency, settings.BaseCurrency, existing.EstablishedAt, false); err != nil {
 			return nil, err
@@ -1257,9 +1247,8 @@ func (s *Service) DeleteBorrowing(ctx context.Context, spaceID SpaceID, id Borro
 	}
 
 	// 1. Check if borrowing has linked transactions
-	bID := id
 	page, err := s.deps.TransactionStore.ListBySpace(ctx, spaceID, &TransactionFilter{
-		BorrowingID: &bID,
+		BorrowingID: new(id),
 		PageSize:    1,
 	})
 	if err != nil {
@@ -2023,7 +2012,6 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID SpaceID, id stri
 		return nil, err
 	}
 
-	// 1. Fetch current staging inbox item
 	item, err := s.deps.InboxItemStore.Get(ctx, spaceID, id)
 	if err != nil {
 		return nil, fmt.Errorf("get inbox item: %w", err)
@@ -2033,238 +2021,169 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID SpaceID, id stri
 		return nil, err
 	}
 
-	// 1b. If it is a system verification email: mark resolved immediately
-	if item.DocType == InboxItemDocSystemVerification {
-		item.MarkResolved(nil)
-		if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
-			return nil, fmt.Errorf("resolve verification inbox item: %w", err)
-		}
-		return item, nil
+	switch {
+	case item.DocType == InboxItemDocSystemVerification:
+		return s.approveSystemVerification(ctx, item)
+	case item.TransactionID != nil && *item.TransactionID != "":
+		return s.approveLinkedTransaction(ctx, spaceID, item)
+	case item.ScheduledPaymentID != nil && *item.ScheduledPaymentID != "":
+		return s.approveScheduledPayment(ctx, spaceID, item)
+	case item.DocType == InboxItemDocInvoice:
+		return s.approveStagedInvoice(ctx, spaceID, item)
+	default:
+		return s.approveStandalonePromotion(ctx, spaceID, item)
+	}
+}
+
+func (s *Service) approveSystemVerification(ctx context.Context, item *InboxItem) (*InboxItem, error) {
+	item.MarkResolved(nil)
+	if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
+		return nil, fmt.Errorf("resolve verification inbox item: %w", err)
+	}
+	return item, nil
+}
+
+func (s *Service) approveLinkedTransaction(ctx context.Context, spaceID SpaceID, item *InboxItem) (*InboxItem, error) {
+	txnID, err := ParseTransactionID(*item.TransactionID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid transaction ID: %w", err)
+	}
+	txn, err := s.deps.TransactionStore.GetByID(ctx, spaceID, txnID)
+	if err != nil {
+		return nil, fmt.Errorf("get transaction: %w", err)
+	}
+	if txn.SpaceID != spaceID {
+		return nil, fmt.Errorf("transaction does not belong to this space")
+	}
+	if txn.Type == TransactionTypeTransferOut || txn.Type == TransactionTypeTransferIn {
+		return nil, ErrCannotLinkReceiptToTransfer
 	}
 
-	// 2. If it is linked to an existing transaction:
-	if item.TransactionID != nil && *item.TransactionID != "" {
-		txnID, err := ParseTransactionID(*item.TransactionID)
-		if err != nil {
-			return nil, fmt.Errorf("invalid transaction ID: %w", err)
-		}
-		txn, err := s.deps.TransactionStore.GetByID(ctx, SpaceID(spaceID), txnID)
-		if err != nil {
-			return nil, fmt.Errorf("get transaction: %w", err)
-		}
-		if txn.SpaceID != SpaceID(spaceID) {
-			return nil, fmt.Errorf("transaction does not belong to this space")
-		}
-		if txn.Type == TransactionTypeTransferOut || txn.Type == TransactionTypeTransferIn {
-			return nil, ErrCannotLinkReceiptToTransfer
-		}
+	overwrite := item.MetadataBool("overwrite_linked_transaction")
 
-		overwrite := item.MetadataBool("overwrite_linked_transaction")
-
-		// If overwrite option is selected, update the ledger transaction to match receipt details
-		if overwrite {
-			diff := item.Amount - txn.Amount
-			if diff != 0 && txn.AccountID != nil {
-				if diff > 0 {
-					if err := s.adjustAccountBalance(ctx, SpaceID(spaceID), *txn.AccountID, diff, txn.Type, false); err != nil {
-						return nil, fmt.Errorf("failed to adjust account balance delta: %w", err)
-					}
-				} else {
-					if err := s.adjustAccountBalance(ctx, SpaceID(spaceID), *txn.AccountID, -diff, txn.Type, true); err != nil {
-						return nil, fmt.Errorf("failed to adjust account balance delta: %w", err)
-					}
-				}
+	if overwrite {
+		diff := item.Amount - txn.Amount
+		if diff != 0 && txn.AccountID != nil {
+			isReversal := diff < 0
+			absDiff := diff
+			if isReversal {
+				absDiff = -diff
 			}
-
-			updatedTxn := *txn
-			updatedTxn.Amount = item.Amount
-			updatedTxn.Currency = Currency(item.Currency)
-			if item.VendorName != "" {
-				updatedTxn.Description = item.VendorName
-			}
-
-			if err := s.deps.TransactionStore.Update(ctx, &updatedTxn); err != nil {
-				return nil, fmt.Errorf("failed to update linked transaction: %w", err)
-			}
-			txn = &updatedTxn
-		}
-
-		// Handle optional borrowing link for existing transaction
-		if item.BorrowingID != nil && *item.BorrowingID != "" {
-			linkType := BorrowingLinkTypeInitialReceipt
-			if item.BorrowingLinkType != nil {
-				linkType = *item.BorrowingLinkType
-			}
-			if err := s.handleBorrowingLinkForTransaction(ctx, SpaceID(spaceID), txn, *item.BorrowingID, linkType); err != nil {
-				return nil, fmt.Errorf("link borrowing to existing transaction: %w", err)
+			if err := s.adjustAccountBalance(ctx, spaceID, *txn.AccountID, absDiff, txn.Type, isReversal); err != nil {
+				return nil, fmt.Errorf("failed to adjust account balance delta: %w", err)
 			}
 		}
 
-		// Handle optional scheduled payment link for existing transaction
-		if item.ScheduledPaymentID != nil && *item.ScheduledPaymentID != "" {
-			if err := s.handleScheduledPaymentLinkForTransaction(ctx, SpaceID(spaceID), txn, *item.ScheduledPaymentID); err != nil {
-				return nil, fmt.Errorf("link scheduled payment to existing transaction: %w", err)
-			}
-			item.ScheduledPaymentID = nil
+		updatedTxn := *txn
+		updatedTxn.Amount = item.Amount
+		updatedTxn.Currency = Currency(item.Currency)
+		if item.VendorName != "" {
+			updatedTxn.Description = item.VendorName
 		}
 
-		// Mark inbox item as resolved and link it
-		item.Status = InboxItemResolved
-		if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
-			return nil, fmt.Errorf("resolve inbox item: %w", err)
+		if err := s.deps.TransactionStore.Update(ctx, &updatedTxn); err != nil {
+			return nil, fmt.Errorf("failed to update linked transaction: %w", err)
 		}
-
-		// Event 1: Receipt/Document Ingested
-		evtIngested := &TransactionEvent{
-			SpaceID:       SpaceID(spaceID),
-			TransactionID: txn.ID,
-			EventType:     "RECEIPT_INGESTED",
-			Metadata: map[string]any{
-				"amount_cents": item.Amount,
-				"currency":     item.Currency,
-				"vendor_name":  item.VendorName,
-				"description":  "Receipt/Document ingested into staging queue",
-			},
-			CreateTime: item.CreateTime,
-		}
-		if _, err := s.LogTransactionEvent(ctx, evtIngested); err != nil {
-			fmt.Printf("warning: failed to log receipt ingested event: %v\n", err)
-		}
-
-		// Event 2: Staging item linked to this transaction
-		linkedDesc := "Staged document linked to existing ledger entry"
-		if overwrite {
-			linkedDesc = "Staged document linked to existing ledger entry and updated transaction details"
-		}
-		evtLinked := &TransactionEvent{
-			SpaceID:       SpaceID(spaceID),
-			TransactionID: txn.ID,
-			EventType:     "TRANSACTION_LINKED",
-			Metadata: map[string]any{
-				"inbox_item_id":                string(item.ID),
-				"overwrite_linked_transaction": overwrite,
-				"description":                  linkedDesc,
-			},
-			CreateTime: time.Now(),
-		}
-		if _, err := s.LogTransactionEvent(ctx, evtLinked); err != nil {
-			fmt.Printf("warning: failed to log transaction linked event: %v\n", err)
-		}
-
-		return item, nil
+		txn = &updatedTxn
 	}
 
-	// 3. If it is linked to a bill/scheduled payment:
+	if item.BorrowingID != nil && *item.BorrowingID != "" {
+		linkType := BorrowingLinkTypeInitialReceipt
+		if item.BorrowingLinkType != nil {
+			linkType = *item.BorrowingLinkType
+		}
+		if err := s.handleBorrowingLinkForTransaction(ctx, spaceID, txn, *item.BorrowingID, linkType); err != nil {
+			return nil, fmt.Errorf("link borrowing to existing transaction: %w", err)
+		}
+	}
+
 	if item.ScheduledPaymentID != nil && *item.ScheduledPaymentID != "" {
-		payID := ScheduledPaymentID(*item.ScheduledPaymentID)
-		if item.DocType == InboxItemDocInvoice {
-			// A. If it's an unpaid INVOICE: do NOT create a transaction.
-			// Just update the scheduled payment amount and metadata to the actual values.
-			payment, err := s.deps.ScheduledPaymentStore.GetByID(ctx, SpaceID(spaceID), payID)
-			if err != nil {
-				return nil, fmt.Errorf("get scheduled payment: %w", err)
-			}
-			payment.Amount = item.Amount
-			payment.SourceType = item.VendorName
-			if err := s.deps.ScheduledPaymentStore.Update(ctx, payment); err != nil {
-				return nil, fmt.Errorf("update scheduled payment: %w", err)
-			}
-
-			// Mark inbox item as resolved and link it
-			item.Status = InboxItemResolved
-			if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
-				return nil, fmt.Errorf("resolve inbox item: %w", err)
-			}
-			return item, nil
-		} else {
-			// B. If it's a RECEIPT or other: promote the scheduled payment to a finished transaction.
-			txn, err := s.ConfirmScheduledPayment(ctx, ConfirmScheduledPaymentRequest{
-				SpaceID:         SpaceID(spaceID),
-				PaymentID:       payID,
-				AccountID:       (*AccountID)(item.AccountID),
-				TransactionDate: item.TransactionDate,
-				EffectiveDate:   time.Now().UTC(),
-				ActualAmount:    item.Amount,
-				Description:     item.VendorName,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("confirm scheduled payment: %w", err)
-			}
-
-			// Mark inbox item as resolved and link it
-			item.MarkResolved(&txn.ID)
-			if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
-				return nil, fmt.Errorf("resolve inbox item: %w", err)
-			}
-			return item, nil
+		if err := s.handleScheduledPaymentLinkForTransaction(ctx, spaceID, txn, *item.ScheduledPaymentID); err != nil {
+			return nil, fmt.Errorf("link scheduled payment to existing transaction: %w", err)
 		}
+		item.ScheduledPaymentID = nil
 	}
 
-	// 4. Otherwise: create a standalone ledger transaction or a transfer
-	transactionType := item.MetadataString("transaction_type")
-	destinationAccountID := item.MetadataString("destination_account_id")
-	transferLeg := item.MetadataString("transfer_leg")
+	item.Status = InboxItemResolved
+	if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
+		return nil, fmt.Errorf("resolve inbox item: %w", err)
+	}
+
+	if _, err := s.LogTransactionEvent(ctx, item.NewReceiptIngestedEvent(txn.ID)); err != nil {
+		slog.WarnContext(ctx, "failed to log receipt ingested event", "transaction_id", string(txn.ID), "error", err)
+	}
+
+	if _, err := s.LogTransactionEvent(ctx, item.NewTransactionLinkedEvent(txn.ID, overwrite)); err != nil {
+		slog.WarnContext(ctx, "failed to log transaction linked event", "transaction_id", string(txn.ID), "error", err)
+	}
+
+	return item, nil
+}
+
+func (s *Service) approveScheduledPayment(ctx context.Context, spaceID SpaceID, item *InboxItem) (*InboxItem, error) {
+	payID := ScheduledPaymentID(*item.ScheduledPaymentID)
 	if item.DocType == InboxItemDocInvoice {
-		spID, err := NewScheduledPaymentID()
+		payment, err := s.deps.ScheduledPaymentStore.GetByID(ctx, spaceID, payID)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("get scheduled payment: %w", err)
 		}
-		var bID BudgetID
-		if item.BudgetID != nil && *item.BudgetID != "" {
-			bID, err = ParseBudgetID(*item.BudgetID)
-			if err != nil {
-				return nil, fmt.Errorf("parse budget ID: %w", err)
-			}
+		payment.Amount = item.Amount
+		payment.SourceType = item.VendorName
+		if err := s.deps.ScheduledPaymentStore.Update(ctx, payment); err != nil {
+			return nil, fmt.Errorf("update scheduled payment: %w", err)
 		}
 
-		dueDate := item.TransactionDate
-		if dueDate.IsZero() {
-			dueDate = time.Now().UTC()
-		}
-
-		payment := &ScheduledPayment{
-			ID:         spID,
-			SpaceID:    SpaceID(spaceID),
-			BudgetID:   bID,
-			SourceType: "invoice",
-			SourceID:   item.ID,
-			Amount:     item.Amount,
-			Currency:   Currency(item.Currency),
-			DueDate:    dueDate,
-			Status:     ScheduledPaymentPending,
-			Metadata: ScheduledPaymentMetadata{
-				VendorName:  item.VendorName,
-				DueDate:     dueDate.Format("2006-01-02"),
-				Description: item.VendorName,
-				InvoiceID:   item.ID,
-			},
-			CreateTime: time.Now().UTC(),
-			UpdateTime: time.Now().UTC(),
-		}
-
-		if err := payment.Validate(); err != nil {
-			return nil, fmt.Errorf("validate new scheduled payment: %w", err)
-		}
-
-		if err := s.deps.ScheduledPaymentStore.Create(ctx, payment); err != nil {
-			return nil, fmt.Errorf("create scheduled payment: %w", err)
-		}
-
-		// Mark inbox item as resolved and link it
 		item.Status = InboxItemResolved
-		pIDStr := string(payment.ID)
-		item.ScheduledPaymentID = &pIDStr
 		if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
 			return nil, fmt.Errorf("resolve inbox item: %w", err)
 		}
-
 		return item, nil
 	}
 
-	settings, err := s.deps.SettingsStore.GetByID(ctx, SpaceID(spaceID))
+	txn, err := s.ConfirmScheduledPayment(ctx, ConfirmScheduledPaymentRequest{
+		SpaceID:         spaceID,
+		PaymentID:       payID,
+		AccountID:       (*AccountID)(item.AccountID),
+		TransactionDate: item.TransactionDate,
+		EffectiveDate:   time.Now().UTC(),
+		ActualAmount:    item.Amount,
+		Description:     item.VendorName,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("confirm scheduled payment: %w", err)
+	}
+
+	item.MarkResolved(&txn.ID)
+	if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
+		return nil, fmt.Errorf("resolve inbox item: %w", err)
+	}
+	return item, nil
+}
+
+func (s *Service) approveStagedInvoice(ctx context.Context, spaceID SpaceID, item *InboxItem) (*InboxItem, error) {
+	payment, err := item.NewScheduledPaymentFromInvoice(spaceID)
 	if err != nil {
 		return nil, err
 	}
+
+	if err := s.deps.ScheduledPaymentStore.Create(ctx, payment); err != nil {
+		return nil, fmt.Errorf("create scheduled payment: %w", err)
+	}
+
+	item.Status = InboxItemResolved
+	pIDStr := string(payment.ID)
+	item.ScheduledPaymentID = &pIDStr
+	if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
+		return nil, fmt.Errorf("resolve inbox item: %w", err)
+	}
+
+	return item, nil
+}
+
+func (s *Service) approveStandalonePromotion(ctx context.Context, spaceID SpaceID, item *InboxItem) (*InboxItem, error) {
+	transactionType := item.MetadataString("transaction_type")
+	destinationAccountID := item.MetadataString("destination_account_id")
+	transferLeg := item.MetadataString("transfer_leg")
 
 	if transactionType == "TRANSFER" {
 		if item.AccountID == nil || *item.AccountID == "" {
@@ -2288,7 +2207,7 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID SpaceID, id stri
 		}
 
 		t := &Transfer{
-			SpaceID:              SpaceID(spaceID),
+			SpaceID:              spaceID,
 			SourceAccountID:      srcAccID,
 			DestinationAccountID: destAccID,
 			SourceAmount:         item.Amount,
@@ -2308,8 +2227,9 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID SpaceID, id stri
 			targetAccID = destAccID
 		}
 
-		page, err := s.deps.TransactionStore.ListBySpace(ctx, SpaceID(spaceID), &TransactionFilter{
+		page, err := s.deps.TransactionStore.ListBySpace(ctx, spaceID, &TransactionFilter{
 			TransferID: &newT.ID,
+			PageSize:   2, // Two legs
 		})
 		var txs []*Transaction
 		if err == nil {
@@ -2325,7 +2245,6 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID SpaceID, id stri
 			}
 		}
 
-		// Mark inbox item as resolved and link it
 		var matchedTxID *TransactionID
 		if matchedTx != nil {
 			matchedTxID = &matchedTx.ID
@@ -2339,6 +2258,11 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID SpaceID, id stri
 		}
 
 		return item, nil
+	}
+
+	settings, err := s.deps.SettingsStore.GetByID(ctx, spaceID)
+	if err != nil {
+		return nil, err
 	}
 
 	var txnType TransactionType
@@ -2355,11 +2279,11 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID SpaceID, id stri
 			if err != nil {
 				return nil, fmt.Errorf("parse budget ID: %w", err)
 			}
-			budget, err := s.deps.BudgetStore.GetByID(ctx, SpaceID(spaceID), bID)
+			budget, err := s.deps.BudgetStore.GetByID(ctx, spaceID, bID)
 			if err != nil {
 				return nil, fmt.Errorf("get budget: %w", err)
 			}
-			period, err := s.GetOrCreatePeriod(ctx, SpaceID(spaceID), budget.ID, item.TransactionDate)
+			period, err := s.GetOrCreatePeriod(ctx, spaceID, budget.ID, item.TransactionDate)
 			if err != nil {
 				return nil, fmt.Errorf("get or create period: %w", err)
 			}
@@ -2377,11 +2301,11 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID SpaceID, id stri
 			if err != nil {
 				return nil, fmt.Errorf("parse budget ID: %w", err)
 			}
-			budget, err := s.deps.BudgetStore.GetByID(ctx, SpaceID(spaceID), bID)
+			budget, err := s.deps.BudgetStore.GetByID(ctx, spaceID, bID)
 			if err != nil {
 				return nil, fmt.Errorf("get budget: %w", err)
 			}
-			period, err := s.GetOrCreatePeriod(ctx, SpaceID(spaceID), budget.ID, item.TransactionDate)
+			period, err := s.GetOrCreatePeriod(ctx, spaceID, budget.ID, item.TransactionDate)
 			if err != nil {
 				return nil, fmt.Errorf("get or create period: %w", err)
 			}
@@ -2390,17 +2314,11 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID SpaceID, id stri
 		}
 	}
 
-	// Calculate base currency conversion
-	rate, err := s.resolveExchangeRate(ctx, SpaceID(spaceID), Currency(item.Currency), settings.BaseCurrency, item.TransactionDate, true)
+	rate, err := s.resolveExchangeRate(ctx, spaceID, Currency(item.Currency), settings.BaseCurrency, item.TransactionDate, true)
 	if err != nil {
 		return nil, err
 	}
 	amountInBase := ConvertAmount(item.Amount, rate)
-
-	tID, err := NewTransactionID()
-	if err != nil {
-		return nil, err
-	}
 
 	var accountID *AccountID
 	if item.AccountID != nil && *item.AccountID != "" {
@@ -2416,8 +2334,7 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID SpaceID, id stri
 	}
 
 	txn := &Transaction{
-		ID:              tID,
-		SpaceID:         SpaceID(spaceID),
+		SpaceID:         spaceID,
 		Type:            txnType,
 		BudgetID:        budgetID,
 		PeriodID:        periodID,
@@ -2427,8 +2344,10 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID SpaceID, id stri
 		AmountInBase:    amountInBase,
 		Description:     item.VendorName,
 		TransactionDate: txDate,
-		CreateTime:      time.Now().UTC(),
-		UpdateTime:      time.Now().UTC(),
+	}
+
+	if err := txn.Init(); err != nil {
+		return nil, fmt.Errorf("init transaction: %w", err)
 	}
 
 	if err := txn.Validate(); err != nil {
@@ -2439,18 +2358,16 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID SpaceID, id stri
 		return nil, err
 	}
 
-	// Handle optional borrowing link for newly promoted transaction
 	if item.BorrowingID != nil && *item.BorrowingID != "" {
 		linkType := BorrowingLinkTypeInitialReceipt
 		if item.BorrowingLinkType != nil {
 			linkType = *item.BorrowingLinkType
 		}
-		if err := s.handleBorrowingLinkForTransaction(ctx, SpaceID(spaceID), txn, *item.BorrowingID, linkType); err != nil {
+		if err := s.handleBorrowingLinkForTransaction(ctx, spaceID, txn, *item.BorrowingID, linkType); err != nil {
 			return nil, fmt.Errorf("link borrowing to new transaction: %w", err)
 		}
 	}
 
-	// Mark inbox item as resolved and link it
 	item.MarkResolved(&txn.ID)
 	if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
 		return nil, fmt.Errorf("resolve inbox item: %w", err)
