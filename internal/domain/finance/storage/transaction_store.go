@@ -285,7 +285,7 @@ func (s *TransactionStore) AggregateSpent(ctx context.Context, periodID finance.
 			END
 		), 0) as spent_amount
 	FROM finance.transaction 
-	WHERE period_id = $1`
+	WHERE period_id = $1 AND type = 'EXPENSE'`
 
 	var row struct {
 		SpentInBase int64 `db:"spent_in_base"`
@@ -322,7 +322,7 @@ func (s *TransactionStore) AggregateSpentBatch(ctx context.Context, periodIDs []
 			), 0) as spent_amount
 		FROM finance.transaction t
 		JOIN finance.budget_period p ON t.period_id = p.id
-		WHERE t.period_id IN (?)
+		WHERE t.period_id IN (?) AND t.type = 'EXPENSE'
 		GROUP BY t.period_id
 	`, idStrings)
 	if err != nil {

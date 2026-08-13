@@ -40,7 +40,6 @@ import {
   Calculator,
   Hash,
   Filter,
-  Scale,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -202,14 +201,16 @@ export function TransactionsView() {
         }
   }
 
-  // Calculate stats from queried stream
+  // Calculate stats from queried stream (filtered by EXPENSE type for outflow calculations)
   const transactions = txnData?.transactions || []
-  const totalSpent = transactions.reduce(
+  const expenseTransactions = transactions.filter((t) => t.type === "EXPENSE")
+  const totalSpent = expenseTransactions.reduce(
     (acc, t) => acc + formatCents(t.amountInBase),
     0
   )
   const txCount = transactions.length
-  const avgSpent = txCount > 0 ? totalSpent / txCount : 0
+  const expenseCount = expenseTransactions.length
+  const avgSpent = expenseCount > 0 ? totalSpent / expenseCount : 0
   const pendingCount = pendingData?.inboxItems.length || 0
 
   return (
@@ -258,7 +259,7 @@ export function TransactionsView() {
             </div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">
-                Average Cost
+                Avg. per Expense
               </p>
               <h4 className="mt-0.5 text-2xl font-bold text-foreground">
                 {avgSpent.toLocaleString(undefined, {
@@ -595,12 +596,6 @@ export function TransactionsView() {
                               <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-blue-500 uppercase select-none">
                                 <Coins className="h-2.5 w-2.5" />
                                 Repayment
-                              </span>
-                            )}
-                            {t.type === "BALANCE_ADJUSTMENT" && (
-                              <span className="inline-flex items-center gap-1 rounded bg-teal-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-teal-400 uppercase select-none">
-                                <Scale className="h-2.5 w-2.5" />
-                                Adjustment
                               </span>
                             )}
                           </span>
