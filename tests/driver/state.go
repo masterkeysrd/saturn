@@ -26,8 +26,8 @@ type BorrowingInfo struct {
 	TotalAmount  int64
 }
 
-// RepaymentInfo stores registered repayment metadata.
-type RepaymentInfo struct {
+// BorrowingTransactionInfo stores registered borrowing transaction metadata.
+type BorrowingTransactionInfo struct {
 	ID          string
 	BorrowingID string
 	AccountID   string
@@ -71,19 +71,19 @@ type State struct {
 	UserEmail    string
 	UserPassword string
 
-	Accounts          map[string]*AccountInfo
-	Institutions      map[string]*InstitutionInfo
-	Borrowings        map[string]*BorrowingInfo
-	Repayments        map[string]*RepaymentInfo
-	Transfers         map[string]*financev1.Transfer
-	InboxItems        map[string]*InboxItemInfo
-	Budgets           map[string]string
-	ScheduledPayments map[string]string
+	Accounts              map[string]*AccountInfo
+	Institutions          map[string]*InstitutionInfo
+	Borrowings            map[string]*BorrowingInfo
+	BorrowingTransactions map[string]*BorrowingTransactionInfo
+	Transfers             map[string]*financev1.Transfer
+	InboxItems            map[string]*InboxItemInfo
+	Budgets               map[string]string
+	ScheduledPayments     map[string]string
 
 	LastAccount                     *AccountInfo
 	LastInstitution                 *InstitutionInfo
 	LastBorrowing                   *BorrowingInfo
-	LastRepayment                   *RepaymentInfo
+	LastBorrowingTransaction        *BorrowingTransactionInfo
 	LastTransfer                    *financev1.Transfer
 	LastInboxItem                   *InboxItemInfo
 	LastIntegrationID               string
@@ -95,15 +95,15 @@ type State struct {
 
 func newState(t *testing.T) *State {
 	return &State{
-		T:                 t,
-		Accounts:          make(map[string]*AccountInfo),
-		Institutions:      make(map[string]*InstitutionInfo),
-		Borrowings:        make(map[string]*BorrowingInfo),
-		Repayments:        make(map[string]*RepaymentInfo),
-		Transfers:         make(map[string]*financev1.Transfer),
-		InboxItems:        make(map[string]*InboxItemInfo),
-		Budgets:           make(map[string]string),
-		ScheduledPayments: make(map[string]string),
+		T:                     t,
+		Accounts:              make(map[string]*AccountInfo),
+		Institutions:          make(map[string]*InstitutionInfo),
+		Borrowings:            make(map[string]*BorrowingInfo),
+		BorrowingTransactions: make(map[string]*BorrowingTransactionInfo),
+		Transfers:             make(map[string]*financev1.Transfer),
+		InboxItems:            make(map[string]*InboxItemInfo),
+		Budgets:               make(map[string]string),
+		ScheduledPayments:     make(map[string]string),
 	}
 }
 
@@ -116,7 +116,7 @@ func (s *State) ClearRegistries() {
 	s.Accounts = make(map[string]*AccountInfo)
 	s.Institutions = make(map[string]*InstitutionInfo)
 	s.Borrowings = make(map[string]*BorrowingInfo)
-	s.Repayments = make(map[string]*RepaymentInfo)
+	s.BorrowingTransactions = make(map[string]*BorrowingTransactionInfo)
 	s.Transfers = make(map[string]*financev1.Transfer)
 	s.InboxItems = make(map[string]*InboxItemInfo)
 	s.Budgets = make(map[string]string)
@@ -124,7 +124,7 @@ func (s *State) ClearRegistries() {
 	s.LastAccount = nil
 	s.LastInstitution = nil
 	s.LastBorrowing = nil
-	s.LastRepayment = nil
+	s.LastBorrowingTransaction = nil
 	s.LastTransfer = nil
 	s.LastInboxItem = nil
 	s.LastTransactionID = ""

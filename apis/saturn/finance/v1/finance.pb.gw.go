@@ -1285,14 +1285,27 @@ func local_request_Finance_ListBorrowings_0(ctx context.Context, marshaler runti
 	return msg, metadata, err
 }
 
+var filter_Finance_UpdateBorrowing_0 = &utilities.DoubleArray{Encoding: map[string]int{"borrowing": 0, "id": 1}, Base: []int{1, 1, 2, 0, 0}, Check: []int{0, 1, 1, 2, 3}}
+
 func request_Finance_UpdateBorrowing_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq UpdateBorrowingRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq.Borrowing); err != nil && !errors.Is(err, io.EOF) {
+	newReader, berr := utilities.IOReaderFactory(req.Body)
+	if berr != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
+	}
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq.Borrowing); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if protoReq.UpdateMask == nil || len(protoReq.UpdateMask.GetPaths()) == 0 {
+		if fieldMask, err := runtime.FieldMaskFromRequestBody(newReader(), protoReq.Borrowing); err != nil {
+			return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+		} else {
+			protoReq.UpdateMask = fieldMask
+		}
 	}
 	val, ok := pathParams["id"]
 	if !ok {
@@ -1301,6 +1314,12 @@ func request_Finance_UpdateBorrowing_0(ctx context.Context, marshaler runtime.Ma
 	protoReq.Id, err = runtime.String(val)
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Finance_UpdateBorrowing_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
@@ -1315,8 +1334,19 @@ func local_request_Finance_UpdateBorrowing_0(ctx context.Context, marshaler runt
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq.Borrowing); err != nil && !errors.Is(err, io.EOF) {
+	newReader, berr := utilities.IOReaderFactory(req.Body)
+	if berr != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
+	}
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq.Borrowing); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if protoReq.UpdateMask == nil || len(protoReq.UpdateMask.GetPaths()) == 0 {
+		if fieldMask, err := runtime.FieldMaskFromRequestBody(newReader(), protoReq.Borrowing); err != nil {
+			return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+		} else {
+			protoReq.UpdateMask = fieldMask
+		}
 	}
 	val, ok := pathParams["id"]
 	if !ok {
@@ -1325,6 +1355,12 @@ func local_request_Finance_UpdateBorrowing_0(ctx context.Context, marshaler runt
 	protoReq.Id, err = runtime.String(val)
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Finance_UpdateBorrowing_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	msg, err := server.UpdateBorrowing(ctx, &protoReq)
 	return msg, metadata, err
@@ -1369,13 +1405,13 @@ func local_request_Finance_DeleteBorrowing_0(ctx context.Context, marshaler runt
 	return msg, metadata, err
 }
 
-func request_Finance_CreateBorrowingRepayment_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Finance_LogBorrowingTransaction_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq CreateBorrowingRepaymentRequest
+		protoReq LogBorrowingTransactionRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq.Repayment); err != nil && !errors.Is(err, io.EOF) {
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq.Transaction); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	val, ok := pathParams["borrowing_id"]
@@ -1389,17 +1425,17 @@ func request_Finance_CreateBorrowingRepayment_0(ctx context.Context, marshaler r
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	msg, err := client.CreateBorrowingRepayment(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.LogBorrowingTransaction(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 }
 
-func local_request_Finance_CreateBorrowingRepayment_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_Finance_LogBorrowingTransaction_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq CreateBorrowingRepaymentRequest
+		protoReq LogBorrowingTransactionRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq.Repayment); err != nil && !errors.Is(err, io.EOF) {
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq.Transaction); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	val, ok := pathParams["borrowing_id"]
@@ -1410,16 +1446,135 @@ func local_request_Finance_CreateBorrowingRepayment_0(ctx context.Context, marsh
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "borrowing_id", err)
 	}
-	msg, err := server.CreateBorrowingRepayment(ctx, &protoReq)
+	msg, err := server.LogBorrowingTransaction(ctx, &protoReq)
 	return msg, metadata, err
 }
 
-func request_Finance_ListBorrowingRepayments_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Finance_UpdateBorrowingTransaction_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq ListBorrowingRepaymentsRequest
+		protoReq UpdateBorrowingTransactionRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq.Transaction); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	val, ok := pathParams["borrowing_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "borrowing_id")
+	}
+	protoReq.BorrowingId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "borrowing_id", err)
+	}
+	val, ok = pathParams["transaction_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "transaction_id")
+	}
+	protoReq.TransactionId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "transaction_id", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	msg, err := client.UpdateBorrowingTransaction(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_Finance_UpdateBorrowingTransaction_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq UpdateBorrowingTransactionRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq.Transaction); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	val, ok := pathParams["borrowing_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "borrowing_id")
+	}
+	protoReq.BorrowingId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "borrowing_id", err)
+	}
+	val, ok = pathParams["transaction_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "transaction_id")
+	}
+	protoReq.TransactionId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "transaction_id", err)
+	}
+	msg, err := server.UpdateBorrowingTransaction(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_Finance_DeleteBorrowingTransaction_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq DeleteBorrowingTransactionRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["borrowing_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "borrowing_id")
+	}
+	protoReq.BorrowingId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "borrowing_id", err)
+	}
+	val, ok = pathParams["transaction_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "transaction_id")
+	}
+	protoReq.TransactionId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "transaction_id", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	msg, err := client.DeleteBorrowingTransaction(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_Finance_DeleteBorrowingTransaction_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq DeleteBorrowingTransactionRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["borrowing_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "borrowing_id")
+	}
+	protoReq.BorrowingId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "borrowing_id", err)
+	}
+	val, ok = pathParams["transaction_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "transaction_id")
+	}
+	protoReq.TransactionId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "transaction_id", err)
+	}
+	msg, err := server.DeleteBorrowingTransaction(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_Finance_AdjustBorrowingBalance_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq AdjustBorrowingBalanceRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
 	val, ok := pathParams["borrowing_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "borrowing_id")
@@ -1431,16 +1586,19 @@ func request_Finance_ListBorrowingRepayments_0(ctx context.Context, marshaler ru
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	msg, err := client.ListBorrowingRepayments(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.AdjustBorrowingBalance(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 }
 
-func local_request_Finance_ListBorrowingRepayments_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_Finance_AdjustBorrowingBalance_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq ListBorrowingRepaymentsRequest
+		protoReq AdjustBorrowingBalanceRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
 	val, ok := pathParams["borrowing_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "borrowing_id")
@@ -1449,62 +1607,7 @@ func local_request_Finance_ListBorrowingRepayments_0(ctx context.Context, marsha
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "borrowing_id", err)
 	}
-	msg, err := server.ListBorrowingRepayments(ctx, &protoReq)
-	return msg, metadata, err
-}
-
-func request_Finance_DeleteBorrowingRepayment_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var (
-		protoReq DeleteBorrowingRepaymentRequest
-		metadata runtime.ServerMetadata
-		err      error
-	)
-	val, ok := pathParams["borrowing_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "borrowing_id")
-	}
-	protoReq.BorrowingId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "borrowing_id", err)
-	}
-	val, ok = pathParams["id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
-	}
-	protoReq.Id, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
-	}
-	if req.Body != nil {
-		_, _ = io.Copy(io.Discard, req.Body)
-	}
-	msg, err := client.DeleteBorrowingRepayment(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-}
-
-func local_request_Finance_DeleteBorrowingRepayment_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var (
-		protoReq DeleteBorrowingRepaymentRequest
-		metadata runtime.ServerMetadata
-		err      error
-	)
-	val, ok := pathParams["borrowing_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "borrowing_id")
-	}
-	protoReq.BorrowingId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "borrowing_id", err)
-	}
-	val, ok = pathParams["id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
-	}
-	protoReq.Id, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
-	}
-	msg, err := server.DeleteBorrowingRepayment(ctx, &protoReq)
+	msg, err := server.AdjustBorrowingBalance(ctx, &protoReq)
 	return msg, metadata, err
 }
 
@@ -2926,7 +3029,7 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		}
 		forward_Finance_ListBorrowings_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPut, pattern_Finance_UpdateBorrowing_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPatch, pattern_Finance_UpdateBorrowing_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
@@ -2966,65 +3069,85 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		}
 		forward_Finance_DeleteBorrowing_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPost, pattern_Finance_CreateBorrowingRepayment_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPost, pattern_Finance_LogBorrowingTransaction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateBorrowingRepayment", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}/repayments"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/LogBorrowingTransaction", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}/transactions"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_Finance_CreateBorrowingRepayment_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Finance_LogBorrowingTransaction_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_CreateBorrowingRepayment_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_LogBorrowingTransaction_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodGet, pattern_Finance_ListBorrowingRepayments_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPut, pattern_Finance_UpdateBorrowingTransaction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListBorrowingRepayments", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}/repayments"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateBorrowingTransaction", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}/transactions/{transaction_id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_Finance_ListBorrowingRepayments_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Finance_UpdateBorrowingTransaction_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_ListBorrowingRepayments_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_UpdateBorrowingTransaction_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodDelete, pattern_Finance_DeleteBorrowingRepayment_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodDelete, pattern_Finance_DeleteBorrowingTransaction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteBorrowingRepayment", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}/repayments/{id}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteBorrowingTransaction", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}/transactions/{transaction_id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_Finance_DeleteBorrowingRepayment_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Finance_DeleteBorrowingTransaction_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_DeleteBorrowingRepayment_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_DeleteBorrowingTransaction_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_Finance_AdjustBorrowingBalance_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/AdjustBorrowingBalance", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}/adjust"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_Finance_AdjustBorrowingBalance_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Finance_AdjustBorrowingBalance_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
 	mux.Handle(http.MethodPost, pattern_Finance_CreateAccount_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -3970,7 +4093,7 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		}
 		forward_Finance_ListBorrowings_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPut, pattern_Finance_UpdateBorrowing_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPatch, pattern_Finance_UpdateBorrowing_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
@@ -4004,56 +4127,73 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		}
 		forward_Finance_DeleteBorrowing_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPost, pattern_Finance_CreateBorrowingRepayment_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPost, pattern_Finance_LogBorrowingTransaction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateBorrowingRepayment", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}/repayments"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/LogBorrowingTransaction", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}/transactions"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_Finance_CreateBorrowingRepayment_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Finance_LogBorrowingTransaction_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_CreateBorrowingRepayment_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_LogBorrowingTransaction_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodGet, pattern_Finance_ListBorrowingRepayments_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPut, pattern_Finance_UpdateBorrowingTransaction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListBorrowingRepayments", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}/repayments"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateBorrowingTransaction", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}/transactions/{transaction_id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_Finance_ListBorrowingRepayments_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Finance_UpdateBorrowingTransaction_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_ListBorrowingRepayments_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_UpdateBorrowingTransaction_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodDelete, pattern_Finance_DeleteBorrowingRepayment_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodDelete, pattern_Finance_DeleteBorrowingTransaction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteBorrowingRepayment", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}/repayments/{id}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteBorrowingTransaction", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}/transactions/{transaction_id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_Finance_DeleteBorrowingRepayment_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Finance_DeleteBorrowingTransaction_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_DeleteBorrowingRepayment_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_DeleteBorrowingTransaction_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_Finance_AdjustBorrowingBalance_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/AdjustBorrowingBalance", runtime.WithHTTPPathPattern("/v1/finance/borrowings/{borrowing_id}/adjust"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_Finance_AdjustBorrowingBalance_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Finance_AdjustBorrowingBalance_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
 	mux.Handle(http.MethodPost, pattern_Finance_CreateAccount_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -4365,117 +4505,119 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 }
 
 var (
-	pattern_Finance_ConfigureFinance_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "settings"}, ""))
-	pattern_Finance_GetFinanceSettings_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "settings"}, ""))
-	pattern_Finance_CreateBudget_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "budgets"}, ""))
-	pattern_Finance_GetBudget_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "budgets", "id"}, ""))
-	pattern_Finance_UpdateBudget_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "budgets", "id"}, ""))
-	pattern_Finance_DeleteBudget_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "budgets", "id"}, ""))
-	pattern_Finance_ListBudgets_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "budgets"}, ""))
-	pattern_Finance_GetBudgetPeriod_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "budgets", "budget_id", "period"}, ""))
-	pattern_Finance_CreateExchangeRate_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "exchange-rates"}, ""))
-	pattern_Finance_GetExchangeRate_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "exchange-rates", "id"}, ""))
-	pattern_Finance_UpdateExchangeRate_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "exchange-rates", "id"}, ""))
-	pattern_Finance_ListExchangeRates_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "exchange-rates"}, ""))
-	pattern_Finance_DeleteExchangeRate_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "exchange-rates", "id"}, ""))
-	pattern_Finance_CreateExpense_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "expenses"}, ""))
-	pattern_Finance_UpdateExpense_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "expenses", "id"}, ""))
-	pattern_Finance_DeleteTransaction_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "transactions", "id"}, ""))
-	pattern_Finance_ListTransactions_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "transactions"}, ""))
-	pattern_Finance_GetTransaction_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "transactions", "id"}, ""))
-	pattern_Finance_ListTransactionEvents_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "transactions", "txn_id", "events"}, ""))
-	pattern_Finance_GetInsights_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "insights"}, ""))
-	pattern_Finance_CreateRecurringExpense_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "recurring-expenses"}, ""))
-	pattern_Finance_UpdateRecurringExpense_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "recurring-expenses", "id"}, ""))
-	pattern_Finance_DeleteRecurringExpense_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "recurring-expenses", "id"}, ""))
-	pattern_Finance_ListRecurringExpenses_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "recurring-expenses"}, ""))
-	pattern_Finance_ListScheduledPayments_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "scheduled-payments"}, ""))
-	pattern_Finance_GetScheduledPayment_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "scheduled-payments", "id"}, ""))
-	pattern_Finance_ConfirmScheduledPayment_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "scheduled-payments", "payment_id", "confirm"}, ""))
-	pattern_Finance_MatchScheduledPayment_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "scheduled-payments", "payment_id", "match"}, ""))
-	pattern_Finance_SkipScheduledPayment_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "scheduled-payments", "id"}, "skip"))
-	pattern_Finance_CreateBorrowing_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "borrowings"}, ""))
-	pattern_Finance_GetBorrowing_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "borrowings", "id"}, ""))
-	pattern_Finance_ListBorrowings_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "borrowings"}, ""))
-	pattern_Finance_UpdateBorrowing_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "borrowings", "id"}, ""))
-	pattern_Finance_DeleteBorrowing_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "borrowings", "id"}, ""))
-	pattern_Finance_CreateBorrowingRepayment_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "borrowings", "borrowing_id", "repayments"}, ""))
-	pattern_Finance_ListBorrowingRepayments_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "borrowings", "borrowing_id", "repayments"}, ""))
-	pattern_Finance_DeleteBorrowingRepayment_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "finance", "borrowings", "borrowing_id", "repayments", "id"}, ""))
-	pattern_Finance_CreateAccount_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "accounts"}, ""))
-	pattern_Finance_GetAccount_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "accounts", "id"}, ""))
-	pattern_Finance_UpdateAccount_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "accounts", "id"}, ""))
-	pattern_Finance_AdjustAccountBalance_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "accounts", "account_id"}, "adjust-balance"))
-	pattern_Finance_DeleteAccount_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "accounts", "id"}, ""))
-	pattern_Finance_ListAccounts_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "accounts"}, ""))
-	pattern_Finance_CreateInstitution_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "institutions"}, ""))
-	pattern_Finance_UpdateInstitution_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "institutions", "id"}, ""))
-	pattern_Finance_DeleteInstitution_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "institutions", "id"}, ""))
-	pattern_Finance_ListInstitutions_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "institutions"}, ""))
-	pattern_Finance_ResolveInstitution_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "institutions"}, "resolve"))
-	pattern_Finance_CreateTransfer_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "transfers"}, ""))
-	pattern_Finance_ListTransfers_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "transfers"}, ""))
-	pattern_Finance_ListCurrencies_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "currencies"}, ""))
-	pattern_Finance_ListInboxItems_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "inbox-items"}, ""))
-	pattern_Finance_UpdateInboxItem_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "inbox-items", "id"}, ""))
-	pattern_Finance_ApproveInboxItem_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "inbox-items", "id"}, "approve"))
-	pattern_Finance_DiscardInboxItem_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "inbox-items", "id"}, ""))
+	pattern_Finance_ConfigureFinance_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "settings"}, ""))
+	pattern_Finance_GetFinanceSettings_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "settings"}, ""))
+	pattern_Finance_CreateBudget_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "budgets"}, ""))
+	pattern_Finance_GetBudget_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "budgets", "id"}, ""))
+	pattern_Finance_UpdateBudget_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "budgets", "id"}, ""))
+	pattern_Finance_DeleteBudget_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "budgets", "id"}, ""))
+	pattern_Finance_ListBudgets_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "budgets"}, ""))
+	pattern_Finance_GetBudgetPeriod_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "budgets", "budget_id", "period"}, ""))
+	pattern_Finance_CreateExchangeRate_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "exchange-rates"}, ""))
+	pattern_Finance_GetExchangeRate_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "exchange-rates", "id"}, ""))
+	pattern_Finance_UpdateExchangeRate_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "exchange-rates", "id"}, ""))
+	pattern_Finance_ListExchangeRates_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "exchange-rates"}, ""))
+	pattern_Finance_DeleteExchangeRate_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "exchange-rates", "id"}, ""))
+	pattern_Finance_CreateExpense_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "expenses"}, ""))
+	pattern_Finance_UpdateExpense_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "expenses", "id"}, ""))
+	pattern_Finance_DeleteTransaction_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "transactions", "id"}, ""))
+	pattern_Finance_ListTransactions_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "transactions"}, ""))
+	pattern_Finance_GetTransaction_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "transactions", "id"}, ""))
+	pattern_Finance_ListTransactionEvents_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "transactions", "txn_id", "events"}, ""))
+	pattern_Finance_GetInsights_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "insights"}, ""))
+	pattern_Finance_CreateRecurringExpense_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "recurring-expenses"}, ""))
+	pattern_Finance_UpdateRecurringExpense_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "recurring-expenses", "id"}, ""))
+	pattern_Finance_DeleteRecurringExpense_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "recurring-expenses", "id"}, ""))
+	pattern_Finance_ListRecurringExpenses_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "recurring-expenses"}, ""))
+	pattern_Finance_ListScheduledPayments_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "scheduled-payments"}, ""))
+	pattern_Finance_GetScheduledPayment_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "scheduled-payments", "id"}, ""))
+	pattern_Finance_ConfirmScheduledPayment_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "scheduled-payments", "payment_id", "confirm"}, ""))
+	pattern_Finance_MatchScheduledPayment_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "scheduled-payments", "payment_id", "match"}, ""))
+	pattern_Finance_SkipScheduledPayment_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "scheduled-payments", "id"}, "skip"))
+	pattern_Finance_CreateBorrowing_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "borrowings"}, ""))
+	pattern_Finance_GetBorrowing_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "borrowings", "id"}, ""))
+	pattern_Finance_ListBorrowings_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "borrowings"}, ""))
+	pattern_Finance_UpdateBorrowing_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "borrowings", "id"}, ""))
+	pattern_Finance_DeleteBorrowing_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "borrowings", "id"}, ""))
+	pattern_Finance_LogBorrowingTransaction_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "borrowings", "borrowing_id", "transactions"}, ""))
+	pattern_Finance_UpdateBorrowingTransaction_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "finance", "borrowings", "borrowing_id", "transactions", "transaction_id"}, ""))
+	pattern_Finance_DeleteBorrowingTransaction_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "finance", "borrowings", "borrowing_id", "transactions", "transaction_id"}, ""))
+	pattern_Finance_AdjustBorrowingBalance_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "borrowings", "borrowing_id", "adjust"}, ""))
+	pattern_Finance_CreateAccount_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "accounts"}, ""))
+	pattern_Finance_GetAccount_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "accounts", "id"}, ""))
+	pattern_Finance_UpdateAccount_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "accounts", "id"}, ""))
+	pattern_Finance_AdjustAccountBalance_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "accounts", "account_id"}, "adjust-balance"))
+	pattern_Finance_DeleteAccount_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "accounts", "id"}, ""))
+	pattern_Finance_ListAccounts_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "accounts"}, ""))
+	pattern_Finance_CreateInstitution_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "institutions"}, ""))
+	pattern_Finance_UpdateInstitution_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "institutions", "id"}, ""))
+	pattern_Finance_DeleteInstitution_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "institutions", "id"}, ""))
+	pattern_Finance_ListInstitutions_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "institutions"}, ""))
+	pattern_Finance_ResolveInstitution_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "institutions"}, "resolve"))
+	pattern_Finance_CreateTransfer_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "transfers"}, ""))
+	pattern_Finance_ListTransfers_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "transfers"}, ""))
+	pattern_Finance_ListCurrencies_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "currencies"}, ""))
+	pattern_Finance_ListInboxItems_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "inbox-items"}, ""))
+	pattern_Finance_UpdateInboxItem_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "inbox-items", "id"}, ""))
+	pattern_Finance_ApproveInboxItem_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "inbox-items", "id"}, "approve"))
+	pattern_Finance_DiscardInboxItem_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "inbox-items", "id"}, ""))
 )
 
 var (
-	forward_Finance_ConfigureFinance_0         = runtime.ForwardResponseMessage
-	forward_Finance_GetFinanceSettings_0       = runtime.ForwardResponseMessage
-	forward_Finance_CreateBudget_0             = runtime.ForwardResponseMessage
-	forward_Finance_GetBudget_0                = runtime.ForwardResponseMessage
-	forward_Finance_UpdateBudget_0             = runtime.ForwardResponseMessage
-	forward_Finance_DeleteBudget_0             = runtime.ForwardResponseMessage
-	forward_Finance_ListBudgets_0              = runtime.ForwardResponseMessage
-	forward_Finance_GetBudgetPeriod_0          = runtime.ForwardResponseMessage
-	forward_Finance_CreateExchangeRate_0       = runtime.ForwardResponseMessage
-	forward_Finance_GetExchangeRate_0          = runtime.ForwardResponseMessage
-	forward_Finance_UpdateExchangeRate_0       = runtime.ForwardResponseMessage
-	forward_Finance_ListExchangeRates_0        = runtime.ForwardResponseMessage
-	forward_Finance_DeleteExchangeRate_0       = runtime.ForwardResponseMessage
-	forward_Finance_CreateExpense_0            = runtime.ForwardResponseMessage
-	forward_Finance_UpdateExpense_0            = runtime.ForwardResponseMessage
-	forward_Finance_DeleteTransaction_0        = runtime.ForwardResponseMessage
-	forward_Finance_ListTransactions_0         = runtime.ForwardResponseMessage
-	forward_Finance_GetTransaction_0           = runtime.ForwardResponseMessage
-	forward_Finance_ListTransactionEvents_0    = runtime.ForwardResponseMessage
-	forward_Finance_GetInsights_0              = runtime.ForwardResponseMessage
-	forward_Finance_CreateRecurringExpense_0   = runtime.ForwardResponseMessage
-	forward_Finance_UpdateRecurringExpense_0   = runtime.ForwardResponseMessage
-	forward_Finance_DeleteRecurringExpense_0   = runtime.ForwardResponseMessage
-	forward_Finance_ListRecurringExpenses_0    = runtime.ForwardResponseMessage
-	forward_Finance_ListScheduledPayments_0    = runtime.ForwardResponseMessage
-	forward_Finance_GetScheduledPayment_0      = runtime.ForwardResponseMessage
-	forward_Finance_ConfirmScheduledPayment_0  = runtime.ForwardResponseMessage
-	forward_Finance_MatchScheduledPayment_0    = runtime.ForwardResponseMessage
-	forward_Finance_SkipScheduledPayment_0     = runtime.ForwardResponseMessage
-	forward_Finance_CreateBorrowing_0          = runtime.ForwardResponseMessage
-	forward_Finance_GetBorrowing_0             = runtime.ForwardResponseMessage
-	forward_Finance_ListBorrowings_0           = runtime.ForwardResponseMessage
-	forward_Finance_UpdateBorrowing_0          = runtime.ForwardResponseMessage
-	forward_Finance_DeleteBorrowing_0          = runtime.ForwardResponseMessage
-	forward_Finance_CreateBorrowingRepayment_0 = runtime.ForwardResponseMessage
-	forward_Finance_ListBorrowingRepayments_0  = runtime.ForwardResponseMessage
-	forward_Finance_DeleteBorrowingRepayment_0 = runtime.ForwardResponseMessage
-	forward_Finance_CreateAccount_0            = runtime.ForwardResponseMessage
-	forward_Finance_GetAccount_0               = runtime.ForwardResponseMessage
-	forward_Finance_UpdateAccount_0            = runtime.ForwardResponseMessage
-	forward_Finance_AdjustAccountBalance_0     = runtime.ForwardResponseMessage
-	forward_Finance_DeleteAccount_0            = runtime.ForwardResponseMessage
-	forward_Finance_ListAccounts_0             = runtime.ForwardResponseMessage
-	forward_Finance_CreateInstitution_0        = runtime.ForwardResponseMessage
-	forward_Finance_UpdateInstitution_0        = runtime.ForwardResponseMessage
-	forward_Finance_DeleteInstitution_0        = runtime.ForwardResponseMessage
-	forward_Finance_ListInstitutions_0         = runtime.ForwardResponseMessage
-	forward_Finance_ResolveInstitution_0       = runtime.ForwardResponseMessage
-	forward_Finance_CreateTransfer_0           = runtime.ForwardResponseMessage
-	forward_Finance_ListTransfers_0            = runtime.ForwardResponseMessage
-	forward_Finance_ListCurrencies_0           = runtime.ForwardResponseMessage
-	forward_Finance_ListInboxItems_0           = runtime.ForwardResponseMessage
-	forward_Finance_UpdateInboxItem_0          = runtime.ForwardResponseMessage
-	forward_Finance_ApproveInboxItem_0         = runtime.ForwardResponseMessage
-	forward_Finance_DiscardInboxItem_0         = runtime.ForwardResponseMessage
+	forward_Finance_ConfigureFinance_0           = runtime.ForwardResponseMessage
+	forward_Finance_GetFinanceSettings_0         = runtime.ForwardResponseMessage
+	forward_Finance_CreateBudget_0               = runtime.ForwardResponseMessage
+	forward_Finance_GetBudget_0                  = runtime.ForwardResponseMessage
+	forward_Finance_UpdateBudget_0               = runtime.ForwardResponseMessage
+	forward_Finance_DeleteBudget_0               = runtime.ForwardResponseMessage
+	forward_Finance_ListBudgets_0                = runtime.ForwardResponseMessage
+	forward_Finance_GetBudgetPeriod_0            = runtime.ForwardResponseMessage
+	forward_Finance_CreateExchangeRate_0         = runtime.ForwardResponseMessage
+	forward_Finance_GetExchangeRate_0            = runtime.ForwardResponseMessage
+	forward_Finance_UpdateExchangeRate_0         = runtime.ForwardResponseMessage
+	forward_Finance_ListExchangeRates_0          = runtime.ForwardResponseMessage
+	forward_Finance_DeleteExchangeRate_0         = runtime.ForwardResponseMessage
+	forward_Finance_CreateExpense_0              = runtime.ForwardResponseMessage
+	forward_Finance_UpdateExpense_0              = runtime.ForwardResponseMessage
+	forward_Finance_DeleteTransaction_0          = runtime.ForwardResponseMessage
+	forward_Finance_ListTransactions_0           = runtime.ForwardResponseMessage
+	forward_Finance_GetTransaction_0             = runtime.ForwardResponseMessage
+	forward_Finance_ListTransactionEvents_0      = runtime.ForwardResponseMessage
+	forward_Finance_GetInsights_0                = runtime.ForwardResponseMessage
+	forward_Finance_CreateRecurringExpense_0     = runtime.ForwardResponseMessage
+	forward_Finance_UpdateRecurringExpense_0     = runtime.ForwardResponseMessage
+	forward_Finance_DeleteRecurringExpense_0     = runtime.ForwardResponseMessage
+	forward_Finance_ListRecurringExpenses_0      = runtime.ForwardResponseMessage
+	forward_Finance_ListScheduledPayments_0      = runtime.ForwardResponseMessage
+	forward_Finance_GetScheduledPayment_0        = runtime.ForwardResponseMessage
+	forward_Finance_ConfirmScheduledPayment_0    = runtime.ForwardResponseMessage
+	forward_Finance_MatchScheduledPayment_0      = runtime.ForwardResponseMessage
+	forward_Finance_SkipScheduledPayment_0       = runtime.ForwardResponseMessage
+	forward_Finance_CreateBorrowing_0            = runtime.ForwardResponseMessage
+	forward_Finance_GetBorrowing_0               = runtime.ForwardResponseMessage
+	forward_Finance_ListBorrowings_0             = runtime.ForwardResponseMessage
+	forward_Finance_UpdateBorrowing_0            = runtime.ForwardResponseMessage
+	forward_Finance_DeleteBorrowing_0            = runtime.ForwardResponseMessage
+	forward_Finance_LogBorrowingTransaction_0    = runtime.ForwardResponseMessage
+	forward_Finance_UpdateBorrowingTransaction_0 = runtime.ForwardResponseMessage
+	forward_Finance_DeleteBorrowingTransaction_0 = runtime.ForwardResponseMessage
+	forward_Finance_AdjustBorrowingBalance_0     = runtime.ForwardResponseMessage
+	forward_Finance_CreateAccount_0              = runtime.ForwardResponseMessage
+	forward_Finance_GetAccount_0                 = runtime.ForwardResponseMessage
+	forward_Finance_UpdateAccount_0              = runtime.ForwardResponseMessage
+	forward_Finance_AdjustAccountBalance_0       = runtime.ForwardResponseMessage
+	forward_Finance_DeleteAccount_0              = runtime.ForwardResponseMessage
+	forward_Finance_ListAccounts_0               = runtime.ForwardResponseMessage
+	forward_Finance_CreateInstitution_0          = runtime.ForwardResponseMessage
+	forward_Finance_UpdateInstitution_0          = runtime.ForwardResponseMessage
+	forward_Finance_DeleteInstitution_0          = runtime.ForwardResponseMessage
+	forward_Finance_ListInstitutions_0           = runtime.ForwardResponseMessage
+	forward_Finance_ResolveInstitution_0         = runtime.ForwardResponseMessage
+	forward_Finance_CreateTransfer_0             = runtime.ForwardResponseMessage
+	forward_Finance_ListTransfers_0              = runtime.ForwardResponseMessage
+	forward_Finance_ListCurrencies_0             = runtime.ForwardResponseMessage
+	forward_Finance_ListInboxItems_0             = runtime.ForwardResponseMessage
+	forward_Finance_UpdateInboxItem_0            = runtime.ForwardResponseMessage
+	forward_Finance_ApproveInboxItem_0           = runtime.ForwardResponseMessage
+	forward_Finance_DiscardInboxItem_0           = runtime.ForwardResponseMessage
 )

@@ -32,14 +32,6 @@ type BudgetDeleteOptions struct {
 	ExpectErr string
 }
 
-// RepaymentOptions encapsulates options for creating a borrowing repayment.
-type RepaymentOptions struct {
-	Borrowing string // Name/alias of borrowing
-	Account   string // Name/alias of payment account
-	Amount    int64  // Repayment amount in borrowing currency cents
-	Notes     string // Optional notes
-}
-
 // FinanceDriver provides fluent methods for finance domain operations using financev1.Client SDK.
 type FinanceDriver struct {
 	driver      *Driver
@@ -163,6 +155,7 @@ type BorrowingOptions struct {
 	Direction    financev1.Borrowing_Direction
 	Currency     string
 	TotalAmount  int64
+	Account      string // Optional account to link initial transaction
 	ExpectErr    string
 	Assert       func(tb testing.TB, bor *financev1.Borrowing)
 }
@@ -173,13 +166,27 @@ func (f *FinanceDriver) CreateBorrowing(tb testing.TB, opts BorrowingOptions) *F
 	if tb.Failed() {
 		return f
 	}
+
+	var accountID *string
+	createAsTxn := false
+	if opts.Account != "" {
+		acc, ok := f.driver.state.Accounts[opts.Account]
+		if !ok {
+			tb.Fatalf("account named %q not found in state registry", opts.Account)
+		}
+		accountID = &acc.ID
+		createAsTxn = true
+	}
+
 	client := f.getClient()
 	bor, err := client.CreateBorrowing(tb.Context(), &financev1.CreateBorrowingRequest{
 		Borrowing: &financev1.Borrowing{
-			Counterparty: opts.Counterparty,
-			Direction:    opts.Direction,
-			Currency:     opts.Currency,
-			TotalAmount:  opts.TotalAmount,
+			Counterparty:        opts.Counterparty,
+			Direction:           opts.Direction,
+			Currency:            opts.Currency,
+			TotalAmount:         opts.TotalAmount,
+			AccountId:           accountID,
+			CreateAsTransaction: createAsTxn,
 		},
 	})
 	if opts.ExpectErr != "" {
@@ -214,8 +221,80 @@ func (f *FinanceDriver) CreateBorrowing(tb testing.TB, opts BorrowingOptions) *F
 	return f
 }
 
-// CreateRepayment creates a repayment against an existing borrowing agreement using financev1.Client.
-func (f *FinanceDriver) CreateRepayment(tb testing.TB, opts RepaymentOptions) *FinanceDriver {
+// UpdateBorrowingOptions parameters for updating a borrowing agreement.
+type UpdateBorrowingOptions struct {
+	Borrowing    string
+	TotalAmount  int64
+	Counterparty string
+	Direction    financev1.Borrowing_Direction
+	Currency     string
+	Account      string
+}
+
+// UpdateBorrowing updates a borrowing agreement using financev1.Client.
+func (f *FinanceDriver) UpdateBorrowing(tb testing.TB, opts UpdateBorrowingOptions) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+
+	borInfo, ok := f.driver.state.Borrowings[opts.Borrowing]
+	if !ok {
+		tb.Fatalf("borrowing named %q not found in state registry", opts.Borrowing)
+	}
+
+	var accountID *string
+	if opts.Account != "" {
+		accInfo, ok := f.driver.state.Accounts[opts.Account]
+		if !ok {
+			tb.Fatalf("account named %q not found in state registry", opts.Account)
+		}
+		accountID = &accInfo.ID
+	}
+
+	dir := opts.Direction
+	if dir == financev1.Borrowing_DIRECTION_UNSPECIFIED {
+		dir = borInfo.Direction
+	}
+	cp := opts.Counterparty
+	if cp == "" {
+		cp = borInfo.Counterparty
+	}
+	curr := opts.Currency
+	if curr == "" {
+		curr = borInfo.Currency
+	}
+
+	client := f.getClient()
+	updated, err := client.UpdateBorrowing(tb.Context(), &financev1.UpdateBorrowingRequest{
+		Id: borInfo.ID,
+		Borrowing: &financev1.Borrowing{
+			Id:           borInfo.ID,
+			Direction:    dir,
+			Counterparty: cp,
+			TotalAmount:  opts.TotalAmount,
+			Currency:     curr,
+			AccountId:    accountID,
+		},
+	})
+	if err != nil {
+		tb.Fatalf("UpdateBorrowing SDK call failed: %v", err)
+	}
+
+	borInfo.TotalAmount = updated.GetTotalAmount()
+	return f
+}
+
+// AdjustBorrowingBalanceOptions parameters for adjusting a borrowing balance.
+type AdjustBorrowingBalanceOptions struct {
+	Borrowing     string
+	TargetBalance int64
+	Account       string // Optional
+	Notes         string
+}
+
+// AdjustBorrowingBalance adjusts a borrowing remaining balance using financev1.Client.
+func (f *FinanceDriver) AdjustBorrowingBalance(tb testing.TB, opts AdjustBorrowingBalanceOptions) *FinanceDriver {
 	tb.Helper()
 	if tb.Failed() {
 		return f
@@ -225,57 +304,125 @@ func (f *FinanceDriver) CreateRepayment(tb testing.TB, opts RepaymentOptions) *F
 	if !ok {
 		tb.Fatalf("borrowing named %q not found in state registry", opts.Borrowing)
 	}
-	acc, ok := f.driver.state.Accounts[opts.Account]
-	if !ok {
-		tb.Fatalf("account named %q not found in state registry", opts.Account)
+
+	var accountID *string
+	if opts.Account != "" {
+		acc, ok := f.driver.state.Accounts[opts.Account]
+		if !ok {
+			tb.Fatalf("account named %q not found in state registry", opts.Account)
+		}
+		accountID = &acc.ID
 	}
 
 	client := f.getClient()
-	rep, err := client.CreateBorrowingRepayment(tb.Context(), &financev1.CreateBorrowingRepaymentRequest{
-		BorrowingId: bor.ID,
-		Repayment: &financev1.BorrowingRepayment{
-			Amount:    opts.Amount,
-			AccountId: acc.ID,
-			Notes:     opts.Notes,
-		},
-	})
-	if err != nil {
-		tb.Fatalf("CreateBorrowingRepayment SDK call failed: %v", err)
+	req := &financev1.AdjustBorrowingBalanceRequest{
+		BorrowingId:   bor.ID,
+		TargetBalance: opts.TargetBalance,
+		AccountId:     accountID,
+	}
+	if opts.Notes != "" {
+		req.Notes = &opts.Notes
 	}
 
-	repKey := opts.Borrowing + "_repayment"
-	repInfo := &RepaymentInfo{
-		ID:          rep.GetId(),
-		BorrowingID: bor.ID,
-		AccountID:   acc.ID,
-		Amount:      opts.Amount,
+	_, err := client.AdjustBorrowingBalance(tb.Context(), req)
+	if err != nil {
+		tb.Fatalf("AdjustBorrowingBalance SDK call failed: %v", err)
 	}
-	f.driver.state.Repayments[repKey] = repInfo
-	f.driver.state.LastRepayment = repInfo
+
 	return f
 }
 
-// DeleteRepayment deletes a borrowing repayment using financev1.Client.
-func (f *FinanceDriver) DeleteRepayment(tb testing.TB, repaymentKey string) *FinanceDriver {
+// LogBorrowingTransactionOptions parameters for logging a borrowing transaction.
+type LogBorrowingTransactionOptions struct {
+	Borrowing string
+	Type      financev1.BorrowingTransactionType
+	Amount    int64
+	Account   string // Optional
+	Notes     string
+	Key       string // Optional state key
+}
+
+// LogBorrowingTransaction logs a borrowing payment or disbursement using financev1.Client.
+func (f *FinanceDriver) LogBorrowingTransaction(tb testing.TB, opts LogBorrowingTransactionOptions) *FinanceDriver {
 	tb.Helper()
 	if tb.Failed() {
 		return f
 	}
 
-	rep, ok := f.driver.state.Repayments[repaymentKey]
+	bor, ok := f.driver.state.Borrowings[opts.Borrowing]
 	if !ok {
-		tb.Fatalf("repayment key %q not found in state registry", repaymentKey)
+		tb.Fatalf("borrowing named %q not found in state registry", opts.Borrowing)
+	}
+
+	var accountID *string
+	var accIDStr string
+	if opts.Account != "" {
+		acc, ok := f.driver.state.Accounts[opts.Account]
+		if !ok {
+			tb.Fatalf("account named %q not found in state registry", opts.Account)
+		}
+		accountID = &acc.ID
+		accIDStr = acc.ID
 	}
 
 	client := f.getClient()
-	_, err := client.DeleteTransaction(tb.Context(), &financev1.DeleteTransactionRequest{
-		Id: rep.ID,
-	})
-	if err != nil {
-		tb.Fatalf("DeleteTransaction SDK call failed for repayment: %v", err)
+	txnInput := &financev1.BorrowingTransactionInput{
+		Type:      opts.Type,
+		Amount:    opts.Amount,
+		AccountId: accountID,
+	}
+	if opts.Notes != "" {
+		txnInput.Notes = &opts.Notes
 	}
 
-	delete(f.driver.state.Repayments, repaymentKey)
+	req := &financev1.LogBorrowingTransactionRequest{
+		BorrowingId: bor.ID,
+		Transaction: txnInput,
+	}
+
+	res, err := client.LogBorrowingTransaction(tb.Context(), req)
+	if err != nil {
+		tb.Fatalf("LogBorrowingTransaction SDK call failed: %v", err)
+	}
+
+	key := opts.Key
+	if key == "" {
+		key = opts.Borrowing + "_tx_" + res.GetId()
+	}
+	repInfo := &BorrowingTransactionInfo{
+		ID:          res.GetId(),
+		BorrowingID: bor.ID,
+		AccountID:   accIDStr,
+		Amount:      opts.Amount,
+	}
+	f.driver.state.BorrowingTransactions[key] = repInfo
+	f.driver.state.LastBorrowingTransaction = repInfo
+
+	return f
+}
+
+// DeleteBorrowingTransaction deletes a borrowing transaction using financev1.Client.
+func (f *FinanceDriver) DeleteBorrowingTransaction(tb testing.TB, transactionKey string) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+
+	rep, ok := f.driver.state.BorrowingTransactions[transactionKey]
+	if !ok {
+		tb.Fatalf("borrowing transaction key %q not found in state registry", transactionKey)
+	}
+
+	client := f.getClient()
+	_, err := client.DeleteBorrowingTransaction(tb.Context(), &financev1.DeleteBorrowingTransactionRequest{
+		BorrowingId:   rep.BorrowingID,
+		TransactionId: rep.ID,
+	})
+	if err != nil {
+		tb.Fatalf("DeleteBorrowingTransaction SDK call failed: %v", err)
+	}
+
+	delete(f.driver.state.BorrowingTransactions, transactionKey)
 	return f
 }
 
@@ -372,16 +519,16 @@ func (f *FinanceDriver) AssertBorrowingBalance(tb testing.TB, borrowingName stri
 	return f
 }
 
-// AssertRepaymentTransaction verifies that a transaction event was logged for a repayment.
-func (f *FinanceDriver) AssertRepaymentTransaction(tb testing.TB, repaymentKey string, expectedAmount int64) *FinanceDriver {
+// AssertBorrowingTransaction verifies that a transaction event was logged for a borrowing transaction.
+func (f *FinanceDriver) AssertBorrowingTransaction(tb testing.TB, transactionKey string, expectedAmount int64) *FinanceDriver {
 	tb.Helper()
 	if tb.Failed() {
 		return f
 	}
 
-	rep, ok := f.driver.state.Repayments[repaymentKey]
+	rep, ok := f.driver.state.BorrowingTransactions[transactionKey]
 	if !ok {
-		tb.Fatalf("repayment key %q not found in state registry", repaymentKey)
+		tb.Fatalf("borrowing transaction key %q not found in state registry", transactionKey)
 	}
 
 	client := f.getClient()
@@ -399,11 +546,11 @@ func (f *FinanceDriver) AssertRepaymentTransaction(tb testing.TB, repaymentKey s
 	}
 
 	if foundTx == nil {
-		tb.Fatalf("transaction with ID %s for repayment %q not found in ListTransactions response", rep.ID, repaymentKey)
+		tb.Fatalf("transaction with ID %s for key %q not found in ListTransactions response", rep.ID, transactionKey)
 	}
 
 	if foundTx.GetAmount() != expectedAmount {
-		tb.Errorf("Transaction for repayment %q amount = %d, want %d", repaymentKey, foundTx.GetAmount(), expectedAmount)
+		tb.Errorf("Transaction for key %q amount = %d, want %d", transactionKey, foundTx.GetAmount(), expectedAmount)
 	}
 	return f
 }
@@ -424,6 +571,47 @@ func (f *FinanceDriver) AssertTransactionCount(tb testing.TB, expectedCount int)
 	if count != expectedCount {
 		tb.Errorf("Transaction count = %d, want %d", count, expectedCount)
 	}
+	return f
+}
+
+// AssertBorrowingTransactions fetches transactions for a borrowing live via gRPC API ListTransactions and passes them to a callback.
+func (f *FinanceDriver) AssertBorrowingTransactions(tb testing.TB, borrowingName string, fn func(txns []*financev1.Transaction)) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+
+	borInfo, ok := f.driver.state.Borrowings[borrowingName]
+	if !ok {
+		tb.Fatalf("borrowing named %q not found in state registry", borrowingName)
+	}
+
+	client := f.getClient()
+	resp, err := client.ListTransactions(tb.Context(), &financev1.ListTransactionsRequest{
+		BorrowingId: &borInfo.ID,
+	})
+	if err != nil {
+		tb.Fatalf("ListTransactions SDK call for borrowing failed: %v", err)
+	}
+
+	fn(resp.GetTransactions())
+	return f
+}
+
+// AssertTransactions fetches all transactions in the space live via gRPC API and passes them to a callback.
+func (f *FinanceDriver) AssertTransactions(tb testing.TB, fn func(txns []*financev1.Transaction)) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+
+	client := f.getClient()
+	resp, err := client.ListTransactions(tb.Context(), &financev1.ListTransactionsRequest{})
+	if err != nil {
+		tb.Fatalf("ListTransactions SDK call failed: %v", err)
+	}
+
+	fn(resp.GetTransactions())
 	return f
 }
 

@@ -178,6 +178,13 @@ func (h *Handler) UpdateBorrowing(ctx context.Context, req *financev1.UpdateBorr
 		accountID = &idVal
 	}
 
+	var versionVal int64
+	if req.Version != nil {
+		versionVal = *req.Version
+	} else if input.Version > 0 {
+		versionVal = input.Version
+	}
+
 	appReq := &financeapp.UpdateBorrowingRequest{
 		ID:            bID,
 		Direction:     toDomainBorrowingDirection(input.GetDirection()),
@@ -189,6 +196,8 @@ func (h *Handler) UpdateBorrowing(ctx context.Context, req *financev1.UpdateBorr
 		DueAt:         dueAt,
 		Notes:         input.GetNotes(),
 		AccountID:     accountID,
+		Version:       versionVal,
+		UpdateMask:    req.GetUpdateMask().GetPaths(),
 	}
 
 	b, err := h.Coordinator.UpdateBorrowing(ctx, appReq)
@@ -213,92 +222,161 @@ func (h *Handler) DeleteBorrowing(ctx context.Context, req *financev1.DeleteBorr
 	return &emptypb.Empty{}, nil
 }
 
-func (h *Handler) CreateBorrowingRepayment(ctx context.Context, req *financev1.CreateBorrowingRepaymentRequest) (*financev1.BorrowingRepayment, error) {
-	input := req.GetRepayment()
-	if input == nil {
-		return nil, status.Error(codes.InvalidArgument, "missing repayment payload")
-	}
-
+func (h *Handler) LogBorrowingTransaction(ctx context.Context, req *financev1.LogBorrowingTransactionRequest) (*financev1.Transaction, error) {
 	bID, err := finance.ParseBorrowingID(req.GetBorrowingId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	aID, err := finance.ParseAccountID(input.GetAccountId())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+	txn := req.GetTransaction()
+	if txn == nil {
+		return nil, status.Error(codes.InvalidArgument, "missing transaction payload")
 	}
 
-	var paymentDate time.Time
-	if input.GetPaymentDate() != nil {
-		paymentDate = input.GetPaymentDate().AsTime()
-	} else {
-		paymentDate = time.Now().UTC()
+	var accountIDPtr *finance.AccountID
+	if txn.AccountId != nil && *txn.AccountId != "" {
+		aID, parseErr := finance.ParseAccountID(*txn.AccountId)
+		if parseErr != nil {
+			return nil, status.Error(codes.InvalidArgument, parseErr.Error())
+		}
+		accountIDPtr = &aID
 	}
 
-	appReq := &financeapp.CreateBorrowingRepaymentRequest{
-		BorrowingID: bID,
-		Amount:      input.GetAmount(),
-		PaymentDate: paymentDate,
-		Notes:       input.GetNotes(),
-		AccountID:   aID,
+	var parsedDate time.Time
+	if txn.TransactionDate != nil && *txn.TransactionDate != "" {
+		if t, pErr := time.Parse(time.RFC3339, *txn.TransactionDate); pErr == nil {
+			parsedDate = t
+		} else if t, pErr := time.Parse("2006-01-02", *txn.TransactionDate); pErr == nil {
+			parsedDate = t
+		}
 	}
 
-	r, err := h.Coordinator.CreateBorrowingRepayment(ctx, appReq)
+	domainType := finance.BorrowingTransactionTypePayment
+	if txn.GetType() == financev1.BorrowingTransactionType_BORROWING_TRANSACTION_TYPE_DISBURSEMENT {
+		domainType = finance.BorrowingTransactionTypeDisbursement
+	}
+
+	res, err := h.Coordinator.LogBorrowingTransaction(ctx, &financeapp.LogBorrowingTransactionRequest{
+		BorrowingID:     bID,
+		Type:            domainType,
+		Amount:          txn.GetAmount(),
+		TransactionDate: parsedDate,
+		AccountID:       accountIDPtr,
+		Notes:           txn.GetNotes(),
+	})
 	if err != nil {
 		return nil, h.mapError(err)
 	}
 
-	return toProtoBorrowingRepayment(r), nil
+	return toProtoTransaction(res), nil
 }
 
-func (h *Handler) ListBorrowingRepayments(ctx context.Context, req *financev1.ListBorrowingRepaymentsRequest) (*financev1.ListBorrowingRepaymentsResponse, error) {
+func (h *Handler) UpdateBorrowingTransaction(ctx context.Context, req *financev1.UpdateBorrowingTransactionRequest) (*financev1.Transaction, error) {
 	bID, err := finance.ParseBorrowingID(req.GetBorrowingId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
-	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	tID, err := finance.ParseTransactionID(req.GetTransactionId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	spaceID := finance.SpaceID(spaceIDStr)
 
-	list, err := h.Aggregator.ListBorrowingRepayments(ctx, spaceID, bID)
+	txn := req.GetTransaction()
+	if txn == nil {
+		return nil, status.Error(codes.InvalidArgument, "missing transaction payload")
+	}
+
+	var accountIDPtr *finance.AccountID
+	if txn.AccountId != nil && *txn.AccountId != "" {
+		aID, parseErr := finance.ParseAccountID(*txn.AccountId)
+		if parseErr != nil {
+			return nil, status.Error(codes.InvalidArgument, parseErr.Error())
+		}
+		accountIDPtr = &aID
+	}
+
+	var parsedDate time.Time
+	if txn.TransactionDate != nil && *txn.TransactionDate != "" {
+		if t, pErr := time.Parse(time.RFC3339, *txn.TransactionDate); pErr == nil {
+			parsedDate = t
+		} else if t, pErr := time.Parse("2006-01-02", *txn.TransactionDate); pErr == nil {
+			parsedDate = t
+		}
+	}
+
+	domainType := finance.BorrowingTransactionTypePayment
+	if txn.GetType() == financev1.BorrowingTransactionType_BORROWING_TRANSACTION_TYPE_DISBURSEMENT {
+		domainType = finance.BorrowingTransactionTypeDisbursement
+	}
+
+	res, err := h.Coordinator.UpdateBorrowingTransaction(ctx, &financeapp.UpdateBorrowingTransactionRequest{
+		BorrowingID:     bID,
+		TransactionID:   tID,
+		Type:            domainType,
+		Amount:          txn.GetAmount(),
+		TransactionDate: parsedDate,
+		AccountID:       accountIDPtr,
+		Notes:           txn.GetNotes(),
+	})
 	if err != nil {
 		return nil, h.mapError(err)
 	}
 
-	protoList := make([]*financev1.BorrowingRepayment, 0, len(list))
-	for _, r := range list {
-		protoList = append(protoList, toProtoBorrowingRepayment(r))
-	}
-
-	return &financev1.ListBorrowingRepaymentsResponse{
-		Repayments: protoList,
-	}, nil
+	return toProtoTransaction(res), nil
 }
 
-func (h *Handler) DeleteBorrowingRepayment(ctx context.Context, req *financev1.DeleteBorrowingRepaymentRequest) (*emptypb.Empty, error) {
+func (h *Handler) DeleteBorrowingTransaction(ctx context.Context, req *financev1.DeleteBorrowingTransactionRequest) (*emptypb.Empty, error) {
 	bID, err := finance.ParseBorrowingID(req.GetBorrowingId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	rID, err := finance.ParseBorrowingRepaymentID(req.GetId())
+	tID, err := finance.ParseTransactionID(req.GetTransactionId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	err = h.Coordinator.DeleteBorrowingRepayment(ctx, &financeapp.DeleteBorrowingRepaymentRequest{
-		BorrowingID: bID,
-		ID:          rID,
+	err = h.Coordinator.DeleteBorrowingTransaction(ctx, &financeapp.DeleteBorrowingTransactionRequest{
+		BorrowingID:   bID,
+		TransactionID: tID,
 	})
 	if err != nil {
 		return nil, h.mapError(err)
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func (h *Handler) AdjustBorrowingBalance(ctx context.Context, req *financev1.AdjustBorrowingBalanceRequest) (*financev1.Borrowing, error) {
+	bID, err := finance.ParseBorrowingID(req.GetBorrowingId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	var accountIDPtr *finance.AccountID
+	if req.AccountId != nil && *req.AccountId != "" {
+		aID, parseErr := finance.ParseAccountID(*req.AccountId)
+		if parseErr != nil {
+			return nil, status.Error(codes.InvalidArgument, parseErr.Error())
+		}
+		accountIDPtr = &aID
+	}
+
+	appReq := &financeapp.AdjustBorrowingBalanceRequest{
+		BorrowingID:    bID,
+		TargetBalance:  req.GetTargetBalance(),
+		AdjustmentDate: req.GetAdjustmentDate(),
+		Notes:          req.GetNotes(),
+		AccountID:      accountIDPtr,
+	}
+
+	b, err := h.Coordinator.AdjustBorrowingBalance(ctx, appReq)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoBorrowing(b), nil
 }
 
 // Mappers
@@ -358,31 +436,9 @@ func toProtoBorrowing(b *finance.Borrowing) *financev1.Borrowing {
 		EstablishedAt:       timestamppb.New(b.EstablishedAt),
 		DueAt:               dueAt,
 		Notes:               b.Notes,
+		Version:             b.Version,
 		CreateTime:          timestamppb.New(b.CreateTime),
 		UpdateTime:          timestamppb.New(b.UpdateTime),
 		CreateAsTransaction: false,
-	}
-}
-
-func toProtoBorrowingRepayment(r *finance.BorrowingRepayment) *financev1.BorrowingRepayment {
-	if r == nil {
-		return nil
-	}
-
-	var accountID string
-	if r.AccountID != nil {
-		accountID = string(*r.AccountID)
-	}
-
-	return &financev1.BorrowingRepayment{
-		Id:          string(r.ID),
-		BorrowingId: string(r.BorrowingID),
-		SpaceId:     string(r.SpaceID),
-		Amount:      r.Amount,
-		PaymentDate: timestamppb.New(r.PaymentDate),
-		Notes:       r.Notes,
-		AccountId:   accountID,
-		CreateTime:  timestamppb.New(r.CreateTime),
-		UpdateTime:  timestamppb.New(r.UpdateTime),
 	}
 }

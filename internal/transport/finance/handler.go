@@ -591,7 +591,7 @@ func (h *Handler) mapError(err error) error {
 		return status.Error(codes.NotFound, "borrowing not found")
 	case errors.Is(err, finance.ErrRepaymentNotFound):
 		return status.Error(codes.NotFound, "borrowing repayment not found")
-	case errors.Is(err, finance.ErrBudgetVersionMismatch), errors.Is(err, finance.ErrAccountVersionMismatch), errors.Is(err, finance.ErrInstitutionVersionMismatch):
+	case errors.Is(err, finance.ErrBudgetVersionMismatch), errors.Is(err, finance.ErrAccountVersionMismatch), errors.Is(err, finance.ErrInstitutionVersionMismatch), errors.Is(err, finance.ErrBorrowingVersionMismatch):
 		return status.Error(codes.Aborted, err.Error())
 	}
 

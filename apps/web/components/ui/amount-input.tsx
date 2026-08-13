@@ -57,7 +57,10 @@ function formatAmountString(val: string, allowNegative?: boolean): string {
   return isNegative ? `-${res}` : res
 }
 
-function parseAmountString(formattedVal: string, allowNegative?: boolean): string {
+function parseAmountString(
+  formattedVal: string,
+  allowNegative?: boolean
+): string {
   if (!formattedVal) return ""
   const isNegative = allowNegative && formattedVal.startsWith("-")
   const cleanVal = formattedVal.replace(/^-/, "")

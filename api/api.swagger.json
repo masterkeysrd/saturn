@@ -1132,45 +1132,15 @@
         ]
       }
     },
-    "/v1/finance/borrowings/{borrowingId}/repayments": {
-      "get": {
-        "summary": "Lists all repayment installments registered under a debt agreement.",
-        "operationId": "Finance_ListBorrowingRepayments",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListBorrowingRepaymentsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/googleRpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "borrowingId",
-            "description": "Required. Target parent borrowing identifier.\nValues are of the form `bor_[a-zA-Z0-9]+`.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Finance"
-        ]
-      },
+    "/v1/finance/borrowings/{borrowingId}/adjust": {
       "post": {
-        "summary": "Logs a repayment installment reducing the remaining amount of an active debt agreement.",
-        "operationId": "Finance_CreateBorrowingRepayment",
+        "summary": "Adjusts the remaining balance of a borrowing record directly and logs an adjustment transaction.",
+        "operationId": "Finance_AdjustBorrowingBalance",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1BorrowingRepayment"
+              "$ref": "#/definitions/v1Borrowing"
             }
           },
           "default": {
@@ -1183,18 +1153,17 @@
         "parameters": [
           {
             "name": "borrowingId",
-            "description": "Required. Target parent borrowing identifier.\nValues are of the form `bor_[a-zA-Z0-9]+`.",
+            "description": "Required. Target borrowing identifier.",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
-            "name": "repayment",
-            "description": "Required. Updated repayment parameters.",
+            "name": "body",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1BorrowingRepayment"
+              "$ref": "#/definitions/FinanceAdjustBorrowingBalanceBody"
             }
           }
         ],
@@ -1203,10 +1172,51 @@
         ]
       }
     },
-    "/v1/finance/borrowings/{borrowingId}/repayments/{id}": {
+    "/v1/finance/borrowings/{borrowingId}/transactions": {
+      "post": {
+        "summary": "Logs a new borrowing transaction (payment or debt increase).",
+        "operationId": "Finance_LogBorrowingTransaction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Transaction"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "borrowingId",
+            "description": "Required. Target parent borrowing identifier.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "transaction",
+            "description": "Required. Transaction parameters.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1BorrowingTransactionInput"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/borrowings/{borrowingId}/transactions/{transactionId}": {
       "delete": {
-        "summary": "Deletes a borrowing repayment, restoring the debt balance of the borrowing agreement.",
-        "operationId": "Finance_DeleteBorrowingRepayment",
+        "summary": "Deletes a borrowing transaction and reverts balance impacts.",
+        "operationId": "Finance_DeleteBorrowingTransaction",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -1225,17 +1235,63 @@
         "parameters": [
           {
             "name": "borrowingId",
-            "description": "Required. Target parent borrowing identifier.\nValues are of the form `bor_[a-zA-Z0-9]+`.",
+            "description": "Required. Target parent borrowing identifier.",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
-            "name": "id",
-            "description": "Required. Unique identifier of the installment repayment to delete.\nValues are of the form `rep_[a-zA-Z0-9]+`.",
+            "name": "transactionId",
+            "description": "Required. Target transaction identifier to delete.",
             "in": "path",
             "required": true,
             "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "put": {
+        "summary": "Updates borrowing transaction parameters and recalculates balances.",
+        "operationId": "Finance_UpdateBorrowingTransaction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Transaction"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "borrowingId",
+            "description": "Required. Target parent borrowing identifier.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "transactionId",
+            "description": "Required. Target transaction identifier to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "transaction",
+            "description": "Required. Updated transaction parameters.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1BorrowingTransactionInput"
+            }
           }
         ],
         "tags": [
@@ -1305,7 +1361,7 @@
           "Finance"
         ]
       },
-      "put": {
+      "patch": {
         "summary": "Updates properties of a borrowing record (such as counterparty contact details).",
         "operationId": "Finance_UpdateBorrowing",
         "responses": {
@@ -1338,6 +1394,14 @@
             "schema": {
               "$ref": "#/definitions/v1Borrowing"
             }
+          },
+          {
+            "name": "version",
+            "description": "Optional. Version number for optimistic concurrency control.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -4755,6 +4819,32 @@
         "targetBalance"
       ]
     },
+    "FinanceAdjustBorrowingBalanceBody": {
+      "type": "object",
+      "properties": {
+        "targetBalance": {
+          "type": "string",
+          "format": "int64",
+          "description": "Required. Target remaining balance in cents."
+        },
+        "adjustmentDate": {
+          "type": "string",
+          "description": "Optional. Date of the balance adjustment."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional. Reconciliation note or reason for adjustment."
+        },
+        "accountId": {
+          "type": "string",
+          "description": "Optional. Bank account ID to register a balance adjustment transaction."
+        }
+      },
+      "description": "The request for\n[AdjustBorrowingBalance][saturn.finance.v1.Finance.AdjustBorrowingBalance].",
+      "required": [
+        "targetBalance"
+      ]
+    },
     "FinanceApproveInboxItemBody": {
       "type": "object",
       "description": "The request for\n[ApproveInboxItem][saturn.finance.v1.Finance.ApproveInboxItem]."
@@ -5744,6 +5834,12 @@
         "accountId": {
           "type": "string",
           "description": "Optional. Source account identifier for transaction creation.\nValues are of the form `acc_[a-zA-Z0-9]+`."
+        },
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "Output only. Version counter for optimistic concurrency control.",
+          "readOnly": true
         }
       },
       "description": "Borrowing represents a personal lent/borrowed debt agreement.",
@@ -5765,62 +5861,6 @@
       ],
       "description": "Borrowing link classification type.\n\n - BORROWING_LINK_TYPE_INITIAL_RECEIPT: Original funding proof ($0 balance adjustment)\n - BORROWING_LINK_TYPE_REPAYMENT: Installment payback (reduces remaining balance)\n - BORROWING_LINK_TYPE_ADDITIONAL_LOAN: Top-up / extra drawdown (increases balance)"
     },
-    "v1BorrowingRepayment": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Output only. Unique identifier.\nValues are of the form `rep_[a-zA-Z0-9]+`.",
-          "readOnly": true
-        },
-        "borrowingId": {
-          "type": "string",
-          "description": "Required. Parent borrowing identifier.\nValues are of the form `bor_[a-zA-Z0-9]+`."
-        },
-        "spaceId": {
-          "type": "string",
-          "description": "Output only. Space identifier.",
-          "readOnly": true
-        },
-        "amount": {
-          "type": "string",
-          "format": "int64",
-          "description": "Required. Installment amount in cents."
-        },
-        "paymentDate": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Required. Installment payment date."
-        },
-        "notes": {
-          "type": "string",
-          "description": "Optional. Narration notes."
-        },
-        "createTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Output only. Creation timestamp.",
-          "readOnly": true
-        },
-        "updateTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Output only. Last update timestamp.",
-          "readOnly": true
-        },
-        "accountId": {
-          "type": "string",
-          "description": "Required. Source account identifier.\nValues are of the form `acc_[a-zA-Z0-9]+`."
-        }
-      },
-      "description": "BorrowingRepayment represents an installment payment towards a borrowing.",
-      "required": [
-        "borrowingId",
-        "amount",
-        "paymentDate",
-        "accountId"
-      ]
-    },
     "v1BorrowingStatus": {
       "type": "string",
       "enum": [
@@ -5828,6 +5868,45 @@
         "PAID_OFF"
       ],
       "description": "BorrowingStatus defines the lifecycle status of debt agreements.\n\n - ACTIVE: Active borrowing with pending outstanding balances.\n - PAID_OFF: Paid-off borrowing with zero remaining balance."
+    },
+    "v1BorrowingTransactionInput": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/v1BorrowingTransactionType",
+          "description": "Required. Transaction type: PAYMENT (repayment) or DISBURSEMENT (debt increase)."
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64",
+          "description": "Required. Amount in cents."
+        },
+        "transactionDate": {
+          "type": "string",
+          "description": "Optional. Date of the payment or disbursement."
+        },
+        "accountId": {
+          "type": "string",
+          "description": "Optional. Payment or liquidity account identifier."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional. Memo or notes for this transaction."
+        }
+      },
+      "description": "Common payload parameters for logging or updating a borrowing transaction.",
+      "required": [
+        "type",
+        "amount"
+      ]
+    },
+    "v1BorrowingTransactionType": {
+      "type": "string",
+      "enum": [
+        "BORROWING_TRANSACTION_TYPE_PAYMENT",
+        "BORROWING_TRANSACTION_TYPE_DISBURSEMENT"
+      ],
+      "description": "Enum representing the type of borrowing transaction.\n\n - BORROWING_TRANSACTION_TYPE_PAYMENT: Payment towards reducing debt (repayment).\n - BORROWING_TRANSACTION_TYPE_DISBURSEMENT: Additional loan drawdown or funds lent out (debt increase)."
     },
     "v1Budget": {
       "type": "object",
@@ -6890,20 +6969,6 @@
           }
         }
       }
-    },
-    "v1ListBorrowingRepaymentsResponse": {
-      "type": "object",
-      "properties": {
-        "repayments": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1BorrowingRepayment"
-          },
-          "description": "List of installment repayments."
-        }
-      },
-      "description": "The response for\n[ListBorrowingRepayments][saturn.finance.v1.Finance.ListBorrowingRepayments]."
     },
     "v1ListBorrowingsResponse": {
       "type": "object",

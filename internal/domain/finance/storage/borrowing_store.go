@@ -27,6 +27,7 @@ type borrowingDB struct {
 	EstablishedAt   sql.NullTime `db:"established_at"`
 	DueAt           sql.NullTime `db:"due_at"`
 	Notes           string       `db:"notes"`
+	Version         int64        `db:"version"`
 	CreateTime      sql.NullTime `db:"create_time"`
 	UpdateTime      sql.NullTime `db:"update_time"`
 }
@@ -50,6 +51,7 @@ func (row *borrowingDB) toDomain() *finance.Borrowing {
 		EstablishedAt:   nullTimeToTime(row.EstablishedAt),
 		DueAt:           dueAtPtr,
 		Notes:           row.Notes,
+		Version:         row.Version,
 		CreateTime:      nullTimeToTime(row.CreateTime),
 		UpdateTime:      nullTimeToTime(row.UpdateTime),
 	}
@@ -64,6 +66,11 @@ func NewBorrowingStore(db *sqlx.DB) *BorrowingStore {
 }
 
 func (s *BorrowingStore) Create(ctx context.Context, b *finance.Borrowing) error {
+	version := b.Version
+	if version == 0 {
+		version = 1
+	}
+
 	ds := pgDialect.Insert(goqu.S("finance").Table("borrowing")).Rows(goqu.Record{
 		"id":               string(b.ID),
 		"space_id":         string(b.SpaceID),
@@ -77,6 +84,7 @@ func (s *BorrowingStore) Create(ctx context.Context, b *finance.Borrowing) error
 		"established_at":   timeToNullTime(b.EstablishedAt),
 		"due_at":           timeToNullTime(ptrToTime(b.DueAt)),
 		"notes":            b.Notes,
+		"version":          version,
 		"create_time":      b.CreateTime,
 		"update_time":      b.UpdateTime,
 	})
@@ -87,6 +95,9 @@ func (s *BorrowingStore) Create(ctx context.Context, b *finance.Borrowing) error
 	}
 
 	_, err = s.db.ExecContext(ctx, query, args...)
+	if err == nil {
+		b.Version = version
+	}
 	return err
 }
 
@@ -112,6 +123,12 @@ func (s *BorrowingStore) GetByID(ctx context.Context, spaceID finance.SpaceID, i
 }
 
 func (s *BorrowingStore) Update(ctx context.Context, b *finance.Borrowing) error {
+	currentVersion := b.Version
+	newVersion := currentVersion + 1
+	if currentVersion == 0 {
+		newVersion = 1
+	}
+
 	ds := pgDialect.Update(goqu.S("finance").Table("borrowing")).
 		Set(goqu.Record{
 			"direction":        string(b.Direction),
@@ -124,9 +141,14 @@ func (s *BorrowingStore) Update(ctx context.Context, b *finance.Borrowing) error
 			"established_at":   timeToNullTime(b.EstablishedAt),
 			"due_at":           timeToNullTime(ptrToTime(b.DueAt)),
 			"notes":            b.Notes,
+			"version":          newVersion,
 			"update_time":      b.UpdateTime,
 		}).
-		Where(goqu.Ex{"id": string(b.ID)})
+		Where(goqu.Ex{"id": string(b.ID), "space_id": string(b.SpaceID)})
+
+	if currentVersion > 0 {
+		ds = ds.Where(goqu.Ex{"version": currentVersion})
+	}
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
@@ -142,8 +164,12 @@ func (s *BorrowingStore) Update(ctx context.Context, b *finance.Borrowing) error
 		return err
 	}
 	if rows == 0 {
+		if currentVersion > 0 {
+			return finance.ErrBorrowingVersionMismatch
+		}
 		return finance.ErrBorrowingNotFound
 	}
+	b.Version = newVersion
 	return nil
 }
 

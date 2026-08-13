@@ -348,7 +348,7 @@ function AccountSelectInner({
                     : "text-muted-foreground hover:bg-accent/60"
                 )}
               >
-                <span>None / No Account</span>
+                <span>No Account (Off-ledger / Cash)</span>
                 {!value && <Check className="h-3.5 w-3.5 text-primary" />}
               </button>
             )}

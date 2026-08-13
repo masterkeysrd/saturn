@@ -20,8 +20,3 @@ func (s *Service) ListBorrowings(ctx context.Context, spaceID finance.SpaceID, f
 func (s *Service) GetBorrowing(ctx context.Context, spaceID finance.SpaceID, id finance.BorrowingID) (*finance.Borrowing, error) {
 	return s.financeService.GetBorrowing(ctx, spaceID, id)
 }
-
-// ListBorrowingRepayments retrieves all repayments for a borrowing record.
-func (s *Service) ListBorrowingRepayments(ctx context.Context, spaceID finance.SpaceID, borrowingID finance.BorrowingID) ([]*finance.BorrowingRepayment, error) {
-	return s.financeService.ListBorrowingRepayments(ctx, spaceID, borrowingID)
-}

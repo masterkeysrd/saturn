@@ -169,3 +169,45 @@ func TestBorrowingRepayment_Validate(t *testing.T) {
 		t.Error("expected error for zero amount repayment, got nil")
 	}
 }
+
+func TestBorrowing_ApplyPatch(t *testing.T) {
+	bID, _ := NewBorrowingID()
+	rawSpace, _ := id.Generate("spc_")
+	spaceID := SpaceID(rawSpace)
+	now := time.Now().UTC()
+
+	original := &Borrowing{
+		ID:              bID,
+		SpaceID:         spaceID,
+		Direction:       BorrowingDirectionLent,
+		Counterparty:    "Original Counterparty",
+		ContactInfo:     "old@email.com",
+		TotalAmount:     10000,
+		RemainingAmount: 10000,
+		Currency:        "USD",
+		Status:          BorrowingStatusActive,
+		EstablishedAt:   now,
+		Notes:           "Original notes",
+		Version:         1,
+	}
+
+	incoming := &Borrowing{
+		Counterparty: "Updated Counterparty",
+		Notes:        "Patched notes",
+	}
+
+	mask := []string{"counterparty", "notes"}
+	if err := original.ApplyPatch(incoming, mask); err != nil {
+		t.Fatalf("ApplyPatch failed: %v", err)
+	}
+
+	if original.Counterparty != "Updated Counterparty" {
+		t.Errorf("Counterparty = %s, want Updated Counterparty", original.Counterparty)
+	}
+	if original.Notes != "Patched notes" {
+		t.Errorf("Notes = %s, want Patched notes", original.Notes)
+	}
+	if original.ContactInfo != "old@email.com" {
+		t.Errorf("ContactInfo = %s, want old@email.com (unmodified)", original.ContactInfo)
+	}
+}

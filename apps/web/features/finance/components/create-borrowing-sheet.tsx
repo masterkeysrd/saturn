@@ -1,6 +1,7 @@
 import { useEffect } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useQueryClient } from "@tanstack/react-query"
 import { FormSelect } from "@/components/ui/form-select"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
 import { borrowingSchema, type BorrowingFormValues } from "../schemas/borrowing"
@@ -41,6 +42,7 @@ export function CreateBorrowingSheet({
   editBorrowing,
   refetchBorrowings,
 }: CreateBorrowingSheetProps) {
+  const queryClient = useQueryClient()
   const createBorrowingMutation = useCreateBorrowingMutation()
   const updateBorrowingMutation = useUpdateBorrowingMutation()
 
@@ -102,7 +104,7 @@ export function CreateBorrowingSheet({
           establishedAt: estDate,
           dueAt: dueDate,
           hasDueDate: !!dueDate,
-          createAsTransaction: false,
+          createAsTransaction: !!editBorrowing.accountId,
           notes: editBorrowing.notes || "",
         })
       } else {
@@ -161,6 +163,15 @@ export function CreateBorrowingSheet({
           borrowing: borrowingPayload,
         })
       }
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/transactions"],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/accounts"],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/borrowings"],
+      })
       refetchBorrowings?.()
       onOpenChange(false)
     } catch (err) {
@@ -275,23 +286,23 @@ export function CreateBorrowingSheet({
         )}
       </div>
 
-      {!editBorrowing && (
-        <div className="flex items-center gap-2.5 pt-1 select-none">
-          <Checkbox
-            id="createAsTransaction"
-            checked={createAsTxValue}
-            onCheckedChange={(checked) =>
-              setValue("createAsTransaction", !!checked, { shouldDirty: true })
-            }
-          />
-          <Label
-            htmlFor="createAsTransaction"
-            className="cursor-pointer text-xs font-semibold text-foreground/80"
-          >
-            Create as transaction
-          </Label>
-        </div>
-      )}
+      <div className="flex items-center gap-2.5 pt-1 select-none">
+        <Checkbox
+          id="createAsTransaction"
+          checked={createAsTxValue}
+          onCheckedChange={(checked) =>
+            setValue("createAsTransaction", !!checked, { shouldDirty: true })
+          }
+        />
+        <Label
+          htmlFor="createAsTransaction"
+          className="cursor-pointer text-xs font-semibold text-foreground/80"
+        >
+          {editBorrowing
+            ? "Sync change to linked bank transaction"
+            : "Register as bank transaction"}
+        </Label>
+      </div>
 
       <FormFieldItem label="Notes">
         <textarea

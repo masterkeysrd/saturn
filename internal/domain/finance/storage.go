@@ -172,6 +172,7 @@ type TransactionFilter struct {
 	AccountID          *AccountID
 	TransferID         *TransferID
 	BorrowingID        *string
+	BorrowingRoles     []string
 	ScheduledPaymentID *string
 	PageSize           int32
 	NextPageToken      string

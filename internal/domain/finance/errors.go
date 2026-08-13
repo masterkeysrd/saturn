@@ -22,4 +22,5 @@ var (
 	ErrCannotRelinkTransactionToDifferentScheduledPayment = errors.New("cannot relink transaction to a different scheduled payment")
 	ErrAccountVersionMismatch                             = errors.New("update failed: account not found or version mismatch")
 	ErrInstitutionVersionMismatch                         = errors.New("update failed: institution not found or version mismatch")
+	ErrBorrowingVersionMismatch                           = errors.New("update failed: borrowing not found or version mismatch")
 )

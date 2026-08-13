@@ -1,10 +1,12 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useQueryClient } from "@tanstack/react-query"
 import {
-  useListBorrowingRepaymentsQuery,
-  useCreateBorrowingRepaymentMutation,
-  useDeleteBorrowingRepaymentMutation,
+  useListTransactionsQuery,
+  useLogBorrowingTransactionMutation,
+  useDeleteBorrowingTransactionMutation,
+  type BorrowingTransactionType,
   type Borrowing,
   useListAccountsQuery,
   useGetFinanceSettingsQuery,
@@ -20,28 +22,31 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, Trash2, Calendar, HandCoins } from "lucide-react"
+import { Loader2, Trash2, Calendar, HandCoins, Scale } from "lucide-react"
 import { formatCents, toCentsString } from "../utils"
 import { DatePicker } from "@/components/ui/date-picker"
 import { CurrencyConversionPreview } from "./currency-conversion-preview"
 import { AccountSelect } from "./account-select"
 import { repaymentSchema, type RepaymentFormValues } from "../schemas/borrowing"
+import { AdjustBorrowingModal } from "./adjust-borrowing-modal"
 
 interface BorrowingDetailSheetProps {
+  borrowing: Borrowing | null
   open: boolean
   onOpenChange: (open: boolean) => void
   spaceId: string
-  borrowing: Borrowing | null
   refetchBorrowings: () => void
 }
 
 export function BorrowingDetailSheet({
+  borrowing,
   open,
   onOpenChange,
   spaceId,
-  borrowing,
   refetchBorrowings,
 }: BorrowingDetailSheetProps) {
+  const queryClient = useQueryClient()
+  const [openAdjustModal, setOpenAdjustModal] = useState<boolean>(false)
   const { data: settings } = useGetFinanceSettingsQuery(
     {},
     { enabled: open && !!spaceId }
@@ -49,8 +54,8 @@ export function BorrowingDetailSheet({
   const baseCurrency = settings?.baseCurrency || "USD"
 
   const { getConversionPreview } = useCurrencyConversionPreview({
-    spaceId,
-    enabled: open,
+    spaceId: spaceId || "",
+    enabled: open && !!spaceId,
     baseCurrency,
   })
 
@@ -61,18 +66,19 @@ export function BorrowingDetailSheet({
   const activeAccounts = accountsData?.accounts?.filter((a) => a.isActive) || []
 
   const {
-    data: repaymentsData,
+    data: transactionsData,
     isLoading: listLoading,
-    refetch: refetchRepayments,
-  } = useListBorrowingRepaymentsQuery(
+    refetch: refetchTransactions,
+  } = useListTransactionsQuery(
     {
       borrowingId: borrowing?.id || "",
     },
     { enabled: open && !!borrowing?.id }
   )
+  const repayments = transactionsData?.transactions || []
 
-  const createRepaymentMutation = useCreateBorrowingRepaymentMutation()
-  const deleteRepaymentMutation = useDeleteBorrowingRepaymentMutation()
+  const logTransactionMutation = useLogBorrowingTransactionMutation()
+  const deleteTransactionMutation = useDeleteBorrowingTransactionMutation()
 
   const {
     register,
@@ -90,16 +96,19 @@ export function BorrowingDetailSheet({
     },
   })
 
+  const defaultAccount =
+    activeAccounts.find((a) => a.isDefault) || activeAccounts[0]
+
   useEffect(() => {
     if (open) {
       reset({
         amount: "",
         paymentDate: new Date(),
-        accountId: "",
+        accountId: defaultAccount?.id || "",
         notes: "",
       })
     }
-  }, [open, borrowing, reset])
+  }, [open, borrowing, reset, defaultAccount?.id])
 
   const amountValue = useWatch({ control, name: "amount" })
   const conversion = borrowing
@@ -113,14 +122,14 @@ export function BorrowingDetailSheet({
     if (isNaN(cents) || cents <= 0) return
 
     try {
-      await createRepaymentMutation.mutateAsync({
+      await logTransactionMutation.mutateAsync({
         borrowing_id: borrowing.id || "",
         req: {
           borrowingId: borrowing.id || "",
-          repayment: {
-            borrowingId: borrowing.id || "",
+          transaction: {
+            type: "BORROWING_TRANSACTION_TYPE_PAYMENT" as BorrowingTransactionType,
             amount: cents.toString(),
-            paymentDate: data.paymentDate.toISOString(),
+            transactionDate: data.paymentDate.toISOString(),
             notes: data.notes || "",
             accountId: data.accountId || "",
           },
@@ -132,7 +141,16 @@ export function BorrowingDetailSheet({
         accountId: "",
         notes: "",
       })
-      refetchRepayments()
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/transactions"],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/accounts"],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/borrowings"],
+      })
+      refetchTransactions()
       refetchBorrowings()
     } catch (err) {
       console.error("Failed to add repayment", err)
@@ -142,22 +160,30 @@ export function BorrowingDetailSheet({
   const handleDeleteRepayment = async (repaymentId: string) => {
     if (!borrowing) return
     try {
-      await deleteRepaymentMutation.mutateAsync({
+      await deleteTransactionMutation.mutateAsync({
         borrowing_id: borrowing.id || "",
-        id: repaymentId,
+        transaction_id: repaymentId,
         req: {
           borrowingId: borrowing.id || "",
-          id: repaymentId,
+          transactionId: repaymentId,
         },
       })
-      refetchRepayments()
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/transactions"],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/accounts"],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/borrowings"],
+      })
+      refetchTransactions()
       refetchBorrowings()
     } catch (err) {
       console.error("Failed to delete repayment", err)
     }
   }
 
-  const repayments = repaymentsData?.repayments || []
   const currency = borrowing?.currency || "USD"
   const directionLabel =
     borrowing?.direction === "LENT" ? "Lent to" : "Borrowed from"
@@ -194,21 +220,33 @@ export function BorrowingDetailSheet({
                     </span>
                   )}
                 </div>
-                <div className="text-right">
-                  <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                    Status
-                  </span>
-                  <span className="mt-1 block">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs leading-5 font-semibold ${
-                        borrowing.status === "ACTIVE"
-                          ? "bg-emerald-500/10 text-emerald-500"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {borrowing.status === "ACTIVE" ? "Active" : "Settled"}
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setOpenAdjustModal(true)}
+                    className="h-8 cursor-pointer gap-1.5 rounded-xl border-border/50 bg-background/50 px-3 text-xs font-semibold text-foreground hover:bg-muted"
+                  >
+                    <Scale className="h-3.5 w-3.5 text-emerald-400" />
+                    Adjust Balance
+                  </Button>
+                  <div className="text-right">
+                    <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                      Status
                     </span>
-                  </span>
+                    <span className="mt-1 block">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs leading-5 font-semibold ${
+                          borrowing.status === "ACTIVE"
+                            ? "bg-emerald-500/10 text-emerald-500"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {borrowing.status === "ACTIVE" ? "Active" : "Settled"}
+                      </span>
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -318,19 +356,18 @@ export function BorrowingDetailSheet({
                             {currency}
                           </span>
                           <span className="text-[10px] text-muted-foreground">
-                            {new Date(r.paymentDate).toLocaleDateString(
-                              undefined,
-                              {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              }
-                            )}
+                            {new Date(
+                              r.transactionDate || r.createTime || ""
+                            ).toLocaleDateString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
                           </span>
                         </div>
-                        {r.notes && (
+                        {r.description && (
                           <p className="mt-0.5 truncate text-[10px] text-muted-foreground/80 italic">
-                            {r.notes}
+                            {r.description}
                           </p>
                         )}
                       </div>
@@ -340,9 +377,9 @@ export function BorrowingDetailSheet({
                         variant="ghost"
                         className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
                         onClick={() => handleDeleteRepayment(r.id || "")}
-                        disabled={deleteRepaymentMutation.isPending}
+                        disabled={deleteTransactionMutation.isPending}
                       >
-                        {deleteRepaymentMutation.isPending ? (
+                        {deleteTransactionMutation.isPending ? (
                           <Loader2 className="h-3 w-3 animate-spin" />
                         ) : (
                           <Trash2 className="h-3.5 w-3.5" />
@@ -433,11 +470,11 @@ export function BorrowingDetailSheet({
                   type="submit"
                   className="h-11 w-full rounded-xl bg-gradient-to-r from-primary to-accent font-semibold text-white shadow-md shadow-primary/10 transition-all hover:scale-[1.005]"
                   disabled={
-                    createRepaymentMutation.isPending ||
+                    logTransactionMutation.isPending ||
                     !!(conversion && "error" in conversion)
                   }
                 >
-                  {createRepaymentMutation.isPending ? (
+                  {logTransactionMutation.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     "Add Payment"
@@ -447,6 +484,15 @@ export function BorrowingDetailSheet({
             )}
           </div>
         )}
+
+        <AdjustBorrowingModal
+          open={openAdjustModal}
+          onOpenChange={setOpenAdjustModal}
+          borrowing={borrowing}
+          spaceId={spaceId}
+          refetchBorrowings={refetchBorrowings}
+          refetchRepayments={refetchTransactions}
+        />
       </SheetContent>
     </Sheet>
   )

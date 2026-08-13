@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/id"
+	"github.com/masterkeysrd/saturn/internal/platform/patch"
 	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
 
@@ -97,6 +98,7 @@ type Borrowing struct {
 	DueAt           *time.Time
 	Notes           string
 	AccountID       *AccountID // Transient: used to link a transaction on creation/update
+	Version         int64
 	CreateTime      time.Time
 	UpdateTime      time.Time
 }
@@ -136,6 +138,29 @@ func (b *Borrowing) Validate() error {
 		return errors.New("established date is required")
 	}
 	return nil
+}
+
+// BorrowingPatchSchema defines patchable fields for a Borrowing entity.
+var BorrowingPatchSchema = patch.NewSchema[Borrowing]().
+	Register("id", patch.Field(func(b *Borrowing) *BorrowingID { return &b.ID })).
+	Register("direction", patch.Field(func(b *Borrowing) *BorrowingDirection { return &b.Direction })).
+	Register("counterparty", patch.Field(func(b *Borrowing) *string { return &b.Counterparty })).
+	Register("contact_info", patch.Field(func(b *Borrowing) *string { return &b.ContactInfo })).
+	Register("total_amount", patch.Field(func(b *Borrowing) *int64 { return &b.TotalAmount })).
+	Register("currency", patch.Field(func(b *Borrowing) *Currency { return &b.Currency })).
+	Register("status", patch.Field(func(b *Borrowing) *BorrowingStatus { return &b.Status })).
+	Register("established_at", patch.Field(func(b *Borrowing) *time.Time { return &b.EstablishedAt })).
+	Register("due_at", patch.Field(func(b *Borrowing) **time.Time { return &b.DueAt })).
+	Register("notes", patch.Field(func(b *Borrowing) *string { return &b.Notes })).
+	Register("account_id", patch.Field(func(b *Borrowing) **AccountID { return &b.AccountID }))
+
+// ApplyPatch applies partial updates to a Borrowing entity based on a field mask.
+func (b *Borrowing) ApplyPatch(incoming *Borrowing, mask []string) error {
+	if err := BorrowingPatchSchema.Apply(b, incoming, mask); err != nil {
+		return err
+	}
+	b.UpdateTime = time.Now().UTC()
+	return b.Validate()
 }
 
 // BorrowingRepayment represents a repayment installment for a borrowing.

@@ -27,22 +27,23 @@ func TestCreateBorrowingRequest_Fields(t *testing.T) {
 	}
 }
 
-func TestCreateBorrowingRepaymentRequest_Fields(t *testing.T) {
+func TestLogBorrowingTransactionRequest_Fields(t *testing.T) {
 	accID := finance.AccountID("acc_456")
 	now := time.Now().UTC()
 
-	req := &financeapp.CreateBorrowingRepaymentRequest{
-		BorrowingID: finance.BorrowingID("bor_999"),
-		Amount:      5000,
-		PaymentDate: now,
-		Notes:       "Partial payment",
-		AccountID:   accID,
+	req := &financeapp.LogBorrowingTransactionRequest{
+		BorrowingID:     finance.BorrowingID("bor_999"),
+		Type:            finance.BorrowingTransactionTypePayment,
+		Amount:          5000,
+		TransactionDate: now,
+		Notes:           "Partial payment",
+		AccountID:       &accID,
 	}
 
 	if req.BorrowingID != "bor_999" || req.Amount != 5000 {
 		t.Errorf("unexpected repayment parameters")
 	}
-	if req.AccountID != "acc_456" {
+	if req.AccountID == nil || *req.AccountID != "acc_456" {
 		t.Errorf("expected account ID acc_456")
 	}
 }

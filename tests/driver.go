@@ -151,22 +151,22 @@ func (d *TestDriver) CreateBorrowing(counterparty, direction, currency string, a
 	return d
 }
 
-// CreateBorrowingRepayment registers a repayment against the current borrowing.
-func (d *TestDriver) CreateBorrowingRepayment(amount int64, notes string) *TestDriver {
+// LogBorrowingTransaction registers a repayment/disbursement against the current borrowing.
+func (d *TestDriver) LogBorrowingTransaction(amount int64, notes string) *TestDriver {
 	if d.t.Failed() {
 		return d
 	}
 	payload := map[string]interface{}{
-		"repayment": map[string]interface{}{
-			"borrowingId": d.borrowingID,
-			"amount":      fmt.Sprintf("%d", amount),
-			"accountId":   d.accountID,
-			"notes":       notes,
-			"paymentDate": time.Now().Format(time.RFC3339),
+		"transaction": map[string]interface{}{
+			"type":            "BORROWING_TRANSACTION_TYPE_PAYMENT",
+			"amount":          fmt.Sprintf("%d", amount),
+			"accountId":       d.accountID,
+			"notes":           notes,
+			"transactionDate": time.Now().Format(time.RFC3339),
 		},
 	}
 
-	url := fmt.Sprintf("/api/v1/finance/borrowings/%s/repayments", d.borrowingID)
+	url := fmt.Sprintf("/v1/finance/borrowings/%s/transactions", d.borrowingID)
 	var resp map[string]interface{}
 	d.doRequest("POST", url, payload, &resp, true)
 
@@ -176,12 +176,12 @@ func (d *TestDriver) CreateBorrowingRepayment(amount int64, notes string) *TestD
 	return d
 }
 
-// DeleteBorrowingRepayment deletes the last registered repayment.
-func (d *TestDriver) DeleteBorrowingRepayment() *TestDriver {
+// DeleteBorrowingTransaction deletes the last registered borrowing transaction.
+func (d *TestDriver) DeleteBorrowingTransaction() *TestDriver {
 	if d.t.Failed() {
 		return d
 	}
-	url := fmt.Sprintf("/api/v1/finance/borrowings/%s/repayments/%s", d.borrowingID, d.repaymentID)
+	url := fmt.Sprintf("/v1/finance/borrowings/%s/transactions/%s", d.borrowingID, d.repaymentID)
 	var resp map[string]interface{}
 	d.doRequest("DELETE", url, nil, &resp, true)
 	return d

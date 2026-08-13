@@ -308,6 +308,21 @@ func (m *mockTransactionStore) ListBySpace(ctx context.Context, spaceID SpaceID,
 			if filter.Type != nil && t.Type != *filter.Type {
 				continue
 			}
+			if filter.BorrowingID != nil && (t.Metadata.BorrowingID == nil || string(*t.Metadata.BorrowingID) != *filter.BorrowingID) {
+				continue
+			}
+			if len(filter.BorrowingRoles) > 0 {
+				matchRole := false
+				for _, r := range filter.BorrowingRoles {
+					if t.Metadata.BorrowingRole == r {
+						matchRole = true
+						break
+					}
+				}
+				if !matchRole {
+					continue
+				}
+			}
 			if filter.MinAmount != nil && t.Amount < *filter.MinAmount {
 				continue
 			}
@@ -1502,8 +1517,9 @@ func TestAdjustAccountBalance(t *testing.T) {
 
 func TestCreateBorrowingRepayment_SameCurrencyLent(t *testing.T) {
 	ctx := context.Background()
-	spaceID := SpaceID("sp_test123")
-	accID := AccountID("acc_bank123")
+	spIDStr, _ := id.Generate("spc_")
+	spaceID := SpaceID(spIDStr)
+	accID, _ := NewAccountID()
 	borID, _ := NewBorrowingID()
 
 	accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
@@ -1540,16 +1556,17 @@ func TestCreateBorrowingRepayment_SameCurrencyLent(t *testing.T) {
 		TransactionStore: txnStore,
 	})
 
-	repayment, err := svc.CreateBorrowingRepayment(ctx, &BorrowingRepayment{
-		BorrowingID: borID,
-		SpaceID:     spaceID,
-		Amount:      3000, // $30.00 repayment
-		PaymentDate: time.Now().UTC(),
-		AccountID:   &accID,
-		Notes:       "Part payment from John",
+	txnResult, err := svc.LogBorrowingTransaction(ctx, LogBorrowingTransactionRequest{
+		BorrowingID:     borID,
+		SpaceID:         spaceID,
+		Type:            BorrowingTransactionTypePayment,
+		Amount:          3000, // $30.00 repayment
+		TransactionDate: time.Now().UTC(),
+		AccountID:       &accID,
+		Notes:           "Part payment from John",
 	})
 	if err != nil {
-		t.Fatalf("CreateBorrowingRepayment failed: %v", err)
+		t.Fatalf("LogBorrowingTransaction failed: %v", err)
 	}
 
 	// Verify Borrowing remaining balance (10000 - 3000 = 7000)
@@ -1565,7 +1582,7 @@ func TestCreateBorrowingRepayment_SameCurrencyLent(t *testing.T) {
 	}
 
 	// Verify Repayment Transaction logged
-	txn, err := txnStore.GetByID(ctx, spaceID, TransactionID(repayment.ID))
+	txn, err := txnStore.GetByID(ctx, spaceID, txnResult.ID)
 	if err != nil {
 		t.Fatalf("Repayment transaction not found: %v", err)
 	}
@@ -1579,8 +1596,9 @@ func TestCreateBorrowingRepayment_SameCurrencyLent(t *testing.T) {
 
 func TestCreateBorrowingRepayment_MultiCurrency(t *testing.T) {
 	ctx := context.Background()
-	spaceID := SpaceID("sp_test456")
-	accID := AccountID("acc_dop123")
+	spIDStr, _ := id.Generate("spc_")
+	spaceID := SpaceID(spIDStr)
+	accID, _ := NewAccountID()
 	borID, _ := NewBorrowingID()
 
 	accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
@@ -1627,16 +1645,17 @@ func TestCreateBorrowingRepayment_MultiCurrency(t *testing.T) {
 		TransactionStore:  txnStore,
 	})
 
-	repayment, err := svc.CreateBorrowingRepayment(ctx, &BorrowingRepayment{
-		BorrowingID: borID,
-		SpaceID:     spaceID,
-		Amount:      1000, // $10.00 USD repayment
-		PaymentDate: time.Now().UTC(),
-		AccountID:   &accID,
-		Notes:       "Repayment from Maria in DOP",
+	txnResult, err := svc.LogBorrowingTransaction(ctx, LogBorrowingTransactionRequest{
+		BorrowingID:     borID,
+		SpaceID:         spaceID,
+		Type:            BorrowingTransactionTypePayment,
+		Amount:          1000, // $10.00 USD repayment
+		TransactionDate: time.Now().UTC(),
+		AccountID:       &accID,
+		Notes:           "Repayment from Maria in DOP",
 	})
 	if err != nil {
-		t.Fatalf("CreateBorrowingRepayment multi-currency failed: %v", err)
+		t.Fatalf("LogBorrowingTransaction multi-currency failed: %v", err)
 	}
 
 	// Verify Borrowing remaining balance ($100 - $10 = $90 USD)
@@ -1653,10 +1672,10 @@ func TestCreateBorrowingRepayment_MultiCurrency(t *testing.T) {
 	}
 
 	// Verify Deleting Repayment rolls back both DOP Account and USD Borrowing
-	err = svc.DeleteBorrowingRepayment(ctx, DeleteBorrowingRepaymentRequest{
-		SpaceID:     spaceID,
-		BorrowingID: borID,
-		ID:          repayment.ID,
+	err = svc.DeleteBorrowingTransaction(ctx, DeleteBorrowingTransactionRequest{
+		SpaceID:       spaceID,
+		BorrowingID:   borID,
+		TransactionID: txnResult.ID,
 	})
 	if err != nil {
 		t.Fatalf("DeleteBorrowingRepayment failed: %v", err)
@@ -1670,6 +1689,483 @@ func TestCreateBorrowingRepayment_MultiCurrency(t *testing.T) {
 	accAfterDelete, _ := accountStore.GetByID(ctx, spaceID, accID)
 	if accAfterDelete.CurrentBalance != 5000000 {
 		t.Errorf("Account DOP balance after deletion = %d, want 5000000 DOP", accAfterDelete.CurrentBalance)
+	}
+}
+
+func TestAdjustBorrowingBalance(t *testing.T) {
+	tests := []struct {
+		name                string
+		direction           BorrowingDirection
+		initialTotal        int64
+		initialRemaining    int64
+		initialAccountBal   int64
+		targetBalance       int64
+		withAccount         bool
+		wantRemaining       int64
+		wantStatus          BorrowingStatus
+		wantAccountBal      int64
+		wantRepaymentsCount int
+	}{
+		{
+			name:                "LENT: decrease remaining balance with account (INFLOW)",
+			direction:           BorrowingDirectionLent,
+			initialTotal:        50000,
+			initialRemaining:    50000,
+			initialAccountBal:   100000,
+			targetBalance:       30000,
+			withAccount:         true,
+			wantRemaining:       30000,
+			wantStatus:          BorrowingStatusActive,
+			wantAccountBal:      120000, // +20000 INFLOW
+			wantRepaymentsCount: 1,
+		},
+		{
+			name:                "LENT: increase remaining balance with account (OUTFLOW)",
+			direction:           BorrowingDirectionLent,
+			initialTotal:        50000,
+			initialRemaining:    30000,
+			initialAccountBal:   120000,
+			targetBalance:       45000,
+			withAccount:         true,
+			wantRemaining:       45000,
+			wantStatus:          BorrowingStatusActive,
+			wantAccountBal:      105000, // -15000 OUTFLOW
+			wantRepaymentsCount: 1,
+		},
+		{
+			name:                "BORROWED: decrease remaining balance with account (OUTFLOW)",
+			direction:           BorrowingDirectionBorrowed,
+			initialTotal:        50000,
+			initialRemaining:    50000,
+			initialAccountBal:   100000,
+			targetBalance:       30000,
+			withAccount:         true,
+			wantRemaining:       30000,
+			wantStatus:          BorrowingStatusActive,
+			wantAccountBal:      80000, // -20000 OUTFLOW
+			wantRepaymentsCount: 1,
+		},
+		{
+			name:                "BORROWED: increase remaining balance with account (INFLOW)",
+			direction:           BorrowingDirectionBorrowed,
+			initialTotal:        50000,
+			initialRemaining:    30000,
+			initialAccountBal:   80000,
+			targetBalance:       40000,
+			withAccount:         true,
+			wantRemaining:       40000,
+			wantStatus:          BorrowingStatusActive,
+			wantAccountBal:      90000, // +10000 INFLOW
+			wantRepaymentsCount: 1,
+		},
+		{
+			name:                "Adjust to 0 without account (PAID_OFF status)",
+			direction:           BorrowingDirectionBorrowed,
+			initialTotal:        100000,
+			initialRemaining:    100000,
+			initialAccountBal:   100000,
+			targetBalance:       0,
+			withAccount:         false,
+			wantRemaining:       0,
+			wantStatus:          BorrowingStatusPaidOff,
+			wantAccountBal:      100000, // Untouched
+			wantRepaymentsCount: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			spIDStr, _ := id.Generate("spc_")
+			spaceID := SpaceID(spIDStr)
+			accID, _ := NewAccountID()
+			borID, _ := NewBorrowingID()
+
+			accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
+			txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
+			borrowingStore := &mockBorrowingStore{data: make(map[BorrowingID]*Borrowing)}
+			settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+
+			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
+			_ = accountStore.Create(ctx, &Account{
+				ID:             accID,
+				SpaceID:        spaceID,
+				Name:           "Checking",
+				Type:           AccountTypeBank,
+				Currency:       "USD",
+				CurrentBalance: tt.initialAccountBal,
+				IsActive:       true,
+			})
+			_ = borrowingStore.Create(ctx, &Borrowing{
+				ID:              borID,
+				SpaceID:         spaceID,
+				Direction:       tt.direction,
+				Counterparty:    "Test Party",
+				TotalAmount:     tt.initialTotal,
+				RemainingAmount: tt.initialRemaining,
+				Currency:        "USD",
+				Status:          BorrowingStatusActive,
+				EstablishedAt:   time.Now().UTC(),
+			})
+
+			svc := NewService(Dependencies{
+				SettingsStore:    settingsStore,
+				AccountStore:     accountStore,
+				BorrowingStore:   borrowingStore,
+				TransactionStore: txnStore,
+			})
+
+			var accIDPtr *AccountID
+			if tt.withAccount {
+				accIDPtr = &accID
+			}
+
+			adjusted, err := svc.AdjustBorrowingBalance(ctx, AdjustBorrowingBalanceRequest{
+				SpaceID:       spaceID,
+				BorrowingID:   borID,
+				TargetBalance: tt.targetBalance,
+				Note:          "Table test adjustment",
+				AccountID:     accIDPtr,
+			})
+			if err != nil {
+				t.Fatalf("AdjustBorrowingBalance failed: %v", err)
+			}
+
+			if adjusted.RemainingAmount != tt.wantRemaining {
+				t.Errorf("RemainingAmount = %d, want %d", adjusted.RemainingAmount, tt.wantRemaining)
+			}
+			if adjusted.Status != tt.wantStatus {
+				t.Errorf("Status = %s, want %s", adjusted.Status, tt.wantStatus)
+			}
+
+			acc, _ := accountStore.GetByID(ctx, spaceID, accID)
+			if acc.CurrentBalance != tt.wantAccountBal {
+				t.Errorf("Account balance = %d, want %d", acc.CurrentBalance, tt.wantAccountBal)
+			}
+
+			bIDStr := string(borID)
+			page, err := txnStore.ListBySpace(ctx, spaceID, &TransactionFilter{
+				BorrowingID:    &bIDStr,
+				BorrowingRoles: []string{"REPAYMENT", "DISBURSEMENT", "ADJUSTMENT"},
+			})
+			if err != nil {
+				t.Fatalf("ListBySpace failed: %v", err)
+			}
+			if len(page.Items) != tt.wantRepaymentsCount {
+				t.Errorf("Repayments length = %d, want %d", len(page.Items), tt.wantRepaymentsCount)
+			}
+
+			// Verify base currency amount calculation on the generated adjustment transaction
+			for _, txn := range txnStore.txns {
+				if txn.Metadata.BorrowingRole == "ADJUSTMENT" {
+					if txn.AmountInBase == 0 {
+						t.Errorf("Adjustment transaction AmountInBase is 0, expected non-zero base currency amount")
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestLogAndUpdateBorrowingTransaction(t *testing.T) {
+	tests := []struct {
+		name                 string
+		direction            BorrowingDirection
+		initialTotal         int64
+		initialRemaining     int64
+		txType               BorrowingTransactionType
+		amount               int64
+		wantRemaining        int64
+		wantTotal            int64
+		wantAccountBalImpact int64 // Delta on account (Positive = Inflow, Negative = Outflow)
+	}{
+		{
+			name:                 "LENT PAYMENT: Reduces debt & adds INFLOW to bank (+200)",
+			direction:            BorrowingDirectionLent,
+			initialTotal:         50000,
+			initialRemaining:     50000,
+			txType:               BorrowingTransactionTypePayment,
+			amount:               20000,
+			wantRemaining:        30000,
+			wantTotal:            50000,
+			wantAccountBalImpact: 20000,
+		},
+		{
+			name:                 "LENT DISBURSEMENT: Increases debt & TotalAmount, adds OUTFLOW to bank (-100)",
+			direction:            BorrowingDirectionLent,
+			initialTotal:         50000,
+			initialRemaining:     30000,
+			txType:               BorrowingTransactionTypeDisbursement,
+			amount:               10000,
+			wantRemaining:        40000,
+			wantTotal:            60000,
+			wantAccountBalImpact: -10000,
+		},
+		{
+			name:                 "BORROWED PAYMENT: Reduces debt & adds OUTFLOW to bank (-150)",
+			direction:            BorrowingDirectionBorrowed,
+			initialTotal:         50000,
+			initialRemaining:     50000,
+			txType:               BorrowingTransactionTypePayment,
+			amount:               15000,
+			wantRemaining:        35000,
+			wantTotal:            50000,
+			wantAccountBalImpact: -15000,
+		},
+		{
+			name:                 "BORROWED DISBURSEMENT: Increases debt & TotalAmount, adds INFLOW to bank (+300)",
+			direction:            BorrowingDirectionBorrowed,
+			initialTotal:         50000,
+			initialRemaining:     35000,
+			txType:               BorrowingTransactionTypeDisbursement,
+			amount:               30000,
+			wantRemaining:        65000,
+			wantTotal:            80000,
+			wantAccountBalImpact: 30000,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			spIDStr, _ := id.Generate("spc_")
+			spaceID := SpaceID(spIDStr)
+			accID, _ := NewAccountID()
+			borID, _ := NewBorrowingID()
+
+			accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
+			txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
+			borrowingStore := &mockBorrowingStore{data: make(map[BorrowingID]*Borrowing)}
+			settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+
+			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
+			_ = accountStore.Create(ctx, &Account{
+				ID:             accID,
+				SpaceID:        spaceID,
+				Name:           "Checking",
+				Type:           AccountTypeBank,
+				Currency:       "USD",
+				CurrentBalance: 100000, // $1,000.00
+				IsActive:       true,
+			})
+			_ = borrowingStore.Create(ctx, &Borrowing{
+				ID:              borID,
+				SpaceID:         spaceID,
+				Direction:       tt.direction,
+				Counterparty:    "Test Counterparty",
+				TotalAmount:     tt.initialTotal,
+				RemainingAmount: tt.initialRemaining,
+				Currency:        "USD",
+				Status:          BorrowingStatusActive,
+				EstablishedAt:   time.Now().UTC(),
+			})
+
+			svc := NewService(Dependencies{
+				SettingsStore:    settingsStore,
+				AccountStore:     accountStore,
+				BorrowingStore:   borrowingStore,
+				TransactionStore: txnStore,
+			})
+
+			// 1. Log borrowing transaction
+			rep, err := svc.LogBorrowingTransaction(ctx, LogBorrowingTransactionRequest{
+				SpaceID:     spaceID,
+				BorrowingID: borID,
+				Type:        tt.txType,
+				Amount:      tt.amount,
+				AccountID:   &accID,
+				Notes:       "Test transaction",
+			})
+			if err != nil {
+				t.Fatalf("LogBorrowingTransaction failed: %v", err)
+			}
+
+			// Verify updated borrowing balances
+			b, _ := borrowingStore.GetByID(ctx, spaceID, borID)
+			if b.RemainingAmount != tt.wantRemaining {
+				t.Errorf("RemainingAmount = %d, want %d", b.RemainingAmount, tt.wantRemaining)
+			}
+			if b.TotalAmount != tt.wantTotal {
+				t.Errorf("TotalAmount = %d, want %d", b.TotalAmount, tt.wantTotal)
+			}
+
+			// Verify account balance impact
+			acc, _ := accountStore.GetByID(ctx, spaceID, accID)
+			wantAccBal := 100000 + tt.wantAccountBalImpact
+			if acc.CurrentBalance != wantAccBal {
+				t.Errorf("Account balance = %d, want %d", acc.CurrentBalance, wantAccBal)
+			}
+
+			// 2. Test DeleteBorrowingTransaction (reverts everything back)
+			err = svc.DeleteBorrowingTransaction(ctx, DeleteBorrowingTransactionRequest{
+				SpaceID:       spaceID,
+				BorrowingID:   borID,
+				TransactionID: TransactionID(rep.ID),
+			})
+			if err != nil {
+				t.Fatalf("DeleteBorrowingTransaction failed: %v", err)
+			}
+
+			bRestored, _ := borrowingStore.GetByID(ctx, spaceID, borID)
+			if bRestored.RemainingAmount != tt.initialRemaining {
+				t.Errorf("Restored RemainingAmount = %d, want %d", bRestored.RemainingAmount, tt.initialRemaining)
+			}
+			if bRestored.TotalAmount != tt.initialTotal {
+				t.Errorf("Restored TotalAmount = %d, want %d", bRestored.TotalAmount, tt.initialTotal)
+			}
+
+			accRestored, _ := accountStore.GetByID(ctx, spaceID, accID)
+			if accRestored.CurrentBalance != 100000 {
+				t.Errorf("Restored account balance = %d, want 100000", accRestored.CurrentBalance)
+			}
+		})
+	}
+}
+
+func TestDeleteBorrowingAdjustment(t *testing.T) {
+	ctx := context.Background()
+	spIDStr, _ := id.Generate("spc_")
+	spaceID := SpaceID(spIDStr)
+	borID, _ := NewBorrowingID()
+
+	txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
+	borrowingStore := &mockBorrowingStore{data: make(map[BorrowingID]*Borrowing)}
+	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+
+	_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
+	_ = borrowingStore.Create(ctx, &Borrowing{
+		ID:              borID,
+		SpaceID:         spaceID,
+		Direction:       BorrowingDirectionLent,
+		Counterparty:    "Charlie",
+		TotalAmount:     50000, // $500.00
+		RemainingAmount: 50000, // $500.00
+		Currency:        "USD",
+		Status:          BorrowingStatusActive,
+		EstablishedAt:   time.Now().UTC(),
+	})
+
+	svc := NewService(Dependencies{
+		SettingsStore:    settingsStore,
+		BorrowingStore:   borrowingStore,
+		TransactionStore: txnStore,
+	})
+
+	// Perform adjustment from 50000 down to 20000
+	_, err := svc.AdjustBorrowingBalance(ctx, AdjustBorrowingBalanceRequest{
+		SpaceID:       spaceID,
+		BorrowingID:   borID,
+		TargetBalance: 20000,
+		Note:          "Test Adjustment",
+	})
+	if err != nil {
+		t.Fatalf("AdjustBorrowingBalance failed: %v", err)
+	}
+
+	bIDStr := string(borID)
+	page, _ := txnStore.ListBySpace(ctx, spaceID, &TransactionFilter{
+		BorrowingID:    &bIDStr,
+		BorrowingRoles: []string{"ADJUSTMENT"},
+	})
+	if len(page.Items) != 1 {
+		t.Fatalf("Expected 1 adjustment record, got %d", len(page.Items))
+	}
+
+	// Delete the adjustment record
+	err = svc.DeleteBorrowingTransaction(ctx, DeleteBorrowingTransactionRequest{
+		SpaceID:       spaceID,
+		BorrowingID:   borID,
+		TransactionID: page.Items[0].ID,
+	})
+	if err != nil {
+		t.Fatalf("DeleteBorrowingRepayment for adjustment failed: %v", err)
+	}
+
+	// Verify RemainingAmount is restored back to 50000
+	b, _ := borrowingStore.GetByID(ctx, spaceID, borID)
+	if b.RemainingAmount != 50000 {
+		t.Errorf("RemainingAmount after adjustment deletion = %d, want 50000", b.RemainingAmount)
+	}
+}
+
+func TestUpdateBorrowing(t *testing.T) {
+	tests := []struct {
+		name             string
+		direction        BorrowingDirection
+		initialTotal     int64
+		initialRemaining int64
+		newTotal         int64
+		wantRemaining    int64
+	}{
+		{
+			name:             "Zero payments logged: RemainingAmount auto-syncs to new TotalAmount",
+			direction:        BorrowingDirectionLent,
+			initialTotal:     50000,
+			initialRemaining: 50000,
+			newTotal:         60000,
+			wantRemaining:    60000,
+		},
+		{
+			name:             "Payments already logged: RemainingAmount stays preserved",
+			direction:        BorrowingDirectionLent,
+			initialTotal:     50000,
+			initialRemaining: 30000,
+			newTotal:         60000,
+			wantRemaining:    30000,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			spIDStr, _ := id.Generate("spc_")
+			spaceID := SpaceID(spIDStr)
+			borID, _ := NewBorrowingID()
+
+			txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
+			borrowingStore := &mockBorrowingStore{data: make(map[BorrowingID]*Borrowing)}
+			settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+
+			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
+			_ = borrowingStore.Create(ctx, &Borrowing{
+				ID:              borID,
+				SpaceID:         spaceID,
+				Direction:       tt.direction,
+				Counterparty:    "Test Counterparty",
+				TotalAmount:     tt.initialTotal,
+				RemainingAmount: tt.initialRemaining,
+				Currency:        "USD",
+				Status:          BorrowingStatusActive,
+				EstablishedAt:   time.Now().UTC(),
+			})
+
+			svc := NewService(Dependencies{
+				SettingsStore:    settingsStore,
+				BorrowingStore:   borrowingStore,
+				TransactionStore: txnStore,
+			})
+
+			updated, err := svc.UpdateBorrowing(ctx, &Borrowing{
+				ID:            borID,
+				SpaceID:       spaceID,
+				Direction:     tt.direction,
+				Counterparty:  "Test Counterparty",
+				TotalAmount:   tt.newTotal,
+				Currency:      "USD",
+				Status:        BorrowingStatusActive,
+				EstablishedAt: time.Now().UTC(),
+			}, nil)
+			if err != nil {
+				t.Fatalf("UpdateBorrowing failed: %v", err)
+			}
+
+			if updated.TotalAmount != tt.newTotal {
+				t.Errorf("TotalAmount = %d, want %d", updated.TotalAmount, tt.newTotal)
+			}
+			if updated.RemainingAmount != tt.wantRemaining {
+				t.Errorf("RemainingAmount = %d, want %d", updated.RemainingAmount, tt.wantRemaining)
+			}
+		})
 	}
 }
 

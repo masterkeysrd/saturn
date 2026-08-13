@@ -53,6 +53,8 @@ type UpdateBorrowingRequest struct {
 	DueAt         *time.Time
 	Notes         string
 	AccountID     *finance.AccountID
+	Version       int64
+	UpdateMask    []string
 }
 
 func (c *Coordinator) UpdateBorrowing(ctx context.Context, req *UpdateBorrowingRequest) (*finance.Borrowing, error) {
@@ -73,9 +75,10 @@ func (c *Coordinator) UpdateBorrowing(ctx context.Context, req *UpdateBorrowingR
 		DueAt:         req.DueAt,
 		Notes:         req.Notes,
 		AccountID:     req.AccountID,
+		Version:       req.Version,
 	}
 
-	return c.financeService.UpdateBorrowing(ctx, b)
+	return c.financeService.UpdateBorrowing(ctx, b, req.UpdateMask)
 }
 
 func (c *Coordinator) DeleteBorrowing(ctx context.Context, id finance.BorrowingID) error {
@@ -87,46 +90,98 @@ func (c *Coordinator) DeleteBorrowing(ctx context.Context, id finance.BorrowingI
 	return c.financeService.DeleteBorrowing(ctx, rCtx.SpaceID, id)
 }
 
-type CreateBorrowingRepaymentRequest struct {
-	BorrowingID finance.BorrowingID
-	Amount      int64
-	PaymentDate time.Time
-	Notes       string
-	AccountID   finance.AccountID
+type AdjustBorrowingBalanceRequest struct {
+	BorrowingID    finance.BorrowingID
+	TargetBalance  int64
+	AdjustmentDate string
+	Notes          string
+	AccountID      *finance.AccountID
 }
 
-func (c *Coordinator) CreateBorrowingRepayment(ctx context.Context, req *CreateBorrowingRepaymentRequest) (*finance.BorrowingRepayment, error) {
+func (c *Coordinator) AdjustBorrowingBalance(ctx context.Context, req *AdjustBorrowingBalanceRequest) (*finance.Borrowing, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	r := &finance.BorrowingRepayment{
-		SpaceID:     rCtx.SpaceID,
-		BorrowingID: req.BorrowingID,
-		Amount:      req.Amount,
-		PaymentDate: req.PaymentDate,
-		Notes:       req.Notes,
-		AccountID:   &req.AccountID,
+	return c.financeService.AdjustBorrowingBalance(ctx, finance.AdjustBorrowingBalanceRequest{
+		SpaceID:        rCtx.SpaceID,
+		BorrowingID:    req.BorrowingID,
+		TargetBalance:  req.TargetBalance,
+		AdjustmentDate: req.AdjustmentDate,
+		Note:           req.Notes,
+		AccountID:      req.AccountID,
+	})
+}
+
+type LogBorrowingTransactionRequest struct {
+	BorrowingID     finance.BorrowingID
+	Type            finance.BorrowingTransactionType
+	Amount          int64
+	TransactionDate time.Time
+	AccountID       *finance.AccountID
+	Notes           string
+}
+
+func (c *Coordinator) LogBorrowingTransaction(ctx context.Context, req *LogBorrowingTransactionRequest) (*finance.Transaction, error) {
+	rCtx, err := c.resolveContext(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	return c.financeService.CreateBorrowingRepayment(ctx, r)
+	return c.financeService.LogBorrowingTransaction(ctx, finance.LogBorrowingTransactionRequest{
+		SpaceID:         rCtx.SpaceID,
+		BorrowingID:     req.BorrowingID,
+		Type:            req.Type,
+		Amount:          req.Amount,
+		TransactionDate: req.TransactionDate,
+		AccountID:       req.AccountID,
+		Notes:           req.Notes,
+	})
 }
 
-type DeleteBorrowingRepaymentRequest struct {
-	BorrowingID finance.BorrowingID
-	ID          finance.BorrowingRepaymentID
+type UpdateBorrowingTransactionRequest struct {
+	BorrowingID     finance.BorrowingID
+	TransactionID   finance.TransactionID
+	Type            finance.BorrowingTransactionType
+	Amount          int64
+	TransactionDate time.Time
+	AccountID       *finance.AccountID
+	Notes           string
 }
 
-func (c *Coordinator) DeleteBorrowingRepayment(ctx context.Context, req *DeleteBorrowingRepaymentRequest) error {
+func (c *Coordinator) UpdateBorrowingTransaction(ctx context.Context, req *UpdateBorrowingTransactionRequest) (*finance.Transaction, error) {
+	rCtx, err := c.resolveContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.financeService.UpdateBorrowingTransaction(ctx, finance.UpdateBorrowingTransactionRequest{
+		SpaceID:         rCtx.SpaceID,
+		BorrowingID:     req.BorrowingID,
+		TransactionID:   req.TransactionID,
+		Type:            req.Type,
+		Amount:          req.Amount,
+		TransactionDate: req.TransactionDate,
+		AccountID:       req.AccountID,
+		Notes:           req.Notes,
+	})
+}
+
+type DeleteBorrowingTransactionRequest struct {
+	BorrowingID   finance.BorrowingID
+	TransactionID finance.TransactionID
+}
+
+func (c *Coordinator) DeleteBorrowingTransaction(ctx context.Context, req *DeleteBorrowingTransactionRequest) error {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return err
 	}
 
-	return c.financeService.DeleteBorrowingRepayment(ctx, finance.DeleteBorrowingRepaymentRequest{
-		SpaceID:     rCtx.SpaceID,
-		BorrowingID: req.BorrowingID,
-		ID:          req.ID,
+	return c.financeService.DeleteBorrowingTransaction(ctx, finance.DeleteBorrowingTransactionRequest{
+		SpaceID:       rCtx.SpaceID,
+		BorrowingID:   req.BorrowingID,
+		TransactionID: req.TransactionID,
 	})
 }

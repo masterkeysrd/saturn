@@ -529,11 +529,19 @@ func (c *Client) ListBorrowings(ctx context.Context, req *ListBorrowingsRequest)
 	return &resp, nil
 }
 
-// UpdateBorrowing executes PUT /api/v1/finance/borrowings/{id}.
+// UpdateBorrowing executes PATCH /api/v1/finance/borrowings/{id}.
 func (c *Client) UpdateBorrowing(ctx context.Context, req *UpdateBorrowingRequest) (*Borrowing, error) {
 	var resp Borrowing
 	path := fmt.Sprintf("/api/v1/finance/borrowings/%s", req.GetId())
 	var query []string
+	if req.Version != nil {
+		query = append(query, fmt.Sprintf("version=%d", req.GetVersion()))
+	}
+	if req.UpdateMask != nil {
+		for _, p := range req.GetUpdateMask().GetPaths() {
+			query = append(query, fmt.Sprintf("update_mask.paths=%s", p))
+		}
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
@@ -541,7 +549,7 @@ func (c *Client) UpdateBorrowing(ctx context.Context, req *UpdateBorrowingReques
 	if payload == nil {
 		return nil, fmt.Errorf("borrowing payload is required")
 	}
-	if err := c.base.Do(ctx, "PUT", path, payload, &resp); err != nil {
+	if err := c.base.Do(ctx, "PATCH", path, payload, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil
@@ -561,17 +569,17 @@ func (c *Client) DeleteBorrowing(ctx context.Context, req *DeleteBorrowingReques
 	return &resp, nil
 }
 
-// CreateBorrowingRepayment executes POST /api/v1/finance/borrowings/{borrowing_id}/repayments.
-func (c *Client) CreateBorrowingRepayment(ctx context.Context, req *CreateBorrowingRepaymentRequest) (*BorrowingRepayment, error) {
-	var resp BorrowingRepayment
-	path := fmt.Sprintf("/api/v1/finance/borrowings/%s/repayments", req.GetBorrowingId())
+// LogBorrowingTransaction executes POST /api/v1/finance/borrowings/{borrowing_id}/transactions.
+func (c *Client) LogBorrowingTransaction(ctx context.Context, req *LogBorrowingTransactionRequest) (*Transaction, error) {
+	var resp Transaction
+	path := fmt.Sprintf("/api/v1/finance/borrowings/%s/transactions", req.GetBorrowingId())
 	var query []string
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
-	payload := req.GetRepayment()
+	payload := req.GetTransaction()
 	if payload == nil {
-		return nil, fmt.Errorf("repayment payload is required")
+		return nil, fmt.Errorf("transaction payload is required")
 	}
 	if err := c.base.Do(ctx, "POST", path, payload, &resp); err != nil {
 		return nil, err
@@ -579,29 +587,47 @@ func (c *Client) CreateBorrowingRepayment(ctx context.Context, req *CreateBorrow
 	return &resp, nil
 }
 
-// ListBorrowingRepayments executes GET /api/v1/finance/borrowings/{borrowing_id}/repayments.
-func (c *Client) ListBorrowingRepayments(ctx context.Context, req *ListBorrowingRepaymentsRequest) (*ListBorrowingRepaymentsResponse, error) {
-	var resp ListBorrowingRepaymentsResponse
-	path := fmt.Sprintf("/api/v1/finance/borrowings/%s/repayments", req.GetBorrowingId())
+// UpdateBorrowingTransaction executes PUT /api/v1/finance/borrowings/{borrowing_id}/transactions/{transaction_id}.
+func (c *Client) UpdateBorrowingTransaction(ctx context.Context, req *UpdateBorrowingTransactionRequest) (*Transaction, error) {
+	var resp Transaction
+	path := fmt.Sprintf("/api/v1/finance/borrowings/%s/transactions/%s", req.GetBorrowingId(), req.GetTransactionId())
 	var query []string
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
-	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+	payload := req.GetTransaction()
+	if payload == nil {
+		return nil, fmt.Errorf("transaction payload is required")
+	}
+	if err := c.base.Do(ctx, "PUT", path, payload, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil
 }
 
-// DeleteBorrowingRepayment executes DELETE /api/v1/finance/borrowings/{borrowing_id}/repayments/{id}.
-func (c *Client) DeleteBorrowingRepayment(ctx context.Context, req *DeleteBorrowingRepaymentRequest) (*emptypb.Empty, error) {
+// DeleteBorrowingTransaction executes DELETE /api/v1/finance/borrowings/{borrowing_id}/transactions/{transaction_id}.
+func (c *Client) DeleteBorrowingTransaction(ctx context.Context, req *DeleteBorrowingTransactionRequest) (*emptypb.Empty, error) {
 	var resp emptypb.Empty
-	path := fmt.Sprintf("/api/v1/finance/borrowings/%s/repayments/%s", req.GetBorrowingId(), req.GetId())
+	path := fmt.Sprintf("/api/v1/finance/borrowings/%s/transactions/%s", req.GetBorrowingId(), req.GetTransactionId())
 	var query []string
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
 	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// AdjustBorrowingBalance executes POST /api/v1/finance/borrowings/{borrowing_id}/adjust.
+func (c *Client) AdjustBorrowingBalance(ctx context.Context, req *AdjustBorrowingBalanceRequest) (*Borrowing, error) {
+	var resp Borrowing
+	path := fmt.Sprintf("/api/v1/finance/borrowings/%s/adjust", req.GetBorrowingId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil

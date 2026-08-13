@@ -217,7 +217,7 @@ service Finance {
   // Updates properties of a borrowing record (such as counterparty contact details).
   rpc UpdateBorrowing(UpdateBorrowingRequest) returns (Borrowing) {
     option (google.api.http) = {
-      put: "/v1/finance/borrowings/{id}"
+      patch: "/v1/finance/borrowings/{id}"
       body: "borrowing"
     };
   }
@@ -227,22 +227,35 @@ service Finance {
     option (google.api.http) = {delete: "/v1/finance/borrowings/{id}"};
   }
 
-  // Logs a repayment installment reducing the remaining amount of an active debt agreement.
-  rpc CreateBorrowingRepayment(CreateBorrowingRepaymentRequest) returns (BorrowingRepayment) {
+
+
+  // Logs a new borrowing transaction (payment or debt increase).
+  rpc LogBorrowingTransaction(LogBorrowingTransactionRequest) returns (Transaction) {
     option (google.api.http) = {
-      post: "/v1/finance/borrowings/{borrowing_id}/repayments"
-      body: "repayment"
+      post: "/v1/finance/borrowings/{borrowing_id}/transactions"
+      body: "transaction"
     };
   }
 
-  // Lists all repayment installments registered under a debt agreement.
-  rpc ListBorrowingRepayments(ListBorrowingRepaymentsRequest) returns (ListBorrowingRepaymentsResponse) {
-    option (google.api.http) = {get: "/v1/finance/borrowings/{borrowing_id}/repayments"};
+  // Updates borrowing transaction parameters and recalculates balances.
+  rpc UpdateBorrowingTransaction(UpdateBorrowingTransactionRequest) returns (Transaction) {
+    option (google.api.http) = {
+      put: "/v1/finance/borrowings/{borrowing_id}/transactions/{transaction_id}"
+      body: "transaction"
+    };
   }
 
-  // Deletes a borrowing repayment, restoring the debt balance of the borrowing agreement.
-  rpc DeleteBorrowingRepayment(DeleteBorrowingRepaymentRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {delete: "/v1/finance/borrowings/{borrowing_id}/repayments/{id}"};
+  // Deletes a borrowing transaction and reverts balance impacts.
+  rpc DeleteBorrowingTransaction(DeleteBorrowingTransactionRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/finance/borrowings/{borrowing_id}/transactions/{transaction_id}"};
+  }
+
+  // Adjusts the remaining balance of a borrowing record directly and logs an adjustment transaction.
+  rpc AdjustBorrowingBalance(AdjustBorrowingBalanceRequest) returns (Borrowing) {
+    option (google.api.http) = {
+      post: "/v1/finance/borrowings/{borrowing_id}/adjust"
+      body: "*"
+    };
   }
 
   // Registers a new payment or liquidity account (such as cash, bank, or credit card).
@@ -910,10 +923,10 @@ message ListTransactionsRequest {
 
   // Optional. Target parent budget ID filter.
   // Values are of the form `bud_[a-zA-Z0-9]+`.
-  string budget_id = 2 [(google.api.field_behavior) = OPTIONAL];
+  optional string budget_id = 2 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Target transaction flow type filter.
-  Transaction.Type type = 3 [(google.api.field_behavior) = OPTIONAL];
+  optional Transaction.Type type = 3 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Target account identifier.
   // Values are of the form `acc_[a-zA-Z0-9]+`.
@@ -923,10 +936,10 @@ message ListTransactionsRequest {
   optional string search_query = 7 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Maximum number of items to return.
-  int32 page_size = 8 [(google.api.field_behavior) = OPTIONAL];
+  optional int32 page_size = 8 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Keyset page token.
-  string page_token = 9 [(google.api.field_behavior) = OPTIONAL];
+  optional string page_token = 9 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Sort order string.
   optional string sort = 10 [(google.api.field_behavior) = OPTIONAL];
@@ -1512,39 +1525,9 @@ message Borrowing {
   // Optional. Source account identifier for transaction creation.
   // Values are of the form `acc_[a-zA-Z0-9]+`.
   optional string account_id = 16 [(google.api.field_behavior) = OPTIONAL];
-}
 
-// BorrowingRepayment represents an installment payment towards a borrowing.
-message BorrowingRepayment {
-  // Output only. Unique identifier.
-  // Values are of the form `rep_[a-zA-Z0-9]+`.
-  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
-
-  // Required. Parent borrowing identifier.
-  // Values are of the form `bor_[a-zA-Z0-9]+`.
-  string borrowing_id = 2 [(google.api.field_behavior) = REQUIRED];
-
-  // Output only. Space identifier.
-  string space_id = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
-
-  // Required. Installment amount in cents.
-  int64 amount = 4 [(google.api.field_behavior) = REQUIRED];
-
-  // Required. Installment payment date.
-  google.protobuf.Timestamp payment_date = 5 [(google.api.field_behavior) = REQUIRED];
-
-  // Optional. Narration notes.
-  string notes = 6 [(google.api.field_behavior) = OPTIONAL];
-
-  // Output only. Creation timestamp.
-  google.protobuf.Timestamp create_time = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
-
-  // Output only. Last update timestamp.
-  google.protobuf.Timestamp update_time = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
-
-  // Required. Source account identifier.
-  // Values are of the form `acc_[a-zA-Z0-9]+`.
-  string account_id = 9 [(google.api.field_behavior) = REQUIRED];
+  // Output only. Version counter for optimistic concurrency control.
+  int64 version = 17 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // The request for
@@ -1600,6 +1583,12 @@ message UpdateBorrowingRequest {
 
   // Required. Updated borrowing parameters.
   Borrowing borrowing = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Field mask defining which fields to update for partial updates.
+  optional google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Version number for optimistic concurrency control.
+  optional int64 version = 4 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // The request for
@@ -1610,42 +1599,87 @@ message DeleteBorrowingRequest {
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
-// The request for
-// [CreateBorrowingRepayment][saturn.finance.v1.Finance.CreateBorrowingRepayment].
-message CreateBorrowingRepaymentRequest {
+
+
+// Enum representing the type of borrowing transaction.
+enum BorrowingTransactionType {
+  // Unspecified type.
+  BORROWING_TRANSACTION_TYPE_UNSPECIFIED = 0;
+
+  // Payment towards reducing debt (repayment).
+  BORROWING_TRANSACTION_TYPE_PAYMENT = 1;
+
+  // Additional loan drawdown or funds lent out (debt increase).
+  BORROWING_TRANSACTION_TYPE_DISBURSEMENT = 2;
+}
+
+// Common payload parameters for logging or updating a borrowing transaction.
+message BorrowingTransactionInput {
+  // Required. Transaction type: PAYMENT (repayment) or DISBURSEMENT (debt increase).
+  BorrowingTransactionType type = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Amount in cents.
+  int64 amount = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Date of the payment or disbursement.
+  optional string transaction_date = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Payment or liquidity account identifier.
+  optional string account_id = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Memo or notes for this transaction.
+  optional string notes = 5 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request for LogBorrowingTransaction.
+message LogBorrowingTransactionRequest {
   // Required. Target parent borrowing identifier.
-  // Values are of the form `bor_[a-zA-Z0-9]+`.
   string borrowing_id = 1 [(google.api.field_behavior) = REQUIRED];
 
-  // Required. Updated repayment parameters.
-  BorrowingRepayment repayment = 2 [(google.api.field_behavior) = REQUIRED];
+  // Required. Transaction parameters.
+  BorrowingTransactionInput transaction = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+
+
+// Request for UpdateBorrowingTransaction.
+message UpdateBorrowingTransactionRequest {
+  // Required. Target parent borrowing identifier.
+  string borrowing_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Target transaction identifier to update.
+  string transaction_id = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Updated transaction parameters.
+  BorrowingTransactionInput transaction = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request for DeleteBorrowingTransaction.
+message DeleteBorrowingTransactionRequest {
+  // Required. Target parent borrowing identifier.
+  string borrowing_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Target transaction identifier to delete.
+  string transaction_id = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 // The request for
-// [ListBorrowingRepayments][saturn.finance.v1.Finance.ListBorrowingRepayments].
-message ListBorrowingRepaymentsRequest {
-  // Required. Target parent borrowing identifier.
-  // Values are of the form `bor_[a-zA-Z0-9]+`.
-  string borrowing_id = 1 [(google.api.field_behavior) = REQUIRED];
-}
-
-// The response for
-// [ListBorrowingRepayments][saturn.finance.v1.Finance.ListBorrowingRepayments].
-message ListBorrowingRepaymentsResponse {
-  // List of installment repayments.
-  repeated BorrowingRepayment repayments = 1;
-}
-
-// The request for
-// [DeleteBorrowingRepayment][saturn.finance.v1.Finance.DeleteBorrowingRepayment].
-message DeleteBorrowingRepaymentRequest {
-  // Required. Target parent borrowing identifier.
-  // Values are of the form `bor_[a-zA-Z0-9]+`.
+// [AdjustBorrowingBalance][saturn.finance.v1.Finance.AdjustBorrowingBalance].
+message AdjustBorrowingBalanceRequest {
+  // Required. Target borrowing identifier.
   string borrowing_id = 1 [(google.api.field_behavior) = REQUIRED];
 
-  // Required. Unique identifier of the installment repayment to delete.
-  // Values are of the form `rep_[a-zA-Z0-9]+`.
-  string id = 2 [(google.api.field_behavior) = REQUIRED];
+  // Required. Target remaining balance in cents.
+  int64 target_balance = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Date of the balance adjustment.
+  optional string adjustment_date = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Reconciliation note or reason for adjustment.
+  optional string notes = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Bank account ID to register a balance adjustment transaction.
+  optional string account_id = 5 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // CurrencyInfo encapsulates currency code metadata.

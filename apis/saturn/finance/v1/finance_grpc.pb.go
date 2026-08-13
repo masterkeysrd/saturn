@@ -20,61 +20,62 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Finance_ConfigureFinance_FullMethodName         = "/saturn.finance.v1.Finance/ConfigureFinance"
-	Finance_GetFinanceSettings_FullMethodName       = "/saturn.finance.v1.Finance/GetFinanceSettings"
-	Finance_CreateBudget_FullMethodName             = "/saturn.finance.v1.Finance/CreateBudget"
-	Finance_GetBudget_FullMethodName                = "/saturn.finance.v1.Finance/GetBudget"
-	Finance_UpdateBudget_FullMethodName             = "/saturn.finance.v1.Finance/UpdateBudget"
-	Finance_DeleteBudget_FullMethodName             = "/saturn.finance.v1.Finance/DeleteBudget"
-	Finance_ListBudgets_FullMethodName              = "/saturn.finance.v1.Finance/ListBudgets"
-	Finance_GetBudgetPeriod_FullMethodName          = "/saturn.finance.v1.Finance/GetBudgetPeriod"
-	Finance_CreateExchangeRate_FullMethodName       = "/saturn.finance.v1.Finance/CreateExchangeRate"
-	Finance_GetExchangeRate_FullMethodName          = "/saturn.finance.v1.Finance/GetExchangeRate"
-	Finance_UpdateExchangeRate_FullMethodName       = "/saturn.finance.v1.Finance/UpdateExchangeRate"
-	Finance_ListExchangeRates_FullMethodName        = "/saturn.finance.v1.Finance/ListExchangeRates"
-	Finance_DeleteExchangeRate_FullMethodName       = "/saturn.finance.v1.Finance/DeleteExchangeRate"
-	Finance_CreateExpense_FullMethodName            = "/saturn.finance.v1.Finance/CreateExpense"
-	Finance_UpdateExpense_FullMethodName            = "/saturn.finance.v1.Finance/UpdateExpense"
-	Finance_DeleteTransaction_FullMethodName        = "/saturn.finance.v1.Finance/DeleteTransaction"
-	Finance_ListTransactions_FullMethodName         = "/saturn.finance.v1.Finance/ListTransactions"
-	Finance_GetTransaction_FullMethodName           = "/saturn.finance.v1.Finance/GetTransaction"
-	Finance_ListTransactionEvents_FullMethodName    = "/saturn.finance.v1.Finance/ListTransactionEvents"
-	Finance_GetInsights_FullMethodName              = "/saturn.finance.v1.Finance/GetInsights"
-	Finance_CreateRecurringExpense_FullMethodName   = "/saturn.finance.v1.Finance/CreateRecurringExpense"
-	Finance_UpdateRecurringExpense_FullMethodName   = "/saturn.finance.v1.Finance/UpdateRecurringExpense"
-	Finance_DeleteRecurringExpense_FullMethodName   = "/saturn.finance.v1.Finance/DeleteRecurringExpense"
-	Finance_ListRecurringExpenses_FullMethodName    = "/saturn.finance.v1.Finance/ListRecurringExpenses"
-	Finance_ListScheduledPayments_FullMethodName    = "/saturn.finance.v1.Finance/ListScheduledPayments"
-	Finance_GetScheduledPayment_FullMethodName      = "/saturn.finance.v1.Finance/GetScheduledPayment"
-	Finance_ConfirmScheduledPayment_FullMethodName  = "/saturn.finance.v1.Finance/ConfirmScheduledPayment"
-	Finance_MatchScheduledPayment_FullMethodName    = "/saturn.finance.v1.Finance/MatchScheduledPayment"
-	Finance_SkipScheduledPayment_FullMethodName     = "/saturn.finance.v1.Finance/SkipScheduledPayment"
-	Finance_CreateBorrowing_FullMethodName          = "/saturn.finance.v1.Finance/CreateBorrowing"
-	Finance_GetBorrowing_FullMethodName             = "/saturn.finance.v1.Finance/GetBorrowing"
-	Finance_ListBorrowings_FullMethodName           = "/saturn.finance.v1.Finance/ListBorrowings"
-	Finance_UpdateBorrowing_FullMethodName          = "/saturn.finance.v1.Finance/UpdateBorrowing"
-	Finance_DeleteBorrowing_FullMethodName          = "/saturn.finance.v1.Finance/DeleteBorrowing"
-	Finance_CreateBorrowingRepayment_FullMethodName = "/saturn.finance.v1.Finance/CreateBorrowingRepayment"
-	Finance_ListBorrowingRepayments_FullMethodName  = "/saturn.finance.v1.Finance/ListBorrowingRepayments"
-	Finance_DeleteBorrowingRepayment_FullMethodName = "/saturn.finance.v1.Finance/DeleteBorrowingRepayment"
-	Finance_CreateAccount_FullMethodName            = "/saturn.finance.v1.Finance/CreateAccount"
-	Finance_GetAccount_FullMethodName               = "/saturn.finance.v1.Finance/GetAccount"
-	Finance_UpdateAccount_FullMethodName            = "/saturn.finance.v1.Finance/UpdateAccount"
-	Finance_AdjustAccountBalance_FullMethodName     = "/saturn.finance.v1.Finance/AdjustAccountBalance"
-	Finance_DeleteAccount_FullMethodName            = "/saturn.finance.v1.Finance/DeleteAccount"
-	Finance_ListAccounts_FullMethodName             = "/saturn.finance.v1.Finance/ListAccounts"
-	Finance_CreateInstitution_FullMethodName        = "/saturn.finance.v1.Finance/CreateInstitution"
-	Finance_UpdateInstitution_FullMethodName        = "/saturn.finance.v1.Finance/UpdateInstitution"
-	Finance_DeleteInstitution_FullMethodName        = "/saturn.finance.v1.Finance/DeleteInstitution"
-	Finance_ListInstitutions_FullMethodName         = "/saturn.finance.v1.Finance/ListInstitutions"
-	Finance_ResolveInstitution_FullMethodName       = "/saturn.finance.v1.Finance/ResolveInstitution"
-	Finance_CreateTransfer_FullMethodName           = "/saturn.finance.v1.Finance/CreateTransfer"
-	Finance_ListTransfers_FullMethodName            = "/saturn.finance.v1.Finance/ListTransfers"
-	Finance_ListCurrencies_FullMethodName           = "/saturn.finance.v1.Finance/ListCurrencies"
-	Finance_ListInboxItems_FullMethodName           = "/saturn.finance.v1.Finance/ListInboxItems"
-	Finance_UpdateInboxItem_FullMethodName          = "/saturn.finance.v1.Finance/UpdateInboxItem"
-	Finance_ApproveInboxItem_FullMethodName         = "/saturn.finance.v1.Finance/ApproveInboxItem"
-	Finance_DiscardInboxItem_FullMethodName         = "/saturn.finance.v1.Finance/DiscardInboxItem"
+	Finance_ConfigureFinance_FullMethodName           = "/saturn.finance.v1.Finance/ConfigureFinance"
+	Finance_GetFinanceSettings_FullMethodName         = "/saturn.finance.v1.Finance/GetFinanceSettings"
+	Finance_CreateBudget_FullMethodName               = "/saturn.finance.v1.Finance/CreateBudget"
+	Finance_GetBudget_FullMethodName                  = "/saturn.finance.v1.Finance/GetBudget"
+	Finance_UpdateBudget_FullMethodName               = "/saturn.finance.v1.Finance/UpdateBudget"
+	Finance_DeleteBudget_FullMethodName               = "/saturn.finance.v1.Finance/DeleteBudget"
+	Finance_ListBudgets_FullMethodName                = "/saturn.finance.v1.Finance/ListBudgets"
+	Finance_GetBudgetPeriod_FullMethodName            = "/saturn.finance.v1.Finance/GetBudgetPeriod"
+	Finance_CreateExchangeRate_FullMethodName         = "/saturn.finance.v1.Finance/CreateExchangeRate"
+	Finance_GetExchangeRate_FullMethodName            = "/saturn.finance.v1.Finance/GetExchangeRate"
+	Finance_UpdateExchangeRate_FullMethodName         = "/saturn.finance.v1.Finance/UpdateExchangeRate"
+	Finance_ListExchangeRates_FullMethodName          = "/saturn.finance.v1.Finance/ListExchangeRates"
+	Finance_DeleteExchangeRate_FullMethodName         = "/saturn.finance.v1.Finance/DeleteExchangeRate"
+	Finance_CreateExpense_FullMethodName              = "/saturn.finance.v1.Finance/CreateExpense"
+	Finance_UpdateExpense_FullMethodName              = "/saturn.finance.v1.Finance/UpdateExpense"
+	Finance_DeleteTransaction_FullMethodName          = "/saturn.finance.v1.Finance/DeleteTransaction"
+	Finance_ListTransactions_FullMethodName           = "/saturn.finance.v1.Finance/ListTransactions"
+	Finance_GetTransaction_FullMethodName             = "/saturn.finance.v1.Finance/GetTransaction"
+	Finance_ListTransactionEvents_FullMethodName      = "/saturn.finance.v1.Finance/ListTransactionEvents"
+	Finance_GetInsights_FullMethodName                = "/saturn.finance.v1.Finance/GetInsights"
+	Finance_CreateRecurringExpense_FullMethodName     = "/saturn.finance.v1.Finance/CreateRecurringExpense"
+	Finance_UpdateRecurringExpense_FullMethodName     = "/saturn.finance.v1.Finance/UpdateRecurringExpense"
+	Finance_DeleteRecurringExpense_FullMethodName     = "/saturn.finance.v1.Finance/DeleteRecurringExpense"
+	Finance_ListRecurringExpenses_FullMethodName      = "/saturn.finance.v1.Finance/ListRecurringExpenses"
+	Finance_ListScheduledPayments_FullMethodName      = "/saturn.finance.v1.Finance/ListScheduledPayments"
+	Finance_GetScheduledPayment_FullMethodName        = "/saturn.finance.v1.Finance/GetScheduledPayment"
+	Finance_ConfirmScheduledPayment_FullMethodName    = "/saturn.finance.v1.Finance/ConfirmScheduledPayment"
+	Finance_MatchScheduledPayment_FullMethodName      = "/saturn.finance.v1.Finance/MatchScheduledPayment"
+	Finance_SkipScheduledPayment_FullMethodName       = "/saturn.finance.v1.Finance/SkipScheduledPayment"
+	Finance_CreateBorrowing_FullMethodName            = "/saturn.finance.v1.Finance/CreateBorrowing"
+	Finance_GetBorrowing_FullMethodName               = "/saturn.finance.v1.Finance/GetBorrowing"
+	Finance_ListBorrowings_FullMethodName             = "/saturn.finance.v1.Finance/ListBorrowings"
+	Finance_UpdateBorrowing_FullMethodName            = "/saturn.finance.v1.Finance/UpdateBorrowing"
+	Finance_DeleteBorrowing_FullMethodName            = "/saturn.finance.v1.Finance/DeleteBorrowing"
+	Finance_LogBorrowingTransaction_FullMethodName    = "/saturn.finance.v1.Finance/LogBorrowingTransaction"
+	Finance_UpdateBorrowingTransaction_FullMethodName = "/saturn.finance.v1.Finance/UpdateBorrowingTransaction"
+	Finance_DeleteBorrowingTransaction_FullMethodName = "/saturn.finance.v1.Finance/DeleteBorrowingTransaction"
+	Finance_AdjustBorrowingBalance_FullMethodName     = "/saturn.finance.v1.Finance/AdjustBorrowingBalance"
+	Finance_CreateAccount_FullMethodName              = "/saturn.finance.v1.Finance/CreateAccount"
+	Finance_GetAccount_FullMethodName                 = "/saturn.finance.v1.Finance/GetAccount"
+	Finance_UpdateAccount_FullMethodName              = "/saturn.finance.v1.Finance/UpdateAccount"
+	Finance_AdjustAccountBalance_FullMethodName       = "/saturn.finance.v1.Finance/AdjustAccountBalance"
+	Finance_DeleteAccount_FullMethodName              = "/saturn.finance.v1.Finance/DeleteAccount"
+	Finance_ListAccounts_FullMethodName               = "/saturn.finance.v1.Finance/ListAccounts"
+	Finance_CreateInstitution_FullMethodName          = "/saturn.finance.v1.Finance/CreateInstitution"
+	Finance_UpdateInstitution_FullMethodName          = "/saturn.finance.v1.Finance/UpdateInstitution"
+	Finance_DeleteInstitution_FullMethodName          = "/saturn.finance.v1.Finance/DeleteInstitution"
+	Finance_ListInstitutions_FullMethodName           = "/saturn.finance.v1.Finance/ListInstitutions"
+	Finance_ResolveInstitution_FullMethodName         = "/saturn.finance.v1.Finance/ResolveInstitution"
+	Finance_CreateTransfer_FullMethodName             = "/saturn.finance.v1.Finance/CreateTransfer"
+	Finance_ListTransfers_FullMethodName              = "/saturn.finance.v1.Finance/ListTransfers"
+	Finance_ListCurrencies_FullMethodName             = "/saturn.finance.v1.Finance/ListCurrencies"
+	Finance_ListInboxItems_FullMethodName             = "/saturn.finance.v1.Finance/ListInboxItems"
+	Finance_UpdateInboxItem_FullMethodName            = "/saturn.finance.v1.Finance/UpdateInboxItem"
+	Finance_ApproveInboxItem_FullMethodName           = "/saturn.finance.v1.Finance/ApproveInboxItem"
+	Finance_DiscardInboxItem_FullMethodName           = "/saturn.finance.v1.Finance/DiscardInboxItem"
 )
 
 // FinanceClient is the client API for Finance service.
@@ -153,12 +154,14 @@ type FinanceClient interface {
 	UpdateBorrowing(ctx context.Context, in *UpdateBorrowingRequest, opts ...grpc.CallOption) (*Borrowing, error)
 	// Deletes a borrowing record and all corresponding repayments.
 	DeleteBorrowing(ctx context.Context, in *DeleteBorrowingRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// Logs a repayment installment reducing the remaining amount of an active debt agreement.
-	CreateBorrowingRepayment(ctx context.Context, in *CreateBorrowingRepaymentRequest, opts ...grpc.CallOption) (*BorrowingRepayment, error)
-	// Lists all repayment installments registered under a debt agreement.
-	ListBorrowingRepayments(ctx context.Context, in *ListBorrowingRepaymentsRequest, opts ...grpc.CallOption) (*ListBorrowingRepaymentsResponse, error)
-	// Deletes a borrowing repayment, restoring the debt balance of the borrowing agreement.
-	DeleteBorrowingRepayment(ctx context.Context, in *DeleteBorrowingRepaymentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Logs a new borrowing transaction (payment or debt increase).
+	LogBorrowingTransaction(ctx context.Context, in *LogBorrowingTransactionRequest, opts ...grpc.CallOption) (*Transaction, error)
+	// Updates borrowing transaction parameters and recalculates balances.
+	UpdateBorrowingTransaction(ctx context.Context, in *UpdateBorrowingTransactionRequest, opts ...grpc.CallOption) (*Transaction, error)
+	// Deletes a borrowing transaction and reverts balance impacts.
+	DeleteBorrowingTransaction(ctx context.Context, in *DeleteBorrowingTransactionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Adjusts the remaining balance of a borrowing record directly and logs an adjustment transaction.
+	AdjustBorrowingBalance(ctx context.Context, in *AdjustBorrowingBalanceRequest, opts ...grpc.CallOption) (*Borrowing, error)
 	// Registers a new payment or liquidity account (such as cash, bank, or credit card).
 	CreateAccount(ctx context.Context, in *CreateAccountRequest, opts ...grpc.CallOption) (*Account, error)
 	// Retrieves details of a specific payment account.
@@ -545,30 +548,40 @@ func (c *financeClient) DeleteBorrowing(ctx context.Context, in *DeleteBorrowing
 	return out, nil
 }
 
-func (c *financeClient) CreateBorrowingRepayment(ctx context.Context, in *CreateBorrowingRepaymentRequest, opts ...grpc.CallOption) (*BorrowingRepayment, error) {
+func (c *financeClient) LogBorrowingTransaction(ctx context.Context, in *LogBorrowingTransactionRequest, opts ...grpc.CallOption) (*Transaction, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(BorrowingRepayment)
-	err := c.cc.Invoke(ctx, Finance_CreateBorrowingRepayment_FullMethodName, in, out, cOpts...)
+	out := new(Transaction)
+	err := c.cc.Invoke(ctx, Finance_LogBorrowingTransaction_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *financeClient) ListBorrowingRepayments(ctx context.Context, in *ListBorrowingRepaymentsRequest, opts ...grpc.CallOption) (*ListBorrowingRepaymentsResponse, error) {
+func (c *financeClient) UpdateBorrowingTransaction(ctx context.Context, in *UpdateBorrowingTransactionRequest, opts ...grpc.CallOption) (*Transaction, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListBorrowingRepaymentsResponse)
-	err := c.cc.Invoke(ctx, Finance_ListBorrowingRepayments_FullMethodName, in, out, cOpts...)
+	out := new(Transaction)
+	err := c.cc.Invoke(ctx, Finance_UpdateBorrowingTransaction_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *financeClient) DeleteBorrowingRepayment(ctx context.Context, in *DeleteBorrowingRepaymentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *financeClient) DeleteBorrowingTransaction(ctx context.Context, in *DeleteBorrowingTransactionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, Finance_DeleteBorrowingRepayment_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Finance_DeleteBorrowingTransaction_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) AdjustBorrowingBalance(ctx context.Context, in *AdjustBorrowingBalanceRequest, opts ...grpc.CallOption) (*Borrowing, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Borrowing)
+	err := c.cc.Invoke(ctx, Finance_AdjustBorrowingBalance_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -831,12 +844,14 @@ type FinanceServer interface {
 	UpdateBorrowing(context.Context, *UpdateBorrowingRequest) (*Borrowing, error)
 	// Deletes a borrowing record and all corresponding repayments.
 	DeleteBorrowing(context.Context, *DeleteBorrowingRequest) (*emptypb.Empty, error)
-	// Logs a repayment installment reducing the remaining amount of an active debt agreement.
-	CreateBorrowingRepayment(context.Context, *CreateBorrowingRepaymentRequest) (*BorrowingRepayment, error)
-	// Lists all repayment installments registered under a debt agreement.
-	ListBorrowingRepayments(context.Context, *ListBorrowingRepaymentsRequest) (*ListBorrowingRepaymentsResponse, error)
-	// Deletes a borrowing repayment, restoring the debt balance of the borrowing agreement.
-	DeleteBorrowingRepayment(context.Context, *DeleteBorrowingRepaymentRequest) (*emptypb.Empty, error)
+	// Logs a new borrowing transaction (payment or debt increase).
+	LogBorrowingTransaction(context.Context, *LogBorrowingTransactionRequest) (*Transaction, error)
+	// Updates borrowing transaction parameters and recalculates balances.
+	UpdateBorrowingTransaction(context.Context, *UpdateBorrowingTransactionRequest) (*Transaction, error)
+	// Deletes a borrowing transaction and reverts balance impacts.
+	DeleteBorrowingTransaction(context.Context, *DeleteBorrowingTransactionRequest) (*emptypb.Empty, error)
+	// Adjusts the remaining balance of a borrowing record directly and logs an adjustment transaction.
+	AdjustBorrowingBalance(context.Context, *AdjustBorrowingBalanceRequest) (*Borrowing, error)
 	// Registers a new payment or liquidity account (such as cash, bank, or credit card).
 	CreateAccount(context.Context, *CreateAccountRequest) (*Account, error)
 	// Retrieves details of a specific payment account.
@@ -984,14 +999,17 @@ func (UnimplementedFinanceServer) UpdateBorrowing(context.Context, *UpdateBorrow
 func (UnimplementedFinanceServer) DeleteBorrowing(context.Context, *DeleteBorrowingRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteBorrowing not implemented")
 }
-func (UnimplementedFinanceServer) CreateBorrowingRepayment(context.Context, *CreateBorrowingRepaymentRequest) (*BorrowingRepayment, error) {
-	return nil, status.Error(codes.Unimplemented, "method CreateBorrowingRepayment not implemented")
+func (UnimplementedFinanceServer) LogBorrowingTransaction(context.Context, *LogBorrowingTransactionRequest) (*Transaction, error) {
+	return nil, status.Error(codes.Unimplemented, "method LogBorrowingTransaction not implemented")
 }
-func (UnimplementedFinanceServer) ListBorrowingRepayments(context.Context, *ListBorrowingRepaymentsRequest) (*ListBorrowingRepaymentsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ListBorrowingRepayments not implemented")
+func (UnimplementedFinanceServer) UpdateBorrowingTransaction(context.Context, *UpdateBorrowingTransactionRequest) (*Transaction, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateBorrowingTransaction not implemented")
 }
-func (UnimplementedFinanceServer) DeleteBorrowingRepayment(context.Context, *DeleteBorrowingRepaymentRequest) (*emptypb.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method DeleteBorrowingRepayment not implemented")
+func (UnimplementedFinanceServer) DeleteBorrowingTransaction(context.Context, *DeleteBorrowingTransactionRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteBorrowingTransaction not implemented")
+}
+func (UnimplementedFinanceServer) AdjustBorrowingBalance(context.Context, *AdjustBorrowingBalanceRequest) (*Borrowing, error) {
+	return nil, status.Error(codes.Unimplemented, "method AdjustBorrowingBalance not implemented")
 }
 func (UnimplementedFinanceServer) CreateAccount(context.Context, *CreateAccountRequest) (*Account, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateAccount not implemented")
@@ -1679,56 +1697,74 @@ func _Finance_DeleteBorrowing_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Finance_CreateBorrowingRepayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateBorrowingRepaymentRequest)
+func _Finance_LogBorrowingTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LogBorrowingTransactionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FinanceServer).CreateBorrowingRepayment(ctx, in)
+		return srv.(FinanceServer).LogBorrowingTransaction(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Finance_CreateBorrowingRepayment_FullMethodName,
+		FullMethod: Finance_LogBorrowingTransaction_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FinanceServer).CreateBorrowingRepayment(ctx, req.(*CreateBorrowingRepaymentRequest))
+		return srv.(FinanceServer).LogBorrowingTransaction(ctx, req.(*LogBorrowingTransactionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Finance_ListBorrowingRepayments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListBorrowingRepaymentsRequest)
+func _Finance_UpdateBorrowingTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateBorrowingTransactionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FinanceServer).ListBorrowingRepayments(ctx, in)
+		return srv.(FinanceServer).UpdateBorrowingTransaction(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Finance_ListBorrowingRepayments_FullMethodName,
+		FullMethod: Finance_UpdateBorrowingTransaction_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FinanceServer).ListBorrowingRepayments(ctx, req.(*ListBorrowingRepaymentsRequest))
+		return srv.(FinanceServer).UpdateBorrowingTransaction(ctx, req.(*UpdateBorrowingTransactionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Finance_DeleteBorrowingRepayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteBorrowingRepaymentRequest)
+func _Finance_DeleteBorrowingTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteBorrowingTransactionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FinanceServer).DeleteBorrowingRepayment(ctx, in)
+		return srv.(FinanceServer).DeleteBorrowingTransaction(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Finance_DeleteBorrowingRepayment_FullMethodName,
+		FullMethod: Finance_DeleteBorrowingTransaction_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FinanceServer).DeleteBorrowingRepayment(ctx, req.(*DeleteBorrowingRepaymentRequest))
+		return srv.(FinanceServer).DeleteBorrowingTransaction(ctx, req.(*DeleteBorrowingTransactionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_AdjustBorrowingBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdjustBorrowingBalanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).AdjustBorrowingBalance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_AdjustBorrowingBalance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).AdjustBorrowingBalance(ctx, req.(*AdjustBorrowingBalanceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2201,16 +2237,20 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Finance_DeleteBorrowing_Handler,
 		},
 		{
-			MethodName: "CreateBorrowingRepayment",
-			Handler:    _Finance_CreateBorrowingRepayment_Handler,
+			MethodName: "LogBorrowingTransaction",
+			Handler:    _Finance_LogBorrowingTransaction_Handler,
 		},
 		{
-			MethodName: "ListBorrowingRepayments",
-			Handler:    _Finance_ListBorrowingRepayments_Handler,
+			MethodName: "UpdateBorrowingTransaction",
+			Handler:    _Finance_UpdateBorrowingTransaction_Handler,
 		},
 		{
-			MethodName: "DeleteBorrowingRepayment",
-			Handler:    _Finance_DeleteBorrowingRepayment_Handler,
+			MethodName: "DeleteBorrowingTransaction",
+			Handler:    _Finance_DeleteBorrowingTransaction_Handler,
+		},
+		{
+			MethodName: "AdjustBorrowingBalance",
+			Handler:    _Finance_AdjustBorrowingBalance_Handler,
 		},
 		{
 			MethodName: "CreateAccount",

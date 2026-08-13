@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import type { InboxReviewFormValues } from "./schemas/inbox-review"
 import { InboxItemReviewPanel } from "./components/inbox-item-review-panel"
 import { useUrlState } from "@/lib/use-url-state"
@@ -11,7 +12,7 @@ import {
   useListScheduledPaymentsQuery,
   useListAccountsQuery,
   useListBorrowingsQuery,
-  useCreateBorrowingRepaymentMutation,
+  useLogBorrowingTransactionMutation,
   useListBudgetsQuery,
   useListTransactionsQuery,
   type InboxItem,
@@ -33,6 +34,7 @@ import { Inbox, Loader2 } from "lucide-react"
 import { toast } from "@/components/ui/toast"
 
 export function InboxView() {
+  const queryClient = useQueryClient()
   const { spaceId } = useActiveSpaceContext()
   const [urlState, setUrlState] = useUrlState({
     search: "",
@@ -173,7 +175,7 @@ export function InboxView() {
   const approveMutation = useApproveInboxItemMutation()
   const discardMutation = useDiscardInboxItemMutation()
   const updateInboxMutation = useUpdateInboxItemMutation()
-  const createRepaymentMutation = useCreateBorrowingRepaymentMutation()
+  const logTransactionMutation = useLogBorrowingTransactionMutation()
 
   const handleApprove = async (
     tx: InboxItem,
@@ -280,14 +282,14 @@ export function InboxView() {
 
       // 3. If a borrowing option is selected, create a repayment record
       if (borrowingId && borrowingId !== "none") {
-        await createRepaymentMutation.mutateAsync({
+        await logTransactionMutation.mutateAsync({
           borrowing_id: borrowingId,
           req: {
             borrowingId,
-            repayment: {
-              borrowingId,
+            transaction: {
+              type: "BORROWING_TRANSACTION_TYPE_PAYMENT",
               amount: finalAmount,
-              paymentDate: tx.transactionDate || new Date().toISOString(),
+              transactionDate: tx.transactionDate || new Date().toISOString(),
               notes: `Inbox payment match for vendor: ${desc || tx.vendorName}`,
               accountId: accId,
             },
@@ -303,6 +305,15 @@ export function InboxView() {
         setUrlState({ selected: "" })
       }
 
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/transactions"],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/accounts"],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/borrowings"],
+      })
       refetchInbox()
       toast.add({
         title: "Reconciliation Approved",

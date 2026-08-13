@@ -55,11 +55,12 @@ type FinanceService interface {
 	CreateBorrowing(ctx context.Context, b *finance.Borrowing, createAsTransaction bool) (*finance.Borrowing, error)
 	GetBorrowing(ctx context.Context, spaceID finance.SpaceID, id finance.BorrowingID) (*finance.Borrowing, error)
 	ListBorrowings(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBorrowingsFilter) ([]*finance.Borrowing, string, error)
-	UpdateBorrowing(ctx context.Context, b *finance.Borrowing) (*finance.Borrowing, error)
+	UpdateBorrowing(ctx context.Context, b *finance.Borrowing, mask []string) (*finance.Borrowing, error)
 	DeleteBorrowing(ctx context.Context, spaceID finance.SpaceID, id finance.BorrowingID) error
-	CreateBorrowingRepayment(ctx context.Context, r *finance.BorrowingRepayment) (*finance.BorrowingRepayment, error)
-	ListBorrowingRepayments(ctx context.Context, spaceID finance.SpaceID, borrowingID finance.BorrowingID) ([]*finance.BorrowingRepayment, error)
-	DeleteBorrowingRepayment(ctx context.Context, req finance.DeleteBorrowingRepaymentRequest) error
+	LogBorrowingTransaction(ctx context.Context, req finance.LogBorrowingTransactionRequest) (*finance.Transaction, error)
+	UpdateBorrowingTransaction(ctx context.Context, req finance.UpdateBorrowingTransactionRequest) (*finance.Transaction, error)
+	DeleteBorrowingTransaction(ctx context.Context, req finance.DeleteBorrowingTransactionRequest) error
+	AdjustBorrowingBalance(ctx context.Context, req finance.AdjustBorrowingBalanceRequest) (*finance.Borrowing, error)
 	ListCurrencies(ctx context.Context) ([]finance.CurrencyInfo, error)
 
 	CreateAccount(ctx context.Context, account *finance.Account) (*finance.Account, error)

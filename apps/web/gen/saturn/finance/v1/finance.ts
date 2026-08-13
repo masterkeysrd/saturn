@@ -52,6 +52,23 @@ export type InsightGranularity =
   | "YEARLY"
 
 /**
+ * Enum representing the type of borrowing transaction.
+ */
+export type BorrowingTransactionType =
+  /**
+   * Unspecified type.
+   */
+  | "BORROWING_TRANSACTION_TYPE_UNSPECIFIED"
+  /**
+   * Payment towards reducing debt (repayment).
+   */
+  | "BORROWING_TRANSACTION_TYPE_PAYMENT"
+  /**
+   * Additional loan drawdown or funds lent out (debt increase).
+   */
+  | "BORROWING_TRANSACTION_TYPE_DISBURSEMENT"
+
+/**
  * Borrowing link classification type.
  */
 export type BorrowingLinkType =
@@ -983,11 +1000,11 @@ export interface ListTransactionsRequest {
    * Optional. Target parent budget ID filter.
    * Values are of the form `bud_[a-zA-Z0-9]+`.
    */
-  budgetId: string
+  budgetId?: string
   /**
    * Optional. Target transaction flow type filter.
    */
-  type: Transaction_Type
+  type?: Transaction_Type
   /**
    * Optional. Target account identifier.
    * Values are of the form `acc_[a-zA-Z0-9]+`.
@@ -1000,11 +1017,11 @@ export interface ListTransactionsRequest {
   /**
    * Optional. Maximum number of items to return.
    */
-  pageSize: number
+  pageSize?: number
   /**
    * Optional. Keyset page token.
    */
-  pageToken: string
+  pageToken?: string
   /**
    * Optional. Sort order string.
    */
@@ -1709,51 +1726,10 @@ export interface Borrowing {
    * Values are of the form `acc_[a-zA-Z0-9]+`.
    */
   accountId?: string
-}
-
-/**
- * BorrowingRepayment represents an installment payment towards a borrowing.
- */
-export interface BorrowingRepayment {
   /**
-   * Output only. Unique identifier.
-   * Values are of the form `rep_[a-zA-Z0-9]+`.
+   * Output only. Version counter for optimistic concurrency control.
    */
-  id?: string
-  /**
-   * Required. Parent borrowing identifier.
-   * Values are of the form `bor_[a-zA-Z0-9]+`.
-   */
-  borrowingId: string
-  /**
-   * Output only. Space identifier.
-   */
-  spaceId?: string
-  /**
-   * Required. Installment amount in cents.
-   */
-  amount: string
-  /**
-   * Required. Installment payment date.
-   */
-  paymentDate: string
-  /**
-   * Optional. Narration notes.
-   */
-  notes: string
-  /**
-   * Output only. Creation timestamp.
-   */
-  createTime?: string
-  /**
-   * Output only. Last update timestamp.
-   */
-  updateTime?: string
-  /**
-   * Required. Source account identifier.
-   * Values are of the form `acc_[a-zA-Z0-9]+`.
-   */
-  accountId: string
+  version?: string
 }
 
 /**
@@ -1835,6 +1811,14 @@ export interface UpdateBorrowingRequest {
    * Required. Updated borrowing parameters.
    */
   borrowing: Borrowing
+  /**
+   * Optional. Field mask defining which fields to update for partial updates.
+   */
+  updateMask?: { paths?: string[] }
+  /**
+   * Optional. Version number for optimistic concurrency control.
+   */
+  version?: string
 }
 
 /**
@@ -1850,59 +1834,102 @@ export interface DeleteBorrowingRequest {
 }
 
 /**
- * The request for
- * [CreateBorrowingRepayment][saturn.finance.v1.Finance.CreateBorrowingRepayment].
+ * Common payload parameters for logging or updating a borrowing transaction.
  */
-export interface CreateBorrowingRepaymentRequest {
+export interface BorrowingTransactionInput {
+  /**
+   * Required. Transaction type: PAYMENT (repayment) or DISBURSEMENT (debt increase).
+   */
+  type: BorrowingTransactionType
+  /**
+   * Required. Amount in cents.
+   */
+  amount: string
+  /**
+   * Optional. Date of the payment or disbursement.
+   */
+  transactionDate?: string
+  /**
+   * Optional. Payment or liquidity account identifier.
+   */
+  accountId?: string
+  /**
+   * Optional. Memo or notes for this transaction.
+   */
+  notes?: string
+}
+
+/**
+ * Request for LogBorrowingTransaction.
+ */
+export interface LogBorrowingTransactionRequest {
   /**
    * Required. Target parent borrowing identifier.
-   * Values are of the form `bor_[a-zA-Z0-9]+`.
    */
   borrowingId: string
   /**
-   * Required. Updated repayment parameters.
+   * Required. Transaction parameters.
    */
-  repayment: BorrowingRepayment
+  transaction: BorrowingTransactionInput
+}
+
+/**
+ * Request for UpdateBorrowingTransaction.
+ */
+export interface UpdateBorrowingTransactionRequest {
+  /**
+   * Required. Target parent borrowing identifier.
+   */
+  borrowingId: string
+  /**
+   * Required. Target transaction identifier to update.
+   */
+  transactionId: string
+  /**
+   * Required. Updated transaction parameters.
+   */
+  transaction: BorrowingTransactionInput
+}
+
+/**
+ * Request for DeleteBorrowingTransaction.
+ */
+export interface DeleteBorrowingTransactionRequest {
+  /**
+   * Required. Target parent borrowing identifier.
+   */
+  borrowingId: string
+  /**
+   * Required. Target transaction identifier to delete.
+   */
+  transactionId: string
 }
 
 /**
  * The request for
- * [ListBorrowingRepayments][saturn.finance.v1.Finance.ListBorrowingRepayments].
+ * [AdjustBorrowingBalance][saturn.finance.v1.Finance.AdjustBorrowingBalance].
  */
-export interface ListBorrowingRepaymentsRequest {
+export interface AdjustBorrowingBalanceRequest {
   /**
-   * Required. Target parent borrowing identifier.
-   * Values are of the form `bor_[a-zA-Z0-9]+`.
-   */
-  borrowingId: string
-}
-
-/**
- * The response for
- * [ListBorrowingRepayments][saturn.finance.v1.Finance.ListBorrowingRepayments].
- */
-export interface ListBorrowingRepaymentsResponse {
-  /**
-   * List of installment repayments.
-   */
-  repayments: BorrowingRepayment[]
-}
-
-/**
- * The request for
- * [DeleteBorrowingRepayment][saturn.finance.v1.Finance.DeleteBorrowingRepayment].
- */
-export interface DeleteBorrowingRepaymentRequest {
-  /**
-   * Required. Target parent borrowing identifier.
-   * Values are of the form `bor_[a-zA-Z0-9]+`.
+   * Required. Target borrowing identifier.
    */
   borrowingId: string
   /**
-   * Required. Unique identifier of the installment repayment to delete.
-   * Values are of the form `rep_[a-zA-Z0-9]+`.
+   * Required. Target remaining balance in cents.
    */
-  id: string
+  targetBalance: string
+  /**
+   * Optional. Date of the balance adjustment.
+   */
+  adjustmentDate?: string
+  /**
+   * Optional. Reconciliation note or reason for adjustment.
+   */
+  notes?: string
+  /**
+   * Optional. Bank account ID to register a balance adjustment transaction.
+   */
+  accountId?: string
 }
 
 /**
@@ -3558,9 +3585,13 @@ export async function updateBorrowing(
   id: string,
   req: UpdateBorrowingRequest
 ): Promise<Borrowing> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
+  delete (params as Record<string, unknown>).borrowing
   return request<Borrowing>({
-    method: "PUT",
+    method: "PATCH",
     url: `/api/v1/finance/borrowings/${id}`,
+    params: params,
     data: req.borrowing,
   })
 }
@@ -3613,92 +3644,146 @@ export function useDeleteBorrowingMutation(
 }
 
 /**
- * Logs a repayment installment reducing the remaining amount of an active debt agreement.
+ * Logs a new borrowing transaction (payment or debt increase).
  */
-export async function createBorrowingRepayment(
+export async function logBorrowingTransaction(
   borrowing_id: string,
-  req: CreateBorrowingRepaymentRequest
-): Promise<BorrowingRepayment> {
-  return request<BorrowingRepayment>({
+  req: LogBorrowingTransactionRequest
+): Promise<Transaction> {
+  return request<Transaction>({
     method: "POST",
-    url: `/api/v1/finance/borrowings/${borrowing_id}/repayments`,
-    data: req.repayment,
+    url: `/api/v1/finance/borrowings/${borrowing_id}/transactions`,
+    data: req.transaction,
   })
 }
 
-export function useCreateBorrowingRepaymentMutation(
+export function useLogBorrowingTransactionMutation(
   options?: UseMutationOptions<
-    BorrowingRepayment,
+    Transaction,
     Error,
-    { borrowing_id: string; req: CreateBorrowingRepaymentRequest }
+    { borrowing_id: string; req: LogBorrowingTransactionRequest }
   >
 ) {
   return useMutation<
-    BorrowingRepayment,
+    Transaction,
     Error,
-    { borrowing_id: string; req: CreateBorrowingRepaymentRequest }
+    { borrowing_id: string; req: LogBorrowingTransactionRequest }
   >({
     mutationFn: ({ borrowing_id, req }) =>
-      createBorrowingRepayment(borrowing_id, req),
+      logBorrowingTransaction(borrowing_id, req),
     ...options,
   })
 }
 
 /**
- * Lists all repayment installments registered under a debt agreement.
+ * Updates borrowing transaction parameters and recalculates balances.
  */
-export async function listBorrowingRepayments(
+export async function updateBorrowingTransaction(
   borrowing_id: string,
-  _req: ListBorrowingRepaymentsRequest
-): Promise<ListBorrowingRepaymentsResponse> {
-  return request<ListBorrowingRepaymentsResponse>({
-    method: "GET",
-    url: `/api/v1/finance/borrowings/${borrowing_id}/repayments`,
+  transaction_id: string,
+  req: UpdateBorrowingTransactionRequest
+): Promise<Transaction> {
+  return request<Transaction>({
+    method: "PUT",
+    url: `/api/v1/finance/borrowings/${borrowing_id}/transactions/${transaction_id}`,
+    data: req.transaction,
   })
 }
 
-export function useListBorrowingRepaymentsQuery(
-  req: ListBorrowingRepaymentsRequest,
-  options?: Omit<
-    UseQueryOptions<ListBorrowingRepaymentsResponse, Error>,
-    "queryKey" | "queryFn"
+export function useUpdateBorrowingTransactionMutation(
+  options?: UseMutationOptions<
+    Transaction,
+    Error,
+    {
+      borrowing_id: string
+      transaction_id: string
+      req: UpdateBorrowingTransactionRequest
+    }
   >
 ) {
-  return useQuery<ListBorrowingRepaymentsResponse, Error>({
-    queryKey: [`/api/v1/finance/borrowings/${req.borrowingId}/repayments`, req],
-    queryFn: () => listBorrowingRepayments(req.borrowingId, req),
+  return useMutation<
+    Transaction,
+    Error,
+    {
+      borrowing_id: string
+      transaction_id: string
+      req: UpdateBorrowingTransactionRequest
+    }
+  >({
+    mutationFn: ({ borrowing_id, transaction_id, req }) =>
+      updateBorrowingTransaction(borrowing_id, transaction_id, req),
     ...options,
   })
 }
 
 /**
- * Deletes a borrowing repayment, restoring the debt balance of the borrowing agreement.
+ * Deletes a borrowing transaction and reverts balance impacts.
  */
-export async function deleteBorrowingRepayment(
+export async function deleteBorrowingTransaction(
   borrowing_id: string,
-  id: string,
-  _req: DeleteBorrowingRepaymentRequest
+  transaction_id: string,
+  _req: DeleteBorrowingTransactionRequest
 ): Promise<Record<string, never>> {
   return request<Record<string, never>>({
     method: "DELETE",
-    url: `/api/v1/finance/borrowings/${borrowing_id}/repayments/${id}`,
+    url: `/api/v1/finance/borrowings/${borrowing_id}/transactions/${transaction_id}`,
   })
 }
 
-export function useDeleteBorrowingRepaymentMutation(
+export function useDeleteBorrowingTransactionMutation(
   options?: UseMutationOptions<
     Record<string, never>,
     Error,
-    { borrowing_id: string; id: string; req: DeleteBorrowingRepaymentRequest }
+    {
+      borrowing_id: string
+      transaction_id: string
+      req: DeleteBorrowingTransactionRequest
+    }
   >
 ) {
   return useMutation<
     Record<string, never>,
     Error,
-    { borrowing_id: string; id: string; req: DeleteBorrowingRepaymentRequest }
+    {
+      borrowing_id: string
+      transaction_id: string
+      req: DeleteBorrowingTransactionRequest
+    }
   >({
-    mutationFn: ({ borrowing_id, id, req }) =>
-      deleteBorrowingRepayment(borrowing_id, id, req),
+    mutationFn: ({ borrowing_id, transaction_id, req }) =>
+      deleteBorrowingTransaction(borrowing_id, transaction_id, req),
+    ...options,
+  })
+}
+
+/**
+ * Adjusts the remaining balance of a borrowing record directly and logs an adjustment transaction.
+ */
+export async function adjustBorrowingBalance(
+  borrowing_id: string,
+  req: AdjustBorrowingBalanceRequest
+): Promise<Borrowing> {
+  return request<Borrowing>({
+    method: "POST",
+    url: `/api/v1/finance/borrowings/${borrowing_id}/adjust`,
+    data: req,
+  })
+}
+
+export function useAdjustBorrowingBalanceMutation(
+  options?: UseMutationOptions<
+    Borrowing,
+    Error,
+    { borrowing_id: string; req: AdjustBorrowingBalanceRequest }
+  >
+) {
+  return useMutation<
+    Borrowing,
+    Error,
+    { borrowing_id: string; req: AdjustBorrowingBalanceRequest }
+  >({
+    mutationFn: ({ borrowing_id, req }) =>
+      adjustBorrowingBalance(borrowing_id, req),
     ...options,
   })
 }

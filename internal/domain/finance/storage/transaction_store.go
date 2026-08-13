@@ -213,6 +213,9 @@ func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 	if filter.BorrowingID != nil {
 		ds = ds.Where(goqu.L("metadata->>'borrowing_id'").Eq(*filter.BorrowingID))
 	}
+	if len(filter.BorrowingRoles) > 0 {
+		ds = ds.Where(goqu.L("metadata->>'borrowing_role'").In(filter.BorrowingRoles))
+	}
 	if filter.ScheduledPaymentID != nil {
 		ds = ds.Where(goqu.L("metadata->>'scheduled_payment_id'").Eq(*filter.ScheduledPaymentID))
 	}
