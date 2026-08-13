@@ -297,7 +297,8 @@ export function InboxView() {
         })
       }
 
-      // 4. Select next available item
+      // 4. Update local state & select next available item
+      setAllStagedItems((prev) => prev.filter((item) => item.id !== id))
       const remaining = inboxItems.filter((item) => item.id !== id)
       if (remaining.length > 0) {
         setUrlState({ selected: remaining[0].id || "" })
@@ -305,6 +306,9 @@ export function InboxView() {
         setUrlState({ selected: "" })
       }
 
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/inbox-items"],
+      })
       await queryClient.invalidateQueries({
         queryKey: ["/api/v1/finance/transactions"],
       })
@@ -336,12 +340,16 @@ export function InboxView() {
         id,
         req: { id },
       })
+      setAllStagedItems((prev) => prev.filter((item) => item.id !== id))
       const remaining = inboxItems.filter((item) => item.id !== id)
       if (remaining.length > 0) {
         setUrlState({ selected: remaining[0].id || "" })
       } else {
         setUrlState({ selected: "" })
       }
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/inbox-items"],
+      })
       refetchInbox()
       toast.add({
         title: "Item Discarded",
