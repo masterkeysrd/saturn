@@ -255,9 +255,11 @@ export function InboxItemReviewPanel({
   // Synchronize form when selectedItem changes
   useEffect(() => {
     let itemMeta: {
-      suggested_borrowing_id?: string
       transaction_type?: string
+      suggested_borrowing_id?: string
       potential_duplicate_id?: string
+      destination_account_id?: string
+      suggested_transfer_leg?: string
     } = {}
     if (selectedItem.metadata) {
       itemMeta = selectedItem.metadata as typeof itemMeta
@@ -290,8 +292,10 @@ export function InboxItemReviewPanel({
       amountStr: (Number(selectedItem.amount || 0) / 100).toFixed(2),
       currency: selectedItem.currency || "USD",
       accountId: selectedItem.accountId || "",
-      destinationAccountId: "",
-      transferLeg: "SOURCE",
+      destinationAccountId: itemMeta.destination_account_id || "",
+      transferLeg:
+        (itemMeta.suggested_transfer_leg as "SOURCE" | "DESTINATION") ||
+        "SOURCE",
       budgetId: selectedItem.budgetId || "",
       scheduledPaymentId: initialScheduledPaymentId,
       borrowingId: initialBorrowingId,

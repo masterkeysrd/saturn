@@ -165,6 +165,7 @@ type SignalSuggestion struct {
 	CardLastFour         string         `json:"cardLastFour,omitempty"`
 	SuggestedBudget      string         `json:"suggestedBudget,omitempty"`
 	AccountID            *string        `json:"accountId,omitempty"`
+	DestinationAccountID *string        `json:"destinationAccountId,omitempty"`
 	BudgetID             *string        `json:"budgetId,omitempty"`
 	PotentialDuplicateID *string        `json:"potentialDuplicateId,omitempty"`
 	Metadata             map[string]any `json:"metadata,omitempty"`
@@ -177,6 +178,11 @@ func (c *Coordinator) GetSignalSuggestions(ctx context.Context, spaceID string, 
 		return nil, err
 	}
 
+	var destAccID *string
+	if v, ok := state.Metadata["destination_account_id"].(string); ok && v != "" {
+		destAccID = &v
+	}
+
 	return &SignalSuggestion{
 		Classification:       state.Classification,
 		Vendor:               state.Vendor,
@@ -186,6 +192,7 @@ func (c *Coordinator) GetSignalSuggestions(ctx context.Context, spaceID string, 
 		CardLastFour:         state.CardLastFour,
 		SuggestedBudget:      state.SuggestedBudget,
 		AccountID:            state.AccountID,
+		DestinationAccountID: destAccID,
 		BudgetID:             state.BudgetID,
 		PotentialDuplicateID: state.PotentialDuplicateID,
 		Metadata:             state.Metadata,
@@ -269,14 +276,16 @@ func (c *Coordinator) pipelineExtractNode(ctx context.Context, state *IngestionS
 	}
 	budgets := page.Items
 
-	var accounts []*finance.Account
-	if state.Classification != "INVOICE" {
-		var err error
-		page, err := c.financeService.ListAccounts(ctx, finance.SpaceID(state.SpaceID), &finance.ListAccountsFilter{PageSize: 1000})
-		if err != nil {
-			return nil, fmt.Errorf("list accounts: %w", err)
-		}
-		accounts = page.Items
+	accPage, err := c.financeService.ListAccounts(ctx, finance.SpaceID(state.SpaceID), &finance.ListAccountsFilter{PageSize: 1000})
+	if err != nil {
+		return nil, fmt.Errorf("list accounts: %w", err)
+	}
+	accounts := accPage.Items
+
+	instPage, err := c.financeService.ListInstitutions(ctx, finance.SpaceID(state.SpaceID), &finance.ListInstitutionsFilter{PageSize: 1000})
+	var institutions []*finance.Institution
+	if err == nil {
+		institutions = instPage.Items
 	}
 
 	spPage, err := c.financeService.ListScheduledPayments(ctx, finance.SpaceID(state.SpaceID), &finance.ListScheduledPaymentsFilter{})
@@ -303,6 +312,7 @@ func (c *Coordinator) pipelineExtractNode(ctx context.Context, state *IngestionS
 	result, err := c.parser.Parse(ctx, state.SpaceID, textContent, IngestionContext{
 		Budgets:           budgets,
 		Accounts:          accounts,
+		Institutions:      institutions,
 		ScheduledPayments: payments,
 		RecurringExpenses: expenses,
 		Borrowings:        borrowings,
@@ -321,6 +331,11 @@ func (c *Coordinator) pipelineExtractNode(ctx context.Context, state *IngestionS
 		s.SuggestedBudget = result.SuggestedBudget
 
 		s.Metadata["reference_number"] = result.ReferenceNumber
+		s.Metadata["suggested_account_id"] = result.SourceAccountID
+		s.Metadata["source_account_name"] = result.SourceAccountName
+		s.Metadata["destination_account_id"] = result.DestAccountID
+		s.Metadata["dest_account_name"] = result.DestAccountName
+		s.Metadata["dest_account_last_four"] = result.DestAccountLastFour
 		s.Metadata["suggested_borrowing_id"] = result.SuggestedBorrowing
 		s.Metadata["transaction_type"] = result.TransactionType
 		s.Metadata["suggested_transfer_leg"] = result.SuggestedTransferLeg
@@ -329,35 +344,143 @@ func (c *Coordinator) pipelineExtractNode(ctx context.Context, state *IngestionS
 	}), nil
 }
 
-// 3. Resolve Node: Queries Saturn DB to match credit card suffix and categories.
+// 3. Resolve Node: Queries Saturn DB to match accounts, budgets, and categories.
 func (c *Coordinator) pipelineResolveNode(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
+	page, err := c.financeService.ListAccounts(ctx, finance.SpaceID(state.SpaceID), &finance.ListAccountsFilter{PageSize: 1000})
+	var accounts []*finance.Account
+	if err == nil {
+		accounts = page.Items
+	}
+
+	// 1. Resolve Source Account
 	var accountID *string
-	if state.Classification != "INVOICE" && state.CardLastFour != "" {
-		page, err := c.financeService.ListAccounts(ctx, finance.SpaceID(state.SpaceID), &finance.ListAccountsFilter{PageSize: 1000})
-		if err == nil {
-			for _, acc := range page.Items {
-				if acc.LastFour == state.CardLastFour && acc.IsActive {
-					accountID = new(string(acc.ID))
+
+	sugAccountID := ""
+	if v, ok := state.Metadata["suggested_account_id"].(string); ok {
+		sugAccountID = v
+	}
+	srcAccountName := ""
+	if v, ok := state.Metadata["source_account_name"].(string); ok {
+		srcAccountName = v
+	}
+
+	if sugAccountID != "" {
+		for _, acc := range accounts {
+			if string(acc.ID) == sugAccountID && acc.IsActive {
+				accountID = new(string(acc.ID))
+				break
+			}
+		}
+	}
+	if accountID == nil && srcAccountName != "" {
+		for _, acc := range accounts {
+			if strings.EqualFold(acc.Name, srcAccountName) && acc.IsActive {
+				accountID = new(string(acc.ID))
+				break
+			}
+		}
+	}
+
+	// B. Match by Card Last Four
+	if accountID == nil && state.CardLastFour != "" {
+		for _, acc := range accounts {
+			if acc.LastFour == state.CardLastFour && acc.IsActive {
+				accountID = new(string(acc.ID))
+				break
+			}
+		}
+	}
+
+	// C. Resolve Budget & Fallback to Budget Default Account
+	var budgetID *string
+	if state.SuggestedBudget != "" {
+		if bID, err := finance.ParseBudgetID(state.SuggestedBudget); err == nil {
+			if budget, err := c.financeService.GetBudget(ctx, finance.SpaceID(state.SpaceID), bID); err == nil && budget != nil && string(budget.SpaceID) == state.SpaceID {
+				budgetID = new(string(budget.ID))
+				if accountID == nil && budget.DefaultAccountID != nil {
+					for _, acc := range accounts {
+						if acc.ID == *budget.DefaultAccountID && acc.IsActive {
+							accountID = new(string(acc.ID))
+							break
+						}
+					}
+				}
+			}
+		} else if pageB, err := c.financeService.ListBudgets(ctx, finance.SpaceID(state.SpaceID), &finance.ListBudgetsFilter{PageSize: 1000}); err == nil {
+			for _, b := range pageB.Items {
+				if strings.EqualFold(b.Name, state.SuggestedBudget) {
+					budgetID = new(string(b.ID))
+					if accountID == nil && b.DefaultAccountID != nil {
+						for _, acc := range accounts {
+							if acc.ID == *b.DefaultAccountID && acc.IsActive {
+								accountID = new(string(acc.ID))
+								break
+							}
+						}
+					}
 					break
 				}
 			}
 		}
 	}
 
-	var budgetID *string
-	if state.SuggestedBudget != "" {
-		if bID, err := finance.ParseBudgetID(state.SuggestedBudget); err == nil {
-			if budget, err := c.financeService.GetBudget(ctx, finance.SpaceID(state.SpaceID), bID); err == nil && budget != nil && string(budget.SpaceID) == state.SpaceID {
-				budgetID = new(string(budget.ID))
-			}
-		} else if page, err := c.financeService.ListBudgets(ctx, finance.SpaceID(state.SpaceID), &finance.ListBudgetsFilter{PageSize: 1000}); err == nil {
-			for _, b := range page.Items {
-				if strings.EqualFold(b.Name, state.SuggestedBudget) {
-					budgetID = new(string(b.ID))
-					break
-				}
+	// D. Single Active Account Fallback
+	if accountID == nil {
+		activeCount := 0
+		var singleAcc *finance.Account
+		for _, acc := range accounts {
+			if acc.IsActive {
+				activeCount++
+				singleAcc = acc
 			}
 		}
+		if activeCount == 1 && singleAcc != nil {
+			accountID = new(string(singleAcc.ID))
+		}
+	}
+
+	// 2. Resolve Destination Account (for Transfers)
+	sugDestAccountID := ""
+	if v, ok := state.Metadata["destination_account_id"].(string); ok {
+		sugDestAccountID = v
+	}
+	destAccountName := ""
+	if v, ok := state.Metadata["dest_account_name"].(string); ok {
+		destAccountName = v
+	}
+	destAccountLastFour := ""
+	if v, ok := state.Metadata["dest_account_last_four"].(string); ok {
+		destAccountLastFour = v
+	}
+
+	resolvedDestID := ""
+	if sugDestAccountID != "" {
+		for _, acc := range accounts {
+			if string(acc.ID) == sugDestAccountID && acc.IsActive {
+				resolvedDestID = string(acc.ID)
+				break
+			}
+		}
+	}
+	if resolvedDestID == "" && destAccountName != "" {
+		for _, acc := range accounts {
+			if strings.EqualFold(acc.Name, destAccountName) && acc.IsActive {
+				resolvedDestID = string(acc.ID)
+				break
+			}
+		}
+	}
+	if resolvedDestID == "" && destAccountLastFour != "" {
+		for _, acc := range accounts {
+			if acc.LastFour == destAccountLastFour && acc.IsActive {
+				resolvedDestID = string(acc.ID)
+				break
+			}
+		}
+	}
+
+	if resolvedDestID != "" {
+		state.Metadata["destination_account_id"] = resolvedDestID
 	}
 
 	return graph.Update[*IngestionState](func(s *IngestionState) *IngestionState {

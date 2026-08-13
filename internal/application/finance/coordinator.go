@@ -83,6 +83,7 @@ type FinanceService interface {
 	UpdateInstitution(ctx context.Context, inst *finance.Institution, mask []string) (*finance.Institution, error)
 	DeleteInstitution(ctx context.Context, spaceID finance.SpaceID, id finance.InstitutionID, opts finance.DeleteOptions) error
 	ResolveInstitution(ctx context.Context, spaceID finance.SpaceID, name string) (*finance.ResolveInstitutionResult, error)
+	ListInstitutions(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListInstitutionsFilter) (*paging.Page[*finance.Institution], error)
 }
 
 // ParsedTransaction represents structured transaction data parsed by an ingestion agent.
@@ -94,6 +95,11 @@ type ParsedTransaction struct {
 	Currency             string
 	Counterparty         string
 	CardLastFour         string
+	SourceAccountID      string
+	SourceAccountName    string
+	DestAccountID        string
+	DestAccountName      string
+	DestAccountLastFour  string
 	SuggestedBudget      string
 	SuggestedBorrowing   string
 	SuggestedTransferLeg string
@@ -104,6 +110,7 @@ type ParsedTransaction struct {
 type IngestionContext struct {
 	Budgets           []*finance.Budget
 	Accounts          []*finance.Account
+	Institutions      []*finance.Institution
 	ScheduledPayments []*finance.ScheduledPayment
 	RecurringExpenses []*finance.RecurringExpense
 	Borrowings        []*finance.Borrowing

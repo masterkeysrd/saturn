@@ -24,8 +24,9 @@ EXTRACTION RULES:
 5. Suggest a budget category ONLY from the active list inside the <budgets> XML block. Match semantic meanings. If a match is found, return the budget's exact "id" attribute value (e.g., "bgt_...") in the "suggested_budget" field. If there is no clear semantic match, set "suggested_budget" to null.
 
 6. Identify Account Identifiers:
-   - source_account: The card/account that initiated the outflow (last_four must be digits).
-   - destination_account: The card/account that received the inflow (only populated for TRANSFERS or INCOMES).
+   - Match accounts against the active list inside the <accounts> XML block (by ID, Name, LastFour, or Currency).
+   - source_account: The card/account that initiated the outflow. If matched from <accounts>, return its exact "id" attribute value (e.g. "acc_..."), "raw_name", and "last_four".
+   - destination_account: The card/account that received the inflow (especially for TRANSFERS or INCOMES). If matched from <accounts>, return its exact "id" attribute value (e.g. "acc_..."), "raw_name", and "last_four".
 
 7. Suggest a borrowing record ONLY from the active list inside the <borrowings> XML block. Match based on whether the transaction represents a loan repayment or disbursement associated with the counterparty name. If a match is found, return the borrowing's exact "id" attribute value (e.g., "brw_...") in the "suggested_borrowing" field. Otherwise, set "suggested_borrowing" to null.
 

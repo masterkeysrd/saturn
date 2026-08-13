@@ -44,14 +44,15 @@ func init() {
     "source_account": {
       "type": "object",
       "properties": {
-        "raw_name": { "type": "string" },
+        "id": { "type": ["string", "null"] },
+        "raw_name": { "type": ["string", "null"] },
         "last_four": { "type": ["string", "null"] }
-      },
-      "required": ["raw_name"]
+      }
     },
     "destination_account": {
       "type": "object",
       "properties": {
+        "id": { "type": ["string", "null"] },
         "raw_name": { "type": ["string", "null"] },
         "last_four": { "type": ["string", "null"] }
       }
@@ -116,20 +117,32 @@ func NewAgentIngestionParser(c *agentapp.Coordinator) *AgentIngestionParser {
 
 func (a *AgentIngestionParser) Parse(ctx context.Context, spaceID string, doc string, ingestionCtx IngestionContext) (*ParsedTransaction, error) {
 	type accountTxInfo struct {
-		ID       string
-		Name     string
-		Type     string
-		LastFour string
-		Currency string
+		ID          string `json:"id"`
+		Name        string `json:"name"`
+		Type        string `json:"type"`
+		LastFour    string `json:"last_four"`
+		Currency    string `json:"currency"`
+		Institution string `json:"institution,omitempty"`
 	}
+
+	instMap := make(map[string]string)
+	for _, inst := range ingestionCtx.Institutions {
+		instMap[string(inst.ID)] = inst.Name
+	}
+
 	var accountInfos []accountTxInfo
 	for _, acc := range ingestionCtx.Accounts {
+		instName := ""
+		if acc.InstitutionID != nil {
+			instName = instMap[string(*acc.InstitutionID)]
+		}
 		accountInfos = append(accountInfos, accountTxInfo{
-			ID:       string(acc.ID),
-			Name:     acc.Name,
-			Type:     string(acc.Type),
-			LastFour: acc.LastFour,
-			Currency: string(acc.Currency),
+			ID:          string(acc.ID),
+			Name:        acc.Name,
+			Type:        string(acc.Type),
+			LastFour:    acc.LastFour,
+			Currency:    string(acc.Currency),
+			Institution: instName,
 		})
 	}
 
@@ -213,21 +226,25 @@ func (a *AgentIngestionParser) Parse(ctx context.Context, spaceID string, doc st
 		return nil, err
 	}
 
+	type ExtractedAccount struct {
+		ID       string `json:"id"`
+		RawName  string `json:"raw_name"`
+		LastFour string `json:"last_four"`
+	}
+
 	cleanedJSON := cleanJSON(rawJSON)
 	var extracted struct {
-		ReferenceNumber string  `json:"reference_number"`
-		TransactionType string  `json:"transaction_type"`
-		Date            string  `json:"date"`
-		Amount          float64 `json:"amount"`
-		Currency        string  `json:"currency"`
-		Counterparty    string  `json:"counterparty"`
-		SourceAccount   struct {
-			RawName  string `json:"raw_name"`
-			LastFour string `json:"last_four"`
-		} `json:"source_account"`
-		SuggestedBudget      *string `json:"suggested_budget"`
-		SuggestedBorrowing   *string `json:"suggested_borrowing"`
-		SuggestedTransferLeg *string `json:"suggested_transfer_leg"`
+		ReferenceNumber      string           `json:"reference_number"`
+		TransactionType      string           `json:"transaction_type"`
+		Date                 string           `json:"date"`
+		Amount               float64          `json:"amount"`
+		Currency             string           `json:"currency"`
+		Counterparty         string           `json:"counterparty"`
+		SourceAccount        ExtractedAccount `json:"source_account"`
+		DestinationAccount   ExtractedAccount `json:"destination_account"`
+		SuggestedBudget      *string          `json:"suggested_budget"`
+		SuggestedBorrowing   *string          `json:"suggested_borrowing"`
+		SuggestedTransferLeg *string          `json:"suggested_transfer_leg"`
 	}
 
 	if err := json.Unmarshal([]byte(cleanedJSON), &extracted); err != nil {
@@ -257,6 +274,11 @@ func (a *AgentIngestionParser) Parse(ctx context.Context, spaceID string, doc st
 		Currency:             extracted.Currency,
 		Counterparty:         extracted.Counterparty,
 		CardLastFour:         extracted.SourceAccount.LastFour,
+		SourceAccountID:      extracted.SourceAccount.ID,
+		SourceAccountName:    extracted.SourceAccount.RawName,
+		DestAccountID:        extracted.DestinationAccount.ID,
+		DestAccountName:      extracted.DestinationAccount.RawName,
+		DestAccountLastFour:  extracted.DestinationAccount.LastFour,
 		SuggestedBudget:      suggestedBudget,
 		SuggestedBorrowing:   suggestedBorrowing,
 		SuggestedTransferLeg: suggestedTransferLeg,
