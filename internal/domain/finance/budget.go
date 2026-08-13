@@ -245,13 +245,18 @@ func (b *Budget) CalculateBounds(t time.Time) (time.Time, time.Time) {
 type NewPeriodOpts struct {
 	PeriodID           PeriodID
 	TargetDate         time.Time
+	StartDate          time.Time
+	EndDate            time.Time
 	BaseCurrency       Currency
 	ExchangeRateToBase float64
 }
 
 // NewPeriod constructs a validated BudgetPeriod instance for the budget at the specified date.
 func (b *Budget) NewPeriod(opts NewPeriodOpts) (*BudgetPeriod, error) {
-	start, end := b.CalculateBounds(opts.TargetDate)
+	start, end := opts.StartDate, opts.EndDate
+	if start.IsZero() || end.IsZero() {
+		start, end = b.CalculateBounds(opts.TargetDate)
+	}
 	pID := opts.PeriodID
 	if pID == "" {
 		var err error

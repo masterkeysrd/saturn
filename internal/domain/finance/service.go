@@ -258,26 +258,13 @@ func (s *Service) GetOrCreatePeriods(ctx context.Context, budgets []*Budget, dat
 			return nil, err
 		}
 
-		periodID, err := NewPeriodID()
-		if err != nil {
-			return nil, err
-		}
-
-		newPeriod := &BudgetPeriod{
-			ID:                 periodID,
-			BudgetID:           b.ID,
-			SpaceID:            b.SpaceID,
+		newPeriod, err := b.NewPeriod(NewPeriodOpts{
 			StartDate:          bounds.Start,
 			EndDate:            bounds.End,
-			LimitAmount:        b.LimitAmount,
-			Currency:           b.Currency,
 			BaseCurrency:       settings.BaseCurrency,
 			ExchangeRateToBase: rate,
-			CreateTime:         time.Now().UTC(),
-			UpdateTime:         time.Now().UTC(),
-		}
-
-		if err := newPeriod.Validate(); err != nil {
+		})
+		if err != nil {
 			return nil, err
 		}
 
