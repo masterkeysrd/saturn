@@ -208,6 +208,98 @@ func (a *Account) RollbackTransaction(tType TransactionType, impactAmount int64)
 	a.UpdateTime = time.Now().UTC()
 }
 
+// ReconcileAccountOpts contains options for building a balance reconciliation transaction.
+type ReconcileAccountOpts struct {
+	TargetBalance  int64
+	AdjustmentDate time.Time
+	Note           string
+}
+
+// ReconcileBalance computes reconciliation delta and generates a BALANCE_ADJUSTMENT transaction entity.
+func (a *Account) ReconcileBalance(opts ReconcileAccountOpts) (*Transaction, error) {
+	delta := opts.TargetBalance - a.CurrentBalance
+	if delta == 0 {
+		return nil, nil
+	}
+
+	txnID, err := NewTransactionID()
+	if err != nil {
+		return nil, err
+	}
+
+	adjDate := opts.AdjustmentDate
+	if adjDate.IsZero() {
+		adjDate = time.Now().UTC()
+	}
+
+	desc := "Balance Adjustment"
+	if opts.Note != "" {
+		desc += " (" + opts.Note + ")"
+	}
+
+	accID := a.ID
+	return &Transaction{
+		ID:              txnID,
+		SpaceID:         a.SpaceID,
+		AccountID:       &accID,
+		Type:            TransactionTypeBalanceAdjustment,
+		Amount:          delta,
+		Currency:        a.Currency,
+		Description:     desc,
+		TransactionDate: adjDate,
+		EffectiveDate:   adjDate,
+	}, nil
+}
+
+// SetAsDefault sets account as default, enforcing that inactive accounts cannot be default.
+func (a *Account) SetAsDefault() error {
+	if !a.IsActive {
+		return errors.New("cannot set an inactive account as default")
+	}
+	a.IsDefault = true
+	a.UpdateTime = time.Now().UTC()
+	return nil
+}
+
+// Deactivate deactivates the account (disallowed if it's currently default).
+func (a *Account) Deactivate() error {
+	if a.IsDefault {
+		return errors.New("cannot deactivate default account")
+	}
+	a.IsActive = false
+	a.UpdateTime = time.Now().UTC()
+	return nil
+}
+
+// Activate sets IsActive = true.
+func (a *Account) Activate() {
+	a.IsActive = true
+	a.UpdateTime = time.Now().UTC()
+}
+
+// ValidateTransferTo verifies that a transfer can occur from this account to the destination account.
+func (a *Account) ValidateTransferTo(dest *Account, amount int64) error {
+	if dest == nil {
+		return errors.New("destination account is required")
+	}
+	if a.ID == dest.ID {
+		return errors.New("source and destination accounts must be different")
+	}
+	if a.SpaceID != dest.SpaceID {
+		return errors.New("source and destination accounts must belong to the same space")
+	}
+	if !a.IsActive {
+		return errors.New("source account is inactive")
+	}
+	if !dest.IsActive {
+		return errors.New("destination account is inactive")
+	}
+	if amount <= 0 {
+		return errors.New("transfer amount must be greater than zero")
+	}
+	return nil
+}
+
 // DefaultAccountSortField represents the fallback sorting column name for accounts.
 const DefaultAccountSortField = "name"
 

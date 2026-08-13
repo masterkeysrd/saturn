@@ -215,3 +215,92 @@ func TestAccount_ApplyAndRollbackTransaction(t *testing.T) {
 		}
 	})
 }
+
+func TestAccount_ReconcileLifecycleAndTransfer(t *testing.T) {
+	accID1, _ := NewAccountID()
+	accID2, _ := NewAccountID()
+	rawSpace, _ := id.Generate("spc_")
+	spaceID := SpaceID(rawSpace)
+
+	acc1 := &Account{
+		ID:             accID1,
+		SpaceID:        spaceID,
+		Name:           "Checking",
+		Type:           AccountTypeBank,
+		Currency:       "USD",
+		CurrentBalance: 5000,
+		IsActive:       true,
+		IsDefault:      false,
+	}
+
+	acc2 := &Account{
+		ID:             accID2,
+		SpaceID:        spaceID,
+		Name:           "Savings",
+		Type:           AccountTypeBank,
+		Currency:       "USD",
+		CurrentBalance: 2000,
+		IsActive:       true,
+		IsDefault:      false,
+	}
+
+	t.Run("ReconcileBalance builds adjustment transaction", func(t *testing.T) {
+		txn, err := acc1.ReconcileBalance(ReconcileAccountOpts{
+			TargetBalance: 6500,
+			Note:          "Monthly Audit",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if txn == nil {
+			t.Fatal("expected non-nil transaction")
+		}
+		if txn.Amount != 1500 {
+			t.Errorf("txn.Amount = %d, want 1500", txn.Amount)
+		}
+		if txn.Type != TransactionTypeBalanceAdjustment {
+			t.Errorf("txn.Type = %s, want %s", txn.Type, TransactionTypeBalanceAdjustment)
+		}
+	})
+
+	t.Run("Lifecycle: SetAsDefault & Deactivate rules", func(t *testing.T) {
+		if err := acc1.SetAsDefault(); err != nil {
+			t.Errorf("unexpected error setting default: %v", err)
+		}
+		if !acc1.IsDefault {
+			t.Error("expected IsDefault = true")
+		}
+
+		if err := acc1.Deactivate(); err == nil {
+			t.Error("expected error when deactivating default account")
+		}
+
+		acc1.IsDefault = false
+		if err := acc1.Deactivate(); err != nil {
+			t.Errorf("unexpected error deactivating non-default account: %v", err)
+		}
+
+		if err := acc1.SetAsDefault(); err == nil {
+			t.Error("expected error setting inactive account as default")
+		}
+
+		acc1.Activate()
+		if !acc1.IsActive {
+			t.Error("expected IsActive = true after Activate()")
+		}
+	})
+
+	t.Run("ValidateTransferTo rules", func(t *testing.T) {
+		if err := acc1.ValidateTransferTo(acc2, 1000); err != nil {
+			t.Errorf("unexpected error for valid transfer: %v", err)
+		}
+
+		if err := acc1.ValidateTransferTo(acc1, 1000); err == nil {
+			t.Error("expected error when transfer source equals destination")
+		}
+
+		if err := acc1.ValidateTransferTo(acc2, 0); err == nil {
+			t.Error("expected error when transfer amount is 0")
+		}
+	})
+}

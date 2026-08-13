@@ -2042,8 +2042,7 @@ func (s *Service) CreateAccount(ctx context.Context, a *Account) (*Account, erro
 		a.ID = aID
 	}
 	a.CreateTime = time.Now().UTC()
-	a.UpdateTime = time.Now().UTC()
-	a.IsActive = true
+	a.Activate()
 
 	if err := a.Validate(); err != nil {
 		return nil, err
@@ -2055,8 +2054,11 @@ func (s *Service) CreateAccount(ctx context.Context, a *Account) (*Account, erro
 		return nil, err
 	}
 	if !hasAny {
-		a.IsDefault = true
+		_ = a.SetAsDefault()
 	} else if a.IsDefault {
+		if err := a.SetAsDefault(); err != nil {
+			return nil, err
+		}
 		// Unset all other defaults space-wide atomically in the DB
 		if err := s.deps.AccountStore.UnsetDefaultsExcept(ctx, a.SpaceID, a.ID); err != nil {
 			return nil, err
@@ -2099,18 +2101,29 @@ func (s *Service) UpdateAccount(ctx context.Context, account *Account, mask []st
 	}
 
 	wasDefault := existing.IsDefault
+	wasActive := existing.IsActive
+
 	if err := existing.ApplyPatch(account, mask); err != nil {
 		return nil, err
 	}
 
 	if existing.IsDefault && !wasDefault {
+		if err := existing.SetAsDefault(); err != nil {
+			return nil, err
+		}
 		// Unset all other defaults space-wide atomically in the DB
 		if err := s.deps.AccountStore.UnsetDefaultsExcept(ctx, account.SpaceID, account.ID); err != nil {
 			return nil, err
 		}
 	} else if !existing.IsDefault && wasDefault {
 		// Prevent unsetting default status directly without setting another account as default
-		existing.IsDefault = true
+		_ = existing.SetAsDefault()
+	}
+
+	if !existing.IsActive && wasActive {
+		if err := existing.Deactivate(); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := s.deps.AccountStore.Update(ctx, existing); err != nil {
@@ -2134,16 +2147,6 @@ func (s *Service) AdjustAccountBalance(ctx context.Context, spaceID SpaceID, acc
 		return nil, fmt.Errorf("fetch target account: %w", err)
 	}
 
-	delta := targetBalance - acc.CurrentBalance
-	if delta == 0 {
-		return acc, nil
-	}
-
-	txnID, err := NewTransactionID()
-	if err != nil {
-		return nil, err
-	}
-
 	parsedDate := time.Now().UTC()
 	if adjustmentDate != "" {
 		if t, parseErr := time.Parse(time.RFC3339, adjustmentDate); parseErr == nil {
@@ -2153,22 +2156,16 @@ func (s *Service) AdjustAccountBalance(ctx context.Context, spaceID SpaceID, acc
 		}
 	}
 
-	description := "Balance Adjustment"
-	if note != "" {
-		description += " (" + note + ")"
+	txn, err := acc.ReconcileBalance(ReconcileAccountOpts{
+		TargetBalance:  targetBalance,
+		AdjustmentDate: parsedDate,
+		Note:           note,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("reconcile balance: %w", err)
 	}
-
-	accIDVal := accountID
-	txn := &Transaction{
-		ID:              txnID,
-		SpaceID:         spaceID,
-		AccountID:       &accIDVal,
-		Type:            TransactionTypeBalanceAdjustment,
-		Amount:          delta,
-		Currency:        acc.Currency,
-		Description:     description,
-		TransactionDate: parsedDate,
-		EffectiveDate:   parsedDate,
+	if txn == nil {
+		return acc, nil
 	}
 
 	if err := s.createTransaction(ctx, txn); err != nil {
@@ -2234,8 +2231,8 @@ func (s *Service) CreateTransfer(ctx context.Context, t *Transfer) (*Transfer, e
 		return nil, fmt.Errorf("destination account: %w", err)
 	}
 
-	if srcAcc.SpaceID != t.SpaceID || destAcc.SpaceID != t.SpaceID {
-		return nil, errors.New("accounts do not belong to the same space as the transfer")
+	if err := srcAcc.ValidateTransferTo(destAcc, t.SourceAmount); err != nil {
+		return nil, fmt.Errorf("validate account transfer: %w", err)
 	}
 
 	// Double-entry validation: same currency transfers must have matching source and destination amounts
