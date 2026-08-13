@@ -89,6 +89,22 @@ func (i *InboxItem) MetadataString(key string) string {
 	return v
 }
 
+// EnsurePending checks if the inbox item is in pending status.
+func (i *InboxItem) EnsurePending() error {
+	if i.Status != InboxItemPending {
+		return fmt.Errorf("inbox item is already processed: status = %s", i.Status)
+	}
+	return nil
+}
+
+// MarkResolved transitions status to resolved and attaches an optional transaction ID link.
+func (i *InboxItem) MarkResolved(txnID *TransactionID) {
+	i.Status = InboxItemResolved
+	if txnID != nil && *txnID != "" {
+		i.TransactionID = new(string(*txnID))
+	}
+}
+
 // StageInboxItem defines parameters to draft and stage an inbox item.
 type StageInboxItem struct {
 	IntegrationID   string

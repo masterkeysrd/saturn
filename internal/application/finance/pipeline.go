@@ -70,16 +70,13 @@ func (s *IngestionState) Copy() *IngestionState {
 	}
 	var accID, budID, dupID *string
 	if s.AccountID != nil {
-		val := *s.AccountID
-		accID = &val
+		accID = new(*s.AccountID)
 	}
 	if s.BudgetID != nil {
-		val := *s.BudgetID
-		budID = &val
+		budID = new(*s.BudgetID)
 	}
 	if s.PotentialDuplicateID != nil {
-		val := *s.PotentialDuplicateID
-		dupID = &val
+		dupID = new(*s.PotentialDuplicateID)
 	}
 
 	var metaCopy map[string]any
@@ -340,8 +337,7 @@ func (c *Coordinator) pipelineResolveNode(ctx context.Context, state *IngestionS
 		if err == nil {
 			for _, acc := range page.Items {
 				if acc.LastFour == state.CardLastFour && acc.IsActive {
-					val := string(acc.ID)
-					accountID = &val
+					accountID = new(string(acc.ID))
 					break
 				}
 			}
@@ -352,14 +348,12 @@ func (c *Coordinator) pipelineResolveNode(ctx context.Context, state *IngestionS
 	if state.SuggestedBudget != "" {
 		if bID, err := finance.ParseBudgetID(state.SuggestedBudget); err == nil {
 			if budget, err := c.financeService.GetBudget(ctx, finance.SpaceID(state.SpaceID), bID); err == nil && budget != nil && string(budget.SpaceID) == state.SpaceID {
-				idStr := string(budget.ID)
-				budgetID = &idStr
+				budgetID = new(string(budget.ID))
 			}
 		} else if page, err := c.financeService.ListBudgets(ctx, finance.SpaceID(state.SpaceID), &finance.ListBudgetsFilter{PageSize: 1000}); err == nil {
 			for _, b := range page.Items {
 				if strings.EqualFold(b.Name, state.SuggestedBudget) {
-					idStr := string(b.ID)
-					budgetID = &idStr
+					budgetID = new(string(b.ID))
 					break
 				}
 			}

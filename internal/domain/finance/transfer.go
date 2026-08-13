@@ -96,10 +96,12 @@ func (t *Transfer) Validate() error {
 
 // TransferLegOpts contains parameters for generating source and destination transactions for a transfer.
 type TransferLegOpts struct {
-	SourceAmountInBase int64
-	DestAmountInBase   int64
+	SourceAccountName  string
+	DestAccountName    string
 	SourceCurrency     Currency
 	DestCurrency       Currency
+	SourceAmountInBase int64
+	DestAmountInBase   int64
 }
 
 // NewLegTransactions creates the pair of TRANSFER_OUT and TRANSFER_IN transactions for this transfer.
@@ -123,6 +125,16 @@ func (t *Transfer) NewLegTransactions(opts TransferLegOpts) (sourceTxn *Transact
 		destAmountInBase = t.DestinationAmount
 	}
 
+	srcDesc := fmt.Sprintf("Transfer to %s", opts.DestAccountName)
+	if opts.DestAccountName == "" {
+		srcDesc = fmt.Sprintf("Transfer out to %s", t.DestinationAccountID)
+	}
+
+	destDesc := fmt.Sprintf("Transfer from %s", opts.SourceAccountName)
+	if opts.SourceAccountName == "" {
+		destDesc = fmt.Sprintf("Transfer in from %s", t.SourceAccountID)
+	}
+
 	transferID := t.ID
 	sourceTxn = &Transaction{
 		ID:              sourceID,
@@ -132,7 +144,7 @@ func (t *Transfer) NewLegTransactions(opts TransferLegOpts) (sourceTxn *Transact
 		Amount:          t.SourceAmount,
 		Currency:        opts.SourceCurrency,
 		AmountInBase:    sourceAmountInBase,
-		Description:     fmt.Sprintf("Transfer out to %s", t.DestinationAccountID),
+		Description:     srcDesc,
 		TransactionDate: t.TransferDate,
 		EffectiveDate:   t.TransferDate,
 		Metadata: TransactionMetadata{
@@ -153,7 +165,7 @@ func (t *Transfer) NewLegTransactions(opts TransferLegOpts) (sourceTxn *Transact
 		Amount:          t.DestinationAmount,
 		Currency:        opts.DestCurrency,
 		AmountInBase:    destAmountInBase,
-		Description:     fmt.Sprintf("Transfer in from %s", t.SourceAccountID),
+		Description:     destDesc,
 		TransactionDate: t.TransferDate,
 		EffectiveDate:   t.TransferDate,
 		Metadata: TransactionMetadata{

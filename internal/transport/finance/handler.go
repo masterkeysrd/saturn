@@ -745,8 +745,7 @@ func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTrans
 
 	var budgetID *finance.BudgetID
 	if req.GetBudgetId() != "" {
-		bID := finance.BudgetID(req.GetBudgetId())
-		budgetID = &bID
+		budgetID = new(finance.BudgetID(req.GetBudgetId()))
 	}
 
 	var txnType *finance.TransactionType
@@ -769,32 +768,27 @@ func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTrans
 
 	var accountID *finance.AccountID
 	if req.AccountId != nil {
-		idVal := finance.AccountID(*req.AccountId)
-		accountID = &idVal
+		accountID = new(finance.AccountID(*req.AccountId))
 	}
 
 	var searchQuery *string
 	if req.SearchQuery != nil {
-		val := req.GetSearchQuery()
-		searchQuery = &val
+		searchQuery = new(req.GetSearchQuery())
 	}
 
 	var transferID *finance.TransferID
 	if req.TransferId != nil {
-		idVal := finance.TransferID(*req.TransferId)
-		transferID = &idVal
+		transferID = new(finance.TransferID(*req.TransferId))
 	}
 
-	var scheduledPaymentID *string
+	var scheduledPaymentID *finance.ScheduledPaymentID
 	if req.ScheduledPaymentId != nil && *req.ScheduledPaymentId != "" {
-		val := *req.ScheduledPaymentId
-		scheduledPaymentID = &val
+		scheduledPaymentID = new(finance.ScheduledPaymentID(*req.ScheduledPaymentId))
 	}
 
-	var borrowingID *string
+	var borrowingID *finance.BorrowingID
 	if req.BorrowingId != nil && *req.BorrowingId != "" {
-		val := *req.BorrowingId
-		borrowingID = &val
+		borrowingID = new(finance.BorrowingID(*req.BorrowingId))
 	}
 
 	filter := finance.TransactionFilter{
@@ -1584,24 +1578,19 @@ func toProtoInboxItem(pt *finance.InboxItem) *financev1.InboxItem {
 func toDomainInboxItem(pb *financev1.InboxItem) *finance.InboxItem {
 	var accountID, budgetID, paymentID, transactionID, borrowingID *string
 	if pb.GetAccountId() != "" {
-		val := pb.GetAccountId()
-		accountID = &val
+		accountID = new(pb.GetAccountId())
 	}
 	if pb.GetBudgetId() != "" {
-		val := pb.GetBudgetId()
-		budgetID = &val
+		budgetID = new(pb.GetBudgetId())
 	}
 	if pb.GetScheduledPaymentId() != "" {
-		val := pb.GetScheduledPaymentId()
-		paymentID = &val
+		paymentID = new(pb.GetScheduledPaymentId())
 	}
 	if pb.GetTransactionId() != "" {
-		val := pb.GetTransactionId()
-		transactionID = &val
+		transactionID = new(pb.GetTransactionId())
 	}
 	if pb.GetBorrowingId() != "" {
-		val := pb.GetBorrowingId()
-		borrowingID = &val
+		borrowingID = new(pb.GetBorrowingId())
 	}
 
 	var txDate time.Time
@@ -1673,20 +1662,18 @@ func (h *Handler) ListInboxItems(ctx context.Context, req *financev1.ListInboxIt
 	if req.Status != nil {
 		sVal := toDomainInboxStatus(*req.Status)
 		if sVal != "" {
-			status = &sVal
+			status = new(sVal)
 		}
 	}
 
 	var docType *finance.InboxItemDocType
 	if req.DocType != nil {
-		dVal := toDomainInboxDocType(*req.DocType)
-		docType = &dVal
+		docType = new(toDomainInboxDocType(*req.DocType))
 	}
 
 	var searchQuery *string
 	if req.SearchQuery != nil {
-		sVal := req.GetSearchQuery()
-		searchQuery = &sVal
+		searchQuery = new(req.GetSearchQuery())
 	}
 
 	excludePayload := req.GetView() == financev1.InboxItem_BASIC

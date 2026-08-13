@@ -55,6 +55,24 @@ type RecurringExpense struct {
 	UpdateTime      time.Time
 }
 
+// Init prepares a new recurring expense entity for creation by generating an ID (if missing), setting active status, and populating creation timestamps.
+func (re *RecurringExpense) Init() error {
+	if string(re.ID) == "" {
+		reID, err := NewRecurringExpenseID()
+		if err != nil {
+			return fmt.Errorf("generate recurring expense ID: %w", err)
+		}
+		re.ID = reID
+	}
+	if re.Status == "" {
+		re.Status = RecurringExpenseActive
+	}
+	now := time.Now().UTC()
+	re.CreateTime = now
+	re.UpdateTime = now
+	return nil
+}
+
 func (re *RecurringExpense) Validate() error {
 	if err := re.ID.Validate(); err != nil {
 		return fmt.Errorf("validate recurring expense ID: %w", err)

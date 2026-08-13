@@ -43,8 +43,7 @@ func (h *Handler) CreateBorrowing(ctx context.Context, req *financev1.CreateBorr
 
 	var accountID *finance.AccountID
 	if input.AccountId != nil && *input.AccountId != "" {
-		idVal := finance.AccountID(*input.AccountId)
-		accountID = &idVal
+		accountID = new(finance.AccountID(input.GetAccountId()))
 	}
 
 	appReq := &financeapp.CreateBorrowingRequest{
@@ -174,8 +173,7 @@ func (h *Handler) UpdateBorrowing(ctx context.Context, req *financev1.UpdateBorr
 
 	var accountID *finance.AccountID
 	if input.AccountId != nil && *input.AccountId != "" {
-		idVal := finance.AccountID(*input.AccountId)
-		accountID = &idVal
+		accountID = new(finance.AccountID(input.GetAccountId()))
 	}
 
 	var versionVal int64

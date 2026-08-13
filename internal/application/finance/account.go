@@ -44,8 +44,7 @@ func (c *Coordinator) CreateAccount(ctx context.Context, req *CreateAccountReque
 
 	var instID *finance.InstitutionID
 	if req.InstitutionID != "" {
-		parsed := finance.InstitutionID(req.InstitutionID)
-		instID = &parsed
+		instID = new(finance.InstitutionID(req.InstitutionID))
 	}
 
 	acc := &finance.Account{
@@ -74,8 +73,7 @@ func (c *Coordinator) UpdateAccount(ctx context.Context, req *UpdateAccountReque
 
 	var instID *finance.InstitutionID
 	if req.InstitutionID != "" {
-		parsed := finance.InstitutionID(req.InstitutionID)
-		instID = &parsed
+		instID = new(finance.InstitutionID(req.InstitutionID))
 	}
 
 	acc := &finance.Account{

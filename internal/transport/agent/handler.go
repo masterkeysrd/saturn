@@ -111,13 +111,12 @@ func (h *Handler) CreateProvider(ctx context.Context, req *agentv1.CreateProvide
 		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
 	}
 
-	urlPtr := &req.ApiUrl
-	if req.ApiUrl == "" {
-		urlPtr = nil
+	var urlPtr, keyPtr *string
+	if req.ApiUrl != "" {
+		urlPtr = new(req.ApiUrl)
 	}
-	keyPtr := &req.ApiKey
-	if req.ApiKey == "" {
-		keyPtr = nil
+	if req.ApiKey != "" {
+		keyPtr = new(req.ApiKey)
 	}
 
 	p, err := h.coordinator.GetStore().CreateProvider(ctx, spaceID, req.GetName(), agent.CompatibilityMode(req.GetCompatibilityMode()), urlPtr, keyPtr)
@@ -172,14 +171,12 @@ func (h *Handler) UpdateProvider(ctx context.Context, req *agentv1.UpdateProvide
 		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
 	}
 
-	urlPtr := &req.ApiUrl
-	if req.ApiUrl == "" {
-		urlPtr = nil
+	var urlPtr, keyPtr *string
+	if req.ApiUrl != "" {
+		urlPtr = new(req.ApiUrl)
 	}
-	// Avoid wiping existing keys on basic updates if key field is empty
-	var keyPtr *string
 	if req.ApiKey != "" {
-		keyPtr = &req.ApiKey
+		keyPtr = new(req.ApiKey)
 	}
 
 	p, err := h.coordinator.GetStore().UpdateProvider(ctx, spaceID, req.GetId(), req.GetName(), urlPtr, keyPtr)

@@ -117,11 +117,16 @@ func (sp *ScheduledPayment) MarkSkipped() error {
 
 // ConfirmOpts contains parameters for creating an expense transaction upon confirming a scheduled payment.
 type ConfirmOpts struct {
+	BudgetID            *BudgetID
 	PeriodID            *PeriodID
 	AccountID           *AccountID
+	Amount              int64
+	Currency            Currency
 	AmountInBase        int64
 	AccountImpactAmount int64
+	Description         string
 	TransactionDate     time.Time
+	EffectiveDate       time.Time
 }
 
 // NewConfirmationTransaction constructs an expense transaction for a confirmed scheduled payment.
@@ -136,27 +141,61 @@ func (sp *ScheduledPayment) NewConfirmationTransaction(opts ConfirmOpts) (*Trans
 		date = time.Now().UTC()
 	}
 
+	effDate := opts.EffectiveDate
+	if effDate.IsZero() {
+		effDate = date
+	}
+
+	budgetID := &sp.BudgetID
+	if opts.BudgetID != nil {
+		budgetID = opts.BudgetID
+	}
+
+	amount := sp.Amount
+	if opts.Amount > 0 {
+		amount = opts.Amount
+	}
+
+	curr := sp.Currency
+	if opts.Currency != "" {
+		curr = opts.Currency
+	}
+
+	desc := opts.Description
+	if desc == "" {
+		if sp.Metadata.Description != "" {
+			desc = sp.Metadata.Description
+		} else {
+			desc = fmt.Sprintf("Scheduled Payment: %s", sp.SourceType)
+		}
+	}
+
 	spID := sp.ID
-	bID := sp.BudgetID
+	meta := TransactionMetadata{
+		ScheduledPaymentID:  &spID,
+		AccountImpactAmount: opts.AccountImpactAmount,
+	}
+
+	if sp.SourceType == SourceTypeRecurrentExpense && sp.SourceID != "" {
+		meta.RecurringExpenseID = new(RecurringExpenseID(sp.SourceID))
+	}
+
 	t := &Transaction{
 		ID:              txnID,
 		SpaceID:         sp.SpaceID,
 		Type:            TransactionTypeExpense,
-		BudgetID:        &bID,
+		BudgetID:        budgetID,
 		PeriodID:        opts.PeriodID,
 		AccountID:       opts.AccountID,
-		Amount:          sp.Amount,
-		Currency:        sp.Currency,
+		Amount:          amount,
+		Currency:        curr,
 		AmountInBase:    opts.AmountInBase,
-		Description:     fmt.Sprintf("Scheduled Payment: %s", sp.SourceType),
+		Description:     desc,
 		TransactionDate: date,
-		EffectiveDate:   date,
-		Metadata: TransactionMetadata{
-			ScheduledPaymentID:  &spID,
-			AccountImpactAmount: opts.AccountImpactAmount,
-		},
-		CreateTime: time.Now().UTC(),
-		UpdateTime: time.Now().UTC(),
+		EffectiveDate:   effDate,
+		Metadata:        meta,
+		CreateTime:      time.Now().UTC(),
+		UpdateTime:      time.Now().UTC(),
 	}
 
 	if opts.PeriodID != nil {

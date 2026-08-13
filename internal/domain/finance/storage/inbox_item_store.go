@@ -41,23 +41,22 @@ func toInboxItemDomain(db inboxItemDB) *finance.InboxItem {
 	var accountID, budgetID, paymentID, transactionID, borrowingID *string
 	var linkType *finance.BorrowingLinkType
 	if db.AccountID.Valid {
-		accountID = &db.AccountID.String
+		accountID = new(db.AccountID.String)
 	}
 	if db.BudgetID.Valid {
-		budgetID = &db.BudgetID.String
+		budgetID = new(db.BudgetID.String)
 	}
 	if db.ScheduledPaymentID.Valid {
-		paymentID = &db.ScheduledPaymentID.String
+		paymentID = new(db.ScheduledPaymentID.String)
 	}
 	if db.TransactionID.Valid {
-		transactionID = &db.TransactionID.String
+		transactionID = new(db.TransactionID.String)
 	}
 	if db.BorrowingID.Valid {
-		borrowingID = &db.BorrowingID.String
+		borrowingID = new(db.BorrowingID.String)
 	}
 	if db.BorrowingLinkType.Valid {
-		lt := finance.BorrowingLinkType(db.BorrowingLinkType.String)
-		linkType = &lt
+		linkType = new(finance.BorrowingLinkType(db.BorrowingLinkType.String))
 	}
 
 	var amount int64

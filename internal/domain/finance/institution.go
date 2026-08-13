@@ -46,6 +46,27 @@ type Institution struct {
 	UpdateTime time.Time
 }
 
+// Init prepares a new institution entity for creation by generating an ID (if missing), auto-resolving domain & logo URL, and populating creation timestamps.
+func (i *Institution) Init() error {
+	if string(i.ID) == "" {
+		instID, err := NewInstitutionID()
+		if err != nil {
+			return fmt.Errorf("generate institution ID: %w", err)
+		}
+		i.ID = instID
+	}
+	if i.Domain == "" {
+		i.Domain = AutoResolveInstitutionDomain(i.Name)
+	}
+	if i.LogoURL == "" && i.Domain != "" {
+		i.LogoURL = BuildInstitutionFaviconURL(i.Domain)
+	}
+	now := time.Now().UTC()
+	i.CreateTime = now
+	i.UpdateTime = now
+	return nil
+}
+
 // Validate checks the institution's business rules.
 func (i *Institution) Validate() error {
 	i.Name = strings.TrimSpace(i.Name)

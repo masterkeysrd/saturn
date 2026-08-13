@@ -174,7 +174,7 @@ func (f *FinanceDriver) CreateBorrowing(tb testing.TB, opts BorrowingOptions) *F
 		if !ok {
 			tb.Fatalf("account named %q not found in state registry", opts.Account)
 		}
-		accountID = &acc.ID
+		accountID = new(acc.ID)
 		createAsTxn = true
 	}
 
@@ -249,7 +249,7 @@ func (f *FinanceDriver) UpdateBorrowing(tb testing.TB, opts UpdateBorrowingOptio
 		if !ok {
 			tb.Fatalf("account named %q not found in state registry", opts.Account)
 		}
-		accountID = &accInfo.ID
+		accountID = new(accInfo.ID)
 	}
 
 	dir := opts.Direction
@@ -311,7 +311,7 @@ func (f *FinanceDriver) AdjustBorrowingBalance(tb testing.TB, opts AdjustBorrowi
 		if !ok {
 			tb.Fatalf("account named %q not found in state registry", opts.Account)
 		}
-		accountID = &acc.ID
+		accountID = new(acc.ID)
 	}
 
 	client := f.getClient()
@@ -321,7 +321,7 @@ func (f *FinanceDriver) AdjustBorrowingBalance(tb testing.TB, opts AdjustBorrowi
 		AccountId:     accountID,
 	}
 	if opts.Notes != "" {
-		req.Notes = &opts.Notes
+		req.Notes = new(opts.Notes)
 	}
 
 	_, err := client.AdjustBorrowingBalance(tb.Context(), req)
@@ -361,7 +361,7 @@ func (f *FinanceDriver) LogBorrowingTransaction(tb testing.TB, opts LogBorrowing
 		if !ok {
 			tb.Fatalf("account named %q not found in state registry", opts.Account)
 		}
-		accountID = &acc.ID
+		accountID = new(acc.ID)
 		accIDStr = acc.ID
 	}
 
@@ -372,7 +372,7 @@ func (f *FinanceDriver) LogBorrowingTransaction(tb testing.TB, opts LogBorrowing
 		AccountId: accountID,
 	}
 	if opts.Notes != "" {
-		txnInput.Notes = &opts.Notes
+		txnInput.Notes = new(opts.Notes)
 	}
 
 	req := &financev1.LogBorrowingTransactionRequest{
@@ -1379,7 +1379,7 @@ func (f *FinanceDriver) StageInboxItem(tb testing.TB, opts StageInboxItemOptions
 		if !ok {
 			tb.Fatalf("StageInboxItem: account named %q not found in state registry", opts.AccountName)
 		}
-		accountID = &acc.ID
+		accountID = new(acc.ID)
 	} else if opts.CardLastFour != "" {
 		var selected *AccountInfo
 		for _, acc := range f.driver.state.Accounts {
@@ -1393,7 +1393,7 @@ func (f *FinanceDriver) StageInboxItem(tb testing.TB, opts StageInboxItemOptions
 			}
 		}
 		if selected != nil {
-			accountID = &selected.ID
+			accountID = new(selected.ID)
 		}
 	}
 
@@ -1403,7 +1403,7 @@ func (f *FinanceDriver) StageInboxItem(tb testing.TB, opts StageInboxItemOptions
 		if !ok {
 			tb.Fatalf("StageInboxItem: budget named %q not found in state registry", opts.BudgetName)
 		}
-		budgetID = &bID
+		budgetID = new(bID)
 	}
 
 	docTypeStr := "unknown"
@@ -1547,7 +1547,7 @@ func (f *FinanceDriver) UpdateInboxItem(tb testing.TB, key string, opts StageInb
 		if !ok {
 			tb.Fatalf("UpdateInboxItem: account named %q not found in state registry", opts.AccountName)
 		}
-		accountID = &acc.ID
+		accountID = new(acc.ID)
 	}
 
 	var budgetID *string
@@ -1556,7 +1556,7 @@ func (f *FinanceDriver) UpdateInboxItem(tb testing.TB, key string, opts StageInb
 		if !ok {
 			tb.Fatalf("UpdateInboxItem: budget named %q not found in state registry", opts.BudgetName)
 		}
-		budgetID = &bID
+		budgetID = new(bID)
 	}
 
 	client := f.getClient()
@@ -1591,12 +1591,12 @@ func (f *FinanceDriver) UpdateInboxItem(tb testing.TB, key string, opts StageInb
 		if borInfo, ok := f.driver.state.Borrowings[bID]; ok {
 			bID = borInfo.ID
 		}
-		item.BorrowingId = &bID
+		item.BorrowingId = new(bID)
 		lt := opts.BorrowingLinkType
 		if lt == financev1.BorrowingLinkType_BORROWING_LINK_TYPE_UNSPECIFIED {
 			lt = financev1.BorrowingLinkType_BORROWING_LINK_TYPE_REPAYMENT
 		}
-		item.BorrowingLinkType = &lt
+		item.BorrowingLinkType = new(lt)
 	}
 
 	if item.Metadata == nil {

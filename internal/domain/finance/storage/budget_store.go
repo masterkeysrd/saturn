@@ -32,8 +32,7 @@ type budgetDB struct {
 func (row *budgetDB) toDomain() *finance.Budget {
 	var defaultAccountID *finance.AccountID
 	if row.DefaultAccountID.Valid {
-		idVal := finance.AccountID(row.DefaultAccountID.String)
-		defaultAccountID = &idVal
+		defaultAccountID = new(finance.AccountID(row.DefaultAccountID.String))
 	}
 	return &finance.Budget{
 		ID:               finance.BudgetID(row.ID),

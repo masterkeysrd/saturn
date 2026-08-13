@@ -48,3 +48,28 @@ func (fs *FinanceSettings) Validate() error {
 	}
 	return nil
 }
+
+// NewDefaultCashAccount instantiates the standard default Cash account for a workspace.
+func (fs *FinanceSettings) NewDefaultCashAccount() (*Account, error) {
+	accID, err := NewAccountID()
+	if err != nil {
+		return nil, fmt.Errorf("generate cash account ID: %w", err)
+	}
+
+	acc := &Account{
+		ID:             accID,
+		SpaceID:        fs.SpaceID,
+		Name:           "Cash",
+		Type:           AccountTypeCash,
+		Currency:       fs.BaseCurrency,
+		IsActive:       true,
+		InitialBalance: 0,
+		CurrentBalance: 0,
+		CreateTime:     time.Now().UTC(),
+		UpdateTime:     time.Now().UTC(),
+	}
+	if err := acc.Validate(); err != nil {
+		return nil, fmt.Errorf("validate default cash account: %w", err)
+	}
+	return acc, nil
+}

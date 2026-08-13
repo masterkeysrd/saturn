@@ -129,18 +129,17 @@ func (h *Handler) ListRecurringExpenses(ctx context.Context, req *financev1.List
 	}
 	spaceID := finance.SpaceID(spaceIDStr)
 
-	var statusFilter *string
+	var statusFilter *finance.RecurringExpenseStatus
 	if req.GetStatus() != financev1.RecurringExpense_STATUS_UNSPECIFIED {
 		domainStatus, err := mapProtoStatusToDomain(req.GetStatus())
 		if err != nil {
 			return nil, err
 		}
-		st := string(domainStatus)
-		statusFilter = &st
+		statusFilter = new(domainStatus)
 	}
 
 	filter := finance.ListRecurringExpensesFilter{
-		Status:        (*finance.RecurringExpenseStatus)(statusFilter),
+		Status:        statusFilter,
 		PageSize:      req.GetPageSize(),
 		NextPageToken: req.GetPageToken(),
 		SearchQuery:   req.SearchQuery,
@@ -175,31 +174,27 @@ func (h *Handler) ListScheduledPayments(ctx context.Context, req *financev1.List
 	}
 	spaceID := finance.SpaceID(spaceIDStr)
 
-	var statusFilter *string
+	var statusFilter *finance.ScheduledPaymentStatus
 	if req.GetStatus() != financev1.ScheduledPayment_STATUS_UNSPECIFIED {
 		domainStatus, err := mapProtoPaymentStatusToDomain(req.GetStatus())
 		if err != nil {
 			return nil, err
 		}
-		st := string(domainStatus)
-		statusFilter = &st
+		statusFilter = new(domainStatus)
 	} else {
-		st := string(finance.ScheduledPaymentPending)
-		statusFilter = &st
+		statusFilter = new(finance.ScheduledPaymentPending)
 	}
 
 	var startDate, endDate *time.Time
 	if req.GetStartDate() != nil {
-		st := req.GetStartDate().AsTime()
-		startDate = &st
+		startDate = new(req.GetStartDate().AsTime())
 	}
 	if req.GetEndDate() != nil {
-		et := req.GetEndDate().AsTime()
-		endDate = &et
+		endDate = new(req.GetEndDate().AsTime())
 	}
 
 	filter := finance.ListScheduledPaymentsFilter{
-		Status:        (*finance.ScheduledPaymentStatus)(statusFilter),
+		Status:        statusFilter,
 		StartDate:     startDate,
 		EndDate:       endDate,
 		PageSize:      req.GetPageSize(),
@@ -265,7 +260,7 @@ func (h *Handler) ConfirmScheduledPayment(ctx context.Context, req *financev1.Co
 		if err != nil {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
-		accountID = &parsed
+		accountID = new(parsed)
 	}
 
 	var budgetID *finance.BudgetID
@@ -274,13 +269,12 @@ func (h *Handler) ConfirmScheduledPayment(ctx context.Context, req *financev1.Co
 		if err != nil {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
-		budgetID = &parsed
+		budgetID = new(parsed)
 	}
 
 	var currency *finance.Currency
 	if req.Currency != nil && *req.Currency != "" {
-		parsed := finance.Currency(*req.Currency)
-		currency = &parsed
+		currency = new(finance.Currency(*req.Currency))
 	}
 
 	appReq := &financeapp.ConfirmScheduledPaymentRequest{

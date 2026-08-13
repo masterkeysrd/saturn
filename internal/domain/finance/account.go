@@ -81,6 +81,22 @@ type Account struct {
 	UpdateTime     time.Time
 }
 
+// Init prepares a new account entity for creation by generating an ID (if missing), setting active state, and populating creation timestamps.
+func (a *Account) Init() error {
+	if string(a.ID) == "" {
+		accID, err := NewAccountID()
+		if err != nil {
+			return fmt.Errorf("generate account ID: %w", err)
+		}
+		a.ID = accID
+	}
+	a.IsActive = true
+	now := time.Now().UTC()
+	a.CreateTime = now
+	a.UpdateTime = now
+	return nil
+}
+
 // AccountPatchSchema defines patchable fields for an Account entity.
 var AccountPatchSchema = patch.NewSchema[Account]().
 	Register("name", patch.Field(func(a *Account) *string { return &a.Name })).

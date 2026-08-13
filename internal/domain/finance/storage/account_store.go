@@ -35,8 +35,7 @@ type accountDB struct {
 func (row *accountDB) toDomain() *finance.Account {
 	var instID *finance.InstitutionID
 	if row.InstitutionID.Valid {
-		idVal := finance.InstitutionID(row.InstitutionID.String)
-		instID = &idVal
+		instID = new(finance.InstitutionID(row.InstitutionID.String))
 	}
 	return &finance.Account{
 		ID:             finance.AccountID(row.ID),

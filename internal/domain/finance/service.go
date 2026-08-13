@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -39,14 +40,11 @@ func NewService(deps Dependencies) *Service {
 	return &Service{deps: deps}
 }
 
-// ConfigureFinance creates or updates the workspace base currency settings.
+// ConfigureFinance initializes workspace base currency settings if not already configured.
 func (s *Service) ConfigureFinance(ctx context.Context, settings *FinanceSettings) (*FinanceSettings, error) {
 	if err := settings.Validate(); err != nil {
 		return nil, err
 	}
-
-	settings.CreateTime = time.Now().UTC()
-	settings.UpdateTime = time.Now().UTC()
 
 	existing, err := s.deps.SettingsStore.GetByID(ctx, settings.SpaceID)
 	if err == nil {
@@ -58,25 +56,18 @@ func (s *Service) ConfigureFinance(ctx context.Context, settings *FinanceSetting
 		return nil, err
 	}
 
+	now := time.Now().UTC()
+	settings.CreateTime = now
+	settings.UpdateTime = now
+
 	if err := s.deps.SettingsStore.Create(ctx, settings); err != nil {
 		return nil, err
 	}
 
 	// Automatically initialize a default Cash Account for this space
-	cashAccID, err := NewAccountID()
-	if err == nil {
-		defaultCashAcc := &Account{
-			ID:             cashAccID,
-			SpaceID:        settings.SpaceID,
-			Name:           "Cash",
-			Type:           AccountTypeCash,
-			Currency:       settings.BaseCurrency,
-			IsActive:       true,
-			InitialBalance: 0,
-			CurrentBalance: 0,
-		}
+	if defaultCashAcc, err := settings.NewDefaultCashAccount(); err == nil {
 		if _, err := s.CreateAccount(ctx, defaultCashAcc); err != nil {
-			fmt.Printf("[Finance Service] Warning: failed to create default Cash Account: %v\n", err)
+			slog.WarnContext(ctx, "failed to create default cash account", "space_id", settings.SpaceID, "error", err)
 		}
 	}
 
@@ -93,29 +84,17 @@ func (s *Service) GetFinanceSettings(ctx context.Context, spaceID SpaceID) (*Fin
 
 // CreateBudget creates a new budget template in a workspace.
 func (s *Service) CreateBudget(ctx context.Context, budget *Budget) (*Budget, error) {
-	if string(budget.ID) == "" {
-		bID, err := NewBudgetID()
-		if err != nil {
-			return nil, err
-		}
-		budget.ID = bID
+	if err := budget.Init(); err != nil {
+		return nil, err
 	}
-
 	if err := budget.Validate(); err != nil {
 		return nil, err
 	}
 
 	// Verify workspace settings exist
-	_, err := s.deps.SettingsStore.GetByID(ctx, budget.SpaceID)
-	if err != nil {
+	if _, err := s.deps.SettingsStore.GetByID(ctx, budget.SpaceID); err != nil {
 		return nil, fmt.Errorf("verify workspace settings: %w", err)
 	}
-
-	if budget.Status == "" {
-		budget.Status = BudgetStatusActive
-	}
-	budget.CreateTime = time.Now().UTC()
-	budget.UpdateTime = time.Now().UTC()
 
 	if err := s.deps.BudgetStore.Create(ctx, budget); err != nil {
 		return nil, err
@@ -208,23 +187,9 @@ func (s *Service) GetOrCreatePeriod(ctx context.Context, spaceID SpaceID, budget
 	}
 
 	// Determine exchange rate to base currency
-	rate := 1.0
-	if budget.Currency != settings.BaseCurrency {
-		rateRecord, err := s.getExchangeRate(ctx, ExchangeRateKey{
-			SpaceID:      budget.SpaceID,
-			FromCurrency: Currency(budget.Currency),
-			ToCurrency:   Currency(settings.BaseCurrency),
-			RateDate:     date,
-		})
-		if err != nil {
-			if errors.Is(err, ErrExchangeRateNotFound) {
-				rate = 0.0
-			} else {
-				return nil, fmt.Errorf("fetch exchange rate from %s to %s for date %s: %w", budget.Currency, settings.BaseCurrency, date.Format("2006-01-02"), err)
-			}
-		} else {
-			rate = rateRecord.Rate
-		}
+	rate, err := s.resolveExchangeRate(ctx, budget.SpaceID, budget.Currency, settings.BaseCurrency, date, true)
+	if err != nil {
+		return nil, err
 	}
 
 	newPeriod, err := budget.NewPeriod(NewPeriodOpts{
@@ -288,23 +253,9 @@ func (s *Service) GetOrCreatePeriods(ctx context.Context, budgets []*Budget, dat
 		bounds := boundsMap[b.ID]
 
 		// Determine exchange rate to base currency
-		rate := 1.0
-		if b.Currency != settings.BaseCurrency {
-			rateRecord, err := s.getExchangeRate(ctx, ExchangeRateKey{
-				SpaceID:      b.SpaceID,
-				FromCurrency: Currency(b.Currency),
-				ToCurrency:   Currency(settings.BaseCurrency),
-				RateDate:     date,
-			})
-			if err != nil {
-				if errors.Is(err, ErrExchangeRateNotFound) {
-					rate = 0.0
-				} else {
-					return nil, fmt.Errorf("fetch exchange rate from %s to %s for date %s: %w", b.Currency, settings.BaseCurrency, date.Format("2006-01-02"), err)
-				}
-			} else {
-				rate = rateRecord.Rate
-			}
+		rate, err := s.resolveExchangeRate(ctx, b.SpaceID, b.Currency, settings.BaseCurrency, date, true)
+		if err != nil {
+			return nil, err
 		}
 
 		periodID, err := NewPeriodID()
@@ -452,6 +403,27 @@ func (s *Service) getExchangeRate(ctx context.Context, key ExchangeRateKey) (*Ex
 	return s.deps.ExchangeRateStore.GetNextRate(ctx, key)
 }
 
+// resolveExchangeRate returns 1.0 for matching currencies, or queries the exchange rate store for cross-currency rates.
+// If allowNotFoundFallback is true and no rate is configured, it returns 0.0 without failing.
+func (s *Service) resolveExchangeRate(ctx context.Context, spaceID SpaceID, from, to Currency, date time.Time, allowNotFoundFallback bool) (float64, error) {
+	if from == to {
+		return 1.0, nil
+	}
+	rateRecord, err := s.getExchangeRate(ctx, ExchangeRateKey{
+		SpaceID:      spaceID,
+		FromCurrency: from,
+		ToCurrency:   to,
+		RateDate:     date,
+	})
+	if err != nil {
+		if allowNotFoundFallback && errors.Is(err, ErrExchangeRateNotFound) {
+			return 0.0, nil
+		}
+		return 0.0, fmt.Errorf("fetch exchange rate from %s to %s for date %s: %w", from, to, date.Format("2006-01-02"), err)
+	}
+	return rateRecord.Rate, nil
+}
+
 // CreateExpense logs a new expense transaction.
 func (s *Service) CreateExpense(ctx context.Context, txn *Transaction) (*Transaction, error) {
 	txn.Type = TransactionTypeExpense
@@ -516,40 +488,12 @@ func (s *Service) UpdateExpense(ctx context.Context, txn *Transaction) (*Transac
 	}
 
 	// Log manual edit transaction event with field diff
-	metadata := map[string]any{}
-	if existing.Amount != txn.Amount {
-		metadata["old_amount"] = existing.Amount
-		metadata["new_amount"] = txn.Amount
-	}
-	if existing.Description != txn.Description {
-		metadata["old_description"] = existing.Description
-		metadata["new_description"] = txn.Description
-	}
-	if existing.Currency != txn.Currency {
-		metadata["old_currency"] = string(existing.Currency)
-		metadata["new_currency"] = string(txn.Currency)
-	}
-	if existing.BudgetID != nil && txn.BudgetID != nil && *existing.BudgetID != *txn.BudgetID {
-		metadata["old_budget_id"] = string(*existing.BudgetID)
-		metadata["new_budget_id"] = string(*txn.BudgetID)
-	}
-	if (existing.AccountID == nil && txn.AccountID != nil) ||
-		(existing.AccountID != nil && txn.AccountID == nil) ||
-		(existing.AccountID != nil && txn.AccountID != nil && *existing.AccountID != *txn.AccountID) {
-		if existing.AccountID != nil {
-			metadata["old_account_id"] = string(*existing.AccountID)
-		}
-		if txn.AccountID != nil {
-			metadata["new_account_id"] = string(*txn.AccountID)
-		}
-	}
-
-	if len(metadata) > 0 {
+	if diff := existing.Diff(txn); len(diff) > 0 {
 		_, _ = s.LogTransactionEvent(ctx, &TransactionEvent{
 			SpaceID:       txn.SpaceID,
 			TransactionID: txn.ID,
 			EventType:     "MANUAL_EDIT",
-			Metadata:      metadata,
+			Metadata:      diff,
 		})
 	}
 
@@ -705,7 +649,7 @@ func (s *Service) GetSpentInsights(ctx context.Context, req *GetSpentInsightsReq
 		totalSpent += r.SpentInBase
 
 		// Convert budget limit to base currency using the period's exchange rate
-		limitInBase := int64(float64(r.BudgetLimit) * r.ExchangeRateToBase)
+		limitInBase := ConvertAmount(r.BudgetLimit, r.ExchangeRateToBase)
 		totalLimit += limitInBase
 
 		usagePct := 0.0
@@ -775,18 +719,9 @@ func (s *Service) GetSpentInsights(ctx context.Context, req *GetSpentInsightsReq
 
 // CreateRecurringExpense configures a new recurring expense rule.
 func (s *Service) CreateRecurringExpense(ctx context.Context, re *RecurringExpense) (*RecurringExpense, error) {
-	if re.ID == "" {
-		id, err := NewRecurringExpenseID()
-		if err != nil {
-			return nil, err
-		}
-		re.ID = id
+	if err := re.Init(); err != nil {
+		return nil, err
 	}
-
-	re.Status = RecurringExpenseActive
-	re.CreateTime = time.Now().UTC()
-	re.UpdateTime = time.Now().UTC()
-
 	if err := re.Validate(); err != nil {
 		return nil, err
 	}
@@ -927,21 +862,12 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 	}
 
 	// Calculate base currency conversion
-	rate := 1.0
-	if currency != settings.BaseCurrency {
-		rateRecord, err := s.getExchangeRate(ctx, ExchangeRateKey{
-			SpaceID:      payment.SpaceID,
-			FromCurrency: currency,
-			ToCurrency:   settings.BaseCurrency,
-			RateDate:     txnDate,
-		})
-		if err != nil {
-			return nil, err
-		}
-		rate = rateRecord.Rate
+	rate, err := s.resolveExchangeRate(ctx, payment.SpaceID, currency, settings.BaseCurrency, txnDate, false)
+	if err != nil {
+		return nil, err
 	}
 
-	amountInBase := int64(float64(actualAmount) * rate)
+	amountInBase := ConvertAmount(actualAmount, rate)
 
 	description := ""
 	if req.Description != "" {
@@ -967,22 +893,20 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 	}
 
 	txn, err := payment.NewConfirmationTransaction(ConfirmOpts{
+		BudgetID:            new(budgetID),
 		PeriodID:            &period.ID,
 		AccountID:           req.AccountID,
+		Amount:              actualAmount,
+		Currency:            currency,
 		AmountInBase:        amountInBase,
 		AccountImpactAmount: actualAmount,
+		Description:         description,
 		TransactionDate:     txnDate,
+		EffectiveDate:       effDate,
 	})
 	if err != nil {
 		return nil, err
 	}
-	txn.BudgetID = &budgetID
-	txn.Amount = actualAmount
-	txn.Currency = currency
-	txn.Description = description
-	txn.EffectiveDate = effDate
-	reID := RecurringExpenseID(payment.SourceID)
-	txn.Metadata.RecurringExpenseID = &reID
 
 	if err := s.deps.TransactionStore.Create(ctx, txn); err != nil {
 		return nil, err
@@ -1053,10 +977,11 @@ func (s *Service) MatchScheduledPayment(ctx context.Context, req MatchScheduledP
 	}
 
 	// Update transaction link properties in metadata
-	reID := RecurringExpenseID(payment.SourceID)
-	txn.Metadata.ScheduledPaymentID = &payment.ID
-	txn.Metadata.RecurringExpenseID = &reID
-	txn.UpdateTime = time.Now().UTC()
+	var reID *RecurringExpenseID
+	if payment.SourceType == SourceTypeRecurrentExpense && payment.SourceID != "" {
+		reID = new(RecurringExpenseID(payment.SourceID))
+	}
+	txn.LinkScheduledPayment(payment.ID, reID)
 
 	if err := s.deps.TransactionStore.Update(ctx, txn); err != nil {
 		return nil, fmt.Errorf("failed to link transaction: %w", err)
@@ -1188,36 +1113,23 @@ func (s *Service) createTransaction(ctx context.Context, txn *Transaction) error
 		if err != nil {
 			return fmt.Errorf("fetch budget template: %w", err)
 		}
-		st := budget.Status
-		if st == "" {
-			st = BudgetStatusActive
-		}
-		if st != BudgetStatusActive {
-			return fmt.Errorf("cannot log transaction against budget %q with status %q", budget.Name, st)
+		if err := budget.EnsureActive(); err != nil {
+			return err
 		}
 		period, err := s.GetOrCreatePeriod(ctx, txn.SpaceID, budget.ID, txn.EffectiveDate)
 		if err != nil {
 			return fmt.Errorf("resolve active budget period: %w", err)
 		}
-		txn.PeriodID = &period.ID
+		txn.PeriodID = new(period.ID)
 	}
 
 	// 4. Centralized Base Currency Exchange Rate Calculation
 	if txn.AmountInBase == 0 || txn.Currency != settings.BaseCurrency {
-		rate := 1.0
-		if txn.Currency != settings.BaseCurrency {
-			rateRecord, err := s.getExchangeRate(ctx, ExchangeRateKey{
-				SpaceID:      txn.SpaceID,
-				FromCurrency: txn.Currency,
-				ToCurrency:   settings.BaseCurrency,
-				RateDate:     txn.TransactionDate,
-			})
-			if err != nil {
-				return fmt.Errorf("fetch exchange rate from %s to %s for date %s: %w", txn.Currency, settings.BaseCurrency, txn.TransactionDate.Format("2006-01-02"), err)
-			}
-			rate = rateRecord.Rate
+		rate, err := s.resolveExchangeRate(ctx, txn.SpaceID, txn.Currency, settings.BaseCurrency, txn.TransactionDate, false)
+		if err != nil {
+			return err
 		}
-		txn.AmountInBase = int64(float64(txn.Amount) * rate)
+		txn.AmountInBase = ConvertAmount(txn.Amount, rate)
 	}
 
 	if err := txn.Validate(); err != nil {
@@ -1231,11 +1143,7 @@ func (s *Service) createTransaction(ctx context.Context, txn *Transaction) error
 
 	// 6. Adjust account balance
 	if txn.AccountID != nil && *txn.AccountID != "" {
-		impactAmount := txn.Amount
-		if txn.Metadata.AccountImpactAmount > 0 {
-			impactAmount = txn.Metadata.AccountImpactAmount
-		}
-		if err := s.adjustAccountBalance(ctx, txn.SpaceID, *txn.AccountID, impactAmount, txn.Type, false); err != nil {
+		if err := s.adjustAccountBalance(ctx, txn.SpaceID, *txn.AccountID, txn.ImpactAmount(), txn.Type, false); err != nil {
 			return fmt.Errorf("failed to adjust account balance: %w", err)
 		}
 	}
@@ -1278,26 +1186,17 @@ func (s *Service) updateTransaction(ctx context.Context, txn *Transaction, exist
 		if err != nil {
 			return fmt.Errorf("resolve active budget period: %w", err)
 		}
-		txn.PeriodID = &period.ID
+		txn.PeriodID = new(period.ID)
 	} else {
 		txn.PeriodID = nil
 	}
 
 	// 4. Centralized Base Currency Exchange Rate Calculation
-	if txn.Currency != settings.BaseCurrency {
-		rateRecord, err := s.getExchangeRate(ctx, ExchangeRateKey{
-			SpaceID:      txn.SpaceID,
-			FromCurrency: txn.Currency,
-			ToCurrency:   settings.BaseCurrency,
-			RateDate:     txn.TransactionDate,
-		})
-		if err != nil {
-			return fmt.Errorf("fetch exchange rate from %s to %s for date %s: %w", txn.Currency, settings.BaseCurrency, txn.TransactionDate.Format("2006-01-02"), err)
-		}
-		txn.AmountInBase = int64(float64(txn.Amount) * rateRecord.Rate)
-	} else {
-		txn.AmountInBase = txn.Amount
+	rate, err := s.resolveExchangeRate(ctx, txn.SpaceID, txn.Currency, settings.BaseCurrency, txn.TransactionDate, false)
+	if err != nil {
+		return err
 	}
+	txn.AmountInBase = ConvertAmount(txn.Amount, rate)
 
 	if err := txn.Validate(); err != nil {
 		return err
@@ -1329,11 +1228,7 @@ func (s *Service) updateTransaction(ctx context.Context, txn *Transaction, exist
 func (s *Service) deleteTransaction(ctx context.Context, txn *Transaction) error {
 	// 1. Revert the account balance impact using account_impact_amount if present
 	if txn.AccountID != nil && *txn.AccountID != "" {
-		impactAmount := txn.Amount
-		if txn.Metadata.AccountImpactAmount > 0 {
-			impactAmount = txn.Metadata.AccountImpactAmount
-		}
-		if err := s.adjustAccountBalance(ctx, txn.SpaceID, *txn.AccountID, impactAmount, txn.Type, true); err != nil {
+		if err := s.adjustAccountBalance(ctx, txn.SpaceID, *txn.AccountID, txn.ImpactAmount(), txn.Type, true); err != nil {
 			return fmt.Errorf("failed to revert account balance on deletion: %w", err)
 		}
 	}
@@ -1401,19 +1296,11 @@ func (s *Service) syncBorrowingTransaction(ctx context.Context, targetTxn *Trans
 	return s.createTransaction(ctx, targetTxn)
 }
 
-// CreateBorrowing creates a new borrowing record and syncs a transaction.
+// CreateBorrowing initializes a borrowing agreement and optionally logs its disbursement transaction.
 func (s *Service) CreateBorrowing(ctx context.Context, b *Borrowing, createAsTransaction bool) (*Borrowing, error) {
-	if b.ID == "" {
-		bID, err := NewBorrowingID()
-		if err != nil {
-			return nil, err
-		}
-		b.ID = bID
+	if err := b.Init(); err != nil {
+		return nil, err
 	}
-	b.RemainingAmount = b.TotalAmount
-	b.Status = BorrowingStatusActive
-	b.CreateTime = time.Now().UTC()
-	b.UpdateTime = time.Now().UTC()
 
 	if err := b.Validate(); err != nil {
 		return nil, err
@@ -1424,15 +1311,9 @@ func (s *Service) CreateBorrowing(ctx context.Context, b *Borrowing, createAsTra
 		return nil, err
 	}
 
-	if createAsTransaction && b.Currency != settings.BaseCurrency {
-		_, err := s.getExchangeRate(ctx, ExchangeRateKey{
-			SpaceID:      b.SpaceID,
-			FromCurrency: b.Currency,
-			ToCurrency:   settings.BaseCurrency,
-			RateDate:     b.EstablishedAt,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("exchange rate not configured from %s to %s for date %s: %w", b.Currency, settings.BaseCurrency, b.EstablishedAt.Format("2006-01-02"), err)
+	if createAsTransaction {
+		if _, err := s.resolveExchangeRate(ctx, b.SpaceID, b.Currency, settings.BaseCurrency, b.EstablishedAt, false); err != nil {
+			return nil, err
 		}
 	}
 
@@ -1440,7 +1321,7 @@ func (s *Service) CreateBorrowing(ctx context.Context, b *Borrowing, createAsTra
 		return nil, err
 	}
 
-	if createAsTransaction || (b.AccountID != nil && *b.AccountID != "") {
+	if createAsTransaction || b.HasLinkedAccount() {
 		initialTxn, err := b.NewTransaction(BorrowingTransactionOpts{
 			Role:            "INITIAL_FUNDING",
 			Amount:          b.TotalAmount,
@@ -1517,15 +1398,9 @@ func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing, mask []stri
 	}
 	hasInitialTxn := len(page.Items) > 0
 
-	if (hasInitialTxn || (existing.AccountID != nil && *existing.AccountID != "")) && existing.Currency != settings.BaseCurrency {
-		_, err := s.getExchangeRate(ctx, ExchangeRateKey{
-			SpaceID:      existing.SpaceID,
-			FromCurrency: existing.Currency,
-			ToCurrency:   settings.BaseCurrency,
-			RateDate:     existing.EstablishedAt,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("exchange rate not configured from %s to %s for date %s: %w", existing.Currency, settings.BaseCurrency, existing.EstablishedAt.Format("2006-01-02"), err)
+	if hasInitialTxn || existing.HasLinkedAccount() {
+		if _, err := s.resolveExchangeRate(ctx, existing.SpaceID, existing.Currency, settings.BaseCurrency, existing.EstablishedAt, false); err != nil {
+			return nil, err
 		}
 	}
 
@@ -1533,7 +1408,7 @@ func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing, mask []stri
 		return nil, err
 	}
 
-	if hasInitialTxn || (existing.AccountID != nil && *existing.AccountID != "") {
+	if hasInitialTxn || existing.HasLinkedAccount() {
 		initialTxn, err := existing.NewTransaction(BorrowingTransactionOpts{
 			Role:            "INITIAL_FUNDING",
 			Amount:          existing.TotalAmount,
@@ -1644,19 +1519,11 @@ func (s *Service) LogBorrowingTransaction(ctx context.Context, req LogBorrowingT
 		return nil, fmt.Errorf("verify workspace settings: %w", err)
 	}
 
-	amountInBase := req.Amount
-	if b.Currency != settings.BaseCurrency {
-		rateRecord, err := s.getExchangeRate(ctx, ExchangeRateKey{
-			SpaceID:      req.SpaceID,
-			FromCurrency: b.Currency,
-			ToCurrency:   settings.BaseCurrency,
-			RateDate:     date,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("exchange rate not configured from %s to %s for date %s: %w", b.Currency, settings.BaseCurrency, date.Format("2006-01-02"), err)
-		}
-		amountInBase = int64(float64(req.Amount) * rateRecord.Rate)
+	rateToBase, err := s.resolveExchangeRate(ctx, req.SpaceID, b.Currency, settings.BaseCurrency, date, false)
+	if err != nil {
+		return nil, err
 	}
+	amountInBase := ConvertAmount(req.Amount, rateToBase)
 
 	accountImpactAmount := req.Amount
 	if req.AccountID != nil && *req.AccountID != "" {
@@ -1664,18 +1531,11 @@ func (s *Service) LogBorrowingTransaction(ctx context.Context, req LogBorrowingT
 		if err != nil {
 			return nil, fmt.Errorf("fetch payment account: %w", err)
 		}
-		if acc.Currency != b.Currency {
-			rateRecord, err := s.getExchangeRate(ctx, ExchangeRateKey{
-				SpaceID:      req.SpaceID,
-				FromCurrency: b.Currency,
-				ToCurrency:   acc.Currency,
-				RateDate:     date,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("exchange rate not configured from %s to %s for date %s: %w", b.Currency, acc.Currency, date.Format("2006-01-02"), err)
-			}
-			accountImpactAmount = int64(float64(req.Amount) * rateRecord.Rate)
+		rateToAcc, err := s.resolveExchangeRate(ctx, req.SpaceID, b.Currency, acc.Currency, date, false)
+		if err != nil {
+			return nil, err
 		}
+		accountImpactAmount = ConvertAmount(req.Amount, rateToAcc)
 	}
 
 	if err := s.deps.BorrowingStore.Update(ctx, b); err != nil {
@@ -1880,15 +1740,9 @@ func (s *Service) ListCurrencies(ctx context.Context) ([]CurrencyInfo, error) {
 
 // CreateAccount creates a new account.
 func (s *Service) CreateAccount(ctx context.Context, a *Account) (*Account, error) {
-	if a.ID == "" {
-		aID, err := NewAccountID()
-		if err != nil {
-			return nil, err
-		}
-		a.ID = aID
+	if err := a.Init(); err != nil {
+		return nil, err
 	}
-	a.CreateTime = time.Now().UTC()
-	a.Activate()
 
 	if err := a.Validate(); err != nil {
 		return nil, err
@@ -2092,14 +1946,14 @@ func (s *Service) CreateTransfer(ctx context.Context, t *Transfer) (*Transfer, e
 	}
 
 	outflowTxn, inflowTxn, err := t.NewLegTransactions(TransferLegOpts{
-		SourceCurrency: srcAcc.Currency,
-		DestCurrency:   destAcc.Currency,
+		SourceAccountName: srcAcc.Name,
+		DestAccountName:   destAcc.Name,
+		SourceCurrency:    srcAcc.Currency,
+		DestCurrency:      destAcc.Currency,
 	})
 	if err != nil {
 		return nil, err
 	}
-	outflowTxn.Description = fmt.Sprintf("Transfer to %s", destAcc.Name)
-	inflowTxn.Description = fmt.Sprintf("Transfer from %s", srcAcc.Name)
 
 	if err := s.createTransaction(ctx, outflowTxn); err != nil {
 		return nil, fmt.Errorf("failed to log transfer outflow leg: %w", err)
@@ -2227,8 +2081,7 @@ func (s *Service) StageInboxItem(ctx context.Context, spaceID SpaceID, req *Stag
 			if selected == nil {
 				selected = page.Items[0]
 			}
-			accIDStr := string(selected.ID)
-			accountID = &accIDStr
+			accountID = new(string(selected.ID))
 		}
 	}
 
@@ -2239,8 +2092,7 @@ func (s *Service) StageInboxItem(ctx context.Context, spaceID SpaceID, req *Stag
 		if err == nil {
 			budget, err := s.deps.BudgetStore.GetByID(ctx, spaceID, bID)
 			if err == nil && budget != nil && budget.SpaceID == spaceID {
-				bIDStr := string(budget.ID)
-				budgetID = &bIDStr
+				budgetID = new(string(budget.ID))
 			}
 		}
 	}
@@ -2359,13 +2211,13 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID SpaceID, id stri
 		return nil, fmt.Errorf("get inbox item: %w", err)
 	}
 
-	if item.Status != InboxItemPending {
-		return nil, fmt.Errorf("inbox item is already processed: status = %s", item.Status)
+	if err := item.EnsurePending(); err != nil {
+		return nil, err
 	}
 
 	// 1b. If it is a system verification email: mark resolved immediately
 	if item.DocType == InboxItemDocSystemVerification {
-		item.Status = InboxItemResolved
+		item.MarkResolved(nil)
 		if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
 			return nil, fmt.Errorf("resolve verification inbox item: %w", err)
 		}
@@ -2522,9 +2374,7 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID SpaceID, id stri
 			}
 
 			// Mark inbox item as resolved and link it
-			item.Status = InboxItemResolved
-			tIDStr := string(txn.ID)
-			item.TransactionID = &tIDStr
+			item.MarkResolved(&txn.ID)
 			if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
 				return nil, fmt.Errorf("resolve inbox item: %w", err)
 			}
@@ -2658,11 +2508,11 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID SpaceID, id stri
 		}
 
 		// Mark inbox item as resolved and link it
-		item.Status = InboxItemResolved
+		var matchedTxID *TransactionID
 		if matchedTx != nil {
-			tIDStr := string(matchedTx.ID)
-			item.TransactionID = &tIDStr
+			matchedTxID = &matchedTx.ID
 		}
+		item.MarkResolved(matchedTxID)
 		targetAccIDStr := string(targetAccID)
 		item.AccountID = &targetAccIDStr
 
@@ -2723,19 +2573,11 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID SpaceID, id stri
 	}
 
 	// Calculate base currency conversion
-	var rate = 1.0
-	if item.Currency != string(settings.BaseCurrency) {
-		rateRecord, err := s.getExchangeRate(ctx, ExchangeRateKey{
-			SpaceID:      SpaceID(spaceID),
-			FromCurrency: Currency(item.Currency),
-			ToCurrency:   settings.BaseCurrency,
-			RateDate:     item.TransactionDate,
-		})
-		if err == nil {
-			rate = rateRecord.Rate
-		}
+	rate, err := s.resolveExchangeRate(ctx, SpaceID(spaceID), Currency(item.Currency), settings.BaseCurrency, item.TransactionDate, true)
+	if err != nil {
+		return nil, err
 	}
-	amountInBase := int64(float64(item.Amount) * rate)
+	amountInBase := ConvertAmount(item.Amount, rate)
 
 	tID, err := NewTransactionID()
 	if err != nil {
@@ -2791,9 +2633,7 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID SpaceID, id stri
 	}
 
 	// Mark inbox item as resolved and link it
-	item.Status = InboxItemResolved
-	tIDStr := string(txn.ID)
-	item.TransactionID = &tIDStr
+	item.MarkResolved(&txn.ID)
 	if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
 		return nil, fmt.Errorf("resolve inbox item: %w", err)
 	}
@@ -2850,9 +2690,7 @@ func (s *Service) handleBorrowingLinkForTransaction(ctx context.Context, spaceID
 	}
 
 	// Update metadata with borrowing link details
-	txn.Metadata.BorrowingID = &borrowing.ID
-	txn.Metadata.BorrowingRole = role
-	txn.UpdateTime = time.Now().UTC()
+	txn.LinkBorrowing(borrowing.ID, role)
 
 	if err := s.deps.TransactionStore.Update(ctx, txn); err != nil {
 		return fmt.Errorf("update transaction borrowing metadata: %w", err)
@@ -2959,21 +2797,9 @@ func BuildInstitutionFaviconURL(domain string) string {
 }
 
 func (s *Service) CreateInstitution(ctx context.Context, inst *Institution) (*Institution, error) {
-	if inst.ID == "" {
-		id, err := NewInstitutionID()
-		if err != nil {
-			return nil, err
-		}
-		inst.ID = id
+	if err := inst.Init(); err != nil {
+		return nil, err
 	}
-	if inst.Domain == "" {
-		inst.Domain = AutoResolveInstitutionDomain(inst.Name)
-	}
-	if inst.LogoURL == "" && inst.Domain != "" {
-		inst.LogoURL = BuildInstitutionFaviconURL(inst.Domain)
-	}
-	inst.CreateTime = time.Now().UTC()
-	inst.UpdateTime = time.Now().UTC()
 	if err := inst.Validate(); err != nil {
 		return nil, err
 	}

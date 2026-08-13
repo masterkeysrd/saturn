@@ -174,3 +174,65 @@ func (t *Transaction) GetSortValue(field string) string {
 	}
 	return t.GetSortValue(DefaultTransactionSortField)
 }
+
+// LinkScheduledPayment attaches scheduled payment and recurring expense linkage metadata.
+func (t *Transaction) LinkScheduledPayment(paymentID ScheduledPaymentID, reID *RecurringExpenseID) {
+	t.Metadata.ScheduledPaymentID = &paymentID
+	if reID != nil {
+		t.Metadata.RecurringExpenseID = reID
+	}
+	t.UpdateTime = time.Now().UTC()
+}
+
+// LinkBorrowing attaches borrowing linkage metadata.
+func (t *Transaction) LinkBorrowing(borrowingID BorrowingID, role string) {
+	t.Metadata.BorrowingID = &borrowingID
+	t.Metadata.BorrowingRole = role
+	t.UpdateTime = time.Now().UTC()
+}
+
+// ImpactAmount returns the effective monetary impact amount of the transaction on an account balance.
+func (t *Transaction) ImpactAmount() int64 {
+	if t.Metadata.AccountImpactAmount > 0 {
+		return t.Metadata.AccountImpactAmount
+	}
+	return t.Amount
+}
+
+// Diff compares this transaction with an updated transaction and returns a metadata diff map for audit logging.
+func (t *Transaction) Diff(updated *Transaction) map[string]any {
+	metadata := map[string]any{}
+	if t.Amount != updated.Amount {
+		metadata["old_amount"] = t.Amount
+		metadata["new_amount"] = updated.Amount
+	}
+	if t.Description != updated.Description {
+		metadata["old_description"] = t.Description
+		metadata["new_description"] = updated.Description
+	}
+	if t.Currency != updated.Currency {
+		metadata["old_currency"] = string(t.Currency)
+		metadata["new_currency"] = string(updated.Currency)
+	}
+	if (t.BudgetID == nil && updated.BudgetID != nil) ||
+		(t.BudgetID != nil && updated.BudgetID == nil) ||
+		(t.BudgetID != nil && updated.BudgetID != nil && *t.BudgetID != *updated.BudgetID) {
+		if t.BudgetID != nil {
+			metadata["old_budget_id"] = string(*t.BudgetID)
+		}
+		if updated.BudgetID != nil {
+			metadata["new_budget_id"] = string(*updated.BudgetID)
+		}
+	}
+	if (t.AccountID == nil && updated.AccountID != nil) ||
+		(t.AccountID != nil && updated.AccountID == nil) ||
+		(t.AccountID != nil && updated.AccountID != nil && *t.AccountID != *updated.AccountID) {
+		if t.AccountID != nil {
+			metadata["old_account_id"] = string(*t.AccountID)
+		}
+		if updated.AccountID != nil {
+			metadata["new_account_id"] = string(*updated.AccountID)
+		}
+	}
+	return metadata
+}

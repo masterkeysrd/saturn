@@ -50,7 +50,7 @@ func (s *EncryptedStore) CreateProvider(ctx context.Context, spaceID string, nam
 		if err != nil {
 			return nil, fmt.Errorf("encrypt api_key: %w", err)
 		}
-		encKey = &encrypted
+		encKey = new(encrypted)
 	}
 
 	p, err := s.next.CreateProvider(ctx, spaceID, name, mode, url, encKey)
@@ -92,7 +92,7 @@ func (s *EncryptedStore) UpdateProvider(ctx context.Context, spaceID string, id 
 		if err != nil {
 			return nil, fmt.Errorf("encrypt api_key: %w", err)
 		}
-		encKey = &encrypted
+		encKey = new(encrypted)
 	}
 
 	p, err := s.next.UpdateProvider(ctx, spaceID, id, name, url, encKey)
@@ -110,7 +110,7 @@ func (s *EncryptedStore) decryptProvider(p *LLMProvider) {
 	}
 	decrypted, err := s.cipher.Decrypt(*p.APIKey)
 	if err == nil {
-		p.APIKey = &decrypted
+		p.APIKey = new(decrypted)
 	}
 }
 

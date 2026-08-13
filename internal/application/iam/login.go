@@ -90,8 +90,7 @@ func (c *Coordinator) Login(ctx context.Context, req *LoginRequest) (*LoginRespo
 		var eventType = identity.SecurityEventLoginFailed
 
 		if attempts >= 5 {
-			lockTime := now.Add(15 * time.Minute)
-			lockedUntil = &lockTime
+			lockedUntil = new(now.Add(15 * time.Minute))
 			eventType = identity.SecurityEventAccountLocked
 		}
 

@@ -90,3 +90,11 @@ func (r *ExchangeRate) GetSortValue(field string) string {
 	}
 	return r.GetSortValue(DefaultExchangeRateSortField)
 }
+
+// ConvertAmount converts a monetary amount in cents using an exchange rate multiplier.
+func ConvertAmount(amount int64, rate float64) int64 {
+	if rate == 1.0 || amount == 0 {
+		return amount
+	}
+	return int64(float64(amount) * rate)
+}

@@ -75,18 +75,15 @@ func (s *TransactionStore) Create(ctx context.Context, t *finance.Transaction) e
 func (row *transactionDB) toDomain() *finance.Transaction {
 	var budgetIDPtr *finance.BudgetID
 	if row.BudgetID.Valid {
-		bID := finance.BudgetID(row.BudgetID.String)
-		budgetIDPtr = &bID
+		budgetIDPtr = new(finance.BudgetID(row.BudgetID.String))
 	}
 	var periodIDPtr *finance.PeriodID
 	if row.PeriodID.Valid {
-		pID := finance.PeriodID(row.PeriodID.String)
-		periodIDPtr = &pID
+		periodIDPtr = new(finance.PeriodID(row.PeriodID.String))
 	}
 	var accountIDPtr *finance.AccountID
 	if row.AccountID.Valid {
-		aID := finance.AccountID(row.AccountID.String)
-		accountIDPtr = &aID
+		accountIDPtr = new(finance.AccountID(row.AccountID.String))
 	}
 
 	var meta finance.TransactionMetadata

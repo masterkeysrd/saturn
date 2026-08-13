@@ -102,6 +102,36 @@ type Budget struct {
 	UpdateTime       time.Time
 }
 
+// Init prepares a new budget entity for creation by generating an ID (if missing), setting default active status, and populating creation timestamps.
+func (b *Budget) Init() error {
+	if string(b.ID) == "" {
+		bID, err := NewBudgetID()
+		if err != nil {
+			return fmt.Errorf("generate budget ID: %w", err)
+		}
+		b.ID = bID
+	}
+	if b.Status == "" {
+		b.Status = BudgetStatusActive
+	}
+	now := time.Now().UTC()
+	b.CreateTime = now
+	b.UpdateTime = now
+	return nil
+}
+
+// EnsureActive checks whether the budget is active and eligible to record transactions against.
+func (b *Budget) EnsureActive() error {
+	st := b.Status
+	if st == "" {
+		st = BudgetStatusActive
+	}
+	if st != BudgetStatusActive {
+		return fmt.Errorf("cannot log transaction against budget %q with status %q", b.Name, st)
+	}
+	return nil
+}
+
 // IsActive returns true if the budget status is active.
 func (b *Budget) IsActive() bool {
 	return b.Status == BudgetStatusActive

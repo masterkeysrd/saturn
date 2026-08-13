@@ -103,6 +103,30 @@ type Borrowing struct {
 	UpdateTime      time.Time
 }
 
+// Init prepares a new borrowing entity for creation by generating an ID (if missing), setting active status, initializing remaining amount, and populating creation timestamps.
+func (b *Borrowing) Init() error {
+	if string(b.ID) == "" {
+		bID, err := NewBorrowingID()
+		if err != nil {
+			return fmt.Errorf("generate borrowing ID: %w", err)
+		}
+		b.ID = bID
+	}
+	if b.Status == "" {
+		b.Status = BorrowingStatusActive
+	}
+	if b.EstablishedAt.IsZero() {
+		b.EstablishedAt = time.Now().UTC()
+	}
+	if b.RemainingAmount == 0 {
+		b.RemainingAmount = b.TotalAmount
+	}
+	now := time.Now().UTC()
+	b.CreateTime = now
+	b.UpdateTime = now
+	return nil
+}
+
 // Validate checks basic properties of a borrowing.
 func (b *Borrowing) Validate() error {
 	if err := b.ID.Validate(); err != nil {
@@ -297,6 +321,11 @@ func (b *Borrowing) RollbackTransaction(role string, txnType TransactionType, am
 	}
 
 	b.UpdateTime = time.Now().UTC()
+}
+
+// HasLinkedAccount returns true if the borrowing agreement is linked to a financial account.
+func (b *Borrowing) HasLinkedAccount() bool {
+	return b.AccountID != nil && *b.AccountID != ""
 }
 
 // NewTransaction constructs a valid Transaction entity linked to this Borrowing.
