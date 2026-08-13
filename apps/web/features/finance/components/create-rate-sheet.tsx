@@ -46,6 +46,7 @@ export function CreateRateSheet({
     .map((c) => ({
       value: c.code,
       label: `${c.code}${c.name ? ` (${c.name})` : ""}`,
+      triggerLabel: c.code,
     }))
 
   const defaultFrom = currencyItems.length > 0 ? currencyItems[0].value : "EUR"

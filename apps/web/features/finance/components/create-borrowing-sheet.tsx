@@ -60,6 +60,7 @@ export function CreateBorrowingSheet({
   const currencyItems = currencies.map((c) => ({
     value: c.code,
     label: `${c.code}${c.name ? ` (${c.name})` : ""}`,
+    triggerLabel: c.code,
   }))
 
   const {

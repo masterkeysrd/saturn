@@ -22,7 +22,7 @@ interface FormSelectProps<TFieldValues extends FieldValues = FieldValues> {
   disabled?: boolean
   className?: string
   triggerClassName?: string
-  items: Array<{ value: string; label: string }>
+  items: Array<{ value: string; label: string; triggerLabel?: string }>
   helperText?: string
 }
 
@@ -50,6 +50,47 @@ export function FormSelect<TFieldValues extends FieldValues>({
               (String(field.value).endsWith(i.value) ||
                 i.value.endsWith(String(field.value)))
           )
+        const hasWrapper = !!(label || helperText || fieldState.error)
+
+        const selectElement = (
+          <Select
+            value={field.value}
+            onValueChange={(val) => field.onChange(val || "")}
+            disabled={disabled}
+          >
+            <SelectTrigger
+              id={name}
+              className={cn(
+                "!h-11 w-full rounded-xl border-border/60 bg-background/50 text-left",
+                disabled && "opacity-70",
+                triggerClassName,
+                !hasWrapper && className
+              )}
+            >
+              <SelectValue placeholder={placeholder}>
+                {selectedItem
+                  ? selectedItem.triggerLabel || selectedItem.label
+                  : field.value || undefined}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent className="w-(--anchor-width) min-w-56 rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+              {items.map((item) => (
+                <SelectItem
+                  key={item.value}
+                  value={item.value}
+                  label={item.label}
+                >
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )
+
+        if (!hasWrapper) {
+          return selectElement
+        }
+
         return (
           <div className={cn("space-y-1.5", className)}>
             {label && (
@@ -60,35 +101,7 @@ export function FormSelect<TFieldValues extends FieldValues>({
                 {label}
               </Label>
             )}
-            <Select
-              value={field.value}
-              onValueChange={(val) => field.onChange(val || "")}
-              disabled={disabled}
-            >
-              <SelectTrigger
-                id={name}
-                className={cn(
-                  "!h-11 w-full rounded-xl border-border/60 bg-background/50 text-left",
-                  disabled && "opacity-70",
-                  triggerClassName
-                )}
-              >
-                <SelectValue placeholder={placeholder}>
-                  {selectedItem ? selectedItem.label : field.value || undefined}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                {items.map((item) => (
-                  <SelectItem
-                    key={item.value}
-                    value={item.value}
-                    label={item.label}
-                  >
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {selectElement}
             {helperText && !fieldState.error && (
               <span className="mt-1 block text-[10px] text-muted-foreground/75">
                 {helperText}
