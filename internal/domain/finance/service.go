@@ -1863,33 +1863,19 @@ func (s *Service) StageInboxItem(ctx context.Context, spaceID SpaceID, req *Stag
 		return nil, fmt.Errorf("generate inbox item ID: %w", err)
 	}
 
-	// 2. Resolve target account ID (prioritizing explicit AccountID over CardLastFour fallback with currency priority)
+	// 2. Resolve target account ID
 	var accountID *string
-	if req.AccountID != nil && *req.AccountID != "" {
-		accountID = req.AccountID
-	} else if req.CardLastFour != "" {
-		activeOnly := true
-		last4 := req.CardLastFour
-		page, err := s.deps.AccountStore.ListBySpace(ctx, spaceID, &ListAccountsFilter{
-			PageSize:   100,
-			ActiveOnly: &activeOnly,
-			LastFour:   &last4,
-		})
-		if err == nil && len(page.Items) > 0 {
-			var selected *Account
-			// Priority 1: Match currency exact
-			for _, acc := range page.Items {
-				if string(acc.Currency) == req.Currency {
-					selected = acc
-					break
-				}
-			}
-			// Priority 2: Fallback to first matching account
-			if selected == nil {
-				selected = page.Items[0]
-			}
-			accountID = new(string(selected.ID))
-		}
+	reqAccID := ""
+	if req.AccountID != nil {
+		reqAccID = *req.AccountID
+	}
+	acc, err := s.ResolveAccount(ctx, spaceID, ResolveAccountOpts{
+		AccountID: reqAccID,
+		LastFour:  req.CardLastFour,
+		Currency:  req.Currency,
+	})
+	if err == nil && acc != nil {
+		accountID = new(string(acc.ID))
 	}
 
 	// 3. Resolve and validate matching budget ID
@@ -2610,4 +2596,82 @@ func (s *Service) ResolveInstitution(ctx context.Context, spaceID SpaceID, name 
 	}
 
 	return result, nil
+}
+
+// ResolveAccountOpts defines search criteria for resolving workspace accounts.
+type ResolveAccountOpts struct {
+	AccountID   string
+	AccountName string
+	LastFour    string
+	Currency    string
+}
+
+// ResolveAccount resolves the best matching account for a given space using ID -> Name + Currency -> LastFour + Currency -> Single Active Account Fallback.
+func (s *Service) ResolveAccount(ctx context.Context, spaceID SpaceID, opts ResolveAccountOpts) (*Account, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, err
+	}
+	if s.deps.AccountStore == nil {
+		return nil, nil
+	}
+
+	activeOnly := true
+	page, err := s.deps.AccountStore.ListBySpace(ctx, spaceID, &ListAccountsFilter{
+		PageSize:   1000,
+		ActiveOnly: &activeOnly,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list accounts for resolution: %w", err)
+	}
+	accounts := page.Items
+	if len(accounts) == 0 {
+		return nil, nil
+	}
+
+	// 1. Match by explicit AccountID
+	if opts.AccountID != "" {
+		aID, err := ParseAccountID(opts.AccountID)
+		if err == nil {
+			for _, acc := range accounts {
+				if acc.ID == aID {
+					return acc, nil
+				}
+			}
+		}
+	}
+
+	// 2. Match by Account Name (Priority 1: Currency match, Priority 2: Name match fallback)
+	if opts.AccountName != "" {
+		for _, acc := range accounts {
+			if strings.EqualFold(acc.Name, opts.AccountName) && (opts.Currency == "" || string(acc.Currency) == opts.Currency) {
+				return acc, nil
+			}
+		}
+		for _, acc := range accounts {
+			if strings.EqualFold(acc.Name, opts.AccountName) {
+				return acc, nil
+			}
+		}
+	}
+
+	// 3. Match by Card LastFour (Priority 1: Currency match, Priority 2: LastFour match fallback)
+	if opts.LastFour != "" {
+		for _, acc := range accounts {
+			if acc.LastFour == opts.LastFour && (opts.Currency == "" || string(acc.Currency) == opts.Currency) {
+				return acc, nil
+			}
+		}
+		for _, acc := range accounts {
+			if acc.LastFour == opts.LastFour {
+				return acc, nil
+			}
+		}
+	}
+
+	// 4. Single Active Account Fallback (only if no explicit search criteria provided)
+	if opts.AccountID == "" && opts.AccountName == "" && opts.LastFour == "" && len(accounts) == 1 {
+		return accounts[0], nil
+	}
+
+	return nil, nil
 }

@@ -24,7 +24,7 @@ EXTRACTION RULES:
 5. Suggest a budget category ONLY from the active list inside the <budgets> XML block. Match semantic meanings. If a match is found, return the budget's exact "id" attribute value (e.g., "bgt_...") in the "suggested_budget" field. If there is no clear semantic match, set "suggested_budget" to null.
 
 6. Identify Account Identifiers:
-   - Match accounts against the active list inside the <accounts> XML block (by ID, Name, LastFour, or Currency).
+   - Match accounts against the active list inside the <accounts> XML block (by ID, Name, LastFour, or Currency). When multiple accounts share the same name or last 4 digits (e.g. dual-currency credit cards), prioritize matching the account whose currency matches the transaction currency.
    - source_account: The card/account that initiated the outflow. If matched from <accounts>, return its exact "id" attribute value (e.g. "acc_..."), "raw_name", and "last_four".
    - destination_account: The card/account that received the inflow (especially for TRANSFERS or INCOMES). If matched from <accounts>, return its exact "id" attribute value (e.g. "acc_..."), "raw_name", and "last_four".
 

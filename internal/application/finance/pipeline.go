@@ -103,6 +103,17 @@ func (s *IngestionState) Copy() *IngestionState {
 	}
 }
 
+// MetadataString safely retrieves a string value from state Metadata map.
+func (s *IngestionState) MetadataString(key string) string {
+	if s == nil || s.Metadata == nil {
+		return ""
+	}
+	if v, ok := s.Metadata[key].(string); ok {
+		return v
+	}
+	return ""
+}
+
 // ProcessSignalPipeline executes the core Loom Graph (Classifier -> Extractor -> Resolver -> Deduplicator).
 // Returns the enriched IngestionState without performing side-effects (e.g. DB staging).
 func (c *Coordinator) ProcessSignalPipeline(ctx context.Context, spaceID string, req *IngestionRequest) (*IngestionState, error) {
@@ -346,64 +357,26 @@ func (c *Coordinator) pipelineExtractNode(ctx context.Context, state *IngestionS
 
 // 3. Resolve Node: Queries Saturn DB to match accounts, budgets, and categories.
 func (c *Coordinator) pipelineResolveNode(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
-	page, err := c.financeService.ListAccounts(ctx, finance.SpaceID(state.SpaceID), &finance.ListAccountsFilter{PageSize: 1000})
-	var accounts []*finance.Account
-	if err == nil {
-		accounts = page.Items
-	}
-
-	// 1. Resolve Source Account
+	// 1. Resolve Source Account via unified financeService domain resolver
+	srcAcc, err := c.financeService.ResolveAccount(ctx, finance.SpaceID(state.SpaceID), finance.ResolveAccountOpts{
+		AccountID:   state.MetadataString("suggested_account_id"),
+		AccountName: state.MetadataString("source_account_name"),
+		LastFour:    state.CardLastFour,
+		Currency:    state.Currency,
+	})
 	var accountID *string
-
-	sugAccountID := ""
-	if v, ok := state.Metadata["suggested_account_id"].(string); ok {
-		sugAccountID = v
-	}
-	srcAccountName := ""
-	if v, ok := state.Metadata["source_account_name"].(string); ok {
-		srcAccountName = v
+	if err == nil && srcAcc != nil {
+		accountID = new(string(srcAcc.ID))
 	}
 
-	if sugAccountID != "" {
-		for _, acc := range accounts {
-			if string(acc.ID) == sugAccountID && acc.IsActive {
-				accountID = new(string(acc.ID))
-				break
-			}
-		}
-	}
-	if accountID == nil && srcAccountName != "" {
-		for _, acc := range accounts {
-			if strings.EqualFold(acc.Name, srcAccountName) && acc.IsActive {
-				accountID = new(string(acc.ID))
-				break
-			}
-		}
-	}
-
-	// B. Match by Card Last Four
-	if accountID == nil && state.CardLastFour != "" {
-		for _, acc := range accounts {
-			if acc.LastFour == state.CardLastFour && acc.IsActive {
-				accountID = new(string(acc.ID))
-				break
-			}
-		}
-	}
-
-	// C. Resolve Budget & Fallback to Budget Default Account
+	// 2. Resolve Budget & Fallback to Budget Default Account
 	var budgetID *string
 	if state.SuggestedBudget != "" {
 		if bID, err := finance.ParseBudgetID(state.SuggestedBudget); err == nil {
 			if budget, err := c.financeService.GetBudget(ctx, finance.SpaceID(state.SpaceID), bID); err == nil && budget != nil && string(budget.SpaceID) == state.SpaceID {
 				budgetID = new(string(budget.ID))
 				if accountID == nil && budget.DefaultAccountID != nil {
-					for _, acc := range accounts {
-						if acc.ID == *budget.DefaultAccountID && acc.IsActive {
-							accountID = new(string(acc.ID))
-							break
-						}
-					}
+					accountID = new(string(*budget.DefaultAccountID))
 				}
 			}
 		} else if pageB, err := c.financeService.ListBudgets(ctx, finance.SpaceID(state.SpaceID), &finance.ListBudgetsFilter{PageSize: 1000}); err == nil {
@@ -411,12 +384,7 @@ func (c *Coordinator) pipelineResolveNode(ctx context.Context, state *IngestionS
 				if strings.EqualFold(b.Name, state.SuggestedBudget) {
 					budgetID = new(string(b.ID))
 					if accountID == nil && b.DefaultAccountID != nil {
-						for _, acc := range accounts {
-							if acc.ID == *b.DefaultAccountID && acc.IsActive {
-								accountID = new(string(acc.ID))
-								break
-							}
-						}
+						accountID = new(string(*b.DefaultAccountID))
 					}
 					break
 				}
@@ -424,63 +392,15 @@ func (c *Coordinator) pipelineResolveNode(ctx context.Context, state *IngestionS
 		}
 	}
 
-	// D. Single Active Account Fallback
-	if accountID == nil {
-		activeCount := 0
-		var singleAcc *finance.Account
-		for _, acc := range accounts {
-			if acc.IsActive {
-				activeCount++
-				singleAcc = acc
-			}
-		}
-		if activeCount == 1 && singleAcc != nil {
-			accountID = new(string(singleAcc.ID))
-		}
-	}
-
-	// 2. Resolve Destination Account (for Transfers)
-	sugDestAccountID := ""
-	if v, ok := state.Metadata["destination_account_id"].(string); ok {
-		sugDestAccountID = v
-	}
-	destAccountName := ""
-	if v, ok := state.Metadata["dest_account_name"].(string); ok {
-		destAccountName = v
-	}
-	destAccountLastFour := ""
-	if v, ok := state.Metadata["dest_account_last_four"].(string); ok {
-		destAccountLastFour = v
-	}
-
-	resolvedDestID := ""
-	if sugDestAccountID != "" {
-		for _, acc := range accounts {
-			if string(acc.ID) == sugDestAccountID && acc.IsActive {
-				resolvedDestID = string(acc.ID)
-				break
-			}
-		}
-	}
-	if resolvedDestID == "" && destAccountName != "" {
-		for _, acc := range accounts {
-			if strings.EqualFold(acc.Name, destAccountName) && acc.IsActive {
-				resolvedDestID = string(acc.ID)
-				break
-			}
-		}
-	}
-	if resolvedDestID == "" && destAccountLastFour != "" {
-		for _, acc := range accounts {
-			if acc.LastFour == destAccountLastFour && acc.IsActive {
-				resolvedDestID = string(acc.ID)
-				break
-			}
-		}
-	}
-
-	if resolvedDestID != "" {
-		state.Metadata["destination_account_id"] = resolvedDestID
+	// 3. Resolve Destination Account (for Transfers) via unified financeService domain resolver
+	destAcc, err := c.financeService.ResolveAccount(ctx, finance.SpaceID(state.SpaceID), finance.ResolveAccountOpts{
+		AccountID:   state.MetadataString("destination_account_id"),
+		AccountName: state.MetadataString("dest_account_name"),
+		LastFour:    state.MetadataString("dest_account_last_four"),
+		Currency:    state.Currency,
+	})
+	if err == nil && destAcc != nil {
+		state.Metadata["destination_account_id"] = string(destAcc.ID)
 	}
 
 	return graph.Update[*IngestionState](func(s *IngestionState) *IngestionState {
