@@ -33,8 +33,10 @@ type FinanceService interface {
 	ListExchangeRates(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListExchangeRatesFilter) ([]*finance.ExchangeRate, string, error)
 	DeleteExchangeRateByID(ctx context.Context, spaceID finance.SpaceID, id string) error
 	CreateExpense(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error)
+	CreateIncome(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error)
 	GetTransaction(ctx context.Context, spaceID finance.SpaceID, id finance.TransactionID) (*finance.Transaction, error)
 	UpdateExpense(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error)
+	UpdateIncome(ctx context.Context, txn *finance.Transaction) (*finance.Transaction, error)
 	DeleteTransaction(ctx context.Context, spaceID finance.SpaceID, id finance.TransactionID) error
 	ListTransactions(ctx context.Context, spaceID finance.SpaceID, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error)
 	ListTransactionEvents(ctx context.Context, spaceID finance.SpaceID, txnID finance.TransactionID) ([]*finance.TransactionEvent, error)

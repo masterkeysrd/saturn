@@ -35,6 +35,8 @@ const (
 	Finance_DeleteExchangeRate_FullMethodName          = "/saturn.finance.v1.Finance/DeleteExchangeRate"
 	Finance_CreateExpense_FullMethodName               = "/saturn.finance.v1.Finance/CreateExpense"
 	Finance_UpdateExpense_FullMethodName               = "/saturn.finance.v1.Finance/UpdateExpense"
+	Finance_CreateIncome_FullMethodName                = "/saturn.finance.v1.Finance/CreateIncome"
+	Finance_UpdateIncome_FullMethodName                = "/saturn.finance.v1.Finance/UpdateIncome"
 	Finance_DeleteTransaction_FullMethodName           = "/saturn.finance.v1.Finance/DeleteTransaction"
 	Finance_ListTransactions_FullMethodName            = "/saturn.finance.v1.Finance/ListTransactions"
 	Finance_GetTransaction_FullMethodName              = "/saturn.finance.v1.Finance/GetTransaction"
@@ -116,6 +118,10 @@ type FinanceClient interface {
 	CreateExpense(ctx context.Context, in *CreateExpenseRequest, opts ...grpc.CallOption) (*Transaction, error)
 	// Modifies properties of a logged expense transaction. Re-calculates budget and currency conversions.
 	UpdateExpense(ctx context.Context, in *UpdateExpenseRequest, opts ...grpc.CallOption) (*Transaction, error)
+	// Logs a new income transaction, updating account balances.
+	CreateIncome(ctx context.Context, in *CreateIncomeRequest, opts ...grpc.CallOption) (*Transaction, error)
+	// Modifies properties of a logged income transaction. Re-calculates currency conversions and balances.
+	UpdateIncome(ctx context.Context, in *UpdateIncomeRequest, opts ...grpc.CallOption) (*Transaction, error)
 	// Deletes a transaction, reversing all changes to budget period consumption and account balances.
 	DeleteTransaction(ctx context.Context, in *DeleteTransactionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Lists paginated transaction records matching specific budget, account, source, or text queries.
@@ -352,6 +358,26 @@ func (c *financeClient) UpdateExpense(ctx context.Context, in *UpdateExpenseRequ
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Transaction)
 	err := c.cc.Invoke(ctx, Finance_UpdateExpense_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) CreateIncome(ctx context.Context, in *CreateIncomeRequest, opts ...grpc.CallOption) (*Transaction, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Transaction)
+	err := c.cc.Invoke(ctx, Finance_CreateIncome_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) UpdateIncome(ctx context.Context, in *UpdateIncomeRequest, opts ...grpc.CallOption) (*Transaction, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Transaction)
+	err := c.cc.Invoke(ctx, Finance_UpdateIncome_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -806,6 +832,10 @@ type FinanceServer interface {
 	CreateExpense(context.Context, *CreateExpenseRequest) (*Transaction, error)
 	// Modifies properties of a logged expense transaction. Re-calculates budget and currency conversions.
 	UpdateExpense(context.Context, *UpdateExpenseRequest) (*Transaction, error)
+	// Logs a new income transaction, updating account balances.
+	CreateIncome(context.Context, *CreateIncomeRequest) (*Transaction, error)
+	// Modifies properties of a logged income transaction. Re-calculates currency conversions and balances.
+	UpdateIncome(context.Context, *UpdateIncomeRequest) (*Transaction, error)
 	// Deletes a transaction, reversing all changes to budget period consumption and account balances.
 	DeleteTransaction(context.Context, *DeleteTransactionRequest) (*emptypb.Empty, error)
 	// Lists paginated transaction records matching specific budget, account, source, or text queries.
@@ -941,6 +971,12 @@ func (UnimplementedFinanceServer) CreateExpense(context.Context, *CreateExpenseR
 }
 func (UnimplementedFinanceServer) UpdateExpense(context.Context, *UpdateExpenseRequest) (*Transaction, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateExpense not implemented")
+}
+func (UnimplementedFinanceServer) CreateIncome(context.Context, *CreateIncomeRequest) (*Transaction, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateIncome not implemented")
+}
+func (UnimplementedFinanceServer) UpdateIncome(context.Context, *UpdateIncomeRequest) (*Transaction, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateIncome not implemented")
 }
 func (UnimplementedFinanceServer) DeleteTransaction(context.Context, *DeleteTransactionRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteTransaction not implemented")
@@ -1351,6 +1387,42 @@ func _Finance_UpdateExpense_Handler(srv interface{}, ctx context.Context, dec fu
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(FinanceServer).UpdateExpense(ctx, req.(*UpdateExpenseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_CreateIncome_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateIncomeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).CreateIncome(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_CreateIncome_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).CreateIncome(ctx, req.(*CreateIncomeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_UpdateIncome_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateIncomeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).UpdateIncome(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_UpdateIncome_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).UpdateIncome(ctx, req.(*UpdateIncomeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2159,6 +2231,14 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateExpense",
 			Handler:    _Finance_UpdateExpense_Handler,
+		},
+		{
+			MethodName: "CreateIncome",
+			Handler:    _Finance_CreateIncome_Handler,
+		},
+		{
+			MethodName: "UpdateIncome",
+			Handler:    _Finance_UpdateIncome_Handler,
 		},
 		{
 			MethodName: "DeleteTransaction",

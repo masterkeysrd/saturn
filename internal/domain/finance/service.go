@@ -442,6 +442,25 @@ func (s *Service) CreateExpense(ctx context.Context, txn *Transaction) (*Transac
 	return txn, nil
 }
 
+// CreateIncome logs a new income transaction.
+func (s *Service) CreateIncome(ctx context.Context, txn *Transaction) (*Transaction, error) {
+	txn.Type = TransactionTypeIncome
+	txn.BudgetID = nil
+
+	if txn.ID == "" {
+		tID, err := NewTransactionID()
+		if err != nil {
+			return nil, err
+		}
+		txn.ID = tID
+	}
+
+	if err := s.createTransaction(ctx, txn); err != nil {
+		return nil, err
+	}
+	return txn, nil
+}
+
 // GetTransaction retrieves a transaction by ID for a space.
 func (s *Service) GetTransaction(ctx context.Context, spaceID SpaceID, id TransactionID) (*Transaction, error) {
 	if err := spaceID.Validate(); err != nil {
@@ -474,6 +493,33 @@ func (s *Service) UpdateExpense(ctx context.Context, txn *Transaction) (*Transac
 	if txn.BudgetID == nil {
 		return nil, errors.New("expense transaction requires a budget ID")
 	}
+
+	existing, err := s.deps.TransactionStore.GetByID(ctx, txn.SpaceID, txn.ID)
+	if err != nil {
+		return nil, fmt.Errorf("fetch existing transaction: %w", err)
+	}
+
+	if err := s.updateTransaction(ctx, txn, existing); err != nil {
+		return nil, err
+	}
+
+	// Log manual edit transaction event with field diff
+	if diff := existing.Diff(txn); len(diff) > 0 {
+		_, _ = s.LogTransactionEvent(ctx, &TransactionEvent{
+			SpaceID:       txn.SpaceID,
+			TransactionID: txn.ID,
+			EventType:     "MANUAL_EDIT",
+			Metadata:      diff,
+		})
+	}
+
+	return txn, nil
+}
+
+// UpdateIncome modifies an existing income transaction.
+func (s *Service) UpdateIncome(ctx context.Context, txn *Transaction) (*Transaction, error) {
+	txn.Type = TransactionTypeIncome
+	txn.BudgetID = nil
 
 	existing, err := s.deps.TransactionStore.GetByID(ctx, txn.SpaceID, txn.ID)
 	if err != nil {

@@ -2212,6 +2212,81 @@
         ]
       }
     },
+    "/v1/finance/incomes": {
+      "post": {
+        "summary": "Logs a new income transaction, updating account balances.",
+        "operationId": "Finance_CreateIncome",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Transaction"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "income",
+            "description": "Required. Target income transaction parameters.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1IncomeInput"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/incomes/{id}": {
+      "put": {
+        "summary": "Modifies properties of a logged income transaction. Re-calculates currency conversions and balances.",
+        "operationId": "Finance_UpdateIncome",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Transaction"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Unique identifier of the transaction to update.\nValues are of the form `txn_[a-zA-Z0-9]+`.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "income",
+            "description": "Required. Updated income transaction parameters.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1IncomeInput"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/finance/insights": {
       "get": {
         "summary": "Aggregates space spend patterns, limits, remaining budgets, burn rates, and budget category distributions.",
@@ -6733,6 +6808,43 @@
         "FULL"
       ],
       "description": "Optional representation view.\n\n - BASIC: Excludes raw_payload and metadata\n - FULL: Returns complete fields"
+    },
+    "v1IncomeInput": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "string",
+          "format": "int64",
+          "description": "Required. Absolute value of transaction in local currency cents (e.g. 10000 for $100.00)."
+        },
+        "currency": {
+          "type": "string",
+          "description": "Required. Currency code."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional. Narration notes."
+        },
+        "transactionDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Optional. Time transaction occurred."
+        },
+        "effectiveDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Optional. Execution/posting date."
+        },
+        "accountId": {
+          "type": "string",
+          "description": "Optional. Target account identifier.\nValues are of the form `acc_[a-zA-Z0-9]+`."
+        }
+      },
+      "description": "IncomeInput encapsulates fields representing an income record payload.",
+      "required": [
+        "amount",
+        "currency"
+      ]
     },
     "v1InsightGranularity": {
       "type": "string",

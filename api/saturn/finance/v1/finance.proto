@@ -111,6 +111,22 @@ service Finance {
     };
   }
 
+  // Logs a new income transaction, updating account balances.
+  rpc CreateIncome(CreateIncomeRequest) returns (Transaction) {
+    option (google.api.http) = {
+      post: "/v1/finance/incomes"
+      body: "income"
+    };
+  }
+
+  // Modifies properties of a logged income transaction. Re-calculates currency conversions and balances.
+  rpc UpdateIncome(UpdateIncomeRequest) returns (Transaction) {
+    option (google.api.http) = {
+      put: "/v1/finance/incomes/{id}"
+      body: "income"
+    };
+  }
+
   // Deletes a transaction, reversing all changes to budget period consumption and account balances.
   rpc DeleteTransaction(DeleteTransactionRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {delete: "/v1/finance/transactions/{id}"};
@@ -892,6 +908,46 @@ message UpdateExpenseRequest {
 
   // Required. Updated expense transaction parameters.
   ExpenseInput expense = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// IncomeInput encapsulates fields representing an income record payload.
+message IncomeInput {
+  // Required. Absolute value of transaction in local currency cents (e.g. 10000 for $100.00).
+  int64 amount = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Currency code.
+  string currency = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Narration notes.
+  string description = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Time transaction occurred.
+  google.protobuf.Timestamp transaction_date = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Execution/posting date.
+  google.protobuf.Timestamp effective_date = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Target account identifier.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
+  optional string account_id = 6 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// The request for
+// [CreateIncome][saturn.finance.v1.Finance.CreateIncome].
+message CreateIncomeRequest {
+  // Required. Target income transaction parameters.
+  IncomeInput income = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// The request for
+// [UpdateIncome][saturn.finance.v1.Finance.UpdateIncome].
+message UpdateIncomeRequest {
+  // Required. Unique identifier of the transaction to update.
+  // Values are of the form `txn_[a-zA-Z0-9]+`.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Updated income transaction parameters.
+  IncomeInput income = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 // The request for

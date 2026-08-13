@@ -279,6 +279,42 @@ func (c *Client) UpdateExpense(ctx context.Context, req *UpdateExpenseRequest) (
 	return &resp, nil
 }
 
+// CreateIncome executes POST /api/v1/finance/incomes.
+func (c *Client) CreateIncome(ctx context.Context, req *CreateIncomeRequest) (*Transaction, error) {
+	var resp Transaction
+	path := "/api/v1/finance/incomes"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	payload := req.GetIncome()
+	if payload == nil {
+		return nil, fmt.Errorf("income payload is required")
+	}
+	if err := c.base.Do(ctx, "POST", path, payload, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// UpdateIncome executes PUT /api/v1/finance/incomes/{id}.
+func (c *Client) UpdateIncome(ctx context.Context, req *UpdateIncomeRequest) (*Transaction, error) {
+	var resp Transaction
+	path := fmt.Sprintf("/api/v1/finance/incomes/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	payload := req.GetIncome()
+	if payload == nil {
+		return nil, fmt.Errorf("income payload is required")
+	}
+	if err := c.base.Do(ctx, "PUT", path, payload, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
 // DeleteTransaction executes DELETE /api/v1/finance/transactions/{id}.
 func (c *Client) DeleteTransaction(ctx context.Context, req *DeleteTransactionRequest) (*emptypb.Empty, error) {
 	var resp emptypb.Empty

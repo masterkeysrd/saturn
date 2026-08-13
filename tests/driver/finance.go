@@ -26,6 +26,17 @@ type ExpenseOptions struct {
 	Assert          func(tb testing.TB, txn *financev1.Transaction)
 }
 
+// IncomeOptions encapsulates parameters for logging an income transaction.
+type IncomeOptions struct {
+	Account         string
+	Currency        string
+	Amount          int64
+	Description     string
+	TransactionDate time.Time
+	ExpectErr       string
+	Assert          func(tb testing.TB, txn *financev1.Transaction)
+}
+
 // BudgetDeleteOptions encapsulates options for deleting a budget.
 type BudgetDeleteOptions struct {
 	Budget    string
@@ -917,6 +928,156 @@ func (f *FinanceDriver) CreateExpense(tb testing.TB, opts ExpenseOptions) *Finan
 	if opts.Assert != nil {
 		opts.Assert(tb, txn)
 	}
+	return f
+}
+
+// CreateIncome logs an income transaction using IncomeOptions struct.
+func (f *FinanceDriver) CreateIncome(tb testing.TB, opts IncomeOptions) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+	acc, ok := f.driver.state.Accounts[opts.Account]
+	if !ok {
+		tb.Fatalf("account named %q not found in state registry", opts.Account)
+	}
+
+	currency := opts.Currency
+	if currency == "" {
+		currency = acc.Currency
+	}
+
+	var txnDate *timestamppb.Timestamp
+	if !opts.TransactionDate.IsZero() {
+		txnDate = timestamppb.New(opts.TransactionDate)
+	}
+
+	client := f.getClient()
+	txn, err := client.CreateIncome(tb.Context(), &financev1.CreateIncomeRequest{
+		Income: &financev1.IncomeInput{
+			Amount:          opts.Amount,
+			Currency:        currency,
+			Description:     opts.Description,
+			AccountId:       &acc.ID,
+			TransactionDate: txnDate,
+		},
+	})
+
+	if opts.ExpectErr != "" {
+		if err == nil {
+			tb.Fatalf("CreateIncome succeeded, but expected error containing %q", opts.ExpectErr)
+		}
+		if !strings.Contains(err.Error(), opts.ExpectErr) {
+			tb.Fatalf("CreateIncome error = %v, want error containing %q", err, opts.ExpectErr)
+		}
+		return f
+	}
+
+	if err != nil {
+		tb.Fatalf("CreateIncome SDK call failed: %v", err)
+	}
+
+	if txn.GetAmount() != opts.Amount {
+		tb.Errorf("CreateIncome Amount = %d, want %d", txn.GetAmount(), opts.Amount)
+	}
+	if currency != "" && txn.GetCurrency() != currency {
+		tb.Errorf("CreateIncome Currency = %s, want %s", txn.GetCurrency(), currency)
+	}
+	if opts.Description != "" && txn.GetDescription() != opts.Description {
+		tb.Errorf("CreateIncome Description = %q, want %q", txn.GetDescription(), opts.Description)
+	}
+
+	f.driver.state.LastTransactionID = txn.GetId()
+	if opts.Assert != nil {
+		opts.Assert(tb, txn)
+	}
+	return f
+}
+
+// UpdateIncome modifies the last registered income transaction.
+func (f *FinanceDriver) UpdateIncome(tb testing.TB, opts IncomeOptions) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+	if f.driver.state.LastTransactionID == "" {
+		tb.Fatalf("UpdateIncome: no transaction ID found in state registry")
+	}
+	acc, ok := f.driver.state.Accounts[opts.Account]
+	if !ok {
+		tb.Fatalf("account named %q not found in state registry", opts.Account)
+	}
+
+	currency := opts.Currency
+	if currency == "" {
+		currency = acc.Currency
+	}
+
+	var txnDate *timestamppb.Timestamp
+	if !opts.TransactionDate.IsZero() {
+		txnDate = timestamppb.New(opts.TransactionDate)
+	}
+
+	client := f.getClient()
+	txn, err := client.UpdateIncome(tb.Context(), &financev1.UpdateIncomeRequest{
+		Id: f.driver.state.LastTransactionID,
+		Income: &financev1.IncomeInput{
+			Amount:          opts.Amount,
+			Currency:        currency,
+			Description:     opts.Description,
+			AccountId:       &acc.ID,
+			TransactionDate: txnDate,
+		},
+	})
+
+	if opts.ExpectErr != "" {
+		if err == nil {
+			tb.Fatalf("UpdateIncome succeeded, but expected error containing %q", opts.ExpectErr)
+		}
+		if !strings.Contains(err.Error(), opts.ExpectErr) {
+			tb.Fatalf("UpdateIncome error = %v, want error containing %q", err, opts.ExpectErr)
+		}
+		return f
+	}
+
+	if err != nil {
+		tb.Fatalf("UpdateIncome SDK call failed: %v", err)
+	}
+
+	if txn.GetAmount() != opts.Amount {
+		tb.Errorf("UpdateIncome Amount = %d, want %d", txn.GetAmount(), opts.Amount)
+	}
+	if currency != "" && txn.GetCurrency() != currency {
+		tb.Errorf("UpdateIncome Currency = %s, want %s", txn.GetCurrency(), currency)
+	}
+	if opts.Description != "" && txn.GetDescription() != opts.Description {
+		tb.Errorf("UpdateIncome Description = %q, want %q", txn.GetDescription(), opts.Description)
+	}
+
+	if opts.Assert != nil {
+		opts.Assert(tb, txn)
+	}
+	return f
+}
+
+// DeleteLastTransaction deletes the last registered transaction ID.
+func (f *FinanceDriver) DeleteLastTransaction(tb testing.TB) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+	if f.driver.state.LastTransactionID == "" {
+		tb.Fatalf("DeleteLastTransaction: no transaction ID found in state registry")
+	}
+
+	client := f.getClient()
+	_, err := client.DeleteTransaction(tb.Context(), &financev1.DeleteTransactionRequest{
+		Id: f.driver.state.LastTransactionID,
+	})
+	if err != nil {
+		tb.Fatalf("DeleteTransaction SDK call failed: %v", err)
+	}
+
 	return f
 }
 

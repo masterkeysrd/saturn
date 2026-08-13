@@ -647,6 +647,54 @@ func (h *Handler) CreateExpense(ctx context.Context, req *financev1.CreateExpens
 	return toProtoTransaction(txn), nil
 }
 
+func (h *Handler) CreateIncome(ctx context.Context, req *financev1.CreateIncomeRequest) (*financev1.Transaction, error) {
+	income := req.GetIncome()
+	if income == nil {
+		return nil, status.Error(codes.InvalidArgument, "income details are required")
+	}
+
+	currency, err := finance.ParseCurrency(income.GetCurrency())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	var transactionDate time.Time
+	if income.GetTransactionDate() != nil {
+		transactionDate = income.GetTransactionDate().AsTime()
+	} else {
+		transactionDate = time.Now().UTC()
+	}
+
+	var effectiveDate time.Time
+	if income.GetEffectiveDate() != nil {
+		effectiveDate = income.GetEffectiveDate().AsTime()
+	} else {
+		effectiveDate = transactionDate
+	}
+
+	var accountID *finance.AccountID
+	if income.AccountId != nil {
+		idVal := finance.AccountID(*income.AccountId)
+		accountID = &idVal
+	}
+
+	appReq := &financeapp.CreateIncomeRequest{
+		Amount:          income.GetAmount(),
+		Currency:        currency,
+		Description:     income.GetDescription(),
+		TransactionDate: transactionDate,
+		EffectiveDate:   effectiveDate,
+		AccountID:       accountID,
+	}
+
+	txn, err := h.Coordinator.CreateIncome(ctx, appReq)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoTransaction(txn), nil
+}
+
 func (h *Handler) UpdateExpense(ctx context.Context, req *financev1.UpdateExpenseRequest) (*financev1.Transaction, error) {
 	expense := req.GetExpense()
 	if expense == nil {
@@ -691,6 +739,56 @@ func (h *Handler) UpdateExpense(ctx context.Context, req *financev1.UpdateExpens
 	}
 
 	txn, err := h.Coordinator.UpdateExpense(ctx, appReq)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoTransaction(txn), nil
+}
+
+func (h *Handler) UpdateIncome(ctx context.Context, req *financev1.UpdateIncomeRequest) (*financev1.Transaction, error) {
+	income := req.GetIncome()
+	if income == nil {
+		return nil, status.Error(codes.InvalidArgument, "income details are required")
+	}
+
+	currency, err := finance.ParseCurrency(income.GetCurrency())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	var transactionDate time.Time
+	if income.GetTransactionDate() != nil {
+		transactionDate = income.GetTransactionDate().AsTime()
+	}
+
+	var effectiveDate time.Time
+	if income.GetEffectiveDate() != nil {
+		effectiveDate = income.GetEffectiveDate().AsTime()
+	}
+
+	tID, err := finance.ParseTransactionID(req.GetId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	var accountID *finance.AccountID
+	if income.AccountId != nil {
+		idVal := finance.AccountID(*income.AccountId)
+		accountID = &idVal
+	}
+
+	appReq := &financeapp.UpdateIncomeRequest{
+		TransactionID:   tID,
+		Amount:          income.GetAmount(),
+		Currency:        currency,
+		Description:     income.GetDescription(),
+		TransactionDate: transactionDate,
+		EffectiveDate:   effectiveDate,
+		AccountID:       accountID,
+	}
+
+	txn, err := h.Coordinator.UpdateIncome(ctx, appReq)
 	if err != nil {
 		return nil, h.mapError(err)
 	}

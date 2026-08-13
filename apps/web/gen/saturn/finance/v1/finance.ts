@@ -965,6 +965,64 @@ export interface UpdateExpenseRequest {
 }
 
 /**
+ * IncomeInput encapsulates fields representing an income record payload.
+ */
+export interface IncomeInput {
+  /**
+   * Required. Absolute value of transaction in local currency cents (e.g. 10000 for $100.00).
+   */
+  amount: string
+  /**
+   * Required. Currency code.
+   */
+  currency: string
+  /**
+   * Optional. Narration notes.
+   */
+  description: string
+  /**
+   * Optional. Time transaction occurred.
+   */
+  transactionDate: string
+  /**
+   * Optional. Execution/posting date.
+   */
+  effectiveDate: string
+  /**
+   * Optional. Target account identifier.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
+  accountId?: string
+}
+
+/**
+ * The request for
+ * [CreateIncome][saturn.finance.v1.Finance.CreateIncome].
+ */
+export interface CreateIncomeRequest {
+  /**
+   * Required. Target income transaction parameters.
+   */
+  income: IncomeInput
+}
+
+/**
+ * The request for
+ * [UpdateIncome][saturn.finance.v1.Finance.UpdateIncome].
+ */
+export interface UpdateIncomeRequest {
+  /**
+   * Required. Unique identifier of the transaction to update.
+   * Values are of the form `txn_[a-zA-Z0-9]+`.
+   */
+  id: string
+  /**
+   * Required. Updated income transaction parameters.
+   */
+  income: IncomeInput
+}
+
+/**
  * The request for
  * [DeleteTransaction][saturn.finance.v1.Finance.DeleteTransaction].
  */
@@ -3145,6 +3203,59 @@ export function useUpdateExpenseMutation(
     { id: string; req: UpdateExpenseRequest }
   >({
     mutationFn: ({ id, req }) => updateExpense(id, req),
+    ...options,
+  })
+}
+
+/**
+ * Logs a new income transaction, updating account balances.
+ */
+export async function createIncome(
+  req: CreateIncomeRequest
+): Promise<Transaction> {
+  return request<Transaction>({
+    method: "POST",
+    url: "/api/v1/finance/incomes",
+    data: req.income,
+  })
+}
+
+export function useCreateIncomeMutation(
+  options?: UseMutationOptions<Transaction, Error, CreateIncomeRequest>
+) {
+  return useMutation<Transaction, Error, CreateIncomeRequest>({
+    mutationFn: (req) => createIncome(req),
+    ...options,
+  })
+}
+
+/**
+ * Modifies properties of a logged income transaction. Re-calculates currency conversions and balances.
+ */
+export async function updateIncome(
+  id: string,
+  req: UpdateIncomeRequest
+): Promise<Transaction> {
+  return request<Transaction>({
+    method: "PUT",
+    url: `/api/v1/finance/incomes/${id}`,
+    data: req.income,
+  })
+}
+
+export function useUpdateIncomeMutation(
+  options?: UseMutationOptions<
+    Transaction,
+    Error,
+    { id: string; req: UpdateIncomeRequest }
+  >
+) {
+  return useMutation<
+    Transaction,
+    Error,
+    { id: string; req: UpdateIncomeRequest }
+  >({
+    mutationFn: ({ id, req }) => updateIncome(id, req),
     ...options,
   })
 }
