@@ -206,6 +206,31 @@ func (sp *ScheduledPayment) NewConfirmationTransaction(opts ConfirmOpts) (*Trans
 	return t, nil
 }
 
+// ResolveDescription determines the final description for a payment confirmation using fallback hierarchy.
+func (sp *ScheduledPayment) ResolveDescription(reqDesc, sourceFallback string) string {
+	if reqDesc != "" {
+		return reqDesc
+	}
+	if sp.Metadata.Description != "" {
+		return sp.Metadata.Description
+	}
+	if sourceFallback != "" {
+		return sourceFallback
+	}
+	return "Scheduled Payment"
+}
+
+// NewScheduledEvent constructs an EXPENSE_SCHEDULED audit event for the payment.
+func (sp *ScheduledPayment) NewScheduledEvent(txnID TransactionID) *TransactionEvent {
+	return &TransactionEvent{
+		SpaceID:       sp.SpaceID,
+		TransactionID: txnID,
+		EventType:     "EXPENSE_SCHEDULED",
+		CreateTime:    sp.CreateTime,
+		Metadata:      map[string]any{"scheduled_payment_id": string(sp.ID)},
+	}
+}
+
 const DefaultScheduledPaymentSortField = "due_date"
 
 // ScheduledPaymentSortFields registry maps sortable scheduled payment field names to cursor strings.

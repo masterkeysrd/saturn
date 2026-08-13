@@ -96,3 +96,14 @@ func (e *TransactionEvent) ParseMetadataJSON(data []byte) error {
 	}
 	return json.Unmarshal(data, &e.Metadata)
 }
+
+// NewConfirmationEvent constructs a BANK_CONFIRM_RECEIVED audit event for a confirmed transaction.
+func (t *Transaction) NewConfirmationEvent(actualAmount int64) *TransactionEvent {
+	return &TransactionEvent{
+		SpaceID:       t.SpaceID,
+		TransactionID: t.ID,
+		EventType:     "BANK_CONFIRM_RECEIVED",
+		CreateTime:    t.TransactionDate,
+		Metadata:      map[string]any{"actual_amount": actualAmount},
+	}
+}

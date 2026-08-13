@@ -707,28 +707,22 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 
 	amountInBase := ConvertAmount(actualAmount, rate)
 
-	description := ""
-	if req.Description != "" {
-		description = req.Description
-	} else if payment.Metadata.Description != "" {
-		description = payment.Metadata.Description
-	}
-
-	if description == "" && payment.SourceType == SourceTypeRecurrentExpense {
-		if exp, err := s.deps.RecurringExpenseStore.GetByID(ctx, payment.SpaceID, RecurringExpenseID(payment.SourceID)); err == nil {
-			description = exp.Name
-		}
-	} else if description == "" && payment.SourceType == "invoice" {
-		if item, err := s.deps.InboxItemStore.Get(ctx, payment.SpaceID, payment.SourceID); err == nil {
-			if item.VendorName != "" {
-				description = item.VendorName
+	sourceFallback := ""
+	if req.Description == "" && payment.Metadata.Description == "" {
+		if payment.SourceType == SourceTypeRecurrentExpense {
+			if exp, err := s.deps.RecurringExpenseStore.GetByID(ctx, payment.SpaceID, RecurringExpenseID(payment.SourceID)); err == nil {
+				sourceFallback = exp.Name
+			}
+		} else if payment.SourceType == "invoice" {
+			if item, err := s.deps.InboxItemStore.Get(ctx, payment.SpaceID, payment.SourceID); err == nil {
+				if item.VendorName != "" {
+					sourceFallback = item.VendorName
+				}
 			}
 		}
 	}
 
-	if description == "" {
-		description = "Scheduled Payment"
-	}
+	description := payment.ResolveDescription(req.Description, sourceFallback)
 
 	txn, err := payment.NewConfirmationTransaction(ConfirmOpts{
 		BudgetID:            new(budgetID),
@@ -757,26 +751,12 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 	}
 
 	// Log the historical scheduled event with the deferred creation date
-	_, err = s.LogTransactionEvent(ctx, &TransactionEvent{
-		SpaceID:       payment.SpaceID,
-		TransactionID: txn.ID,
-		EventType:     "EXPENSE_SCHEDULED",
-		CreateTime:    payment.CreateTime,
-		Metadata:      map[string]any{"scheduled_payment_id": string(payment.ID)},
-	})
-	if err != nil {
+	if _, err = s.LogTransactionEvent(ctx, payment.NewScheduledEvent(txn.ID)); err != nil {
 		return nil, fmt.Errorf("failed to log scheduled event: %w", err)
 	}
 
 	// Log the actual payment confirmation event with the transaction date
-	_, err = s.LogTransactionEvent(ctx, &TransactionEvent{
-		SpaceID:       payment.SpaceID,
-		TransactionID: txn.ID,
-		EventType:     "BANK_CONFIRM_RECEIVED",
-		CreateTime:    txnDate,
-		Metadata:      map[string]any{"actual_amount": actualAmount},
-	})
-	if err != nil {
+	if _, err = s.LogTransactionEvent(ctx, txn.NewConfirmationEvent(actualAmount)); err != nil {
 		return nil, fmt.Errorf("failed to log payment confirmation event: %w", err)
 	}
 
