@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/doug-martin/goqu/v9"
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 )
@@ -25,16 +26,30 @@ func NewSettingsStore(db *sqlx.DB) *SettingsStore {
 }
 
 func (s *SettingsStore) Create(ctx context.Context, settings *finance.FinanceSettings) error {
-	query := `INSERT INTO finance.settings (space_id, base_currency, create_time, update_time)
-		VALUES ($1, $2, $3, $4)`
-	_, err := s.db.ExecContext(ctx, query, string(settings.SpaceID), settings.BaseCurrency, settings.CreateTime, settings.UpdateTime)
+	ds := pgDialect.Insert(goqu.S("finance").Table("settings")).Rows(goqu.Record{
+		"space_id":      string(settings.SpaceID),
+		"base_currency": string(settings.BaseCurrency),
+		"create_time":   settings.CreateTime,
+		"update_time":   settings.UpdateTime,
+	})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, query, args...)
 	return err
 }
 
 func (s *SettingsStore) GetByID(ctx context.Context, spaceID finance.SpaceID) (*finance.FinanceSettings, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("settings")).
+		Select("space_id", "base_currency", "create_time", "update_time").
+		Where(goqu.Ex{"space_id": string(spaceID)})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, err
+	}
 	var row settingsDB
-	query := `SELECT space_id, base_currency, create_time, update_time FROM finance.settings WHERE space_id = $1`
-	if err := s.db.GetContext(ctx, &row, query, string(spaceID)); err != nil {
+	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, finance.ErrSettingsNotFound
 		}

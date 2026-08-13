@@ -44,7 +44,7 @@ func (m *mockRecurringExpenseStore) Update(ctx context.Context, re *finance.Recu
 	return nil
 }
 
-func (m *mockRecurringExpenseStore) Delete(ctx context.Context, id finance.RecurringExpenseID) error {
+func (m *mockRecurringExpenseStore) Delete(ctx context.Context, id finance.RecurringExpenseID, opts finance.DeleteOptions) error {
 	delete(m.expenses, id)
 	return nil
 }

@@ -5,9 +5,8 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"errors"
-	"fmt"
-	"strings"
 
+	"github.com/doug-martin/goqu/v9"
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 )
@@ -34,19 +33,36 @@ func NewTransferStore(db *sqlx.DB) *TransferStore {
 }
 
 func (s *TransferStore) Create(ctx context.Context, t *finance.Transfer) error {
-	query := `INSERT INTO finance.transfer (id, space_id, source_account_id, destination_account_id, source_amount, destination_amount, transfer_date, notes, create_time, update_time)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
-	_, err := s.db.ExecContext(ctx, query,
-		string(t.ID), string(t.SpaceID), string(t.SourceAccountID), string(t.DestinationAccountID),
-		t.SourceAmount, t.DestinationAmount, timeToNullTime(t.TransferDate), t.Notes, t.CreateTime, t.UpdateTime,
-	)
+	ds := pgDialect.Insert(goqu.S("finance").Table("transfer")).Rows(goqu.Record{
+		"id":                     string(t.ID),
+		"space_id":               string(t.SpaceID),
+		"source_account_id":      string(t.SourceAccountID),
+		"destination_account_id": string(t.DestinationAccountID),
+		"source_amount":          t.SourceAmount,
+		"destination_amount":     t.DestinationAmount,
+		"transfer_date":          timeToNullTime(t.TransferDate),
+		"notes":                  t.Notes,
+		"create_time":            t.CreateTime,
+		"update_time":            t.UpdateTime,
+	})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, query, args...)
 	return err
 }
 
 func (s *TransferStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.TransferID) (*finance.Transfer, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("transfer")).
+		Select("*").
+		Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, err
+	}
 	var row transferDB
-	query := `SELECT * FROM finance.transfer WHERE space_id = $1 AND id = $2`
-	if err := s.db.GetContext(ctx, &row, query, string(spaceID), string(id)); err != nil {
+	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, finance.ErrTransferNotFound
 		}
@@ -67,8 +83,13 @@ func (s *TransferStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id
 }
 
 func (s *TransferStore) Delete(ctx context.Context, id finance.TransferID) error {
-	query := `DELETE FROM finance.transfer WHERE id = $1`
-	res, err := s.db.ExecContext(ctx, query, string(id))
+	ds := pgDialect.Delete(goqu.S("finance").Table("transfer")).
+		Where(goqu.Ex{"id": string(id)})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
+	}
+	res, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -94,18 +115,20 @@ func (s *TransferStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID
 		}
 	}
 
-	conditions := []string{"space_id = $1"}
-	args := []any{string(spaceID)}
-	argIndex := 2
+	ds := pgDialect.From(goqu.S("finance").Table("transfer")).
+		Select("*").
+		Where(goqu.Ex{"space_id": string(spaceID)})
 
 	if cursorID != "" {
-		conditions = append(conditions, fmt.Sprintf("id < $%d", argIndex))
-		args = append(args, cursorID)
-		argIndex++
+		ds = ds.Where(goqu.I("id").Lt(cursorID))
 	}
 
-	query := fmt.Sprintf(`SELECT * FROM finance.transfer WHERE %s ORDER BY transfer_date DESC, id DESC LIMIT $%d`, strings.Join(conditions, " AND "), argIndex)
-	args = append(args, limit+1)
+	ds = ds.Order(goqu.I("transfer_date").Desc(), goqu.I("id").Desc()).Limit(uint(limit + 1))
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, "", err
+	}
 
 	var rows []transferDB
 	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {

@@ -192,7 +192,7 @@ type RecurringExpenseStore interface {
 	GetByID(ctx context.Context, spaceID SpaceID, id RecurringExpenseID) (*RecurringExpense, error)
 	GetByIDs(ctx context.Context, spaceID SpaceID, ids []RecurringExpenseID) ([]*RecurringExpense, error)
 	Update(ctx context.Context, expense *RecurringExpense) error
-	Delete(ctx context.Context, id RecurringExpenseID) error
+	Delete(ctx context.Context, id RecurringExpenseID, opts DeleteOptions) error
 	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListRecurringExpensesFilter) (*paging.Page[*RecurringExpense], error)
 	ListPendingGeneration(ctx context.Context, maxDueDate time.Time) ([]*RecurringExpense, error)
 }

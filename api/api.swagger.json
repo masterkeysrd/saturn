@@ -2600,13 +2600,21 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "version",
+            "description": "Optional. Version number for optimistic concurrency control during deletion.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
           }
         ],
         "tags": [
           "Finance"
         ]
       },
-      "put": {
+      "patch": {
         "summary": "Updates an active recurring expense template.",
         "operationId": "Finance_UpdateRecurringExpense",
         "responses": {
@@ -2639,6 +2647,14 @@
             "schema": {
               "$ref": "#/definitions/v1RecurringExpense"
             }
+          },
+          {
+            "name": "version",
+            "description": "Optional. Version number for optimistic concurrency control.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -7478,6 +7494,12 @@
           "type": "integer",
           "format": "int32",
           "description": "Optional. Days allowed past due date before triggering warning events."
+        },
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "Output only. Version counter for optimistic concurrency control.",
+          "readOnly": true
         },
         "createTime": {
           "type": "string",

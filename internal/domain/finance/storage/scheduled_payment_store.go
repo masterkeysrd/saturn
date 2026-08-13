@@ -67,20 +67,38 @@ func NewScheduledPaymentStore(db *sqlx.DB) *ScheduledPaymentStore {
 }
 
 func (s *ScheduledPaymentStore) Create(ctx context.Context, sp *finance.ScheduledPayment) error {
-	query := `INSERT INTO finance.scheduled_payment (id, space_id, budget_id, source_type, source_id, amount, currency, due_date, status, metadata, create_time, update_time)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
-	_, err := s.db.ExecContext(ctx, query,
-		string(sp.ID), string(sp.SpaceID), string(sp.BudgetID), sp.SourceType, sp.SourceID,
-		sp.Amount, string(sp.Currency), sp.DueDate, string(sp.Status), marshalScheduledPaymentMetadata(sp.Metadata),
-		sp.CreateTime, sp.UpdateTime,
-	)
+	ds := pgDialect.Insert(goqu.S("finance").Table("scheduled_payment")).Rows(goqu.Record{
+		"id":          string(sp.ID),
+		"space_id":    string(sp.SpaceID),
+		"budget_id":   string(sp.BudgetID),
+		"source_type": sp.SourceType,
+		"source_id":   sp.SourceID,
+		"amount":      sp.Amount,
+		"currency":    string(sp.Currency),
+		"due_date":    sp.DueDate,
+		"status":      string(sp.Status),
+		"metadata":    marshalScheduledPaymentMetadata(sp.Metadata),
+		"create_time": sp.CreateTime,
+		"update_time": sp.UpdateTime,
+	})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, query, args...)
 	return err
 }
 
 func (s *ScheduledPaymentStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.ScheduledPaymentID) (*finance.ScheduledPayment, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("scheduled_payment")).
+		Select("*").
+		Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, err
+	}
 	var row scheduledPaymentDB
-	query := `SELECT * FROM finance.scheduled_payment WHERE space_id = $1 AND id = $2`
-	if err := s.db.GetContext(ctx, &row, query, string(spaceID), string(id)); err != nil {
+	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.New("scheduled payment not found")
 		}
@@ -90,16 +108,27 @@ func (s *ScheduledPaymentStore) GetByID(ctx context.Context, spaceID finance.Spa
 }
 
 func (s *ScheduledPaymentStore) Update(ctx context.Context, payment *finance.ScheduledPayment) error {
-	query := `
-		UPDATE finance.scheduled_payment 
-		SET budget_id = $3, source_type = $4, source_id = $5, amount = $6, currency = $7, due_date = $8, status = $9, metadata = $10, update_time = NOW() 
-		WHERE id = $1 AND space_id = $2
-	`
-	res, err := s.db.ExecContext(ctx, query,
-		string(payment.ID), string(payment.SpaceID), string(payment.BudgetID),
-		payment.SourceType, payment.SourceID, payment.Amount, string(payment.Currency),
-		payment.DueDate, string(payment.Status), marshalScheduledPaymentMetadata(payment.Metadata),
-	)
+	ds := pgDialect.Update(goqu.S("finance").Table("scheduled_payment")).
+		Set(goqu.Record{
+			"budget_id":   string(payment.BudgetID),
+			"source_type": payment.SourceType,
+			"source_id":   payment.SourceID,
+			"amount":      payment.Amount,
+			"currency":    string(payment.Currency),
+			"due_date":    payment.DueDate,
+			"status":      string(payment.Status),
+			"metadata":    marshalScheduledPaymentMetadata(payment.Metadata),
+			"update_time": goqu.L("NOW()"),
+		}).
+		Where(goqu.Ex{
+			"id":       string(payment.ID),
+			"space_id": string(payment.SpaceID),
+		})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
+	}
+	res, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -114,8 +143,17 @@ func (s *ScheduledPaymentStore) Update(ctx context.Context, payment *finance.Sch
 }
 
 func (s *ScheduledPaymentStore) UpdateStatus(ctx context.Context, id finance.ScheduledPaymentID, status finance.ScheduledPaymentStatus) error {
-	query := `UPDATE finance.scheduled_payment SET status = $2, update_time = NOW() WHERE id = $1`
-	res, err := s.db.ExecContext(ctx, query, string(id), string(status))
+	ds := pgDialect.Update(goqu.S("finance").Table("scheduled_payment")).
+		Set(goqu.Record{
+			"status":      string(status),
+			"update_time": goqu.L("NOW()"),
+		}).
+		Where(goqu.Ex{"id": string(id)})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
+	}
+	res, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -130,8 +168,13 @@ func (s *ScheduledPaymentStore) UpdateStatus(ctx context.Context, id finance.Sch
 }
 
 func (s *ScheduledPaymentStore) Delete(ctx context.Context, id finance.ScheduledPaymentID) error {
-	query := `DELETE FROM finance.scheduled_payment WHERE id = $1`
-	res, err := s.db.ExecContext(ctx, query, string(id))
+	ds := pgDialect.Delete(goqu.S("finance").Table("scheduled_payment")).
+		Where(goqu.Ex{"id": string(id)})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
+	}
+	res, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}

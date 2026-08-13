@@ -29,6 +29,8 @@ type UpdateRecurringExpenseRequest struct {
 	IsVariable      bool
 	Status          string
 	GracePeriodDays int32
+	Version         int64
+	UpdateMask      []string
 }
 
 type ConfirmScheduledPaymentRequest struct {
@@ -92,17 +94,18 @@ func (c *Coordinator) UpdateRecurringExpense(ctx context.Context, req *UpdateRec
 		IsVariable:      req.IsVariable,
 		Status:          finance.RecurringExpenseStatus(req.Status),
 		GracePeriodDays: req.GracePeriodDays,
+		Version:         req.Version,
 	}
 
-	return c.financeService.UpdateRecurringExpense(ctx, expense)
+	return c.financeService.UpdateRecurringExpense(ctx, expense, req.UpdateMask)
 }
 
-func (c *Coordinator) DeleteRecurringExpense(ctx context.Context, id finance.RecurringExpenseID) error {
+func (c *Coordinator) DeleteRecurringExpense(ctx context.Context, id finance.RecurringExpenseID, opts finance.DeleteOptions) error {
 	_, err := c.resolveContext(ctx)
 	if err != nil {
 		return err
 	}
-	return c.financeService.DeleteRecurringExpense(ctx, id)
+	return c.financeService.DeleteRecurringExpense(ctx, id, opts)
 }
 
 func (c *Coordinator) ConfirmScheduledPayment(ctx context.Context, req *ConfirmScheduledPaymentRequest) (*finance.Transaction, error) {

@@ -160,16 +160,17 @@ export function RecurringView() {
     Boolean(t.metadata?.recurring_expense_id)
   )
 
-  const handleDeleteExpense = async (id: string) => {
+  const handleDeleteExpense = async (expense: RecurringExpense) => {
     if (
       confirm(
         "Are you sure you want to delete this recurring expense template? This will stop future scheduled bills from generating."
       )
     ) {
       await deleteMutation.mutateAsync({
-        id: id,
+        id: expense.id || "",
         req: {
-          id: id,
+          id: expense.id || "",
+          version: expense.version,
         },
       })
       refetchExpenses()
@@ -483,9 +484,7 @@ export function RecurringView() {
                                         <span>Edit</span>
                                       </DropdownMenuItem>
                                       <DropdownMenuItem
-                                        onClick={() =>
-                                          handleDeleteExpense(exp.id || "")
-                                        }
+                                        onClick={() => handleDeleteExpense(exp)}
                                         className="flex cursor-pointer items-center gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
                                       >
                                         <Trash2Icon className="h-4 w-4" />

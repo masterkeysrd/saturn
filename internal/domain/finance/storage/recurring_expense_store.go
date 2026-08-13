@@ -24,6 +24,7 @@ type recurringExpenseDB struct {
 	IsVariable      bool         `db:"is_variable"`
 	Status          string       `db:"status"`
 	GracePeriodDays int32        `db:"grace_period_days"`
+	Version         int64        `db:"version"`
 	CreateTime      sql.NullTime `db:"create_time"`
 	UpdateTime      sql.NullTime `db:"update_time"`
 }
@@ -41,6 +42,7 @@ func (r *recurringExpenseDB) toDomain() *finance.RecurringExpense {
 		IsVariable:      r.IsVariable,
 		Status:          finance.RecurringExpenseStatus(r.Status),
 		GracePeriodDays: r.GracePeriodDays,
+		Version:         r.Version,
 		CreateTime:      r.CreateTime.Time,
 		UpdateTime:      r.UpdateTime.Time,
 	}
@@ -55,19 +57,43 @@ func NewRecurringExpenseStore(db *sqlx.DB) *RecurringExpenseStore {
 }
 
 func (s *RecurringExpenseStore) Create(ctx context.Context, re *finance.RecurringExpense) error {
-	query := `INSERT INTO finance.recurring_expense (id, space_id, budget_id, name, amount, currency, interval, next_due_date, is_variable, status, grace_period_days, create_time, update_time)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`
-	_, err := s.db.ExecContext(ctx, query,
-		string(re.ID), string(re.SpaceID), string(re.BudgetID), re.Name, re.Amount, string(re.Currency),
-		re.Interval, re.NextDueDate, re.IsVariable, string(re.Status), re.GracePeriodDays, re.CreateTime, re.UpdateTime,
-	)
+	if re.Version == 0 {
+		re.Version = 1
+	}
+	ds := pgDialect.Insert(goqu.S("finance").Table("recurring_expense")).Rows(goqu.Record{
+		"id":                string(re.ID),
+		"space_id":          string(re.SpaceID),
+		"budget_id":         string(re.BudgetID),
+		"name":              re.Name,
+		"amount":            re.Amount,
+		"currency":          string(re.Currency),
+		"interval":          string(re.Interval),
+		"next_due_date":     re.NextDueDate,
+		"is_variable":       re.IsVariable,
+		"status":            string(re.Status),
+		"grace_period_days": re.GracePeriodDays,
+		"version":           re.Version,
+		"create_time":       re.CreateTime,
+		"update_time":       re.UpdateTime,
+	})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, query, args...)
 	return err
 }
 
 func (s *RecurringExpenseStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.RecurringExpenseID) (*finance.RecurringExpense, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("recurring_expense")).
+		Select("*").
+		Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, err
+	}
 	var row recurringExpenseDB
-	query := `SELECT * FROM finance.recurring_expense WHERE space_id = $1 AND id = $2`
-	if err := s.db.GetContext(ctx, &row, query, string(spaceID), string(id)); err != nil {
+	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.New("recurring expense not found")
 		}
@@ -106,22 +132,29 @@ func (s *RecurringExpenseStore) GetByIDs(ctx context.Context, spaceID finance.Sp
 }
 
 func (s *RecurringExpenseStore) Update(ctx context.Context, re *finance.RecurringExpense) error {
-	query := `UPDATE finance.recurring_expense SET 
-		budget_id = $2, 
-		name = $3, 
-		amount = $4, 
-		currency = $5, 
-		interval = $6, 
-		next_due_date = $7, 
-		is_variable = $8, 
-		status = $9, 
-		grace_period_days = $10, 
-		update_time = $11 
-		WHERE id = $1`
-	res, err := s.db.ExecContext(ctx, query,
-		string(re.ID), string(re.BudgetID), re.Name, re.Amount, string(re.Currency),
-		re.Interval, re.NextDueDate, re.IsVariable, string(re.Status), re.GracePeriodDays, re.UpdateTime,
-	)
+	ds := pgDialect.Update(goqu.S("finance").Table("recurring_expense")).
+		Set(goqu.Record{
+			"budget_id":         string(re.BudgetID),
+			"name":              re.Name,
+			"amount":            re.Amount,
+			"currency":          string(re.Currency),
+			"interval":          string(re.Interval),
+			"next_due_date":     re.NextDueDate,
+			"is_variable":       re.IsVariable,
+			"status":            string(re.Status),
+			"grace_period_days": re.GracePeriodDays,
+			"version":           goqu.L("version + 1"),
+			"update_time":       re.UpdateTime,
+		}).
+		Where(goqu.Ex{
+			"id":      string(re.ID),
+			"version": re.Version,
+		})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
+	}
+	res, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -130,14 +163,23 @@ func (s *RecurringExpenseStore) Update(ctx context.Context, re *finance.Recurrin
 		return err
 	}
 	if rows == 0 {
-		return errors.New("recurring expense not found")
+		return finance.ErrRecurringExpenseVersionMismatch
 	}
+	re.Version++
 	return nil
 }
 
-func (s *RecurringExpenseStore) Delete(ctx context.Context, id finance.RecurringExpenseID) error {
-	query := `DELETE FROM finance.recurring_expense WHERE id = $1`
-	res, err := s.db.ExecContext(ctx, query, string(id))
+func (s *RecurringExpenseStore) Delete(ctx context.Context, id finance.RecurringExpenseID, opts finance.DeleteOptions) error {
+	ds := pgDialect.Delete(goqu.S("finance").Table("recurring_expense")).
+		Where(goqu.Ex{"id": string(id)})
+	if opts.Version > 0 {
+		ds = ds.Where(goqu.Ex{"version": opts.Version})
+	}
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
+	}
+	res, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -146,6 +188,9 @@ func (s *RecurringExpenseStore) Delete(ctx context.Context, id finance.Recurring
 		return err
 	}
 	if rows == 0 {
+		if opts.Version > 0 {
+			return finance.ErrRecurringExpenseVersionMismatch
+		}
 		return errors.New("recurring expense not found")
 	}
 	return nil
@@ -205,11 +250,20 @@ func (s *RecurringExpenseStore) ListBySpace(ctx context.Context, spaceID finance
 }
 
 func (s *RecurringExpenseStore) ListPendingGeneration(ctx context.Context, maxDueDate time.Time) ([]*finance.RecurringExpense, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("recurring_expense")).
+		Select("*").
+		Where(goqu.Ex{
+			"status":        string(finance.RecurringExpenseActive),
+			"next_due_date": goqu.Op{"lte": maxDueDate},
+		}).
+		Order(goqu.I("next_due_date").Asc())
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, err
+	}
+
 	var rows []recurringExpenseDB
-	query := `SELECT * FROM finance.recurring_expense 
-		WHERE status = 'active' AND next_due_date <= $1 
-		ORDER BY next_due_date ASC`
-	if err := s.db.SelectContext(ctx, &rows, query, maxDueDate); err != nil {
+	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
 		return nil, err
 	}
 

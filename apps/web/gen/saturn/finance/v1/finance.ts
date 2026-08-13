@@ -1314,6 +1314,10 @@ export interface RecurringExpense {
    */
   gracePeriodDays: number
   /**
+   * Output only. Version counter for optimistic concurrency control.
+   */
+  version?: string
+  /**
    * Output only. Creation timestamp.
    */
   createTime?: string
@@ -1470,6 +1474,14 @@ export interface UpdateRecurringExpenseRequest {
    * Required. The recurring expense template to update.
    */
   recurringExpense: RecurringExpense
+  /**
+   * Optional. Field mask defining which fields to update for partial updates.
+   */
+  updateMask?: { paths?: string[] }
+  /**
+   * Optional. Version number for optimistic concurrency control.
+   */
+  version?: string
 }
 
 /**
@@ -1482,6 +1494,10 @@ export interface DeleteRecurringExpenseRequest {
    * Values are of the form `rec_[a-zA-Z0-9]+`.
    */
   id: string
+  /**
+   * Optional. Version number for optimistic concurrency control during deletion.
+   */
+  version?: string
 }
 
 /**
@@ -3285,9 +3301,13 @@ export async function updateRecurringExpense(
   id: string,
   req: UpdateRecurringExpenseRequest
 ): Promise<RecurringExpense> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
+  delete (params as Record<string, unknown>).recurringExpense
   return request<RecurringExpense>({
-    method: "PUT",
+    method: "PATCH",
     url: `/api/v1/finance/recurring-expenses/${id}`,
+    params: params,
     data: req.recurringExpense,
   })
 }
@@ -3314,11 +3334,14 @@ export function useUpdateRecurringExpenseMutation(
  */
 export async function deleteRecurringExpense(
   id: string,
-  _req: DeleteRecurringExpenseRequest
+  req: DeleteRecurringExpenseRequest
 ): Promise<Record<string, never>> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
   return request<Record<string, never>>({
     method: "DELETE",
     url: `/api/v1/finance/recurring-expenses/${id}`,
+    params: params,
   })
 }
 

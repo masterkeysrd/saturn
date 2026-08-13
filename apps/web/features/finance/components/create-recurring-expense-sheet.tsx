@@ -10,10 +10,12 @@ import {
 import {
   type Budget,
   type RecurringExpense,
+  type UpdateRecurringExpenseRequest,
   useCreateRecurringExpenseMutation,
   useUpdateRecurringExpenseMutation,
   useListCurrenciesQuery,
 } from "@/gen/saturn/finance/v1/finance"
+import { usePatch } from "@/hooks/use-patch"
 import { useCurrencyConversionPreview } from "@/hooks/use-currency-conversion"
 import { BudgetSelect } from "./budget-select"
 import { CurrencyConversionPreview } from "./currency-conversion-preview"
@@ -60,6 +62,24 @@ export function CreateRecurringExpenseSheet({
   const createMutation = useCreateRecurringExpenseMutation()
   const updateMutation = useUpdateRecurringExpenseMutation()
 
+  const patchMutation = usePatch<
+    RecurringExpense,
+    { id: string; req: UpdateRecurringExpenseRequest }
+  >({
+    entityKey: "recurring-expenses",
+    mutationFn: (vars) => updateMutation.mutateAsync(vars),
+    buildVariables: (id, payload, _dirtyPaths, expectedVersion) => ({
+      id,
+      req: {
+        id,
+        version: expectedVersion,
+        recurringExpense: {
+          ...(payload as Partial<RecurringExpense>),
+        } as RecurringExpense,
+      },
+    }),
+  })
+
   const { getConversionPreview } = useCurrencyConversionPreview({
     spaceId,
     enabled: open,
@@ -82,7 +102,7 @@ export function CreateRecurringExpenseSheet({
     control,
     reset,
     setValue,
-    formState: { errors },
+    formState: { errors, dirtyFields },
   } = useForm<RecurringExpenseFormValues>({
     resolver: zodResolver(recurringExpenseSchema),
     defaultValues: {
@@ -155,7 +175,7 @@ export function CreateRecurringExpenseSheet({
     return `${y}-${m}-${date}T12:00:00Z`
   }
 
-  const isPending = createMutation.isPending || updateMutation.isPending
+  const isPending = createMutation.isPending || patchMutation.isPending
   const conversion = getConversionPreview(amountValue, currencyValue)
 
   const onSubmit = async (data: RecurringExpenseFormValues) => {
@@ -163,26 +183,23 @@ export function CreateRecurringExpenseSheet({
     const nextDueDateStr = toLocalISODate(data.nextDueDate)
 
     if (editExpense) {
-      await updateMutation.mutateAsync({
+      await patchMutation.mutateAsync({
         id: editExpense.id || "",
-        req: {
-          id: editExpense.id || "",
-          recurringExpense: {
-            id: editExpense.id || "",
-            spaceId: editExpense.spaceId || "",
-            budgetId: data.budgetId,
-            name: data.name,
-            amount: centsAmount,
-            currency: data.currency,
-            interval: data.interval,
-            executionState: {
-              nextDueDate: nextDueDateStr,
-            },
-            isVariable: data.isVariable,
-            status: data.status,
-            gracePeriodDays: data.gracePeriodDays,
+        expectedVersion: editExpense.version,
+        payload: {
+          budgetId: data.budgetId,
+          name: data.name,
+          amount: centsAmount,
+          currency: data.currency,
+          interval: data.interval,
+          executionState: {
+            nextDueDate: nextDueDateStr,
           },
-        },
+          isVariable: data.isVariable,
+          status: data.status,
+          gracePeriodDays: data.gracePeriodDays,
+        } as unknown as Partial<RecurringExpense>,
+        dirtyFields,
       })
     } else {
       await createMutation.mutateAsync({

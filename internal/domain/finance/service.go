@@ -588,32 +588,38 @@ func (s *Service) GetRecurringExpenses(ctx context.Context, spaceID SpaceID, ids
 	return s.deps.RecurringExpenseStore.GetByIDs(ctx, spaceID, ids)
 }
 
-// UpdateRecurringExpense updates an existing recurring expense template.
-func (s *Service) UpdateRecurringExpense(ctx context.Context, re *RecurringExpense) (*RecurringExpense, error) {
+// UpdateRecurringExpense modifies an existing recurring expense template, optionally applying a field mask.
+// If mask is nil or empty, all registered patchable fields are updated.
+func (s *Service) UpdateRecurringExpense(ctx context.Context, re *RecurringExpense, mask []string) (*RecurringExpense, error) {
 	existing, err := s.deps.RecurringExpenseStore.GetByID(ctx, re.SpaceID, re.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	re.CreateTime = existing.CreateTime
-	re.UpdateTime = time.Now().UTC()
+	if re.Version > 0 && re.Version != existing.Version {
+		return nil, ErrRecurringExpenseVersionMismatch
+	}
 
-	if err := re.Validate(); err != nil {
+	if err := existing.ApplyPatch(re, mask); err != nil {
 		return nil, err
 	}
 
-	if err := s.deps.RecurringExpenseStore.Update(ctx, re); err != nil {
+	if err := existing.Validate(); err != nil {
 		return nil, err
 	}
-	return re, nil
+
+	if err := s.deps.RecurringExpenseStore.Update(ctx, existing); err != nil {
+		return nil, err
+	}
+	return existing, nil
 }
 
 // DeleteRecurringExpense deletes a recurring expense rule.
-func (s *Service) DeleteRecurringExpense(ctx context.Context, id RecurringExpenseID) error {
+func (s *Service) DeleteRecurringExpense(ctx context.Context, id RecurringExpenseID, opts DeleteOptions) error {
 	if err := id.Validate(); err != nil {
 		return err
 	}
-	return s.deps.RecurringExpenseStore.Delete(ctx, id)
+	return s.deps.RecurringExpenseStore.Delete(ctx, id, opts)
 }
 
 // ListRecurringExpenses lists recurring expenses for a workspace.

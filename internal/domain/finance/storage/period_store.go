@@ -50,16 +50,41 @@ func NewPeriodStore(db *sqlx.DB) *PeriodStore {
 }
 
 func (s *PeriodStore) Create(ctx context.Context, p *finance.BudgetPeriod) error {
-	query := `INSERT INTO finance.budget_period (id, budget_id, space_id, start_date, end_date, limit_amount, currency, base_currency, exchange_rate_to_base, create_time, update_time)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
-	_, err := s.db.ExecContext(ctx, query, string(p.ID), string(p.BudgetID), string(p.SpaceID), p.StartDate, p.EndDate, p.LimitAmount, p.Currency, p.BaseCurrency, p.ExchangeRateToBase, p.CreateTime, p.UpdateTime)
+	ds := pgDialect.Insert(goqu.S("finance").Table("budget_period")).Rows(goqu.Record{
+		"id":                    string(p.ID),
+		"budget_id":             string(p.BudgetID),
+		"space_id":              string(p.SpaceID),
+		"start_date":            p.StartDate,
+		"end_date":              p.EndDate,
+		"limit_amount":          p.LimitAmount,
+		"currency":              string(p.Currency),
+		"base_currency":         string(p.BaseCurrency),
+		"exchange_rate_to_base": p.ExchangeRateToBase,
+		"create_time":           p.CreateTime,
+		"update_time":           p.UpdateTime,
+	})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, query, args...)
 	return err
 }
 
 func (s *PeriodStore) GetByRange(ctx context.Context, budgetID finance.BudgetID, startDate, endDate time.Time) (*finance.BudgetPeriod, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("budget_period")).
+		Select("*").
+		Where(goqu.Ex{
+			"budget_id":  string(budgetID),
+			"start_date": startDate,
+			"end_date":   endDate,
+		})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, err
+	}
 	var row periodDB
-	query := `SELECT * FROM finance.budget_period WHERE budget_id = $1 AND start_date = $2 AND end_date = $3`
-	if err := s.db.GetContext(ctx, &row, query, string(budgetID), startDate, endDate); err != nil {
+	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, finance.ErrPeriodNotFound
 		}
@@ -84,7 +109,7 @@ func (s *PeriodStore) GetByRanges(ctx context.Context, keys []finance.PeriodRang
 
 	ds := pgDialect.From(goqu.S("finance").Table("budget_period")).
 		Where(goqu.Or(orExprs...))
-	sqlStr, args, err := ds.ToSQL()
+	sqlStr, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, err
 	}
@@ -102,8 +127,17 @@ func (s *PeriodStore) GetByRanges(ctx context.Context, keys []finance.PeriodRang
 }
 
 func (s *PeriodStore) UpdateLimit(ctx context.Context, id finance.PeriodID, limit int64) error {
-	query := `UPDATE finance.budget_period SET limit_amount = $1, update_time = NOW() WHERE id = $2`
-	res, err := s.db.ExecContext(ctx, query, limit, string(id))
+	ds := pgDialect.Update(goqu.S("finance").Table("budget_period")).
+		Set(goqu.Record{
+			"limit_amount": limit,
+			"update_time":  goqu.L("NOW()"),
+		}).
+		Where(goqu.Ex{"id": string(id)})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
+	}
+	res, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -118,9 +152,16 @@ func (s *PeriodStore) UpdateLimit(ctx context.Context, id finance.PeriodID, limi
 }
 
 func (s *PeriodStore) ListByBudget(ctx context.Context, budgetID finance.BudgetID) ([]*finance.BudgetPeriod, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("budget_period")).
+		Select("*").
+		Where(goqu.Ex{"budget_id": string(budgetID)}).
+		Order(goqu.I("start_date").Desc())
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, err
+	}
 	var rows []periodDB
-	query := `SELECT * FROM finance.budget_period WHERE budget_id = $1 ORDER BY start_date DESC`
-	if err := s.db.SelectContext(ctx, &rows, query, string(budgetID)); err != nil {
+	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
 		return nil, err
 	}
 

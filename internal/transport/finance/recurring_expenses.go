@@ -63,17 +63,11 @@ func (h *Handler) UpdateRecurringExpense(ctx context.Context, req *financev1.Upd
 		return nil, status.Error(codes.InvalidArgument, "recurring_expense is required")
 	}
 
-	var nextDueDate time.Time
-	if exp.GetExecutionState() != nil && exp.GetExecutionState().GetNextDueDate() != nil {
-		nextDueDate = exp.GetExecutionState().GetNextDueDate().AsTime()
+	idStr := req.GetId()
+	if idStr == "" {
+		idStr = exp.GetId()
 	}
-
-	currency, err := finance.ParseCurrency(exp.GetCurrency())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
-	id, err := finance.ParseRecurringExpenseID(exp.GetId())
+	id, err := finance.ParseRecurringExpenseID(idStr)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -88,17 +82,29 @@ func (h *Handler) UpdateRecurringExpense(ctx context.Context, req *financev1.Upd
 		return nil, err
 	}
 
+	var nextDueDate time.Time
+	if exp.GetExecutionState() != nil && exp.GetExecutionState().GetNextDueDate() != nil {
+		nextDueDate = exp.GetExecutionState().GetNextDueDate().AsTime()
+	}
+
+	var mask []string
+	if req.UpdateMask != nil {
+		mask = req.UpdateMask.Paths
+	}
+
 	appReq := &financeapp.UpdateRecurringExpenseRequest{
 		ID:              id,
 		BudgetID:        finance.BudgetID(exp.GetBudgetId()),
 		Name:            exp.GetName(),
 		Amount:          exp.GetAmount(),
-		Currency:        currency,
+		Currency:        finance.Currency(exp.GetCurrency()),
 		Interval:        interval,
 		DueDate:         nextDueDate,
 		IsVariable:      exp.GetIsVariable(),
 		Status:          string(statusVal),
 		GracePeriodDays: exp.GetGracePeriodDays(),
+		Version:         req.GetVersion(),
+		UpdateMask:      mask,
 	}
 
 	expense, err := h.Coordinator.UpdateRecurringExpense(ctx, appReq)
@@ -115,7 +121,12 @@ func (h *Handler) DeleteRecurringExpense(ctx context.Context, req *financev1.Del
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	if err := h.Coordinator.DeleteRecurringExpense(ctx, id); err != nil {
+	var opts finance.DeleteOptions
+	if req.GetVersion() != 0 {
+		opts.Version = req.GetVersion()
+	}
+
+	if err := h.Coordinator.DeleteRecurringExpense(ctx, id, opts); err != nil {
 		return nil, h.mapError(err)
 	}
 
@@ -344,6 +355,8 @@ func mapProtoIntervalToDomain(interval financev1.RecurringExpense_Interval) (str
 		return "monthly", nil
 	case financev1.RecurringExpense_YEARLY:
 		return "yearly", nil
+	case financev1.RecurringExpense_INTERVAL_UNSPECIFIED:
+		return "", nil
 	default:
 		return "", status.Error(codes.InvalidArgument, "invalid recurring expense interval")
 	}
@@ -370,6 +383,8 @@ func mapProtoStatusToDomain(st financev1.RecurringExpense_Status) (finance.Recur
 		return finance.RecurringExpensePaused, nil
 	case financev1.RecurringExpense_ENDED:
 		return finance.RecurringExpenseEnded, nil
+	case financev1.RecurringExpense_STATUS_UNSPECIFIED:
+		return "", nil
 	default:
 		return "", status.Error(codes.InvalidArgument, "invalid recurring expense status")
 	}
@@ -448,6 +463,7 @@ func toProtoRecurringExpense(e *finance.RecurringExpense) *financev1.RecurringEx
 		IsVariable:      e.IsVariable,
 		Status:          mapDomainStatusToProto(e.Status),
 		GracePeriodDays: e.GracePeriodDays,
+		Version:         e.Version,
 		CreateTime:      timestamppb.New(e.CreateTime),
 		UpdateTime:      timestamppb.New(e.UpdateTime),
 	}

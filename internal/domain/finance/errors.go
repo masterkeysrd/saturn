@@ -23,5 +23,6 @@ var (
 	ErrAccountVersionMismatch                             = errors.New("update failed: account not found or version mismatch")
 	ErrInstitutionVersionMismatch                         = errors.New("update failed: institution not found or version mismatch")
 	ErrBorrowingVersionMismatch                           = errors.New("update failed: borrowing not found or version mismatch")
+	ErrRecurringExpenseVersionMismatch                    = errors.New("update failed: recurring expense not found or version mismatch")
 	ErrBorrowingHasTransactions                           = errors.New("cannot delete borrowing agreement with linked transactions")
 )

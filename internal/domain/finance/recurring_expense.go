@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/id"
+	"github.com/masterkeysrd/saturn/internal/platform/patch"
 )
 
 type RecurringExpenseID string
@@ -51,8 +52,30 @@ type RecurringExpense struct {
 	IsVariable      bool
 	Status          RecurringExpenseStatus
 	GracePeriodDays int32
+	Version         int64
 	CreateTime      time.Time
 	UpdateTime      time.Time
+}
+
+// RecurringExpensePatchSchema defines patchable fields for a RecurringExpense entity.
+var RecurringExpensePatchSchema = patch.NewSchema[RecurringExpense]().
+	Register("name", patch.Field(func(re *RecurringExpense) *string { return &re.Name })).
+	Register("amount", patch.Field(func(re *RecurringExpense) *int64 { return &re.Amount })).
+	Register("currency", patch.Field(func(re *RecurringExpense) *Currency { return &re.Currency })).
+	Register("interval", patch.Field(func(re *RecurringExpense) *RecurrenceInterval { return &re.Interval })).
+	Register("next_due_date", patch.Field(func(re *RecurringExpense) *time.Time { return &re.NextDueDate })).
+	Register("is_variable", patch.Field(func(re *RecurringExpense) *bool { return &re.IsVariable })).
+	Register("status", patch.Field(func(re *RecurringExpense) *RecurringExpenseStatus { return &re.Status })).
+	Register("grace_period_days", patch.Field(func(re *RecurringExpense) *int32 { return &re.GracePeriodDays })).
+	Register("budget_id", patch.Field(func(re *RecurringExpense) *BudgetID { return &re.BudgetID }))
+
+// ApplyPatch selectively mutates patchable fields on the existing recurring expense.
+func (re *RecurringExpense) ApplyPatch(update *RecurringExpense, mask []string) error {
+	if err := RecurringExpensePatchSchema.Apply(re, update, mask); err != nil {
+		return fmt.Errorf("apply patch: %w", err)
+	}
+	re.UpdateTime = time.Now().UTC()
+	return nil
 }
 
 // Init prepares a new recurring expense entity for creation by generating an ID (if missing), setting active status, and populating creation timestamps.

@@ -147,7 +147,7 @@ service Finance {
   // Updates an active recurring expense template.
   rpc UpdateRecurringExpense(UpdateRecurringExpenseRequest) returns (RecurringExpense) {
     option (google.api.http) = {
-      put: "/v1/finance/recurring-expenses/{id}"
+      patch: "/v1/finance/recurring-expenses/{id}"
       body: "recurring_expense"
     };
   }
@@ -1203,6 +1203,9 @@ message RecurringExpense {
   // Optional. Days allowed past due date before triggering warning events.
   int32 grace_period_days = 11 [(google.api.field_behavior) = OPTIONAL];
 
+  // Output only. Version counter for optimistic concurrency control.
+  int64 version = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+
   // Output only. Creation timestamp.
   google.protobuf.Timestamp create_time = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
 
@@ -1324,6 +1327,12 @@ message UpdateRecurringExpenseRequest {
 
   // Required. The recurring expense template to update.
   RecurringExpense recurring_expense = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Field mask defining which fields to update for partial updates.
+  optional google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Version number for optimistic concurrency control.
+  optional int64 version = 4 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // The request for
@@ -1332,6 +1341,9 @@ message DeleteRecurringExpenseRequest {
   // Required. Unique identifier of the template to delete.
   // Values are of the form `rec_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Version number for optimistic concurrency control during deletion.
+  optional int64 version = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // The request for

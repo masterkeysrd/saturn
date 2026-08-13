@@ -367,11 +367,19 @@ func (c *Client) CreateRecurringExpense(ctx context.Context, req *CreateRecurrin
 	return &resp, nil
 }
 
-// UpdateRecurringExpense executes PUT /api/v1/finance/recurring-expenses/{id}.
+// UpdateRecurringExpense executes PATCH /api/v1/finance/recurring-expenses/{id}.
 func (c *Client) UpdateRecurringExpense(ctx context.Context, req *UpdateRecurringExpenseRequest) (*RecurringExpense, error) {
 	var resp RecurringExpense
 	path := fmt.Sprintf("/api/v1/finance/recurring-expenses/%s", req.GetId())
 	var query []string
+	if req.Version != nil {
+		query = append(query, fmt.Sprintf("version=%d", req.GetVersion()))
+	}
+	if req.UpdateMask != nil {
+		for _, p := range req.GetUpdateMask().GetPaths() {
+			query = append(query, fmt.Sprintf("update_mask.paths=%s", p))
+		}
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
@@ -379,7 +387,7 @@ func (c *Client) UpdateRecurringExpense(ctx context.Context, req *UpdateRecurrin
 	if payload == nil {
 		return nil, fmt.Errorf("recurring_expense payload is required")
 	}
-	if err := c.base.Do(ctx, "PUT", path, payload, &resp); err != nil {
+	if err := c.base.Do(ctx, "PATCH", path, payload, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil
@@ -390,6 +398,9 @@ func (c *Client) DeleteRecurringExpense(ctx context.Context, req *DeleteRecurrin
 	var resp emptypb.Empty
 	path := fmt.Sprintf("/api/v1/finance/recurring-expenses/%s", req.GetId())
 	var query []string
+	if req.Version != nil {
+		query = append(query, fmt.Sprintf("version=%d", req.GetVersion()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
