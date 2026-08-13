@@ -1,18 +1,28 @@
 import { useState, useEffect } from "react"
 import { FormDrawer } from "@/components/ui/form-drawer"
-import { ArrowDownLeft, ArrowUpRight, CalendarClock } from "lucide-react"
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  CalendarClock,
+  HandCoins,
+  ArrowRightLeft,
+} from "lucide-react"
 import {
   type Account,
   type Budget,
   type Transaction,
   type ScheduledTransaction,
   type RecurringTransaction,
+  type Borrowing,
   useListAccountsQuery,
 } from "@/gen/saturn/finance/v1/finance"
 import { CreateExpenseForm } from "./create-expense-form"
 import { CreateIncomeForm } from "./create-income-form"
 import { ConfirmScheduledForm } from "./confirm-scheduled-form"
 import { ScheduledTransactionSelector } from "./scheduled-transaction-selector"
+import { BorrowingSelector } from "./borrowing-selector"
+import { CreateBorrowingTransactionForm } from "./create-borrowing-transaction-form"
+import { CreateTransferForm } from "./create-transfer-form"
 
 interface CreateTransactionSheetProps {
   open: boolean
@@ -42,18 +52,32 @@ export function CreateTransactionSheet({
   refetchData,
 }: CreateTransactionSheetProps) {
   const [step, setStep] = useState<
-    "SELECT" | "EXPENSE" | "INCOME" | "SCHEDULE_SELECT" | "CONFIRM_SCHEDULE"
+    | "SELECT"
+    | "EXPENSE"
+    | "INCOME"
+    | "SCHEDULE_SELECT"
+    | "CONFIRM_SCHEDULE"
+    | "BORROWING_SELECT"
+    | "RECORD_BORROWING"
+    | "TRANSFER"
   >("SELECT")
 
-  const [selectedScheduled, setSelectedScheduled] = useState<ScheduledTransaction | null>(null)
-  const [cachedTemplates, setCachedTemplates] = useState<RecurringTransaction[]>([])
+  const [selectedScheduled, setSelectedScheduled] =
+    useState<ScheduledTransaction | null>(null)
+  const [cachedTemplates, setCachedTemplates] = useState<
+    RecurringTransaction[]
+  >([])
+  const [selectedBorrowing, setSelectedBorrowing] = useState<Borrowing | null>(
+    null
+  )
 
   // Fetch accounts locally if not passed down by parent view
   const { data: accountsData } = useListAccountsQuery(
     {},
     { enabled: open && !!spaceId }
   )
-  const resolvedAccounts = accounts.length > 0 ? accounts : accountsData?.accounts || []
+  const resolvedAccounts =
+    accounts.length > 0 ? accounts : accountsData?.accounts || []
 
   const handleRefetch = () => {
     refetchTransactions?.()
@@ -66,6 +90,7 @@ export function CreateTransactionSheet({
     if (open) {
       setSelectedScheduled(null)
       setCachedTemplates([])
+      setSelectedBorrowing(null)
       if (editTransaction) {
         if (editTransaction.type === "INCOME") {
           setStep("INCOME")
@@ -148,6 +173,49 @@ export function CreateTransactionSheet({
     )
   }
 
+  // Selection of borrowing agreement view
+  if (step === "BORROWING_SELECT") {
+    return (
+      <BorrowingSelector
+        open={open}
+        onOpenChange={onOpenChange}
+        spaceId={spaceId}
+        onSelect={(b) => {
+          setSelectedBorrowing(b)
+          setStep("RECORD_BORROWING")
+        }}
+        onBack={() => setStep("SELECT")}
+      />
+    )
+  }
+
+  // Render Record Borrowing form
+  if (step === "RECORD_BORROWING" && selectedBorrowing) {
+    return (
+      <CreateBorrowingTransactionForm
+        open={open}
+        onOpenChange={onOpenChange}
+        borrowing={selectedBorrowing}
+        accounts={resolvedAccounts}
+        refetchData={handleRefetch}
+        onBack={() => setStep("BORROWING_SELECT")}
+      />
+    )
+  }
+
+  // Render Transfer form
+  if (step === "TRANSFER") {
+    return (
+      <CreateTransferForm
+        open={open}
+        onOpenChange={onOpenChange}
+        accounts={resolvedAccounts}
+        refetchData={handleRefetch}
+        onBack={() => setStep("SELECT")}
+      />
+    )
+  }
+
   // Selection view
   return (
     <FormDrawer
@@ -205,7 +273,7 @@ export function CreateTransactionSheet({
         <button
           type="button"
           onClick={() => setStep("SCHEDULE_SELECT")}
-          className="group hover:border-indigo-500/40 hover:bg-indigo-500/5 flex w-full items-start gap-4 rounded-2xl border border-border/60 bg-background/40 p-5 text-left transition-all hover:scale-[1.01] focus:outline-none"
+          className="group flex w-full items-start gap-4 rounded-2xl border border-border/60 bg-background/40 p-5 text-left transition-all hover:scale-[1.01] hover:border-indigo-500/40 hover:bg-indigo-500/5 focus:outline-none"
         >
           <div className="shrink-0 rounded-xl bg-indigo-500/10 p-2.5 text-indigo-500 dark:bg-indigo-500/20">
             <CalendarClock className="h-5 w-5" />
@@ -215,7 +283,48 @@ export function CreateTransactionSheet({
               Confirm Scheduled Bill/Income
             </h3>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Reconcile and clear a pending scheduled calendar item (e.g. SaaS subscription, rent, salary template).
+              Reconcile and clear a pending scheduled calendar item (e.g. SaaS
+              subscription, rent, salary template).
+            </p>
+          </div>
+        </button>
+
+        {/* Card 4: Record Borrowing/Lending Transaction */}
+        <button
+          type="button"
+          onClick={() => setStep("BORROWING_SELECT")}
+          className="group flex w-full items-start gap-4 rounded-2xl border border-border/60 bg-background/40 p-5 text-left transition-all hover:scale-[1.01] hover:border-amber-500/40 hover:bg-amber-500/5 focus:outline-none"
+        >
+          <div className="shrink-0 rounded-xl bg-amber-500/10 p-2.5 text-amber-500 dark:bg-amber-500/20">
+            <HandCoins className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-bold text-foreground">
+              Personal Borrowing / Lending Payment
+            </h3>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Record a repayment or drawdown disbursement linked to an active
+              borrowing or lending agreement.
+            </p>
+          </div>
+        </button>
+
+        {/* Card 5: Record Account-to-Account Transfer */}
+        <button
+          type="button"
+          onClick={() => setStep("TRANSFER")}
+          className="group flex w-full items-start gap-4 rounded-2xl border border-border/60 bg-background/40 p-5 text-left transition-all hover:scale-[1.01] hover:border-sky-500/40 hover:bg-sky-500/5 focus:outline-none"
+        >
+          <div className="shrink-0 rounded-xl bg-sky-500/10 p-2.5 text-sky-500 dark:bg-sky-500/20">
+            <ArrowRightLeft className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-bold text-foreground">
+              Perform Account Transfer
+            </h3>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Transfer funds between two bank accounts. Duly records both side
+              entries.
             </p>
           </div>
         </button>

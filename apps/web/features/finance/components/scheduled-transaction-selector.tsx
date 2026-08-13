@@ -1,5 +1,12 @@
 import { useState, useMemo } from "react"
-import { ArrowDownLeft, ArrowUpRight, CalendarClock, ChevronRight, Search } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  CalendarClock,
+  ChevronRight,
+  Search,
+} from "lucide-react"
 import { FormDrawer } from "@/components/ui/form-drawer"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -17,7 +24,10 @@ interface ScheduledTransactionSelectorProps {
   onOpenChange: (open: boolean) => void
   spaceId?: string
   budgets?: Budget[]
-  onSelect: (st: ScheduledTransaction, recurringTemplates: RecurringTransaction[]) => void
+  onSelect: (
+    st: ScheduledTransaction,
+    recurringTemplates: RecurringTransaction[]
+  ) => void
   onBack: () => void
 }
 
@@ -29,6 +39,7 @@ export function ScheduledTransactionSelector({
   onSelect,
   onBack,
 }: ScheduledTransactionSelectorProps) {
+  const navigate = useNavigate()
   const [searchText, setSearchText] = useState("")
 
   // Fetch pending scheduled transactions
@@ -59,8 +70,14 @@ export function ScheduledTransactionSelector({
 
   const getDisplayName = (st: ScheduledTransaction) => {
     if (st.sourceType === "RECURRENT_TRANSACTION") {
-      const matchedTemplate = recurringTemplates.find((e) => e.id === st.sourceId)
-      return matchedTemplate?.name || st.recurringTransaction?.name || "Scheduled Obligation"
+      const matchedTemplate = recurringTemplates.find(
+        (e) => e.id === st.sourceId
+      )
+      return (
+        matchedTemplate?.name ||
+        st.recurringTransaction?.name ||
+        "Scheduled Obligation"
+      )
     }
     if (st.sourceType === "SOURCE_TYPE_UNSPECIFIED" || !st.sourceType) {
       if (st.metadata?.vendorName) {
@@ -78,7 +95,8 @@ export function ScheduledTransactionSelector({
     if (!q) return pendingScheduled
     return pendingScheduled.filter((st) => {
       const name = getDisplayName(st).toLowerCase()
-      const budgetName = budgets.find((b) => b.id === st.budgetId)?.name?.toLowerCase() || ""
+      const budgetName =
+        budgets.find((b) => b.id === st.budgetId)?.name?.toLowerCase() || ""
       const amountStr = (Number(st.amount || 0) / 100).toFixed(2)
       return name.includes(q) || budgetName.includes(q) || amountStr.includes(q)
     })
@@ -96,14 +114,28 @@ export function ScheduledTransactionSelector({
       onSubmit={(e) => e.preventDefault()}
     >
       <div className="flex flex-col gap-4">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onBack}
-          className="-ml-2 h-8 self-start rounded-lg px-2 text-xs font-semibold text-muted-foreground hover:bg-muted/10 hover:text-foreground"
-        >
-          ← Back to types
-        </Button>
+        <div className="flex items-center justify-between">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onBack}
+            className="-ml-2 h-8 rounded-lg px-2 text-xs font-semibold text-muted-foreground hover:bg-muted/10 hover:text-foreground"
+          >
+            ← Back to types
+          </Button>
+
+          <Button
+            type="button"
+            variant="link"
+            onClick={() => {
+              onOpenChange(false)
+              navigate("/finance/recurring")
+            }}
+            className="h-8 cursor-pointer px-0 text-xs font-bold text-indigo-400 hover:text-indigo-300 hover:underline"
+          >
+            Manage Templates
+          </Button>
+        </div>
 
         {/* Search bar */}
         <div className="relative">
@@ -112,26 +144,28 @@ export function ScheduledTransactionSelector({
             placeholder="Search scheduled items..."
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            className="h-10 rounded-xl border-border/60 bg-background/40 pl-9 pr-4 text-xs focus-visible:ring-primary"
+            className="h-10 rounded-xl border-border/60 bg-background/40 pr-4 pl-9 text-xs focus-visible:ring-primary"
           />
         </div>
 
         {/* List items */}
-        <div className="max-h-[360px] overflow-y-auto pr-1 space-y-2">
+        <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
           {filteredScheduled.length === 0 ? (
             <div className="py-12 text-center">
               <CalendarClock className="mx-auto h-12 w-12 text-muted-foreground/20" />
               <p className="mt-2 text-xs font-semibold text-muted-foreground">
                 No pending scheduled items found.
               </p>
-              <p className="mt-1 text-[11px] text-muted-foreground/80 max-w-xs mx-auto">
-                Create recurring templates or schedule upcoming SaaS subscriptions in the Calendar tab.
+              <p className="mx-auto mt-1 max-w-xs text-[11px] text-muted-foreground/80">
+                Create recurring templates or schedule upcoming SaaS
+                subscriptions in the Calendar tab.
               </p>
             </div>
           ) : (
             filteredScheduled.map((st) => {
               const name = getDisplayName(st)
-              const budgetName = budgets.find((b) => b.id === st.budgetId)?.name || ""
+              const budgetName =
+                budgets.find((b) => b.id === st.budgetId)?.name || ""
               const isExpense = st.type === "EXPENSE"
               const dateStr = st.dueDate
                 ? new Date(st.dueDate).toLocaleDateString(undefined, {
@@ -170,14 +204,16 @@ export function ScheduledTransactionSelector({
                         {isExpense && budgetName && (
                           <>
                             <span>•</span>
-                            <span className="truncate max-w-[100px]">{budgetName}</span>
+                            <span className="max-w-[100px] truncate">
+                              {budgetName}
+                            </span>
                           </>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex shrink-0 items-center gap-2">
                     <span className="text-xs font-black text-foreground">
                       {formatCents(st.amount).toFixed(2)}{" "}
                       <span className="text-[10px] font-bold text-muted-foreground uppercase">
