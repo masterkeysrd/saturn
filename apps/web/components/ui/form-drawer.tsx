@@ -20,6 +20,7 @@ export interface FormDrawerProps {
   submitLabel: string
   isPending?: boolean
   disabled?: boolean
+  hideSubmitButton?: boolean
   onSubmit: (e: React.FormEvent) => void
   children: React.ReactNode
   className?: string
@@ -34,6 +35,7 @@ export function FormDrawer({
   submitLabel,
   isPending = false,
   disabled = false,
+  hideSubmitButton = false,
   onSubmit,
   children,
   className,
@@ -42,7 +44,7 @@ export function FormDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         className={cn(
-          "rounded-none border-none border-border/40 bg-card/95 p-6 shadow-2xl backdrop-blur-xl sm:rounded-l-3xl sm:border-l md:p-8",
+          "rounded-none border-none border-border/40 bg-card/95 p-6 shadow-2xl backdrop-blur-xl sm:rounded-l-3xl sm:border-l data-[side=right]:sm:max-w-md md:p-8",
           className
         )}
       >
@@ -61,16 +63,18 @@ export function FormDrawer({
         <form onSubmit={onSubmit} className="mt-8 space-y-6">
           {children}
 
-          <div className="w-full pt-4">
-            <Button
-              type="submit"
-              disabled={isPending || disabled}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent font-semibold text-white shadow-lg shadow-primary/10 transition-all hover:scale-[1.01]"
-            >
-              {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              <span>{submitLabel}</span>
-            </Button>
-          </div>
+          {!hideSubmitButton && (
+            <div className="w-full pt-4">
+              <Button
+                type="submit"
+                disabled={isPending || disabled}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent font-semibold text-white shadow-lg shadow-primary/10 transition-all hover:scale-[1.01]"
+              >
+                {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                <span>{submitLabel}</span>
+              </Button>
+            </div>
+          )}
         </form>
       </SheetContent>
     </Sheet>

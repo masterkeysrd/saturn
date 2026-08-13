@@ -1,31 +1,12 @@
-import { useEffect } from "react"
-import { useForm, Controller, useWatch } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { FormSelect } from "@/components/ui/form-select"
-import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
-import {
-  transactionSchema,
-  type TransactionFormValues,
-} from "../schemas/transaction"
+import { useState, useEffect } from "react"
+import { FormDrawer } from "@/components/ui/form-drawer"
+import { ArrowDownLeft, ArrowUpRight, ShieldAlert } from "lucide-react"
 import {
   type Account,
   type Budget,
   type Transaction,
-  useCreateExpenseMutation,
-  useUpdateExpenseMutation,
-  useListCurrenciesQuery,
-  useListAccountsQuery,
 } from "@/gen/saturn/finance/v1/finance"
-import { useCurrencyConversionPreview } from "@/hooks/use-currency-conversion"
-import { BudgetSelect } from "./budget-select"
-import { AccountSelect } from "./account-select"
-import { CurrencyConversionPreview } from "./currency-conversion-preview"
-import { Input } from "@/components/ui/input"
-import { AmountInput } from "@/components/ui/amount-input"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
-import { DatePicker } from "@/components/ui/date-picker"
-import { toCentsString, formatCents } from "../utils"
+import { CreateExpenseForm } from "./create-expense-form"
 
 interface CreateTransactionSheetProps {
   open: boolean
@@ -47,329 +28,140 @@ export function CreateTransactionSheet({
   spaceId,
   baseCurrency,
   budgets = [],
-  accounts: initialAccounts,
+  accounts,
   editTransaction,
   preselectedBudgetId,
   refetchTransactions,
   refetchBudgets,
   refetchData,
 }: CreateTransactionSheetProps) {
+  const [step, setStep] = useState<"SELECT" | "EXPENSE" | "INCOME">("SELECT")
+
   const handleRefetch = () => {
     refetchTransactions?.()
     refetchBudgets?.()
     refetchData?.()
   }
 
-  const { data: accountsData } = useListAccountsQuery(
-    {},
-    { enabled: open && !initialAccounts }
-  )
-  const accountsList = initialAccounts || accountsData?.accounts || []
-  const activeAccounts = accountsList.filter((a) => a.isActive)
-
-  const createExpenseMutation = useCreateExpenseMutation({
-    onSuccess: () => {
-      handleRefetch()
-      onOpenChange(false)
-    },
-    onError: (err: unknown) => {
-      alert(err instanceof Error ? err.message : "Failed to record expense.")
-    },
-  })
-
-  const updateExpenseMutation = useUpdateExpenseMutation({
-    onSuccess: () => {
-      handleRefetch()
-      onOpenChange(false)
-    },
-    onError: (err: unknown) => {
-      alert(err instanceof Error ? err.message : "Failed to update expense.")
-    },
-  })
-
-  const { data: currenciesData } = useListCurrenciesQuery(
-    {},
-    { enabled: open && !!spaceId, staleTime: 1000 * 60 * 30 }
-  )
-  const currencies = currenciesData?.currencies || []
-  const currencyItems = currencies.map((c) => ({
-    value: c.code,
-    label: `${c.code}${c.name ? ` (${c.name})` : ""}`,
-    triggerLabel: c.code,
-  }))
-
-  const {
-    register,
-    handleSubmit,
-    control,
-    reset,
-    setValue,
-    formState: { errors },
-  } = useForm<TransactionFormValues>({
-    resolver: zodResolver(transactionSchema),
-    defaultValues: {
-      budgetId: "",
-      amount: "",
-      currency: baseCurrency || "USD",
-      description: "",
-      transactionDate: new Date(),
-      effectiveDate: new Date(),
-      hasCustomEffectiveDate: false,
-      accountId: "",
-    },
-  })
-
+  // Determine starting step when sheet opens
   useEffect(() => {
     if (open) {
       if (editTransaction) {
-        const txDate = editTransaction.transactionDate
-          ? new Date(editTransaction.transactionDate)
-          : new Date()
-        const effDate = editTransaction.effectiveDate
-          ? new Date(editTransaction.effectiveDate)
-          : txDate
-        const isDiff = txDate.toDateString() !== effDate.toDateString()
-
-        reset({
-          budgetId: editTransaction.budgetId || "",
-          amount: formatCents(editTransaction.amount).toString(),
-          currency: editTransaction.currency || baseCurrency || "USD",
-          description: editTransaction.description || "",
-          transactionDate: txDate,
-          effectiveDate: effDate,
-          hasCustomEffectiveDate: isDiff,
-          accountId: editTransaction.accountId || "",
-        })
+        setStep("EXPENSE")
+      } else if (preselectedBudgetId) {
+        setStep("EXPENSE")
       } else {
-        const selectedBudgetId =
-          preselectedBudgetId || (budgets.length > 0 ? budgets[0].id : "")
-        const initialBudget = budgets.find((b) => b.id === selectedBudgetId)
-
-        const defaultCurrency = initialBudget?.currency || baseCurrency || "USD"
-
-        const defaultAcc = activeAccounts.find((a) => a.isDefault)
-        const initialAccId =
-          initialBudget?.defaultAccountId || defaultAcc?.id || ""
-
-        reset({
-          budgetId: selectedBudgetId || "",
-          amount: "",
-          currency: defaultCurrency,
-          description: "",
-          transactionDate: new Date(),
-          effectiveDate: new Date(),
-          hasCustomEffectiveDate: false,
-          accountId: initialAccId,
-        })
+        setStep("SELECT")
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, editTransaction, preselectedBudgetId, baseCurrency, reset])
+  }, [open, editTransaction, preselectedBudgetId])
 
-  const budgetIdValue = useWatch({ control, name: "budgetId" })
-  const amountValue = useWatch({ control, name: "amount" })
-  const currencyValue = useWatch({ control, name: "currency" })
-  const transactionDateValue = useWatch({ control, name: "transactionDate" })
-  const hasCustomEffectiveDate = useWatch({
-    control,
-    name: "hasCustomEffectiveDate",
-  })
-
-  // Sync currency & default account when selected budget changes
-  const handleBudgetChange = (newBudgetId: string) => {
-    const b = budgets.find((x) => x.id === newBudgetId)
-    if (b) {
-      setValue("currency", b.currency)
-      const globalDefault = activeAccounts.find((a) => a.isDefault)
-      if (b.defaultAccountId || globalDefault?.id) {
-        setValue("accountId", b.defaultAccountId || globalDefault?.id || "")
-      }
-    }
-  }
-
-  const { getConversionPreview } = useCurrencyConversionPreview({
-    spaceId,
-    enabled: open,
-    baseCurrency,
-  })
-
-  const isPending =
-    createExpenseMutation.isPending || updateExpenseMutation.isPending
-
-  const onSubmit = async (data: TransactionFormValues) => {
-    const toLocalISODate = (d: Date): string => {
-      const y = d.getFullYear()
-      const m = String(d.getMonth() + 1).padStart(2, "0")
-      const date = String(d.getDate()).padStart(2, "0")
-      return `${y}-${m}-${date}T12:00:00Z`
-    }
-
-    const txDateStr = toLocalISODate(data.transactionDate)
-    const effDateStr = toLocalISODate(
-      data.hasCustomEffectiveDate ? data.effectiveDate : data.transactionDate
+  // If we are directly showing the expense form
+  if (step === "EXPENSE") {
+    return (
+      <CreateExpenseForm
+        open={open}
+        onOpenChange={onOpenChange}
+        spaceId={spaceId}
+        baseCurrency={baseCurrency}
+        budgets={budgets}
+        accounts={accounts}
+        editTransaction={editTransaction}
+        preselectedBudgetId={preselectedBudgetId}
+        refetchData={handleRefetch}
+        onBack={editTransaction ? undefined : () => setStep("SELECT")}
+      />
     )
-
-    if (editTransaction) {
-      await updateExpenseMutation.mutateAsync({
-        id: editTransaction.id || "",
-        req: {
-          id: editTransaction.id || "",
-          expense: {
-            budgetId: data.budgetId,
-            amount: toCentsString(data.amount),
-            currency: data.currency,
-            description: data.description,
-            transactionDate: txDateStr,
-            effectiveDate: effDateStr,
-            accountId: data.accountId || undefined,
-          },
-        },
-      })
-    } else {
-      await createExpenseMutation.mutateAsync({
-        expense: {
-          budgetId: data.budgetId,
-          amount: toCentsString(data.amount),
-          currency: data.currency,
-          description: data.description,
-          transactionDate: txDateStr,
-          effectiveDate: effDateStr,
-          accountId: data.accountId || undefined,
-        },
-      })
-    }
   }
 
-  const conversion = getConversionPreview(amountValue, currencyValue)
+  // Placeholder for Income form
+  if (step === "INCOME") {
+    return (
+      <FormDrawer
+        open={open}
+        onOpenChange={onOpenChange}
+        title={
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setStep("SELECT")}
+              className="rounded-lg p-1 transition-colors hover:bg-muted-foreground/10"
+            >
+              <ArrowDownLeft className="h-4.5 w-4.5 rotate-135 text-muted-foreground" />
+            </button>
+            <span>Record Income</span>
+          </div>
+        }
+        description="Record an inbound transaction."
+        submitLabel="Save Income"
+        disabled
+        hideSubmitButton
+        onSubmit={(e) => e.preventDefault()}
+      >
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <ShieldAlert className="h-10 w-10 text-muted-foreground/60" />
+          <h3 className="mt-4 text-sm font-semibold text-foreground">
+            Income Form Coming Soon
+          </h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            We are polishing the manual income registration. Stay tuned!
+          </p>
+        </div>
+      </FormDrawer>
+    )
+  }
 
+  // Selection view
   return (
     <FormDrawer
       open={open}
       onOpenChange={onOpenChange}
-      title={editTransaction ? "Edit Expense" : "Record Expense"}
-      description={
-        editTransaction
-          ? "Modify logged expense details. Saturn will recompute currency base aggregates automatically."
-          : "Record a new expense. The amount will be deducted from the active period of the selected budget template."
-      }
-      submitLabel={editTransaction ? "Update Expense" : "Save Expense"}
-      isPending={isPending}
-      disabled={!budgetIdValue || !!(conversion && "error" in conversion)}
-      onSubmit={handleSubmit(onSubmit)}
+      title="Record Transaction"
+      description="Choose the type of transaction you want to record in your ledger."
+      submitLabel="Select an option above"
+      disabled
+      hideSubmitButton
+      onSubmit={(e) => e.preventDefault()}
     >
-      <FormFieldItem label="Budget" error={errors.budgetId?.message}>
-        <BudgetSelect
-          control={control}
-          name="budgetId"
-          budgets={budgets}
-          onBudgetChange={handleBudgetChange}
-          placeholder="Select a budget..."
-        />
-      </FormFieldItem>
+      <div className="mt-2 flex flex-col gap-4">
+        {/* Card 1: Outflow / Expense */}
+        <button
+          type="button"
+          onClick={() => setStep("EXPENSE")}
+          className="group flex w-full items-start gap-4 rounded-2xl border border-border/60 bg-background/40 p-5 text-left transition-all hover:scale-[1.01] hover:border-primary/40 hover:bg-primary/5 focus:outline-none"
+        >
+          <div className="shrink-0 rounded-xl bg-rose-500/10 p-2.5 text-rose-500 dark:bg-rose-500/20">
+            <ArrowDownLeft className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-bold text-foreground">
+              Record Expense
+            </h3>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Record an outbound payment, fee, or purchase. Deducted from a
+              budget category.
+            </p>
+          </div>
+        </button>
 
-      <FormFieldItem label="Account / Payment Method (Optional)">
-        <AccountSelect
-          control={control}
-          name="accountId"
-          accounts={activeAccounts}
-          placeholder="Choose account to impact balance"
-          allowNone
-        />
-      </FormFieldItem>
-
-      <FormFieldItem label="Description" error={errors.description?.message}>
-        <Input
-          {...register("description")}
-          placeholder="e.g. Amazon Web Services, Restaurant Dinner"
-          className="h-12 rounded-xl border-border/60 bg-background/50"
-        />
-      </FormFieldItem>
-
-      <div className="space-y-3.5">
-        <FormFieldItem label="Transaction Date">
-          <Controller
-            control={control}
-            name="transactionDate"
-            render={({ field }) => (
-              <DatePicker
-                date={field.value}
-                setDate={(newDate) => {
-                  if (newDate) {
-                    field.onChange(newDate)
-                    if (!hasCustomEffectiveDate) {
-                      setValue("effectiveDate", newDate)
-                    }
-                  }
-                }}
-              />
-            )}
-          />
-        </FormFieldItem>
-
-        <div className="flex items-center gap-2.5 py-1 select-none">
-          <Checkbox
-            id="txCustomEffective"
-            checked={hasCustomEffectiveDate}
-            onCheckedChange={(checked) => {
-              const isChecked = !!checked
-              setValue("hasCustomEffectiveDate", isChecked)
-              if (!isChecked) {
-                setValue("effectiveDate", transactionDateValue)
-              }
-            }}
-          />
-          <Label
-            htmlFor="txCustomEffective"
-            className="cursor-pointer text-xs font-semibold text-foreground/80"
-          >
-            Is this payment effective on a different date?
-          </Label>
-        </div>
-
-        {hasCustomEffectiveDate && (
-          <FormFieldItem
-            label="Effective Date"
-            className="slide-in-from-top-1.5 animate-in duration-200"
-          >
-            <Controller
-              control={control}
-              name="effectiveDate"
-              render={({ field }) => (
-                <DatePicker
-                  date={field.value}
-                  setDate={(newDate) => newDate && field.onChange(newDate)}
-                />
-              )}
-            />
-          </FormFieldItem>
-        )}
+        {/* Card 2: Inflow / Income */}
+        <button
+          type="button"
+          onClick={() => setStep("INCOME")}
+          className="group hover:border-emerald/40 hover:bg-emerald/5 flex w-full items-start gap-4 rounded-2xl border border-border/60 bg-background/40 p-5 text-left transition-all hover:scale-[1.01] focus:outline-none"
+        >
+          <div className="shrink-0 rounded-xl bg-emerald-500/10 p-2.5 text-emerald-500 dark:bg-emerald-500/20">
+            <ArrowUpRight className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-bold text-foreground">Record Income</h3>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Record an inbound salary deposit, client payment, or refund.
+              Increases account balance.
+            </p>
+          </div>
+        </button>
       </div>
-
-      <FormFieldItem label="Amount" error={errors.amount?.message}>
-        <div className="flex h-12 items-center overflow-hidden rounded-xl border border-border/60 bg-background/50 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20">
-          <AmountInput
-            control={control}
-            name="amount"
-            placeholder="0.00"
-            showError={false}
-            className="h-full w-full flex-1 border-0 bg-transparent px-4 py-2 text-sm text-foreground shadow-none ring-0 focus-visible:ring-0 focus-visible:outline-none"
-          />
-
-          <div className="h-6 w-px shrink-0 bg-border/40" />
-
-          <FormSelect
-            control={control}
-            name="currency"
-            items={currencyItems}
-            triggerClassName="!h-full w-28 border-0 bg-transparent focus-visible:ring-0"
-          />
-        </div>
-      </FormFieldItem>
-
-      <CurrencyConversionPreview
-        conversion={conversion}
-        fromCurrency={currencyValue}
-      />
     </FormDrawer>
   )
 }
