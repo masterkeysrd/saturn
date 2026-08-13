@@ -171,9 +171,9 @@ type TransactionFilter struct {
 	Type               *TransactionType
 	AccountID          *AccountID
 	TransferID         *TransferID
-	BorrowingID        *string
+	BorrowingID        *BorrowingID
 	BorrowingRoles     []string
-	ScheduledPaymentID *string
+	ScheduledPaymentID *ScheduledPaymentID
 	PageSize           int32
 	NextPageToken      string
 	Sort               sorting.SortOrder

@@ -249,6 +249,42 @@ func TestBorrowing_ApplyTransaction(t *testing.T) {
 		}
 	})
 
+	t.Run("AdjustBalance updates remaining amount, delta, and status", func(t *testing.T) {
+		b := &Borrowing{
+			ID:              bID,
+			SpaceID:         spaceID,
+			Direction:       BorrowingDirectionBorrowed,
+			Counterparty:    "Bob",
+			TotalAmount:     10000,
+			RemainingAmount: 5000,
+			Currency:        "USD",
+			Status:          BorrowingStatusActive,
+			EstablishedAt:   now,
+		}
+
+		delta := b.AdjustBalance(2000)
+		if delta != -3000 {
+			t.Errorf("delta = %d, want -3000", delta)
+		}
+		if b.RemainingAmount != 2000 {
+			t.Errorf("remaining = %d, want 2000", b.RemainingAmount)
+		}
+		if b.Status != BorrowingStatusActive {
+			t.Errorf("status = %s, want ACTIVE", b.Status)
+		}
+
+		delta = b.AdjustBalance(0)
+		if delta != -2000 {
+			t.Errorf("delta = %d, want -2000", delta)
+		}
+		if b.RemainingAmount != 0 {
+			t.Errorf("remaining = %d, want 0", b.RemainingAmount)
+		}
+		if b.Status != BorrowingStatusPaidOff {
+			t.Errorf("status = %s, want PAID_OFF", b.Status)
+		}
+	})
+
 	t.Run("Payment reduces debt and updates status to PAID_OFF when remaining reaches 0", func(t *testing.T) {
 		b := &Borrowing{
 			ID:              bID,
@@ -323,4 +359,72 @@ func TestBorrowing_NewTransaction(t *testing.T) {
 	if txn.Metadata.BorrowingRole != "REPAYMENT" {
 		t.Errorf("BorrowingRole = %s, want REPAYMENT", txn.Metadata.BorrowingRole)
 	}
+}
+
+func TestBorrowing_RollbackTransaction(t *testing.T) {
+	bID, _ := NewBorrowingID()
+	rawSpace, _ := id.Generate("spc_")
+	spaceID := SpaceID(rawSpace)
+	now := time.Now().UTC()
+
+	t.Run("Rollback REPAYMENT restores remaining balance and ACTIVE status", func(t *testing.T) {
+		b := &Borrowing{
+			ID:              bID,
+			SpaceID:         spaceID,
+			Direction:       BorrowingDirectionBorrowed,
+			Counterparty:    "Charlie",
+			TotalAmount:     10000,
+			RemainingAmount: 5000,
+			Currency:        "USD",
+			Status:          BorrowingStatusPaidOff,
+		}
+
+		b.RollbackTransaction("REPAYMENT", TransactionTypeExpense, 3000)
+		if b.RemainingAmount != 8000 {
+			t.Errorf("remaining = %d, want 8000", b.RemainingAmount)
+		}
+		if b.Status != BorrowingStatusActive {
+			t.Errorf("status = %s, want ACTIVE", b.Status)
+		}
+	})
+
+	t.Run("Rollback DISBURSEMENT reduces total and remaining amount", func(t *testing.T) {
+		b := &Borrowing{
+			ID:              bID,
+			SpaceID:         spaceID,
+			Direction:       BorrowingDirectionLent,
+			Counterparty:    "David",
+			TotalAmount:     15000,
+			RemainingAmount: 15000,
+			Currency:        "USD",
+			Status:          BorrowingStatusActive,
+		}
+
+		b.RollbackTransaction("DISBURSEMENT", TransactionTypeExpense, 5000)
+		if b.TotalAmount != 10000 || b.RemainingAmount != 10000 {
+			t.Errorf("total = %d, remaining = %d, want 10000", b.TotalAmount, b.RemainingAmount)
+		}
+	})
+
+	t.Run("Rollback INITIAL_FUNDING sets remaining to 0 and status to PAID_OFF", func(t *testing.T) {
+		b := &Borrowing{
+			ID:              bID,
+			SpaceID:         spaceID,
+			Direction:       BorrowingDirectionBorrowed,
+			Counterparty:    "Eve",
+			TotalAmount:     10000,
+			RemainingAmount: 10000,
+			Currency:        "USD",
+			Status:          BorrowingStatusActive,
+			EstablishedAt:   now,
+		}
+
+		b.RollbackTransaction("INITIAL_FUNDING", TransactionTypeIncome, 10000)
+		if b.RemainingAmount != 0 {
+			t.Errorf("remaining = %d, want 0", b.RemainingAmount)
+		}
+		if b.Status != BorrowingStatusPaidOff {
+			t.Errorf("status = %s, want PAID_OFF", b.Status)
+		}
+	})
 }

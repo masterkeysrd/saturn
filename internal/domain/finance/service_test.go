@@ -308,7 +308,7 @@ func (m *mockTransactionStore) ListBySpace(ctx context.Context, spaceID SpaceID,
 			if filter.Type != nil && t.Type != *filter.Type {
 				continue
 			}
-			if filter.BorrowingID != nil && (t.Metadata.BorrowingID == nil || string(*t.Metadata.BorrowingID) != *filter.BorrowingID) {
+			if filter.BorrowingID != nil && (t.Metadata.BorrowingID == nil || *t.Metadata.BorrowingID != *filter.BorrowingID) {
 				continue
 			}
 			if len(filter.BorrowingRoles) > 0 {
@@ -1843,9 +1843,8 @@ func TestAdjustBorrowingBalance(t *testing.T) {
 				t.Errorf("Account balance = %d, want %d", acc.CurrentBalance, tt.wantAccountBal)
 			}
 
-			bIDStr := string(borID)
 			page, err := txnStore.ListBySpace(ctx, spaceID, &TransactionFilter{
-				BorrowingID:    &bIDStr,
+				BorrowingID:    &borID,
 				BorrowingRoles: []string{"REPAYMENT", "DISBURSEMENT", "ADJUSTMENT"},
 			})
 			if err != nil {
@@ -2062,9 +2061,8 @@ func TestDeleteBorrowingAdjustment(t *testing.T) {
 		t.Fatalf("AdjustBorrowingBalance failed: %v", err)
 	}
 
-	bIDStr := string(borID)
 	page, _ := txnStore.ListBySpace(ctx, spaceID, &TransactionFilter{
-		BorrowingID:    &bIDStr,
+		BorrowingID:    &borID,
 		BorrowingRoles: []string{"ADJUSTMENT"},
 	})
 	if len(page.Items) != 1 {
@@ -2085,6 +2083,63 @@ func TestDeleteBorrowingAdjustment(t *testing.T) {
 	b, _ := borrowingStore.GetByID(ctx, spaceID, borID)
 	if b.RemainingAmount != 50000 {
 		t.Errorf("RemainingAmount after adjustment deletion = %d, want 50000", b.RemainingAmount)
+	}
+}
+
+func TestDeleteBorrowing_BlockedWhenTransactionsExist(t *testing.T) {
+	ctx := context.Background()
+	rawSpace, _ := id.Generate("spc_")
+	spaceID := SpaceID(rawSpace)
+
+	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+	_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
+
+	borrowingStore := &mockBorrowingStore{data: make(map[BorrowingID]*Borrowing)}
+	txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
+
+	svc := NewService(Dependencies{
+		SettingsStore:    settingsStore,
+		BorrowingStore:   borrowingStore,
+		TransactionStore: txnStore,
+	})
+
+	// Create borrowing without transaction
+	b, err := svc.CreateBorrowing(ctx, &Borrowing{
+		SpaceID:         spaceID,
+		Direction:       BorrowingDirectionLent,
+		Counterparty:    "Frank",
+		TotalAmount:     50000,
+		RemainingAmount: 50000,
+		Currency:        "USD",
+		EstablishedAt:   time.Now().UTC(),
+	}, false)
+	if err != nil {
+		t.Fatalf("CreateBorrowing failed: %v", err)
+	}
+
+	// 1. Can delete when no transactions exist
+	if err := svc.DeleteBorrowing(ctx, spaceID, b.ID); err != nil {
+		t.Fatalf("DeleteBorrowing failed when no transactions exist: %v", err)
+	}
+
+	// 2. Re-create borrowing with initial transaction
+	b2, err := svc.CreateBorrowing(ctx, &Borrowing{
+		SpaceID:         spaceID,
+		Direction:       BorrowingDirectionLent,
+		Counterparty:    "Grace",
+		TotalAmount:     50000,
+		RemainingAmount: 5000,
+		Currency:        "USD",
+		EstablishedAt:   time.Now().UTC(),
+	}, true)
+	if err != nil {
+		t.Fatalf("CreateBorrowing with transaction failed: %v", err)
+	}
+
+	// 3. Attempt delete -> must be blocked with ErrBorrowingHasTransactions
+	err = svc.DeleteBorrowing(ctx, spaceID, b2.ID)
+	if !errors.Is(err, ErrBorrowingHasTransactions) {
+		t.Fatalf("DeleteBorrowing error = %v, want %v", err, ErrBorrowingHasTransactions)
 	}
 }
 

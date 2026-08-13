@@ -173,7 +173,6 @@ func TestOneTimeBudget_OCC_And_Patch(t *testing.T) {
 			LimitAmount: 300000,
 			Currency:    "USD",
 			Interval:    financev1.Budget_ONE_TIME,
-			Version:     bgt.GetVersion(),
 		},
 	})
 	if err != nil {
@@ -194,7 +193,6 @@ func TestOneTimeBudget_OCC_And_Patch(t *testing.T) {
 			LimitAmount: 400000,
 			Currency:    "USD",
 			Interval:    financev1.Budget_ONE_TIME,
-			Version:     staleVersion,
 		},
 	})
 	if err == nil {
@@ -255,7 +253,6 @@ func TestBudgetStatus_TransactionEnforcement(t *testing.T) {
 			Currency:    "USD",
 			Interval:    financev1.Budget_MONTHLY,
 			Status:      financev1.Budget_CLOSED,
-			Version:     pausedBgt.GetVersion(),
 		},
 	})
 	if err != nil {

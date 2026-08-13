@@ -353,3 +353,44 @@ func TestBorrowingTransactionDisbursementFlow(t *testing.T) {
 		AssertBorrowingBalance(t, "Helen Loan", 40000).
 		AssertAccountBalance(t, "Main Account", 110000) // 80000 + 30000 = 110000 ($1,100)
 }
+
+func TestBorrowingDeletion_BlockAndDeleteFlow(t *testing.T) {
+	d := driver.New(t, testEnv)
+
+	d.Auth().
+		CreateApprovedUser(t).
+		Login(t)
+
+	d.Space().
+		Ensure(t, "Personal Space")
+
+	d.Finance().
+		InitSettings(t, "USD").
+		// 1. Borrowing without transactions can be deleted immediately
+		CreateBorrowing(t, driver.BorrowingOptions{
+			Name:         "Empty Loan",
+			Counterparty: "Ian",
+			Direction:    financev1.Borrowing_LENT,
+			Currency:     "USD",
+			TotalAmount:  10000,
+		}).
+		DeleteBorrowing(t, "Empty Loan").
+		// 2. Borrowing with linked transaction cannot be deleted directly
+		CreateBorrowing(t, driver.BorrowingOptions{
+			Name:         "Active Loan",
+			Counterparty: "Jane",
+			Direction:    financev1.Borrowing_LENT,
+			Currency:     "USD",
+			TotalAmount:  20000,
+		}).
+		LogBorrowingTransaction(t, driver.LogBorrowingTransactionOptions{
+			Borrowing: "Active Loan",
+			Type:      financev1.BorrowingTransactionType_BORROWING_TRANSACTION_TYPE_PAYMENT,
+			Amount:    5000,
+			Key:       "Active Loan_repayment",
+		}).
+		DeleteBorrowingShouldFail(t, "Active Loan").
+		// 3. Once linked transaction is deleted, borrowing deletion succeeds
+		DeleteBorrowingTransaction(t, "Active Loan_repayment").
+		DeleteBorrowing(t, "Active Loan")
+}

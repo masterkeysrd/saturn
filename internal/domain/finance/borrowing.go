@@ -222,6 +222,83 @@ func (b *Borrowing) ApplyTransaction(txnType BorrowingTransactionType, amount in
 	return role, tType, defaultDesc, nil
 }
 
+// AdjustBalance adjusts remaining amount to targetBalance, updates status (PAID_OFF vs ACTIVE), and returns delta.
+func (b *Borrowing) AdjustBalance(targetBalance int64) (delta int64) {
+	delta = targetBalance - b.RemainingAmount
+	b.RemainingAmount = targetBalance
+	if b.RemainingAmount <= 0 {
+		b.RemainingAmount = 0
+		b.Status = BorrowingStatusPaidOff
+	} else {
+		b.Status = BorrowingStatusActive
+	}
+	b.UpdateTime = time.Now().UTC()
+	return delta
+}
+
+// RollbackTransaction reverts a borrowing transaction (REPAYMENT, DISBURSEMENT, ADJUSTMENT, INITIAL_FUNDING),
+// restoring remaining balance, total amount, and status.
+func (b *Borrowing) RollbackTransaction(role string, txnType TransactionType, amount int64) {
+	if amount <= 0 {
+		return
+	}
+
+	switch role {
+	case "REPAYMENT":
+		b.RemainingAmount += amount
+		if b.RemainingAmount > b.TotalAmount {
+			b.RemainingAmount = b.TotalAmount
+		}
+		b.Status = BorrowingStatusActive
+
+	case "DISBURSEMENT":
+		b.RemainingAmount -= amount
+		if b.RemainingAmount < 0 {
+			b.RemainingAmount = 0
+		}
+		b.TotalAmount -= amount
+		if b.TotalAmount < 0 {
+			b.TotalAmount = 0
+		}
+		if b.RemainingAmount <= 0 {
+			b.Status = BorrowingStatusPaidOff
+		} else {
+			b.Status = BorrowingStatusActive
+		}
+
+	case "ADJUSTMENT":
+		isIncrease := false
+		if b.Direction == BorrowingDirectionLent {
+			isIncrease = (txnType == TransactionTypeExpense)
+		} else {
+			isIncrease = (txnType == TransactionTypeIncome)
+		}
+
+		if isIncrease {
+			b.RemainingAmount -= amount
+			if b.RemainingAmount < 0 {
+				b.RemainingAmount = 0
+			}
+		} else {
+			b.RemainingAmount += amount
+			if b.RemainingAmount > b.TotalAmount {
+				b.RemainingAmount = b.TotalAmount
+			}
+		}
+		if b.RemainingAmount <= 0 {
+			b.Status = BorrowingStatusPaidOff
+		} else {
+			b.Status = BorrowingStatusActive
+		}
+
+	case "INITIAL_FUNDING":
+		b.RemainingAmount = 0
+		b.Status = BorrowingStatusPaidOff
+	}
+
+	b.UpdateTime = time.Now().UTC()
+}
+
 // NewTransaction constructs a valid Transaction entity linked to this Borrowing.
 func (b *Borrowing) NewTransaction(opts BorrowingTransactionOpts) (*Transaction, error) {
 	txnID, err := NewTransactionID()
@@ -229,21 +306,49 @@ func (b *Borrowing) NewTransaction(opts BorrowingTransactionOpts) (*Transaction,
 		return nil, err
 	}
 
+	txnType := opts.Type
+	if txnType == "" {
+		if b.Direction == BorrowingDirectionLent {
+			txnType = TransactionTypeExpense
+		} else {
+			txnType = TransactionTypeIncome
+		}
+	}
+
+	desc := opts.Description
+	if desc == "" {
+		if b.Direction == BorrowingDirectionLent {
+			desc = fmt.Sprintf("Lent to %s", b.Counterparty)
+		} else {
+			desc = fmt.Sprintf("Borrowed from %s", b.Counterparty)
+		}
+	}
+
+	role := opts.Role
+	if role == "" {
+		role = "INITIAL_FUNDING"
+	}
+
+	amountInBase := opts.AmountInBase
+	if amountInBase <= 0 {
+		amountInBase = opts.Amount
+	}
+
 	bID := b.ID
 	t := &Transaction{
 		ID:              txnID,
 		SpaceID:         b.SpaceID,
-		Type:            opts.Type,
+		Type:            txnType,
 		AccountID:       opts.AccountID,
 		Amount:          opts.Amount,
 		Currency:        b.Currency,
-		AmountInBase:    opts.AmountInBase,
-		Description:     opts.Description,
+		AmountInBase:    amountInBase,
+		Description:     desc,
 		TransactionDate: opts.TransactionDate,
 		EffectiveDate:   opts.TransactionDate,
 		Metadata: TransactionMetadata{
 			BorrowingID:         &bID,
-			BorrowingRole:       opts.Role,
+			BorrowingRole:       role,
 			BorrowingAmount:     opts.Amount,
 			AccountImpactAmount: opts.AccountImpactAmount,
 		},

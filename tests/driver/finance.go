@@ -400,6 +400,51 @@ func (f *FinanceDriver) LogBorrowingTransaction(tb testing.TB, opts LogBorrowing
 
 	return f
 }
+func (f *FinanceDriver) DeleteBorrowing(tb testing.TB, name string) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+
+	bor, ok := f.driver.state.Borrowings[name]
+	if !ok {
+		tb.Fatalf("borrowing %q not found in state registry", name)
+	}
+
+	client := f.getClient()
+	_, err := client.DeleteBorrowing(tb.Context(), &financev1.DeleteBorrowingRequest{
+		Id: bor.ID,
+	})
+	if err != nil {
+		tb.Fatalf("DeleteBorrowing SDK call failed: %v", err)
+	}
+
+	delete(f.driver.state.Borrowings, name)
+	return f
+}
+
+// DeleteBorrowingShouldFail asserts that deleting a borrowing agreement fails (e.g. when linked transactions exist).
+func (f *FinanceDriver) DeleteBorrowingShouldFail(tb testing.TB, name string) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+
+	bor, ok := f.driver.state.Borrowings[name]
+	if !ok {
+		tb.Fatalf("borrowing %q not found in state registry", name)
+	}
+
+	client := f.getClient()
+	_, err := client.DeleteBorrowing(tb.Context(), &financev1.DeleteBorrowingRequest{
+		Id: bor.ID,
+	})
+	if err == nil {
+		tb.Fatalf("expected DeleteBorrowing for %q to fail, but it succeeded", name)
+	}
+
+	return f
+}
 
 // DeleteBorrowingTransaction deletes a borrowing transaction using financev1.Client.
 func (f *FinanceDriver) DeleteBorrowingTransaction(tb testing.TB, transactionKey string) *FinanceDriver {
@@ -1774,7 +1819,6 @@ func (f *FinanceDriver) UpdateInstitution(tb testing.TB, opts InstitutionUpdateO
 	updated, err := client.UpdateInstitution(tb.Context(), &financev1.UpdateInstitutionRequest{
 		Id: info.ID,
 		Institution: &financev1.Institution{
-			Id:      info.ID,
 			Name:    name,
 			Domain:  opts.Domain,
 			LogoUrl: opts.LogoURL,
@@ -1861,7 +1905,6 @@ func (f *FinanceDriver) UpdateAccount(tb testing.TB, opts AccountUpdateOptions) 
 	updated, err := client.UpdateAccount(tb.Context(), &financev1.UpdateAccountRequest{
 		Id: info.ID,
 		Account: &financev1.Account{
-			Id:          info.ID,
 			Name:        accName,
 			CreditLimit: opts.CreditLimit,
 			IsDefault:   opts.IsDefault,

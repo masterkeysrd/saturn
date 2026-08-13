@@ -1347,66 +1347,8 @@ func (s *Service) deleteTransaction(ctx context.Context, txn *Transaction) error
 		}
 
 		if b, err := s.deps.BorrowingStore.GetByID(ctx, txn.SpaceID, *txn.Metadata.BorrowingID); err == nil {
-			switch role {
-			case "REPAYMENT":
-				b.RemainingAmount += borrowingAmount
-				if b.RemainingAmount > b.TotalAmount {
-					b.RemainingAmount = b.TotalAmount
-				}
-				b.Status = BorrowingStatusActive
-				b.UpdateTime = time.Now().UTC()
-				_ = s.deps.BorrowingStore.Update(ctx, b)
-
-			case "DISBURSEMENT":
-				b.RemainingAmount -= borrowingAmount
-				if b.RemainingAmount < 0 {
-					b.RemainingAmount = 0
-				}
-				b.TotalAmount -= borrowingAmount
-				if b.TotalAmount < 0 {
-					b.TotalAmount = 0
-				}
-				if b.RemainingAmount <= 0 {
-					b.Status = BorrowingStatusPaidOff
-				} else {
-					b.Status = BorrowingStatusActive
-				}
-				b.UpdateTime = time.Now().UTC()
-				_ = s.deps.BorrowingStore.Update(ctx, b)
-
-			case "ADJUSTMENT":
-				isIncrease := false
-				if b.Direction == BorrowingDirectionLent {
-					isIncrease = (txn.Type == TransactionTypeExpense)
-				} else {
-					isIncrease = (txn.Type == TransactionTypeIncome)
-				}
-
-				if isIncrease {
-					b.RemainingAmount -= borrowingAmount
-					if b.RemainingAmount < 0 {
-						b.RemainingAmount = 0
-					}
-				} else {
-					b.RemainingAmount += borrowingAmount
-					if b.RemainingAmount > b.TotalAmount {
-						b.RemainingAmount = b.TotalAmount
-					}
-				}
-				if b.RemainingAmount <= 0 {
-					b.Status = BorrowingStatusPaidOff
-				} else {
-					b.Status = BorrowingStatusActive
-				}
-				b.UpdateTime = time.Now().UTC()
-				_ = s.deps.BorrowingStore.Update(ctx, b)
-
-			case "INITIAL_FUNDING":
-				b.RemainingAmount = 0
-				b.Status = BorrowingStatusPaidOff
-				b.UpdateTime = time.Now().UTC()
-				_ = s.deps.BorrowingStore.Update(ctx, b)
-			}
+			b.RollbackTransaction(role, txn.Type, borrowingAmount)
+			_ = s.deps.BorrowingStore.Update(ctx, b)
 		}
 	}
 
@@ -1430,92 +1372,33 @@ func (s *Service) adjustAccountBalance(ctx context.Context, spaceID SpaceID, acc
 	return s.deps.AccountStore.Update(ctx, acc)
 }
 
-type syncTransactionParams struct {
-	SpaceID         SpaceID
-	BorrowingID     string
-	Amount          int64
-	Currency        Currency
-	TransactionDate time.Time
-	Description     string
-	Type            TransactionType
-	AccountID       *AccountID
-}
+// Helper to create or update associated borrowing transaction idempotently
+func (s *Service) syncBorrowingTransaction(ctx context.Context, targetTxn *Transaction) error {
+	if targetTxn == nil || targetTxn.Metadata.BorrowingID == nil {
+		return errors.New("borrowing transaction metadata requires borrowing_id")
+	}
 
-// Helper to create or update associated transaction
-func (s *Service) syncTransaction(ctx context.Context, params syncTransactionParams) error {
-	// Find if transaction already exists
-	bID := params.BorrowingID
-	page, err := s.deps.TransactionStore.ListBySpace(ctx, params.SpaceID, &TransactionFilter{
-		BorrowingID:    &bID,
-		BorrowingRoles: []string{"INITIAL_FUNDING"},
+	role := targetTxn.Metadata.BorrowingRole
+	if role == "" {
+		role = "INITIAL_FUNDING"
+	}
+
+	page, err := s.deps.TransactionStore.ListBySpace(ctx, targetTxn.SpaceID, &TransactionFilter{
+		BorrowingID:    targetTxn.Metadata.BorrowingID,
+		BorrowingRoles: []string{role},
 		PageSize:       1,
 	})
 	if err != nil {
 		return fmt.Errorf("list existing transactions: %w", err)
 	}
-	existingTxs := page.Items
 
-	if len(existingTxs) > 0 {
-		existing := existingTxs[0]
-		// Clone and modify for update
-		txn := *existing
-		txn.Amount = params.Amount
-		txn.Currency = params.Currency
-		txn.Description = params.Description
-		txn.TransactionDate = params.TransactionDate
-		txn.EffectiveDate = params.TransactionDate
-		txn.Type = params.Type
-		txn.AccountID = params.AccountID
-		txn.UpdateTime = time.Now().UTC()
+	if len(page.Items) > 0 {
+		existing := page.Items[0]
+		targetTxn.ID = existing.ID
+		return s.updateTransaction(ctx, targetTxn, existing)
+	}
 
-		if err := s.updateTransaction(ctx, &txn, existing); err != nil {
-			return fmt.Errorf("update transaction: %w", err)
-		}
-	} else {
-		tID, err := NewTransactionID()
-		if err != nil {
-			return err
-		}
-		bID := BorrowingID(params.BorrowingID)
-		txn := &Transaction{
-			ID:              tID,
-			SpaceID:         params.SpaceID,
-			Type:            params.Type,
-			Amount:          params.Amount,
-			Currency:        params.Currency,
-			Description:     params.Description,
-			TransactionDate: params.TransactionDate,
-			EffectiveDate:   params.TransactionDate,
-			AccountID:       params.AccountID,
-			Metadata: TransactionMetadata{
-				BorrowingID:   &bID,
-				BorrowingRole: "INITIAL_FUNDING",
-			},
-			CreateTime: time.Now().UTC(),
-			UpdateTime: time.Now().UTC(),
-		}
-		if err := s.createTransaction(ctx, txn); err != nil {
-			return fmt.Errorf("create transaction: %w", err)
-		}
-	}
-	return nil
-}
-
-func (s *Service) deleteTransactionByBorrowingID(ctx context.Context, spaceID SpaceID, borrowingID string) error {
-	bID := borrowingID
-	page, err := s.deps.TransactionStore.ListBySpace(ctx, spaceID, &TransactionFilter{
-		BorrowingID: &bID,
-		PageSize:    50,
-	})
-	if err != nil {
-		return err
-	}
-	for _, txn := range page.Items {
-		if err := s.deleteTransaction(ctx, txn); err != nil {
-			return fmt.Errorf("delete borrowing transaction %s: %w", txn.ID, err)
-		}
-	}
-	return nil
+	return s.createTransaction(ctx, targetTxn)
 }
 
 // CreateBorrowing creates a new borrowing record and syncs a transaction.
@@ -1558,28 +1441,17 @@ func (s *Service) CreateBorrowing(ctx context.Context, b *Borrowing, createAsTra
 	}
 
 	if createAsTransaction || (b.AccountID != nil && *b.AccountID != "") {
-		// Sync transaction
-		var txnType TransactionType
-		var desc string
-		if b.Direction == BorrowingDirectionLent {
-			txnType = TransactionTypeExpense
-			desc = fmt.Sprintf("Lent to %s", b.Counterparty)
-		} else {
-			txnType = TransactionTypeIncome
-			desc = fmt.Sprintf("Borrowed from %s", b.Counterparty)
-		}
-
-		err = s.syncTransaction(ctx, syncTransactionParams{
-			SpaceID:         b.SpaceID,
-			BorrowingID:     string(b.ID),
+		initialTxn, err := b.NewTransaction(BorrowingTransactionOpts{
+			Role:            "INITIAL_FUNDING",
 			Amount:          b.TotalAmount,
-			Currency:        b.Currency,
-			TransactionDate: b.EstablishedAt,
-			Description:     desc,
-			Type:            txnType,
 			AccountID:       b.AccountID,
+			TransactionDate: b.EstablishedAt,
 		})
 		if err != nil {
+			return nil, err
+		}
+
+		if err := s.syncBorrowingTransaction(ctx, initialTxn); err != nil {
 			return nil, err
 		}
 	}
@@ -1634,10 +1506,9 @@ func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing, mask []stri
 		return nil, err
 	}
 
-	// Check if an INITIAL_FUNDING transaction already exists for this borrowing
-	bID := string(existing.ID)
+	borID := existing.ID
 	page, err := s.deps.TransactionStore.ListBySpace(ctx, existing.SpaceID, &TransactionFilter{
-		BorrowingID:    &bID,
+		BorrowingID:    &borID,
 		BorrowingRoles: []string{"INITIAL_FUNDING"},
 		PageSize:       1,
 	})
@@ -1663,28 +1534,17 @@ func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing, mask []stri
 	}
 
 	if hasInitialTxn || (existing.AccountID != nil && *existing.AccountID != "") {
-		// Update associated INITIAL_FUNDING transaction
-		var txnType TransactionType
-		var desc string
-		if existing.Direction == BorrowingDirectionLent {
-			txnType = TransactionTypeExpense
-			desc = fmt.Sprintf("Lent to %s", existing.Counterparty)
-		} else {
-			txnType = TransactionTypeIncome
-			desc = fmt.Sprintf("Borrowed from %s", existing.Counterparty)
-		}
-
-		err = s.syncTransaction(ctx, syncTransactionParams{
-			SpaceID:         existing.SpaceID,
-			BorrowingID:     string(existing.ID),
+		initialTxn, err := existing.NewTransaction(BorrowingTransactionOpts{
+			Role:            "INITIAL_FUNDING",
 			Amount:          existing.TotalAmount,
-			Currency:        existing.Currency,
-			TransactionDate: existing.EstablishedAt,
-			Description:     desc,
-			Type:            txnType,
 			AccountID:       existing.AccountID,
+			TransactionDate: existing.EstablishedAt,
 		})
 		if err != nil {
+			return nil, err
+		}
+
+		if err := s.syncBorrowingTransaction(ctx, initialTxn); err != nil {
 			return nil, err
 		}
 	}
@@ -1692,7 +1552,7 @@ func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing, mask []stri
 	return existing, nil
 }
 
-// DeleteBorrowing removes a borrowing, its repayments, and their transactions.
+// DeleteBorrowing removes a borrowing agreement if it has no linked transactions.
 func (s *Service) DeleteBorrowing(ctx context.Context, spaceID SpaceID, id BorrowingID) error {
 	b, err := s.deps.BorrowingStore.GetByID(ctx, spaceID, id)
 	if err != nil {
@@ -1703,8 +1563,18 @@ func (s *Service) DeleteBorrowing(ctx context.Context, spaceID SpaceID, id Borro
 		return errors.New("borrowing does not belong to space")
 	}
 
-	// 1. Delete associated transactions for borrowing
-	_ = s.deleteTransactionByBorrowingID(ctx, spaceID, string(id))
+	// 1. Check if borrowing has linked transactions
+	bID := id
+	page, err := s.deps.TransactionStore.ListBySpace(ctx, spaceID, &TransactionFilter{
+		BorrowingID: &bID,
+		PageSize:    1,
+	})
+	if err != nil {
+		return fmt.Errorf("check linked borrowing transactions: %w", err)
+	}
+	if len(page.Items) > 0 {
+		return ErrBorrowingHasTransactions
+	}
 
 	// 2. Delete borrowing agreement from DB
 	return s.deps.BorrowingStore.Delete(ctx, id)
@@ -1917,7 +1787,7 @@ func (s *Service) AdjustBorrowingBalance(ctx context.Context, req AdjustBorrowin
 		return nil, fmt.Errorf("fetch target borrowing: %w", err)
 	}
 
-	delta := req.TargetBalance - b.RemainingAmount
+	delta := b.AdjustBalance(req.TargetBalance)
 	if delta == 0 {
 		return b, nil
 	}
@@ -1930,16 +1800,6 @@ func (s *Service) AdjustBorrowingBalance(ctx context.Context, req AdjustBorrowin
 			parsedDate = t
 		}
 	}
-
-	// 1. Update borrowing remaining amount
-	b.RemainingAmount = req.TargetBalance
-	if b.RemainingAmount <= 0 {
-		b.RemainingAmount = 0
-		b.Status = BorrowingStatusPaidOff
-	} else {
-		b.Status = BorrowingStatusActive
-	}
-	b.UpdateTime = time.Now().UTC()
 
 	if err := s.deps.BorrowingStore.Update(ctx, b); err != nil {
 		return nil, fmt.Errorf("failed to update borrowing balance: %w", err)
