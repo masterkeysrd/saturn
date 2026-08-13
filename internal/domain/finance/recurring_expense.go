@@ -46,7 +46,7 @@ type RecurringExpense struct {
 	Name            string
 	Amount          int64
 	Currency        Currency
-	Interval        string // "weekly", "monthly", "yearly"
+	Interval        RecurrenceInterval
 	NextDueDate     time.Time
 	IsVariable      bool
 	Status          RecurringExpenseStatus
@@ -74,13 +74,70 @@ func (re *RecurringExpense) Validate() error {
 	if err := re.Currency.Validate(); err != nil {
 		return fmt.Errorf("validate currency: %w", err)
 	}
-	if re.Interval != "weekly" && re.Interval != "monthly" && re.Interval != "yearly" {
-		return fmt.Errorf("invalid interval: %q", re.Interval)
+	if err := re.Interval.Validate(); err != nil {
+		return err
+	}
+	if re.Interval == IntervalOneTime {
+		return errors.New("recurring expense cannot have a one_time interval")
 	}
 	if re.NextDueDate.IsZero() {
 		return errors.New("next due date cannot be zero")
 	}
 	return nil
+}
+
+// AdvanceNextDueDate moves NextDueDate forward according to the recurrence interval.
+func (re *RecurringExpense) AdvanceNextDueDate() error {
+	switch re.Interval {
+	case IntervalWeekly:
+		re.NextDueDate = re.NextDueDate.AddDate(0, 0, 7)
+	case IntervalMonthly:
+		re.NextDueDate = re.NextDueDate.AddDate(0, 1, 0)
+	case IntervalYearly:
+		re.NextDueDate = re.NextDueDate.AddDate(1, 0, 0)
+	default:
+		return fmt.Errorf("unsupported interval for recurring expense %s: %s", re.ID, re.Interval)
+	}
+	re.UpdateTime = time.Now().UTC()
+	return nil
+}
+
+// NewScheduledPayment instantiates a pending ScheduledPayment from this template.
+func (re *RecurringExpense) NewScheduledPayment(spID ScheduledPaymentID) (*ScheduledPayment, error) {
+	var dateTag string
+	switch re.Interval {
+	case IntervalMonthly:
+		dateTag = re.NextDueDate.Format("2006-01")
+	case IntervalYearly:
+		dateTag = re.NextDueDate.Format("2006")
+	default:
+		dateTag = re.NextDueDate.Format("2006-01-02")
+	}
+
+	descText := fmt.Sprintf("%s (%s)", re.Name, dateTag)
+	sp := &ScheduledPayment{
+		ID:         spID,
+		SpaceID:    re.SpaceID,
+		BudgetID:   re.BudgetID,
+		SourceType: SourceTypeRecurrentExpense,
+		SourceID:   string(re.ID),
+		Amount:     re.Amount,
+		Currency:   re.Currency,
+		DueDate:    re.NextDueDate,
+		Status:     ScheduledPaymentPending,
+		Metadata: ScheduledPaymentMetadata{
+			Name:        re.Name,
+			DueDate:     re.NextDueDate.Format("2006-01-02"),
+			Description: descText,
+		},
+		CreateTime: time.Now().UTC(),
+		UpdateTime: time.Now().UTC(),
+	}
+
+	if err := sp.Validate(); err != nil {
+		return nil, fmt.Errorf("validate generated scheduled payment: %w", err)
+	}
+	return sp, nil
 }
 
 const DefaultRecurringExpenseSortField = "create_time"

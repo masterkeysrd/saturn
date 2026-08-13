@@ -146,6 +146,68 @@ func (a *Account) Validate() error {
 	return nil
 }
 
+// ApplyTransaction Impact adjusts the current account balance according to transaction type and account rules.
+func (a *Account) ApplyTransaction(tType TransactionType, impactAmount int64) {
+	if tType == TransactionTypeBalanceAdjustment {
+		a.CurrentBalance += impactAmount
+		a.UpdateTime = time.Now().UTC()
+		return
+	}
+
+	isOutflow := (tType == TransactionTypeExpense || tType == TransactionTypeTransferOut)
+	isInflow := (tType == TransactionTypeIncome || tType == TransactionTypeTransferIn)
+
+	if a.Type == AccountTypeCreditCard {
+		// Liability Account Rules (Positive = Debt Owed):
+		// Outflow (Purchase/Expense/TransferOut) INCREASES debt (+amount)
+		// Inflow (Card Payment/Refund/TransferIn) DECREASES debt (-amount)
+		if isOutflow {
+			a.CurrentBalance += impactAmount
+		} else if isInflow {
+			a.CurrentBalance -= impactAmount
+		}
+	} else {
+		// Asset Account Rules (Positive = Money Owned):
+		// Outflow (Withdrawal/Expense/TransferOut) DECREASES asset (-amount)
+		// Inflow (Deposit/Income/TransferIn) INCREASES asset (+amount)
+		if isOutflow {
+			a.CurrentBalance -= impactAmount
+		} else if isInflow {
+			a.CurrentBalance += impactAmount
+		}
+	}
+
+	a.UpdateTime = time.Now().UTC()
+}
+
+// RollbackTransaction Impact reverts a previously applied transaction impact on current balance.
+func (a *Account) RollbackTransaction(tType TransactionType, impactAmount int64) {
+	if tType == TransactionTypeBalanceAdjustment {
+		a.CurrentBalance -= impactAmount
+		a.UpdateTime = time.Now().UTC()
+		return
+	}
+
+	isOutflow := (tType == TransactionTypeExpense || tType == TransactionTypeTransferOut)
+	isInflow := (tType == TransactionTypeIncome || tType == TransactionTypeTransferIn)
+
+	if a.Type == AccountTypeCreditCard {
+		if isOutflow {
+			a.CurrentBalance -= impactAmount
+		} else if isInflow {
+			a.CurrentBalance += impactAmount
+		}
+	} else {
+		if isOutflow {
+			a.CurrentBalance += impactAmount
+		} else if isInflow {
+			a.CurrentBalance -= impactAmount
+		}
+	}
+
+	a.UpdateTime = time.Now().UTC()
+}
+
 // DefaultAccountSortField represents the fallback sorting column name for accounts.
 const DefaultAccountSortField = "name"
 

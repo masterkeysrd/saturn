@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -28,6 +29,11 @@ type scheduledPaymentDB struct {
 }
 
 func (r *scheduledPaymentDB) toDomain() *finance.ScheduledPayment {
+	var meta finance.ScheduledPaymentMetadata
+	if len(r.Metadata) > 0 {
+		_ = json.Unmarshal(r.Metadata, &meta)
+	}
+
 	return &finance.ScheduledPayment{
 		ID:         finance.ScheduledPaymentID(r.ID),
 		SpaceID:    finance.SpaceID(r.SpaceID),
@@ -38,10 +44,18 @@ func (r *scheduledPaymentDB) toDomain() *finance.ScheduledPayment {
 		Currency:   finance.Currency(r.Currency),
 		DueDate:    r.DueDate,
 		Status:     finance.ScheduledPaymentStatus(r.Status),
-		Metadata:   r.Metadata,
+		Metadata:   meta,
 		CreateTime: r.CreateTime.Time,
 		UpdateTime: r.UpdateTime.Time,
 	}
+}
+
+func marshalScheduledPaymentMetadata(meta finance.ScheduledPaymentMetadata) []byte {
+	bytes, err := json.Marshal(meta)
+	if err != nil {
+		return []byte("{}")
+	}
+	return bytes
 }
 
 type ScheduledPaymentStore struct {
@@ -57,7 +71,7 @@ func (s *ScheduledPaymentStore) Create(ctx context.Context, sp *finance.Schedule
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
 	_, err := s.db.ExecContext(ctx, query,
 		string(sp.ID), string(sp.SpaceID), string(sp.BudgetID), sp.SourceType, sp.SourceID,
-		sp.Amount, string(sp.Currency), sp.DueDate, string(sp.Status), sp.Metadata,
+		sp.Amount, string(sp.Currency), sp.DueDate, string(sp.Status), marshalScheduledPaymentMetadata(sp.Metadata),
 		sp.CreateTime, sp.UpdateTime,
 	)
 	return err
@@ -84,7 +98,7 @@ func (s *ScheduledPaymentStore) Update(ctx context.Context, payment *finance.Sch
 	res, err := s.db.ExecContext(ctx, query,
 		string(payment.ID), string(payment.SpaceID), string(payment.BudgetID),
 		payment.SourceType, payment.SourceID, payment.Amount, string(payment.Currency),
-		payment.DueDate, string(payment.Status), payment.Metadata,
+		payment.DueDate, string(payment.Status), marshalScheduledPaymentMetadata(payment.Metadata),
 	)
 	if err != nil {
 		return err

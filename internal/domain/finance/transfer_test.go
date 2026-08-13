@@ -93,3 +93,53 @@ func TestTransfer_Validate(t *testing.T) {
 		})
 	}
 }
+
+func TestTransfer_NewLegTransactions(t *testing.T) {
+	trsfID, _ := NewTransferID()
+	rawSpace, _ := id.Generate("spc_")
+	spaceID := SpaceID(rawSpace)
+	srcAccID, _ := NewAccountID()
+	dstAccID, _ := NewAccountID()
+	now := time.Now().UTC()
+
+	transfer := &Transfer{
+		ID:                   trsfID,
+		SpaceID:              spaceID,
+		SourceAccountID:      srcAccID,
+		DestinationAccountID: dstAccID,
+		SourceAmount:         10000,
+		DestinationAmount:    10000,
+		TransferDate:         now,
+		Notes:                "Test transfer notes",
+	}
+
+	srcTxn, dstTxn, err := transfer.NewLegTransactions(TransferLegOpts{
+		SourceCurrency:     "USD",
+		DestCurrency:       "USD",
+		SourceAmountInBase: 10000,
+		DestAmountInBase:   10000,
+	})
+	if err != nil {
+		t.Fatalf("NewLegTransactions failed: %v", err)
+	}
+
+	if srcTxn.Type != TransactionTypeTransferOut {
+		t.Errorf("srcTxn type = %s, want TRANSFER_OUT", srcTxn.Type)
+	}
+	if *srcTxn.AccountID != srcAccID {
+		t.Errorf("srcTxn account = %s, want %s", *srcTxn.AccountID, srcAccID)
+	}
+	if *srcTxn.Metadata.TransferID != trsfID {
+		t.Errorf("srcTxn TransferID = %s, want %s", *srcTxn.Metadata.TransferID, trsfID)
+	}
+
+	if dstTxn.Type != TransactionTypeTransferIn {
+		t.Errorf("dstTxn type = %s, want TRANSFER_IN", dstTxn.Type)
+	}
+	if *dstTxn.AccountID != dstAccID {
+		t.Errorf("dstTxn account = %s, want %s", *dstTxn.AccountID, dstAccID)
+	}
+	if *dstTxn.Metadata.TransferID != trsfID {
+		t.Errorf("dstTxn TransferID = %s, want %s", *dstTxn.Metadata.TransferID, trsfID)
+	}
+}

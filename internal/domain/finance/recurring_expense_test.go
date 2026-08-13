@@ -43,7 +43,7 @@ func TestRecurringExpense_Validate(t *testing.T) {
 				Name:        "Netflix",
 				Amount:      1500,
 				Currency:    "USD",
-				Interval:    "monthly",
+				Interval:    IntervalMonthly,
 				NextDueDate: now,
 				Status:      RecurringExpenseActive,
 			},
@@ -58,7 +58,7 @@ func TestRecurringExpense_Validate(t *testing.T) {
 				Name:        "Gym",
 				Amount:      1000,
 				Currency:    "USD",
-				Interval:    "weekly",
+				Interval:    IntervalWeekly,
 				NextDueDate: now,
 				Status:      RecurringExpenseActive,
 			},
@@ -73,7 +73,7 @@ func TestRecurringExpense_Validate(t *testing.T) {
 				Name:        "Software",
 				Amount:      5000,
 				Currency:    "USD",
-				Interval:    "biweekly",
+				Interval:    RecurrenceInterval("biweekly"),
 				NextDueDate: now,
 				Status:      RecurringExpenseActive,
 			},
@@ -88,7 +88,7 @@ func TestRecurringExpense_Validate(t *testing.T) {
 				Name:        "Software",
 				Amount:      0,
 				Currency:    "USD",
-				Interval:    "monthly",
+				Interval:    IntervalMonthly,
 				NextDueDate: now,
 				Status:      RecurringExpenseActive,
 			},
@@ -103,6 +103,45 @@ func TestRecurringExpense_Validate(t *testing.T) {
 				t.Errorf("RecurringExpense.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestRecurringExpense_AdvanceNextDueDateAndNewScheduledPayment(t *testing.T) {
+	recID, _ := NewRecurringExpenseID()
+	rawSpace, _ := id.Generate("spc_")
+	spaceID := SpaceID(rawSpace)
+	budID, _ := NewBudgetID()
+	now := time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC)
+
+	re := &RecurringExpense{
+		ID:          recID,
+		SpaceID:     spaceID,
+		BudgetID:    budID,
+		Name:        "SaaS Subscription",
+		Amount:      4900,
+		Currency:    "USD",
+		Interval:    IntervalMonthly,
+		NextDueDate: now,
+		Status:      RecurringExpenseActive,
+	}
+
+	spID, _ := NewScheduledPaymentID()
+	sp, err := re.NewScheduledPayment(spID)
+	if err != nil {
+		t.Fatalf("NewScheduledPayment failed: %v", err)
+	}
+
+	if sp.Amount != 4900 || sp.BudgetID != budID {
+		t.Errorf("sp amount = %d, budget = %s, want 4900 and %s", sp.Amount, sp.BudgetID, budID)
+	}
+
+	if err := re.AdvanceNextDueDate(); err != nil {
+		t.Fatalf("AdvanceNextDueDate failed: %v", err)
+	}
+
+	expectedNext := time.Date(2026, 2, 15, 0, 0, 0, 0, time.UTC)
+	if !re.NextDueDate.Equal(expectedNext) {
+		t.Errorf("NextDueDate = %v, want %v", re.NextDueDate, expectedNext)
 	}
 }
 

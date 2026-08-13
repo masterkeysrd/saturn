@@ -211,3 +211,116 @@ func TestBorrowing_ApplyPatch(t *testing.T) {
 		t.Errorf("ContactInfo = %s, want old@email.com (unmodified)", original.ContactInfo)
 	}
 }
+
+func TestBorrowing_ApplyTransaction(t *testing.T) {
+	bID, _ := NewBorrowingID()
+	rawSpace, _ := id.Generate("spc_")
+	spaceID := SpaceID(rawSpace)
+	now := time.Now().UTC()
+
+	t.Run("Disbursement increases debt and total", func(t *testing.T) {
+		b := &Borrowing{
+			ID:              bID,
+			SpaceID:         spaceID,
+			Direction:       BorrowingDirectionLent,
+			Counterparty:    "Alice",
+			TotalAmount:     10000,
+			RemainingAmount: 10000,
+			Currency:        "USD",
+			Status:          BorrowingStatusActive,
+			EstablishedAt:   now,
+		}
+
+		role, tType, desc, err := b.ApplyTransaction(BorrowingTransactionTypeDisbursement, 5000)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if role != "DISBURSEMENT" {
+			t.Errorf("role = %s, want DISBURSEMENT", role)
+		}
+		if tType != TransactionTypeExpense {
+			t.Errorf("type = %s, want EXPENSE", tType)
+		}
+		if desc != "Additional loan to Alice" {
+			t.Errorf("desc = %s, want Additional loan to Alice", desc)
+		}
+		if b.TotalAmount != 15000 || b.RemainingAmount != 15000 {
+			t.Errorf("total = %d, remaining = %d, want 15000", b.TotalAmount, b.RemainingAmount)
+		}
+	})
+
+	t.Run("Payment reduces debt and updates status to PAID_OFF when remaining reaches 0", func(t *testing.T) {
+		b := &Borrowing{
+			ID:              bID,
+			SpaceID:         spaceID,
+			Direction:       BorrowingDirectionBorrowed,
+			Counterparty:    "Bob",
+			TotalAmount:     10000,
+			RemainingAmount: 10000,
+			Currency:        "USD",
+			Status:          BorrowingStatusActive,
+			EstablishedAt:   now,
+		}
+
+		role, tType, desc, err := b.ApplyTransaction(BorrowingTransactionTypePayment, 10000)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if role != "REPAYMENT" {
+			t.Errorf("role = %s, want REPAYMENT", role)
+		}
+		if tType != TransactionTypeExpense {
+			t.Errorf("type = %s, want EXPENSE", tType)
+		}
+		if desc != "Repayment to Bob" {
+			t.Errorf("desc = %s, want Repayment to Bob", desc)
+		}
+		if b.RemainingAmount != 0 || b.Status != BorrowingStatusPaidOff {
+			t.Errorf("remaining = %d, status = %s, want 0 and PAID_OFF", b.RemainingAmount, b.Status)
+		}
+	})
+}
+
+func TestBorrowing_NewTransaction(t *testing.T) {
+	bID, _ := NewBorrowingID()
+	rawSpace, _ := id.Generate("spc_")
+	spaceID := SpaceID(rawSpace)
+	accID, _ := NewAccountID()
+	now := time.Now().UTC()
+
+	b := &Borrowing{
+		ID:            bID,
+		SpaceID:       spaceID,
+		Direction:     BorrowingDirectionLent,
+		Counterparty:  "Alice",
+		Currency:      "USD",
+		EstablishedAt: now,
+	}
+
+	txn, err := b.NewTransaction(BorrowingTransactionOpts{
+		Role:                "REPAYMENT",
+		Type:                TransactionTypeIncome,
+		Amount:              2500,
+		AmountInBase:        2500,
+		AccountImpactAmount: 2500,
+		AccountID:           &accID,
+		TransactionDate:     now,
+		Description:         "Repayment from Alice",
+	})
+	if err != nil {
+		t.Fatalf("NewTransaction failed: %v", err)
+	}
+
+	if txn.SpaceID != spaceID {
+		t.Errorf("SpaceID = %s, want %s", txn.SpaceID, spaceID)
+	}
+	if txn.Currency != "USD" {
+		t.Errorf("Currency = %s, want USD", txn.Currency)
+	}
+	if *txn.Metadata.BorrowingID != bID {
+		t.Errorf("BorrowingID = %s, want %s", *txn.Metadata.BorrowingID, bID)
+	}
+	if txn.Metadata.BorrowingRole != "REPAYMENT" {
+		t.Errorf("BorrowingRole = %s, want REPAYMENT", txn.Metadata.BorrowingRole)
+	}
+}

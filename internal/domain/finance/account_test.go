@@ -164,3 +164,54 @@ func TestAccount_SortFields(t *testing.T) {
 		t.Errorf("GetSortValue('name') = %q, want %q", val, "Savings")
 	}
 }
+
+func TestAccount_ApplyAndRollbackTransaction(t *testing.T) {
+	accID, _ := NewAccountID()
+	rawSpace, _ := id.Generate("spc_")
+	spaceID := SpaceID(rawSpace)
+
+	t.Run("Asset Bank Account: Expense decreases balance, Income increases balance", func(t *testing.T) {
+		acc := &Account{
+			ID:             accID,
+			SpaceID:        spaceID,
+			Name:           "Bank Account",
+			Type:           AccountTypeBank,
+			CurrentBalance: 10000,
+		}
+
+		acc.ApplyTransaction(TransactionTypeExpense, 2000)
+		if acc.CurrentBalance != 8000 {
+			t.Errorf("balance after expense = %d, want 8000", acc.CurrentBalance)
+		}
+
+		acc.RollbackTransaction(TransactionTypeExpense, 2000)
+		if acc.CurrentBalance != 10000 {
+			t.Errorf("balance after rollback = %d, want 10000", acc.CurrentBalance)
+		}
+
+		acc.ApplyTransaction(TransactionTypeIncome, 5000)
+		if acc.CurrentBalance != 15000 {
+			t.Errorf("balance after income = %d, want 15000", acc.CurrentBalance)
+		}
+	})
+
+	t.Run("Liability Credit Card Account: Expense increases debt, Payment/Income decreases debt", func(t *testing.T) {
+		acc := &Account{
+			ID:             accID,
+			SpaceID:        spaceID,
+			Name:           "Credit Card",
+			Type:           AccountTypeCreditCard,
+			CurrentBalance: 1000,
+		}
+
+		acc.ApplyTransaction(TransactionTypeExpense, 500)
+		if acc.CurrentBalance != 1500 {
+			t.Errorf("credit balance after expense = %d, want 1500", acc.CurrentBalance)
+		}
+
+		acc.ApplyTransaction(TransactionTypeIncome, 700)
+		if acc.CurrentBalance != 800 {
+			t.Errorf("credit balance after payment/income = %d, want 800", acc.CurrentBalance)
+		}
+	})
+}

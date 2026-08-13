@@ -56,7 +56,6 @@ import {
   getBudgetColors,
   getBudgetIcon,
   formatInterval,
-  decodeBase64Utf8,
 } from "../utils"
 
 interface ConfirmPaymentSheetProps {
@@ -204,16 +203,7 @@ export function ConfirmPaymentSheet({
       const matchedExp = payment.sourceId
         ? expenses.find((e) => e.id === payment.sourceId)
         : null
-      const metaDesc = payment.metadata
-        ? (() => {
-            try {
-              const decoded = JSON.parse(payment.metadata)
-              return decoded?.description || null
-            } catch {
-              return null
-            }
-          })()
-        : null
+      const metaDesc = payment.metadata?.description || null
 
       const dueFormatted = new Date(payment.dueDate).toISOString().slice(0, 10)
       const name =
@@ -381,18 +371,10 @@ export function ConfirmPaymentSheet({
                     ? expenses.find((e) => e.id === payment.sourceId)
                     : null
 
-                  const vendorFromMeta = payment.metadata
-                    ? (() => {
-                        try {
-                          const decoded = JSON.parse(
-                            decodeBase64Utf8(payment.metadata)
-                          )
-                          return decoded?.vendor_name || null
-                        } catch {
-                          return null
-                        }
-                      })()
-                    : null
+                  const vendorFromMeta =
+                    payment.metadata?.vendorName ||
+                    payment.metadata?.description ||
+                    null
 
                   const templateName =
                     matchedExpense?.name ||

@@ -1394,9 +1394,9 @@ export interface ScheduledPayment {
    */
   status: ScheduledPayment_Status
   /**
-   * Optional. Metadata binary payload.
+   * Optional. Context metadata.
    */
-  metadata: string
+  metadata: ScheduledPayment_Metadata
   /**
    * Output only. Creation timestamp.
    */
@@ -1432,6 +1432,18 @@ export interface ScheduledPayment_RecurringExpenseInfo {
   id: string
   name: string
   interval: RecurringExpense_Interval
+}
+
+/**
+ * Metadata wraps context metadata for scheduled payments.
+ */
+export interface ScheduledPayment_Metadata {
+  name: string
+  dueDate: string
+  description: string
+  vendorName: string
+  invoiceId: string
+  notes: string
 }
 
 /**

@@ -447,7 +447,7 @@ func toProtoRecurringExpense(e *finance.RecurringExpense) *financev1.RecurringEx
 		Name:     e.Name,
 		Amount:   e.Amount,
 		Currency: string(e.Currency),
-		Interval: mapDomainIntervalToProto(e.Interval),
+		Interval: mapDomainIntervalToProto(string(e.Interval)),
 		ExecutionState: &financev1.RecurringExpense_ExecutionState{
 			NextDueDate: timestamppb.New(e.NextDueDate),
 		},
@@ -473,7 +473,14 @@ func toProtoScheduledPayment(p *finance.ScheduledPayment) *financev1.ScheduledPa
 		Currency:   string(p.Currency),
 		DueDate:    timestamppb.New(p.DueDate),
 		Status:     mapDomainPaymentStatusToProto(p.Status),
-		Metadata:   p.Metadata,
+		Metadata: &financev1.ScheduledPayment_Metadata{
+			Name:        p.Metadata.Name,
+			DueDate:     p.Metadata.DueDate,
+			Description: p.Metadata.Description,
+			VendorName:  p.Metadata.VendorName,
+			InvoiceId:   p.Metadata.InvoiceID,
+			Notes:       p.Metadata.Notes,
+		},
 		CreateTime: timestamppb.New(p.CreateTime),
 		UpdateTime: timestamppb.New(p.UpdateTime),
 	}
@@ -512,7 +519,7 @@ func toProtoAggregatedScheduledPayment(ap *financeaggregator.AggregatedScheduled
 		protoVal.RecurringExpense = &financev1.ScheduledPayment_RecurringExpenseInfo{
 			Id:       string(ap.RecurringExpense.ID),
 			Name:     ap.RecurringExpense.Name,
-			Interval: mapDomainIntervalToProto(ap.RecurringExpense.Interval),
+			Interval: mapDomainIntervalToProto(string(ap.RecurringExpense.Interval)),
 		}
 	}
 	return protoVal

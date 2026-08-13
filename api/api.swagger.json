@@ -5024,6 +5024,30 @@
       ],
       "description": "Execution interval recurrence rule."
     },
+    "ScheduledPaymentMetadata": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "dueDate": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "vendorName": {
+          "type": "string"
+        },
+        "invoiceId": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "description": "Metadata wraps context metadata for scheduled payments."
+    },
     "ScheduledPaymentRecurringExpenseInfo": {
       "type": "object",
       "properties": {
@@ -7706,9 +7730,8 @@
           "description": "Required. Instance execution status."
         },
         "metadata": {
-          "type": "string",
-          "format": "byte",
-          "description": "Optional. Metadata binary payload."
+          "$ref": "#/definitions/ScheduledPaymentMetadata",
+          "description": "Optional. Context metadata."
         },
         "createTime": {
           "type": "string",

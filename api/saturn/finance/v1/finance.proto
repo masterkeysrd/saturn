@@ -1237,6 +1237,16 @@ message ScheduledPayment {
     RecurringExpense.Interval interval = 3;
   }
 
+  // Metadata wraps context metadata for scheduled payments.
+  message Metadata {
+    string name = 1;
+    string due_date = 2;
+    string description = 3;
+    string vendor_name = 4;
+    string invoice_id = 5;
+    string notes = 6;
+  }
+
   // Output only. Unique identifier.
   // Values are of the form `sch_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
@@ -1283,8 +1293,8 @@ message ScheduledPayment {
   // Required. Instance execution status.
   Status status = 9 [(google.api.field_behavior) = REQUIRED];
 
-  // Optional. Metadata binary payload.
-  bytes metadata = 10 [(google.api.field_behavior) = OPTIONAL];
+  // Optional. Context metadata.
+  Metadata metadata = 10 [(google.api.field_behavior) = OPTIONAL];
 
   // Output only. Creation timestamp.
   google.protobuf.Timestamp create_time = 11 [(google.api.field_behavior) = OUTPUT_ONLY];

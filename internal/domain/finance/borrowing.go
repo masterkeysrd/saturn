@@ -163,6 +163,100 @@ func (b *Borrowing) ApplyPatch(incoming *Borrowing, mask []string) error {
 	return b.Validate()
 }
 
+// BorrowingTransactionType represents the type of transaction (PAYMENT vs DISBURSEMENT).
+type BorrowingTransactionType string
+
+const (
+	BorrowingTransactionTypePayment      BorrowingTransactionType = "PAYMENT"
+	BorrowingTransactionTypeDisbursement BorrowingTransactionType = "DISBURSEMENT"
+)
+
+// BorrowingTransactionOpts defines parameters for instantiating a Transaction linked to a Borrowing.
+type BorrowingTransactionOpts struct {
+	Role                string
+	Type                TransactionType
+	Amount              int64
+	AmountInBase        int64
+	AccountImpactAmount int64
+	AccountID           *AccountID
+	TransactionDate     time.Time
+	Description         string
+}
+
+// ApplyTransaction updates borrowing balances and status based on a payment or disbursement.
+// Returns the corresponding BorrowingRole, TransactionType, and default description.
+func (b *Borrowing) ApplyTransaction(txnType BorrowingTransactionType, amount int64) (role string, tType TransactionType, defaultDesc string, err error) {
+	if amount <= 0 {
+		return "", "", "", errors.New("borrowing transaction amount must be positive")
+	}
+
+	if txnType == BorrowingTransactionTypeDisbursement {
+		b.RemainingAmount += amount
+		b.TotalAmount += amount
+		b.Status = BorrowingStatusActive
+		role = "DISBURSEMENT"
+		if b.Direction == BorrowingDirectionLent {
+			tType = TransactionTypeExpense
+			defaultDesc = fmt.Sprintf("Additional loan to %s", b.Counterparty)
+		} else {
+			tType = TransactionTypeIncome
+			defaultDesc = fmt.Sprintf("Additional loan from %s", b.Counterparty)
+		}
+	} else { // PAYMENT
+		b.RemainingAmount -= amount
+		if b.RemainingAmount <= 0 {
+			b.RemainingAmount = 0
+			b.Status = BorrowingStatusPaidOff
+		}
+		role = "REPAYMENT"
+		if b.Direction == BorrowingDirectionLent {
+			tType = TransactionTypeIncome
+			defaultDesc = fmt.Sprintf("Repayment from %s", b.Counterparty)
+		} else {
+			tType = TransactionTypeExpense
+			defaultDesc = fmt.Sprintf("Repayment to %s", b.Counterparty)
+		}
+	}
+
+	b.UpdateTime = time.Now().UTC()
+	return role, tType, defaultDesc, nil
+}
+
+// NewTransaction constructs a valid Transaction entity linked to this Borrowing.
+func (b *Borrowing) NewTransaction(opts BorrowingTransactionOpts) (*Transaction, error) {
+	txnID, err := NewTransactionID()
+	if err != nil {
+		return nil, err
+	}
+
+	bID := b.ID
+	t := &Transaction{
+		ID:              txnID,
+		SpaceID:         b.SpaceID,
+		Type:            opts.Type,
+		AccountID:       opts.AccountID,
+		Amount:          opts.Amount,
+		Currency:        b.Currency,
+		AmountInBase:    opts.AmountInBase,
+		Description:     opts.Description,
+		TransactionDate: opts.TransactionDate,
+		EffectiveDate:   opts.TransactionDate,
+		Metadata: TransactionMetadata{
+			BorrowingID:         &bID,
+			BorrowingRole:       opts.Role,
+			BorrowingAmount:     opts.Amount,
+			AccountImpactAmount: opts.AccountImpactAmount,
+		},
+		CreateTime: time.Now().UTC(),
+		UpdateTime: time.Now().UTC(),
+	}
+
+	if err := t.Validate(); err != nil {
+		return nil, fmt.Errorf("validate borrowing transaction: %w", err)
+	}
+	return t, nil
+}
+
 // BorrowingRepayment represents a repayment installment for a borrowing.
 type BorrowingRepayment struct {
 	ID          BorrowingRepaymentID

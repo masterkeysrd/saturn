@@ -61,21 +61,6 @@ const FORECAST_DAYS_WINDOW = 7
 const DEFAULT_PAGE_SIZE = 100
 const HISTORY_PAGE_SIZE = 50
 
-function decodeBase64Utf8(base64: string): string {
-  try {
-    const binStr = atob(base64)
-    const len = binStr.length
-    const bytes = new Uint8Array(len)
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binStr.charCodeAt(i)
-    }
-    return new TextDecoder().decode(bytes)
-  } catch (e) {
-    console.error("Base64 UTF-8 decoding failed", e)
-    return ""
-  }
-}
-
 export function RecurringView() {
   const { spaceId, isWritable } = useSpacePermissions()
 
@@ -570,22 +555,18 @@ export function RecurringView() {
                                   ?.name || "Recurring Bill"
                               )
                             }
-                            if (pay.sourceType === "SOURCE_TYPE_UNSPECIFIED") {
-                              try {
-                                if (pay.metadata && pay.metadata.length > 0) {
-                                  const decoded = JSON.parse(
-                                    decodeBase64Utf8(pay.metadata)
-                                  )
-                                  if (decoded && decoded.vendor_name) {
-                                    return decoded.vendor_name
-                                  }
-                                }
-                              } catch (e) {
-                                console.error("failed to decode metadata", e)
+                            if (
+                              pay.sourceType === "SOURCE_TYPE_UNSPECIFIED" ||
+                              !pay.sourceType
+                            ) {
+                              if (pay.metadata?.vendorName) {
+                                return pay.metadata.vendorName
                               }
-                              return "Scheduled Invoice"
+                              if (pay.metadata?.description) {
+                                return pay.metadata.description
+                              }
                             }
-                            return "Scheduled Outflow"
+                            return "Scheduled Invoice"
                           })()
 
                           return (

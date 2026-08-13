@@ -93,3 +93,85 @@ func (t *Transfer) Validate() error {
 	t.Notes = strings.TrimSpace(t.Notes)
 	return nil
 }
+
+// TransferLegOpts contains parameters for generating source and destination transactions for a transfer.
+type TransferLegOpts struct {
+	SourceAmountInBase int64
+	DestAmountInBase   int64
+	SourceCurrency     Currency
+	DestCurrency       Currency
+}
+
+// NewLegTransactions creates the pair of TRANSFER_OUT and TRANSFER_IN transactions for this transfer.
+func (t *Transfer) NewLegTransactions(opts TransferLegOpts) (sourceTxn *Transaction, destTxn *Transaction, err error) {
+	sourceID, err := NewTransactionID()
+	if err != nil {
+		return nil, nil, err
+	}
+	destID, err := NewTransactionID()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sourceAmountInBase := opts.SourceAmountInBase
+	if sourceAmountInBase <= 0 {
+		sourceAmountInBase = t.SourceAmount
+	}
+
+	destAmountInBase := opts.DestAmountInBase
+	if destAmountInBase <= 0 {
+		destAmountInBase = t.DestinationAmount
+	}
+
+	transferID := t.ID
+	sourceTxn = &Transaction{
+		ID:              sourceID,
+		SpaceID:         t.SpaceID,
+		Type:            TransactionTypeTransferOut,
+		AccountID:       &t.SourceAccountID,
+		Amount:          t.SourceAmount,
+		Currency:        opts.SourceCurrency,
+		AmountInBase:    sourceAmountInBase,
+		Description:     fmt.Sprintf("Transfer out to %s", t.DestinationAccountID),
+		TransactionDate: t.TransferDate,
+		EffectiveDate:   t.TransferDate,
+		Metadata: TransactionMetadata{
+			TransferID:           &transferID,
+			CounterpartAccountID: &t.DestinationAccountID,
+			AccountImpactAmount:  t.SourceAmount,
+			Notes:                t.Notes,
+		},
+		CreateTime: time.Now().UTC(),
+		UpdateTime: time.Now().UTC(),
+	}
+
+	destTxn = &Transaction{
+		ID:              destID,
+		SpaceID:         t.SpaceID,
+		Type:            TransactionTypeTransferIn,
+		AccountID:       &t.DestinationAccountID,
+		Amount:          t.DestinationAmount,
+		Currency:        opts.DestCurrency,
+		AmountInBase:    destAmountInBase,
+		Description:     fmt.Sprintf("Transfer in from %s", t.SourceAccountID),
+		TransactionDate: t.TransferDate,
+		EffectiveDate:   t.TransferDate,
+		Metadata: TransactionMetadata{
+			TransferID:           &transferID,
+			CounterpartAccountID: &t.SourceAccountID,
+			AccountImpactAmount:  t.DestinationAmount,
+			Notes:                t.Notes,
+		},
+		CreateTime: time.Now().UTC(),
+		UpdateTime: time.Now().UTC(),
+	}
+
+	if err := sourceTxn.Validate(); err != nil {
+		return nil, nil, fmt.Errorf("validate source transfer transaction: %w", err)
+	}
+	if err := destTxn.Validate(); err != nil {
+		return nil, nil, fmt.Errorf("validate destination transfer transaction: %w", err)
+	}
+
+	return sourceTxn, destTxn, nil
+}

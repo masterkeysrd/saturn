@@ -36,7 +36,7 @@ func (r *recurringExpenseDB) toDomain() *finance.RecurringExpense {
 		Name:            r.Name,
 		Amount:          r.Amount,
 		Currency:        finance.Currency(r.Currency),
-		Interval:        r.Interval,
+		Interval:        finance.RecurrenceInterval(r.Interval),
 		NextDueDate:     r.NextDueDate,
 		IsVariable:      r.IsVariable,
 		Status:          finance.RecurringExpenseStatus(r.Status),

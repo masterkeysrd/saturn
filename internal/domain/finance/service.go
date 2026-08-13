@@ -2,7 +2,6 @@ package finance
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -961,13 +960,8 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 	description := ""
 	if req.Description != "" {
 		description = req.Description
-	} else if len(payment.Metadata) > 0 {
-		var meta struct {
-			Description string `json:"description"`
-		}
-		if err := json.Unmarshal(payment.Metadata, &meta); err == nil && meta.Description != "" {
-			description = meta.Description
-		}
+	} else if payment.Metadata.Description != "" {
+		description = payment.Metadata.Description
 	}
 
 	if description == "" && payment.SourceType == SourceTypeRecurrentExpense {
@@ -986,36 +980,23 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 		description = "Scheduled Payment"
 	}
 
-	tID, err := NewTransactionID()
+	txn, err := payment.NewConfirmationTransaction(ConfirmOpts{
+		PeriodID:            &period.ID,
+		AccountID:           req.AccountID,
+		AmountInBase:        amountInBase,
+		AccountImpactAmount: actualAmount,
+		TransactionDate:     txnDate,
+	})
 	if err != nil {
 		return nil, err
 	}
-
+	txn.BudgetID = &budgetID
+	txn.Amount = actualAmount
+	txn.Currency = currency
+	txn.Description = description
+	txn.EffectiveDate = effDate
 	reID := RecurringExpenseID(payment.SourceID)
-	txn := &Transaction{
-		ID:              tID,
-		SpaceID:         payment.SpaceID,
-		AccountID:       req.AccountID,
-		Type:            TransactionTypeExpense,
-		BudgetID:        &budgetID,
-		PeriodID:        &period.ID,
-		Amount:          actualAmount,
-		Currency:        currency,
-		AmountInBase:    amountInBase,
-		Description:     description,
-		TransactionDate: txnDate,
-		EffectiveDate:   effDate,
-		Metadata: TransactionMetadata{
-			ScheduledPaymentID: &payment.ID,
-			RecurringExpenseID: &reID,
-		},
-		CreateTime: time.Now().UTC(),
-		UpdateTime: time.Now().UTC(),
-	}
-
-	if err := txn.Validate(); err != nil {
-		return nil, err
-	}
+	txn.Metadata.RecurringExpenseID = &reID
 
 	if err := s.deps.TransactionStore.Create(ctx, txn); err != nil {
 		return nil, err
@@ -1052,8 +1033,9 @@ func (s *Service) ConfirmScheduledPayment(ctx context.Context, req ConfirmSchedu
 	}
 
 	// Mark scheduled payment as paid
-	payment.Status = ScheduledPaymentPaid
-	payment.UpdateTime = time.Now().UTC()
+	if err := payment.MarkPaid(); err != nil {
+		return nil, err
+	}
 	if err := s.deps.ScheduledPaymentStore.Update(ctx, payment); err != nil {
 		return nil, fmt.Errorf("failed to update scheduled payment status: %w", err)
 	}
@@ -1145,7 +1127,9 @@ func (s *Service) SkipScheduledPayment(ctx context.Context, spaceID SpaceID, id 
 		return nil, ErrScheduledPaymentNotFound
 	}
 
-	payment.Status = ScheduledPaymentSkipped
+	if err := payment.MarkSkipped(); err != nil {
+		return nil, err
+	}
 	if err := s.deps.ScheduledPaymentStore.UpdateStatus(ctx, id, ScheduledPaymentSkipped); err != nil {
 		return nil, fmt.Errorf("update scheduled payment status: %w", err)
 	}
@@ -1170,45 +1154,8 @@ func (s *Service) GenerateScheduledPayments(ctx context.Context) error {
 				return err
 			}
 
-			var dateTag string
-			switch re.Interval {
-			case "monthly":
-				dateTag = re.NextDueDate.Format("2006-01")
-			case "yearly":
-				dateTag = re.NextDueDate.Format("2006")
-			case "weekly":
-				dateTag = re.NextDueDate.Format("2006-01-02")
-			default:
-				dateTag = re.NextDueDate.Format("2006-01-02")
-			}
-
-			descText := fmt.Sprintf("%s (%s)", re.Name, dateTag)
-			metaMap := map[string]any{
-				"name":        re.Name,
-				"due_date":    re.NextDueDate.Format("2006-01-02"),
-				"description": descText,
-			}
-			metaBytes, err := json.Marshal(metaMap)
+			payment, err := re.NewScheduledPayment(spID)
 			if err != nil {
-				return fmt.Errorf("marshal scheduled payment metadata: %w", err)
-			}
-
-			payment := &ScheduledPayment{
-				ID:         spID,
-				SpaceID:    re.SpaceID,
-				BudgetID:   re.BudgetID,
-				SourceType: SourceTypeRecurrentExpense,
-				SourceID:   string(re.ID),
-				Amount:     re.Amount,
-				Currency:   re.Currency,
-				DueDate:    re.NextDueDate,
-				Status:     ScheduledPaymentPending,
-				Metadata:   metaBytes,
-				CreateTime: time.Now().UTC(),
-				UpdateTime: time.Now().UTC(),
-			}
-
-			if err := payment.Validate(); err != nil {
 				return err
 			}
 
@@ -1216,20 +1163,11 @@ func (s *Service) GenerateScheduledPayments(ctx context.Context) error {
 				return err
 			}
 
-			// Advance the template next due date
-			switch re.Interval {
-			case "weekly":
-				re.NextDueDate = re.NextDueDate.AddDate(0, 0, 7)
-			case "monthly":
-				re.NextDueDate = re.NextDueDate.AddDate(0, 1, 0)
-			case "yearly":
-				re.NextDueDate = re.NextDueDate.AddDate(1, 0, 0)
-			default:
-				return fmt.Errorf("unsupported interval for recurring expense %s: %s", re.ID, re.Interval)
+			if err := re.AdvanceNextDueDate(); err != nil {
+				return err
 			}
 		}
 
-		re.UpdateTime = time.Now().UTC()
 		if err := s.deps.RecurringExpenseStore.Update(ctx, re); err != nil {
 			return err
 		}
@@ -1497,46 +1435,12 @@ func (s *Service) adjustAccountBalance(ctx context.Context, spaceID SpaceID, acc
 		return err
 	}
 
-	if txnType == TransactionTypeBalanceAdjustment {
-		if revert {
-			acc.CurrentBalance -= amount
-		} else {
-			acc.CurrentBalance += amount
-		}
-		acc.UpdateTime = time.Now().UTC()
-		return s.deps.AccountStore.Update(ctx, acc)
-	}
-
-	// Determine if the transaction is an inflow or an outflow
-	isOutflow := (txnType == TransactionTypeExpense || txnType == TransactionTypeTransferOut)
-	isInflow := (txnType == TransactionTypeIncome || txnType == TransactionTypeTransferIn)
-
-	// Reverse logic if we are reverting an operation (on update or delete)
 	if revert {
-		isOutflow, isInflow = isInflow, isOutflow
-	}
-
-	if acc.Type == AccountTypeCreditCard {
-		// Liability Account Rules (Positive = Debt Owed):
-		// Outflow (Purchase/Expense/TransferOut) INCREASES debt (+amount)
-		// Inflow (Card Payment/Refund/TransferIn) DECREASES debt (-amount)
-		if isOutflow {
-			acc.CurrentBalance += amount
-		} else if isInflow {
-			acc.CurrentBalance -= amount
-		}
+		acc.RollbackTransaction(txnType, amount)
 	} else {
-		// Asset Account Rules (Positive = Money Owned):
-		// Outflow (Withdrawal/Expense/TransferOut) DECREASES asset (-amount)
-		// Inflow (Deposit/Income/TransferIn) INCREASES asset (+amount)
-		if isOutflow {
-			acc.CurrentBalance -= amount
-		} else if isInflow {
-			acc.CurrentBalance += amount
-		}
+		acc.ApplyTransaction(txnType, amount)
 	}
 
-	acc.UpdateTime = time.Now().UTC()
 	return s.deps.AccountStore.Update(ctx, acc)
 }
 
@@ -1820,14 +1724,6 @@ func (s *Service) DeleteBorrowing(ctx context.Context, spaceID SpaceID, id Borro
 	return s.deps.BorrowingStore.Delete(ctx, id)
 }
 
-// BorrowingTransactionType represents the type of transaction (PAYMENT vs DISBURSEMENT).
-type BorrowingTransactionType string
-
-const (
-	BorrowingTransactionTypePayment      BorrowingTransactionType = "PAYMENT"
-	BorrowingTransactionTypeDisbursement BorrowingTransactionType = "DISBURSEMENT"
-)
-
 // LogBorrowingTransactionRequest holds parameters to log a borrowing payment or disbursement.
 type LogBorrowingTransactionRequest struct {
 	SpaceID         SpaceID
@@ -1866,13 +1762,20 @@ func (s *Service) LogBorrowingTransaction(ctx context.Context, req LogBorrowingT
 	if err := req.BorrowingID.Validate(); err != nil {
 		return nil, err
 	}
-	if req.Amount <= 0 {
-		return nil, errors.New("borrowing transaction amount must be positive")
-	}
 
 	b, err := s.deps.BorrowingStore.GetByID(ctx, req.SpaceID, req.BorrowingID)
 	if err != nil {
 		return nil, fmt.Errorf("fetch borrowing record: %w", err)
+	}
+
+	borrowingRole, txnType, defaultDesc, err := b.ApplyTransaction(req.Type, req.Amount)
+	if err != nil {
+		return nil, err
+	}
+
+	desc := defaultDesc
+	if req.Notes != "" {
+		desc = req.Notes
 	}
 
 	date := req.TransactionDate
@@ -1919,72 +1822,22 @@ func (s *Service) LogBorrowingTransaction(ctx context.Context, req LogBorrowingT
 		}
 	}
 
-	var borrowingRole string
-	var txnType TransactionType
-	var desc string
-
-	if req.Type == BorrowingTransactionTypeDisbursement {
-		borrowingRole = "DISBURSEMENT"
-		b.RemainingAmount += req.Amount
-		b.TotalAmount += req.Amount
-		b.Status = BorrowingStatusActive
-		if b.Direction == BorrowingDirectionLent {
-			txnType = TransactionTypeExpense
-			desc = fmt.Sprintf("Additional loan to %s", b.Counterparty)
-		} else {
-			txnType = TransactionTypeIncome
-			desc = fmt.Sprintf("Additional loan from %s", b.Counterparty)
-		}
-	} else {
-		borrowingRole = "REPAYMENT"
-		b.RemainingAmount -= req.Amount
-		if b.RemainingAmount <= 0 {
-			b.RemainingAmount = 0
-			b.Status = BorrowingStatusPaidOff
-		}
-		if b.Direction == BorrowingDirectionLent {
-			txnType = TransactionTypeIncome
-			desc = fmt.Sprintf("Repayment from %s", b.Counterparty)
-		} else {
-			txnType = TransactionTypeExpense
-			desc = fmt.Sprintf("Repayment to %s", b.Counterparty)
-		}
-	}
-
-	if req.Notes != "" {
-		desc = req.Notes
-	}
-
-	b.UpdateTime = time.Now().UTC()
 	if err := s.deps.BorrowingStore.Update(ctx, b); err != nil {
 		return nil, fmt.Errorf("failed to update borrowing balance: %w", err)
 	}
 
-	txnID, err := NewTransactionID()
+	txn, err := b.NewTransaction(BorrowingTransactionOpts{
+		Role:                borrowingRole,
+		Type:                txnType,
+		Amount:              req.Amount,
+		AmountInBase:        amountInBase,
+		AccountImpactAmount: accountImpactAmount,
+		AccountID:           req.AccountID,
+		TransactionDate:     date,
+		Description:         desc,
+	})
 	if err != nil {
 		return nil, err
-	}
-
-	txn := &Transaction{
-		ID:              txnID,
-		SpaceID:         req.SpaceID,
-		Type:            txnType,
-		AccountID:       req.AccountID,
-		Amount:          req.Amount,
-		Currency:        b.Currency,
-		AmountInBase:    amountInBase,
-		Description:     desc,
-		TransactionDate: date,
-		EffectiveDate:   date,
-		Metadata: TransactionMetadata{
-			BorrowingID:         &b.ID,
-			BorrowingRole:       borrowingRole,
-			BorrowingAmount:     req.Amount,
-			AccountImpactAmount: accountImpactAmount,
-			Notes:               req.Notes,
-		},
-		CreateTime: time.Now().UTC(),
-		UpdateTime: time.Now().UTC(),
 	}
 
 	if err := s.createTransaction(ctx, txn); err != nil {
@@ -2395,55 +2248,18 @@ func (s *Service) CreateTransfer(ctx context.Context, t *Transfer) (*Transfer, e
 		return nil, err
 	}
 
-	// 2. Create the Outflow Transaction Leg
-	outflowTxnID, err := NewTransactionID()
+	outflowTxn, inflowTxn, err := t.NewLegTransactions(TransferLegOpts{
+		SourceCurrency: srcAcc.Currency,
+		DestCurrency:   destAcc.Currency,
+	})
 	if err != nil {
 		return nil, err
 	}
-	outflowTxn := &Transaction{
-		ID:              outflowTxnID,
-		SpaceID:         t.SpaceID,
-		Type:            TransactionTypeTransferOut,
-		Amount:          t.SourceAmount,
-		Currency:        srcAcc.Currency,
-		Description:     fmt.Sprintf("Transfer to %s", destAcc.Name),
-		TransactionDate: t.TransferDate,
-		EffectiveDate:   t.TransferDate,
-		AccountID:       &t.SourceAccountID,
-		Metadata: TransactionMetadata{
-			TransferID:           &t.ID,
-			CounterpartAccountID: &t.DestinationAccountID,
-			Notes:                t.Notes,
-		},
-		CreateTime: t.CreateTime,
-		UpdateTime: t.UpdateTime,
-	}
+	outflowTxn.Description = fmt.Sprintf("Transfer to %s", destAcc.Name)
+	inflowTxn.Description = fmt.Sprintf("Transfer from %s", srcAcc.Name)
+
 	if err := s.createTransaction(ctx, outflowTxn); err != nil {
 		return nil, fmt.Errorf("failed to log transfer outflow leg: %w", err)
-	}
-
-	// 3. Create the Inflow Transaction Leg
-	inflowTxnID, err := NewTransactionID()
-	if err != nil {
-		return nil, err
-	}
-	inflowTxn := &Transaction{
-		ID:              inflowTxnID,
-		SpaceID:         t.SpaceID,
-		Type:            TransactionTypeTransferIn,
-		Amount:          t.DestinationAmount,
-		Currency:        destAcc.Currency,
-		Description:     fmt.Sprintf("Transfer from %s", srcAcc.Name),
-		TransactionDate: t.TransferDate,
-		EffectiveDate:   t.TransferDate,
-		AccountID:       &t.DestinationAccountID,
-		Metadata: TransactionMetadata{
-			TransferID:           &t.ID,
-			CounterpartAccountID: &t.SourceAccountID,
-			Notes:                t.Notes,
-		},
-		CreateTime: t.CreateTime,
-		UpdateTime: t.UpdateTime,
 	}
 	if err := s.createTransaction(ctx, inflowTxn); err != nil {
 		return nil, fmt.Errorf("failed to log transfer inflow leg: %w", err)
@@ -2895,15 +2711,6 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID SpaceID, id stri
 			dueDate = time.Now().UTC()
 		}
 
-		desc := item.VendorName
-		metaMap := map[string]any{
-			"vendor_name": desc,
-		}
-		var metaBytes []byte
-		if b, err := json.Marshal(metaMap); err == nil {
-			metaBytes = b
-		}
-
 		payment := &ScheduledPayment{
 			ID:         spID,
 			SpaceID:    SpaceID(spaceID),
@@ -2914,7 +2721,12 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID SpaceID, id stri
 			Currency:   Currency(item.Currency),
 			DueDate:    dueDate,
 			Status:     ScheduledPaymentPending,
-			Metadata:   metaBytes,
+			Metadata: ScheduledPaymentMetadata{
+				VendorName:  item.VendorName,
+				DueDate:     dueDate.Format("2006-01-02"),
+				Description: item.VendorName,
+				InvoiceID:   item.ID,
+			},
 			CreateTime: time.Now().UTC(),
 			UpdateTime: time.Now().UTC(),
 		}

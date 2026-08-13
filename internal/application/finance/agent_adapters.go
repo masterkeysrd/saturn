@@ -169,7 +169,7 @@ func (a *AgentIngestionParser) Parse(ctx context.Context, spaceID string, doc st
 			Name:        re.Name,
 			Amount:      float64(re.Amount) / 100.0,
 			Currency:    string(re.Currency),
-			Interval:    re.Interval,
+			Interval:    string(re.Interval),
 			NextDueDate: re.NextDueDate.Format(time.RFC3339),
 			Status:      string(re.Status),
 		})

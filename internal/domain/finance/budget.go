@@ -19,6 +19,16 @@ const (
 	IntervalOneTime RecurrenceInterval = "one_time"
 )
 
+// Validate checks if the recurrence interval is valid.
+func (i RecurrenceInterval) Validate() error {
+	switch i {
+	case IntervalWeekly, IntervalMonthly, IntervalYearly, IntervalOneTime:
+		return nil
+	default:
+		return fmt.Errorf("invalid recurrence interval: %q", i)
+	}
+}
+
 type BudgetStatus string
 
 const (
@@ -135,11 +145,8 @@ func (b *Budget) Validate() error {
 	if err := b.Currency.Validate(); err != nil {
 		return fmt.Errorf("validate currency: %w", err)
 	}
-	switch b.Interval {
-	case IntervalWeekly, IntervalMonthly, IntervalYearly, IntervalOneTime:
-		// Valid
-	default:
-		return fmt.Errorf("invalid interval %q: must be weekly, monthly, yearly, or one_time", b.Interval)
+	if err := b.Interval.Validate(); err != nil {
+		return err
 	}
 	switch b.Status {
 	case BudgetStatusActive, BudgetStatusPaused, BudgetStatusClosed:
