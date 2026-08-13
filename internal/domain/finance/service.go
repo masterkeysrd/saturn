@@ -1090,6 +1090,9 @@ func (s *Service) updateTransaction(ctx context.Context, txn *Transaction, exist
 		return errors.New("balance adjustment transactions cannot be edited directly; perform a new balance adjustment or delete this record to revert")
 	}
 
+	// Preserve existing metadata (to prevent edits from wiping out linked entity IDs)
+	txn.Metadata = existing.Metadata
+
 	// 1. Set dates
 	if txn.EffectiveDate.IsZero() {
 		txn.EffectiveDate = txn.TransactionDate

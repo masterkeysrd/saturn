@@ -50,7 +50,9 @@ export function InsightsView() {
     { enabled: !!spaceId }
   )
   const [granularity, setGranularity] = useState<InsightGranularity>("MONTHLY")
-  const [activeTab, setActiveTab] = useState<"OUTFLOWS" | "INFLOWS" | "CASH_FLOW">("CASH_FLOW")
+  const [activeTab, setActiveTab] = useState<
+    "OUTFLOWS" | "INFLOWS" | "CASH_FLOW"
+  >("CASH_FLOW")
 
   // Fetch unified spent and income insights from the backend
   const {
@@ -199,22 +201,17 @@ export function InsightsView() {
     }
 
     return Array.from(pointsMap.values()).sort(
-      (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+      (a, b) =>
+        new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
     )
   })()
 
   // Calculate chart max ranges based on active mode using merged trends
   let maxTrendAmount = 100
   if (activeTab === "OUTFLOWS") {
-    maxTrendAmount = Math.max(
-      ...mergedTrend.map((pt) => pt.outflowTotal),
-      100
-    )
+    maxTrendAmount = Math.max(...mergedTrend.map((pt) => pt.outflowTotal), 100)
   } else if (activeTab === "INFLOWS") {
-    maxTrendAmount = Math.max(
-      ...mergedTrend.map((pt) => pt.inflowTotal),
-      100
-    )
+    maxTrendAmount = Math.max(...mergedTrend.map((pt) => pt.inflowTotal), 100)
   } else if (activeTab === "CASH_FLOW") {
     maxTrendAmount = Math.max(
       ...mergedTrend.map((pt) => Math.max(pt.outflowTotal, pt.inflowTotal)),
@@ -230,7 +227,7 @@ export function InsightsView() {
     >
       <div className="animate-in space-y-6 pb-6 duration-500 fade-in">
         {/* Navigation Selector Tabs at the Top */}
-        <div className="flex items-center gap-1 self-start rounded-2xl border border-border/40 bg-muted/20 p-1 max-w-sm">
+        <div className="flex max-w-sm items-center gap-1 self-start rounded-2xl border border-border/40 bg-muted/20 p-1">
           <button
             onClick={() => {
               setActiveTab("CASH_FLOW")
@@ -238,9 +235,9 @@ export function InsightsView() {
               setActiveCashFlowTooltip(null)
             }}
             className={cn(
-              "flex-1 cursor-pointer rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-300 flex items-center justify-center gap-1.5",
+              "flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-300",
               activeTab === "CASH_FLOW"
-                ? "bg-card text-foreground shadow-sm border border-border/40"
+                ? "border border-border/40 bg-card text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -254,9 +251,9 @@ export function InsightsView() {
               setActiveCashFlowTooltip(null)
             }}
             className={cn(
-              "flex-1 cursor-pointer rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-300 flex items-center justify-center gap-1.5",
+              "flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-300",
               activeTab === "OUTFLOWS"
-                ? "bg-card text-foreground shadow-sm border border-border/40"
+                ? "border border-border/40 bg-card text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -270,9 +267,9 @@ export function InsightsView() {
               setActiveCashFlowTooltip(null)
             }}
             className={cn(
-              "flex-1 cursor-pointer rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-300 flex items-center justify-center gap-1.5",
+              "flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-300",
               activeTab === "INFLOWS"
-                ? "bg-card text-foreground shadow-sm border border-border/40"
+                ? "border border-border/40 bg-card text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -283,7 +280,6 @@ export function InsightsView() {
 
         {/* Top Half split layout: 1/3 Metrics Sidebar, 2/3 Stacked Trend Chart */}
         <div className="grid gap-6 md:grid-cols-3">
-          
           {/* 1/3 Sidebar Metrics Column */}
           {activeTab === "OUTFLOWS" && (
             <div className="flex flex-col justify-between gap-3 md:col-span-1">
@@ -362,7 +358,10 @@ export function InsightsView() {
                 </div>
                 <div className="mt-2.5 flex items-baseline gap-1">
                   <span className="text-xl font-bold tracking-tight">
-                    {formatAmount(incomeInsights?.totalIncome || "0", baseCurrency)}
+                    {formatAmount(
+                      incomeInsights?.totalIncome || "0",
+                      baseCurrency
+                    )}
                   </span>
                 </div>
               </div>
@@ -374,8 +373,8 @@ export function InsightsView() {
                   </span>
                   <CoinsIcon className="h-3.5 w-3.5 text-teal-400" />
                 </div>
-                <div className="mt-2.5 flex items-baseline gap-1 min-w-0 w-full">
-                  <span className="text-base font-bold tracking-tight truncate max-w-[200px]">
+                <div className="mt-2.5 flex w-full min-w-0 items-baseline gap-1">
+                  <span className="max-w-[200px] truncate text-base font-bold tracking-tight">
                     {incomeInsights?.distributions?.[0]?.name || "None"}
                   </span>
                 </div>
@@ -404,13 +403,15 @@ export function InsightsView() {
                 </div>
                 <div className="mt-2.5 flex items-baseline gap-1">
                   <span className="text-xl font-bold tracking-tight">
-                    {Array.from(
-                      new Set(
-                        (incomeInsights?.trend || []).flatMap((pt) =>
-                          pt.contributions.map((c) => c.accountId)
+                    {
+                      Array.from(
+                        new Set(
+                          (incomeInsights?.trend || []).flatMap((pt) =>
+                            pt.contributions.map((c) => c.accountId)
+                          )
                         )
-                      )
-                    ).length}
+                      ).length
+                    }
                   </span>
                 </div>
               </div>
@@ -423,7 +424,10 @@ export function InsightsView() {
                 const totalIn = incomeInsights?.totalIncome || 0
                 const totalOut = spentInsights.totalSpent
                 const netCash = Number(totalIn) - Number(totalOut)
-                const savingsPct = Number(totalIn) > 0 ? (float64(netCash) / float64(totalIn)) * 100 : 0
+                const savingsPct =
+                  Number(totalIn) > 0
+                    ? (float64(netCash) / float64(totalIn)) * 100
+                    : 0
 
                 function float64(val: number | string) {
                   return typeof val === "string" ? parseFloat(val) : val
@@ -436,11 +440,22 @@ export function InsightsView() {
                         <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                           Net Savings
                         </span>
-                        <Scale className={cn("h-3.5 w-3.5", netCash >= 0 ? "text-emerald-500" : "text-rose-500")} />
+                        <Scale
+                          className={cn(
+                            "h-3.5 w-3.5",
+                            netCash >= 0 ? "text-emerald-500" : "text-rose-500"
+                          )}
+                        />
                       </div>
                       <div className="mt-2.5 flex items-baseline gap-1">
-                        <span className={cn("text-xl font-bold tracking-tight", netCash >= 0 ? "text-emerald-400" : "text-rose-400")}>
-                          {netCash >= 0 ? "+" : ""}{formatAmount(netCash.toString(), baseCurrency)}
+                        <span
+                          className={cn(
+                            "text-xl font-bold tracking-tight",
+                            netCash >= 0 ? "text-emerald-400" : "text-rose-400"
+                          )}
+                        >
+                          {netCash >= 0 ? "+" : ""}
+                          {formatAmount(netCash.toString(), baseCurrency)}
                         </span>
                       </div>
                     </div>
@@ -453,7 +468,14 @@ export function InsightsView() {
                         <PercentIcon className="h-3.5 w-3.5 text-primary" />
                       </div>
                       <div className="mt-2.5 flex items-baseline gap-1">
-                        <span className={cn("text-xl font-bold tracking-tight", savingsPct >= 0 ? "text-emerald-400" : "text-rose-400")}>
+                        <span
+                          className={cn(
+                            "text-xl font-bold tracking-tight",
+                            savingsPct >= 0
+                              ? "text-emerald-400"
+                              : "text-rose-400"
+                          )}
+                        >
                           {savingsPct.toFixed(1)}%
                         </span>
                       </div>
@@ -546,7 +568,6 @@ export function InsightsView() {
             {/* Custom Interactive Charts */}
             <div className="relative mt-4">
               <div className="relative flex h-[170px] items-end gap-2.5 border-b border-muted/15 px-2 sm:gap-4">
-                
                 {/* Vertical Grid Y-axis Guide Markers */}
                 <div className="pointer-events-none absolute top-0 right-0 bottom-0 left-0 flex flex-col justify-between font-mono text-[8px] text-muted-foreground/30">
                   <div className="w-full border-t border-dashed border-muted/10 pt-0.5">
@@ -562,8 +583,8 @@ export function InsightsView() {
                   <div className="w-full"></div>
                 </div>
 
-                {activeTab === "OUTFLOWS" && (
-                  mergedTrend.length === 0 ? (
+                {activeTab === "OUTFLOWS" &&
+                  (mergedTrend.length === 0 ? (
                     <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
                       No outflow transactions recorded for this range.
                     </div>
@@ -622,11 +643,10 @@ export function InsightsView() {
                         </div>
                       )
                     })
-                  )
-                )}
+                  ))}
 
-                {activeTab === "INFLOWS" && (
-                  mergedTrend.length === 0 ? (
+                {activeTab === "INFLOWS" &&
+                  (mergedTrend.length === 0 ? (
                     <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
                       No inflow transactions recorded for this range.
                     </div>
@@ -671,7 +691,11 @@ export function InsightsView() {
                                       amountInBase: Number(c.amountInBase),
                                       amountInLocal: Number(c.amountInLocal),
                                       localCurrency: c.localCurrency,
-                                      percentage: ptTotal > 0 ? (Number(c.amountInBase) / ptTotal) * 100 : 0,
+                                      percentage:
+                                        ptTotal > 0
+                                          ? (Number(c.amountInBase) / ptTotal) *
+                                            100
+                                          : 0,
                                     })
                                   }
                                   onMouseLeave={() => setActiveTooltip(null)}
@@ -685,11 +709,10 @@ export function InsightsView() {
                         </div>
                       )
                     })
-                  )
-                )}
+                  ))}
 
-                {activeTab === "CASH_FLOW" && (
-                  mergedTrend.length === 0 ? (
+                {activeTab === "CASH_FLOW" &&
+                  (mergedTrend.length === 0 ? (
                     <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
                       No data recorded for this range.
                     </div>
@@ -699,21 +722,25 @@ export function InsightsView() {
                       const inflowTotal = pt.inflowTotal
 
                       const inflowHeight = (inflowTotal / maxTrendAmount) * 100
-                      const outflowHeight = (outflowTotal / maxTrendAmount) * 100
+                      const outflowHeight =
+                        (outflowTotal / maxTrendAmount) * 100
 
                       const net = inflowTotal - outflowTotal
-                      const savingsRate = inflowTotal > 0 ? (net / inflowTotal) * 100 : 0
+                      const savingsRate =
+                        inflowTotal > 0 ? (net / inflowTotal) * 100 : 0
 
                       return (
                         <div
                           key={ptIdx}
                           className="group relative flex h-full flex-1 flex-col items-center justify-end"
                         >
-                          <div className="flex h-full w-full items-end justify-center gap-1 sm:gap-1.5 max-w-[40px]">
+                          <div className="flex h-full w-full max-w-[40px] items-end justify-center gap-1 sm:gap-1.5">
                             {/* Inflow Bar (Green) */}
                             <div
-                              className="w-[10px] sm:w-[14px] bg-emerald-500 rounded-t-sm transition-all duration-350 hover:brightness-110 cursor-pointer"
-                              style={{ height: `${Math.max(inflowHeight, 2)}%` }}
+                              className="w-[10px] cursor-pointer rounded-t-sm bg-emerald-500 transition-all duration-350 hover:brightness-110 sm:w-[14px]"
+                              style={{
+                                height: `${Math.max(inflowHeight, 2)}%`,
+                              }}
                               onMouseEnter={() =>
                                 setActiveCashFlowTooltip({
                                   label: pt.label,
@@ -723,12 +750,16 @@ export function InsightsView() {
                                   savingsRate,
                                 })
                               }
-                              onMouseLeave={() => setActiveCashFlowTooltip(null)}
+                              onMouseLeave={() =>
+                                setActiveCashFlowTooltip(null)
+                              }
                             />
                             {/* Outflow Bar (Rose) */}
                             <div
-                              className="w-[10px] sm:w-[14px] bg-rose-500 rounded-t-sm transition-all duration-350 hover:brightness-110 cursor-pointer"
-                              style={{ height: `${Math.max(outflowHeight, 2)}%` }}
+                              className="w-[10px] cursor-pointer rounded-t-sm bg-rose-500 transition-all duration-350 hover:brightness-110 sm:w-[14px]"
+                              style={{
+                                height: `${Math.max(outflowHeight, 2)}%`,
+                              }}
                               onMouseEnter={() =>
                                 setActiveCashFlowTooltip({
                                   label: pt.label,
@@ -738,7 +769,9 @@ export function InsightsView() {
                                   savingsRate,
                                 })
                               }
-                              onMouseLeave={() => setActiveCashFlowTooltip(null)}
+                              onMouseLeave={() =>
+                                setActiveCashFlowTooltip(null)
+                              }
                             />
                           </div>
                           <span className="mt-1.5 text-[8px] font-bold text-muted-foreground transition-colors duration-200 group-hover:text-foreground">
@@ -747,9 +780,7 @@ export function InsightsView() {
                         </div>
                       )
                     })
-                  )
-                )}
-
+                  ))}
               </div>
 
               {/* General Interactive Tooltip Card for Single Streams */}
@@ -773,7 +804,7 @@ export function InsightsView() {
                           activeTooltip.colorClass
                         )}
                       />
-                      <span className="text-[10px] font-bold text-foreground truncate max-w-[150px]">
+                      <span className="max-w-[150px] truncate text-[10px] font-bold text-foreground">
                         {activeTooltip.title}
                       </span>
                     </div>
@@ -831,7 +862,10 @@ export function InsightsView() {
                         Inflow:
                       </span>
                       <span className="font-bold text-foreground">
-                        {formatAmount(activeCashFlowTooltip.inflow.toString(), baseCurrency)}
+                        {formatAmount(
+                          activeCashFlowTooltip.inflow.toString(),
+                          baseCurrency
+                        )}
                       </span>
                     </div>
 
@@ -841,27 +875,47 @@ export function InsightsView() {
                         Outflow:
                       </span>
                       <span className="font-bold text-foreground">
-                        {formatAmount(activeCashFlowTooltip.outflow.toString(), baseCurrency)}
+                        {formatAmount(
+                          activeCashFlowTooltip.outflow.toString(),
+                          baseCurrency
+                        )}
                       </span>
                     </div>
 
                     <div className="flex justify-between border-t border-muted/10 pt-1 text-muted-foreground">
                       <span className="font-semibold">Net Cash:</span>
-                      <span className={cn("font-bold", activeCashFlowTooltip.net >= 0 ? "text-emerald-400" : "text-rose-400")}>
-                        {activeCashFlowTooltip.net >= 0 ? "+" : ""}{formatAmount(activeCashFlowTooltip.net.toString(), baseCurrency)}
+                      <span
+                        className={cn(
+                          "font-bold",
+                          activeCashFlowTooltip.net >= 0
+                            ? "text-emerald-400"
+                            : "text-rose-400"
+                        )}
+                      >
+                        {activeCashFlowTooltip.net >= 0 ? "+" : ""}
+                        {formatAmount(
+                          activeCashFlowTooltip.net.toString(),
+                          baseCurrency
+                        )}
                       </span>
                     </div>
 
                     <div className="flex justify-between text-muted-foreground">
                       <span>Savings Rate:</span>
-                      <span className={cn("font-black", activeCashFlowTooltip.savingsRate >= 0 ? "text-emerald-400" : "text-rose-400")}>
+                      <span
+                        className={cn(
+                          "font-black",
+                          activeCashFlowTooltip.savingsRate >= 0
+                            ? "text-emerald-400"
+                            : "text-rose-400"
+                        )}
+                      >
                         {activeCashFlowTooltip.savingsRate.toFixed(1)}%
                       </span>
                     </div>
                   </div>
                 </div>
               )}
-
             </div>
           </div>
         </div>
@@ -1076,27 +1130,39 @@ export function InsightsView() {
                           className="group rounded-xl border border-muted/10 bg-muted/5 p-3 transition-all duration-300 hover:bg-muted/10"
                         >
                           <div className="mb-1.5 flex items-center justify-between">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div className={cn("rounded-lg p-2", color.bg, color.text)}>
+                            <div className="flex min-w-0 items-center gap-2.5">
+                              <div
+                                className={cn(
+                                  "rounded-lg p-2",
+                                  color.bg,
+                                  color.text
+                                )}
+                              >
                                 <ArrowUpRight className="h-3.5 w-3.5" />
                               </div>
                               <div className="min-w-0">
-                                <span className="block text-xs font-bold text-foreground truncate max-w-[180px]">
+                                <span className="block max-w-[180px] truncate text-xs font-bold text-foreground">
                                   {source.name}
                                 </span>
                               </div>
                             </div>
 
-                            <div className="text-right shrink-0">
+                            <div className="shrink-0 text-right">
                               <span className="text-xs font-bold text-emerald-400">
-                                {formatAmount(source.amount.toString(), baseCurrency)}
+                                {formatAmount(
+                                  source.amount.toString(),
+                                  baseCurrency
+                                )}
                               </span>
                             </div>
                           </div>
 
                           <div className="h-1 w-full overflow-hidden rounded-full bg-muted/20">
                             <div
-                              className={cn("h-full rounded-full transition-all duration-550", color.bar)}
+                              className={cn(
+                                "h-full rounded-full transition-all duration-550",
+                                color.bar
+                              )}
                               style={{
                                 width: `${Math.min(source.percentage, 100)}%`,
                               }}
@@ -1106,7 +1172,9 @@ export function InsightsView() {
                             <span className="text-[8px] font-bold text-muted-foreground uppercase">
                               Contribution
                             </span>
-                            <span className={cn("text-[8px] font-bold", color.text)}>
+                            <span
+                              className={cn("text-[8px] font-bold", color.text)}
+                            >
                               {source.percentage.toFixed(1)}%
                             </span>
                           </div>
@@ -1209,13 +1277,17 @@ export function InsightsView() {
                         className="flex items-center justify-between border-b border-muted/10 pb-2.5 last:border-0 last:pb-0"
                       >
                         <div>
-                          <span className="block text-xs font-semibold text-foreground truncate max-w-[200px] sm:max-w-none">
+                          <span className="block max-w-[200px] truncate text-xs font-semibold text-foreground sm:max-w-none">
                             {inc.description || "Unspecified Income"}
                           </span>
                           <span className="block text-[9px] text-muted-foreground">
                             {new Date(inc.transactionDate).toLocaleDateString(
                               undefined,
-                              { month: "short", day: "numeric", timeZone: "UTC" }
+                              {
+                                month: "short",
+                                day: "numeric",
+                                timeZone: "UTC",
+                              }
                             )}
                           </span>
                         </div>
@@ -1254,14 +1326,18 @@ export function InsightsView() {
                         className="flex items-center justify-between border-b border-muted/10 pb-2.5 last:border-0 last:pb-0"
                       >
                         <div>
-                          <span className="block text-xs font-semibold text-foreground truncate max-w-[200px] sm:max-w-none">
+                          <span className="block max-w-[200px] truncate text-xs font-semibold text-foreground sm:max-w-none">
                             {exp.description || "Unspecified Expense"}
                           </span>
                           <span className="block text-[9px] text-muted-foreground">
                             {exp.budgetName} •{" "}
                             {new Date(exp.transactionDate).toLocaleDateString(
                               undefined,
-                              { month: "short", day: "numeric", timeZone: "UTC" }
+                              {
+                                month: "short",
+                                day: "numeric",
+                                timeZone: "UTC",
+                              }
                             )}
                           </span>
                         </div>
@@ -1282,7 +1358,6 @@ export function InsightsView() {
             </div>
           </div>
         )}
-
       </div>
     </FinancePageLayout>
   )

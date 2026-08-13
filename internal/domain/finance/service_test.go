@@ -1282,8 +1282,9 @@ func TestTransactions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// 4. Create an expense of 10.00 EUR (1000 cents) on Feb 15
+	// 4. Create an expense of 10.00 EUR (1000 cents) on Feb 15 with mock metadata
 	targetDate := time.Date(2026, 2, 15, 12, 0, 0, 0, time.UTC)
+	schedID := ScheduledTransactionID("sctx_123")
 	txn := &Transaction{
 		SpaceID:         spID,
 		BudgetID:        &budget.ID,
@@ -1291,6 +1292,9 @@ func TestTransactions(t *testing.T) {
 		Currency:        Currency("EUR"),
 		Description:     "Dinner",
 		TransactionDate: targetDate,
+		Metadata: TransactionMetadata{
+			ScheduledTransactionID: &schedID,
+		},
 	}
 
 	createdTxn, err := svc.CreateExpense(ctx, txn)
@@ -1322,15 +1326,29 @@ func TestTransactions(t *testing.T) {
 		t.Errorf("Period SpentAmount = %d, want 1000", stats[0].SpentAmount)
 	}
 
-	// Update the expense to 15.00 EUR (1500 cents)
-	createdTxn.Amount = 1500
-	updatedTxn, err := svc.UpdateExpense(ctx, createdTxn)
+	// Update the expense: simulate the coordinator by instantiating a clean Transaction struct without metadata
+	updateTxnInput := &Transaction{
+		ID:              createdTxn.ID,
+		SpaceID:         createdTxn.SpaceID,
+		BudgetID:        createdTxn.BudgetID,
+		Amount:          1500,
+		Currency:        createdTxn.Currency,
+		Description:     createdTxn.Description,
+		TransactionDate: createdTxn.TransactionDate,
+		EffectiveDate:   createdTxn.EffectiveDate,
+		AccountID:       createdTxn.AccountID,
+	}
+	updatedTxn, err := svc.UpdateExpense(ctx, updateTxnInput)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if updatedTxn.AmountInBase != 1650 { // 1500 * 1.10 = 1650
 		t.Errorf("Updated AmountInBase = %d, want 1650", updatedTxn.AmountInBase)
+	}
+
+	if updatedTxn.Metadata.ScheduledTransactionID == nil || *updatedTxn.Metadata.ScheduledTransactionID != "sctx_123" {
+		t.Errorf("Metadata was lost or wiped during UpdateExpense: %+v", updatedTxn.Metadata)
 	}
 
 	// Verify the period updated its spent aggregates to reflect new amount
