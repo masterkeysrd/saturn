@@ -5014,6 +5014,97 @@
       ],
       "description": "Document category classification enum."
     },
+    "IncomeInsightsAccountContribution": {
+      "type": "object",
+      "properties": {
+        "accountId": {
+          "type": "string",
+          "description": "Unique identifier of the bank account."
+        },
+        "accountName": {
+          "type": "string",
+          "description": "User-friendly name."
+        },
+        "amountInBase": {
+          "type": "string",
+          "format": "int64",
+          "description": "Inflow amount converted to base currency cents."
+        },
+        "amountInLocal": {
+          "type": "string",
+          "format": "int64",
+          "description": "Inflow amount in local currency cents."
+        },
+        "localCurrency": {
+          "type": "string",
+          "description": "Local currency code."
+        }
+      },
+      "description": "AccountContribution details how much income went to a single bank account."
+    },
+    "IncomeInsightsHighValueIncome": {
+      "type": "object",
+      "properties": {
+        "transactionId": {
+          "type": "string",
+          "description": "Unique identifier of the transaction."
+        },
+        "description": {
+          "type": "string",
+          "description": "Narration notes."
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64",
+          "description": "Absolute value in local currency cents."
+        },
+        "currency": {
+          "type": "string",
+          "description": "Local currency code."
+        },
+        "amountInBase": {
+          "type": "string",
+          "format": "int64",
+          "description": "Value converted to base currency cents."
+        },
+        "transactionDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Time transaction occurred."
+        },
+        "effectiveDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Execution/posting date."
+        }
+      },
+      "description": "HighValueIncome tracks outlier inbound transactions."
+    },
+    "IncomeInsightsIncomeSource": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Source name/description identifier."
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64",
+          "description": "Amount in cents."
+        },
+        "amountInBase": {
+          "type": "string",
+          "format": "int64",
+          "description": "Amount converted to base currency cents."
+        },
+        "percentage": {
+          "type": "number",
+          "format": "double",
+          "description": "Percentage relative to total income."
+        }
+      },
+      "description": "IncomeSource break downs contributions by description keywords."
+    },
     "IntegrationServiceCreateIntegrationTokenBody": {
       "type": "object",
       "properties": {
@@ -5358,38 +5449,6 @@
         }
       },
       "description": "HighValueExpense tracks outlier transactions exceeding typical limits."
-    },
-    "SpentInsightsTrendDataPoint": {
-      "type": "object",
-      "properties": {
-        "label": {
-          "type": "string",
-          "description": "Dynamic grouping label (e.g. Month name, date string)."
-        },
-        "startDate": {
-          "type": "string",
-          "description": "Interval start date boundary."
-        },
-        "amountInBase": {
-          "type": "string",
-          "format": "int64",
-          "description": "Spent amount converted to base currency cents."
-        },
-        "transactionCount": {
-          "type": "integer",
-          "format": "int32",
-          "description": "Total transactions within this interval."
-        },
-        "contributions": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/SpentInsightsBudgetContribution"
-          },
-          "description": "List of budget category contributions within this interval."
-        }
-      },
-      "description": "TrendDataPoint tracks spend patterns grouped by granular interval."
     },
     "TransactionAccountInfo": {
       "type": "object",
@@ -6609,6 +6668,10 @@
         "spent": {
           "$ref": "#/definitions/v1SpentInsights",
           "description": "Spent insights statistics."
+        },
+        "income": {
+          "$ref": "#/definitions/v1IncomeInsights",
+          "description": "Income insights statistics."
         }
       },
       "description": "The response for\n[GetInsights][saturn.finance.v1.Finance.GetInsights]."
@@ -6845,6 +6908,73 @@
         "amount",
         "currency"
       ]
+    },
+    "v1IncomeInsights": {
+      "type": "object",
+      "properties": {
+        "totalIncome": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total income in base currency cents."
+        },
+        "trend": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1IncomeInsightsTrendDataPoint"
+          },
+          "description": "List of granular interval trend points."
+        },
+        "distributions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/IncomeInsightsIncomeSource"
+          },
+          "description": "Distribution breakdown by income sources."
+        },
+        "topIncomes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/IncomeInsightsHighValueIncome"
+          },
+          "description": "List of largest income transactions."
+        }
+      },
+      "description": "IncomeInsights aggregates inflow statistics."
+    },
+    "v1IncomeInsightsTrendDataPoint": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Dynamic grouping label (e.g. Month name, date string)."
+        },
+        "startDate": {
+          "type": "string",
+          "description": "Interval start date boundary."
+        },
+        "amountInBase": {
+          "type": "string",
+          "format": "int64",
+          "description": "Income amount converted to base currency cents."
+        },
+        "transactionCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total transactions within this interval."
+        },
+        "contributions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/IncomeInsightsAccountContribution"
+          },
+          "description": "List of bank account contributions within this interval."
+        }
+      },
+      "description": "TrendDataPoint tracks income patterns grouped by granular interval."
     },
     "v1InsightGranularity": {
       "type": "string",
@@ -8076,7 +8206,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/SpentInsightsTrendDataPoint"
+            "$ref": "#/definitions/v1SpentInsightsTrendDataPoint"
           },
           "description": "List of granular interval trend points."
         },
@@ -8098,6 +8228,38 @@
         }
       },
       "description": "SpentInsights aggregates workspace statistics."
+    },
+    "v1SpentInsightsTrendDataPoint": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Dynamic grouping label (e.g. Month name, date string)."
+        },
+        "startDate": {
+          "type": "string",
+          "description": "Interval start date boundary."
+        },
+        "amountInBase": {
+          "type": "string",
+          "format": "int64",
+          "description": "Spent amount converted to base currency cents."
+        },
+        "transactionCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total transactions within this interval."
+        },
+        "contributions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/SpentInsightsBudgetContribution"
+          },
+          "description": "List of budget category contributions within this interval."
+        }
+      },
+      "description": "TrendDataPoint tracks spend patterns grouped by granular interval."
     },
     "v1TopicMetrics": {
       "type": "object",

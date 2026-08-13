@@ -1149,6 +1149,10 @@ export interface GetInsightsResponse {
    * Spent insights statistics.
    */
   spent: SpentInsights
+  /**
+   * Income insights statistics.
+   */
+  income: IncomeInsights
 }
 
 /**
@@ -1311,6 +1315,136 @@ export interface SpentInsights_HighValueExpense {
    * Parent budget name.
    */
   budgetName: string
+  /**
+   * Time transaction occurred.
+   */
+  transactionDate: string
+  /**
+   * Execution/posting date.
+   */
+  effectiveDate: string
+}
+
+/**
+ * IncomeInsights aggregates inflow statistics.
+ */
+export interface IncomeInsights {
+  /**
+   * Total income in base currency cents.
+   */
+  totalIncome: string
+  /**
+   * List of granular interval trend points.
+   */
+  trend: IncomeInsights_TrendDataPoint[]
+  /**
+   * Distribution breakdown by income sources.
+   */
+  distributions: IncomeInsights_IncomeSource[]
+  /**
+   * List of largest income transactions.
+   */
+  topIncomes: IncomeInsights_HighValueIncome[]
+}
+
+/**
+ * AccountContribution details how much income went to a single bank account.
+ */
+export interface IncomeInsights_AccountContribution {
+  /**
+   * Unique identifier of the bank account.
+   */
+  accountId: string
+  /**
+   * User-friendly name.
+   */
+  accountName: string
+  /**
+   * Inflow amount converted to base currency cents.
+   */
+  amountInBase: string
+  /**
+   * Inflow amount in local currency cents.
+   */
+  amountInLocal: string
+  /**
+   * Local currency code.
+   */
+  localCurrency: string
+}
+
+/**
+ * TrendDataPoint tracks income patterns grouped by granular interval.
+ */
+export interface IncomeInsights_TrendDataPoint {
+  /**
+   * Dynamic grouping label (e.g. Month name, date string).
+   */
+  label: string
+  /**
+   * Interval start date boundary.
+   */
+  startDate: string
+  /**
+   * Income amount converted to base currency cents.
+   */
+  amountInBase: string
+  /**
+   * Total transactions within this interval.
+   */
+  transactionCount: number
+  /**
+   * List of bank account contributions within this interval.
+   */
+  contributions: IncomeInsights_AccountContribution[]
+}
+
+/**
+ * IncomeSource break downs contributions by description keywords.
+ */
+export interface IncomeInsights_IncomeSource {
+  /**
+   * Source name/description identifier.
+   */
+  name: string
+  /**
+   * Amount in cents.
+   */
+  amount: string
+  /**
+   * Amount converted to base currency cents.
+   */
+  amountInBase: string
+  /**
+   * Percentage relative to total income.
+   */
+  percentage: number
+}
+
+/**
+ * HighValueIncome tracks outlier inbound transactions.
+ */
+export interface IncomeInsights_HighValueIncome {
+  /**
+   * Unique identifier of the transaction.
+   */
+  transactionId: string
+  /**
+   * Narration notes.
+   */
+  description: string
+  /**
+   * Absolute value in local currency cents.
+   */
+  amount: string
+  /**
+   * Local currency code.
+   */
+  currency: string
+  /**
+   * Value converted to base currency cents.
+   */
+  amountInBase: string
   /**
    * Time transaction occurred.
    */

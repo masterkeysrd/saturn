@@ -1053,6 +1053,9 @@ message GetInsightsRequest {
 message GetInsightsResponse {
   // Spent insights statistics.
   SpentInsights spent = 1;
+
+  // Income insights statistics.
+  IncomeInsights income = 2;
 }
 
 // SpentInsights aggregates workspace statistics.
@@ -1173,6 +1176,96 @@ message SpentInsights {
 
   // List of largest expense transactions.
   repeated HighValueExpense top_expenses = 7;
+}
+
+// IncomeInsights aggregates inflow statistics.
+message IncomeInsights {
+  // AccountContribution details how much income went to a single bank account.
+  message AccountContribution {
+    // Unique identifier of the bank account.
+    string account_id = 1;
+
+    // User-friendly name.
+    string account_name = 2;
+
+    // Inflow amount converted to base currency cents.
+    int64 amount_in_base = 3;
+
+    // Inflow amount in local currency cents.
+    int64 amount_in_local = 4;
+
+    // Local currency code.
+    string local_currency = 5;
+  }
+
+  // TrendDataPoint tracks income patterns grouped by granular interval.
+  message TrendDataPoint {
+    // Dynamic grouping label (e.g. Month name, date string).
+    string label = 1;
+
+    // Interval start date boundary.
+    string start_date = 2;
+
+    // Income amount converted to base currency cents.
+    int64 amount_in_base = 3;
+
+    // Total transactions within this interval.
+    int32 transaction_count = 4;
+
+    // List of bank account contributions within this interval.
+    repeated AccountContribution contributions = 5;
+  }
+
+  // IncomeSource break downs contributions by description keywords.
+  message IncomeSource {
+    // Source name/description identifier.
+    string name = 1;
+
+    // Amount in cents.
+    int64 amount = 2;
+
+    // Amount converted to base currency cents.
+    int64 amount_in_base = 3;
+
+    // Percentage relative to total income.
+    double percentage = 4;
+  }
+
+  // HighValueIncome tracks outlier inbound transactions.
+  message HighValueIncome {
+    // Unique identifier of the transaction.
+    string transaction_id = 1;
+
+    // Narration notes.
+    string description = 2;
+
+    // Absolute value in local currency cents.
+    int64 amount = 3;
+
+    // Local currency code.
+    string currency = 4;
+
+    // Value converted to base currency cents.
+    int64 amount_in_base = 5;
+
+    // Time transaction occurred.
+    google.protobuf.Timestamp transaction_date = 6;
+
+    // Execution/posting date.
+    google.protobuf.Timestamp effective_date = 7;
+  }
+
+  // Total income in base currency cents.
+  int64 total_income = 1;
+
+  // List of granular interval trend points.
+  repeated TrendDataPoint trend = 2;
+
+  // Distribution breakdown by income sources.
+  repeated IncomeSource distributions = 3;
+
+  // List of largest income transactions.
+  repeated HighValueIncome top_incomes = 4;
 }
 
 // GenerateScheduledTransactionsPayload defines the cron scheduling payload.

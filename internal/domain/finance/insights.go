@@ -307,3 +307,128 @@ func BuildSpentInsights(
 		TopExpenses:     topExpenses,
 	}
 }
+
+// Insights holds unified space analytics for outflows and inflows.
+type Insights struct {
+	Spent  *SpentInsights
+	Income *IncomeInsights
+}
+
+// IncomeInsights aggregates calculated inflow analytics.
+type IncomeInsights struct {
+	TotalIncome   int64
+	Trend         []*IncomeTrendDataPoint
+	Distributions []*IncomeSource
+	TopIncomes    []*HighValueIncome
+}
+
+type IncomeTrendDataPoint struct {
+	Label            string
+	StartDate        string
+	AmountInBase     int64
+	TransactionCount int32
+	Contributions    []*AccountContribution
+}
+
+type AccountContribution struct {
+	AccountID     string
+	AccountName   string
+	AmountInBase  int64
+	AmountInLocal int64
+	LocalCurrency string
+}
+
+type IncomeSource struct {
+	Name         string
+	Amount       int64
+	AmountInBase int64
+	Percentage   float64
+}
+
+type HighValueIncome struct {
+	TransactionID   string
+	Description     string
+	Amount          int64
+	Currency        string
+	AmountInBase    int64
+	TransactionDate time.Time
+	EffectiveDate   time.Time
+}
+
+// BuildIncomeInsights processes raw income trend rows, sources, and top incomes into a fully aggregated IncomeInsights model.
+func BuildIncomeInsights(
+	g Granularity,
+	start, end time.Time,
+	baseCurrency string,
+	trendRows []*IncomeTrend,
+	sourceRows []*IncomeSourceRow,
+	topRows []*TopIncome,
+) *IncomeInsights {
+	trendPoints := make([]*IncomeTrendDataPoint, 0)
+	var currentPoint *IncomeTrendDataPoint
+	var lastStart time.Time
+
+	for _, row := range trendRows {
+		if currentPoint == nil || !row.IntervalStart.Equal(lastStart) {
+			currentPoint = &IncomeTrendDataPoint{
+				Label:     g.FormatLabel(row.IntervalStart),
+				StartDate: row.IntervalStart.Format(time.RFC3339),
+			}
+			trendPoints = append(trendPoints, currentPoint)
+			lastStart = row.IntervalStart
+		}
+
+		currentPoint.AmountInBase += row.IncomeInBase
+		currentPoint.TransactionCount += row.TxnCount
+
+		if row.AccountID != "" {
+			currentPoint.Contributions = append(currentPoint.Contributions, &AccountContribution{
+				AccountID:     row.AccountID,
+				AccountName:   row.AccountName,
+				AmountInBase:  row.IncomeInBase,
+				AmountInLocal: row.IncomeInLocal,
+				LocalCurrency: row.Currency,
+			})
+		}
+	}
+
+	var totalIncome int64
+	distributions := make([]*IncomeSource, 0, len(sourceRows))
+
+	for _, r := range sourceRows {
+		totalIncome += r.AmountInBase
+	}
+
+	for _, r := range sourceRows {
+		pct := 0.0
+		if totalIncome > 0 {
+			pct = (float64(r.AmountInBase) / float64(totalIncome)) * 100.0
+		}
+		distributions = append(distributions, &IncomeSource{
+			Name:         r.SourceName,
+			Amount:       r.AmountInBase,
+			AmountInBase: r.AmountInBase,
+			Percentage:   pct,
+		})
+	}
+
+	topIncomes := make([]*HighValueIncome, 0, len(topRows))
+	for _, r := range topRows {
+		topIncomes = append(topIncomes, &HighValueIncome{
+			TransactionID:   r.TransactionID,
+			Description:     r.Description,
+			Amount:          r.Amount,
+			Currency:        r.Currency,
+			AmountInBase:    r.AmountInBase,
+			TransactionDate: r.TransactionDate,
+			EffectiveDate:   r.EffectiveDate,
+		})
+	}
+
+	return &IncomeInsights{
+		TotalIncome:   totalIncome,
+		Trend:         trendPoints,
+		Distributions: distributions,
+		TopIncomes:    topIncomes,
+	}
+}

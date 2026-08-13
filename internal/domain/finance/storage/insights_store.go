@@ -196,3 +196,144 @@ func (s *InsightsStore) GetTopExpenses(ctx context.Context, filter *finance.TopE
 	}
 	return results, nil
 }
+
+type incomeTrendRow struct {
+	IntervalStart   time.Time `db:"interval_start"`
+	AccountID       string    `db:"account_id"`
+	AccountName     string    `db:"account_name"`
+	AccountCurrency string    `db:"account_currency"`
+	TxnCount        int32     `db:"txn_count"`
+	IncomeInBase    int64     `db:"income_in_base"`
+	IncomeInLocal   int64     `db:"income_in_local"`
+}
+
+func (s *InsightsStore) GetIncomeTrend(ctx context.Context, filter *finance.IncomeTrendFilter) ([]*finance.IncomeTrend, error) {
+	var trunc string
+	switch filter.Granularity {
+	case finance.GranularityDaily:
+		trunc = "day"
+	case finance.GranularityWeekly:
+		trunc = "week"
+	case finance.GranularityMonthly:
+		trunc = "month"
+	case finance.GranularityYearly:
+		trunc = "year"
+	default:
+		trunc = "month"
+	}
+
+	query := fmt.Sprintf(`SELECT 
+		date_trunc('%s', t.effective_date) as interval_start,
+		COALESCE(t.account_id, '') as account_id,
+		COALESCE(a.name, '') as account_name,
+		COALESCE(a.currency, '') as account_currency,
+		COUNT(t.id) as txn_count,
+		SUM(t.amount_in_base) as income_in_base,
+		SUM(t.amount) as income_in_local
+	FROM finance.transaction t
+	LEFT JOIN finance.account a ON t.account_id = a.id
+	WHERE t.space_id = $1 AND t.type = 'INCOME' AND t.effective_date >= $2 AND t.effective_date <= $3
+	GROUP BY interval_start, t.account_id, a.name, a.currency
+	ORDER BY interval_start ASC`, trunc)
+
+	startDateStr := filter.StartDate.UTC().Format("2006-01-02")
+	endDateStr := filter.EndDate.UTC().Format("2006-01-02")
+
+	var rows []*incomeTrendRow
+	if err := s.db.SelectContext(ctx, &rows, query, string(filter.SpaceID), startDateStr, endDateStr); err != nil {
+		return nil, err
+	}
+
+	results := make([]*finance.IncomeTrend, len(rows))
+	for i, r := range rows {
+		results[i] = &finance.IncomeTrend{
+			IntervalStart: r.IntervalStart,
+			AccountID:     r.AccountID,
+			AccountName:   r.AccountName,
+			Currency:      r.AccountCurrency,
+			TxnCount:      r.TxnCount,
+			IncomeInBase:  r.IncomeInBase,
+			IncomeInLocal: r.IncomeInLocal,
+		}
+	}
+	return results, nil
+}
+
+type incomeSourceRow struct {
+	SourceName   string `db:"source_name"`
+	AmountInBase int64  `db:"amount_in_base"`
+}
+
+func (s *InsightsStore) GetIncomeSources(ctx context.Context, filter *finance.IncomeSourcesFilter) ([]*finance.IncomeSourceRow, error) {
+	query := `SELECT 
+		COALESCE(t.description, 'Other Inflow') as source_name,
+		SUM(t.amount_in_base) as amount_in_base
+	FROM finance.transaction t
+	WHERE t.space_id = $1 AND t.type = 'INCOME' AND t.effective_date >= $2 AND t.effective_date <= $3
+	GROUP BY source_name
+	ORDER BY amount_in_base DESC`
+
+	startDateStr := filter.StartDate.UTC().Format("2006-01-02")
+	endDateStr := filter.EndDate.UTC().Format("2006-01-02")
+
+	var rows []*incomeSourceRow
+	if err := s.db.SelectContext(ctx, &rows, query, string(filter.SpaceID), startDateStr, endDateStr); err != nil {
+		return nil, err
+	}
+
+	results := make([]*finance.IncomeSourceRow, len(rows))
+	for i, r := range rows {
+		results[i] = &finance.IncomeSourceRow{
+			SourceName:   r.SourceName,
+			AmountInBase: r.AmountInBase,
+		}
+	}
+	return results, nil
+}
+
+type topIncomeRow struct {
+	TransactionID   string    `db:"transaction_id"`
+	Description     string    `db:"description"`
+	Amount          int64     `db:"amount"`
+	Currency        string    `db:"currency"`
+	AmountInBase    int64     `db:"amount_in_base"`
+	TransactionDate time.Time `db:"transaction_date"`
+	EffectiveDate   time.Time `db:"effective_date"`
+}
+
+func (s *InsightsStore) GetTopIncomes(ctx context.Context, filter *finance.TopIncomesFilter) ([]*finance.TopIncome, error) {
+	query := `SELECT 
+		t.id as transaction_id,
+		t.description,
+		t.amount,
+		t.currency,
+		t.amount_in_base,
+		t.transaction_date,
+		t.effective_date
+	FROM finance.transaction t
+	WHERE t.space_id = $1 AND t.type = 'INCOME' AND t.effective_date >= $2 AND t.effective_date <= $3
+	ORDER BY t.amount_in_base DESC
+	LIMIT $4`
+
+	startDateStr := filter.StartDate.UTC().Format("2006-01-02")
+	endDateStr := filter.EndDate.UTC().Format("2006-01-02")
+
+	var rows []*topIncomeRow
+	if err := s.db.SelectContext(ctx, &rows, query, string(filter.SpaceID), startDateStr, endDateStr, filter.Limit); err != nil {
+		return nil, err
+	}
+
+	results := make([]*finance.TopIncome, len(rows))
+	for i, r := range rows {
+		results[i] = &finance.TopIncome{
+			TransactionID:   r.TransactionID,
+			Description:     r.Description,
+			Amount:          r.Amount,
+			Currency:        r.Currency,
+			AmountInBase:    r.AmountInBase,
+			TransactionDate: r.TransactionDate,
+			EffectiveDate:   r.EffectiveDate,
+		}
+	}
+	return results, nil
+}

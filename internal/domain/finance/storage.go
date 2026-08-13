@@ -113,6 +113,9 @@ type InsightsStore interface {
 	GetSpentTrend(ctx context.Context, filter *SpentTrendFilter) ([]*SpentTrend, error)
 	GetBudgetDistribution(ctx context.Context, filter *BudgetDistributionFilter) ([]*BudgetDistribution, error)
 	GetTopExpenses(ctx context.Context, filter *TopExpensesFilter) ([]*TopExpense, error)
+	GetIncomeTrend(ctx context.Context, filter *IncomeTrendFilter) ([]*IncomeTrend, error)
+	GetIncomeSources(ctx context.Context, filter *IncomeSourcesFilter) ([]*IncomeSourceRow, error)
+	GetTopIncomes(ctx context.Context, filter *TopIncomesFilter) ([]*TopIncome, error)
 }
 
 type SpentTrendFilter struct {
@@ -133,6 +136,54 @@ type TopExpensesFilter struct {
 	StartDate time.Time
 	EndDate   time.Time
 	Limit     int
+}
+
+type IncomeTrendFilter struct {
+	SpaceID     SpaceID
+	Granularity Granularity
+	StartDate   time.Time
+	EndDate     time.Time
+}
+
+type IncomeSourcesFilter struct {
+	SpaceID   SpaceID
+	StartDate time.Time
+	EndDate   time.Time
+}
+
+type TopIncomesFilter struct {
+	SpaceID   SpaceID
+	StartDate time.Time
+	EndDate   time.Time
+	Limit     int
+}
+
+// IncomeTrend represents trend aggregation data for a given interval.
+type IncomeTrend struct {
+	IntervalStart time.Time
+	AccountID     string
+	AccountName   string
+	Currency      string
+	TxnCount      int32
+	IncomeInBase  int64
+	IncomeInLocal int64
+}
+
+// IncomeSourceRow represents income allocation per source description.
+type IncomeSourceRow struct {
+	SourceName   string
+	AmountInBase int64
+}
+
+// TopIncome represents a high-value transaction.
+type TopIncome struct {
+	TransactionID   string
+	Description     string
+	Amount          int64
+	Currency        string
+	AmountInBase    int64
+	TransactionDate time.Time
+	EffectiveDate   time.Time
 }
 
 // ListBudgetsFilter encapsulates filtering parameters for listing budgets.

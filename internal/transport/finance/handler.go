@@ -1103,72 +1103,132 @@ func mapGranularity(g financev1.InsightGranularity) string {
 	}
 }
 
-func toProtoInsightsResponse(in *finance.SpentInsights) *financev1.GetInsightsResponse {
+func toProtoInsightsResponse(in *finance.Insights) *financev1.GetInsightsResponse {
 	if in == nil {
 		return &financev1.GetInsightsResponse{}
 	}
 
-	trendPoints := make([]*financev1.SpentInsights_TrendDataPoint, 0, len(in.Trend))
-	for _, pt := range in.Trend {
-		contribs := make([]*financev1.SpentInsights_BudgetContribution, 0, len(pt.Contributions))
-		for _, c := range pt.Contributions {
-			contribs = append(contribs, &financev1.SpentInsights_BudgetContribution{
-				BudgetId:               c.BudgetID,
-				BudgetName:             c.BudgetName,
-				BudgetColor:            c.BudgetColor,
-				AmountInBase:           c.AmountInBase,
-				AmountInLocal:          c.AmountInLocal,
-				LocalCurrency:          c.LocalCurrency,
-				ContributionPercentage: c.ContributionPercentage,
+	var spentProto *financev1.SpentInsights
+	if in.Spent != nil {
+		trendPoints := make([]*financev1.SpentInsights_TrendDataPoint, 0, len(in.Spent.Trend))
+		for _, pt := range in.Spent.Trend {
+			contribs := make([]*financev1.SpentInsights_BudgetContribution, 0, len(pt.Contributions))
+			for _, c := range pt.Contributions {
+				contribs = append(contribs, &financev1.SpentInsights_BudgetContribution{
+					BudgetId:               c.BudgetID,
+					BudgetName:             c.BudgetName,
+					BudgetColor:            c.BudgetColor,
+					AmountInBase:           c.AmountInBase,
+					AmountInLocal:          c.AmountInLocal,
+					LocalCurrency:          c.LocalCurrency,
+					ContributionPercentage: c.ContributionPercentage,
+				})
+			}
+			trendPoints = append(trendPoints, &financev1.SpentInsights_TrendDataPoint{
+				Label:            pt.Label,
+				StartDate:        pt.StartDate,
+				AmountInBase:     pt.AmountInBase,
+				TransactionCount: pt.TransactionCount,
+				Contributions:    contribs,
 			})
 		}
-		trendPoints = append(trendPoints, &financev1.SpentInsights_TrendDataPoint{
-			Label:            pt.Label,
-			StartDate:        pt.StartDate,
-			AmountInBase:     pt.AmountInBase,
-			TransactionCount: pt.TransactionCount,
-			Contributions:    contribs,
-		})
-	}
 
-	dists := make([]*financev1.SpentInsights_BudgetUsage, 0, len(in.Distributions))
-	for _, d := range in.Distributions {
-		dists = append(dists, &financev1.SpentInsights_BudgetUsage{
-			BudgetId:        d.BudgetID,
-			BudgetName:      d.BudgetName,
-			BudgetColor:     d.BudgetColor,
-			BudgetIcon:      d.BudgetIcon,
-			Limit:           d.Limit,
-			Spent:           d.Spent,
-			SpentInBase:     d.SpentInBase,
-			UsagePercentage: d.UsagePercentage,
-		})
-	}
+		dists := make([]*financev1.SpentInsights_BudgetUsage, 0, len(in.Spent.Distributions))
+		for _, d := range in.Spent.Distributions {
+			dists = append(dists, &financev1.SpentInsights_BudgetUsage{
+				BudgetId:        d.BudgetID,
+				BudgetName:      d.BudgetName,
+				BudgetColor:     d.BudgetColor,
+				BudgetIcon:      d.BudgetIcon,
+				Limit:           d.Limit,
+				Spent:           d.Spent,
+				SpentInBase:     d.SpentInBase,
+				UsagePercentage: d.UsagePercentage,
+			})
+		}
 
-	tops := make([]*financev1.SpentInsights_HighValueExpense, 0, len(in.TopExpenses))
-	for _, t := range in.TopExpenses {
-		tops = append(tops, &financev1.SpentInsights_HighValueExpense{
-			TransactionId:   t.TransactionID,
-			Description:     t.Description,
-			Amount:          t.Amount,
-			Currency:        t.Currency,
-			AmountInBase:    t.AmountInBase,
-			BudgetName:      t.BudgetName,
-			TransactionDate: timestamppb.New(t.TransactionDate),
-			EffectiveDate:   timestamppb.New(t.EffectiveDate),
-		})
-	}
+		tops := make([]*financev1.SpentInsights_HighValueExpense, 0, len(in.Spent.TopExpenses))
+		for _, t := range in.Spent.TopExpenses {
+			tops = append(tops, &financev1.SpentInsights_HighValueExpense{
+				TransactionId:   t.TransactionID,
+				Description:     t.Description,
+				Amount:          t.Amount,
+				Currency:        t.Currency,
+				AmountInBase:    t.AmountInBase,
+				BudgetName:      t.BudgetName,
+				TransactionDate: timestamppb.New(t.TransactionDate),
+				EffectiveDate:   timestamppb.New(t.EffectiveDate),
+			})
+		}
 
-	return &financev1.GetInsightsResponse{
-		Spent: &financev1.SpentInsights{
-			TotalLimit:      in.TotalLimit,
-			TotalSpent:      in.TotalSpent,
-			RemainingBudget: in.RemainingBudget,
-			BurnRate:        in.BurnRate,
+		spentProto = &financev1.SpentInsights{
+			TotalLimit:      in.Spent.TotalLimit,
+			TotalSpent:      in.Spent.TotalSpent,
+			RemainingBudget: in.Spent.RemainingBudget,
+			BurnRate:        in.Spent.BurnRate,
 			Trend:           trendPoints,
 			Distributions:   dists,
 			TopExpenses:     tops,
-		},
+		}
+	}
+
+	var incomeProto *financev1.IncomeInsights
+	if in.Income != nil {
+		incTrend := make([]*financev1.IncomeInsights_TrendDataPoint, 0, len(in.Income.Trend))
+		for _, pt := range in.Income.Trend {
+			contrs := make([]*financev1.IncomeInsights_AccountContribution, 0, len(pt.Contributions))
+			for _, c := range pt.Contributions {
+				contrs = append(contrs, &financev1.IncomeInsights_AccountContribution{
+					AccountId:     c.AccountID,
+					AccountName:   c.AccountName,
+					AmountInBase:  c.AmountInBase,
+					AmountInLocal: c.AmountInLocal,
+					LocalCurrency: c.LocalCurrency,
+				})
+			}
+			incTrend = append(incTrend, &financev1.IncomeInsights_TrendDataPoint{
+				Label:            pt.Label,
+				StartDate:        pt.StartDate,
+				AmountInBase:     pt.AmountInBase,
+				TransactionCount: pt.TransactionCount,
+				Contributions:    contrs,
+			})
+		}
+
+		incDists := make([]*financev1.IncomeInsights_IncomeSource, 0, len(in.Income.Distributions))
+		for _, d := range in.Income.Distributions {
+			incDists = append(incDists, &financev1.IncomeInsights_IncomeSource{
+				Name:         d.Name,
+				Amount:       d.Amount,
+				AmountInBase: d.AmountInBase,
+				Percentage:   d.Percentage,
+			})
+		}
+
+		incTops := make([]*financev1.IncomeInsights_HighValueIncome, 0, len(in.Income.TopIncomes))
+		for _, t := range in.Income.TopIncomes {
+			incTops = append(incTops, &financev1.IncomeInsights_HighValueIncome{
+				TransactionId:   t.TransactionID,
+				Description:     t.Description,
+				Amount:          t.Amount,
+				Currency:        t.Currency,
+				AmountInBase:    t.AmountInBase,
+				TransactionDate: timestamppb.New(t.TransactionDate),
+				EffectiveDate:   timestamppb.New(t.EffectiveDate),
+			})
+		}
+
+		incomeProto = &financev1.IncomeInsights{
+			TotalIncome:   in.Income.TotalIncome,
+			Trend:         incTrend,
+			Distributions: incDists,
+			TopIncomes:    incTops,
+		}
+	}
+
+	return &financev1.GetInsightsResponse{
+		Spent:  spentProto,
+		Income: incomeProto,
 	}
 }
 

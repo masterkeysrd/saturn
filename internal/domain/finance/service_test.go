@@ -405,6 +405,18 @@ func (m *mockInsightsStore) GetTopExpenses(ctx context.Context, filter *TopExpen
 	return m.topExpenses, m.err
 }
 
+func (m *mockInsightsStore) GetIncomeTrend(ctx context.Context, filter *IncomeTrendFilter) ([]*IncomeTrend, error) {
+	return nil, m.err
+}
+
+func (m *mockInsightsStore) GetIncomeSources(ctx context.Context, filter *IncomeSourcesFilter) ([]*IncomeSourceRow, error) {
+	return nil, m.err
+}
+
+func (m *mockInsightsStore) GetTopIncomes(ctx context.Context, filter *TopIncomesFilter) ([]*TopIncome, error) {
+	return nil, m.err
+}
+
 type mockAccountStore struct {
 	data map[AccountID]*Account
 }

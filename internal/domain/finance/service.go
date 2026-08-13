@@ -595,6 +595,50 @@ func (s *Service) GetSpentInsights(ctx context.Context, req *GetSpentInsightsReq
 	return BuildSpentInsights(g, start, end, string(settings.BaseCurrency), trendRows, distRows, topRows), nil
 }
 
+// GetIncomeInsights computes aggregated inflow analytics and trends for a space.
+func (s *Service) GetIncomeInsights(ctx context.Context, req *GetSpentInsightsRequest) (*IncomeInsights, error) {
+	g, start, end, err := req.ResolveRange()
+	if err != nil {
+		return nil, err
+	}
+
+	settings, err := s.deps.SettingsStore.GetByID(ctx, req.SpaceID)
+	if err != nil {
+		return nil, fmt.Errorf("verify workspace settings: %w", err)
+	}
+
+	trendRows, err := s.deps.InsightsStore.GetIncomeTrend(ctx, &IncomeTrendFilter{
+		SpaceID:     req.SpaceID,
+		Granularity: g,
+		StartDate:   start,
+		EndDate:     end,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("fetch income trend: %w", err)
+	}
+
+	sourceRows, err := s.deps.InsightsStore.GetIncomeSources(ctx, &IncomeSourcesFilter{
+		SpaceID:   req.SpaceID,
+		StartDate: start,
+		EndDate:   end,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("fetch income sources: %w", err)
+	}
+
+	topRows, err := s.deps.InsightsStore.GetTopIncomes(ctx, &TopIncomesFilter{
+		SpaceID:   req.SpaceID,
+		StartDate: start,
+		EndDate:   end,
+		Limit:     5,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("fetch top incomes: %w", err)
+	}
+
+	return BuildIncomeInsights(g, start, end, string(settings.BaseCurrency), trendRows, sourceRows, topRows), nil
+}
+
 // CreateRecurringTransaction configures a new recurring transaction rule.
 func (s *Service) CreateRecurringTransaction(ctx context.Context, re *RecurringTransaction) (*RecurringTransaction, error) {
 	if err := re.Init(); err != nil {
