@@ -23,6 +23,15 @@ func (r *ExchangeRate) ComputeID() string {
 	return fmt.Sprintf("rate_%s_%s_%s", r.FromCurrency, r.ToCurrency, r.RateDate.Format("20060102"))
 }
 
+// Init prepares a new exchange rate entity for creation by setting its deterministic ID and creation timestamp.
+func (r *ExchangeRate) Init() error {
+	if r.ID == "" {
+		r.ID = r.ComputeID()
+	}
+	r.CreateTime = time.Now().UTC()
+	return nil
+}
+
 // ParseExchangeRateID extracts fromCurrency, toCurrency, and rateDate from an exchange rate ID.
 func ParseExchangeRateID(id string) (Currency, Currency, time.Time, error) {
 	clean := strings.TrimPrefix(id, "rate_")

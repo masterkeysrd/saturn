@@ -126,3 +126,184 @@ type GetSpentInsightsRequest struct {
 	StartDate   time.Time
 	EndDate     time.Time
 }
+
+// FormatLabel returns the presentation string for a given interval timestamp according to granularity rules.
+func (g Granularity) FormatLabel(t time.Time) string {
+	switch g {
+	case GranularityDaily:
+		return t.Format("02 Jan")
+	case GranularityWeekly:
+		_, w := t.ISOWeek()
+		return fmt.Sprintf("Wk %d", w)
+	case GranularityMonthly:
+		return t.Format("Jan 06")
+	case GranularityYearly:
+		return t.Format("2006")
+	default:
+		return t.Format("Jan 06")
+	}
+}
+
+// ResolveRange validates the request options, parses granularity, and computes default date boundaries.
+func (req *GetSpentInsightsRequest) ResolveRange() (Granularity, time.Time, time.Time, error) {
+	if err := req.SpaceID.Validate(); err != nil {
+		return "", time.Time{}, time.Time{}, fmt.Errorf("validate space ID: %w", err)
+	}
+	g, err := ParseGranularity(req.Granularity)
+	if err != nil {
+		return "", time.Time{}, time.Time{}, err
+	}
+
+	start := req.StartDate
+	if start.IsZero() {
+		now := time.Now().UTC()
+		switch g {
+		case GranularityDaily:
+			start = now.AddDate(0, 0, -30)
+		case GranularityWeekly:
+			start = now.AddDate(0, 0, -84)
+		case GranularityMonthly:
+			start = now.AddDate(-1, 0, 0)
+		case GranularityYearly:
+			start = now.AddDate(-5, 0, 0)
+		}
+	}
+	end := req.EndDate
+	if end.IsZero() {
+		end = time.Now().UTC()
+	}
+
+	return g, start, end, nil
+}
+
+// BuildSpentInsights processes raw trend rows, budget distributions, and top expenses into a fully aggregated SpentInsights model.
+func BuildSpentInsights(
+	g Granularity,
+	start, end time.Time,
+	baseCurrency string,
+	trendRows []*SpentTrend,
+	distRows []*BudgetDistribution,
+	topRows []*TopExpense,
+) *SpentInsights {
+	trendPoints := make([]*TrendDataPoint, 0)
+	var currentPoint *TrendDataPoint
+	var lastStart time.Time
+	var unbudgetedSpentInBase int64
+
+	for _, row := range trendRows {
+		if row.BudgetID == "" {
+			unbudgetedSpentInBase += row.SpentInBase
+		}
+
+		if currentPoint == nil || !row.IntervalStart.Equal(lastStart) {
+			currentPoint = &TrendDataPoint{
+				Label:     g.FormatLabel(row.IntervalStart),
+				StartDate: row.IntervalStart.Format(time.RFC3339),
+			}
+			trendPoints = append(trendPoints, currentPoint)
+			lastStart = row.IntervalStart
+		}
+
+		currentPoint.AmountInBase += row.SpentInBase
+		currentPoint.TransactionCount += row.TxnCount
+
+		if row.BudgetID != "" {
+			currentPoint.Contributions = append(currentPoint.Contributions, &BudgetContribution{
+				BudgetID:      row.BudgetID,
+				BudgetName:    row.BudgetName,
+				BudgetColor:   row.BudgetColor,
+				AmountInBase:  row.SpentInBase,
+				AmountInLocal: row.SpentInLocal,
+				LocalCurrency: row.BudgetCurrency,
+			})
+		} else {
+			currentPoint.Contributions = append(currentPoint.Contributions, &BudgetContribution{
+				BudgetID:      "unbudgeted",
+				BudgetName:    "Unbudgeted",
+				BudgetColor:   "#94a3b8",
+				AmountInBase:  row.SpentInBase,
+				AmountInLocal: row.SpentInLocal,
+				LocalCurrency: baseCurrency,
+			})
+		}
+	}
+
+	for _, pt := range trendPoints {
+		if pt.AmountInBase > 0 {
+			for _, c := range pt.Contributions {
+				c.ContributionPercentage = (float64(c.AmountInBase) / float64(pt.AmountInBase)) * 100.0
+			}
+		}
+	}
+
+	var totalSpent int64
+	var totalLimit int64
+	distributions := make([]*BudgetUsage, 0, len(distRows)+1)
+
+	for _, r := range distRows {
+		totalSpent += r.SpentInBase
+		limitInBase := ConvertAmount(r.BudgetLimit, r.ExchangeRateToBase)
+		totalLimit += limitInBase
+
+		usagePct := 0.0
+		if r.BudgetLimit > 0 {
+			usagePct = (float64(r.SpentInLocalMatching) / float64(r.BudgetLimit)) * 100.0
+		}
+
+		distributions = append(distributions, &BudgetUsage{
+			BudgetID:        r.BudgetID,
+			BudgetName:      r.BudgetName,
+			BudgetColor:     r.BudgetColor,
+			BudgetIcon:      r.BudgetIcon,
+			Limit:           r.BudgetLimit,
+			Spent:           r.SpentInLocalMatching,
+			SpentInBase:     r.SpentInBase,
+			UsagePercentage: usagePct,
+		})
+	}
+
+	if unbudgetedSpentInBase > 0 {
+		totalSpent += unbudgetedSpentInBase
+		distributions = append(distributions, &BudgetUsage{
+			BudgetID:        "unbudgeted",
+			BudgetName:      "Unbudgeted",
+			BudgetColor:     "#94a3b8",
+			BudgetIcon:      "Coins",
+			Limit:           0,
+			Spent:           unbudgetedSpentInBase,
+			SpentInBase:     unbudgetedSpentInBase,
+			UsagePercentage: 0.0,
+		})
+	}
+
+	remaining := totalLimit - totalSpent
+	burnRate := 0.0
+	days := end.Sub(start).Hours() / 24.0
+	if days > 0 {
+		burnRate = float64(totalSpent) / days
+	}
+
+	topExpenses := make([]*HighValueExpense, 0, len(topRows))
+	for _, r := range topRows {
+		topExpenses = append(topExpenses, &HighValueExpense{
+			TransactionID:   r.TransactionID,
+			Description:     r.Description,
+			Amount:          r.Amount,
+			Currency:        r.Currency,
+			AmountInBase:    r.AmountInBase,
+			BudgetName:      r.BudgetName,
+			TransactionDate: r.TransactionDate,
+			EffectiveDate:   r.EffectiveDate,
+		})
+	}
+
+	return &SpentInsights{
+		TotalLimit:      totalLimit,
+		TotalSpent:      totalSpent,
+		RemainingBudget: remaining,
+		BurnRate:        burnRate,
+		Trend:           trendPoints,
+		Distributions:   distributions,
+		TopExpenses:     topExpenses,
+	}
+}

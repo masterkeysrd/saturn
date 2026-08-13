@@ -296,11 +296,12 @@ func (s *Service) UpdatePeriodLimit(ctx context.Context, id PeriodID, limit int6
 
 // CreateExchangeRate registers a new daily rate record.
 func (s *Service) CreateExchangeRate(ctx context.Context, rate *ExchangeRate) (*ExchangeRate, error) {
+	if err := rate.Init(); err != nil {
+		return nil, err
+	}
 	if err := rate.Validate(); err != nil {
 		return nil, fmt.Errorf("validate exchange rate: %w", err)
 	}
-	rate.CreateTime = time.Now().UTC()
-	rate.ID = rate.ComputeID()
 
 	if err := s.deps.ExchangeRateStore.Create(ctx, rate); err != nil {
 		return nil, err
@@ -326,27 +327,36 @@ func (s *Service) GetExchangeRateByID(ctx context.Context, spaceID SpaceID, id s
 	return s.deps.ExchangeRateStore.GetExactRate(ctx, key)
 }
 
-// UpdateExchangeRate updates an existing exchange rate record.
+// UpdateExchangeRate corrects the multiplier on an existing exchange rate record.
 func (s *Service) UpdateExchangeRate(ctx context.Context, spaceID SpaceID, id string, rate *ExchangeRate) (*ExchangeRate, error) {
 	if err := spaceID.Validate(); err != nil {
 		return nil, fmt.Errorf("validate space ID: %w", err)
 	}
+
 	from, to, t, err := ParseExchangeRateID(id)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrExchangeRateNotFound, err)
 	}
-	rate.SpaceID = spaceID
-	rate.FromCurrency = from
-	rate.ToCurrency = to
-	rate.RateDate = t
-	rate.ID = id
-	if err := rate.Validate(); err != nil {
-		return nil, fmt.Errorf("validate exchange rate: %w", err)
-	}
-	if err := s.deps.ExchangeRateStore.Update(ctx, rate); err != nil {
+
+	existing, err := s.deps.ExchangeRateStore.GetExactRate(ctx, ExchangeRateKey{
+		SpaceID:      spaceID,
+		FromCurrency: from,
+		ToCurrency:   to,
+		RateDate:     t,
+	})
+	if err != nil {
 		return nil, err
 	}
-	return rate, nil
+
+	existing.Rate = rate.Rate
+	if err := existing.Validate(); err != nil {
+		return nil, fmt.Errorf("validate exchange rate: %w", err)
+	}
+
+	if err := s.deps.ExchangeRateStore.Update(ctx, existing); err != nil {
+		return nil, err
+	}
+	return existing, nil
 }
 
 // ListExchangeRates retrieves paginated rate records.
@@ -497,8 +507,9 @@ func (s *Service) ListTransactions(ctx context.Context, spaceID SpaceID, filter 
 
 // GetSpentInsights computes aggregated outflow analytics and trends for a space.
 func (s *Service) GetSpentInsights(ctx context.Context, req *GetSpentInsightsRequest) (*SpentInsights, error) {
-	if err := req.SpaceID.Validate(); err != nil {
-		return nil, fmt.Errorf("validate space ID: %w", err)
+	g, start, end, err := req.ResolveRange()
+	if err != nil {
+		return nil, err
 	}
 
 	settings, err := s.deps.SettingsStore.GetByID(ctx, req.SpaceID)
@@ -506,30 +517,6 @@ func (s *Service) GetSpentInsights(ctx context.Context, req *GetSpentInsightsReq
 		return nil, fmt.Errorf("verify workspace settings: %w", err)
 	}
 
-	g, err := ParseGranularity(req.Granularity)
-	if err != nil {
-		return nil, fmt.Errorf("invalid granularity: %w", err)
-	}
-
-	start := req.StartDate
-	if start.IsZero() {
-		switch g {
-		case GranularityDaily:
-			start = time.Now().UTC().AddDate(0, 0, -30)
-		case GranularityWeekly:
-			start = time.Now().UTC().AddDate(0, 0, -84) // 12 weeks
-		case GranularityMonthly:
-			start = time.Now().UTC().AddDate(-1, 0, 0) // 12 months
-		case GranularityYearly:
-			start = time.Now().UTC().AddDate(-5, 0, 0) // 5 years
-		}
-	}
-	end := req.EndDate
-	if end.IsZero() {
-		end = time.Now().UTC()
-	}
-
-	// Fetch trend, distributions, and top expenses from storage
 	trendRows, err := s.deps.InsightsStore.GetSpentTrend(ctx, &SpentTrendFilter{
 		SpaceID:     req.SpaceID,
 		Granularity: g,
@@ -559,149 +546,7 @@ func (s *Service) GetSpentInsights(ctx context.Context, req *GetSpentInsightsReq
 		return nil, fmt.Errorf("fetch top expenses: %w", err)
 	}
 
-	// 1. Group raw trend rows by interval_start
-	trendPoints := make([]*TrendDataPoint, 0)
-	var currentPoint *TrendDataPoint
-	var lastStart time.Time
-
-	for _, row := range trendRows {
-		if currentPoint == nil || !row.IntervalStart.Equal(lastStart) {
-			var label string
-			switch g {
-			case GranularityDaily:
-				label = row.IntervalStart.Format("02 Jan")
-			case GranularityWeekly:
-				_, w := row.IntervalStart.ISOWeek()
-				label = fmt.Sprintf("Wk %d", w)
-			case GranularityMonthly:
-				label = row.IntervalStart.Format("Jan 06")
-			case GranularityYearly:
-				label = row.IntervalStart.Format("2006")
-			}
-
-			currentPoint = &TrendDataPoint{
-				Label:     label,
-				StartDate: row.IntervalStart.Format(time.RFC3339),
-			}
-			trendPoints = append(trendPoints, currentPoint)
-			lastStart = row.IntervalStart
-		}
-
-		currentPoint.AmountInBase += row.SpentInBase
-		currentPoint.TransactionCount += row.TxnCount
-
-		if row.BudgetID != "" {
-			currentPoint.Contributions = append(currentPoint.Contributions, &BudgetContribution{
-				BudgetID:      row.BudgetID,
-				BudgetName:    row.BudgetName,
-				BudgetColor:   row.BudgetColor,
-				AmountInBase:  row.SpentInBase,
-				AmountInLocal: row.SpentInLocal,
-				LocalCurrency: row.BudgetCurrency,
-			})
-		} else {
-			currentPoint.Contributions = append(currentPoint.Contributions, &BudgetContribution{
-				BudgetID:      "unbudgeted",
-				BudgetName:    "Unbudgeted",
-				BudgetColor:   "#94a3b8",
-				AmountInBase:  row.SpentInBase,
-				AmountInLocal: row.SpentInLocal,
-				LocalCurrency: string(settings.BaseCurrency),
-			})
-		}
-	}
-
-	// Calculate contribution percentages
-	for _, pt := range trendPoints {
-		if pt.AmountInBase > 0 {
-			for _, c := range pt.Contributions {
-				c.ContributionPercentage = (float64(c.AmountInBase) / float64(pt.AmountInBase)) * 100.0
-			}
-		}
-	}
-
-	var unbudgetedSpentInBase int64
-	for _, row := range trendRows {
-		if row.BudgetID == "" {
-			unbudgetedSpentInBase += row.SpentInBase
-		}
-	}
-
-	// 2. Map budget distributions
-	var totalSpent int64
-	var totalLimit int64
-	distributions := make([]*BudgetUsage, 0, len(distRows)+1)
-
-	for _, r := range distRows {
-		totalSpent += r.SpentInBase
-
-		// Convert budget limit to base currency using the period's exchange rate
-		limitInBase := ConvertAmount(r.BudgetLimit, r.ExchangeRateToBase)
-		totalLimit += limitInBase
-
-		usagePct := 0.0
-		if r.BudgetLimit > 0 {
-			usagePct = (float64(r.SpentInLocalMatching) / float64(r.BudgetLimit)) * 100.0
-		}
-
-		distributions = append(distributions, &BudgetUsage{
-			BudgetID:        r.BudgetID,
-			BudgetName:      r.BudgetName,
-			BudgetColor:     r.BudgetColor,
-			BudgetIcon:      r.BudgetIcon,
-			Limit:           r.BudgetLimit,
-			Spent:           r.SpentInLocalMatching,
-			SpentInBase:     r.SpentInBase,
-			UsagePercentage: usagePct,
-		})
-	}
-
-	if unbudgetedSpentInBase > 0 {
-		totalSpent += unbudgetedSpentInBase
-		distributions = append(distributions, &BudgetUsage{
-			BudgetID:        "unbudgeted",
-			BudgetName:      "Unbudgeted",
-			BudgetColor:     "#94a3b8",
-			BudgetIcon:      "Coins",
-			Limit:           0,
-			Spent:           unbudgetedSpentInBase,
-			SpentInBase:     unbudgetedSpentInBase,
-			UsagePercentage: 0.0,
-		})
-	}
-
-	// 3. Overall calculation stats
-	remaining := totalLimit - totalSpent
-	burnRate := 0.0
-	days := end.Sub(start).Hours() / 24.0
-	if days > 0 {
-		burnRate = float64(totalSpent) / days
-	}
-
-	// 4. Map top expenses
-	topExpenses := make([]*HighValueExpense, 0, len(topRows))
-	for _, r := range topRows {
-		topExpenses = append(topExpenses, &HighValueExpense{
-			TransactionID:   r.TransactionID,
-			Description:     r.Description,
-			Amount:          r.Amount,
-			Currency:        r.Currency,
-			AmountInBase:    r.AmountInBase,
-			BudgetName:      r.BudgetName,
-			TransactionDate: r.TransactionDate,
-			EffectiveDate:   r.EffectiveDate,
-		})
-	}
-
-	return &SpentInsights{
-		TotalLimit:      totalLimit,
-		TotalSpent:      totalSpent,
-		RemainingBudget: remaining,
-		BurnRate:        burnRate,
-		Trend:           trendPoints,
-		Distributions:   distributions,
-		TopExpenses:     topExpenses,
-	}, nil
+	return BuildSpentInsights(g, start, end, string(settings.BaseCurrency), trendRows, distRows, topRows), nil
 }
 
 // CreateRecurringExpense configures a new recurring expense rule.

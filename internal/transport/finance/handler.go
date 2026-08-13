@@ -1601,11 +1601,12 @@ func toDomainInboxItem(pb *financev1.InboxItem) *finance.InboxItem {
 	domainMeta := make(map[string]any)
 	if pb.GetMetadata() != nil {
 		for k, v := range pb.GetMetadata() {
-			if v == "true" {
+			switch v {
+			case "true":
 				domainMeta[k] = true
-			} else if v == "false" {
+			case "false":
 				domainMeta[k] = false
-			} else {
+			default:
 				domainMeta[k] = v
 			}
 		}
