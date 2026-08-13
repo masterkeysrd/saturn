@@ -211,6 +211,78 @@ func (b *Budget) CalculateBounds(t time.Time) (time.Time, time.Time) {
 	}
 }
 
+// NewPeriodOpts holds parameters to spawn a BudgetPeriod entity.
+type NewPeriodOpts struct {
+	PeriodID           PeriodID
+	TargetDate         time.Time
+	BaseCurrency       Currency
+	ExchangeRateToBase float64
+}
+
+// NewPeriod constructs a validated BudgetPeriod instance for the budget at the specified date.
+func (b *Budget) NewPeriod(opts NewPeriodOpts) (*BudgetPeriod, error) {
+	start, end := b.CalculateBounds(opts.TargetDate)
+	pID := opts.PeriodID
+	if pID == "" {
+		var err error
+		pID, err = NewPeriodID()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	rate := opts.ExchangeRateToBase
+	if rate <= 0 && (opts.BaseCurrency == "" || b.Currency == opts.BaseCurrency) {
+		rate = 1.0
+	}
+
+	period := &BudgetPeriod{
+		ID:                 pID,
+		BudgetID:           b.ID,
+		SpaceID:            b.SpaceID,
+		StartDate:          start,
+		EndDate:            end,
+		LimitAmount:        b.LimitAmount,
+		Currency:           b.Currency,
+		BaseCurrency:       opts.BaseCurrency,
+		ExchangeRateToBase: rate,
+		CreateTime:         time.Now().UTC(),
+		UpdateTime:         time.Now().UTC(),
+	}
+
+	if err := period.Validate(); err != nil {
+		return nil, fmt.Errorf("validate new budget period: %w", err)
+	}
+
+	return period, nil
+}
+
+// Pause pauses an active budget.
+func (b *Budget) Pause() error {
+	if b.Status == BudgetStatusClosed {
+		return errors.New("cannot pause a closed budget")
+	}
+	b.Status = BudgetStatusPaused
+	b.UpdateTime = time.Now().UTC()
+	return nil
+}
+
+// Resume resumes a paused budget.
+func (b *Budget) Resume() error {
+	if b.Status == BudgetStatusClosed {
+		return errors.New("cannot resume a closed budget")
+	}
+	b.Status = BudgetStatusActive
+	b.UpdateTime = time.Now().UTC()
+	return nil
+}
+
+// Close closes a budget.
+func (b *Budget) Close() {
+	b.Status = BudgetStatusClosed
+	b.UpdateTime = time.Now().UTC()
+}
+
 // BudgetPatchSchema defines all patchable fields for a Budget entity.
 var BudgetPatchSchema = patch.NewSchema[Budget]().
 	Register("name", patch.Field(func(b *Budget) *string { return &b.Name })).

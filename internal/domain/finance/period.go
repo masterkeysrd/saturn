@@ -92,3 +92,13 @@ func (p *BudgetPeriod) Validate() error {
 	}
 	return nil
 }
+
+// UpdateLimit updates the period limit amount and update timestamp.
+func (p *BudgetPeriod) UpdateLimit(newLimit int64) error {
+	if newLimit <= 0 {
+		return errors.New("period limit must be greater than zero")
+	}
+	p.LimitAmount = newLimit
+	p.UpdateTime = time.Now().UTC()
+	return nil
+}

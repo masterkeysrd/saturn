@@ -138,3 +138,64 @@ func TestBudget_CalculateBounds_OneTime(t *testing.T) {
 		t.Errorf("expected end year 9999, got %d", end.Year())
 	}
 }
+
+func TestBudget_NewPeriod_And_Lifecycle(t *testing.T) {
+	budgetID, _ := finance.NewBudgetID()
+	spaceID := finance.SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+
+	budget := &finance.Budget{
+		ID:          budgetID,
+		SpaceID:     spaceID,
+		Name:        "Groceries",
+		LimitAmount: 50000,
+		Currency:    finance.Currency("USD"),
+		Interval:    finance.IntervalMonthly,
+		Status:      finance.BudgetStatusActive,
+	}
+
+	t.Run("NewPeriod generates valid BudgetPeriod", func(t *testing.T) {
+		targetDate := time.Date(2026, 8, 15, 12, 0, 0, 0, time.UTC)
+		period, err := budget.NewPeriod(finance.NewPeriodOpts{
+			TargetDate:         targetDate,
+			BaseCurrency:       finance.Currency("USD"),
+			ExchangeRateToBase: 1.0,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if period.LimitAmount != 50000 {
+			t.Errorf("period limit = %d, want 50000", period.LimitAmount)
+		}
+		if err := period.UpdateLimit(60000); err != nil {
+			t.Fatalf("unexpected error updating period limit: %v", err)
+		}
+		if period.LimitAmount != 60000 {
+			t.Errorf("updated period limit = %d, want 60000", period.LimitAmount)
+		}
+	})
+
+	t.Run("Lifecycle: Pause, Resume, Close", func(t *testing.T) {
+		if err := budget.Pause(); err != nil {
+			t.Fatalf("unexpected error pausing budget: %v", err)
+		}
+		if budget.Status != finance.BudgetStatusPaused {
+			t.Errorf("status after pause = %s, want %s", budget.Status, finance.BudgetStatusPaused)
+		}
+
+		if err := budget.Resume(); err != nil {
+			t.Fatalf("unexpected error resuming budget: %v", err)
+		}
+		if budget.Status != finance.BudgetStatusActive {
+			t.Errorf("status after resume = %s, want %s", budget.Status, finance.BudgetStatusActive)
+		}
+
+		budget.Close()
+		if budget.Status != finance.BudgetStatusClosed {
+			t.Errorf("status after close = %s, want %s", budget.Status, finance.BudgetStatusClosed)
+		}
+
+		if err := budget.Pause(); err == nil {
+			t.Error("expected error pausing a closed budget")
+		}
+	})
+}
