@@ -68,8 +68,8 @@ func TestRecurringSubscriptions_ScheduledTransactions(t *testing.T) {
 				if txn.GetAmountInBase() != 1080 {
 					t.Errorf("Transaction AmountInBase = %d, want 1080", txn.GetAmountInBase())
 				}
-				if txn.GetMetadata()["recurring_expense_id"] == "" {
-					t.Errorf("expected recurring_expense_id set in metadata")
+				if txn.GetMetadata()["recurring_transaction_id"] == "" {
+					t.Errorf("expected recurring_transaction_id set in metadata")
 				}
 			})
 	})

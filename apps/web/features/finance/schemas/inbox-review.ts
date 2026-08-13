@@ -19,7 +19,7 @@ export const inboxReviewSchema = z
     destinationAccountId: z.string().optional(),
     transferLeg: z.enum(["SOURCE", "DESTINATION"]),
     budgetId: z.string().optional(),
-    scheduledPaymentId: z.string().optional(),
+    scheduledTransactionId: z.string().optional(),
     borrowingId: z.string().optional(),
     borrowingLinkType: z
       .enum(["INITIAL_RECEIPT", "REPAYMENT", "ADDITIONAL_LOAN"])

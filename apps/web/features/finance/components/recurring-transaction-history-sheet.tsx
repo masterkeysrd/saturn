@@ -46,7 +46,7 @@ export function RecurringTransactionHistorySheet({
   )
 
   const transactions = (data?.transactions || []).filter(
-    (t) => t.metadata?.recurring_expense_id === transaction?.id
+    (t) => t.metadata?.recurring_transaction_id === transaction?.id
   )
 
   return (

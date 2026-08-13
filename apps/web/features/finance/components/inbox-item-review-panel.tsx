@@ -125,7 +125,7 @@ export function InboxItemReviewPanel({
       destinationAccountId: "",
       transferLeg: "SOURCE",
       budgetId: "",
-      scheduledPaymentId: "",
+      scheduledTransactionId: "",
       borrowingId: "",
     },
   })
@@ -211,9 +211,9 @@ export function InboxItemReviewPanel({
   const suggestedBill = useMemo(() => {
     if (!payments || payments.length === 0) return null
 
-    if (selectedItem.scheduledPaymentId) {
+    if (selectedItem.scheduledTransactionId) {
       const match = payments.find(
-        (p) => p.id === selectedItem.scheduledPaymentId
+        (p) => p.id === selectedItem.scheduledTransactionId
       )
       if (match) return match
     }
@@ -276,8 +276,8 @@ export function InboxItemReviewPanel({
     const txnTypeVal = (
       itemMeta.transaction_type || "EXPENSE"
     ).toUpperCase() as InboxReviewFormValues["transactionType"]
-    const initialScheduledPaymentId =
-      selectedItem.scheduledPaymentId ||
+    const initialScheduledTransactionId =
+      selectedItem.scheduledTransactionId ||
       (suggestedBill ? suggestedBill.id || "" : "")
     const initialBorrowingId =
       itemMeta.suggested_borrowing_id ||
@@ -301,16 +301,16 @@ export function InboxItemReviewPanel({
         (itemMeta.suggested_transfer_leg as "SOURCE" | "DESTINATION") ||
         "SOURCE",
       budgetId: selectedItem.budgetId || "",
-      scheduledPaymentId: initialScheduledPaymentId,
+      scheduledTransactionId: initialScheduledTransactionId,
       borrowingId: initialBorrowingId,
     })
   }, [selectedItem, suggestedBill, suggestedBorrowing, reset])
 
   const currentTxnType = useWatch({ control, name: "transactionType" })
 
-  const currentScheduledPaymentId = useWatch({
+  const currentScheduledTransactionId = useWatch({
     control,
-    name: "scheduledPaymentId",
+    name: "scheduledTransactionId",
   })
 
   const filteredPayments = useMemo(() => {
@@ -385,11 +385,11 @@ export function InboxItemReviewPanel({
     }
   }, [decodedRawText, isVerificationItem])
   const transferLeg = useWatch({ control, name: "transferLeg" })
-  const scheduledPaymentIdVal = useWatch({
+  const scheduledTransactionIdVal = useWatch({
     control,
-    name: "scheduledPaymentId",
+    name: "scheduledTransactionId",
   })
-  const hasScheduledBill = !!scheduledPaymentIdVal
+  const hasScheduledBill = !!scheduledTransactionIdVal
   const isLinking = !!(selectedTxId && selectedTxId !== "none")
 
   const matchedTransaction = useMemo(() => {
@@ -399,7 +399,7 @@ export function InboxItemReviewPanel({
 
   const isMatchedAlreadyScheduled = useMemo(() => {
     if (!matchedTransaction) return false
-    return Boolean(matchedTransaction.metadata?.scheduled_payment_id)
+    return Boolean(matchedTransaction.metadata?.scheduled_transaction_id)
   }, [matchedTransaction])
 
   const isMatchedAlreadyBorrowing = useMemo(() => {
@@ -1138,7 +1138,7 @@ export function InboxItemReviewPanel({
 
                       {(() => {
                         const selectedPaymentObj = payments.find(
-                          (p) => p.id === currentScheduledPaymentId
+                          (p) => p.id === currentScheduledTransactionId
                         )
                         const selectedPaymentBudget = selectedPaymentObj
                           ? budgets.find(
@@ -1211,7 +1211,7 @@ export function InboxItemReviewPanel({
                                     type="button"
                                     className="flex w-full cursor-pointer items-center justify-between rounded-xl px-2.5 py-2 text-left text-xs text-rose-400 transition-colors hover:bg-rose-500/10"
                                     onClick={() => {
-                                      setValue("scheduledPaymentId", "", {
+                                      setValue("scheduledTransactionId", "", {
                                         shouldValidate: true,
                                       })
                                       setBillPopoverOpen(false)
@@ -1239,7 +1239,7 @@ export function InboxItemReviewPanel({
                                         (b) => b.id === p.budgetId
                                       )
                                       const isSelected =
-                                        currentScheduledPaymentId === p.id
+                                        currentScheduledTransactionId === p.id
                                       const isOverdue =
                                         p.dueDate &&
                                         new Date(p.dueDate).getTime() < nowTime
@@ -1273,7 +1273,7 @@ export function InboxItemReviewPanel({
                                           )}
                                           onClick={() => {
                                             setValue(
-                                              "scheduledPaymentId",
+                                              "scheduledTransactionId",
                                               p.id || "",
                                               { shouldValidate: true }
                                             )
@@ -1593,7 +1593,7 @@ export function InboxItemReviewPanel({
                             )
                           </span>
                         </div>
-                        {currentScheduledPaymentId !== suggestedBill.id ? (
+                        {currentScheduledTransactionId !== suggestedBill.id ? (
                           <Button
                             type="button"
                             variant="outline"
@@ -1601,7 +1601,7 @@ export function InboxItemReviewPanel({
                             className="h-6 shrink-0 cursor-pointer rounded-lg border-indigo-500/30 px-2 text-[10px] font-bold text-indigo-300 hover:bg-indigo-500/20"
                             onClick={() =>
                               setValue(
-                                "scheduledPaymentId",
+                                "scheduledTransactionId",
                                 suggestedBill.id || "",
                                 { shouldValidate: true }
                               )

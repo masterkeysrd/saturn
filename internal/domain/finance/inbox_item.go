@@ -51,24 +51,24 @@ func ParseInboxItemDocType(s string) InboxItemDocType {
 
 // InboxItem represents a parsed inbound signal waiting in the staging queue.
 type InboxItem struct {
-	ID                 string             `json:"id"`
-	SpaceID            string             `json:"spaceId"`
-	IntegrationID      string             `json:"integrationId"`
-	Status             InboxItemStatus    `json:"status"`
-	DocType            InboxItemDocType   `json:"docType"`
-	Amount             int64              `json:"amount"`
-	Currency           string             `json:"currency"`
-	VendorName         string             `json:"vendorName"`
-	TransactionDate    time.Time          `json:"transactionDate"`
-	AccountID          *string            `json:"accountId,omitempty"`
-	BudgetID           *string            `json:"budgetId,omitempty"`
-	ScheduledPaymentID *string            `json:"scheduledPaymentId,omitempty"`
-	TransactionID      *string            `json:"transactionId,omitempty"`
-	BorrowingID        *string            `json:"borrowingId,omitempty"`
-	BorrowingLinkType  *BorrowingLinkType `json:"borrowingLinkType,omitempty"`
-	RawPayload         string             `json:"rawPayload"`
-	Metadata           map[string]any     `json:"metadata"`
-	CreateTime         time.Time          `json:"createTime"`
+	ID                     string             `json:"id"`
+	SpaceID                string             `json:"spaceId"`
+	IntegrationID          string             `json:"integrationId"`
+	Status                 InboxItemStatus    `json:"status"`
+	DocType                InboxItemDocType   `json:"docType"`
+	Amount                 int64              `json:"amount"`
+	Currency               string             `json:"currency"`
+	VendorName             string             `json:"vendorName"`
+	TransactionDate        time.Time          `json:"transactionDate"`
+	AccountID              *string            `json:"accountId,omitempty"`
+	BudgetID               *string            `json:"budgetId,omitempty"`
+	ScheduledTransactionID *string            `json:"scheduledTransactionId,omitempty"`
+	TransactionID          *string            `json:"transactionId,omitempty"`
+	BorrowingID            *string            `json:"borrowingId,omitempty"`
+	BorrowingLinkType      *BorrowingLinkType `json:"borrowingLinkType,omitempty"`
+	RawPayload             string             `json:"rawPayload"`
+	Metadata               map[string]any     `json:"metadata"`
+	CreateTime             time.Time          `json:"createTime"`
 }
 
 // MetadataBool retrieves a boolean value from the metadata map safely.
@@ -202,7 +202,7 @@ type ApproveInboxItem struct {
 	ID                         string
 	AccountID                  string
 	BudgetID                   string
-	ScheduledPaymentID         string
+	ScheduledTransactionID     string
 	Amount                     int64
 	Description                string
 	DocType                    InboxItemDocType

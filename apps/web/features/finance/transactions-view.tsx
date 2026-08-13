@@ -568,7 +568,7 @@ export function TransactionsView() {
                                 </span>
                               )}
                             </span>
-                            {Boolean(t.metadata?.recurring_expense_id) && (
+                            {Boolean(t.metadata?.recurring_transaction_id) && (
                               <span className="inline-flex items-center gap-1 rounded bg-indigo-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-indigo-500 uppercase select-none">
                                 <Repeat className="h-2.5 w-2.5" />
                                 Recurring

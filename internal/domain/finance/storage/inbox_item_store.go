@@ -17,24 +17,24 @@ import (
 )
 
 type inboxItemDB struct {
-	ID                 string         `db:"id"`
-	SpaceID            string         `db:"space_id"`
-	IntegrationID      string         `db:"integration_id"`
-	Status             string         `db:"status"`
-	DocType            string         `db:"doc_type"`
-	Amount             sql.NullInt64  `db:"amount"`
-	Currency           sql.NullString `db:"currency"`
-	VendorName         sql.NullString `db:"vendor_name"`
-	TransactionDate    sql.NullTime   `db:"transaction_date"`
-	AccountID          sql.NullString `db:"account_id"`
-	BudgetID           sql.NullString `db:"budget_id"`
-	ScheduledPaymentID sql.NullString `db:"scheduled_payment_id"`
-	TransactionID      sql.NullString `db:"transaction_id"`
-	BorrowingID        sql.NullString `db:"borrowing_id"`
-	BorrowingLinkType  sql.NullString `db:"borrowing_link_type"`
-	RawPayload         string         `db:"raw_payload"`
-	MetadataJSON       string         `db:"metadata"`
-	CreateTime         sql.NullTime   `db:"create_time"`
+	ID                     string         `db:"id"`
+	SpaceID                string         `db:"space_id"`
+	IntegrationID          string         `db:"integration_id"`
+	Status                 string         `db:"status"`
+	DocType                string         `db:"doc_type"`
+	Amount                 sql.NullInt64  `db:"amount"`
+	Currency               sql.NullString `db:"currency"`
+	VendorName             sql.NullString `db:"vendor_name"`
+	TransactionDate        sql.NullTime   `db:"transaction_date"`
+	AccountID              sql.NullString `db:"account_id"`
+	BudgetID               sql.NullString `db:"budget_id"`
+	ScheduledTransactionID sql.NullString `db:"scheduled_transaction_id"`
+	TransactionID          sql.NullString `db:"transaction_id"`
+	BorrowingID            sql.NullString `db:"borrowing_id"`
+	BorrowingLinkType      sql.NullString `db:"borrowing_link_type"`
+	RawPayload             string         `db:"raw_payload"`
+	MetadataJSON           string         `db:"metadata"`
+	CreateTime             sql.NullTime   `db:"create_time"`
 }
 
 func toInboxItemDomain(db inboxItemDB) *finance.InboxItem {
@@ -46,8 +46,8 @@ func toInboxItemDomain(db inboxItemDB) *finance.InboxItem {
 	if db.BudgetID.Valid {
 		budgetID = new(db.BudgetID.String)
 	}
-	if db.ScheduledPaymentID.Valid {
-		paymentID = new(db.ScheduledPaymentID.String)
+	if db.ScheduledTransactionID.Valid {
+		paymentID = new(db.ScheduledTransactionID.String)
 	}
 	if db.TransactionID.Valid {
 		transactionID = new(db.TransactionID.String)
@@ -73,24 +73,24 @@ func toInboxItemDomain(db inboxItemDB) *finance.InboxItem {
 	}
 
 	return &finance.InboxItem{
-		ID:                 db.ID,
-		SpaceID:            db.SpaceID,
-		IntegrationID:      db.IntegrationID,
-		Status:             finance.InboxItemStatus(db.Status),
-		DocType:            finance.InboxItemDocType(db.DocType),
-		Amount:             amount,
-		Currency:           db.Currency.String,
-		VendorName:         db.VendorName.String,
-		TransactionDate:    db.TransactionDate.Time,
-		AccountID:          accountID,
-		BudgetID:           budgetID,
-		ScheduledPaymentID: paymentID,
-		TransactionID:      transactionID,
-		BorrowingID:        borrowingID,
-		BorrowingLinkType:  linkType,
-		RawPayload:         db.RawPayload,
-		Metadata:           metadata,
-		CreateTime:         db.CreateTime.Time,
+		ID:                     db.ID,
+		SpaceID:                db.SpaceID,
+		IntegrationID:          db.IntegrationID,
+		Status:                 finance.InboxItemStatus(db.Status),
+		DocType:                finance.InboxItemDocType(db.DocType),
+		Amount:                 amount,
+		Currency:               db.Currency.String,
+		VendorName:             db.VendorName.String,
+		TransactionDate:        db.TransactionDate.Time,
+		AccountID:              accountID,
+		BudgetID:               budgetID,
+		ScheduledTransactionID: paymentID,
+		TransactionID:          transactionID,
+		BorrowingID:            borrowingID,
+		BorrowingLinkType:      linkType,
+		RawPayload:             db.RawPayload,
+		Metadata:               metadata,
+		CreateTime:             db.CreateTime.Time,
 	}
 }
 
@@ -122,24 +122,24 @@ func (s *InboxItemStore) Insert(ctx context.Context, item *finance.InboxItem) er
 	}
 
 	ds := pgDialect.Insert(goqu.S("finance").Table("inbox_item")).Rows(goqu.Record{
-		"id":                   item.ID,
-		"space_id":             item.SpaceID,
-		"integration_id":       item.IntegrationID,
-		"status":               string(item.Status),
-		"doc_type":             string(item.DocType),
-		"amount":               conv.Ptr(item.Amount),
-		"currency":             conv.Ptr(item.Currency),
-		"vendor_name":          conv.Ptr(item.VendorName),
-		"transaction_date":     conv.Ptr(item.TransactionDate),
-		"account_id":           conv.StringPtr(item.AccountID),
-		"budget_id":            conv.StringPtr(item.BudgetID),
-		"scheduled_payment_id": conv.StringPtr(item.ScheduledPaymentID),
-		"transaction_id":       conv.StringPtr(item.TransactionID),
-		"borrowing_id":         conv.StringPtr(item.BorrowingID),
-		"borrowing_link_type":  conv.StringPtr(linkTypeStr),
-		"raw_payload":          item.RawPayload,
-		"metadata":             metaJSON,
-		"create_time":          createTime,
+		"id":                       item.ID,
+		"space_id":                 item.SpaceID,
+		"integration_id":           item.IntegrationID,
+		"status":                   string(item.Status),
+		"doc_type":                 string(item.DocType),
+		"amount":                   conv.Ptr(item.Amount),
+		"currency":                 conv.Ptr(item.Currency),
+		"vendor_name":              conv.Ptr(item.VendorName),
+		"transaction_date":         conv.Ptr(item.TransactionDate),
+		"account_id":               conv.StringPtr(item.AccountID),
+		"budget_id":                conv.StringPtr(item.BudgetID),
+		"scheduled_transaction_id": conv.StringPtr(item.ScheduledTransactionID),
+		"transaction_id":           conv.StringPtr(item.TransactionID),
+		"borrowing_id":             conv.StringPtr(item.BorrowingID),
+		"borrowing_link_type":      conv.StringPtr(linkTypeStr),
+		"raw_payload":              item.RawPayload,
+		"metadata":                 metaJSON,
+		"create_time":              createTime,
 	})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
@@ -182,7 +182,7 @@ func (s *InboxItemStore) ListBySpace(ctx context.Context, spaceID finance.SpaceI
 		ds = pgDialect.From(goqu.S("finance").Table("inbox_item")).Select(
 			"id", "space_id", "integration_id", "status", "doc_type",
 			"amount", "currency", "vendor_name", "transaction_date",
-			"account_id", "budget_id", "scheduled_payment_id", "transaction_id",
+			"account_id", "budget_id", "scheduled_transaction_id", "transaction_id",
 			"create_time",
 		)
 	} else {
@@ -287,20 +287,20 @@ func (s *InboxItemStore) Update(ctx context.Context, item *finance.InboxItem) er
 
 	ds := pgDialect.Update(goqu.S("finance").Table("inbox_item")).
 		Set(goqu.Record{
-			"status":               string(item.Status),
-			"doc_type":             string(item.DocType),
-			"amount":               conv.Ptr(item.Amount),
-			"currency":             conv.Ptr(item.Currency),
-			"vendor_name":          conv.Ptr(item.VendorName),
-			"transaction_date":     conv.Ptr(item.TransactionDate),
-			"account_id":           conv.StringPtr(item.AccountID),
-			"budget_id":            conv.StringPtr(item.BudgetID),
-			"scheduled_payment_id": conv.StringPtr(item.ScheduledPaymentID),
-			"transaction_id":       conv.StringPtr(item.TransactionID),
-			"borrowing_id":         conv.StringPtr(item.BorrowingID),
-			"borrowing_link_type":  conv.StringPtr(linkTypeStr),
-			"raw_payload":          item.RawPayload,
-			"metadata":             metaJSON,
+			"status":                   string(item.Status),
+			"doc_type":                 string(item.DocType),
+			"amount":                   conv.Ptr(item.Amount),
+			"currency":                 conv.Ptr(item.Currency),
+			"vendor_name":              conv.Ptr(item.VendorName),
+			"transaction_date":         conv.Ptr(item.TransactionDate),
+			"account_id":               conv.StringPtr(item.AccountID),
+			"budget_id":                conv.StringPtr(item.BudgetID),
+			"scheduled_transaction_id": conv.StringPtr(item.ScheduledTransactionID),
+			"transaction_id":           conv.StringPtr(item.TransactionID),
+			"borrowing_id":             conv.StringPtr(item.BorrowingID),
+			"borrowing_link_type":      conv.StringPtr(linkTypeStr),
+			"raw_payload":              item.RawPayload,
+			"metadata":                 metaJSON,
 		}).
 		Where(goqu.Ex{
 			"space_id": item.SpaceID,

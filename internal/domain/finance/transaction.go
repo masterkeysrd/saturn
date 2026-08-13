@@ -23,9 +23,6 @@ const (
 	SourceTypeRecurrentTransaction = "recurrent_transaction"
 )
 
-type ScheduledPaymentID = ScheduledTransactionID
-type RecurringExpenseID = RecurringTransactionID
-
 // TransactionID is a custom string type representing a transaction's unique identifier (KSUID).
 type TransactionID string
 
@@ -69,15 +66,15 @@ const transactionPrefix = "txn_"
 
 // TransactionMetadata contains strongly typed domain context metadata associated with a transaction.
 type TransactionMetadata struct {
-	ScheduledPaymentID   *ScheduledPaymentID `json:"scheduled_payment_id,omitempty"`
-	RecurringExpenseID   *RecurringExpenseID `json:"recurring_expense_id,omitempty"`
-	BorrowingID          *BorrowingID        `json:"borrowing_id,omitempty"`
-	BorrowingRole        string              `json:"borrowing_role,omitempty"` // "INITIAL_FUNDING", "REPAYMENT", "ADDITIONAL_LOAN"
-	BorrowingAmount      int64               `json:"borrowing_amount,omitempty"`
-	AccountImpactAmount  int64               `json:"account_impact_amount,omitempty"`
-	TransferID           *TransferID         `json:"transfer_id,omitempty"`
-	CounterpartAccountID *AccountID          `json:"counterpart_account_id,omitempty"`
-	Notes                string              `json:"notes,omitempty"`
+	ScheduledTransactionID *ScheduledTransactionID `json:"scheduled_transaction_id,omitempty"`
+	RecurringTransactionID *RecurringTransactionID `json:"recurring_transaction_id,omitempty"`
+	BorrowingID            *BorrowingID            `json:"borrowing_id,omitempty"`
+	BorrowingRole          string                  `json:"borrowing_role,omitempty"` // "INITIAL_FUNDING", "REPAYMENT", "ADDITIONAL_LOAN"
+	BorrowingAmount        int64                   `json:"borrowing_amount,omitempty"`
+	AccountImpactAmount    int64                   `json:"account_impact_amount,omitempty"`
+	TransferID             *TransferID             `json:"transfer_id,omitempty"`
+	CounterpartAccountID   *AccountID              `json:"counterpart_account_id,omitempty"`
+	Notes                  string                  `json:"notes,omitempty"`
 }
 
 // Transaction represents a financial record in the space ledger.
@@ -201,11 +198,11 @@ func (t *Transaction) GetSortValue(field string) string {
 	return t.GetSortValue(DefaultTransactionSortField)
 }
 
-// LinkScheduledPayment attaches scheduled payment and recurring expense linkage metadata.
-func (t *Transaction) LinkScheduledPayment(paymentID ScheduledPaymentID, reID *RecurringExpenseID) {
-	t.Metadata.ScheduledPaymentID = &paymentID
-	if reID != nil {
-		t.Metadata.RecurringExpenseID = reID
+// LinkScheduledTransaction attaches scheduled transaction and recurring transaction linkage metadata.
+func (t *Transaction) LinkScheduledTransaction(txnID ScheduledTransactionID, rtID *RecurringTransactionID) {
+	t.Metadata.ScheduledTransactionID = &txnID
+	if rtID != nil {
+		t.Metadata.RecurringTransactionID = rtID
 	}
 	t.UpdateTime = time.Now().UTC()
 }

@@ -871,13 +871,13 @@ func (s *Service) MatchScheduledTransaction(ctx context.Context, req MatchSchedu
 	}
 
 	// Update transaction link properties in metadata
-	var reID *RecurringExpenseID
+	var reID *RecurringTransactionID
 	if payment.SourceType == string(SourceTypeRecurrentTransaction) && payment.SourceID != "" {
-		reID = new(RecurringExpenseID)
-		*reID = RecurringExpenseID(payment.SourceID)
+		reID = new(RecurringTransactionID)
+		*reID = RecurringTransactionID(payment.SourceID)
 	}
-	spID := ScheduledPaymentID(payment.ID)
-	txn.LinkScheduledPayment(spID, reID)
+	spID := ScheduledTransactionID(payment.ID)
+	txn.LinkScheduledTransaction(spID, reID)
 
 	if err := s.deps.TransactionStore.Update(ctx, txn); err != nil {
 		return nil, fmt.Errorf("failed to link transaction: %w", err)
@@ -887,7 +887,7 @@ func (s *Service) MatchScheduledTransaction(ctx context.Context, req MatchSchedu
 	_, err = s.LogTransactionEvent(ctx, &TransactionEvent{
 		SpaceID:       payment.SpaceID,
 		TransactionID: txn.ID,
-		EventType:     "SCHEDULED_PAYMENT_LINKED",
+		EventType:     "SCHEDULED_TRANSACTION_LINKED",
 		CreateTime:    time.Now().UTC(),
 		Metadata:      map[string]any{"scheduled_transaction_id": string(payment.ID)},
 	})
@@ -2043,8 +2043,8 @@ func (s *Service) UpdateInboxItem(ctx context.Context, spaceID SpaceID, item *In
 	if item.BudgetID == nil {
 		item.BudgetID = existing.BudgetID
 	}
-	if item.ScheduledPaymentID == nil {
-		item.ScheduledPaymentID = existing.ScheduledPaymentID
+	if item.ScheduledTransactionID == nil {
+		item.ScheduledTransactionID = existing.ScheduledTransactionID
 	}
 	if item.TransactionID == nil {
 		item.TransactionID = existing.TransactionID
@@ -2089,8 +2089,8 @@ func (s *Service) ApproveInboxItem(ctx context.Context, spaceID SpaceID, id stri
 		return s.approveSystemVerification(ctx, item)
 	case item.TransactionID != nil && *item.TransactionID != "":
 		return s.approveLinkedTransaction(ctx, spaceID, item)
-	case item.ScheduledPaymentID != nil && *item.ScheduledPaymentID != "":
-		return s.approveScheduledPayment(ctx, spaceID, item)
+	case item.ScheduledTransactionID != nil && *item.ScheduledTransactionID != "":
+		return s.approveScheduledTransaction(ctx, spaceID, item)
 	case item.DocType == InboxItemDocInvoice:
 		return s.approveStagedInvoice(ctx, spaceID, item)
 	default:
@@ -2160,11 +2160,11 @@ func (s *Service) approveLinkedTransaction(ctx context.Context, spaceID SpaceID,
 		}
 	}
 
-	if item.ScheduledPaymentID != nil && *item.ScheduledPaymentID != "" {
-		if err := s.handleScheduledTransactionLinkForTransaction(ctx, spaceID, txn, *item.ScheduledPaymentID); err != nil {
+	if item.ScheduledTransactionID != nil && *item.ScheduledTransactionID != "" {
+		if err := s.handleScheduledTransactionLinkForTransaction(ctx, spaceID, txn, *item.ScheduledTransactionID); err != nil {
 			return nil, fmt.Errorf("link scheduled transaction to existing transaction: %w", err)
 		}
-		item.ScheduledPaymentID = nil
+		item.ScheduledTransactionID = nil
 	}
 
 	item.Status = InboxItemResolved
@@ -2183,8 +2183,8 @@ func (s *Service) approveLinkedTransaction(ctx context.Context, spaceID SpaceID,
 	return item, nil
 }
 
-func (s *Service) approveScheduledPayment(ctx context.Context, spaceID SpaceID, item *InboxItem) (*InboxItem, error) {
-	payID := ScheduledTransactionID(*item.ScheduledPaymentID)
+func (s *Service) approveScheduledTransaction(ctx context.Context, spaceID SpaceID, item *InboxItem) (*InboxItem, error) {
+	payID := ScheduledTransactionID(*item.ScheduledTransactionID)
 	if item.DocType == InboxItemDocInvoice {
 		payment, err := s.deps.ScheduledTransactionStore.GetByID(ctx, spaceID, payID)
 		if err != nil {
@@ -2235,7 +2235,7 @@ func (s *Service) approveStagedInvoice(ctx context.Context, spaceID SpaceID, ite
 
 	item.Status = InboxItemResolved
 	pIDStr := string(payment.ID)
-	item.ScheduledPaymentID = &pIDStr
+	item.ScheduledTransactionID = &pIDStr
 	if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
 		return nil, fmt.Errorf("resolve inbox item: %w", err)
 	}
@@ -2510,8 +2510,8 @@ func (s *Service) handleScheduledTransactionLinkForTransaction(ctx context.Conte
 		return fmt.Errorf("get scheduled transaction: %w", err)
 	}
 
-	if txn.Metadata.ScheduledPaymentID != nil {
-		if string(*txn.Metadata.ScheduledPaymentID) != string(payment.ID) {
+	if txn.Metadata.ScheduledTransactionID != nil {
+		if string(*txn.Metadata.ScheduledTransactionID) != string(payment.ID) {
 			return ErrCannotRelinkTransactionToDifferentScheduledTransaction
 		}
 		// Already linked to this exact scheduled transaction (ensure payment is marked paid)
@@ -2532,7 +2532,7 @@ func (s *Service) handleScheduledTransactionLinkForTransaction(ctx context.Conte
 		return fmt.Errorf("update scheduled transaction status: %w", err)
 	}
 
-	txn.Metadata.ScheduledPaymentID = (*ScheduledPaymentID)(&payment.ID)
+	txn.Metadata.ScheduledTransactionID = &payment.ID
 	txn.UpdateTime = time.Now().UTC()
 	if err := s.deps.TransactionStore.Update(ctx, txn); err != nil {
 		return fmt.Errorf("update transaction scheduled transaction metadata: %w", err)

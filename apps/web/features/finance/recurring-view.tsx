@@ -149,7 +149,7 @@ export function RecurringView() {
   )
 
   const historyTransactions = (historyData?.transactions || []).filter((t) =>
-    Boolean(t.metadata?.recurring_expense_id)
+    Boolean(t.metadata?.recurring_transaction_id)
   )
 
   const handleDeleteTransaction = async (re: RecurringTransaction) => {

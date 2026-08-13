@@ -185,7 +185,7 @@ export function InboxView() {
     const id = tx.id || ""
     const accId = values.accountId || ""
     const budId = values.budgetId || ""
-    const payId = values.scheduledPaymentId || ""
+    const payId = values.scheduledTransactionId || ""
     const borrowingId = values.borrowingId || ""
     const amtStr = values.amountStr || ""
     const desc = values.description || ""
@@ -260,7 +260,7 @@ export function InboxView() {
             transactionDate: tx.transactionDate,
             accountId: accId || "",
             budgetId: budId || "",
-            scheduledPaymentId: payId || "",
+            scheduledTransactionId: payId || "",
             transactionId: txnId || "",
             borrowingId: values.borrowingId || "",
             borrowingLinkType: values.borrowingLinkType

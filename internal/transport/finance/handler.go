@@ -879,9 +879,9 @@ func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTrans
 		transferID = new(finance.TransferID(*req.TransferId))
 	}
 
-	var scheduledPaymentID *finance.ScheduledPaymentID
-	if req.ScheduledPaymentId != nil && *req.ScheduledPaymentId != "" {
-		scheduledPaymentID = new(finance.ScheduledPaymentID(*req.ScheduledPaymentId))
+	var scheduledTransactionID *finance.ScheduledTransactionID
+	if req.ScheduledTransactionId != nil && *req.ScheduledTransactionId != "" {
+		scheduledTransactionID = new(finance.ScheduledTransactionID(*req.ScheduledTransactionId))
 	}
 
 	var borrowingID *finance.BorrowingID
@@ -890,16 +890,16 @@ func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTrans
 	}
 
 	filter := finance.TransactionFilter{
-		BudgetID:           budgetID,
-		Type:               txnType,
-		AccountID:          accountID,
-		TransferID:         transferID,
-		ScheduledPaymentID: scheduledPaymentID,
-		BorrowingID:        borrowingID,
-		PageSize:           req.GetPageSize(),
-		NextPageToken:      req.GetPageToken(),
-		Sort:               sorting.Parse(req.GetSort()),
-		SearchQuery:        searchQuery,
+		BudgetID:               budgetID,
+		Type:                   txnType,
+		AccountID:              accountID,
+		TransferID:             transferID,
+		ScheduledTransactionID: scheduledTransactionID,
+		BorrowingID:            borrowingID,
+		PageSize:               req.GetPageSize(),
+		NextPageToken:          req.GetPageToken(),
+		Sort:                   sorting.Parse(req.GetSort()),
+		SearchQuery:            searchQuery,
 	}
 
 	view := financeaggregator.ViewBasic
@@ -959,11 +959,11 @@ func toProtoTransaction(t *finance.Transaction) *financev1.Transaction {
 	}
 
 	metaMap := make(map[string]string)
-	if t.Metadata.ScheduledPaymentID != nil {
-		metaMap["scheduled_payment_id"] = string(*t.Metadata.ScheduledPaymentID)
+	if t.Metadata.ScheduledTransactionID != nil {
+		metaMap["scheduled_transaction_id"] = string(*t.Metadata.ScheduledTransactionID)
 	}
-	if t.Metadata.RecurringExpenseID != nil {
-		metaMap["recurring_expense_id"] = string(*t.Metadata.RecurringExpenseID)
+	if t.Metadata.RecurringTransactionID != nil {
+		metaMap["recurring_transaction_id"] = string(*t.Metadata.RecurringTransactionID)
 	}
 	if t.Metadata.BorrowingID != nil {
 		metaMap["borrowing_id"] = string(*t.Metadata.BorrowingID)
@@ -1629,8 +1629,8 @@ func toProtoInboxItem(pt *finance.InboxItem) *financev1.InboxItem {
 	if pt.BudgetID != nil {
 		budgetID = *pt.BudgetID
 	}
-	if pt.ScheduledPaymentID != nil {
-		paymentID = *pt.ScheduledPaymentID
+	if pt.ScheduledTransactionID != nil {
+		paymentID = *pt.ScheduledTransactionID
 	}
 	if pt.TransactionID != nil {
 		transactionID = *pt.TransactionID
@@ -1652,24 +1652,24 @@ func toProtoInboxItem(pt *finance.InboxItem) *financev1.InboxItem {
 	}
 
 	return &financev1.InboxItem{
-		Id:                 pt.ID,
-		SpaceId:            pt.SpaceID,
-		IntegrationId:      pt.IntegrationID,
-		Status:             toProtoInboxStatus(pt.Status),
-		DocType:            toProtoInboxDocType(pt.DocType),
-		Amount:             pt.Amount,
-		Currency:           pt.Currency,
-		VendorName:         pt.VendorName,
-		TransactionDate:    txDate,
-		AccountId:          accountID,
-		BudgetId:           budgetID,
-		ScheduledPaymentId: paymentID,
-		TransactionId:      transactionID,
-		BorrowingId:        conv.Ptr(borrowingID),
-		BorrowingLinkType:  toProtoBorrowingLinkType(pt.BorrowingLinkType),
-		RawPayload:         pt.RawPayload,
-		Metadata:           protoMeta,
-		CreateTime:         timestamppb.New(pt.CreateTime),
+		Id:                     pt.ID,
+		SpaceId:                pt.SpaceID,
+		IntegrationId:          pt.IntegrationID,
+		Status:                 toProtoInboxStatus(pt.Status),
+		DocType:                toProtoInboxDocType(pt.DocType),
+		Amount:                 pt.Amount,
+		Currency:               pt.Currency,
+		VendorName:             pt.VendorName,
+		TransactionDate:        txDate,
+		AccountId:              accountID,
+		BudgetId:               budgetID,
+		ScheduledTransactionId: paymentID,
+		TransactionId:          transactionID,
+		BorrowingId:            conv.Ptr(borrowingID),
+		BorrowingLinkType:      toProtoBorrowingLinkType(pt.BorrowingLinkType),
+		RawPayload:             pt.RawPayload,
+		Metadata:               protoMeta,
+		CreateTime:             timestamppb.New(pt.CreateTime),
 	}
 }
 
@@ -1681,8 +1681,8 @@ func toDomainInboxItem(pb *financev1.InboxItem) *finance.InboxItem {
 	if pb.GetBudgetId() != "" {
 		budgetID = new(pb.GetBudgetId())
 	}
-	if pb.GetScheduledPaymentId() != "" {
-		paymentID = new(pb.GetScheduledPaymentId())
+	if pb.GetScheduledTransactionId() != "" {
+		paymentID = new(pb.GetScheduledTransactionId())
 	}
 	if pb.GetTransactionId() != "" {
 		transactionID = new(pb.GetTransactionId())
@@ -1711,23 +1711,23 @@ func toDomainInboxItem(pb *financev1.InboxItem) *finance.InboxItem {
 	}
 
 	return &finance.InboxItem{
-		ID:                 pb.GetId(),
-		SpaceID:            pb.GetSpaceId(),
-		IntegrationID:      pb.GetIntegrationId(),
-		Status:             toDomainInboxStatus(pb.GetStatus()),
-		DocType:            toDomainInboxDocType(pb.GetDocType()),
-		Amount:             pb.GetAmount(),
-		Currency:           pb.GetCurrency(),
-		VendorName:         pb.GetVendorName(),
-		TransactionDate:    txDate,
-		AccountID:          accountID,
-		BudgetID:           budgetID,
-		ScheduledPaymentID: paymentID,
-		TransactionID:      transactionID,
-		BorrowingID:        borrowingID,
-		BorrowingLinkType:  toDomainBorrowingLinkType(pb.GetBorrowingLinkType()),
-		RawPayload:         pb.GetRawPayload(),
-		Metadata:           domainMeta,
+		ID:                     pb.GetId(),
+		SpaceID:                pb.GetSpaceId(),
+		IntegrationID:          pb.GetIntegrationId(),
+		Status:                 toDomainInboxStatus(pb.GetStatus()),
+		DocType:                toDomainInboxDocType(pb.GetDocType()),
+		Amount:                 pb.GetAmount(),
+		Currency:               pb.GetCurrency(),
+		VendorName:             pb.GetVendorName(),
+		TransactionDate:        txDate,
+		AccountID:              accountID,
+		BudgetID:               budgetID,
+		ScheduledTransactionID: paymentID,
+		TransactionID:          transactionID,
+		BorrowingID:            borrowingID,
+		BorrowingLinkType:      toDomainBorrowingLinkType(pb.GetBorrowingLinkType()),
+		RawPayload:             pb.GetRawPayload(),
+		Metadata:               domainMeta,
 	}
 }
 

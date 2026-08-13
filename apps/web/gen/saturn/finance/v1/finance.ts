@@ -1095,10 +1095,10 @@ export interface ListTransactionsRequest {
    */
   transferId?: string
   /**
-   * Optional. Target scheduled payment ID filter.
+   * Optional. Target scheduled transaction ID filter.
    * Values are of the form `sch_[a-zA-Z0-9]+`.
    */
-  scheduledPaymentId?: string
+  scheduledTransactionId?: string
   /**
    * Optional. Target borrowing ID filter.
    * Values are of the form `bor_[a-zA-Z0-9]+`.
@@ -2681,10 +2681,10 @@ export interface InboxItem {
    */
   budgetId: string
   /**
-   * Optional. Associated scheduled payment identifier to clear.
+   * Optional. Associated scheduled transaction identifier to clear.
    * Values are of the form `sch_[a-zA-Z0-9]+`.
    */
-  scheduledPaymentId: string
+  scheduledTransactionId: string
   /**
    * Optional. Associated completed transaction ledger ID.
    * Values are of the form `txn_[a-zA-Z0-9]+`.

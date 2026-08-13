@@ -1783,11 +1783,11 @@ func (f *FinanceDriver) UpdateInboxItem(tb testing.TB, key string, opts StageInb
 	}
 
 	item := &financev1.InboxItem{
-		Id:                 info.ID,
-		AccountId:          unptr(accountID),
-		BudgetId:           unptr(budgetID),
-		ScheduledPaymentId: spID,
-		TransactionId:      txnID,
+		Id:                     info.ID,
+		AccountId:              unptr(accountID),
+		BudgetId:               unptr(budgetID),
+		ScheduledTransactionId: spID,
+		TransactionId:          txnID,
 	}
 
 	bID := opts.BorrowingID

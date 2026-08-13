@@ -213,8 +213,8 @@ func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 	if len(filter.BorrowingRoles) > 0 {
 		ds = ds.Where(goqu.L("metadata->>'borrowing_role'").In(filter.BorrowingRoles))
 	}
-	if filter.ScheduledPaymentID != nil {
-		ds = ds.Where(goqu.L("metadata->>'scheduled_payment_id'").Eq(*filter.ScheduledPaymentID))
+	if filter.ScheduledTransactionID != nil {
+		ds = ds.Where(goqu.L("metadata->>'scheduled_transaction_id'").Eq(*filter.ScheduledTransactionID))
 	}
 	if filter.MinAmount != nil {
 		ds = ds.Where(goqu.I("amount").Gte(*filter.MinAmount))

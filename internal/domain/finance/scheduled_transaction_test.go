@@ -90,7 +90,7 @@ func TestScheduledTransaction_NewConfirmationTransaction(t *testing.T) {
 	if *txn.BudgetID != budgetID {
 		t.Errorf("budgetID = %s, want %s", *txn.BudgetID, budgetID)
 	}
-	if string(*txn.Metadata.ScheduledPaymentID) != string(spID) {
-		t.Errorf("ScheduledPaymentID = %s, want %s", *txn.Metadata.ScheduledPaymentID, spID)
+	if string(*txn.Metadata.ScheduledTransactionID) != string(spID) {
+		t.Errorf("ScheduledTransactionID = %s, want %s", *txn.Metadata.ScheduledTransactionID, spID)
 	}
 }

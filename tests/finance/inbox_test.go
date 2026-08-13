@@ -558,8 +558,8 @@ func TestInboxItem_ReceiptMatrix(t *testing.T) {
 				if txn.GetType() != financev1.Transaction_EXPENSE {
 					t.Errorf("Transaction type = %s, want EXPENSE", txn.GetType())
 				}
-				if txn.GetMetadata()["scheduled_payment_id"] == "" {
-					t.Error("Expected scheduled_payment_id link in transaction metadata, got empty")
+				if txn.GetMetadata()["scheduled_transaction_id"] == "" {
+					t.Error("Expected scheduled_transaction_id link in transaction metadata, got empty")
 				}
 			})
 	})
@@ -590,8 +590,8 @@ func TestInboxItem_ReceiptMatrix(t *testing.T) {
 				if txn.GetDescription() != "Power Co" {
 					t.Errorf("Transaction description = %q, want Power Co", txn.GetDescription())
 				}
-				if txn.GetMetadata()["scheduled_payment_id"] == "" {
-					t.Error("Expected scheduled_payment_id link in transaction metadata, got empty")
+				if txn.GetMetadata()["scheduled_transaction_id"] == "" {
+					t.Error("Expected scheduled_transaction_id link in transaction metadata, got empty")
 				}
 			})
 	})
@@ -622,8 +622,8 @@ func TestInboxItem_ReceiptMatrix(t *testing.T) {
 				if txn.GetAmount() != 5000 {
 					t.Errorf("Transaction amount = %d, want 5000", txn.GetAmount())
 				}
-				if txn.GetMetadata()["scheduled_payment_id"] == "" {
-					t.Error("Expected scheduled_payment_id link in transaction metadata, got empty")
+				if txn.GetMetadata()["scheduled_transaction_id"] == "" {
+					t.Error("Expected scheduled_transaction_id link in transaction metadata, got empty")
 				}
 			})
 	})
@@ -661,8 +661,8 @@ func TestInboxItem_ReceiptMatrix(t *testing.T) {
 				if txn.GetDescription() != "Phone Co" {
 					t.Errorf("Transaction description = %q, want Phone Co", txn.GetDescription())
 				}
-				if txn.GetMetadata()["scheduled_payment_id"] == "" {
-					t.Error("Expected scheduled_payment_id link in transaction metadata, got empty")
+				if txn.GetMetadata()["scheduled_transaction_id"] == "" {
+					t.Error("Expected scheduled_transaction_id link in transaction metadata, got empty")
 				}
 			})
 	})
@@ -1317,8 +1317,8 @@ func TestInboxItem_BankNotificationMatrix(t *testing.T) {
 				if txn.GetAmount() != 5000 {
 					t.Errorf("Transaction amount = %d, want 5000", txn.GetAmount())
 				}
-				if txn.GetMetadata()["scheduled_payment_id"] == "" {
-					t.Error("Expected scheduled_payment_id in transaction metadata, got empty")
+				if txn.GetMetadata()["scheduled_transaction_id"] == "" {
+					t.Error("Expected scheduled_transaction_id in transaction metadata, got empty")
 				}
 			})
 	})

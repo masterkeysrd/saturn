@@ -181,12 +181,13 @@ func (sp *ScheduledTransaction) NewConfirmationTransaction(opts ConfirmOpts) (*T
 
 	spID := sp.ID
 	meta := TransactionMetadata{
-		ScheduledPaymentID:  (*ScheduledPaymentID)(&spID),
-		AccountImpactAmount: opts.AccountImpactAmount,
+		ScheduledTransactionID: &spID,
+		AccountImpactAmount:    opts.AccountImpactAmount,
 	}
 
 	if sp.SourceType == string(SourceTypeRecurrentTransaction) && sp.SourceID != "" {
-		meta.RecurringExpenseID = (*RecurringExpenseID)(&sp.SourceID)
+		rtID := RecurringTransactionID(sp.SourceID)
+		meta.RecurringTransactionID = &rtID
 	}
 
 	var accountID *AccountID = sp.AccountID

@@ -246,7 +246,7 @@ export function formatNextDueDate(dateStr: string | undefined | null): string {
 export function formatStatus(status: string | undefined | null): string {
   if (!status) return "Active"
   const clean = status
-    .replace(/^(STATUS_|RECURRING_EXPENSE_STATUS_)/i, "")
+    .replace(/^(STATUS_|RECURRING_EXPENSE_STATUS_|RECURRING_TRANSACTION_STATUS_)/i, "")
     .toLowerCase()
   if (!clean || clean === "unspecified") return "Active"
   return clean.charAt(0).toUpperCase() + clean.slice(1)
@@ -255,7 +255,7 @@ export function formatStatus(status: string | undefined | null): string {
 export function isStatusActive(status: string | undefined | null): boolean {
   if (!status) return true
   const clean = status
-    .replace(/^(STATUS_|RECURRING_EXPENSE_STATUS_)/i, "")
+    .replace(/^(STATUS_|RECURRING_EXPENSE_STATUS_|RECURRING_TRANSACTION_STATUS_)/i, "")
     .toUpperCase()
   return clean === "ACTIVE" || clean === "UNSPECIFIED"
 }
