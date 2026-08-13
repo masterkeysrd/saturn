@@ -11,10 +11,10 @@ import (
 
 type RecurringTransactionID string
 
-const recurringTransactionPrefix = "rec_"
+var RecurringTransactionIDGenerator = id.NewPrefixGenerator("rctx_", "rec_")
 
 func NewRecurringTransactionID() (RecurringTransactionID, error) {
-	raw, err := id.Generate(recurringTransactionPrefix)
+	raw, err := RecurringTransactionIDGenerator.Generate()
 	if err != nil {
 		return "", err
 	}
@@ -22,14 +22,14 @@ func NewRecurringTransactionID() (RecurringTransactionID, error) {
 }
 
 func ParseRecurringTransactionID(s string) (RecurringTransactionID, error) {
-	if err := id.Validate(s, recurringTransactionPrefix); err != nil {
+	if err := RecurringTransactionIDGenerator.Validate(s); err != nil {
 		return "", fmt.Errorf("invalid recurring transaction ID: %w", err)
 	}
 	return RecurringTransactionID(s), nil
 }
 
 func (rid RecurringTransactionID) Validate() error {
-	return id.Validate(string(rid), recurringTransactionPrefix)
+	return RecurringTransactionIDGenerator.Validate(string(rid))
 }
 
 type RecurringTransactionStatus string

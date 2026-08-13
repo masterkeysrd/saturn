@@ -55,6 +55,49 @@ func Validate(id, prefix string) error {
 	return GetDefault().Validate(id, prefix)
 }
 
+// ValidateMultiple checks that the ID is a valid KSUID with one of the expected prefixes using the default generator.
+func ValidateMultiple(idStr string, prefixes ...string) error {
+	if len(prefixes) == 0 {
+		return fmt.Errorf("no prefixes provided for validation")
+	}
+	var lastErr error
+	for _, prefix := range prefixes {
+		if err := Validate(idStr, prefix); err == nil {
+			return nil
+		} else {
+			lastErr = err
+		}
+	}
+	return lastErr
+}
+
+// PrefixGenerator wraps ID generation and validation pinned to a primary prefix and a set of legacy prefixes.
+type PrefixGenerator struct {
+	primary string
+	legacy  []string
+}
+
+// NewPrefixGenerator instantiates a PrefixGenerator.
+func NewPrefixGenerator(primary string, legacy ...string) *PrefixGenerator {
+	return &PrefixGenerator{
+		primary: primary,
+		legacy:  legacy,
+	}
+}
+
+// Generate creates a new ID with the primary prefix.
+func (p *PrefixGenerator) Generate() (string, error) {
+	return Generate(p.primary)
+}
+
+// Validate checks if the ID is valid with either the primary prefix or any legacy prefixes.
+func (p *PrefixGenerator) Validate(idStr string) error {
+	prefixes := make([]string, 0, 1+len(p.legacy))
+	prefixes = append(prefixes, p.primary)
+	prefixes = append(prefixes, p.legacy...)
+	return ValidateMultiple(idStr, prefixes...)
+}
+
 // defaultGenerator implements Generator using KSUID.
 type defaultGenerator struct{}
 

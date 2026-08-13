@@ -12,10 +12,10 @@ var ErrScheduledTransactionNotFound = errors.New("scheduled transaction not foun
 
 type ScheduledTransactionID string
 
-const scheduledTransactionPrefix = "sch_"
+var ScheduledTransactionIDGenerator = id.NewPrefixGenerator("sctx_", "sch_")
 
 func NewScheduledTransactionID() (ScheduledTransactionID, error) {
-	raw, err := id.Generate(scheduledTransactionPrefix)
+	raw, err := ScheduledTransactionIDGenerator.Generate()
 	if err != nil {
 		return "", err
 	}
@@ -23,14 +23,14 @@ func NewScheduledTransactionID() (ScheduledTransactionID, error) {
 }
 
 func ParseScheduledTransactionID(s string) (ScheduledTransactionID, error) {
-	if err := id.Validate(s, scheduledTransactionPrefix); err != nil {
+	if err := ScheduledTransactionIDGenerator.Validate(s); err != nil {
 		return "", fmt.Errorf("invalid scheduled transaction ID: %w", err)
 	}
 	return ScheduledTransactionID(s), nil
 }
 
 func (spid ScheduledTransactionID) Validate() error {
-	return id.Validate(string(spid), scheduledTransactionPrefix)
+	return ScheduledTransactionIDGenerator.Validate(string(spid))
 }
 
 type ScheduledTransactionStatus string

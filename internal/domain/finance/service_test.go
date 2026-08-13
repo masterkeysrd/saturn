@@ -3154,7 +3154,7 @@ func TestService_InvoiceBranch(t *testing.T) {
 
 			if tt.linkScheduledPayment {
 				pIDStr := string(preExistingPayID)
-				staged.ScheduledPaymentID = &pIDStr
+				staged.ScheduledTransactionID = &pIDStr
 				if tt.expectPaidTxnLinked {
 					tIDStr := string(preExistingTxnID)
 					staged.TransactionID = &tIDStr
