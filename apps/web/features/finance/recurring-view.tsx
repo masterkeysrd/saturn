@@ -2,21 +2,21 @@ import { useState } from "react"
 import { useSpacePermissions } from "@/features/space/use-space"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import {
-  useListRecurringExpensesQuery,
-  useListScheduledPaymentsQuery,
-  useDeleteRecurringExpenseMutation,
-  useSkipScheduledPaymentMutation,
+  useListRecurringTransactionsQuery,
+  useListScheduledTransactionsQuery,
+  useDeleteRecurringTransactionMutation,
+  useSkipScheduledTransactionMutation,
   useListTransactionsQuery,
-  type RecurringExpense,
-  type ScheduledPayment,
-  type ListScheduledPaymentsRequest,
+  type RecurringTransaction,
+  type ScheduledTransaction,
+  type ListScheduledTransactionsRequest,
   useGetFinanceSettingsQuery,
   useListBudgetsQuery,
-  useListCurrenciesQuery,
 } from "@/gen/saturn/finance/v1/finance"
 import { useCurrencyConversionPreview } from "@/hooks/use-currency-conversion"
 import {
   TrendingDownIcon,
+  TrendingUpIcon,
   CalendarIcon,
   LayersIcon,
   PlusIcon,
@@ -38,9 +38,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
-import { CreateRecurringExpenseSheet } from "./components/create-recurring-expense-sheet"
-import { ConfirmPaymentSheet } from "./components/confirm-payment-sheet"
-import { RecurringExpenseHistorySheet } from "./components/recurring-expense-history-sheet"
+import { CreateRecurringTransactionSheet } from "./components/create-recurring-transaction-sheet"
+import { ConfirmTransactionSheet } from "./components/confirm-transaction-sheet"
+import { RecurringTransactionHistorySheet } from "./components/recurring-transaction-history-sheet"
 import { SkipPaymentDialog } from "./components/skip-payment-dialog"
 import {
   formatCents,
@@ -54,7 +54,6 @@ import {
 import { cn } from "@/lib/utils"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 
-// Constants for time conversions and pagination
 const WEEKS_IN_YEAR = 52
 const MONTHS_IN_YEAR = 12
 const FORECAST_DAYS_WINDOW = 7
@@ -76,12 +75,6 @@ export function RecurringView() {
   )
   const budgets = budgetsData?.budgets || []
 
-  const { data: currenciesData } = useListCurrenciesQuery(
-    {},
-    { enabled: !!spaceId, staleTime: 1000 * 60 * 30 }
-  )
-  const currencies = currenciesData?.currencies || []
-
   const { getConversionPreview } = useCurrencyConversionPreview({
     spaceId,
     enabled: !!settings,
@@ -89,59 +82,58 @@ export function RecurringView() {
   })
 
   // Sheets and Dialogs state
-  const [expenseSheetOpen, setExpenseSheetOpen] = useState(false)
-  const [editExpense, setEditExpense] = useState<RecurringExpense | null>(null)
+  const [transactionSheetOpen, setTransactionSheetOpen] = useState(false)
+  const [editTransaction, setEditTransaction] =
+    useState<RecurringTransaction | null>(null)
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
-  const [selectedPayment, setSelectedPayment] =
-    useState<ScheduledPayment | null>(null)
+  const [selectedScheduledTransaction, setSelectedScheduledTransaction] =
+    useState<ScheduledTransaction | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
-  const [historyExpense, setHistoryExpense] = useState<RecurringExpense | null>(
-    null
-  )
-  const [paymentToSkip, setPaymentToSkip] = useState<ScheduledPayment | null>(
-    null
-  )
+  const [historyTransaction, setHistoryTransaction] =
+    useState<RecurringTransaction | null>(null)
+  const [transactionToSkip, setTransactionToSkip] =
+    useState<ScheduledTransaction | null>(null)
 
   // Fetch lists
   const {
-    data: expensesData,
-    isLoading: expensesLoading,
-    refetch: refetchExpenses,
-  } = useListRecurringExpensesQuery({
+    data: recurringData,
+    isLoading: recurringLoading,
+    refetch: refetchRecurring,
+  } = useListRecurringTransactionsQuery({
     pageSize: DEFAULT_PAGE_SIZE,
     pageToken: "",
     status: "STATUS_UNSPECIFIED",
   })
 
   const {
-    data: paymentsData,
-    isLoading: paymentsLoading,
-    refetch: refetchPayments,
-  } = useListScheduledPaymentsQuery({
+    data: scheduledData,
+    isLoading: scheduledLoading,
+    refetch: refetchScheduled,
+  } = useListScheduledTransactionsQuery({
     pageSize: DEFAULT_PAGE_SIZE,
     pageToken: "",
     status: "PENDING",
     startDate: "",
     endDate: "",
-  } as unknown as ListScheduledPaymentsRequest)
+  } as unknown as ListScheduledTransactionsRequest)
 
-  const deleteMutation = useDeleteRecurringExpenseMutation()
-  const skipMutation = useSkipScheduledPaymentMutation()
+  const deleteMutation = useDeleteRecurringTransactionMutation()
+  const skipMutation = useSkipScheduledTransactionMutation()
 
-  const handleConfirmSkipPayment = async () => {
-    if (!paymentToSkip) return
+  const handleConfirmSkipTransaction = async () => {
+    if (!transactionToSkip) return
     await skipMutation.mutateAsync({
-      id: paymentToSkip.id || "",
-      req: { id: paymentToSkip.id || "" },
+      id: transactionToSkip.id || "",
+      req: { id: transactionToSkip.id || "" },
     })
-    refetchPayments()
-    setPaymentToSkip(null)
+    refetchScheduled()
+    setTransactionToSkip(null)
   }
 
-  const expenses = expensesData?.recurringExpenses || []
-  const payments = paymentsData?.scheduledPayments || []
+  const transactions = recurringData?.recurringTransactions || []
+  const scheduledTransactions = scheduledData?.scheduledTransactions || []
 
-  // Fetch unified transaction history for all recurrent outflows
+  // Fetch unified transaction history
   const {
     data: historyData,
     isLoading: historyLoading,
@@ -160,20 +152,20 @@ export function RecurringView() {
     Boolean(t.metadata?.recurring_expense_id)
   )
 
-  const handleDeleteExpense = async (expense: RecurringExpense) => {
+  const handleDeleteTransaction = async (re: RecurringTransaction) => {
     if (
       confirm(
-        "Are you sure you want to delete this recurring expense template? This will stop future scheduled bills from generating."
+        `Are you sure you want to delete this recurring ${re.type === "INCOME" ? "income" : "expense"} template? This will stop future scheduled instances from generating.`
       )
     ) {
       await deleteMutation.mutateAsync({
-        id: expense.id || "",
+        id: re.id || "",
         req: {
-          id: expense.id || "",
-          version: expense.version,
+          id: re.id || "",
+          version: re.version,
         },
       })
-      refetchExpenses()
+      refetchRecurring()
     }
   }
 
@@ -189,9 +181,30 @@ export function RecurringView() {
     return amountVal // Fallback if rate not configured yet
   }
 
-  // Calculate Normalized Monthly Recurring Overhead in base currency
-  const monthlyOverhead = expenses.reduce((acc, exp) => {
-    if (!isStatusActive(exp.status)) return acc
+  // Calculate Normalized Monthly Recurring Expenses in base currency
+  const monthlyExpenses = transactions.reduce((acc, exp) => {
+    if (!isStatusActive(exp.status) || exp.type !== "EXPENSE") return acc
+
+    const amountVal = formatCents(exp.amount)
+    const convertedAmount = convertToBase(amountVal, exp.currency)
+    let normalizedAmount = convertedAmount
+
+    const upperInterval = (exp.interval || "").toUpperCase()
+    if (upperInterval === "WEEKLY" || upperInterval === "INTERVAL_WEEKLY") {
+      normalizedAmount = convertedAmount * (WEEKS_IN_YEAR / MONTHS_IN_YEAR)
+    } else if (
+      upperInterval === "YEARLY" ||
+      upperInterval === "INTERVAL_YEARLY"
+    ) {
+      normalizedAmount = convertedAmount / MONTHS_IN_YEAR
+    }
+
+    return acc + normalizedAmount
+  }, 0)
+
+  // Calculate Normalized Monthly Recurring Incomes in base currency
+  const monthlyIncomes = transactions.reduce((acc, exp) => {
+    if (!isStatusActive(exp.status) || exp.type !== "INCOME") return acc
 
     const amountVal = formatCents(exp.amount)
     const convertedAmount = convertToBase(amountVal, exp.currency)
@@ -214,7 +227,8 @@ export function RecurringView() {
   const next7Days = new Date()
   next7Days.setDate(next7Days.getDate() + FORECAST_DAYS_WINDOW)
 
-  const upcomingOutflows = payments.reduce((acc, pay) => {
+  const upcomingOutflows = scheduledTransactions.reduce((acc, pay) => {
+    if (pay.type !== "EXPENSE") return acc
     const dueDate = new Date(pay.dueDate)
     if (dueDate <= next7Days) {
       const amountVal = formatCents(pay.amount)
@@ -224,40 +238,63 @@ export function RecurringView() {
     return acc
   }, 0)
 
-  const isLoading = expensesLoading || paymentsLoading
+  const isLoading = recurringLoading || scheduledLoading
 
   return (
     <FinancePageLayout
-      title="Recurrent Expenses"
-      description="Manage recurrent SaaS subscriptions, bills, rent, and scheduled outflows."
+      title="Recurring Transactions"
+      description="Manage recurring SaaS subscriptions, utility bills, salaries, rent, and scheduled obligations."
       icon={LayersIcon}
       actions={
         <Button
           onClick={() => {
-            setEditExpense(null)
-            setExpenseSheetOpen(true)
+            setEditTransaction(null)
+            setTransactionSheetOpen(true)
           }}
           className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-accent pt-0.5 font-semibold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.02] hover:opacity-95 sm:w-auto"
         >
           <PlusIcon className="h-4 w-4" />
-          Create Recurrent Expense
+          Create Template
         </Button>
       }
     >
       <div className="mt-2 animate-in space-y-8 duration-300 fade-in">
         {/* Metrics Grid */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          {/* Monthly Overhead Card */}
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          {/* Monthly Incomes Card */}
           <div className="relative flex items-center gap-4 overflow-hidden rounded-3xl border border-border/40 bg-card/30 p-6 shadow-sm backdrop-blur-sm select-none">
-            <div className="rounded-2xl bg-indigo-500/10 p-3.5 text-indigo-500">
-              <LayersIcon className="h-6 w-6" />
+            <div className="rounded-2xl bg-emerald-500/10 p-3.5 text-emerald-500">
+              <TrendingUpIcon className="h-6 w-6" />
             </div>
             <div>
               <span className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                Monthly Overhead
+                Recurring Income (Monthly)
               </span>
-              <span className="mt-1 block text-2xl font-black tracking-tight text-foreground">
-                {monthlyOverhead.toLocaleString(undefined, {
+              <span className="mt-1 block text-2xl font-black tracking-tight text-emerald-500">
+                +
+                {monthlyIncomes.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{" "}
+                <span className="text-xs font-bold text-muted-foreground uppercase">
+                  {baseCurrency}
+                </span>
+              </span>
+            </div>
+          </div>
+
+          {/* Monthly Expenses Card */}
+          <div className="relative flex items-center gap-4 overflow-hidden rounded-3xl border border-border/40 bg-card/30 p-6 shadow-sm backdrop-blur-sm select-none">
+            <div className="rounded-2xl bg-rose-500/10 p-3.5 text-rose-500">
+              <TrendingDownIcon className="h-6 w-6" />
+            </div>
+            <div>
+              <span className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                Recurring Overhead (Monthly)
+              </span>
+              <span className="mt-1 block text-2xl font-black tracking-tight text-rose-500">
+                -
+                {monthlyExpenses.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}{" "}
@@ -271,13 +308,13 @@ export function RecurringView() {
           {/* 7-Day Outflow Card */}
           <div className="relative flex items-center gap-4 overflow-hidden rounded-3xl border border-border/40 bg-card/30 p-6 shadow-sm backdrop-blur-sm select-none">
             <div className="rounded-2xl bg-amber-500/10 p-3.5 text-amber-500">
-              <TrendingDownIcon className="h-6 w-6" />
+              <CalendarIcon className="h-6 w-6" />
             </div>
             <div>
               <span className="block text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                 Next 7 Days Outflows
               </span>
-              <span className="mt-1 block text-2xl font-black tracking-tight text-foreground">
+              <span className="mt-1 block text-2xl font-black tracking-tight text-amber-500">
                 {upcomingOutflows.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
@@ -311,7 +348,7 @@ export function RecurringView() {
                   className="flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all data-active:bg-primary data-active:text-primary-foreground data-active:shadow-sm"
                 >
                   <History className="h-3.5 w-3.5" />
-                  Payment History
+                  History
                   {historyTransactions.length > 0 && (
                     <span className="ml-1 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-black text-primary group-data-active:bg-primary-foreground/20 group-data-active:text-primary-foreground">
                       {historyTransactions.length}
@@ -324,7 +361,7 @@ export function RecurringView() {
             {/* Tab 1: Active Templates & Pending Obligations */}
             <TabsContent value="active" className="mt-0 space-y-8">
               <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-                {/* 1. Recurring Expenses Templates (Configuration template list - 7 cols) */}
+                {/* 1. Recurring Templates List (7 cols) */}
                 <div className="flex flex-col overflow-hidden rounded-3xl border border-border/40 bg-card/30 shadow-sm backdrop-blur-sm lg:col-span-7">
                   <div className="flex items-center justify-between border-b border-border/20 bg-card/10 px-6 py-4">
                     <h2 className="flex items-center gap-2 text-xs font-black tracking-wider text-muted-foreground uppercase">
@@ -332,25 +369,25 @@ export function RecurringView() {
                       Recurring Templates
                     </h2>
                     <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-black text-primary">
-                      {expenses.length} Total
+                      {transactions.length} Total
                     </span>
                   </div>
 
-                  {expenses.length === 0 ? (
+                  {transactions.length === 0 ? (
                     <div className="flex h-[200px] flex-col items-center justify-center p-4 text-center">
                       <LayersIcon className="mb-3 h-10 w-10 text-muted-foreground/30" />
                       <p className="text-xs font-semibold text-muted-foreground">
                         No recurring templates configured.
                       </p>
                       <p className="mt-1 max-w-[300px] text-[10px] text-muted-foreground/80">
-                        Add subscriptions or rent bills to automate future
-                        scheduling.
+                        Add template rules for salary inflows or subscription
+                        outflows to automate future scheduling.
                       </p>
                     </div>
                   ) : (
-                    <ScrollArea className="max-h-[360px] min-h-[180px]">
+                    <ScrollArea className="max-h-[500px] min-h-[180px]">
                       <div className="flex flex-col">
-                        {expenses.map((exp) => {
+                        {transactions.map((exp) => {
                           const budget = budgets.find(
                             (b) => b.id === exp.budgetId
                           )
@@ -381,8 +418,12 @@ export function RecurringView() {
                                 <div
                                   className={cn(
                                     "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-sm",
-                                    colors.bg,
-                                    colors.text
+                                    exp.type === "INCOME"
+                                      ? "bg-emerald-500/10 text-emerald-500"
+                                      : colors.bg,
+                                    exp.type === "INCOME"
+                                      ? "text-emerald-500"
+                                      : colors.text
                                   )}
                                 >
                                   <Icon className="h-5 w-5" />
@@ -395,7 +436,15 @@ export function RecurringView() {
                                     {exp.name}
                                   </h4>
                                   <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                                    <span className="font-semibold text-foreground">
+                                    <span
+                                      className={cn(
+                                        "font-semibold",
+                                        exp.type === "EXPENSE"
+                                          ? "text-rose-500"
+                                          : "text-emerald-500"
+                                      )}
+                                    >
+                                      {exp.type === "EXPENSE" ? "-" : "+"}
                                       {formatCents(exp.amount).toLocaleString(
                                         undefined,
                                         {
@@ -465,18 +514,18 @@ export function RecurringView() {
                                     >
                                       <DropdownMenuItem
                                         onClick={() => {
-                                          setHistoryExpense(exp)
+                                          setHistoryTransaction(exp)
                                           setHistoryOpen(true)
                                         }}
                                         className="flex cursor-pointer items-center gap-2"
                                       >
                                         <History className="h-4 w-4 text-muted-foreground" />
-                                        <span>Payment History</span>
+                                        <span>History Logs</span>
                                       </DropdownMenuItem>
                                       <DropdownMenuItem
                                         onClick={() => {
-                                          setEditExpense(exp)
-                                          setExpenseSheetOpen(true)
+                                          setEditTransaction(exp)
+                                          setTransactionSheetOpen(true)
                                         }}
                                         className="flex cursor-pointer items-center gap-2"
                                       >
@@ -484,7 +533,9 @@ export function RecurringView() {
                                         <span>Edit</span>
                                       </DropdownMenuItem>
                                       <DropdownMenuItem
-                                        onClick={() => handleDeleteExpense(exp)}
+                                        onClick={() =>
+                                          handleDeleteTransaction(exp)
+                                        }
                                         className="flex cursor-pointer items-center gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
                                       >
                                         <Trash2Icon className="h-4 w-4" />
@@ -502,32 +553,32 @@ export function RecurringView() {
                   )}
                 </div>
 
-                {/* 2. Pending Payments (Actionable scheduled payments list - 5 cols) */}
+                {/* 2. Pending Schedule (Actionable list - 5 cols) */}
                 <div className="flex flex-col overflow-hidden rounded-3xl border border-border/40 bg-card/30 shadow-sm backdrop-blur-sm lg:col-span-5">
                   <div className="flex items-center justify-between border-b border-border/20 bg-card/10 px-6 py-4">
                     <h2 className="flex items-center gap-2 text-xs font-black tracking-wider text-muted-foreground uppercase">
                       <CalendarIcon className="h-4 w-4 text-primary" />
-                      Pending Payments
+                      Pending Schedule
                     </h2>
                     <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-black text-primary">
-                      {payments.length} Pending
+                      {scheduledTransactions.length} Pending
                     </span>
                   </div>
 
-                  {payments.length === 0 ? (
+                  {scheduledTransactions.length === 0 ? (
                     <div className="flex h-[200px] flex-col items-center justify-center p-4 text-center">
                       <CheckCircle2Icon className="mb-3 h-10 w-10 text-emerald-500/30" />
                       <p className="text-xs font-semibold text-muted-foreground">
-                        All clear! No pending payments.
+                        All clear! No pending schedules.
                       </p>
                       <p className="mt-1 max-w-[200px] text-[10px] text-muted-foreground/80">
-                        Upcoming bills will generate automatically.
+                        Upcoming templates will generate items automatically.
                       </p>
                     </div>
                   ) : (
-                    <ScrollArea className="max-h-[360px] min-h-[180px]">
+                    <ScrollArea className="max-h-[500px] min-h-[180px]">
                       <div className="flex flex-col">
-                        {payments.map((pay) => {
+                        {scheduledTransactions.map((pay) => {
                           const budget = budgets.find(
                             (b) => b.id === pay.budgetId
                           )
@@ -537,10 +588,11 @@ export function RecurringView() {
                           const Icon = getBudgetIcon(
                             budget?.icon || "piggy-bank"
                           )
-                          const matchedExpense = expenses.find(
+                          const matchedTemplate = transactions.find(
                             (e) => e.id === pay.sourceId
                           )
-                          const graceDays = matchedExpense?.gracePeriodDays || 0
+                          const graceDays =
+                            matchedTemplate?.gracePeriodDays || 0
                           const graceDueDate = new Date(pay.dueDate)
                           graceDueDate.setDate(
                             graceDueDate.getDate() + graceDays
@@ -548,10 +600,10 @@ export function RecurringView() {
                           const isOverdue = graceDueDate < new Date()
 
                           const displayName = (() => {
-                            if (pay.sourceType === "RECURRENT_EXPENSE") {
+                            if (pay.sourceType === "RECURRENT_TRANSACTION") {
                               return (
-                                expenses.find((e) => e.id === pay.sourceId)
-                                  ?.name || "Recurring Bill"
+                                transactions.find((e) => e.id === pay.sourceId)
+                                  ?.name || "Scheduled Obligation"
                               )
                             }
                             if (
@@ -565,7 +617,7 @@ export function RecurringView() {
                                 return pay.metadata.description
                               }
                             }
-                            return "Scheduled Invoice"
+                            return "Scheduled Inflow"
                           })()
 
                           return (
@@ -577,8 +629,12 @@ export function RecurringView() {
                                 <div
                                   className={cn(
                                     "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-sm",
-                                    colors.bg,
-                                    colors.text
+                                    pay.type === "INCOME"
+                                      ? "bg-emerald-500/10 text-emerald-500"
+                                      : colors.bg,
+                                    pay.type === "INCOME"
+                                      ? "text-emerald-500"
+                                      : colors.text
                                   )}
                                 >
                                   <Icon className="h-4 w-4" />
@@ -594,12 +650,12 @@ export function RecurringView() {
                                     <span
                                       className={cn(
                                         "flex items-center gap-0.5 font-semibold",
-                                        isOverdue
+                                        isOverdue && pay.type === "EXPENSE"
                                           ? "text-rose-500"
                                           : "text-muted-foreground"
                                       )}
                                     >
-                                      {isOverdue && (
+                                      {isOverdue && pay.type === "EXPENSE" && (
                                         <AlertCircleIcon className="h-2.5 w-2.5" />
                                       )}
                                       Due:{" "}
@@ -618,7 +674,15 @@ export function RecurringView() {
 
                               <div className="flex shrink-0 items-center gap-2">
                                 <div className="text-right">
-                                  <span className="block text-xs font-bold text-foreground">
+                                  <span
+                                    className={cn(
+                                      "block text-xs font-bold",
+                                      pay.type === "EXPENSE"
+                                        ? "text-rose-500"
+                                        : "text-emerald-500"
+                                    )}
+                                  >
+                                    {pay.type === "EXPENSE" ? "-" : "+"}
                                     {formatCents(pay.amount).toLocaleString(
                                       undefined,
                                       {
@@ -650,16 +714,16 @@ export function RecurringView() {
                                   >
                                     <DropdownMenuItem
                                       onClick={() => {
-                                        setSelectedPayment(pay)
+                                        setSelectedScheduledTransaction(pay)
                                         setConfirmDialogOpen(true)
                                       }}
                                       className="flex cursor-pointer items-center gap-2"
                                     >
                                       <CheckCircle2Icon className="h-4 w-4 text-emerald-500" />
-                                      <span>Confirm...</span>
+                                      <span>Confirm Cleared</span>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
-                                      onClick={() => setPaymentToSkip(pay)}
+                                      onClick={() => setTransactionToSkip(pay)}
                                       className="flex cursor-pointer items-center gap-2 text-amber-600 focus:bg-amber-500/10 focus:text-amber-600 dark:text-amber-400"
                                     >
                                       <FastForward className="h-4 w-4" />
@@ -678,13 +742,13 @@ export function RecurringView() {
               </div>
             </TabsContent>
 
-            {/* Tab 2: Cleared Payment History */}
+            {/* Tab 2: History */}
             <TabsContent value="history" className="mt-0">
               <div className="flex flex-col overflow-hidden rounded-3xl border border-border/40 bg-card/30 shadow-sm backdrop-blur-sm">
                 <div className="flex items-center justify-between border-b border-border/20 bg-card/10 px-6 py-4">
                   <h2 className="flex items-center gap-2 text-xs font-black tracking-wider text-muted-foreground uppercase">
                     <History className="h-4 w-4 text-primary" />
-                    Payment History
+                    Transaction Logs
                   </h2>
                   <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-black text-primary">
                     {historyTransactions.length} Total
@@ -699,18 +763,18 @@ export function RecurringView() {
                   <div className="flex h-[250px] flex-col items-center justify-center p-4 text-center">
                     <History className="mb-3 h-10 w-10 text-muted-foreground/30" />
                     <p className="text-xs font-bold text-foreground">
-                      No payment history yet
+                      No transaction history yet
                     </p>
                     <p className="mt-1 max-w-[280px] text-[10px] text-muted-foreground">
-                      Confirm pending payments to build your recurrent payment
-                      history log.
+                      Confirm pending scheduled items to build your recurrent
+                      transaction logs.
                     </p>
                   </div>
                 ) : (
                   <ScrollArea className="max-h-[500px] min-h-[250px]">
                     <div className="flex flex-col">
                       {historyTransactions.map((txn) => {
-                        const matchedExpense = expenses.find(
+                        const matchedTemplate = transactions.find(
                           (e) =>
                             e.id ===
                             (txn.metadata?.source_id ?? txn.metadata?.sourceId)
@@ -726,7 +790,7 @@ export function RecurringView() {
                         const tDate = new Date(txn.transactionDate)
                         const effDate = new Date(txn.effectiveDate)
 
-                        const graceDays = matchedExpense?.gracePeriodDays || 0
+                        const graceDays = matchedTemplate?.gracePeriodDays || 0
                         const graceLimitDate = new Date(effDate)
                         graceLimitDate.setDate(
                           graceLimitDate.getDate() + graceDays
@@ -744,8 +808,12 @@ export function RecurringView() {
                               <div
                                 className={cn(
                                   "flex h-10 w-10 items-center justify-center rounded-xl shadow-sm",
-                                  colors.bg,
-                                  colors.text
+                                  txn.type === "INCOME"
+                                    ? "bg-emerald-500/10 text-emerald-500"
+                                    : colors.bg,
+                                  txn.type === "INCOME"
+                                    ? "text-emerald-500"
+                                    : colors.text
                                 )}
                               >
                                 <Icon className="h-5 w-5" />
@@ -753,11 +821,11 @@ export function RecurringView() {
                               <div>
                                 <div className="flex items-center gap-2">
                                   <h4 className="text-xs font-bold text-foreground">
-                                    {matchedExpense?.name ||
+                                    {matchedTemplate?.name ||
                                       txn.description ||
-                                      "Recurring Outflow"}
+                                      "Recurring Transaction"}
                                   </h4>
-                                  {isLate ? (
+                                  {isLate && txn.type === "EXPENSE" ? (
                                     <span className="rounded bg-rose-500/10 px-1.5 py-0.5 text-[8px] font-black tracking-wider text-rose-500 uppercase select-none">
                                       Late
                                     </span>
@@ -789,7 +857,15 @@ export function RecurringView() {
 
                             <div className="flex items-center gap-4">
                               <div className="text-right">
-                                <span className="block text-xs font-bold text-foreground">
+                                <span
+                                  className={cn(
+                                    "block text-xs font-bold",
+                                    txn.type === "EXPENSE"
+                                      ? "text-rose-500"
+                                      : "text-emerald-500"
+                                  )}
+                                >
+                                  {txn.type === "EXPENSE" ? "-" : "+"}
                                   {formatCents(txn.amount).toLocaleString(
                                     undefined,
                                     {
@@ -828,54 +904,53 @@ export function RecurringView() {
       </div>
 
       {/* Sheets and Dialogs */}
-      <CreateRecurringExpenseSheet
-        open={expenseSheetOpen}
-        onOpenChange={setExpenseSheetOpen}
+      <CreateRecurringTransactionSheet
+        open={transactionSheetOpen}
+        onOpenChange={setTransactionSheetOpen}
         budgets={budgets}
         baseCurrency={baseCurrency}
-        editExpense={editExpense}
-        refetchExpenses={refetchExpenses}
-        getConversionPreview={getConversionPreview}
-        currencies={currencies}
+        editTransaction={editTransaction}
+        refetchTransactions={refetchRecurring}
+        spaceId={spaceId}
       />
 
-      <ConfirmPaymentSheet
+      <ConfirmTransactionSheet
         open={confirmDialogOpen}
         onOpenChange={setConfirmDialogOpen}
-        payment={selectedPayment}
-        refetchPayments={() => {
-          refetchPayments()
-          refetchExpenses()
+        transaction={selectedScheduledTransaction}
+        refetchTransactions={() => {
+          refetchScheduled()
+          refetchRecurring()
           refetchHistory()
         }}
         getConversionPreview={getConversionPreview}
       />
 
-      <RecurringExpenseHistorySheet
+      <RecurringTransactionHistorySheet
         open={historyOpen}
         onOpenChange={setHistoryOpen}
-        expense={historyExpense}
+        transaction={historyTransaction}
       />
 
       <SkipPaymentDialog
-        open={!!paymentToSkip}
+        open={!!transactionToSkip}
         onOpenChange={(open) => {
-          if (!open) setPaymentToSkip(null)
+          if (!open) setTransactionToSkip(null)
         }}
-        onConfirm={handleConfirmSkipPayment}
+        onConfirm={handleConfirmSkipTransaction}
         isPending={skipMutation.isPending}
         paymentName={
-          paymentToSkip?.sourceType === "RECURRENT_EXPENSE"
-            ? expenses.find((e) => e.id === paymentToSkip.sourceId)?.name ||
-              "Scheduled Bill"
-            : "Scheduled Bill"
+          transactionToSkip?.sourceType === "RECURRENT_TRANSACTION"
+            ? transactions.find((e) => e.id === transactionToSkip.sourceId)
+                ?.name || "Scheduled Transaction"
+            : "Scheduled Transaction"
         }
         amountFormatted={
-          paymentToSkip
-            ? formatCents(paymentToSkip.amount).toFixed(2)
+          transactionToSkip
+            ? formatCents(transactionToSkip.amount).toFixed(2)
             : undefined
         }
-        currency={paymentToSkip?.currency}
+        currency={transactionToSkip?.currency}
       />
     </FinancePageLayout>
   )

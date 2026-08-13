@@ -11,13 +11,13 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
 )
 
-// GenerateScheduledPaymentsPayloadHandler is the strongly-typed callback signature for the 'finance.GenerateScheduledPayments' job.
-type GenerateScheduledPaymentsPayloadHandler func(ctx context.Context, payload *GenerateScheduledPaymentsPayload) error
+// GenerateScheduledTransactionsPayloadHandler is the strongly-typed callback signature for the 'finance.GenerateScheduledTransactions' job.
+type GenerateScheduledTransactionsPayloadHandler func(ctx context.Context, payload *GenerateScheduledTransactionsPayload) error
 
-// RegisterGenerateScheduledPaymentsPayload binds the handler callback to the scheduler engine.
-func RegisterGenerateScheduledPaymentsPayload(engine *scheduler.Engine, handler GenerateScheduledPaymentsPayloadHandler) {
-	engine.Register("finance.GenerateScheduledPayments", func(ctx context.Context, payloadBytes []byte) error {
-		var payload GenerateScheduledPaymentsPayload
+// RegisterGenerateScheduledTransactionsPayload binds the handler callback to the scheduler engine.
+func RegisterGenerateScheduledTransactionsPayload(engine *scheduler.Engine, handler GenerateScheduledTransactionsPayloadHandler) {
+	engine.Register("finance.GenerateScheduledTransactions", func(ctx context.Context, payloadBytes []byte) error {
+		var payload GenerateScheduledTransactionsPayload
 		if err := json.Unmarshal(payloadBytes, &payload); err != nil {
 			return err
 		}
@@ -25,17 +25,17 @@ func RegisterGenerateScheduledPaymentsPayload(engine *scheduler.Engine, handler 
 	})
 }
 
-// GenerateScheduledPaymentsPayloadJob represents the enqueue request options for 'finance.GenerateScheduledPayments'.
-type GenerateScheduledPaymentsPayloadJob struct {
-	Payload     *GenerateScheduledPaymentsPayload
+// GenerateScheduledTransactionsPayloadJob represents the enqueue request options for 'finance.GenerateScheduledTransactions'.
+type GenerateScheduledTransactionsPayloadJob struct {
+	Payload     *GenerateScheduledTransactionsPayload
 	RunAt       time.Time
 	MaxAttempts int
 }
 
-// EnqueueGenerateScheduledPaymentsPayload puts the job on the queue with compile-time type safety.
-func EnqueueGenerateScheduledPaymentsPayload(ctx context.Context, sched scheduler.Scheduler, job GenerateScheduledPaymentsPayloadJob) error {
+// EnqueueGenerateScheduledTransactionsPayload puts the job on the queue with compile-time type safety.
+func EnqueueGenerateScheduledTransactionsPayload(ctx context.Context, sched scheduler.Scheduler, job GenerateScheduledTransactionsPayloadJob) error {
 	return sched.Enqueue(ctx, scheduler.Job{
-		JobType:     "finance.GenerateScheduledPayments",
+		JobType:     "finance.GenerateScheduledTransactions",
 		RunAt:       job.RunAt,
 		Payload:     job.Payload,
 		MaxAttempts: job.MaxAttempts,

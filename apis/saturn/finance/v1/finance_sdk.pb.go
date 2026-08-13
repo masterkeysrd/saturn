@@ -349,17 +349,17 @@ func (c *Client) GetInsights(ctx context.Context, req *GetInsightsRequest) (*Get
 	return &resp, nil
 }
 
-// CreateRecurringExpense executes POST /api/v1/finance/recurring-expenses.
-func (c *Client) CreateRecurringExpense(ctx context.Context, req *CreateRecurringExpenseRequest) (*RecurringExpense, error) {
-	var resp RecurringExpense
-	path := "/api/v1/finance/recurring-expenses"
+// CreateRecurringTransaction executes POST /api/v1/finance/recurring-transactions.
+func (c *Client) CreateRecurringTransaction(ctx context.Context, req *CreateRecurringTransactionRequest) (*RecurringTransaction, error) {
+	var resp RecurringTransaction
+	path := "/api/v1/finance/recurring-transactions"
 	var query []string
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
-	payload := req.GetRecurringExpense()
+	payload := req.GetRecurringTransaction()
 	if payload == nil {
-		return nil, fmt.Errorf("recurring_expense payload is required")
+		return nil, fmt.Errorf("recurring_transaction payload is required")
 	}
 	if err := c.base.Do(ctx, "POST", path, payload, &resp); err != nil {
 		return nil, err
@@ -367,10 +367,10 @@ func (c *Client) CreateRecurringExpense(ctx context.Context, req *CreateRecurrin
 	return &resp, nil
 }
 
-// UpdateRecurringExpense executes PATCH /api/v1/finance/recurring-expenses/{id}.
-func (c *Client) UpdateRecurringExpense(ctx context.Context, req *UpdateRecurringExpenseRequest) (*RecurringExpense, error) {
-	var resp RecurringExpense
-	path := fmt.Sprintf("/api/v1/finance/recurring-expenses/%s", req.GetId())
+// UpdateRecurringTransaction executes PATCH /api/v1/finance/recurring-transactions/{id}.
+func (c *Client) UpdateRecurringTransaction(ctx context.Context, req *UpdateRecurringTransactionRequest) (*RecurringTransaction, error) {
+	var resp RecurringTransaction
+	path := fmt.Sprintf("/api/v1/finance/recurring-transactions/%s", req.GetId())
 	var query []string
 	if req.Version != nil {
 		query = append(query, fmt.Sprintf("version=%d", req.GetVersion()))
@@ -383,9 +383,9 @@ func (c *Client) UpdateRecurringExpense(ctx context.Context, req *UpdateRecurrin
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
-	payload := req.GetRecurringExpense()
+	payload := req.GetRecurringTransaction()
 	if payload == nil {
-		return nil, fmt.Errorf("recurring_expense payload is required")
+		return nil, fmt.Errorf("recurring_transaction payload is required")
 	}
 	if err := c.base.Do(ctx, "PATCH", path, payload, &resp); err != nil {
 		return nil, err
@@ -393,10 +393,10 @@ func (c *Client) UpdateRecurringExpense(ctx context.Context, req *UpdateRecurrin
 	return &resp, nil
 }
 
-// DeleteRecurringExpense executes DELETE /api/v1/finance/recurring-expenses/{id}.
-func (c *Client) DeleteRecurringExpense(ctx context.Context, req *DeleteRecurringExpenseRequest) (*emptypb.Empty, error) {
+// DeleteRecurringTransaction executes DELETE /api/v1/finance/recurring-transactions/{id}.
+func (c *Client) DeleteRecurringTransaction(ctx context.Context, req *DeleteRecurringTransactionRequest) (*emptypb.Empty, error) {
 	var resp emptypb.Empty
-	path := fmt.Sprintf("/api/v1/finance/recurring-expenses/%s", req.GetId())
+	path := fmt.Sprintf("/api/v1/finance/recurring-transactions/%s", req.GetId())
 	var query []string
 	if req.Version != nil {
 		query = append(query, fmt.Sprintf("version=%d", req.GetVersion()))
@@ -410,10 +410,10 @@ func (c *Client) DeleteRecurringExpense(ctx context.Context, req *DeleteRecurrin
 	return &resp, nil
 }
 
-// ListRecurringExpenses executes GET /api/v1/finance/recurring-expenses.
-func (c *Client) ListRecurringExpenses(ctx context.Context, req *ListRecurringExpensesRequest) (*ListRecurringExpensesResponse, error) {
-	var resp ListRecurringExpensesResponse
-	path := "/api/v1/finance/recurring-expenses"
+// ListRecurringTransactions executes GET /api/v1/finance/recurring-transactions.
+func (c *Client) ListRecurringTransactions(ctx context.Context, req *ListRecurringTransactionsRequest) (*ListRecurringTransactionsResponse, error) {
+	var resp ListRecurringTransactionsResponse
+	path := "/api/v1/finance/recurring-transactions"
 	var query []string
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
@@ -424,10 +424,10 @@ func (c *Client) ListRecurringExpenses(ctx context.Context, req *ListRecurringEx
 	return &resp, nil
 }
 
-// ListScheduledPayments executes GET /api/v1/finance/scheduled-payments.
-func (c *Client) ListScheduledPayments(ctx context.Context, req *ListScheduledPaymentsRequest) (*ListScheduledPaymentsResponse, error) {
-	var resp ListScheduledPaymentsResponse
-	path := "/api/v1/finance/scheduled-payments"
+// ListScheduledTransactions executes GET /api/v1/finance/scheduled-transactions.
+func (c *Client) ListScheduledTransactions(ctx context.Context, req *ListScheduledTransactionsRequest) (*ListScheduledTransactionsResponse, error) {
+	var resp ListScheduledTransactionsResponse
+	path := "/api/v1/finance/scheduled-transactions"
 	var query []string
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
@@ -438,10 +438,10 @@ func (c *Client) ListScheduledPayments(ctx context.Context, req *ListScheduledPa
 	return &resp, nil
 }
 
-// GetScheduledPayment executes GET /api/v1/finance/scheduled-payments/{id}.
-func (c *Client) GetScheduledPayment(ctx context.Context, req *GetScheduledPaymentRequest) (*ScheduledPayment, error) {
-	var resp ScheduledPayment
-	path := fmt.Sprintf("/api/v1/finance/scheduled-payments/%s", req.GetId())
+// GetScheduledTransaction executes GET /api/v1/finance/scheduled-transactions/{id}.
+func (c *Client) GetScheduledTransaction(ctx context.Context, req *GetScheduledTransactionRequest) (*ScheduledTransaction, error) {
+	var resp ScheduledTransaction
+	path := fmt.Sprintf("/api/v1/finance/scheduled-transactions/%s", req.GetId())
 	var query []string
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
@@ -452,10 +452,10 @@ func (c *Client) GetScheduledPayment(ctx context.Context, req *GetScheduledPayme
 	return &resp, nil
 }
 
-// ConfirmScheduledPayment executes POST /api/v1/finance/scheduled-payments/{payment_id}/confirm.
-func (c *Client) ConfirmScheduledPayment(ctx context.Context, req *ConfirmScheduledPaymentRequest) (*Transaction, error) {
+// ConfirmScheduledTransaction executes POST /api/v1/finance/scheduled-transactions/{transaction_id}/confirm.
+func (c *Client) ConfirmScheduledTransaction(ctx context.Context, req *ConfirmScheduledTransactionRequest) (*Transaction, error) {
 	var resp Transaction
-	path := fmt.Sprintf("/api/v1/finance/scheduled-payments/%s/confirm", req.GetPaymentId())
+	path := fmt.Sprintf("/api/v1/finance/scheduled-transactions/%s/confirm", req.GetTransactionId())
 	var query []string
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
@@ -466,10 +466,10 @@ func (c *Client) ConfirmScheduledPayment(ctx context.Context, req *ConfirmSchedu
 	return &resp, nil
 }
 
-// MatchScheduledPayment executes POST /api/v1/finance/scheduled-payments/{payment_id}/match.
-func (c *Client) MatchScheduledPayment(ctx context.Context, req *MatchScheduledPaymentRequest) (*Transaction, error) {
+// MatchScheduledTransaction executes POST /api/v1/finance/scheduled-transactions/{transaction_id}/match.
+func (c *Client) MatchScheduledTransaction(ctx context.Context, req *MatchScheduledTransactionRequest) (*Transaction, error) {
 	var resp Transaction
-	path := fmt.Sprintf("/api/v1/finance/scheduled-payments/%s/match", req.GetPaymentId())
+	path := fmt.Sprintf("/api/v1/finance/scheduled-transactions/%s/match", req.GetTransactionId())
 	var query []string
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
@@ -480,10 +480,10 @@ func (c *Client) MatchScheduledPayment(ctx context.Context, req *MatchScheduledP
 	return &resp, nil
 }
 
-// SkipScheduledPayment executes POST /api/v1/finance/scheduled-payments/{id}:skip.
-func (c *Client) SkipScheduledPayment(ctx context.Context, req *SkipScheduledPaymentRequest) (*ScheduledPayment, error) {
-	var resp ScheduledPayment
-	path := fmt.Sprintf("/api/v1/finance/scheduled-payments/%s:skip", req.GetId())
+// SkipScheduledTransaction executes POST /api/v1/finance/scheduled-transactions/{id}:skip.
+func (c *Client) SkipScheduledTransaction(ctx context.Context, req *SkipScheduledTransactionRequest) (*ScheduledTransaction, error) {
+	var resp ScheduledTransaction
+	path := fmt.Sprintf("/api/v1/finance/scheduled-transactions/%s:skip", req.GetId())
 	var query []string
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")

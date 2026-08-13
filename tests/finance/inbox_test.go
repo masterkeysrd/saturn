@@ -290,12 +290,12 @@ func TestInboxItem_InvoiceJourney(t *testing.T) {
 					t.Errorf("expected RESOLVED status, got %s", item.GetStatus())
 				}
 			}).
-			AssertPendingScheduledPaymentsCount(t, 1). // 1 unpaid bill created
-			AssertPendingScheduledPayment(t, func(sp *financev1.ScheduledPayment) {
+			AssertPendingScheduledTransactionsCount(t, 1). // 1 unpaid bill created
+			AssertPendingScheduledTransaction(t, func(sp *financev1.ScheduledTransaction) {
 				if sp.GetAmount() != 12500 {
-					t.Errorf("expected new scheduled payment amount 12500, got %d", sp.GetAmount())
+					t.Errorf("expected new scheduled transaction amount 12500, got %d", sp.GetAmount())
 				}
-				if sp.GetStatus() != financev1.ScheduledPayment_PENDING {
+				if sp.GetStatus() != financev1.ScheduledTransaction_PENDING {
 					t.Errorf("expected PENDING status for new bill, got %s", sp.GetStatus())
 				}
 			}).
@@ -304,8 +304,8 @@ func TestInboxItem_InvoiceJourney(t *testing.T) {
 
 	t.Run("Linked invoice to unpaid scheduled payment updates bill figures", func(t *testing.T) {
 		d.Finance().
-			CreateRecurringExpense(t, "Internet Bill", "Utilities", 8000, "USD"). // $80.00 estimated bill
-			AssertPendingScheduledPaymentsCount(t, 2).
+			CreateRecurringTransaction(t, "Internet Bill", "Utilities", 8000, "USD"). // $80.00 estimated bill
+			AssertPendingScheduledTransactionsCount(t, 2).
 			StageInboxItem(t, driver.StageInboxItemOptions{
 				Key:         "internet_invoice",
 				DocType:     financev1.InboxItem_INVOICE,
@@ -315,26 +315,26 @@ func TestInboxItem_InvoiceJourney(t *testing.T) {
 				BudgetName:  "Utilities",
 			}).
 			UpdateInboxItem(t, "internet_invoice", driver.StageInboxItemOptions{
-				ScheduledPaymentAmount: 8000,
+				ScheduledTransactionAmount: 8000,
 			}).
 			AssertInboxItemCount(t, financev1.InboxItem_PENDING, 1).
 			ApproveInboxItem(t, "internet_invoice").
 			AssertInboxItemCount(t, financev1.InboxItem_PENDING, 0).
-			AssertScheduledPaymentByAmount(t, 8500, func(sp *financev1.ScheduledPayment) {
-				if sp.GetStatus() != financev1.ScheduledPayment_PENDING {
+			AssertScheduledTransactionByAmount(t, 8500, func(sp *financev1.ScheduledTransaction) {
+				if sp.GetStatus() != financev1.ScheduledTransaction_PENDING {
 					t.Errorf("expected PENDING status for updated bill, got %s", sp.GetStatus())
 				}
 			}).
-			AssertPendingScheduledPaymentsCount(t, 2). // Bill count unchanged (updated existing)
+			AssertPendingScheduledTransactionsCount(t, 2). // Bill count unchanged (updated existing)
 			AssertTransactionCount(t, 0)
 	})
 
 	t.Run("Linked invoice to already paid scheduled payment attaches audit link to paid transaction", func(t *testing.T) {
 		d.Finance().
-			CreateRecurringExpense(t, "Water Bill", "Utilities", 5000, "USD").
-			ConfirmScheduledPayment(t, driver.ConfirmScheduledPaymentOptions{
-				ScheduledPaymentAmount: 5000,
-				Account:                "Main Checking",
+			CreateRecurringTransaction(t, "Water Bill", "Utilities", 5000, "USD").
+			ConfirmScheduledTransaction(t, driver.ConfirmScheduledTransactionOptions{
+				ScheduledTransactionAmount: 5000,
+				Account:                    "Main Checking",
 			}). // Confirms payment into completed transaction ($50.00 deducted)
 			StageInboxItem(t, driver.StageInboxItemOptions{
 				Key:         "water_invoice",
@@ -351,7 +351,7 @@ func TestInboxItem_InvoiceJourney(t *testing.T) {
 			ApproveInboxItem(t, "water_invoice").
 			AssertInboxItemCount(t, financev1.InboxItem_PENDING, 0).
 			AssertTransactionCount(t, 1).                   // Exactly 1 paid transaction exists (no double creation)
-			AssertPendingScheduledPaymentsCount(t, 2).      // Remaining pending bills intact
+			AssertPendingScheduledTransactionsCount(t, 2).  // Remaining pending bills intact
 			AssertAccountBalance(t, "Main Checking", 95000) // $1000 - $50 = $950 balance intact (no double deduction)
 	})
 
@@ -532,7 +532,7 @@ func TestInboxItem_ReceiptMatrix(t *testing.T) {
 	t.Run("5_LinkedReceiptToUnpaidScheduledPayment_ExactAmount", func(t *testing.T) {
 		_, fin := setupReceiptTest(t, "Receipt Space 5")
 
-		fin.CreateRecurringExpense(t, "Internet Bill", "General Expenses", 8000, "USD").
+		fin.CreateRecurringTransaction(t, "Internet Bill", "General Expenses", 8000, "USD").
 			StageInboxItem(t, driver.StageInboxItemOptions{
 				Key:         "receipt_5",
 				DocType:     financev1.InboxItem_RECEIPT,
@@ -542,11 +542,11 @@ func TestInboxItem_ReceiptMatrix(t *testing.T) {
 				AccountName: "Main Checking",
 			}).
 			UpdateInboxItem(t, "receipt_5", driver.StageInboxItemOptions{
-				ScheduledPaymentName: "Internet Bill",
+				ScheduledTransactionName: "Internet Bill",
 			}).
 			ApproveInboxItem(t, "receipt_5").
 			AssertTransactionCount(t, 1).
-			AssertPendingScheduledPaymentsCount(t, 0).
+			AssertPendingScheduledTransactionsCount(t, 0).
 			AssertAccountBalance(t, "Main Checking", 92000).
 			AssertLastTransaction(t, func(txn *financev1.Transaction) {
 				if txn.GetAmount() != 8000 {
@@ -567,7 +567,7 @@ func TestInboxItem_ReceiptMatrix(t *testing.T) {
 	t.Run("6_LinkedReceiptToUnpaidScheduledPayment_WithAmountOverwrite", func(t *testing.T) {
 		_, fin := setupReceiptTest(t, "Receipt Space 6")
 
-		fin.CreateRecurringExpense(t, "Power Bill", "General Expenses", 8000, "USD").
+		fin.CreateRecurringTransaction(t, "Power Bill", "General Expenses", 8000, "USD").
 			StageInboxItem(t, driver.StageInboxItemOptions{
 				Key:         "receipt_6",
 				DocType:     financev1.InboxItem_RECEIPT,
@@ -577,11 +577,11 @@ func TestInboxItem_ReceiptMatrix(t *testing.T) {
 				AccountName: "Main Checking",
 			}).
 			UpdateInboxItem(t, "receipt_6", driver.StageInboxItemOptions{
-				ScheduledPaymentName: "Power Bill",
+				ScheduledTransactionName: "Power Bill",
 			}).
 			ApproveInboxItem(t, "receipt_6").
 			AssertTransactionCount(t, 1).
-			AssertPendingScheduledPaymentsCount(t, 0).
+			AssertPendingScheduledTransactionsCount(t, 0).
 			AssertAccountBalance(t, "Main Checking", 91500). // 100000 - 8500 = 91500
 			AssertLastTransaction(t, func(txn *financev1.Transaction) {
 				if txn.GetAmount() != 8500 {
@@ -599,10 +599,10 @@ func TestInboxItem_ReceiptMatrix(t *testing.T) {
 	t.Run("7_LinkedReceiptToPaidScheduledPayment_Idempotent", func(t *testing.T) {
 		_, fin := setupReceiptTest(t, "Receipt Space 7")
 
-		fin.CreateRecurringExpense(t, "Gym", "General Expenses", 5000, "USD").
-			ConfirmScheduledPayment(t, driver.ConfirmScheduledPaymentOptions{
-				ScheduledPaymentName: "Gym",
-				Account:              "Main Checking",
+		fin.CreateRecurringTransaction(t, "Gym", "General Expenses", 5000, "USD").
+			ConfirmScheduledTransaction(t, driver.ConfirmScheduledTransactionOptions{
+				ScheduledTransactionName: "Gym",
+				Account:                  "Main Checking",
 			}).
 			StageInboxItem(t, driver.StageInboxItemOptions{
 				Key:         "receipt_7",
@@ -612,8 +612,8 @@ func TestInboxItem_ReceiptMatrix(t *testing.T) {
 				AccountName: "Main Checking",
 			}).
 			UpdateInboxItem(t, "receipt_7", driver.StageInboxItemOptions{
-				ScheduledPaymentName:  "Gym",
-				LinkToLastTransaction: true,
+				ScheduledTransactionName: "Gym",
+				LinkToLastTransaction:    true,
 			}).
 			ApproveInboxItem(t, "receipt_7").
 			AssertTransactionCount(t, 1).                    // 0 duplicate transactions
@@ -631,7 +631,7 @@ func TestInboxItem_ReceiptMatrix(t *testing.T) {
 	t.Run("8_RetroactiveScheduledPaymentLink_OnExistingTransaction", func(t *testing.T) {
 		_, fin := setupReceiptTest(t, "Receipt Space 8")
 
-		fin.CreateRecurringExpense(t, "Phone Bill", "General Expenses", 8000, "USD").
+		fin.CreateRecurringTransaction(t, "Phone Bill", "General Expenses", 8000, "USD").
 			CreateExpense(t, driver.ExpenseOptions{
 				Account:     "Main Checking",
 				Budget:      "General Expenses",
@@ -647,12 +647,12 @@ func TestInboxItem_ReceiptMatrix(t *testing.T) {
 				AccountName: "Main Checking",
 			}).
 			UpdateInboxItem(t, "receipt_8", driver.StageInboxItemOptions{
-				ScheduledPaymentName:  "Phone Bill",
-				LinkToLastTransaction: true,
+				ScheduledTransactionName: "Phone Bill",
+				LinkToLastTransaction:    true,
 			}).
 			ApproveInboxItem(t, "receipt_8").
 			AssertTransactionCount(t, 1).
-			AssertPendingScheduledPaymentsCount(t, 0).
+			AssertPendingScheduledTransactionsCount(t, 0).
 			AssertAccountBalance(t, "Main Checking", 92000).
 			AssertLastTransaction(t, func(txn *financev1.Transaction) {
 				if txn.GetAmount() != 8000 {
@@ -670,11 +670,11 @@ func TestInboxItem_ReceiptMatrix(t *testing.T) {
 	t.Run("9_RelinkToDifferentScheduledPayment_Rejection", func(t *testing.T) {
 		_, fin := setupReceiptTest(t, "Receipt Space 9")
 
-		fin.CreateRecurringExpense(t, "Bill A", "General Expenses", 3000, "USD").
-			CreateRecurringExpense(t, "Bill B", "General Expenses", 4000, "USD").
-			ConfirmScheduledPayment(t, driver.ConfirmScheduledPaymentOptions{
-				ScheduledPaymentName: "Bill A",
-				Account:              "Main Checking",
+		fin.CreateRecurringTransaction(t, "Bill A", "General Expenses", 3000, "USD").
+			CreateRecurringTransaction(t, "Bill B", "General Expenses", 4000, "USD").
+			ConfirmScheduledTransaction(t, driver.ConfirmScheduledTransactionOptions{
+				ScheduledTransactionName: "Bill A",
+				Account:                  "Main Checking",
 			}).
 			StageInboxItem(t, driver.StageInboxItemOptions{
 				Key:         "receipt_9",
@@ -684,10 +684,10 @@ func TestInboxItem_ReceiptMatrix(t *testing.T) {
 				AccountName: "Main Checking",
 			}).
 			UpdateInboxItem(t, "receipt_9", driver.StageInboxItemOptions{
-				ScheduledPaymentName:  "Bill B", // Try to link Bill A's transaction to Bill B
-				LinkToLastTransaction: true,
+				ScheduledTransactionName: "Bill B", // Try to link Bill A's transaction to Bill B
+				LinkToLastTransaction:    true,
 			}).
-			ApproveInboxItem(t, "receipt_9", "cannot relink transaction to a different scheduled payment")
+			ApproveInboxItem(t, "receipt_9", "cannot relink transaction to a different scheduled transaction")
 	})
 
 	// --- Category 3: Borrowing / Loan Linking ---
@@ -1298,7 +1298,7 @@ func TestInboxItem_BankNotificationMatrix(t *testing.T) {
 	t.Run("10_LinkToUnpaidScheduledPayment", func(t *testing.T) {
 		_, fin := setupBankTest(t, "Bank Space 10")
 
-		fin.CreateRecurringExpense(t, "Gym Membership", "General Expenses", 5000, "USD").
+		fin.CreateRecurringTransaction(t, "Gym Membership", "General Expenses", 5000, "USD").
 			StageInboxItem(t, driver.StageInboxItemOptions{
 				Key:         "bank_10",
 				DocType:     financev1.InboxItem_BANK_NOTIFICATION,
@@ -1307,11 +1307,11 @@ func TestInboxItem_BankNotificationMatrix(t *testing.T) {
 				AccountName: "Main Checking",
 			}).
 			UpdateInboxItem(t, "bank_10", driver.StageInboxItemOptions{
-				ScheduledPaymentName: "Gym Membership",
+				ScheduledTransactionName: "Gym Membership",
 			}).
 			ApproveInboxItem(t, "bank_10").
 			AssertTransactionCount(t, 1).
-			AssertPendingScheduledPaymentsCount(t, 0).
+			AssertPendingScheduledTransactionsCount(t, 0).
 			AssertAccountBalance(t, "Main Checking", 95000).
 			AssertLastTransaction(t, func(txn *financev1.Transaction) {
 				if txn.GetAmount() != 5000 {
@@ -1489,7 +1489,7 @@ func TestInboxItem_BankNotificationMatrix(t *testing.T) {
 	t.Run("17_ACH_AutoPayBill_WithAmountOverwrite", func(t *testing.T) {
 		_, fin := setupBankTest(t, "Bank Space 17")
 
-		fin.CreateRecurringExpense(t, "Electric Bill", "General Expenses", 8000, "USD").
+		fin.CreateRecurringTransaction(t, "Electric Bill", "General Expenses", 8000, "USD").
 			StageInboxItem(t, driver.StageInboxItemOptions{
 				Key:         "bank_17",
 				DocType:     financev1.InboxItem_BANK_NOTIFICATION,
@@ -1498,10 +1498,10 @@ func TestInboxItem_BankNotificationMatrix(t *testing.T) {
 				AccountName: "Main Checking",
 			}).
 			UpdateInboxItem(t, "bank_17", driver.StageInboxItemOptions{
-				ScheduledPaymentName: "Electric Bill",
+				ScheduledTransactionName: "Electric Bill",
 			}).
 			ApproveInboxItem(t, "bank_17").
-			AssertPendingScheduledPaymentsCount(t, 0).
+			AssertPendingScheduledTransactionsCount(t, 0).
 			AssertAccountBalance(t, "Main Checking", 91500). // 100000 - 8500 = 91500
 			AssertLastTransaction(t, func(txn *financev1.Transaction) {
 				if txn.GetAmount() != 8500 {

@@ -9,7 +9,7 @@ import type {
   InboxItem,
   Account,
   Budget,
-  ScheduledPayment,
+  ScheduledTransaction,
   Borrowing,
   Transaction,
 } from "@/gen/saturn/finance/v1/finance"
@@ -66,7 +66,7 @@ interface InboxItemReviewPanelProps {
   selectedItem: InboxItem
   accounts: Account[]
   budgets: Budget[]
-  payments: ScheduledPayment[]
+  payments: ScheduledTransaction[]
   borrowings: Borrowing[]
   transactions: Transaction[]
   onApprove: (tx: InboxItem, values: InboxReviewFormValues) => Promise<void>
@@ -218,10 +218,14 @@ export function InboxItemReviewPanel({
       if (match) return match
     }
 
+    const itemMeta = selectedItem.metadata || {}
+    const docTxnType = (itemMeta.transaction_type || "EXPENSE").toUpperCase()
+
     const vendorLower = (selectedItem.vendorName || "").toLowerCase().trim()
     const stagedAmtCents = Number(selectedItem.amount || 0)
 
     for (const p of payments) {
+      if (p.type !== docTxnType) continue
       const pAmtCents = Number(p.amount || 0)
       const budget = budgets.find((b) => b.id === p.budgetId)
       const budgetNameLower = (budget?.name || "").toLowerCase()
@@ -302,16 +306,22 @@ export function InboxItemReviewPanel({
     })
   }, [selectedItem, suggestedBill, suggestedBorrowing, reset])
 
+  const currentTxnType = useWatch({ control, name: "transactionType" })
+
   const currentScheduledPaymentId = useWatch({
     control,
     name: "scheduledPaymentId",
   })
 
   const filteredPayments = useMemo(() => {
-    const q = billSearch.toLowerCase().trim()
-    if (!q) return payments
+    const matchedTypePayments = payments.filter((p) => {
+      return p.type === currentTxnType
+    })
 
-    return payments.filter((p) => {
+    const q = billSearch.toLowerCase().trim()
+    if (!q) return matchedTypePayments
+
+    return matchedTypePayments.filter((p) => {
       const budget = budgets.find((b) => b.id === p.budgetId)
       const budgetName = (budget?.name || "").toLowerCase()
       const amtStr = (Number(p.amount || 0) / 100).toFixed(2)
@@ -327,7 +337,7 @@ export function InboxItemReviewPanel({
         sourceType.includes(q)
       )
     })
-  }, [payments, budgets, billSearch])
+  }, [payments, budgets, billSearch, currentTxnType])
 
   const currentBorrowingId = useWatch({ control, name: "borrowingId" })
   const currentBorrowingLinkType = useWatch({
@@ -374,7 +384,6 @@ export function InboxItemReviewPanel({
       autoVerified,
     }
   }, [decodedRawText, isVerificationItem])
-  const currentTxnType = useWatch({ control, name: "transactionType" })
   const transferLeg = useWatch({ control, name: "transferLeg" })
   const scheduledPaymentIdVal = useWatch({
     control,
@@ -398,8 +407,11 @@ export function InboxItemReviewPanel({
     return Boolean(matchedTransaction.metadata?.borrowing_id)
   }, [matchedTransaction])
 
-  const showScheduledPaymentSection = !isLinking || !isMatchedAlreadyScheduled
-  const showBorrowingSection = !isLinking || !isMatchedAlreadyBorrowing
+  const showScheduledPaymentSection =
+    (currentTxnType === "EXPENSE" || currentTxnType === "INCOME") &&
+    (!isLinking || !isMatchedAlreadyScheduled)
+  const showBorrowingSection =
+    currentTxnType === "EXPENSE" && (!isLinking || !isMatchedAlreadyBorrowing)
 
   const dupTx = meta.potential_duplicate_id
     ? transactions.find((t) => t.id === meta.potential_duplicate_id)
@@ -1087,21 +1099,23 @@ export function InboxItemReviewPanel({
                   </div>
                 )}
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                    {currentDocType === "INVOICE"
-                      ? "Budget Category (Required)"
-                      : "Budget Category"}
-                  </Label>
-                  <BudgetSelect
-                    control={control}
-                    name="budgetId"
-                    className="h-10 w-full rounded-xl border-border/60 bg-background/40"
-                    budgets={budgets}
-                    allowNone
-                    disabled={isLinking}
-                  />
-                </div>
+                {currentTxnType !== "INCOME" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
+                      {currentDocType === "INVOICE"
+                        ? "Budget Category (Required)"
+                        : "Budget Category"}
+                    </Label>
+                    <BudgetSelect
+                      control={control}
+                      name="budgetId"
+                      className="h-10 w-full rounded-xl border-border/60 bg-background/40"
+                      budgets={budgets}
+                      allowNone
+                      disabled={isLinking}
+                    />
+                  </div>
+                )}
               </>
             )}
 
@@ -1117,7 +1131,9 @@ export function InboxItemReviewPanel({
                     <div className="space-y-2">
                       <Label className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground uppercase">
                         <Calendar className="h-3.5 w-3.5 text-indigo-400" />
-                        Link Scheduled Bill
+                        {currentTxnType === "INCOME"
+                          ? "Link Scheduled Income"
+                          : "Link Scheduled Bill"}
                       </Label>
 
                       {(() => {
@@ -1129,6 +1145,15 @@ export function InboxItemReviewPanel({
                               (b) => b.id === selectedPaymentObj.budgetId
                             )
                           : null
+
+                        const selectedPaymentName =
+                          selectedPaymentObj?.recurringTransaction?.name ||
+                          selectedPaymentObj?.metadata?.vendorName ||
+                          selectedPaymentObj?.metadata?.name ||
+                          selectedPaymentBudget?.name ||
+                          (selectedPaymentObj?.type === "INCOME"
+                            ? "Scheduled Income"
+                            : "Scheduled Bill")
 
                         return (
                           <Popover
@@ -1142,8 +1167,7 @@ export function InboxItemReviewPanel({
                                   <div className="flex min-w-0 items-center gap-2">
                                     <Calendar className="h-3.5 w-3.5 shrink-0 text-indigo-400" />
                                     <span className="truncate font-semibold text-foreground">
-                                      {selectedPaymentBudget?.name ||
-                                        "Scheduled Bill"}
+                                      {selectedPaymentName}
                                     </span>
                                     <span className="shrink-0 text-[10px] text-muted-foreground">
                                       (Due{" "}
@@ -1193,12 +1217,21 @@ export function InboxItemReviewPanel({
                                       setBillPopoverOpen(false)
                                     }}
                                   >
-                                    <span>None / Standalone Expense</span>
+                                    <span>
+                                      None / Standalone{" "}
+                                      {currentTxnType === "INCOME"
+                                        ? "Income"
+                                        : "Expense"}
+                                    </span>
                                   </button>
                                   <Separator className="my-1 bg-border/10" />
                                   {filteredPayments.length === 0 ? (
                                     <div className="p-4 text-center text-xs text-muted-foreground">
-                                      No matching scheduled bills found.
+                                      No matching scheduled{" "}
+                                      {currentTxnType === "INCOME"
+                                        ? "income items"
+                                        : "bills"}{" "}
+                                      found.
                                     </div>
                                   ) : (
                                     filteredPayments.map((p) => {
@@ -1218,6 +1251,15 @@ export function InboxItemReviewPanel({
                                             day: "numeric",
                                           })
                                         : "N/A"
+
+                                      const pName =
+                                        p.recurringTransaction?.name ||
+                                        p.metadata?.vendorName ||
+                                        p.metadata?.name ||
+                                        budget?.name ||
+                                        (p.type === "INCOME"
+                                          ? "Scheduled Income"
+                                          : "Scheduled Bill")
 
                                       return (
                                         <button
@@ -1242,8 +1284,7 @@ export function InboxItemReviewPanel({
                                             <div className="flex items-center gap-1.5 truncate pr-2 font-semibold text-foreground">
                                               <Calendar className="h-3.5 w-3.5 shrink-0 text-indigo-400" />
                                               <span className="truncate">
-                                                {budget?.name ||
-                                                  "Scheduled Bill"}
+                                                {pName}
                                               </span>
                                             </div>
                                             <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">

@@ -40,17 +40,17 @@ type FinanceService interface {
 	ListTransactionEvents(ctx context.Context, spaceID finance.SpaceID, txnID finance.TransactionID) ([]*finance.TransactionEvent, error)
 	GetSpentInsights(ctx context.Context, req *finance.GetSpentInsightsRequest) (*finance.SpentInsights, error)
 
-	CreateRecurringExpense(ctx context.Context, expense *finance.RecurringExpense) (*finance.RecurringExpense, error)
-	GetRecurringExpense(ctx context.Context, spaceID finance.SpaceID, id finance.RecurringExpenseID) (*finance.RecurringExpense, error)
-	UpdateRecurringExpense(ctx context.Context, expense *finance.RecurringExpense, mask []string) (*finance.RecurringExpense, error)
-	DeleteRecurringExpense(ctx context.Context, id finance.RecurringExpenseID, opts finance.DeleteOptions) error
-	ListRecurringExpenses(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListRecurringExpensesFilter) (*paging.Page[*finance.RecurringExpense], error)
-	ListScheduledPayments(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListScheduledPaymentsFilter) (*paging.Page[*finance.ScheduledPayment], error)
-	GetScheduledPayment(ctx context.Context, spaceID finance.SpaceID, id finance.ScheduledPaymentID) (*finance.ScheduledPayment, error)
-	ConfirmScheduledPayment(ctx context.Context, req finance.ConfirmScheduledPaymentRequest) (*finance.Transaction, error)
-	MatchScheduledPayment(ctx context.Context, req finance.MatchScheduledPaymentRequest) (*finance.Transaction, error)
-	SkipScheduledPayment(ctx context.Context, spaceID finance.SpaceID, id finance.ScheduledPaymentID) (*finance.ScheduledPayment, error)
-	GenerateScheduledPayments(ctx context.Context) error
+	CreateRecurringTransaction(ctx context.Context, transaction *finance.RecurringTransaction) (*finance.RecurringTransaction, error)
+	GetRecurringTransaction(ctx context.Context, spaceID finance.SpaceID, id finance.RecurringTransactionID) (*finance.RecurringTransaction, error)
+	UpdateRecurringTransaction(ctx context.Context, transaction *finance.RecurringTransaction, mask []string) (*finance.RecurringTransaction, error)
+	DeleteRecurringTransaction(ctx context.Context, id finance.RecurringTransactionID, opts finance.DeleteOptions) error
+	ListRecurringTransactions(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListRecurringTransactionsFilter) (*paging.Page[*finance.RecurringTransaction], error)
+	ListScheduledTransactions(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListScheduledTransactionsFilter) (*paging.Page[*finance.ScheduledTransaction], error)
+	GetScheduledTransaction(ctx context.Context, spaceID finance.SpaceID, id finance.ScheduledTransactionID) (*finance.ScheduledTransaction, error)
+	ConfirmScheduledTransaction(ctx context.Context, req finance.ConfirmScheduledTransactionRequest) (*finance.Transaction, error)
+	MatchScheduledTransaction(ctx context.Context, req finance.MatchScheduledTransactionRequest) (*finance.Transaction, error)
+	SkipScheduledTransaction(ctx context.Context, spaceID finance.SpaceID, id finance.ScheduledTransactionID) (*finance.ScheduledTransaction, error)
+	GenerateScheduledTransactions(ctx context.Context) error
 
 	CreateBorrowing(ctx context.Context, b *finance.Borrowing, createAsTransaction bool) (*finance.Borrowing, error)
 	GetBorrowing(ctx context.Context, spaceID finance.SpaceID, id finance.BorrowingID) (*finance.Borrowing, error)
@@ -109,13 +109,13 @@ type ParsedTransaction struct {
 
 // IngestionContext provides workspace entity context to guide the polymorphic ingestion agent suggestions.
 type IngestionContext struct {
-	Budgets           []*finance.Budget
-	Accounts          []*finance.Account
-	Institutions      []*finance.Institution
-	ScheduledPayments []*finance.ScheduledPayment
-	RecurringExpenses []*finance.RecurringExpense
-	Borrowings        []*finance.Borrowing
-	ReferenceDate     time.Time
+	Budgets               []*finance.Budget
+	Accounts              []*finance.Account
+	Institutions          []*finance.Institution
+	ScheduledTransactions []*finance.ScheduledTransaction
+	RecurringTransactions []*finance.RecurringTransaction
+	Borrowings            []*finance.Borrowing
+	ReferenceDate         time.Time
 }
 
 // DocumentClassifier defines the interface for running document-type classification.

@@ -682,62 +682,62 @@ func (m *mockBorrowingStore) ListBySpace(ctx context.Context, spaceID SpaceID, f
 	return list, "", nil
 }
 
-type mockScheduledPaymentStore struct {
-	payments map[ScheduledPaymentID]*ScheduledPayment
+type mockScheduledTransactionStore struct {
+	payments map[ScheduledTransactionID]*ScheduledTransaction
 }
 
-func (m *mockScheduledPaymentStore) Create(ctx context.Context, payment *ScheduledPayment) error {
+func (m *mockScheduledTransactionStore) Create(ctx context.Context, payment *ScheduledTransaction) error {
 	if m.payments == nil {
-		m.payments = make(map[ScheduledPaymentID]*ScheduledPayment)
+		m.payments = make(map[ScheduledTransactionID]*ScheduledTransaction)
 	}
 	m.payments[payment.ID] = payment
 	return nil
 }
 
-func (m *mockScheduledPaymentStore) GetByID(ctx context.Context, spaceID SpaceID, id ScheduledPaymentID) (*ScheduledPayment, error) {
+func (m *mockScheduledTransactionStore) GetByID(ctx context.Context, spaceID SpaceID, id ScheduledTransactionID) (*ScheduledTransaction, error) {
 	p, ok := m.payments[id]
 	if !ok || p.SpaceID != spaceID {
-		return nil, ErrScheduledPaymentNotFound
+		return nil, ErrScheduledTransactionNotFound
 	}
 	return p, nil
 }
 
-func (m *mockScheduledPaymentStore) Update(ctx context.Context, payment *ScheduledPayment) error {
+func (m *mockScheduledTransactionStore) Update(ctx context.Context, payment *ScheduledTransaction) error {
 	if _, ok := m.payments[payment.ID]; !ok {
-		return ErrScheduledPaymentNotFound
+		return ErrScheduledTransactionNotFound
 	}
 	m.payments[payment.ID] = payment
 	return nil
 }
 
-func (m *mockScheduledPaymentStore) UpdateStatus(ctx context.Context, id ScheduledPaymentID, status ScheduledPaymentStatus) error {
+func (m *mockScheduledTransactionStore) UpdateStatus(ctx context.Context, id ScheduledTransactionID, status ScheduledTransactionStatus) error {
 	p, ok := m.payments[id]
 	if !ok {
-		return ErrScheduledPaymentNotFound
+		return ErrScheduledTransactionNotFound
 	}
 	p.Status = status
 	return nil
 }
 
-func (m *mockScheduledPaymentStore) Delete(ctx context.Context, id ScheduledPaymentID) error {
+func (m *mockScheduledTransactionStore) Delete(ctx context.Context, id ScheduledTransactionID) error {
 	delete(m.payments, id)
 	return nil
 }
 
-func (m *mockScheduledPaymentStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListScheduledPaymentsFilter) (*paging.Page[*ScheduledPayment], error) {
-	var list []*ScheduledPayment
+func (m *mockScheduledTransactionStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListScheduledTransactionsFilter) (*paging.Page[*ScheduledTransaction], error) {
+	var list []*ScheduledTransaction
 	for _, p := range m.payments {
 		if p.SpaceID == spaceID {
 			list = append(list, p)
 		}
 	}
-	return &paging.Page[*ScheduledPayment]{Items: list}, nil
+	return &paging.Page[*ScheduledTransaction]{Items: list}, nil
 }
 
-func (m *mockScheduledPaymentStore) HasScheduledPayments(ctx context.Context, spaceID SpaceID, filter *ListScheduledPaymentsFilter) (bool, error) {
+func (m *mockScheduledTransactionStore) HasScheduledTransactions(ctx context.Context, spaceID SpaceID, filter *ListScheduledTransactionsFilter) (bool, error) {
 	for _, p := range m.payments {
 		if p.SpaceID == spaceID {
-			if filter != nil && filter.BudgetID != nil && p.BudgetID != *filter.BudgetID {
+			if filter != nil && filter.BudgetID != nil && (p.BudgetID == nil || *p.BudgetID != *filter.BudgetID) {
 				continue
 			}
 			return true, nil
@@ -839,7 +839,7 @@ func TestDeleteBudget(t *testing.T) {
 
 	budgetStore := &mockBudgetStore{data: make(map[BudgetID]*Budget)}
 	txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
-	schedStore := &mockScheduledPaymentStore{payments: make(map[ScheduledPaymentID]*ScheduledPayment)}
+	schedStore := &mockScheduledTransactionStore{payments: make(map[ScheduledTransactionID]*ScheduledTransaction)}
 
 	_ = budgetStore.Create(ctx, &Budget{ID: bIDClean, SpaceID: spaceID, Name: "Clean Budget", Status: BudgetStatusActive})
 	_ = budgetStore.Create(ctx, &Budget{ID: bIDTxns, SpaceID: spaceID, Name: "Txn Budget", Status: BudgetStatusActive})
@@ -853,17 +853,18 @@ func TestDeleteBudget(t *testing.T) {
 		Amount:   500,
 	})
 
-	_ = schedStore.Create(ctx, &ScheduledPayment{
-		ID:       ScheduledPaymentID("sch_1"),
+	_ = schedStore.Create(ctx, &ScheduledTransaction{
+		ID:       ScheduledTransactionID("sch_1"),
 		SpaceID:  spaceID,
-		BudgetID: bIDSched,
-		Status:   ScheduledPaymentPending,
+		BudgetID: &bIDSched,
+		Status:   ScheduledTransactionPending,
+		Type:     TransactionTypeExpense,
 	})
 
 	svc := NewService(Dependencies{
-		BudgetStore:           budgetStore,
-		TransactionStore:      txnStore,
-		ScheduledPaymentStore: schedStore,
+		BudgetStore:               budgetStore,
+		TransactionStore:          txnStore,
+		ScheduledTransactionStore: schedStore,
 	})
 
 	tests := []struct {
@@ -879,7 +880,7 @@ func TestDeleteBudget(t *testing.T) {
 		{
 			name:    "deleting budget with active scheduled payments fails",
 			bID:     bIDSched,
-			wantErr: ErrBudgetHasScheduledPayments,
+			wantErr: ErrBudgetHasScheduledTransactions,
 		},
 		{
 			name:    "deleting clean budget succeeds",
@@ -902,35 +903,36 @@ func TestDeleteBudget(t *testing.T) {
 	}
 }
 
-func TestGetScheduledPayment(t *testing.T) {
+func TestGetScheduledTransaction(t *testing.T) {
 	ctx := context.Background()
 	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
-	spID := ScheduledPaymentID("sch_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	spID := ScheduledTransactionID("sch_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 
-	mockStore := &mockScheduledPaymentStore{
-		payments: map[ScheduledPaymentID]*ScheduledPayment{
+	mockStore := &mockScheduledTransactionStore{
+		payments: map[ScheduledTransactionID]*ScheduledTransaction{
 			spID: {
 				ID:       spID,
 				SpaceID:  spaceID,
 				Amount:   1500,
 				Currency: Currency("USD"),
-				Status:   ScheduledPaymentPending,
+				Status:   ScheduledTransactionPending,
+				Type:     TransactionTypeExpense,
 			},
 		},
 	}
 
 	svc := NewService(Dependencies{
-		ScheduledPaymentStore: mockStore,
+		ScheduledTransactionStore: mockStore,
 	})
 
 	tests := []struct {
 		name    string
 		spaceID SpaceID
-		id      ScheduledPaymentID
+		id      ScheduledTransactionID
 		wantErr bool
 	}{
 		{
-			name:    "valid query returns scheduled payment",
+			name:    "valid query returns scheduled transaction",
 			spaceID: spaceID,
 			id:      spID,
 			wantErr: false,
@@ -942,32 +944,32 @@ func TestGetScheduledPayment(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "invalid scheduled payment ID returns validation error",
+			name:    "invalid scheduled transaction ID returns validation error",
 			spaceID: spaceID,
-			id:      ScheduledPaymentID("invalid"),
+			id:      ScheduledTransactionID("invalid"),
 			wantErr: true,
 		},
 		{
-			name:    "missing scheduled payment returns not found error",
+			name:    "missing scheduled transaction returns not found error",
 			spaceID: spaceID,
-			id:      ScheduledPaymentID("sch_2dE1V8ZqWz4eS2N9yX3bL999999"),
+			id:      ScheduledTransactionID("sch_2dE1V8ZqWz4eS2N9yX3bL999999"),
 			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := svc.GetScheduledPayment(ctx, tt.spaceID, tt.id)
+			got, err := svc.GetScheduledTransaction(ctx, tt.spaceID, tt.id)
 			if tt.wantErr {
 				if err == nil {
-					t.Errorf("GetScheduledPayment expected error, got nil")
+					t.Errorf("GetScheduledTransaction expected error, got nil")
 				}
 			} else {
 				if err != nil {
-					t.Errorf("unexpected GetScheduledPayment error: %v", err)
+					t.Errorf("unexpected GetScheduledTransaction error: %v", err)
 				}
 				if got == nil || got.ID != spID {
-					t.Errorf("GetScheduledPayment got = %v, want ID %s", got, spID)
+					t.Errorf("GetScheduledTransaction got = %v, want ID %s", got, spID)
 				}
 			}
 		})
@@ -2792,19 +2794,19 @@ func TestService_ApproveInboxItem(t *testing.T) {
 			txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
 			eventStore := &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)}
 			transferStore := &mockTransferStore{data: make(map[TransferID]*Transfer)}
-			scheduledStore := &mockScheduledPaymentStore{payments: make(map[ScheduledPaymentID]*ScheduledPayment)}
+			scheduledStore := &mockScheduledTransactionStore{payments: make(map[ScheduledTransactionID]*ScheduledTransaction)}
 			inboxStore := &mockInboxItemStore{items: make(map[string]*InboxItem)}
 
 			svc := NewService(Dependencies{
-				SettingsStore:         settingsStore,
-				AccountStore:          accountStore,
-				TransactionStore:      txnStore,
-				TransactionEventStore: eventStore,
-				TransferStore:         transferStore,
-				ScheduledPaymentStore: scheduledStore,
-				InboxItemStore:        inboxStore,
-				BudgetStore:           budgetStore,
-				PeriodStore:           periodStore,
+				SettingsStore:             settingsStore,
+				AccountStore:              accountStore,
+				TransactionStore:          txnStore,
+				TransactionEventStore:     eventStore,
+				TransferStore:             transferStore,
+				ScheduledTransactionStore: scheduledStore,
+				InboxItemStore:            inboxStore,
+				BudgetStore:               budgetStore,
+				PeriodStore:               periodStore,
 			})
 
 			// Prepare metadata overrides with valid destination account ID
@@ -2931,16 +2933,16 @@ func TestService_SystemVerification(t *testing.T) {
 			txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
 			eventStore := &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)}
 			transferStore := &mockTransferStore{data: make(map[TransferID]*Transfer)}
-			scheduledStore := &mockScheduledPaymentStore{payments: make(map[ScheduledPaymentID]*ScheduledPayment)}
+			scheduledStore := &mockScheduledTransactionStore{payments: make(map[ScheduledTransactionID]*ScheduledTransaction)}
 			inboxStore := &mockInboxItemStore{items: make(map[string]*InboxItem)}
 
 			svc := NewService(Dependencies{
-				SettingsStore:         settingsStore,
-				TransactionStore:      txnStore,
-				TransactionEventStore: eventStore,
-				TransferStore:         transferStore,
-				ScheduledPaymentStore: scheduledStore,
-				InboxItemStore:        inboxStore,
+				SettingsStore:             settingsStore,
+				TransactionStore:          txnStore,
+				TransactionEventStore:     eventStore,
+				TransferStore:             transferStore,
+				ScheduledTransactionStore: scheduledStore,
+				InboxItemStore:            inboxStore,
 			})
 
 			// Stage system verification item
@@ -2995,7 +2997,7 @@ func TestService_SystemVerification(t *testing.T) {
 				t.Errorf("Transfers created = %d, want 0", len(transferStore.data))
 			}
 			if len(scheduledStore.payments) != 0 {
-				t.Errorf("Scheduled payments created = %d, want 0", len(scheduledStore.payments))
+				t.Errorf("Scheduled transactions created = %d, want 0", len(scheduledStore.payments))
 			}
 		})
 	}
@@ -3010,7 +3012,7 @@ func TestService_InvoiceBranch(t *testing.T) {
 		name                     string
 		action                   string // "approve" or "discard"
 		linkScheduledPayment     bool
-		paymentInitialStatus     ScheduledPaymentStatus
+		paymentInitialStatus     ScheduledTransactionStatus
 		expectedScheduledCount   int
 		expectedTransactionCount int
 		expectPaidTxnLinked      bool
@@ -3027,7 +3029,7 @@ func TestService_InvoiceBranch(t *testing.T) {
 			name:                     "Linked invoice to unpaid scheduled payment updates bill figures",
 			action:                   "approve",
 			linkScheduledPayment:     true,
-			paymentInitialStatus:     ScheduledPaymentPending,
+			paymentInitialStatus:     ScheduledTransactionPending,
 			expectedScheduledCount:   1,
 			expectedTransactionCount: 0,
 			expectPaidTxnLinked:      false,
@@ -3036,7 +3038,7 @@ func TestService_InvoiceBranch(t *testing.T) {
 			name:                     "Linked invoice to already paid scheduled payment attaches audit link to paid transaction",
 			action:                   "approve",
 			linkScheduledPayment:     true,
-			paymentInitialStatus:     ScheduledPaymentStatus("paid"),
+			paymentInitialStatus:     ScheduledTransactionStatus("paid"),
 			expectedScheduledCount:   1,
 			expectedTransactionCount: 1,
 			expectPaidTxnLinked:      true,
@@ -3061,34 +3063,48 @@ func TestService_InvoiceBranch(t *testing.T) {
 			_ = accountStore.Create(ctx, &Account{
 				ID:             accID,
 				SpaceID:        spID,
-				Name:           "Checking",
+				Name:           "checking",
 				Currency:       Currency("USD"),
 				CurrentBalance: 100000,
 				IsActive:       true,
 			})
 
+			budgetStore := &mockBudgetStore{data: make(map[BudgetID]*Budget)}
+			bIDVal, _ := NewBudgetID()
+			bg := &Budget{
+				ID:       bIDVal,
+				SpaceID:  spID,
+				Name:     "util",
+				Currency: Currency("USD"),
+			}
+			_ = budgetStore.Create(ctx, bg)
+
+			periodStore := &mockPeriodStore{data: make(map[string]*BudgetPeriod)}
+
 			txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
 			eventStore := &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)}
 			transferStore := &mockTransferStore{data: make(map[TransferID]*Transfer)}
-			scheduledStore := &mockScheduledPaymentStore{payments: make(map[ScheduledPaymentID]*ScheduledPayment)}
+			scheduledStore := &mockScheduledTransactionStore{payments: make(map[ScheduledTransactionID]*ScheduledTransaction)}
 			inboxStore := &mockInboxItemStore{items: make(map[string]*InboxItem)}
 
 			svc := NewService(Dependencies{
-				SettingsStore:         settingsStore,
-				AccountStore:          accountStore,
-				TransactionStore:      txnStore,
-				TransactionEventStore: eventStore,
-				TransferStore:         transferStore,
-				ScheduledPaymentStore: scheduledStore,
-				InboxItemStore:        inboxStore,
+				SettingsStore:             settingsStore,
+				AccountStore:              accountStore,
+				TransactionStore:          txnStore,
+				TransactionEventStore:     eventStore,
+				TransferStore:             transferStore,
+				ScheduledTransactionStore: scheduledStore,
+				InboxItemStore:            inboxStore,
+				BudgetStore:               budgetStore,
+				PeriodStore:               periodStore,
 			})
 
-			var preExistingPayID ScheduledPaymentID
+			var preExistingPayID ScheduledTransactionID
 			var preExistingTxnID TransactionID
 
 			if tt.linkScheduledPayment {
-				preExistingPayID, _ = NewScheduledPaymentID()
-				pay := &ScheduledPayment{
+				preExistingPayID, _ = NewScheduledTransactionID()
+				pay := &ScheduledTransaction{
 					ID:         preExistingPayID,
 					SpaceID:    spID,
 					SourceType: "Electric Co",
@@ -3097,6 +3113,7 @@ func TestService_InvoiceBranch(t *testing.T) {
 					Currency:   Currency("USD"),
 					DueDate:    time.Now().UTC(),
 					Status:     tt.paymentInitialStatus,
+					Type:       TransactionTypeExpense,
 				}
 
 				if tt.expectPaidTxnLinked {
@@ -3116,8 +3133,7 @@ func TestService_InvoiceBranch(t *testing.T) {
 				_ = scheduledStore.Create(ctx, pay)
 			}
 
-			bID, _ := NewBudgetID()
-			bIDStr := string(bID)
+			bIDStr := string(bIDVal)
 
 			// Stage Invoice item
 			accIDStr := string(accID)
@@ -3146,8 +3162,7 @@ func TestService_InvoiceBranch(t *testing.T) {
 				_, _ = svc.UpdateInboxItem(ctx, spID, staged)
 			}
 
-			switch tt.action {
-			case "approve":
+			if tt.action == "approve" {
 				_, err := svc.ApproveInboxItem(ctx, spID, staged.ID)
 				if err != nil {
 					t.Fatalf("ApproveInboxItem failed: %v", err)
@@ -3167,7 +3182,7 @@ func TestService_InvoiceBranch(t *testing.T) {
 					}
 				}
 
-			case "discard":
+			} else if tt.action == "discard" {
 				err := svc.DiscardInboxItem(ctx, spID, staged.ID)
 				if err != nil {
 					t.Fatalf("DiscardInboxItem failed: %v", err)

@@ -49,6 +49,7 @@ CRITICAL: If a duplicate is found, you MUST extract and output the exact "id" at
   <reference_date_utc>{{.reference_date_utc}}</reference_date_utc>
   {{if .budgets}}
   <budgets>
+    Active budget categories available in the workspace. Used to classify expenses.
     {{range .budgets}}
     <budget id="{{.ID}}" name="{{.Name}}" currency="{{.Currency}}" />
     {{end}}
@@ -56,27 +57,31 @@ CRITICAL: If a duplicate is found, you MUST extract and output the exact "id" at
   {{end}}
   {{if .accounts}}
   <accounts>
+    Active ledger accounts (checking, savings, credit cards, cash, digital wallets) used to track money sources or targets.
     {{range .accounts}}
     <account id="{{.ID}}" name="{{.Name}}" type="{{.Type}}" last_four="{{.LastFour}}" currency="{{.Currency}}" />
     {{end}}
   </accounts>
   {{end}}
-  {{if .scheduled_payments}}
-  <scheduled_payments>
-    {{range .scheduled_payments}}
-    <payment id="{{.ID}}" source_type="{{.SourceType}}" amount="{{.Amount}}" currency="{{.Currency}}" due_date="{{.DueDate}}" status="{{.Status}}" />
+  {{if .scheduled_transactions}}
+  <scheduled_transactions>
+    Concrete, pending transaction instances generated from recurring transaction templates that are due on a specific date. The type attribute defines whether it is an EXPENSE or INCOME.
+    {{range .scheduled_transactions}}
+    <scheduled_transaction id="{{.ID}}" type="{{.Type}}" source_type="{{.SourceType}}" amount="{{.Amount}}" currency="{{.Currency}}" due_date="{{.DueDate}}" status="{{.Status}}" />
     {{end}}
-  </scheduled_payments>
+  </scheduled_transactions>
   {{end}}
-  {{if .recurring_expenses}}
-  <recurring_expenses>
-    {{range .recurring_expenses}}
-    <recurring_expense id="{{.ID}}" name="{{.Name}}" amount="{{.Amount}}" currency="{{.Currency}}" interval="{{.Interval}}" next_due_date="{{.NextDueDate}}" status="{{.Status}}" />
+  {{if .recurring_transactions}}
+  <recurring_transactions>
+    Templates/rules for repeating inflows or outflows (cadence-based). The type attribute defines whether it is an EXPENSE or INCOME.
+    {{range .recurring_transactions}}
+    <recurring_transaction id="{{.ID}}" type="{{.Type}}" name="{{.Name}}" amount="{{.Amount}}" currency="{{.Currency}}" interval="{{.Interval}}" next_due_date="{{.NextDueDate}}" status="{{.Status}}" />
     {{end}}
-  </recurring_expenses>
+  </recurring_transactions>
   {{end}}
   {{if .borrowings}}
   <borrowings>
+    Active debt agreements representing either borrowed funds or lent funds. The direction attribute specifies whether it is BORROWED (payable liability) or LENT (receivable asset).
     {{range .borrowings}}
     <borrowing id="{{.ID}}" direction="{{.Direction}}" counterparty="{{.Counterparty}}" total_amount="{{.TotalAmount}}" remaining_amount="{{.RemainingAmount}}" currency="{{.Currency}}" />
     {{end}}

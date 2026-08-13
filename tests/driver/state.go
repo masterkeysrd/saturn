@@ -78,19 +78,19 @@ type State struct {
 	Transfers             map[string]*financev1.Transfer
 	InboxItems            map[string]*InboxItemInfo
 	Budgets               map[string]string
-	ScheduledPayments     map[string]string
+	ScheduledTransactions map[string]string
 
-	LastAccount                     *AccountInfo
-	LastInstitution                 *InstitutionInfo
-	LastBorrowing                   *BorrowingInfo
-	LastBorrowingTransaction        *BorrowingTransactionInfo
-	LastTransfer                    *financev1.Transfer
-	LastInboxItem                   *InboxItemInfo
-	LastIntegrationID               string
-	LastTransactionID               string
-	LastRecurringExpenseID          string
-	LastScheduledPaymentID          string
-	LastConfirmedScheduledPaymentID string
+	LastAccount                         *AccountInfo
+	LastInstitution                     *InstitutionInfo
+	LastBorrowing                       *BorrowingInfo
+	LastBorrowingTransaction            *BorrowingTransactionInfo
+	LastTransfer                        *financev1.Transfer
+	LastInboxItem                       *InboxItemInfo
+	LastIntegrationID                   string
+	LastTransactionID                   string
+	LastRecurringTransactionID          string
+	LastScheduledTransactionID          string
+	LastConfirmedScheduledTransactionID string
 }
 
 func newState(t *testing.T) *State {
@@ -103,7 +103,7 @@ func newState(t *testing.T) *State {
 		Transfers:             make(map[string]*financev1.Transfer),
 		InboxItems:            make(map[string]*InboxItemInfo),
 		Budgets:               make(map[string]string),
-		ScheduledPayments:     make(map[string]string),
+		ScheduledTransactions: make(map[string]string),
 	}
 }
 
@@ -120,7 +120,7 @@ func (s *State) ClearRegistries() {
 	s.Transfers = make(map[string]*financev1.Transfer)
 	s.InboxItems = make(map[string]*InboxItemInfo)
 	s.Budgets = make(map[string]string)
-	s.ScheduledPayments = make(map[string]string)
+	s.ScheduledTransactions = make(map[string]string)
 	s.LastAccount = nil
 	s.LastInstitution = nil
 	s.LastBorrowing = nil
@@ -128,7 +128,7 @@ func (s *State) ClearRegistries() {
 	s.LastTransfer = nil
 	s.LastInboxItem = nil
 	s.LastTransactionID = ""
-	s.LastScheduledPaymentID = ""
-	s.LastRecurringExpenseID = ""
-	s.LastConfirmedScheduledPaymentID = ""
+	s.LastScheduledTransactionID = ""
+	s.LastRecurringTransactionID = ""
+	s.LastConfirmedScheduledTransactionID = ""
 }

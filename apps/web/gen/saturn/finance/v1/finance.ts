@@ -52,6 +52,11 @@ export type InsightGranularity =
   | "YEARLY"
 
 /**
+ * RecurringType defines the type of recurring transaction.
+ */
+export type RecurringType = "RECURRING_TYPE_UNSPECIFIED" | "EXPENSE" | "INCOME"
+
+/**
  * Enum representing the type of borrowing transaction.
  */
 export type BorrowingTransactionType =
@@ -189,35 +194,35 @@ export type Transaction_View =
 /**
  * Scoped resource representation view level.
  */
-export type RecurringExpense_View = "VIEW_UNSPECIFIED" | "BASIC" | "FULL"
+export type RecurringTransaction_View = "VIEW_UNSPECIFIED" | "BASIC" | "FULL"
 
 /**
  * Execution interval recurrence rule.
  */
-export type RecurringExpense_Interval =
+export type RecurringTransaction_Interval =
   "INTERVAL_UNSPECIFIED" | "WEEKLY" | "MONTHLY" | "YEARLY"
 
 /**
  * Active template status.
  */
-export type RecurringExpense_Status =
+export type RecurringTransaction_Status =
   "STATUS_UNSPECIFIED" | "ACTIVE" | "PAUSED" | "ENDED"
 
 /**
  * Scoped resource representation view level.
  */
-export type ScheduledPayment_View = "VIEW_UNSPECIFIED" | "BASIC" | "FULL"
+export type ScheduledTransaction_View = "VIEW_UNSPECIFIED" | "BASIC" | "FULL"
 
 /**
  * Parent template source type.
  */
-export type ScheduledPayment_SourceType =
-  "SOURCE_TYPE_UNSPECIFIED" | "RECURRENT_EXPENSE" | "LOAN" | "TAX"
+export type ScheduledTransaction_SourceType =
+  "SOURCE_TYPE_UNSPECIFIED" | "RECURRENT_TRANSACTION" | "LOAN" | "TAX"
 
 /**
  * Instance execution status.
  */
-export type ScheduledPayment_Status =
+export type ScheduledTransaction_Status =
   "STATUS_UNSPECIFIED" | "PENDING" | "PROCESSING" | "SKIPPED" | "PAID"
 
 /**
@@ -1259,14 +1264,14 @@ export interface SpentInsights_HighValueExpense {
 }
 
 /**
- * GenerateScheduledPaymentsPayload defines the cron scheduling payload.
+ * GenerateScheduledTransactionsPayload defines the cron scheduling payload.
  */
-export type GenerateScheduledPaymentsPayload = Record<string, never>
+export type GenerateScheduledTransactionsPayload = Record<string, never>
 
 /**
- * RecurringExpense represents a template rule to repeat payments.
+ * RecurringTransaction represents a template rule to repeat payments or incomes.
  */
-export interface RecurringExpense {
+export interface RecurringTransaction {
   /**
    * Output only. Unique identifier.
    * Values are of the form `rec_[a-zA-Z0-9]+`.
@@ -1277,10 +1282,10 @@ export interface RecurringExpense {
    */
   spaceId?: string
   /**
-   * Required. Budget category identifier.
+   * Optional. Budget category identifier. Required for EXPENSE type.
    * Values are of the form `bud_[a-zA-Z0-9]+`.
    */
-  budgetId: string
+  budgetId?: string
   /**
    * Required. User-friendly name.
    */
@@ -1296,11 +1301,11 @@ export interface RecurringExpense {
   /**
    * Required. Execution interval rule.
    */
-  interval: RecurringExpense_Interval
+  interval: RecurringTransaction_Interval
   /**
    * Required. Scheduler engine runtime state.
    */
-  executionState: RecurringExpense_ExecutionState
+  executionState: RecurringTransaction_ExecutionState
   /**
    * Optional. Indicates if the payment amount is variable.
    */
@@ -1308,11 +1313,15 @@ export interface RecurringExpense {
   /**
    * Required. Active template status.
    */
-  status: RecurringExpense_Status
+  status: RecurringTransaction_Status
   /**
    * Optional. Days allowed past due date before triggering warning events.
    */
   gracePeriodDays: number
+  /**
+   * Required. Transaction type (EXPENSE or INCOME).
+   */
+  type: RecurringType
   /**
    * Output only. Version counter for optimistic concurrency control.
    */
@@ -1328,13 +1337,17 @@ export interface RecurringExpense {
   /**
    * Output only. Hydrated minimal budget details. Available only on FULL view.
    */
-  budget?: RecurringExpense_BudgetInfo
+  budget?: RecurringTransaction_BudgetInfo
+  /**
+   * Optional. Default financial account identifier to impact.
+   */
+  accountId?: string
 }
 
 /**
  * BudgetInfo wraps minimal budget details required for UI listing.
  */
-export interface RecurringExpense_BudgetInfo {
+export interface RecurringTransaction_BudgetInfo {
   id: string
   name: string
   color: string
@@ -1344,7 +1357,7 @@ export interface RecurringExpense_BudgetInfo {
 /**
  * ExecutionState represents the scheduler engine runtime tracking parameters.
  */
-export interface RecurringExpense_ExecutionState {
+export interface RecurringTransaction_ExecutionState {
   /**
    * Required. Next execution due date.
    */
@@ -1356,9 +1369,9 @@ export interface RecurringExpense_ExecutionState {
 }
 
 /**
- * ScheduledPayment represents a spawned pending payment instance.
+ * ScheduledTransaction represents a spawned pending payment or income instance.
  */
-export interface ScheduledPayment {
+export interface ScheduledTransaction {
   /**
    * Output only. Unique identifier.
    * Values are of the form `sch_[a-zA-Z0-9]+`.
@@ -1369,20 +1382,20 @@ export interface ScheduledPayment {
    */
   spaceId?: string
   /**
-   * Required. Budget category identifier.
+   * Optional. Budget category identifier.
    * Values are of the form `bud_[a-zA-Z0-9]+`.
    */
-  budgetId: string
+  budgetId?: string
   /**
    * Required. Parent template source type.
    */
-  sourceType: ScheduledPayment_SourceType
+  sourceType: ScheduledTransaction_SourceType
   /**
    * Required. Parent template source ID.
    */
   sourceId: string
   /**
-   * Required. Target payment amount in cents.
+   * Required. Target amount in cents.
    */
   amount: string
   /**
@@ -1396,11 +1409,11 @@ export interface ScheduledPayment {
   /**
    * Required. Instance execution status.
    */
-  status: ScheduledPayment_Status
+  status: ScheduledTransaction_Status
   /**
    * Optional. Context metadata.
    */
-  metadata: ScheduledPayment_Metadata
+  metadata: ScheduledTransaction_Metadata
   /**
    * Output only. Creation timestamp.
    */
@@ -1412,17 +1425,25 @@ export interface ScheduledPayment {
   /**
    * Output only. Hydrated minimal budget details. Available only on FULL view.
    */
-  budget?: ScheduledPayment_BudgetInfo
+  budget?: ScheduledTransaction_BudgetInfo
   /**
    * Output only. Hydrated parent template details. Available only on FULL view.
    */
-  recurringExpense?: ScheduledPayment_RecurringExpenseInfo
+  recurringTransaction?: ScheduledTransaction_RecurringTransactionInfo
+  /**
+   * Required. Transaction type (EXPENSE or INCOME).
+   */
+  type: RecurringType
+  /**
+   * Optional. Settle account identifier.
+   */
+  accountId?: string
 }
 
 /**
  * BudgetInfo wraps minimal budget details required for UI listing.
  */
-export interface ScheduledPayment_BudgetInfo {
+export interface ScheduledTransaction_BudgetInfo {
   id: string
   name: string
   color: string
@@ -1430,18 +1451,18 @@ export interface ScheduledPayment_BudgetInfo {
 }
 
 /**
- * RecurringExpenseInfo wraps parent template details.
+ * RecurringTransactionInfo wraps parent template details.
  */
-export interface ScheduledPayment_RecurringExpenseInfo {
+export interface ScheduledTransaction_RecurringTransactionInfo {
   id: string
   name: string
-  interval: RecurringExpense_Interval
+  interval: RecurringTransaction_Interval
 }
 
 /**
- * Metadata wraps context metadata for scheduled payments.
+ * Metadata wraps context metadata for scheduled transactions.
  */
-export interface ScheduledPayment_Metadata {
+export interface ScheduledTransaction_Metadata {
   name: string
   dueDate: string
   description: string
@@ -1452,28 +1473,28 @@ export interface ScheduledPayment_Metadata {
 
 /**
  * The request for
- * [CreateRecurringExpense][saturn.finance.v1.Finance.CreateRecurringExpense].
+ * [CreateRecurringTransaction][saturn.finance.v1.Finance.CreateRecurringTransaction].
  */
-export interface CreateRecurringExpenseRequest {
+export interface CreateRecurringTransactionRequest {
   /**
-   * Required. The recurring expense template to create.
+   * Required. The recurring transaction template to create.
    */
-  recurringExpense: RecurringExpense
+  recurringTransaction: RecurringTransaction
 }
 
 /**
  * The request for
- * [UpdateRecurringExpense][saturn.finance.v1.Finance.UpdateRecurringExpense].
+ * [UpdateRecurringTransaction][saturn.finance.v1.Finance.UpdateRecurringTransaction].
  */
-export interface UpdateRecurringExpenseRequest {
+export interface UpdateRecurringTransactionRequest {
   /**
    * Required. Unique identifier of the template to update.
    */
   id: string
   /**
-   * Required. The recurring expense template to update.
+   * Required. The recurring transaction template to update.
    */
-  recurringExpense: RecurringExpense
+  recurringTransaction: RecurringTransaction
   /**
    * Optional. Field mask defining which fields to update for partial updates.
    */
@@ -1486,9 +1507,9 @@ export interface UpdateRecurringExpenseRequest {
 
 /**
  * The request for
- * [DeleteRecurringExpense][saturn.finance.v1.Finance.DeleteRecurringExpense].
+ * [DeleteRecurringTransaction][saturn.finance.v1.Finance.DeleteRecurringTransaction].
  */
-export interface DeleteRecurringExpenseRequest {
+export interface DeleteRecurringTransactionRequest {
   /**
    * Required. Unique identifier of the template to delete.
    * Values are of the form `rec_[a-zA-Z0-9]+`.
@@ -1502,13 +1523,13 @@ export interface DeleteRecurringExpenseRequest {
 
 /**
  * The request for
- * [ListRecurringExpenses][saturn.finance.v1.Finance.ListRecurringExpenses].
+ * [ListRecurringTransactions][saturn.finance.v1.Finance.ListRecurringTransactions].
  */
-export interface ListRecurringExpensesRequest {
+export interface ListRecurringTransactionsRequest {
   /**
    * Optional. Filter templates by active status.
    */
-  status: RecurringExpense_Status
+  status: RecurringTransaction_Status
   /**
    * Optional. Maximum number of items to return.
    */
@@ -1520,7 +1541,7 @@ export interface ListRecurringExpensesRequest {
   /**
    * Optional. Representation view level.
    */
-  view?: RecurringExpense_View
+  view?: RecurringTransaction_View
   /**
    * Optional. Search string querying the name of the template.
    */
@@ -1533,13 +1554,13 @@ export interface ListRecurringExpensesRequest {
 
 /**
  * The response for
- * [ListRecurringExpenses][saturn.finance.v1.Finance.ListRecurringExpenses].
+ * [ListRecurringTransactions][saturn.finance.v1.Finance.ListRecurringTransactions].
  */
-export interface ListRecurringExpensesResponse {
+export interface ListRecurringTransactionsResponse {
   /**
-   * List of recurring expense templates matching filters.
+   * List of recurring transaction templates matching filters.
    */
-  recurringExpenses: RecurringExpense[]
+  recurringTransactions: RecurringTransaction[]
   /**
    * Next page keyset token. Empty if no more pages are available.
    */
@@ -1548,13 +1569,13 @@ export interface ListRecurringExpensesResponse {
 
 /**
  * The request for
- * [ListScheduledPayments][saturn.finance.v1.Finance.ListScheduledPayments].
+ * [ListScheduledTransactions][saturn.finance.v1.Finance.ListScheduledTransactions].
  */
-export interface ListScheduledPaymentsRequest {
+export interface ListScheduledTransactionsRequest {
   /**
-   * Optional. Filter instances by payment status.
+   * Optional. Filter instances by transaction status.
    */
-  status: ScheduledPayment_Status
+  status: ScheduledTransaction_Status
   /**
    * Optional. Target start date of execution window.
    */
@@ -1574,7 +1595,7 @@ export interface ListScheduledPaymentsRequest {
   /**
    * Optional. Representation view level.
    */
-  view?: ScheduledPayment_View
+  view?: ScheduledTransaction_View
   /**
    * Optional. Search string querying the description or parent info.
    */
@@ -1587,13 +1608,13 @@ export interface ListScheduledPaymentsRequest {
 
 /**
  * The response for
- * [ListScheduledPayments][saturn.finance.v1.Finance.ListScheduledPayments].
+ * [ListScheduledTransactions][saturn.finance.v1.Finance.ListScheduledTransactions].
  */
-export interface ListScheduledPaymentsResponse {
+export interface ListScheduledTransactionsResponse {
   /**
-   * List of scheduled payment instances matching filters.
+   * List of scheduled transaction instances matching filters.
    */
-  scheduledPayments: ScheduledPayment[]
+  scheduledTransactions: ScheduledTransaction[]
   /**
    * Next page keyset token. Empty if no more pages are available.
    */
@@ -1602,11 +1623,11 @@ export interface ListScheduledPaymentsResponse {
 
 /**
  * The request for
- * [GetScheduledPayment][saturn.finance.v1.Finance.GetScheduledPayment].
+ * [GetScheduledTransaction][saturn.finance.v1.Finance.GetScheduledTransaction].
  */
-export interface GetScheduledPaymentRequest {
+export interface GetScheduledTransactionRequest {
   /**
-   * Required. Unique identifier of the scheduled payment to retrieve.
+   * Required. Unique identifier of the scheduled transaction to retrieve.
    * Values are of the form `sch_[a-zA-Z0-9]+`.
    */
   id: string
@@ -1614,14 +1635,14 @@ export interface GetScheduledPaymentRequest {
 
 /**
  * The request for
- * [ConfirmScheduledPayment][saturn.finance.v1.Finance.ConfirmScheduledPayment].
+ * [ConfirmScheduledTransaction][saturn.finance.v1.Finance.ConfirmScheduledTransaction].
  */
-export interface ConfirmScheduledPaymentRequest {
+export interface ConfirmScheduledTransactionRequest {
   /**
-   * Required. Unique identifier of the scheduled payment to confirm.
+   * Required. Unique identifier of the scheduled transaction to confirm.
    * Values are of the form `sch_[a-zA-Z0-9]+`.
    */
-  paymentId: string
+  transactionId: string
   /**
    * Required. Time transaction occurred.
    */
@@ -1639,46 +1660,46 @@ export interface ConfirmScheduledPaymentRequest {
    */
   description?: string
   /**
-   * Optional. Financial account identifier used to settle the payment.
+   * Optional. Financial account identifier used to settle the transaction.
    * When provided, the account balance will be updated accordingly.
    * Values are of the form `acc_[a-zA-Z0-9]+`.
    */
   accountId?: string
   /**
    * Optional. Budget category identifier to allocate the cleared transaction under.
-   * If omitted, defaults to the budget category configured on the scheduled payment.
+   * If omitted, defaults to the budget category configured on the scheduled transaction.
    * Values are of the form `bud_[a-zA-Z0-9]+`.
    */
   budgetId?: string
   /**
    * Optional. Settlement currency code (ISO 4217 standard 3-letter code).
-   * If omitted, defaults to the currency configured on the scheduled payment.
+   * If omitted, defaults to the currency configured on the scheduled transaction.
    */
   currency?: string
 }
 
 /**
- * The request for [MatchScheduledPayment][saturn.finance.v1.Finance.MatchScheduledPayment].
+ * The request for [MatchScheduledTransaction][saturn.finance.v1.Finance.MatchScheduledTransaction].
  */
-export interface MatchScheduledPaymentRequest {
+export interface MatchScheduledTransactionRequest {
   /**
-   * Required. Target scheduled payment identifier.
+   * Required. Target scheduled transaction identifier.
    * Values are of the form `sch_[a-zA-Z0-9]+`.
    */
-  paymentId: string
+  transactionId: string
   /**
    * Required. Existing transaction identifier to match and link.
    * Values are of the form `txn_[a-zA-Z0-9]+`.
    */
-  transactionId: string
+  matchedTransactionId: string
 }
 
 /**
- * The request for [SkipScheduledPayment][saturn.finance.v1.Finance.SkipScheduledPayment].
+ * The request for [SkipScheduledTransaction][saturn.finance.v1.Finance.SkipScheduledTransaction].
  */
-export interface SkipScheduledPaymentRequest {
+export interface SkipScheduledTransactionRequest {
   /**
-   * Required. Identifier of the scheduled payment instance to skip.
+   * Required. Identifier of the scheduled transaction instance to skip.
    * Values are of the form `sch_[a-zA-Z0-9]+`.
    */
   id: string
@@ -3269,95 +3290,99 @@ export function useGetInsightsQuery(
 }
 
 /**
- * Registers a recurring expense template, generating repeating payment obligations periodically.
+ * Registers a recurring transaction template, generating repeating transaction obligations periodically.
  */
-export async function createRecurringExpense(
-  req: CreateRecurringExpenseRequest
-): Promise<RecurringExpense> {
-  return request<RecurringExpense>({
+export async function createRecurringTransaction(
+  req: CreateRecurringTransactionRequest
+): Promise<RecurringTransaction> {
+  return request<RecurringTransaction>({
     method: "POST",
-    url: "/api/v1/finance/recurring-expenses",
-    data: req.recurringExpense,
+    url: "/api/v1/finance/recurring-transactions",
+    data: req.recurringTransaction,
   })
 }
 
-export function useCreateRecurringExpenseMutation(
+export function useCreateRecurringTransactionMutation(
   options?: UseMutationOptions<
-    RecurringExpense,
+    RecurringTransaction,
     Error,
-    CreateRecurringExpenseRequest
-  >
-) {
-  return useMutation<RecurringExpense, Error, CreateRecurringExpenseRequest>({
-    mutationFn: (req) => createRecurringExpense(req),
-    ...options,
-  })
-}
-
-/**
- * Updates an active recurring expense template.
- */
-export async function updateRecurringExpense(
-  id: string,
-  req: UpdateRecurringExpenseRequest
-): Promise<RecurringExpense> {
-  const params = { ...req }
-  delete (params as Record<string, unknown>).id
-  delete (params as Record<string, unknown>).recurringExpense
-  return request<RecurringExpense>({
-    method: "PATCH",
-    url: `/api/v1/finance/recurring-expenses/${id}`,
-    params: params,
-    data: req.recurringExpense,
-  })
-}
-
-export function useUpdateRecurringExpenseMutation(
-  options?: UseMutationOptions<
-    RecurringExpense,
-    Error,
-    { id: string; req: UpdateRecurringExpenseRequest }
+    CreateRecurringTransactionRequest
   >
 ) {
   return useMutation<
-    RecurringExpense,
+    RecurringTransaction,
     Error,
-    { id: string; req: UpdateRecurringExpenseRequest }
+    CreateRecurringTransactionRequest
   >({
-    mutationFn: ({ id, req }) => updateRecurringExpense(id, req),
+    mutationFn: (req) => createRecurringTransaction(req),
     ...options,
   })
 }
 
 /**
- * Deletes a recurring template, preventing any future payment instances from spawning.
+ * Updates an active recurring transaction template.
  */
-export async function deleteRecurringExpense(
+export async function updateRecurringTransaction(
   id: string,
-  req: DeleteRecurringExpenseRequest
+  req: UpdateRecurringTransactionRequest
+): Promise<RecurringTransaction> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
+  delete (params as Record<string, unknown>).recurringTransaction
+  return request<RecurringTransaction>({
+    method: "PATCH",
+    url: `/api/v1/finance/recurring-transactions/${id}`,
+    params: params,
+    data: req.recurringTransaction,
+  })
+}
+
+export function useUpdateRecurringTransactionMutation(
+  options?: UseMutationOptions<
+    RecurringTransaction,
+    Error,
+    { id: string; req: UpdateRecurringTransactionRequest }
+  >
+) {
+  return useMutation<
+    RecurringTransaction,
+    Error,
+    { id: string; req: UpdateRecurringTransactionRequest }
+  >({
+    mutationFn: ({ id, req }) => updateRecurringTransaction(id, req),
+    ...options,
+  })
+}
+
+/**
+ * Deletes a recurring template, preventing any future transaction instances from spawning.
+ */
+export async function deleteRecurringTransaction(
+  id: string,
+  req: DeleteRecurringTransactionRequest
 ): Promise<Record<string, never>> {
   const params = { ...req }
   delete (params as Record<string, unknown>).id
   return request<Record<string, never>>({
     method: "DELETE",
-    url: `/api/v1/finance/recurring-expenses/${id}`,
+    url: `/api/v1/finance/recurring-transactions/${id}`,
     params: params,
   })
 }
 
-export function useDeleteRecurringExpenseMutation(
+export function useDeleteRecurringTransactionMutation(
   options?: UseMutationOptions<
     Record<string, never>,
     Error,
-    { id: string; req: DeleteRecurringExpenseRequest }
+    { id: string; req: DeleteRecurringTransactionRequest }
   >
 ) {
   return useMutation<
     Record<string, never>,
     Error,
-    { id: string; req: DeleteRecurringExpenseRequest }
+    { id: string; req: DeleteRecurringTransactionRequest }
   >({
-    mutationFn: ({ id, req }) => deleteRecurringExpense(id, req),
+    mutationFn: ({ id, req }) => deleteRecurringTransaction(id, req),
     ...options,
   })
 }
@@ -3365,176 +3390,177 @@ export function useDeleteRecurringExpenseMutation(
 /**
  * Lists all configured recurring templates in the space.
  */
-export async function listRecurringExpenses(
-  req: ListRecurringExpensesRequest
-): Promise<ListRecurringExpensesResponse> {
+export async function listRecurringTransactions(
+  req: ListRecurringTransactionsRequest
+): Promise<ListRecurringTransactionsResponse> {
   const params = { ...req }
-  return request<ListRecurringExpensesResponse>({
+  return request<ListRecurringTransactionsResponse>({
     method: "GET",
-    url: "/api/v1/finance/recurring-expenses",
+    url: "/api/v1/finance/recurring-transactions",
     params: params,
   })
 }
 
-export function useListRecurringExpensesQuery(
-  req: ListRecurringExpensesRequest,
+export function useListRecurringTransactionsQuery(
+  req: ListRecurringTransactionsRequest,
   options?: Omit<
-    UseQueryOptions<ListRecurringExpensesResponse, Error>,
+    UseQueryOptions<ListRecurringTransactionsResponse, Error>,
     "queryKey" | "queryFn"
   >
 ) {
-  return useQuery<ListRecurringExpensesResponse, Error>({
-    queryKey: ["/api/v1/finance/recurring-expenses", req],
-    queryFn: () => listRecurringExpenses(req),
+  return useQuery<ListRecurringTransactionsResponse, Error>({
+    queryKey: ["/api/v1/finance/recurring-transactions", req],
+    queryFn: () => listRecurringTransactions(req),
     ...options,
   })
 }
 
 /**
- * Lists scheduled payment instances spawned by recurring templates.
+ * Lists scheduled transaction instances spawned by recurring templates.
  */
-export async function listScheduledPayments(
-  req: ListScheduledPaymentsRequest
-): Promise<ListScheduledPaymentsResponse> {
+export async function listScheduledTransactions(
+  req: ListScheduledTransactionsRequest
+): Promise<ListScheduledTransactionsResponse> {
   const params = { ...req }
-  return request<ListScheduledPaymentsResponse>({
+  return request<ListScheduledTransactionsResponse>({
     method: "GET",
-    url: "/api/v1/finance/scheduled-payments",
+    url: "/api/v1/finance/scheduled-transactions",
     params: params,
   })
 }
 
-export function useListScheduledPaymentsQuery(
-  req: ListScheduledPaymentsRequest,
+export function useListScheduledTransactionsQuery(
+  req: ListScheduledTransactionsRequest,
   options?: Omit<
-    UseQueryOptions<ListScheduledPaymentsResponse, Error>,
+    UseQueryOptions<ListScheduledTransactionsResponse, Error>,
     "queryKey" | "queryFn"
   >
 ) {
-  return useQuery<ListScheduledPaymentsResponse, Error>({
-    queryKey: ["/api/v1/finance/scheduled-payments", req],
-    queryFn: () => listScheduledPayments(req),
+  return useQuery<ListScheduledTransactionsResponse, Error>({
+    queryKey: ["/api/v1/finance/scheduled-transactions", req],
+    queryFn: () => listScheduledTransactions(req),
     ...options,
   })
 }
 
 /**
- * Retrieves details of a specific scheduled payment by ID.
+ * Retrieves details of a specific scheduled transaction by ID.
  */
-export async function getScheduledPayment(
+export async function getScheduledTransaction(
   id: string,
-  _req: GetScheduledPaymentRequest
-): Promise<ScheduledPayment> {
-  return request<ScheduledPayment>({
+  _req: GetScheduledTransactionRequest
+): Promise<ScheduledTransaction> {
+  return request<ScheduledTransaction>({
     method: "GET",
-    url: `/api/v1/finance/scheduled-payments/${id}`,
+    url: `/api/v1/finance/scheduled-transactions/${id}`,
   })
 }
 
-export function useGetScheduledPaymentQuery(
-  req: GetScheduledPaymentRequest,
+export function useGetScheduledTransactionQuery(
+  req: GetScheduledTransactionRequest,
   options?: Omit<
-    UseQueryOptions<ScheduledPayment, Error>,
+    UseQueryOptions<ScheduledTransaction, Error>,
     "queryKey" | "queryFn"
   >
 ) {
-  return useQuery<ScheduledPayment, Error>({
-    queryKey: [`/api/v1/finance/scheduled-payments/${req.id}`, req],
-    queryFn: () => getScheduledPayment(req.id, req),
+  return useQuery<ScheduledTransaction, Error>({
+    queryKey: [`/api/v1/finance/scheduled-transactions/${req.id}`, req],
+    queryFn: () => getScheduledTransaction(req.id, req),
     ...options,
   })
 }
 
 /**
- * Clears a scheduled payment instance, converting it into a permanent, reconciled ledger transaction.
+ * Clears a scheduled transaction instance, converting it into a permanent, reconciled ledger transaction.
  */
-export async function confirmScheduledPayment(
-  payment_id: string,
-  req: ConfirmScheduledPaymentRequest
+export async function confirmScheduledTransaction(
+  transaction_id: string,
+  req: ConfirmScheduledTransactionRequest
 ): Promise<Transaction> {
   return request<Transaction>({
     method: "POST",
-    url: `/api/v1/finance/scheduled-payments/${payment_id}/confirm`,
+    url: `/api/v1/finance/scheduled-transactions/${transaction_id}/confirm`,
     data: req,
   })
 }
 
-export function useConfirmScheduledPaymentMutation(
+export function useConfirmScheduledTransactionMutation(
   options?: UseMutationOptions<
     Transaction,
     Error,
-    { payment_id: string; req: ConfirmScheduledPaymentRequest }
+    { transaction_id: string; req: ConfirmScheduledTransactionRequest }
   >
 ) {
   return useMutation<
     Transaction,
     Error,
-    { payment_id: string; req: ConfirmScheduledPaymentRequest }
+    { transaction_id: string; req: ConfirmScheduledTransactionRequest }
   >({
-    mutationFn: ({ payment_id, req }) =>
-      confirmScheduledPayment(payment_id, req),
+    mutationFn: ({ transaction_id, req }) =>
+      confirmScheduledTransaction(transaction_id, req),
     ...options,
   })
 }
 
 /**
- * Links an existing transaction with a pending scheduled payment, marking it cleared.
+ * Links an existing transaction with a pending scheduled transaction, marking it cleared.
  */
-export async function matchScheduledPayment(
-  payment_id: string,
-  req: MatchScheduledPaymentRequest
+export async function matchScheduledTransaction(
+  transaction_id: string,
+  req: MatchScheduledTransactionRequest
 ): Promise<Transaction> {
   return request<Transaction>({
     method: "POST",
-    url: `/api/v1/finance/scheduled-payments/${payment_id}/match`,
+    url: `/api/v1/finance/scheduled-transactions/${transaction_id}/match`,
     data: req,
   })
 }
 
-export function useMatchScheduledPaymentMutation(
+export function useMatchScheduledTransactionMutation(
   options?: UseMutationOptions<
     Transaction,
     Error,
-    { payment_id: string; req: MatchScheduledPaymentRequest }
+    { transaction_id: string; req: MatchScheduledTransactionRequest }
   >
 ) {
   return useMutation<
     Transaction,
     Error,
-    { payment_id: string; req: MatchScheduledPaymentRequest }
+    { transaction_id: string; req: MatchScheduledTransactionRequest }
   >({
-    mutationFn: ({ payment_id, req }) => matchScheduledPayment(payment_id, req),
+    mutationFn: ({ transaction_id, req }) =>
+      matchScheduledTransaction(transaction_id, req),
     ...options,
   })
 }
 
 /**
- * Dismisses a pending scheduled payment instance without creating a transaction.
+ * Dismisses a pending scheduled transaction instance without creating a transaction.
  */
-export async function skipScheduledPayment(
+export async function skipScheduledTransaction(
   id: string,
-  req: SkipScheduledPaymentRequest
-): Promise<ScheduledPayment> {
-  return request<ScheduledPayment>({
+  req: SkipScheduledTransactionRequest
+): Promise<ScheduledTransaction> {
+  return request<ScheduledTransaction>({
     method: "POST",
-    url: `/api/v1/finance/scheduled-payments/${id}:skip`,
+    url: `/api/v1/finance/scheduled-transactions/${id}:skip`,
     data: req,
   })
 }
 
-export function useSkipScheduledPaymentMutation(
+export function useSkipScheduledTransactionMutation(
   options?: UseMutationOptions<
-    ScheduledPayment,
+    ScheduledTransaction,
     Error,
-    { id: string; req: SkipScheduledPaymentRequest }
+    { id: string; req: SkipScheduledTransactionRequest }
   >
 ) {
   return useMutation<
-    ScheduledPayment,
+    ScheduledTransaction,
     Error,
-    { id: string; req: SkipScheduledPaymentRequest }
+    { id: string; req: SkipScheduledTransactionRequest }
   >({
-    mutationFn: ({ id, req }) => skipScheduledPayment(id, req),
+    mutationFn: ({ id, req }) => skipScheduledTransaction(id, req),
     ...options,
   })
 }

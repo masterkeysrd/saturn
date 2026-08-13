@@ -1041,8 +1041,8 @@ func (f *FinanceDriver) DeleteBudget(tb testing.TB, opts BudgetDeleteOptions) *F
 	return f
 }
 
-// CreateRecurringExpense creates a recurring expense subscription linked to a named budget.
-func (f *FinanceDriver) CreateRecurringExpense(tb testing.TB, expenseName, budgetName string, amount int64, currency string) *FinanceDriver {
+// CreateRecurringTransaction creates a recurring transaction subscription linked to a named budget.
+func (f *FinanceDriver) CreateRecurringTransaction(tb testing.TB, expenseName, budgetName string, amount int64, currency string) *FinanceDriver {
 	tb.Helper()
 	if tb.Failed() {
 		return f
@@ -1053,33 +1053,34 @@ func (f *FinanceDriver) CreateRecurringExpense(tb testing.TB, expenseName, budge
 	}
 
 	client := f.getClient()
-	resp, err := client.CreateRecurringExpense(tb.Context(), &financev1.CreateRecurringExpenseRequest{
-		RecurringExpense: &financev1.RecurringExpense{
+	resp, err := client.CreateRecurringTransaction(tb.Context(), &financev1.CreateRecurringTransactionRequest{
+		RecurringTransaction: &financev1.RecurringTransaction{
 			Name:     expenseName,
-			BudgetId: budID,
+			BudgetId: &budID,
 			Amount:   amount,
 			Currency: currency,
-			Interval: financev1.RecurringExpense_MONTHLY,
-			Status:   financev1.RecurringExpense_ACTIVE,
-			ExecutionState: &financev1.RecurringExpense_ExecutionState{
+			Interval: financev1.RecurringTransaction_MONTHLY,
+			Status:   financev1.RecurringTransaction_ACTIVE,
+			ExecutionState: &financev1.RecurringTransaction_ExecutionState{
 				NextDueDate: timestamppb.Now(),
 			},
+			Type: financev1.RecurringType_EXPENSE,
 		},
 	})
 	if err != nil {
-		tb.Fatalf("CreateRecurringExpense SDK call failed: %v", err)
+		tb.Fatalf("CreateRecurringTransaction SDK call failed: %v", err)
 	}
 
-	f.driver.state.LastRecurringExpenseID = resp.GetId()
+	f.driver.state.LastRecurringTransactionID = resp.GetId()
 
-	listResp, err := client.ListScheduledPayments(tb.Context(), &financev1.ListScheduledPaymentsRequest{
-		Status: financev1.ScheduledPayment_PENDING,
+	listResp, err := client.ListScheduledTransactions(tb.Context(), &financev1.ListScheduledTransactionsRequest{
+		Status: financev1.ScheduledTransaction_PENDING,
 	})
 	if err == nil {
-		for _, sp := range listResp.GetScheduledPayments() {
+		for _, sp := range listResp.GetScheduledTransactions() {
 			if sp.GetSourceId() == resp.GetId() {
-				f.driver.state.ScheduledPayments[expenseName] = sp.GetId()
-				f.driver.state.LastScheduledPaymentID = sp.GetId()
+				f.driver.state.ScheduledTransactions[expenseName] = sp.GetId()
+				f.driver.state.LastScheduledTransactionID = sp.GetId()
 				break
 			}
 		}
@@ -1087,43 +1088,85 @@ func (f *FinanceDriver) CreateRecurringExpense(tb testing.TB, expenseName, budge
 	return f
 }
 
-// AssertPendingScheduledPaymentsCount asserts the number of remaining pending scheduled payments.
-func (f *FinanceDriver) AssertPendingScheduledPaymentsCount(tb testing.TB, expectedCount int) *FinanceDriver {
+// CreateRecurringIncome creates a recurring transaction template for income (no budget required).
+func (f *FinanceDriver) CreateRecurringIncome(tb testing.TB, name string, amount int64, currency string) *FinanceDriver {
 	tb.Helper()
 	if tb.Failed() {
 		return f
 	}
 
 	client := f.getClient()
-	pendingStatus := financev1.ScheduledPayment_PENDING
-	listResp, err := client.ListScheduledPayments(tb.Context(), &financev1.ListScheduledPaymentsRequest{
+	resp, err := client.CreateRecurringTransaction(tb.Context(), &financev1.CreateRecurringTransactionRequest{
+		RecurringTransaction: &financev1.RecurringTransaction{
+			Name:     name,
+			Amount:   amount,
+			Currency: currency,
+			Interval: financev1.RecurringTransaction_MONTHLY,
+			Status:   financev1.RecurringTransaction_ACTIVE,
+			ExecutionState: &financev1.RecurringTransaction_ExecutionState{
+				NextDueDate: timestamppb.Now(),
+			},
+			Type: financev1.RecurringType_INCOME,
+		},
+	})
+	if err != nil {
+		tb.Fatalf("CreateRecurringIncome SDK call failed: %v", err)
+	}
+
+	f.driver.state.LastRecurringTransactionID = resp.GetId()
+
+	listResp, err := client.ListScheduledTransactions(tb.Context(), &financev1.ListScheduledTransactionsRequest{
+		Status: financev1.ScheduledTransaction_PENDING,
+	})
+	if err == nil {
+		for _, sp := range listResp.GetScheduledTransactions() {
+			if sp.GetSourceId() == resp.GetId() {
+				f.driver.state.ScheduledTransactions[name] = sp.GetId()
+				f.driver.state.LastScheduledTransactionID = sp.GetId()
+				break
+			}
+		}
+	}
+	return f
+}
+
+// AssertPendingScheduledTransactionsCount asserts the number of remaining pending scheduled transactions.
+func (f *FinanceDriver) AssertPendingScheduledTransactionsCount(tb testing.TB, expectedCount int) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+
+	client := f.getClient()
+	pendingStatus := financev1.ScheduledTransaction_PENDING
+	listResp, err := client.ListScheduledTransactions(tb.Context(), &financev1.ListScheduledTransactionsRequest{
 		Status: pendingStatus,
 	})
 	if err != nil {
-		tb.Fatalf("AssertPendingScheduledPaymentsCount SDK call failed: %v", err)
+		tb.Fatalf("AssertPendingScheduledTransactionsCount SDK call failed: %v", err)
 	}
 
-	actualCount := len(listResp.GetScheduledPayments())
+	actualCount := len(listResp.GetScheduledTransactions())
 	if actualCount != expectedCount {
-		tb.Errorf("Pending Scheduled Payments count = %d, want %d", actualCount, expectedCount)
+		tb.Errorf("Pending Scheduled Transactions count = %d, want %d", actualCount, expectedCount)
 	}
 
 	return f
 }
 
-// ConfirmScheduledPaymentOptions parameters for confirming scheduled payments.
-type ConfirmScheduledPaymentOptions struct {
-	PaymentID              string
-	ScheduledPaymentName   string
-	ScheduledPaymentAmount int64
-	Account                string
-	Currency               string
-	Amount                 int64
-	ExpectErr              string
+// ConfirmScheduledTransactionOptions parameters for confirming scheduled transactions.
+type ConfirmScheduledTransactionOptions struct {
+	PaymentID                  string
+	ScheduledTransactionName   string
+	ScheduledTransactionAmount int64
+	Account                    string
+	Currency                   string
+	Amount                     int64
+	ExpectErr                  string
 }
 
-// ConfirmScheduledPayment confirms a scheduled payment using ConfirmScheduledPaymentOptions struct.
-func (f *FinanceDriver) ConfirmScheduledPayment(tb testing.TB, opts ConfirmScheduledPaymentOptions) *FinanceDriver {
+// ConfirmScheduledTransaction confirms a scheduled transaction using ConfirmScheduledTransactionOptions struct.
+func (f *FinanceDriver) ConfirmScheduledTransaction(tb testing.TB, opts ConfirmScheduledTransactionOptions) *FinanceDriver {
 	tb.Helper()
 	if tb.Failed() {
 		return f
@@ -1137,23 +1180,23 @@ func (f *FinanceDriver) ConfirmScheduledPayment(tb testing.TB, opts ConfirmSched
 	client := f.getClient()
 	targetPaymentID := opts.PaymentID
 	if targetPaymentID == "" {
-		if opts.ScheduledPaymentName != "" {
-			if id, ok := f.driver.state.ScheduledPayments[opts.ScheduledPaymentName]; ok {
+		if opts.ScheduledTransactionName != "" {
+			if id, ok := f.driver.state.ScheduledTransactions[opts.ScheduledTransactionName]; ok {
 				targetPaymentID = id
 			}
 		}
 		if targetPaymentID == "" {
-			targetPaymentID = f.driver.state.LastScheduledPaymentID
+			targetPaymentID = f.driver.state.LastScheduledTransactionID
 		}
 	}
 	if targetPaymentID == "" {
-		tb.Fatalf("ConfirmScheduledPayment requires explicit PaymentID or active state scheduled payment")
+		tb.Fatalf("ConfirmScheduledTransaction requires explicit PaymentID or active state scheduled transaction")
 	}
 
 	accID := acc.ID
-	req := &financev1.ConfirmScheduledPaymentRequest{
-		PaymentId: targetPaymentID,
-		AccountId: &accID,
+	req := &financev1.ConfirmScheduledTransactionRequest{
+		TransactionId: targetPaymentID,
+		AccountId:     &accID,
 	}
 
 	if opts.Currency != "" {
@@ -1164,24 +1207,24 @@ func (f *FinanceDriver) ConfirmScheduledPayment(tb testing.TB, opts ConfirmSched
 		req.ActualAmount = opts.Amount
 	}
 
-	txn, err := client.ConfirmScheduledPayment(tb.Context(), req)
+	txn, err := client.ConfirmScheduledTransaction(tb.Context(), req)
 
 	if opts.ExpectErr != "" {
 		if err == nil {
-			tb.Fatalf("ConfirmScheduledPayment succeeded, but expected error containing %q", opts.ExpectErr)
+			tb.Fatalf("ConfirmScheduledTransaction succeeded, but expected error containing %q", opts.ExpectErr)
 		}
 		if !strings.Contains(err.Error(), opts.ExpectErr) {
-			tb.Fatalf("ConfirmScheduledPayment error = %v, want error containing %q", err, opts.ExpectErr)
+			tb.Fatalf("ConfirmScheduledTransaction error = %v, want error containing %q", err, opts.ExpectErr)
 		}
 		return f
 	}
 
 	if err != nil {
-		tb.Fatalf("ConfirmScheduledPayment SDK call failed: %v", err)
+		tb.Fatalf("ConfirmScheduledTransaction SDK call failed: %v", err)
 	}
 
 	f.driver.state.LastTransactionID = txn.GetId()
-	f.driver.state.LastConfirmedScheduledPaymentID = targetPaymentID
+	f.driver.state.LastConfirmedScheduledTransactionID = targetPaymentID
 	return f
 }
 
@@ -1238,93 +1281,93 @@ func (f *FinanceDriver) AssertSpentInsights(tb testing.TB, expectedTotalSpent in
 	return f
 }
 
-// AssertScheduledPayment executes a live API query to GET /v1/finance/scheduled-payments/{id} and runs an assertion callback.
-func (f *FinanceDriver) AssertScheduledPayment(tb testing.TB, paymentID string, fn func(sp *financev1.ScheduledPayment)) *FinanceDriver {
+// AssertScheduledTransaction executes a live API query to GET /v1/finance/scheduled-transactions/{id} and runs an assertion callback.
+func (f *FinanceDriver) AssertScheduledTransaction(tb testing.TB, paymentID string, fn func(sp *financev1.ScheduledTransaction)) *FinanceDriver {
 	tb.Helper()
 	if tb.Failed() {
 		return f
 	}
 
 	client := f.getClient()
-	sp, err := client.GetScheduledPayment(tb.Context(), &financev1.GetScheduledPaymentRequest{
+	sp, err := client.GetScheduledTransaction(tb.Context(), &financev1.GetScheduledTransactionRequest{
 		Id: paymentID,
 	})
 	if err != nil {
-		tb.Fatalf("AssertScheduledPayment: GetScheduledPayment API call failed for ID %s: %v", paymentID, err)
+		tb.Fatalf("AssertScheduledTransaction: GetScheduledTransaction API call failed for ID %s: %v", paymentID, err)
 	}
 
 	fn(sp)
 	return f
 }
 
-// AssertLastRecurringExpense fluently queries the live API for the last created recurring expense and runs an assertion callback.
-func (f *FinanceDriver) AssertLastRecurringExpense(tb testing.TB, fn func(re *financev1.RecurringExpense)) *FinanceDriver {
+// AssertLastRecurringTransaction fluently queries the live API for the last created recurring transaction and runs an assertion callback.
+func (f *FinanceDriver) AssertLastRecurringTransaction(tb testing.TB, fn func(re *financev1.RecurringTransaction)) *FinanceDriver {
 	tb.Helper()
 	if tb.Failed() {
 		return f
 	}
-	if f.driver.state.LastRecurringExpenseID == "" {
-		tb.Fatalf("AssertLastRecurringExpense: no recurring expense created in driver state")
+	if f.driver.state.LastRecurringTransactionID == "" {
+		tb.Fatalf("AssertLastRecurringTransaction: no recurring transaction created in driver state")
 	}
 	client := f.getClient()
-	resp, err := client.ListRecurringExpenses(tb.Context(), &financev1.ListRecurringExpensesRequest{})
+	resp, err := client.ListRecurringTransactions(tb.Context(), &financev1.ListRecurringTransactionsRequest{})
 	if err != nil {
-		tb.Fatalf("AssertLastRecurringExpense: ListRecurringExpenses API call failed: %v", err)
+		tb.Fatalf("AssertLastRecurringTransaction: ListRecurringTransactions API call failed: %v", err)
 	}
-	var matched *financev1.RecurringExpense
-	for _, re := range resp.GetRecurringExpenses() {
-		if re.GetId() == f.driver.state.LastRecurringExpenseID {
+	var matched *financev1.RecurringTransaction
+	for _, re := range resp.GetRecurringTransactions() {
+		if re.GetId() == f.driver.state.LastRecurringTransactionID {
 			matched = re
 			break
 		}
 	}
 	if matched == nil {
-		tb.Fatalf("AssertLastRecurringExpense: recurring expense %s not found", f.driver.state.LastRecurringExpenseID)
+		tb.Fatalf("AssertLastRecurringTransaction: recurring transaction %s not found", f.driver.state.LastRecurringTransactionID)
 	}
 	fn(matched)
 	return f
 }
 
-// AssertScheduledPaymentByAmount queries the live API for a scheduled payment matching the amount and executes an assertion callback.
-func (f *FinanceDriver) AssertScheduledPaymentByAmount(tb testing.TB, amount int64, fn func(sp *financev1.ScheduledPayment)) *FinanceDriver {
+// AssertScheduledTransactionByAmount queries the live API for a scheduled transaction matching the amount and executes an assertion callback.
+func (f *FinanceDriver) AssertScheduledTransactionByAmount(tb testing.TB, amount int64, fn func(sp *financev1.ScheduledTransaction)) *FinanceDriver {
 	tb.Helper()
 	if tb.Failed() {
 		return f
 	}
 	client := f.getClient()
-	listResp, err := client.ListScheduledPayments(tb.Context(), &financev1.ListScheduledPaymentsRequest{})
+	listResp, err := client.ListScheduledTransactions(tb.Context(), &financev1.ListScheduledTransactionsRequest{})
 	if err != nil {
-		tb.Fatalf("AssertScheduledPaymentByAmount: ListScheduledPayments API call failed: %v", err)
+		tb.Fatalf("AssertScheduledTransactionByAmount: ListScheduledTransactions API call failed: %v", err)
 	}
-	var matched *financev1.ScheduledPayment
-	for _, sp := range listResp.GetScheduledPayments() {
+	var matched *financev1.ScheduledTransaction
+	for _, sp := range listResp.GetScheduledTransactions() {
 		if sp.GetAmount() == amount {
 			matched = sp
 			break
 		}
 	}
 	if matched == nil {
-		tb.Fatalf("AssertScheduledPaymentByAmount: no scheduled payment found matching amount %d", amount)
+		tb.Fatalf("AssertScheduledTransactionByAmount: no scheduled transaction found matching amount %d", amount)
 	}
 	fn(matched)
 	return f
 }
 
-// AssertPendingScheduledPayment fluently queries the live API for the first pending scheduled payment and runs an assertion callback.
-func (f *FinanceDriver) AssertPendingScheduledPayment(tb testing.TB, fn func(sp *financev1.ScheduledPayment)) *FinanceDriver {
+// AssertPendingScheduledTransaction fluently queries the live API for the first pending scheduled transaction and runs an assertion callback.
+func (f *FinanceDriver) AssertPendingScheduledTransaction(tb testing.TB, fn func(sp *financev1.ScheduledTransaction)) *FinanceDriver {
 	tb.Helper()
 	if tb.Failed() {
 		return f
 	}
 	client := f.getClient()
-	listResp, err := client.ListScheduledPayments(tb.Context(), &financev1.ListScheduledPaymentsRequest{})
+	listResp, err := client.ListScheduledTransactions(tb.Context(), &financev1.ListScheduledTransactionsRequest{})
 	if err != nil {
-		tb.Fatalf("AssertPendingScheduledPayment API call failed: %v", err)
+		tb.Fatalf("AssertPendingScheduledTransaction API call failed: %v", err)
 	}
-	if len(listResp.GetScheduledPayments()) == 0 {
-		tb.Fatalf("AssertPendingScheduledPayment: no scheduled payments found")
+	if len(listResp.GetScheduledTransactions()) == 0 {
+		tb.Fatalf("AssertPendingScheduledTransaction: no scheduled transactions found")
 	}
-	fn(listResp.GetScheduledPayments()[0])
+	fn(listResp.GetScheduledTransactions()[0])
 	return f
 }
 
@@ -1338,9 +1381,9 @@ type StageInboxItemOptions struct {
 	AccountName                string
 	BudgetName                 string
 	CardLastFour               string
-	ScheduledPaymentID         string
-	ScheduledPaymentName       string
-	ScheduledPaymentAmount     int64
+	ScheduledTransactionID     string
+	ScheduledTransactionName   string
+	ScheduledTransactionAmount int64
 	TransactionID              string
 	LinkToLastTransaction      bool
 	BorrowingID                string
@@ -1561,15 +1604,15 @@ func (f *FinanceDriver) UpdateInboxItem(tb testing.TB, key string, opts StageInb
 
 	client := f.getClient()
 
-	spID := opts.ScheduledPaymentID
+	spID := opts.ScheduledTransactionID
 	if spID == "" {
-		if opts.ScheduledPaymentName != "" {
-			if id, ok := f.driver.state.ScheduledPayments[opts.ScheduledPaymentName]; ok {
+		if opts.ScheduledTransactionName != "" {
+			if id, ok := f.driver.state.ScheduledTransactions[opts.ScheduledTransactionName]; ok {
 				spID = id
 			}
 		}
-		if spID == "" && opts.ScheduledPaymentAmount > 0 {
-			spID = f.driver.state.LastScheduledPaymentID
+		if spID == "" && opts.ScheduledTransactionAmount > 0 {
+			spID = f.driver.state.LastScheduledTransactionID
 		}
 	}
 

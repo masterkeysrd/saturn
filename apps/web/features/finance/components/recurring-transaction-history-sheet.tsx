@@ -7,25 +7,26 @@ import {
 } from "@/components/ui/sheet"
 import {
   useListTransactionsQuery,
-  type RecurringExpense,
+  type RecurringTransaction,
   useGetFinanceSettingsQuery,
 } from "@/gen/saturn/finance/v1/finance"
 import { useActiveSpaceContext } from "@/features/space/use-space"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2, Calendar, FileText, ArrowRight } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { formatCents } from "../utils"
 
-interface RecurringExpenseHistorySheetProps {
+interface RecurringTransactionHistorySheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  expense: RecurringExpense | null
+  transaction: RecurringTransaction | null
 }
 
-export function RecurringExpenseHistorySheet({
+export function RecurringTransactionHistorySheet({
   open,
   onOpenChange,
-  expense,
-}: RecurringExpenseHistorySheetProps) {
+  transaction,
+}: RecurringTransactionHistorySheetProps) {
   const { spaceId } = useActiveSpaceContext()
   const { data: settings } = useGetFinanceSettingsQuery(
     {},
@@ -41,11 +42,11 @@ export function RecurringExpenseHistorySheet({
       pageSize: 100,
       pageToken: "",
     },
-    { enabled: open && !!expense?.id && !!spaceId }
+    { enabled: open && !!transaction?.id && !!spaceId }
   )
 
   const transactions = (data?.transactions || []).filter(
-    (t) => t.metadata?.recurring_expense_id === expense?.id
+    (t) => t.metadata?.recurring_expense_id === transaction?.id
   )
 
   return (
@@ -54,12 +55,12 @@ export function RecurringExpenseHistorySheet({
         <SheetHeader className="mb-6 text-left">
           <SheetTitle className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground">
             <FileText className="h-5 w-5 text-primary" />
-            Payment History
+            Transaction History
           </SheetTitle>
           <SheetDescription className="mt-1 text-xs text-muted-foreground">
             Ledger of past cleared instances for template:{" "}
             <span className="font-semibold text-foreground">
-              {expense?.name || ""}
+              {transaction?.name || ""}
             </span>
           </SheetDescription>
         </SheetHeader>
@@ -75,8 +76,8 @@ export function RecurringExpenseHistorySheet({
               No transaction history found
             </p>
             <p className="mt-1 max-w-[250px] text-[10px] text-muted-foreground/80">
-              Historical payment logs will appear here once upcoming outflows
-              generated from this template are confirmed.
+              Historical transaction logs will appear here once upcoming
+              schedules generated from this template are confirmed.
             </p>
           </div>
         ) : (
@@ -88,7 +89,7 @@ export function RecurringExpenseHistorySheet({
                 const tDate = new Date(txn.transactionDate)
                 const effDate = new Date(txn.effectiveDate)
 
-                const graceDays = expense?.gracePeriodDays || 0
+                const graceDays = transaction?.gracePeriodDays || 0
                 const graceLimitDate = new Date(effDate)
                 graceLimitDate.setDate(graceLimitDate.getDate() + graceDays)
 
@@ -118,7 +119,15 @@ export function RecurringExpenseHistorySheet({
                       </div>
 
                       <div className="text-right">
-                        <span className="block text-xs font-bold text-foreground">
+                        <span
+                          className={cn(
+                            "block text-xs font-bold",
+                            txn.type === "EXPENSE"
+                              ? "text-rose-500"
+                              : "text-emerald-500"
+                          )}
+                        >
+                          {txn.type === "EXPENSE" ? "-" : "+"}
                           {formatCents(txn.amount).toFixed(2)}{" "}
                           <span className="text-[9px] font-medium text-muted-foreground uppercase">
                             {txn.currency}

@@ -136,62 +136,62 @@ service Finance {
     option (google.api.http) = {get: "/v1/finance/insights"};
   }
 
-  // Registers a recurring expense template, generating repeating payment obligations periodically.
-  rpc CreateRecurringExpense(CreateRecurringExpenseRequest) returns (RecurringExpense) {
+  // Registers a recurring transaction template, generating repeating transaction obligations periodically.
+  rpc CreateRecurringTransaction(CreateRecurringTransactionRequest) returns (RecurringTransaction) {
     option (google.api.http) = {
-      post: "/v1/finance/recurring-expenses"
-      body: "recurring_expense"
+      post: "/v1/finance/recurring-transactions"
+      body: "recurring_transaction"
     };
   }
 
-  // Updates an active recurring expense template.
-  rpc UpdateRecurringExpense(UpdateRecurringExpenseRequest) returns (RecurringExpense) {
+  // Updates an active recurring transaction template.
+  rpc UpdateRecurringTransaction(UpdateRecurringTransactionRequest) returns (RecurringTransaction) {
     option (google.api.http) = {
-      patch: "/v1/finance/recurring-expenses/{id}"
-      body: "recurring_expense"
+      patch: "/v1/finance/recurring-transactions/{id}"
+      body: "recurring_transaction"
     };
   }
 
-  // Deletes a recurring template, preventing any future payment instances from spawning.
-  rpc DeleteRecurringExpense(DeleteRecurringExpenseRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {delete: "/v1/finance/recurring-expenses/{id}"};
+  // Deletes a recurring template, preventing any future transaction instances from spawning.
+  rpc DeleteRecurringTransaction(DeleteRecurringTransactionRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/finance/recurring-transactions/{id}"};
   }
 
   // Lists all configured recurring templates in the space.
-  rpc ListRecurringExpenses(ListRecurringExpensesRequest) returns (ListRecurringExpensesResponse) {
-    option (google.api.http) = {get: "/v1/finance/recurring-expenses"};
+  rpc ListRecurringTransactions(ListRecurringTransactionsRequest) returns (ListRecurringTransactionsResponse) {
+    option (google.api.http) = {get: "/v1/finance/recurring-transactions"};
   }
 
-  // Lists scheduled payment instances spawned by recurring templates.
-  rpc ListScheduledPayments(ListScheduledPaymentsRequest) returns (ListScheduledPaymentsResponse) {
-    option (google.api.http) = {get: "/v1/finance/scheduled-payments"};
+  // Lists scheduled transaction instances spawned by recurring templates.
+  rpc ListScheduledTransactions(ListScheduledTransactionsRequest) returns (ListScheduledTransactionsResponse) {
+    option (google.api.http) = {get: "/v1/finance/scheduled-transactions"};
   }
 
-  // Retrieves details of a specific scheduled payment by ID.
-  rpc GetScheduledPayment(GetScheduledPaymentRequest) returns (ScheduledPayment) {
-    option (google.api.http) = {get: "/v1/finance/scheduled-payments/{id}"};
+  // Retrieves details of a specific scheduled transaction by ID.
+  rpc GetScheduledTransaction(GetScheduledTransactionRequest) returns (ScheduledTransaction) {
+    option (google.api.http) = {get: "/v1/finance/scheduled-transactions/{id}"};
   }
 
-  // Clears a scheduled payment instance, converting it into a permanent, reconciled ledger transaction.
-  rpc ConfirmScheduledPayment(ConfirmScheduledPaymentRequest) returns (Transaction) {
+  // Clears a scheduled transaction instance, converting it into a permanent, reconciled ledger transaction.
+  rpc ConfirmScheduledTransaction(ConfirmScheduledTransactionRequest) returns (Transaction) {
     option (google.api.http) = {
-      post: "/v1/finance/scheduled-payments/{payment_id}/confirm"
+      post: "/v1/finance/scheduled-transactions/{transaction_id}/confirm"
       body: "*"
     };
   }
 
-  // Links an existing transaction with a pending scheduled payment, marking it cleared.
-  rpc MatchScheduledPayment(MatchScheduledPaymentRequest) returns (Transaction) {
+  // Links an existing transaction with a pending scheduled transaction, marking it cleared.
+  rpc MatchScheduledTransaction(MatchScheduledTransactionRequest) returns (Transaction) {
     option (google.api.http) = {
-      post: "/v1/finance/scheduled-payments/{payment_id}/match"
+      post: "/v1/finance/scheduled-transactions/{transaction_id}/match"
       body: "*"
     };
   }
 
-  // Dismisses a pending scheduled payment instance without creating a transaction.
-  rpc SkipScheduledPayment(SkipScheduledPaymentRequest) returns (ScheduledPayment) {
+  // Dismisses a pending scheduled transaction instance without creating a transaction.
+  rpc SkipScheduledTransaction(SkipScheduledTransactionRequest) returns (ScheduledTransaction) {
     option (google.api.http) = {
-      post: "/v1/finance/scheduled-payments/{id}:skip"
+      post: "/v1/finance/scheduled-transactions/{id}:skip"
       body: "*"
     };
   }
@@ -226,8 +226,6 @@ service Finance {
   rpc DeleteBorrowing(DeleteBorrowingRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {delete: "/v1/finance/borrowings/{id}"};
   }
-
-
 
   // Logs a new borrowing transaction (payment or debt increase).
   rpc LogBorrowingTransaction(LogBorrowingTransactionRequest) returns (Transaction) {
@@ -1121,13 +1119,20 @@ message SpentInsights {
   repeated HighValueExpense top_expenses = 7;
 }
 
-// GenerateScheduledPaymentsPayload defines the cron scheduling payload.
-message GenerateScheduledPaymentsPayload {
-  option (saturn.platform.scheduler.v1.job_type) = "finance.GenerateScheduledPayments";
+// GenerateScheduledTransactionsPayload defines the cron scheduling payload.
+message GenerateScheduledTransactionsPayload {
+  option (saturn.platform.scheduler.v1.job_type) = "finance.GenerateScheduledTransactions";
 }
 
-// RecurringExpense represents a template rule to repeat payments.
-message RecurringExpense {
+// RecurringType defines the type of recurring transaction.
+enum RecurringType {
+  RECURRING_TYPE_UNSPECIFIED = 0;
+  EXPENSE = 1;
+  INCOME = 2;
+}
+
+// RecurringTransaction represents a template rule to repeat payments or incomes.
+message RecurringTransaction {
   // Scoped resource representation view level.
   enum View {
     VIEW_UNSPECIFIED = 0;
@@ -1166,9 +1171,9 @@ message RecurringExpense {
   // Output only. Space identifier.
   string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 
-  // Required. Budget category identifier.
+  // Optional. Budget category identifier. Required for EXPENSE type.
   // Values are of the form `bud_[a-zA-Z0-9]+`.
-  string budget_id = 3 [(google.api.field_behavior) = REQUIRED];
+  optional string budget_id = 3 [(google.api.field_behavior) = OPTIONAL];
 
   // Required. User-friendly name.
   string name = 4 [(google.api.field_behavior) = REQUIRED];
@@ -1203,21 +1208,27 @@ message RecurringExpense {
   // Optional. Days allowed past due date before triggering warning events.
   int32 grace_period_days = 11 [(google.api.field_behavior) = OPTIONAL];
 
+  // Required. Transaction type (EXPENSE or INCOME).
+  RecurringType type = 12 [(google.api.field_behavior) = REQUIRED];
+
   // Output only. Version counter for optimistic concurrency control.
   int64 version = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output only. Creation timestamp.
-  google.protobuf.Timestamp create_time = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp create_time = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output only. Last update timestamp.
-  google.protobuf.Timestamp update_time = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp update_time = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output only. Hydrated minimal budget details. Available only on FULL view.
-  optional BudgetInfo budget = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+  optional BudgetInfo budget = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. Default financial account identifier to impact.
+  optional string account_id = 17 [(google.api.field_behavior) = OPTIONAL];
 }
 
-// ScheduledPayment represents a spawned pending payment instance.
-message ScheduledPayment {
+// ScheduledTransaction represents a spawned pending payment or income instance.
+message ScheduledTransaction {
   // Scoped resource representation view level.
   enum View {
     VIEW_UNSPECIFIED = 0;
@@ -1233,14 +1244,14 @@ message ScheduledPayment {
     string icon = 4;
   }
 
-  // RecurringExpenseInfo wraps parent template details.
-  message RecurringExpenseInfo {
+  // RecurringTransactionInfo wraps parent template details.
+  message RecurringTransactionInfo {
     string id = 1;
     string name = 2;
-    RecurringExpense.Interval interval = 3;
+    RecurringTransaction.Interval interval = 3;
   }
 
-  // Metadata wraps context metadata for scheduled payments.
+  // Metadata wraps context metadata for scheduled transactions.
   message Metadata {
     string name = 1;
     string due_date = 2;
@@ -1257,14 +1268,14 @@ message ScheduledPayment {
   // Output only. Space identifier.
   string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 
-  // Required. Budget category identifier.
+  // Optional. Budget category identifier.
   // Values are of the form `bud_[a-zA-Z0-9]+`.
-  string budget_id = 3 [(google.api.field_behavior) = REQUIRED];
+  optional string budget_id = 3 [(google.api.field_behavior) = OPTIONAL];
 
   // Parent template source type.
   enum SourceType {
     SOURCE_TYPE_UNSPECIFIED = 0;
-    RECURRENT_EXPENSE = 1;
+    RECURRENT_TRANSACTION = 1;
     LOAN = 2;
     TAX = 3;
   }
@@ -1275,7 +1286,7 @@ message ScheduledPayment {
   // Required. Parent template source ID.
   string source_id = 5 [(google.api.field_behavior) = REQUIRED];
 
-  // Required. Target payment amount in cents.
+  // Required. Target amount in cents.
   int64 amount = 6 [(google.api.field_behavior) = REQUIRED];
 
   // Required. Currency code.
@@ -1309,24 +1320,30 @@ message ScheduledPayment {
   optional BudgetInfo budget = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output only. Hydrated parent template details. Available only on FULL view.
-  optional RecurringExpenseInfo recurring_expense = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+  optional RecurringTransactionInfo recurring_transaction = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. Transaction type (EXPENSE or INCOME).
+  RecurringType type = 15 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Settle account identifier.
+  optional string account_id = 16 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // The request for
-// [CreateRecurringExpense][saturn.finance.v1.Finance.CreateRecurringExpense].
-message CreateRecurringExpenseRequest {
-  // Required. The recurring expense template to create.
-  RecurringExpense recurring_expense = 1 [(google.api.field_behavior) = REQUIRED];
+// [CreateRecurringTransaction][saturn.finance.v1.Finance.CreateRecurringTransaction].
+message CreateRecurringTransactionRequest {
+  // Required. The recurring transaction template to create.
+  RecurringTransaction recurring_transaction = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 // The request for
-// [UpdateRecurringExpense][saturn.finance.v1.Finance.UpdateRecurringExpense].
-message UpdateRecurringExpenseRequest {
+// [UpdateRecurringTransaction][saturn.finance.v1.Finance.UpdateRecurringTransaction].
+message UpdateRecurringTransactionRequest {
   // Required. Unique identifier of the template to update.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 
-  // Required. The recurring expense template to update.
-  RecurringExpense recurring_expense = 2 [(google.api.field_behavior) = REQUIRED];
+  // Required. The recurring transaction template to update.
+  RecurringTransaction recurring_transaction = 2 [(google.api.field_behavior) = REQUIRED];
 
   // Optional. Field mask defining which fields to update for partial updates.
   optional google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
@@ -1336,8 +1353,8 @@ message UpdateRecurringExpenseRequest {
 }
 
 // The request for
-// [DeleteRecurringExpense][saturn.finance.v1.Finance.DeleteRecurringExpense].
-message DeleteRecurringExpenseRequest {
+// [DeleteRecurringTransaction][saturn.finance.v1.Finance.DeleteRecurringTransaction].
+message DeleteRecurringTransactionRequest {
   // Required. Unique identifier of the template to delete.
   // Values are of the form `rec_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
@@ -1347,10 +1364,10 @@ message DeleteRecurringExpenseRequest {
 }
 
 // The request for
-// [ListRecurringExpenses][saturn.finance.v1.Finance.ListRecurringExpenses].
-message ListRecurringExpensesRequest {
+// [ListRecurringTransactions][saturn.finance.v1.Finance.ListRecurringTransactions].
+message ListRecurringTransactionsRequest {
   // Optional. Filter templates by active status.
-  RecurringExpense.Status status = 1 [(google.api.field_behavior) = OPTIONAL];
+  RecurringTransaction.Status status = 1 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Maximum number of items to return.
   int32 page_size = 2 [(google.api.field_behavior) = OPTIONAL];
@@ -1359,7 +1376,7 @@ message ListRecurringExpensesRequest {
   string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Representation view level.
-  optional RecurringExpense.View view = 4 [(google.api.field_behavior) = OPTIONAL];
+  optional RecurringTransaction.View view = 4 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Search string querying the name of the template.
   optional string search_query = 5 [(google.api.field_behavior) = OPTIONAL];
@@ -1369,20 +1386,20 @@ message ListRecurringExpensesRequest {
 }
 
 // The response for
-// [ListRecurringExpenses][saturn.finance.v1.Finance.ListRecurringExpenses].
-message ListRecurringExpensesResponse {
-  // List of recurring expense templates matching filters.
-  repeated RecurringExpense recurring_expenses = 1;
+// [ListRecurringTransactions][saturn.finance.v1.Finance.ListRecurringTransactions].
+message ListRecurringTransactionsResponse {
+  // List of recurring transaction templates matching filters.
+  repeated RecurringTransaction recurring_transactions = 1;
 
   // Next page keyset token. Empty if no more pages are available.
   string next_page_token = 2;
 }
 
 // The request for
-// [ListScheduledPayments][saturn.finance.v1.Finance.ListScheduledPayments].
-message ListScheduledPaymentsRequest {
-  // Optional. Filter instances by payment status.
-  ScheduledPayment.Status status = 1 [(google.api.field_behavior) = OPTIONAL];
+// [ListScheduledTransactions][saturn.finance.v1.Finance.ListScheduledTransactions].
+message ListScheduledTransactionsRequest {
+  // Optional. Filter instances by transaction status.
+  ScheduledTransaction.Status status = 1 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Target start date of execution window.
   google.protobuf.Timestamp start_date = 2 [(google.api.field_behavior) = OPTIONAL];
@@ -1397,7 +1414,7 @@ message ListScheduledPaymentsRequest {
   string page_token = 5 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Representation view level.
-  optional ScheduledPayment.View view = 6 [(google.api.field_behavior) = OPTIONAL];
+  optional ScheduledTransaction.View view = 6 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Search string querying the description or parent info.
   optional string search_query = 7 [(google.api.field_behavior) = OPTIONAL];
@@ -1407,29 +1424,29 @@ message ListScheduledPaymentsRequest {
 }
 
 // The response for
-// [ListScheduledPayments][saturn.finance.v1.Finance.ListScheduledPayments].
-message ListScheduledPaymentsResponse {
-  // List of scheduled payment instances matching filters.
-  repeated ScheduledPayment scheduled_payments = 1;
+// [ListScheduledTransactions][saturn.finance.v1.Finance.ListScheduledTransactions].
+message ListScheduledTransactionsResponse {
+  // List of scheduled transaction instances matching filters.
+  repeated ScheduledTransaction scheduled_transactions = 1;
 
   // Next page keyset token. Empty if no more pages are available.
   string next_page_token = 2;
 }
 
 // The request for
-// [GetScheduledPayment][saturn.finance.v1.Finance.GetScheduledPayment].
-message GetScheduledPaymentRequest {
-  // Required. Unique identifier of the scheduled payment to retrieve.
+// [GetScheduledTransaction][saturn.finance.v1.Finance.GetScheduledTransaction].
+message GetScheduledTransactionRequest {
+  // Required. Unique identifier of the scheduled transaction to retrieve.
   // Values are of the form `sch_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 // The request for
-// [ConfirmScheduledPayment][saturn.finance.v1.Finance.ConfirmScheduledPayment].
-message ConfirmScheduledPaymentRequest {
-  // Required. Unique identifier of the scheduled payment to confirm.
+// [ConfirmScheduledTransaction][saturn.finance.v1.Finance.ConfirmScheduledTransaction].
+message ConfirmScheduledTransactionRequest {
+  // Required. Unique identifier of the scheduled transaction to confirm.
   // Values are of the form `sch_[a-zA-Z0-9]+`.
-  string payment_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string transaction_id = 1 [(google.api.field_behavior) = REQUIRED];
 
   // Required. Time transaction occurred.
   google.protobuf.Timestamp transaction_date = 2 [(google.api.field_behavior) = REQUIRED];
@@ -1443,35 +1460,35 @@ message ConfirmScheduledPaymentRequest {
   // Optional. Narration notes.
   optional string description = 5 [(google.api.field_behavior) = OPTIONAL];
 
-  // Optional. Financial account identifier used to settle the payment.
+  // Optional. Financial account identifier used to settle the transaction.
   // When provided, the account balance will be updated accordingly.
   // Values are of the form `acc_[a-zA-Z0-9]+`.
   optional string account_id = 6 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Budget category identifier to allocate the cleared transaction under.
-  // If omitted, defaults to the budget category configured on the scheduled payment.
+  // If omitted, defaults to the budget category configured on the scheduled transaction.
   // Values are of the form `bud_[a-zA-Z0-9]+`.
   optional string budget_id = 7 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Settlement currency code (ISO 4217 standard 3-letter code).
-  // If omitted, defaults to the currency configured on the scheduled payment.
+  // If omitted, defaults to the currency configured on the scheduled transaction.
   optional string currency = 8 [(google.api.field_behavior) = OPTIONAL];
 }
 
-// The request for [MatchScheduledPayment][saturn.finance.v1.Finance.MatchScheduledPayment].
-message MatchScheduledPaymentRequest {
-  // Required. Target scheduled payment identifier.
+// The request for [MatchScheduledTransaction][saturn.finance.v1.Finance.MatchScheduledTransaction].
+message MatchScheduledTransactionRequest {
+  // Required. Target scheduled transaction identifier.
   // Values are of the form `sch_[a-zA-Z0-9]+`.
-  string payment_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string transaction_id = 1 [(google.api.field_behavior) = REQUIRED];
 
   // Required. Existing transaction identifier to match and link.
   // Values are of the form `txn_[a-zA-Z0-9]+`.
-  string transaction_id = 2 [(google.api.field_behavior) = REQUIRED];
+  string matched_transaction_id = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
-// The request for [SkipScheduledPayment][saturn.finance.v1.Finance.SkipScheduledPayment].
-message SkipScheduledPaymentRequest {
-  // Required. Identifier of the scheduled payment instance to skip.
+// The request for [SkipScheduledTransaction][saturn.finance.v1.Finance.SkipScheduledTransaction].
+message SkipScheduledTransactionRequest {
+  // Required. Identifier of the scheduled transaction instance to skip.
   // Values are of the form `sch_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
@@ -1621,8 +1638,6 @@ message DeleteBorrowingRequest {
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
-
-
 // Enum representing the type of borrowing transaction.
 enum BorrowingTransactionType {
   // Unspecified type.
@@ -1661,8 +1676,6 @@ message LogBorrowingTransactionRequest {
   // Required. Transaction parameters.
   BorrowingTransactionInput transaction = 2 [(google.api.field_behavior) = REQUIRED];
 }
-
-
 
 // Request for UpdateBorrowingTransaction.
 message UpdateBorrowingTransactionRequest {

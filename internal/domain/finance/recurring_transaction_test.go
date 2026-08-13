@@ -7,23 +7,23 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/id"
 )
 
-func TestRecurringExpenseID(t *testing.T) {
-	recID, err := NewRecurringExpenseID()
+func TestRecurringTransactionID(t *testing.T) {
+	recID, err := NewRecurringTransactionID()
 	if err != nil {
-		t.Fatalf("unexpected error creating recurring expense ID: %v", err)
+		t.Fatalf("unexpected error creating recurring transaction ID: %v", err)
 	}
 	if err := recID.Validate(); err != nil {
-		t.Errorf("expected valid recurring expense ID, got: %v", err)
+		t.Errorf("expected valid recurring transaction ID, got: %v", err)
 	}
 
-	parsed, err := ParseRecurringExpenseID(string(recID))
+	parsed, err := ParseRecurringTransactionID(string(recID))
 	if err != nil || parsed != recID {
-		t.Errorf("failed to parse recurring expense ID: %v", err)
+		t.Errorf("failed to parse recurring transaction ID: %v", err)
 	}
 }
 
-func TestRecurringExpense_Validate(t *testing.T) {
-	recID, _ := NewRecurringExpenseID()
+func TestRecurringTransaction_Validate(t *testing.T) {
+	recID, _ := NewRecurringTransactionID()
 	rawSpace, _ := id.Generate("spc_")
 	spaceID := SpaceID(rawSpace)
 	budID, _ := NewBudgetID()
@@ -31,66 +31,70 @@ func TestRecurringExpense_Validate(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		recurring RecurringExpense
+		recurring RecurringTransaction
 		wantErr   bool
 	}{
 		{
 			name: "valid monthly recurring expense",
-			recurring: RecurringExpense{
+			recurring: RecurringTransaction{
 				ID:          recID,
 				SpaceID:     spaceID,
-				BudgetID:    budID,
+				BudgetID:    &budID,
 				Name:        "Netflix",
 				Amount:      1500,
 				Currency:    "USD",
 				Interval:    IntervalMonthly,
 				NextDueDate: now,
-				Status:      RecurringExpenseActive,
+				Status:      RecurringTransactionActive,
+				Type:        TransactionTypeExpense,
 			},
 			wantErr: false,
 		},
 		{
-			name: "valid weekly recurring expense",
-			recurring: RecurringExpense{
+			name: "valid monthly recurring income without budget ID",
+			recurring: RecurringTransaction{
 				ID:          recID,
 				SpaceID:     spaceID,
-				BudgetID:    budID,
-				Name:        "Gym",
-				Amount:      1000,
+				BudgetID:    nil,
+				Name:        "Salary",
+				Amount:      500000,
 				Currency:    "USD",
-				Interval:    IntervalWeekly,
+				Interval:    IntervalMonthly,
 				NextDueDate: now,
-				Status:      RecurringExpenseActive,
+				Status:      RecurringTransactionActive,
+				Type:        TransactionTypeIncome,
 			},
 			wantErr: false,
 		},
 		{
 			name: "invalid interval",
-			recurring: RecurringExpense{
+			recurring: RecurringTransaction{
 				ID:          recID,
 				SpaceID:     spaceID,
-				BudgetID:    budID,
+				BudgetID:    &budID,
 				Name:        "Software",
 				Amount:      5000,
 				Currency:    "USD",
 				Interval:    RecurrenceInterval("biweekly"),
 				NextDueDate: now,
-				Status:      RecurringExpenseActive,
+				Status:      RecurringTransactionActive,
+				Type:        TransactionTypeExpense,
 			},
 			wantErr: true,
 		},
 		{
 			name: "zero amount",
-			recurring: RecurringExpense{
+			recurring: RecurringTransaction{
 				ID:          recID,
 				SpaceID:     spaceID,
-				BudgetID:    budID,
+				BudgetID:    &budID,
 				Name:        "Software",
 				Amount:      0,
 				Currency:    "USD",
 				Interval:    IntervalMonthly,
 				NextDueDate: now,
-				Status:      RecurringExpenseActive,
+				Status:      RecurringTransactionActive,
+				Type:        TransactionTypeExpense,
 			},
 			wantErr: true,
 		},
@@ -100,39 +104,40 @@ func TestRecurringExpense_Validate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.recurring.Validate()
 			if (err != nil) != tt.wantErr {
-				t.Errorf("RecurringExpense.Validate() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("RecurringTransaction.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
-func TestRecurringExpense_AdvanceNextDueDateAndNewScheduledPayment(t *testing.T) {
-	recID, _ := NewRecurringExpenseID()
+func TestRecurringTransaction_AdvanceNextDueDateAndNewScheduledTransaction(t *testing.T) {
+	recID, _ := NewRecurringTransactionID()
 	rawSpace, _ := id.Generate("spc_")
 	spaceID := SpaceID(rawSpace)
 	budID, _ := NewBudgetID()
 	now := time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC)
 
-	re := &RecurringExpense{
+	re := &RecurringTransaction{
 		ID:          recID,
 		SpaceID:     spaceID,
-		BudgetID:    budID,
+		BudgetID:    &budID,
 		Name:        "SaaS Subscription",
 		Amount:      4900,
 		Currency:    "USD",
 		Interval:    IntervalMonthly,
 		NextDueDate: now,
-		Status:      RecurringExpenseActive,
+		Status:      RecurringTransactionActive,
+		Type:        TransactionTypeExpense,
 	}
 
-	spID, _ := NewScheduledPaymentID()
-	sp, err := re.NewScheduledPayment(spID)
+	spID, _ := NewScheduledTransactionID()
+	sp, err := re.NewScheduledTransaction(spID)
 	if err != nil {
-		t.Fatalf("NewScheduledPayment failed: %v", err)
+		t.Fatalf("NewScheduledTransaction failed: %v", err)
 	}
 
-	if sp.Amount != 4900 || sp.BudgetID != budID {
-		t.Errorf("sp amount = %d, budget = %s, want 4900 and %s", sp.Amount, sp.BudgetID, budID)
+	if sp.Amount != 4900 || *sp.BudgetID != budID {
+		t.Errorf("sp amount = %d, budget = %s, want 4900 and %s", sp.Amount, *sp.BudgetID, budID)
 	}
 
 	if err := re.AdvanceNextDueDate(); err != nil {
@@ -145,23 +150,23 @@ func TestRecurringExpense_AdvanceNextDueDateAndNewScheduledPayment(t *testing.T)
 	}
 }
 
-func TestRecurringExpense_SortFields(t *testing.T) {
-	if !IsRecurringExpenseSortField("name") {
+func TestRecurringTransaction_SortFields(t *testing.T) {
+	if !IsRecurringTransactionSortField("name") {
 		t.Error("expected 'name' to be valid sort field")
 	}
-	if !IsRecurringExpenseSortField("next_due_date") {
+	if !IsRecurringTransactionSortField("next_due_date") {
 		t.Error("expected 'next_due_date' to be valid sort field")
 	}
-	if IsRecurringExpenseSortField("unknown") {
+	if IsRecurringTransactionSortField("unknown") {
 		t.Error("expected 'unknown' to be invalid sort field")
 	}
 
 	now := time.Now()
-	rec := &RecurringExpense{
+	rec := &RecurringTransaction{
 		Name:        "Spotify",
 		Amount:      999,
 		NextDueDate: now,
-		Status:      RecurringExpenseActive,
+		Status:      RecurringTransactionActive,
 	}
 
 	val := rec.GetSortValue("name")

@@ -2465,15 +2465,15 @@
         ]
       }
     },
-    "/v1/finance/recurring-expenses": {
+    "/v1/finance/recurring-transactions": {
       "get": {
         "summary": "Lists all configured recurring templates in the space.",
-        "operationId": "Finance_ListRecurringExpenses",
+        "operationId": "Finance_ListRecurringTransactions",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ListRecurringExpensesResponse"
+              "$ref": "#/definitions/v1ListRecurringTransactionsResponse"
             }
           },
           "default": {
@@ -2542,13 +2542,13 @@
         ]
       },
       "post": {
-        "summary": "Registers a recurring expense template, generating repeating payment obligations periodically.",
-        "operationId": "Finance_CreateRecurringExpense",
+        "summary": "Registers a recurring transaction template, generating repeating transaction obligations periodically.",
+        "operationId": "Finance_CreateRecurringTransaction",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1RecurringExpense"
+              "$ref": "#/definitions/v1RecurringTransaction"
             }
           },
           "default": {
@@ -2560,12 +2560,12 @@
         },
         "parameters": [
           {
-            "name": "recurringExpense",
-            "description": "Required. The recurring expense template to create.",
+            "name": "recurringTransaction",
+            "description": "Required. The recurring transaction template to create.",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1RecurringExpense"
+              "$ref": "#/definitions/v1RecurringTransaction"
             }
           }
         ],
@@ -2574,10 +2574,10 @@
         ]
       }
     },
-    "/v1/finance/recurring-expenses/{id}": {
+    "/v1/finance/recurring-transactions/{id}": {
       "delete": {
-        "summary": "Deletes a recurring template, preventing any future payment instances from spawning.",
-        "operationId": "Finance_DeleteRecurringExpense",
+        "summary": "Deletes a recurring template, preventing any future transaction instances from spawning.",
+        "operationId": "Finance_DeleteRecurringTransaction",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -2615,13 +2615,13 @@
         ]
       },
       "patch": {
-        "summary": "Updates an active recurring expense template.",
-        "operationId": "Finance_UpdateRecurringExpense",
+        "summary": "Updates an active recurring transaction template.",
+        "operationId": "Finance_UpdateRecurringTransaction",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1RecurringExpense"
+              "$ref": "#/definitions/v1RecurringTransaction"
             }
           },
           "default": {
@@ -2640,12 +2640,12 @@
             "type": "string"
           },
           {
-            "name": "recurringExpense",
-            "description": "Required. The recurring expense template to update.",
+            "name": "recurringTransaction",
+            "description": "Required. The recurring transaction template to update.",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1RecurringExpense"
+              "$ref": "#/definitions/v1RecurringTransaction"
             }
           },
           {
@@ -2662,15 +2662,15 @@
         ]
       }
     },
-    "/v1/finance/scheduled-payments": {
+    "/v1/finance/scheduled-transactions": {
       "get": {
-        "summary": "Lists scheduled payment instances spawned by recurring templates.",
-        "operationId": "Finance_ListScheduledPayments",
+        "summary": "Lists scheduled transaction instances spawned by recurring templates.",
+        "operationId": "Finance_ListScheduledTransactions",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ListScheduledPaymentsResponse"
+              "$ref": "#/definitions/v1ListScheduledTransactionsResponse"
             }
           },
           "default": {
@@ -2683,7 +2683,7 @@
         "parameters": [
           {
             "name": "status",
-            "description": "Optional. Filter instances by payment status.",
+            "description": "Optional. Filter instances by transaction status.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -2756,15 +2756,15 @@
         ]
       }
     },
-    "/v1/finance/scheduled-payments/{id}": {
+    "/v1/finance/scheduled-transactions/{id}": {
       "get": {
-        "summary": "Retrieves details of a specific scheduled payment by ID.",
-        "operationId": "Finance_GetScheduledPayment",
+        "summary": "Retrieves details of a specific scheduled transaction by ID.",
+        "operationId": "Finance_GetScheduledTransaction",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ScheduledPayment"
+              "$ref": "#/definitions/v1ScheduledTransaction"
             }
           },
           "default": {
@@ -2777,7 +2777,7 @@
         "parameters": [
           {
             "name": "id",
-            "description": "Required. Unique identifier of the scheduled payment to retrieve.\nValues are of the form `sch_[a-zA-Z0-9]+`.",
+            "description": "Required. Unique identifier of the scheduled transaction to retrieve.\nValues are of the form `sch_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -2788,15 +2788,15 @@
         ]
       }
     },
-    "/v1/finance/scheduled-payments/{id}:skip": {
+    "/v1/finance/scheduled-transactions/{id}:skip": {
       "post": {
-        "summary": "Dismisses a pending scheduled payment instance without creating a transaction.",
-        "operationId": "Finance_SkipScheduledPayment",
+        "summary": "Dismisses a pending scheduled transaction instance without creating a transaction.",
+        "operationId": "Finance_SkipScheduledTransaction",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ScheduledPayment"
+              "$ref": "#/definitions/v1ScheduledTransaction"
             }
           },
           "default": {
@@ -2809,7 +2809,7 @@
         "parameters": [
           {
             "name": "id",
-            "description": "Required. Identifier of the scheduled payment instance to skip.\nValues are of the form `sch_[a-zA-Z0-9]+`.",
+            "description": "Required. Identifier of the scheduled transaction instance to skip.\nValues are of the form `sch_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -2819,7 +2819,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/FinanceSkipScheduledPaymentBody"
+              "$ref": "#/definitions/FinanceSkipScheduledTransactionBody"
             }
           }
         ],
@@ -2828,10 +2828,10 @@
         ]
       }
     },
-    "/v1/finance/scheduled-payments/{paymentId}/confirm": {
+    "/v1/finance/scheduled-transactions/{transactionId}/confirm": {
       "post": {
-        "summary": "Clears a scheduled payment instance, converting it into a permanent, reconciled ledger transaction.",
-        "operationId": "Finance_ConfirmScheduledPayment",
+        "summary": "Clears a scheduled transaction instance, converting it into a permanent, reconciled ledger transaction.",
+        "operationId": "Finance_ConfirmScheduledTransaction",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -2848,8 +2848,8 @@
         },
         "parameters": [
           {
-            "name": "paymentId",
-            "description": "Required. Unique identifier of the scheduled payment to confirm.\nValues are of the form `sch_[a-zA-Z0-9]+`.",
+            "name": "transactionId",
+            "description": "Required. Unique identifier of the scheduled transaction to confirm.\nValues are of the form `sch_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -2859,7 +2859,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/FinanceConfirmScheduledPaymentBody"
+              "$ref": "#/definitions/FinanceConfirmScheduledTransactionBody"
             }
           }
         ],
@@ -2868,10 +2868,10 @@
         ]
       }
     },
-    "/v1/finance/scheduled-payments/{paymentId}/match": {
+    "/v1/finance/scheduled-transactions/{transactionId}/match": {
       "post": {
-        "summary": "Links an existing transaction with a pending scheduled payment, marking it cleared.",
-        "operationId": "Finance_MatchScheduledPayment",
+        "summary": "Links an existing transaction with a pending scheduled transaction, marking it cleared.",
+        "operationId": "Finance_MatchScheduledTransaction",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -2888,8 +2888,8 @@
         },
         "parameters": [
           {
-            "name": "paymentId",
-            "description": "Required. Target scheduled payment identifier.\nValues are of the form `sch_[a-zA-Z0-9]+`.",
+            "name": "transactionId",
+            "description": "Required. Target scheduled transaction identifier.\nValues are of the form `sch_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -2899,7 +2899,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/FinanceMatchScheduledPaymentBody"
+              "$ref": "#/definitions/FinanceMatchScheduledTransactionBody"
             }
           }
         ],
@@ -4865,7 +4865,7 @@
       "type": "object",
       "description": "The request for\n[ApproveInboxItem][saturn.finance.v1.Finance.ApproveInboxItem]."
     },
-    "FinanceConfirmScheduledPaymentBody": {
+    "FinanceConfirmScheduledTransactionBody": {
       "type": "object",
       "properties": {
         "transactionDate": {
@@ -4889,40 +4889,40 @@
         },
         "accountId": {
           "type": "string",
-          "description": "Optional. Financial account identifier used to settle the payment.\nWhen provided, the account balance will be updated accordingly.\nValues are of the form `acc_[a-zA-Z0-9]+`."
+          "description": "Optional. Financial account identifier used to settle the transaction.\nWhen provided, the account balance will be updated accordingly.\nValues are of the form `acc_[a-zA-Z0-9]+`."
         },
         "budgetId": {
           "type": "string",
-          "description": "Optional. Budget category identifier to allocate the cleared transaction under.\nIf omitted, defaults to the budget category configured on the scheduled payment.\nValues are of the form `bud_[a-zA-Z0-9]+`."
+          "description": "Optional. Budget category identifier to allocate the cleared transaction under.\nIf omitted, defaults to the budget category configured on the scheduled transaction.\nValues are of the form `bud_[a-zA-Z0-9]+`."
         },
         "currency": {
           "type": "string",
-          "description": "Optional. Settlement currency code (ISO 4217 standard 3-letter code).\nIf omitted, defaults to the currency configured on the scheduled payment."
+          "description": "Optional. Settlement currency code (ISO 4217 standard 3-letter code).\nIf omitted, defaults to the currency configured on the scheduled transaction."
         }
       },
-      "description": "The request for\n[ConfirmScheduledPayment][saturn.finance.v1.Finance.ConfirmScheduledPayment].",
+      "description": "The request for\n[ConfirmScheduledTransaction][saturn.finance.v1.Finance.ConfirmScheduledTransaction].",
       "required": [
         "transactionDate",
         "effectiveDate",
         "actualAmount"
       ]
     },
-    "FinanceMatchScheduledPaymentBody": {
+    "FinanceMatchScheduledTransactionBody": {
       "type": "object",
       "properties": {
-        "transactionId": {
+        "matchedTransactionId": {
           "type": "string",
           "description": "Required. Existing transaction identifier to match and link.\nValues are of the form `txn_[a-zA-Z0-9]+`."
         }
       },
-      "description": "The request for [MatchScheduledPayment][saturn.finance.v1.Finance.MatchScheduledPayment].",
+      "description": "The request for [MatchScheduledTransaction][saturn.finance.v1.Finance.MatchScheduledTransaction].",
       "required": [
-        "transactionId"
+        "matchedTransactionId"
       ]
     },
-    "FinanceSkipScheduledPaymentBody": {
+    "FinanceSkipScheduledTransactionBody": {
       "type": "object",
-      "description": "The request for [SkipScheduledPayment][saturn.finance.v1.Finance.SkipScheduledPayment]."
+      "description": "The request for [SkipScheduledTransaction][saturn.finance.v1.Finance.SkipScheduledTransaction]."
     },
     "IdentityRevokeSessionBody": {
       "type": "object",
@@ -5011,7 +5011,7 @@
     "MessageAdminRetryDeliveryBody": {
       "type": "object"
     },
-    "RecurringExpenseExecutionState": {
+    "RecurringTransactionExecutionState": {
       "type": "object",
       "properties": {
         "nextDueDate": {
@@ -5031,7 +5031,7 @@
         "nextDueDate"
       ]
     },
-    "RecurringExpenseInterval": {
+    "RecurringTransactionInterval": {
       "type": "string",
       "enum": [
         "WEEKLY",
@@ -5040,7 +5040,7 @@
       ],
       "description": "Execution interval recurrence rule."
     },
-    "ScheduledPaymentMetadata": {
+    "ScheduledTransactionMetadata": {
       "type": "object",
       "properties": {
         "name": {
@@ -5062,9 +5062,9 @@
           "type": "string"
         }
       },
-      "description": "Metadata wraps context metadata for scheduled payments."
+      "description": "Metadata wraps context metadata for scheduled transactions."
     },
-    "ScheduledPaymentRecurringExpenseInfo": {
+    "ScheduledTransactionRecurringTransactionInfo": {
       "type": "object",
       "properties": {
         "id": {
@@ -5074,15 +5074,15 @@
           "type": "string"
         },
         "interval": {
-          "$ref": "#/definitions/RecurringExpenseInterval"
+          "$ref": "#/definitions/RecurringTransactionInterval"
         }
       },
-      "description": "RecurringExpenseInfo wraps parent template details."
+      "description": "RecurringTransactionInfo wraps parent template details."
     },
-    "ScheduledPaymentSourceType": {
+    "ScheduledTransactionSourceType": {
       "type": "string",
       "enum": [
-        "RECURRENT_EXPENSE",
+        "RECURRENT_TRANSACTION",
         "LOAN",
         "TAX"
       ],
@@ -7203,41 +7203,41 @@
         }
       }
     },
-    "v1ListRecurringExpensesResponse": {
+    "v1ListRecurringTransactionsResponse": {
       "type": "object",
       "properties": {
-        "recurringExpenses": {
+        "recurringTransactions": {
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1RecurringExpense"
+            "$ref": "#/definitions/v1RecurringTransaction"
           },
-          "description": "List of recurring expense templates matching filters."
+          "description": "List of recurring transaction templates matching filters."
         },
         "nextPageToken": {
           "type": "string",
           "description": "Next page keyset token. Empty if no more pages are available."
         }
       },
-      "description": "The response for\n[ListRecurringExpenses][saturn.finance.v1.Finance.ListRecurringExpenses]."
+      "description": "The response for\n[ListRecurringTransactions][saturn.finance.v1.Finance.ListRecurringTransactions]."
     },
-    "v1ListScheduledPaymentsResponse": {
+    "v1ListScheduledTransactionsResponse": {
       "type": "object",
       "properties": {
-        "scheduledPayments": {
+        "scheduledTransactions": {
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1ScheduledPayment"
+            "$ref": "#/definitions/v1ScheduledTransaction"
           },
-          "description": "List of scheduled payment instances matching filters."
+          "description": "List of scheduled transaction instances matching filters."
         },
         "nextPageToken": {
           "type": "string",
           "description": "Next page keyset token. Empty if no more pages are available."
         }
       },
-      "description": "The response for\n[ListScheduledPayments][saturn.finance.v1.Finance.ListScheduledPayments]."
+      "description": "The response for\n[ListScheduledTransactions][saturn.finance.v1.Finance.ListScheduledTransactions]."
     },
     "v1ListSchedulesResponse": {
       "type": "object",
@@ -7444,7 +7444,7 @@
         }
       }
     },
-    "v1RecurringExpense": {
+    "v1RecurringTransaction": {
       "type": "object",
       "properties": {
         "id": {
@@ -7459,7 +7459,7 @@
         },
         "budgetId": {
           "type": "string",
-          "description": "Required. Budget category identifier.\nValues are of the form `bud_[a-zA-Z0-9]+`."
+          "description": "Optional. Budget category identifier. Required for EXPENSE type.\nValues are of the form `bud_[a-zA-Z0-9]+`."
         },
         "name": {
           "type": "string",
@@ -7475,11 +7475,11 @@
           "description": "Required. Currency code."
         },
         "interval": {
-          "$ref": "#/definitions/RecurringExpenseInterval",
+          "$ref": "#/definitions/RecurringTransactionInterval",
           "description": "Required. Execution interval rule."
         },
         "executionState": {
-          "$ref": "#/definitions/RecurringExpenseExecutionState",
+          "$ref": "#/definitions/RecurringTransactionExecutionState",
           "description": "Required. Scheduler engine runtime state."
         },
         "isVariable": {
@@ -7487,13 +7487,17 @@
           "description": "Optional. Indicates if the payment amount is variable."
         },
         "status": {
-          "$ref": "#/definitions/v1RecurringExpenseStatus",
+          "$ref": "#/definitions/v1RecurringTransactionStatus",
           "description": "Required. Active template status."
         },
         "gracePeriodDays": {
           "type": "integer",
           "format": "int32",
           "description": "Optional. Days allowed past due date before triggering warning events."
+        },
+        "type": {
+          "$ref": "#/definitions/v1RecurringType",
+          "description": "Required. Transaction type (EXPENSE or INCOME)."
         },
         "version": {
           "type": "string",
@@ -7514,23 +7518,27 @@
           "readOnly": true
         },
         "budget": {
-          "$ref": "#/definitions/v1RecurringExpenseBudgetInfo",
+          "$ref": "#/definitions/v1RecurringTransactionBudgetInfo",
           "description": "Output only. Hydrated minimal budget details. Available only on FULL view.",
           "readOnly": true
+        },
+        "accountId": {
+          "type": "string",
+          "description": "Optional. Default financial account identifier to impact."
         }
       },
-      "description": "RecurringExpense represents a template rule to repeat payments.",
+      "description": "RecurringTransaction represents a template rule to repeat payments or incomes.",
       "required": [
-        "budgetId",
         "name",
         "amount",
         "currency",
         "interval",
         "executionState",
-        "status"
+        "status",
+        "type"
       ]
     },
-    "v1RecurringExpenseBudgetInfo": {
+    "v1RecurringTransactionBudgetInfo": {
       "type": "object",
       "properties": {
         "id": {
@@ -7548,7 +7556,7 @@
       },
       "description": "BudgetInfo wraps minimal budget details required for UI listing."
     },
-    "v1RecurringExpenseStatus": {
+    "v1RecurringTransactionStatus": {
       "type": "string",
       "enum": [
         "ACTIVE",
@@ -7557,13 +7565,21 @@
       ],
       "description": "Active template status."
     },
-    "v1RecurringExpenseView": {
+    "v1RecurringTransactionView": {
       "type": "string",
       "enum": [
         "BASIC",
         "FULL"
       ],
       "description": "Scoped resource representation view level."
+    },
+    "v1RecurringType": {
+      "type": "string",
+      "enum": [
+        "EXPENSE",
+        "INCOME"
+      ],
+      "description": "RecurringType defines the type of recurring transaction."
     },
     "v1RefreshSessionRequest": {
       "type": "object",
@@ -7708,7 +7724,7 @@
         }
       }
     },
-    "v1ScheduledPayment": {
+    "v1ScheduledTransaction": {
       "type": "object",
       "properties": {
         "id": {
@@ -7723,10 +7739,10 @@
         },
         "budgetId": {
           "type": "string",
-          "description": "Required. Budget category identifier.\nValues are of the form `bud_[a-zA-Z0-9]+`."
+          "description": "Optional. Budget category identifier.\nValues are of the form `bud_[a-zA-Z0-9]+`."
         },
         "sourceType": {
-          "$ref": "#/definitions/ScheduledPaymentSourceType",
+          "$ref": "#/definitions/ScheduledTransactionSourceType",
           "description": "Required. Parent template source type."
         },
         "sourceId": {
@@ -7736,7 +7752,7 @@
         "amount": {
           "type": "string",
           "format": "int64",
-          "description": "Required. Target payment amount in cents."
+          "description": "Required. Target amount in cents."
         },
         "currency": {
           "type": "string",
@@ -7748,11 +7764,11 @@
           "description": "Required. Scheduled execution due date."
         },
         "status": {
-          "$ref": "#/definitions/v1ScheduledPaymentStatus",
+          "$ref": "#/definitions/v1ScheduledTransactionStatus",
           "description": "Required. Instance execution status."
         },
         "metadata": {
-          "$ref": "#/definitions/ScheduledPaymentMetadata",
+          "$ref": "#/definitions/ScheduledTransactionMetadata",
           "description": "Optional. Context metadata."
         },
         "createTime": {
@@ -7768,28 +7784,36 @@
           "readOnly": true
         },
         "budget": {
-          "$ref": "#/definitions/v1ScheduledPaymentBudgetInfo",
+          "$ref": "#/definitions/v1ScheduledTransactionBudgetInfo",
           "description": "Output only. Hydrated minimal budget details. Available only on FULL view.",
           "readOnly": true
         },
-        "recurringExpense": {
-          "$ref": "#/definitions/ScheduledPaymentRecurringExpenseInfo",
+        "recurringTransaction": {
+          "$ref": "#/definitions/ScheduledTransactionRecurringTransactionInfo",
           "description": "Output only. Hydrated parent template details. Available only on FULL view.",
           "readOnly": true
+        },
+        "type": {
+          "$ref": "#/definitions/v1RecurringType",
+          "description": "Required. Transaction type (EXPENSE or INCOME)."
+        },
+        "accountId": {
+          "type": "string",
+          "description": "Optional. Settle account identifier."
         }
       },
-      "description": "ScheduledPayment represents a spawned pending payment instance.",
+      "description": "ScheduledTransaction represents a spawned pending payment or income instance.",
       "required": [
-        "budgetId",
         "sourceType",
         "sourceId",
         "amount",
         "currency",
         "dueDate",
-        "status"
+        "status",
+        "type"
       ]
     },
-    "v1ScheduledPaymentBudgetInfo": {
+    "v1ScheduledTransactionBudgetInfo": {
       "type": "object",
       "properties": {
         "id": {
@@ -7807,7 +7831,7 @@
       },
       "description": "BudgetInfo wraps minimal budget details required for UI listing."
     },
-    "v1ScheduledPaymentStatus": {
+    "v1ScheduledTransactionStatus": {
       "type": "string",
       "enum": [
         "PENDING",
@@ -7817,7 +7841,7 @@
       ],
       "description": "Instance execution status."
     },
-    "v1ScheduledPaymentView": {
+    "v1ScheduledTransactionView": {
       "type": "string",
       "enum": [
         "BASIC",

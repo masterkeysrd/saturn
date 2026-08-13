@@ -20,62 +20,62 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Finance_ConfigureFinance_FullMethodName           = "/saturn.finance.v1.Finance/ConfigureFinance"
-	Finance_GetFinanceSettings_FullMethodName         = "/saturn.finance.v1.Finance/GetFinanceSettings"
-	Finance_CreateBudget_FullMethodName               = "/saturn.finance.v1.Finance/CreateBudget"
-	Finance_GetBudget_FullMethodName                  = "/saturn.finance.v1.Finance/GetBudget"
-	Finance_UpdateBudget_FullMethodName               = "/saturn.finance.v1.Finance/UpdateBudget"
-	Finance_DeleteBudget_FullMethodName               = "/saturn.finance.v1.Finance/DeleteBudget"
-	Finance_ListBudgets_FullMethodName                = "/saturn.finance.v1.Finance/ListBudgets"
-	Finance_GetBudgetPeriod_FullMethodName            = "/saturn.finance.v1.Finance/GetBudgetPeriod"
-	Finance_CreateExchangeRate_FullMethodName         = "/saturn.finance.v1.Finance/CreateExchangeRate"
-	Finance_GetExchangeRate_FullMethodName            = "/saturn.finance.v1.Finance/GetExchangeRate"
-	Finance_UpdateExchangeRate_FullMethodName         = "/saturn.finance.v1.Finance/UpdateExchangeRate"
-	Finance_ListExchangeRates_FullMethodName          = "/saturn.finance.v1.Finance/ListExchangeRates"
-	Finance_DeleteExchangeRate_FullMethodName         = "/saturn.finance.v1.Finance/DeleteExchangeRate"
-	Finance_CreateExpense_FullMethodName              = "/saturn.finance.v1.Finance/CreateExpense"
-	Finance_UpdateExpense_FullMethodName              = "/saturn.finance.v1.Finance/UpdateExpense"
-	Finance_DeleteTransaction_FullMethodName          = "/saturn.finance.v1.Finance/DeleteTransaction"
-	Finance_ListTransactions_FullMethodName           = "/saturn.finance.v1.Finance/ListTransactions"
-	Finance_GetTransaction_FullMethodName             = "/saturn.finance.v1.Finance/GetTransaction"
-	Finance_ListTransactionEvents_FullMethodName      = "/saturn.finance.v1.Finance/ListTransactionEvents"
-	Finance_GetInsights_FullMethodName                = "/saturn.finance.v1.Finance/GetInsights"
-	Finance_CreateRecurringExpense_FullMethodName     = "/saturn.finance.v1.Finance/CreateRecurringExpense"
-	Finance_UpdateRecurringExpense_FullMethodName     = "/saturn.finance.v1.Finance/UpdateRecurringExpense"
-	Finance_DeleteRecurringExpense_FullMethodName     = "/saturn.finance.v1.Finance/DeleteRecurringExpense"
-	Finance_ListRecurringExpenses_FullMethodName      = "/saturn.finance.v1.Finance/ListRecurringExpenses"
-	Finance_ListScheduledPayments_FullMethodName      = "/saturn.finance.v1.Finance/ListScheduledPayments"
-	Finance_GetScheduledPayment_FullMethodName        = "/saturn.finance.v1.Finance/GetScheduledPayment"
-	Finance_ConfirmScheduledPayment_FullMethodName    = "/saturn.finance.v1.Finance/ConfirmScheduledPayment"
-	Finance_MatchScheduledPayment_FullMethodName      = "/saturn.finance.v1.Finance/MatchScheduledPayment"
-	Finance_SkipScheduledPayment_FullMethodName       = "/saturn.finance.v1.Finance/SkipScheduledPayment"
-	Finance_CreateBorrowing_FullMethodName            = "/saturn.finance.v1.Finance/CreateBorrowing"
-	Finance_GetBorrowing_FullMethodName               = "/saturn.finance.v1.Finance/GetBorrowing"
-	Finance_ListBorrowings_FullMethodName             = "/saturn.finance.v1.Finance/ListBorrowings"
-	Finance_UpdateBorrowing_FullMethodName            = "/saturn.finance.v1.Finance/UpdateBorrowing"
-	Finance_DeleteBorrowing_FullMethodName            = "/saturn.finance.v1.Finance/DeleteBorrowing"
-	Finance_LogBorrowingTransaction_FullMethodName    = "/saturn.finance.v1.Finance/LogBorrowingTransaction"
-	Finance_UpdateBorrowingTransaction_FullMethodName = "/saturn.finance.v1.Finance/UpdateBorrowingTransaction"
-	Finance_DeleteBorrowingTransaction_FullMethodName = "/saturn.finance.v1.Finance/DeleteBorrowingTransaction"
-	Finance_AdjustBorrowingBalance_FullMethodName     = "/saturn.finance.v1.Finance/AdjustBorrowingBalance"
-	Finance_CreateAccount_FullMethodName              = "/saturn.finance.v1.Finance/CreateAccount"
-	Finance_GetAccount_FullMethodName                 = "/saturn.finance.v1.Finance/GetAccount"
-	Finance_UpdateAccount_FullMethodName              = "/saturn.finance.v1.Finance/UpdateAccount"
-	Finance_AdjustAccountBalance_FullMethodName       = "/saturn.finance.v1.Finance/AdjustAccountBalance"
-	Finance_DeleteAccount_FullMethodName              = "/saturn.finance.v1.Finance/DeleteAccount"
-	Finance_ListAccounts_FullMethodName               = "/saturn.finance.v1.Finance/ListAccounts"
-	Finance_CreateInstitution_FullMethodName          = "/saturn.finance.v1.Finance/CreateInstitution"
-	Finance_UpdateInstitution_FullMethodName          = "/saturn.finance.v1.Finance/UpdateInstitution"
-	Finance_DeleteInstitution_FullMethodName          = "/saturn.finance.v1.Finance/DeleteInstitution"
-	Finance_ListInstitutions_FullMethodName           = "/saturn.finance.v1.Finance/ListInstitutions"
-	Finance_ResolveInstitution_FullMethodName         = "/saturn.finance.v1.Finance/ResolveInstitution"
-	Finance_CreateTransfer_FullMethodName             = "/saturn.finance.v1.Finance/CreateTransfer"
-	Finance_ListTransfers_FullMethodName              = "/saturn.finance.v1.Finance/ListTransfers"
-	Finance_ListCurrencies_FullMethodName             = "/saturn.finance.v1.Finance/ListCurrencies"
-	Finance_ListInboxItems_FullMethodName             = "/saturn.finance.v1.Finance/ListInboxItems"
-	Finance_UpdateInboxItem_FullMethodName            = "/saturn.finance.v1.Finance/UpdateInboxItem"
-	Finance_ApproveInboxItem_FullMethodName           = "/saturn.finance.v1.Finance/ApproveInboxItem"
-	Finance_DiscardInboxItem_FullMethodName           = "/saturn.finance.v1.Finance/DiscardInboxItem"
+	Finance_ConfigureFinance_FullMethodName            = "/saturn.finance.v1.Finance/ConfigureFinance"
+	Finance_GetFinanceSettings_FullMethodName          = "/saturn.finance.v1.Finance/GetFinanceSettings"
+	Finance_CreateBudget_FullMethodName                = "/saturn.finance.v1.Finance/CreateBudget"
+	Finance_GetBudget_FullMethodName                   = "/saturn.finance.v1.Finance/GetBudget"
+	Finance_UpdateBudget_FullMethodName                = "/saturn.finance.v1.Finance/UpdateBudget"
+	Finance_DeleteBudget_FullMethodName                = "/saturn.finance.v1.Finance/DeleteBudget"
+	Finance_ListBudgets_FullMethodName                 = "/saturn.finance.v1.Finance/ListBudgets"
+	Finance_GetBudgetPeriod_FullMethodName             = "/saturn.finance.v1.Finance/GetBudgetPeriod"
+	Finance_CreateExchangeRate_FullMethodName          = "/saturn.finance.v1.Finance/CreateExchangeRate"
+	Finance_GetExchangeRate_FullMethodName             = "/saturn.finance.v1.Finance/GetExchangeRate"
+	Finance_UpdateExchangeRate_FullMethodName          = "/saturn.finance.v1.Finance/UpdateExchangeRate"
+	Finance_ListExchangeRates_FullMethodName           = "/saturn.finance.v1.Finance/ListExchangeRates"
+	Finance_DeleteExchangeRate_FullMethodName          = "/saturn.finance.v1.Finance/DeleteExchangeRate"
+	Finance_CreateExpense_FullMethodName               = "/saturn.finance.v1.Finance/CreateExpense"
+	Finance_UpdateExpense_FullMethodName               = "/saturn.finance.v1.Finance/UpdateExpense"
+	Finance_DeleteTransaction_FullMethodName           = "/saturn.finance.v1.Finance/DeleteTransaction"
+	Finance_ListTransactions_FullMethodName            = "/saturn.finance.v1.Finance/ListTransactions"
+	Finance_GetTransaction_FullMethodName              = "/saturn.finance.v1.Finance/GetTransaction"
+	Finance_ListTransactionEvents_FullMethodName       = "/saturn.finance.v1.Finance/ListTransactionEvents"
+	Finance_GetInsights_FullMethodName                 = "/saturn.finance.v1.Finance/GetInsights"
+	Finance_CreateRecurringTransaction_FullMethodName  = "/saturn.finance.v1.Finance/CreateRecurringTransaction"
+	Finance_UpdateRecurringTransaction_FullMethodName  = "/saturn.finance.v1.Finance/UpdateRecurringTransaction"
+	Finance_DeleteRecurringTransaction_FullMethodName  = "/saturn.finance.v1.Finance/DeleteRecurringTransaction"
+	Finance_ListRecurringTransactions_FullMethodName   = "/saturn.finance.v1.Finance/ListRecurringTransactions"
+	Finance_ListScheduledTransactions_FullMethodName   = "/saturn.finance.v1.Finance/ListScheduledTransactions"
+	Finance_GetScheduledTransaction_FullMethodName     = "/saturn.finance.v1.Finance/GetScheduledTransaction"
+	Finance_ConfirmScheduledTransaction_FullMethodName = "/saturn.finance.v1.Finance/ConfirmScheduledTransaction"
+	Finance_MatchScheduledTransaction_FullMethodName   = "/saturn.finance.v1.Finance/MatchScheduledTransaction"
+	Finance_SkipScheduledTransaction_FullMethodName    = "/saturn.finance.v1.Finance/SkipScheduledTransaction"
+	Finance_CreateBorrowing_FullMethodName             = "/saturn.finance.v1.Finance/CreateBorrowing"
+	Finance_GetBorrowing_FullMethodName                = "/saturn.finance.v1.Finance/GetBorrowing"
+	Finance_ListBorrowings_FullMethodName              = "/saturn.finance.v1.Finance/ListBorrowings"
+	Finance_UpdateBorrowing_FullMethodName             = "/saturn.finance.v1.Finance/UpdateBorrowing"
+	Finance_DeleteBorrowing_FullMethodName             = "/saturn.finance.v1.Finance/DeleteBorrowing"
+	Finance_LogBorrowingTransaction_FullMethodName     = "/saturn.finance.v1.Finance/LogBorrowingTransaction"
+	Finance_UpdateBorrowingTransaction_FullMethodName  = "/saturn.finance.v1.Finance/UpdateBorrowingTransaction"
+	Finance_DeleteBorrowingTransaction_FullMethodName  = "/saturn.finance.v1.Finance/DeleteBorrowingTransaction"
+	Finance_AdjustBorrowingBalance_FullMethodName      = "/saturn.finance.v1.Finance/AdjustBorrowingBalance"
+	Finance_CreateAccount_FullMethodName               = "/saturn.finance.v1.Finance/CreateAccount"
+	Finance_GetAccount_FullMethodName                  = "/saturn.finance.v1.Finance/GetAccount"
+	Finance_UpdateAccount_FullMethodName               = "/saturn.finance.v1.Finance/UpdateAccount"
+	Finance_AdjustAccountBalance_FullMethodName        = "/saturn.finance.v1.Finance/AdjustAccountBalance"
+	Finance_DeleteAccount_FullMethodName               = "/saturn.finance.v1.Finance/DeleteAccount"
+	Finance_ListAccounts_FullMethodName                = "/saturn.finance.v1.Finance/ListAccounts"
+	Finance_CreateInstitution_FullMethodName           = "/saturn.finance.v1.Finance/CreateInstitution"
+	Finance_UpdateInstitution_FullMethodName           = "/saturn.finance.v1.Finance/UpdateInstitution"
+	Finance_DeleteInstitution_FullMethodName           = "/saturn.finance.v1.Finance/DeleteInstitution"
+	Finance_ListInstitutions_FullMethodName            = "/saturn.finance.v1.Finance/ListInstitutions"
+	Finance_ResolveInstitution_FullMethodName          = "/saturn.finance.v1.Finance/ResolveInstitution"
+	Finance_CreateTransfer_FullMethodName              = "/saturn.finance.v1.Finance/CreateTransfer"
+	Finance_ListTransfers_FullMethodName               = "/saturn.finance.v1.Finance/ListTransfers"
+	Finance_ListCurrencies_FullMethodName              = "/saturn.finance.v1.Finance/ListCurrencies"
+	Finance_ListInboxItems_FullMethodName              = "/saturn.finance.v1.Finance/ListInboxItems"
+	Finance_UpdateInboxItem_FullMethodName             = "/saturn.finance.v1.Finance/UpdateInboxItem"
+	Finance_ApproveInboxItem_FullMethodName            = "/saturn.finance.v1.Finance/ApproveInboxItem"
+	Finance_DiscardInboxItem_FullMethodName            = "/saturn.finance.v1.Finance/DiscardInboxItem"
 )
 
 // FinanceClient is the client API for Finance service.
@@ -126,24 +126,24 @@ type FinanceClient interface {
 	ListTransactionEvents(ctx context.Context, in *ListTransactionEventsRequest, opts ...grpc.CallOption) (*ListTransactionEventsResponse, error)
 	// Aggregates space spend patterns, limits, remaining budgets, burn rates, and budget category distributions.
 	GetInsights(ctx context.Context, in *GetInsightsRequest, opts ...grpc.CallOption) (*GetInsightsResponse, error)
-	// Registers a recurring expense template, generating repeating payment obligations periodically.
-	CreateRecurringExpense(ctx context.Context, in *CreateRecurringExpenseRequest, opts ...grpc.CallOption) (*RecurringExpense, error)
-	// Updates an active recurring expense template.
-	UpdateRecurringExpense(ctx context.Context, in *UpdateRecurringExpenseRequest, opts ...grpc.CallOption) (*RecurringExpense, error)
-	// Deletes a recurring template, preventing any future payment instances from spawning.
-	DeleteRecurringExpense(ctx context.Context, in *DeleteRecurringExpenseRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Registers a recurring transaction template, generating repeating transaction obligations periodically.
+	CreateRecurringTransaction(ctx context.Context, in *CreateRecurringTransactionRequest, opts ...grpc.CallOption) (*RecurringTransaction, error)
+	// Updates an active recurring transaction template.
+	UpdateRecurringTransaction(ctx context.Context, in *UpdateRecurringTransactionRequest, opts ...grpc.CallOption) (*RecurringTransaction, error)
+	// Deletes a recurring template, preventing any future transaction instances from spawning.
+	DeleteRecurringTransaction(ctx context.Context, in *DeleteRecurringTransactionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Lists all configured recurring templates in the space.
-	ListRecurringExpenses(ctx context.Context, in *ListRecurringExpensesRequest, opts ...grpc.CallOption) (*ListRecurringExpensesResponse, error)
-	// Lists scheduled payment instances spawned by recurring templates.
-	ListScheduledPayments(ctx context.Context, in *ListScheduledPaymentsRequest, opts ...grpc.CallOption) (*ListScheduledPaymentsResponse, error)
-	// Retrieves details of a specific scheduled payment by ID.
-	GetScheduledPayment(ctx context.Context, in *GetScheduledPaymentRequest, opts ...grpc.CallOption) (*ScheduledPayment, error)
-	// Clears a scheduled payment instance, converting it into a permanent, reconciled ledger transaction.
-	ConfirmScheduledPayment(ctx context.Context, in *ConfirmScheduledPaymentRequest, opts ...grpc.CallOption) (*Transaction, error)
-	// Links an existing transaction with a pending scheduled payment, marking it cleared.
-	MatchScheduledPayment(ctx context.Context, in *MatchScheduledPaymentRequest, opts ...grpc.CallOption) (*Transaction, error)
-	// Dismisses a pending scheduled payment instance without creating a transaction.
-	SkipScheduledPayment(ctx context.Context, in *SkipScheduledPaymentRequest, opts ...grpc.CallOption) (*ScheduledPayment, error)
+	ListRecurringTransactions(ctx context.Context, in *ListRecurringTransactionsRequest, opts ...grpc.CallOption) (*ListRecurringTransactionsResponse, error)
+	// Lists scheduled transaction instances spawned by recurring templates.
+	ListScheduledTransactions(ctx context.Context, in *ListScheduledTransactionsRequest, opts ...grpc.CallOption) (*ListScheduledTransactionsResponse, error)
+	// Retrieves details of a specific scheduled transaction by ID.
+	GetScheduledTransaction(ctx context.Context, in *GetScheduledTransactionRequest, opts ...grpc.CallOption) (*ScheduledTransaction, error)
+	// Clears a scheduled transaction instance, converting it into a permanent, reconciled ledger transaction.
+	ConfirmScheduledTransaction(ctx context.Context, in *ConfirmScheduledTransactionRequest, opts ...grpc.CallOption) (*Transaction, error)
+	// Links an existing transaction with a pending scheduled transaction, marking it cleared.
+	MatchScheduledTransaction(ctx context.Context, in *MatchScheduledTransactionRequest, opts ...grpc.CallOption) (*Transaction, error)
+	// Dismisses a pending scheduled transaction instance without creating a transaction.
+	SkipScheduledTransaction(ctx context.Context, in *SkipScheduledTransactionRequest, opts ...grpc.CallOption) (*ScheduledTransaction, error)
 	// Logs a new personal debt agreement (lent or borrowed money).
 	CreateBorrowing(ctx context.Context, in *CreateBorrowingRequest, opts ...grpc.CallOption) (*Borrowing, error)
 	// Retrieves detail metrics of a borrowing record.
@@ -408,90 +408,90 @@ func (c *financeClient) GetInsights(ctx context.Context, in *GetInsightsRequest,
 	return out, nil
 }
 
-func (c *financeClient) CreateRecurringExpense(ctx context.Context, in *CreateRecurringExpenseRequest, opts ...grpc.CallOption) (*RecurringExpense, error) {
+func (c *financeClient) CreateRecurringTransaction(ctx context.Context, in *CreateRecurringTransactionRequest, opts ...grpc.CallOption) (*RecurringTransaction, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RecurringExpense)
-	err := c.cc.Invoke(ctx, Finance_CreateRecurringExpense_FullMethodName, in, out, cOpts...)
+	out := new(RecurringTransaction)
+	err := c.cc.Invoke(ctx, Finance_CreateRecurringTransaction_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *financeClient) UpdateRecurringExpense(ctx context.Context, in *UpdateRecurringExpenseRequest, opts ...grpc.CallOption) (*RecurringExpense, error) {
+func (c *financeClient) UpdateRecurringTransaction(ctx context.Context, in *UpdateRecurringTransactionRequest, opts ...grpc.CallOption) (*RecurringTransaction, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RecurringExpense)
-	err := c.cc.Invoke(ctx, Finance_UpdateRecurringExpense_FullMethodName, in, out, cOpts...)
+	out := new(RecurringTransaction)
+	err := c.cc.Invoke(ctx, Finance_UpdateRecurringTransaction_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *financeClient) DeleteRecurringExpense(ctx context.Context, in *DeleteRecurringExpenseRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *financeClient) DeleteRecurringTransaction(ctx context.Context, in *DeleteRecurringTransactionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, Finance_DeleteRecurringExpense_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Finance_DeleteRecurringTransaction_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *financeClient) ListRecurringExpenses(ctx context.Context, in *ListRecurringExpensesRequest, opts ...grpc.CallOption) (*ListRecurringExpensesResponse, error) {
+func (c *financeClient) ListRecurringTransactions(ctx context.Context, in *ListRecurringTransactionsRequest, opts ...grpc.CallOption) (*ListRecurringTransactionsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListRecurringExpensesResponse)
-	err := c.cc.Invoke(ctx, Finance_ListRecurringExpenses_FullMethodName, in, out, cOpts...)
+	out := new(ListRecurringTransactionsResponse)
+	err := c.cc.Invoke(ctx, Finance_ListRecurringTransactions_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *financeClient) ListScheduledPayments(ctx context.Context, in *ListScheduledPaymentsRequest, opts ...grpc.CallOption) (*ListScheduledPaymentsResponse, error) {
+func (c *financeClient) ListScheduledTransactions(ctx context.Context, in *ListScheduledTransactionsRequest, opts ...grpc.CallOption) (*ListScheduledTransactionsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListScheduledPaymentsResponse)
-	err := c.cc.Invoke(ctx, Finance_ListScheduledPayments_FullMethodName, in, out, cOpts...)
+	out := new(ListScheduledTransactionsResponse)
+	err := c.cc.Invoke(ctx, Finance_ListScheduledTransactions_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *financeClient) GetScheduledPayment(ctx context.Context, in *GetScheduledPaymentRequest, opts ...grpc.CallOption) (*ScheduledPayment, error) {
+func (c *financeClient) GetScheduledTransaction(ctx context.Context, in *GetScheduledTransactionRequest, opts ...grpc.CallOption) (*ScheduledTransaction, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ScheduledPayment)
-	err := c.cc.Invoke(ctx, Finance_GetScheduledPayment_FullMethodName, in, out, cOpts...)
+	out := new(ScheduledTransaction)
+	err := c.cc.Invoke(ctx, Finance_GetScheduledTransaction_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *financeClient) ConfirmScheduledPayment(ctx context.Context, in *ConfirmScheduledPaymentRequest, opts ...grpc.CallOption) (*Transaction, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Transaction)
-	err := c.cc.Invoke(ctx, Finance_ConfirmScheduledPayment_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *financeClient) MatchScheduledPayment(ctx context.Context, in *MatchScheduledPaymentRequest, opts ...grpc.CallOption) (*Transaction, error) {
+func (c *financeClient) ConfirmScheduledTransaction(ctx context.Context, in *ConfirmScheduledTransactionRequest, opts ...grpc.CallOption) (*Transaction, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Transaction)
-	err := c.cc.Invoke(ctx, Finance_MatchScheduledPayment_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Finance_ConfirmScheduledTransaction_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *financeClient) SkipScheduledPayment(ctx context.Context, in *SkipScheduledPaymentRequest, opts ...grpc.CallOption) (*ScheduledPayment, error) {
+func (c *financeClient) MatchScheduledTransaction(ctx context.Context, in *MatchScheduledTransactionRequest, opts ...grpc.CallOption) (*Transaction, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ScheduledPayment)
-	err := c.cc.Invoke(ctx, Finance_SkipScheduledPayment_FullMethodName, in, out, cOpts...)
+	out := new(Transaction)
+	err := c.cc.Invoke(ctx, Finance_MatchScheduledTransaction_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) SkipScheduledTransaction(ctx context.Context, in *SkipScheduledTransactionRequest, opts ...grpc.CallOption) (*ScheduledTransaction, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ScheduledTransaction)
+	err := c.cc.Invoke(ctx, Finance_SkipScheduledTransaction_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -816,24 +816,24 @@ type FinanceServer interface {
 	ListTransactionEvents(context.Context, *ListTransactionEventsRequest) (*ListTransactionEventsResponse, error)
 	// Aggregates space spend patterns, limits, remaining budgets, burn rates, and budget category distributions.
 	GetInsights(context.Context, *GetInsightsRequest) (*GetInsightsResponse, error)
-	// Registers a recurring expense template, generating repeating payment obligations periodically.
-	CreateRecurringExpense(context.Context, *CreateRecurringExpenseRequest) (*RecurringExpense, error)
-	// Updates an active recurring expense template.
-	UpdateRecurringExpense(context.Context, *UpdateRecurringExpenseRequest) (*RecurringExpense, error)
-	// Deletes a recurring template, preventing any future payment instances from spawning.
-	DeleteRecurringExpense(context.Context, *DeleteRecurringExpenseRequest) (*emptypb.Empty, error)
+	// Registers a recurring transaction template, generating repeating transaction obligations periodically.
+	CreateRecurringTransaction(context.Context, *CreateRecurringTransactionRequest) (*RecurringTransaction, error)
+	// Updates an active recurring transaction template.
+	UpdateRecurringTransaction(context.Context, *UpdateRecurringTransactionRequest) (*RecurringTransaction, error)
+	// Deletes a recurring template, preventing any future transaction instances from spawning.
+	DeleteRecurringTransaction(context.Context, *DeleteRecurringTransactionRequest) (*emptypb.Empty, error)
 	// Lists all configured recurring templates in the space.
-	ListRecurringExpenses(context.Context, *ListRecurringExpensesRequest) (*ListRecurringExpensesResponse, error)
-	// Lists scheduled payment instances spawned by recurring templates.
-	ListScheduledPayments(context.Context, *ListScheduledPaymentsRequest) (*ListScheduledPaymentsResponse, error)
-	// Retrieves details of a specific scheduled payment by ID.
-	GetScheduledPayment(context.Context, *GetScheduledPaymentRequest) (*ScheduledPayment, error)
-	// Clears a scheduled payment instance, converting it into a permanent, reconciled ledger transaction.
-	ConfirmScheduledPayment(context.Context, *ConfirmScheduledPaymentRequest) (*Transaction, error)
-	// Links an existing transaction with a pending scheduled payment, marking it cleared.
-	MatchScheduledPayment(context.Context, *MatchScheduledPaymentRequest) (*Transaction, error)
-	// Dismisses a pending scheduled payment instance without creating a transaction.
-	SkipScheduledPayment(context.Context, *SkipScheduledPaymentRequest) (*ScheduledPayment, error)
+	ListRecurringTransactions(context.Context, *ListRecurringTransactionsRequest) (*ListRecurringTransactionsResponse, error)
+	// Lists scheduled transaction instances spawned by recurring templates.
+	ListScheduledTransactions(context.Context, *ListScheduledTransactionsRequest) (*ListScheduledTransactionsResponse, error)
+	// Retrieves details of a specific scheduled transaction by ID.
+	GetScheduledTransaction(context.Context, *GetScheduledTransactionRequest) (*ScheduledTransaction, error)
+	// Clears a scheduled transaction instance, converting it into a permanent, reconciled ledger transaction.
+	ConfirmScheduledTransaction(context.Context, *ConfirmScheduledTransactionRequest) (*Transaction, error)
+	// Links an existing transaction with a pending scheduled transaction, marking it cleared.
+	MatchScheduledTransaction(context.Context, *MatchScheduledTransactionRequest) (*Transaction, error)
+	// Dismisses a pending scheduled transaction instance without creating a transaction.
+	SkipScheduledTransaction(context.Context, *SkipScheduledTransactionRequest) (*ScheduledTransaction, error)
 	// Logs a new personal debt agreement (lent or borrowed money).
 	CreateBorrowing(context.Context, *CreateBorrowingRequest) (*Borrowing, error)
 	// Retrieves detail metrics of a borrowing record.
@@ -957,32 +957,32 @@ func (UnimplementedFinanceServer) ListTransactionEvents(context.Context, *ListTr
 func (UnimplementedFinanceServer) GetInsights(context.Context, *GetInsightsRequest) (*GetInsightsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetInsights not implemented")
 }
-func (UnimplementedFinanceServer) CreateRecurringExpense(context.Context, *CreateRecurringExpenseRequest) (*RecurringExpense, error) {
-	return nil, status.Error(codes.Unimplemented, "method CreateRecurringExpense not implemented")
+func (UnimplementedFinanceServer) CreateRecurringTransaction(context.Context, *CreateRecurringTransactionRequest) (*RecurringTransaction, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateRecurringTransaction not implemented")
 }
-func (UnimplementedFinanceServer) UpdateRecurringExpense(context.Context, *UpdateRecurringExpenseRequest) (*RecurringExpense, error) {
-	return nil, status.Error(codes.Unimplemented, "method UpdateRecurringExpense not implemented")
+func (UnimplementedFinanceServer) UpdateRecurringTransaction(context.Context, *UpdateRecurringTransactionRequest) (*RecurringTransaction, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateRecurringTransaction not implemented")
 }
-func (UnimplementedFinanceServer) DeleteRecurringExpense(context.Context, *DeleteRecurringExpenseRequest) (*emptypb.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method DeleteRecurringExpense not implemented")
+func (UnimplementedFinanceServer) DeleteRecurringTransaction(context.Context, *DeleteRecurringTransactionRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteRecurringTransaction not implemented")
 }
-func (UnimplementedFinanceServer) ListRecurringExpenses(context.Context, *ListRecurringExpensesRequest) (*ListRecurringExpensesResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ListRecurringExpenses not implemented")
+func (UnimplementedFinanceServer) ListRecurringTransactions(context.Context, *ListRecurringTransactionsRequest) (*ListRecurringTransactionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListRecurringTransactions not implemented")
 }
-func (UnimplementedFinanceServer) ListScheduledPayments(context.Context, *ListScheduledPaymentsRequest) (*ListScheduledPaymentsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ListScheduledPayments not implemented")
+func (UnimplementedFinanceServer) ListScheduledTransactions(context.Context, *ListScheduledTransactionsRequest) (*ListScheduledTransactionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListScheduledTransactions not implemented")
 }
-func (UnimplementedFinanceServer) GetScheduledPayment(context.Context, *GetScheduledPaymentRequest) (*ScheduledPayment, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetScheduledPayment not implemented")
+func (UnimplementedFinanceServer) GetScheduledTransaction(context.Context, *GetScheduledTransactionRequest) (*ScheduledTransaction, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetScheduledTransaction not implemented")
 }
-func (UnimplementedFinanceServer) ConfirmScheduledPayment(context.Context, *ConfirmScheduledPaymentRequest) (*Transaction, error) {
-	return nil, status.Error(codes.Unimplemented, "method ConfirmScheduledPayment not implemented")
+func (UnimplementedFinanceServer) ConfirmScheduledTransaction(context.Context, *ConfirmScheduledTransactionRequest) (*Transaction, error) {
+	return nil, status.Error(codes.Unimplemented, "method ConfirmScheduledTransaction not implemented")
 }
-func (UnimplementedFinanceServer) MatchScheduledPayment(context.Context, *MatchScheduledPaymentRequest) (*Transaction, error) {
-	return nil, status.Error(codes.Unimplemented, "method MatchScheduledPayment not implemented")
+func (UnimplementedFinanceServer) MatchScheduledTransaction(context.Context, *MatchScheduledTransactionRequest) (*Transaction, error) {
+	return nil, status.Error(codes.Unimplemented, "method MatchScheduledTransaction not implemented")
 }
-func (UnimplementedFinanceServer) SkipScheduledPayment(context.Context, *SkipScheduledPaymentRequest) (*ScheduledPayment, error) {
-	return nil, status.Error(codes.Unimplemented, "method SkipScheduledPayment not implemented")
+func (UnimplementedFinanceServer) SkipScheduledTransaction(context.Context, *SkipScheduledTransactionRequest) (*ScheduledTransaction, error) {
+	return nil, status.Error(codes.Unimplemented, "method SkipScheduledTransaction not implemented")
 }
 func (UnimplementedFinanceServer) CreateBorrowing(context.Context, *CreateBorrowingRequest) (*Borrowing, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateBorrowing not implemented")
@@ -1445,164 +1445,164 @@ func _Finance_GetInsights_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Finance_CreateRecurringExpense_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateRecurringExpenseRequest)
+func _Finance_CreateRecurringTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateRecurringTransactionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FinanceServer).CreateRecurringExpense(ctx, in)
+		return srv.(FinanceServer).CreateRecurringTransaction(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Finance_CreateRecurringExpense_FullMethodName,
+		FullMethod: Finance_CreateRecurringTransaction_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FinanceServer).CreateRecurringExpense(ctx, req.(*CreateRecurringExpenseRequest))
+		return srv.(FinanceServer).CreateRecurringTransaction(ctx, req.(*CreateRecurringTransactionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Finance_UpdateRecurringExpense_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateRecurringExpenseRequest)
+func _Finance_UpdateRecurringTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateRecurringTransactionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FinanceServer).UpdateRecurringExpense(ctx, in)
+		return srv.(FinanceServer).UpdateRecurringTransaction(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Finance_UpdateRecurringExpense_FullMethodName,
+		FullMethod: Finance_UpdateRecurringTransaction_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FinanceServer).UpdateRecurringExpense(ctx, req.(*UpdateRecurringExpenseRequest))
+		return srv.(FinanceServer).UpdateRecurringTransaction(ctx, req.(*UpdateRecurringTransactionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Finance_DeleteRecurringExpense_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteRecurringExpenseRequest)
+func _Finance_DeleteRecurringTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRecurringTransactionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FinanceServer).DeleteRecurringExpense(ctx, in)
+		return srv.(FinanceServer).DeleteRecurringTransaction(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Finance_DeleteRecurringExpense_FullMethodName,
+		FullMethod: Finance_DeleteRecurringTransaction_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FinanceServer).DeleteRecurringExpense(ctx, req.(*DeleteRecurringExpenseRequest))
+		return srv.(FinanceServer).DeleteRecurringTransaction(ctx, req.(*DeleteRecurringTransactionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Finance_ListRecurringExpenses_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListRecurringExpensesRequest)
+func _Finance_ListRecurringTransactions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRecurringTransactionsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FinanceServer).ListRecurringExpenses(ctx, in)
+		return srv.(FinanceServer).ListRecurringTransactions(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Finance_ListRecurringExpenses_FullMethodName,
+		FullMethod: Finance_ListRecurringTransactions_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FinanceServer).ListRecurringExpenses(ctx, req.(*ListRecurringExpensesRequest))
+		return srv.(FinanceServer).ListRecurringTransactions(ctx, req.(*ListRecurringTransactionsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Finance_ListScheduledPayments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListScheduledPaymentsRequest)
+func _Finance_ListScheduledTransactions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListScheduledTransactionsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FinanceServer).ListScheduledPayments(ctx, in)
+		return srv.(FinanceServer).ListScheduledTransactions(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Finance_ListScheduledPayments_FullMethodName,
+		FullMethod: Finance_ListScheduledTransactions_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FinanceServer).ListScheduledPayments(ctx, req.(*ListScheduledPaymentsRequest))
+		return srv.(FinanceServer).ListScheduledTransactions(ctx, req.(*ListScheduledTransactionsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Finance_GetScheduledPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetScheduledPaymentRequest)
+func _Finance_GetScheduledTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetScheduledTransactionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FinanceServer).GetScheduledPayment(ctx, in)
+		return srv.(FinanceServer).GetScheduledTransaction(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Finance_GetScheduledPayment_FullMethodName,
+		FullMethod: Finance_GetScheduledTransaction_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FinanceServer).GetScheduledPayment(ctx, req.(*GetScheduledPaymentRequest))
+		return srv.(FinanceServer).GetScheduledTransaction(ctx, req.(*GetScheduledTransactionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Finance_ConfirmScheduledPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ConfirmScheduledPaymentRequest)
+func _Finance_ConfirmScheduledTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConfirmScheduledTransactionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FinanceServer).ConfirmScheduledPayment(ctx, in)
+		return srv.(FinanceServer).ConfirmScheduledTransaction(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Finance_ConfirmScheduledPayment_FullMethodName,
+		FullMethod: Finance_ConfirmScheduledTransaction_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FinanceServer).ConfirmScheduledPayment(ctx, req.(*ConfirmScheduledPaymentRequest))
+		return srv.(FinanceServer).ConfirmScheduledTransaction(ctx, req.(*ConfirmScheduledTransactionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Finance_MatchScheduledPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MatchScheduledPaymentRequest)
+func _Finance_MatchScheduledTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MatchScheduledTransactionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FinanceServer).MatchScheduledPayment(ctx, in)
+		return srv.(FinanceServer).MatchScheduledTransaction(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Finance_MatchScheduledPayment_FullMethodName,
+		FullMethod: Finance_MatchScheduledTransaction_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FinanceServer).MatchScheduledPayment(ctx, req.(*MatchScheduledPaymentRequest))
+		return srv.(FinanceServer).MatchScheduledTransaction(ctx, req.(*MatchScheduledTransactionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Finance_SkipScheduledPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SkipScheduledPaymentRequest)
+func _Finance_SkipScheduledTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SkipScheduledTransactionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FinanceServer).SkipScheduledPayment(ctx, in)
+		return srv.(FinanceServer).SkipScheduledTransaction(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Finance_SkipScheduledPayment_FullMethodName,
+		FullMethod: Finance_SkipScheduledTransaction_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FinanceServer).SkipScheduledPayment(ctx, req.(*SkipScheduledPaymentRequest))
+		return srv.(FinanceServer).SkipScheduledTransaction(ctx, req.(*SkipScheduledTransactionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2181,40 +2181,40 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Finance_GetInsights_Handler,
 		},
 		{
-			MethodName: "CreateRecurringExpense",
-			Handler:    _Finance_CreateRecurringExpense_Handler,
+			MethodName: "CreateRecurringTransaction",
+			Handler:    _Finance_CreateRecurringTransaction_Handler,
 		},
 		{
-			MethodName: "UpdateRecurringExpense",
-			Handler:    _Finance_UpdateRecurringExpense_Handler,
+			MethodName: "UpdateRecurringTransaction",
+			Handler:    _Finance_UpdateRecurringTransaction_Handler,
 		},
 		{
-			MethodName: "DeleteRecurringExpense",
-			Handler:    _Finance_DeleteRecurringExpense_Handler,
+			MethodName: "DeleteRecurringTransaction",
+			Handler:    _Finance_DeleteRecurringTransaction_Handler,
 		},
 		{
-			MethodName: "ListRecurringExpenses",
-			Handler:    _Finance_ListRecurringExpenses_Handler,
+			MethodName: "ListRecurringTransactions",
+			Handler:    _Finance_ListRecurringTransactions_Handler,
 		},
 		{
-			MethodName: "ListScheduledPayments",
-			Handler:    _Finance_ListScheduledPayments_Handler,
+			MethodName: "ListScheduledTransactions",
+			Handler:    _Finance_ListScheduledTransactions_Handler,
 		},
 		{
-			MethodName: "GetScheduledPayment",
-			Handler:    _Finance_GetScheduledPayment_Handler,
+			MethodName: "GetScheduledTransaction",
+			Handler:    _Finance_GetScheduledTransaction_Handler,
 		},
 		{
-			MethodName: "ConfirmScheduledPayment",
-			Handler:    _Finance_ConfirmScheduledPayment_Handler,
+			MethodName: "ConfirmScheduledTransaction",
+			Handler:    _Finance_ConfirmScheduledTransaction_Handler,
 		},
 		{
-			MethodName: "MatchScheduledPayment",
-			Handler:    _Finance_MatchScheduledPayment_Handler,
+			MethodName: "MatchScheduledTransaction",
+			Handler:    _Finance_MatchScheduledTransaction_Handler,
 		},
 		{
-			MethodName: "SkipScheduledPayment",
-			Handler:    _Finance_SkipScheduledPayment_Handler,
+			MethodName: "SkipScheduledTransaction",
+			Handler:    _Finance_SkipScheduledTransaction_Handler,
 		},
 		{
 			MethodName: "CreateBorrowing",

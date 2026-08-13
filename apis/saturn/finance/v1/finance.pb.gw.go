@@ -829,38 +829,38 @@ func local_request_Finance_GetInsights_0(ctx context.Context, marshaler runtime.
 	return msg, metadata, err
 }
 
-func request_Finance_CreateRecurringExpense_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Finance_CreateRecurringTransaction_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq CreateRecurringExpenseRequest
+		protoReq CreateRecurringTransactionRequest
 		metadata runtime.ServerMetadata
 	)
-	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq.RecurringExpense); err != nil && !errors.Is(err, io.EOF) {
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq.RecurringTransaction); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	msg, err := client.CreateRecurringExpense(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.CreateRecurringTransaction(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 }
 
-func local_request_Finance_CreateRecurringExpense_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_Finance_CreateRecurringTransaction_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq CreateRecurringExpenseRequest
+		protoReq CreateRecurringTransactionRequest
 		metadata runtime.ServerMetadata
 	)
-	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq.RecurringExpense); err != nil && !errors.Is(err, io.EOF) {
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq.RecurringTransaction); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	msg, err := server.CreateRecurringExpense(ctx, &protoReq)
+	msg, err := server.CreateRecurringTransaction(ctx, &protoReq)
 	return msg, metadata, err
 }
 
-var filter_Finance_UpdateRecurringExpense_0 = &utilities.DoubleArray{Encoding: map[string]int{"recurring_expense": 0, "id": 1}, Base: []int{1, 1, 2, 0, 0}, Check: []int{0, 1, 1, 2, 3}}
+var filter_Finance_UpdateRecurringTransaction_0 = &utilities.DoubleArray{Encoding: map[string]int{"recurring_transaction": 0, "id": 1}, Base: []int{1, 1, 2, 0, 0}, Check: []int{0, 1, 1, 2, 3}}
 
-func request_Finance_UpdateRecurringExpense_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Finance_UpdateRecurringTransaction_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq UpdateRecurringExpenseRequest
+		protoReq UpdateRecurringTransactionRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
@@ -868,11 +868,11 @@ func request_Finance_UpdateRecurringExpense_0(ctx context.Context, marshaler run
 	if berr != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
 	}
-	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq.RecurringExpense); err != nil && !errors.Is(err, io.EOF) {
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq.RecurringTransaction); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if protoReq.UpdateMask == nil || len(protoReq.UpdateMask.GetPaths()) == 0 {
-		if fieldMask, err := runtime.FieldMaskFromRequestBody(newReader(), protoReq.RecurringExpense); err != nil {
+		if fieldMask, err := runtime.FieldMaskFromRequestBody(newReader(), protoReq.RecurringTransaction); err != nil {
 			return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 		} else {
 			protoReq.UpdateMask = fieldMask
@@ -889,19 +889,19 @@ func request_Finance_UpdateRecurringExpense_0(ctx context.Context, marshaler run
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Finance_UpdateRecurringExpense_0); err != nil {
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Finance_UpdateRecurringTransaction_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	msg, err := client.UpdateRecurringExpense(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.UpdateRecurringTransaction(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 }
 
-func local_request_Finance_UpdateRecurringExpense_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_Finance_UpdateRecurringTransaction_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq UpdateRecurringExpenseRequest
+		protoReq UpdateRecurringTransactionRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
@@ -909,11 +909,11 @@ func local_request_Finance_UpdateRecurringExpense_0(ctx context.Context, marshal
 	if berr != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
 	}
-	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq.RecurringExpense); err != nil && !errors.Is(err, io.EOF) {
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq.RecurringTransaction); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if protoReq.UpdateMask == nil || len(protoReq.UpdateMask.GetPaths()) == 0 {
-		if fieldMask, err := runtime.FieldMaskFromRequestBody(newReader(), protoReq.RecurringExpense); err != nil {
+		if fieldMask, err := runtime.FieldMaskFromRequestBody(newReader(), protoReq.RecurringTransaction); err != nil {
 			return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 		} else {
 			protoReq.UpdateMask = fieldMask
@@ -930,18 +930,18 @@ func local_request_Finance_UpdateRecurringExpense_0(ctx context.Context, marshal
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Finance_UpdateRecurringExpense_0); err != nil {
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Finance_UpdateRecurringTransaction_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	msg, err := server.UpdateRecurringExpense(ctx, &protoReq)
+	msg, err := server.UpdateRecurringTransaction(ctx, &protoReq)
 	return msg, metadata, err
 }
 
-var filter_Finance_DeleteRecurringExpense_0 = &utilities.DoubleArray{Encoding: map[string]int{"id": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
+var filter_Finance_DeleteRecurringTransaction_0 = &utilities.DoubleArray{Encoding: map[string]int{"id": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
 
-func request_Finance_DeleteRecurringExpense_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Finance_DeleteRecurringTransaction_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq DeleteRecurringExpenseRequest
+		protoReq DeleteRecurringTransactionRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
@@ -956,19 +956,19 @@ func request_Finance_DeleteRecurringExpense_0(ctx context.Context, marshaler run
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Finance_DeleteRecurringExpense_0); err != nil {
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Finance_DeleteRecurringTransaction_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	msg, err := client.DeleteRecurringExpense(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.DeleteRecurringTransaction(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 }
 
-func local_request_Finance_DeleteRecurringExpense_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_Finance_DeleteRecurringTransaction_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq DeleteRecurringExpenseRequest
+		protoReq DeleteRecurringTransactionRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
@@ -983,86 +983,86 @@ func local_request_Finance_DeleteRecurringExpense_0(ctx context.Context, marshal
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Finance_DeleteRecurringExpense_0); err != nil {
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Finance_DeleteRecurringTransaction_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	msg, err := server.DeleteRecurringExpense(ctx, &protoReq)
+	msg, err := server.DeleteRecurringTransaction(ctx, &protoReq)
 	return msg, metadata, err
 }
 
-var filter_Finance_ListRecurringExpenses_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+var filter_Finance_ListRecurringTransactions_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 
-func request_Finance_ListRecurringExpenses_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Finance_ListRecurringTransactions_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq ListRecurringExpensesRequest
+		protoReq ListRecurringTransactionsRequest
 		metadata runtime.ServerMetadata
 	)
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Finance_ListRecurringExpenses_0); err != nil {
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Finance_ListRecurringTransactions_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	msg, err := client.ListRecurringExpenses(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.ListRecurringTransactions(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 }
 
-func local_request_Finance_ListRecurringExpenses_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_Finance_ListRecurringTransactions_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq ListRecurringExpensesRequest
+		protoReq ListRecurringTransactionsRequest
 		metadata runtime.ServerMetadata
 	)
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Finance_ListRecurringExpenses_0); err != nil {
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Finance_ListRecurringTransactions_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	msg, err := server.ListRecurringExpenses(ctx, &protoReq)
+	msg, err := server.ListRecurringTransactions(ctx, &protoReq)
 	return msg, metadata, err
 }
 
-var filter_Finance_ListScheduledPayments_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+var filter_Finance_ListScheduledTransactions_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 
-func request_Finance_ListScheduledPayments_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Finance_ListScheduledTransactions_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq ListScheduledPaymentsRequest
+		protoReq ListScheduledTransactionsRequest
 		metadata runtime.ServerMetadata
 	)
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Finance_ListScheduledPayments_0); err != nil {
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Finance_ListScheduledTransactions_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	msg, err := client.ListScheduledPayments(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.ListScheduledTransactions(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 }
 
-func local_request_Finance_ListScheduledPayments_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_Finance_ListScheduledTransactions_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq ListScheduledPaymentsRequest
+		protoReq ListScheduledTransactionsRequest
 		metadata runtime.ServerMetadata
 	)
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Finance_ListScheduledPayments_0); err != nil {
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Finance_ListScheduledTransactions_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	msg, err := server.ListScheduledPayments(ctx, &protoReq)
+	msg, err := server.ListScheduledTransactions(ctx, &protoReq)
 	return msg, metadata, err
 }
 
-func request_Finance_GetScheduledPayment_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Finance_GetScheduledTransaction_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq GetScheduledPaymentRequest
+		protoReq GetScheduledTransactionRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
@@ -1077,13 +1077,13 @@ func request_Finance_GetScheduledPayment_0(ctx context.Context, marshaler runtim
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	msg, err := client.GetScheduledPayment(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.GetScheduledTransaction(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 }
 
-func local_request_Finance_GetScheduledPayment_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_Finance_GetScheduledTransaction_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq GetScheduledPaymentRequest
+		protoReq GetScheduledTransactionRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
@@ -1095,127 +1095,103 @@ func local_request_Finance_GetScheduledPayment_0(ctx context.Context, marshaler 
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
 	}
-	msg, err := server.GetScheduledPayment(ctx, &protoReq)
+	msg, err := server.GetScheduledTransaction(ctx, &protoReq)
 	return msg, metadata, err
 }
 
-func request_Finance_ConfirmScheduledPayment_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Finance_ConfirmScheduledTransaction_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq ConfirmScheduledPaymentRequest
+		protoReq ConfirmScheduledTransactionRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	val, ok := pathParams["payment_id"]
+	val, ok := pathParams["transaction_id"]
 	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "payment_id")
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "transaction_id")
 	}
-	protoReq.PaymentId, err = runtime.String(val)
+	protoReq.TransactionId, err = runtime.String(val)
 	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "payment_id", err)
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "transaction_id", err)
 	}
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	msg, err := client.ConfirmScheduledPayment(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.ConfirmScheduledTransaction(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 }
 
-func local_request_Finance_ConfirmScheduledPayment_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_Finance_ConfirmScheduledTransaction_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq ConfirmScheduledPaymentRequest
+		protoReq ConfirmScheduledTransactionRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	val, ok := pathParams["payment_id"]
+	val, ok := pathParams["transaction_id"]
 	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "payment_id")
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "transaction_id")
 	}
-	protoReq.PaymentId, err = runtime.String(val)
+	protoReq.TransactionId, err = runtime.String(val)
 	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "payment_id", err)
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "transaction_id", err)
 	}
-	msg, err := server.ConfirmScheduledPayment(ctx, &protoReq)
+	msg, err := server.ConfirmScheduledTransaction(ctx, &protoReq)
 	return msg, metadata, err
 }
 
-func request_Finance_MatchScheduledPayment_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Finance_MatchScheduledTransaction_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq MatchScheduledPaymentRequest
+		protoReq MatchScheduledTransactionRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	val, ok := pathParams["payment_id"]
+	val, ok := pathParams["transaction_id"]
 	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "payment_id")
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "transaction_id")
 	}
-	protoReq.PaymentId, err = runtime.String(val)
+	protoReq.TransactionId, err = runtime.String(val)
 	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "payment_id", err)
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "transaction_id", err)
 	}
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	msg, err := client.MatchScheduledPayment(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.MatchScheduledTransaction(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 }
 
-func local_request_Finance_MatchScheduledPayment_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_Finance_MatchScheduledTransaction_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq MatchScheduledPaymentRequest
+		protoReq MatchScheduledTransactionRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	val, ok := pathParams["payment_id"]
+	val, ok := pathParams["transaction_id"]
 	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "payment_id")
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "transaction_id")
 	}
-	protoReq.PaymentId, err = runtime.String(val)
+	protoReq.TransactionId, err = runtime.String(val)
 	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "payment_id", err)
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "transaction_id", err)
 	}
-	msg, err := server.MatchScheduledPayment(ctx, &protoReq)
+	msg, err := server.MatchScheduledTransaction(ctx, &protoReq)
 	return msg, metadata, err
 }
 
-func request_Finance_SkipScheduledPayment_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Finance_SkipScheduledTransaction_0(ctx context.Context, marshaler runtime.Marshaler, client FinanceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq SkipScheduledPaymentRequest
-		metadata runtime.ServerMetadata
-		err      error
-	)
-	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	val, ok := pathParams["id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
-	}
-	protoReq.Id, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
-	}
-	if req.Body != nil {
-		_, _ = io.Copy(io.Discard, req.Body)
-	}
-	msg, err := client.SkipScheduledPayment(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-}
-
-func local_request_Finance_SkipScheduledPayment_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var (
-		protoReq SkipScheduledPaymentRequest
+		protoReq SkipScheduledTransactionRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
@@ -1230,7 +1206,31 @@ func local_request_Finance_SkipScheduledPayment_0(ctx context.Context, marshaler
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
 	}
-	msg, err := server.SkipScheduledPayment(ctx, &protoReq)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	msg, err := client.SkipScheduledTransaction(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_Finance_SkipScheduledTransaction_0(ctx context.Context, marshaler runtime.Marshaler, server FinanceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq SkipScheduledTransactionRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	val, ok := pathParams["id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
+	}
+	protoReq.Id, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
+	}
+	msg, err := server.SkipScheduledTransaction(ctx, &protoReq)
 	return msg, metadata, err
 }
 
@@ -2839,185 +2839,185 @@ func RegisterFinanceHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		}
 		forward_Finance_GetInsights_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPost, pattern_Finance_CreateRecurringExpense_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPost, pattern_Finance_CreateRecurringTransaction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateRecurringExpense", runtime.WithHTTPPathPattern("/v1/finance/recurring-expenses"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateRecurringTransaction", runtime.WithHTTPPathPattern("/v1/finance/recurring-transactions"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_Finance_CreateRecurringExpense_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Finance_CreateRecurringTransaction_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_CreateRecurringExpense_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_CreateRecurringTransaction_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPatch, pattern_Finance_UpdateRecurringExpense_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPatch, pattern_Finance_UpdateRecurringTransaction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateRecurringExpense", runtime.WithHTTPPathPattern("/v1/finance/recurring-expenses/{id}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateRecurringTransaction", runtime.WithHTTPPathPattern("/v1/finance/recurring-transactions/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_Finance_UpdateRecurringExpense_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Finance_UpdateRecurringTransaction_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_UpdateRecurringExpense_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_UpdateRecurringTransaction_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodDelete, pattern_Finance_DeleteRecurringExpense_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodDelete, pattern_Finance_DeleteRecurringTransaction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteRecurringExpense", runtime.WithHTTPPathPattern("/v1/finance/recurring-expenses/{id}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteRecurringTransaction", runtime.WithHTTPPathPattern("/v1/finance/recurring-transactions/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_Finance_DeleteRecurringExpense_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Finance_DeleteRecurringTransaction_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_DeleteRecurringExpense_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_DeleteRecurringTransaction_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodGet, pattern_Finance_ListRecurringExpenses_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_Finance_ListRecurringTransactions_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListRecurringExpenses", runtime.WithHTTPPathPattern("/v1/finance/recurring-expenses"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListRecurringTransactions", runtime.WithHTTPPathPattern("/v1/finance/recurring-transactions"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_Finance_ListRecurringExpenses_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Finance_ListRecurringTransactions_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_ListRecurringExpenses_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_ListRecurringTransactions_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodGet, pattern_Finance_ListScheduledPayments_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_Finance_ListScheduledTransactions_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListScheduledPayments", runtime.WithHTTPPathPattern("/v1/finance/scheduled-payments"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListScheduledTransactions", runtime.WithHTTPPathPattern("/v1/finance/scheduled-transactions"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_Finance_ListScheduledPayments_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Finance_ListScheduledTransactions_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_ListScheduledPayments_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_ListScheduledTransactions_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodGet, pattern_Finance_GetScheduledPayment_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_Finance_GetScheduledTransaction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetScheduledPayment", runtime.WithHTTPPathPattern("/v1/finance/scheduled-payments/{id}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetScheduledTransaction", runtime.WithHTTPPathPattern("/v1/finance/scheduled-transactions/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_Finance_GetScheduledPayment_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Finance_GetScheduledTransaction_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_GetScheduledPayment_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_GetScheduledTransaction_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPost, pattern_Finance_ConfirmScheduledPayment_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPost, pattern_Finance_ConfirmScheduledTransaction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ConfirmScheduledPayment", runtime.WithHTTPPathPattern("/v1/finance/scheduled-payments/{payment_id}/confirm"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/ConfirmScheduledTransaction", runtime.WithHTTPPathPattern("/v1/finance/scheduled-transactions/{transaction_id}/confirm"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_Finance_ConfirmScheduledPayment_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Finance_ConfirmScheduledTransaction_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_ConfirmScheduledPayment_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_ConfirmScheduledTransaction_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPost, pattern_Finance_MatchScheduledPayment_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPost, pattern_Finance_MatchScheduledTransaction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/MatchScheduledPayment", runtime.WithHTTPPathPattern("/v1/finance/scheduled-payments/{payment_id}/match"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/MatchScheduledTransaction", runtime.WithHTTPPathPattern("/v1/finance/scheduled-transactions/{transaction_id}/match"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_Finance_MatchScheduledPayment_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Finance_MatchScheduledTransaction_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_MatchScheduledPayment_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_MatchScheduledTransaction_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPost, pattern_Finance_SkipScheduledPayment_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPost, pattern_Finance_SkipScheduledTransaction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/SkipScheduledPayment", runtime.WithHTTPPathPattern("/v1/finance/scheduled-payments/{id}:skip"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.finance.v1.Finance/SkipScheduledTransaction", runtime.WithHTTPPathPattern("/v1/finance/scheduled-transactions/{id}:skip"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_Finance_SkipScheduledPayment_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Finance_SkipScheduledTransaction_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_SkipScheduledPayment_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_SkipScheduledTransaction_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
 	mux.Handle(http.MethodPost, pattern_Finance_CreateBorrowing_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -3939,158 +3939,158 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		}
 		forward_Finance_GetInsights_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPost, pattern_Finance_CreateRecurringExpense_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPost, pattern_Finance_CreateRecurringTransaction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateRecurringExpense", runtime.WithHTTPPathPattern("/v1/finance/recurring-expenses"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/CreateRecurringTransaction", runtime.WithHTTPPathPattern("/v1/finance/recurring-transactions"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_Finance_CreateRecurringExpense_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Finance_CreateRecurringTransaction_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_CreateRecurringExpense_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_CreateRecurringTransaction_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPatch, pattern_Finance_UpdateRecurringExpense_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPatch, pattern_Finance_UpdateRecurringTransaction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateRecurringExpense", runtime.WithHTTPPathPattern("/v1/finance/recurring-expenses/{id}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/UpdateRecurringTransaction", runtime.WithHTTPPathPattern("/v1/finance/recurring-transactions/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_Finance_UpdateRecurringExpense_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Finance_UpdateRecurringTransaction_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_UpdateRecurringExpense_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_UpdateRecurringTransaction_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodDelete, pattern_Finance_DeleteRecurringExpense_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodDelete, pattern_Finance_DeleteRecurringTransaction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteRecurringExpense", runtime.WithHTTPPathPattern("/v1/finance/recurring-expenses/{id}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/DeleteRecurringTransaction", runtime.WithHTTPPathPattern("/v1/finance/recurring-transactions/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_Finance_DeleteRecurringExpense_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Finance_DeleteRecurringTransaction_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_DeleteRecurringExpense_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_DeleteRecurringTransaction_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodGet, pattern_Finance_ListRecurringExpenses_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_Finance_ListRecurringTransactions_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListRecurringExpenses", runtime.WithHTTPPathPattern("/v1/finance/recurring-expenses"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListRecurringTransactions", runtime.WithHTTPPathPattern("/v1/finance/recurring-transactions"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_Finance_ListRecurringExpenses_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Finance_ListRecurringTransactions_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_ListRecurringExpenses_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_ListRecurringTransactions_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodGet, pattern_Finance_ListScheduledPayments_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_Finance_ListScheduledTransactions_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListScheduledPayments", runtime.WithHTTPPathPattern("/v1/finance/scheduled-payments"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ListScheduledTransactions", runtime.WithHTTPPathPattern("/v1/finance/scheduled-transactions"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_Finance_ListScheduledPayments_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Finance_ListScheduledTransactions_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_ListScheduledPayments_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_ListScheduledTransactions_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodGet, pattern_Finance_GetScheduledPayment_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_Finance_GetScheduledTransaction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetScheduledPayment", runtime.WithHTTPPathPattern("/v1/finance/scheduled-payments/{id}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/GetScheduledTransaction", runtime.WithHTTPPathPattern("/v1/finance/scheduled-transactions/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_Finance_GetScheduledPayment_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Finance_GetScheduledTransaction_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_GetScheduledPayment_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_GetScheduledTransaction_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPost, pattern_Finance_ConfirmScheduledPayment_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPost, pattern_Finance_ConfirmScheduledTransaction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ConfirmScheduledPayment", runtime.WithHTTPPathPattern("/v1/finance/scheduled-payments/{payment_id}/confirm"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/ConfirmScheduledTransaction", runtime.WithHTTPPathPattern("/v1/finance/scheduled-transactions/{transaction_id}/confirm"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_Finance_ConfirmScheduledPayment_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Finance_ConfirmScheduledTransaction_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_ConfirmScheduledPayment_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_ConfirmScheduledTransaction_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPost, pattern_Finance_MatchScheduledPayment_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPost, pattern_Finance_MatchScheduledTransaction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/MatchScheduledPayment", runtime.WithHTTPPathPattern("/v1/finance/scheduled-payments/{payment_id}/match"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/MatchScheduledTransaction", runtime.WithHTTPPathPattern("/v1/finance/scheduled-transactions/{transaction_id}/match"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_Finance_MatchScheduledPayment_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Finance_MatchScheduledTransaction_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_MatchScheduledPayment_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_MatchScheduledTransaction_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPost, pattern_Finance_SkipScheduledPayment_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPost, pattern_Finance_SkipScheduledTransaction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/SkipScheduledPayment", runtime.WithHTTPPathPattern("/v1/finance/scheduled-payments/{id}:skip"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.finance.v1.Finance/SkipScheduledTransaction", runtime.WithHTTPPathPattern("/v1/finance/scheduled-transactions/{id}:skip"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_Finance_SkipScheduledPayment_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Finance_SkipScheduledTransaction_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Finance_SkipScheduledPayment_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Finance_SkipScheduledTransaction_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
 	mux.Handle(http.MethodPost, pattern_Finance_CreateBorrowing_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -4555,119 +4555,119 @@ func RegisterFinanceHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 }
 
 var (
-	pattern_Finance_ConfigureFinance_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "settings"}, ""))
-	pattern_Finance_GetFinanceSettings_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "settings"}, ""))
-	pattern_Finance_CreateBudget_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "budgets"}, ""))
-	pattern_Finance_GetBudget_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "budgets", "id"}, ""))
-	pattern_Finance_UpdateBudget_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "budgets", "id"}, ""))
-	pattern_Finance_DeleteBudget_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "budgets", "id"}, ""))
-	pattern_Finance_ListBudgets_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "budgets"}, ""))
-	pattern_Finance_GetBudgetPeriod_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "budgets", "budget_id", "period"}, ""))
-	pattern_Finance_CreateExchangeRate_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "exchange-rates"}, ""))
-	pattern_Finance_GetExchangeRate_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "exchange-rates", "id"}, ""))
-	pattern_Finance_UpdateExchangeRate_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "exchange-rates", "id"}, ""))
-	pattern_Finance_ListExchangeRates_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "exchange-rates"}, ""))
-	pattern_Finance_DeleteExchangeRate_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "exchange-rates", "id"}, ""))
-	pattern_Finance_CreateExpense_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "expenses"}, ""))
-	pattern_Finance_UpdateExpense_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "expenses", "id"}, ""))
-	pattern_Finance_DeleteTransaction_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "transactions", "id"}, ""))
-	pattern_Finance_ListTransactions_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "transactions"}, ""))
-	pattern_Finance_GetTransaction_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "transactions", "id"}, ""))
-	pattern_Finance_ListTransactionEvents_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "transactions", "txn_id", "events"}, ""))
-	pattern_Finance_GetInsights_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "insights"}, ""))
-	pattern_Finance_CreateRecurringExpense_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "recurring-expenses"}, ""))
-	pattern_Finance_UpdateRecurringExpense_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "recurring-expenses", "id"}, ""))
-	pattern_Finance_DeleteRecurringExpense_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "recurring-expenses", "id"}, ""))
-	pattern_Finance_ListRecurringExpenses_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "recurring-expenses"}, ""))
-	pattern_Finance_ListScheduledPayments_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "scheduled-payments"}, ""))
-	pattern_Finance_GetScheduledPayment_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "scheduled-payments", "id"}, ""))
-	pattern_Finance_ConfirmScheduledPayment_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "scheduled-payments", "payment_id", "confirm"}, ""))
-	pattern_Finance_MatchScheduledPayment_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "scheduled-payments", "payment_id", "match"}, ""))
-	pattern_Finance_SkipScheduledPayment_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "scheduled-payments", "id"}, "skip"))
-	pattern_Finance_CreateBorrowing_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "borrowings"}, ""))
-	pattern_Finance_GetBorrowing_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "borrowings", "id"}, ""))
-	pattern_Finance_ListBorrowings_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "borrowings"}, ""))
-	pattern_Finance_UpdateBorrowing_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "borrowings", "id"}, ""))
-	pattern_Finance_DeleteBorrowing_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "borrowings", "id"}, ""))
-	pattern_Finance_LogBorrowingTransaction_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "borrowings", "borrowing_id", "transactions"}, ""))
-	pattern_Finance_UpdateBorrowingTransaction_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "finance", "borrowings", "borrowing_id", "transactions", "transaction_id"}, ""))
-	pattern_Finance_DeleteBorrowingTransaction_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "finance", "borrowings", "borrowing_id", "transactions", "transaction_id"}, ""))
-	pattern_Finance_AdjustBorrowingBalance_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "borrowings", "borrowing_id", "adjust"}, ""))
-	pattern_Finance_CreateAccount_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "accounts"}, ""))
-	pattern_Finance_GetAccount_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "accounts", "id"}, ""))
-	pattern_Finance_UpdateAccount_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "accounts", "id"}, ""))
-	pattern_Finance_AdjustAccountBalance_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "accounts", "account_id"}, "adjust-balance"))
-	pattern_Finance_DeleteAccount_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "accounts", "id"}, ""))
-	pattern_Finance_ListAccounts_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "accounts"}, ""))
-	pattern_Finance_CreateInstitution_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "institutions"}, ""))
-	pattern_Finance_UpdateInstitution_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "institutions", "id"}, ""))
-	pattern_Finance_DeleteInstitution_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "institutions", "id"}, ""))
-	pattern_Finance_ListInstitutions_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "institutions"}, ""))
-	pattern_Finance_ResolveInstitution_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "institutions"}, "resolve"))
-	pattern_Finance_CreateTransfer_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "transfers"}, ""))
-	pattern_Finance_ListTransfers_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "transfers"}, ""))
-	pattern_Finance_ListCurrencies_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "currencies"}, ""))
-	pattern_Finance_ListInboxItems_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "inbox-items"}, ""))
-	pattern_Finance_UpdateInboxItem_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "inbox-items", "id"}, ""))
-	pattern_Finance_ApproveInboxItem_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "inbox-items", "id"}, "approve"))
-	pattern_Finance_DiscardInboxItem_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "inbox-items", "id"}, ""))
+	pattern_Finance_ConfigureFinance_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "settings"}, ""))
+	pattern_Finance_GetFinanceSettings_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "settings"}, ""))
+	pattern_Finance_CreateBudget_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "budgets"}, ""))
+	pattern_Finance_GetBudget_0                   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "budgets", "id"}, ""))
+	pattern_Finance_UpdateBudget_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "budgets", "id"}, ""))
+	pattern_Finance_DeleteBudget_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "budgets", "id"}, ""))
+	pattern_Finance_ListBudgets_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "budgets"}, ""))
+	pattern_Finance_GetBudgetPeriod_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "budgets", "budget_id", "period"}, ""))
+	pattern_Finance_CreateExchangeRate_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "exchange-rates"}, ""))
+	pattern_Finance_GetExchangeRate_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "exchange-rates", "id"}, ""))
+	pattern_Finance_UpdateExchangeRate_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "exchange-rates", "id"}, ""))
+	pattern_Finance_ListExchangeRates_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "exchange-rates"}, ""))
+	pattern_Finance_DeleteExchangeRate_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "exchange-rates", "id"}, ""))
+	pattern_Finance_CreateExpense_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "expenses"}, ""))
+	pattern_Finance_UpdateExpense_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "expenses", "id"}, ""))
+	pattern_Finance_DeleteTransaction_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "transactions", "id"}, ""))
+	pattern_Finance_ListTransactions_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "transactions"}, ""))
+	pattern_Finance_GetTransaction_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "transactions", "id"}, ""))
+	pattern_Finance_ListTransactionEvents_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "transactions", "txn_id", "events"}, ""))
+	pattern_Finance_GetInsights_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "insights"}, ""))
+	pattern_Finance_CreateRecurringTransaction_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "recurring-transactions"}, ""))
+	pattern_Finance_UpdateRecurringTransaction_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "recurring-transactions", "id"}, ""))
+	pattern_Finance_DeleteRecurringTransaction_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "recurring-transactions", "id"}, ""))
+	pattern_Finance_ListRecurringTransactions_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "recurring-transactions"}, ""))
+	pattern_Finance_ListScheduledTransactions_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "scheduled-transactions"}, ""))
+	pattern_Finance_GetScheduledTransaction_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "scheduled-transactions", "id"}, ""))
+	pattern_Finance_ConfirmScheduledTransaction_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "scheduled-transactions", "transaction_id", "confirm"}, ""))
+	pattern_Finance_MatchScheduledTransaction_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "scheduled-transactions", "transaction_id", "match"}, ""))
+	pattern_Finance_SkipScheduledTransaction_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "scheduled-transactions", "id"}, "skip"))
+	pattern_Finance_CreateBorrowing_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "borrowings"}, ""))
+	pattern_Finance_GetBorrowing_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "borrowings", "id"}, ""))
+	pattern_Finance_ListBorrowings_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "borrowings"}, ""))
+	pattern_Finance_UpdateBorrowing_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "borrowings", "id"}, ""))
+	pattern_Finance_DeleteBorrowing_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "borrowings", "id"}, ""))
+	pattern_Finance_LogBorrowingTransaction_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "borrowings", "borrowing_id", "transactions"}, ""))
+	pattern_Finance_UpdateBorrowingTransaction_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "finance", "borrowings", "borrowing_id", "transactions", "transaction_id"}, ""))
+	pattern_Finance_DeleteBorrowingTransaction_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "finance", "borrowings", "borrowing_id", "transactions", "transaction_id"}, ""))
+	pattern_Finance_AdjustBorrowingBalance_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 2, 4}, []string{"v1", "finance", "borrowings", "borrowing_id", "adjust"}, ""))
+	pattern_Finance_CreateAccount_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "accounts"}, ""))
+	pattern_Finance_GetAccount_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "accounts", "id"}, ""))
+	pattern_Finance_UpdateAccount_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "accounts", "id"}, ""))
+	pattern_Finance_AdjustAccountBalance_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "accounts", "account_id"}, "adjust-balance"))
+	pattern_Finance_DeleteAccount_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "accounts", "id"}, ""))
+	pattern_Finance_ListAccounts_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "accounts"}, ""))
+	pattern_Finance_CreateInstitution_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "institutions"}, ""))
+	pattern_Finance_UpdateInstitution_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "institutions", "id"}, ""))
+	pattern_Finance_DeleteInstitution_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "institutions", "id"}, ""))
+	pattern_Finance_ListInstitutions_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "institutions"}, ""))
+	pattern_Finance_ResolveInstitution_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "institutions"}, "resolve"))
+	pattern_Finance_CreateTransfer_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "transfers"}, ""))
+	pattern_Finance_ListTransfers_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "transfers"}, ""))
+	pattern_Finance_ListCurrencies_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "currencies"}, ""))
+	pattern_Finance_ListInboxItems_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "finance", "inbox-items"}, ""))
+	pattern_Finance_UpdateInboxItem_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "inbox-items", "id"}, ""))
+	pattern_Finance_ApproveInboxItem_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "inbox-items", "id"}, "approve"))
+	pattern_Finance_DiscardInboxItem_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "finance", "inbox-items", "id"}, ""))
 )
 
 var (
-	forward_Finance_ConfigureFinance_0           = runtime.ForwardResponseMessage
-	forward_Finance_GetFinanceSettings_0         = runtime.ForwardResponseMessage
-	forward_Finance_CreateBudget_0               = runtime.ForwardResponseMessage
-	forward_Finance_GetBudget_0                  = runtime.ForwardResponseMessage
-	forward_Finance_UpdateBudget_0               = runtime.ForwardResponseMessage
-	forward_Finance_DeleteBudget_0               = runtime.ForwardResponseMessage
-	forward_Finance_ListBudgets_0                = runtime.ForwardResponseMessage
-	forward_Finance_GetBudgetPeriod_0            = runtime.ForwardResponseMessage
-	forward_Finance_CreateExchangeRate_0         = runtime.ForwardResponseMessage
-	forward_Finance_GetExchangeRate_0            = runtime.ForwardResponseMessage
-	forward_Finance_UpdateExchangeRate_0         = runtime.ForwardResponseMessage
-	forward_Finance_ListExchangeRates_0          = runtime.ForwardResponseMessage
-	forward_Finance_DeleteExchangeRate_0         = runtime.ForwardResponseMessage
-	forward_Finance_CreateExpense_0              = runtime.ForwardResponseMessage
-	forward_Finance_UpdateExpense_0              = runtime.ForwardResponseMessage
-	forward_Finance_DeleteTransaction_0          = runtime.ForwardResponseMessage
-	forward_Finance_ListTransactions_0           = runtime.ForwardResponseMessage
-	forward_Finance_GetTransaction_0             = runtime.ForwardResponseMessage
-	forward_Finance_ListTransactionEvents_0      = runtime.ForwardResponseMessage
-	forward_Finance_GetInsights_0                = runtime.ForwardResponseMessage
-	forward_Finance_CreateRecurringExpense_0     = runtime.ForwardResponseMessage
-	forward_Finance_UpdateRecurringExpense_0     = runtime.ForwardResponseMessage
-	forward_Finance_DeleteRecurringExpense_0     = runtime.ForwardResponseMessage
-	forward_Finance_ListRecurringExpenses_0      = runtime.ForwardResponseMessage
-	forward_Finance_ListScheduledPayments_0      = runtime.ForwardResponseMessage
-	forward_Finance_GetScheduledPayment_0        = runtime.ForwardResponseMessage
-	forward_Finance_ConfirmScheduledPayment_0    = runtime.ForwardResponseMessage
-	forward_Finance_MatchScheduledPayment_0      = runtime.ForwardResponseMessage
-	forward_Finance_SkipScheduledPayment_0       = runtime.ForwardResponseMessage
-	forward_Finance_CreateBorrowing_0            = runtime.ForwardResponseMessage
-	forward_Finance_GetBorrowing_0               = runtime.ForwardResponseMessage
-	forward_Finance_ListBorrowings_0             = runtime.ForwardResponseMessage
-	forward_Finance_UpdateBorrowing_0            = runtime.ForwardResponseMessage
-	forward_Finance_DeleteBorrowing_0            = runtime.ForwardResponseMessage
-	forward_Finance_LogBorrowingTransaction_0    = runtime.ForwardResponseMessage
-	forward_Finance_UpdateBorrowingTransaction_0 = runtime.ForwardResponseMessage
-	forward_Finance_DeleteBorrowingTransaction_0 = runtime.ForwardResponseMessage
-	forward_Finance_AdjustBorrowingBalance_0     = runtime.ForwardResponseMessage
-	forward_Finance_CreateAccount_0              = runtime.ForwardResponseMessage
-	forward_Finance_GetAccount_0                 = runtime.ForwardResponseMessage
-	forward_Finance_UpdateAccount_0              = runtime.ForwardResponseMessage
-	forward_Finance_AdjustAccountBalance_0       = runtime.ForwardResponseMessage
-	forward_Finance_DeleteAccount_0              = runtime.ForwardResponseMessage
-	forward_Finance_ListAccounts_0               = runtime.ForwardResponseMessage
-	forward_Finance_CreateInstitution_0          = runtime.ForwardResponseMessage
-	forward_Finance_UpdateInstitution_0          = runtime.ForwardResponseMessage
-	forward_Finance_DeleteInstitution_0          = runtime.ForwardResponseMessage
-	forward_Finance_ListInstitutions_0           = runtime.ForwardResponseMessage
-	forward_Finance_ResolveInstitution_0         = runtime.ForwardResponseMessage
-	forward_Finance_CreateTransfer_0             = runtime.ForwardResponseMessage
-	forward_Finance_ListTransfers_0              = runtime.ForwardResponseMessage
-	forward_Finance_ListCurrencies_0             = runtime.ForwardResponseMessage
-	forward_Finance_ListInboxItems_0             = runtime.ForwardResponseMessage
-	forward_Finance_UpdateInboxItem_0            = runtime.ForwardResponseMessage
-	forward_Finance_ApproveInboxItem_0           = runtime.ForwardResponseMessage
-	forward_Finance_DiscardInboxItem_0           = runtime.ForwardResponseMessage
+	forward_Finance_ConfigureFinance_0            = runtime.ForwardResponseMessage
+	forward_Finance_GetFinanceSettings_0          = runtime.ForwardResponseMessage
+	forward_Finance_CreateBudget_0                = runtime.ForwardResponseMessage
+	forward_Finance_GetBudget_0                   = runtime.ForwardResponseMessage
+	forward_Finance_UpdateBudget_0                = runtime.ForwardResponseMessage
+	forward_Finance_DeleteBudget_0                = runtime.ForwardResponseMessage
+	forward_Finance_ListBudgets_0                 = runtime.ForwardResponseMessage
+	forward_Finance_GetBudgetPeriod_0             = runtime.ForwardResponseMessage
+	forward_Finance_CreateExchangeRate_0          = runtime.ForwardResponseMessage
+	forward_Finance_GetExchangeRate_0             = runtime.ForwardResponseMessage
+	forward_Finance_UpdateExchangeRate_0          = runtime.ForwardResponseMessage
+	forward_Finance_ListExchangeRates_0           = runtime.ForwardResponseMessage
+	forward_Finance_DeleteExchangeRate_0          = runtime.ForwardResponseMessage
+	forward_Finance_CreateExpense_0               = runtime.ForwardResponseMessage
+	forward_Finance_UpdateExpense_0               = runtime.ForwardResponseMessage
+	forward_Finance_DeleteTransaction_0           = runtime.ForwardResponseMessage
+	forward_Finance_ListTransactions_0            = runtime.ForwardResponseMessage
+	forward_Finance_GetTransaction_0              = runtime.ForwardResponseMessage
+	forward_Finance_ListTransactionEvents_0       = runtime.ForwardResponseMessage
+	forward_Finance_GetInsights_0                 = runtime.ForwardResponseMessage
+	forward_Finance_CreateRecurringTransaction_0  = runtime.ForwardResponseMessage
+	forward_Finance_UpdateRecurringTransaction_0  = runtime.ForwardResponseMessage
+	forward_Finance_DeleteRecurringTransaction_0  = runtime.ForwardResponseMessage
+	forward_Finance_ListRecurringTransactions_0   = runtime.ForwardResponseMessage
+	forward_Finance_ListScheduledTransactions_0   = runtime.ForwardResponseMessage
+	forward_Finance_GetScheduledTransaction_0     = runtime.ForwardResponseMessage
+	forward_Finance_ConfirmScheduledTransaction_0 = runtime.ForwardResponseMessage
+	forward_Finance_MatchScheduledTransaction_0   = runtime.ForwardResponseMessage
+	forward_Finance_SkipScheduledTransaction_0    = runtime.ForwardResponseMessage
+	forward_Finance_CreateBorrowing_0             = runtime.ForwardResponseMessage
+	forward_Finance_GetBorrowing_0                = runtime.ForwardResponseMessage
+	forward_Finance_ListBorrowings_0              = runtime.ForwardResponseMessage
+	forward_Finance_UpdateBorrowing_0             = runtime.ForwardResponseMessage
+	forward_Finance_DeleteBorrowing_0             = runtime.ForwardResponseMessage
+	forward_Finance_LogBorrowingTransaction_0     = runtime.ForwardResponseMessage
+	forward_Finance_UpdateBorrowingTransaction_0  = runtime.ForwardResponseMessage
+	forward_Finance_DeleteBorrowingTransaction_0  = runtime.ForwardResponseMessage
+	forward_Finance_AdjustBorrowingBalance_0      = runtime.ForwardResponseMessage
+	forward_Finance_CreateAccount_0               = runtime.ForwardResponseMessage
+	forward_Finance_GetAccount_0                  = runtime.ForwardResponseMessage
+	forward_Finance_UpdateAccount_0               = runtime.ForwardResponseMessage
+	forward_Finance_AdjustAccountBalance_0        = runtime.ForwardResponseMessage
+	forward_Finance_DeleteAccount_0               = runtime.ForwardResponseMessage
+	forward_Finance_ListAccounts_0                = runtime.ForwardResponseMessage
+	forward_Finance_CreateInstitution_0           = runtime.ForwardResponseMessage
+	forward_Finance_UpdateInstitution_0           = runtime.ForwardResponseMessage
+	forward_Finance_DeleteInstitution_0           = runtime.ForwardResponseMessage
+	forward_Finance_ListInstitutions_0            = runtime.ForwardResponseMessage
+	forward_Finance_ResolveInstitution_0          = runtime.ForwardResponseMessage
+	forward_Finance_CreateTransfer_0              = runtime.ForwardResponseMessage
+	forward_Finance_ListTransfers_0               = runtime.ForwardResponseMessage
+	forward_Finance_ListCurrencies_0              = runtime.ForwardResponseMessage
+	forward_Finance_ListInboxItems_0              = runtime.ForwardResponseMessage
+	forward_Finance_UpdateInboxItem_0             = runtime.ForwardResponseMessage
+	forward_Finance_ApproveInboxItem_0            = runtime.ForwardResponseMessage
+	forward_Finance_DiscardInboxItem_0            = runtime.ForwardResponseMessage
 )

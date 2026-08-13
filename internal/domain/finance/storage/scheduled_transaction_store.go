@@ -13,44 +13,59 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
-type scheduledPaymentDB struct {
-	ID         string       `db:"id"`
-	SpaceID    string       `db:"space_id"`
-	BudgetID   string       `db:"budget_id"`
-	SourceType string       `db:"source_type"`
-	SourceID   string       `db:"source_id"`
-	Amount     int64        `db:"amount"`
-	Currency   string       `db:"currency"`
-	DueDate    time.Time    `db:"due_date"`
-	Status     string       `db:"status"`
-	Metadata   []byte       `db:"metadata"`
-	CreateTime sql.NullTime `db:"create_time"`
-	UpdateTime sql.NullTime `db:"update_time"`
+type scheduledTransactionDB struct {
+	ID         string         `db:"id"`
+	SpaceID    string         `db:"space_id"`
+	BudgetID   sql.NullString `db:"budget_id"`
+	SourceType string         `db:"source_type"`
+	SourceID   string         `db:"source_id"`
+	Amount     int64          `db:"amount"`
+	Currency   string         `db:"currency"`
+	DueDate    time.Time      `db:"due_date"`
+	Status     string         `db:"status"`
+	Metadata   []byte         `db:"metadata"`
+	Type       string         `db:"type"`
+	AccountID  sql.NullString `db:"account_id"`
+	CreateTime sql.NullTime   `db:"create_time"`
+	UpdateTime sql.NullTime   `db:"update_time"`
 }
 
-func (r *scheduledPaymentDB) toDomain() *finance.ScheduledPayment {
-	var meta finance.ScheduledPaymentMetadata
+func (r *scheduledTransactionDB) toDomain() *finance.ScheduledTransaction {
+	var meta finance.ScheduledTransactionMetadata
 	if len(r.Metadata) > 0 {
 		_ = json.Unmarshal(r.Metadata, &meta)
 	}
 
-	return &finance.ScheduledPayment{
-		ID:         finance.ScheduledPaymentID(r.ID),
+	var budgetID *finance.BudgetID
+	if r.BudgetID.Valid && r.BudgetID.String != "" {
+		bID := finance.BudgetID(r.BudgetID.String)
+		budgetID = &bID
+	}
+	var accountID *finance.AccountID
+	if r.AccountID.Valid && r.AccountID.String != "" {
+		aID := finance.AccountID(r.AccountID.String)
+		accountID = &aID
+	}
+
+	return &finance.ScheduledTransaction{
+		ID:         finance.ScheduledTransactionID(r.ID),
 		SpaceID:    finance.SpaceID(r.SpaceID),
-		BudgetID:   finance.BudgetID(r.BudgetID),
+		BudgetID:   budgetID,
 		SourceType: r.SourceType,
 		SourceID:   r.SourceID,
 		Amount:     r.Amount,
 		Currency:   finance.Currency(r.Currency),
 		DueDate:    r.DueDate,
-		Status:     finance.ScheduledPaymentStatus(r.Status),
+		Status:     finance.ScheduledTransactionStatus(r.Status),
 		Metadata:   meta,
+		Type:       finance.TransactionType(r.Type),
+		AccountID:  accountID,
 		CreateTime: r.CreateTime.Time,
 		UpdateTime: r.UpdateTime.Time,
 	}
 }
 
-func marshalScheduledPaymentMetadata(meta finance.ScheduledPaymentMetadata) []byte {
+func marshalScheduledTransactionMetadata(meta finance.ScheduledTransactionMetadata) []byte {
 	bytes, err := json.Marshal(meta)
 	if err != nil {
 		return []byte("{}")
@@ -58,26 +73,37 @@ func marshalScheduledPaymentMetadata(meta finance.ScheduledPaymentMetadata) []by
 	return bytes
 }
 
-type ScheduledPaymentStore struct {
+type ScheduledTransactionStore struct {
 	db *sqlx.DB
 }
 
-func NewScheduledPaymentStore(db *sqlx.DB) *ScheduledPaymentStore {
-	return &ScheduledPaymentStore{db: db}
+func NewScheduledTransactionStore(db *sqlx.DB) *ScheduledTransactionStore {
+	return &ScheduledTransactionStore{db: db}
 }
 
-func (s *ScheduledPaymentStore) Create(ctx context.Context, sp *finance.ScheduledPayment) error {
-	ds := pgDialect.Insert(goqu.S("finance").Table("scheduled_payment")).Rows(goqu.Record{
+func (s *ScheduledTransactionStore) Create(ctx context.Context, sp *finance.ScheduledTransaction) error {
+	var budgetID interface{}
+	if sp.BudgetID != nil {
+		budgetID = string(*sp.BudgetID)
+	}
+	var accountID interface{}
+	if sp.AccountID != nil {
+		accountID = string(*sp.AccountID)
+	}
+
+	ds := pgDialect.Insert(goqu.S("finance").Table("scheduled_transaction")).Rows(goqu.Record{
 		"id":          string(sp.ID),
 		"space_id":    string(sp.SpaceID),
-		"budget_id":   string(sp.BudgetID),
+		"budget_id":   budgetID,
 		"source_type": sp.SourceType,
 		"source_id":   sp.SourceID,
 		"amount":      sp.Amount,
 		"currency":    string(sp.Currency),
 		"due_date":    sp.DueDate,
 		"status":      string(sp.Status),
-		"metadata":    marshalScheduledPaymentMetadata(sp.Metadata),
+		"metadata":    marshalScheduledTransactionMetadata(sp.Metadata),
+		"type":        string(sp.Type),
+		"account_id":  accountID,
 		"create_time": sp.CreateTime,
 		"update_time": sp.UpdateTime,
 	})
@@ -89,35 +115,46 @@ func (s *ScheduledPaymentStore) Create(ctx context.Context, sp *finance.Schedule
 	return err
 }
 
-func (s *ScheduledPaymentStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.ScheduledPaymentID) (*finance.ScheduledPayment, error) {
-	ds := pgDialect.From(goqu.S("finance").Table("scheduled_payment")).
+func (s *ScheduledTransactionStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.ScheduledTransactionID) (*finance.ScheduledTransaction, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("scheduled_transaction")).
 		Select("*").
 		Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, err
 	}
-	var row scheduledPaymentDB
+	var row scheduledTransactionDB
 	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("scheduled payment not found")
+			return nil, errors.New("scheduled transaction not found")
 		}
 		return nil, err
 	}
 	return row.toDomain(), nil
 }
 
-func (s *ScheduledPaymentStore) Update(ctx context.Context, payment *finance.ScheduledPayment) error {
-	ds := pgDialect.Update(goqu.S("finance").Table("scheduled_payment")).
+func (s *ScheduledTransactionStore) Update(ctx context.Context, payment *finance.ScheduledTransaction) error {
+	var budgetID interface{}
+	if payment.BudgetID != nil {
+		budgetID = string(*payment.BudgetID)
+	}
+	var accountID interface{}
+	if payment.AccountID != nil {
+		accountID = string(*payment.AccountID)
+	}
+
+	ds := pgDialect.Update(goqu.S("finance").Table("scheduled_transaction")).
 		Set(goqu.Record{
-			"budget_id":   string(payment.BudgetID),
+			"budget_id":   budgetID,
 			"source_type": payment.SourceType,
 			"source_id":   payment.SourceID,
 			"amount":      payment.Amount,
 			"currency":    string(payment.Currency),
 			"due_date":    payment.DueDate,
 			"status":      string(payment.Status),
-			"metadata":    marshalScheduledPaymentMetadata(payment.Metadata),
+			"metadata":    marshalScheduledTransactionMetadata(payment.Metadata),
+			"type":        string(payment.Type),
+			"account_id":  accountID,
 			"update_time": goqu.L("NOW()"),
 		}).
 		Where(goqu.Ex{
@@ -137,13 +174,13 @@ func (s *ScheduledPaymentStore) Update(ctx context.Context, payment *finance.Sch
 		return err
 	}
 	if rows == 0 {
-		return errors.New("scheduled payment not found")
+		return errors.New("scheduled transaction not found")
 	}
 	return nil
 }
 
-func (s *ScheduledPaymentStore) UpdateStatus(ctx context.Context, id finance.ScheduledPaymentID, status finance.ScheduledPaymentStatus) error {
-	ds := pgDialect.Update(goqu.S("finance").Table("scheduled_payment")).
+func (s *ScheduledTransactionStore) UpdateStatus(ctx context.Context, id finance.ScheduledTransactionID, status finance.ScheduledTransactionStatus) error {
+	ds := pgDialect.Update(goqu.S("finance").Table("scheduled_transaction")).
 		Set(goqu.Record{
 			"status":      string(status),
 			"update_time": goqu.L("NOW()"),
@@ -162,13 +199,13 @@ func (s *ScheduledPaymentStore) UpdateStatus(ctx context.Context, id finance.Sch
 		return err
 	}
 	if rows == 0 {
-		return errors.New("scheduled payment not found")
+		return errors.New("scheduled transaction not found")
 	}
 	return nil
 }
 
-func (s *ScheduledPaymentStore) Delete(ctx context.Context, id finance.ScheduledPaymentID) error {
-	ds := pgDialect.Delete(goqu.S("finance").Table("scheduled_payment")).
+func (s *ScheduledTransactionStore) Delete(ctx context.Context, id finance.ScheduledTransactionID) error {
+	ds := pgDialect.Delete(goqu.S("finance").Table("scheduled_transaction")).
 		Where(goqu.Ex{"id": string(id)})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
@@ -183,17 +220,17 @@ func (s *ScheduledPaymentStore) Delete(ctx context.Context, id finance.Scheduled
 		return err
 	}
 	if rows == 0 {
-		return errors.New("scheduled payment not found")
+		return errors.New("scheduled transaction not found")
 	}
 	return nil
 }
 
-func (s *ScheduledPaymentStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListScheduledPaymentsFilter) (*paging.Page[*finance.ScheduledPayment], error) {
+func (s *ScheduledTransactionStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListScheduledTransactionsFilter) (*paging.Page[*finance.ScheduledTransaction], error) {
 	if filter.PageSize <= 0 || filter.PageSize > 100 {
 		filter.PageSize = 20
 	}
 
-	ds := pgDialect.From(goqu.S("finance").Table("scheduled_payment")).Select("*")
+	ds := pgDialect.From(goqu.S("finance").Table("scheduled_transaction")).Select("*")
 	ds = ds.Where(goqu.Ex{"space_id": string(spaceID)})
 
 	if filter.Status != nil {
@@ -215,8 +252,8 @@ func (s *ScheduledPaymentStore) ListBySpace(ctx context.Context, spaceID finance
 	cursor, _ := paging.Decode(filter.NextPageToken)
 
 	sortOrder := filter.Sort
-	if !finance.IsScheduledPaymentSortField(sortOrder.Field) {
-		sortOrder.Field = finance.DefaultScheduledPaymentSortField
+	if !finance.IsScheduledTransactionSortField(sortOrder.Field) {
+		sortOrder.Field = finance.DefaultScheduledTransactionSortField
 		sortOrder.Ascending = true // default: earliest due date first
 	}
 
@@ -231,17 +268,17 @@ func (s *ScheduledPaymentStore) ListBySpace(ctx context.Context, spaceID finance
 		return nil, err
 	}
 
-	var rows []scheduledPaymentDB
+	var rows []scheduledTransactionDB
 	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
 		return nil, err
 	}
 
-	payments := make([]*finance.ScheduledPayment, len(rows))
+	transactions := make([]*finance.ScheduledTransaction, len(rows))
 	for i := range rows {
-		payments[i] = rows[i].toDomain()
+		transactions[i] = rows[i].toDomain()
 	}
 
-	return paging.NewPage(payments, int(filter.PageSize), func(p *finance.ScheduledPayment) paging.Cursor {
+	return paging.NewPage(transactions, int(filter.PageSize), func(p *finance.ScheduledTransaction) paging.Cursor {
 		return paging.Cursor{
 			SortValue: p.GetSortValue(sortOrder.Field),
 			ID:        string(p.ID),
@@ -249,8 +286,8 @@ func (s *ScheduledPaymentStore) ListBySpace(ctx context.Context, spaceID finance
 	}), nil
 }
 
-func (s *ScheduledPaymentStore) HasScheduledPayments(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListScheduledPaymentsFilter) (bool, error) {
-	ds := pgDialect.From(goqu.S("finance").Table("scheduled_payment")).Select(goqu.L("1")).Where(goqu.Ex{"space_id": string(spaceID)})
+func (s *ScheduledTransactionStore) HasScheduledTransactions(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListScheduledTransactionsFilter) (bool, error) {
+	ds := pgDialect.From(goqu.S("finance").Table("scheduled_transaction")).Select(goqu.L("1")).Where(goqu.Ex{"space_id": string(spaceID)})
 
 	if filter != nil {
 		if filter.BudgetID != nil {

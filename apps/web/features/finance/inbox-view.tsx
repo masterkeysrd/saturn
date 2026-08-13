@@ -9,7 +9,7 @@ import {
   useApproveInboxItemMutation,
   useDiscardInboxItemMutation,
   useUpdateInboxItemMutation,
-  useListScheduledPaymentsQuery,
+  useListScheduledTransactionsQuery,
   useListAccountsQuery,
   useListBorrowingsQuery,
   useLogBorrowingTransactionMutation,
@@ -142,7 +142,7 @@ export function InboxView() {
   )
   const budgets = budgetsData?.budgets || []
 
-  const { data: paymentsData } = useListScheduledPaymentsQuery(
+  const { data: paymentsData } = useListScheduledTransactionsQuery(
     {
       status: "PENDING",
       pageSize: 100,
@@ -152,7 +152,7 @@ export function InboxView() {
     },
     { enabled: !!spaceId }
   )
-  const payments = paymentsData?.scheduledPayments || []
+  const payments = paymentsData?.scheduledTransactions || []
 
   const { data: borrowingsData } = useListBorrowingsQuery(
     { status: "ACTIVE", pageSize: 100, pageToken: "" },

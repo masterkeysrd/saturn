@@ -299,15 +299,15 @@ func (c *Coordinator) pipelineExtractNode(ctx context.Context, state *IngestionS
 		institutions = instPage.Items
 	}
 
-	spPage, err := c.financeService.ListScheduledPayments(ctx, finance.SpaceID(state.SpaceID), &finance.ListScheduledPaymentsFilter{})
+	spPage, err := c.financeService.ListScheduledTransactions(ctx, finance.SpaceID(state.SpaceID), &finance.ListScheduledTransactionsFilter{})
 	if err != nil {
-		return nil, fmt.Errorf("list scheduled payments: %w", err)
+		return nil, fmt.Errorf("list scheduled transactions: %w", err)
 	}
 	payments := spPage.Items
 
-	reePage, err := c.financeService.ListRecurringExpenses(ctx, finance.SpaceID(state.SpaceID), &finance.ListRecurringExpensesFilter{})
+	reePage, err := c.financeService.ListRecurringTransactions(ctx, finance.SpaceID(state.SpaceID), &finance.ListRecurringTransactionsFilter{})
 	if err != nil {
-		return nil, fmt.Errorf("list recurring expenses: %w", err)
+		return nil, fmt.Errorf("list recurring transactions: %w", err)
 	}
 	expenses := reePage.Items
 
@@ -321,13 +321,13 @@ func (c *Coordinator) pipelineExtractNode(ctx context.Context, state *IngestionS
 	}
 
 	result, err := c.parser.Parse(ctx, state.SpaceID, textContent, IngestionContext{
-		Budgets:           budgets,
-		Accounts:          accounts,
-		Institutions:      institutions,
-		ScheduledPayments: payments,
-		RecurringExpenses: expenses,
-		Borrowings:        borrowings,
-		ReferenceDate:     time.Now(),
+		Budgets:               budgets,
+		Accounts:              accounts,
+		Institutions:          institutions,
+		ScheduledTransactions: payments,
+		RecurringTransactions: expenses,
+		Borrowings:            borrowings,
+		ReferenceDate:         time.Now(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("extractor agent failed: %w", err)

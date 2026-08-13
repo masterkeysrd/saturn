@@ -209,8 +209,8 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	rateStore := financestorage.NewExchangeRateStore(sqlxDB)
 	transactionStore := financestorage.NewTransactionStore(sqlxDB)
 	insightsStore := financestorage.NewInsightsStore(sqlxDB)
-	recurringExpenseStore := financestorage.NewRecurringExpenseStore(sqlxDB)
-	scheduledPaymentStore := financestorage.NewScheduledPaymentStore(sqlxDB)
+	recurringTransactionStore := financestorage.NewRecurringTransactionStore(sqlxDB)
+	scheduledTransactionStore := financestorage.NewScheduledTransactionStore(sqlxDB)
 	borrowingStore := financestorage.NewBorrowingStore(sqlxDB)
 	accountStore := financestorage.NewAccountStore(sqlxDB)
 	transferStore := financestorage.NewTransferStore(sqlxDB)
@@ -219,20 +219,20 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	institutionStore := financestorage.NewInstitutionStore(sqlxDB)
 
 	financeService := finance.NewService(finance.Dependencies{
-		SettingsStore:         settingsStore,
-		BudgetStore:           budgetStore,
-		PeriodStore:           periodStore,
-		ExchangeRateStore:     rateStore,
-		TransactionStore:      transactionStore,
-		InsightsStore:         insightsStore,
-		RecurringExpenseStore: recurringExpenseStore,
-		ScheduledPaymentStore: scheduledPaymentStore,
-		BorrowingStore:        borrowingStore,
-		AccountStore:          accountStore,
-		TransferStore:         transferStore,
-		TransactionEventStore: transactionEventStore,
-		InboxItemStore:        inboxItemStore,
-		InstitutionStore:      institutionStore,
+		SettingsStore:             settingsStore,
+		BudgetStore:               budgetStore,
+		PeriodStore:               periodStore,
+		ExchangeRateStore:         rateStore,
+		TransactionStore:          transactionStore,
+		InsightsStore:             insightsStore,
+		RecurringTransactionStore: recurringTransactionStore,
+		ScheduledTransactionStore: scheduledTransactionStore,
+		BorrowingStore:            borrowingStore,
+		AccountStore:              accountStore,
+		TransferStore:             transferStore,
+		TransactionEventStore:     transactionEventStore,
+		InboxItemStore:            inboxItemStore,
+		InstitutionStore:          institutionStore,
 	})
 
 	integrationRegistry := integration.NewRegistry(sqlxDB)
@@ -304,7 +304,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	schedulerv1.RegisterSchedulerAdminServer(s.grpc, schedulerHandler)
 
 	// Register background task handler execution callbacks
-	financev1.RegisterGenerateScheduledPaymentsPayload(schedulerEngine, financeHandler.HandleGenerateScheduledPayments)
+	financev1.RegisterGenerateScheduledTransactionsPayload(schedulerEngine, financeHandler.HandleGenerateScheduledTransactions)
 
 	// Seed cron schedules / triggers
 	if err := financeHandler.RegisterSchedules(ctx, schedulerEngine); err != nil {

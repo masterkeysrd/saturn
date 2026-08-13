@@ -1,23 +1,26 @@
 import { useEffect } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { cn } from "@/lib/utils"
 import { FormSelect } from "@/components/ui/form-select"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
 import {
-  recurringExpenseSchema,
-  type RecurringExpenseFormValues,
-} from "../schemas/recurring-expense"
+  recurringTransactionSchema,
+  type RecurringTransactionFormValues,
+} from "../schemas/recurring-transaction"
 import {
   type Budget,
-  type RecurringExpense,
-  type UpdateRecurringExpenseRequest,
-  useCreateRecurringExpenseMutation,
-  useUpdateRecurringExpenseMutation,
+  type RecurringTransaction,
+  type UpdateRecurringTransactionRequest,
+  useCreateRecurringTransactionMutation,
+  useUpdateRecurringTransactionMutation,
   useListCurrenciesQuery,
+  useListAccountsQuery,
 } from "@/gen/saturn/finance/v1/finance"
 import { usePatch } from "@/hooks/use-patch"
 import { useCurrencyConversionPreview } from "@/hooks/use-currency-conversion"
 import { BudgetSelect } from "./budget-select"
+import { AccountSelect } from "./account-select"
 import { CurrencyConversionPreview } from "./currency-conversion-preview"
 import { Input } from "@/components/ui/input"
 import { AmountInput } from "@/components/ui/amount-input"
@@ -26,16 +29,14 @@ import { Label } from "@/components/ui/label"
 import { DatePicker } from "@/components/ui/date-picker"
 import { toCentsString, formatCents } from "../utils"
 
-interface CreateRecurringExpenseSheetProps {
+interface CreateRecurringTransactionSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   spaceId?: string
   baseCurrency?: string
   budgets?: Budget[]
-  editExpense?: RecurringExpense | null
-  refetchExpenses?: () => void
-  getConversionPreview?: (amountStr: string, fromCurr: string) => unknown
-  currencies?: unknown[]
+  editTransaction?: RecurringTransaction | null
+  refetchTransactions?: () => void
 }
 
 const INTERVAL_ITEMS = [
@@ -50,32 +51,32 @@ const STATUS_ITEMS = [
   { value: "ENDED", label: "Ended" },
 ]
 
-export function CreateRecurringExpenseSheet({
+export function CreateRecurringTransactionSheet({
   open,
   onOpenChange,
   spaceId,
   baseCurrency,
   budgets = [],
-  editExpense,
-  refetchExpenses,
-}: CreateRecurringExpenseSheetProps) {
-  const createMutation = useCreateRecurringExpenseMutation()
-  const updateMutation = useUpdateRecurringExpenseMutation()
+  editTransaction,
+  refetchTransactions,
+}: CreateRecurringTransactionSheetProps) {
+  const createMutation = useCreateRecurringTransactionMutation()
+  const updateMutation = useUpdateRecurringTransactionMutation()
 
   const patchMutation = usePatch<
-    RecurringExpense,
-    { id: string; req: UpdateRecurringExpenseRequest }
+    RecurringTransaction,
+    { id: string; req: UpdateRecurringTransactionRequest }
   >({
-    entityKey: "recurring-expenses",
+    entityKey: "recurring-transactions",
     mutationFn: (vars) => updateMutation.mutateAsync(vars),
     buildVariables: (id, payload, _dirtyPaths, expectedVersion) => ({
       id,
       req: {
         id,
         version: expectedVersion,
-        recurringExpense: {
-          ...(payload as Partial<RecurringExpense>),
-        } as RecurringExpense,
+        recurringTransaction: {
+          ...(payload as Partial<RecurringTransaction>),
+        } as RecurringTransaction,
       },
     }),
   })
@@ -97,6 +98,12 @@ export function CreateRecurringExpenseSheet({
     triggerLabel: c.code,
   }))
 
+  const { data: accountsData } = useListAccountsQuery(
+    {},
+    { enabled: open && !!spaceId }
+  )
+  const accounts = accountsData?.accounts || []
+
   const {
     register,
     handleSubmit,
@@ -104,10 +111,12 @@ export function CreateRecurringExpenseSheet({
     reset,
     setValue,
     formState: { errors, dirtyFields },
-  } = useForm<RecurringExpenseFormValues>({
-    resolver: zodResolver(recurringExpenseSchema),
+  } = useForm<RecurringTransactionFormValues>({
+    resolver: zodResolver(recurringTransactionSchema),
     defaultValues: {
+      type: "EXPENSE",
       budgetId: "",
+      accountId: "",
       name: "",
       amount: "",
       currency: baseCurrency || "USD",
@@ -119,23 +128,30 @@ export function CreateRecurringExpenseSheet({
     },
   })
 
+  const typeValue = useWatch({ control, name: "type" })
+  const amountValue = useWatch({ control, name: "amount" })
+  const currencyValue = useWatch({ control, name: "currency" })
+  const isVariableValue = useWatch({ control, name: "isVariable" })
+
   useEffect(() => {
     if (open) {
-      if (editExpense) {
-        const nextDueDate = editExpense.executionState?.nextDueDate
-          ? new Date(editExpense.executionState.nextDueDate)
+      if (editTransaction) {
+        const nextDueDate = editTransaction.executionState?.nextDueDate
+          ? new Date(editTransaction.executionState.nextDueDate)
           : new Date()
 
         reset({
-          budgetId: editExpense.budgetId || "",
-          name: editExpense.name || "",
-          amount: formatCents(editExpense.amount).toString(),
-          currency: editExpense.currency || baseCurrency || "USD",
-          interval: editExpense.interval || "MONTHLY",
+          type: editTransaction.type === "INCOME" ? "INCOME" : "EXPENSE",
+          budgetId: editTransaction.budgetId || "",
+          accountId: editTransaction.accountId || "",
+          name: editTransaction.name || "",
+          amount: formatCents(editTransaction.amount).toString(),
+          currency: editTransaction.currency || baseCurrency || "USD",
+          interval: editTransaction.interval || "MONTHLY",
           nextDueDate,
-          isVariable: editExpense.isVariable || false,
-          status: editExpense.status || "ACTIVE",
-          gracePeriodDays: editExpense.gracePeriodDays || 0,
+          isVariable: editTransaction.isVariable || false,
+          status: editTransaction.status || "ACTIVE",
+          gracePeriodDays: editTransaction.gracePeriodDays || 0,
         })
       } else {
         const defaultBudgetId = budgets.length > 0 ? budgets[0].id : ""
@@ -143,7 +159,9 @@ export function CreateRecurringExpenseSheet({
         const defaultCurrency = initialBudget?.currency || baseCurrency || "USD"
 
         reset({
+          type: "EXPENSE",
           budgetId: defaultBudgetId || "",
+          accountId: "",
           name: "",
           amount: "",
           currency: defaultCurrency,
@@ -156,11 +174,7 @@ export function CreateRecurringExpenseSheet({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, editExpense, baseCurrency, reset])
-
-  const amountValue = useWatch({ control, name: "amount" })
-  const currencyValue = useWatch({ control, name: "currency" })
-  const isVariableValue = useWatch({ control, name: "isVariable" })
+  }, [open, editTransaction, baseCurrency, reset])
 
   const handleBudgetChange = (newBudgetId: string) => {
     const b = budgets.find((x) => x.id === newBudgetId)
@@ -179,16 +193,18 @@ export function CreateRecurringExpenseSheet({
   const isPending = createMutation.isPending || patchMutation.isPending
   const conversion = getConversionPreview(amountValue, currencyValue)
 
-  const onSubmit = async (data: RecurringExpenseFormValues) => {
+  const onSubmit = async (data: RecurringTransactionFormValues) => {
     const centsAmount = toCentsString(data.amount)
     const nextDueDateStr = toLocalISODate(data.nextDueDate)
 
-    if (editExpense) {
+    if (editTransaction) {
       await patchMutation.mutateAsync({
-        id: editExpense.id || "",
-        expectedVersion: editExpense.version,
+        id: editTransaction.id || "",
+        expectedVersion: editTransaction.version,
         payload: {
-          budgetId: data.budgetId,
+          type: data.type,
+          budgetId: data.type === "EXPENSE" ? data.budgetId : undefined,
+          accountId: data.accountId || undefined,
           name: data.name,
           amount: centsAmount,
           currency: data.currency,
@@ -199,13 +215,15 @@ export function CreateRecurringExpenseSheet({
           isVariable: data.isVariable,
           status: data.status,
           gracePeriodDays: data.gracePeriodDays,
-        } as unknown as Partial<RecurringExpense>,
+        } as unknown as Partial<RecurringTransaction>,
         dirtyFields,
       })
     } else {
       await createMutation.mutateAsync({
-        recurringExpense: {
-          budgetId: data.budgetId,
+        recurringTransaction: {
+          type: data.type,
+          budgetId: data.type === "EXPENSE" ? data.budgetId : undefined,
+          accountId: data.accountId || undefined,
           name: data.name,
           amount: centsAmount,
           currency: data.currency,
@@ -220,7 +238,7 @@ export function CreateRecurringExpenseSheet({
       })
     }
 
-    refetchExpenses?.()
+    refetchTransactions?.()
     onOpenChange(false)
   }
 
@@ -229,31 +247,76 @@ export function CreateRecurringExpenseSheet({
       open={open}
       onOpenChange={onOpenChange}
       title={
-        editExpense ? "Edit Recurrent Expense" : "Create Recurrent Expense"
+        editTransaction
+          ? "Edit Recurring Transaction"
+          : "Create Recurring Transaction"
       }
       description={
-        editExpense
-          ? "Modify the rules for this recurrent expense template."
-          : "Configure a recurrent expense template (e.g. rent or subscriptions)."
+        editTransaction
+          ? "Modify the rules for this recurring transaction template."
+          : "Configure a recurring transaction template (e.g. rent, salaries, or subscriptions)."
       }
-      submitLabel={editExpense ? "Save Changes" : "Create Template"}
+      submitLabel={editTransaction ? "Save Changes" : "Create Template"}
       isPending={isPending}
       disabled={!!(conversion && "error" in conversion)}
       onSubmit={handleSubmit(onSubmit)}
     >
-      <FormFieldItem label="Budget" error={errors.budgetId?.message}>
-        <BudgetSelect
-          control={control}
-          name="budgetId"
-          budgets={budgets}
-          onBudgetChange={handleBudgetChange}
-          placeholder="Select a budget..."
-        />
+      <FormFieldItem label="Transaction Type">
+        <div className="flex rounded-xl border border-border/30 bg-muted/60 p-1">
+          <button
+            type="button"
+            onClick={() => {
+              setValue("type", "EXPENSE", { shouldDirty: true })
+              if (budgets.length > 0) {
+                setValue("budgetId", budgets[0].id, { shouldDirty: true })
+              }
+            }}
+            className={cn(
+              "flex-1 rounded-lg py-2 text-sm font-semibold transition-all duration-200",
+              typeValue === "EXPENSE"
+                ? "scale-[1.01] bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-background/20 hover:text-foreground"
+            )}
+          >
+            Expense
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setValue("type", "INCOME", { shouldDirty: true })
+              setValue("budgetId", "", { shouldDirty: true })
+            }}
+            className={cn(
+              "flex-1 rounded-lg py-2 text-sm font-semibold transition-all duration-200",
+              typeValue === "INCOME"
+                ? "scale-[1.01] bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-background/20 hover:text-foreground"
+            )}
+          >
+            Income
+          </button>
+        </div>
       </FormFieldItem>
+
+      {typeValue === "EXPENSE" && (
+        <FormFieldItem label="Budget" error={errors.budgetId?.message}>
+          <BudgetSelect
+            control={control}
+            name="budgetId"
+            budgets={budgets}
+            onBudgetChange={handleBudgetChange}
+            placeholder="Select a budget..."
+          />
+        </FormFieldItem>
+      )}
 
       <FormFieldItem label="Template Name" error={errors.name?.message}>
         <Input
-          placeholder="e.g. Office Rent, Netflix"
+          placeholder={
+            typeValue === "EXPENSE"
+              ? "e.g. Office Rent, Netflix"
+              : "e.g. Salary, Retainer"
+          }
           {...register("name")}
           className="h-12 rounded-xl border-border/60 bg-background/50"
         />
@@ -285,6 +348,16 @@ export function CreateRecurringExpenseSheet({
         fromCurrency={currencyValue}
       />
 
+      <FormFieldItem label="Target Account (Optional)">
+        <AccountSelect
+          control={control}
+          name="accountId"
+          accounts={accounts}
+          allowNone
+          placeholder="Select default account..."
+        />
+      </FormFieldItem>
+
       <FormSelect
         control={control}
         name="interval"
@@ -312,7 +385,7 @@ export function CreateRecurringExpenseSheet({
         <Input
           type="number"
           min="0"
-          placeholder="e.g. 5"
+          placeholder="e.g. 3"
           {...register("gracePeriodDays", { valueAsNumber: true })}
           className="h-12 rounded-xl border-border/60 bg-background/50"
         />
@@ -331,15 +404,15 @@ export function CreateRecurringExpenseSheet({
             htmlFor="isVariable"
             className="cursor-pointer text-xs leading-none font-semibold text-foreground/80"
           >
-            Variable Amount Bill
+            Variable Amount Transaction
           </Label>
           <span className="text-[10px] text-muted-foreground">
-            Check if the amount changes month-to-month (e.g. electricity bills).
+            Check if the amount changes execution-to-execution.
           </span>
         </div>
       </div>
 
-      {editExpense && (
+      {editTransaction && (
         <FormSelect
           control={control}
           name="status"

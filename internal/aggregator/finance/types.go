@@ -18,15 +18,15 @@ type AggregatedBudget struct {
 	Period *AggregatedBudgetPeriod
 }
 
-// AggregatedRecurringExpense wraps the core recurring expense template with hydrated details.
-type AggregatedRecurringExpense struct {
-	*finance.RecurringExpense
+// AggregatedRecurringTransaction wraps the core recurring transaction template with hydrated details.
+type AggregatedRecurringTransaction struct {
+	*finance.RecurringTransaction
 	Budget *AggregatedBudget
 }
 
-// AggregatedScheduledPayment wraps the core scheduled payment instance with hydrated details.
-type AggregatedScheduledPayment struct {
-	*finance.ScheduledPayment
-	Budget           *AggregatedBudget
-	RecurringExpense *AggregatedRecurringExpense
+// AggregatedScheduledTransaction wraps the core scheduled transaction instance with hydrated details.
+type AggregatedScheduledTransaction struct {
+	*finance.ScheduledTransaction
+	Budget               *AggregatedBudget
+	RecurringTransaction *AggregatedRecurringTransaction
 }

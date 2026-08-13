@@ -146,27 +146,29 @@ func (a *AgentIngestionParser) Parse(ctx context.Context, spaceID string, doc st
 		})
 	}
 
-	type scheduledPaymentInfo struct {
+	type scheduledTransactionInfo struct {
 		ID         string
 		SourceType string
 		Amount     float64
 		Currency   string
 		DueDate    string
 		Status     string
+		Type       string
 	}
-	var paymentInfos []scheduledPaymentInfo
-	for _, p := range ingestionCtx.ScheduledPayments {
-		paymentInfos = append(paymentInfos, scheduledPaymentInfo{
+	var paymentInfos []scheduledTransactionInfo
+	for _, p := range ingestionCtx.ScheduledTransactions {
+		paymentInfos = append(paymentInfos, scheduledTransactionInfo{
 			ID:         string(p.ID),
 			SourceType: p.SourceType,
 			Amount:     float64(p.Amount) / 100.0,
 			Currency:   string(p.Currency),
 			DueDate:    p.DueDate.Format(time.RFC3339),
 			Status:     string(p.Status),
+			Type:       string(p.Type),
 		})
 	}
 
-	type recurringExpenseInfo struct {
+	type recurringTransactionInfo struct {
 		ID          string
 		Name        string
 		Amount      float64
@@ -174,10 +176,11 @@ func (a *AgentIngestionParser) Parse(ctx context.Context, spaceID string, doc st
 		Interval    string
 		NextDueDate string
 		Status      string
+		Type        string
 	}
-	var recurringInfos []recurringExpenseInfo
-	for _, re := range ingestionCtx.RecurringExpenses {
-		recurringInfos = append(recurringInfos, recurringExpenseInfo{
+	var recurringInfos []recurringTransactionInfo
+	for _, re := range ingestionCtx.RecurringTransactions {
+		recurringInfos = append(recurringInfos, recurringTransactionInfo{
 			ID:          string(re.ID),
 			Name:        re.Name,
 			Amount:      float64(re.Amount) / 100.0,
@@ -185,6 +188,7 @@ func (a *AgentIngestionParser) Parse(ctx context.Context, spaceID string, doc st
 			Interval:    string(re.Interval),
 			NextDueDate: re.NextDueDate.Format(time.RFC3339),
 			Status:      string(re.Status),
+			Type:        string(re.Type),
 		})
 	}
 
@@ -212,14 +216,14 @@ func (a *AgentIngestionParser) Parse(ctx context.Context, spaceID string, doc st
 		SpaceID: spaceID,
 		Purpose: "INBOX_PARSER",
 		Params: map[string]any{
-			"extract":            true,
-			"reference_date_utc": ingestionCtx.ReferenceDate.UTC().Format(time.RFC3339),
-			"budgets":            ingestionCtx.Budgets,
-			"accounts":           accountInfos,
-			"scheduled_payments": paymentInfos,
-			"recurring_expenses": recurringInfos,
-			"borrowings":         borrowingInfos,
-			"email_body":         doc,
+			"extract":                true,
+			"reference_date_utc":     ingestionCtx.ReferenceDate.UTC().Format(time.RFC3339),
+			"budgets":                ingestionCtx.Budgets,
+			"accounts":               accountInfos,
+			"scheduled_transactions": paymentInfos,
+			"recurring_transactions": recurringInfos,
+			"borrowings":             borrowingInfos,
+			"email_body":             doc,
 		},
 	})
 	if err != nil {

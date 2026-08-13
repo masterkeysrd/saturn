@@ -17,11 +17,14 @@ const (
 	TransactionTypeTransferIn        TransactionType = "TRANSFER_IN"
 	TransactionTypeBalanceAdjustment TransactionType = "BALANCE_ADJUSTMENT"
 
-	SourceTypeBorrowing           = "borrowing"
-	SourceTypeBorrowingRepayment  = "borrowing_repayment"
-	SourceTypeBorrowingAdditional = "borrowing_additional"
-	SourceTypeRecurrentExpense    = "recurrent_expense"
+	SourceTypeBorrowing            = "borrowing"
+	SourceTypeBorrowingRepayment   = "borrowing_repayment"
+	SourceTypeBorrowingAdditional  = "borrowing_additional"
+	SourceTypeRecurrentTransaction = "recurrent_transaction"
 )
+
+type ScheduledPaymentID = ScheduledTransactionID
+type RecurringExpenseID = RecurringTransactionID
 
 // TransactionID is a custom string type representing a transaction's unique identifier (KSUID).
 type TransactionID string

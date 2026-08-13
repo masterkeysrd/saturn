@@ -186,41 +186,41 @@ type TransactionFilter struct {
 	SearchQuery *string
 }
 
-// RecurringExpenseStore defines persistence for recurring expense templates.
-type RecurringExpenseStore interface {
-	Create(ctx context.Context, expense *RecurringExpense) error
-	GetByID(ctx context.Context, spaceID SpaceID, id RecurringExpenseID) (*RecurringExpense, error)
-	GetByIDs(ctx context.Context, spaceID SpaceID, ids []RecurringExpenseID) ([]*RecurringExpense, error)
-	Update(ctx context.Context, expense *RecurringExpense) error
-	Delete(ctx context.Context, id RecurringExpenseID, opts DeleteOptions) error
-	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListRecurringExpensesFilter) (*paging.Page[*RecurringExpense], error)
-	ListPendingGeneration(ctx context.Context, maxDueDate time.Time) ([]*RecurringExpense, error)
+// RecurringTransactionStore defines persistence for recurring transaction templates.
+type RecurringTransactionStore interface {
+	Create(ctx context.Context, transaction *RecurringTransaction) error
+	GetByID(ctx context.Context, spaceID SpaceID, id RecurringTransactionID) (*RecurringTransaction, error)
+	GetByIDs(ctx context.Context, spaceID SpaceID, ids []RecurringTransactionID) ([]*RecurringTransaction, error)
+	Update(ctx context.Context, transaction *RecurringTransaction) error
+	Delete(ctx context.Context, id RecurringTransactionID, opts DeleteOptions) error
+	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListRecurringTransactionsFilter) (*paging.Page[*RecurringTransaction], error)
+	ListPendingGeneration(ctx context.Context, maxDueDate time.Time) ([]*RecurringTransaction, error)
 }
 
-// ScheduledPaymentStore defines persistence for scheduled payment instances.
-type ScheduledPaymentStore interface {
-	Create(ctx context.Context, payment *ScheduledPayment) error
-	GetByID(ctx context.Context, spaceID SpaceID, id ScheduledPaymentID) (*ScheduledPayment, error)
-	Update(ctx context.Context, payment *ScheduledPayment) error
-	UpdateStatus(ctx context.Context, id ScheduledPaymentID, status ScheduledPaymentStatus) error
-	Delete(ctx context.Context, id ScheduledPaymentID) error
-	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListScheduledPaymentsFilter) (*paging.Page[*ScheduledPayment], error)
-	HasScheduledPayments(ctx context.Context, spaceID SpaceID, filter *ListScheduledPaymentsFilter) (bool, error)
+// ScheduledTransactionStore defines persistence for scheduled transaction instances.
+type ScheduledTransactionStore interface {
+	Create(ctx context.Context, payment *ScheduledTransaction) error
+	GetByID(ctx context.Context, spaceID SpaceID, id ScheduledTransactionID) (*ScheduledTransaction, error)
+	Update(ctx context.Context, payment *ScheduledTransaction) error
+	UpdateStatus(ctx context.Context, id ScheduledTransactionID, status ScheduledTransactionStatus) error
+	Delete(ctx context.Context, id ScheduledTransactionID) error
+	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListScheduledTransactionsFilter) (*paging.Page[*ScheduledTransaction], error)
+	HasScheduledTransactions(ctx context.Context, spaceID SpaceID, filter *ListScheduledTransactionsFilter) (bool, error)
 }
 
-// ListRecurringExpensesFilter encapsulates filtering parameters for recurring expenses.
-type ListRecurringExpensesFilter struct {
-	Status        *RecurringExpenseStatus
+// ListRecurringTransactionsFilter encapsulates filtering parameters for recurring transactions.
+type ListRecurringTransactionsFilter struct {
+	Status        *RecurringTransactionStatus
 	PageSize      int32
 	NextPageToken string
 	SearchQuery   *string
 	Sort          sorting.SortOrder
 }
 
-// ListScheduledPaymentsFilter encapsulates filtering parameters for scheduled payments.
-type ListScheduledPaymentsFilter struct {
+// ListScheduledTransactionsFilter encapsulates filtering parameters for scheduled transactions.
+type ListScheduledTransactionsFilter struct {
 	BudgetID      *BudgetID
-	Status        *ScheduledPaymentStatus
+	Status        *ScheduledTransactionStatus
 	StartDate     *time.Time
 	EndDate       *time.Time
 	PageSize      int32

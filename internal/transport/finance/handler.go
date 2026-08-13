@@ -585,13 +585,13 @@ func (h *Handler) mapError(err error) error {
 		return status.Error(codes.FailedPrecondition, "exchange rate not found")
 	case errors.Is(err, finance.ErrTransactionNotFound):
 		return status.Error(codes.NotFound, "transaction not found")
-	case errors.Is(err, finance.ErrScheduledPaymentNotFound):
-		return status.Error(codes.NotFound, "scheduled payment not found")
+	case errors.Is(err, finance.ErrScheduledTransactionNotFound):
+		return status.Error(codes.NotFound, "scheduled transaction not found")
 	case errors.Is(err, finance.ErrBorrowingNotFound):
 		return status.Error(codes.NotFound, "borrowing not found")
 	case errors.Is(err, finance.ErrRepaymentNotFound):
 		return status.Error(codes.NotFound, "borrowing repayment not found")
-	case errors.Is(err, finance.ErrBudgetVersionMismatch), errors.Is(err, finance.ErrAccountVersionMismatch), errors.Is(err, finance.ErrInstitutionVersionMismatch), errors.Is(err, finance.ErrBorrowingVersionMismatch):
+	case errors.Is(err, finance.ErrBudgetVersionMismatch), errors.Is(err, finance.ErrAccountVersionMismatch), errors.Is(err, finance.ErrInstitutionVersionMismatch), errors.Is(err, finance.ErrBorrowingVersionMismatch), errors.Is(err, finance.ErrRecurringTransactionVersionMismatch):
 		return status.Error(codes.Aborted, err.Error())
 	}
 

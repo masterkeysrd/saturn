@@ -26,7 +26,7 @@ export const menu: FeatureMenu = {
       url: "/finance/inbox",
     },
     {
-      title: "Recurring Expenses",
+      title: "Recurring Transactions",
       url: "/finance/recurring",
     },
     {

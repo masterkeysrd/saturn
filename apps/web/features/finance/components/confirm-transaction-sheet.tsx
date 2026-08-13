@@ -3,18 +3,18 @@ import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useNavigate } from "react-router-dom"
 import {
-  confirmPaymentSchema,
-  type ConfirmPaymentFormValues,
+  confirmTransactionSchema,
+  type ConfirmTransactionFormValues,
 } from "../schemas/reconciliation"
 import {
-  useConfirmScheduledPaymentMutation,
-  useMatchScheduledPaymentMutation,
-  useSkipScheduledPaymentMutation,
+  useConfirmScheduledTransactionMutation,
+  useMatchScheduledTransactionMutation,
+  useSkipScheduledTransactionMutation,
   useListAccountsQuery,
   useListBudgetsQuery,
-  useListRecurringExpensesQuery,
+  useListRecurringTransactionsQuery,
   useListTransactionsQuery,
-  type ScheduledPayment,
+  type ScheduledTransaction,
   type Transaction,
 } from "@/gen/saturn/finance/v1/finance"
 import {
@@ -58,11 +58,11 @@ import {
   formatInterval,
 } from "../utils"
 
-interface ConfirmPaymentSheetProps {
+interface ConfirmTransactionSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  payment: ScheduledPayment | null
-  refetchPayments: () => void
+  transaction: ScheduledTransaction | null
+  refetchTransactions: () => void
   getConversionPreview: (
     amountStr: string,
     fromCurr: string
@@ -72,13 +72,13 @@ interface ConfirmPaymentSheetProps {
     | null
 }
 
-export function ConfirmPaymentSheet({
+export function ConfirmTransactionSheet({
   open,
   onOpenChange,
-  payment,
-  refetchPayments,
+  transaction,
+  refetchTransactions,
   getConversionPreview,
-}: ConfirmPaymentSheetProps) {
+}: ConfirmTransactionSheetProps) {
   const navigate = useNavigate()
   const {
     register,
@@ -86,9 +86,10 @@ export function ConfirmPaymentSheet({
     control,
     reset,
     formState: { errors },
-  } = useForm<ConfirmPaymentFormValues>({
-    resolver: zodResolver(confirmPaymentSchema),
+  } = useForm<ConfirmTransactionFormValues>({
+    resolver: zodResolver(confirmTransactionSchema),
     defaultValues: {
+      type: "EXPENSE",
       amount: "",
       accountId: "",
       budgetId: "",
@@ -112,7 +113,7 @@ export function ConfirmPaymentSheet({
     { pageSize: 100, pageToken: "" },
     { enabled: open }
   )
-  const { data: expensesData } = useListRecurringExpensesQuery(
+  const { data: recurringData } = useListRecurringTransactionsQuery(
     { pageSize: 100, pageToken: "", status: "STATUS_UNSPECIFIED" },
     { enabled: open }
   )
@@ -123,15 +124,15 @@ export function ConfirmPaymentSheet({
 
   const accounts = accountsData?.accounts || []
   const budgets = budgetsData?.budgets || []
-  const expenses = useMemo(
-    () => expensesData?.recurringExpenses || [],
-    [expensesData?.recurringExpenses]
+  const recurringTemplates = useMemo(
+    () => recurringData?.recurringTransactions || [],
+    [recurringData?.recurringTransactions]
   )
   const transactions = transactionsData?.transactions || []
 
-  // Filter unlinked expense transactions
+  // Filter unlinked transactions of matching type
   const unlinkedTransactions = transactions.filter(
-    (t) => !t.metadata?.scheduled_payment_id && t.type === "EXPENSE"
+    (t) => !t.metadata?.scheduled_payment_id && t.type === transaction?.type
   )
 
   // Reconciliation Queue style multi-field search filter
@@ -158,36 +159,40 @@ export function ConfirmPaymentSheet({
   })
 
   // Smart Candidate Search (matching amount, currency, and date within 7 days)
-  const candidateMatch = payment
+  const candidateMatch = transaction
     ? unlinkedTransactions.find((t) => {
-        if (t.amount !== payment.amount || t.currency !== payment.currency)
+        if (
+          t.amount !== transaction.amount ||
+          t.currency !== transaction.currency
+        )
           return false
         const tDate = new Date(t.transactionDate).getTime()
-        const pDate = new Date(payment.dueDate).getTime()
+        const pDate = new Date(transaction.dueDate).getTime()
         const diffDays = Math.abs(tDate - pDate) / (1000 * 3600 * 24)
         return diffDays <= 7
       })
     : null
 
-  const confirmMutation = useConfirmScheduledPaymentMutation()
-  const matchMutation = useMatchScheduledPaymentMutation()
-  const skipMutation = useSkipScheduledPaymentMutation()
+  const confirmMutation = useConfirmScheduledTransactionMutation()
+  const matchMutation = useMatchScheduledTransactionMutation()
+  const skipMutation = useSkipScheduledTransactionMutation()
   const [skipDialogOpen, setSkipDialogOpen] = useState(false)
 
   const handleConfirmSkip = async () => {
-    if (!payment) return
+    if (!transaction) return
     await skipMutation.mutateAsync({
-      id: payment.id || "",
-      req: { id: payment.id || "" },
+      id: transaction.id || "",
+      req: { id: transaction.id || "" },
     })
-    refetchPayments()
+    refetchTransactions()
     setSkipDialogOpen(false)
     onOpenChange(false)
   }
 
-  const [prevPayment, setPrevPayment] = useState<typeof payment>(null)
-  if (open && payment && payment !== prevPayment) {
-    setPrevPayment(payment)
+  const [prevTransaction, setPrevTransaction] =
+    useState<typeof transaction>(null)
+  if (open && transaction && transaction !== prevTransaction) {
+    setPrevTransaction(transaction)
     setConfirmedTxn(null)
     if (candidateMatch) {
       setSelectedTxnId(candidateMatch.id || "")
@@ -199,32 +204,36 @@ export function ConfirmPaymentSheet({
   }
 
   useEffect(() => {
-    if (open && payment) {
-      const matchedExp = payment.sourceId
-        ? expenses.find((e) => e.id === payment.sourceId)
+    if (open && transaction) {
+      const matchedTemplate = transaction.sourceId
+        ? recurringTemplates.find((e) => e.id === transaction.sourceId)
         : null
-      const metaDesc = payment.metadata?.description || null
+      const metaDesc = transaction.metadata?.description || null
 
-      const dueFormatted = new Date(payment.dueDate).toISOString().slice(0, 10)
+      const dueFormatted = new Date(transaction.dueDate)
+        .toISOString()
+        .slice(0, 10)
       const name =
-        matchedExp?.name ||
-        payment.recurringExpense?.name ||
-        "Scheduled Payment"
+        matchedTemplate?.name ||
+        transaction.recurringTransaction?.name ||
+        "Scheduled Transaction"
       const defaultDesc = metaDesc || `${name} (${dueFormatted})`
 
       reset({
-        amount: formatCents(payment.amount).toString(),
+        type: transaction.type === "INCOME" ? "INCOME" : "EXPENSE",
+        amount: formatCents(transaction.amount).toString(),
         transactionDate: new Date(),
-        effectiveDate: new Date(payment.dueDate),
-        budgetId: payment.budgetId || "",
-        accountId: "",
+        effectiveDate: new Date(transaction.dueDate),
+        budgetId: transaction.budgetId || "",
+        accountId: transaction.accountId || "",
         description: defaultDesc,
       })
     }
-  }, [open, payment, expenses, reset])
+  }, [open, transaction, recurringTemplates, reset])
 
   const amountValue = useWatch({ control, name: "amount" })
   const budgetIdValue = useWatch({ control, name: "budgetId" })
+  const typeValue = useWatch({ control, name: "type" })
 
   const toLocalISODate = (d: Date): string => {
     const y = d.getFullYear()
@@ -233,18 +242,18 @@ export function ConfirmPaymentSheet({
     return `${y}-${m}-${date}T12:00:00Z`
   }
 
-  const onSubmit = async (data: ConfirmPaymentFormValues) => {
-    if (!payment) return
+  const onSubmit = async (data: ConfirmTransactionFormValues) => {
+    if (!transaction) return
 
     if (selectedTxnId) {
       const res = await matchMutation.mutateAsync({
-        payment_id: payment.id || "",
+        transaction_id: transaction.id || "",
         req: {
-          paymentId: payment.id || "",
-          transactionId: selectedTxnId,
+          transactionId: transaction.id || "",
+          matchedTransactionId: selectedTxnId,
         },
       })
-      refetchPayments()
+      refetchTransactions()
       setConfirmedTxn(res)
     } else {
       const centsAmount = toCentsString(data.amount)
@@ -252,25 +261,26 @@ export function ConfirmPaymentSheet({
       const effDateStr = toLocalISODate(data.effectiveDate)
 
       const res = await confirmMutation.mutateAsync({
-        payment_id: payment.id || "",
+        transaction_id: transaction.id || "",
         req: {
-          paymentId: payment.id || "",
+          transactionId: transaction.id || "",
           transactionDate: txDateStr,
           effectiveDate: effDateStr,
           actualAmount: centsAmount,
           description: data.description.trim() || undefined,
           accountId: data.accountId || undefined,
-          budgetId: data.budgetId || undefined,
+          budgetId:
+            data.type === "EXPENSE" ? data.budgetId || undefined : undefined,
         },
       })
-      refetchPayments()
+      refetchTransactions()
       setConfirmedTxn(res)
     }
   }
 
   const isPending = confirmMutation.isPending
-  const conversion = payment
-    ? getConversionPreview(amountValue, payment.currency)
+  const conversion = transaction
+    ? getConversionPreview(amountValue, transaction.currency)
     : null
 
   return (
@@ -285,11 +295,11 @@ export function ConfirmPaymentSheet({
               </div>
               <div className="space-y-2">
                 <h3 className="text-xl font-bold tracking-tight text-foreground">
-                  Payment Cleared!
+                  Transaction Cleared!
                 </h3>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  The scheduled payment was successfully cleared and registered
-                  as a transaction.
+                  The scheduled transaction was successfully cleared and
+                  registered in the ledger.
                 </p>
               </div>
 
@@ -302,7 +312,15 @@ export function ConfirmPaymentSheet({
                 </div>
                 <div className="flex justify-between border-b border-border/10 pb-2">
                   <span className="text-muted-foreground">Cleared Amount:</span>
-                  <span className="font-bold text-foreground">
+                  <span
+                    className={cn(
+                      "font-bold",
+                      confirmedTxn.type === "EXPENSE"
+                        ? "text-rose-500"
+                        : "text-emerald-500"
+                    )}
+                  >
+                    {confirmedTxn.type === "EXPENSE" ? "-" : "+"}
                     {formatCents(confirmedTxn.amount).toFixed(2)}{" "}
                     <span className="text-[10px] font-medium text-muted-foreground uppercase">
                       {confirmedTxn.currency}
@@ -327,7 +345,7 @@ export function ConfirmPaymentSheet({
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Description:</span>
                   <span className="max-w-[200px] truncate font-semibold text-foreground">
-                    {confirmedTxn.description || "Scheduled Outflow"}
+                    {confirmedTxn.description || "Scheduled Transaction"}
                   </span>
                 </div>
               </div>
@@ -358,59 +376,68 @@ export function ConfirmPaymentSheet({
             <div className="overflow-y-auto pr-1">
               <SheetHeader className="p-0">
                 <SheetTitle className="text-xl font-bold">
-                  Confirm Payment
+                  {transaction?.type === "INCOME"
+                    ? "Confirm Income Receipt"
+                    : "Confirm Payment"}
                 </SheetTitle>
                 <SheetDescription className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-                  Verify the details for clearing this scheduled outflow.
+                  Verify the details for clearing this scheduled{" "}
+                  {transaction?.type === "INCOME" ? "inflow" : "outflow"}.
                 </SheetDescription>
               </SheetHeader>
 
-              {payment &&
+              {transaction &&
                 (() => {
-                  const matchedExpense = payment.sourceId
-                    ? expenses.find((e) => e.id === payment.sourceId)
+                  const matchedTemplate = transaction.sourceId
+                    ? recurringTemplates.find(
+                        (e) => e.id === transaction.sourceId
+                      )
                     : null
 
                   const vendorFromMeta =
-                    payment.metadata?.vendorName ||
-                    payment.metadata?.description ||
+                    transaction.metadata?.vendorName ||
+                    transaction.metadata?.description ||
                     null
 
                   const templateName =
-                    matchedExpense?.name ||
-                    payment.recurringExpense?.name ||
+                    matchedTemplate?.name ||
+                    transaction.recurringTransaction?.name ||
                     vendorFromMeta ||
-                    "Scheduled Outflow"
+                    "Scheduled Transaction"
 
                   const budget =
-                    payment.budget ||
+                    transaction.budget ||
                     budgets.find(
-                      (b) => b.id === (budgetIdValue || payment.budgetId)
+                      (b) => b.id === (budgetIdValue || transaction.budgetId)
                     )
                   const colors = getBudgetColors(budget?.color || "indigo")
                   const Icon = getBudgetIcon(budget?.icon || "piggy-bank")
 
                   const intervalVal =
-                    matchedExpense?.interval ||
-                    payment.recurringExpense?.interval
+                    matchedTemplate?.interval ||
+                    transaction.recurringTransaction?.interval
                   const intervalLabel = intervalVal
                     ? formatInterval(intervalVal)
                     : null
 
                   return (
                     <form
-                      id="confirm-payment-form"
+                      id="confirm-transaction-form"
                       onSubmit={handleSubmit(onSubmit)}
                       className="mt-6 space-y-5"
                     >
-                      {/* Rich Context Card for Scheduled Payment / Recurring Expense */}
+                      {/* Rich Context Card for Scheduled Obligation */}
                       <div className="rounded-2xl border border-border/40 bg-card/40 p-4 shadow-sm backdrop-blur-md">
                         <div className="flex items-center gap-3.5">
                           <div
                             className={cn(
                               "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-xs",
-                              colors.bg,
-                              colors.text
+                              transaction.type === "INCOME"
+                                ? "bg-emerald-500/10 text-emerald-500"
+                                : colors.bg,
+                              transaction.type === "INCOME"
+                                ? "text-emerald-500"
+                                : colors.text
                             )}
                           >
                             <Icon className="h-5 w-5" />
@@ -429,18 +456,24 @@ export function ConfirmPaymentSheet({
                             </div>
 
                             <div className="mt-0.5 flex items-center justify-between gap-2 text-xs">
-                              {budget?.name && (
+                              {transaction.type === "EXPENSE" &&
+                              budget?.name ? (
                                 <span className="truncate text-[11px] font-medium text-muted-foreground">
                                   Budget:{" "}
                                   <span className="font-semibold text-foreground">
                                     {budget.name}
                                   </span>
                                 </span>
+                              ) : (
+                                <span className="text-[11px] font-semibold tracking-wide text-emerald-500 uppercase">
+                                  Income Inflow
+                                </span>
                               )}
                               <span className="shrink-0 font-semibold text-foreground">
-                                Target: {formatCents(payment.amount).toFixed(2)}{" "}
+                                Target:{" "}
+                                {formatCents(transaction.amount).toFixed(2)}{" "}
                                 <span className="text-[10px] font-medium text-muted-foreground uppercase">
-                                  {payment.currency}
+                                  {transaction.currency}
                                 </span>
                               </span>
                             </div>
@@ -453,7 +486,7 @@ export function ConfirmPaymentSheet({
                               Source
                             </span>
                             <span className="font-bold text-foreground">
-                              {formatSourceType(payment.sourceType)}
+                              {formatSourceType(transaction.sourceType)}
                             </span>
                           </div>
 
@@ -462,7 +495,7 @@ export function ConfirmPaymentSheet({
                               Due Date
                             </span>
                             <span className="font-mono font-bold text-foreground">
-                              {new Date(payment.dueDate).toLocaleDateString(
+                              {new Date(transaction.dueDate).toLocaleDateString(
                                 undefined,
                                 {
                                   year: "numeric",
@@ -485,7 +518,7 @@ export function ConfirmPaymentSheet({
                         >
                           <div className="flex items-center gap-2">
                             <Link2 className="h-4 w-4 text-primary" />
-                            <span>Link Existing Bank Transaction</span>
+                            <span>Link Existing Bank Record</span>
                             {candidateMatch ? (
                               <span className="flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-500">
                                 <Sparkles className="h-3 w-3" />1 Smart Match
@@ -541,7 +574,17 @@ export function ConfirmPaymentSheet({
                                     {candidateMatch.description ||
                                       "Bank Outflow"}
                                   </span>
-                                  <span className="font-bold">
+                                  <span
+                                    className={cn(
+                                      "font-bold",
+                                      candidateMatch.type === "EXPENSE"
+                                        ? "text-rose-500"
+                                        : "text-emerald-500"
+                                    )}
+                                  >
+                                    {candidateMatch.type === "EXPENSE"
+                                      ? "-"
+                                      : "+"}
                                     {formatCents(candidateMatch.amount).toFixed(
                                       2
                                     )}{" "}
@@ -569,12 +612,12 @@ export function ConfirmPaymentSheet({
                               </div>
                             )}
 
-                            {/* Manual Search Select using Reconciliation Queue Search Popover */}
+                            {/* Manual Search Select */}
                             <div className="space-y-1.5">
                               <Label className="text-[11px] font-semibold text-muted-foreground">
                                 {candidateMatch
-                                  ? "Or search and pick another transaction:"
-                                  : "Search transaction to pair with:"}
+                                  ? "Or search and pick another record:"
+                                  : "Search transaction record to pair with:"}
                               </Label>
                               <Popover
                                 open={popoverOpen}
@@ -603,9 +646,17 @@ export function ConfirmPaymentSheet({
                                       return (
                                         <div className="flex w-full items-center justify-between pr-1 text-xs">
                                           <div className="flex min-w-0 items-center gap-2">
-                                            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500" />
+                                            <span
+                                              className={cn(
+                                                "h-1.5 w-1.5 shrink-0 rounded-full",
+                                                matched.type === "EXPENSE"
+                                                  ? "bg-rose-500"
+                                                  : "bg-emerald-500"
+                                              )}
+                                            />
                                             <span className="max-w-[190px] truncate font-semibold text-foreground">
-                                              {matched.description || "Outflow"}
+                                              {matched.description ||
+                                                "Transaction"}
                                             </span>
                                             <span className="shrink-0 text-[10px] text-muted-foreground">
                                               ({dateStr})
@@ -619,7 +670,7 @@ export function ConfirmPaymentSheet({
                                     })()
                                   ) : (
                                     <span className="text-xs text-muted-foreground">
-                                      Search by vendor, amount, budget, or
+                                      Search by description, amount, or
                                       account...
                                     </span>
                                   )}
@@ -633,7 +684,7 @@ export function ConfirmPaymentSheet({
                                   <div className="relative">
                                     <Search className="absolute top-2.5 left-2.5 h-3.5 w-3.5 text-muted-foreground" />
                                     <Input
-                                      placeholder="Type to search (vendor, amount, budget...)"
+                                      placeholder="Type to search (description, amount...)"
                                       className="h-9 rounded-xl border-border/50 bg-background/50 pl-8 text-xs focus-visible:ring-ring"
                                       value={txSearch}
                                       onChange={(e) =>
@@ -700,9 +751,17 @@ export function ConfirmPaymentSheet({
                                             >
                                               <div className="flex min-w-0 flex-col gap-0.5 pr-2">
                                                 <div className="flex items-center gap-1.5">
-                                                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500" />
+                                                  <span
+                                                    className={cn(
+                                                      "h-1.5 w-1.5 shrink-0 rounded-full",
+                                                      t.type === "EXPENSE"
+                                                        ? "bg-rose-500"
+                                                        : "bg-emerald-500"
+                                                    )}
+                                                  />
                                                   <span className="truncate font-bold text-foreground">
-                                                    {t.description || "Outflow"}
+                                                    {t.description ||
+                                                      "Transaction"}
                                                   </span>
                                                 </div>
                                                 <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
@@ -713,14 +772,15 @@ export function ConfirmPaymentSheet({
                                                       <span>{accountName}</span>
                                                     </>
                                                   )}
-                                                  {budgetName && (
-                                                    <>
-                                                      <span>•</span>
-                                                      <span className="font-medium text-foreground/80">
-                                                        {budgetName}
-                                                      </span>
-                                                    </>
-                                                  )}
+                                                  {t.type === "EXPENSE" &&
+                                                    budgetName && (
+                                                      <>
+                                                        <span>•</span>
+                                                        <span className="font-medium text-foreground/80">
+                                                          {budgetName}
+                                                        </span>
+                                                      </>
+                                                    )}
                                                 </div>
                                               </div>
 
@@ -747,7 +807,7 @@ export function ConfirmPaymentSheet({
                               htmlFor="actualAmount"
                               className="text-xs font-bold tracking-wider text-muted-foreground uppercase"
                             >
-                              Amount Paid
+                              Amount Cleared
                             </Label>
                             <div className="flex h-12 items-center overflow-hidden rounded-xl border border-border/60 bg-background/50 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20">
                               <input
@@ -763,7 +823,7 @@ export function ConfirmPaymentSheet({
                               <div className="h-6 w-px shrink-0 bg-border/40" />
 
                               <div className="px-4 text-xs font-bold text-muted-foreground select-none">
-                                {payment.currency}
+                                {transaction.currency}
                               </div>
                             </div>
                             {errors.amount && (
@@ -775,38 +835,40 @@ export function ConfirmPaymentSheet({
 
                           <CurrencyConversionPreview
                             conversion={conversion}
-                            fromCurrency={payment.currency}
+                            fromCurrency={transaction.currency}
                           />
 
                           <div className="space-y-2">
                             <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                              Financial Account (Paid From)
+                              Financial Account
                             </Label>
                             <AccountSelect
                               control={control}
                               name="accountId"
                               accounts={accounts}
                               allowNone
-                              placeholder="Select account used for payment..."
+                              placeholder="Select account used for settlement..."
                             />
                           </div>
 
-                          <div className="space-y-2">
-                            <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                              Budget Category
-                            </Label>
-                            <BudgetSelect
-                              control={control}
-                              name="budgetId"
-                              budgets={budgets}
-                              placeholder="Select budget category..."
-                            />
-                            {errors.budgetId && (
-                              <p className="text-[11px] font-semibold text-destructive">
-                                {errors.budgetId.message}
-                              </p>
-                            )}
-                          </div>
+                          {typeValue === "EXPENSE" && (
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
+                                Budget Category
+                              </Label>
+                              <BudgetSelect
+                                control={control}
+                                name="budgetId"
+                                budgets={budgets}
+                                placeholder="Select budget category..."
+                              />
+                              {errors.budgetId && (
+                                <p className="text-[11px] font-semibold text-destructive">
+                                  {errors.budgetId.message}
+                                </p>
+                              )}
+                            </div>
+                          )}
 
                           <div className="space-y-2">
                             <Label
@@ -890,7 +952,7 @@ export function ConfirmPaymentSheet({
               </Button>
               <Button
                 type="submit"
-                form="confirm-payment-form"
+                form="confirm-transaction-form"
                 className="h-12 flex-1 cursor-pointer rounded-xl bg-gradient-to-r from-primary to-accent text-xs font-bold text-white shadow-lg shadow-primary/15 transition-all hover:scale-[1.01] hover:opacity-95"
                 disabled={
                   isPending || matchMutation.isPending || skipMutation.isPending
@@ -902,7 +964,9 @@ export function ConfirmPaymentSheet({
                     {selectedTxnId ? "Linking..." : "Clearing..."}
                   </>
                 ) : selectedTxnId ? (
-                  "Link & Clear Payment"
+                  "Link & Clear"
+                ) : transaction?.type === "INCOME" ? (
+                  "Clear Income Inflow"
                 ) : (
                   "Clear Payment"
                 )}
@@ -917,10 +981,15 @@ export function ConfirmPaymentSheet({
         onOpenChange={setSkipDialogOpen}
         onConfirm={handleConfirmSkip}
         isPending={skipMutation.isPending}
-        amountFormatted={
-          payment ? formatCents(payment.amount).toFixed(2) : undefined
+        paymentName={
+          transaction
+            ? transaction.recurringTransaction?.name || "Scheduled Transaction"
+            : ""
         }
-        currency={payment?.currency}
+        amountFormatted={
+          transaction ? formatCents(transaction.amount).toFixed(2) : undefined
+        }
+        currency={transaction?.currency}
       />
     </Sheet>
   )

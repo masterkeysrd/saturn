@@ -7,23 +7,24 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/id"
 )
 
-func TestScheduledPayment_StateTransitions(t *testing.T) {
-	spID, _ := NewScheduledPaymentID()
+func TestScheduledTransaction_StateTransitions(t *testing.T) {
+	spID, _ := NewScheduledTransactionID()
 	rawSpace, _ := id.Generate("spc_")
 	spaceID := SpaceID(rawSpace)
 	rawBudget, _ := id.Generate("bgt_")
 	budgetID := BudgetID(rawBudget)
 
-	sp := &ScheduledPayment{
+	sp := &ScheduledTransaction{
 		ID:         spID,
 		SpaceID:    spaceID,
-		BudgetID:   budgetID,
-		SourceType: "recurrent_expense",
+		BudgetID:   &budgetID,
+		SourceType: "recurrent_transaction",
 		SourceID:   "rec_123",
 		Amount:     5000,
 		Currency:   "USD",
 		DueDate:    time.Now().UTC(),
-		Status:     ScheduledPaymentPending,
+		Status:     ScheduledTransactionPending,
+		Type:       TransactionTypeExpense,
 	}
 
 	t.Run("MarkSkipped updates status", func(t *testing.T) {
@@ -31,8 +32,8 @@ func TestScheduledPayment_StateTransitions(t *testing.T) {
 		if err := spCopy.MarkSkipped(); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if spCopy.Status != ScheduledPaymentSkipped {
-			t.Errorf("status = %s, want %s", spCopy.Status, ScheduledPaymentSkipped)
+		if spCopy.Status != ScheduledTransactionSkipped {
+			t.Errorf("status = %s, want %s", spCopy.Status, ScheduledTransactionSkipped)
 		}
 	})
 
@@ -41,8 +42,8 @@ func TestScheduledPayment_StateTransitions(t *testing.T) {
 		if err := spCopy.MarkPaid(); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if spCopy.Status != ScheduledPaymentPaid {
-			t.Errorf("status = %s, want %s", spCopy.Status, ScheduledPaymentPaid)
+		if spCopy.Status != ScheduledTransactionPaid {
+			t.Errorf("status = %s, want %s", spCopy.Status, ScheduledTransactionPaid)
 		}
 
 		if err := spCopy.MarkPaid(); err == nil {
@@ -51,8 +52,8 @@ func TestScheduledPayment_StateTransitions(t *testing.T) {
 	})
 }
 
-func TestScheduledPayment_NewConfirmationTransaction(t *testing.T) {
-	spID, _ := NewScheduledPaymentID()
+func TestScheduledTransaction_NewConfirmationTransaction(t *testing.T) {
+	spID, _ := NewScheduledTransactionID()
 	rawSpace, _ := id.Generate("spc_")
 	spaceID := SpaceID(rawSpace)
 	rawBudget, _ := id.Generate("bgt_")
@@ -60,16 +61,17 @@ func TestScheduledPayment_NewConfirmationTransaction(t *testing.T) {
 	accID, _ := NewAccountID()
 	now := time.Now().UTC()
 
-	sp := &ScheduledPayment{
+	sp := &ScheduledTransaction{
 		ID:         spID,
 		SpaceID:    spaceID,
-		BudgetID:   budgetID,
-		SourceType: "recurrent_expense",
+		BudgetID:   &budgetID,
+		SourceType: "recurrent_transaction",
 		SourceID:   "rec_123",
 		Amount:     7500,
 		Currency:   "USD",
 		DueDate:    now,
-		Status:     ScheduledPaymentPending,
+		Status:     ScheduledTransactionPending,
+		Type:       TransactionTypeExpense,
 	}
 
 	txn, err := sp.NewConfirmationTransaction(ConfirmOpts{
@@ -88,7 +90,7 @@ func TestScheduledPayment_NewConfirmationTransaction(t *testing.T) {
 	if *txn.BudgetID != budgetID {
 		t.Errorf("budgetID = %s, want %s", *txn.BudgetID, budgetID)
 	}
-	if *txn.Metadata.ScheduledPaymentID != spID {
+	if string(*txn.Metadata.ScheduledPaymentID) != string(spID) {
 		t.Errorf("ScheduledPaymentID = %s, want %s", *txn.Metadata.ScheduledPaymentID, spID)
 	}
 }

@@ -140,15 +140,15 @@ func (i *InboxItem) NewTransactionLinkedEvent(txnID TransactionID, overwrite boo
 	}
 }
 
-// NewScheduledPaymentFromInvoice constructs and initializes a ScheduledPayment from an invoice inbox item.
-func (i *InboxItem) NewScheduledPaymentFromInvoice(spaceID SpaceID) (*ScheduledPayment, error) {
-	var bID BudgetID
+// NewScheduledTransactionFromInvoice constructs and initializes a ScheduledTransaction from an invoice inbox item.
+func (i *InboxItem) NewScheduledTransactionFromInvoice(spaceID SpaceID) (*ScheduledTransaction, error) {
+	var bID *BudgetID
 	if i.BudgetID != nil && *i.BudgetID != "" {
-		var err error
-		bID, err = ParseBudgetID(*i.BudgetID)
+		parsed, err := ParseBudgetID(*i.BudgetID)
 		if err != nil {
 			return nil, fmt.Errorf("parse budget ID: %w", err)
 		}
+		bID = &parsed
 	}
 
 	dueDate := i.TransactionDate
@@ -156,7 +156,7 @@ func (i *InboxItem) NewScheduledPaymentFromInvoice(spaceID SpaceID) (*ScheduledP
 		dueDate = time.Now().UTC()
 	}
 
-	payment := &ScheduledPayment{
+	payment := &ScheduledTransaction{
 		SpaceID:    spaceID,
 		BudgetID:   bID,
 		SourceType: "invoice",
@@ -164,19 +164,20 @@ func (i *InboxItem) NewScheduledPaymentFromInvoice(spaceID SpaceID) (*ScheduledP
 		Amount:     i.Amount,
 		Currency:   Currency(i.Currency),
 		DueDate:    dueDate,
-		Metadata: ScheduledPaymentMetadata{
+		Metadata: ScheduledTransactionMetadata{
 			VendorName:  i.VendorName,
 			DueDate:     dueDate.Format("2006-01-02"),
 			Description: i.VendorName,
 			InvoiceID:   i.ID,
 		},
+		Type: TransactionTypeExpense,
 	}
 
 	if err := payment.Init(); err != nil {
-		return nil, fmt.Errorf("init scheduled payment: %w", err)
+		return nil, fmt.Errorf("init scheduled transaction: %w", err)
 	}
 	if err := payment.Validate(); err != nil {
-		return nil, fmt.Errorf("validate new scheduled payment: %w", err)
+		return nil, fmt.Errorf("validate new scheduled transaction: %w", err)
 	}
 	return payment, nil
 }
