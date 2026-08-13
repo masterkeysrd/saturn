@@ -15,6 +15,7 @@ interface BaseAmountInputProps extends Omit<
   currency?: string
   className?: string
   showError?: boolean
+  allowNegative?: boolean
 }
 
 export type AmountInputProps<TFieldValues extends FieldValues = FieldValues> =
@@ -33,33 +34,43 @@ export type AmountInputProps<TFieldValues extends FieldValues = FieldValues> =
       onChange?: undefined
     })
 
-function formatAmountString(val: string): string {
+function formatAmountString(val: string, allowNegative?: boolean): string {
   if (!val) return ""
-  const parts = val.split(".")
+  const isNegative = allowNegative && val.startsWith("-")
+  const cleanVal = val.replace(/^-/, "")
+  if (!cleanVal) return isNegative ? "-" : ""
+
+  const parts = cleanVal.split(".")
   const rawInt = parts[0].replace(/\D/g, "")
-  if (!rawInt && parts.length === 1) return ""
+  if (!rawInt && parts.length === 1) return isNegative ? "-" : ""
 
   const formattedInt = rawInt
     ? parseInt(rawInt, 10).toLocaleString("en-US")
     : "0"
 
+  let res = formattedInt
   if (parts.length > 1) {
     const rawDec = parts[1].replace(/\D/g, "").slice(0, 2)
-    return `${formattedInt}.${rawDec}`
+    res = `${formattedInt}.${rawDec}`
   }
 
-  return formattedInt
+  return isNegative ? `-${res}` : res
 }
 
-function parseAmountString(formattedVal: string): string {
+function parseAmountString(formattedVal: string, allowNegative?: boolean): string {
   if (!formattedVal) return ""
-  const parts = formattedVal.split(".")
+  const isNegative = allowNegative && formattedVal.startsWith("-")
+  const cleanVal = formattedVal.replace(/^-/, "")
+  if (!cleanVal) return isNegative ? "-" : ""
+
+  const parts = cleanVal.split(".")
   const rawInt = parts[0].replace(/\D/g, "")
+  let res = rawInt
   if (parts.length > 1) {
     const rawDec = parts[1].replace(/\D/g, "").slice(0, 2)
-    return `${rawInt || "0"}.${rawDec}`
+    res = `${rawInt || "0"}.${rawDec}`
   }
-  return rawInt
+  return isNegative ? `-${res}` : res
 }
 
 const AmountInputInner = React.forwardRef<
@@ -79,6 +90,7 @@ const AmountInputInner = React.forwardRef<
       className,
       placeholder = "0.00",
       disabled,
+      allowNegative,
       ...props
     },
     forwardedRef
@@ -89,8 +101,8 @@ const AmountInputInner = React.forwardRef<
 
     const displayValue = React.useMemo(() => {
       const strVal = typeof value === "number" ? value.toString() : value || ""
-      return formatAmountString(strVal)
-    }, [value])
+      return formatAmountString(strVal, allowNegative)
+    }, [value, allowNegative])
 
     const cursorRef = React.useRef<number | null>(null)
 
@@ -99,12 +111,13 @@ const AmountInputInner = React.forwardRef<
       const newVal = inputEl.value
       const selectionStart = inputEl.selectionStart ?? newVal.length
 
+      const regex = allowNegative ? /[^0-9.-]/g : /[^0-9.]/g
       const digitsBeforeCursor = newVal
         .slice(0, selectionStart)
-        .replace(/[^0-9.]/g, "").length
+        .replace(regex, "").length
 
-      const rawVal = newVal ? parseAmountString(newVal) : ""
-      const formattedNew = formatAmountString(rawVal)
+      const rawVal = newVal ? parseAmountString(newVal, allowNegative) : ""
+      const formattedNew = formatAmountString(rawVal, allowNegative)
 
       let newCursorPos = 0
       let digitCount = 0

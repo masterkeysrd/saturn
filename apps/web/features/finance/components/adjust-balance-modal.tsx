@@ -192,6 +192,7 @@ export function AdjustBalanceModal({
               name="targetBalance"
               currency={account.currency}
               placeholder="0.00"
+              allowNegative
               autoFocus
             />
           </div>
