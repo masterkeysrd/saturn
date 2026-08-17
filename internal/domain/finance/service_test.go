@@ -11,6 +11,7 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/platform/id"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
+	"github.com/segmentio/ksuid"
 )
 
 // --- In-Memory Mocks for Stores ---
@@ -305,8 +306,17 @@ func (m *mockTransactionStore) ListBySpace(ctx context.Context, spaceID SpaceID,
 			if filter.BudgetID != nil && (t.BudgetID == nil || *t.BudgetID != *filter.BudgetID) {
 				continue
 			}
-			if filter.Type != nil && t.Type != *filter.Type {
-				continue
+			if len(filter.Types) > 0 {
+				match := false
+				for _, ft := range filter.Types {
+					if t.Type == ft {
+						match = true
+						break
+					}
+				}
+				if !match {
+					continue
+				}
 			}
 			if filter.BorrowingID != nil && (t.Metadata.BorrowingID == nil || *t.Metadata.BorrowingID != *filter.BorrowingID) {
 				continue
@@ -756,6 +766,127 @@ func (m *mockScheduledTransactionStore) HasScheduledTransactions(ctx context.Con
 		}
 	}
 	return false, nil
+}
+
+type mockStatementStore struct {
+	statements map[StatementID]*Statement
+	lines      map[StatementID][]*StatementLine
+}
+
+func newMockStatementStore() *mockStatementStore {
+	return &mockStatementStore{
+		statements: make(map[StatementID]*Statement),
+		lines:      make(map[StatementID][]*StatementLine),
+	}
+}
+
+func (m *mockStatementStore) Create(ctx context.Context, statement *Statement, lines []*StatementLine) error {
+	if statement.Version == 0 {
+		statement.Version = 1
+	}
+	for _, l := range lines {
+		if l.Version == 0 {
+			l.Version = 1
+		}
+	}
+	m.statements[statement.ID] = statement
+	m.lines[statement.ID] = lines
+	return nil
+}
+
+func (m *mockStatementStore) GetByID(ctx context.Context, spaceID SpaceID, id StatementID) (*Statement, error) {
+	stmt, ok := m.statements[id]
+	if !ok || stmt.SpaceID != spaceID {
+		return nil, ErrStatementNotFound
+	}
+	cp := *stmt
+	return &cp, nil
+}
+
+func (m *mockStatementStore) List(ctx context.Context, spaceID SpaceID, filter *ListStatementsFilter) (*paging.Page[*Statement], error) {
+	var matched []*Statement
+	for _, stmt := range m.statements {
+		if stmt.SpaceID != spaceID {
+			continue
+		}
+		if filter.AccountID != nil && stmt.AccountID != *filter.AccountID {
+			continue
+		}
+		if filter.Status != nil && stmt.Status != *filter.Status {
+			continue
+		}
+		matched = append(matched, stmt)
+	}
+	return &paging.Page[*Statement]{
+		Items: matched,
+	}, nil
+}
+
+func (m *mockStatementStore) Delete(ctx context.Context, spaceID SpaceID, id StatementID, opts DeleteOptions) error {
+	stmt, ok := m.statements[id]
+	if !ok || stmt.SpaceID != spaceID {
+		return ErrStatementNotFound
+	}
+	if opts.Version > 0 && stmt.Version != opts.Version {
+		return ErrStatementVersionMismatch
+	}
+	delete(m.statements, id)
+	delete(m.lines, id)
+	return nil
+}
+
+func (m *mockStatementStore) Update(ctx context.Context, statement *Statement) error {
+	existing, ok := m.statements[statement.ID]
+	if !ok {
+		return ErrStatementNotFound
+	}
+	if statement.Version > 0 && existing.Version != statement.Version {
+		return ErrStatementVersionMismatch
+	}
+	existing.StatementStartingBalance = statement.StatementStartingBalance
+	existing.StatementEndingBalance = statement.StatementEndingBalance
+	existing.StatementDate = statement.StatementDate
+	existing.Status = statement.Status
+	existing.UpdateTime = statement.UpdateTime
+	existing.Version++
+	statement.Version = existing.Version
+	return nil
+}
+
+func (m *mockStatementStore) ListLines(ctx context.Context, statementID StatementID) ([]*StatementLine, error) {
+	lines, ok := m.lines[statementID]
+	if !ok {
+		return nil, ErrStatementLineNotFound
+	}
+	return lines, nil
+}
+
+func (m *mockStatementStore) GetLineByID(ctx context.Context, id StatementLineID) (*StatementLine, error) {
+	for _, lines := range m.lines {
+		for _, l := range lines {
+			if l.ID == id {
+				cp := *l
+				return &cp, nil
+			}
+		}
+	}
+	return nil, ErrStatementLineNotFound
+}
+
+func (m *mockStatementStore) UpdateLineDraft(ctx context.Context, line *StatementLine) error {
+	existing, err := m.GetLineByID(ctx, line.ID)
+	if err != nil {
+		return err
+	}
+	if line.Version > 0 && existing.Version != line.Version {
+		return ErrStatementLineVersionMismatch
+	}
+	existing.Status = line.Status
+	existing.Action = line.Action
+	existing.MatchedTransactionID = line.MatchedTransactionID
+	existing.Version++
+	line.Version = existing.Version
+	return nil
 }
 
 // --- Test Cases ---
@@ -3524,6 +3655,1040 @@ func TestDeleteAccount(t *testing.T) {
 				if err != nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
+			}
+		})
+	}
+}
+
+func TestService_ImportStatement(t *testing.T) {
+	type testFixture struct {
+		name        string
+		csvMapping  *CSVMapping
+		rawCSV      string
+		wantErr     bool
+		verifyLines func(t *testing.T, lines []*StatementLine)
+	}
+
+	tests := []testFixture{
+		{
+			name: "SingleAmountColumn_DebitAndCredit",
+			csvMapping: &CSVMapping{
+				DateColumnIndex:        0,
+				DescriptionColumnIndex: 1,
+				AmountColumnIndex:      2,
+				DebitColumnIndex:       -1,
+				CreditColumnIndex:      -1,
+				HasHeader:              true,
+				Delimiter:              ",",
+				DateFormat:             "2006-01-02",
+			},
+			rawCSV: "date,description,amount\n2026-08-12,Salary Direct Deposit,200.00\n2026-08-13,Coffee Shop,-4.50\n",
+			verifyLines: func(t *testing.T, lines []*StatementLine) {
+				if len(lines) != 2 {
+					t.Fatalf("expected 2 parsed lines, got %d", len(lines))
+				}
+				if lines[0].Amount != 20000 || lines[0].Description != "Salary Direct Deposit" {
+					t.Errorf("unexpected line 0: %+v", lines[0])
+				}
+				if lines[1].Amount != -450 || lines[1].Description != "Coffee Shop" {
+					t.Errorf("unexpected line 1: %+v", lines[1])
+				}
+			},
+		},
+		{
+			name: "DualColumn_DebitAndCredit",
+			csvMapping: &CSVMapping{
+				DateColumnIndex:        0,
+				DescriptionColumnIndex: 1,
+				AmountColumnIndex:      -1,
+				DebitColumnIndex:       2,
+				CreditColumnIndex:      3,
+				HasHeader:              true,
+				Delimiter:              ",",
+				DateFormat:             "2006-01-02",
+			},
+			rawCSV: "date,description,debit,credit\n2026-08-12,Salary Deposit,,200.00\n2026-08-13,Gas Purchase,50.00,\n",
+			verifyLines: func(t *testing.T, lines []*StatementLine) {
+				if len(lines) != 2 {
+					t.Fatalf("expected 2 parsed lines, got %d", len(lines))
+				}
+				if lines[0].Amount != 20000 || lines[0].Description != "Salary Deposit" {
+					t.Errorf("unexpected credit line: %+v", lines[0])
+				}
+				if lines[1].Amount != -5000 || lines[1].Description != "Gas Purchase" {
+					t.Errorf("unexpected debit line: %+v", lines[1])
+				}
+			},
+		},
+		{
+			name: "SemicolonDelimiter_CustomDateFormat",
+			csvMapping: &CSVMapping{
+				DateColumnIndex:        0,
+				DescriptionColumnIndex: 1,
+				AmountColumnIndex:      2,
+				DebitColumnIndex:       -1,
+				CreditColumnIndex:      -1,
+				HasHeader:              false,
+				Delimiter:              ";",
+				DateFormat:             "02/01/2006",
+			},
+			rawCSV: "12/08/2026;Vendor Payment;-75.25\n",
+			verifyLines: func(t *testing.T, lines []*StatementLine) {
+				if len(lines) != 1 {
+					t.Fatalf("expected 1 parsed line, got %d", len(lines))
+				}
+				if lines[0].DateStr != "2026-08-12" || lines[0].Amount != -7525 {
+					t.Errorf("unexpected line: %+v", lines[0])
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spaceID := SpaceID("spc_" + ksuid.New().String())
+			accountID := AccountID("acc_" + ksuid.New().String())
+			statementStore := newMockStatementStore()
+
+			deps := Dependencies{
+				SettingsStore: &mockSettingsStore{
+					data: map[SpaceID]*FinanceSettings{
+						spaceID: {SpaceID: spaceID, BaseCurrency: Currency("USD")},
+					},
+				},
+				AccountStore: &mockAccountStore{
+					data: map[AccountID]*Account{
+						accountID: {
+							ID:             accountID,
+							SpaceID:        spaceID,
+							Name:           "Main Checking",
+							Type:           AccountTypeBank,
+							Currency:       Currency("USD"),
+							CurrentBalance: 100000,
+							IsActive:       true,
+						},
+					},
+				},
+				StatementStore:   statementStore,
+				TransactionStore: &mockTransactionStore{txns: make(map[TransactionID]*Transaction)},
+			}
+
+			svc := NewService(deps)
+			stmt := &Statement{
+				SpaceID:                  spaceID,
+				StatementDate:            time.Date(2026, 8, 12, 0, 0, 0, 0, time.UTC),
+				StatementStartingBalance: 100000,
+				StatementEndingBalance:   120000,
+				Filename:                 "statement.csv",
+				Config: StatementConfig{
+					Format: "CSV",
+					CSV:    tt.csvMapping,
+				},
+				RawContent: tt.rawCSV,
+			}
+
+			imported, err := svc.ImportStatement(context.Background(), accountID, stmt)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			lines := statementStore.lines[imported.ID]
+			if tt.verifyLines != nil {
+				tt.verifyLines(t, lines)
+			}
+		})
+	}
+}
+
+func TestService_CompleteStatement(t *testing.T) {
+	type testFixture struct {
+		name            string
+		startingBalance int64
+		endingBalance   int64
+		setupStores     func(spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies)
+		setupLines      func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine
+		wantErr         bool
+		errContains     string
+		verifyResults   func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies)
+	}
+
+	tests := []testFixture{
+		{
+			name:            "Match_ExistingTransaction_Outflow",
+			startingBalance: 100000,
+			endingBalance:   95000,
+			setupStores: func(spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies) {
+				txID := TransactionID("txn_" + ksuid.New().String())
+				txn := &Transaction{
+					ID:              txID,
+					SpaceID:         spaceID,
+					Type:            TransactionTypeExpense,
+					AccountID:       &accountID,
+					Amount:          5000,
+					Currency:        Currency("USD"),
+					Description:     "Grocery Store",
+					TransactionDate: time.Date(2026, 8, 14, 0, 0, 0, 0, time.UTC),
+				}
+				_ = deps.TransactionStore.Create(context.Background(), txn)
+			},
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine {
+				var txID TransactionID
+				for id := range deps.TransactionStore.(*mockTransactionStore).txns {
+					txID = id
+				}
+				return []*StatementLine{
+					{
+						ID:          StatementLineID("stln_" + ksuid.New().String()),
+						StatementID: stmtID,
+						RowIndex:    1,
+						DateStr:     "2026-08-14",
+						Description: "Grocery Store",
+						Amount:      -5000,
+						Status:      StatementLineStatusImported,
+						Action: StatementLineAction{
+							Type:          StatementLineActionTypeMatch,
+							TransactionID: &txID,
+						},
+					},
+				}
+			},
+			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies) {
+				if stmt.Status != StatementStatusCompleted {
+					t.Errorf("expected statement completed, got %s", stmt.Status)
+				}
+				line := lines[0]
+				if line.Status != StatementLineStatusMatched {
+					t.Errorf("expected line matched, got %s", line.Status)
+				}
+				if line.MatchedTransactionID == nil {
+					t.Fatal("expected matched transaction ID to be set")
+				}
+				txn, err := deps.TransactionStore.GetByID(context.Background(), spaceID, *line.MatchedTransactionID)
+				if err != nil {
+					t.Fatalf("get matched transaction: %v", err)
+				}
+				if !txn.Metadata.Reconciled {
+					t.Error("expected transaction metadata reconciled to be true")
+				}
+				if txn.Metadata.ReconciliationStatementID != string(stmt.ID) {
+					t.Errorf("expected reconciliation statement ID %s, got %s", stmt.ID, txn.Metadata.ReconciliationStatementID)
+				}
+			},
+		},
+		{
+			name:            "Match_ExistingTransaction_WithOverwrite_IncreaseExpense",
+			startingBalance: 100000,
+			endingBalance:   85000,
+			setupStores: func(spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies) {
+				txID := TransactionID("txn_" + ksuid.New().String())
+				txn := &Transaction{
+					ID:              txID,
+					SpaceID:         spaceID,
+					Type:            TransactionTypeExpense,
+					AccountID:       &accountID,
+					Amount:          10000, // initially 100.00
+					Currency:        Currency("USD"),
+					Description:     "Initial Grocery",
+					TransactionDate: time.Date(2026, 8, 14, 0, 0, 0, 0, time.UTC),
+				}
+				_ = deps.TransactionStore.Create(context.Background(), txn)
+			},
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine {
+				var txID TransactionID
+				for id := range deps.TransactionStore.(*mockTransactionStore).txns {
+					txID = id
+				}
+				overwrite := true
+				return []*StatementLine{
+					{
+						ID:          StatementLineID("stln_" + ksuid.New().String()),
+						StatementID: stmtID,
+						RowIndex:    1,
+						DateStr:     "2026-08-14",
+						Description: "Updated Grocery From Bank",
+						Amount:      -15000, // statement shows 150.00
+						Status:      StatementLineStatusImported,
+						Action: StatementLineAction{
+							Type:                 StatementLineActionTypeMatch,
+							TransactionID:        &txID,
+							OverwriteTransaction: &overwrite,
+						},
+					},
+				}
+			},
+			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies) {
+				if stmt.Status != StatementStatusCompleted {
+					t.Errorf("expected statement completed, got %s", stmt.Status)
+				}
+				line := lines[0]
+				if line.Status != StatementLineStatusMatched {
+					t.Errorf("expected line matched, got %s", line.Status)
+				}
+				txn, err := deps.TransactionStore.GetByID(context.Background(), spaceID, *line.MatchedTransactionID)
+				if err != nil {
+					t.Fatalf("expected matched transaction: %v", err)
+				}
+				if txn.Amount != 15000 {
+					t.Errorf("expected transaction amount overwritten to 15000, got %d", txn.Amount)
+				}
+				if txn.Description != "Updated Grocery From Bank" {
+					t.Errorf("expected description updated, got %s", txn.Description)
+				}
+				if !txn.Metadata.Reconciled {
+					t.Errorf("expected transaction marked reconciled")
+				}
+				// Verify account balance was adjusted by delta (10000 -> 15000 means -5000 more deducted from 100000 initial balance)
+				acc, err := deps.AccountStore.GetByID(context.Background(), spaceID, stmt.AccountID)
+				if err != nil {
+					t.Fatalf("expected account: %v", err)
+				}
+				// Initial mock account balance was 100000, after -5000 delta adjustment it should be 95000
+				if acc.CurrentBalance != 95000 {
+					t.Errorf("expected account balance 95000, got %d", acc.CurrentBalance)
+				}
+			},
+		},
+		{
+			name:            "CreateExpense_Standalone",
+			startingBalance: 100000,
+			endingBalance:   92500,
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine {
+				return []*StatementLine{
+					{
+						ID:          StatementLineID("stln_" + ksuid.New().String()),
+						StatementID: stmtID,
+						RowIndex:    1,
+						DateStr:     "2026-08-14",
+						Description: "Office Supplies",
+						Amount:      -7500,
+						Status:      StatementLineStatusImported,
+						Action: StatementLineAction{
+							Type: StatementLineActionTypeCreateExpense,
+						},
+					},
+				}
+			},
+			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies) {
+				line := lines[0]
+				if line.MatchedTransactionID == nil {
+					t.Fatal("expected matched transaction ID to be populated")
+				}
+				txn, err := deps.TransactionStore.GetByID(context.Background(), spaceID, *line.MatchedTransactionID)
+				if err != nil {
+					t.Fatalf("expected created transaction in store: %v", err)
+				}
+				if txn.Type != TransactionTypeExpense || txn.Amount != 7500 {
+					t.Errorf("expected expense 7500 cents, got %s %d", txn.Type, txn.Amount)
+				}
+				if !txn.Metadata.Reconciled || txn.Metadata.ReconciliationStatementID != string(stmt.ID) {
+					t.Errorf("expected reconciliation metadata attached, got %+v", txn.Metadata)
+				}
+			},
+		},
+		{
+			name:            "CreateIncome_Standalone",
+			startingBalance: 100000,
+			endingBalance:   220000,
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine {
+				return []*StatementLine{
+					{
+						ID:          StatementLineID("stln_" + ksuid.New().String()),
+						StatementID: stmtID,
+						RowIndex:    1,
+						DateStr:     "2026-08-14",
+						Description: "Client Retainer",
+						Amount:      120000,
+						Status:      StatementLineStatusImported,
+						Action: StatementLineAction{
+							Type: StatementLineActionTypeCreateIncome,
+						},
+					},
+				}
+			},
+			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies) {
+				line := lines[0]
+				if line.MatchedTransactionID == nil {
+					t.Fatal("expected matched transaction ID to be populated")
+				}
+				txn, err := deps.TransactionStore.GetByID(context.Background(), spaceID, *line.MatchedTransactionID)
+				if err != nil {
+					t.Fatalf("expected created transaction in store: %v", err)
+				}
+				if txn.Type != TransactionTypeIncome || txn.Amount != 120000 {
+					t.Errorf("expected income 120000 cents, got %s %d", txn.Type, txn.Amount)
+				}
+				if !txn.Metadata.Reconciled || txn.Metadata.ReconciliationStatementID != string(stmt.ID) {
+					t.Errorf("expected reconciliation metadata attached, got %+v", txn.Metadata)
+				}
+			},
+		},
+		{
+			name:            "CreateTransfer_Outflow_StampsOutflowLegOnly",
+			startingBalance: 100000,
+			endingBalance:   70000,
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine {
+				return []*StatementLine{
+					{
+						ID:          StatementLineID("stln_" + ksuid.New().String()),
+						StatementID: stmtID,
+						RowIndex:    1,
+						DateStr:     "2026-08-14",
+						Description: "Transfer to Savings",
+						Amount:      -30000,
+						Status:      StatementLineStatusImported,
+						Action: StatementLineAction{
+							Type:                 StatementLineActionTypeCreateTransfer,
+							CounterpartAccountID: &counterpartID,
+						},
+					},
+				}
+			},
+			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies) {
+				line := lines[0]
+				if line.MatchedTransactionID == nil {
+					t.Fatal("expected matched transaction ID to be populated")
+				}
+				outflowTxn, err := deps.TransactionStore.GetByID(context.Background(), spaceID, *line.MatchedTransactionID)
+				if err != nil {
+					t.Fatalf("expected outflow transaction: %v", err)
+				}
+				if outflowTxn.Type != TransactionTypeTransferOut {
+					t.Errorf("expected outflow leg, got %s", outflowTxn.Type)
+				}
+				if !outflowTxn.Metadata.Reconciled || outflowTxn.Metadata.ReconciliationStatementID != string(stmt.ID) {
+					t.Errorf("expected outflow leg reconciled, got %+v", outflowTxn.Metadata)
+				}
+
+				// Verify inflow leg is NOT marked reconciled
+				for _, tx := range deps.TransactionStore.(*mockTransactionStore).txns {
+					if tx.Type == TransactionTypeTransferIn {
+						if tx.Metadata.Reconciled {
+							t.Error("expected destination inflow leg not to be reconciled")
+						}
+					}
+				}
+			},
+		},
+		{
+			name:            "CreateTransfer_Inflow_StampsInflowLegOnly",
+			startingBalance: 100000,
+			endingBalance:   145000,
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine {
+				return []*StatementLine{
+					{
+						ID:          StatementLineID("stln_" + ksuid.New().String()),
+						StatementID: stmtID,
+						RowIndex:    1,
+						DateStr:     "2026-08-14",
+						Description: "Transfer from Savings",
+						Amount:      45000,
+						Status:      StatementLineStatusImported,
+						Action: StatementLineAction{
+							Type:                 StatementLineActionTypeCreateTransfer,
+							CounterpartAccountID: &counterpartID,
+						},
+					},
+				}
+			},
+			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies) {
+				line := lines[0]
+				if line.MatchedTransactionID == nil {
+					t.Fatal("expected matched transaction ID to be populated")
+				}
+				inflowTxn, err := deps.TransactionStore.GetByID(context.Background(), spaceID, *line.MatchedTransactionID)
+				if err != nil {
+					t.Fatalf("expected inflow transaction: %v", err)
+				}
+				if inflowTxn.Type != TransactionTypeTransferIn {
+					t.Errorf("expected inflow leg, got %s", inflowTxn.Type)
+				}
+				if !inflowTxn.Metadata.Reconciled || inflowTxn.Metadata.ReconciliationStatementID != string(stmt.ID) {
+					t.Errorf("expected inflow leg reconciled, got %+v", inflowTxn.Metadata)
+				}
+
+				// Verify counterpart outflow leg is NOT marked reconciled
+				for _, tx := range deps.TransactionStore.(*mockTransactionStore).txns {
+					if tx.Type == TransactionTypeTransferOut {
+						if tx.Metadata.Reconciled {
+							t.Error("expected source counterpart outflow leg not to be reconciled")
+						}
+					}
+				}
+			},
+		},
+		{
+			name:            "ConfirmScheduled_Payment",
+			startingBalance: 100000,
+			endingBalance:   85000,
+			setupStores: func(spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies) {
+				schedID := ScheduledTransactionID("sch_" + ksuid.New().String())
+				payment := &ScheduledTransaction{
+					ID:         schedID,
+					SpaceID:    spaceID,
+					Amount:     15000,
+					Currency:   Currency("USD"),
+					Status:     ScheduledTransactionPending,
+					DueDate:    time.Date(2026, 8, 14, 0, 0, 0, 0, time.UTC),
+					Type:       TransactionTypeExpense,
+					SourceType: "Electric Company",
+				}
+				_ = deps.ScheduledTransactionStore.Create(context.Background(), payment)
+			},
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine {
+				var schedID ScheduledTransactionID
+				for id := range deps.ScheduledTransactionStore.(*mockScheduledTransactionStore).payments {
+					schedID = id
+				}
+				return []*StatementLine{
+					{
+						ID:          StatementLineID("stln_" + ksuid.New().String()),
+						StatementID: stmtID,
+						RowIndex:    1,
+						DateStr:     "2026-08-14",
+						Description: "Electric Company Autopay",
+						Amount:      -15000,
+						Status:      StatementLineStatusImported,
+						Action: StatementLineAction{
+							Type:                   StatementLineActionTypeConfirmScheduled,
+							ScheduledTransactionID: &schedID,
+						},
+					},
+				}
+			},
+			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies) {
+				line := lines[0]
+				if line.MatchedTransactionID == nil {
+					t.Fatal("expected matched transaction ID to be populated")
+				}
+				txn, err := deps.TransactionStore.GetByID(context.Background(), spaceID, *line.MatchedTransactionID)
+				if err != nil {
+					t.Fatalf("expected logged payment transaction: %v", err)
+				}
+				if !txn.Metadata.Reconciled {
+					t.Error("expected transaction reconciled")
+				}
+			},
+		},
+		{
+			name:            "CreateRepayment_Borrowing",
+			startingBalance: 100000,
+			endingBalance:   80000,
+			setupStores: func(spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies) {
+				bID := BorrowingID("bor_" + ksuid.New().String())
+				b := &Borrowing{
+					ID:              bID,
+					SpaceID:         spaceID,
+					Direction:       BorrowingDirectionBorrowed,
+					Counterparty:    "Bank of America",
+					TotalAmount:     100000,
+					RemainingAmount: 100000,
+					Currency:        Currency("USD"),
+					Status:          BorrowingStatusActive,
+				}
+				_ = deps.BorrowingStore.Create(context.Background(), b)
+			},
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine {
+				var bID BorrowingID
+				for id := range deps.BorrowingStore.(*mockBorrowingStore).data {
+					bID = id
+				}
+				return []*StatementLine{
+					{
+						ID:          StatementLineID("stln_" + ksuid.New().String()),
+						StatementID: stmtID,
+						RowIndex:    1,
+						DateStr:     "2026-08-14",
+						Description: "Loan Monthly Payment",
+						Amount:      -20000,
+						Status:      StatementLineStatusImported,
+						Action: StatementLineAction{
+							Type:        StatementLineActionTypeCreateRepayment,
+							BorrowingID: &bID,
+						},
+					},
+				}
+			},
+			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies) {
+				line := lines[0]
+				if line.MatchedTransactionID == nil {
+					t.Fatal("expected matched transaction ID to be populated")
+				}
+				txn, err := deps.TransactionStore.GetByID(context.Background(), spaceID, *line.MatchedTransactionID)
+				if err != nil {
+					t.Fatalf("expected repayment transaction: %v", err)
+				}
+				if txn.Metadata.BorrowingRole != "REPAYMENT" {
+					t.Errorf("expected borrowing role REPAYMENT, got %s", txn.Metadata.BorrowingRole)
+				}
+				if !txn.Metadata.Reconciled {
+					t.Error("expected repayment transaction reconciled")
+				}
+			},
+		},
+		{
+			name:            "Skip_Line",
+			startingBalance: 100000,
+			endingBalance:   99900,
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine {
+				return []*StatementLine{
+					{
+						ID:          StatementLineID("stln_" + ksuid.New().String()),
+						StatementID: stmtID,
+						RowIndex:    1,
+						DateStr:     "2026-08-14",
+						Description: "Ignored Bank Adjustment",
+						Amount:      -100,
+						Status:      StatementLineStatusImported,
+						Action: StatementLineAction{
+							Type: StatementLineActionTypeSkip,
+						},
+					},
+				}
+			},
+			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies) {
+				line := lines[0]
+				if line.MatchedTransactionID != nil {
+					t.Errorf("expected nil matched transaction ID for skipped line, got %v", line.MatchedTransactionID)
+				}
+				if line.Status != StatementLineStatusSkipped {
+					t.Errorf("expected line status skipped, got %s", line.Status)
+				}
+			},
+		},
+		{
+			name:            "Error_Transfer_MissingCounterpartAccount",
+			startingBalance: 100000,
+			endingBalance:   95000,
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine {
+				return []*StatementLine{
+					{
+						ID:          StatementLineID("stln_" + ksuid.New().String()),
+						StatementID: stmtID,
+						RowIndex:    1,
+						DateStr:     "2026-08-14",
+						Description: "Transfer with missing counterpart",
+						Amount:      -5000,
+						Status:      StatementLineStatusImported,
+						Action: StatementLineAction{
+							Type:                 StatementLineActionTypeCreateTransfer,
+							CounterpartAccountID: nil,
+						},
+					},
+				}
+			},
+			wantErr:     true,
+			errContains: "requires counterpart_account_id",
+		},
+		{
+			name:            "Error_StatementBalanceMismatch",
+			startingBalance: 100000,
+			endingBalance:   200000, // Expected 150000, reported 200000
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine {
+				return []*StatementLine{
+					{
+						ID:          StatementLineID("stln_" + ksuid.New().String()),
+						StatementID: stmtID,
+						RowIndex:    1,
+						DateStr:     "2026-08-14",
+						Description: "Partial Deposit",
+						Amount:      50000,
+						Status:      StatementLineStatusImported,
+						Action: StatementLineAction{
+							Type: StatementLineActionTypeCreateIncome,
+						},
+					},
+				}
+			},
+			wantErr:     true,
+			errContains: "cash flow sum of matches does not equal statement balance difference",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spaceID := SpaceID("spc_" + ksuid.New().String())
+			accountID := AccountID("acc_" + ksuid.New().String())
+			counterpartID := AccountID("acc_" + ksuid.New().String())
+			stmtID := StatementID("stmt_" + ksuid.New().String())
+			bgtID := BudgetID("bgt_" + ksuid.New().String())
+			periodID := PeriodID("bgp_" + ksuid.New().String())
+
+			deps := Dependencies{
+				SettingsStore: &mockSettingsStore{
+					data: map[SpaceID]*FinanceSettings{
+						spaceID: {
+							SpaceID:      spaceID,
+							BaseCurrency: Currency("USD"),
+						},
+					},
+				},
+				BudgetStore: &mockBudgetStore{
+					data: map[BudgetID]*Budget{
+						bgtID: {
+							ID:          bgtID,
+							SpaceID:     spaceID,
+							Name:        "Operations",
+							LimitAmount: 1000000,
+							Currency:    Currency("USD"),
+							Status:      BudgetStatusActive,
+						},
+					},
+				},
+				PeriodStore: &mockPeriodStore{
+					data: map[string]*BudgetPeriod{
+						string(bgtID) + "_" + time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339) + "_" + time.Date(2026, 8, 31, 23, 59, 59, 0, time.UTC).Format(time.RFC3339): {
+							ID:          periodID,
+							SpaceID:     spaceID,
+							BudgetID:    bgtID,
+							StartDate:   time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC),
+							EndDate:     time.Date(2026, 8, 31, 23, 59, 59, 0, time.UTC),
+							LimitAmount: 1000000,
+						},
+					},
+				},
+				AccountStore: &mockAccountStore{
+					data: map[AccountID]*Account{
+						accountID: {
+							ID:             accountID,
+							SpaceID:        spaceID,
+							Name:           "Main Checking",
+							Type:           AccountTypeBank,
+							Currency:       Currency("USD"),
+							CurrentBalance: tt.startingBalance,
+							IsActive:       true,
+						},
+						counterpartID: {
+							ID:             counterpartID,
+							SpaceID:        spaceID,
+							Name:           "High Yield Savings",
+							Type:           AccountTypeBank,
+							Currency:       Currency("USD"),
+							CurrentBalance: 500000,
+							IsActive:       true,
+						},
+					},
+				},
+				StatementStore:            newMockStatementStore(),
+				TransactionStore:          &mockTransactionStore{txns: make(map[TransactionID]*Transaction)},
+				TransferStore:             &mockTransferStore{data: make(map[TransferID]*Transfer)},
+				ScheduledTransactionStore: &mockScheduledTransactionStore{payments: make(map[ScheduledTransactionID]*ScheduledTransaction)},
+				BorrowingStore:            &mockBorrowingStore{data: make(map[BorrowingID]*Borrowing)},
+			}
+
+			if tt.setupStores != nil {
+				tt.setupStores(spaceID, accountID, counterpartID, &deps)
+			}
+
+			stmt := &Statement{
+				ID:                       stmtID,
+				SpaceID:                  spaceID,
+				AccountID:                accountID,
+				StatementDate:            time.Date(2026, 8, 14, 0, 0, 0, 0, time.UTC),
+				StatementStartingBalance: tt.startingBalance,
+				StatementEndingBalance:   tt.endingBalance,
+				Status:                   StatementStatusInProgress,
+			}
+
+			var lines []*StatementLine
+			if tt.setupLines != nil {
+				lines = tt.setupLines(spaceID, stmtID, accountID, counterpartID, &deps)
+				for _, l := range lines {
+					if l.Amount < 0 && l.Action.BudgetID == nil {
+						l.Action.BudgetID = &bgtID
+					}
+				}
+			}
+
+			_ = deps.StatementStore.Create(context.Background(), stmt, lines)
+
+			svc := NewService(deps)
+			completedStmt, err := svc.CompleteStatement(context.Background(), spaceID, stmtID)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tt.errContains)
+				}
+				if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
+					t.Errorf("expected error %q, got %q", tt.errContains, err.Error())
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			updatedLines, err := svc.ListStatementLines(context.Background(), spaceID, stmtID)
+			if err != nil {
+				t.Fatalf("failed to list lines: %v", err)
+			}
+
+			if tt.verifyResults != nil {
+				tt.verifyResults(t, spaceID, completedStmt, updatedLines, &deps)
+			}
+		})
+	}
+}
+
+func TestService_UpdateStatement(t *testing.T) {
+	spaceID := SpaceID("spc_" + ksuid.New().String())
+	stmtID := StatementID("stmt_" + ksuid.New().String())
+	accID := AccountID("acc_" + ksuid.New().String())
+
+	tests := []struct {
+		name       string
+		setupStore func() *mockStatementStore
+		updateStmt *Statement
+		mask       []string
+		wantVer    int64
+		wantErr    error
+	}{
+		{
+			name: "successful update increments version",
+			setupStore: func() *mockStatementStore {
+				store := newMockStatementStore()
+				_ = store.Create(context.Background(), &Statement{
+					ID:                       stmtID,
+					SpaceID:                  spaceID,
+					AccountID:                accID,
+					Status:                   StatementStatusInProgress,
+					StatementDate:            time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC),
+					StatementStartingBalance: 1000,
+					StatementEndingBalance:   2000,
+					Filename:                 "stmt.csv",
+					Config:                   StatementConfig{Format: "CSV", CSV: &CSVMapping{}},
+					RawContent:               "dummy",
+					Version:                  1,
+				}, nil)
+				return store
+			},
+			updateStmt: &Statement{
+				ID:                     stmtID,
+				StatementEndingBalance: 2500,
+				Version:                1,
+			},
+			mask:    []string{"statement_ending_balance", "version"},
+			wantVer: 2,
+			wantErr: nil,
+		},
+		{
+			name: "stale version returns ErrStatementVersionMismatch",
+			setupStore: func() *mockStatementStore {
+				store := newMockStatementStore()
+				_ = store.Create(context.Background(), &Statement{
+					ID:                       stmtID,
+					SpaceID:                  spaceID,
+					AccountID:                accID,
+					Status:                   StatementStatusInProgress,
+					StatementDate:            time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC),
+					StatementStartingBalance: 1000,
+					StatementEndingBalance:   2000,
+					Filename:                 "stmt.csv",
+					Config:                   StatementConfig{Format: "CSV", CSV: &CSVMapping{}},
+					RawContent:               "dummy",
+					Version:                  2,
+				}, nil)
+				return store
+			},
+			updateStmt: &Statement{
+				ID:                     stmtID,
+				StatementEndingBalance: 2500,
+				Version:                1,
+			},
+			mask:    []string{"statement_ending_balance", "version"},
+			wantErr: ErrStatementVersionMismatch,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := tt.setupStore()
+			svc := NewService(Dependencies{StatementStore: store})
+
+			res, err := svc.UpdateStatement(context.Background(), spaceID, tt.updateStmt, tt.mask)
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("expected error %v, got %v", tt.wantErr, err)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if res.Version != tt.wantVer {
+				t.Errorf("expected version %d, got %d", tt.wantVer, res.Version)
+			}
+		})
+	}
+}
+
+func TestService_DeleteStatement(t *testing.T) {
+	spaceID := SpaceID("spc_" + ksuid.New().String())
+	stmtID := StatementID("stmt_" + ksuid.New().String())
+	accID := AccountID("acc_" + ksuid.New().String())
+
+	tests := []struct {
+		name       string
+		setupStore func() *mockStatementStore
+		opts       DeleteOptions
+		wantErr    error
+	}{
+		{
+			name: "successful delete matching version",
+			setupStore: func() *mockStatementStore {
+				store := newMockStatementStore()
+				_ = store.Create(context.Background(), &Statement{
+					ID:        stmtID,
+					SpaceID:   spaceID,
+					AccountID: accID,
+					Status:    StatementStatusInProgress,
+					Version:   2,
+				}, nil)
+				return store
+			},
+			opts:    DeleteOptions{Version: 2},
+			wantErr: nil,
+		},
+		{
+			name: "version mismatch returns ErrStatementVersionMismatch",
+			setupStore: func() *mockStatementStore {
+				store := newMockStatementStore()
+				_ = store.Create(context.Background(), &Statement{
+					ID:        stmtID,
+					SpaceID:   spaceID,
+					AccountID: accID,
+					Status:    StatementStatusInProgress,
+					Version:   2,
+				}, nil)
+				return store
+			},
+			opts:    DeleteOptions{Version: 1},
+			wantErr: ErrStatementVersionMismatch,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := tt.setupStore()
+			svc := NewService(Dependencies{StatementStore: store})
+
+			err := svc.DeleteStatement(context.Background(), spaceID, stmtID, tt.opts)
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("expected error %v, got %v", tt.wantErr, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestService_UpdateStatementLine(t *testing.T) {
+	spaceID := SpaceID("spc_" + ksuid.New().String())
+	stmtID := StatementID("stmt_" + ksuid.New().String())
+	lineID := StatementLineID("stln_" + ksuid.New().String())
+	accID := AccountID("acc_" + ksuid.New().String())
+
+	tests := []struct {
+		name       string
+		setupStore func() *mockStatementStore
+		updateLine *StatementLine
+		mask       []string
+		wantVer    int64
+		wantErr    error
+	}{
+		{
+			name: "successful update increments line version",
+			setupStore: func() *mockStatementStore {
+				store := newMockStatementStore()
+				_ = store.Create(context.Background(), &Statement{
+					ID:        stmtID,
+					SpaceID:   spaceID,
+					AccountID: accID,
+					Status:    StatementStatusInProgress,
+					Version:   1,
+				}, []*StatementLine{
+					{
+						ID:          lineID,
+						StatementID: stmtID,
+						Description: "Coffee",
+						Amount:      -500,
+						DateStr:     "2026-08-01",
+						Status:      StatementLineStatusUnmatched,
+						Version:     1,
+					},
+				})
+				return store
+			},
+			updateLine: &StatementLine{
+				ID:      lineID,
+				Status:  StatementLineStatusSkipped,
+				Version: 1,
+			},
+			mask:    []string{"status", "version"},
+			wantVer: 2,
+			wantErr: nil,
+		},
+		{
+			name: "stale line version returns ErrStatementLineVersionMismatch",
+			setupStore: func() *mockStatementStore {
+				store := newMockStatementStore()
+				_ = store.Create(context.Background(), &Statement{
+					ID:        stmtID,
+					SpaceID:   spaceID,
+					AccountID: accID,
+					Status:    StatementStatusInProgress,
+					Version:   1,
+				}, []*StatementLine{
+					{
+						ID:          lineID,
+						StatementID: stmtID,
+						Description: "Coffee",
+						Amount:      -500,
+						DateStr:     "2026-08-01",
+						Status:      StatementLineStatusUnmatched,
+						Version:     2,
+					},
+				})
+				return store
+			},
+			updateLine: &StatementLine{
+				ID:      lineID,
+				Status:  StatementLineStatusSkipped,
+				Version: 1,
+			},
+			mask:    []string{"status", "version"},
+			wantErr: ErrStatementLineVersionMismatch,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := tt.setupStore()
+			svc := NewService(Dependencies{StatementStore: store})
+
+			res, err := svc.UpdateStatementLine(context.Background(), spaceID, tt.updateLine, tt.mask)
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("expected error %v, got %v", tt.wantErr, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if res.Version != tt.wantVer {
+				t.Errorf("expected version %d, got %d", tt.wantVer, res.Version)
 			}
 		})
 	}

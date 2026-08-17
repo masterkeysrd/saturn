@@ -78,6 +78,14 @@ const (
 	Finance_UpdateInboxItem_FullMethodName             = "/saturn.finance.v1.Finance/UpdateInboxItem"
 	Finance_ApproveInboxItem_FullMethodName            = "/saturn.finance.v1.Finance/ApproveInboxItem"
 	Finance_DiscardInboxItem_FullMethodName            = "/saturn.finance.v1.Finance/DiscardInboxItem"
+	Finance_ImportStatement_FullMethodName             = "/saturn.finance.v1.Finance/ImportStatement"
+	Finance_GetStatement_FullMethodName                = "/saturn.finance.v1.Finance/GetStatement"
+	Finance_DeleteStatement_FullMethodName             = "/saturn.finance.v1.Finance/DeleteStatement"
+	Finance_ListStatements_FullMethodName              = "/saturn.finance.v1.Finance/ListStatements"
+	Finance_ListStatementLines_FullMethodName          = "/saturn.finance.v1.Finance/ListStatementLines"
+	Finance_UpdateStatementLine_FullMethodName         = "/saturn.finance.v1.Finance/UpdateStatementLine"
+	Finance_UpdateStatement_FullMethodName             = "/saturn.finance.v1.Finance/UpdateStatement"
+	Finance_CompleteStatement_FullMethodName           = "/saturn.finance.v1.Finance/CompleteStatement"
 )
 
 // FinanceClient is the client API for Finance service.
@@ -204,6 +212,25 @@ type FinanceClient interface {
 	ApproveInboxItem(ctx context.Context, in *ApproveInboxItemRequest, opts ...grpc.CallOption) (*InboxItem, error)
 	// Discards an ingested inbox item from the staging queue, preventing classification.
 	DiscardInboxItem(ctx context.Context, in *DiscardInboxItemRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Initiates a new statement reconciliation session by parsing the uploaded CSV content
+	// and persisting the detected lines for user review.
+	ImportStatement(ctx context.Context, in *ImportStatementRequest, opts ...grpc.CallOption) (*Statement, error)
+	// Retrieves a specific statement resource by ID, including its status and balance metadata.
+	GetStatement(ctx context.Context, in *GetStatementRequest, opts ...grpc.CallOption) (*Statement, error)
+	// Discards a statement resource and permanently deletes all associated statement lines.
+	DeleteStatement(ctx context.Context, in *DeleteStatementRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Lists statements in the space, optionally filtered by account or reconciliation status.
+	ListStatements(ctx context.Context, in *ListStatementsRequest, opts ...grpc.CallOption) (*ListStatementsResponse, error)
+	// Lists all statement lines belonging to a specific statement session.
+	ListStatementLines(ctx context.Context, in *ListStatementLinesRequest, opts ...grpc.CallOption) (*ListStatementLinesResponse, error)
+	// Saves the user's matching or transaction-generation choice for a statement line as a draft.
+	// Supports partial updates via field mask (e.g. match, create_expense, skip).
+	UpdateStatementLine(ctx context.Context, in *UpdateStatementLineRequest, opts ...grpc.CallOption) (*StatementLine, error)
+	// Updates statement metadata such as the statement date, starting balance, or ending balance.
+	UpdateStatement(ctx context.Context, in *UpdateStatementRequest, opts ...grpc.CallOption) (*Statement, error)
+	// Commits all reconciliation choices: creates transactions, links matched entries,
+	// and marks the statement as COMPLETED in a single atomic database transaction.
+	CompleteStatement(ctx context.Context, in *CompleteStatementRequest, opts ...grpc.CallOption) (*Statement, error)
 }
 
 type financeClient struct {
@@ -794,6 +821,86 @@ func (c *financeClient) DiscardInboxItem(ctx context.Context, in *DiscardInboxIt
 	return out, nil
 }
 
+func (c *financeClient) ImportStatement(ctx context.Context, in *ImportStatementRequest, opts ...grpc.CallOption) (*Statement, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Statement)
+	err := c.cc.Invoke(ctx, Finance_ImportStatement_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) GetStatement(ctx context.Context, in *GetStatementRequest, opts ...grpc.CallOption) (*Statement, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Statement)
+	err := c.cc.Invoke(ctx, Finance_GetStatement_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) DeleteStatement(ctx context.Context, in *DeleteStatementRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Finance_DeleteStatement_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) ListStatements(ctx context.Context, in *ListStatementsRequest, opts ...grpc.CallOption) (*ListStatementsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListStatementsResponse)
+	err := c.cc.Invoke(ctx, Finance_ListStatements_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) ListStatementLines(ctx context.Context, in *ListStatementLinesRequest, opts ...grpc.CallOption) (*ListStatementLinesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListStatementLinesResponse)
+	err := c.cc.Invoke(ctx, Finance_ListStatementLines_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) UpdateStatementLine(ctx context.Context, in *UpdateStatementLineRequest, opts ...grpc.CallOption) (*StatementLine, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StatementLine)
+	err := c.cc.Invoke(ctx, Finance_UpdateStatementLine_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) UpdateStatement(ctx context.Context, in *UpdateStatementRequest, opts ...grpc.CallOption) (*Statement, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Statement)
+	err := c.cc.Invoke(ctx, Finance_UpdateStatement_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) CompleteStatement(ctx context.Context, in *CompleteStatementRequest, opts ...grpc.CallOption) (*Statement, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Statement)
+	err := c.cc.Invoke(ctx, Finance_CompleteStatement_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FinanceServer is the server API for Finance service.
 // All implementations should embed UnimplementedFinanceServer
 // for forward compatibility.
@@ -918,6 +1025,25 @@ type FinanceServer interface {
 	ApproveInboxItem(context.Context, *ApproveInboxItemRequest) (*InboxItem, error)
 	// Discards an ingested inbox item from the staging queue, preventing classification.
 	DiscardInboxItem(context.Context, *DiscardInboxItemRequest) (*emptypb.Empty, error)
+	// Initiates a new statement reconciliation session by parsing the uploaded CSV content
+	// and persisting the detected lines for user review.
+	ImportStatement(context.Context, *ImportStatementRequest) (*Statement, error)
+	// Retrieves a specific statement resource by ID, including its status and balance metadata.
+	GetStatement(context.Context, *GetStatementRequest) (*Statement, error)
+	// Discards a statement resource and permanently deletes all associated statement lines.
+	DeleteStatement(context.Context, *DeleteStatementRequest) (*emptypb.Empty, error)
+	// Lists statements in the space, optionally filtered by account or reconciliation status.
+	ListStatements(context.Context, *ListStatementsRequest) (*ListStatementsResponse, error)
+	// Lists all statement lines belonging to a specific statement session.
+	ListStatementLines(context.Context, *ListStatementLinesRequest) (*ListStatementLinesResponse, error)
+	// Saves the user's matching or transaction-generation choice for a statement line as a draft.
+	// Supports partial updates via field mask (e.g. match, create_expense, skip).
+	UpdateStatementLine(context.Context, *UpdateStatementLineRequest) (*StatementLine, error)
+	// Updates statement metadata such as the statement date, starting balance, or ending balance.
+	UpdateStatement(context.Context, *UpdateStatementRequest) (*Statement, error)
+	// Commits all reconciliation choices: creates transactions, links matched entries,
+	// and marks the statement as COMPLETED in a single atomic database transaction.
+	CompleteStatement(context.Context, *CompleteStatementRequest) (*Statement, error)
 }
 
 // UnimplementedFinanceServer should be embedded to have
@@ -1100,6 +1226,30 @@ func (UnimplementedFinanceServer) ApproveInboxItem(context.Context, *ApproveInbo
 }
 func (UnimplementedFinanceServer) DiscardInboxItem(context.Context, *DiscardInboxItemRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method DiscardInboxItem not implemented")
+}
+func (UnimplementedFinanceServer) ImportStatement(context.Context, *ImportStatementRequest) (*Statement, error) {
+	return nil, status.Error(codes.Unimplemented, "method ImportStatement not implemented")
+}
+func (UnimplementedFinanceServer) GetStatement(context.Context, *GetStatementRequest) (*Statement, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetStatement not implemented")
+}
+func (UnimplementedFinanceServer) DeleteStatement(context.Context, *DeleteStatementRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteStatement not implemented")
+}
+func (UnimplementedFinanceServer) ListStatements(context.Context, *ListStatementsRequest) (*ListStatementsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListStatements not implemented")
+}
+func (UnimplementedFinanceServer) ListStatementLines(context.Context, *ListStatementLinesRequest) (*ListStatementLinesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListStatementLines not implemented")
+}
+func (UnimplementedFinanceServer) UpdateStatementLine(context.Context, *UpdateStatementLineRequest) (*StatementLine, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateStatementLine not implemented")
+}
+func (UnimplementedFinanceServer) UpdateStatement(context.Context, *UpdateStatementRequest) (*Statement, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateStatement not implemented")
+}
+func (UnimplementedFinanceServer) CompleteStatement(context.Context, *CompleteStatementRequest) (*Statement, error) {
+	return nil, status.Error(codes.Unimplemented, "method CompleteStatement not implemented")
 }
 func (UnimplementedFinanceServer) testEmbeddedByValue() {}
 
@@ -2165,6 +2315,150 @@ func _Finance_DiscardInboxItem_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Finance_ImportStatement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ImportStatementRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).ImportStatement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_ImportStatement_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).ImportStatement(ctx, req.(*ImportStatementRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_GetStatement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetStatementRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).GetStatement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_GetStatement_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).GetStatement(ctx, req.(*GetStatementRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_DeleteStatement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteStatementRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).DeleteStatement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_DeleteStatement_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).DeleteStatement(ctx, req.(*DeleteStatementRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_ListStatements_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListStatementsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).ListStatements(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_ListStatements_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).ListStatements(ctx, req.(*ListStatementsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_ListStatementLines_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListStatementLinesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).ListStatementLines(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_ListStatementLines_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).ListStatementLines(ctx, req.(*ListStatementLinesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_UpdateStatementLine_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateStatementLineRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).UpdateStatementLine(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_UpdateStatementLine_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).UpdateStatementLine(ctx, req.(*UpdateStatementLineRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_UpdateStatement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateStatementRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).UpdateStatement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_UpdateStatement_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).UpdateStatement(ctx, req.(*UpdateStatementRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_CompleteStatement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CompleteStatementRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).CompleteStatement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_CompleteStatement_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).CompleteStatement(ctx, req.(*CompleteStatementRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Finance_ServiceDesc is the grpc.ServiceDesc for Finance service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2403,6 +2697,38 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DiscardInboxItem",
 			Handler:    _Finance_DiscardInboxItem_Handler,
+		},
+		{
+			MethodName: "ImportStatement",
+			Handler:    _Finance_ImportStatement_Handler,
+		},
+		{
+			MethodName: "GetStatement",
+			Handler:    _Finance_GetStatement_Handler,
+		},
+		{
+			MethodName: "DeleteStatement",
+			Handler:    _Finance_DeleteStatement_Handler,
+		},
+		{
+			MethodName: "ListStatements",
+			Handler:    _Finance_ListStatements_Handler,
+		},
+		{
+			MethodName: "ListStatementLines",
+			Handler:    _Finance_ListStatementLines_Handler,
+		},
+		{
+			MethodName: "UpdateStatementLine",
+			Handler:    _Finance_UpdateStatementLine_Handler,
+		},
+		{
+			MethodName: "UpdateStatement",
+			Handler:    _Finance_UpdateStatement_Handler,
+		},
+		{
+			MethodName: "CompleteStatement",
+			Handler:    _Finance_CompleteStatement_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -1,6 +1,7 @@
 package finance
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -180,6 +181,85 @@ func (i *InboxItem) NewScheduledTransactionFromInvoice(spaceID SpaceID) (*Schedu
 		return nil, fmt.Errorf("validate new scheduled transaction: %w", err)
 	}
 	return payment, nil
+}
+
+// NewTransfer constructs a Transfer entity from this inbox item.
+func (i *InboxItem) NewTransfer(spaceID SpaceID, destAccountID AccountID) (*Transfer, error) {
+	if i.AccountID == nil || *i.AccountID == "" {
+		return nil, errors.New("missing source account for transfer")
+	}
+	srcAccID, err := ParseAccountID(*i.AccountID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid source account: %w", err)
+	}
+	if err := destAccountID.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid destination account: %w", err)
+	}
+	tDate := i.TransactionDate
+	if tDate.IsZero() {
+		tDate = time.Now().UTC()
+	}
+	return &Transfer{
+		SpaceID:              spaceID,
+		SourceAccountID:      srcAccID,
+		DestinationAccountID: destAccountID,
+		SourceAmount:         i.Amount,
+		DestinationAmount:    i.Amount,
+		TransferDate:         tDate,
+		Notes:                i.VendorName,
+	}, nil
+}
+
+// NewTransaction constructs an Expense or Income Transaction from this inbox item.
+func (i *InboxItem) NewTransaction(spaceID SpaceID) (*Transaction, error) {
+	transactionType := i.MetadataString("transaction_type")
+	var txnType TransactionType
+	switch transactionType {
+	case "INCOME":
+		txnType = TransactionTypeIncome
+	case "EXPENSE":
+		txnType = TransactionTypeExpense
+	default:
+		if i.DocType == InboxItemDocReceipt || i.DocType == InboxItemDocInvoice {
+			txnType = TransactionTypeExpense
+		} else {
+			txnType = TransactionTypeIncome
+		}
+	}
+
+	var bID *BudgetID
+	if i.BudgetID != nil && *i.BudgetID != "" {
+		parsed, err := ParseBudgetID(*i.BudgetID)
+		if err != nil {
+			return nil, fmt.Errorf("parse budget ID: %w", err)
+		}
+		bID = &parsed
+	}
+
+	var accID *AccountID
+	if i.AccountID != nil && *i.AccountID != "" {
+		parsed, err := ParseAccountID(*i.AccountID)
+		if err == nil {
+			accID = &parsed
+		}
+	}
+
+	txDate := i.TransactionDate
+	if txDate.IsZero() {
+		txDate = time.Now().UTC()
+	}
+
+	return &Transaction{
+		SpaceID:         spaceID,
+		Type:            txnType,
+		BudgetID:        bID,
+		AccountID:       accID,
+		Amount:          i.Amount,
+		Currency:        Currency(i.Currency),
+		Description:     i.VendorName,
+		TransactionDate: txDate,
+		EffectiveDate:   txDate,
+	}, nil
 }
 
 // StageInboxItem defines parameters to draft and stage an inbox item.

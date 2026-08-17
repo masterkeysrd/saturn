@@ -219,7 +219,7 @@ type ListExchangeRatesFilter struct {
 // TransactionFilter encapsulates filtering parameters for transactions.
 type TransactionFilter struct {
 	BudgetID               *BudgetID
-	Type                   *TransactionType
+	Types                  []TransactionType
 	AccountID              *AccountID
 	TransferID             *TransferID
 	BorrowingID            *BorrowingID
@@ -335,4 +335,38 @@ type InboxItemStore interface {
 	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListInboxItemsFilter) (*paging.Page[*InboxItem], error)
 	Update(ctx context.Context, item *InboxItem) error
 	Delete(ctx context.Context, spaceID SpaceID, id string) error
+}
+
+type ListStatementsFilter struct {
+	AccountID *AccountID
+	Status    *StatementStatus
+	PageSize  int32
+	PageToken string
+}
+
+// StatementStore defines persistence and retrieval operations for bank/account statements and statement lines.
+type StatementStore interface {
+	// Create creates a new statement and its associated lines inside a single database transaction.
+	Create(ctx context.Context, statement *Statement, lines []*StatementLine) error
+
+	// GetByID retrieves a statement by its unique ID.
+	GetByID(ctx context.Context, spaceID SpaceID, id StatementID) (*Statement, error)
+
+	// List lists statements for a specific workspace with filters and pagination.
+	List(ctx context.Context, spaceID SpaceID, filter *ListStatementsFilter) (*paging.Page[*Statement], error)
+
+	// Delete deletes a statement and all its associated lines.
+	Delete(ctx context.Context, spaceID SpaceID, id StatementID, opts DeleteOptions) error
+
+	// Update updates a statement's properties (such as starting/ending balances).
+	Update(ctx context.Context, statement *Statement) error
+
+	// ListLines lists all statement lines for a specific statement.
+	ListLines(ctx context.Context, statementID StatementID) ([]*StatementLine, error)
+
+	// GetLineByID retrieves a specific statement line by ID.
+	GetLineByID(ctx context.Context, id StatementLineID) (*StatementLine, error)
+
+	// UpdateLineDraft updates the draft choices (status, action, and matched_transaction_id) of a statement line.
+	UpdateLineDraft(ctx context.Context, line *StatementLine) error
 }

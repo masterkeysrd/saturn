@@ -26,6 +26,10 @@ export const menu: FeatureMenu = {
       url: "/finance/inbox",
     },
     {
+      title: "Reconciliation",
+      url: "/finance/reconcile",
+    },
+    {
       title: "Recurring Transactions",
       url: "/finance/recurring",
     },

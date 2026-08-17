@@ -148,14 +148,14 @@ function BudgetSelectInner({
     >
       <SelectTrigger
         className={cn(
-          "!h-12 w-full rounded-xl border border-border/50 bg-background/50 text-left transition-all hover:bg-background/80 focus:ring-1 focus:ring-ring",
+          "h-11 w-full rounded-xl border border-border/50 bg-background/50 text-left transition-all hover:bg-background/80 focus:ring-1 focus:ring-ring",
           className
         )}
       >
         <SelectValue placeholder={placeholder}>
           {selectedBudget ? (
-            <div className="flex w-full items-center justify-between pr-2">
-              <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex w-full min-w-0 items-center justify-between pr-1">
+              <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
                 {(() => {
                   const Icon = getBudgetIcon(selectedBudget.icon)
                   const colors = getBudgetColors(selectedBudget.color)
@@ -172,20 +172,20 @@ function BudgetSelectInner({
                     </div>
                   )
                 })()}
-                <div className="flex min-w-0 items-center gap-2">
+                <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
                   <span className="truncate text-xs font-semibold text-foreground">
                     {selectedBudget.name}
                   </span>
                   <span
                     className={cn(
-                      "rounded-full border px-1.5 py-0.5 text-[8px] font-bold tracking-wider",
+                      "shrink-0 rounded-full border px-1.5 py-0.5 text-[8px] font-bold tracking-wider",
                       getIntervalColorClass(selectedBudget.interval)
                     )}
                   >
                     {formatInterval(selectedBudget.interval)}
                   </span>
                   {!isStatusActive(selectedBudget.status) && (
-                    <span className="flex items-center gap-0.5 rounded-full border border-border/40 bg-muted px-1.5 py-0.5 text-[8px] font-bold text-muted-foreground uppercase">
+                    <span className="flex shrink-0 items-center gap-0.5 rounded-full border border-border/40 bg-muted px-1.5 py-0.5 text-[8px] font-bold text-muted-foreground uppercase">
                       <PauseCircle className="h-2 w-2" />
                       Paused
                     </span>

@@ -28,6 +28,28 @@ export const routes: SaturnRouteObject[] = [
     requiresSpace: true,
   },
   {
+    path: "/finance/reconcile",
+    element: createElement(
+      lazy(() =>
+        import("./reconcile-dashboard-view").then((m) => ({
+          default: m.ReconciliationDashboardView,
+        }))
+      )
+    ),
+    requiresSpace: true,
+  },
+  {
+    path: "/finance/reconcile/:statementId",
+    element: createElement(
+      lazy(() =>
+        import("./reconcile-workspace-view").then((m) => ({
+          default: m.ReconciliationWorkspaceView,
+        }))
+      )
+    ),
+    requiresSpace: true,
+  },
+  {
     path: "/finance/recurring",
     element: createElement(
       lazy(() =>

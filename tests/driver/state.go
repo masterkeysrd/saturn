@@ -63,6 +63,14 @@ type InstitutionInfo struct {
 	Version int64
 }
 
+// StatementInfo stores registered statement metadata.
+type StatementInfo struct {
+	ID        string
+	AccountID string
+	Filename  string
+	Version   int64
+}
+
 // State manages internal session and entity registries for a test run.
 type State struct {
 	T            *testing.T
@@ -79,6 +87,7 @@ type State struct {
 	InboxItems            map[string]*InboxItemInfo
 	Budgets               map[string]string
 	ScheduledTransactions map[string]string
+	Statements            map[string]*StatementInfo
 
 	LastAccount                         *AccountInfo
 	LastInstitution                     *InstitutionInfo
@@ -86,6 +95,7 @@ type State struct {
 	LastBorrowingTransaction            *BorrowingTransactionInfo
 	LastTransfer                        *financev1.Transfer
 	LastInboxItem                       *InboxItemInfo
+	LastStatement                       *StatementInfo
 	LastIntegrationID                   string
 	LastTransactionID                   string
 	LastRecurringTransactionID          string
@@ -104,6 +114,7 @@ func newState(t *testing.T) *State {
 		InboxItems:            make(map[string]*InboxItemInfo),
 		Budgets:               make(map[string]string),
 		ScheduledTransactions: make(map[string]string),
+		Statements:            make(map[string]*StatementInfo),
 	}
 }
 
@@ -121,12 +132,14 @@ func (s *State) ClearRegistries() {
 	s.InboxItems = make(map[string]*InboxItemInfo)
 	s.Budgets = make(map[string]string)
 	s.ScheduledTransactions = make(map[string]string)
+	s.Statements = make(map[string]*StatementInfo)
 	s.LastAccount = nil
 	s.LastInstitution = nil
 	s.LastBorrowing = nil
 	s.LastBorrowingTransaction = nil
 	s.LastTransfer = nil
 	s.LastInboxItem = nil
+	s.LastStatement = nil
 	s.LastTransactionID = ""
 	s.LastScheduledTransactionID = ""
 	s.LastRecurringTransactionID = ""

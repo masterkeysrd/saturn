@@ -72,7 +72,11 @@ export async function request<TResponse, TData = unknown, TParams = unknown>({
               searchParams.append(key, formattedPaths.join(","))
             }
           } else if (Array.isArray(value)) {
-            searchParams.append(key, value.join(","))
+            value.forEach((item) => {
+              if (item !== undefined && item !== null && item !== "") {
+                searchParams.append(key, String(item))
+              }
+            })
           } else {
             searchParams.append(key, String(value))
           }

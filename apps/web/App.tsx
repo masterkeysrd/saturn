@@ -155,7 +155,7 @@ export function App() {
                     <SidebarTrigger />
                     <ThemeToggle />
                   </div>
-                  <div className="flex flex-1 flex-col overflow-y-auto p-6">
+                  <div className="flex flex-1 flex-col overflow-y-auto">
                     <Outlet />
                   </div>
                 </main>

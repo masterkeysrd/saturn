@@ -113,9 +113,10 @@ export function TransactionsView() {
     {
       view: "FULL",
       budgetId: urlState.budgetId === "_all" ? "" : urlState.budgetId,
-      type: urlState.type as Parameters<
-        typeof useListTransactionsQuery
-      >[0]["type"],
+      types:
+        urlState.type && urlState.type !== "TYPE_UNSPECIFIED"
+          ? [urlState.type as any]
+          : undefined,
       accountId:
         urlState.accountId === "_all"
           ? undefined

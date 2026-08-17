@@ -163,7 +163,6 @@ export function InboxView() {
   const { data: txnsData } = useListTransactionsQuery(
     {
       budgetId: "",
-      type: "TYPE_UNSPECIFIED",
       pageSize: 100,
       pageToken: "",
     },

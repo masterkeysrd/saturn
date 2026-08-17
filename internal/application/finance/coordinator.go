@@ -88,6 +88,12 @@ type FinanceService interface {
 	DeleteInstitution(ctx context.Context, spaceID finance.SpaceID, id finance.InstitutionID, opts finance.DeleteOptions) error
 	ResolveInstitution(ctx context.Context, spaceID finance.SpaceID, name string) (*finance.ResolveInstitutionResult, error)
 	ListInstitutions(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListInstitutionsFilter) (*paging.Page[*finance.Institution], error)
+
+	ImportStatement(ctx context.Context, accountID finance.AccountID, stmt *finance.Statement) (*finance.Statement, error)
+	DeleteStatement(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID, opts finance.DeleteOptions) error
+	UpdateStatement(ctx context.Context, spaceID finance.SpaceID, stmt *finance.Statement, mask []string) (*finance.Statement, error)
+	UpdateStatementLine(ctx context.Context, spaceID finance.SpaceID, line *finance.StatementLine, mask []string) (*finance.StatementLine, error)
+	CompleteStatement(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID) (*finance.Statement, error)
 }
 
 // ParsedTransaction represents structured transaction data parsed by an ingestion agent.
@@ -233,4 +239,50 @@ func (c *Coordinator) ListCurrencies(ctx context.Context) ([]finance.CurrencyInf
 		return nil, err
 	}
 	return c.financeService.ListCurrencies(ctx)
+}
+
+// ImportStatement imports a statement for the session's workspace.
+func (c *Coordinator) ImportStatement(ctx context.Context, accountID finance.AccountID, stmt *finance.Statement) (*finance.Statement, error) {
+	rCtx, err := c.resolveContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	stmt.SpaceID = rCtx.SpaceID
+	return c.financeService.ImportStatement(ctx, accountID, stmt)
+}
+
+// DeleteStatement deletes a statement for the session's workspace.
+func (c *Coordinator) DeleteStatement(ctx context.Context, id finance.StatementID, opts finance.DeleteOptions) error {
+	rCtx, err := c.resolveContext(ctx)
+	if err != nil {
+		return err
+	}
+	return c.financeService.DeleteStatement(ctx, rCtx.SpaceID, id, opts)
+}
+
+// UpdateStatement updates statement metadata and balances.
+func (c *Coordinator) UpdateStatement(ctx context.Context, stmt *finance.Statement, mask []string) (*finance.Statement, error) {
+	rCtx, err := c.resolveContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return c.financeService.UpdateStatement(ctx, rCtx.SpaceID, stmt, mask)
+}
+
+// UpdateStatementLine updates draft decisions on a statement line.
+func (c *Coordinator) UpdateStatementLine(ctx context.Context, line *finance.StatementLine, mask []string) (*finance.StatementLine, error) {
+	rCtx, err := c.resolveContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return c.financeService.UpdateStatementLine(ctx, rCtx.SpaceID, line, mask)
+}
+
+// CompleteStatement finalizes statement reconciliation.
+func (c *Coordinator) CompleteStatement(ctx context.Context, id finance.StatementID) (*finance.Statement, error) {
+	rCtx, err := c.resolveContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return c.financeService.CompleteStatement(ctx, rCtx.SpaceID, id)
 }

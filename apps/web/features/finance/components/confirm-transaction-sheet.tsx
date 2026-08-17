@@ -118,7 +118,7 @@ export function ConfirmTransactionSheet({
     { enabled: open }
   )
   const { data: transactionsData } = useListTransactionsQuery(
-    { pageSize: 100, pageToken: "", budgetId: "", type: "TYPE_UNSPECIFIED" },
+    { pageSize: 100, pageToken: "", budgetId: "", types: [] },
     { enabled: open }
   )
 

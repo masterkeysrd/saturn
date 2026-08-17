@@ -862,6 +862,46 @@
         ]
       }
     },
+    "/v1/finance/accounts/{accountId}/statements:import": {
+      "post": {
+        "summary": "Initiates a new statement reconciliation session by parsing the uploaded CSV content\nand persisting the detected lines for user review.",
+        "operationId": "Finance_ImportStatement",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Statement"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "accountId",
+            "description": "Required. Target account identifier to upload the statement under.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceImportStatementBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/finance/accounts/{accountId}:adjust-balance": {
       "post": {
         "summary": "Adjusts an account's live balance to a target amount by creating a system reconciliation transaction.",
@@ -3038,6 +3078,298 @@
         ]
       }
     },
+    "/v1/finance/statement-lines/{id}": {
+      "patch": {
+        "summary": "Saves the user's matching or transaction-generation choice for a statement line as a draft.\nSupports partial updates via field mask (e.g. match, create_expense, skip).",
+        "operationId": "Finance_UpdateStatementLine",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1StatementLine"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Unique identifier of the statement line to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "statementLine",
+            "description": "Required. Updated statement line properties.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1StatementLine"
+            }
+          },
+          {
+            "name": "version",
+            "description": "Optional. Version number for optimistic concurrency control.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/statements": {
+      "get": {
+        "summary": "Lists statements in the space, optionally filtered by account or reconciliation status.",
+        "operationId": "Finance_ListStatements",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListStatementsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "accountId",
+            "description": "Optional. Filter statements by account identifier.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "description": "Optional. Filter statements by status.\n\n - IN_PROGRESS: In progress draft statement undergoing reconciliation.\n - COMPLETED: Completed statement with all lines successfully matched or imported.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "IN_PROGRESS",
+              "COMPLETED"
+            ]
+          },
+          {
+            "name": "pageSize",
+            "description": "Optional. Number of statements to return.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "description": "Optional. Keyset pagination token.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/statements/{id}": {
+      "get": {
+        "summary": "Retrieves a specific statement resource by ID, including its status and balance metadata.",
+        "operationId": "Finance_GetStatement",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Statement"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "delete": {
+        "summary": "Discards a statement resource and permanently deletes all associated statement lines.",
+        "operationId": "Finance_DeleteStatement",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      },
+      "patch": {
+        "summary": "Updates statement metadata such as the statement date, starting balance, or ending balance.",
+        "operationId": "Finance_UpdateStatement",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Statement"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Required. Unique identifier of the statement to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "statement",
+            "description": "Required. Updated statement properties.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Statement"
+            }
+          },
+          {
+            "name": "version",
+            "description": "Optional. Version number for optimistic concurrency control.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/statements/{id}:complete": {
+      "post": {
+        "summary": "Commits all reconciliation choices: creates transactions, links matched entries,\nand marks the statement as COMPLETED in a single atomic database transaction.",
+        "operationId": "Finance_CompleteStatement",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Statement"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceCompleteStatementBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/statements/{statementId}/lines": {
+      "get": {
+        "summary": "Lists all statement lines belonging to a specific statement session.",
+        "operationId": "Finance_ListStatementLines",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListStatementLinesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "statementId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/finance/transactions": {
       "get": {
         "summary": "Lists paginated transaction records matching specific budget, account, source, or text queries.",
@@ -3076,18 +3408,22 @@
             "type": "string"
           },
           {
-            "name": "type",
-            "description": "Optional. Target transaction flow type filter.\n\n - EXPENSE: Expense transaction, subtracting from the account balance.\n - INCOME: Income transaction, adding to the account balance.\n - TRANSFER_OUT: Transfer out transaction, moving funds to another account.\n - TRANSFER_IN: Transfer in transaction, receiving funds from another account.\n - BALANCE_ADJUSTMENT: Balance adjustment transaction, reconciling account to real-world balance.",
+            "name": "types",
+            "description": "Optional. Target transaction flow types filter.\n\n - EXPENSE: Expense transaction, subtracting from the account balance.\n - INCOME: Income transaction, adding to the account balance.\n - TRANSFER_OUT: Transfer out transaction, moving funds to another account.\n - TRANSFER_IN: Transfer in transaction, receiving funds from another account.\n - BALANCE_ADJUSTMENT: Balance adjustment transaction, reconciling account to real-world balance.",
             "in": "query",
             "required": false,
-            "type": "string",
-            "enum": [
-              "EXPENSE",
-              "INCOME",
-              "TRANSFER_OUT",
-              "TRANSFER_IN",
-              "BALANCE_ADJUSTMENT"
-            ]
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "EXPENSE",
+                "INCOME",
+                "TRANSFER_OUT",
+                "TRANSFER_IN",
+                "BALANCE_ADJUSTMENT"
+              ]
+            },
+            "collectionFormat": "multi"
           },
           {
             "name": "accountId",
@@ -4888,6 +5224,44 @@
       ],
       "description": "RecurrenceInterval defines the frequency of budgeting or transaction execution rules.\n\n - WEEKLY: Budget resets or templates trigger every calendar week.\n - MONTHLY: Budget resets or templates trigger every calendar month.\n - YEARLY: Budget resets or templates trigger every calendar year.\n - ONE_TIME: Non-recurring single-period allocation"
     },
+    "ConfigCsvConfig": {
+      "type": "object",
+      "properties": {
+        "hasHeader": {
+          "type": "boolean"
+        },
+        "delimiter": {
+          "type": "string"
+        },
+        "dateFormat": {
+          "type": "string"
+        },
+        "dateColumnIndex": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "descriptionColumnIndex": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "referenceColumnIndex": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "amountColumnIndex": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "debitColumnIndex": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "creditColumnIndex": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
     "FinanceAdjustAccountBalanceBody": {
       "type": "object",
       "properties": {
@@ -4940,6 +5314,10 @@
       "type": "object",
       "description": "The request for\n[ApproveInboxItem][saturn.finance.v1.Finance.ApproveInboxItem]."
     },
+    "FinanceCompleteStatementBody": {
+      "type": "object",
+      "description": "Request to finalize and commit the statement."
+    },
     "FinanceConfirmScheduledTransactionBody": {
       "type": "object",
       "properties": {
@@ -4980,6 +5358,19 @@
         "transactionDate",
         "effectiveDate",
         "actualAmount"
+      ]
+    },
+    "FinanceImportStatementBody": {
+      "type": "object",
+      "properties": {
+        "statement": {
+          "$ref": "#/definitions/v1Statement",
+          "description": "Required. The statement resource properties to import."
+        }
+      },
+      "description": "Request to import a new statement.",
+      "required": [
+        "statement"
       ]
     },
     "FinanceMatchScheduledTransactionBody": {
@@ -5449,6 +5840,87 @@
         }
       },
       "description": "HighValueExpense tracks outlier transactions exceeding typical limits."
+    },
+    "StatementConfig": {
+      "type": "object",
+      "properties": {
+        "csv": {
+          "$ref": "#/definitions/ConfigCsvConfig"
+        }
+      },
+      "description": "Nested parsing configuration."
+    },
+    "StatementLineConfirmScheduledAction": {
+      "type": "object",
+      "properties": {
+        "scheduledTransactionId": {
+          "type": "string"
+        }
+      }
+    },
+    "StatementLineCreateExpenseAction": {
+      "type": "object",
+      "properties": {
+        "budgetId": {
+          "type": "string"
+        }
+      }
+    },
+    "StatementLineCreateIncomeAction": {
+      "type": "object"
+    },
+    "StatementLineCreateRepaymentAction": {
+      "type": "object",
+      "properties": {
+        "borrowingId": {
+          "type": "string"
+        }
+      }
+    },
+    "StatementLineCreateTransferAction": {
+      "type": "object",
+      "properties": {
+        "counterpartAccountId": {
+          "type": "string"
+        }
+      }
+    },
+    "StatementLineMatchAction": {
+      "type": "object",
+      "properties": {
+        "transactionId": {
+          "type": "string"
+        },
+        "overwriteTransaction": {
+          "type": "boolean"
+        }
+      },
+      "title": "Draft actions"
+    },
+    "StatementLineSkipAction": {
+      "type": "object"
+    },
+    "StatementLineSuggestions": {
+      "type": "object",
+      "properties": {
+        "transactionType": {
+          "$ref": "#/definitions/v1TransactionType",
+          "readOnly": true
+        },
+        "budgetId": {
+          "type": "string",
+          "readOnly": true
+        },
+        "matches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Transaction"
+          },
+          "readOnly": true
+        }
+      },
+      "description": "Grouped suggestions resolved dynamically by the matching engine on fetch."
     },
     "TransactionAccountInfo": {
       "type": "object",
@@ -7540,6 +8012,35 @@
       },
       "description": "ListSpacesResponse contains the list of spaces and pagination token."
     },
+    "v1ListStatementLinesResponse": {
+      "type": "object",
+      "properties": {
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1StatementLine"
+          }
+        }
+      },
+      "description": "Response from listing lines."
+    },
+    "v1ListStatementsResponse": {
+      "type": "object",
+      "properties": {
+        "statements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Statement"
+          }
+        },
+        "nextPageToken": {
+          "type": "string"
+        }
+      },
+      "description": "Response from listing statements."
+    },
     "v1ListTransactionEventsResponse": {
       "type": "object",
       "properties": {
@@ -8260,6 +8761,185 @@
         }
       },
       "description": "TrendDataPoint tracks spend patterns grouped by granular interval."
+    },
+    "v1Statement": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. Unique identifier for the statement.\nValues are of the form `stmt_[a-zA-Z0-9]+`.",
+          "readOnly": true
+        },
+        "spaceId": {
+          "type": "string",
+          "description": "Output only. Associated workspace identifier.",
+          "readOnly": true
+        },
+        "accountId": {
+          "type": "string",
+          "description": "Output only. Identifier of the account this statement belongs to.",
+          "readOnly": true
+        },
+        "status": {
+          "$ref": "#/definitions/v1StatementStatus",
+          "description": "Output only. Current reconciliation status.",
+          "readOnly": true
+        },
+        "statementDate": {
+          "type": "string",
+          "description": "Required. The closing date of the statement (ISO-8601 calendar date e.g. \"2026-08-12\")."
+        },
+        "statementStartingBalance": {
+          "type": "string",
+          "format": "int64",
+          "description": "Required. The starting balance of the statement in account cents."
+        },
+        "statementEndingBalance": {
+          "type": "string",
+          "format": "int64",
+          "description": "Required. The ending balance of the statement in account cents."
+        },
+        "filename": {
+          "type": "string",
+          "description": "Required. Original file name."
+        },
+        "config": {
+          "$ref": "#/definitions/StatementConfig",
+          "description": "Required. Extensible statement parsing configuration."
+        },
+        "rawContent": {
+          "type": "string",
+          "description": "Required. Original raw statement file content."
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when statement was imported.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Timestamp when statement was last modified.",
+          "readOnly": true
+        },
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "Output only. Optimistic concurrency control version identifier.",
+          "readOnly": true
+        }
+      },
+      "description": "Statement represents an uploaded account statement.",
+      "required": [
+        "statementDate",
+        "statementStartingBalance",
+        "statementEndingBalance",
+        "filename",
+        "config",
+        "rawContent"
+      ]
+    },
+    "v1StatementLine": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Output only. Unique identifier for the statement line.\nValues are of the form `stln_[a-zA-Z0-9]+`.",
+          "readOnly": true
+        },
+        "statementId": {
+          "type": "string",
+          "description": "Output only. Identifier of the parent statement.",
+          "readOnly": true
+        },
+        "rowIndex": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Output only. Line index inside the source statement (0-indexed).",
+          "readOnly": true
+        },
+        "dateStr": {
+          "type": "string",
+          "description": "Output only. Original date string from the CSV.",
+          "readOnly": true
+        },
+        "description": {
+          "type": "string",
+          "description": "Output only. Original description string from the CSV.",
+          "readOnly": true
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64",
+          "description": "Output only. Amount in account cents.",
+          "readOnly": true
+        },
+        "status": {
+          "$ref": "#/definitions/v1StatementLineStatus",
+          "description": "Current reconciliation status of the line."
+        },
+        "matchedTransactionId": {
+          "type": "string",
+          "description": "Output only. Linked transaction ID once committed/completed.",
+          "readOnly": true
+        },
+        "reference": {
+          "type": "string",
+          "description": "Output only. Bank confirmation number or wire reference.",
+          "readOnly": true
+        },
+        "match": {
+          "$ref": "#/definitions/StatementLineMatchAction"
+        },
+        "createExpense": {
+          "$ref": "#/definitions/StatementLineCreateExpenseAction"
+        },
+        "createIncome": {
+          "$ref": "#/definitions/StatementLineCreateIncomeAction"
+        },
+        "createTransfer": {
+          "$ref": "#/definitions/StatementLineCreateTransferAction"
+        },
+        "confirmScheduled": {
+          "$ref": "#/definitions/StatementLineConfirmScheduledAction"
+        },
+        "createRepayment": {
+          "$ref": "#/definitions/StatementLineCreateRepaymentAction"
+        },
+        "skip": {
+          "$ref": "#/definitions/StatementLineSkipAction"
+        },
+        "suggestions": {
+          "$ref": "#/definitions/StatementLineSuggestions",
+          "readOnly": true
+        },
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "Output only. Optimistic concurrency control version identifier.",
+          "readOnly": true
+        }
+      },
+      "description": "StatementLine represents a parsed transaction row from the uploaded statement."
+    },
+    "v1StatementLineStatus": {
+      "type": "string",
+      "enum": [
+        "UNMATCHED",
+        "MATCHED",
+        "IMPORTED",
+        "SKIPPED"
+      ],
+      "description": "Status defines whether the line is matched to the ledger.\n\n - UNMATCHED: Unmatched line item.\n - MATCHED: Matched to an existing transaction.\n - IMPORTED: Imported as a new transaction.\n - SKIPPED: Explicitly skipped/ignored."
+    },
+    "v1StatementStatus": {
+      "type": "string",
+      "enum": [
+        "IN_PROGRESS",
+        "COMPLETED"
+      ],
+      "description": "Status defines the lifecycle phase of the statement.\n\n - IN_PROGRESS: In progress draft statement undergoing reconciliation.\n - COMPLETED: Completed statement with all lines successfully matched or imported."
     },
     "v1TopicMetrics": {
       "type": "object",

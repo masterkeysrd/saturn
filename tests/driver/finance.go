@@ -2175,6 +2175,365 @@ func (f *FinanceDriver) DeleteAccount(tb testing.TB, accountName string, version
 	return f
 }
 
+// ImportStatementOptions encapsulates parameters for importing a bank statement.
+type ImportStatementOptions struct {
+	Account         string // Account name or ID
+	StatementDate   string // "2026-08-12"
+	StartingBalance int64  // Cents
+	EndingBalance   int64  // Cents
+	Filename        string
+	RawContent      string
+	Config          *financev1.Statement_Config
+	Name            string // Optional key name in driver state registry
+	ExpectErr       string
+	Assert          func(tb testing.TB, stmt *financev1.Statement)
+}
+
+// StatementUpdateOptions encapsulates parameters for updating a statement.
+type StatementUpdateOptions struct {
+	Statement       string // Key in state registry or Statement ID
+	StartingBalance *int64
+	EndingBalance   *int64
+	StatementDate   *string
+	UpdateMask      []string
+	Version         *int64
+	ExpectErr       string
+	Assert          func(tb testing.TB, stmt *financev1.Statement)
+}
+
+// StatementLineUpdateOptions encapsulates parameters for updating a statement line draft.
+type StatementLineUpdateOptions struct {
+	LineID     string
+	Status     financev1.StatementLine_Status
+	Action     *financev1.StatementLine
+	UpdateMask []string
+	Version    *int64
+	ExpectErr  string
+	Assert     func(tb testing.TB, line *financev1.StatementLine)
+}
+
+func (f *FinanceDriver) resolveStatementID(stmtKey string) string {
+	if stmtKey == "" && f.driver.state.LastStatement != nil {
+		return f.driver.state.LastStatement.ID
+	}
+	if info, ok := f.driver.state.Statements[stmtKey]; ok {
+		return info.ID
+	}
+	return stmtKey
+}
+
+// ImportStatement imports a statement CSV into the specified account.
+func (f *FinanceDriver) ImportStatement(tb testing.TB, opts ImportStatementOptions) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+
+	accountID := opts.Account
+	if accInfo, ok := f.driver.state.Accounts[opts.Account]; ok {
+		accountID = accInfo.ID
+	}
+
+	config := opts.Config
+	if config == nil {
+		config = &financev1.Statement_Config{
+			Format: &financev1.Statement_Config_Csv{
+				Csv: &financev1.Statement_Config_CsvConfig{
+					HasHeader:              true,
+					Delimiter:              ",",
+					DateFormat:             "2006-01-02",
+					DateColumnIndex:        0,
+					DescriptionColumnIndex: 1,
+					AmountColumnIndex:      2,
+				},
+			},
+		}
+	}
+
+	filename := opts.Filename
+	if filename == "" {
+		filename = "statement.csv"
+	}
+	dateStr := opts.StatementDate
+	if dateStr == "" {
+		dateStr = time.Now().Format("2006-01-02")
+	}
+
+	client := f.getClient()
+	stmt, err := client.ImportStatement(tb.Context(), &financev1.ImportStatementRequest{
+		AccountId: accountID,
+		Statement: &financev1.Statement{
+			StatementDate:            dateStr,
+			StatementStartingBalance: opts.StartingBalance,
+			StatementEndingBalance:   opts.EndingBalance,
+			Filename:                 filename,
+			RawContent:               opts.RawContent,
+			Config:                   config,
+		},
+	})
+
+	if opts.ExpectErr != "" {
+		if err == nil {
+			tb.Fatalf("ImportStatement succeeded, but expected error containing %q", opts.ExpectErr)
+		}
+		if !strings.Contains(err.Error(), opts.ExpectErr) {
+			tb.Fatalf("ImportStatement error = %v, want error containing %q", err, opts.ExpectErr)
+		}
+		return f
+	}
+
+	if err != nil {
+		tb.Fatalf("ImportStatement SDK call failed: %v", err)
+	}
+
+	stmtInfo := &StatementInfo{
+		ID:        stmt.GetId(),
+		AccountID: stmt.GetAccountId(),
+		Filename:  stmt.GetFilename(),
+		Version:   stmt.GetVersion(),
+	}
+
+	key := opts.Name
+	if key == "" {
+		key = opts.Filename
+	}
+	if key == "" {
+		key = stmt.GetId()
+	}
+
+	f.driver.state.Statements[key] = stmtInfo
+	f.driver.state.LastStatement = stmtInfo
+
+	if opts.Assert != nil {
+		opts.Assert(tb, stmt)
+	}
+	return f
+}
+
+// GetStatement retrieves a statement by ID or registered key.
+func (f *FinanceDriver) GetStatement(tb testing.TB, stmtKey string, assert func(tb testing.TB, stmt *financev1.Statement)) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+	stmtID := f.resolveStatementID(stmtKey)
+	client := f.getClient()
+	stmt, err := client.GetStatement(tb.Context(), &financev1.GetStatementRequest{
+		Id: stmtID,
+	})
+	if err != nil {
+		tb.Fatalf("GetStatement SDK call failed: %v", err)
+	}
+	if assert != nil {
+		assert(tb, stmt)
+	}
+	return f
+}
+
+// ListStatements lists statements in the current workspace.
+func (f *FinanceDriver) ListStatements(tb testing.TB, req *financev1.ListStatementsRequest, assert func(tb testing.TB, stmts []*financev1.Statement)) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+	if req == nil {
+		req = &financev1.ListStatementsRequest{}
+	}
+	client := f.getClient()
+	resp, err := client.ListStatements(tb.Context(), req)
+	if err != nil {
+		tb.Fatalf("ListStatements SDK call failed: %v", err)
+	}
+	if assert != nil {
+		assert(tb, resp.GetStatements())
+	}
+	return f
+}
+
+// ListStatementLines retrieves all lines and dynamic suggestions for a statement.
+func (f *FinanceDriver) ListStatementLines(tb testing.TB, stmtKey string, assert func(tb testing.TB, lines []*financev1.StatementLine)) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+	stmtID := f.resolveStatementID(stmtKey)
+	client := f.getClient()
+	resp, err := client.ListStatementLines(tb.Context(), &financev1.ListStatementLinesRequest{
+		StatementId: stmtID,
+	})
+	if err != nil {
+		tb.Fatalf("ListStatementLines SDK call failed: %v", err)
+	}
+	if assert != nil {
+		assert(tb, resp.GetLines())
+	}
+	return f
+}
+
+// UpdateStatement updates statement metadata/balances.
+func (f *FinanceDriver) UpdateStatement(tb testing.TB, opts StatementUpdateOptions) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+	stmtID := f.resolveStatementID(opts.Statement)
+	stmtProto := &financev1.Statement{}
+	if opts.StartingBalance != nil {
+		stmtProto.StatementStartingBalance = *opts.StartingBalance
+	}
+	if opts.EndingBalance != nil {
+		stmtProto.StatementEndingBalance = *opts.EndingBalance
+	}
+	if opts.StatementDate != nil {
+		stmtProto.StatementDate = *opts.StatementDate
+	}
+
+	var mask *fieldmaskpb.FieldMask
+	if len(opts.UpdateMask) > 0 {
+		mask = &fieldmaskpb.FieldMask{Paths: opts.UpdateMask}
+	}
+
+	client := f.getClient()
+	updated, err := client.UpdateStatement(tb.Context(), &financev1.UpdateStatementRequest{
+		Id:         stmtID,
+		Statement:  stmtProto,
+		UpdateMask: mask,
+		Version:    opts.Version,
+	})
+
+	if opts.ExpectErr != "" {
+		if err == nil {
+			tb.Fatalf("UpdateStatement succeeded, but expected error containing %q", opts.ExpectErr)
+		}
+		if !strings.Contains(err.Error(), opts.ExpectErr) {
+			tb.Fatalf("UpdateStatement error = %v, want error containing %q", err, opts.ExpectErr)
+		}
+		return f
+	}
+
+	if err != nil {
+		tb.Fatalf("UpdateStatement SDK call failed: %v", err)
+	}
+
+	if info, ok := f.driver.state.Statements[opts.Statement]; ok {
+		info.Version = updated.GetVersion()
+	}
+
+	if opts.Assert != nil {
+		opts.Assert(tb, updated)
+	}
+	return f
+}
+
+// UpdateStatementLine updates a statement line draft choice.
+func (f *FinanceDriver) UpdateStatementLine(tb testing.TB, opts StatementLineUpdateOptions) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+
+	lineProto := &financev1.StatementLine{
+		Status: opts.Status,
+	}
+	if opts.Action != nil {
+		lineProto.Action = opts.Action.Action
+		lineProto.Status = opts.Action.Status
+		lineProto.MatchedTransactionId = opts.Action.MatchedTransactionId
+	}
+
+	var mask *fieldmaskpb.FieldMask
+	if len(opts.UpdateMask) > 0 {
+		mask = &fieldmaskpb.FieldMask{Paths: opts.UpdateMask}
+	}
+
+	client := f.getClient()
+	updated, err := client.UpdateStatementLine(tb.Context(), &financev1.UpdateStatementLineRequest{
+		Id:            opts.LineID,
+		StatementLine: lineProto,
+		UpdateMask:    mask,
+		Version:       opts.Version,
+	})
+
+	if opts.ExpectErr != "" {
+		if err == nil {
+			tb.Fatalf("UpdateStatementLine succeeded, but expected error containing %q", opts.ExpectErr)
+		}
+		if !strings.Contains(err.Error(), opts.ExpectErr) {
+			tb.Fatalf("UpdateStatementLine error = %v, want error containing %q", err, opts.ExpectErr)
+		}
+		return f
+	}
+
+	if err != nil {
+		tb.Fatalf("UpdateStatementLine SDK call failed: %v", err)
+	}
+
+	if opts.Assert != nil {
+		opts.Assert(tb, updated)
+	}
+	return f
+}
+
+// DeleteStatement deletes a statement reconciliation session.
+func (f *FinanceDriver) DeleteStatement(tb testing.TB, stmtKey string, version *int64, expectErr string) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+	stmtID := f.resolveStatementID(stmtKey)
+	client := f.getClient()
+	_, err := client.DeleteStatement(tb.Context(), &financev1.DeleteStatementRequest{
+		Id:      stmtID,
+		Version: version,
+	})
+	if expectErr != "" {
+		if err == nil {
+			tb.Fatalf("DeleteStatement succeeded, but expected error containing %q", expectErr)
+		}
+		if !strings.Contains(err.Error(), expectErr) {
+			tb.Fatalf("DeleteStatement error = %v, want error containing %q", err, expectErr)
+		}
+		return f
+	}
+	if err != nil {
+		tb.Fatalf("DeleteStatement SDK call failed: %v", err)
+	}
+	delete(f.driver.state.Statements, stmtKey)
+	return f
+}
+
+// CompleteStatement finalizes a statement reconciliation session and commits all linked/generated transactions.
+func (f *FinanceDriver) CompleteStatement(tb testing.TB, stmtKey string, expectErr string, assert func(tb testing.TB, stmt *financev1.Statement)) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+	stmtID := f.resolveStatementID(stmtKey)
+	client := f.getClient()
+	stmt, err := client.CompleteStatement(tb.Context(), &financev1.CompleteStatementRequest{
+		Id: stmtID,
+	})
+	if expectErr != "" {
+		if err == nil {
+			tb.Fatalf("CompleteStatement succeeded, but expected error containing %q", expectErr)
+		}
+		if !strings.Contains(err.Error(), expectErr) {
+			tb.Fatalf("CompleteStatement error = %v, want error containing %q", err, expectErr)
+		}
+		return f
+	}
+	if err != nil {
+		tb.Fatalf("CompleteStatement SDK call failed: %v", err)
+	}
+	if info, ok := f.driver.state.Statements[stmtKey]; ok {
+		info.Version = stmt.GetVersion()
+	}
+	if assert != nil {
+		assert(tb, stmt)
+	}
+	return f
+}
+
 func unptr(s *string) string {
 	if s == nil {
 		return ""

@@ -63,8 +63,15 @@ func (d *Driver) Platform() *PlatformDriver {
 	return d.platformSubdriver
 }
 
+// State returns the driver's current test state.
+func (d *Driver) State() *State {
+	return d.state
+}
+
 const truncateSQL = `
 TRUNCATE TABLE 
+    finance.statement_line,
+    finance.statement,
     finance.transaction_events,
     finance.transaction,
     finance.borrowing,

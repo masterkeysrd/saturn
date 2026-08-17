@@ -217,6 +217,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	transactionEventStore := financestorage.NewTransactionEventStore(sqlxDB)
 	inboxItemStore := financestorage.NewInboxItemStore(sqlxDB)
 	institutionStore := financestorage.NewInstitutionStore(sqlxDB)
+	statementStore := financestorage.NewStatementStore(sqlxDB)
 
 	financeService := finance.NewService(finance.Dependencies{
 		SettingsStore:             settingsStore,
@@ -233,6 +234,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 		TransactionEventStore:     transactionEventStore,
 		InboxItemStore:            inboxItemStore,
 		InstitutionStore:          institutionStore,
+		StatementStore:            statementStore,
 	})
 
 	integrationRegistry := integration.NewRegistry(sqlxDB)

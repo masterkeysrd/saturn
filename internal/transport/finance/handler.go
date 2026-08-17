@@ -591,7 +591,7 @@ func (h *Handler) mapError(err error) error {
 		return status.Error(codes.NotFound, "borrowing not found")
 	case errors.Is(err, finance.ErrRepaymentNotFound):
 		return status.Error(codes.NotFound, "borrowing repayment not found")
-	case errors.Is(err, finance.ErrBudgetVersionMismatch), errors.Is(err, finance.ErrAccountVersionMismatch), errors.Is(err, finance.ErrInstitutionVersionMismatch), errors.Is(err, finance.ErrBorrowingVersionMismatch), errors.Is(err, finance.ErrRecurringTransactionVersionMismatch):
+	case errors.Is(err, finance.ErrBudgetVersionMismatch), errors.Is(err, finance.ErrAccountVersionMismatch), errors.Is(err, finance.ErrInstitutionVersionMismatch), errors.Is(err, finance.ErrBorrowingVersionMismatch), errors.Is(err, finance.ErrRecurringTransactionVersionMismatch), errors.Is(err, finance.ErrStatementVersionMismatch), errors.Is(err, finance.ErrStatementLineVersionMismatch):
 		return status.Error(codes.Aborted, err.Error())
 	}
 
@@ -846,22 +846,20 @@ func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTrans
 		budgetID = new(finance.BudgetID(req.GetBudgetId()))
 	}
 
-	var txnType *finance.TransactionType
-	if req.GetType() != financev1.Transaction_TYPE_UNSPECIFIED {
-		var t finance.TransactionType
-		switch req.GetType() {
+	var txnTypes []finance.TransactionType
+	for _, pt := range req.GetTypes() {
+		switch pt {
 		case financev1.Transaction_EXPENSE:
-			t = finance.TransactionTypeExpense
+			txnTypes = append(txnTypes, finance.TransactionTypeExpense)
 		case financev1.Transaction_INCOME:
-			t = finance.TransactionTypeIncome
+			txnTypes = append(txnTypes, finance.TransactionTypeIncome)
 		case financev1.Transaction_TRANSFER_OUT:
-			t = finance.TransactionTypeTransferOut
+			txnTypes = append(txnTypes, finance.TransactionTypeTransferOut)
 		case financev1.Transaction_TRANSFER_IN:
-			t = finance.TransactionTypeTransferIn
+			txnTypes = append(txnTypes, finance.TransactionTypeTransferIn)
 		case financev1.Transaction_BALANCE_ADJUSTMENT:
-			t = finance.TransactionTypeBalanceAdjustment
+			txnTypes = append(txnTypes, finance.TransactionTypeBalanceAdjustment)
 		}
-		txnType = &t
 	}
 
 	var accountID *finance.AccountID
@@ -891,7 +889,7 @@ func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTrans
 
 	filter := finance.TransactionFilter{
 		BudgetID:               budgetID,
-		Type:                   txnType,
+		Types:                  txnTypes,
 		AccountID:              accountID,
 		TransferID:             transferID,
 		ScheduledTransactionID: scheduledTransactionID,
@@ -976,6 +974,15 @@ func toProtoTransaction(t *finance.Transaction) *financev1.Transaction {
 	}
 	if t.Metadata.CounterpartAccountID != nil {
 		metaMap["counterpart_account_id"] = string(*t.Metadata.CounterpartAccountID)
+	}
+	if t.Metadata.Reconciled {
+		metaMap["reconciled"] = "true"
+	}
+	if t.Metadata.ReconciliationStatementID != "" {
+		metaMap["reconciliation_statement_id"] = t.Metadata.ReconciliationStatementID
+	}
+	if t.Metadata.ReconciledAt != nil {
+		metaMap["reconciled_at"] = t.Metadata.ReconciledAt.Format(time.RFC3339)
 	}
 	if t.Metadata.Notes != "" {
 		metaMap["notes"] = t.Metadata.Notes
@@ -2021,4 +2028,570 @@ func (h *Handler) ResolveInstitution(ctx context.Context, req *financev1.Resolve
 	}
 
 	return resp, nil
+}
+
+// Statement Reconciliation Handlers
+
+func (h *Handler) ImportStatement(ctx context.Context, req *financev1.ImportStatementRequest) (*financev1.Statement, error) {
+	if req.AccountId == "" {
+		return nil, status.Error(codes.InvalidArgument, "account_id is required")
+	}
+	if req.Statement == nil {
+		return nil, status.Error(codes.InvalidArgument, "statement details are required")
+	}
+
+	var stmtDate time.Time
+	if req.Statement.StatementDate != "" {
+		if t, err := time.Parse("2006-01-02", req.Statement.StatementDate); err == nil {
+			stmtDate = t
+		} else if t, err := time.Parse(time.RFC3339, req.Statement.StatementDate); err == nil {
+			stmtDate = t
+		}
+	}
+
+	var domainConfig finance.StatementConfig
+	if req.Statement.Config != nil {
+		if csvProto := req.Statement.Config.GetCsv(); csvProto != nil {
+			domainConfig.Format = "CSV"
+			domainConfig.CSV = &finance.CSVMapping{
+				DateColumnIndex:        csvProto.DateColumnIndex,
+				DescriptionColumnIndex: csvProto.DescriptionColumnIndex,
+				AmountColumnIndex:      csvProto.AmountColumnIndex,
+				DebitColumnIndex:       csvProto.DebitColumnIndex,
+				CreditColumnIndex:      csvProto.CreditColumnIndex,
+				ReferenceColumnIndex:   csvProto.ReferenceColumnIndex,
+				HasHeader:              csvProto.HasHeader,
+				Delimiter:              csvProto.Delimiter,
+				DateFormat:             csvProto.DateFormat,
+			}
+		}
+	}
+
+	domainStmt := &finance.Statement{
+		StatementDate:            stmtDate,
+		StatementStartingBalance: req.Statement.StatementStartingBalance,
+		StatementEndingBalance:   req.Statement.StatementEndingBalance,
+		Filename:                 req.Statement.Filename,
+		Config:                   domainConfig,
+		RawContent:               req.Statement.RawContent,
+	}
+
+	res, err := h.Coordinator.ImportStatement(ctx, finance.AccountID(req.AccountId), domainStmt)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoStatement(res), nil
+}
+
+func (h *Handler) GetStatement(ctx context.Context, req *financev1.GetStatementRequest) (*financev1.Statement, error) {
+	if req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "id is required")
+	}
+
+	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "space_id not found in context")
+	}
+	spaceID := finance.SpaceID(spaceIDStr)
+
+	res, err := h.Aggregator.GetStatement(ctx, spaceID, finance.StatementID(req.Id))
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoStatement(res), nil
+}
+
+func (h *Handler) DeleteStatement(ctx context.Context, req *financev1.DeleteStatementRequest) (*emptypb.Empty, error) {
+	if req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "id is required")
+	}
+
+	opts := finance.DeleteOptions{Version: req.GetVersion()}
+	err := h.Coordinator.DeleteStatement(ctx, finance.StatementID(req.Id), opts)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (h *Handler) ListStatements(ctx context.Context, req *financev1.ListStatementsRequest) (*financev1.ListStatementsResponse, error) {
+	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "space_id not found in context")
+	}
+	spaceID := finance.SpaceID(spaceIDStr)
+
+	filter := &finance.ListStatementsFilter{
+		PageSize:  req.PageSize,
+		PageToken: req.PageToken,
+	}
+
+	if req.AccountId != nil && *req.AccountId != "" {
+		aID := finance.AccountID(*req.AccountId)
+		filter.AccountID = &aID
+	}
+
+	if req.Status != nil {
+		var dStatus finance.StatementStatus
+		switch *req.Status {
+		case financev1.Statement_IN_PROGRESS:
+			dStatus = finance.StatementStatusInProgress
+		case financev1.Statement_COMPLETED:
+			dStatus = finance.StatementStatusCompleted
+		default:
+			dStatus = ""
+		}
+		if dStatus != "" {
+			filter.Status = &dStatus
+		}
+	}
+
+	page, err := h.Aggregator.ListStatements(ctx, spaceID, filter)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	protoStatements := make([]*financev1.Statement, len(page.Items))
+	for i, s := range page.Items {
+		protoStatements[i] = toProtoStatement(s)
+	}
+
+	return &financev1.ListStatementsResponse{
+		Statements:    protoStatements,
+		NextPageToken: page.NextPageToken,
+	}, nil
+}
+
+func (h *Handler) ListStatementLines(ctx context.Context, req *financev1.ListStatementLinesRequest) (*financev1.ListStatementLinesResponse, error) {
+	if req.StatementId == "" {
+		return nil, status.Error(codes.InvalidArgument, "statement_id is required")
+	}
+
+	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "space_id not found in context")
+	}
+	spaceID := finance.SpaceID(spaceIDStr)
+
+	lines, err := h.Aggregator.ListStatementLines(ctx, spaceID, finance.StatementID(req.StatementId))
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	protoLines := make([]*financev1.StatementLine, len(lines))
+	for i, l := range lines {
+		protoLines[i] = toProtoStatementLine(l)
+	}
+
+	return &financev1.ListStatementLinesResponse{
+		Lines: protoLines,
+	}, nil
+}
+
+func (h *Handler) UpdateStatementLine(ctx context.Context, req *financev1.UpdateStatementLineRequest) (*financev1.StatementLine, error) {
+	if req.StatementLine == nil || req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "statement line with valid id is required")
+	}
+
+	var maskPaths []string
+	if req.UpdateMask != nil {
+		hasAction := false
+		for _, p := range req.UpdateMask.Paths {
+			if strings.HasPrefix(p, "match") {
+				if !hasAction {
+					maskPaths = append(maskPaths, "action", "matched_transaction_id")
+					hasAction = true
+				}
+			} else if strings.HasPrefix(p, "create_") || strings.HasPrefix(p, "confirm_") || strings.HasPrefix(p, "skip") || p == "action" {
+				if !hasAction {
+					maskPaths = append(maskPaths, "action")
+					hasAction = true
+				}
+			} else {
+				maskPaths = append(maskPaths, p)
+			}
+		}
+	}
+
+	req.StatementLine.Id = req.Id
+	domainLine := toDomainStatementLine(req.StatementLine)
+	if req.Version != nil {
+		domainLine.Version = req.GetVersion()
+	}
+	res, err := h.Coordinator.UpdateStatementLine(ctx, domainLine, maskPaths)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoStatementLine(res), nil
+}
+
+func (h *Handler) UpdateStatement(ctx context.Context, req *financev1.UpdateStatementRequest) (*financev1.Statement, error) {
+	if req.Statement == nil || req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "statement with valid id is required")
+	}
+
+	var maskPaths []string
+	if req.UpdateMask != nil {
+		maskPaths = req.UpdateMask.Paths
+	}
+
+	req.Statement.Id = req.Id
+	domainStmt := toDomainStatement(req.Statement)
+	if req.Version != nil {
+		domainStmt.Version = req.GetVersion()
+	}
+	res, err := h.Coordinator.UpdateStatement(ctx, domainStmt, maskPaths)
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoStatement(res), nil
+}
+
+func (h *Handler) CompleteStatement(ctx context.Context, req *financev1.CompleteStatementRequest) (*financev1.Statement, error) {
+	if req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "id is required")
+	}
+
+	res, err := h.Coordinator.CompleteStatement(ctx, finance.StatementID(req.Id))
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	return toProtoStatement(res), nil
+}
+
+// Mappers
+
+func toProtoStatement(s *finance.Statement) *financev1.Statement {
+	if s == nil {
+		return nil
+	}
+	var protoStatus financev1.Statement_Status
+	switch s.Status {
+	case finance.StatementStatusInProgress:
+		protoStatus = financev1.Statement_IN_PROGRESS
+	case finance.StatementStatusCompleted:
+		protoStatus = financev1.Statement_COMPLETED
+	default:
+		protoStatus = financev1.Statement_STATUS_UNSPECIFIED
+	}
+
+	var protoConfig *financev1.Statement_Config
+	if s.Config.Format == "CSV" && s.Config.CSV != nil {
+		m := s.Config.CSV
+		protoConfig = &financev1.Statement_Config{
+			Format: &financev1.Statement_Config_Csv{
+				Csv: &financev1.Statement_Config_CsvConfig{
+					HasHeader:              m.HasHeader,
+					Delimiter:              m.Delimiter,
+					DateFormat:             m.DateFormat,
+					DateColumnIndex:        m.DateColumnIndex,
+					DescriptionColumnIndex: m.DescriptionColumnIndex,
+					ReferenceColumnIndex:   m.ReferenceColumnIndex,
+					AmountColumnIndex:      m.AmountColumnIndex,
+					DebitColumnIndex:       m.DebitColumnIndex,
+					CreditColumnIndex:      m.CreditColumnIndex,
+				},
+			},
+		}
+	}
+
+	return &financev1.Statement{
+		Id:                       string(s.ID),
+		SpaceId:                  string(s.SpaceID),
+		AccountId:                string(s.AccountID),
+		Status:                   protoStatus,
+		StatementDate:            s.StatementDate.Format("2006-01-02"),
+		StatementStartingBalance: s.StatementStartingBalance,
+		StatementEndingBalance:   s.StatementEndingBalance,
+		Filename:                 s.Filename,
+		Config:                   protoConfig,
+		RawContent:               s.RawContent,
+		CreateTime:               timestamppb.New(s.CreateTime),
+		UpdateTime:               timestamppb.New(s.UpdateTime),
+		Version:                  s.Version,
+	}
+}
+
+func toProtoStatementLine(l *finance.StatementLine) *financev1.StatementLine {
+	if l == nil {
+		return nil
+	}
+	var protoStatus financev1.StatementLine_Status
+	switch l.Status {
+	case finance.StatementLineStatusUnmatched:
+		protoStatus = financev1.StatementLine_UNMATCHED
+	case finance.StatementLineStatusMatched:
+		protoStatus = financev1.StatementLine_MATCHED
+	case finance.StatementLineStatusImported:
+		protoStatus = financev1.StatementLine_IMPORTED
+	case finance.StatementLineStatusSkipped:
+		protoStatus = financev1.StatementLine_SKIPPED
+	default:
+		protoStatus = financev1.StatementLine_STATUS_UNSPECIFIED
+	}
+
+	var matchedTxnID *string
+	if l.MatchedTransactionID != nil {
+		s := string(*l.MatchedTransactionID)
+		matchedTxnID = &s
+	}
+
+	res := &financev1.StatementLine{
+		Id:                   string(l.ID),
+		StatementId:          string(l.StatementID),
+		RowIndex:             l.RowIndex,
+		DateStr:              l.DateStr,
+		Description:          l.Description,
+		Amount:               l.Amount,
+		Status:               protoStatus,
+		MatchedTransactionId: matchedTxnID,
+		Reference:            l.Reference,
+		Version:              l.Version,
+	}
+
+	// Map Action oneof
+	switch l.Action.Type {
+	case finance.StatementLineActionTypeMatch:
+		var txnID string
+		if l.Action.TransactionID != nil {
+			txnID = string(*l.Action.TransactionID)
+		}
+		res.Action = &financev1.StatementLine_Match{
+			Match: &financev1.StatementLine_MatchAction{
+				TransactionId:        txnID,
+				OverwriteTransaction: l.Action.OverwriteTransaction,
+			},
+		}
+	case finance.StatementLineActionTypeCreateExpense:
+		var bID string
+		if l.Action.BudgetID != nil {
+			bID = string(*l.Action.BudgetID)
+		}
+		res.Action = &financev1.StatementLine_CreateExpense{
+			CreateExpense: &financev1.StatementLine_CreateExpenseAction{
+				BudgetId: bID,
+			},
+		}
+	case finance.StatementLineActionTypeCreateIncome:
+		res.Action = &financev1.StatementLine_CreateIncome{
+			CreateIncome: &financev1.StatementLine_CreateIncomeAction{},
+		}
+	case finance.StatementLineActionTypeCreateTransfer:
+		var destID string
+		if l.Action.CounterpartAccountID != nil {
+			destID = string(*l.Action.CounterpartAccountID)
+		}
+		res.Action = &financev1.StatementLine_CreateTransfer{
+			CreateTransfer: &financev1.StatementLine_CreateTransferAction{
+				CounterpartAccountId: destID,
+			},
+		}
+	case finance.StatementLineActionTypeConfirmScheduled:
+		var sID string
+		if l.Action.ScheduledTransactionID != nil {
+			sID = string(*l.Action.ScheduledTransactionID)
+		}
+		res.Action = &financev1.StatementLine_ConfirmScheduled{
+			ConfirmScheduled: &financev1.StatementLine_ConfirmScheduledAction{
+				ScheduledTransactionId: sID,
+			},
+		}
+	case finance.StatementLineActionTypeCreateRepayment:
+		var borID string
+		if l.Action.BorrowingID != nil {
+			borID = string(*l.Action.BorrowingID)
+		}
+		res.Action = &financev1.StatementLine_CreateRepayment{
+			CreateRepayment: &financev1.StatementLine_CreateRepaymentAction{
+				BorrowingId: borID,
+			},
+		}
+	case finance.StatementLineActionTypeSkip:
+		res.Action = &financev1.StatementLine_Skip{
+			Skip: &financev1.StatementLine_SkipAction{},
+		}
+	}
+
+	// Map suggestions
+	if l.Suggestions != nil {
+		var protoType financev1.Transaction_Type
+		switch l.Suggestions.TransactionType {
+		case finance.TransactionTypeExpense:
+			protoType = financev1.Transaction_EXPENSE
+		case finance.TransactionTypeIncome:
+			protoType = financev1.Transaction_INCOME
+		case finance.TransactionTypeTransferOut:
+			protoType = financev1.Transaction_TRANSFER_OUT
+		case finance.TransactionTypeTransferIn:
+			protoType = financev1.Transaction_TRANSFER_IN
+		default:
+			protoType = financev1.Transaction_TYPE_UNSPECIFIED
+		}
+
+		var bID *string
+		if l.Suggestions.BudgetID != nil {
+			s := string(*l.Suggestions.BudgetID)
+			bID = &s
+		}
+
+		var protoMatches []*financev1.Transaction
+		for _, t := range l.Suggestions.Matches {
+			protoMatches = append(protoMatches, toProtoTransaction(t))
+		}
+
+		res.Suggestions = &financev1.StatementLine_Suggestions{
+			TransactionType: protoType,
+			BudgetId:        bID,
+			Matches:         protoMatches,
+		}
+	}
+
+	return res
+}
+
+func toDomainAction(pb *financev1.StatementLine) finance.StatementLineAction {
+	if pb == nil {
+		return finance.StatementLineAction{Type: finance.StatementLineActionTypePending}
+	}
+	if pb.GetMatch() != nil {
+		var txnID *finance.TransactionID
+		if idStr := pb.GetMatch().GetTransactionId(); idStr != "" {
+			tID := finance.TransactionID(idStr)
+			txnID = &tID
+		}
+		return finance.StatementLineAction{
+			Type:                 finance.StatementLineActionTypeMatch,
+			TransactionID:        txnID,
+			OverwriteTransaction: pb.GetMatch().OverwriteTransaction,
+		}
+	}
+	if pb.GetCreateExpense() != nil {
+		var bID *finance.BudgetID
+		if idStr := pb.GetCreateExpense().GetBudgetId(); idStr != "" {
+			parsed := finance.BudgetID(idStr)
+			bID = &parsed
+		}
+		return finance.StatementLineAction{
+			Type:     finance.StatementLineActionTypeCreateExpense,
+			BudgetID: bID,
+		}
+	}
+	if pb.GetCreateIncome() != nil {
+		return finance.StatementLineAction{
+			Type: finance.StatementLineActionTypeCreateIncome,
+		}
+	}
+	if pb.GetCreateTransfer() != nil {
+		var accID *finance.AccountID
+		if idStr := pb.GetCreateTransfer().GetCounterpartAccountId(); idStr != "" {
+			parsed := finance.AccountID(idStr)
+			accID = &parsed
+		}
+		return finance.StatementLineAction{
+			Type:                 finance.StatementLineActionTypeCreateTransfer,
+			CounterpartAccountID: accID,
+		}
+	}
+	if pb.GetConfirmScheduled() != nil {
+		var sID *finance.ScheduledTransactionID
+		if idStr := pb.GetConfirmScheduled().GetScheduledTransactionId(); idStr != "" {
+			parsed := finance.ScheduledTransactionID(idStr)
+			sID = &parsed
+		}
+		return finance.StatementLineAction{
+			Type:                   finance.StatementLineActionTypeConfirmScheduled,
+			ScheduledTransactionID: sID,
+		}
+	}
+	if pb.GetCreateRepayment() != nil {
+		var borID *finance.BorrowingID
+		if idStr := pb.GetCreateRepayment().GetBorrowingId(); idStr != "" {
+			parsed := finance.BorrowingID(idStr)
+			borID = &parsed
+		}
+		return finance.StatementLineAction{
+			Type:        finance.StatementLineActionTypeCreateRepayment,
+			BorrowingID: borID,
+		}
+	}
+	if pb.GetSkip() != nil {
+		return finance.StatementLineAction{
+			Type: finance.StatementLineActionTypeSkip,
+		}
+	}
+	return finance.StatementLineAction{Type: finance.StatementLineActionTypePending}
+}
+
+func toDomainStatementLine(pb *financev1.StatementLine) *finance.StatementLine {
+	if pb == nil {
+		return nil
+	}
+	var status finance.StatementLineStatus
+	switch pb.Status {
+	case financev1.StatementLine_UNMATCHED:
+		status = finance.StatementLineStatusUnmatched
+	case financev1.StatementLine_MATCHED:
+		status = finance.StatementLineStatusMatched
+	case financev1.StatementLine_IMPORTED:
+		status = finance.StatementLineStatusImported
+	case financev1.StatementLine_SKIPPED:
+		status = finance.StatementLineStatusSkipped
+	default:
+		status = finance.StatementLineStatusUnmatched
+	}
+
+	var matchedTxnID *finance.TransactionID
+	if pb.MatchedTransactionId != nil && *pb.MatchedTransactionId != "" {
+		id := finance.TransactionID(*pb.MatchedTransactionId)
+		matchedTxnID = &id
+	} else if pb.GetMatch() != nil && pb.GetMatch().GetTransactionId() != "" {
+		id := finance.TransactionID(pb.GetMatch().GetTransactionId())
+		matchedTxnID = &id
+	}
+
+	return &finance.StatementLine{
+		ID:                   finance.StatementLineID(pb.Id),
+		StatementID:          finance.StatementID(pb.StatementId),
+		RowIndex:             pb.RowIndex,
+		DateStr:              pb.DateStr,
+		Description:          pb.Description,
+		Amount:               pb.Amount,
+		Reference:            pb.Reference,
+		Action:               toDomainAction(pb),
+		Status:               status,
+		MatchedTransactionID: matchedTxnID,
+		Version:              pb.Version,
+	}
+}
+
+func toDomainStatement(pb *financev1.Statement) *finance.Statement {
+	if pb == nil {
+		return nil
+	}
+	var stmtDate time.Time
+	if pb.StatementDate != "" {
+		if t, err := time.Parse("2006-01-02", pb.StatementDate); err == nil {
+			stmtDate = t
+		} else if t, err := time.Parse(time.RFC3339, pb.StatementDate); err == nil {
+			stmtDate = t
+		}
+	}
+
+	return &finance.Statement{
+		ID:                       finance.StatementID(pb.Id),
+		SpaceID:                  finance.SpaceID(pb.SpaceId),
+		AccountID:                finance.AccountID(pb.AccountId),
+		StatementDate:            stmtDate,
+		StatementStartingBalance: pb.StatementStartingBalance,
+		StatementEndingBalance:   pb.StatementEndingBalance,
+		Filename:                 pb.Filename,
+		RawContent:               pb.RawContent,
+		Version:                  pb.Version,
+	}
 }

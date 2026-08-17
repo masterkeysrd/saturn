@@ -979,3 +979,142 @@ func (c *Client) DiscardInboxItem(ctx context.Context, req *DiscardInboxItemRequ
 	}
 	return &resp, nil
 }
+
+// ImportStatement executes POST /api/v1/finance/accounts/{account_id}/statements:import.
+func (c *Client) ImportStatement(ctx context.Context, req *ImportStatementRequest) (*Statement, error) {
+	var resp Statement
+	path := fmt.Sprintf("/api/v1/finance/accounts/%s/statements:import", req.GetAccountId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// GetStatement executes GET /api/v1/finance/statements/{id}.
+func (c *Client) GetStatement(ctx context.Context, req *GetStatementRequest) (*Statement, error) {
+	var resp Statement
+	path := fmt.Sprintf("/api/v1/finance/statements/%s", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// DeleteStatement executes DELETE /api/v1/finance/statements/{id}.
+func (c *Client) DeleteStatement(ctx context.Context, req *DeleteStatementRequest) (*emptypb.Empty, error) {
+	var resp emptypb.Empty
+	path := fmt.Sprintf("/api/v1/finance/statements/%s", req.GetId())
+	var query []string
+	if req.Version != nil {
+		query = append(query, fmt.Sprintf("version=%d", req.GetVersion()))
+	}
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "DELETE", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ListStatements executes GET /api/v1/finance/statements.
+func (c *Client) ListStatements(ctx context.Context, req *ListStatementsRequest) (*ListStatementsResponse, error) {
+	var resp ListStatementsResponse
+	path := "/api/v1/finance/statements"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ListStatementLines executes GET /api/v1/finance/statements/{statement_id}/lines.
+func (c *Client) ListStatementLines(ctx context.Context, req *ListStatementLinesRequest) (*ListStatementLinesResponse, error) {
+	var resp ListStatementLinesResponse
+	path := fmt.Sprintf("/api/v1/finance/statements/%s/lines", req.GetStatementId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "GET", path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// UpdateStatementLine executes PATCH /api/v1/finance/statement-lines/{id}.
+func (c *Client) UpdateStatementLine(ctx context.Context, req *UpdateStatementLineRequest) (*StatementLine, error) {
+	var resp StatementLine
+	path := fmt.Sprintf("/api/v1/finance/statement-lines/%s", req.GetId())
+	var query []string
+	if req.Version != nil {
+		query = append(query, fmt.Sprintf("version=%d", req.GetVersion()))
+	}
+	if req.UpdateMask != nil {
+		for _, p := range req.GetUpdateMask().GetPaths() {
+			query = append(query, fmt.Sprintf("update_mask.paths=%s", p))
+		}
+	}
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	payload := req.GetStatementLine()
+	if payload == nil {
+		return nil, fmt.Errorf("statement_line payload is required")
+	}
+	if err := c.base.Do(ctx, "PATCH", path, payload, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// UpdateStatement executes PATCH /api/v1/finance/statements/{id}.
+func (c *Client) UpdateStatement(ctx context.Context, req *UpdateStatementRequest) (*Statement, error) {
+	var resp Statement
+	path := fmt.Sprintf("/api/v1/finance/statements/%s", req.GetId())
+	var query []string
+	if req.Version != nil {
+		query = append(query, fmt.Sprintf("version=%d", req.GetVersion()))
+	}
+	if req.UpdateMask != nil {
+		for _, p := range req.GetUpdateMask().GetPaths() {
+			query = append(query, fmt.Sprintf("update_mask.paths=%s", p))
+		}
+	}
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	payload := req.GetStatement()
+	if payload == nil {
+		return nil, fmt.Errorf("statement payload is required")
+	}
+	if err := c.base.Do(ctx, "PATCH", path, payload, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// CompleteStatement executes POST /api/v1/finance/statements/{id}:complete.
+func (c *Client) CompleteStatement(ctx context.Context, req *CompleteStatementRequest) (*Statement, error) {
+	var resp Statement
+	path := fmt.Sprintf("/api/v1/finance/statements/%s:complete", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}

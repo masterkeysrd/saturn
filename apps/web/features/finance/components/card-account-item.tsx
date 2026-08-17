@@ -13,6 +13,7 @@ import {
   Edit2,
   Check,
   Trash2,
+  RefreshCw,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -60,6 +61,7 @@ interface CardAccountItemProps {
   onEdit: () => void
   onSetDefault?: () => void
   onDelete: () => void
+  onReconcile: () => void
 }
 
 export function CardAccountItem({
@@ -71,6 +73,7 @@ export function CardAccountItem({
   onEdit,
   onSetDefault,
   onDelete,
+  onReconcile,
 }: CardAccountItemProps) {
   const theme = getCardGradient(acc.color)
   const isCredit = acc.type === "CREDIT_CARD"
@@ -158,6 +161,16 @@ export function CardAccountItem({
             <DropdownMenuContent className="rounded-xl border border-border/50 bg-card/95 p-1.5 shadow-xl backdrop-blur-xl">
               {isWritable && (
                 <>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onReconcile()
+                    }}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-blue-400 focus:bg-blue-500/10"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Reconcile Account
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation()

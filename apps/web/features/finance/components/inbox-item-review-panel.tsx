@@ -1161,10 +1161,10 @@ export function InboxItemReviewPanel({
                             onOpenChange={setBillPopoverOpen}
                             modal={false}
                           >
-                            <PopoverTrigger className="flex h-10 w-full cursor-pointer items-center justify-between rounded-xl border border-border/60 bg-background/40 px-3 text-left font-normal text-foreground hover:bg-background/50 focus:ring-1 focus:ring-ring">
+                            <PopoverTrigger className="flex h-10 w-full min-w-0 cursor-pointer items-center justify-between gap-2 rounded-xl border border-border/60 bg-background/40 px-3 text-left font-normal text-foreground hover:bg-background/50 focus:ring-1 focus:ring-ring">
                               {selectedPaymentObj ? (
-                                <div className="flex w-full items-center justify-between pr-1 text-xs">
-                                  <div className="flex min-w-0 items-center gap-2">
+                                <div className="flex min-w-0 flex-1 items-center justify-between gap-2 overflow-hidden text-xs">
+                                  <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
                                     <Calendar className="h-3.5 w-3.5 shrink-0 text-indigo-400" />
                                     <span className="truncate font-semibold text-foreground">
                                       {selectedPaymentName}
@@ -1177,7 +1177,7 @@ export function InboxItemReviewPanel({
                                       )
                                     </span>
                                   </div>
-                                  <span className="shrink-0 pl-2 font-bold text-foreground">
+                                  <span className="shrink-0 font-bold text-foreground">
                                     {formatCents(
                                       selectedPaymentObj.amount
                                     ).toLocaleString(undefined, {
@@ -1188,7 +1188,7 @@ export function InboxItemReviewPanel({
                                   </span>
                                 </div>
                               ) : (
-                                <span className="text-xs text-muted-foreground">
+                                <span className="truncate text-xs text-muted-foreground">
                                   Search or select a scheduled bill...
                                 </span>
                               )}
@@ -1349,17 +1349,17 @@ export function InboxItemReviewPanel({
                               onOpenChange={setBorrowingPopoverOpen}
                               modal={false}
                             >
-                              <PopoverTrigger className="flex h-10 w-full cursor-pointer items-center justify-between rounded-xl border border-border/60 bg-background/40 px-3 text-left font-normal text-foreground hover:bg-background/50 focus:ring-1 focus:ring-ring">
+                              <PopoverTrigger className="flex h-10 w-full min-w-0 cursor-pointer items-center justify-between gap-2 rounded-xl border border-border/60 bg-background/40 px-3 text-left font-normal text-foreground hover:bg-background/50 focus:ring-1 focus:ring-ring">
                                 {selectedBorrowingObj ? (
-                                  <div className="flex w-full items-center justify-between pr-1 text-xs">
-                                    <div className="flex min-w-0 items-center gap-2">
+                                  <div className="flex min-w-0 flex-1 items-center justify-between gap-2 overflow-hidden text-xs">
+                                    <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
                                       <ArrowLeftRight className="h-3.5 w-3.5 shrink-0 text-teal-400" />
                                       <span className="truncate font-semibold text-foreground">
                                         {selectedBorrowingObj.counterparty}
                                       </span>
                                       <span
                                         className={cn(
-                                          "rounded border px-1.5 text-[9px] font-bold",
+                                          "shrink-0 rounded border px-1.5 text-[9px] font-bold",
                                           selectedBorrowingObj.direction ===
                                             "LENT"
                                             ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
@@ -1372,7 +1372,7 @@ export function InboxItemReviewPanel({
                                           : "Borrowed"}
                                       </span>
                                     </div>
-                                    <span className="shrink-0 pl-2 font-bold text-foreground">
+                                    <span className="shrink-0 font-bold text-foreground">
                                       Bal:{" "}
                                       {formatCents(
                                         selectedBorrowingObj.remainingAmount
@@ -1384,7 +1384,7 @@ export function InboxItemReviewPanel({
                                     </span>
                                   </div>
                                 ) : (
-                                  <span className="text-xs text-muted-foreground">
+                                  <span className="truncate text-xs text-muted-foreground">
                                     Search or select debt / borrowing...
                                   </span>
                                 )}

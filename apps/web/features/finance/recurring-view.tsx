@@ -141,7 +141,7 @@ export function RecurringView() {
   } = useListTransactionsQuery(
     {
       budgetId: "",
-      type: "TYPE_UNSPECIFIED",
+      types: [],
       pageSize: HISTORY_PAGE_SIZE,
       pageToken: "",
     },

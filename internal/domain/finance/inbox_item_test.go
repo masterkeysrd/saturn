@@ -3,6 +3,8 @@ package finance
 import (
 	"testing"
 	"time"
+
+	"github.com/segmentio/ksuid"
 )
 
 func TestParseInboxItemDocType(t *testing.T) {
@@ -158,5 +160,67 @@ func TestInboxItem_SortFields(t *testing.T) {
 				t.Errorf("GetSortValue(%q) returned empty string", tt.field)
 			}
 		})
+	}
+}
+
+func TestInboxItem_NewTransaction(t *testing.T) {
+	spaceID := SpaceID("spc_" + ksuid.New().String())
+	accID := "acc_" + ksuid.New().String()
+	bgtID := "bgt_" + ksuid.New().String()
+
+	item := &InboxItem{
+		ID:         "ibx_" + ksuid.New().String(),
+		SpaceID:    string(spaceID),
+		Amount:     5000,
+		Currency:   "USD",
+		VendorName: "Coffee Shop",
+		AccountID:  &accID,
+		BudgetID:   &bgtID,
+		DocType:    InboxItemDocReceipt,
+	}
+
+	txn, err := item.NewTransaction(spaceID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if txn.Type != TransactionTypeExpense {
+		t.Errorf("expected expense, got %s", txn.Type)
+	}
+	if txn.Amount != 5000 {
+		t.Errorf("expected amount 5000, got %d", txn.Amount)
+	}
+	if txn.Description != "Coffee Shop" {
+		t.Errorf("expected description 'Coffee Shop', got %s", txn.Description)
+	}
+}
+
+func TestInboxItem_NewTransfer(t *testing.T) {
+	spaceID := SpaceID("spc_" + ksuid.New().String())
+	srcAccID := "acc_" + ksuid.New().String()
+	destAccID := AccountID("acc_" + ksuid.New().String())
+
+	item := &InboxItem{
+		ID:         "ibx_" + ksuid.New().String(),
+		SpaceID:    string(spaceID),
+		Amount:     12000,
+		Currency:   "USD",
+		VendorName: "Transfer to Savings",
+		AccountID:  &srcAccID,
+	}
+
+	transfer, err := item.NewTransfer(spaceID, destAccID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if transfer.SourceAccountID != AccountID(srcAccID) {
+		t.Errorf("expected source account %s, got %s", srcAccID, transfer.SourceAccountID)
+	}
+	if transfer.DestinationAccountID != destAccID {
+		t.Errorf("expected dest account %s, got %s", destAccID, transfer.DestinationAccountID)
+	}
+	if transfer.SourceAmount != 12000 || transfer.DestinationAmount != 12000 {
+		t.Errorf("expected 12000, got %d", transfer.SourceAmount)
 	}
 }

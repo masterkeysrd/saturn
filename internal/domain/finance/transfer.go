@@ -94,6 +94,12 @@ func (t *Transfer) Validate() error {
 	return nil
 }
 
+// CreateTransferOpts holds optional parameters for transfer leg transaction creation.
+type CreateTransferOpts struct {
+	OutflowMetadata *TransactionMetadata
+	InflowMetadata  *TransactionMetadata
+}
+
 // TransferLegOpts contains parameters for generating source and destination transactions for a transfer.
 type TransferLegOpts struct {
 	SourceAccountName  string

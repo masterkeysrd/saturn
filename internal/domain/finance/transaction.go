@@ -66,15 +66,58 @@ const transactionPrefix = "txn_"
 
 // TransactionMetadata contains strongly typed domain context metadata associated with a transaction.
 type TransactionMetadata struct {
-	ScheduledTransactionID *ScheduledTransactionID `json:"scheduled_transaction_id,omitempty"`
-	RecurringTransactionID *RecurringTransactionID `json:"recurring_transaction_id,omitempty"`
-	BorrowingID            *BorrowingID            `json:"borrowing_id,omitempty"`
-	BorrowingRole          string                  `json:"borrowing_role,omitempty"` // "INITIAL_FUNDING", "REPAYMENT", "ADDITIONAL_LOAN"
-	BorrowingAmount        int64                   `json:"borrowing_amount,omitempty"`
-	AccountImpactAmount    int64                   `json:"account_impact_amount,omitempty"`
-	TransferID             *TransferID             `json:"transfer_id,omitempty"`
-	CounterpartAccountID   *AccountID              `json:"counterpart_account_id,omitempty"`
-	Notes                  string                  `json:"notes,omitempty"`
+	ScheduledTransactionID    *ScheduledTransactionID `json:"scheduled_transaction_id,omitempty"`
+	RecurringTransactionID    *RecurringTransactionID `json:"recurring_transaction_id,omitempty"`
+	BorrowingID               *BorrowingID            `json:"borrowing_id,omitempty"`
+	BorrowingRole             string                  `json:"borrowing_role,omitempty"` // "INITIAL_FUNDING", "REPAYMENT", "ADDITIONAL_LOAN"
+	BorrowingAmount           int64                   `json:"borrowing_amount,omitempty"`
+	AccountImpactAmount       int64                   `json:"account_impact_amount,omitempty"`
+	TransferID                *TransferID             `json:"transfer_id,omitempty"`
+	CounterpartAccountID      *AccountID              `json:"counterpart_account_id,omitempty"`
+	Notes                     string                  `json:"notes,omitempty"`
+	Reconciled                bool                    `json:"reconciled,omitempty"`
+	ReconciliationStatementID string                  `json:"reconciliation_statement_id,omitempty"`
+	ReconciledAt              *time.Time              `json:"reconciled_at,omitempty"`
+}
+
+// Merge copies non-zero / non-nil fields from other into this TransactionMetadata instance.
+func (m *TransactionMetadata) Merge(other TransactionMetadata) {
+	if other.ScheduledTransactionID != nil {
+		m.ScheduledTransactionID = other.ScheduledTransactionID
+	}
+	if other.RecurringTransactionID != nil {
+		m.RecurringTransactionID = other.RecurringTransactionID
+	}
+	if other.BorrowingID != nil {
+		m.BorrowingID = other.BorrowingID
+	}
+	if other.BorrowingRole != "" {
+		m.BorrowingRole = other.BorrowingRole
+	}
+	if other.BorrowingAmount != 0 {
+		m.BorrowingAmount = other.BorrowingAmount
+	}
+	if other.AccountImpactAmount != 0 {
+		m.AccountImpactAmount = other.AccountImpactAmount
+	}
+	if other.TransferID != nil {
+		m.TransferID = other.TransferID
+	}
+	if other.CounterpartAccountID != nil {
+		m.CounterpartAccountID = other.CounterpartAccountID
+	}
+	if other.Notes != "" {
+		m.Notes = other.Notes
+	}
+	if other.Reconciled {
+		m.Reconciled = true
+	}
+	if other.ReconciliationStatementID != "" {
+		m.ReconciliationStatementID = other.ReconciliationStatementID
+	}
+	if other.ReconciledAt != nil {
+		m.ReconciledAt = other.ReconciledAt
+	}
 }
 
 // Transaction represents a financial record in the space ledger.

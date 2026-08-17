@@ -32,7 +32,7 @@ export function PageLayout({
   return (
     <div
       className={cn(
-        "mx-auto flex w-full max-w-6xl flex-1 animate-in flex-col gap-8 duration-500 fade-in",
+        "mx-auto flex w-full max-w-6xl flex-1 animate-in flex-col gap-8 p-6 duration-500 fade-in",
         className
       )}
     >

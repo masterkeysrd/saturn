@@ -385,6 +385,61 @@ service Finance {
   rpc DiscardInboxItem(DiscardInboxItemRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {delete: "/v1/finance/inbox-items/{id}"};
   }
+
+  // Initiates a new statement reconciliation session by parsing the uploaded CSV content
+  // and persisting the detected lines for user review.
+  rpc ImportStatement(ImportStatementRequest) returns (Statement) {
+    option (google.api.http) = {
+      post: "/v1/finance/accounts/{account_id}/statements:import"
+      body: "*"
+    };
+  }
+
+  // Retrieves a specific statement resource by ID, including its status and balance metadata.
+  rpc GetStatement(GetStatementRequest) returns (Statement) {
+    option (google.api.http) = {get: "/v1/finance/statements/{id}"};
+  }
+
+  // Discards a statement resource and permanently deletes all associated statement lines.
+  rpc DeleteStatement(DeleteStatementRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/v1/finance/statements/{id}"};
+  }
+
+  // Lists statements in the space, optionally filtered by account or reconciliation status.
+  rpc ListStatements(ListStatementsRequest) returns (ListStatementsResponse) {
+    option (google.api.http) = {get: "/v1/finance/statements"};
+  }
+
+  // Lists all statement lines belonging to a specific statement session.
+  rpc ListStatementLines(ListStatementLinesRequest) returns (ListStatementLinesResponse) {
+    option (google.api.http) = {get: "/v1/finance/statements/{statement_id}/lines"};
+  }
+
+  // Saves the user's matching or transaction-generation choice for a statement line as a draft.
+  // Supports partial updates via field mask (e.g. match, create_expense, skip).
+  rpc UpdateStatementLine(UpdateStatementLineRequest) returns (StatementLine) {
+    option (google.api.http) = {
+      patch: "/v1/finance/statement-lines/{id}"
+      body: "statement_line"
+    };
+  }
+
+  // Updates statement metadata such as the statement date, starting balance, or ending balance.
+  rpc UpdateStatement(UpdateStatementRequest) returns (Statement) {
+    option (google.api.http) = {
+      patch: "/v1/finance/statements/{id}"
+      body: "statement"
+    };
+  }
+
+  // Commits all reconciliation choices: creates transactions, links matched entries,
+  // and marks the statement as COMPLETED in a single atomic database transaction.
+  rpc CompleteStatement(CompleteStatementRequest) returns (Statement) {
+    option (google.api.http) = {
+      post: "/v1/finance/statements/{id}:complete"
+      body: "*"
+    };
+  }
 }
 
 // FinanceSettings represents the workspace configuration.
@@ -979,8 +1034,8 @@ message ListTransactionsRequest {
   // Values are of the form `bud_[a-zA-Z0-9]+`.
   optional string budget_id = 2 [(google.api.field_behavior) = OPTIONAL];
 
-  // Optional. Target transaction flow type filter.
-  optional Transaction.Type type = 3 [(google.api.field_behavior) = OPTIONAL];
+  // Optional. Target transaction flow types filter.
+  repeated Transaction.Type types = 3 [(google.api.field_behavior) = OPTIONAL];
 
   // Optional. Target account identifier.
   // Values are of the form `acc_[a-zA-Z0-9]+`.
@@ -2463,5 +2518,248 @@ message ApproveInboxItemRequest {
 message DiscardInboxItemRequest {
   // Required. Target staged inbox item identifier to discard.
   // Values are of the form `inb_[a-zA-Z0-9]+`.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Statement represents an uploaded account statement.
+message Statement {
+  // Status defines the lifecycle phase of the statement.
+  enum Status {
+    // Default unspecified status.
+    STATUS_UNSPECIFIED = 0;
+    // In progress draft statement undergoing reconciliation.
+    IN_PROGRESS = 1;
+    // Completed statement with all lines successfully matched or imported.
+    COMPLETED = 2;
+  }
+
+  // Nested parsing configuration.
+  message Config {
+    message CsvConfig {
+      bool has_header = 1;
+      string delimiter = 2;
+      string date_format = 3;
+
+      int32 date_column_index = 4;
+      int32 description_column_index = 5;
+      int32 reference_column_index = 6;
+      int32 amount_column_index = 7;
+      int32 debit_column_index = 8;
+      int32 credit_column_index = 9;
+    }
+
+    oneof format {
+      CsvConfig csv = 1;
+    }
+  }
+
+  // Output only. Unique identifier for the statement.
+  // Values are of the form `stmt_[a-zA-Z0-9]+`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Associated workspace identifier.
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Identifier of the account this statement belongs to.
+  string account_id = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Current reconciliation status.
+  Status status = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. The closing date of the statement (ISO-8601 calendar date e.g. "2026-08-12").
+  string statement_date = 5 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The starting balance of the statement in account cents.
+  int64 statement_starting_balance = 6 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The ending balance of the statement in account cents.
+  int64 statement_ending_balance = 7 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Original file name.
+  string filename = 8 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Extensible statement parsing configuration.
+  Config config = 9 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Original raw statement file content.
+  string raw_content = 10 [(google.api.field_behavior) = REQUIRED];
+
+  // Output only. Timestamp when statement was imported.
+  google.protobuf.Timestamp create_time = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp when statement was last modified.
+  google.protobuf.Timestamp update_time = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Optimistic concurrency control version identifier.
+  int64 version = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// StatementLine represents a parsed transaction row from the uploaded statement.
+message StatementLine {
+  // Status defines whether the line is matched to the ledger.
+  enum Status {
+    // Default unspecified status.
+    STATUS_UNSPECIFIED = 0;
+    // Unmatched line item.
+    UNMATCHED = 1;
+    // Matched to an existing transaction.
+    MATCHED = 2;
+    // Imported as a new transaction.
+    IMPORTED = 3;
+    // Explicitly skipped/ignored.
+    SKIPPED = 4;
+  }
+
+  // Output only. Unique identifier for the statement line.
+  // Values are of the form `stln_[a-zA-Z0-9]+`.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Identifier of the parent statement.
+  string statement_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Line index inside the source statement (0-indexed).
+  int32 row_index = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Original date string from the CSV.
+  string date_str = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Original description string from the CSV.
+  string description = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Amount in account cents.
+  int64 amount = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Current reconciliation status of the line.
+  Status status = 7;
+
+  // Output only. Linked transaction ID once committed/completed.
+  optional string matched_transaction_id = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Bank confirmation number or wire reference.
+  optional string reference = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Draft actions
+  message MatchAction {
+    string transaction_id = 1;
+    optional bool overwrite_transaction = 2;
+  }
+  message CreateExpenseAction {
+    string budget_id = 1;
+  }
+  message CreateIncomeAction {}
+  message CreateTransferAction {
+    string counterpart_account_id = 1;
+  }
+  message ConfirmScheduledAction {
+    string scheduled_transaction_id = 1;
+  }
+  message CreateRepaymentAction {
+    string borrowing_id = 1;
+  }
+  message SkipAction {}
+
+  // The draft action representing the user's matching/categorization choice.
+  oneof action {
+    MatchAction match = 10;
+    CreateExpenseAction create_expense = 11;
+    CreateIncomeAction create_income = 12;
+    CreateTransferAction create_transfer = 13;
+    ConfirmScheduledAction confirm_scheduled = 14;
+    CreateRepaymentAction create_repayment = 15;
+    SkipAction skip = 16;
+  }
+
+  // Grouped suggestions resolved dynamically by the matching engine on fetch.
+  message Suggestions {
+    Transaction.Type transaction_type = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+    optional string budget_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+    repeated Transaction matches = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  }
+  optional Suggestions suggestions = 17 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Optimistic concurrency control version identifier.
+  int64 version = 18 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request to import a new statement.
+message ImportStatementRequest {
+  // Required. Target account identifier to upload the statement under.
+  string account_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The statement resource properties to import.
+  Statement statement = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request to get a statement.
+message GetStatementRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request to delete a statement.
+message DeleteStatementRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  optional int64 version = 2 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request to list statements in a space.
+message ListStatementsRequest {
+  // Optional. Filter statements by account identifier.
+  optional string account_id = 1 [(google.api.field_behavior) = OPTIONAL];
+  // Optional. Filter statements by status.
+  optional Statement.Status status = 2 [(google.api.field_behavior) = OPTIONAL];
+  // Optional. Number of statements to return.
+  int32 page_size = 3 [(google.api.field_behavior) = OPTIONAL];
+  // Optional. Keyset pagination token.
+  string page_token = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Response from listing statements.
+message ListStatementsResponse {
+  repeated Statement statements = 1;
+  string next_page_token = 2;
+}
+
+// Request to list lines of a statement.
+message ListStatementLinesRequest {
+  string statement_id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Response from listing lines.
+message ListStatementLinesResponse {
+  repeated StatementLine lines = 1;
+}
+
+// Request to update a statement line's draft parameters.
+message UpdateStatementLineRequest {
+  // Required. Unique identifier of the statement line to update.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Updated statement line properties.
+  StatementLine statement_line = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Field mask specifying which properties of the statement line to update.
+  optional google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Version number for optimistic concurrency control.
+  optional int64 version = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request to update a statement's properties (such as starting or ending balances).
+message UpdateStatementRequest {
+  // Required. Unique identifier of the statement to update.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Updated statement properties.
+  Statement statement = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Field mask specifying which properties of the statement to update.
+  optional google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Version number for optimistic concurrency control.
+  optional int64 version = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Request to finalize and commit the statement.
+message CompleteStatementRequest {
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 }

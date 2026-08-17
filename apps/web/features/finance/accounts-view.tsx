@@ -1,5 +1,9 @@
 import { useState, useMemo, useCallback } from "react"
-import { useSpacePermissions } from "@/features/space/use-space"
+import { useNavigate } from "react-router-dom"
+import {
+  useSpacePermissions,
+  resolveSpacePath,
+} from "@/features/space/use-space"
 import {
   type Account,
   type Account_Type,
@@ -67,6 +71,7 @@ function getAccountTypeLabel(type: Account_Type) {
 }
 
 export function AccountsView() {
+  const navigate = useNavigate()
   const { spaceId, isWritable } = useSpacePermissions()
   const [urlState, setUrlState] = useUrlState(ACCOUNTS_FILTER_DEFAULTS)
   const [searchQuery, setSearchQuery] = useState(urlState.q || "")
@@ -698,6 +703,15 @@ export function AccountsView() {
                             }}
                             onSetDefault={() => handleSetDefault(acc)}
                             onDelete={() => handleDeleteAccount(acc.id || "")}
+                            onReconcile={() =>
+                              navigate(
+                                resolveSpacePath(
+                                  `/finance/reconcile?accountId=${acc.id}`,
+                                  spaceId,
+                                  true
+                                )
+                              )
+                            }
                           />
                         ))}
                       </div>
@@ -724,6 +738,15 @@ export function AccountsView() {
                     }}
                     onSetDefault={() => handleSetDefault(acc)}
                     onDelete={() => handleDeleteAccount(acc.id || "")}
+                    onReconcile={() =>
+                      navigate(
+                        resolveSpacePath(
+                          `/finance/reconcile?accountId=${acc.id}`,
+                          spaceId,
+                          true
+                        )
+                      )
+                    }
                   />
                 ))}
               </div>

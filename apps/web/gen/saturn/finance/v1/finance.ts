@@ -324,6 +324,48 @@ export type InboxItem_DocType =
 export type InboxItem_View = "VIEW_UNSPECIFIED" | "BASIC" | "FULL"
 
 /**
+ * Status defines the lifecycle phase of the statement.
+ */
+export type Statement_Status =
+  /**
+   * Default unspecified status.
+   */
+  | "STATUS_UNSPECIFIED"
+  /**
+   * In progress draft statement undergoing reconciliation.
+   */
+  | "IN_PROGRESS"
+  /**
+   * Completed statement with all lines successfully matched or imported.
+   */
+  | "COMPLETED"
+
+/**
+ * Status defines whether the line is matched to the ledger.
+ */
+export type StatementLine_Status =
+  /**
+   * Default unspecified status.
+   */
+  | "STATUS_UNSPECIFIED"
+  /**
+   * Unmatched line item.
+   */
+  | "UNMATCHED"
+  /**
+   * Matched to an existing transaction.
+   */
+  | "MATCHED"
+  /**
+   * Imported as a new transaction.
+   */
+  | "IMPORTED"
+  /**
+   * Explicitly skipped/ignored.
+   */
+  | "SKIPPED"
+
+/**
  * FinanceSettings represents the workspace configuration.
  */
 export interface FinanceSettings {
@@ -1065,9 +1107,9 @@ export interface ListTransactionsRequest {
    */
   budgetId?: string
   /**
-   * Optional. Target transaction flow type filter.
+   * Optional. Target transaction flow types filter.
    */
-  type?: Transaction_Type
+  types?: Transaction_Type[]
   /**
    * Optional. Target account identifier.
    * Values are of the form `acc_[a-zA-Z0-9]+`.
@@ -2938,6 +2980,300 @@ export interface DiscardInboxItemRequest {
 }
 
 /**
+ * Statement represents an uploaded account statement.
+ */
+export interface Statement {
+  /**
+   * Output only. Unique identifier for the statement.
+   * Values are of the form `stmt_[a-zA-Z0-9]+`.
+   */
+  id?: string
+  /**
+   * Output only. Associated workspace identifier.
+   */
+  spaceId?: string
+  /**
+   * Output only. Identifier of the account this statement belongs to.
+   */
+  accountId?: string
+  /**
+   * Output only. Current reconciliation status.
+   */
+  status?: Statement_Status
+  /**
+   * Required. The closing date of the statement (ISO-8601 calendar date e.g. "2026-08-12").
+   */
+  statementDate: string
+  /**
+   * Required. The starting balance of the statement in account cents.
+   */
+  statementStartingBalance: string
+  /**
+   * Required. The ending balance of the statement in account cents.
+   */
+  statementEndingBalance: string
+  /**
+   * Required. Original file name.
+   */
+  filename: string
+  /**
+   * Required. Extensible statement parsing configuration.
+   */
+  config: Statement_Config
+  /**
+   * Required. Original raw statement file content.
+   */
+  rawContent: string
+  /**
+   * Output only. Timestamp when statement was imported.
+   */
+  createTime?: string
+  /**
+   * Output only. Timestamp when statement was last modified.
+   */
+  updateTime?: string
+  /**
+   * Output only. Optimistic concurrency control version identifier.
+   */
+  version?: string
+}
+
+/**
+ * Nested parsing configuration.
+ */
+export interface Statement_Config {
+  csv?: Statement_Config_CsvConfig
+}
+
+export interface Statement_Config_CsvConfig {
+  hasHeader: boolean
+  delimiter: string
+  dateFormat: string
+  dateColumnIndex: number
+  descriptionColumnIndex: number
+  referenceColumnIndex: number
+  amountColumnIndex: number
+  debitColumnIndex: number
+  creditColumnIndex: number
+}
+
+/**
+ * StatementLine represents a parsed transaction row from the uploaded statement.
+ */
+export interface StatementLine {
+  /**
+   * Output only. Unique identifier for the statement line.
+   * Values are of the form `stln_[a-zA-Z0-9]+`.
+   */
+  id?: string
+  /**
+   * Output only. Identifier of the parent statement.
+   */
+  statementId?: string
+  /**
+   * Output only. Line index inside the source statement (0-indexed).
+   */
+  rowIndex?: number
+  /**
+   * Output only. Original date string from the CSV.
+   */
+  dateStr?: string
+  /**
+   * Output only. Original description string from the CSV.
+   */
+  description?: string
+  /**
+   * Output only. Amount in account cents.
+   */
+  amount?: string
+  /**
+   * Current reconciliation status of the line.
+   */
+  status: StatementLine_Status
+  /**
+   * Output only. Linked transaction ID once committed/completed.
+   */
+  matchedTransactionId?: string
+  /**
+   * Output only. Bank confirmation number or wire reference.
+   */
+  reference?: string
+  match?: StatementLine_MatchAction
+  createExpense?: StatementLine_CreateExpenseAction
+  createIncome?: StatementLine_CreateIncomeAction
+  createTransfer?: StatementLine_CreateTransferAction
+  confirmScheduled?: StatementLine_ConfirmScheduledAction
+  createRepayment?: StatementLine_CreateRepaymentAction
+  skip?: StatementLine_SkipAction
+  suggestions?: StatementLine_Suggestions
+  /**
+   * Output only. Optimistic concurrency control version identifier.
+   */
+  version?: string
+}
+
+/**
+ * Draft actions
+ */
+export interface StatementLine_MatchAction {
+  transactionId: string
+  overwriteTransaction?: boolean
+}
+
+export interface StatementLine_CreateExpenseAction {
+  budgetId: string
+}
+
+export type StatementLine_CreateIncomeAction = Record<string, never>
+
+export interface StatementLine_CreateTransferAction {
+  counterpartAccountId: string
+}
+
+export interface StatementLine_ConfirmScheduledAction {
+  scheduledTransactionId: string
+}
+
+export interface StatementLine_CreateRepaymentAction {
+  borrowingId: string
+}
+
+export type StatementLine_SkipAction = Record<string, never>
+
+/**
+ * Grouped suggestions resolved dynamically by the matching engine on fetch.
+ */
+export interface StatementLine_Suggestions {
+  transactionType?: Transaction_Type
+  budgetId?: string
+  matches?: Transaction[]
+}
+
+/**
+ * Request to import a new statement.
+ */
+export interface ImportStatementRequest {
+  /**
+   * Required. Target account identifier to upload the statement under.
+   */
+  accountId: string
+  /**
+   * Required. The statement resource properties to import.
+   */
+  statement: Statement
+}
+
+/**
+ * Request to get a statement.
+ */
+export interface GetStatementRequest {
+  id: string
+}
+
+/**
+ * Request to delete a statement.
+ */
+export interface DeleteStatementRequest {
+  id: string
+  version?: string
+}
+
+/**
+ * Request to list statements in a space.
+ */
+export interface ListStatementsRequest {
+  /**
+   * Optional. Filter statements by account identifier.
+   */
+  accountId?: string
+  /**
+   * Optional. Filter statements by status.
+   */
+  status?: Statement_Status
+  /**
+   * Optional. Number of statements to return.
+   */
+  pageSize: number
+  /**
+   * Optional. Keyset pagination token.
+   */
+  pageToken: string
+}
+
+/**
+ * Response from listing statements.
+ */
+export interface ListStatementsResponse {
+  statements: Statement[]
+  nextPageToken: string
+}
+
+/**
+ * Request to list lines of a statement.
+ */
+export interface ListStatementLinesRequest {
+  statementId: string
+}
+
+/**
+ * Response from listing lines.
+ */
+export interface ListStatementLinesResponse {
+  lines: StatementLine[]
+}
+
+/**
+ * Request to update a statement line's draft parameters.
+ */
+export interface UpdateStatementLineRequest {
+  /**
+   * Required. Unique identifier of the statement line to update.
+   */
+  id: string
+  /**
+   * Required. Updated statement line properties.
+   */
+  statementLine: StatementLine
+  /**
+   * Optional. Field mask specifying which properties of the statement line to update.
+   */
+  updateMask?: { paths?: string[] }
+  /**
+   * Optional. Version number for optimistic concurrency control.
+   */
+  version?: string
+}
+
+/**
+ * Request to update a statement's properties (such as starting or ending balances).
+ */
+export interface UpdateStatementRequest {
+  /**
+   * Required. Unique identifier of the statement to update.
+   */
+  id: string
+  /**
+   * Required. Updated statement properties.
+   */
+  statement: Statement
+  /**
+   * Optional. Field mask specifying which properties of the statement to update.
+   */
+  updateMask?: { paths?: string[] }
+  /**
+   * Optional. Version number for optimistic concurrency control.
+   */
+  version?: string
+}
+
+/**
+ * Request to finalize and commit the statement.
+ */
+export interface CompleteStatementRequest {
+  id: string
+}
+
+/**
  * Finance service provides APIs for budgeting, accounts management, transaction
  * recording, daily exchange rate configurations, and analytics insights.
  */
@@ -4606,6 +4942,253 @@ export function useDiscardInboxItemMutation(
     { id: string; req: DiscardInboxItemRequest }
   >({
     mutationFn: ({ id, req }) => discardInboxItem(id, req),
+    ...options,
+  })
+}
+
+/**
+ * Initiates a new statement reconciliation session by parsing the uploaded CSV content
+ * and persisting the detected lines for user review.
+ */
+export async function importStatement(
+  account_id: string,
+  req: ImportStatementRequest
+): Promise<Statement> {
+  return request<Statement>({
+    method: "POST",
+    url: `/api/v1/finance/accounts/${account_id}/statements:import`,
+    data: req,
+  })
+}
+
+export function useImportStatementMutation(
+  options?: UseMutationOptions<
+    Statement,
+    Error,
+    { account_id: string; req: ImportStatementRequest }
+  >
+) {
+  return useMutation<
+    Statement,
+    Error,
+    { account_id: string; req: ImportStatementRequest }
+  >({
+    mutationFn: ({ account_id, req }) => importStatement(account_id, req),
+    ...options,
+  })
+}
+
+/**
+ * Retrieves a specific statement resource by ID, including its status and balance metadata.
+ */
+export async function getStatement(
+  id: string,
+  _req: GetStatementRequest
+): Promise<Statement> {
+  return request<Statement>({
+    method: "GET",
+    url: `/api/v1/finance/statements/${id}`,
+  })
+}
+
+export function useGetStatementQuery(
+  req: GetStatementRequest,
+  options?: Omit<UseQueryOptions<Statement, Error>, "queryKey" | "queryFn">
+) {
+  return useQuery<Statement, Error>({
+    queryKey: [`/api/v1/finance/statements/${req.id}`, req],
+    queryFn: () => getStatement(req.id, req),
+    ...options,
+  })
+}
+
+/**
+ * Discards a statement resource and permanently deletes all associated statement lines.
+ */
+export async function deleteStatement(
+  id: string,
+  req: DeleteStatementRequest
+): Promise<Record<string, never>> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
+  return request<Record<string, never>>({
+    method: "DELETE",
+    url: `/api/v1/finance/statements/${id}`,
+    params: params,
+  })
+}
+
+export function useDeleteStatementMutation(
+  options?: UseMutationOptions<
+    Record<string, never>,
+    Error,
+    { id: string; req: DeleteStatementRequest }
+  >
+) {
+  return useMutation<
+    Record<string, never>,
+    Error,
+    { id: string; req: DeleteStatementRequest }
+  >({
+    mutationFn: ({ id, req }) => deleteStatement(id, req),
+    ...options,
+  })
+}
+
+/**
+ * Lists statements in the space, optionally filtered by account or reconciliation status.
+ */
+export async function listStatements(
+  req: ListStatementsRequest
+): Promise<ListStatementsResponse> {
+  const params = { ...req }
+  return request<ListStatementsResponse>({
+    method: "GET",
+    url: "/api/v1/finance/statements",
+    params: params,
+  })
+}
+
+export function useListStatementsQuery(
+  req: ListStatementsRequest,
+  options?: Omit<
+    UseQueryOptions<ListStatementsResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListStatementsResponse, Error>({
+    queryKey: ["/api/v1/finance/statements", req],
+    queryFn: () => listStatements(req),
+    ...options,
+  })
+}
+
+/**
+ * Lists all statement lines belonging to a specific statement session.
+ */
+export async function listStatementLines(
+  statement_id: string,
+  _req: ListStatementLinesRequest
+): Promise<ListStatementLinesResponse> {
+  return request<ListStatementLinesResponse>({
+    method: "GET",
+    url: `/api/v1/finance/statements/${statement_id}/lines`,
+  })
+}
+
+export function useListStatementLinesQuery(
+  req: ListStatementLinesRequest,
+  options?: Omit<
+    UseQueryOptions<ListStatementLinesResponse, Error>,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery<ListStatementLinesResponse, Error>({
+    queryKey: [`/api/v1/finance/statements/${req.statementId}/lines`, req],
+    queryFn: () => listStatementLines(req.statementId, req),
+    ...options,
+  })
+}
+
+/**
+ * Saves the user's matching or transaction-generation choice for a statement line as a draft.
+ * Supports partial updates via field mask (e.g. match, create_expense, skip).
+ */
+export async function updateStatementLine(
+  id: string,
+  req: UpdateStatementLineRequest
+): Promise<StatementLine> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
+  delete (params as Record<string, unknown>).statementLine
+  return request<StatementLine>({
+    method: "PATCH",
+    url: `/api/v1/finance/statement-lines/${id}`,
+    params: params,
+    data: req.statementLine,
+  })
+}
+
+export function useUpdateStatementLineMutation(
+  options?: UseMutationOptions<
+    StatementLine,
+    Error,
+    { id: string; req: UpdateStatementLineRequest }
+  >
+) {
+  return useMutation<
+    StatementLine,
+    Error,
+    { id: string; req: UpdateStatementLineRequest }
+  >({
+    mutationFn: ({ id, req }) => updateStatementLine(id, req),
+    ...options,
+  })
+}
+
+/**
+ * Updates statement metadata such as the statement date, starting balance, or ending balance.
+ */
+export async function updateStatement(
+  id: string,
+  req: UpdateStatementRequest
+): Promise<Statement> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).id
+  delete (params as Record<string, unknown>).statement
+  return request<Statement>({
+    method: "PATCH",
+    url: `/api/v1/finance/statements/${id}`,
+    params: params,
+    data: req.statement,
+  })
+}
+
+export function useUpdateStatementMutation(
+  options?: UseMutationOptions<
+    Statement,
+    Error,
+    { id: string; req: UpdateStatementRequest }
+  >
+) {
+  return useMutation<
+    Statement,
+    Error,
+    { id: string; req: UpdateStatementRequest }
+  >({
+    mutationFn: ({ id, req }) => updateStatement(id, req),
+    ...options,
+  })
+}
+
+/**
+ * Commits all reconciliation choices: creates transactions, links matched entries,
+ * and marks the statement as COMPLETED in a single atomic database transaction.
+ */
+export async function completeStatement(
+  id: string,
+  req: CompleteStatementRequest
+): Promise<Statement> {
+  return request<Statement>({
+    method: "POST",
+    url: `/api/v1/finance/statements/${id}:complete`,
+    data: req,
+  })
+}
+
+export function useCompleteStatementMutation(
+  options?: UseMutationOptions<
+    Statement,
+    Error,
+    { id: string; req: CompleteStatementRequest }
+  >
+) {
+  return useMutation<
+    Statement,
+    Error,
+    { id: string; req: CompleteStatementRequest }
+  >({
+    mutationFn: ({ id, req }) => completeStatement(id, req),
     ...options,
   })
 }

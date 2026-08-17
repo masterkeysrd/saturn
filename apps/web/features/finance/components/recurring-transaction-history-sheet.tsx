@@ -38,7 +38,7 @@ export function RecurringTransactionHistorySheet({
   const { data, isLoading } = useListTransactionsQuery(
     {
       budgetId: "",
-      type: "TYPE_UNSPECIFIED",
+      types: [],
       pageSize: 100,
       pageToken: "",
     },

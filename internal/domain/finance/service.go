@@ -28,6 +28,7 @@ type Dependencies struct {
 	TransactionEventStore     TransactionEventStore
 	InboxItemStore            InboxItemStore
 	InstitutionStore          InstitutionStore
+	StatementStore            StatementStore
 }
 
 // Service implements the domain-level finance operations.
@@ -839,7 +840,7 @@ func (s *Service) ConfirmScheduledTransaction(ctx context.Context, req ConfirmSc
 		bID = &budgetID
 	}
 
-	var accountID *AccountID = payment.AccountID
+	var accountID = payment.AccountID
 	if req.AccountID != nil {
 		accountID = req.AccountID
 	}
@@ -1838,10 +1839,15 @@ func (s *Service) GetLatestRates(ctx context.Context, spaceID SpaceID, fromCurre
 
 // CreateTransfer logs a fund movement between accounts.
 func (s *Service) CreateTransfer(ctx context.Context, t *Transfer) (*Transfer, error) {
+	transfer, _, _, err := s.createTransfer(ctx, t, CreateTransferOpts{})
+	return transfer, err
+}
+
+func (s *Service) createTransfer(ctx context.Context, t *Transfer, opts CreateTransferOpts) (*Transfer, *Transaction, *Transaction, error) {
 	if t.ID == "" {
 		tID, err := NewTransferID()
 		if err != nil {
-			return nil, err
+			return nil, nil, nil, err
 		}
 		t.ID = tID
 	}
@@ -1849,31 +1855,31 @@ func (s *Service) CreateTransfer(ctx context.Context, t *Transfer) (*Transfer, e
 	t.UpdateTime = time.Now().UTC()
 
 	if err := t.Validate(); err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	// Fetch both accounts to verify existence and check currencies
 	srcAcc, err := s.deps.AccountStore.GetByID(ctx, t.SpaceID, t.SourceAccountID)
 	if err != nil {
-		return nil, fmt.Errorf("source account: %w", err)
+		return nil, nil, nil, fmt.Errorf("source account: %w", err)
 	}
 	destAcc, err := s.deps.AccountStore.GetByID(ctx, t.SpaceID, t.DestinationAccountID)
 	if err != nil {
-		return nil, fmt.Errorf("destination account: %w", err)
+		return nil, nil, nil, fmt.Errorf("destination account: %w", err)
 	}
 
 	if err := srcAcc.ValidateTransferTo(destAcc, t.SourceAmount); err != nil {
-		return nil, fmt.Errorf("validate account transfer: %w", err)
+		return nil, nil, nil, fmt.Errorf("validate account transfer: %w", err)
 	}
 
 	// Double-entry validation: same currency transfers must have matching source and destination amounts
 	if srcAcc.Currency == destAcc.Currency && t.SourceAmount != t.DestinationAmount {
-		return nil, errors.New("source and destination amounts must match for single-currency transfers")
+		return nil, nil, nil, errors.New("source and destination amounts must match for single-currency transfers")
 	}
 
 	// 1. Insert Transfer parent record
 	if err := s.deps.TransferStore.Create(ctx, t); err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	outflowTxn, inflowTxn, err := t.NewLegTransactions(TransferLegOpts{
@@ -1883,17 +1889,25 @@ func (s *Service) CreateTransfer(ctx context.Context, t *Transfer) (*Transfer, e
 		DestCurrency:      destAcc.Currency,
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
+	}
+
+	// Attach optional leg-specific metadata
+	if opts.OutflowMetadata != nil {
+		outflowTxn.Metadata.Merge(*opts.OutflowMetadata)
+	}
+	if opts.InflowMetadata != nil {
+		inflowTxn.Metadata.Merge(*opts.InflowMetadata)
 	}
 
 	if err := s.createTransaction(ctx, outflowTxn); err != nil {
-		return nil, fmt.Errorf("failed to log transfer outflow leg: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to log transfer outflow leg: %w", err)
 	}
 	if err := s.createTransaction(ctx, inflowTxn); err != nil {
-		return nil, fmt.Errorf("failed to log transfer inflow leg: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to log transfer inflow leg: %w", err)
 	}
 
-	return t, nil
+	return t, outflowTxn, inflowTxn, nil
 }
 
 // GetTransfer retrieves a transfer for a space.
@@ -2296,71 +2310,32 @@ func (s *Service) approveStandalonePromotion(ctx context.Context, spaceID SpaceI
 	transferLeg := item.MetadataString("transfer_leg")
 
 	if transactionType == "TRANSFER" {
-		if item.AccountID == nil || *item.AccountID == "" {
-			return nil, fmt.Errorf("missing source account for transfer")
-		}
-		srcAccID, err := ParseAccountID(*item.AccountID)
-		if err != nil {
-			return nil, fmt.Errorf("invalid source account: %w", err)
-		}
 		if destinationAccountID == "" {
-			return nil, fmt.Errorf("missing destination account for transfer")
+			return nil, errors.New("missing destination account for transfer")
 		}
 		destAccID, err := ParseAccountID(destinationAccountID)
 		if err != nil {
 			return nil, fmt.Errorf("invalid destination account: %w", err)
 		}
 
-		tDate := item.TransactionDate
-		if tDate.IsZero() {
-			tDate = time.Now().UTC()
+		transfer, err := item.NewTransfer(spaceID, destAccID)
+		if err != nil {
+			return nil, err
 		}
 
-		t := &Transfer{
-			SpaceID:              spaceID,
-			SourceAccountID:      srcAccID,
-			DestinationAccountID: destAccID,
-			SourceAmount:         item.Amount,
-			DestinationAmount:    item.Amount,
-			TransferDate:         tDate,
-			Notes:                item.VendorName,
-		}
-		newT, err := s.CreateTransfer(ctx, t)
+		_, outflowTxn, inflowTxn, err := s.createTransfer(ctx, transfer, CreateTransferOpts{})
 		if err != nil {
 			return nil, fmt.Errorf("create transfer: %w", err)
 		}
 
-		targetLeg := TransactionTypeTransferOut
-		targetAccID := srcAccID
+		targetTxnID := &outflowTxn.ID
+		targetAccIDStr := string(transfer.SourceAccountID)
 		if transferLeg == "DESTINATION" {
-			targetLeg = TransactionTypeTransferIn
-			targetAccID = destAccID
+			targetTxnID = &inflowTxn.ID
+			targetAccIDStr = string(transfer.DestinationAccountID)
 		}
 
-		page, err := s.deps.TransactionStore.ListBySpace(ctx, spaceID, &TransactionFilter{
-			TransferID: &newT.ID,
-			PageSize:   2, // Two legs
-		})
-		var txs []*Transaction
-		if err == nil {
-			txs = page.Items
-		}
-		var matchedTx *Transaction
-		if err == nil {
-			for _, tx := range txs {
-				if tx.Type == targetLeg {
-					matchedTx = tx
-					break
-				}
-			}
-		}
-
-		var matchedTxID *TransactionID
-		if matchedTx != nil {
-			matchedTxID = &matchedTx.ID
-		}
-		item.MarkResolved(matchedTxID)
-		targetAccIDStr := string(targetAccID)
+		item.MarkResolved(targetTxnID)
 		item.AccountID = &targetAccIDStr
 
 		if err := s.deps.InboxItemStore.Update(ctx, item); err != nil {
@@ -2370,97 +2345,8 @@ func (s *Service) approveStandalonePromotion(ctx context.Context, spaceID SpaceI
 		return item, nil
 	}
 
-	settings, err := s.deps.SettingsStore.GetByID(ctx, spaceID)
+	txn, err := item.NewTransaction(spaceID)
 	if err != nil {
-		return nil, err
-	}
-
-	var txnType TransactionType
-	var budgetID *BudgetID
-	var periodID *PeriodID
-
-	switch transactionType {
-	case "INCOME":
-		txnType = TransactionTypeIncome
-	case "EXPENSE":
-		txnType = TransactionTypeExpense
-		if item.BudgetID != nil && *item.BudgetID != "" {
-			bID, err := ParseBudgetID(*item.BudgetID)
-			if err != nil {
-				return nil, fmt.Errorf("parse budget ID: %w", err)
-			}
-			budget, err := s.deps.BudgetStore.GetByID(ctx, spaceID, bID)
-			if err != nil {
-				return nil, fmt.Errorf("get budget: %w", err)
-			}
-			period, err := s.GetOrCreatePeriod(ctx, spaceID, budget.ID, item.TransactionDate)
-			if err != nil {
-				return nil, fmt.Errorf("get or create period: %w", err)
-			}
-			budgetID = &budget.ID
-			periodID = &period.ID
-		}
-	default:
-		if item.DocType == InboxItemDocReceipt || item.DocType == InboxItemDocInvoice {
-			txnType = TransactionTypeExpense
-		} else {
-			txnType = TransactionTypeIncome
-		}
-		if item.BudgetID != nil && *item.BudgetID != "" {
-			bID, err := ParseBudgetID(*item.BudgetID)
-			if err != nil {
-				return nil, fmt.Errorf("parse budget ID: %w", err)
-			}
-			budget, err := s.deps.BudgetStore.GetByID(ctx, spaceID, bID)
-			if err != nil {
-				return nil, fmt.Errorf("get budget: %w", err)
-			}
-			period, err := s.GetOrCreatePeriod(ctx, spaceID, budget.ID, item.TransactionDate)
-			if err != nil {
-				return nil, fmt.Errorf("get or create period: %w", err)
-			}
-			budgetID = &budget.ID
-			periodID = &period.ID
-		}
-	}
-
-	rate, err := s.resolveExchangeRate(ctx, spaceID, Currency(item.Currency), settings.BaseCurrency, item.TransactionDate, true)
-	if err != nil {
-		return nil, err
-	}
-	amountInBase := ConvertAmount(item.Amount, rate)
-
-	var accountID *AccountID
-	if item.AccountID != nil && *item.AccountID != "" {
-		accID, err := ParseAccountID(*item.AccountID)
-		if err == nil {
-			accountID = &accID
-		}
-	}
-
-	txDate := item.TransactionDate
-	if txDate.IsZero() {
-		txDate = time.Now().UTC()
-	}
-
-	txn := &Transaction{
-		SpaceID:         spaceID,
-		Type:            txnType,
-		BudgetID:        budgetID,
-		PeriodID:        periodID,
-		AccountID:       accountID,
-		Amount:          item.Amount,
-		Currency:        Currency(item.Currency),
-		AmountInBase:    amountInBase,
-		Description:     item.VendorName,
-		TransactionDate: txDate,
-	}
-
-	if err := txn.Init(); err != nil {
-		return nil, fmt.Errorf("init transaction: %w", err)
-	}
-
-	if err := txn.Validate(); err != nil {
 		return nil, err
 	}
 
@@ -2476,6 +2362,13 @@ func (s *Service) approveStandalonePromotion(ctx context.Context, spaceID SpaceI
 		if err := s.handleBorrowingLinkForTransaction(ctx, spaceID, txn, *item.BorrowingID, linkType); err != nil {
 			return nil, fmt.Errorf("link borrowing to new transaction: %w", err)
 		}
+	}
+
+	if item.ScheduledTransactionID != nil && *item.ScheduledTransactionID != "" {
+		if err := s.handleScheduledTransactionLinkForTransaction(ctx, spaceID, txn, *item.ScheduledTransactionID); err != nil {
+			return nil, fmt.Errorf("link scheduled transaction to new transaction: %w", err)
+		}
+		item.ScheduledTransactionID = nil
 	}
 
 	item.MarkResolved(&txn.ID)
@@ -2798,4 +2691,538 @@ func (s *Service) ResolveAccount(ctx context.Context, spaceID SpaceID, opts Reso
 	}
 
 	return nil, nil
+}
+
+// ImportStatement parses and saves a statement with its statement lines.
+func (s *Service) ImportStatement(ctx context.Context, accountID AccountID, stmt *Statement) (*Statement, error) {
+	if stmt == nil {
+		return nil, errors.New("statement is required")
+	}
+	if err := stmt.SpaceID.Validate(); err != nil {
+		return nil, err
+	}
+	if err := accountID.Validate(); err != nil {
+		return nil, err
+	}
+
+	// 1. Verify account exists
+	acc, err := s.deps.AccountStore.GetByID(ctx, stmt.SpaceID, accountID)
+	if err != nil {
+		return nil, fmt.Errorf("verify account: %w", err)
+	}
+	stmt.AccountID = acc.ID
+
+	// 2. Initialize statement properties
+	if err := stmt.Init(); err != nil {
+		return nil, err
+	}
+
+	// 3. Decode lines from the statement model
+	lines, err := stmt.DecodeLines()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := stmt.Validate(); err != nil {
+		return nil, err
+	}
+
+	// 4. Create statement and lines in database
+	if err := s.deps.StatementStore.Create(ctx, stmt, lines); err != nil {
+		return nil, err
+	}
+
+	return stmt, nil
+}
+
+// GetStatement retrieves a statement by its ID.
+func (s *Service) GetStatement(ctx context.Context, spaceID SpaceID, id StatementID) (*Statement, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, err
+	}
+	if err := id.Validate(); err != nil {
+		return nil, err
+	}
+	return s.deps.StatementStore.GetByID(ctx, spaceID, id)
+}
+
+// DeleteStatement deletes a statement and its lines (discarding it).
+func (s *Service) DeleteStatement(ctx context.Context, spaceID SpaceID, id StatementID, opts DeleteOptions) error {
+	if err := spaceID.Validate(); err != nil {
+		return spaceID.Validate()
+	}
+	if err := id.Validate(); err != nil {
+		return id.Validate()
+	}
+	existing, err := s.deps.StatementStore.GetByID(ctx, spaceID, id)
+	if err != nil {
+		return err
+	}
+	if existing.Status == StatementStatusCompleted {
+		return errors.New("cannot delete a completed statement reconciliation")
+	}
+	return s.deps.StatementStore.Delete(ctx, spaceID, id, opts)
+}
+
+// ListStatements lists statements in a workspace with filters.
+func (s *Service) ListStatements(ctx context.Context, spaceID SpaceID, filter *ListStatementsFilter) (*paging.Page[*Statement], error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, err
+	}
+	return s.deps.StatementStore.List(ctx, spaceID, filter)
+}
+
+// ListStatementLines lists all statement lines for a statement and resolves suggestions dynamically.
+func (s *Service) ListStatementLines(ctx context.Context, spaceID SpaceID, statementID StatementID) ([]*StatementLine, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, err
+	}
+	if err := statementID.Validate(); err != nil {
+		return nil, err
+	}
+	stmt, err := s.deps.StatementStore.GetByID(ctx, spaceID, statementID)
+	if err != nil {
+		return nil, err
+	}
+	lines, err := s.deps.StatementStore.ListLines(ctx, statementID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Resolve dynamic suggestions in memory
+	if err := s.resolveSuggestions(ctx, spaceID, stmt.AccountID, lines); err != nil {
+		slog.ErrorContext(ctx, "failed to resolve reconciliation suggestions", "error", err)
+	}
+
+	return lines, nil
+}
+
+// UpdateStatementLine updates a statement line draft choice.
+func (s *Service) UpdateStatementLine(ctx context.Context, spaceID SpaceID, line *StatementLine, mask []string) (*StatementLine, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, err
+	}
+	if err := line.ID.Validate(); err != nil {
+		return nil, err
+	}
+
+	existing, err := s.deps.StatementStore.GetLineByID(ctx, line.ID)
+	if err != nil {
+		return nil, err
+	}
+	if line.Version > 0 && line.Version != existing.Version {
+		return nil, ErrStatementLineVersionMismatch
+	}
+
+	stmt, err := s.deps.StatementStore.GetByID(ctx, spaceID, existing.StatementID)
+	if err != nil {
+		return nil, err
+	}
+
+	if stmt.Status == StatementStatusCompleted {
+		return nil, errors.New("cannot update statement line draft in a completed statement")
+	}
+
+	if err := existing.ApplyPatch(line, mask); err != nil {
+		return nil, err
+	}
+
+	if err := s.deps.StatementStore.UpdateLineDraft(ctx, existing); err != nil {
+		return nil, err
+	}
+
+	return existing, nil
+}
+
+// UpdateStatement updates statement metadata and balances.
+func (s *Service) UpdateStatement(ctx context.Context, spaceID SpaceID, stmt *Statement, mask []string) (*Statement, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, err
+	}
+	if err := stmt.ID.Validate(); err != nil {
+		return nil, err
+	}
+
+	existing, err := s.deps.StatementStore.GetByID(ctx, spaceID, stmt.ID)
+	if err != nil {
+		return nil, err
+	}
+	if stmt.Version > 0 && stmt.Version != existing.Version {
+		return nil, ErrStatementVersionMismatch
+	}
+
+	if existing.Status == StatementStatusCompleted {
+		return nil, errors.New("cannot update a completed statement")
+	}
+
+	if err := existing.ApplyPatch(stmt, mask); err != nil {
+		return nil, err
+	}
+
+	if err := s.deps.StatementStore.Update(ctx, existing); err != nil {
+		return nil, err
+	}
+
+	return existing, nil
+}
+
+// CompleteStatement finalizes and commits the statement.
+func (s *Service) CompleteStatement(ctx context.Context, spaceID SpaceID, id StatementID) (*Statement, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, err
+	}
+	if err := id.Validate(); err != nil {
+		return nil, err
+	}
+
+	stmt, err := s.deps.StatementStore.GetByID(ctx, spaceID, id)
+	if err != nil {
+		return nil, err
+	}
+	if stmt.Status == StatementStatusCompleted {
+		return nil, errors.New("statement reconciliation is already completed")
+	}
+
+	lines, err := s.deps.StatementStore.ListLines(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// 1. Validate total discrepancy balance is zero
+	var netFlow int64
+	for _, l := range lines {
+		if l.Status != StatementLineStatusSkipped {
+			netFlow += l.Amount
+		}
+	}
+	expectedFlow := stmt.StatementEndingBalance - stmt.StatementStartingBalance
+	if netFlow != expectedFlow {
+		return nil, ErrStatementBalanceMismatch
+	}
+
+	// 2. Fetch account for default currency
+	acc, err := s.deps.AccountStore.GetByID(ctx, spaceID, stmt.AccountID)
+	if err != nil {
+		return nil, fmt.Errorf("fetch statement account: %w", err)
+	}
+
+	for _, l := range lines {
+		switch l.Status {
+		case StatementLineStatusMatched:
+			if l.MatchedTransactionID == nil || *l.MatchedTransactionID == "" {
+				return nil, fmt.Errorf("line index %d status is MATCHED but matched_transaction_id is empty", l.RowIndex)
+			}
+			// Update matched transaction metadata with reconciliation flag
+			existingTxn, err := s.deps.TransactionStore.GetByID(ctx, spaceID, *l.MatchedTransactionID)
+			if err == nil {
+				if l.Action.OverwriteTransaction != nil && *l.Action.OverwriteTransaction {
+					absLineAmount := l.Amount
+					if absLineAmount < 0 {
+						absLineAmount = -absLineAmount
+					}
+					diff := absLineAmount - existingTxn.Amount
+					if diff != 0 && existingTxn.AccountID != nil {
+						isReversal := diff < 0
+						absDiff := diff
+						if isReversal {
+							absDiff = -diff
+						}
+						if err := s.adjustAccountBalance(ctx, spaceID, *existingTxn.AccountID, absDiff, existingTxn.Type, isReversal); err != nil {
+							return nil, fmt.Errorf("failed to adjust account balance delta: %w", err)
+						}
+					}
+					existingTxn.Amount = absLineAmount
+					if l.Description != "" {
+						existingTxn.Description = l.Description
+					}
+				}
+				existingTxn.Metadata.Reconciled = true
+				existingTxn.Metadata.ReconciliationStatementID = string(stmt.ID)
+				existingTxn.Metadata.ReconciledAt = new(time.Now().UTC())
+				_ = s.deps.TransactionStore.Update(ctx, existingTxn)
+			}
+
+		case StatementLineStatusSkipped:
+			// Skipped lines require no transaction generation
+
+		default:
+			switch l.Action.Type {
+			case StatementLineActionTypeMatch:
+				if l.Action.TransactionID == nil || *l.Action.TransactionID == "" {
+					return nil, fmt.Errorf("line index %d Action MATCH requires transaction_id", l.RowIndex)
+				}
+				existingTxn, err := s.deps.TransactionStore.GetByID(ctx, spaceID, *l.Action.TransactionID)
+				if err != nil {
+					return nil, fmt.Errorf("fetch matched transaction: %w", err)
+				}
+				if l.Action.OverwriteTransaction != nil && *l.Action.OverwriteTransaction {
+					absLineAmount := l.Amount
+					if absLineAmount < 0 {
+						absLineAmount = -absLineAmount
+					}
+					diff := absLineAmount - existingTxn.Amount
+					if diff != 0 && existingTxn.AccountID != nil {
+						isReversal := diff < 0
+						absDiff := diff
+						if isReversal {
+							absDiff = -diff
+						}
+						if err := s.adjustAccountBalance(ctx, spaceID, *existingTxn.AccountID, absDiff, existingTxn.Type, isReversal); err != nil {
+							return nil, fmt.Errorf("failed to adjust account balance delta: %w", err)
+						}
+					}
+					existingTxn.Amount = absLineAmount
+					if l.Description != "" {
+						existingTxn.Description = l.Description
+					}
+				}
+				existingTxn.Metadata.Reconciled = true
+				existingTxn.Metadata.ReconciliationStatementID = string(stmt.ID)
+				existingTxn.Metadata.ReconciledAt = new(time.Now().UTC())
+				if err := s.deps.TransactionStore.Update(ctx, existingTxn); err != nil {
+					return nil, fmt.Errorf("update matched transaction: %w", err)
+				}
+				l.MatchedTransactionID = l.Action.TransactionID
+				l.Status = StatementLineStatusMatched
+
+			case StatementLineActionTypeCreateExpense:
+				txn, err := l.NewTransaction(StatementLineTransactionOpts{
+					SpaceID:      spaceID,
+					AccountID:    stmt.AccountID,
+					Currency:     acc.Currency,
+					Type:         TransactionTypeExpense,
+					BudgetID:     l.Action.BudgetID,
+					FallbackDate: stmt.StatementDate,
+				})
+				if err != nil {
+					return nil, err
+				}
+				if err := s.createTransaction(ctx, txn); err != nil {
+					return nil, fmt.Errorf("create expense transaction for line %d: %w", l.RowIndex, err)
+				}
+				l.MatchedTransactionID = &txn.ID
+				l.Status = StatementLineStatusMatched
+
+			case StatementLineActionTypeCreateIncome:
+				txn, err := l.NewTransaction(StatementLineTransactionOpts{
+					SpaceID:      spaceID,
+					AccountID:    stmt.AccountID,
+					Currency:     acc.Currency,
+					Type:         TransactionTypeIncome,
+					FallbackDate: stmt.StatementDate,
+				})
+				if err != nil {
+					return nil, err
+				}
+				if err := s.createTransaction(ctx, txn); err != nil {
+					return nil, fmt.Errorf("create income transaction for line %d: %w", l.RowIndex, err)
+				}
+				l.MatchedTransactionID = &txn.ID
+				l.Status = StatementLineStatusMatched
+
+			case StatementLineActionTypeCreateTransfer:
+				if l.Action.CounterpartAccountID == nil || *l.Action.CounterpartAccountID == "" {
+					return nil, fmt.Errorf("line index %d Action CREATE_TRANSFER requires counterpart_account_id", l.RowIndex)
+				}
+
+				transfer, transferOpts, err := l.NewTransfer(StatementLineTransferOpts{
+					SpaceID:              spaceID,
+					StatementAccountID:   stmt.AccountID,
+					CounterpartAccountID: *l.Action.CounterpartAccountID,
+					FallbackDate:         stmt.StatementDate,
+				})
+				if err != nil {
+					return nil, err
+				}
+
+				_, outflowTxn, inflowTxn, err := s.createTransfer(ctx, transfer, transferOpts)
+				if err != nil {
+					return nil, fmt.Errorf("create transfer for line %d: %w", l.RowIndex, err)
+				}
+
+				if l.Amount < 0 {
+					l.MatchedTransactionID = &outflowTxn.ID
+				} else {
+					l.MatchedTransactionID = &inflowTxn.ID
+				}
+				l.Status = StatementLineStatusMatched
+
+			case StatementLineActionTypeConfirmScheduled:
+				if l.Action.ScheduledTransactionID == nil {
+					return nil, fmt.Errorf("line index %d Action CONFIRM_SCHEDULED requires scheduled_transaction_id", l.RowIndex)
+				}
+				if err := l.Action.ScheduledTransactionID.Validate(); err != nil {
+					return nil, fmt.Errorf("line index %d Action CONFIRM_SCHEDULED invalid scheduled_transaction_id: %w", l.RowIndex, err)
+				}
+
+				budgetID := l.Action.BudgetID
+				if budgetID == nil {
+					if payment, err := s.deps.ScheduledTransactionStore.GetByID(ctx, spaceID, *l.Action.ScheduledTransactionID); err == nil {
+						budgetID = payment.BudgetID
+					}
+				}
+
+				txn, err := l.NewTransaction(StatementLineTransactionOpts{
+					SpaceID:      spaceID,
+					AccountID:    stmt.AccountID,
+					Currency:     acc.Currency,
+					Type:         TransactionTypeExpense,
+					BudgetID:     budgetID,
+					FallbackDate: stmt.StatementDate,
+				})
+				if err != nil {
+					return nil, err
+				}
+				if err := s.createTransaction(ctx, txn); err != nil {
+					return nil, fmt.Errorf("create transaction for scheduled line %d: %w", l.RowIndex, err)
+				}
+				if err := s.handleScheduledTransactionLinkForTransaction(ctx, spaceID, txn, string(*l.Action.ScheduledTransactionID)); err != nil {
+					return nil, fmt.Errorf("link scheduled transaction for line %d: %w", l.RowIndex, err)
+				}
+				l.MatchedTransactionID = &txn.ID
+				l.Status = StatementLineStatusMatched
+
+			case StatementLineActionTypeCreateRepayment:
+				if l.Action.BorrowingID == nil {
+					return nil, fmt.Errorf("line index %d Action CREATE_REPAYMENT requires borrowing_id", l.RowIndex)
+				}
+				if err := l.Action.BorrowingID.Validate(); err != nil {
+					return nil, fmt.Errorf("line index %d Action CREATE_REPAYMENT invalid borrowing_id: %w", l.RowIndex, err)
+				}
+
+				txnType := TransactionTypeExpense
+				if l.Amount > 0 {
+					txnType = TransactionTypeIncome
+				}
+
+				txn, err := l.NewTransaction(StatementLineTransactionOpts{
+					SpaceID:      spaceID,
+					AccountID:    stmt.AccountID,
+					Currency:     acc.Currency,
+					Type:         txnType,
+					BudgetID:     l.Action.BudgetID,
+					FallbackDate: stmt.StatementDate,
+				})
+				if err != nil {
+					return nil, err
+				}
+				if err := s.createTransaction(ctx, txn); err != nil {
+					return nil, fmt.Errorf("create transaction for repayment line %d: %w", l.RowIndex, err)
+				}
+				if err := s.handleBorrowingLinkForTransaction(ctx, spaceID, txn, string(*l.Action.BorrowingID), BorrowingLinkTypeRepayment); err != nil {
+					return nil, fmt.Errorf("link borrowing repayment for line %d: %w", l.RowIndex, err)
+				}
+				l.MatchedTransactionID = &txn.ID
+				l.Status = StatementLineStatusMatched
+
+			case StatementLineActionTypeSkip:
+				l.Status = StatementLineStatusSkipped
+			}
+
+			// Persist updated line draft status & matched_transaction_id
+			if err := s.deps.StatementStore.UpdateLineDraft(ctx, l); err != nil {
+				return nil, fmt.Errorf("update statement line %s: %w", l.ID, err)
+			}
+		}
+	}
+
+	// 3. Mark Statement status as completed
+	stmt.Status = StatementStatusCompleted
+	stmt.UpdateTime = time.Now().UTC()
+	if err := s.deps.StatementStore.Update(ctx, stmt); err != nil {
+		return nil, fmt.Errorf("update statement status: %w", err)
+	}
+
+	return stmt, nil
+}
+
+// resolveSuggestions computes dynamic suggestions in memory for fetched statement lines.
+func (s *Service) resolveSuggestions(ctx context.Context, spaceID SpaceID, accountID AccountID, lines []*StatementLine) error {
+	// 1. Fetch transactions for the account
+	page, err := s.deps.TransactionStore.ListBySpace(ctx, spaceID, &TransactionFilter{
+		AccountID: &accountID,
+		PageSize:  1000,
+	})
+	if err != nil {
+		return err
+	}
+	txns := page.Items
+
+	// 2. Fetch last 500 transactions in space to build category classification maps
+	historyPage, err := s.deps.TransactionStore.ListBySpace(ctx, spaceID, &TransactionFilter{
+		PageSize: 500,
+	})
+	var history []*Transaction
+	if err == nil {
+		history = historyPage.Items
+	}
+
+	// Build classification maps
+	budgetMap := make(map[string]BudgetID)
+	for _, t := range history {
+		if t.BudgetID != nil && t.Description != "" {
+			descLower := strings.ToLower(t.Description)
+			budgetMap[descLower] = *t.BudgetID
+		}
+	}
+
+	// 3. Resolve suggestions for each line
+	for _, l := range lines {
+		sugg := &StatementLineSuggestions{
+			Matches: []*Transaction{},
+		}
+
+		if l.Amount < 0 {
+			sugg.TransactionType = TransactionTypeExpense
+		} else {
+			sugg.TransactionType = TransactionTypeIncome
+		}
+
+		// Suggest budget category
+		descLower := strings.ToLower(l.Description)
+		for d, bID := range budgetMap {
+			if strings.Contains(descLower, d) || strings.Contains(d, descLower) {
+				idCopy := bID
+				sugg.BudgetID = &idCopy
+				break
+			}
+		}
+
+		// Suggest transfer type if description fits
+		if sugg.TransactionType == TransactionTypeExpense {
+			if strings.Contains(descLower, "transfer") || strings.Contains(descLower, "wire") || strings.Contains(descLower, "zelle") {
+				sugg.TransactionType = TransactionTypeTransferOut
+			}
+		} else {
+			if strings.Contains(descLower, "transfer") || strings.Contains(descLower, "wire") || strings.Contains(descLower, "zelle") {
+				sugg.TransactionType = TransactionTypeTransferIn
+			}
+		}
+
+		// Suggest matching transactions
+		lDate, err := time.Parse("2006-01-02", l.DateStr)
+		if err == nil {
+			lAmountAbs := l.Amount
+			if lAmountAbs < 0 {
+				lAmountAbs = -lAmountAbs
+			}
+
+			for _, t := range txns {
+				if t.Amount == lAmountAbs {
+					dateDiff := t.EffectiveDate.Sub(lDate)
+					if dateDiff < 0 {
+						dateDiff = -dateDiff
+					}
+					daysDiff := int(dateDiff.Hours() / 24)
+					if daysDiff <= 3 {
+						sugg.Matches = append(sugg.Matches, t)
+					}
+				}
+			}
+		}
+
+		l.Suggestions = sugg
+	}
+
+	return nil
 }

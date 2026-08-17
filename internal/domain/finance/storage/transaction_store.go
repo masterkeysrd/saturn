@@ -198,8 +198,12 @@ func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 	if filter.BudgetID != nil {
 		ds = ds.Where(goqu.Ex{"budget_id": string(*filter.BudgetID)})
 	}
-	if filter.Type != nil {
-		ds = ds.Where(goqu.Ex{"type": string(*filter.Type)})
+	if len(filter.Types) > 0 {
+		typeStrs := make([]string, len(filter.Types))
+		for i, t := range filter.Types {
+			typeStrs[i] = string(t)
+		}
+		ds = ds.Where(goqu.I("type").In(typeStrs))
 	}
 	if filter.AccountID != nil {
 		ds = ds.Where(goqu.Ex{"account_id": string(*filter.AccountID)})
@@ -359,8 +363,12 @@ func (s *TransactionStore) HasTransactions(ctx context.Context, spaceID finance.
 		if filter.BudgetID != nil {
 			ds = ds.Where(goqu.Ex{"budget_id": string(*filter.BudgetID)})
 		}
-		if filter.Type != nil {
-			ds = ds.Where(goqu.Ex{"type": string(*filter.Type)})
+		if len(filter.Types) > 0 {
+			typeStrs := make([]string, len(filter.Types))
+			for i, t := range filter.Types {
+				typeStrs[i] = string(t)
+			}
+			ds = ds.Where(goqu.I("type").In(typeStrs))
 		}
 		if filter.AccountID != nil {
 			ds = ds.Where(goqu.Ex{"account_id": string(*filter.AccountID)})
