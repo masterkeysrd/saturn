@@ -53,7 +53,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/integration"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
 	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
-	"github.com/masterkeysrd/saturn/internal/shutdown"
+	"github.com/masterkeysrd/saturn/internal/platform/shutdown"
 	agentgrpc "github.com/masterkeysrd/saturn/internal/transport/agent"
 	backupgrpc "github.com/masterkeysrd/saturn/internal/transport/backup"
 	financegrpc "github.com/masterkeysrd/saturn/internal/transport/finance"

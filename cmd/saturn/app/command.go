@@ -15,7 +15,7 @@ import (
 	spacestorage "github.com/masterkeysrd/saturn/internal/domain/space/storage"
 	"github.com/masterkeysrd/saturn/internal/platform/backup"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
-	"github.com/masterkeysrd/saturn/internal/shutdown"
+	"github.com/masterkeysrd/saturn/internal/platform/shutdown"
 	"github.com/masterkeysrd/saturn/migrations"
 	"github.com/spf13/cobra"
 )
