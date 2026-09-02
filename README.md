@@ -130,13 +130,13 @@ docker run -d \
   postgres:15
 
 # Run migrations
-go run cmd/migrate/main.go up
+go run ./cmd/saturn migrate up
 
 # Start the API server
-go run cmd/server/main.go
+go run ./cmd/saturn serve
 
-# (Optional) Start the CLI
-go run cmd/saturn-cli/main.go
+# (Optional) Create an admin user
+go run ./cmd/saturn admin create-user --email admin@example.com --username admin --name Admin --role admin
 ```
 
 ### Docker
@@ -178,42 +178,44 @@ The image exposes port **8080** (HTTP gateway). The gRPC server uses a Unix sock
 
 ```
 saturn/
-├── cmd/                  # Entry points (server, CLI, migrations)
-├── internal/
-│   ├── api/              # gRPC service implementations
-│   ├── gateway/          # gRPC Gateway REST mappings
-│   ├── domain/           # Business logic per module
-│   │   ├── finance/
-│   │   ├── habits/
-│   │   ├── calendar/
-│   │   ├── pomodoro/
-│   │   ├── tasks/
-│   │   └── notes/
-│   ├── infra/            # Database, caching, external services
-│   └── space/            # Multi-tenant space middleware
-├── proto/                # Protocol buffer definitions
-├── migrations/           # SQL migrations
-└── docs/                 # Extended documentation
+├── api/                  # Protocol Buffer definitions, service configs, and OpenAPI specs
+├── apis/                 # Generated Go packages (Protobuf, gRPC, Gateway, SDK)
+├── apps/                 # Application clients
+│   └── web/              # Web application frontend (React, Vite, Tailwind CSS)
+├── bin/                  # Compiled local binaries and protoc plugins
+├── build/                # Container and packaging definitions (Dockerfiles)
+├── cmd/                  # Application entry points
+│   └── saturn/           # Unified CLI (serve, migrate, admin, backup)
+├── deployments/          # Deployment configurations (Docker Compose)
+├── internal/             # Internal application implementation
+│   ├── aggregator/       # Cross-domain aggregation logic (finance)
+│   ├── application/      # Use cases and application services (agent, finance, iam, integration, space)
+│   ├── domain/           # Core domain models and storage (finance, identity, space)
+│   ├── foundation/       # Foundational security and authorization (auth)
+│   ├── platform/         # Reusable platform subsystems (agent, backup, scheduler, shutdown, etc.)
+│   └── transport/        # Network transport handlers (gRPC, HTTP gateway, webhooks)
+├── migrations/           # Database schema migrations (PostgreSQL)
+├── tests/                # Integration and end-to-end test suites
+└── tools/                # Protoc plugins and development tooling
 ```
 
 ## 📖 API Overview
 
-Saturn exposes both **gRPC** and **REST** endpoints. The API is organized by domain, with every request scoped to a Space via a `space-id` header or path parameter.
+Saturn exposes both **gRPC** and **REST** endpoints. The API is organized by domain, with requests scoped to a Space via a `Space-Id` header or path parameter.
 
-### Example: Create a Task
+### Example: Create a Space
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/tasks \
+curl -X POST http://localhost:8080/v1/spaces \
   -H "Content-Type: application/json" \
-  -H "Space-Id: your-space-uuid" \
+  -H "Authorization: Bearer <session-token>" \
   -d '{
-    "title": "Review quarterly budget",
-    "priority": "high",
-    "due_date": "2026-07-15"
+    "name": "Personal",
+    "description": "Personal workspace"
   }'
 ```
 
-Full API documentation is available in the [`docs/`](./docs/) directory.
+Interactive Swagger documentation is available by starting the server with `--swagger.enabled` (at `http://localhost:8080/swagger/`) or by reviewing [`api/api.swagger.json`](./api/api.swagger.json).
 
 ## 🤝 Contributing
 
