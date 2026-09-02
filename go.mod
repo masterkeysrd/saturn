@@ -33,7 +33,7 @@ require (
 	golang.org/x/sync v0.22.0
 	google.golang.org/genai v1.66.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20260715232425-e75dac1f907d
-	google.golang.org/grpc v1.83.0
+	google.golang.org/grpc v1.83.1
 	google.golang.org/protobuf v1.36.11
 )
 
