@@ -395,6 +395,23 @@ service Finance {
     };
   }
 
+  // Ingests an unstructured statement document (PDF, image, or text),
+  // parses multi-currency sections, validates math, and persists draft statements.
+  rpc IngestStatementDocument(IngestStatementDocumentRequest) returns (IngestStatementDocumentResponse) {
+    option (google.api.http) = {
+      post: "/v1/finance/statements:ingest-document"
+      body: "*"
+    };
+  }
+
+  // Analyzes a statement document without persisting drafts (preview/dry-run mode).
+  rpc AnalyzeStatementDocument(AnalyzeStatementDocumentRequest) returns (AnalyzeStatementDocumentResponse) {
+    option (google.api.http) = {
+      post: "/v1/finance/statements:analyze-document"
+      body: "*"
+    };
+  }
+
   // Retrieves a specific statement resource by ID, including its status and balance metadata.
   rpc GetStatement(GetStatementRequest) returns (Statement) {
     option (google.api.http) = {get: "/v1/finance/statements/{id}"};
@@ -2762,4 +2779,70 @@ message UpdateStatementRequest {
 // Request to finalize and commit the statement.
 message CompleteStatementRequest {
   string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// SectionValidationReport summarizes the mathematical verification of an extracted currency section.
+message SectionValidationReport {
+  string currency = 1;
+  int64 starting_balance = 2;
+  int64 ending_balance = 3;
+  int64 calculated_ending = 4;
+  int64 net_flow = 5;
+  int64 discrepancy = 6;
+  bool is_balanced = 7;
+  int32 line_count = 8;
+}
+
+// Request to ingest an unstructured statement document and persist drafts.
+message IngestStatementDocumentRequest {
+  // Optional. Target account identifier override.
+  optional string target_account_id = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Required. Original file name.
+  string filename = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. MIME content type (e.g. "application/pdf", "text/plain").
+  string content_type = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Raw document binary payload.
+  bytes document_bytes = 4 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Password for encrypted PDFs.
+  optional string password = 5 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Response from statement document ingestion.
+message IngestStatementDocumentResponse {
+  string batch_id = 1;
+  repeated Statement created_statements = 2;
+  repeated SectionValidationReport section_reports = 3;
+  repeated string unmapped_sections = 4;
+  bool needs_password = 5;
+  repeated string errors = 6;
+}
+
+// Request to analyze a statement document without creating DB drafts (preview mode).
+message AnalyzeStatementDocumentRequest {
+  // Optional. Target account identifier override.
+  optional string target_account_id = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Required. Original file name.
+  string filename = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. MIME content type.
+  string content_type = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. Raw document binary payload.
+  bytes document_bytes = 4 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Password for encrypted PDFs.
+  optional string password = 5 [(google.api.field_behavior) = OPTIONAL];
+}
+
+// Response from statement document analysis.
+message AnalyzeStatementDocumentResponse {
+  repeated SectionValidationReport section_reports = 1;
+  repeated string unmapped_sections = 2;
+  bool needs_password = 3;
+  repeated string errors = 4;
 }

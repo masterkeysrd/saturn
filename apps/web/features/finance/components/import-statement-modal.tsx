@@ -1,7 +1,9 @@
-import { useState, useRef, useEffect, useMemo } from "react"
+import { useState, useRef, useMemo } from "react"
 import {
   type Account,
+  type IngestStatementDocumentResponse,
   useImportStatementMutation,
+  useIngestStatementDocumentMutation,
 } from "@/gen/saturn/finance/v1/finance"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -35,6 +37,9 @@ import {
   Sparkles,
   Calculator,
   RefreshCw,
+  Lock,
+  AlertTriangle,
+  Layers,
 } from "lucide-react"
 import { AccountSelect } from "./account-select"
 import { formatAmount } from "../utils"
@@ -88,7 +93,21 @@ function parseCSVLineByLine(text: string, delimiter: string = ","): string[][] {
       lines.push(row)
     }
   }
+
   return lines
+}
+
+async function fileToBase64(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer()
+  const bytes = new Uint8Array(buffer)
+  let binary = ""
+  const len = bytes.byteLength
+  const chunkSize = 8192
+  for (let i = 0; i < len; i += chunkSize) {
+    const chunk = bytes.subarray(i, Math.min(i + chunkSize, len))
+    binary += String.fromCharCode.apply(null, Array.from(chunk))
+  }
+  return btoa(binary)
 }
 
 export function ImportStatementModal({
@@ -111,6 +130,17 @@ export function ImportStatementModal({
   const [isDragging, setIsDragging] = useState<boolean>(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Smart PDF Ingestion state
+  const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const [pdfBase64, setPdfBase64] = useState<string>("")
+  const [pdfPassword, setPdfPassword] = useState<string>("")
+  const [pdfError, setPdfError] = useState<string | null>(null)
+  const [needsPassword, setNeedsPassword] = useState<boolean>(false)
+  const [multiCurrencyResult, setMultiCurrencyResult] =
+    useState<IngestStatementDocumentResponse | null>(null)
+
+  const ingestDocMutation = useIngestStatementDocumentMutation()
+
   // Balances
   const [startingBalanceStr, setStartingBalanceStr] = useState<string>("0.00")
   const [endingBalanceStr, setEndingBalanceStr] = useState<string>("0.00")
@@ -128,20 +158,22 @@ export function ImportStatementModal({
 
   const importMutation = useImportStatementMutation()
 
-  useEffect(() => {
-    if (preselectedAccountId) {
-      setImportAccountId(preselectedAccountId)
-    } else if (accounts.length > 0 && !importAccountId) {
-      setImportAccountId(accounts[0].id || "")
-    }
-  }, [preselectedAccountId, accounts, importAccountId])
+  const resetForm = () => {
+    setStep(1)
+    setPdfFile(null)
+    setPdfBase64("")
+    setPdfPassword("")
+    setPdfError(null)
+    setNeedsPassword(false)
+    setMultiCurrencyResult(null)
+  }
 
-  // Reset step when modal opens
-  useEffect(() => {
-    if (open) {
-      setStep(1)
+  const handleModalOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      resetForm()
     }
-  }, [open])
+    onOpenChange(nextOpen)
+  }
 
   const targetAccount = useMemo(
     () => accounts.find((a) => a.id === importAccountId),
@@ -149,6 +181,22 @@ export function ImportStatementModal({
   )
 
   const handleProcessFile = (file: File) => {
+    const isPdf =
+      file.type === "application/pdf" ||
+      file.name.toLowerCase().endsWith(".pdf")
+
+    if (isPdf) {
+      setPdfFile(file)
+      setCsvFile(null)
+      setPdfError(null)
+      setNeedsPassword(false)
+      setMultiCurrencyResult(null)
+      fileToBase64(file).then((b64) => setPdfBase64(b64))
+      return
+    }
+
+    setPdfFile(null)
+    setMultiCurrencyResult(null)
     setCsvFile(file)
     const reader = new FileReader()
     reader.onload = (e) => {
@@ -263,6 +311,49 @@ export function ImportStatementModal({
     setEndingBalanceStr((endCents / 100).toFixed(2))
   }
 
+  const handleIngestPdf = async (passwordOverride?: string) => {
+    if (!pdfFile || !pdfBase64) return
+    setPdfError(null)
+
+    try {
+      const res = await ingestDocMutation.mutateAsync({
+        filename: pdfFile.name,
+        contentType: pdfFile.type || "application/pdf",
+        documentBytes: pdfBase64,
+        password:
+          passwordOverride !== undefined ? passwordOverride : pdfPassword,
+        targetAccountId: undefined,
+      })
+
+      if (res.needsPassword) {
+        setNeedsPassword(true)
+        return
+      }
+
+      if (res.errors && res.errors.length > 0) {
+        setPdfError(res.errors.join(". "))
+        return
+      }
+
+      if (res.createdStatements && res.createdStatements.length > 0) {
+        if (res.createdStatements.length === 1) {
+          handleModalOpenChange(false)
+          onImportSuccess(res.createdStatements[0].id || "")
+        } else {
+          setMultiCurrencyResult(res)
+        }
+      } else {
+        setPdfError("No statements could be extracted from this document.")
+      }
+    } catch (err) {
+      setPdfError(
+        err instanceof Error
+          ? err.message
+          : "Failed to ingest statement document"
+      )
+    }
+  }
+
   const handleImport = async () => {
     if (!importAccountId || !csvFile) return
 
@@ -301,7 +392,7 @@ export function ImportStatementModal({
 
       const stmtId = res?.id
       if (stmtId) {
-        onOpenChange(false)
+        handleModalOpenChange(false)
         onImportSuccess(stmtId)
       }
     } catch (err) {
@@ -315,7 +406,7 @@ export function ImportStatementModal({
     : parsedRows.length
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleModalOpenChange}>
       <DialogContent className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border-border/60 bg-card p-0 shadow-2xl sm:max-w-4xl lg:max-w-5xl">
         {/* Top Header & Wizard Stepper */}
         <div className="flex flex-col gap-4 border-b border-border/40 bg-muted/20 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
@@ -375,205 +466,378 @@ export function ImportStatementModal({
         {/* Modal Body Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {step === 1 ? (
-            /* STEP 1: Upload & Balances */
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-              {/* Left Column: Dropzone & File Info */}
-              <div className="space-y-4 lg:col-span-6">
-                <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                  Statement CSV File
-                </Label>
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".csv,.tsv,.txt,text/csv"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) handleProcessFile(file)
-                  }}
-                />
-
-                {!csvFile ? (
-                  <div
-                    onDragOver={(e) => {
-                      e.preventDefault()
-                      setIsDragging(true)
-                    }}
-                    onDragLeave={() => setIsDragging(false)}
-                    onDrop={(e) => {
-                      e.preventDefault()
-                      setIsDragging(false)
-                      const file = e.dataTransfer.files?.[0]
-                      if (file) handleProcessFile(file)
-                    }}
-                    onClick={() => fileInputRef.current?.click()}
-                    className={cn(
-                      "group flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center transition-all duration-200",
-                      isDragging
-                        ? "border-primary bg-primary/10"
-                        : "border-border/60 bg-muted/20 hover:border-primary/50 hover:bg-muted/30"
-                    )}
-                  >
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-transform group-hover:scale-110">
-                      <UploadCloud className="h-6 w-6" />
-                    </div>
-                    <p className="mt-3 text-sm font-bold text-foreground">
-                      Click to browse or drag & drop CSV
-                    </p>
-                    <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-                      Exported from Chase, Bank of America, Wells Fargo, Stripe,
-                      PayPal, or generic CSV.
-                    </p>
-                    <div className="mt-4 flex gap-1.5">
-                      <span className="rounded-md border border-border/50 bg-background/50 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                        .CSV
-                      </span>
-                      <span className="rounded-md border border-border/50 bg-background/50 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                        .TSV
-                      </span>
-                      <span className="rounded-md border border-border/50 bg-background/50 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                        UTF-8
-                      </span>
-                    </div>
+            multiCurrencyResult ? (
+              /* Multi-Currency Ingestion Result View */
+              <div className="space-y-6">
+                <div className="flex items-center gap-3.5 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Layers className="h-5 w-5" />
                   </div>
-                ) : (
-                  <div className="space-y-4 rounded-2xl border border-border/50 bg-card/60 p-5 shadow-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 items-center space-x-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
-                          <CheckCircle2 className="h-5 w-5" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-bold text-foreground">
-                            {csvFile.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {(csvFile.size / 1024).toFixed(1)} KB •{" "}
-                            <span className="font-semibold text-foreground">
-                              {parsedRows.length} total rows parsed
-                            </span>
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="h-8 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground"
-                      >
-                        <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                        Change
-                      </Button>
-                    </div>
+                  <div>
+                    <h4 className="text-sm font-black tracking-tight text-foreground">
+                      Multi-Currency Statement Ingested
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      This statement contains{" "}
+                      {multiCurrencyResult.createdStatements.length} independent
+                      currency ledgers. Select a ledger to begin reconciliation:
+                    </p>
+                  </div>
+                </div>
 
-                    {/* Quick CSV Insights */}
-                    {estimatedNetFlowCents !== null && (
-                      <div className="space-y-2 rounded-xl border border-border/40 bg-muted/20 p-3 text-xs">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium text-muted-foreground">
-                            Detected Net Flow in File:
-                          </span>
-                          <span
-                            className={cn(
-                              "font-mono font-bold",
-                              estimatedNetFlowCents >= 0
-                                ? "text-emerald-500"
-                                : "text-rose-500"
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {multiCurrencyResult.createdStatements.map((stmt) => {
+                    const acc = accounts.find((a) => a.id === stmt.accountId)
+                    const report = multiCurrencyResult.sectionReports.find(
+                      (r) => r.currency === acc?.currency
+                    )
+                    return (
+                      <div
+                        key={stmt.id}
+                        className="flex flex-col justify-between space-y-4 rounded-2xl border border-border/50 bg-card/60 p-5 shadow-sm transition-all hover:border-primary/50"
+                      >
+                        <div className="space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="inline-flex items-center rounded-md border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
+                              {acc?.currency || "Currency"}
+                            </span>
+                            {report?.isBalanced ? (
+                              <span className="flex items-center text-[11px] font-bold text-emerald-500">
+                                <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                                Balanced (Δ = 0)
+                              </span>
+                            ) : (
+                              <span className="flex items-center text-[11px] font-bold text-rose-500">
+                                <AlertTriangle className="mr-1 h-3.5 w-3.5" />
+                                Discrepancy:{" "}
+                                {formatAmount(
+                                  report?.discrepancy || 0,
+                                  acc?.currency
+                                )}
+                              </span>
                             )}
-                          >
-                            {estimatedNetFlowCents >= 0 ? "+" : ""}
-                            {formatAmount(
-                              estimatedNetFlowCents,
-                              targetAccount?.currency
-                            )}
-                          </span>
+                          </div>
+                          <h5 className="text-sm font-bold text-foreground">
+                            {acc?.name || "Target Account"}
+                          </h5>
+                          <div className="flex items-center justify-between border-t border-border/40 pt-2 text-xs text-muted-foreground">
+                            <span>Ending Balance:</span>
+                            <span className="font-mono font-bold text-foreground">
+                              {formatAmount(
+                                stmt.statementEndingBalance,
+                                acc?.currency
+                              )}
+                            </span>
+                          </div>
                         </div>
+
                         <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleAutoCalculateEndingBalance}
-                          className="h-7 w-full rounded-lg border-border/60 text-[11px] font-bold transition-colors hover:bg-primary/10 hover:text-primary"
+                          type="button"
+                          onClick={() => {
+                            handleModalOpenChange(false)
+                            onImportSuccess(stmt.id || "")
+                          }}
+                          className="w-full rounded-xl bg-primary text-xs font-bold text-white shadow-md transition-all hover:scale-[1.01]"
                         >
-                          <Calculator className="mr-1.5 h-3 w-3" />
-                          Set Ending Balance = Start + Net Flow
+                          Reconcile {acc?.currency} Statement
+                          <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
                         </Button>
                       </div>
-                    )}
-                  </div>
-                )}
+                    )
+                  })}
+                </div>
               </div>
-
-              {/* Right Column: Target Account & Balances */}
-              <div className="space-y-4 lg:col-span-6">
-                <div className="space-y-1.5">
+            ) : (
+              /* STEP 1: Upload & Balances */
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+                {/* Left Column: Dropzone & File Info */}
+                <div className="space-y-4 lg:col-span-6">
                   <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                    Target Ledger Account
+                    Statement File (PDF or CSV)
                   </Label>
-                  <AccountSelect
-                    value={importAccountId}
-                    onValueChange={setImportAccountId}
-                    accounts={accounts}
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv,.tsv,.txt,text/csv,application/pdf,.pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) handleProcessFile(file)
+                    }}
                   />
+
+                  {pdfFile ? (
+                    <div className="space-y-4 rounded-2xl border border-border/50 bg-card/60 p-5 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-center space-x-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500">
+                            <FileText className="h-5 w-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold text-foreground">
+                              {pdfFile.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {(pdfFile.size / 1024).toFixed(1)} KB •{" "}
+                              <span className="font-semibold text-primary">
+                                Janus Statement Extraction
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setPdfFile(null)
+                            fileInputRef.current?.click()
+                          }}
+                          className="h-8 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground"
+                        >
+                          <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                          Change
+                        </Button>
+                      </div>
+
+                      {needsPassword && (
+                        <div className="space-y-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                          <div className="flex items-center gap-2 text-xs font-bold text-amber-500">
+                            <Lock className="h-4 w-4" />
+                            Password-Protected Statement
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            This statement PDF is encrypted. Enter the
+                            decryption password:
+                          </p>
+                          <div className="flex gap-2">
+                            <Input
+                              type="password"
+                              placeholder="PDF password"
+                              value={pdfPassword}
+                              onChange={(e) => setPdfPassword(e.target.value)}
+                              className="h-9 rounded-xl bg-background/80 text-xs"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={
+                                ingestDocMutation.isPending || !pdfPassword
+                              }
+                              onClick={() => handleIngestPdf()}
+                              className="rounded-xl text-xs font-bold"
+                            >
+                              {ingestDocMutation.isPending && (
+                                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                              )}
+                              Unlock
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {pdfError && (
+                        <div className="flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-500">
+                          <AlertTriangle className="h-4 w-4 shrink-0" />
+                          <span>{pdfError}</span>
+                        </div>
+                      )}
+
+                      {!needsPassword && (
+                        <div className="space-y-2 rounded-xl border border-border/40 bg-muted/20 p-3 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1.5 font-bold text-foreground">
+                            <Sparkles className="h-3.5 w-3.5 text-primary" />
+                            Autonomous Extractor
+                          </div>
+                          <p className="text-[11px] leading-relaxed">
+                            Saturn AI will extract all currency ledgers (DOP,
+                            USD, etc.), verify double-entry balance mathematics,
+                            and generate ready-to-reconcile statement drafts.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : !csvFile ? (
+                    <div
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        setIsDragging(true)
+                      }}
+                      onDragLeave={() => setIsDragging(false)}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        setIsDragging(false)
+                        const file = e.dataTransfer.files?.[0]
+                        if (file) handleProcessFile(file)
+                      }}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={cn(
+                        "group flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center transition-all duration-200",
+                        isDragging
+                          ? "border-primary bg-primary/10"
+                          : "border-border/60 bg-muted/20 hover:border-primary/50 hover:bg-muted/30"
+                      )}
+                    >
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-transform group-hover:scale-110">
+                        <UploadCloud className="h-6 w-6" />
+                      </div>
+                      <p className="mt-3 text-sm font-bold text-foreground">
+                        Click to browse or drag & drop Statement
+                      </p>
+                      <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+                        Supports PDF statements (single & multi-currency) or CSV
+                        exports.
+                      </p>
+                      <div className="mt-4 flex gap-1.5">
+                        <span className="rounded-md border border-border/50 bg-background/50 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                          .PDF
+                        </span>
+                        <span className="rounded-md border border-border/50 bg-background/50 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                          .CSV
+                        </span>
+                        <span className="rounded-md border border-border/50 bg-background/50 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                          .TSV
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4 rounded-2xl border border-border/50 bg-card/60 p-5 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-center space-x-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
+                            <CheckCircle2 className="h-5 w-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold text-foreground">
+                              {csvFile.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {(csvFile.size / 1024).toFixed(1)} KB •{" "}
+                              <span className="font-semibold text-foreground">
+                                {parsedRows.length} total rows parsed
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="h-8 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground"
+                        >
+                          <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                          Change
+                        </Button>
+                      </div>
+
+                      {/* Quick CSV Insights */}
+                      {estimatedNetFlowCents !== null && (
+                        <div className="space-y-2 rounded-xl border border-border/40 bg-muted/20 p-3 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-muted-foreground">
+                              Detected Net Flow in File:
+                            </span>
+                            <span
+                              className={cn(
+                                "font-mono font-bold",
+                                estimatedNetFlowCents >= 0
+                                  ? "text-emerald-500"
+                                  : "text-rose-500"
+                              )}
+                            >
+                              {estimatedNetFlowCents >= 0 ? "+" : ""}
+                              {formatAmount(
+                                estimatedNetFlowCents,
+                                targetAccount?.currency
+                              )}
+                            </span>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleAutoCalculateEndingBalance}
+                            className="h-7 w-full rounded-lg border-border/60 text-[11px] font-bold transition-colors hover:bg-primary/10 hover:text-primary"
+                          >
+                            <Calculator className="mr-1.5 h-3 w-3" />
+                            Set Ending Balance = Start + Net Flow
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                    Statement Closing Date
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      type="date"
-                      value={statementDateStr}
-                      onChange={(e) => setStatementDateStr(e.target.value)}
-                      className="h-10 rounded-xl bg-background/50 pl-9 text-xs font-medium"
-                    />
-                    <Calendar className="absolute top-3 left-3 h-4 w-4 text-muted-foreground" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2">
+                {/* Right Column: Target Account & Balances */}
+                <div className="space-y-4 lg:col-span-6">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                      Starting Balance
+                      Target Ledger Account
                     </Label>
-                    <AmountInput
-                      currency={targetAccount?.currency}
-                      value={startingBalanceStr}
-                      onValueChange={setStartingBalanceStr}
-                      allowNegative={true}
-                      placeholder="0.00"
-                      className="h-10 rounded-xl bg-background/50 font-mono text-xs"
+                    <AccountSelect
+                      value={importAccountId}
+                      onValueChange={setImportAccountId}
+                      accounts={accounts}
                     />
                   </div>
+
                   <div className="space-y-1.5">
                     <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                      Target Ending Balance
+                      Statement Closing Date
                     </Label>
-                    <AmountInput
-                      currency={targetAccount?.currency}
-                      value={endingBalanceStr}
-                      onValueChange={setEndingBalanceStr}
-                      allowNegative={true}
-                      placeholder="0.00"
-                      className="h-10 rounded-xl bg-background/50 font-mono text-xs"
-                    />
+                    <div className="relative">
+                      <Input
+                        type="date"
+                        value={statementDateStr}
+                        onChange={(e) => setStatementDateStr(e.target.value)}
+                        className="h-10 rounded-xl bg-background/50 pl-9 text-xs font-medium"
+                      />
+                      <Calendar className="absolute top-3 left-3 h-4 w-4 text-muted-foreground" />
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-1.5 rounded-2xl border border-border/40 bg-muted/10 p-4 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-1.5 font-bold text-foreground">
-                    <Sparkles className="h-3.5 w-3.5 text-primary" />
-                    Reconciliation Tip
+                  <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
+                        Starting Balance
+                      </Label>
+                      <AmountInput
+                        currency={targetAccount?.currency}
+                        value={startingBalanceStr}
+                        onValueChange={setStartingBalanceStr}
+                        allowNegative={true}
+                        placeholder="0.00"
+                        className="h-10 rounded-xl bg-background/50 font-mono text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
+                        Target Ending Balance
+                      </Label>
+                      <AmountInput
+                        currency={targetAccount?.currency}
+                        value={endingBalanceStr}
+                        onValueChange={setEndingBalanceStr}
+                        allowNegative={true}
+                        placeholder="0.00"
+                        className="h-10 rounded-xl bg-background/50 font-mono text-xs"
+                      />
+                    </div>
                   </div>
-                  <p className="text-[11px] leading-relaxed">
-                    The reconciliation engine verifies that the net sum of all
-                    statement lines equals your ending balance minus starting
-                    balance.
-                  </p>
+
+                  <div className="space-y-1.5 rounded-2xl border border-border/40 bg-muted/10 p-4 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1.5 font-bold text-foreground">
+                      <Sparkles className="h-3.5 w-3.5 text-primary" />
+                      Reconciliation Tip
+                    </div>
+                    <p className="text-[11px] leading-relaxed">
+                      The reconciliation engine verifies that the net sum of all
+                      statement lines equals your ending balance minus starting
+                      balance.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )
           ) : (
             /* STEP 2: Column Mapping & Live Preview */
             <div className="space-y-5">
@@ -878,25 +1142,69 @@ export function ImportStatementModal({
         {/* Modal Footer Controls */}
         <div className="flex items-center justify-between border-t border-border/40 bg-muted/20 px-6 py-4">
           {step === 1 ? (
-            <>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => onOpenChange(false)}
-                className="rounded-xl text-xs font-bold text-muted-foreground"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                disabled={!csvFile || !importAccountId}
-                onClick={() => setStep(2)}
-                className="rounded-xl bg-primary px-5 text-xs font-bold text-white shadow-md transition-all hover:scale-[1.01]"
-              >
-                Continue to Column Mapping
-                <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-              </Button>
-            </>
+            multiCurrencyResult ? (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => handleModalOpenChange(false)}
+                  className="rounded-xl text-xs font-bold text-muted-foreground"
+                >
+                  Dismiss
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => handleModalOpenChange(false)}
+                  className="rounded-xl bg-primary px-5 text-xs font-bold text-white shadow-md transition-all hover:scale-[1.01]"
+                >
+                  Done
+                </Button>
+              </>
+            ) : pdfFile ? (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => handleModalOpenChange(false)}
+                  className="rounded-xl text-xs font-bold text-muted-foreground"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  disabled={ingestDocMutation.isPending || !pdfBase64}
+                  onClick={() => handleIngestPdf()}
+                  className="h-10 rounded-xl bg-gradient-to-r from-primary to-accent px-6 text-xs font-bold text-white shadow-lg transition-all hover:scale-[1.01]"
+                >
+                  {ingestDocMutation.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="mr-2 h-4 w-4" />
+                  )}
+                  Extract & Reconcile with Janus
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => handleModalOpenChange(false)}
+                  className="rounded-xl text-xs font-bold text-muted-foreground"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  disabled={!csvFile || !importAccountId}
+                  onClick={() => setStep(2)}
+                  className="rounded-xl bg-primary px-5 text-xs font-bold text-white shadow-md transition-all hover:scale-[1.01]"
+                >
+                  Continue to Column Mapping
+                  <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                </Button>
+              </>
+            )
           ) : (
             <>
               <Button

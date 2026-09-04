@@ -151,30 +151,33 @@ type IngestionDeduplicator interface {
 
 // Dependencies contains all parameters for Coordinator initialization.
 type Dependencies struct {
-	FinanceService FinanceService
-	SpaceService   SpaceService
-	Classifier     DocumentClassifier
-	Parser         IngestionParser
-	Deduplicator   IngestionDeduplicator
+	FinanceService    FinanceService
+	SpaceService      SpaceService
+	Classifier        DocumentClassifier
+	Parser            IngestionParser
+	Deduplicator      IngestionDeduplicator
+	StatementPipeline *StatementPipeline
 }
 
 // Coordinator orchestrates requests across workspace and finance boundaries.
 type Coordinator struct {
-	financeService FinanceService
-	spaceService   SpaceService
-	classifier     DocumentClassifier
-	parser         IngestionParser
-	deduplicator   IngestionDeduplicator
+	financeService    FinanceService
+	spaceService      SpaceService
+	classifier        DocumentClassifier
+	parser            IngestionParser
+	deduplicator      IngestionDeduplicator
+	statementPipeline *StatementPipeline
 }
 
 // NewCoordinator instantiates a new Coordinator.
 func NewCoordinator(deps Dependencies) *Coordinator {
 	return &Coordinator{
-		financeService: deps.FinanceService,
-		spaceService:   deps.SpaceService,
-		classifier:     deps.Classifier,
-		parser:         deps.Parser,
-		deduplicator:   deps.Deduplicator,
+		financeService:    deps.FinanceService,
+		spaceService:      deps.SpaceService,
+		classifier:        deps.Classifier,
+		parser:            deps.Parser,
+		deduplicator:      deps.Deduplicator,
+		statementPipeline: deps.StatementPipeline,
 	}
 }
 
@@ -285,4 +288,28 @@ func (c *Coordinator) CompleteStatement(ctx context.Context, id finance.Statemen
 		return nil, err
 	}
 	return c.financeService.CompleteStatement(ctx, rCtx.SpaceID, id)
+}
+
+// IngestStatementDocument executes statement document ingestion for the session's workspace.
+func (c *Coordinator) IngestStatementDocument(ctx context.Context, req *StatementDocumentRequest) (*IngestStatementResult, error) {
+	if c.statementPipeline == nil {
+		return nil, errors.New("statement pipeline is not configured")
+	}
+	rCtx, err := c.resolveContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return c.statementPipeline.IngestDocument(ctx, string(rCtx.SpaceID), req)
+}
+
+// AnalyzeStatementDocument analyzes statement document without persisting drafts (preview mode).
+func (c *Coordinator) AnalyzeStatementDocument(ctx context.Context, req *StatementDocumentRequest) (*StatementIngestionState, error) {
+	if c.statementPipeline == nil {
+		return nil, errors.New("statement pipeline is not configured")
+	}
+	rCtx, err := c.resolveContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return c.statementPipeline.AnalyzeDocument(ctx, string(rCtx.SpaceID), req)
 }

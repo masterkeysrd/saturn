@@ -3370,6 +3370,74 @@
         ]
       }
     },
+    "/v1/finance/statements:analyze-document": {
+      "post": {
+        "summary": "Analyzes a statement document without persisting drafts (preview/dry-run mode).",
+        "operationId": "Finance_AnalyzeStatementDocument",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AnalyzeStatementDocumentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "Request to analyze a statement document without creating DB drafts (preview mode).",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1AnalyzeStatementDocumentRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
+    "/v1/finance/statements:ingest-document": {
+      "post": {
+        "summary": "Ingests an unstructured statement document (PDF, image, or text),\nparses multi-currency sections, validates math, and persists draft statements.",
+        "operationId": "Finance_IngestStatementDocument",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1IngestStatementDocumentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "Request to ingest an unstructured statement document and persist drafts.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1IngestStatementDocumentRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/finance/transactions": {
       "get": {
         "summary": "Lists paginated transaction records matching specific budget, account, source, or text queries.",
@@ -6367,6 +6435,66 @@
         }
       }
     },
+    "v1AnalyzeStatementDocumentRequest": {
+      "type": "object",
+      "properties": {
+        "targetAccountId": {
+          "type": "string",
+          "description": "Optional. Target account identifier override."
+        },
+        "filename": {
+          "type": "string",
+          "description": "Required. Original file name."
+        },
+        "contentType": {
+          "type": "string",
+          "description": "Required. MIME content type."
+        },
+        "documentBytes": {
+          "type": "string",
+          "format": "byte",
+          "description": "Required. Raw document binary payload."
+        },
+        "password": {
+          "type": "string",
+          "description": "Optional. Password for encrypted PDFs."
+        }
+      },
+      "description": "Request to analyze a statement document without creating DB drafts (preview mode).",
+      "required": [
+        "filename",
+        "contentType",
+        "documentBytes"
+      ]
+    },
+    "v1AnalyzeStatementDocumentResponse": {
+      "type": "object",
+      "properties": {
+        "sectionReports": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SectionValidationReport"
+          }
+        },
+        "unmappedSections": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "needsPassword": {
+          "type": "boolean"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Response from statement document analysis."
+    },
     "v1ApproveUserResponse": {
       "type": "object",
       "properties": {
@@ -7447,6 +7575,76 @@
         }
       },
       "description": "TrendDataPoint tracks income patterns grouped by granular interval."
+    },
+    "v1IngestStatementDocumentRequest": {
+      "type": "object",
+      "properties": {
+        "targetAccountId": {
+          "type": "string",
+          "description": "Optional. Target account identifier override."
+        },
+        "filename": {
+          "type": "string",
+          "description": "Required. Original file name."
+        },
+        "contentType": {
+          "type": "string",
+          "description": "Required. MIME content type (e.g. \"application/pdf\", \"text/plain\")."
+        },
+        "documentBytes": {
+          "type": "string",
+          "format": "byte",
+          "description": "Required. Raw document binary payload."
+        },
+        "password": {
+          "type": "string",
+          "description": "Optional. Password for encrypted PDFs."
+        }
+      },
+      "description": "Request to ingest an unstructured statement document and persist drafts.",
+      "required": [
+        "filename",
+        "contentType",
+        "documentBytes"
+      ]
+    },
+    "v1IngestStatementDocumentResponse": {
+      "type": "object",
+      "properties": {
+        "batchId": {
+          "type": "string"
+        },
+        "createdStatements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Statement"
+          }
+        },
+        "sectionReports": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SectionValidationReport"
+          }
+        },
+        "unmappedSections": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "needsPassword": {
+          "type": "boolean"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Response from statement document ingestion."
     },
     "v1InsightGranularity": {
       "type": "string",
@@ -8591,6 +8789,42 @@
         "FULL"
       ],
       "description": "Scoped resource representation view level."
+    },
+    "v1SectionValidationReport": {
+      "type": "object",
+      "properties": {
+        "currency": {
+          "type": "string"
+        },
+        "startingBalance": {
+          "type": "string",
+          "format": "int64"
+        },
+        "endingBalance": {
+          "type": "string",
+          "format": "int64"
+        },
+        "calculatedEnding": {
+          "type": "string",
+          "format": "int64"
+        },
+        "netFlow": {
+          "type": "string",
+          "format": "int64"
+        },
+        "discrepancy": {
+          "type": "string",
+          "format": "int64"
+        },
+        "isBalanced": {
+          "type": "boolean"
+        },
+        "lineCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "description": "SectionValidationReport summarizes the mathematical verification of an extracted currency section."
     },
     "v1SimulateWebhookResponse": {
       "type": "object",

@@ -994,6 +994,34 @@ func (c *Client) ImportStatement(ctx context.Context, req *ImportStatementReques
 	return &resp, nil
 }
 
+// IngestStatementDocument executes POST /api/v1/finance/statements:ingest-document.
+func (c *Client) IngestStatementDocument(ctx context.Context, req *IngestStatementDocumentRequest) (*IngestStatementDocumentResponse, error) {
+	var resp IngestStatementDocumentResponse
+	path := "/api/v1/finance/statements:ingest-document"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// AnalyzeStatementDocument executes POST /api/v1/finance/statements:analyze-document.
+func (c *Client) AnalyzeStatementDocument(ctx context.Context, req *AnalyzeStatementDocumentRequest) (*AnalyzeStatementDocumentResponse, error) {
+	var resp AnalyzeStatementDocumentResponse
+	path := "/api/v1/finance/statements:analyze-document"
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
 // GetStatement executes GET /api/v1/finance/statements/{id}.
 func (c *Client) GetStatement(ctx context.Context, req *GetStatementRequest) (*Statement, error) {
 	var resp Statement

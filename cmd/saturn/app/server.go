@@ -251,13 +251,20 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	classifier := financeapp.NewAgentDocumentClassifier(agentCoordinator)
 	parser := financeapp.NewAgentIngestionParser(agentCoordinator)
 	deduplicator := financeapp.NewAgentIngestionDeduplicator(agentCoordinator)
+	statementExtractor := financeapp.NewAgentStatementExtractor(agentCoordinator)
+
+	statementPipeline := financeapp.NewStatementPipeline(financeapp.StatementPipelineDependencies{
+		FinanceService: financeService,
+		Extractor:      statementExtractor,
+	})
 
 	financeCoordinator := financeapp.NewCoordinator(financeapp.Dependencies{
-		FinanceService: financeService,
-		SpaceService:   spaceService,
-		Classifier:     classifier,
-		Parser:         parser,
-		Deduplicator:   deduplicator,
+		FinanceService:    financeService,
+		SpaceService:      spaceService,
+		Classifier:        classifier,
+		Parser:            parser,
+		Deduplicator:      deduplicator,
+		StatementPipeline: statementPipeline,
 	})
 
 	// Register email forwarding provider

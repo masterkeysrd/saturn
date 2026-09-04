@@ -79,6 +79,8 @@ const (
 	Finance_ApproveInboxItem_FullMethodName            = "/saturn.finance.v1.Finance/ApproveInboxItem"
 	Finance_DiscardInboxItem_FullMethodName            = "/saturn.finance.v1.Finance/DiscardInboxItem"
 	Finance_ImportStatement_FullMethodName             = "/saturn.finance.v1.Finance/ImportStatement"
+	Finance_IngestStatementDocument_FullMethodName     = "/saturn.finance.v1.Finance/IngestStatementDocument"
+	Finance_AnalyzeStatementDocument_FullMethodName    = "/saturn.finance.v1.Finance/AnalyzeStatementDocument"
 	Finance_GetStatement_FullMethodName                = "/saturn.finance.v1.Finance/GetStatement"
 	Finance_DeleteStatement_FullMethodName             = "/saturn.finance.v1.Finance/DeleteStatement"
 	Finance_ListStatements_FullMethodName              = "/saturn.finance.v1.Finance/ListStatements"
@@ -215,6 +217,11 @@ type FinanceClient interface {
 	// Initiates a new statement reconciliation session by parsing the uploaded CSV content
 	// and persisting the detected lines for user review.
 	ImportStatement(ctx context.Context, in *ImportStatementRequest, opts ...grpc.CallOption) (*Statement, error)
+	// Ingests an unstructured statement document (PDF, image, or text),
+	// parses multi-currency sections, validates math, and persists draft statements.
+	IngestStatementDocument(ctx context.Context, in *IngestStatementDocumentRequest, opts ...grpc.CallOption) (*IngestStatementDocumentResponse, error)
+	// Analyzes a statement document without persisting drafts (preview/dry-run mode).
+	AnalyzeStatementDocument(ctx context.Context, in *AnalyzeStatementDocumentRequest, opts ...grpc.CallOption) (*AnalyzeStatementDocumentResponse, error)
 	// Retrieves a specific statement resource by ID, including its status and balance metadata.
 	GetStatement(ctx context.Context, in *GetStatementRequest, opts ...grpc.CallOption) (*Statement, error)
 	// Discards a statement resource and permanently deletes all associated statement lines.
@@ -831,6 +838,26 @@ func (c *financeClient) ImportStatement(ctx context.Context, in *ImportStatement
 	return out, nil
 }
 
+func (c *financeClient) IngestStatementDocument(ctx context.Context, in *IngestStatementDocumentRequest, opts ...grpc.CallOption) (*IngestStatementDocumentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IngestStatementDocumentResponse)
+	err := c.cc.Invoke(ctx, Finance_IngestStatementDocument_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeClient) AnalyzeStatementDocument(ctx context.Context, in *AnalyzeStatementDocumentRequest, opts ...grpc.CallOption) (*AnalyzeStatementDocumentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AnalyzeStatementDocumentResponse)
+	err := c.cc.Invoke(ctx, Finance_AnalyzeStatementDocument_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *financeClient) GetStatement(ctx context.Context, in *GetStatementRequest, opts ...grpc.CallOption) (*Statement, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Statement)
@@ -1028,6 +1055,11 @@ type FinanceServer interface {
 	// Initiates a new statement reconciliation session by parsing the uploaded CSV content
 	// and persisting the detected lines for user review.
 	ImportStatement(context.Context, *ImportStatementRequest) (*Statement, error)
+	// Ingests an unstructured statement document (PDF, image, or text),
+	// parses multi-currency sections, validates math, and persists draft statements.
+	IngestStatementDocument(context.Context, *IngestStatementDocumentRequest) (*IngestStatementDocumentResponse, error)
+	// Analyzes a statement document without persisting drafts (preview/dry-run mode).
+	AnalyzeStatementDocument(context.Context, *AnalyzeStatementDocumentRequest) (*AnalyzeStatementDocumentResponse, error)
 	// Retrieves a specific statement resource by ID, including its status and balance metadata.
 	GetStatement(context.Context, *GetStatementRequest) (*Statement, error)
 	// Discards a statement resource and permanently deletes all associated statement lines.
@@ -1229,6 +1261,12 @@ func (UnimplementedFinanceServer) DiscardInboxItem(context.Context, *DiscardInbo
 }
 func (UnimplementedFinanceServer) ImportStatement(context.Context, *ImportStatementRequest) (*Statement, error) {
 	return nil, status.Error(codes.Unimplemented, "method ImportStatement not implemented")
+}
+func (UnimplementedFinanceServer) IngestStatementDocument(context.Context, *IngestStatementDocumentRequest) (*IngestStatementDocumentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method IngestStatementDocument not implemented")
+}
+func (UnimplementedFinanceServer) AnalyzeStatementDocument(context.Context, *AnalyzeStatementDocumentRequest) (*AnalyzeStatementDocumentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AnalyzeStatementDocument not implemented")
 }
 func (UnimplementedFinanceServer) GetStatement(context.Context, *GetStatementRequest) (*Statement, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetStatement not implemented")
@@ -2333,6 +2371,42 @@ func _Finance_ImportStatement_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Finance_IngestStatementDocument_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IngestStatementDocumentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).IngestStatementDocument(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_IngestStatementDocument_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).IngestStatementDocument(ctx, req.(*IngestStatementDocumentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Finance_AnalyzeStatementDocument_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AnalyzeStatementDocumentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).AnalyzeStatementDocument(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_AnalyzeStatementDocument_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).AnalyzeStatementDocument(ctx, req.(*AnalyzeStatementDocumentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Finance_GetStatement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetStatementRequest)
 	if err := dec(in); err != nil {
@@ -2701,6 +2775,14 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ImportStatement",
 			Handler:    _Finance_ImportStatement_Handler,
+		},
+		{
+			MethodName: "IngestStatementDocument",
+			Handler:    _Finance_IngestStatementDocument_Handler,
+		},
+		{
+			MethodName: "AnalyzeStatementDocument",
+			Handler:    _Finance_AnalyzeStatementDocument_Handler,
 		},
 		{
 			MethodName: "GetStatement",

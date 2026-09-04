@@ -3274,6 +3274,94 @@ export interface CompleteStatementRequest {
 }
 
 /**
+ * SectionValidationReport summarizes the mathematical verification of an extracted currency section.
+ */
+export interface SectionValidationReport {
+  currency: string
+  startingBalance: string
+  endingBalance: string
+  calculatedEnding: string
+  netFlow: string
+  discrepancy: string
+  isBalanced: boolean
+  lineCount: number
+}
+
+/**
+ * Request to ingest an unstructured statement document and persist drafts.
+ */
+export interface IngestStatementDocumentRequest {
+  /**
+   * Optional. Target account identifier override.
+   */
+  targetAccountId?: string
+  /**
+   * Required. Original file name.
+   */
+  filename: string
+  /**
+   * Required. MIME content type (e.g. "application/pdf", "text/plain").
+   */
+  contentType: string
+  /**
+   * Required. Raw document binary payload.
+   */
+  documentBytes: string
+  /**
+   * Optional. Password for encrypted PDFs.
+   */
+  password?: string
+}
+
+/**
+ * Response from statement document ingestion.
+ */
+export interface IngestStatementDocumentResponse {
+  batchId: string
+  createdStatements: Statement[]
+  sectionReports: SectionValidationReport[]
+  unmappedSections: string[]
+  needsPassword: boolean
+  errors: string[]
+}
+
+/**
+ * Request to analyze a statement document without creating DB drafts (preview mode).
+ */
+export interface AnalyzeStatementDocumentRequest {
+  /**
+   * Optional. Target account identifier override.
+   */
+  targetAccountId?: string
+  /**
+   * Required. Original file name.
+   */
+  filename: string
+  /**
+   * Required. MIME content type.
+   */
+  contentType: string
+  /**
+   * Required. Raw document binary payload.
+   */
+  documentBytes: string
+  /**
+   * Optional. Password for encrypted PDFs.
+   */
+  password?: string
+}
+
+/**
+ * Response from statement document analysis.
+ */
+export interface AnalyzeStatementDocumentResponse {
+  sectionReports: SectionValidationReport[]
+  unmappedSections: string[]
+  needsPassword: boolean
+  errors: string[]
+}
+
+/**
  * Finance service provides APIs for budgeting, accounts management, transaction
  * recording, daily exchange rate configurations, and analytics insights.
  */
@@ -4974,6 +5062,67 @@ export function useImportStatementMutation(
     { account_id: string; req: ImportStatementRequest }
   >({
     mutationFn: ({ account_id, req }) => importStatement(account_id, req),
+    ...options,
+  })
+}
+
+/**
+ * Ingests an unstructured statement document (PDF, image, or text),
+ * parses multi-currency sections, validates math, and persists draft statements.
+ */
+export async function ingestStatementDocument(
+  req: IngestStatementDocumentRequest
+): Promise<IngestStatementDocumentResponse> {
+  return request<IngestStatementDocumentResponse>({
+    method: "POST",
+    url: "/api/v1/finance/statements:ingest-document",
+    data: req,
+  })
+}
+
+export function useIngestStatementDocumentMutation(
+  options?: UseMutationOptions<
+    IngestStatementDocumentResponse,
+    Error,
+    IngestStatementDocumentRequest
+  >
+) {
+  return useMutation<
+    IngestStatementDocumentResponse,
+    Error,
+    IngestStatementDocumentRequest
+  >({
+    mutationFn: (req) => ingestStatementDocument(req),
+    ...options,
+  })
+}
+
+/**
+ * Analyzes a statement document without persisting drafts (preview/dry-run mode).
+ */
+export async function analyzeStatementDocument(
+  req: AnalyzeStatementDocumentRequest
+): Promise<AnalyzeStatementDocumentResponse> {
+  return request<AnalyzeStatementDocumentResponse>({
+    method: "POST",
+    url: "/api/v1/finance/statements:analyze-document",
+    data: req,
+  })
+}
+
+export function useAnalyzeStatementDocumentMutation(
+  options?: UseMutationOptions<
+    AnalyzeStatementDocumentResponse,
+    Error,
+    AnalyzeStatementDocumentRequest
+  >
+) {
+  return useMutation<
+    AnalyzeStatementDocumentResponse,
+    Error,
+    AnalyzeStatementDocumentRequest
+  >({
+    mutationFn: (req) => analyzeStatementDocument(req),
     ...options,
   })
 }
