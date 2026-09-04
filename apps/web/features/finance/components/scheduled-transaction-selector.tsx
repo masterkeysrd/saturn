@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   ArrowDownLeft,
@@ -68,27 +68,30 @@ export function ScheduledTransactionSelector({
     return recurringData?.recurringTransactions || []
   }, [recurringData])
 
-  const getDisplayName = (st: ScheduledTransaction) => {
-    if (st.sourceType === "RECURRENT_TRANSACTION") {
-      const matchedTemplate = recurringTemplates.find(
-        (e) => e.id === st.sourceId
-      )
-      return (
-        matchedTemplate?.name ||
-        st.recurringTransaction?.name ||
-        "Scheduled Obligation"
-      )
-    }
-    if (st.sourceType === "SOURCE_TYPE_UNSPECIFIED" || !st.sourceType) {
-      if (st.metadata?.vendorName) {
-        return st.metadata.vendorName
+  const getDisplayName = useCallback(
+    (st: ScheduledTransaction) => {
+      if (st.sourceType === "RECURRENT_TRANSACTION") {
+        const matchedTemplate = recurringTemplates.find(
+          (e) => e.id === st.sourceId
+        )
+        return (
+          matchedTemplate?.name ||
+          st.recurringTransaction?.name ||
+          "Scheduled Obligation"
+        )
       }
-      if (st.metadata?.description) {
-        return st.metadata.description
+      if (st.sourceType === "SOURCE_TYPE_UNSPECIFIED" || !st.sourceType) {
+        if (st.metadata?.vendorName) {
+          return st.metadata.vendorName
+        }
+        if (st.metadata?.description) {
+          return st.metadata.description
+        }
       }
-    }
-    return st.type === "INCOME" ? "Scheduled Inflow" : "Scheduled Outflow"
-  }
+      return st.type === "INCOME" ? "Scheduled Inflow" : "Scheduled Outflow"
+    },
+    [recurringTemplates]
+  )
 
   const filteredScheduled = useMemo(() => {
     const q = searchText.toLowerCase().trim()
@@ -100,7 +103,7 @@ export function ScheduledTransactionSelector({
       const amountStr = (Number(st.amount || 0) / 100).toFixed(2)
       return name.includes(q) || budgetName.includes(q) || amountStr.includes(q)
     })
-  }, [pendingScheduled, searchText, budgets, recurringTemplates])
+  }, [pendingScheduled, searchText, budgets, getDisplayName])
 
   return (
     <FormDrawer

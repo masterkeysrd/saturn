@@ -92,7 +92,7 @@ export function ConfirmScheduledForm({
       transactionDate: new Date(scheduledTransaction.dueDate || new Date()),
       effectiveDate: new Date(),
     })
-  }, [scheduledTransaction, reset])
+  }, [scheduledTransaction, reset, displayName])
 
   const toLocalISODate = (d: Date): string => {
     const y = d.getFullYear()

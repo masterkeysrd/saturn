@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { FormDrawer } from "@/components/ui/form-drawer"
 import {
   ArrowDownLeft,
@@ -51,6 +51,11 @@ export function CreateTransactionSheet({
   refetchBudgets,
   refetchData,
 }: CreateTransactionSheetProps) {
+  const [prevOpen, setPrevOpen] = useState(open)
+  const [prevEditTransaction, setPrevEditTransaction] = useState(editTransaction)
+  const [prevPreselectedBudgetId, setPrevPreselectedBudgetId] =
+    useState(preselectedBudgetId)
+
   const [step, setStep] = useState<
     | "SELECT"
     | "EXPENSE"
@@ -60,7 +65,15 @@ export function CreateTransactionSheet({
     | "BORROWING_SELECT"
     | "RECORD_BORROWING"
     | "TRANSFER"
-  >("SELECT")
+  >(() => {
+    if (editTransaction) {
+      return editTransaction.type === "INCOME" ? "INCOME" : "EXPENSE"
+    }
+    if (preselectedBudgetId) {
+      return "EXPENSE"
+    }
+    return "SELECT"
+  })
 
   const [selectedScheduled, setSelectedScheduled] =
     useState<ScheduledTransaction | null>(null)
@@ -70,6 +83,29 @@ export function CreateTransactionSheet({
   const [selectedBorrowing, setSelectedBorrowing] = useState<Borrowing | null>(
     null
   )
+
+  // Adjust state during render when sheet open state or target transaction changes
+  if (
+    open !== prevOpen ||
+    editTransaction !== prevEditTransaction ||
+    preselectedBudgetId !== prevPreselectedBudgetId
+  ) {
+    setPrevOpen(open)
+    setPrevEditTransaction(editTransaction)
+    setPrevPreselectedBudgetId(preselectedBudgetId)
+    if (open) {
+      setSelectedScheduled(null)
+      setCachedTemplates([])
+      setSelectedBorrowing(null)
+      if (editTransaction) {
+        setStep(editTransaction.type === "INCOME" ? "INCOME" : "EXPENSE")
+      } else if (preselectedBudgetId) {
+        setStep("EXPENSE")
+      } else {
+        setStep("SELECT")
+      }
+    }
+  }
 
   // Fetch accounts locally if not passed down by parent view
   const { data: accountsData } = useListAccountsQuery(
@@ -84,26 +120,6 @@ export function CreateTransactionSheet({
     refetchBudgets?.()
     refetchData?.()
   }
-
-  // Determine starting step when sheet opens
-  useEffect(() => {
-    if (open) {
-      setSelectedScheduled(null)
-      setCachedTemplates([])
-      setSelectedBorrowing(null)
-      if (editTransaction) {
-        if (editTransaction.type === "INCOME") {
-          setStep("INCOME")
-        } else {
-          setStep("EXPENSE")
-        }
-      } else if (preselectedBudgetId) {
-        setStep("EXPENSE")
-      } else {
-        setStep("SELECT")
-      }
-    }
-  }, [open, editTransaction, preselectedBudgetId])
 
   // If we are directly showing the expense form
   if (step === "EXPENSE") {

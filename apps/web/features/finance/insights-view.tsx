@@ -3,6 +3,8 @@ import { useActiveSpaceContext } from "@/features/space/use-space"
 import {
   useGetInsightsQuery,
   type InsightGranularity,
+  type SpentInsights_BudgetContribution,
+  type IncomeInsights_AccountContribution,
   useGetFinanceSettingsQuery,
 } from "@/gen/saturn/finance/v1/finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
@@ -167,8 +169,8 @@ export function InsightsView() {
         startDate: string
         outflowTotal: number
         inflowTotal: number
-        spentContributions: any[]
-        incomeContributions: any[]
+        spentContributions: SpentInsights_BudgetContribution[]
+        incomeContributions: IncomeInsights_AccountContribution[]
       }
     >()
 

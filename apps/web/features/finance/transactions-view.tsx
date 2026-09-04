@@ -10,6 +10,7 @@ import {
   useListTransactionsQuery,
   useDeleteTransactionMutation,
   type Transaction,
+  type Transaction_Type,
   useListAccountsQuery,
   useListInboxItemsQuery,
   useGetFinanceSettingsQuery,
@@ -115,7 +116,7 @@ export function TransactionsView() {
       budgetId: urlState.budgetId === "_all" ? "" : urlState.budgetId,
       types:
         urlState.type && urlState.type !== "TYPE_UNSPECIFIED"
-          ? [urlState.type as any]
+          ? [urlState.type as Transaction_Type]
           : undefined,
       accountId:
         urlState.accountId === "_all"
