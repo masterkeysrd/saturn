@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react"
 import { useParams, useNavigate } from "react-router-dom"
+import { useQueryClient } from "@tanstack/react-query"
 import {
   useListStatementsQuery,
   useListStatementLinesQuery,
@@ -30,6 +31,18 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { toast } from "@/components/ui/toast"
+import {
   ArrowLeft,
   Loader2,
   CheckCircle2,
@@ -48,6 +61,11 @@ export function ReconciliationWorkspaceView() {
   const { statementId } = useParams<{ statementId: string }>()
   const navigate = useNavigate()
   const { spaceId } = useActiveSpaceContext()
+  const queryClient = useQueryClient()
+
+  // Dialog States
+  const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false)
+  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false)
 
   // Queries
   const {
@@ -101,22 +119,27 @@ export function ReconciliationWorkspaceView() {
     () => statements.find((s) => s.id === statementId),
     [statements, statementId]
   )
-  const lines = useMemo(() => linesResponse?.lines || [], [linesResponse])
+
+  const lines = useMemo(
+    () => linesResponse?.lines || [],
+    [linesResponse?.lines]
+  )
+
   const accounts = useMemo(
     () => accountsResponse?.accounts || [],
-    [accountsResponse]
+    [accountsResponse?.accounts]
   )
   const budgets = useMemo(
     () => budgetsResponse?.budgets || [],
-    [budgetsResponse]
+    [budgetsResponse?.budgets]
   )
   const scheduledTxns = useMemo(
     () => scheduledResponse?.scheduledTransactions || [],
-    [scheduledResponse]
+    [scheduledResponse?.scheduledTransactions]
   )
   const borrowings = useMemo(
     () => borrowingsResponse?.borrowings || [],
-    [borrowingsResponse]
+    [borrowingsResponse?.borrowings]
   )
 
   const targetAccount = useMemo(
@@ -187,10 +210,24 @@ export function ReconciliationWorkspaceView() {
           },
         },
       })
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/statements"],
+      })
       await refetchStatements()
       setIsEditingBalances(false)
+      toast.add({
+        title: "Balances Updated",
+        description: "Statement starting and ending balances were updated.",
+        type: "success",
+      })
     } catch (err) {
       console.error("Failed to update statement balances:", err)
+      toast.add({
+        title: "Update Failed",
+        description:
+          err instanceof Error ? err.message : "Failed to update statement balances.",
+        type: "error",
+      })
     }
   }
 
@@ -254,16 +291,14 @@ export function ReconciliationWorkspaceView() {
       borrowingId?: string
     }
   ) => {
-    let nextStatus: StatementLine["status"] = "IMPORTED"
     let actionField = "create_expense"
     const linePayload: Partial<StatementLine> = {
       id: targetLine.id,
       statementId: targetLine.statementId,
-      status: nextStatus,
+      status: "IMPORTED",
     }
 
     if (actionType === "match") {
-      nextStatus = "MATCHED"
       actionField = "match"
       linePayload.status = "MATCHED"
       linePayload.match = {
@@ -272,38 +307,32 @@ export function ReconciliationWorkspaceView() {
       }
       linePayload.matchedTransactionId = actionPayload.transactionId
     } else if (actionType === "expense") {
-      nextStatus = "IMPORTED"
       actionField = "create_expense"
       linePayload.status = "IMPORTED"
       linePayload.createExpense = { budgetId: actionPayload.budgetId! }
     } else if (actionType === "income") {
-      nextStatus = "IMPORTED"
       actionField = "create_income"
       linePayload.status = "IMPORTED"
       linePayload.createIncome = {}
     } else if (actionType === "transfer") {
-      nextStatus = "IMPORTED"
       actionField = "create_transfer"
       linePayload.status = "IMPORTED"
       linePayload.createTransfer = {
         counterpartAccountId: actionPayload.counterpartAccountId!,
       }
     } else if (actionType === "scheduled") {
-      nextStatus = "IMPORTED"
       actionField = "confirm_scheduled"
       linePayload.status = "IMPORTED"
       linePayload.confirmScheduled = {
         scheduledTransactionId: actionPayload.scheduledTransactionId!,
       }
     } else if (actionType === "repayment") {
-      nextStatus = "IMPORTED"
       actionField = "create_repayment"
       linePayload.status = "IMPORTED"
       linePayload.createRepayment = {
         borrowingId: actionPayload.borrowingId!,
       }
     } else if (actionType === "skip") {
-      nextStatus = "SKIPPED"
       actionField = "skip"
       linePayload.status = "SKIPPED"
       linePayload.skip = {}
@@ -319,9 +348,18 @@ export function ReconciliationWorkspaceView() {
           updateMask: { paths: ["status", actionField] },
         },
       })
+      await queryClient.invalidateQueries({
+        queryKey: [`/api/v1/finance/statements/${statementId}/lines`],
+      })
       refetchLines()
     } catch (err) {
       console.error("Saving line draft failed:", err)
+      toast.add({
+        title: "Action Failed",
+        description:
+          err instanceof Error ? err.message : "Failed to update statement line.",
+        type: "error",
+      })
     }
   }
 
@@ -340,9 +378,18 @@ export function ReconciliationWorkspaceView() {
           updateMask: { paths: ["status"] },
         },
       })
+      await queryClient.invalidateQueries({
+        queryKey: [`/api/v1/finance/statements/${statementId}/lines`],
+      })
       refetchLines()
     } catch (err) {
       console.error("Undo line failed:", err)
+      toast.add({
+        title: "Undo Failed",
+        description:
+          err instanceof Error ? err.message : "Failed to reset line item.",
+        type: "error",
+      })
     }
   }
 
@@ -371,9 +418,18 @@ export function ReconciliationWorkspaceView() {
           updateMask: { paths: maskPaths },
         },
       })
+      await queryClient.invalidateQueries({
+        queryKey: [`/api/v1/finance/statements/${statementId}/lines`],
+      })
       refetchLines()
     } catch (err) {
       console.error("Updating line details failed:", err)
+      toast.add({
+        title: "Update Failed",
+        description:
+          err instanceof Error ? err.message : "Failed to update line details.",
+        type: "error",
+      })
     }
   }
 
@@ -410,39 +466,112 @@ export function ReconciliationWorkspaceView() {
           })
         )
       )
+      await queryClient.invalidateQueries({
+        queryKey: [`/api/v1/finance/statements/${statementId}/lines`],
+      })
       refetchLines()
+      toast.add({
+        title: "Matches Approved",
+        description: `Approved ${matchableLines.length} exact transaction ${
+          matchableLines.length === 1 ? "match" : "matches"
+        }.`,
+        type: "success",
+      })
     } catch (err) {
       console.error("Batch match approval failed:", err)
+      toast.add({
+        title: "Approval Failed",
+        description:
+          err instanceof Error ? err.message : "Failed to approve matches.",
+        type: "error",
+      })
     } finally {
       setIsBatchMatching(false)
     }
   }
 
-  const handleComplete = async () => {
+  const handleConfirmComplete = async () => {
     if (!activeStmt || !activeStmt.id) return
     try {
       await completeMutation.mutateAsync({
         id: activeStmt.id,
         req: { id: activeStmt.id },
       })
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["/api/v1/finance/statements"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: [`/api/v1/finance/statements/${activeStmt.id}/lines`],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["/api/v1/finance/transactions"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["/api/v1/finance/accounts"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["/api/v1/finance/scheduled-transactions"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["/api/v1/finance/borrowings"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["/api/v1/finance/budgets"],
+        }),
+      ])
+      setIsCompleteDialogOpen(false)
+      toast.add({
+        title: "Statement Reconciled",
+        description: `Successfully finalized reconciliation for ${
+          targetAccount?.name || "account"
+        }.`,
+        type: "success",
+      })
       navigate(resolveSpacePath("/finance/reconcile", spaceId, true))
     } catch (err) {
       console.error("Statement completion failed:", err)
+      toast.add({
+        title: "Finalization Failed",
+        description:
+          err instanceof Error
+            ? err.message
+            : "Failed to complete statement reconciliation.",
+        type: "error",
+      })
     }
   }
 
-  const handleDiscard = async () => {
+  const handleConfirmDiscard = async () => {
     if (!activeStmt || !activeStmt.id) return
-    if (!confirm("Are you sure you want to discard this draft statement?"))
-      return
     try {
       await deleteMutation.mutateAsync({
         id: activeStmt.id,
         req: { id: activeStmt.id },
       })
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/statements"],
+      })
+      await queryClient.removeQueries({
+        queryKey: [`/api/v1/finance/statements/${activeStmt.id}/lines`],
+      })
+      setIsDiscardDialogOpen(false)
+      toast.add({
+        title: "Statement Discarded",
+        description: "The draft statement has been removed.",
+        type: "info",
+      })
       navigate(resolveSpacePath("/finance/reconcile", spaceId, true))
     } catch (err) {
       console.error("Statement discard failed:", err)
+      toast.add({
+        title: "Discard Failed",
+        description:
+          err instanceof Error
+            ? err.message
+            : "Failed to discard draft statement.",
+        type: "error",
+      })
     }
   }
 
@@ -619,7 +748,7 @@ export function ReconciliationWorkspaceView() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={handleDiscard}
+                    onClick={() => setIsDiscardDialogOpen(true)}
                     disabled={deleteMutation.isPending}
                     className="rounded-xl text-xs text-destructive hover:bg-destructive/10"
                   >
@@ -629,7 +758,7 @@ export function ReconciliationWorkspaceView() {
 
                   <Button
                     disabled={!isReadyToComplete || completeMutation.isPending}
-                    onClick={handleComplete}
+                    onClick={() => setIsCompleteDialogOpen(true)}
                     className="h-9 rounded-xl bg-gradient-to-r from-primary to-accent px-4 text-xs font-bold text-white shadow-lg transition-all hover:scale-[1.01]"
                   >
                     {completeMutation.isPending && (
@@ -794,6 +923,103 @@ export function ReconciliationWorkspaceView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Discard Confirmation Alert Dialog */}
+      <AlertDialog
+        open={isDiscardDialogOpen}
+        onOpenChange={setIsDiscardDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive">
+              <Trash2 className="h-6 w-6" />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Discard Draft Statement?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to discard this draft statement for{" "}
+              <span className="font-bold text-foreground">
+                {targetAccount?.name || "Account"}
+              </span>
+              {activeStmt?.statementDate && (
+                <> ({activeStmt.statementDate})</>
+              )}
+              ? All {lines.length} statement line items and draft matching progress will be permanently deleted. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={(e) => {
+                e.preventDefault()
+                handleConfirmDiscard()
+              }}
+            >
+              {deleteMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Discarding...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-1.5 h-4 w-4" />
+                  Discard Statement
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Complete Confirmation Alert Dialog */}
+      <AlertDialog
+        open={isCompleteDialogOpen}
+        onOpenChange={setIsCompleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-primary/10 text-primary">
+              <CheckCircle2 className="h-6 w-6 text-primary" />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Finalize Statement Reconciliation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You are about to finalize reconciliation for{" "}
+              <span className="font-bold text-foreground">
+                {targetAccount?.name || "Account"}
+              </span>
+              . This will create and link all imported transactions to your ledger, update your account balance, and mark this statement as completed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={completeMutation.isPending}>
+              Review Lines
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={completeMutation.isPending}
+              onClick={(e) => {
+                e.preventDefault()
+                handleConfirmComplete()
+              }}
+              className="bg-gradient-to-r from-primary to-accent font-bold text-white shadow-md hover:scale-[1.01]"
+            >
+              {completeMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Finalizing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="mr-1.5 h-4 w-4" />
+                  Confirm & Finalize
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

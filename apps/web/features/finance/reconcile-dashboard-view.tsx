@@ -1,8 +1,10 @@
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
+import { useQueryClient } from "@tanstack/react-query"
 import {
   useListStatementsQuery,
   useListAccountsQuery,
+  useDeleteStatementMutation,
   type Statement,
   type Account,
 } from "@/gen/saturn/finance/v1/finance"
@@ -14,6 +16,18 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { toast } from "@/components/ui/toast"
+import {
   FileSpreadsheet,
   Plus,
   Loader2,
@@ -22,6 +36,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   ArrowRight,
+  Trash2,
 } from "lucide-react"
 import { formatAmount } from "./utils"
 import { cn } from "@/lib/utils"
@@ -32,18 +47,23 @@ export function ReconciliationDashboardView() {
   const { spaceId } = useActiveSpaceContext()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  const queryClient = useQueryClient()
+  const deleteStatementMutation = useDeleteStatementMutation()
+
+  const [discardTarget, setDiscardTarget] = useState<Statement | null>(null)
 
   const queryAccountId = searchParams.get("accountId") || undefined
   const shouldOpenImport = searchParams.get("action") === "import"
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(shouldOpenImport)
-  const [activeTab, setActiveTab] = useState<string>("in_progress")
-
-  useEffect(() => {
+  const [prevShouldOpenImport, setPrevShouldOpenImport] = useState(shouldOpenImport)
+  if (shouldOpenImport !== prevShouldOpenImport) {
+    setPrevShouldOpenImport(shouldOpenImport)
     if (shouldOpenImport) {
       setIsImportModalOpen(true)
     }
-  }, [shouldOpenImport])
+  }
+  const [activeTab, setActiveTab] = useState<string>("in_progress")
 
   // Fetch accounts to map account names
   const { data: accountsData, isLoading: accsLoading } = useListAccountsQuery(
@@ -96,11 +116,47 @@ export function ReconciliationDashboardView() {
     }
   }
 
-  const handleImportSuccess = (statementId: string) => {
+  const handleImportSuccess = async (statementId: string) => {
+    await queryClient.invalidateQueries({
+      queryKey: ["/api/v1/finance/statements"],
+    })
     refetch()
     navigate(
       resolveSpacePath(`/finance/reconcile/${statementId}`, spaceId, true)
     )
+  }
+
+  const handleConfirmDiscard = async () => {
+    if (!discardTarget?.id) return
+    try {
+      await deleteStatementMutation.mutateAsync({
+        id: discardTarget.id,
+        req: { id: discardTarget.id },
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/statements"],
+      })
+      await queryClient.removeQueries({
+        queryKey: [`/api/v1/finance/statements/${discardTarget.id}/lines`],
+      })
+      refetch()
+      setDiscardTarget(null)
+      toast.add({
+        title: "Statement Discarded",
+        description: "The draft statement has been removed.",
+        type: "info",
+      })
+    } catch (err) {
+      console.error("Failed to discard statement:", err)
+      toast.add({
+        title: "Discard Failed",
+        description:
+          err instanceof Error
+            ? err.message
+            : "Failed to discard draft statement.",
+        type: "error",
+      })
+    }
   }
 
   const handleOpenWorkspace = (statementId: string) => {
@@ -203,6 +259,7 @@ export function ReconciliationDashboardView() {
                     statement={stmt}
                     accounts={accounts}
                     onOpen={() => handleOpenWorkspace(stmt.id || "")}
+                    onDiscard={(s) => setDiscardTarget(s)}
                   />
                 ))}
               </div>
@@ -247,6 +304,60 @@ export function ReconciliationDashboardView() {
         preselectedAccountId={queryAccountId}
         onImportSuccess={handleImportSuccess}
       />
+
+      {/* Discard Confirmation Alert Dialog */}
+      <AlertDialog
+        open={!!discardTarget}
+        onOpenChange={(open) => !open && setDiscardTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive">
+              <Trash2 className="h-6 w-6" />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Discard Draft Statement?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to discard this draft statement for{" "}
+              <span className="font-bold text-foreground">
+                {accounts.find((a) => a.id === discardTarget?.accountId)?.name ||
+                  "Account"}
+              </span>
+              {discardTarget?.statementDate && (
+                <> ({discardTarget.statementDate})</>
+              )}
+              ? All imported lines and reconciliation progress will be permanently
+              deleted. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={deleteStatementMutation.isPending}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deleteStatementMutation.isPending}
+              onClick={(e) => {
+                e.preventDefault()
+                handleConfirmDiscard()
+              }}
+            >
+              {deleteStatementMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Discarding...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-1.5 h-4 w-4" />
+                  Discard Statement
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </FinancePageLayout>
   )
 }
@@ -255,6 +366,7 @@ interface StatementDashboardCardProps {
   statement: Statement
   accounts: Account[]
   onOpen: () => void
+  onDiscard?: (statement: Statement) => void
   isCompleted?: boolean
 }
 
@@ -262,6 +374,7 @@ function StatementDashboardCard({
   statement,
   accounts,
   onOpen,
+  onDiscard,
   isCompleted: isCompletedProp,
 }: StatementDashboardCardProps) {
   const isCompleted = isCompletedProp ?? statement.status === "COMPLETED"
@@ -335,14 +448,31 @@ function StatementDashboardCard({
           {isCompleted ? "Reconciled" : "Draft In-Progress"}
         </span>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 rounded-xl px-3 text-xs font-bold transition-all group-hover:bg-primary group-hover:text-white"
-        >
-          {isCompleted ? "Review" : "Resume"}
-          <ArrowRight className="ml-1 h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-        </Button>
+        <div className="flex items-center space-x-1.5">
+          {!isCompleted && onDiscard && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDiscard(statement)
+              }}
+              className="h-8 rounded-xl px-2 text-xs text-muted-foreground transition-all hover:bg-destructive/10 hover:text-destructive"
+              title="Discard draft statement"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 rounded-xl px-3 text-xs font-bold transition-all group-hover:bg-primary group-hover:text-white"
+          >
+            {isCompleted ? "Review" : "Resume"}
+            <ArrowRight className="ml-1 h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+          </Button>
+        </div>
       </div>
     </Card>
   )

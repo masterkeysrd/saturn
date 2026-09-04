@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import {
   type Account,
   type IngestStatementDocumentResponse,
@@ -156,6 +157,7 @@ export function ImportStatementModal({
   const [creditColIndex, setCreditColIndex] = useState<number>(3)
   const [refColIndex, setRefColIndex] = useState<number>(-1) // -1 for none
 
+  const queryClient = useQueryClient()
   const importMutation = useImportStatementMutation()
 
   const resetForm = () => {
@@ -336,6 +338,9 @@ export function ImportStatementModal({
       }
 
       if (res.createdStatements && res.createdStatements.length > 0) {
+        await queryClient.invalidateQueries({
+          queryKey: ["/api/v1/finance/statements"],
+        })
         if (res.createdStatements.length === 1) {
           handleModalOpenChange(false)
           onImportSuccess(res.createdStatements[0].id || "")
@@ -392,6 +397,9 @@ export function ImportStatementModal({
 
       const stmtId = res?.id
       if (stmtId) {
+        await queryClient.invalidateQueries({
+          queryKey: ["/api/v1/finance/statements"],
+        })
         handleModalOpenChange(false)
         onImportSuccess(stmtId)
       }

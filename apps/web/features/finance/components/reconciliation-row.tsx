@@ -1,10 +1,11 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback } from "react"
 import {
   type StatementLine,
   type Account,
   type Budget,
   type Borrowing,
   type ScheduledTransaction,
+  type Transaction_Type,
   useListTransactionsQuery,
 } from "@/gen/saturn/finance/v1/finance"
 import { Button } from "@/components/ui/button"
@@ -128,20 +129,25 @@ export function ReconciliationRow({
   )
   const [overwriteTransaction, setOverwriteTransaction] = useState(false)
 
+  const [currentTime] = useState(() => Date.now())
+
   // Scheduled Transaction Search & Selection
   const [scheduledSearch, setScheduledSearch] = useState("")
   const [scheduledPopoverOpen, setScheduledPopoverOpen] = useState(false)
 
-  const getScheduledName = (s: ScheduledTransaction) => {
-    const budget = budgets.find((b) => b.id === s.budgetId)
-    return (
-      s.recurringTransaction?.name ||
-      s.metadata?.vendorName ||
-      s.metadata?.name ||
-      budget?.name ||
-      (s.type === "INCOME" ? "Scheduled Income" : "Scheduled Bill")
-    )
-  }
+  const getScheduledName = useCallback(
+    (s: ScheduledTransaction) => {
+      const budget = budgets.find((b) => b.id === s.budgetId)
+      return (
+        s.recurringTransaction?.name ||
+        s.metadata?.vendorName ||
+        s.metadata?.name ||
+        budget?.name ||
+        (s.type === "INCOME" ? "Scheduled Income" : "Scheduled Bill")
+      )
+    },
+    [budgets]
+  )
 
   const eligibleScheduledTxns = useMemo(() => {
     return scheduledTxns.filter((s) => {
@@ -161,7 +167,7 @@ export function ReconciliationRow({
       const date = s.dueDate ? new Date(s.dueDate).toLocaleDateString() : ""
       return name.includes(q) || amt.includes(q) || date.includes(q)
     })
-  }, [eligibleScheduledTxns, scheduledSearch, budgets])
+  }, [eligibleScheduledTxns, scheduledSearch, getScheduledName])
 
   const selectedScheduledObj = useMemo(() => {
     return scheduledTxns.find((s) => s.id === scheduledId) || null
@@ -189,7 +195,7 @@ export function ReconciliationRow({
   // Search ledger transactions for manual matching
   const [searchMatchQuery, setSearchMatchQuery] = useState("")
 
-  const requestedTypes = useMemo(() => {
+  const requestedTypes: Transaction_Type[] = useMemo(() => {
     return isExpense ? ["EXPENSE", "TRANSFER_OUT"] : ["INCOME", "TRANSFER_IN"]
   }, [isExpense])
 
@@ -198,7 +204,7 @@ export function ReconciliationRow({
       accountId: targetAccount?.id,
       pageSize: 100,
       pageToken: "",
-      types: requestedTypes as any,
+      types: requestedTypes,
       searchQuery: searchMatchQuery || undefined,
     },
     { enabled: customMode === "search_match" && !!targetAccount?.id }
@@ -386,6 +392,7 @@ export function ReconciliationRow({
     targetAccount,
     lineAmount,
     isReadOnly,
+    getScheduledName,
   ])
 
   const handleSaveDescription = () => {
@@ -706,7 +713,7 @@ export function ReconciliationRow({
                               const isSelected = scheduledId === s.id
                               const isOverdue =
                                 s.dueDate &&
-                                new Date(s.dueDate).getTime() < Date.now()
+                                new Date(s.dueDate).getTime() < currentTime
                               const formattedDueDate = s.dueDate
                                 ? new Date(s.dueDate).toLocaleDateString(
                                     undefined,
