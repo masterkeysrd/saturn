@@ -27,10 +27,20 @@ BINARY         := bin/$(APP_NAME)
 
 .DEFAULT_GOAL := help
 
-## Build the binary locally
+## Build the binary locally (with production web assets)
 .PHONY: build
-build:
+build: web-build
 	@echo "→ Building $(APP_NAME) (version=$(VERSION))"
+	@mkdir -p bin
+	go build \
+		-ldflags="-s -w -X main.version=$(VERSION)" \
+		-o $(BINARY) \
+		./$(APP_DIR)
+
+## Build Go binary only (skips frontend rebuild)
+.PHONY: build-go
+build-go:
+	@echo "→ Building $(APP_NAME) Go binary (version=$(VERSION))"
 	@mkdir -p bin
 	go build \
 		-ldflags="-s -w -X main.version=$(VERSION)" \

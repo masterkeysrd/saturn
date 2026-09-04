@@ -1,5 +1,11 @@
 /bin
+/data
 
 # MacOS Files
 .DS_Store
 /.env
+/.env.*
+
+# Frontend build & dependencies
+apps/web/node_modules/
+apps/web/dist/

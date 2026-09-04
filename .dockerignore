@@ -1,0 +1,11 @@
+.git
+.github
+.env
+.env.*
+**/.DS_Store
+bin/
+apps/web/node_modules/
+apps/web/dist/
+tests/
+tmp/
+*.md
