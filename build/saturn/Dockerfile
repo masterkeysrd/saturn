@@ -4,7 +4,7 @@
 # -----------------------------------------------
 
 # --- Stage 1: Web UI Builder ---
-FROM --platform=$BUILDPLATFORM node:22-alpine AS web-builder
+FROM --platform=$BUILDPLATFORM node:26-alpine AS web-builder
 
 WORKDIR /app/apps/web
 
