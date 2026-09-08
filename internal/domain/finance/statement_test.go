@@ -236,4 +236,3 @@ func TestStatementLine_InvertSign(t *testing.T) {
 		})
 	}
 }
-

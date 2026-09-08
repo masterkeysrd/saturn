@@ -2,18 +2,18 @@ package space
 
 import (
 	"context"
-	"errors"
 
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 )
 
-// Sentinel errors for coordinator operations.
-var (
-	ErrUserNotActive = errors.New("user is not active")
+// Error codes for coordinator operations.
+const (
+	UserNotActive errors.Code = "USER_NOT_ACTIVE"
 )
 
-// Dependencies defines the inputs for creating a new spaceapp.Coordinator.
+// Dependencies defines the inputs for creating a new Coordinator.
 type Dependencies struct {
 	SpaceService    SpaceService
 	IdentityService IdentityService
@@ -86,25 +86,36 @@ type ListSpaceMembersRequest struct {
 
 // CreateSpace orchestrates space creation.
 func (c *Coordinator) CreateSpace(ctx context.Context, req *CreateSpaceRequest) (*space.Space, error) {
+	const op errors.Op = "application/space.CreateSpace"
 	sp := &space.Space{
 		OwnerID:     space.SpaceID(req.OwnerID),
 		Name:        req.Name,
 		Description: req.Description,
 	}
-	return c.spaceService.CreateSpace(ctx, sp)
+	res, err := c.spaceService.CreateSpace(ctx, sp)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return res, nil
 }
 
 // GetSpace orchestrates workspace retrieval.
 func (c *Coordinator) GetSpace(ctx context.Context, spaceID space.SpaceID, userID space.SpaceID) (*space.Space, error) {
+	const op errors.Op = "application/space.GetSpace"
 	session := space.Session{
 		SpaceID: spaceID,
 		UserID:  userID,
 	}
-	return c.spaceService.GetSpace(ctx, session)
+	res, err := c.spaceService.GetSpace(ctx, session)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return res, nil
 }
 
 // UpdateSpace orchestrates workspace metadata updates.
 func (c *Coordinator) UpdateSpace(ctx context.Context, req *UpdateSpaceRequest) (*space.Space, error) {
+	const op errors.Op = "application/space.UpdateSpace"
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
 		UserID:  space.SpaceID(req.UserID),
@@ -113,32 +124,47 @@ func (c *Coordinator) UpdateSpace(ctx context.Context, req *UpdateSpaceRequest) 
 		Name:        req.Name,
 		Description: req.Description,
 	}
-	return c.spaceService.UpdateSpace(ctx, session, sp)
+	res, err := c.spaceService.UpdateSpace(ctx, session, sp)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return res, nil
 }
 
 // DeleteSpace orchestrates workspace deletion.
 func (c *Coordinator) DeleteSpace(ctx context.Context, req *DeleteSpaceRequest) error {
+	const op errors.Op = "application/space.DeleteSpace"
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
 		UserID:  space.SpaceID(req.UserID),
 	}
-	return c.spaceService.DeleteSpace(ctx, session)
+	if err := c.spaceService.DeleteSpace(ctx, session); err != nil {
+		return errors.E(op, err)
+	}
+	return nil
 }
 
 // ListSpaces orchestrates workspace listing.
 func (c *Coordinator) ListSpaces(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) ([]*space.Space, string, error) {
-	return c.spaceService.ListSpaces(ctx, userID, filter)
+	const op errors.Op = "application/space.ListSpaces"
+	spaces, nextToken, err := c.spaceService.ListSpaces(ctx, userID, filter)
+	if err != nil {
+		return nil, "", errors.E(op, err)
+	}
+	return spaces, nextToken, nil
 }
 
 // AddSpaceMember orchestrates adding a member to a workspace.
 func (c *Coordinator) AddSpaceMember(ctx context.Context, req *AddSpaceMemberRequest) (*space.Member, error) {
+	const op errors.Op = "application/space.AddSpaceMember"
+
 	// Verify target user exists and is active in Identity system
 	user, err := c.identityService.GetUserByID(ctx, identity.UserID(req.TargetUserID))
 	if err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 	if user.Status != identity.UserStatusActive {
-		return nil, ErrUserNotActive
+		return nil, errors.E(op, errors.Precondition, UserNotActive, "cannot add an inactive user to a space")
 	}
 
 	session := space.Session{
@@ -149,20 +175,29 @@ func (c *Coordinator) AddSpaceMember(ctx context.Context, req *AddSpaceMemberReq
 		UserID: space.SpaceID(req.TargetUserID),
 		Role:   space.SpaceRole(req.Role),
 	}
-	return c.spaceService.AddSpaceMember(ctx, session, m)
+	res, err := c.spaceService.AddSpaceMember(ctx, session, m)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return res, nil
 }
 
 // RemoveSpaceMember orchestrates removing a member from a workspace.
 func (c *Coordinator) RemoveSpaceMember(ctx context.Context, req *RemoveSpaceMemberRequest) error {
+	const op errors.Op = "application/space.RemoveSpaceMember"
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
 		UserID:  space.SpaceID(req.UserID),
 	}
-	return c.spaceService.RemoveSpaceMember(ctx, session, space.SpaceID(req.TargetUserID))
+	if err := c.spaceService.RemoveSpaceMember(ctx, session, space.SpaceID(req.TargetUserID)); err != nil {
+		return errors.E(op, err)
+	}
+	return nil
 }
 
 // UpdateSpaceMemberRole orchestrates updating a member's role in a workspace.
 func (c *Coordinator) UpdateSpaceMemberRole(ctx context.Context, req *UpdateSpaceMemberRoleRequest) (*space.Member, error) {
+	const op errors.Op = "application/space.UpdateSpaceMemberRole"
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
 		UserID:  space.SpaceID(req.UserID),
@@ -171,7 +206,11 @@ func (c *Coordinator) UpdateSpaceMemberRole(ctx context.Context, req *UpdateSpac
 		UserID: space.SpaceID(req.TargetUserID),
 		Role:   space.SpaceRole(req.Role),
 	}
-	return c.spaceService.UpdateSpaceMemberRole(ctx, session, m)
+	res, err := c.spaceService.UpdateSpaceMemberRole(ctx, session, m)
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return res, nil
 }
 
 // MemberProfile represents the user details enriched in the workspace membership.
@@ -189,13 +228,14 @@ type SpaceMember struct {
 
 // ListSpaceMembers orchestrates listing workspace members.
 func (c *Coordinator) ListSpaceMembers(ctx context.Context, req *ListSpaceMembersRequest) ([]*SpaceMember, string, error) {
+	const op errors.Op = "application/space.ListSpaceMembers"
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
 		UserID:  space.SpaceID(req.UserID),
 	}
 	members, nextToken, err := c.spaceService.ListSpaceMembers(ctx, session, req.Filter)
 	if err != nil {
-		return nil, "", err
+		return nil, "", errors.E(op, err)
 	}
 
 	spaceMembers := make([]*SpaceMember, 0, len(members))

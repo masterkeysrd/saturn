@@ -2,14 +2,12 @@ package space
 
 import (
 	"context"
-	"errors"
 
 	spacev1 "github.com/masterkeysrd/saturn/apis/saturn/space/v1"
 	spaceapp "github.com/masterkeysrd/saturn/internal/application/space"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -72,7 +70,7 @@ func toProtoSpaceMemberWithProfile(m *spaceapp.SpaceMember) *spacev1.SpaceMember
 func (h *Handler) getPrincipal(ctx context.Context) (auth.Principal, error) {
 	principal, ok := auth.PrincipalFromContext(ctx)
 	if !ok {
-		return auth.Principal{}, status.Error(codes.Unauthenticated, "missing principal")
+		return auth.Principal{}, errors.E(errors.Unauthenticated, "missing principal")
 	}
 	return principal, nil
 }
@@ -99,10 +97,7 @@ func (h *Handler) CreateSpace(ctx context.Context, req *spacev1.CreateSpaceReque
 		Description: req.GetDescription(),
 	})
 	if err != nil {
-		if errors.Is(err, space.ErrSpaceNameExists) {
-			return nil, status.Error(codes.AlreadyExists, "space name already exists")
-		}
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, err
 	}
 
 	return toProtoSpace(sp), nil
@@ -119,10 +114,7 @@ func (h *Handler) GetSpace(ctx context.Context, req *spacev1.GetSpaceRequest) (*
 
 	sp, err := h.Coordinator.GetSpace(ctx, spaceID, space.SpaceID(userID))
 	if err != nil {
-		if errors.Is(err, space.ErrInsufficientRole) {
-			return nil, status.Error(codes.PermissionDenied, "access denied to this space")
-		}
-		return nil, status.Error(codes.NotFound, "space not found")
+		return nil, err
 	}
 
 	return toProtoSpace(sp), nil
@@ -144,10 +136,7 @@ func (h *Handler) UpdateSpace(ctx context.Context, req *spacev1.UpdateSpaceReque
 		Description: req.GetDescription(),
 	})
 	if err != nil {
-		if errors.Is(err, space.ErrSpaceOwnerOnly) {
-			return nil, status.Error(codes.PermissionDenied, "only the owner can update this space")
-		}
-		return nil, status.Error(codes.NotFound, "space not found")
+		return nil, err
 	}
 
 	return toProtoSpace(sp), nil
@@ -166,10 +155,7 @@ func (h *Handler) DeleteSpace(ctx context.Context, req *spacev1.DeleteSpaceReque
 		SpaceID: string(spaceID),
 		UserID:  userID,
 	}); err != nil {
-		if errors.Is(err, space.ErrSpaceOwnerOnly) {
-			return nil, status.Error(codes.PermissionDenied, "only the owner can delete this space")
-		}
-		return nil, status.Error(codes.NotFound, "space not found")
+		return nil, err
 	}
 
 	return &spacev1.DeleteSpaceResponse{}, nil
@@ -189,7 +175,7 @@ func (h *Handler) ListSpaces(ctx context.Context, req *spacev1.ListSpacesRequest
 
 	spaces, nextToken, err := h.Coordinator.ListSpaces(ctx, space.SpaceID(userID), filter)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, err
 	}
 
 	protoSpaces := make([]*spacev1.Space, 0, len(spaces))
@@ -221,16 +207,7 @@ func (h *Handler) AddSpaceMember(ctx context.Context, req *spacev1.AddSpaceMembe
 		Role:         string(role),
 	})
 	if err != nil {
-		if errors.Is(err, spaceapp.ErrUserNotActive) {
-			return nil, status.Error(codes.FailedPrecondition, "cannot add an inactive user to a space")
-		}
-		if errors.Is(err, space.ErrInsufficientRole) {
-			return nil, status.Error(codes.PermissionDenied, "insufficient role to add members")
-		}
-		if errors.Is(err, space.ErrMemberAlreadyExists) {
-			return nil, status.Error(codes.AlreadyExists, "member already exists")
-		}
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, err
 	}
 
 	return toProtoSpaceMember(m), nil
@@ -251,10 +228,7 @@ func (h *Handler) RemoveSpaceMember(ctx context.Context, req *spacev1.RemoveSpac
 		UserID:       userID,
 		TargetUserID: string(memberID),
 	}); err != nil {
-		if errors.Is(err, space.ErrInsufficientRole) {
-			return nil, status.Error(codes.PermissionDenied, "insufficient role to remove members")
-		}
-		return nil, status.Error(codes.NotFound, "member not found")
+		return nil, err
 	}
 
 	return &spacev1.RemoveSpaceMemberResponse{}, nil
@@ -278,10 +252,7 @@ func (h *Handler) UpdateSpaceMemberRole(ctx context.Context, req *spacev1.Update
 		Role:         string(role),
 	})
 	if err != nil {
-		if errors.Is(err, space.ErrInsufficientRole) {
-			return nil, status.Error(codes.PermissionDenied, "insufficient role to update member roles")
-		}
-		return nil, status.Error(codes.NotFound, "member not found")
+		return nil, err
 	}
 
 	return toProtoSpaceMember(m), nil
@@ -307,10 +278,7 @@ func (h *Handler) ListSpaceMembers(ctx context.Context, req *spacev1.ListSpaceMe
 		Filter:  filter,
 	})
 	if err != nil {
-		if errors.Is(err, space.ErrInsufficientRole) {
-			return nil, status.Error(codes.PermissionDenied, "access denied to this space")
-		}
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, err
 	}
 
 	protoMembers := make([]*spacev1.SpaceMember, 0, len(members))

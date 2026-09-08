@@ -5,12 +5,11 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 
-	"github.com/jmoiron/sqlx"
-
 	"github.com/masterkeysrd/saturn/internal/domain/space"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 )
 
 // memberDB is the internal DB record type for space.member.
@@ -22,14 +21,14 @@ type memberDB struct {
 	UpdateTime sql.NullTime `db:"update_time"`
 }
 
-// MemberStore implements space.MemberStore using sqlx.
+// MemberStore implements space.MemberStore using db.DB.
 type MemberStore struct {
-	db *sqlx.DB
+	db db.DB
 }
 
 // NewMemberStore creates a new MemberStore.
-func NewMemberStore(db *sqlx.DB) *MemberStore {
-	return &MemberStore{db: db}
+func NewMemberStore(database db.DB) *MemberStore {
+	return &MemberStore{db: database}
 }
 
 // toDomainMember converts a memberDB to a domain Member.
@@ -56,50 +55,52 @@ func toDBMember(m *space.Member) *memberDB {
 
 // Create inserts a new membership record.
 func (s *MemberStore) Create(ctx context.Context, member *space.Member) error {
-	db := toDBMember(member)
+	const op errors.Op = "domain/space/storage.CreateMember"
+	rec := toDBMember(member)
 	query := `INSERT INTO space.member (space_id, user_id, role, create_time, update_time)
 		VALUES ($1, $2, $3, NOW(), NOW())`
-	_, err := s.db.ExecContext(ctx, query, db.SpaceID, db.UserID, db.Role)
-	return err
+	_, err := s.db.Exec(ctx, query, rec.SpaceID, rec.UserID, rec.Role)
+	if err != nil {
+		return errors.E(op, err)
+	}
+	return nil
 }
 
 // GetByID retrieves a membership by space ID and user ID.
 func (s *MemberStore) GetByID(ctx context.Context, spaceID space.SpaceID, userID space.SpaceID) (*space.Member, error) {
+	const op errors.Op = "domain/space/storage.GetMemberByID"
 	query := `SELECT * FROM space.member WHERE space_id = $1 AND user_id = $2`
-	var db memberDB
-	if err := s.db.GetContext(ctx, &db, query, spaceID, userID); err != nil {
-		return nil, err
+	var rec memberDB
+	if err := s.db.Get(ctx, &rec, query, spaceID, userID); err != nil {
+		return nil, errors.E(op, err)
 	}
-	return toDomainMember(&db), nil
+	return toDomainMember(&rec), nil
 }
 
 // Update modifies an existing membership.
 func (s *MemberStore) Update(ctx context.Context, member *space.Member) error {
+	const op errors.Op = "domain/space/storage.UpdateMember"
 	query := `UPDATE space.member SET role = $3, update_time = NOW()
 		WHERE space_id = $1 AND user_id = $2`
-	_, err := s.db.ExecContext(ctx, query, member.SpaceID, member.UserID, member.Role)
-	return err
+	if err := s.db.ExecOne(ctx, query, member.SpaceID, member.UserID, member.Role); err != nil {
+		return errors.E(op, err)
+	}
+	return nil
 }
 
 // Delete removes a membership.
 func (s *MemberStore) Delete(ctx context.Context, spaceID space.SpaceID, userID space.SpaceID) error {
+	const op errors.Op = "domain/space/storage.DeleteMember"
 	query := `DELETE FROM space.member WHERE space_id = $1 AND user_id = $2`
-	result, err := s.db.ExecContext(ctx, query, spaceID, userID)
-	if err != nil {
-		return err
-	}
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return errors.New("delete failed: membership not found")
+	if err := s.db.ExecOne(ctx, query, spaceID, userID); err != nil {
+		return errors.E(op, err)
 	}
 	return nil
 }
 
 // ListBySpace returns all members of a space.
 func (s *MemberStore) ListBySpace(ctx context.Context, spaceID space.SpaceID, filter *space.ListMembersFilter) ([]*space.Member, string, error) {
+	const op errors.Op = "domain/space/storage.ListMembersBySpace"
 	if filter.PageSize <= 0 || filter.PageSize > 100 {
 		filter.PageSize = 20
 	}
@@ -123,8 +124,8 @@ func (s *MemberStore) ListBySpace(ctx context.Context, spaceID space.SpaceID, fi
 	args = append(args, filter.PageSize+1)
 
 	var dbMembers []memberDB
-	if err := s.db.SelectContext(ctx, &dbMembers, query, args...); err != nil {
-		return nil, "", err
+	if err := s.db.Select(ctx, &dbMembers, query, args...); err != nil {
+		return nil, "", errors.E(op, err)
 	}
 
 	hasMore := len(dbMembers) > int(filter.PageSize)
@@ -154,10 +155,11 @@ func (s *MemberStore) ListBySpace(ctx context.Context, spaceID space.SpaceID, fi
 
 // ListByUser returns all spaces where the user is a member.
 func (s *MemberStore) ListByUser(ctx context.Context, userID space.SpaceID) ([]*space.Member, error) {
+	const op errors.Op = "domain/space/storage.ListMembersByUser"
 	query := `SELECT * FROM space.member WHERE user_id = $1 ORDER BY space_id`
 	var dbMembers []memberDB
-	if err := s.db.SelectContext(ctx, &dbMembers, query, string(userID)); err != nil {
-		return nil, err
+	if err := s.db.Select(ctx, &dbMembers, query, string(userID)); err != nil {
+		return nil, errors.E(op, err)
 	}
 
 	members := make([]*space.Member, 0, len(dbMembers))
@@ -170,11 +172,15 @@ func (s *MemberStore) ListByUser(ctx context.Context, userID space.SpaceID) ([]*
 
 // Exists checks if a membership exists.
 func (s *MemberStore) Exists(ctx context.Context, spaceID space.SpaceID, userID space.SpaceID) (bool, error) {
+	const op errors.Op = "domain/space/storage.MemberExists"
 	query := `SELECT 1 FROM space.member WHERE space_id = $1 AND user_id = $2 LIMIT 1`
 	var exists int
-	err := s.db.GetContext(ctx, &exists, query, spaceID, userID)
-	if err == sql.ErrNoRows {
-		return false, nil
+	err := s.db.Get(ctx, &exists, query, spaceID, userID)
+	if err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return false, nil
+		}
+		return false, errors.E(op, err)
 	}
-	return err == nil, err
+	return true, nil
 }

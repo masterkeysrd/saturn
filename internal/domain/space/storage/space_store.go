@@ -5,13 +5,12 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
-	"github.com/jmoiron/sqlx"
-
 	"github.com/masterkeysrd/saturn/internal/domain/space"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 )
 
 // spaceDB is the internal DB record type for space.space.
@@ -25,14 +24,14 @@ type spaceDB struct {
 	UpdateTime  sql.NullTime `db:"update_time"`
 }
 
-// SpaceStore implements space.SpaceStore using sqlx.
+// SpaceStore implements space.SpaceStore using db.DB.
 type SpaceStore struct {
-	db *sqlx.DB
+	db db.DB
 }
 
 // NewSpaceStore creates a new SpaceStore.
-func NewSpaceStore(db *sqlx.DB) *SpaceStore {
-	return &SpaceStore{db: db}
+func NewSpaceStore(database db.DB) *SpaceStore {
+	return &SpaceStore{db: database}
 }
 
 // toDomainSpace converts a spaceDB to a domain Space.
@@ -63,37 +62,35 @@ func toDBSpace(s *space.Space) *spaceDB {
 
 // Create inserts a new space and returns the created record.
 func (s *SpaceStore) Create(ctx context.Context, sp *space.Space) error {
-	db := toDBSpace(sp)
+	const op errors.Op = "domain/space/storage.Create"
+	rec := toDBSpace(sp)
 	query := `INSERT INTO space.space (id, name, description, owner_id, version, create_time, update_time)
 		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`
-	_, err := s.db.ExecContext(ctx, query, db.ID, db.Name, db.Description, db.OwnerID, db.Version)
-	return err
+	_, err := s.db.Exec(ctx, query, rec.ID, rec.Name, rec.Description, rec.OwnerID, rec.Version)
+	if err != nil {
+		return errors.E(op, err)
+	}
+	return nil
 }
 
 // GetByID retrieves a space by its unique ID.
 func (s *SpaceStore) GetByID(ctx context.Context, id space.SpaceID) (*space.Space, error) {
+	const op errors.Op = "domain/space/storage.GetByID"
 	query := `SELECT * FROM space.space WHERE id = $1`
-	var db spaceDB
-	if err := s.db.GetContext(ctx, &db, query, id); err != nil {
-		return nil, err
+	var rec spaceDB
+	if err := s.db.Get(ctx, &rec, query, id); err != nil {
+		return nil, errors.E(op, err)
 	}
-	return toDomainSpace(&db), nil
+	return toDomainSpace(&rec), nil
 }
 
 // Update modifies an existing space with optimistic locking.
 func (s *SpaceStore) Update(ctx context.Context, sp *space.Space) error {
+	const op errors.Op = "domain/space/storage.Update"
 	query := `UPDATE space.space SET name = $2, description = $3, version = $4 + 1, update_time = NOW()
 		WHERE id = $1 AND version = $4`
-	result, err := s.db.ExecContext(ctx, query, sp.ID, sp.Name, sp.Description, sp.Version)
-	if err != nil {
-		return err
-	}
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return errors.New("update failed: space not found or version mismatch")
+	if err := s.db.ExecOne(ctx, query, sp.ID, sp.Name, sp.Description, sp.Version); err != nil {
+		return errors.E(op, err)
 	}
 	sp.Version++
 	return nil
@@ -101,23 +98,17 @@ func (s *SpaceStore) Update(ctx context.Context, sp *space.Space) error {
 
 // Delete removes a space by its unique ID.
 func (s *SpaceStore) Delete(ctx context.Context, id space.SpaceID) error {
+	const op errors.Op = "domain/space/storage.Delete"
 	query := `DELETE FROM space.space WHERE id = $1`
-	result, err := s.db.ExecContext(ctx, query, id)
-	if err != nil {
-		return err
-	}
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return errors.New("delete failed: space not found")
+	if err := s.db.ExecOne(ctx, query, id); err != nil {
+		return errors.E(op, err)
 	}
 	return nil
 }
 
 // ListByUser returns spaces owned or joined by the user.
 func (s *SpaceStore) ListByUser(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) ([]*space.Space, string, error) {
+	const op errors.Op = "domain/space/storage.ListByUser"
 	if filter.PageSize <= 0 || filter.PageSize > 100 {
 		filter.PageSize = 20
 	}
@@ -149,8 +140,8 @@ func (s *SpaceStore) ListByUser(ctx context.Context, userID space.SpaceID, filte
 	args = append(args, filter.PageSize+1)
 
 	var dbSpaces []spaceDB
-	if err := s.db.SelectContext(ctx, &dbSpaces, query, args...); err != nil {
-		return nil, "", err
+	if err := s.db.Select(ctx, &dbSpaces, query, args...); err != nil {
+		return nil, "", errors.E(op, err)
 	}
 
 	hasMore := len(dbSpaces) > int(filter.PageSize)
@@ -181,6 +172,7 @@ func (s *SpaceStore) ListByUser(ctx context.Context, userID space.SpaceID, filte
 
 // ListByUserOwned returns spaces owned by the user (without needing member table).
 func (s *SpaceStore) ListByUserOwned(ctx context.Context, ownerID space.SpaceID, filter *space.ListSpacesFilter) ([]*space.Space, string, error) {
+	const op errors.Op = "domain/space/storage.ListByUserOwned"
 	if filter.PageSize <= 0 || filter.PageSize > 100 {
 		filter.PageSize = 20
 	}
@@ -209,8 +201,8 @@ func (s *SpaceStore) ListByUserOwned(ctx context.Context, ownerID space.SpaceID,
 	args = append(args, filter.PageSize+1)
 
 	var dbSpaces []spaceDB
-	if err := s.db.SelectContext(ctx, &dbSpaces, query, args...); err != nil {
-		return nil, "", err
+	if err := s.db.Select(ctx, &dbSpaces, query, args...); err != nil {
+		return nil, "", errors.E(op, err)
 	}
 
 	hasMore := len(dbSpaces) > int(filter.PageSize)

@@ -2,19 +2,9 @@ package space
 
 import (
 	"context"
-	"errors"
 	"time"
-)
 
-// Sentinel errors for space operations.
-var (
-	ErrSpaceNotFound       = errors.New("space not found")
-	ErrSpaceNameExists     = errors.New("space name already exists")
-	ErrSpaceOwnerOnly      = errors.New("only the owner can perform this action")
-	ErrInsufficientRole    = errors.New("insufficient role to perform this action")
-	ErrMemberNotFound      = errors.New("member not found")
-	ErrMemberAlreadyExists = errors.New("member already exists")
-	ErrInvalidRole         = errors.New("invalid role")
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 )
 
 // Dependencies holds all storage interfaces required by the Service.
@@ -35,9 +25,11 @@ func NewService(deps Dependencies) *Service {
 
 // CreateSpace creates a new workspace with the caller as owner.
 func (s *Service) CreateSpace(ctx context.Context, space *Space) (*Space, error) {
+	const op errors.Op = "domain/space.CreateSpace"
+
 	// Validate and sanitize space name using model validation
 	if err := space.Validate(); err != nil {
-		return nil, ErrSpaceNameExists
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	// Check if a space with this name already exists for this owner
@@ -45,7 +37,7 @@ func (s *Service) CreateSpace(ctx context.Context, space *Space) (*Space, error)
 	if err == nil {
 		for _, sp := range spaces {
 			if sp.Name == space.Name {
-				return nil, ErrSpaceNameExists
+				return nil, errors.E(op, errors.Exist, NameExists, "space name already exists")
 			}
 		}
 	}
@@ -53,7 +45,7 @@ func (s *Service) CreateSpace(ctx context.Context, space *Space) (*Space, error)
 	// Generate space ID
 	spaceID, err := NewSpaceID()
 	if err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 
 	space.ID = spaceID
@@ -62,7 +54,7 @@ func (s *Service) CreateSpace(ctx context.Context, space *Space) (*Space, error)
 	space.UpdateTime = time.Now()
 
 	if err := s.deps.SpaceStore.Create(ctx, space); err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 
 	// Create owner membership
@@ -76,7 +68,7 @@ func (s *Service) CreateSpace(ctx context.Context, space *Space) (*Space, error)
 	if err := s.deps.MemberStore.Create(ctx, member); err != nil {
 		// Rollback: delete the space
 		_ = s.deps.SpaceStore.Delete(ctx, spaceID)
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 
 	return space, nil
@@ -84,44 +76,60 @@ func (s *Service) CreateSpace(ctx context.Context, space *Space) (*Space, error)
 
 // GetSpace retrieves a workspace by ID. Requestor must be a member.
 func (s *Service) GetSpace(ctx context.Context, session Session) (*Space, error) {
+	const op errors.Op = "domain/space.GetSpace"
+
 	// Verify membership
 	if _, err := s.deps.MemberStore.GetByID(ctx, session.SpaceID, session.UserID); err != nil {
-		return nil, ErrInsufficientRole
+		if errors.Is(err, errors.NotExist) {
+			return nil, errors.E(op, errors.Permission, InsufficientRole, "access denied to this space")
+		}
+		return nil, errors.E(op, err)
 	}
 
 	space, err := s.deps.SpaceStore.GetByID(ctx, session.SpaceID)
 	if err != nil {
-		return nil, ErrSpaceNotFound
+		if errors.Is(err, errors.NotExist) {
+			return nil, errors.E(op, errors.NotExist, NotFound, "space not found")
+		}
+		return nil, errors.E(op, err)
 	}
 	return space, nil
 }
 
 // UpdateSpace updates a workspace.
 func (s *Service) UpdateSpace(ctx context.Context, session Session, updated *Space) (*Space, error) {
+	const op errors.Op = "domain/space.UpdateSpace"
+
 	space, err := s.deps.SpaceStore.GetByID(ctx, session.SpaceID)
 	if err != nil {
-		return nil, ErrSpaceNotFound
+		if errors.Is(err, errors.NotExist) {
+			return nil, errors.E(op, errors.NotExist, NotFound, "space not found")
+		}
+		return nil, errors.E(op, err)
 	}
 
 	// Check if requestor is the owner
 	member, err := s.deps.MemberStore.GetByID(ctx, session.SpaceID, session.UserID)
 	if err != nil {
-		return nil, ErrSpaceOwnerOnly
+		if errors.Is(err, errors.NotExist) {
+			return nil, errors.E(op, errors.Permission, OwnerOnly, "only the owner can update this space")
+		}
+		return nil, errors.E(op, err)
 	}
 	if !member.CanDeleteSpace() {
-		return nil, ErrSpaceOwnerOnly
+		return nil, errors.E(op, errors.Permission, OwnerOnly, "only the owner can update this space")
 	}
 
 	// Validate and sanitize updated space properties using model validation
 	if err := updated.Validate(); err != nil {
-		return nil, ErrSpaceNameExists
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	space.Name = updated.Name
 	space.Description = updated.Description
 
 	if err := s.deps.SpaceStore.Update(ctx, space); err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 
 	return space, nil
@@ -129,27 +137,37 @@ func (s *Service) UpdateSpace(ctx context.Context, session Session, updated *Spa
 
 // DeleteSpace deletes a workspace. Only the owner can delete.
 func (s *Service) DeleteSpace(ctx context.Context, session Session) error {
+	const op errors.Op = "domain/space.DeleteSpace"
+
 	member, err := s.deps.MemberStore.GetByID(ctx, session.SpaceID, session.UserID)
 	if err != nil {
-		return ErrSpaceOwnerOnly
+		if errors.Is(err, errors.NotExist) {
+			return errors.E(op, errors.Permission, OwnerOnly, "only the owner can delete this space")
+		}
+		return errors.E(op, err)
 	}
 	if !member.CanDeleteSpace() {
-		return ErrSpaceOwnerOnly
+		return errors.E(op, errors.Permission, OwnerOnly, "only the owner can delete this space")
 	}
 
-	return s.deps.SpaceStore.Delete(ctx, session.SpaceID)
+	if err := s.deps.SpaceStore.Delete(ctx, session.SpaceID); err != nil {
+		return errors.E(op, err)
+	}
+	return nil
 }
 
 // ListSpaces lists all spaces the user has access to (owned or joined).
 func (s *Service) ListSpaces(ctx context.Context, userID SpaceID, filter *ListSpacesFilter) ([]*Space, string, error) {
+	const op errors.Op = "domain/space.ListSpaces"
+
 	ownedSpaces, ownedToken, err := s.deps.SpaceStore.ListByUserOwned(ctx, userID, filter)
 	if err != nil {
-		return nil, "", err
+		return nil, "", errors.E(op, err)
 	}
 
 	memberships, err := s.deps.MemberStore.ListByUser(ctx, userID)
 	if err != nil {
-		return nil, "", err
+		return nil, "", errors.E(op, err)
 	}
 
 	// Create a map of owned space IDs for O(1) deduplication
@@ -183,33 +201,41 @@ func (s *Service) ListSpaces(ctx context.Context, userID SpaceID, filter *ListSp
 
 // AddSpaceMember adds a member to a workspace.
 func (s *Service) AddSpaceMember(ctx context.Context, session Session, member *Member) (*Member, error) {
+	const op errors.Op = "domain/space.AddSpaceMember"
+
 	// Validate role using model validation
 	if !member.Role.IsValid() {
-		return nil, ErrInvalidRole
+		return nil, errors.E(op, errors.Invalid, InvalidRole, "invalid role")
 	}
 
 	// Check requestor has permission
 	reqMember, err := s.deps.MemberStore.GetByID(ctx, session.SpaceID, session.UserID)
 	if err != nil {
-		return nil, ErrInsufficientRole
+		if errors.Is(err, errors.NotExist) {
+			return nil, errors.E(op, errors.Permission, InsufficientRole, "insufficient role to add members")
+		}
+		return nil, errors.E(op, err)
 	}
 	if !reqMember.CanManageMembers() {
-		return nil, ErrInsufficientRole
+		return nil, errors.E(op, errors.Permission, InsufficientRole, "insufficient role to add members")
 	}
 
 	// Check space exists
 	_, err = s.deps.SpaceStore.GetByID(ctx, session.SpaceID)
 	if err != nil {
-		return nil, ErrSpaceNotFound
+		if errors.Is(err, errors.NotExist) {
+			return nil, errors.E(op, errors.NotExist, NotFound, "space not found")
+		}
+		return nil, errors.E(op, err)
 	}
 
 	// Check member already exists
 	exists, err := s.deps.MemberStore.Exists(ctx, session.SpaceID, member.UserID)
 	if err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 	if exists {
-		return nil, ErrMemberAlreadyExists
+		return nil, errors.E(op, errors.Exist, MemberAlreadyExists, "member already exists")
 	}
 
 	member.SpaceID = session.SpaceID
@@ -217,7 +243,7 @@ func (s *Service) AddSpaceMember(ctx context.Context, session Session, member *M
 	member.UpdateTime = time.Now()
 
 	if err := s.deps.MemberStore.Create(ctx, member); err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 
 	return member, nil
@@ -225,53 +251,69 @@ func (s *Service) AddSpaceMember(ctx context.Context, session Session, member *M
 
 // RemoveSpaceMember removes a member from a workspace.
 func (s *Service) RemoveSpaceMember(ctx context.Context, session Session, userID SpaceID) error {
+	const op errors.Op = "domain/space.RemoveSpaceMember"
+
 	// Check requestor has permission
 	member, err := s.deps.MemberStore.GetByID(ctx, session.SpaceID, session.UserID)
 	if err != nil {
-		return ErrInsufficientRole
+		if errors.Is(err, errors.NotExist) {
+			return errors.E(op, errors.Permission, InsufficientRole, "insufficient role to remove members")
+		}
+		return errors.E(op, err)
 	}
 	if !member.CanManageMembers() {
-		return ErrInsufficientRole
+		return errors.E(op, errors.Permission, InsufficientRole, "insufficient role to remove members")
 	}
 
 	// Prevent owner from removing themselves
 	if userID == session.UserID {
-		return ErrSpaceOwnerOnly
+		return errors.E(op, errors.Permission, OwnerOnly, "cannot remove space owner")
 	}
 
-	return s.deps.MemberStore.Delete(ctx, session.SpaceID, userID)
+	if err := s.deps.MemberStore.Delete(ctx, session.SpaceID, userID); err != nil {
+		return errors.E(op, err)
+	}
+	return nil
 }
 
 // UpdateSpaceMemberRole updates a member's role.
 func (s *Service) UpdateSpaceMemberRole(ctx context.Context, session Session, updated *Member) (*Member, error) {
+	const op errors.Op = "domain/space.UpdateSpaceMemberRole"
+
 	if !updated.Role.IsValid() {
-		return nil, ErrInvalidRole
+		return nil, errors.E(op, errors.Invalid, InvalidRole, "invalid role")
 	}
 
 	// Check requestor has permission
 	reqMember, err := s.deps.MemberStore.GetByID(ctx, session.SpaceID, session.UserID)
 	if err != nil {
-		return nil, ErrInsufficientRole
+		if errors.Is(err, errors.NotExist) {
+			return nil, errors.E(op, errors.Permission, InsufficientRole, "insufficient role to update member roles")
+		}
+		return nil, errors.E(op, err)
 	}
 	if !reqMember.CanManageMembers() {
-		return nil, ErrInsufficientRole
+		return nil, errors.E(op, errors.Permission, InsufficientRole, "insufficient role to update member roles")
 	}
 
 	// Prevent changing own role
 	if updated.UserID == session.UserID {
-		return nil, ErrSpaceOwnerOnly
+		return nil, errors.E(op, errors.Permission, OwnerOnly, "cannot change own role")
 	}
 
 	// Check membership exists
 	existing, err := s.deps.MemberStore.GetByID(ctx, session.SpaceID, updated.UserID)
 	if err != nil {
-		return nil, ErrMemberNotFound
+		if errors.Is(err, errors.NotExist) {
+			return nil, errors.E(op, errors.NotExist, MemberNotFound, "member not found")
+		}
+		return nil, errors.E(op, err)
 	}
 
 	existing.Role = updated.Role
 	existing.UpdateTime = time.Now()
 	if err := s.deps.MemberStore.Update(ctx, existing); err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 
 	return existing, nil
@@ -279,19 +321,33 @@ func (s *Service) UpdateSpaceMemberRole(ctx context.Context, session Session, up
 
 // ListSpaceMembers lists all members of a workspace. Requestor must be a member.
 func (s *Service) ListSpaceMembers(ctx context.Context, session Session, filter *ListMembersFilter) ([]*Member, string, error) {
+	const op errors.Op = "domain/space.ListSpaceMembers"
+
 	// Verify membership
 	if _, err := s.deps.MemberStore.GetByID(ctx, session.SpaceID, session.UserID); err != nil {
-		return nil, "", ErrInsufficientRole
+		if errors.Is(err, errors.NotExist) {
+			return nil, "", errors.E(op, errors.Permission, InsufficientRole, "access denied to this space")
+		}
+		return nil, "", errors.E(op, err)
 	}
 
-	return s.deps.MemberStore.ListBySpace(ctx, session.SpaceID, filter)
+	members, nextToken, err := s.deps.MemberStore.ListBySpace(ctx, session.SpaceID, filter)
+	if err != nil {
+		return nil, "", errors.E(op, err)
+	}
+	return members, nextToken, nil
 }
 
 // GetMember retrieves a member by space ID and user ID.
 func (s *Service) GetMember(ctx context.Context, spaceID SpaceID, userID SpaceID) (*Member, error) {
+	const op errors.Op = "domain/space.GetMember"
+
 	member, err := s.deps.MemberStore.GetByID(ctx, spaceID, userID)
 	if err != nil {
-		return nil, ErrMemberNotFound
+		if errors.Is(err, errors.NotExist) {
+			return nil, errors.E(op, errors.NotExist, MemberNotFound, "member not found")
+		}
+		return nil, errors.E(op, err)
 	}
 	return member, nil
 }
