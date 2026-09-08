@@ -46,6 +46,12 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
 # --- Stage 3: Minimal Production Runtime ---
 FROM alpine:3.24
 
+LABEL org.opencontainers.image.title="Saturn" \
+      org.opencontainers.image.description="Saturn personal Life Operating System (Life OS)" \
+      org.opencontainers.image.url="https://github.com/masterkeysrd/saturn" \
+      org.opencontainers.image.source="https://github.com/masterkeysrd/saturn" \
+      org.opencontainers.image.licenses="MIT"
+
 RUN apk add --no-cache \
     ca-certificates \
     tzdata \

@@ -41,6 +41,13 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=raw,value=latest
+          labels: |
+            org.opencontainers.image.title=Saturn
+            org.opencontainers.image.description=Saturn personal Life Operating System (Life OS)
+          annotations: |
+            org.opencontainers.image.description=Saturn personal Life Operating System (Life OS)
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v7
@@ -51,6 +58,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
