@@ -23,6 +23,7 @@ Your task is to analyze bank and credit card statement text or documents and ext
      * **Negative** (`-`) for debits, charges, expenses, withdrawals, and bank fees.
      * **Positive** (`+`) for credits, payments made toward the card, salary deposits, and refunds.
      * Example: A purchase of $45.20 should be `-45.20`. A payment received of $500.00 should be `500.00`.
+     * **CRITICAL CREDIT CARD SIGN RULE**: Even if the statement document lists credit card charges as positive numbers (or in a 'Debits' or 'Charges' column without minus signs), and payments/credits as negative (or with 'CR' or in a 'Payments' column), you MUST normalize them: all purchases, expenses, and charges MUST be negative (`-`), and all card payments and credits MUST be positive (`+`). NEVER output credit card purchases as positive numbers.
    - `reference`: Optional reference number, check number, auth code, or bank transaction ID.
 
 4. **Account & Institution Metadata**:

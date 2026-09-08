@@ -88,6 +88,7 @@ const (
 	Finance_UpdateStatementLine_FullMethodName         = "/saturn.finance.v1.Finance/UpdateStatementLine"
 	Finance_UpdateStatement_FullMethodName             = "/saturn.finance.v1.Finance/UpdateStatement"
 	Finance_CompleteStatement_FullMethodName           = "/saturn.finance.v1.Finance/CompleteStatement"
+	Finance_InvertStatementSigns_FullMethodName        = "/saturn.finance.v1.Finance/InvertStatementSigns"
 )
 
 // FinanceClient is the client API for Finance service.
@@ -238,6 +239,8 @@ type FinanceClient interface {
 	// Commits all reconciliation choices: creates transactions, links matched entries,
 	// and marks the statement as COMPLETED in a single atomic database transaction.
 	CompleteStatement(ctx context.Context, in *CompleteStatementRequest, opts ...grpc.CallOption) (*Statement, error)
+	// Inverts all transaction line amounts and negates starting/ending balances for an in-progress statement.
+	InvertStatementSigns(ctx context.Context, in *InvertStatementSignsRequest, opts ...grpc.CallOption) (*InvertStatementSignsResponse, error)
 }
 
 type financeClient struct {
@@ -928,6 +931,16 @@ func (c *financeClient) CompleteStatement(ctx context.Context, in *CompleteState
 	return out, nil
 }
 
+func (c *financeClient) InvertStatementSigns(ctx context.Context, in *InvertStatementSignsRequest, opts ...grpc.CallOption) (*InvertStatementSignsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InvertStatementSignsResponse)
+	err := c.cc.Invoke(ctx, Finance_InvertStatementSigns_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FinanceServer is the server API for Finance service.
 // All implementations should embed UnimplementedFinanceServer
 // for forward compatibility.
@@ -1076,6 +1089,8 @@ type FinanceServer interface {
 	// Commits all reconciliation choices: creates transactions, links matched entries,
 	// and marks the statement as COMPLETED in a single atomic database transaction.
 	CompleteStatement(context.Context, *CompleteStatementRequest) (*Statement, error)
+	// Inverts all transaction line amounts and negates starting/ending balances for an in-progress statement.
+	InvertStatementSigns(context.Context, *InvertStatementSignsRequest) (*InvertStatementSignsResponse, error)
 }
 
 // UnimplementedFinanceServer should be embedded to have
@@ -1288,6 +1303,9 @@ func (UnimplementedFinanceServer) UpdateStatement(context.Context, *UpdateStatem
 }
 func (UnimplementedFinanceServer) CompleteStatement(context.Context, *CompleteStatementRequest) (*Statement, error) {
 	return nil, status.Error(codes.Unimplemented, "method CompleteStatement not implemented")
+}
+func (UnimplementedFinanceServer) InvertStatementSigns(context.Context, *InvertStatementSignsRequest) (*InvertStatementSignsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method InvertStatementSigns not implemented")
 }
 func (UnimplementedFinanceServer) testEmbeddedByValue() {}
 
@@ -2533,6 +2551,24 @@ func _Finance_CompleteStatement_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Finance_InvertStatementSigns_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InvertStatementSignsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServer).InvertStatementSigns(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Finance_InvertStatementSigns_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServer).InvertStatementSigns(ctx, req.(*InvertStatementSignsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Finance_ServiceDesc is the grpc.ServiceDesc for Finance service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2811,6 +2847,10 @@ var Finance_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CompleteStatement",
 			Handler:    _Finance_CompleteStatement_Handler,
+		},
+		{
+			MethodName: "InvertStatementSigns",
+			Handler:    _Finance_InvertStatementSigns_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

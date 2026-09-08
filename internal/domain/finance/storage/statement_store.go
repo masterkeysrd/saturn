@@ -423,6 +423,76 @@ func (s *StatementStore) UpdateLineDraft(ctx context.Context, line *finance.Stat
 	return nil
 }
 
+// InvertSigns negates starting/ending balances of the statement and inverts all line amounts in a single transaction.
+func (s *StatementStore) InvertSigns(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID) (*finance.Statement, []*finance.StatementLine, error) {
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer tx.Rollback()
+
+	// 1. Get statement and verify existence
+	stmtQuery := `SELECT * FROM finance.statement WHERE space_id = $1 AND id = $2 FOR UPDATE`
+	var stmtRow statementDB
+	if err := tx.GetContext(ctx, &stmtRow, stmtQuery, string(spaceID), string(id)); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil, finance.ErrStatementNotFound
+		}
+		return nil, nil, err
+	}
+	if stmtRow.Status == string(finance.StatementStatusCompleted) {
+		return nil, nil, errors.New("cannot invert signs on a completed statement reconciliation")
+	}
+
+	now := time.Now().UTC()
+	// 2. Invert statement starting and ending balances
+	updateStmtQuery := `
+		UPDATE finance.statement
+		SET statement_starting_balance = -statement_starting_balance,
+		    statement_ending_balance = -statement_ending_balance,
+		    version = version + 1,
+		    update_time = $1
+		WHERE space_id = $2 AND id = $3
+		RETURNING *`
+	if err := tx.GetContext(ctx, &stmtRow, updateStmtQuery, now, string(spaceID), string(id)); err != nil {
+		return nil, nil, fmt.Errorf("update statement balances: %w", err)
+	}
+
+	// 3. Invert all statement lines and flip draft action type if needed
+	updateLinesQuery := `
+		UPDATE finance.statement_line
+		SET amount = -amount,
+		    version = version + 1,
+		    action = CASE
+		        WHEN action->>'type' = 'CREATE_INCOME' THEN jsonb_set(action, '{type}', '"CREATE_EXPENSE"')
+		        WHEN action->>'type' = 'CREATE_EXPENSE' THEN jsonb_set(action, '{type}', '"CREATE_INCOME"')
+		        ELSE action
+		    END
+		WHERE statement_id = $1`
+	if _, err := tx.ExecContext(ctx, updateLinesQuery, string(id)); err != nil {
+		return nil, nil, fmt.Errorf("update statement lines: %w", err)
+	}
+
+	// 4. Fetch updated lines in row_index order
+	linesQuery := `SELECT * FROM finance.statement_line WHERE statement_id = $1 ORDER BY row_index ASC`
+	var lineRows []statementLineDB
+	if err := tx.SelectContext(ctx, &lineRows, linesQuery, string(id)); err != nil {
+		return nil, nil, fmt.Errorf("fetch inverted lines: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, nil, err
+	}
+
+	domainStmt := stmtRow.toDomain()
+	domainLines := make([]*finance.StatementLine, len(lineRows))
+	for i := range lineRows {
+		domainLines[i] = lineRows[i].toDomain()
+	}
+
+	return domainStmt, domainLines, nil
+}
+
 // Helpers
 
 func stringPtrToNullString(s *string) sql.NullString {

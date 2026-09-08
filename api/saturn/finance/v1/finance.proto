@@ -457,6 +457,14 @@ service Finance {
       body: "*"
     };
   }
+
+  // Inverts all transaction line amounts and negates starting/ending balances for an in-progress statement.
+  rpc InvertStatementSigns(InvertStatementSignsRequest) returns (InvertStatementSignsResponse) {
+    option (google.api.http) = {
+      post: "/v1/finance/statements/{id}:invert-signs"
+      body: "*"
+    };
+  }
 }
 
 // FinanceSettings represents the workspace configuration.
@@ -2779,6 +2787,17 @@ message UpdateStatementRequest {
 // Request to finalize and commit the statement.
 message CompleteStatementRequest {
   string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request to invert all line amounts and negate starting/ending balances on an in-progress statement.
+message InvertStatementSignsRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Response after inverting statement signs.
+message InvertStatementSignsResponse {
+  Statement statement = 1;
+  repeated StatementLine lines = 2;
 }
 
 // SectionValidationReport summarizes the mathematical verification of an extracted currency section.

@@ -94,6 +94,7 @@ type FinanceService interface {
 	UpdateStatement(ctx context.Context, spaceID finance.SpaceID, stmt *finance.Statement, mask []string) (*finance.Statement, error)
 	UpdateStatementLine(ctx context.Context, spaceID finance.SpaceID, line *finance.StatementLine, mask []string) (*finance.StatementLine, error)
 	CompleteStatement(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID) (*finance.Statement, error)
+	InvertStatementSigns(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID) (*finance.Statement, []*finance.StatementLine, error)
 }
 
 // ParsedTransaction represents structured transaction data parsed by an ingestion agent.
@@ -288,6 +289,15 @@ func (c *Coordinator) CompleteStatement(ctx context.Context, id finance.Statemen
 		return nil, err
 	}
 	return c.financeService.CompleteStatement(ctx, rCtx.SpaceID, id)
+}
+
+// InvertStatementSigns inverts all line amounts and negates statement starting/ending balances.
+func (c *Coordinator) InvertStatementSigns(ctx context.Context, id finance.StatementID) (*finance.Statement, []*finance.StatementLine, error) {
+	rCtx, err := c.resolveContext(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	return c.financeService.InvertStatementSigns(ctx, rCtx.SpaceID, id)
 }
 
 // IngestStatementDocument executes statement document ingestion for the session's workspace.

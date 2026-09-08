@@ -3274,6 +3274,21 @@ export interface CompleteStatementRequest {
 }
 
 /**
+ * Request to invert all line amounts and negate starting/ending balances on an in-progress statement.
+ */
+export interface InvertStatementSignsRequest {
+  id: string
+}
+
+/**
+ * Response after inverting statement signs.
+ */
+export interface InvertStatementSignsResponse {
+  statement: Statement
+  lines: StatementLine[]
+}
+
+/**
  * SectionValidationReport summarizes the mathematical verification of an extracted currency section.
  */
 export interface SectionValidationReport {
@@ -5338,6 +5353,37 @@ export function useCompleteStatementMutation(
     { id: string; req: CompleteStatementRequest }
   >({
     mutationFn: ({ id, req }) => completeStatement(id, req),
+    ...options,
+  })
+}
+
+/**
+ * Inverts all transaction line amounts and negates starting/ending balances for an in-progress statement.
+ */
+export async function invertStatementSigns(
+  id: string,
+  req: InvertStatementSignsRequest
+): Promise<InvertStatementSignsResponse> {
+  return request<InvertStatementSignsResponse>({
+    method: "POST",
+    url: `/api/v1/finance/statements/${id}:invert-signs`,
+    data: req,
+  })
+}
+
+export function useInvertStatementSignsMutation(
+  options?: UseMutationOptions<
+    InvertStatementSignsResponse,
+    Error,
+    { id: string; req: InvertStatementSignsRequest }
+  >
+) {
+  return useMutation<
+    InvertStatementSignsResponse,
+    Error,
+    { id: string; req: InvertStatementSignsRequest }
+  >({
+    mutationFn: ({ id, req }) => invertStatementSigns(id, req),
     ...options,
   })
 }

@@ -2866,6 +2866,26 @@ func (s *Service) UpdateStatement(ctx context.Context, spaceID SpaceID, stmt *St
 	return existing, nil
 }
 
+// InvertStatementSigns inverts all line amounts and negates statement starting/ending balances in a single transaction.
+func (s *Service) InvertStatementSigns(ctx context.Context, spaceID SpaceID, id StatementID) (*Statement, []*StatementLine, error) {
+	if err := spaceID.Validate(); err != nil {
+		return nil, nil, err
+	}
+	if err := id.Validate(); err != nil {
+		return nil, nil, err
+	}
+
+	stmt, lines, err := s.deps.StatementStore.InvertSigns(ctx, spaceID, id)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Re-resolve dynamic suggestions on the inverted lines
+	_ = s.resolveSuggestions(ctx, spaceID, stmt.AccountID, lines)
+
+	return stmt, lines, nil
+}
+
 // CompleteStatement finalizes and commits the statement.
 func (s *Service) CompleteStatement(ctx context.Context, spaceID SpaceID, id StatementID) (*Statement, error) {
 	if err := spaceID.Validate(); err != nil {

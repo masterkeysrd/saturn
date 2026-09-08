@@ -52,7 +52,8 @@ export function CreateTransactionSheet({
   refetchData,
 }: CreateTransactionSheetProps) {
   const [prevOpen, setPrevOpen] = useState(open)
-  const [prevEditTransaction, setPrevEditTransaction] = useState(editTransaction)
+  const [prevEditTransaction, setPrevEditTransaction] =
+    useState(editTransaction)
   const [prevPreselectedBudgetId, setPrevPreselectedBudgetId] =
     useState(preselectedBudgetId)
 

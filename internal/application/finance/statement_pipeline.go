@@ -152,9 +152,9 @@ func (p *StatementPipeline) buildGraph() (*graph.Graph[*StatementIngestionState]
 		AddConditionalEdge("preprocess", "extract", func(s *StatementIngestionState) bool {
 			return !s.NeedsPassword && len(s.Errors) == 0
 		}).
-		AddEdge("extract", "validate_math").
-		AddEdge("validate_math", "resolve_accounts").
-		AddEdge("resolve_accounts", graph.END).
+		AddEdge("extract", "resolve_accounts").
+		AddEdge("resolve_accounts", "validate_math").
+		AddEdge("validate_math", graph.END).
 		Build()
 }
 
@@ -409,19 +409,39 @@ func (p *StatementPipeline) nodeValidateMath(ctx context.Context, state *Stateme
 		discrepancy := sec.EndingBalance - calcEnding
 
 		// Detect Credit Card / Liability sign convention:
-		// On bank statements, credit card balances are reported as positive debt owed (e.g. Starting: 15,107.81, Ending: 33,669.24),
-		// while line purchases are negative (-56,270.74) and payments are positive (+37,709.31).
-		// In double-entry accounting (and Saturn ledger), liabilities are negative:
-		// -15,107.81 + (-18,561.43) = -33,669.24 -> delta == 0!
-		if discrepancy != 0 && sec.StartingBalance > 0 && sec.EndingBalance > 0 {
+		acc := state.AccountMappings[sec.Currency]
+		isCreditCard := (acc != nil && acc.Type == finance.AccountTypeCreditCard) ||
+			sec.CardLastFour != "" ||
+			(state.ParsedDocument != nil && state.ParsedDocument.CardLastFour != "")
+
+		if isCreditCard && sec.StartingBalance > 0 && sec.EndingBalance > 0 {
 			ccStart := -sec.StartingBalance
 			ccEnd := -sec.EndingBalance
-			ccCalcEnding := ccStart + netFlow
-			if ccEnd-ccCalcEnding == 0 {
+
+			// Case A: Lines were extracted with purchases as POSITIVE and payments as NEGATIVE
+			// (e.g. Starting: 15,107.81, Ending: 33,669.24, NetFlow: +18,561.43).
+			// Here ccEnd - (ccStart - netFlow) == 0. All lines must be inverted to negative expenses.
+			if ccEnd-(ccStart-netFlow) == 0 && len(sec.Lines) > 0 {
+				for j := range sec.Lines {
+					sec.Lines[j].Amount = -sec.Lines[j].Amount
+				}
+				netFlow = -netFlow
 				sec.StartingBalance = ccStart
 				sec.EndingBalance = ccEnd
-				calcEnding = ccCalcEnding
-				discrepancy = 0
+				calcEnding = ccStart + netFlow
+				discrepancy = ccEnd - calcEnding
+			} else if discrepancy != 0 {
+				// Case B: Standard bank statement format where line purchases are negative (-18,561.43),
+				// but starting and ending balances are reported as positive debt (15,107.81 and 33,669.24).
+				// In double-entry accounting (and Saturn ledger), liabilities are negative:
+				// -15,107.81 + (-18,561.43) = -33,669.24 -> delta == 0!
+				ccCalcEnding := ccStart + netFlow
+				if ccEnd-ccCalcEnding == 0 {
+					sec.StartingBalance = ccStart
+					sec.EndingBalance = ccEnd
+					calcEnding = ccCalcEnding
+					discrepancy = 0
+				}
 			}
 		}
 

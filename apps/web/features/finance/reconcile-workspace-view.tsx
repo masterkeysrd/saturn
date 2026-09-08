@@ -8,6 +8,7 @@ import {
   useUpdateStatementMutation,
   useCompleteStatementMutation,
   useDeleteStatementMutation,
+  useInvertStatementSignsMutation,
   useListAccountsQuery,
   useListBudgetsQuery,
   useListBorrowingsQuery,
@@ -66,6 +67,8 @@ export function ReconciliationWorkspaceView() {
   // Dialog States
   const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false)
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false)
+  const [isInvertAllDialogOpen, setIsInvertAllDialogOpen] = useState(false)
+  const [isInvertingAllSigns, setIsInvertingAllSigns] = useState(false)
 
   // Queries
   const {
@@ -110,6 +113,7 @@ export function ReconciliationWorkspaceView() {
   const updateLineMutation = useUpdateStatementLineMutation()
   const completeMutation = useCompleteStatementMutation()
   const deleteMutation = useDeleteStatementMutation()
+  const invertSignsMutation = useInvertStatementSignsMutation()
 
   const statements = useMemo(
     () => statementsResponse?.statements || [],
@@ -225,9 +229,49 @@ export function ReconciliationWorkspaceView() {
       toast.add({
         title: "Update Failed",
         description:
-          err instanceof Error ? err.message : "Failed to update statement balances.",
+          err instanceof Error
+            ? err.message
+            : "Failed to update statement balances.",
         type: "error",
       })
+    }
+  }
+
+  const handleInvertAllSigns = async () => {
+    if (!activeStmt || !activeStmt.id || lines.length === 0) return
+    setIsInvertingAllSigns(true)
+    try {
+      await invertSignsMutation.mutateAsync({
+        id: activeStmt.id,
+        req: { id: activeStmt.id },
+      })
+
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/v1/finance/statements"],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: [`/api/v1/finance/statements/${statementId}/lines`],
+      })
+      await Promise.all([refetchStatements(), refetchLines()])
+
+      setIsInvertAllDialogOpen(false)
+      toast.add({
+        title: "Signs Inverted",
+        description: `Successfully inverted statement balances and all ${lines.length} transaction lines.`,
+        type: "success",
+      })
+    } catch (err) {
+      console.error("Failed to invert statement signs:", err)
+      toast.add({
+        title: "Inversion Failed",
+        description:
+          err instanceof Error
+            ? err.message
+            : "Failed to invert statement signs.",
+        type: "error",
+      })
+    } finally {
+      setIsInvertingAllSigns(false)
     }
   }
 
@@ -357,7 +401,9 @@ export function ReconciliationWorkspaceView() {
       toast.add({
         title: "Action Failed",
         description:
-          err instanceof Error ? err.message : "Failed to update statement line.",
+          err instanceof Error
+            ? err.message
+            : "Failed to update statement line.",
         type: "error",
       })
     }
@@ -662,15 +708,27 @@ export function ReconciliationWorkspaceView() {
                   </span>
                 </span>
                 {activeStmt?.status !== "COMPLETED" && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={openEditBalances}
-                    className="h-5 rounded-md px-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/10"
-                  >
-                    <Pencil className="mr-1 h-2.5 w-2.5" />
-                    Edit Balances
-                  </Button>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={openEditBalances}
+                      className="h-5 rounded-md px-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/10"
+                    >
+                      <Pencil className="mr-1 h-2.5 w-2.5" />
+                      Edit Balances
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsInvertAllDialogOpen(true)}
+                      className="h-5 rounded-md px-1.5 text-[11px] font-semibold text-amber-600 transition-colors hover:bg-amber-500/10 dark:text-amber-400"
+                      title="Invert all transaction amounts and balance signs (+/-)"
+                    >
+                      <ArrowUpDown className="mr-1 h-2.5 w-2.5" />
+                      Invert All Signs (+/-)
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
@@ -940,10 +998,10 @@ export function ReconciliationWorkspaceView() {
               <span className="font-bold text-foreground">
                 {targetAccount?.name || "Account"}
               </span>
-              {activeStmt?.statementDate && (
-                <> ({activeStmt.statementDate})</>
-              )}
-              ? All {lines.length} statement line items and draft matching progress will be permanently deleted. This action cannot be undone.
+              {activeStmt?.statementDate && <> ({activeStmt.statementDate})</>}?
+              All {lines.length} statement line items and draft matching
+              progress will be permanently deleted. This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -984,13 +1042,17 @@ export function ReconciliationWorkspaceView() {
             <AlertDialogMedia className="bg-primary/10 text-primary">
               <CheckCircle2 className="h-6 w-6 text-primary" />
             </AlertDialogMedia>
-            <AlertDialogTitle>Finalize Statement Reconciliation?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Finalize Statement Reconciliation?
+            </AlertDialogTitle>
             <AlertDialogDescription>
               You are about to finalize reconciliation for{" "}
               <span className="font-bold text-foreground">
                 {targetAccount?.name || "Account"}
               </span>
-              . This will create and link all imported transactions to your ledger, update your account balance, and mark this statement as completed.
+              . This will create and link all imported transactions to your
+              ledger, update your account balance, and mark this statement as
+              completed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1014,6 +1076,58 @@ export function ReconciliationWorkspaceView() {
                 <>
                   <CheckCircle2 className="mr-1.5 h-4 w-4" />
                   Confirm & Finalize
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Invert All Signs Confirmation Alert Dialog */}
+      <AlertDialog
+        open={isInvertAllDialogOpen}
+        onOpenChange={setIsInvertAllDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <ArrowUpDown className="h-6 w-6" />
+            </AlertDialogMedia>
+            <AlertDialogTitle>
+              Invert All Statement Signs (+/-)?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will invert the sign (+/-) of all {lines.length} transaction
+              lines and negate the starting and ending balances.
+              <br />
+              <br />
+              Use this if your bank reported purchases as positive numbers and
+              payments as negative numbers. Your reconciliation math will remain
+              balanced, and expenses will turn negative (red) while payments
+              turn positive (green).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isInvertingAllSigns}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isInvertingAllSigns}
+              onClick={(e) => {
+                e.preventDefault()
+                handleInvertAllSigns()
+              }}
+              className="bg-amber-600 font-bold text-white hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600"
+            >
+              {isInvertingAllSigns ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Inverting Signs...
+                </>
+              ) : (
+                <>
+                  <ArrowUpDown className="mr-1.5 h-4 w-4" />
+                  Invert All Signs
                 </>
               )}
             </AlertDialogAction>

@@ -3339,6 +3339,45 @@
         ]
       }
     },
+    "/v1/finance/statements/{id}:invert-signs": {
+      "post": {
+        "summary": "Inverts all transaction line amounts and negates starting/ending balances for an in-progress statement.",
+        "operationId": "Finance_InvertStatementSigns",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1InvertStatementSignsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FinanceInvertStatementSignsBody"
+            }
+          }
+        ],
+        "tags": [
+          "Finance"
+        ]
+      }
+    },
     "/v1/finance/statements/{statementId}/lines": {
       "get": {
         "summary": "Lists all statement lines belonging to a specific statement session.",
@@ -5440,6 +5479,10 @@
       "required": [
         "statement"
       ]
+    },
+    "FinanceInvertStatementSignsBody": {
+      "type": "object",
+      "description": "Request to invert all line amounts and negate starting/ending balances on an in-progress statement."
     },
     "FinanceMatchScheduledTransactionBody": {
       "type": "object",
@@ -7764,6 +7807,22 @@
           "format": "date-time"
         }
       }
+    },
+    "v1InvertStatementSignsResponse": {
+      "type": "object",
+      "properties": {
+        "statement": {
+          "$ref": "#/definitions/v1Statement"
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1StatementLine"
+          }
+        }
+      },
+      "description": "Response after inverting statement signs."
     },
     "v1JobInfo": {
       "type": "object",

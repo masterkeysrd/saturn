@@ -252,6 +252,9 @@ func (m *mockFinanceServiceForPipeline) UpdateStatementLine(ctx context.Context,
 func (m *mockFinanceServiceForPipeline) CompleteStatement(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID) (*finance.Statement, error) {
 	return nil, nil
 }
+func (m *mockFinanceServiceForPipeline) InvertStatementSigns(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID) (*finance.Statement, []*finance.StatementLine, error) {
+	return nil, nil, nil
+}
 
 func TestStatementPipeline_AnalyzeDocument_MultiCurrencyAndMathValidation(t *testing.T) {
 	mockFS := &mockFinanceServiceForPipeline{
@@ -553,6 +556,88 @@ func TestStatementPipeline_CreditCardDualCurrencyLiability(t *testing.T) {
 	}
 	if stmtUSD.StatementEndingBalance != -194900 {
 		t.Errorf("expected liability ending balance -194900, got %d", stmtUSD.StatementEndingBalance)
+	}
+}
+
+func TestStatementPipeline_CreditCardInvertedPositiveCharges(t *testing.T) {
+	ctx := context.Background()
+
+	card := &finance.Account{
+		ID:       "acc_card_chase",
+		Name:     "Chase Sapphire",
+		Type:     finance.AccountTypeCreditCard,
+		LastFour: "4455",
+		Currency: "USD",
+	}
+
+	// Bank reports charges as positive, payments as negative.
+	// Starting: $500.00, Ending: $800.00. Purchases: +$400.00, Payment: -$100.00.
+	extractor := &mockStatementExtractor{
+		doc: &ParsedStatementDocument{
+			InstitutionName: "Chase",
+			CardLastFour:    "4455",
+			StatementDate:   "2026-08-20",
+			Sections: []ParsedStatementSection{
+				{
+					Currency:           "USD",
+					CardLastFour:       "4455",
+					SuggestedAccountID: "acc_card_chase",
+					StartingBalance:    50000, // $500.00 on paper
+					EndingBalance:      80000, // $800.00 on paper
+					Lines: []ParsedStatementLine{
+						{DateStr: "2026-08-01", Description: "GROCERY STORE", Amount: 25000},
+						{DateStr: "2026-08-05", Description: "ONLINE STORE", Amount: 15000},
+						{DateStr: "2026-08-10", Description: "AUTOPAY PAYMENT", Amount: -10000},
+					},
+				},
+			},
+		},
+	}
+
+	finService := &mockFinanceServiceForPipeline{
+		accounts: []*finance.Account{card},
+	}
+
+	pipeline := NewStatementPipeline(StatementPipelineDependencies{
+		FinanceService: finService,
+		Extractor:      extractor,
+	})
+
+	res, err := pipeline.IngestDocument(ctx, "spc_123", &StatementDocumentRequest{
+		Filename:      "chase_stmt.txt",
+		ContentType:   "text/plain",
+		DocumentBytes: []byte("Sample statement text"),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(res.CreatedStatements) != 1 {
+		t.Fatalf("expected 1 created statement, got %d", len(res.CreatedStatements))
+	}
+
+	if len(res.SectionReports) != 1 || !res.SectionReports[0].IsBalanced {
+		t.Fatalf("expected section report to be balanced, got: %+v", res.SectionReports)
+	}
+
+	stmt := res.CreatedStatements[0]
+	if stmt.StatementStartingBalance != -50000 {
+		t.Errorf("expected starting balance -50000, got %d", stmt.StatementStartingBalance)
+	}
+	if stmt.StatementEndingBalance != -80000 {
+		t.Errorf("expected ending balance -80000, got %d", stmt.StatementEndingBalance)
+	}
+
+	// Verify the lines in the created statement CSV were inverted to negative expenses and positive payment
+	csvContent := stmt.RawContent
+	if !strings.Contains(csvContent, "GROCERY STORE,-250.00") {
+		t.Errorf("expected negative grocery store expense in CSV, got:\n%s", csvContent)
+	}
+	if !strings.Contains(csvContent, "ONLINE STORE,-150.00") {
+		t.Errorf("expected negative online store expense in CSV, got:\n%s", csvContent)
+	}
+	if !strings.Contains(csvContent, "AUTOPAY PAYMENT,100.00") {
+		t.Errorf("expected positive autopay payment in CSV, got:\n%s", csvContent)
 	}
 }
 

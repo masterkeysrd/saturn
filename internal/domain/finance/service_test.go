@@ -889,6 +889,33 @@ func (m *mockStatementStore) UpdateLineDraft(ctx context.Context, line *Statemen
 	return nil
 }
 
+func (m *mockStatementStore) InvertSigns(ctx context.Context, spaceID SpaceID, id StatementID) (*Statement, []*StatementLine, error) {
+	stmt, err := m.GetByID(ctx, spaceID, id)
+	if err != nil {
+		return nil, nil, err
+	}
+	if stmt.Status == StatementStatusCompleted {
+		return nil, nil, errors.New("cannot invert signs on a completed statement")
+	}
+
+	stmt.StatementStartingBalance = -stmt.StatementStartingBalance
+	stmt.StatementEndingBalance = -stmt.StatementEndingBalance
+	stmt.Version++
+
+	lines := m.lines[id]
+	for _, l := range lines {
+		l.Amount = -l.Amount
+		l.Version++
+		if l.Action.Type == StatementLineActionTypeCreateIncome {
+			l.Action.Type = StatementLineActionTypeCreateExpense
+		} else if l.Action.Type == StatementLineActionTypeCreateExpense {
+			l.Action.Type = StatementLineActionTypeCreateIncome
+		}
+	}
+
+	return stmt, lines, nil
+}
+
 // --- Test Cases ---
 
 func TestUpdateBudget(t *testing.T) {
@@ -3803,6 +3830,100 @@ func TestService_ImportStatement(t *testing.T) {
 				tt.verifyLines(t, lines)
 			}
 		})
+	}
+}
+
+func TestService_InvertStatementSigns(t *testing.T) {
+	ctx := context.Background()
+	spaceID := SpaceID("spc_" + ksuid.New().String())
+	accountID := AccountID("acc_" + ksuid.New().String())
+	stmtID := StatementID("stmt_" + ksuid.New().String())
+
+	statementStore := newMockStatementStore()
+	accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
+	accountStore.data[accountID] = &Account{
+		ID:             accountID,
+		SpaceID:        spaceID,
+		Type:           AccountTypeCreditCard,
+		CurrentBalance: 50000,
+		Currency:       Currency("USD"),
+	}
+
+	stmt := &Statement{
+		ID:                       stmtID,
+		SpaceID:                  spaceID,
+		AccountID:                accountID,
+		Status:                   StatementStatusInProgress,
+		StatementDate:            time.Date(2026, 8, 20, 0, 0, 0, 0, time.UTC),
+		StatementStartingBalance: 50000,
+		StatementEndingBalance:   80000,
+		Filename:                 "card_statement.csv",
+		Config:                   StatementConfig{Format: "CSV"},
+		RawContent:               "raw",
+	}
+
+	lines := []*StatementLine{
+		{
+			ID:          StatementLineID("stln_1"),
+			StatementID: stmtID,
+			RowIndex:    0,
+			DateStr:     "2026-08-01",
+			Description: "Amazon Purchase",
+			Amount:      25000,
+			Status:      StatementLineStatusUnmatched,
+			Action:      StatementLineAction{Type: StatementLineActionTypeCreateIncome},
+		},
+		{
+			ID:          StatementLineID("stln_2"),
+			StatementID: stmtID,
+			RowIndex:    1,
+			DateStr:     "2026-08-05",
+			Description: "Online Payment",
+			Amount:      -10000,
+			Status:      StatementLineStatusUnmatched,
+			Action:      StatementLineAction{Type: StatementLineActionTypeCreateExpense},
+		},
+	}
+
+	_ = statementStore.Create(ctx, stmt, lines)
+
+	deps := Dependencies{
+		StatementStore:   statementStore,
+		AccountStore:     accountStore,
+		TransactionStore: &mockTransactionStore{txns: make(map[TransactionID]*Transaction)},
+	}
+
+	svc := NewService(deps)
+
+	invertedStmt, invertedLines, err := svc.InvertStatementSigns(ctx, spaceID, stmtID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if invertedStmt.StatementStartingBalance != -50000 {
+		t.Errorf("expected starting balance -50000, got %d", invertedStmt.StatementStartingBalance)
+	}
+	if invertedStmt.StatementEndingBalance != -80000 {
+		t.Errorf("expected ending balance -80000, got %d", invertedStmt.StatementEndingBalance)
+	}
+
+	if len(invertedLines) != 2 {
+		t.Fatalf("expected 2 lines, got %d", len(invertedLines))
+	}
+	line0 := invertedLines[0]
+	if line0.Amount != -25000 {
+		t.Errorf("expected line 0 amount -25000, got %d", line0.Amount)
+	}
+	if line0.Action.Type != StatementLineActionTypeCreateExpense {
+		t.Errorf("expected line 0 action CREATE_EXPENSE, got %s", line0.Action.Type)
+	}
+
+	line1 := invertedLines[1]
+	if line1.Amount != 10000 {
+		t.Errorf("expected line 1 amount 10000, got %d", line1.Amount)
+	}
+	if line1.Action.Type != StatementLineActionTypeCreateIncome {
+		t.Errorf("expected line 1 action CREATE_INCOME, got %s", line1.Action.Type)
 	}
 }
 

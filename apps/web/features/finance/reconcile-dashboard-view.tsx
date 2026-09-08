@@ -56,7 +56,8 @@ export function ReconciliationDashboardView() {
   const shouldOpenImport = searchParams.get("action") === "import"
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(shouldOpenImport)
-  const [prevShouldOpenImport, setPrevShouldOpenImport] = useState(shouldOpenImport)
+  const [prevShouldOpenImport, setPrevShouldOpenImport] =
+    useState(shouldOpenImport)
   if (shouldOpenImport !== prevShouldOpenImport) {
     setPrevShouldOpenImport(shouldOpenImport)
     if (shouldOpenImport) {
@@ -319,20 +320,18 @@ export function ReconciliationDashboardView() {
             <AlertDialogDescription>
               Are you sure you want to discard this draft statement for{" "}
               <span className="font-bold text-foreground">
-                {accounts.find((a) => a.id === discardTarget?.accountId)?.name ||
-                  "Account"}
+                {accounts.find((a) => a.id === discardTarget?.accountId)
+                  ?.name || "Account"}
               </span>
               {discardTarget?.statementDate && (
                 <> ({discardTarget.statementDate})</>
               )}
-              ? All imported lines and reconciliation progress will be permanently
-              deleted. This action cannot be undone.
+              ? All imported lines and reconciliation progress will be
+              permanently deleted. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel
-              disabled={deleteStatementMutation.isPending}
-            >
+            <AlertDialogCancel disabled={deleteStatementMutation.isPending}>
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction

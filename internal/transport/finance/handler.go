@@ -2356,6 +2356,27 @@ func (h *Handler) CompleteStatement(ctx context.Context, req *financev1.Complete
 	return toProtoStatement(res), nil
 }
 
+func (h *Handler) InvertStatementSigns(ctx context.Context, req *financev1.InvertStatementSignsRequest) (*financev1.InvertStatementSignsResponse, error) {
+	if req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "id is required")
+	}
+
+	stmt, lines, err := h.Coordinator.InvertStatementSigns(ctx, finance.StatementID(req.Id))
+	if err != nil {
+		return nil, h.mapError(err)
+	}
+
+	protoLines := make([]*financev1.StatementLine, len(lines))
+	for i, l := range lines {
+		protoLines[i] = toProtoStatementLine(l)
+	}
+
+	return &financev1.InvertStatementSignsResponse{
+		Statement: toProtoStatement(stmt),
+		Lines:     protoLines,
+	}, nil
+}
+
 // Mappers
 
 func toProtoStatement(s *finance.Statement) *financev1.Statement {

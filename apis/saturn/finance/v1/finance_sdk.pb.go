@@ -1146,3 +1146,17 @@ func (c *Client) CompleteStatement(ctx context.Context, req *CompleteStatementRe
 	}
 	return &resp, nil
 }
+
+// InvertStatementSigns executes POST /api/v1/finance/statements/{id}:invert-signs.
+func (c *Client) InvertStatementSigns(ctx context.Context, req *InvertStatementSignsRequest) (*InvertStatementSignsResponse, error) {
+	var resp InvertStatementSignsResponse
+	path := fmt.Sprintf("/api/v1/finance/statements/%s:invert-signs", req.GetId())
+	var query []string
+	if len(query) > 0 {
+		path += "?" + strings.Join(query, "&")
+	}
+	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
