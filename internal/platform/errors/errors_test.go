@@ -392,3 +392,29 @@ func TestMatch_EdgeCases(t *testing.T) {
 	}
 }
 
+func TestNew_And_As(t *testing.T) {
+	err := platErr.New("custom simple error")
+	if err == nil || err.Error() != "custom simple error" {
+		t.Errorf("unexpected New error: %v", err)
+	}
+
+	var target *platErr.Error
+	if !platErr.As(err, &target) {
+		t.Fatal("expected As to find *platErr.Error")
+	}
+	if target.Error() != "custom simple error" {
+		t.Errorf("unexpected target error: %v", target)
+	}
+
+	// Test bidirectional Is:
+	kindErr := platErr.E(platErr.Invalid, "invalid payload")
+	if !platErr.Is(kindErr, platErr.Invalid) {
+		t.Error("expected Is(err, Kind) to be true")
+	}
+	if !platErr.Is(platErr.Invalid, kindErr) {
+		t.Error("expected Is(Kind, err) to be true")
+	}
+	if !platErr.Is(kindErr, kindErr) {
+		t.Error("expected Is(err, targetErr) to be true")
+	}
+}

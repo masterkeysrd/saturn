@@ -2,7 +2,6 @@ package interceptors_test
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -10,27 +9,27 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	platformerrors "github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/transport/grpc/interceptors"
 )
 
 func TestKindToGRPCCode(t *testing.T) {
 	tests := []struct {
-		kind platformerrors.Kind
+		kind errors.Kind
 		want codes.Code
 	}{
-		{platformerrors.Invalid, codes.InvalidArgument},
-		{platformerrors.Permission, codes.PermissionDenied},
-		{platformerrors.Unauthenticated, codes.Unauthenticated},
-		{platformerrors.NotExist, codes.NotFound},
-		{platformerrors.Exist, codes.AlreadyExists},
-		{platformerrors.Conflict, codes.Aborted},
-		{platformerrors.Precondition, codes.FailedPrecondition},
-		{platformerrors.ResourceExhausted, codes.ResourceExhausted},
-		{platformerrors.Internal, codes.Internal},
-		{platformerrors.Unavailable, codes.Unavailable},
-		{platformerrors.Other, codes.Unknown},
-		{platformerrors.Kind(99), codes.Unknown},
+		{errors.Invalid, codes.InvalidArgument},
+		{errors.Permission, codes.PermissionDenied},
+		{errors.Unauthenticated, codes.Unauthenticated},
+		{errors.NotExist, codes.NotFound},
+		{errors.Exist, codes.AlreadyExists},
+		{errors.Conflict, codes.Aborted},
+		{errors.Precondition, codes.FailedPrecondition},
+		{errors.ResourceExhausted, codes.ResourceExhausted},
+		{errors.Internal, codes.Internal},
+		{errors.Unavailable, codes.Unavailable},
+		{errors.Other, codes.Unknown},
+		{errors.Kind(99), codes.Unknown},
 	}
 
 	for _, tt := range tests {
@@ -71,12 +70,12 @@ func TestToStatus_And_ToGRPC(t *testing.T) {
 	})
 
 	t.Run("platform error with details and metadata", func(t *testing.T) {
-		err := platformerrors.E(
-			platformerrors.Op("finance.InvertStatementSigns"),
-			platformerrors.Precondition,
-			platformerrors.Code("STATEMENT_COMPLETED"),
-			platformerrors.Meta{"statement_id": "stmt_123", "account_id": "acc_456"},
-			platformerrors.FieldViolation{Field: "status", Description: "cannot modify completed"},
+		err := errors.E(
+			errors.Op("finance.InvertStatementSigns"),
+			errors.Precondition,
+			errors.Code("STATEMENT_COMPLETED"),
+			errors.Meta{"statement_id": "stmt_123", "account_id": "acc_456"},
+			errors.FieldViolation{Field: "status", Description: "cannot modify completed"},
 			"cannot invert completed statement",
 		)
 
@@ -124,11 +123,11 @@ func TestToStatus_And_ToGRPC(t *testing.T) {
 	})
 
 	t.Run("platform error with FieldViolations slice", func(t *testing.T) {
-		violations := platformerrors.FieldViolations{
+		violations := errors.FieldViolations{
 			{Field: "amount", Description: "positive required"},
 			{Field: "currency", Description: "3 letters required"},
 		}
-		err := platformerrors.E(platformerrors.Invalid, violations, "validation failed")
+		err := errors.E(errors.Invalid, violations, "validation failed")
 
 		st := interceptors.ToStatus(err)
 		if st.Code() != codes.InvalidArgument {
@@ -147,7 +146,7 @@ func TestToStatus_And_ToGRPC(t *testing.T) {
 
 	t.Run("internal error redacts message", func(t *testing.T) {
 		dbErr := errors.New("pq: password authentication failed for user 'saturn'")
-		err := platformerrors.E(platformerrors.Op("store.Save"), platformerrors.Internal, dbErr)
+		err := errors.E(errors.Op("store.Save"), errors.Internal, dbErr)
 
 		st := interceptors.ToStatus(err)
 		if st.Code() != codes.Internal {
@@ -175,7 +174,7 @@ func TestInterceptors(t *testing.T) {
 
 	t.Run("unary error conversion", func(t *testing.T) {
 		handler := func(ctx context.Context, req any) (any, error) {
-			return nil, platformerrors.E(platformerrors.NotExist, "item not found")
+			return nil, errors.E(errors.NotExist, "item not found")
 		}
 		_, err := unaryInterceptor(context.Background(), nil, &grpc.UnaryServerInfo{FullMethod: "/test.Service/Method"}, handler)
 		s, ok := status.FromError(err)
@@ -196,7 +195,7 @@ func TestInterceptors(t *testing.T) {
 
 	t.Run("stream error conversion", func(t *testing.T) {
 		handler := func(srv any, stream grpc.ServerStream) error {
-			return platformerrors.E(platformerrors.Permission, "forbidden stream")
+			return errors.E(errors.Permission, "forbidden stream")
 		}
 		err := streamInterceptor(nil, nil, &grpc.StreamServerInfo{FullMethod: "/test.Service/Stream"}, handler)
 		s, ok := status.FromError(err)

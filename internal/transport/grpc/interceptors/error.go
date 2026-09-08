@@ -12,33 +12,33 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/protoadapt"
 
-	platformerrors "github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 )
 
 // KindToGRPCCode converts a platform Kind to a standard gRPC status code.
-func KindToGRPCCode(kind platformerrors.Kind) codes.Code {
+func KindToGRPCCode(kind errors.Kind) codes.Code {
 	switch kind {
-	case platformerrors.Invalid:
+	case errors.Invalid:
 		return codes.InvalidArgument
-	case platformerrors.Permission:
+	case errors.Permission:
 		return codes.PermissionDenied
-	case platformerrors.Unauthenticated:
+	case errors.Unauthenticated:
 		return codes.Unauthenticated
-	case platformerrors.NotExist:
+	case errors.NotExist:
 		return codes.NotFound
-	case platformerrors.Exist:
+	case errors.Exist:
 		return codes.AlreadyExists
-	case platformerrors.Conflict:
+	case errors.Conflict:
 		return codes.Aborted
-	case platformerrors.Precondition:
+	case errors.Precondition:
 		return codes.FailedPrecondition
-	case platformerrors.ResourceExhausted:
+	case errors.ResourceExhausted:
 		return codes.ResourceExhausted
-	case platformerrors.Internal:
+	case errors.Internal:
 		return codes.Internal
-	case platformerrors.Unavailable:
+	case errors.Unavailable:
 		return codes.Unavailable
-	case platformerrors.Other:
+	case errors.Other:
 		return codes.Unknown
 	default:
 		return codes.Unknown
@@ -55,7 +55,7 @@ func ToStatus(err error) *status.Status {
 	// Check if err wraps or is a platform Error
 	hasPlatErr := false
 	for cur := err; cur != nil; {
-		if _, ok := cur.(*platformerrors.Error); ok {
+		if _, ok := cur.(*errors.Error); ok {
 			hasPlatErr = true
 			break
 		}
@@ -75,9 +75,9 @@ func ToStatus(err error) *status.Status {
 		return status.New(codes.Unknown, err.Error())
 	}
 
-	kind := platformerrors.KindOf(err)
+	kind := errors.KindOf(err)
 	code := KindToGRPCCode(kind)
-	msg := platformerrors.UserMessage(err)
+	msg := errors.UserMessage(err)
 	if msg == "" {
 		msg = "an error occurred"
 	}
@@ -87,8 +87,8 @@ func ToStatus(err error) *status.Status {
 	var protoDetails []protoadapt.MessageV1
 
 	// 1. ErrorInfo (stable machine-readable code and domain metadata)
-	errorCode := platformerrors.CodeOf(err)
-	meta := platformerrors.MetaOf(err)
+	errorCode := errors.CodeOf(err)
+	meta := errors.MetaOf(err)
 	if errorCode != "" || len(meta) > 0 {
 		metadata := make(map[string]string)
 		for k, v := range meta {
@@ -102,16 +102,16 @@ func ToStatus(err error) *status.Status {
 	}
 
 	// 2. BadRequest (field violations)
-	details := platformerrors.DetailsOf(err)
+	details := errors.DetailsOf(err)
 	var fieldViolations []*errdetails.BadRequest_FieldViolation
 	for _, d := range details {
 		switch v := d.(type) {
-		case platformerrors.FieldViolation:
+		case errors.FieldViolation:
 			fieldViolations = append(fieldViolations, &errdetails.BadRequest_FieldViolation{
 				Field:       v.Field,
 				Description: v.Description,
 			})
-		case platformerrors.FieldViolations:
+		case errors.FieldViolations:
 			for _, fv := range v {
 				fieldViolations = append(fieldViolations, &errdetails.BadRequest_FieldViolation{
 					Field:       fv.Field,
@@ -156,8 +156,8 @@ func ErrorUnaryInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		resp, err := handler(ctx, req)
 		if err != nil {
-			kind := platformerrors.KindOf(err)
-			if kind == platformerrors.Internal || kind == platformerrors.Other {
+			kind := errors.KindOf(err)
+			if kind == errors.Internal || kind == errors.Other {
 				slog.Error("internal error in gRPC unary call",
 					"method", info.FullMethod,
 					"op_trace", err.Error(),
@@ -175,8 +175,8 @@ func ErrorStreamInterceptor() grpc.StreamServerInterceptor {
 	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		err := handler(srv, ss)
 		if err != nil {
-			kind := platformerrors.KindOf(err)
-			if kind == platformerrors.Internal || kind == platformerrors.Other {
+			kind := errors.KindOf(err)
+			if kind == errors.Internal || kind == errors.Other {
 				slog.Error("internal error in gRPC stream call",
 					"method", info.FullMethod,
 					"op_trace", err.Error(),

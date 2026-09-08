@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	platformerrors "github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 )
 
 // RecoveryMiddleware catches and recovers from runtime panics in downstream HTTP handlers,
@@ -21,7 +21,7 @@ func RecoveryMiddleware(next http.Handler) http.Handler {
 					"stack", string(debug.Stack()),
 					"remote", r.RemoteAddr,
 				)
-				WriteHTTP(w, platformerrors.E(platformerrors.Internal, "panic recovered"))
+				WriteHTTP(w, errors.E(errors.Internal, "panic recovered"))
 			}
 		}()
 		next.ServeHTTP(w, r)

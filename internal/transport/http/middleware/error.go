@@ -7,29 +7,29 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	platformerrors "github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 )
 
 // KindToHTTPStatus converts a platform Kind to an HTTP status code.
-func KindToHTTPStatus(kind platformerrors.Kind) int {
+func KindToHTTPStatus(kind errors.Kind) int {
 	switch kind {
-	case platformerrors.Invalid:
+	case errors.Invalid:
 		return http.StatusBadRequest // 400
-	case platformerrors.Permission:
+	case errors.Permission:
 		return http.StatusForbidden // 403
-	case platformerrors.Unauthenticated:
+	case errors.Unauthenticated:
 		return http.StatusUnauthorized // 401
-	case platformerrors.NotExist:
+	case errors.NotExist:
 		return http.StatusNotFound // 404
-	case platformerrors.Exist, platformerrors.Conflict:
+	case errors.Exist, errors.Conflict:
 		return http.StatusConflict // 409
-	case platformerrors.Precondition:
+	case errors.Precondition:
 		return http.StatusPreconditionFailed // 412
-	case platformerrors.ResourceExhausted:
+	case errors.ResourceExhausted:
 		return http.StatusTooManyRequests // 429
-	case platformerrors.Internal, platformerrors.Other:
+	case errors.Internal, errors.Other:
 		return http.StatusInternalServerError // 500
-	case platformerrors.Unavailable:
+	case errors.Unavailable:
 		return http.StatusServiceUnavailable // 503
 	default:
 		return http.StatusInternalServerError // 500
@@ -97,9 +97,9 @@ func ToHTTP(err error) (int, HTTPErrorResponse) {
 		return http.StatusOK, HTTPErrorResponse{}
 	}
 
-	kind := platformerrors.KindOf(err)
+	kind := errors.KindOf(err)
 	statusCode := KindToHTTPStatus(kind)
-	message := platformerrors.UserMessage(err)
+	message := errors.UserMessage(err)
 	if message == "" {
 		message = "an error occurred"
 	}
@@ -113,8 +113,8 @@ func ToHTTP(err error) (int, HTTPErrorResponse) {
 	}
 
 	// Build details matching Google JSON format
-	code := platformerrors.CodeOf(err)
-	meta := platformerrors.MetaOf(err)
+	code := errors.CodeOf(err)
+	meta := errors.MetaOf(err)
 	if code != "" || len(meta) > 0 {
 		metadata := make(map[string]string)
 		for k, v := range meta {
@@ -128,16 +128,16 @@ func ToHTTP(err error) (int, HTTPErrorResponse) {
 		})
 	}
 
-	details := platformerrors.DetailsOf(err)
+	details := errors.DetailsOf(err)
 	var violations []map[string]string
 	for _, d := range details {
 		switch v := d.(type) {
-		case platformerrors.FieldViolation:
+		case errors.FieldViolation:
 			violations = append(violations, map[string]string{
 				"field":       v.Field,
 				"description": v.Description,
 			})
-		case platformerrors.FieldViolations:
+		case errors.FieldViolations:
 			for _, fv := range v {
 				violations = append(violations, map[string]string{
 					"field":       fv.Field,

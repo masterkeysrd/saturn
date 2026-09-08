@@ -8,27 +8,27 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	platformerrors "github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/transport/http/middleware"
 )
 
 func TestKindToHTTPStatus(t *testing.T) {
 	tests := []struct {
-		kind platformerrors.Kind
+		kind errors.Kind
 		want int
 	}{
-		{platformerrors.Invalid, http.StatusBadRequest},
-		{platformerrors.Permission, http.StatusForbidden},
-		{platformerrors.Unauthenticated, http.StatusUnauthorized},
-		{platformerrors.NotExist, http.StatusNotFound},
-		{platformerrors.Exist, http.StatusConflict},
-		{platformerrors.Conflict, http.StatusConflict},
-		{platformerrors.Precondition, http.StatusPreconditionFailed},
-		{platformerrors.ResourceExhausted, http.StatusTooManyRequests},
-		{platformerrors.Internal, http.StatusInternalServerError},
-		{platformerrors.Unavailable, http.StatusServiceUnavailable},
-		{platformerrors.Other, http.StatusInternalServerError},
-		{platformerrors.Kind(99), http.StatusInternalServerError},
+		{errors.Invalid, http.StatusBadRequest},
+		{errors.Permission, http.StatusForbidden},
+		{errors.Unauthenticated, http.StatusUnauthorized},
+		{errors.NotExist, http.StatusNotFound},
+		{errors.Exist, http.StatusConflict},
+		{errors.Conflict, http.StatusConflict},
+		{errors.Precondition, http.StatusPreconditionFailed},
+		{errors.ResourceExhausted, http.StatusTooManyRequests},
+		{errors.Internal, http.StatusInternalServerError},
+		{errors.Unavailable, http.StatusServiceUnavailable},
+		{errors.Other, http.StatusInternalServerError},
+		{errors.Kind(99), http.StatusInternalServerError},
 	}
 
 	for _, tt := range tests {
@@ -85,11 +85,11 @@ func TestToHTTP_And_WriteHTTP(t *testing.T) {
 	})
 
 	t.Run("domain error with details and violations", func(t *testing.T) {
-		err := platformerrors.E(
-			platformerrors.Precondition,
-			platformerrors.Code("INSUFFICIENT_FUNDS"),
-			platformerrors.Meta{"account_id": "acc_1"},
-			platformerrors.FieldViolation{Field: "amount", Description: "exceeds balance"},
+		err := errors.E(
+			errors.Precondition,
+			errors.Code("INSUFFICIENT_FUNDS"),
+			errors.Meta{"account_id": "acc_1"},
+			errors.FieldViolation{Field: "amount", Description: "exceeds balance"},
 			"insufficient funds in account",
 		)
 
@@ -124,7 +124,7 @@ func TestToHTTP_And_WriteHTTP(t *testing.T) {
 	})
 
 	t.Run("internal error redacts message", func(t *testing.T) {
-		err := platformerrors.E(platformerrors.Internal, "fatal disk failure")
+		err := errors.E(errors.Internal, "fatal disk failure")
 		statusCode, resp := middleware.ToHTTP(err)
 		if statusCode != http.StatusInternalServerError {
 			t.Errorf("expected 500, got %d", statusCode)
@@ -135,11 +135,11 @@ func TestToHTTP_And_WriteHTTP(t *testing.T) {
 	})
 
 	t.Run("supports FieldViolations collection", func(t *testing.T) {
-		violations := platformerrors.FieldViolations{
+		violations := errors.FieldViolations{
 			{Field: "username", Description: "required"},
 			{Field: "email", Description: "invalid format"},
 		}
-		err := platformerrors.E(platformerrors.Invalid, violations, "validation failed")
+		err := errors.E(errors.Invalid, violations, "validation failed")
 		statusCode, resp := middleware.ToHTTP(err)
 		if statusCode != http.StatusBadRequest {
 			t.Errorf("expected 400, got %d", statusCode)

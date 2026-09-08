@@ -257,9 +257,34 @@ func DetailsOf(err error) []any {
 	return details
 }
 
-// Is reports whether err or any error in its chain is of the specified Kind.
-func Is(kind Kind, err error) bool {
-	return KindOf(err) == kind
+// New returns an error that formats as the given text.
+func New(text string) error {
+	return E(text)
+}
+
+// As finds the first error in err's tree that matches target, and if one is found, sets
+// target to that error value and returns true.
+func As(err error, target any) bool {
+	return errors.As(err, target)
+}
+
+// Is reports whether err matches target (either a Kind or an error).
+// It supports standard (err, target) as well as (kind, err) invocation.
+func Is(arg1 any, arg2 any) bool {
+	if k, ok := arg1.(Kind); ok {
+		if err, ok := arg2.(error); ok {
+			return KindOf(err) == k
+		}
+	}
+	if err, ok := arg1.(error); ok {
+		if k, ok := arg2.(Kind); ok {
+			return KindOf(err) == k
+		}
+		if target, ok := arg2.(error); ok {
+			return errors.Is(err, target)
+		}
+	}
+	return false
 }
 
 // UserMessage extracts a user-facing error message from err.
