@@ -17,7 +17,7 @@ COPY apps/web/ ./
 RUN npm run build
 
 # --- Stage 2: Go Backend Builder ---
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS go-builder
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS go-builder
 
 RUN apk add --no-cache git
 
