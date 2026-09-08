@@ -370,6 +370,6 @@ type StatementStore interface {
 	// UpdateLineDraft updates the draft choices (status, action, and matched_transaction_id) of a statement line.
 	UpdateLineDraft(ctx context.Context, line *StatementLine) error
 
-	// InvertSigns negates starting/ending balances of the statement and inverts all line amounts in a single transaction.
-	InvertSigns(ctx context.Context, spaceID SpaceID, id StatementID) (*Statement, []*StatementLine, error)
+	// UpdateStatementWithLines updates a statement and all its lines in a single atomic database transaction.
+	UpdateStatementWithLines(ctx context.Context, statement *Statement, lines []*StatementLine) error
 }

@@ -2875,13 +2875,28 @@ func (s *Service) InvertStatementSigns(ctx context.Context, spaceID SpaceID, id 
 		return nil, nil, err
 	}
 
-	stmt, lines, err := s.deps.StatementStore.InvertSigns(ctx, spaceID, id)
+	stmt, err := s.deps.StatementStore.GetByID(ctx, spaceID, id)
+	if err != nil {
+		return nil, nil, err
+	}
+	lines, err := s.deps.StatementStore.ListLines(ctx, id)
 	if err != nil {
 		return nil, nil, err
 	}
 
+	if err := stmt.InvertSigns(); err != nil {
+		return nil, nil, err
+	}
+	for _, line := range lines {
+		line.InvertSign()
+	}
+
 	// Re-resolve dynamic suggestions on the inverted lines
 	_ = s.resolveSuggestions(ctx, spaceID, stmt.AccountID, lines)
+
+	if err := s.deps.StatementStore.UpdateStatementWithLines(ctx, stmt, lines); err != nil {
+		return nil, nil, err
+	}
 
 	return stmt, lines, nil
 }

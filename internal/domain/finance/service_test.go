@@ -889,31 +889,28 @@ func (m *mockStatementStore) UpdateLineDraft(ctx context.Context, line *Statemen
 	return nil
 }
 
-func (m *mockStatementStore) InvertSigns(ctx context.Context, spaceID SpaceID, id StatementID) (*Statement, []*StatementLine, error) {
-	stmt, err := m.GetByID(ctx, spaceID, id)
-	if err != nil {
-		return nil, nil, err
+func (m *mockStatementStore) UpdateStatementWithLines(ctx context.Context, stmt *Statement, lines []*StatementLine) error {
+	existing, ok := m.statements[stmt.ID]
+	if !ok {
+		return ErrStatementNotFound
 	}
-	if stmt.Status == StatementStatusCompleted {
-		return nil, nil, errors.New("cannot invert signs on a completed statement")
-	}
+	existing.StatementStartingBalance = stmt.StatementStartingBalance
+	existing.StatementEndingBalance = stmt.StatementEndingBalance
+	existing.Version++
+	stmt.Version = existing.Version
 
-	stmt.StatementStartingBalance = -stmt.StatementStartingBalance
-	stmt.StatementEndingBalance = -stmt.StatementEndingBalance
-	stmt.Version++
-
-	lines := m.lines[id]
 	for _, l := range lines {
-		l.Amount = -l.Amount
-		l.Version++
-		if l.Action.Type == StatementLineActionTypeCreateIncome {
-			l.Action.Type = StatementLineActionTypeCreateExpense
-		} else if l.Action.Type == StatementLineActionTypeCreateExpense {
-			l.Action.Type = StatementLineActionTypeCreateIncome
+		for _, exLine := range m.lines[stmt.ID] {
+			if exLine.ID == l.ID {
+				exLine.Amount = l.Amount
+				exLine.Action = l.Action
+				exLine.Version++
+				l.Version = exLine.Version
+				break
+			}
 		}
 	}
-
-	return stmt, lines, nil
+	return nil
 }
 
 // --- Test Cases ---

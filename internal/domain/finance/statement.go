@@ -209,6 +209,20 @@ func (s *Statement) Validate() error {
 	return nil
 }
 
+// ErrCannotInvertCompletedStatement is returned when attempting to invert signs on a completed statement.
+var ErrCannotInvertCompletedStatement = errors.New("cannot invert signs on a completed statement reconciliation")
+
+// InvertSigns negates starting and ending balances and enforces that the statement is not completed.
+func (s *Statement) InvertSigns() error {
+	if s.Status == StatementStatusCompleted {
+		return ErrCannotInvertCompletedStatement
+	}
+	s.StatementStartingBalance = -s.StatementStartingBalance
+	s.StatementEndingBalance = -s.StatementEndingBalance
+	s.UpdateTime = time.Now().UTC()
+	return nil
+}
+
 // DecodeLines parses raw statement content based on the configured format (e.g. CSV)
 // and returns the constructed and validated domain StatementLine entities.
 func (s *Statement) DecodeLines() ([]*StatementLine, error) {
@@ -447,6 +461,17 @@ func (sl *StatementLine) Validate() error {
 		return fmt.Errorf("invalid line status: %s", sl.Status)
 	}
 	return nil
+}
+
+// InvertSign negates the line amount and flips draft action type between CREATE_INCOME and CREATE_EXPENSE.
+func (sl *StatementLine) InvertSign() {
+	sl.Amount = -sl.Amount
+	switch sl.Action.Type {
+	case StatementLineActionTypeCreateIncome:
+		sl.Action.Type = StatementLineActionTypeCreateExpense
+	case StatementLineActionTypeCreateExpense:
+		sl.Action.Type = StatementLineActionTypeCreateIncome
+	}
 }
 
 // StatementLinePatchSchema defines patchable fields for a StatementLine entity.

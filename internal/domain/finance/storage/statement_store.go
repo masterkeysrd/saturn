@@ -423,74 +423,67 @@ func (s *StatementStore) UpdateLineDraft(ctx context.Context, line *finance.Stat
 	return nil
 }
 
-// InvertSigns negates starting/ending balances of the statement and inverts all line amounts in a single transaction.
-func (s *StatementStore) InvertSigns(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID) (*finance.Statement, []*finance.StatementLine, error) {
+// UpdateStatementWithLines updates a statement and all its lines in a single atomic database transaction.
+func (s *StatementStore) UpdateStatementWithLines(ctx context.Context, stmt *finance.Statement, lines []*finance.StatementLine) error {
 	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 	defer tx.Rollback()
 
-	// 1. Get statement and verify existence
-	stmtQuery := `SELECT * FROM finance.statement WHERE space_id = $1 AND id = $2 FOR UPDATE`
-	var stmtRow statementDB
-	if err := tx.GetContext(ctx, &stmtRow, stmtQuery, string(spaceID), string(id)); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil, finance.ErrStatementNotFound
-		}
-		return nil, nil, err
-	}
-	if stmtRow.Status == string(finance.StatementStatusCompleted) {
-		return nil, nil, errors.New("cannot invert signs on a completed statement reconciliation")
-	}
-
 	now := time.Now().UTC()
-	// 2. Invert statement starting and ending balances
 	updateStmtQuery := `
 		UPDATE finance.statement
-		SET statement_starting_balance = -statement_starting_balance,
-		    statement_ending_balance = -statement_ending_balance,
+		SET statement_starting_balance = $1,
+		    statement_ending_balance = $2,
 		    version = version + 1,
-		    update_time = $1
-		WHERE space_id = $2 AND id = $3
-		RETURNING *`
-	if err := tx.GetContext(ctx, &stmtRow, updateStmtQuery, now, string(spaceID), string(id)); err != nil {
-		return nil, nil, fmt.Errorf("update statement balances: %w", err)
+		    update_time = $3
+		WHERE space_id = $4 AND id = $5`
+	res, err := tx.ExecContext(ctx, updateStmtQuery, stmt.StatementStartingBalance, stmt.StatementEndingBalance, now, string(stmt.SpaceID), string(stmt.ID))
+	if err != nil {
+		return fmt.Errorf("update statement: %w", err)
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return finance.ErrStatementNotFound
 	}
 
-	// 3. Invert all statement lines and flip draft action type if needed
-	updateLinesQuery := `
+	updateLineQuery := `
 		UPDATE finance.statement_line
-		SET amount = -amount,
-		    version = version + 1,
-		    action = CASE
-		        WHEN action->>'type' = 'CREATE_INCOME' THEN jsonb_set(action, '{type}', '"CREATE_EXPENSE"')
-		        WHEN action->>'type' = 'CREATE_EXPENSE' THEN jsonb_set(action, '{type}', '"CREATE_INCOME"')
-		        ELSE action
-		    END
-		WHERE statement_id = $1`
-	if _, err := tx.ExecContext(ctx, updateLinesQuery, string(id)); err != nil {
-		return nil, nil, fmt.Errorf("update statement lines: %w", err)
-	}
+		SET amount = $1,
+		    action = $2,
+		    version = version + 1
+		WHERE id = $3 AND statement_id = $4`
+	for _, l := range lines {
+		var actionJSON *string
+		if l.Action.Type != "" {
+			b, err := json.Marshal(l.Action)
+			if err != nil {
+				return fmt.Errorf("marshal line action: %w", err)
+			}
+			str := string(b)
+			actionJSON = &str
+		}
 
-	// 4. Fetch updated lines in row_index order
-	linesQuery := `SELECT * FROM finance.statement_line WHERE statement_id = $1 ORDER BY row_index ASC`
-	var lineRows []statementLineDB
-	if err := tx.SelectContext(ctx, &lineRows, linesQuery, string(id)); err != nil {
-		return nil, nil, fmt.Errorf("fetch inverted lines: %w", err)
+		if _, err := tx.ExecContext(ctx, updateLineQuery, l.Amount, actionJSON, string(l.ID), string(stmt.ID)); err != nil {
+			return fmt.Errorf("update statement line %s: %w", l.ID, err)
+		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		return nil, nil, err
+		return err
 	}
 
-	domainStmt := stmtRow.toDomain()
-	domainLines := make([]*finance.StatementLine, len(lineRows))
-	for i := range lineRows {
-		domainLines[i] = lineRows[i].toDomain()
+	stmt.Version++
+	stmt.UpdateTime = now
+	for _, l := range lines {
+		l.Version++
 	}
 
-	return domainStmt, domainLines, nil
+	return nil
 }
 
 // Helpers

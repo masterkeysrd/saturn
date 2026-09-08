@@ -145,3 +145,95 @@ func TestStatementLine_NewTransfer(t *testing.T) {
 		t.Error("expected OutflowMetadata to be nil for inflow transfer")
 	}
 }
+
+func TestStatement_InvertSigns(t *testing.T) {
+	stmt := &Statement{
+		Status:                   StatementStatusInProgress,
+		StatementStartingBalance: 10000,
+		StatementEndingBalance:   25000,
+	}
+
+	if err := stmt.InvertSigns(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if stmt.StatementStartingBalance != -10000 {
+		t.Errorf("expected starting balance -10000, got %d", stmt.StatementStartingBalance)
+	}
+	if stmt.StatementEndingBalance != -25000 {
+		t.Errorf("expected ending balance -25000, got %d", stmt.StatementEndingBalance)
+	}
+
+	// Double inversion returns to original
+	if err := stmt.InvertSigns(); err != nil {
+		t.Fatalf("unexpected error on second invert: %v", err)
+	}
+	if stmt.StatementStartingBalance != 10000 {
+		t.Errorf("expected starting balance 10000, got %d", stmt.StatementStartingBalance)
+	}
+	if stmt.StatementEndingBalance != 25000 {
+		t.Errorf("expected ending balance 25000, got %d", stmt.StatementEndingBalance)
+	}
+
+	// Completed statement should reject inversion
+	stmt.Status = StatementStatusCompleted
+	if err := stmt.InvertSigns(); err == nil {
+		t.Error("expected error inverting completed statement, got nil")
+	}
+}
+
+func TestStatementLine_InvertSign(t *testing.T) {
+	tests := []struct {
+		name       string
+		amount     int64
+		actionType StatementLineActionType
+		wantAmount int64
+		wantAction StatementLineActionType
+	}{
+		{
+			name:       "income flipped to expense",
+			amount:     5000,
+			actionType: StatementLineActionTypeCreateIncome,
+			wantAmount: -5000,
+			wantAction: StatementLineActionTypeCreateExpense,
+		},
+		{
+			name:       "expense flipped to income",
+			amount:     -8000,
+			actionType: StatementLineActionTypeCreateExpense,
+			wantAmount: 8000,
+			wantAction: StatementLineActionTypeCreateIncome,
+		},
+		{
+			name:       "match action preserved",
+			amount:     -3000,
+			actionType: StatementLineActionTypeMatch,
+			wantAmount: 3000,
+			wantAction: StatementLineActionTypeMatch,
+		},
+		{
+			name:       "pending action preserved",
+			amount:     1200,
+			actionType: StatementLineActionTypePending,
+			wantAmount: -1200,
+			wantAction: StatementLineActionTypePending,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			line := &StatementLine{
+				Amount: tt.amount,
+				Action: StatementLineAction{Type: tt.actionType},
+			}
+			line.InvertSign()
+			if line.Amount != tt.wantAmount {
+				t.Errorf("expected amount %d, got %d", tt.wantAmount, line.Amount)
+			}
+			if line.Action.Type != tt.wantAction {
+				t.Errorf("expected action %s, got %s", tt.wantAction, line.Action.Type)
+			}
+		})
+	}
+}
+
