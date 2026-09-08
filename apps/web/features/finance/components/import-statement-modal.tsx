@@ -44,6 +44,7 @@ import {
 } from "lucide-react"
 import { AccountSelect } from "./account-select"
 import { formatAmount } from "../utils"
+import { checkPdfEncryption, verifyPdfPassword } from "../utils/pdf-security"
 import { cn } from "@/lib/utils"
 
 export interface ImportStatementModalProps {
@@ -98,8 +99,7 @@ function parseCSVLineByLine(text: string, delimiter: string = ","): string[][] {
   return lines
 }
 
-async function fileToBase64(file: File): Promise<string> {
-  const buffer = await file.arrayBuffer()
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer)
   let binary = ""
   const len = bytes.byteLength
@@ -133,10 +133,15 @@ export function ImportStatementModal({
 
   // Smart PDF Ingestion state
   const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const [pdfArrayBuffer, setPdfArrayBuffer] = useState<ArrayBuffer | null>(null)
   const [pdfBase64, setPdfBase64] = useState<string>("")
   const [pdfPassword, setPdfPassword] = useState<string>("")
   const [pdfError, setPdfError] = useState<string | null>(null)
   const [needsPassword, setNeedsPassword] = useState<boolean>(false)
+  const [isCheckingPdf, setIsCheckingPdf] = useState<boolean>(false)
+  const [isValidatingPassword, setIsValidatingPassword] =
+    useState<boolean>(false)
+  const [isPasswordVerified, setIsPasswordVerified] = useState<boolean>(false)
   const [multiCurrencyResult, setMultiCurrencyResult] =
     useState<IngestStatementDocumentResponse | null>(null)
 
@@ -163,10 +168,14 @@ export function ImportStatementModal({
   const resetForm = () => {
     setStep(1)
     setPdfFile(null)
+    setPdfArrayBuffer(null)
     setPdfBase64("")
     setPdfPassword("")
     setPdfError(null)
     setNeedsPassword(false)
+    setIsCheckingPdf(false)
+    setIsValidatingPassword(false)
+    setIsPasswordVerified(false)
     setMultiCurrencyResult(null)
   }
 
@@ -192,12 +201,39 @@ export function ImportStatementModal({
       setCsvFile(null)
       setPdfError(null)
       setNeedsPassword(false)
+      setIsPasswordVerified(false)
       setMultiCurrencyResult(null)
-      fileToBase64(file).then((b64) => setPdfBase64(b64))
+      setIsCheckingPdf(true)
+
+      file
+        .arrayBuffer()
+        .then(async (buffer) => {
+          setPdfArrayBuffer(buffer)
+          const b64 = arrayBufferToBase64(buffer)
+          setPdfBase64(b64)
+
+          const check = await checkPdfEncryption(buffer)
+          setIsCheckingPdf(false)
+          if (check.isEncrypted) {
+            setNeedsPassword(true)
+          } else if (check.error) {
+            setPdfError(check.error)
+          }
+        })
+        .catch((err) => {
+          setIsCheckingPdf(false)
+          setPdfError(
+            err instanceof Error ? err.message : "Failed to read PDF file"
+          )
+        })
       return
     }
 
     setPdfFile(null)
+    setPdfArrayBuffer(null)
+    setIsCheckingPdf(false)
+    setIsValidatingPassword(false)
+    setIsPasswordVerified(false)
     setMultiCurrencyResult(null)
     setCsvFile(file)
     const reader = new FileReader()
@@ -313,6 +349,36 @@ export function ImportStatementModal({
     setEndingBalanceStr((endCents / 100).toFixed(2))
   }
 
+  const handleValidateAndUnlock = async (pwToVerify?: string) => {
+    const pw = pwToVerify !== undefined ? pwToVerify : pdfPassword
+    if (!pw) return
+    if (!pdfArrayBuffer) {
+      handleIngestPdf(pw)
+      return
+    }
+
+    setIsValidatingPassword(true)
+    setPdfError(null)
+
+    try {
+      const res = await verifyPdfPassword(pdfArrayBuffer, pw)
+      if (!res.valid) {
+        setPdfError(res.error || "Incorrect password. Please try again.")
+        setIsValidatingPassword(false)
+        return
+      }
+
+      setIsPasswordVerified(true)
+      setIsValidatingPassword(false)
+      await handleIngestPdf(pw)
+    } catch (err) {
+      setIsValidatingPassword(false)
+      setPdfError(
+        err instanceof Error ? err.message : "Failed to verify password"
+      )
+    }
+  }
+
   const handleIngestPdf = async (passwordOverride?: string) => {
     if (!pdfFile || !pdfBase64) return
     setPdfError(null)
@@ -329,6 +395,7 @@ export function ImportStatementModal({
 
       if (res.needsPassword) {
         setNeedsPassword(true)
+        setIsPasswordVerified(false)
         return
       }
 
@@ -588,9 +655,20 @@ export function ImportStatementModal({
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {(pdfFile.size / 1024).toFixed(1)} KB •{" "}
-                              <span className="font-semibold text-primary">
-                                Janus Statement Extraction
-                              </span>
+                              {isCheckingPdf ? (
+                                <span className="inline-flex items-center gap-1 font-semibold text-amber-500">
+                                  <Loader2 className="h-3 w-3 animate-spin" />{" "}
+                                  Checking encryption...
+                                </span>
+                              ) : needsPassword ? (
+                                <span className="font-semibold text-amber-500">
+                                  Password-Protected
+                                </span>
+                              ) : (
+                                <span className="font-semibold text-primary">
+                                  Janus Statement Extraction
+                                </span>
+                              )}
                             </p>
                           </div>
                         </div>
@@ -599,6 +677,13 @@ export function ImportStatementModal({
                           size="sm"
                           onClick={() => {
                             setPdfFile(null)
+                            setPdfArrayBuffer(null)
+                            setIsCheckingPdf(false)
+                            setIsValidatingPassword(false)
+                            setIsPasswordVerified(false)
+                            setNeedsPassword(false)
+                            setPdfPassword("")
+                            setPdfError(null)
                             fileInputRef.current?.click()
                           }}
                           className="h-8 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground"
@@ -610,9 +695,17 @@ export function ImportStatementModal({
 
                       {needsPassword && (
                         <div className="space-y-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-                          <div className="flex items-center gap-2 text-xs font-bold text-amber-500">
-                            <Lock className="h-4 w-4" />
-                            Password-Protected Statement
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-xs font-bold text-amber-500">
+                              <Lock className="h-4 w-4" />
+                              Password-Protected Statement
+                            </div>
+                            {isPasswordVerified && (
+                              <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-500">
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                Password Verified
+                              </span>
+                            )}
                           </div>
                           <p className="text-xs text-muted-foreground">
                             This statement PDF is encrypted. Enter the
@@ -623,22 +716,54 @@ export function ImportStatementModal({
                               type="password"
                               placeholder="PDF password"
                               value={pdfPassword}
-                              onChange={(e) => setPdfPassword(e.target.value)}
+                              onChange={(e) => {
+                                setPdfPassword(e.target.value)
+                                setIsPasswordVerified(false)
+                                if (pdfError) setPdfError(null)
+                              }}
+                              onKeyDown={(e) => {
+                                if (
+                                  e.key === "Enter" &&
+                                  pdfPassword &&
+                                  !isValidatingPassword &&
+                                  !ingestDocMutation.isPending
+                                ) {
+                                  e.preventDefault()
+                                  handleValidateAndUnlock()
+                                }
+                              }}
+                              disabled={
+                                isValidatingPassword ||
+                                ingestDocMutation.isPending
+                              }
                               className="h-9 rounded-xl bg-background/80 text-xs"
                             />
                             <Button
                               type="button"
                               size="sm"
                               disabled={
-                                ingestDocMutation.isPending || !pdfPassword
+                                isValidatingPassword ||
+                                ingestDocMutation.isPending ||
+                                !pdfPassword
                               }
-                              onClick={() => handleIngestPdf()}
+                              onClick={() => handleValidateAndUnlock()}
                               className="rounded-xl text-xs font-bold"
                             >
-                              {ingestDocMutation.isPending && (
+                              {isValidatingPassword ||
+                              ingestDocMutation.isPending ? (
                                 <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                              ) : isPasswordVerified ? (
+                                <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 text-emerald-400" />
+                              ) : (
+                                <Lock className="mr-1.5 h-3.5 w-3.5" />
                               )}
-                              Unlock
+                              {isValidatingPassword
+                                ? "Verifying..."
+                                : ingestDocMutation.isPending
+                                  ? "Extracting..."
+                                  : isPasswordVerified
+                                    ? "Verified"
+                                    : "Unlock"}
                             </Button>
                           </div>
                         </div>
@@ -651,7 +776,7 @@ export function ImportStatementModal({
                         </div>
                       )}
 
-                      {!needsPassword && (
+                      {!needsPassword && !isCheckingPdf && (
                         <div className="space-y-2 rounded-xl border border-border/40 bg-muted/20 p-3 text-xs text-muted-foreground">
                           <div className="flex items-center gap-1.5 font-bold text-foreground">
                             <Sparkles className="h-3.5 w-3.5 text-primary" />
@@ -1180,16 +1305,36 @@ export function ImportStatementModal({
                 </Button>
                 <Button
                   type="button"
-                  disabled={ingestDocMutation.isPending || !pdfBase64}
-                  onClick={() => handleIngestPdf()}
+                  disabled={
+                    ingestDocMutation.isPending ||
+                    isCheckingPdf ||
+                    isValidatingPassword ||
+                    !pdfBase64 ||
+                    (needsPassword && !isPasswordVerified && !pdfPassword)
+                  }
+                  onClick={() => {
+                    if (needsPassword && !isPasswordVerified) {
+                      handleValidateAndUnlock()
+                    } else {
+                      handleIngestPdf()
+                    }
+                  }}
                   className="h-10 rounded-xl bg-gradient-to-r from-primary to-accent px-6 text-xs font-bold text-white shadow-lg transition-all hover:scale-[1.01]"
                 >
-                  {ingestDocMutation.isPending ? (
+                  {ingestDocMutation.isPending ||
+                  isCheckingPdf ||
+                  isValidatingPassword ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
                     <Sparkles className="mr-2 h-4 w-4" />
                   )}
-                  Extract & Reconcile with Janus
+                  {isCheckingPdf
+                    ? "Checking Encryption..."
+                    : isValidatingPassword
+                      ? "Verifying Password..."
+                      : ingestDocMutation.isPending
+                        ? "Extracting with Janus..."
+                        : "Extract & Reconcile with Janus"}
                 </Button>
               </>
             ) : (

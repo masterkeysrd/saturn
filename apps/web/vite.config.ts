@@ -20,6 +20,10 @@ export default defineConfig({
             if (id.includes("recharts") || id.includes("d3")) {
               return "vendor-charts"
             }
+            // Group PDF processing
+            if (id.includes("pdfjs-dist")) {
+              return "vendor-pdf"
+            }
             // Group SVG icons (hundreds of icons take up a lot of chunk space)
             if (id.includes("lucide-react")) {
               return "vendor-icons"
