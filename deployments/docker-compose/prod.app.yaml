@@ -5,7 +5,7 @@ services:
   migrate:
     image: ${SATURN_IMAGE:-saturn:latest}
     restart: "no"
-    command: ["saturn", "migrate", "up"]
+    command: ["migrate", "up"]
     networks:
       - saturn-network
     environment:
