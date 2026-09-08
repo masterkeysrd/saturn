@@ -49,6 +49,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	spacestorage "github.com/masterkeysrd/saturn/internal/domain/space/storage"
 	"github.com/masterkeysrd/saturn/internal/platform/agent"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
 	"github.com/masterkeysrd/saturn/internal/platform/integration"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
 	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
@@ -57,8 +58,8 @@ import (
 	backupgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/backup"
 	financegrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/finance"
 	identitygrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/identity"
-	"github.com/masterkeysrd/saturn/internal/transport/grpc/interceptors"
 	integrationgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/integration"
+	"github.com/masterkeysrd/saturn/internal/transport/grpc/interceptors"
 	messagegrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/message"
 	schedulergrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/scheduler"
 	spacegrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/space"
@@ -84,7 +85,7 @@ func NewGRPCServer(cfg *Config) *GRPCServer {
 
 // Start initializes the gRPC server, registers the Identity service, and
 // begins listening on the configured Unix socket.
-func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
+func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) error {
 	if err := os.Remove(cfg.GRPC.Socket); err != nil && !os.IsNotExist(err) {
 		slog.Warn("failed to remove stale socket file", "path", cfg.GRPC.Socket, "err", err)
 	}
@@ -96,7 +97,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	}
 
 	// Wire IAM application
-	sqlxDB := sqlx.NewDb(db, "postgres")
+	sqlxDB := sqlx.NewDb(sqlDB, "postgres")
 	userStore := identitystorage.NewUserStore(sqlxDB)
 	credentialStore := identitystorage.NewCredentialStore(sqlxDB)
 	passwordHasher, err := password.NewArgon2id(password.DefaultParams())
@@ -116,8 +117,9 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	)
 
 	// Wire Space stores
-	spaceStore := spacestorage.NewSpaceStore(sqlxDB)
-	memberStore := spacestorage.NewMemberStore(sqlxDB)
+	dbClient := db.New(sqlxDB)
+	spaceStore := spacestorage.NewSpaceStore(dbClient)
+	memberStore := spacestorage.NewMemberStore(dbClient)
 
 	// Wire Space service
 	spaceService := space.NewService(space.Dependencies{

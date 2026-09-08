@@ -6,6 +6,7 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	_ "github.com/masterkeysrd/saturn/internal/platform/db/postgres"
 )
 
 // OpenDB opens a connection to the configured database and pings it.

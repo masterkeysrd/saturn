@@ -14,6 +14,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	spacestorage "github.com/masterkeysrd/saturn/internal/domain/space/storage"
 	"github.com/masterkeysrd/saturn/internal/platform/backup"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
 	"github.com/masterkeysrd/saturn/internal/platform/shutdown"
 	"github.com/masterkeysrd/saturn/migrations"
@@ -116,13 +117,13 @@ func Execute() error {
 			BindFlags(v, cmd.Flags())
 			cfg := LoadConfig(v)
 
-			db, err := OpenDB(cfg)
+			sqlDB, err := OpenDB(cfg)
 			if err != nil {
 				return err
 			}
-			defer func() { _ = db.Close() }()
+			defer func() { _ = sqlDB.Close() }()
 
-			sqlxDB := sqlx.NewDb(db, "postgres")
+			sqlxDB := sqlx.NewDb(sqlDB, "postgres")
 			userStore := identitystorage.NewUserStore(sqlxDB)
 			credentialStore := identitystorage.NewCredentialStore(sqlxDB)
 			passwordHasher, err := password.NewArgon2id(password.DefaultParams())
@@ -136,8 +137,9 @@ func Execute() error {
 				SessionStore:    sessionStore,
 				Hasher:          passwordHasher,
 			})
-			spaceStore := spacestorage.NewSpaceStore(sqlxDB)
-			memberStore := spacestorage.NewMemberStore(sqlxDB)
+			dbClient := db.New(sqlxDB)
+			spaceStore := spacestorage.NewSpaceStore(dbClient)
+			memberStore := spacestorage.NewMemberStore(dbClient)
 			spaceService := space.NewService(space.Dependencies{
 				SpaceStore:  spaceStore,
 				MemberStore: memberStore,
