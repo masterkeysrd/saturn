@@ -417,4 +417,15 @@ func TestNew_And_As(t *testing.T) {
 	if !platErr.Is(kindErr, kindErr) {
 		t.Error("expected Is(err, targetErr) to be true")
 	}
+
+	codeErr := platErr.E(platErr.Code("NOT_FOUND"), "item not found")
+	if !platErr.Is(codeErr, platErr.Code("NOT_FOUND")) {
+		t.Error("expected Is(err, Code) to be true")
+	}
+	if !platErr.Is(platErr.Code("NOT_FOUND"), codeErr) {
+		t.Error("expected Is(Code, err) to be true")
+	}
+	if platErr.Is(codeErr, platErr.Code("OTHER")) {
+		t.Error("expected Is(err, different Code) to be false")
+	}
 }

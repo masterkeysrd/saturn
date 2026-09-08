@@ -268,17 +268,25 @@ func As(err error, target any) bool {
 	return errors.As(err, target)
 }
 
-// Is reports whether err matches target (either a Kind or an error).
-// It supports standard (err, target) as well as (kind, err) invocation.
+// Is reports whether err matches target (either a Kind, a Code, or an error).
+// It supports standard (err, target) as well as (target, err) invocation.
 func Is(arg1 any, arg2 any) bool {
 	if k, ok := arg1.(Kind); ok {
 		if err, ok := arg2.(error); ok {
 			return KindOf(err) == k
 		}
 	}
+	if c, ok := arg1.(Code); ok {
+		if err, ok := arg2.(error); ok {
+			return CodeOf(err) == c
+		}
+	}
 	if err, ok := arg1.(error); ok {
 		if k, ok := arg2.(Kind); ok {
 			return KindOf(err) == k
+		}
+		if c, ok := arg2.(Code); ok {
+			return CodeOf(err) == c
 		}
 		if target, ok := arg2.(error); ok {
 			return errors.Is(err, target)
