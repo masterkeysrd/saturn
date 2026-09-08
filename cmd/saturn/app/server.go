@@ -23,7 +23,6 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/backup"
 	"github.com/masterkeysrd/saturn/internal/platform/eventbus"
 	"github.com/masterkeysrd/saturn/internal/platform/token"
-	transportauth "github.com/masterkeysrd/saturn/internal/transport/auth"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -54,16 +53,19 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/password"
 	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
 	"github.com/masterkeysrd/saturn/internal/platform/shutdown"
-	agentgrpc "github.com/masterkeysrd/saturn/internal/transport/agent"
-	backupgrpc "github.com/masterkeysrd/saturn/internal/transport/backup"
-	financegrpc "github.com/masterkeysrd/saturn/internal/transport/finance"
-	identitygrpc "github.com/masterkeysrd/saturn/internal/transport/identity"
-	integrationgrpc "github.com/masterkeysrd/saturn/internal/transport/integration"
-	messagegrpc "github.com/masterkeysrd/saturn/internal/transport/message"
-	schedulergrpc "github.com/masterkeysrd/saturn/internal/transport/scheduler"
-	spacegrpc "github.com/masterkeysrd/saturn/internal/transport/space"
-	"github.com/masterkeysrd/saturn/internal/transport/webhook"
-	"github.com/masterkeysrd/saturn/internal/transport/webhook/email"
+	agentgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/agent"
+	backupgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/backup"
+	financegrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/finance"
+	identitygrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/identity"
+	"github.com/masterkeysrd/saturn/internal/transport/grpc/interceptors"
+	integrationgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/integration"
+	messagegrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/message"
+	schedulergrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/scheduler"
+	spacegrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/space"
+	"github.com/masterkeysrd/saturn/internal/transport/http/gateway"
+	"github.com/masterkeysrd/saturn/internal/transport/http/middleware"
+	"github.com/masterkeysrd/saturn/internal/transport/http/webhook"
+	"github.com/masterkeysrd/saturn/internal/transport/http/webhook/email"
 )
 
 // GRPCServer manages the standalone gRPC server listening on a Unix socket.
@@ -170,19 +172,21 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, db *sql.DB) error {
 	spaceRules := api.CompileAllSpaceRules(global, modules)
 
 	// Wire auth interceptor with loaded rules
-	authInterceptor := transportauth.NewAuthInterceptor(tokenService, userStore, rules)
+	authInterceptor := interceptors.NewAuthInterceptor(tokenService, userStore, rules)
 
 	// Wire space interceptor
-	spaceInterceptor := transportauth.NewSpaceInterceptor(memberStore, spaceRules)
+	spaceInterceptor := interceptors.NewSpaceInterceptor(memberStore, spaceRules)
 
 	s.grpc = grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			transportauth.PanicUnaryInterceptor(),
+			interceptors.PanicUnaryInterceptor(),
+			interceptors.ErrorUnaryInterceptor(),
 			authInterceptor.UnaryServerInterceptor(),
 			spaceInterceptor.UnaryServerInterceptor(),
 		),
 		grpc.ChainStreamInterceptor(
-			transportauth.PanicStreamInterceptor(),
+			interceptors.PanicStreamInterceptor(),
+			interceptors.ErrorStreamInterceptor(),
 			authInterceptor.StreamServerInterceptor(),
 			spaceInterceptor.StreamServerInterceptor(),
 		),
@@ -425,7 +429,7 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 	s.grpcConn = conn
 	s.mux = runtime.NewServeMux(
 		runtime.WithIncomingHeaderMatcher(customHeaderMatcher),
-		runtime.WithForwardResponseOption(transportauth.CookieResponseForwarder(s.config.Gateway.CookieSecure)),
+		runtime.WithForwardResponseOption(gateway.CookieResponseForwarder(s.config.Gateway.CookieSecure)),
 	)
 
 	// TODO: Update to use RegisterHandler instead of this methods.
@@ -506,7 +510,7 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 		http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(indexContent))
 	}))
 
-	s.server = &http.Server{Addr: s.addr, Handler: handler}
+	s.server = &http.Server{Addr: s.addr, Handler: middleware.LoggingMiddleware(middleware.RecoveryMiddleware(handler))}
 	return nil
 }
 
