@@ -57,10 +57,22 @@ func (c *Client) UpdateSpace(ctx context.Context, req *UpdateSpaceRequest) (*Spa
 	var resp Space
 	path := fmt.Sprintf("/api/v1/spaces/%s", req.GetSpaceId())
 	var query []string
+	if req.Version != nil {
+		query = append(query, fmt.Sprintf("version=%d", req.GetVersion()))
+	}
+	if req.UpdateMask != nil {
+		for _, p := range req.GetUpdateMask().GetPaths() {
+			query = append(query, fmt.Sprintf("update_mask.paths=%s", p))
+		}
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
-	if err := c.base.Do(ctx, "PATCH", path, req, &resp); err != nil {
+	payload := req.GetSpace()
+	if payload == nil {
+		return nil, fmt.Errorf("space payload is required")
+	}
+	if err := c.base.Do(ctx, "PATCH", path, payload, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil

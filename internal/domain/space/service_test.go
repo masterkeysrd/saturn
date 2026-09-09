@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
@@ -22,7 +23,8 @@ func newMemorySpaceStore() *memorySpaceStore {
 func (m *memorySpaceStore) Create(ctx context.Context, s *space.Space) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.spaces[s.ID] = s
+	cp := *s
+	m.spaces[s.ID] = &cp
 	return nil
 }
 
@@ -33,16 +35,24 @@ func (m *memorySpaceStore) GetByID(ctx context.Context, id space.SpaceID) (*spac
 	if !ok {
 		return nil, errors.E(errors.NotExist, "space not found")
 	}
-	return s, nil
+	cp := *s
+	return &cp, nil
 }
 
 func (m *memorySpaceStore) Update(ctx context.Context, s *space.Space) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if _, ok := m.spaces[s.ID]; !ok {
-		return fmt.Errorf("space not found")
+	current, ok := m.spaces[s.ID]
+	if !ok {
+		return errors.E(errors.NotExist, space.NotFound, "space not found")
 	}
-	m.spaces[s.ID] = s
+	if current.Version != s.Version {
+		return errors.E(errors.Conflict, space.VersionMismatch, "space was modified concurrently")
+	}
+	cp := *s
+	cp.Version++
+	m.spaces[s.ID] = &cp
+	s.Version = cp.Version
 	return nil
 }
 
@@ -273,7 +283,7 @@ func TestUpdateSpace(t *testing.T) {
 
 	t.Run("non-owner returns OwnerOnly", func(t *testing.T) {
 		session := space.Session{SpaceID: created.ID, UserID: "non-owner"}
-		_, err := svc.UpdateSpace(ctx, session, &space.Space{Name: "Beta"})
+		_, err := svc.UpdateSpace(ctx, session, &space.Space{Name: "Beta"}, nil)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -290,12 +300,70 @@ func TestUpdateSpace(t *testing.T) {
 		updated, err := svc.UpdateSpace(ctx, session, &space.Space{
 			Name:        "Alpha Renamed",
 			Description: "New Description",
-		})
+		}, nil)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		if updated.Name != "AlphaRenamed" {
 			t.Errorf("expected name 'AlphaRenamed', got %s", updated.Name)
+		}
+		if updated.Version != 2 {
+			t.Errorf("expected version 2, got %d", updated.Version)
+		}
+	})
+
+	t.Run("partial update with mask", func(t *testing.T) {
+		session := space.Session{SpaceID: created.ID, UserID: "owner-1"}
+		updated, err := svc.UpdateSpace(ctx, session, &space.Space{
+			Name:        "Should Be Ignored",
+			Description: "Updated Description Only",
+		}, []string{"description"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		// Name should remain "AlphaRenamed" from previous update
+		if updated.Name != "AlphaRenamed" {
+			t.Errorf("expected name 'AlphaRenamed' preserved, got %s", updated.Name)
+		}
+		if updated.Description != "Updated Description Only" {
+			t.Errorf("expected description 'Updated Description Only', got %s", updated.Description)
+		}
+		if updated.Version != 3 {
+			t.Errorf("expected version 3, got %d", updated.Version)
+		}
+	})
+
+	t.Run("concurrent modification returns VersionMismatch", func(t *testing.T) {
+		session := space.Session{SpaceID: created.ID, UserID: "owner-1"}
+		// Pass an outdated version (1) when current is 3
+		_, err := svc.UpdateSpace(ctx, session, &space.Space{
+			Name:    "Alpha Stale",
+			Version: 1,
+		}, nil)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if kind := errors.KindOf(err); kind != errors.Conflict {
+			t.Errorf("expected kind Conflict, got %v", kind)
+		}
+		if code := errors.CodeOf(err); code != space.VersionMismatch {
+			t.Errorf("expected code VersionMismatch, got %v", code)
+		}
+	})
+
+	t.Run("non-existent space returns NotFound", func(t *testing.T) {
+		session := space.Session{SpaceID: "sp_does_not_exist", UserID: "owner-1"}
+		_, err := svc.UpdateSpace(ctx, session, &space.Space{
+			Name: "Non Existent",
+		}, nil)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if kind := errors.KindOf(err); kind != errors.NotExist {
+			t.Errorf("expected kind NotExist, got %v", kind)
+		}
+		if code := errors.CodeOf(err); code != space.NotFound {
+			t.Errorf("expected code NotFound, got %v", code)
 		}
 	})
 }
@@ -438,6 +506,102 @@ func TestMemberOperations(t *testing.T) {
 	t.Run("remove member success", func(t *testing.T) {
 		if err := svc.RemoveSpaceMember(ctx, ownerSession, "user-2"); err != nil {
 			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestSpace_ApplyPatch(t *testing.T) {
+	spaceID, err := space.NewSpaceID()
+	if err != nil {
+		t.Fatalf("failed generating space ID: %v", err)
+	}
+
+	createTime := time.Now().Add(-24 * time.Hour).UTC()
+	original := &space.Space{
+		ID:          spaceID,
+		Name:        "OriginalWorkspace",
+		Description: "Initial description",
+		OwnerID:     "usr_owner",
+		Version:     1,
+		CreateTime:  createTime,
+		UpdateTime:  createTime,
+	}
+
+	t.Run("successfully patches name and description with mask", func(t *testing.T) {
+		sp := *original
+		incoming := &space.Space{
+			Name:        "Patched Workspace",
+			Description: "Patched description",
+		}
+
+		mask := []string{"name", "description"}
+		err := sp.ApplyPatch(incoming, mask)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if sp.Name != "PatchedWorkspace" {
+			t.Errorf("expected Name 'PatchedWorkspace', got '%s'", sp.Name)
+		}
+		if sp.Description != "Patched description" {
+			t.Errorf("expected Description 'Patched description', got '%s'", sp.Description)
+		}
+		if !sp.UpdateTime.After(original.UpdateTime) {
+			t.Errorf("expected UpdateTime to be updated")
+		}
+	})
+
+	t.Run("patches only specified field in mask", func(t *testing.T) {
+		sp := *original
+		incoming := &space.Space{
+			Name:        "Ignored Name",
+			Description: "Updated Description Only",
+		}
+
+		mask := []string{"description"}
+		err := sp.ApplyPatch(incoming, mask)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if sp.Name != "OriginalWorkspace" {
+			t.Errorf("expected Name to remain 'OriginalWorkspace', got '%s'", sp.Name)
+		}
+		if sp.Description != "Updated Description Only" {
+			t.Errorf("expected Description 'Updated Description Only', got '%s'", sp.Description)
+		}
+	})
+
+	t.Run("returns error on unsupported mask field", func(t *testing.T) {
+		sp := *original
+		incoming := &space.Space{
+			Name: "New Name",
+		}
+
+		mask := []string{"unsupported_field"}
+		err := sp.ApplyPatch(incoming, mask)
+		if err == nil {
+			t.Fatal("expected error for unsupported field in mask, got nil")
+		}
+	})
+
+	t.Run("full update when mask is nil or empty", func(t *testing.T) {
+		sp := *original
+		incoming := &space.Space{
+			Name:        "Full Update Space",
+			Description: "Full update description",
+		}
+
+		err := sp.ApplyPatch(incoming, nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if sp.Name != "FullUpdateSpace" {
+			t.Errorf("expected Name 'FullUpdateSpace', got '%s'", sp.Name)
+		}
+		if sp.Description != "Full update description" {
+			t.Errorf("expected Description 'Full update description', got '%s'", sp.Description)
 		}
 	})
 }

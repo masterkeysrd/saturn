@@ -108,17 +108,21 @@ export interface GetSpaceRequest {
  */
 export interface UpdateSpaceRequest {
   /**
-   * The workspace ID.
+   * Required. The workspace ID.
    */
   spaceId: string
   /**
-   * The workspace's name.
+   * Required. Updated workspace parameters.
    */
-  name: string
+  space: Space
   /**
-   * The workspace's description.
+   * Optional. Field mask defining which fields to update for partial updates.
    */
-  description: string
+  updateMask?: { paths?: string[] }
+  /**
+   * Optional. Version number for optimistic concurrency control.
+   */
+  version?: string
 }
 
 /**
@@ -297,10 +301,14 @@ export async function updateSpace(
   space_id: string,
   req: UpdateSpaceRequest
 ): Promise<Space> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).spaceId
+  delete (params as Record<string, unknown>).space
   return request<Space>({
     method: "PATCH",
     url: `/api/v1/spaces/${space_id}`,
-    data: req,
+    params: params,
+    data: req.space,
   })
 }
 

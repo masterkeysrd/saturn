@@ -17,12 +17,13 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 type mockSpaceService struct {
 	createSpaceFunc           func(ctx context.Context, sp *space.Space) (*space.Space, error)
 	getSpaceFunc              func(ctx context.Context, session space.Session) (*space.Space, error)
-	updateSpaceFunc           func(ctx context.Context, session space.Session, sp *space.Space) (*space.Space, error)
+	updateSpaceFunc           func(ctx context.Context, session space.Session, sp *space.Space, mask []string) (*space.Space, error)
 	deleteSpaceFunc           func(ctx context.Context, session space.Session) error
 	listSpacesFunc            func(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) ([]*space.Space, string, error)
 	addSpaceMemberFunc        func(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error)
@@ -45,9 +46,9 @@ func (m *mockSpaceService) GetSpace(ctx context.Context, session space.Session) 
 	return &space.Space{ID: session.SpaceID, OwnerID: session.UserID, Name: "Space 1", CreateTime: time.Now(), UpdateTime: time.Now()}, nil
 }
 
-func (m *mockSpaceService) UpdateSpace(ctx context.Context, session space.Session, sp *space.Space) (*space.Space, error) {
+func (m *mockSpaceService) UpdateSpace(ctx context.Context, session space.Session, sp *space.Space, mask []string) (*space.Space, error) {
 	if m.updateSpaceFunc != nil {
-		return m.updateSpaceFunc(ctx, session, sp)
+		return m.updateSpaceFunc(ctx, session, sp, mask)
 	}
 	return sp, nil
 }
@@ -332,6 +333,113 @@ func TestHandler_AddSpaceMember(t *testing.T) {
 		ei := extractErrorInfo(st)
 		if ei == nil || ei.Reason != string(space.MemberAlreadyExists) {
 			t.Errorf("expected Reason %q, got %v", space.MemberAlreadyExists, ei)
+		}
+	})
+}
+
+func TestHandler_UpdateSpace(t *testing.T) {
+	mockSpace := &mockSpaceService{}
+	mockID := &mockIdentityService{}
+	coordinator := spaceapp.NewCoordinator(spaceapp.Dependencies{
+		SpaceService:    mockSpace,
+		IdentityService: mockID,
+	})
+	handler := spacegrpc.NewHandler(coordinator)
+	interceptor := interceptors.ErrorUnaryInterceptor()
+
+	invokeUpdate := func(ctx context.Context, req *spacev1.UpdateSpaceRequest) (*spacev1.Space, error) {
+		info := &grpc.UnaryServerInfo{FullMethod: "/saturn.space.v1.Spaces/UpdateSpace"}
+		resp, err := interceptor(ctx, req, info, func(c context.Context, r any) (any, error) {
+			return handler.UpdateSpace(c, r.(*spacev1.UpdateSpaceRequest))
+		})
+		if err != nil {
+			return nil, err
+		}
+		return resp.(*spacev1.Space), nil
+	}
+
+	ctx := auth.WithPrincipal(context.Background(), auth.Principal{Subject: "usr_owner"})
+
+	t.Run("unauthenticated error when principal missing", func(t *testing.T) {
+		_, err := invokeUpdate(context.Background(), &spacev1.UpdateSpaceRequest{
+			SpaceId: "sp_1",
+			Space:   &spacev1.Space{Name: "New Name"},
+		})
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		st, ok := status.FromError(err)
+		if !ok || st.Code() != codes.Unauthenticated {
+			t.Errorf("expected Unauthenticated, got %v", st.Code())
+		}
+	})
+
+	t.Run("nil space payload returns InvalidArgument", func(t *testing.T) {
+		_, err := invokeUpdate(ctx, &spacev1.UpdateSpaceRequest{
+			SpaceId: "sp_1",
+			Space:   nil,
+		})
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		st, ok := status.FromError(err)
+		if !ok || st.Code() != codes.InvalidArgument {
+			t.Errorf("expected InvalidArgument, got %v", st.Code())
+		}
+	})
+
+	t.Run("success updates space and passes field mask", func(t *testing.T) {
+		var capturedMask []string
+		mockSpace.updateSpaceFunc = func(ctx context.Context, session space.Session, sp *space.Space, mask []string) (*space.Space, error) {
+			capturedMask = mask
+			sp.ID = session.SpaceID
+			sp.Name = "Updated Name"
+			sp.Version = 2
+			sp.UpdateTime = time.Now()
+			return sp, nil
+		}
+
+		v := int64(1)
+		res, err := invokeUpdate(ctx, &spacev1.UpdateSpaceRequest{
+			SpaceId: "sp_1",
+			Space: &spacev1.Space{
+				Name: "Updated Name",
+			},
+			UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"name"}},
+			Version:    &v,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if res.Id != "sp_1" || res.Name != "Updated Name" || res.Version != 2 {
+			t.Errorf("unexpected response: %+v", res)
+		}
+		if len(capturedMask) != 1 || capturedMask[0] != "name" {
+			t.Errorf("expected mask ['name'], got %v", capturedMask)
+		}
+	})
+
+	t.Run("version mismatch translates to Aborted with ErrorInfo", func(t *testing.T) {
+		mockSpace.updateSpaceFunc = func(ctx context.Context, session space.Session, sp *space.Space, mask []string) (*space.Space, error) {
+			return nil, errors.E("domain/space.UpdateSpace", errors.Conflict, space.VersionMismatch, "space was modified concurrently")
+		}
+
+		v := int64(1)
+		_, err := invokeUpdate(ctx, &spacev1.UpdateSpaceRequest{
+			SpaceId: "sp_1",
+			Space:   &spacev1.Space{Name: "Conflict"},
+			Version: &v,
+		})
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		st, ok := status.FromError(err)
+		if !ok || st.Code() != codes.Aborted {
+			t.Errorf("expected Aborted, got %v", st.Code())
+		}
+		ei := extractErrorInfo(st)
+		if ei == nil || ei.Reason != string(space.VersionMismatch) {
+			t.Errorf("expected Reason %q, got %v", space.VersionMismatch, ei)
 		}
 	})
 }

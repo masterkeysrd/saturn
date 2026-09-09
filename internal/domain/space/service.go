@@ -95,7 +95,7 @@ func (s *Service) GetSpace(ctx context.Context, session Session) (*Space, error)
 }
 
 // UpdateSpace updates a workspace.
-func (s *Service) UpdateSpace(ctx context.Context, session Session, updated *Space) (*Space, error) {
+func (s *Service) UpdateSpace(ctx context.Context, session Session, updated *Space, mask []string) (*Space, error) {
 	const op errors.Op = "domain/space.UpdateSpace"
 
 	space, err := s.deps.SpaceStore.GetByID(ctx, session.SpaceID)
@@ -118,13 +118,13 @@ func (s *Service) UpdateSpace(ctx context.Context, session Session, updated *Spa
 		return nil, errors.E(op, errors.Permission, OwnerOnly, "only the owner can update this space")
 	}
 
-	// Validate and sanitize updated space properties using model validation
-	if err := updated.Validate(); err != nil {
-		return nil, errors.E(op, errors.Invalid, err)
+	if updated.Version > 0 && updated.Version != space.Version {
+		return nil, errors.E(op, errors.Conflict, VersionMismatch, "space was modified concurrently")
 	}
 
-	space.Name = updated.Name
-	space.Description = updated.Description
+	if err := space.ApplyPatch(updated, mask); err != nil {
+		return nil, errors.E(op, errors.Invalid, err)
+	}
 
 	if err := s.deps.SpaceStore.Update(ctx, space); err != nil {
 		return nil, errors.E(op, err)

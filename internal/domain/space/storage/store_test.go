@@ -103,6 +103,27 @@ func TestSpaceStore(t *testing.T) {
 		}
 	})
 
+	t.Run("Update returns Conflict and VersionMismatch when ExecOne returns NotExist", func(t *testing.T) {
+		mock := &mockDB{
+			execOneFn: func(ctx context.Context, query string, args ...any) error {
+				return errors.E(errors.NotExist, "record not found")
+			},
+		}
+
+		store := NewSpaceStore(mock)
+		sp := &space.Space{ID: "sp_1", Version: 1}
+		err := store.Update(ctx, sp)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if kind := errors.KindOf(err); kind != errors.Conflict {
+			t.Errorf("expected KindConflict, got %v", kind)
+		}
+		if code := errors.CodeOf(err); code != space.VersionMismatch {
+			t.Errorf("expected code VersionMismatch, got %v", code)
+		}
+	})
+
 	t.Run("Delete returns NotExist when ExecOne fails with NotExist", func(t *testing.T) {
 		mock := &mockDB{
 			execOneFn: func(ctx context.Context, query string, args ...any) error {

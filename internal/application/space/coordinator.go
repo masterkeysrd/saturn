@@ -65,10 +65,10 @@ type CreateSpaceRequest struct {
 
 // UpdateSpaceRequest represents the input for updating a space.
 type UpdateSpaceRequest struct {
-	SpaceID     string
-	UserID      string
-	Name        string
-	Description string
+	SpaceID    string
+	UserID     string
+	Space      *space.Space
+	UpdateMask []string
 }
 
 // DeleteSpaceRequest represents the input for deleting a space.
@@ -139,15 +139,14 @@ func (c *coordinator) GetSpace(ctx context.Context, spaceID space.SpaceID, userI
 // UpdateSpace orchestrates workspace metadata updates.
 func (c *coordinator) UpdateSpace(ctx context.Context, req *UpdateSpaceRequest) (*space.Space, error) {
 	const op errors.Op = "application/space.UpdateSpace"
+	if req.Space == nil {
+		return nil, errors.E(op, errors.Invalid, "space payload is required")
+	}
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
 		UserID:  space.SpaceID(req.UserID),
 	}
-	sp := &space.Space{
-		Name:        req.Name,
-		Description: req.Description,
-	}
-	res, err := c.spaceService.UpdateSpace(ctx, session, sp)
+	res, err := c.spaceService.UpdateSpace(ctx, session, req.Space, req.UpdateMask)
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
@@ -289,7 +288,7 @@ func (c *coordinator) ListSpaceMembers(ctx context.Context, req *ListSpaceMember
 type SpaceService interface {
 	CreateSpace(ctx context.Context, space *space.Space) (*space.Space, error)
 	GetSpace(ctx context.Context, session space.Session) (*space.Space, error)
-	UpdateSpace(ctx context.Context, session space.Session, space *space.Space) (*space.Space, error)
+	UpdateSpace(ctx context.Context, session space.Session, space *space.Space, mask []string) (*space.Space, error)
 	DeleteSpace(ctx context.Context, session space.Session) error
 	ListSpaces(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) ([]*space.Space, string, error)
 	AddSpaceMember(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error)

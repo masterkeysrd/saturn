@@ -11,4 +11,5 @@ const (
 	MemberNotFound      errors.Code = "MEMBER_NOT_FOUND"
 	MemberAlreadyExists errors.Code = "MEMBER_ALREADY_EXISTS"
 	InvalidRole         errors.Code = "INVALID_ROLE"
+	VersionMismatch     errors.Code = "SPACE_VERSION_MISMATCH"
 )

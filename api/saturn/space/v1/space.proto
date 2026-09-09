@@ -4,6 +4,7 @@ package saturn.space.v1;
 
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
+import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/masterkeysrd/saturn/apis/saturn/space/v1;spacev1";
@@ -27,7 +28,7 @@ service Spaces {
   rpc UpdateSpace(UpdateSpaceRequest) returns (Space) {
     option (google.api.http) = {
       patch: "/v1/spaces/{space_id}"
-      body: "*"
+      body: "space"
     };
   }
 
@@ -124,12 +125,17 @@ message GetSpaceRequest {
 
 // UpdateSpaceRequest contains the fields for updating a workspace.
 message UpdateSpaceRequest {
-  // The workspace ID.
+  // Required. The workspace ID.
   string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  // The workspace's name.
-  string name = 2 [(google.api.field_behavior) = REQUIRED];
-  // The workspace's description.
-  string description = 3;
+
+  // Required. Updated workspace parameters.
+  Space space = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Field mask defining which fields to update for partial updates.
+  optional google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Version number for optimistic concurrency control.
+  optional int64 version = 4 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // DeleteSpaceRequest contains the fields for deleting a workspace.

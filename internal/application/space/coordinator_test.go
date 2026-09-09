@@ -15,7 +15,7 @@ import (
 type mockSpaceService struct {
 	createSpaceFunc           func(ctx context.Context, sp *space.Space) (*space.Space, error)
 	getSpaceFunc              func(ctx context.Context, session space.Session) (*space.Space, error)
-	updateSpaceFunc           func(ctx context.Context, session space.Session, sp *space.Space) (*space.Space, error)
+	updateSpaceFunc           func(ctx context.Context, session space.Session, sp *space.Space, mask []string) (*space.Space, error)
 	deleteSpaceFunc           func(ctx context.Context, session space.Session) error
 	listSpacesFunc            func(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) ([]*space.Space, string, error)
 	addSpaceMemberFunc        func(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error)
@@ -38,9 +38,9 @@ func (m *mockSpaceService) GetSpace(ctx context.Context, session space.Session) 
 	return &space.Space{ID: session.SpaceID}, nil
 }
 
-func (m *mockSpaceService) UpdateSpace(ctx context.Context, session space.Session, sp *space.Space) (*space.Space, error) {
+func (m *mockSpaceService) UpdateSpace(ctx context.Context, session space.Session, sp *space.Space, mask []string) (*space.Space, error) {
 	if m.updateSpaceFunc != nil {
-		return m.updateSpaceFunc(ctx, session, sp)
+		return m.updateSpaceFunc(ctx, session, sp, mask)
 	}
 	return sp, nil
 }
@@ -392,6 +392,41 @@ func TestTransactionalCoordinator(t *testing.T) {
 		}
 		if txr.beginCalled {
 			t.Errorf("expected GetSpace to NOT begin transaction")
+		}
+	})
+
+	t.Run("UpdateSpace executes in transaction and passes mask", func(t *testing.T) {
+		txr := &mockTransactor{}
+		decorator := spaceapp.NewTransactionalCoordinator(baseCoord, txr)
+
+		ctx := context.Background()
+		var capturedMask []string
+		mockSpace.updateSpaceFunc = func(ctx context.Context, session space.Session, sp *space.Space, mask []string) (*space.Space, error) {
+			capturedMask = mask
+			sp.Name = "Updated"
+			return sp, nil
+		}
+
+		sp, err := decorator.UpdateSpace(ctx, &spaceapp.UpdateSpaceRequest{
+			SpaceID:    "sp_1",
+			UserID:     "usr_1",
+			Space:      &space.Space{Name: "New Name"},
+			UpdateMask: []string{"name"},
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sp.Name != "Updated" {
+			t.Errorf("expected updated name, got %s", sp.Name)
+		}
+		if len(capturedMask) != 1 || capturedMask[0] != "name" {
+			t.Errorf("expected mask ['name'], got %v", capturedMask)
+		}
+		if !txr.beginCalled {
+			t.Errorf("expected Begin to be called on Transactor")
+		}
+		if txr.lastCtrl == nil || !txr.lastCtrl.IsDone() || txr.lastCtrl.IsAborted() {
+			t.Errorf("expected transaction to be committed successfully")
 		}
 	})
 }

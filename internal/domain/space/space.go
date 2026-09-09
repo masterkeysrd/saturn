@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/id"
+	"github.com/masterkeysrd/saturn/internal/platform/patch"
 )
 
 // SpaceID is a custom string type representing a space's unique identifier (KSUID).
@@ -111,4 +112,18 @@ func trimSpace(s string) string {
 		result = append(result, s[i])
 	}
 	return string(result)
+}
+
+// SpacePatchSchema defines all patchable fields for a Space entity.
+var SpacePatchSchema = patch.NewSchema[Space]().
+	Register("name", patch.Field(func(s *Space) *string { return &s.Name })).
+	Register("description", patch.Field(func(s *Space) *string { return &s.Description }))
+
+// ApplyPatch applies partial updates from an incoming space based on the field mask.
+func (s *Space) ApplyPatch(incoming *Space, mask []string) error {
+	if err := SpacePatchSchema.Apply(s, incoming, mask); err != nil {
+		return err
+	}
+	s.UpdateTime = time.Now().UTC()
+	return s.Validate()
 }

@@ -10,6 +10,7 @@ import (
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	fieldmaskpb "google.golang.org/protobuf/types/known/fieldmaskpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -317,12 +318,14 @@ func (x *GetSpaceRequest) GetSpaceId() string {
 // UpdateSpaceRequest contains the fields for updating a workspace.
 type UpdateSpaceRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The workspace ID.
+	// Required. The workspace ID.
 	SpaceId string `protobuf:"bytes,1,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
-	// The workspace's name.
-	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	// The workspace's description.
-	Description   string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// Required. Updated workspace parameters.
+	Space *Space `protobuf:"bytes,2,opt,name=space,proto3" json:"space,omitempty"`
+	// Optional. Field mask defining which fields to update for partial updates.
+	UpdateMask *fieldmaskpb.FieldMask `protobuf:"bytes,3,opt,name=update_mask,json=updateMask,proto3,oneof" json:"update_mask,omitempty"`
+	// Optional. Version number for optimistic concurrency control.
+	Version       *int64 `protobuf:"varint,4,opt,name=version,proto3,oneof" json:"version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -364,18 +367,25 @@ func (x *UpdateSpaceRequest) GetSpaceId() string {
 	return ""
 }
 
-func (x *UpdateSpaceRequest) GetName() string {
+func (x *UpdateSpaceRequest) GetSpace() *Space {
 	if x != nil {
-		return x.Name
+		return x.Space
 	}
-	return ""
+	return nil
 }
 
-func (x *UpdateSpaceRequest) GetDescription() string {
+func (x *UpdateSpaceRequest) GetUpdateMask() *fieldmaskpb.FieldMask {
 	if x != nil {
-		return x.Description
+		return x.UpdateMask
 	}
-	return ""
+	return nil
+}
+
+func (x *UpdateSpaceRequest) GetVersion() int64 {
+	if x != nil && x.Version != nil {
+		return *x.Version
+	}
+	return 0
 }
 
 // DeleteSpaceRequest contains the fields for deleting a workspace.
@@ -967,7 +977,7 @@ var File_saturn_space_v1_space_proto protoreflect.FileDescriptor
 
 const file_saturn_space_v1_space_proto_rawDesc = "" +
 	"\n" +
-	"\x1bsaturn/space/v1/space.proto\x12\x0fsaturn.space.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x90\x02\n" +
+	"\x1bsaturn/space/v1/space.proto\x12\x0fsaturn.space.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x90\x02\n" +
 	"\x05Space\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tB\x03\xe0A\x02R\x04name\x12 \n" +
@@ -996,11 +1006,16 @@ const file_saturn_space_v1_space_proto_rawDesc = "" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\"1\n" +
 	"\x0fGetSpaceRequest\x12\x1e\n" +
-	"\bspace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\aspaceId\"o\n" +
+	"\bspace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\aspaceId\"\xee\x01\n" +
 	"\x12UpdateSpaceRequest\x12\x1e\n" +
-	"\bspace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\aspaceId\x12\x17\n" +
-	"\x04name\x18\x02 \x01(\tB\x03\xe0A\x02R\x04name\x12 \n" +
-	"\vdescription\x18\x03 \x01(\tR\vdescription\"4\n" +
+	"\bspace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\aspaceId\x121\n" +
+	"\x05space\x18\x02 \x01(\v2\x16.saturn.space.v1.SpaceB\x03\xe0A\x02R\x05space\x12E\n" +
+	"\vupdate_mask\x18\x03 \x01(\v2\x1a.google.protobuf.FieldMaskB\x03\xe0A\x01H\x00R\n" +
+	"updateMask\x88\x01\x01\x12\"\n" +
+	"\aversion\x18\x04 \x01(\x03B\x03\xe0A\x01H\x01R\aversion\x88\x01\x01B\x0e\n" +
+	"\f_update_maskB\n" +
+	"\n" +
+	"\b_version\"4\n" +
 	"\x12DeleteSpaceRequest\x12\x1e\n" +
 	"\bspace_id\x18\x01 \x01(\tB\x03\xe0A\x02R\aspaceId\"\x15\n" +
 	"\x13DeleteSpaceResponse\"X\n" +
@@ -1028,12 +1043,12 @@ const file_saturn_space_v1_space_proto_rawDesc = "" +
 	"\x0fnext_page_token\x18\x03 \x01(\tR\rnextPageToken\"z\n" +
 	"\x18ListSpaceMembersResponse\x126\n" +
 	"\amembers\x18\x01 \x03(\v2\x1c.saturn.space.v1.SpaceMemberR\amembers\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken2\xef\b\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken2\xf3\b\n" +
 	"\x06Spaces\x12a\n" +
 	"\vCreateSpace\x12#.saturn.space.v1.CreateSpaceRequest\x1a\x16.saturn.space.v1.Space\"\x15\x82\xd3\xe4\x93\x02\x0f:\x01*\"\n" +
 	"/v1/spaces\x12c\n" +
-	"\bGetSpace\x12 .saturn.space.v1.GetSpaceRequest\x1a\x16.saturn.space.v1.Space\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/spaces/{space_id}\x12l\n" +
-	"\vUpdateSpace\x12#.saturn.space.v1.UpdateSpaceRequest\x1a\x16.saturn.space.v1.Space\" \x82\xd3\xe4\x93\x02\x1a:\x01*2\x15/v1/spaces/{space_id}\x12w\n" +
+	"\bGetSpace\x12 .saturn.space.v1.GetSpaceRequest\x1a\x16.saturn.space.v1.Space\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/spaces/{space_id}\x12p\n" +
+	"\vUpdateSpace\x12#.saturn.space.v1.UpdateSpaceRequest\x1a\x16.saturn.space.v1.Space\"$\x82\xd3\xe4\x93\x02\x1e:\x05space2\x15/v1/spaces/{space_id}\x12w\n" +
 	"\vDeleteSpace\x12#.saturn.space.v1.DeleteSpaceRequest\x1a$.saturn.space.v1.DeleteSpaceResponse\"\x1d\x82\xd3\xe4\x93\x02\x17*\x15/v1/spaces/{space_id}\x12i\n" +
 	"\n" +
 	"ListSpaces\x12\".saturn.space.v1.ListSpacesRequest\x1a#.saturn.space.v1.ListSpacesResponse\"\x12\x82\xd3\xe4\x93\x02\f\x12\n" +
@@ -1074,6 +1089,7 @@ var file_saturn_space_v1_space_proto_goTypes = []any{
 	(*ListSpaceMembersResponse)(nil),     // 14: saturn.space.v1.ListSpaceMembersResponse
 	(*SpaceMember_Profile)(nil),          // 15: saturn.space.v1.SpaceMember.Profile
 	(*timestamppb.Timestamp)(nil),        // 16: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),        // 17: google.protobuf.FieldMask
 }
 var file_saturn_space_v1_space_proto_depIdxs = []int32{
 	16, // 0: saturn.space.v1.Space.create_time:type_name -> google.protobuf.Timestamp
@@ -1081,31 +1097,33 @@ var file_saturn_space_v1_space_proto_depIdxs = []int32{
 	16, // 2: saturn.space.v1.SpaceMember.create_time:type_name -> google.protobuf.Timestamp
 	16, // 3: saturn.space.v1.SpaceMember.update_time:type_name -> google.protobuf.Timestamp
 	15, // 4: saturn.space.v1.SpaceMember.profile:type_name -> saturn.space.v1.SpaceMember.Profile
-	0,  // 5: saturn.space.v1.ListSpacesResponse.spaces:type_name -> saturn.space.v1.Space
-	1,  // 6: saturn.space.v1.ListSpaceMembersResponse.members:type_name -> saturn.space.v1.SpaceMember
-	2,  // 7: saturn.space.v1.Spaces.CreateSpace:input_type -> saturn.space.v1.CreateSpaceRequest
-	3,  // 8: saturn.space.v1.Spaces.GetSpace:input_type -> saturn.space.v1.GetSpaceRequest
-	4,  // 9: saturn.space.v1.Spaces.UpdateSpace:input_type -> saturn.space.v1.UpdateSpaceRequest
-	5,  // 10: saturn.space.v1.Spaces.DeleteSpace:input_type -> saturn.space.v1.DeleteSpaceRequest
-	7,  // 11: saturn.space.v1.Spaces.ListSpaces:input_type -> saturn.space.v1.ListSpacesRequest
-	9,  // 12: saturn.space.v1.Spaces.AddSpaceMember:input_type -> saturn.space.v1.AddSpaceMemberRequest
-	10, // 13: saturn.space.v1.Spaces.RemoveSpaceMember:input_type -> saturn.space.v1.RemoveSpaceMemberRequest
-	12, // 14: saturn.space.v1.Spaces.UpdateSpaceMemberRole:input_type -> saturn.space.v1.UpdateSpaceMemberRoleRequest
-	13, // 15: saturn.space.v1.Spaces.ListSpaceMembers:input_type -> saturn.space.v1.ListSpaceMembersRequest
-	0,  // 16: saturn.space.v1.Spaces.CreateSpace:output_type -> saturn.space.v1.Space
-	0,  // 17: saturn.space.v1.Spaces.GetSpace:output_type -> saturn.space.v1.Space
-	0,  // 18: saturn.space.v1.Spaces.UpdateSpace:output_type -> saturn.space.v1.Space
-	6,  // 19: saturn.space.v1.Spaces.DeleteSpace:output_type -> saturn.space.v1.DeleteSpaceResponse
-	8,  // 20: saturn.space.v1.Spaces.ListSpaces:output_type -> saturn.space.v1.ListSpacesResponse
-	1,  // 21: saturn.space.v1.Spaces.AddSpaceMember:output_type -> saturn.space.v1.SpaceMember
-	11, // 22: saturn.space.v1.Spaces.RemoveSpaceMember:output_type -> saturn.space.v1.RemoveSpaceMemberResponse
-	1,  // 23: saturn.space.v1.Spaces.UpdateSpaceMemberRole:output_type -> saturn.space.v1.SpaceMember
-	14, // 24: saturn.space.v1.Spaces.ListSpaceMembers:output_type -> saturn.space.v1.ListSpaceMembersResponse
-	16, // [16:25] is the sub-list for method output_type
-	7,  // [7:16] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	0,  // 5: saturn.space.v1.UpdateSpaceRequest.space:type_name -> saturn.space.v1.Space
+	17, // 6: saturn.space.v1.UpdateSpaceRequest.update_mask:type_name -> google.protobuf.FieldMask
+	0,  // 7: saturn.space.v1.ListSpacesResponse.spaces:type_name -> saturn.space.v1.Space
+	1,  // 8: saturn.space.v1.ListSpaceMembersResponse.members:type_name -> saturn.space.v1.SpaceMember
+	2,  // 9: saturn.space.v1.Spaces.CreateSpace:input_type -> saturn.space.v1.CreateSpaceRequest
+	3,  // 10: saturn.space.v1.Spaces.GetSpace:input_type -> saturn.space.v1.GetSpaceRequest
+	4,  // 11: saturn.space.v1.Spaces.UpdateSpace:input_type -> saturn.space.v1.UpdateSpaceRequest
+	5,  // 12: saturn.space.v1.Spaces.DeleteSpace:input_type -> saturn.space.v1.DeleteSpaceRequest
+	7,  // 13: saturn.space.v1.Spaces.ListSpaces:input_type -> saturn.space.v1.ListSpacesRequest
+	9,  // 14: saturn.space.v1.Spaces.AddSpaceMember:input_type -> saturn.space.v1.AddSpaceMemberRequest
+	10, // 15: saturn.space.v1.Spaces.RemoveSpaceMember:input_type -> saturn.space.v1.RemoveSpaceMemberRequest
+	12, // 16: saturn.space.v1.Spaces.UpdateSpaceMemberRole:input_type -> saturn.space.v1.UpdateSpaceMemberRoleRequest
+	13, // 17: saturn.space.v1.Spaces.ListSpaceMembers:input_type -> saturn.space.v1.ListSpaceMembersRequest
+	0,  // 18: saturn.space.v1.Spaces.CreateSpace:output_type -> saturn.space.v1.Space
+	0,  // 19: saturn.space.v1.Spaces.GetSpace:output_type -> saturn.space.v1.Space
+	0,  // 20: saturn.space.v1.Spaces.UpdateSpace:output_type -> saturn.space.v1.Space
+	6,  // 21: saturn.space.v1.Spaces.DeleteSpace:output_type -> saturn.space.v1.DeleteSpaceResponse
+	8,  // 22: saturn.space.v1.Spaces.ListSpaces:output_type -> saturn.space.v1.ListSpacesResponse
+	1,  // 23: saturn.space.v1.Spaces.AddSpaceMember:output_type -> saturn.space.v1.SpaceMember
+	11, // 24: saturn.space.v1.Spaces.RemoveSpaceMember:output_type -> saturn.space.v1.RemoveSpaceMemberResponse
+	1,  // 25: saturn.space.v1.Spaces.UpdateSpaceMemberRole:output_type -> saturn.space.v1.SpaceMember
+	14, // 26: saturn.space.v1.Spaces.ListSpaceMembers:output_type -> saturn.space.v1.ListSpaceMembersResponse
+	18, // [18:27] is the sub-list for method output_type
+	9,  // [9:18] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_saturn_space_v1_space_proto_init() }
@@ -1113,6 +1131,7 @@ func file_saturn_space_v1_space_proto_init() {
 	if File_saturn_space_v1_space_proto != nil {
 		return
 	}
+	file_saturn_space_v1_space_proto_msgTypes[4].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

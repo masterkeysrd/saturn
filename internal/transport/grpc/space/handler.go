@@ -35,6 +35,20 @@ func toProtoSpace(sp *space.Space) *spacev1.Space {
 	}
 }
 
+// toDomainSpace converts a proto Space to a domain Space.
+func toDomainSpace(pb *spacev1.Space) (*space.Space, error) {
+	if pb == nil {
+		return nil, errors.E(errors.Invalid, "space payload is required")
+	}
+	return &space.Space{
+		ID:          space.SpaceID(pb.GetId()),
+		Name:        pb.GetName(),
+		Description: pb.GetDescription(),
+		OwnerID:     space.SpaceID(pb.GetOwnerId()),
+		Version:     pb.GetVersion(),
+	}, nil
+}
+
 // toProtoSpaceMember converts a domain Member to a proto SpaceMember.
 func toProtoSpaceMember(m *space.Member) *spacev1.SpaceMember {
 	return &spacev1.SpaceMember{
@@ -127,14 +141,26 @@ func (h *Handler) UpdateSpace(ctx context.Context, req *spacev1.UpdateSpaceReque
 		return nil, err
 	}
 
-	spaceID := space.SpaceID(req.GetSpaceId())
+	spInput, err := toDomainSpace(req.GetSpace())
+	if err != nil {
+		return nil, err
+	}
 
-	sp, err := h.Coordinator.UpdateSpace(ctx, &spaceapp.UpdateSpaceRequest{
-		SpaceID:     string(spaceID),
-		UserID:      userID,
-		Name:        req.GetName(),
-		Description: req.GetDescription(),
-	})
+	if req.GetSpaceId() != "" {
+		spInput.ID = space.SpaceID(req.GetSpaceId())
+	}
+	if req.Version != nil {
+		spInput.Version = req.GetVersion()
+	}
+
+	appReq := &spaceapp.UpdateSpaceRequest{
+		SpaceID:    string(spInput.ID),
+		UserID:     userID,
+		Space:      spInput,
+		UpdateMask: req.GetUpdateMask().GetPaths(),
+	}
+
+	sp, err := h.Coordinator.UpdateSpace(ctx, appReq)
 	if err != nil {
 		return nil, err
 	}

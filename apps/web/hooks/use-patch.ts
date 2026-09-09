@@ -78,25 +78,28 @@ export function usePatch<
         (oldData: unknown) => {
           if (!oldData) return oldData
 
-          if (
-            typeof oldData === "object" &&
-            oldData !== null &&
-            "items" in oldData &&
-            Array.isArray((oldData as { items: unknown[] }).items)
-          ) {
-            const container = oldData as { items: TData[] }
-            return {
-              ...container,
-              items: container.items.map((item: TData) =>
-                item.id === id ? { ...item, ...payload } : item
-              ),
-            }
-          }
-
           if (Array.isArray(oldData)) {
             return oldData.map((item: TData) =>
               item.id === id ? { ...item, ...payload } : item
             )
+          }
+
+          if (typeof oldData === "object" && oldData !== null) {
+            for (const [key, val] of Object.entries(oldData)) {
+              if (Array.isArray(val)) {
+                return {
+                  ...oldData,
+                  [key]: val.map((item: unknown) =>
+                    item &&
+                    typeof item === "object" &&
+                    "id" in item &&
+                    (item as { id?: string }).id === id
+                      ? { ...(item as TData), ...payload }
+                      : item
+                  ),
+                }
+              }
+            }
           }
 
           return oldData

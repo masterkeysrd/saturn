@@ -4957,18 +4957,27 @@
         "parameters": [
           {
             "name": "spaceId",
-            "description": "The workspace ID.",
+            "description": "Required. The workspace ID.",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
-            "name": "body",
+            "name": "space",
+            "description": "Required. Updated workspace parameters.",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/SpacesUpdateSpaceBody"
+              "$ref": "#/definitions/v1Space"
             }
+          },
+          {
+            "name": "version",
+            "description": "Optional. Version number for optimistic concurrency control.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -5799,23 +5808,6 @@
       "required": [
         "userId",
         "role"
-      ]
-    },
-    "SpacesUpdateSpaceBody": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The workspace's name."
-        },
-        "description": {
-          "type": "string",
-          "description": "The workspace's description."
-        }
-      },
-      "description": "UpdateSpaceRequest contains the fields for updating a workspace.",
-      "required": [
-        "name"
       ]
     },
     "SpacesUpdateSpaceMemberRoleBody": {

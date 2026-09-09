@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/doug-martin/goqu/v9"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/platform/db"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
@@ -87,9 +88,28 @@ func (s *SpaceStore) GetByID(ctx context.Context, id space.SpaceID) (*space.Spac
 // Update modifies an existing space with optimistic locking.
 func (s *SpaceStore) Update(ctx context.Context, sp *space.Space) error {
 	const op errors.Op = "domain/space/storage.Update"
-	query := `UPDATE space.space SET name = $2, description = $3, version = $4 + 1, update_time = NOW()
-		WHERE id = $1 AND version = $4`
-	if err := s.db.ExecOne(ctx, query, sp.ID, sp.Name, sp.Description, sp.Version); err != nil {
+
+	ds := pgDialect.Update(goqu.S("space").Table("space")).
+		Set(goqu.Record{
+			"name":        sp.Name,
+			"description": strToPtr(sp.Description),
+			"version":     sp.Version + 1,
+			"update_time": goqu.L("NOW()"),
+		}).
+		Where(goqu.Ex{
+			"id":      string(sp.ID),
+			"version": sp.Version,
+		})
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return errors.E(op, err)
+	}
+
+	if err := s.db.ExecOne(ctx, query, args...); err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return errors.E(op, errors.Conflict, space.VersionMismatch, "space was modified concurrently")
+		}
 		return errors.E(op, err)
 	}
 	sp.Version++

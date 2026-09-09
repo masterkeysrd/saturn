@@ -1,5 +1,9 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useQueryClient } from "@tanstack/react-query"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+import { usePatch } from "@/hooks/use-patch"
 import {
   Sheet,
   SheetContent,
@@ -33,8 +37,16 @@ import {
   useUpdateSpaceMemberRoleMutation,
   useUpdateSpaceMutation,
   type Space,
+  type UpdateSpaceRequest,
 } from "@/gen/saturn/space/v1/space"
 import { toast } from "@/components/ui/toast"
+
+const spaceDetailsSchema = z.object({
+  name: z.string().trim().min(1, "Space name is required").max(255),
+  description: z.string().optional(),
+})
+
+type SpaceDetailsFormValues = z.infer<typeof spaceDetailsSchema>
 
 interface ManageSpaceSheetProps {
   space: Space | null
@@ -44,21 +56,10 @@ interface ManageSpaceSheetProps {
 export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
   const queryClient = useQueryClient()
 
-  const [name, setName] = useState("")
-  const [description, setDescription] = useState("")
   const [newUserId, setNewUserId] = useState("")
   const [newRole, setNewRole] = useState("member")
   const [generalError, setGeneralError] = useState("")
   const [memberError, setMemberError] = useState("")
-  const [prevSpaceId, setPrevSpaceId] = useState<string | null>(null)
-
-  if (space && space.id !== prevSpaceId) {
-    setPrevSpaceId(space.id || null)
-    setName(space.name)
-    setDescription(space.description || "")
-    setGeneralError("")
-    setMemberError("")
-  }
 
   // Queries & Mutations
   const spaceId = space?.id ?? ""
@@ -73,18 +74,60 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
   const removeMemberMutation = useRemoveSpaceMemberMutation()
   const updateRoleMutation = useUpdateSpaceMemberRoleMutation()
 
+  const patchMutation = usePatch<
+    Space,
+    { space_id: string; req: UpdateSpaceRequest }
+  >({
+    entityKey: "/api/v1/spaces",
+    mutationFn: (vars) => updateSpaceMutation.mutateAsync(vars),
+    buildVariables: (id, payload, dirtyPaths, expectedVersion) => ({
+      space_id: id,
+      req: {
+        spaceId: id,
+        version: expectedVersion,
+        space: payload as Space,
+        updateMask: { paths: dirtyPaths },
+      },
+    }),
+  })
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors: formErrors, dirtyFields },
+  } = useForm<SpaceDetailsFormValues>({
+    resolver: zodResolver(spaceDetailsSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+    },
+  })
+
+  useEffect(() => {
+    if (space) {
+      reset({
+        name: space.name,
+        description: space.description || "",
+      })
+    }
+  }, [space, reset])
+
   if (!space) return null
 
-  const handleUpdateDetails = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!name.trim()) return
+  const handleUpdateDetails = async (data: SpaceDetailsFormValues) => {
+    if (!space?.id) return
     setGeneralError("")
     try {
-      await updateSpaceMutation.mutateAsync({
-        space_id: spaceId,
-        req: { spaceId, name: name.trim(), description: description.trim() },
+      await patchMutation.mutateAsync({
+        id: space.id,
+        expectedVersion: space.version ? String(space.version) : undefined,
+        payload: {
+          name: data.name.trim(),
+          description: data.description?.trim() || "",
+        },
+        dirtyFields,
       })
-      queryClient.invalidateQueries({ queryKey: ["/api/v1/spaces"] })
       toast.add({
         type: "success",
         title: "Space Updated",
@@ -219,7 +262,10 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                 General Settings
               </h3>
             </div>
-            <form onSubmit={handleUpdateDetails} className="space-y-4">
+            <form
+              onSubmit={handleSubmit(handleUpdateDetails)}
+              className="space-y-4"
+            >
               <div className="space-y-2">
                 <Label
                   htmlFor="manage-space-name"
@@ -229,10 +275,14 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                 </Label>
                 <Input
                   id="manage-space-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  {...register("name")}
                   className="rounded-xl border-border/40 bg-muted/10 focus:ring-2 focus:ring-primary/20"
                 />
+                {formErrors.name && (
+                  <p className="text-xs text-destructive">
+                    {formErrors.name.message}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label
@@ -243,8 +293,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                 </Label>
                 <Input
                   id="manage-space-desc"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  {...register("description")}
                   className="rounded-xl border-border/40 bg-muted/10 focus:ring-2 focus:ring-primary/20"
                 />
               </div>
@@ -257,10 +306,10 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
               <Button
                 type="submit"
                 size="sm"
-                disabled={!name.trim() || updateSpaceMutation.isPending}
+                disabled={patchMutation.isPending}
                 className="w-full rounded-xl bg-gradient-to-r from-primary to-accent text-white shadow-md shadow-primary/10 transition-opacity hover:opacity-95"
               >
-                {updateSpaceMutation.isPending ? (
+                {patchMutation.isPending ? (
                   <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                 ) : null}
                 Save Settings
