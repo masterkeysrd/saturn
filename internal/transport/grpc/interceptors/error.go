@@ -3,8 +3,6 @@ package interceptors
 import (
 	"context"
 	"fmt"
-	"log/slog"
-
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -13,6 +11,7 @@ import (
 	"google.golang.org/protobuf/protoadapt"
 
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/log"
 )
 
 // KindToGRPCCode converts a platform Kind to a standard gRPC status code.
@@ -156,23 +155,7 @@ func ErrorUnaryInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		resp, err := handler(ctx, req)
 		if err != nil {
-			kind := errors.KindOf(err)
-			code := errors.CodeOf(err)
-			if kind == errors.Internal || kind == errors.Other {
-				slog.Error("internal error in gRPC unary call",
-					"method", info.FullMethod,
-					"op_trace", err.Error(),
-				)
-			} else {
-				slog.Warn("client error in gRPC unary call",
-					"method", info.FullMethod,
-					"kind", kind.String(),
-					"code", string(code),
-					"error", errors.UserMessage(err),
-					"op_trace", err.Error(),
-				)
-			}
-			return resp, ToGRPC(err)
+			return resp, handleRPCError(ctx, info.FullMethod, err, "unary")
 		}
 		return resp, nil
 	}
@@ -184,24 +167,36 @@ func ErrorStreamInterceptor() grpc.StreamServerInterceptor {
 	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		err := handler(srv, ss)
 		if err != nil {
-			kind := errors.KindOf(err)
-			code := errors.CodeOf(err)
-			if kind == errors.Internal || kind == errors.Other {
-				slog.Error("internal error in gRPC stream call",
-					"method", info.FullMethod,
-					"op_trace", err.Error(),
-				)
-			} else {
-				slog.Warn("client error in gRPC stream call",
-					"method", info.FullMethod,
-					"kind", kind.String(),
-					"code", string(code),
-					"error", errors.UserMessage(err),
-					"op_trace", err.Error(),
-				)
+			ctx := context.Background()
+			if ss != nil && ss.Context() != nil {
+				ctx = ss.Context()
 			}
-			return ToGRPC(err)
+			method := ""
+			if info != nil {
+				method = info.FullMethod
+			}
+			return handleRPCError(ctx, method, err, "stream")
 		}
 		return nil
 	}
+}
+
+func handleRPCError(ctx context.Context, method string, err error, rpcType string) error {
+	kind := errors.KindOf(err)
+	code := errors.CodeOf(err)
+	fields := []log.Field{
+		log.String("method", method),
+		log.Err(err),
+	}
+	if kind == errors.Internal || kind == errors.Other {
+		log.Error(ctx, "internal error in gRPC "+rpcType+" call", fields...)
+	} else {
+		fields = append(fields,
+			log.String("kind", kind.String()),
+			log.String("code", string(code)),
+			log.String("error", errors.UserMessage(err)),
+		)
+		log.Warn(ctx, "client error in gRPC "+rpcType+" call", fields...)
+	}
+	return ToGRPC(err)
 }

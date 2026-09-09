@@ -7,7 +7,6 @@ import (
 	"database/sql"
 	"fmt"
 	"io/fs"
-	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -52,7 +51,9 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/agent"
 	"github.com/masterkeysrd/saturn/internal/platform/db"
 	"github.com/masterkeysrd/saturn/internal/platform/integration"
+	"github.com/masterkeysrd/saturn/internal/platform/log"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
+	"github.com/masterkeysrd/saturn/internal/platform/requestid"
 	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
 	"github.com/masterkeysrd/saturn/internal/platform/shutdown"
 	agentgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/agent"
@@ -88,7 +89,7 @@ func NewGRPCServer(cfg *Config) *GRPCServer {
 // begins listening on the configured Unix socket.
 func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) error {
 	if err := os.Remove(cfg.GRPC.Socket); err != nil && !os.IsNotExist(err) {
-		slog.Warn("failed to remove stale socket file", "path", cfg.GRPC.Socket, "err", err)
+		log.Warn(ctx, "failed to remove stale socket file", log.String("path", cfg.GRPC.Socket), log.Err(err))
 	}
 
 	var err error
@@ -181,14 +182,17 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	spaceInterceptor := interceptors.NewSpaceInterceptor(memberStore, spaceRules)
 
 	s.grpc = grpc.NewServer(
+		grpc.StatsHandler(requestid.NewStatsHandler()),
 		grpc.ChainUnaryInterceptor(
 			interceptors.PanicUnaryInterceptor(),
+			interceptors.LoggingUnaryServerInterceptor(),
 			interceptors.ErrorUnaryInterceptor(),
 			authInterceptor.UnaryServerInterceptor(),
 			spaceInterceptor.UnaryServerInterceptor(),
 		),
 		grpc.ChainStreamInterceptor(
 			interceptors.PanicStreamInterceptor(),
+			interceptors.LoggingStreamServerInterceptor(),
 			interceptors.ErrorStreamInterceptor(),
 			authInterceptor.StreamServerInterceptor(),
 			spaceInterceptor.StreamServerInterceptor(),
@@ -201,13 +205,19 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	adminHandler := identitygrpc.NewAdminHandler(coordinator)
 	admingrpc.RegisterAdminIdentityServer(s.grpc, adminHandler)
 
-	// Wire Space service
-	spaceCoordinator := spaceapp.NewTransactionalCoordinator(
-		spaceapp.NewCoordinator(spaceapp.Dependencies{
-			SpaceService:    spaceService,
-			IdentityService: identityService,
-		}),
-		dbClient,
+	appLogger := log.New(
+		log.WithLevel(logLevels[cfg.Log.Level]),
+		log.WithMiddleware(requestid.Enricher()),
+	)
+	spaceCoordinator := spaceapp.NewLoggingCoordinator(
+		spaceapp.NewTransactionalCoordinator(
+			spaceapp.NewCoordinator(spaceapp.Dependencies{
+				SpaceService:    spaceService,
+				IdentityService: identityService,
+			}),
+			dbClient,
+		),
+		appLogger,
 	)
 	spaceAggregator := spaceaggregator.NewService(spaceService, identityService)
 	spaceHandler := spacegrpc.NewHandler(spaceCoordinator, spaceAggregator)
@@ -392,7 +402,7 @@ func (s *GRPCServer) Shutdown(ctx context.Context) error {
 		return nil
 	}
 	s.grpc.GracefulStop()
-	slog.Info("gRPC server stopped")
+	log.Info(ctx, "gRPC server stopped")
 	return nil
 }
 
@@ -436,6 +446,7 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 	s.grpcConn = conn
 	s.mux = runtime.NewServeMux(
 		runtime.WithIncomingHeaderMatcher(customHeaderMatcher),
+		runtime.WithOutgoingHeaderMatcher(customOutgoingHeaderMatcher),
 		runtime.WithForwardResponseOption(gateway.CookieResponseForwarder(s.config.Gateway.CookieSecure)),
 	)
 
@@ -517,7 +528,7 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 		http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(indexContent))
 	}))
 
-	s.server = &http.Server{Addr: s.addr, Handler: middleware.LoggingMiddleware(middleware.RecoveryMiddleware(handler))}
+	s.server = &http.Server{Addr: s.addr, Handler: requestid.Middleware(middleware.LoggingMiddleware(middleware.RecoveryMiddleware(handler)))}
 	return nil
 }
 
@@ -544,7 +555,7 @@ func (s *GRPCGatewayServer) Shutdown(ctx context.Context) error {
 	if s.grpcConn != nil {
 		_ = s.grpcConn.Close()
 	}
-	slog.Info("gRPC-Gateway server stopped")
+	log.Info(ctx, "gRPC-Gateway server stopped")
 	return nil
 }
 
@@ -577,9 +588,9 @@ func StartAll(ctx context.Context, mgr *shutdown.Manager, cfg *Config) error {
 		return fmt.Errorf("gateway: %w", err)
 	}
 
-	g, _ := errgroup.WithContext(ctx)
+	g, gCtx := errgroup.WithContext(ctx)
 	g.Go(func() error {
-		slog.Info("gRPC server starting", "socket", cfg.GRPC.Socket)
+		log.Info(gCtx, "gRPC server starting", log.String("socket", cfg.GRPC.Socket))
 		if err := grpcSrv.grpc.Serve(grpcSrv.listener); err != nil && err != grpc.ErrServerStopped {
 			return fmt.Errorf("grpc: %w", err)
 		}
@@ -587,7 +598,7 @@ func StartAll(ctx context.Context, mgr *shutdown.Manager, cfg *Config) error {
 	})
 
 	g.Go(func() error {
-		slog.Info("gRPC-Gateway server starting", "addr", gwSrv.addr)
+		log.Info(gCtx, "gRPC-Gateway server starting", log.String("addr", gwSrv.addr))
 		if err := gwSrv.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			return fmt.Errorf("gateway: %w", err)
 		}
@@ -595,16 +606,27 @@ func StartAll(ctx context.Context, mgr *shutdown.Manager, cfg *Config) error {
 	})
 
 	if err := g.Wait(); err != nil {
-		slog.Error("server stopped", "err", err)
+		log.Error(ctx, "server stopped", log.Err(err))
 	}
-	slog.Info("all servers stopped")
+	log.Info(ctx, "all servers stopped")
 	return nil
 }
 
 func customHeaderMatcher(key string) (string, bool) {
 	switch strings.ToLower(key) {
+	case "x-request-id":
+		return "x-request-id", true
 	case "space-id":
 		return "space-id", true
+	default:
+		return runtime.DefaultHeaderMatcher(key)
+	}
+}
+
+func customOutgoingHeaderMatcher(key string) (string, bool) {
+	switch strings.ToLower(key) {
+	case "x-request-id":
+		return "X-Request-ID", true
 	default:
 		return runtime.DefaultHeaderMatcher(key)
 	}

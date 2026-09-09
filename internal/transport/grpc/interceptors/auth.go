@@ -48,13 +48,9 @@ func NewAuthInterceptor(validator token.Service, store UserStoreProvider, rules 
 // UnaryServerInterceptor returns a gRPC unary interceptor that authenticates requests.
 func (ai *AuthInterceptor) UnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-		policy, _ := ai.resolvePolicy(info.FullMethod)
-		if policy != nil && policy.AuthRequired {
-			var err error
-			ctx, err = ai.authenticate(ctx, policy.AccessLevels)
-			if err != nil {
-				return nil, err
-			}
+		ctx, err := ai.intercept(ctx, info.FullMethod)
+		if err != nil {
+			return nil, err
 		}
 		return handler(ctx, req)
 	}
@@ -63,26 +59,20 @@ func (ai *AuthInterceptor) UnaryServerInterceptor() grpc.UnaryServerInterceptor 
 // StreamServerInterceptor returns a gRPC stream interceptor that authenticates requests.
 func (ai *AuthInterceptor) StreamServerInterceptor() grpc.StreamServerInterceptor {
 	return func(srv any, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-		policy, _ := ai.resolvePolicy(info.FullMethod)
-		if policy != nil && policy.AuthRequired {
-			ctx, err := ai.authenticate(stream.Context(), policy.AccessLevels)
-			if err != nil {
-				return err
-			}
-			stream = &authenticatedStream{ServerStream: stream, ctx: ctx}
+		ctx, err := ai.intercept(stream.Context(), info.FullMethod)
+		if err != nil {
+			return err
 		}
-		return handler(srv, stream)
+		return handler(srv, WrapServerStream(ctx, stream))
 	}
 }
 
-// authenticatedStream wraps a ServerStream to use an authenticated context.
-type authenticatedStream struct {
-	grpc.ServerStream
-	ctx context.Context
-}
-
-func (s *authenticatedStream) Context() context.Context {
-	return s.ctx
+func (ai *AuthInterceptor) intercept(ctx context.Context, fullMethod string) (context.Context, error) {
+	policy, _ := ai.resolvePolicy(fullMethod)
+	if policy != nil && policy.AuthRequired {
+		return ai.authenticate(ctx, policy.AccessLevels)
+	}
+	return ctx, nil
 }
 
 // resolvePolicy evaluates the auth rules for a given gRPC method name.

@@ -1,7 +1,9 @@
 package space_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -10,6 +12,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/platform/db"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/log"
 )
 
 type mockSpaceService struct {
@@ -333,6 +336,116 @@ func TestTransactionalCoordinator(t *testing.T) {
 		}
 		if txr.lastCtrl == nil || !txr.lastCtrl.IsDone() || txr.lastCtrl.IsAborted() {
 			t.Errorf("expected transaction to be committed successfully")
+		}
+	})
+}
+
+func TestLoggingCoordinator(t *testing.T) {
+	mockSpace := &mockSpaceService{}
+	mockIdent := &mockIdentityService{}
+	baseCoord := spaceapp.NewCoordinator(spaceapp.Dependencies{
+		SpaceService:    mockSpace,
+		IdentityService: mockIdent,
+	})
+
+	t.Run("logs success at Info level with duration and component metadata", func(t *testing.T) {
+		buf := &bytes.Buffer{}
+		logger := log.New(
+			log.WithLevel(log.LevelInfo),
+			log.WithJSON(),
+			log.WithOutput(buf),
+			log.WithSource(false),
+		)
+
+		decorator := spaceapp.NewLoggingCoordinator(baseCoord, logger)
+		ctx := context.Background()
+
+		mockSpace.createSpaceFunc = func(ctx context.Context, sp *space.Space) (*space.Space, error) {
+			sp.ID = "sp_created"
+			return sp, nil
+		}
+
+		res, err := decorator.CreateSpace(ctx, &spaceapp.CreateSpaceRequest{
+			OwnerID: "usr_owner",
+			Name:    "Logged Space",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if res.ID != "sp_created" {
+			t.Errorf("expected sp_created, got %s", res.ID)
+		}
+
+		var payload map[string]any
+		if err := json.Unmarshal(buf.Bytes(), &payload); err != nil {
+			t.Fatalf("failed to unmarshal log JSON: %v", err)
+		}
+
+		if payload["level"] != "INFO" {
+			t.Errorf("expected level INFO, got %v", payload["level"])
+		}
+		if payload["msg"] != "space.CreateSpace completed" {
+			t.Errorf("expected msg 'space.CreateSpace completed', got %v", payload["msg"])
+		}
+		if payload["component"] != "space" {
+			t.Errorf("expected component 'space', got %v", payload["component"])
+		}
+		if payload["operation"] != "CreateSpace" {
+			t.Errorf("expected operation 'CreateSpace', got %v", payload["operation"])
+		}
+		if _, ok := payload["duration"]; !ok {
+			t.Errorf("expected duration to be logged")
+		}
+	})
+
+	t.Run("logs error at Error level with unpacked error and duration", func(t *testing.T) {
+		buf := &bytes.Buffer{}
+		logger := log.New(
+			log.WithLevel(log.LevelInfo),
+			log.WithJSON(),
+			log.WithOutput(buf),
+			log.WithSource(false),
+		)
+
+		decorator := spaceapp.NewLoggingCoordinator(baseCoord, logger)
+		ctx := context.Background()
+
+		mockSpace.createSpaceFunc = func(ctx context.Context, sp *space.Space) (*space.Space, error) {
+			return nil, errors.E(errors.Exist, errors.Code("SPACE_EXISTS"), "space already exists")
+		}
+
+		_, err := decorator.CreateSpace(ctx, &spaceapp.CreateSpaceRequest{
+			OwnerID: "usr_owner",
+			Name:    "Duplicate Space",
+		})
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+
+		var payload map[string]any
+		if err := json.Unmarshal(buf.Bytes(), &payload); err != nil {
+			t.Fatalf("failed to unmarshal log JSON: %v", err)
+		}
+
+		if payload["level"] != "ERROR" {
+			t.Errorf("expected level ERROR, got %v", payload["level"])
+		}
+		if payload["msg"] != "space.CreateSpace failed" {
+			t.Errorf("expected msg 'space.CreateSpace failed', got %v", payload["msg"])
+		}
+		if payload["component"] != "space" {
+			t.Errorf("expected component 'space', got %v", payload["component"])
+		}
+		if payload["operation"] != "CreateSpace" {
+			t.Errorf("expected operation 'CreateSpace', got %v", payload["operation"])
+		}
+
+		errObj, ok := payload["error"].(map[string]any)
+		if !ok {
+			t.Fatalf("expected structured error group, got: %T", payload["error"])
+		}
+		if errObj["code"] != "SPACE_EXISTS" {
+			t.Errorf("expected code SPACE_EXISTS, got %v", errObj["code"])
 		}
 	})
 }

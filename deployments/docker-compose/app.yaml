@@ -32,7 +32,7 @@ services:
       SATURN_DB_PASSWORD: saturn
       SATURN_DB_NAME: saturn
       SATURN_GATEWAY_ADDR: ":8080"
-      SATURN_LOG_LEVEL: info
+      SATURN_LOG_LEVEL: debug
       SATURN_SWAGGER_ENABLED: true
       SATURN_GATEWAY_COOKIE_SECURE: "false"
       SATURN_WEBHOOK_SECRET: dev_webhook_secret

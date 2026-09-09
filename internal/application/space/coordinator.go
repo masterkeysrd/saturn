@@ -14,6 +14,7 @@ const (
 )
 
 //go:generate go run github.com/masterkeysrd/saturn/tools/txgen -target=Coordinator
+//go:generate go run github.com/masterkeysrd/saturn/tools/loggen -target=Coordinator
 
 // Coordinator orchestrates space and membership operations.
 type Coordinator interface {

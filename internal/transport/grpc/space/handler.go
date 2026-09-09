@@ -65,7 +65,6 @@ func toProtoSpaceMember(m *space.Member) *spacev1.SpaceMember {
 	}
 }
 
-
 // toProtoAggregatedSpaceMember converts a spaceaggregator.SpaceMember to a proto SpaceMember.
 func toProtoAggregatedSpaceMember(m *spaceaggregator.SpaceMember) *spacev1.SpaceMember {
 	var profile *spacev1.SpaceMember_Profile

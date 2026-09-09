@@ -15,7 +15,9 @@ import (
 	spacestorage "github.com/masterkeysrd/saturn/internal/domain/space/storage"
 	"github.com/masterkeysrd/saturn/internal/platform/backup"
 	"github.com/masterkeysrd/saturn/internal/platform/db"
+	"github.com/masterkeysrd/saturn/internal/platform/log"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
+	"github.com/masterkeysrd/saturn/internal/platform/requestid"
 	"github.com/masterkeysrd/saturn/internal/platform/shutdown"
 	"github.com/masterkeysrd/saturn/migrations"
 	"github.com/spf13/cobra"
@@ -36,7 +38,7 @@ func Execute() error {
 			BindFlags(v, cmd.Flags())
 			cfg := LoadConfig(v)
 			initLogging(cfg)
-			slog.Info("config loaded", "config", cfg)
+			log.Info(cmd.Context(), "config loaded", log.Any("config", cfg))
 
 			mgr := shutdown.New(shutdown.WithTimeout(cfg.Shutdown.Timeout))
 			ctx, cancel := mgr.Init()
@@ -67,11 +69,11 @@ func Execute() error {
 			}
 			defer func() { _ = db.Close() }()
 
-			slog.Info("running migrations up")
+			log.Info(cmd.Context(), "running migrations up")
 			if err := migrations.Migrate(db); err != nil {
 				return fmt.Errorf("migrate up: %w", err)
 			}
-			slog.Info("migrations applied")
+			log.Info(cmd.Context(), "migrations applied")
 
 			return nil
 		},
@@ -91,11 +93,11 @@ func Execute() error {
 			}
 			defer func() { _ = db.Close() }()
 
-			slog.Info("rolling back migrations")
+			log.Info(cmd.Context(), "rolling back migrations")
 			if err := migrations.Down(db); err != nil {
 				return fmt.Errorf("migrate down: %w", err)
 			}
-			slog.Info("migrations rolled back")
+			log.Info(cmd.Context(), "migrations rolled back")
 
 			return nil
 		},
@@ -177,7 +179,12 @@ func Execute() error {
 				return fmt.Errorf("create user: %w", err)
 			}
 
-			slog.Info("user created successfully", "user_id", resp.UserID, "email", resp.Email, "role", resp.AccessLevel, "status", resp.Status)
+			log.Info(cmd.Context(), "user created successfully",
+				log.String("user_id", resp.UserID),
+				log.String("email", resp.Email),
+				log.String("role", string(resp.AccessLevel)),
+				log.String("status", string(resp.Status)),
+			)
 			fmt.Printf("User created: ID=%s Email=%s Role=%s Status=%s\n", resp.UserID, resp.Email, resp.AccessLevel, resp.Status)
 
 			return nil
@@ -221,16 +228,16 @@ func Execute() error {
 
 			mgr := backup.NewPostgresBackupManager(store, pgConfig, cfg.Backup.LocalDir)
 
-			slog.Info("starting database backup snapshot")
+			log.Info(cmd.Context(), "starting database backup snapshot")
 			entry, err := mgr.RunBackup(cmd.Context(), "cli_manual")
 			if err != nil {
 				return fmt.Errorf("backup execution failed: %w", err)
 			}
 
-			slog.Info("database backup completed successfully",
-				"filename", entry.Filename,
-				"size_bytes", entry.SizeBytes,
-				"sha256", entry.Sha256,
+			log.Info(cmd.Context(), "database backup completed successfully",
+				log.String("filename", entry.Filename),
+				log.Int64("size_bytes", entry.SizeBytes),
+				log.String("sha256", entry.Sha256),
 			)
 			fmt.Printf("Backup successful!\nFile: %s\nSize: %d bytes\nSHA256: %s\n",
 				entry.Filename, entry.SizeBytes, entry.Sha256)
@@ -256,12 +263,30 @@ func initBackupStorage(ctx context.Context, cfg *Config) (backup.Storage, error)
 }
 
 func initLogging(cfg *Config) {
+	level, err := log.ParseLevel(cfg.Log.Level)
+	if err != nil {
+		level = log.LevelInfo
+	}
+
+	format := log.FormatJSON
+	if cfg.Log.Format == "text" {
+		format = log.FormatText
+	}
+
+	logger := log.New(
+		log.WithLevel(level),
+		log.WithFormat(format),
+		log.WithOutput(os.Stderr),
+		log.WithMiddleware(requestid.Enricher()),
+	)
+	log.SetDefault(logger)
+
 	var handler slog.Handler
-	level := logLevels[cfg.Log.Level]
+	slogLevel := logLevels[cfg.Log.Level]
 	if cfg.Log.Format == "json" {
-		handler = slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: level})
+		handler = slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slogLevel})
 	} else {
-		handler = slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level})
+		handler = slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slogLevel})
 	}
 	slog.SetDefault(slog.New(handler))
 }

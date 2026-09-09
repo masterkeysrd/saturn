@@ -52,8 +52,7 @@ func (si *SpaceInterceptor) StreamServerInterceptor() grpc.StreamServerIntercept
 		if err != nil {
 			return err
 		}
-		wrapped := &scopedStream{ServerStream: stream, ctx: ctx}
-		return handler(srv, wrapped)
+		return handler(srv, WrapServerStream(ctx, stream))
 	}
 }
 
@@ -127,14 +126,4 @@ func (si *SpaceInterceptor) resolveSpacePolicy(method string) bool {
 	// Cache the result
 	si.cache.Store(method, scoped)
 	return scoped
-}
-
-// scopedStream wraps a ServerStream to use a scoped context.
-type scopedStream struct {
-	grpc.ServerStream
-	ctx context.Context
-}
-
-func (s *scopedStream) Context() context.Context {
-	return s.ctx
 }

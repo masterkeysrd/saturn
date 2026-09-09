@@ -1,11 +1,13 @@
 package app
 
 import (
+	"context"
 	"fmt"
-	"log/slog"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/masterkeysrd/saturn/internal/platform/log"
 
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -36,11 +38,11 @@ const (
 	defaultJWTKeyDir      = "./keys"
 )
 
-var logLevels = map[string]slog.Level{
-	"debug": slog.LevelDebug,
-	"info":  slog.LevelInfo,
-	"warn":  slog.LevelWarn,
-	"error": slog.LevelError,
+var logLevels = map[string]log.Level{
+	"debug": log.LevelDebug,
+	"info":  log.LevelInfo,
+	"warn":  log.LevelWarn,
+	"error": log.LevelError,
 }
 
 // Config holds all application configuration, organized by subsystem.
@@ -191,13 +193,13 @@ func NewViper() *viper.Viper {
 func LoadConfig(v *viper.Viper) *Config {
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			slog.Warn("failed to read config file", "err", err)
+			log.Warn(context.Background(), "failed to read config file", log.Err(err))
 		}
 	}
 
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
-		slog.Error("failed to parse config", "err", err)
+		log.Error(context.Background(), "failed to parse config", log.Err(err))
 		os.Exit(1)
 	}
 

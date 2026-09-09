@@ -1,11 +1,12 @@
 package middleware
 
 import (
-	"log/slog"
+	"fmt"
 	"net/http"
 	"runtime/debug"
 
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/log"
 )
 
 // RecoveryMiddleware catches and recovers from runtime panics in downstream HTTP handlers,
@@ -14,13 +15,14 @@ func RecoveryMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if rec := recover(); rec != nil {
-				slog.Error("panic recovered in HTTP handler",
-					"method", r.Method,
-					"path", r.URL.Path,
-					"panic", rec,
-					"stack", string(debug.Stack()),
-					"remote", r.RemoteAddr,
-				)
+				fields := []log.Field{
+					log.String("method", r.Method),
+					log.String("path", r.URL.Path),
+					log.String("panic", fmt.Sprint(rec)),
+					log.String("stack", string(debug.Stack())),
+					log.String("remote", r.RemoteAddr),
+				}
+				log.Error(r.Context(), "panic recovered in HTTP handler", fields...)
 				WriteHTTP(w, errors.E(errors.Internal, "panic recovered"))
 			}
 		}()

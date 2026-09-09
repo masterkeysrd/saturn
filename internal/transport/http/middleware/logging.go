@@ -2,9 +2,10 @@ package middleware
 
 import (
 	"bytes"
-	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/masterkeysrd/saturn/internal/platform/log"
 )
 
 // responseWriter captures the response status code, bytes written, and error body snippet.
@@ -62,40 +63,37 @@ func (rw *responseWriter) Unwrap() http.ResponseWriter {
 // LoggingMiddleware logs incoming HTTP requests with their status, latency, and bytes written.
 // Server errors (status >= 500) are logged at Error level.
 // Client errors (400 <= status < 500) are logged at Warn level with error response details.
+// Successful requests (status < 400) are logged at Info level.
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rw := newResponseWriter(w)
 		start := time.Now()
+		ctx := r.Context()
 
 		defer func() {
 			duration := time.Since(start)
 
+			fields := []log.Field{
+				log.String("method", r.Method),
+				log.String("path", r.URL.Path),
+				log.Int("status", rw.statusCode),
+				log.Int64("bytes", rw.bytesWritten),
+				log.Duration("duration", duration),
+				log.String("remote", r.RemoteAddr),
+			}
+
 			if rw.statusCode >= http.StatusInternalServerError {
-				attrs := []any{
-					"method", r.Method,
-					"path", r.URL.Path,
-					"status", rw.statusCode,
-					"bytes", rw.bytesWritten,
-					"duration", duration,
-					"remote", r.RemoteAddr,
-				}
 				if rw.bodyBuf.Len() > 0 {
-					attrs = append(attrs, "error", rw.bodyBuf.String())
+					fields = append(fields, log.String("error", rw.bodyBuf.String()))
 				}
-				slog.Error("HTTP server error", attrs...)
+				log.Error(ctx, "HTTP server error", fields...)
 			} else if rw.statusCode >= http.StatusBadRequest {
-				attrs := []any{
-					"method", r.Method,
-					"path", r.URL.Path,
-					"status", rw.statusCode,
-					"bytes", rw.bytesWritten,
-					"duration", duration,
-					"remote", r.RemoteAddr,
-				}
 				if rw.bodyBuf.Len() > 0 {
-					attrs = append(attrs, "error", rw.bodyBuf.String())
+					fields = append(fields, log.String("error", rw.bodyBuf.String()))
 				}
-				slog.Warn("HTTP client error", attrs...)
+				log.Warn(ctx, "HTTP client error", fields...)
+			} else {
+				log.Info(ctx, "HTTP request completed", fields...)
 			}
 		}()
 
