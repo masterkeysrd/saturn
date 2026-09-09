@@ -201,10 +201,13 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	admingrpc.RegisterAdminIdentityServer(s.grpc, adminHandler)
 
 	// Wire Space service
-	spaceCoordinator := spaceapp.NewCoordinator(spaceapp.Dependencies{
-		SpaceService:    spaceService,
-		IdentityService: identityService,
-	})
+	spaceCoordinator := spaceapp.NewTransactionalCoordinator(
+		spaceapp.NewCoordinator(spaceapp.Dependencies{
+			SpaceService:    spaceService,
+			IdentityService: identityService,
+		}),
+		dbClient,
+	)
 	spaceHandler := spacegrpc.NewHandler(spaceCoordinator)
 	spacev1.RegisterSpacesServer(s.grpc, spaceHandler)
 

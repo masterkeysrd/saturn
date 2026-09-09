@@ -14,11 +14,11 @@ import (
 // Handler implements the spacev1.SpacesServer interface.
 type Handler struct {
 	spacev1.UnimplementedSpacesServer
-	Coordinator *spaceapp.Coordinator
+	Coordinator spaceapp.Coordinator
 }
 
 // NewHandler creates a new Handler.
-func NewHandler(coordinator *spaceapp.Coordinator) *Handler {
+func NewHandler(coordinator spaceapp.Coordinator) *Handler {
 	return &Handler{Coordinator: coordinator}
 }
 

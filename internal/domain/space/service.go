@@ -66,8 +66,6 @@ func (s *Service) CreateSpace(ctx context.Context, space *Space) (*Space, error)
 		UpdateTime: time.Now(),
 	}
 	if err := s.deps.MemberStore.Create(ctx, member); err != nil {
-		// Rollback: delete the space
-		_ = s.deps.SpaceStore.Delete(ctx, spaceID)
 		return nil, errors.E(op, err)
 	}
 

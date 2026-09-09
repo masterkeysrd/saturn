@@ -8,6 +8,7 @@ import (
 	spaceapp "github.com/masterkeysrd/saturn/internal/application/space"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 )
 
@@ -273,4 +274,124 @@ func TestCoordinator_ListSpaceMembers(t *testing.T) {
 	if members[1].Profile != nil {
 		t.Errorf("expected nil profile fallback for member 1")
 	}
+}
+
+type mockTransactor struct {
+	beginCalled bool
+	lastCtrl    *db.TxController
+	beginErr    error
+}
+
+func (m *mockTransactor) Begin(ctx context.Context) (context.Context, *db.TxController, error) {
+	m.beginCalled = true
+	if m.beginErr != nil {
+		return ctx, nil, m.beginErr
+	}
+	ctrl := &db.TxController{}
+	m.lastCtrl = ctrl
+	return db.WithTxContext(ctx, ctrl), ctrl, nil
+}
+
+func (m *mockTransactor) WithTx(ctx context.Context, fn func(ctx context.Context) error) error {
+	txCtx, tx, err := m.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := fn(txCtx); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func TestTransactionalCoordinator(t *testing.T) {
+	mockSpace := &mockSpaceService{}
+	mockID := &mockIdentityService{}
+	baseCoord := spaceapp.NewCoordinator(spaceapp.Dependencies{
+		SpaceService:    mockSpace,
+		IdentityService: mockID,
+	})
+
+	t.Run("CreateSpace commits on success", func(t *testing.T) {
+		txr := &mockTransactor{}
+		decorator := spaceapp.NewTransactionalCoordinator(baseCoord, txr)
+
+		ctx := context.Background()
+		var seenCtx context.Context
+		mockSpace.createSpaceFunc = func(ctx context.Context, sp *space.Space) (*space.Space, error) {
+			seenCtx = ctx
+			return sp, nil
+		}
+
+		sp, err := decorator.CreateSpace(ctx, &spaceapp.CreateSpaceRequest{
+			OwnerID: "usr_1",
+			Name:    "Test Space",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sp.Name != "Test Space" {
+			t.Errorf("expected space name Test Space, got %s", sp.Name)
+		}
+		if !txr.beginCalled {
+			t.Errorf("expected Begin to be called on Transactor")
+		}
+		if txr.lastCtrl == nil || !txr.lastCtrl.IsDone() {
+			t.Errorf("expected transaction to be committed and marked done")
+		}
+		if txr.lastCtrl.IsAborted() {
+			t.Errorf("expected transaction NOT to be aborted")
+		}
+		if db.TxControllerFromContext(seenCtx) == nil {
+			t.Errorf("expected transaction context to be passed to underlying service")
+		}
+	})
+
+	t.Run("CreateSpace rolls back on error", func(t *testing.T) {
+		txr := &mockTransactor{}
+		decorator := spaceapp.NewTransactionalCoordinator(baseCoord, txr)
+
+		ctx := context.Background()
+		mockSpace.createSpaceFunc = func(ctx context.Context, sp *space.Space) (*space.Space, error) {
+			return nil, errors.E(errors.Internal, "database crash")
+		}
+
+		_, err := decorator.CreateSpace(ctx, &spaceapp.CreateSpaceRequest{
+			OwnerID: "usr_1",
+			Name:    "Test Space",
+		})
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !txr.beginCalled {
+			t.Errorf("expected Begin to be called on Transactor")
+		}
+		if txr.lastCtrl == nil || !txr.lastCtrl.IsDone() {
+			t.Errorf("expected transaction to be marked done")
+		}
+		if !txr.lastCtrl.IsAborted() {
+			t.Errorf("expected transaction to be aborted due to error")
+		}
+	})
+
+	t.Run("GetSpace does not begin transaction", func(t *testing.T) {
+		txr := &mockTransactor{}
+		decorator := spaceapp.NewTransactionalCoordinator(baseCoord, txr)
+
+		ctx := context.Background()
+		mockSpace.getSpaceFunc = func(ctx context.Context, session space.Session) (*space.Space, error) {
+			return &space.Space{ID: session.SpaceID}, nil
+		}
+
+		sp, err := decorator.GetSpace(ctx, "sp_1", "usr_1")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sp.ID != "sp_1" {
+			t.Errorf("expected space ID sp_1, got %s", sp.ID)
+		}
+		if txr.beginCalled {
+			t.Errorf("expected GetSpace to NOT begin transaction")
+		}
+	})
 }

@@ -13,25 +13,48 @@ const (
 	UserNotActive errors.Code = "USER_NOT_ACTIVE"
 )
 
+//go:generate go run github.com/masterkeysrd/saturn/tools/txgen -target=Coordinator
+
+// Coordinator orchestrates space and membership operations.
+type Coordinator interface {
+	// @transactional
+	CreateSpace(ctx context.Context, req *CreateSpaceRequest) (*space.Space, error)
+	GetSpace(ctx context.Context, spaceID space.SpaceID, userID space.SpaceID) (*space.Space, error)
+	// @transactional
+	UpdateSpace(ctx context.Context, req *UpdateSpaceRequest) (*space.Space, error)
+	// @transactional
+	DeleteSpace(ctx context.Context, req *DeleteSpaceRequest) error
+	ListSpaces(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) ([]*space.Space, string, error)
+	// @transactional
+	AddSpaceMember(ctx context.Context, req *AddSpaceMemberRequest) (*space.Member, error)
+	// @transactional
+	RemoveSpaceMember(ctx context.Context, req *RemoveSpaceMemberRequest) error
+	// @transactional
+	UpdateSpaceMemberRole(ctx context.Context, req *UpdateSpaceMemberRoleRequest) (*space.Member, error)
+	ListSpaceMembers(ctx context.Context, req *ListSpaceMembersRequest) ([]*SpaceMember, string, error)
+}
+
 // Dependencies defines the inputs for creating a new Coordinator.
 type Dependencies struct {
 	SpaceService    SpaceService
 	IdentityService IdentityService
 }
 
-// Coordinator orchestrates space and membership operations.
-type Coordinator struct {
+// coordinator is the default implementation of Coordinator.
+type coordinator struct {
 	spaceService    SpaceService
 	identityService IdentityService
 }
 
 // NewCoordinator creates a new Coordinator.
-func NewCoordinator(deps Dependencies) *Coordinator {
-	return &Coordinator{
+func NewCoordinator(deps Dependencies) Coordinator {
+	return &coordinator{
 		spaceService:    deps.SpaceService,
 		identityService: deps.IdentityService,
 	}
 }
+
+var _ Coordinator = (*coordinator)(nil)
 
 // CreateSpaceRequest represents the input for creating a space.
 type CreateSpaceRequest struct {
@@ -85,7 +108,7 @@ type ListSpaceMembersRequest struct {
 }
 
 // CreateSpace orchestrates space creation.
-func (c *Coordinator) CreateSpace(ctx context.Context, req *CreateSpaceRequest) (*space.Space, error) {
+func (c *coordinator) CreateSpace(ctx context.Context, req *CreateSpaceRequest) (*space.Space, error) {
 	const op errors.Op = "application/space.CreateSpace"
 	sp := &space.Space{
 		OwnerID:     space.SpaceID(req.OwnerID),
@@ -100,7 +123,7 @@ func (c *Coordinator) CreateSpace(ctx context.Context, req *CreateSpaceRequest) 
 }
 
 // GetSpace orchestrates workspace retrieval.
-func (c *Coordinator) GetSpace(ctx context.Context, spaceID space.SpaceID, userID space.SpaceID) (*space.Space, error) {
+func (c *coordinator) GetSpace(ctx context.Context, spaceID space.SpaceID, userID space.SpaceID) (*space.Space, error) {
 	const op errors.Op = "application/space.GetSpace"
 	session := space.Session{
 		SpaceID: spaceID,
@@ -114,7 +137,7 @@ func (c *Coordinator) GetSpace(ctx context.Context, spaceID space.SpaceID, userI
 }
 
 // UpdateSpace orchestrates workspace metadata updates.
-func (c *Coordinator) UpdateSpace(ctx context.Context, req *UpdateSpaceRequest) (*space.Space, error) {
+func (c *coordinator) UpdateSpace(ctx context.Context, req *UpdateSpaceRequest) (*space.Space, error) {
 	const op errors.Op = "application/space.UpdateSpace"
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
@@ -132,7 +155,7 @@ func (c *Coordinator) UpdateSpace(ctx context.Context, req *UpdateSpaceRequest) 
 }
 
 // DeleteSpace orchestrates workspace deletion.
-func (c *Coordinator) DeleteSpace(ctx context.Context, req *DeleteSpaceRequest) error {
+func (c *coordinator) DeleteSpace(ctx context.Context, req *DeleteSpaceRequest) error {
 	const op errors.Op = "application/space.DeleteSpace"
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
@@ -145,7 +168,7 @@ func (c *Coordinator) DeleteSpace(ctx context.Context, req *DeleteSpaceRequest) 
 }
 
 // ListSpaces orchestrates workspace listing.
-func (c *Coordinator) ListSpaces(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) ([]*space.Space, string, error) {
+func (c *coordinator) ListSpaces(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) ([]*space.Space, string, error) {
 	const op errors.Op = "application/space.ListSpaces"
 	spaces, nextToken, err := c.spaceService.ListSpaces(ctx, userID, filter)
 	if err != nil {
@@ -155,7 +178,7 @@ func (c *Coordinator) ListSpaces(ctx context.Context, userID space.SpaceID, filt
 }
 
 // AddSpaceMember orchestrates adding a member to a workspace.
-func (c *Coordinator) AddSpaceMember(ctx context.Context, req *AddSpaceMemberRequest) (*space.Member, error) {
+func (c *coordinator) AddSpaceMember(ctx context.Context, req *AddSpaceMemberRequest) (*space.Member, error) {
 	const op errors.Op = "application/space.AddSpaceMember"
 
 	// Verify target user exists and is active in Identity system
@@ -183,7 +206,7 @@ func (c *Coordinator) AddSpaceMember(ctx context.Context, req *AddSpaceMemberReq
 }
 
 // RemoveSpaceMember orchestrates removing a member from a workspace.
-func (c *Coordinator) RemoveSpaceMember(ctx context.Context, req *RemoveSpaceMemberRequest) error {
+func (c *coordinator) RemoveSpaceMember(ctx context.Context, req *RemoveSpaceMemberRequest) error {
 	const op errors.Op = "application/space.RemoveSpaceMember"
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
@@ -196,7 +219,7 @@ func (c *Coordinator) RemoveSpaceMember(ctx context.Context, req *RemoveSpaceMem
 }
 
 // UpdateSpaceMemberRole orchestrates updating a member's role in a workspace.
-func (c *Coordinator) UpdateSpaceMemberRole(ctx context.Context, req *UpdateSpaceMemberRoleRequest) (*space.Member, error) {
+func (c *coordinator) UpdateSpaceMemberRole(ctx context.Context, req *UpdateSpaceMemberRoleRequest) (*space.Member, error) {
 	const op errors.Op = "application/space.UpdateSpaceMemberRole"
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
@@ -227,7 +250,7 @@ type SpaceMember struct {
 }
 
 // ListSpaceMembers orchestrates listing workspace members.
-func (c *Coordinator) ListSpaceMembers(ctx context.Context, req *ListSpaceMembersRequest) ([]*SpaceMember, string, error) {
+func (c *coordinator) ListSpaceMembers(ctx context.Context, req *ListSpaceMembersRequest) ([]*SpaceMember, string, error) {
 	const op errors.Op = "application/space.ListSpaceMembers"
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
