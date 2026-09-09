@@ -150,16 +150,25 @@ func ToGRPC(err error) error {
 }
 
 // ErrorUnaryInterceptor returns a gRPC UnaryServerInterceptor that intercepts
-// errors returned by handlers, logs operational traces for internal errors, and
+// errors returned by handlers, logs operational traces for errors, and
 // converts errors into structured gRPC statuses.
 func ErrorUnaryInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		resp, err := handler(ctx, req)
 		if err != nil {
 			kind := errors.KindOf(err)
+			code := errors.CodeOf(err)
 			if kind == errors.Internal || kind == errors.Other {
 				slog.Error("internal error in gRPC unary call",
 					"method", info.FullMethod,
+					"op_trace", err.Error(),
+				)
+			} else {
+				slog.Warn("client error in gRPC unary call",
+					"method", info.FullMethod,
+					"kind", kind.String(),
+					"code", string(code),
+					"error", errors.UserMessage(err),
 					"op_trace", err.Error(),
 				)
 			}
@@ -170,15 +179,24 @@ func ErrorUnaryInterceptor() grpc.UnaryServerInterceptor {
 }
 
 // ErrorStreamInterceptor returns a gRPC StreamServerInterceptor that intercepts
-// stream errors, logs internal operational traces, and converts errors to structured gRPC statuses.
+// stream errors, logs operational traces for errors, and converts errors to structured gRPC statuses.
 func ErrorStreamInterceptor() grpc.StreamServerInterceptor {
 	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		err := handler(srv, ss)
 		if err != nil {
 			kind := errors.KindOf(err)
+			code := errors.CodeOf(err)
 			if kind == errors.Internal || kind == errors.Other {
 				slog.Error("internal error in gRPC stream call",
 					"method", info.FullMethod,
+					"op_trace", err.Error(),
+				)
+			} else {
+				slog.Warn("client error in gRPC stream call",
+					"method", info.FullMethod,
+					"kind", kind.String(),
+					"code", string(code),
+					"error", errors.UserMessage(err),
 					"op_trace", err.Error(),
 				)
 			}

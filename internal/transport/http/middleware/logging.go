@@ -1,17 +1,19 @@
 package middleware
 
 import (
+	"bytes"
 	"log/slog"
 	"net/http"
 	"time"
 )
 
-// responseWriter captures the response status code and bytes written.
+// responseWriter captures the response status code, bytes written, and error body snippet.
 type responseWriter struct {
 	http.ResponseWriter
 	statusCode   int
 	bytesWritten int64
 	wroteHeader  bool
+	bodyBuf      bytes.Buffer
 }
 
 func newResponseWriter(w http.ResponseWriter) *responseWriter {
@@ -33,6 +35,14 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	if !rw.wroteHeader {
 		rw.WriteHeader(http.StatusOK)
 	}
+	if rw.statusCode >= http.StatusBadRequest && rw.bodyBuf.Len() < 1024 {
+		remaining := 1024 - rw.bodyBuf.Len()
+		if len(b) <= remaining {
+			rw.bodyBuf.Write(b)
+		} else {
+			rw.bodyBuf.Write(b[:remaining])
+		}
+	}
 	n, err := rw.ResponseWriter.Write(b)
 	rw.bytesWritten += int64(n)
 	return n, err
@@ -51,7 +61,7 @@ func (rw *responseWriter) Unwrap() http.ResponseWriter {
 
 // LoggingMiddleware logs incoming HTTP requests with their status, latency, and bytes written.
 // Server errors (status >= 500) are logged at Error level.
-// Client errors (400 <= status < 500) are logged at Warn level.
+// Client errors (400 <= status < 500) are logged at Warn level with error response details.
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rw := newResponseWriter(w)
@@ -61,23 +71,31 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 			duration := time.Since(start)
 
 			if rw.statusCode >= http.StatusInternalServerError {
-				slog.Error("HTTP server error",
+				attrs := []any{
 					"method", r.Method,
 					"path", r.URL.Path,
 					"status", rw.statusCode,
 					"bytes", rw.bytesWritten,
 					"duration", duration,
 					"remote", r.RemoteAddr,
-				)
+				}
+				if rw.bodyBuf.Len() > 0 {
+					attrs = append(attrs, "error", rw.bodyBuf.String())
+				}
+				slog.Error("HTTP server error", attrs...)
 			} else if rw.statusCode >= http.StatusBadRequest {
-				slog.Warn("HTTP client error",
+				attrs := []any{
 					"method", r.Method,
 					"path", r.URL.Path,
 					"status", rw.statusCode,
 					"bytes", rw.bytesWritten,
 					"duration", duration,
 					"remote", r.RemoteAddr,
-				)
+				}
+				if rw.bodyBuf.Len() > 0 {
+					attrs = append(attrs, "error", rw.bodyBuf.String())
+				}
+				slog.Warn("HTTP client error", attrs...)
 			}
 		}()
 
