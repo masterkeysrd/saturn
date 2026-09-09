@@ -1,6 +1,9 @@
 import { useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 import { useMySpaces, useActiveSpaceContext } from "@/features/space/use-space"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -24,6 +27,21 @@ import {
 import { toast } from "@/components/ui/toast"
 import { ManageSpaceSheet } from "./manage-space-sheet"
 
+const createSpaceSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Space name is required")
+    .max(100, "Space name cannot exceed 100 characters"),
+  description: z
+    .string()
+    .trim()
+    .max(500, "Description cannot exceed 500 characters")
+    .optional(),
+})
+
+type CreateSpaceFormValues = z.infer<typeof createSpaceSchema>
+
 export function SpaceSettings() {
   const { spaces, isLoading: isSpacesLoading } = useMySpaces()
   const { spaceId, spaceName, switchSpace, clearActiveSpace } =
@@ -38,24 +56,28 @@ export function SpaceSettings() {
   )
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [managingSpace, setManagingSpace] = useState<Space | null>(null)
-  const [newName, setNewName] = useState("")
-  const [newDesc, setNewDesc] = useState("")
+
+  const createForm = useForm<CreateSpaceFormValues>({
+    resolver: zodResolver(createSpaceSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+    },
+  })
 
   const createMutation = useCreateSpaceMutation()
   const deleteMutation = useDeleteSpaceMutation()
 
-  const handleCreate = async () => {
-    if (!newName.trim()) return
+  const handleCreate = async (data: CreateSpaceFormValues) => {
     const req: CreateSpaceRequest = {
-      name: newName.trim(),
-      description: newDesc.trim(),
+      name: data.name.trim(),
+      description: data.description?.trim() || "",
     }
     try {
       const space = await createMutation.mutateAsync(req)
       queryClient.invalidateQueries({ queryKey: ["/api/v1/spaces"] })
       setCreateOpen(false)
-      setNewName("")
-      setNewDesc("")
+      createForm.reset()
       switchSpace({
         spaceId: space.id || "",
         spaceName: space.name,
@@ -232,51 +254,67 @@ export function SpaceSettings() {
         open={createOpen}
         onOpenChange={(open) => {
           setCreateOpen(open)
-          if (!open && searchParams.get("create") === "true") {
-            setSearchParams({ tab: "spaces" }, { replace: true })
+          if (!open) {
+            createForm.reset()
+            if (searchParams.get("create") === "true") {
+              setSearchParams({ tab: "spaces" }, { replace: true })
+            }
           }
         }}
       >
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create a New Space</DialogTitle>
-            <DialogDescription>
-              Create a workspace to organize your projects and isolate your
-              productivity data.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="space-name">Space Name</Label>
-              <Input
-                id="space-name"
-                placeholder="My Workspace"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-              />
+          <form onSubmit={createForm.handleSubmit(handleCreate)}>
+            <DialogHeader>
+              <DialogTitle>Create a New Space</DialogTitle>
+              <DialogDescription>
+                Create a workspace to organize your projects and isolate your
+                productivity data.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="space-name">Space Name</Label>
+                <Input
+                  id="space-name"
+                  placeholder="My Workspace"
+                  {...createForm.register("name")}
+                />
+                {createForm.formState.errors.name && (
+                  <p className="text-xs text-destructive">
+                    {createForm.formState.errors.name.message}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="space-desc">Description</Label>
+                <Input
+                  id="space-desc"
+                  placeholder="A description of your workspace"
+                  {...createForm.register("description")}
+                />
+                {createForm.formState.errors.description && (
+                  <p className="text-xs text-destructive">
+                    {createForm.formState.errors.description.message}
+                  </p>
+                )}
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="space-desc">Description</Label>
-              <Input
-                id="space-desc"
-                placeholder="A description of your workspace"
-                value={newDesc}
-                onChange={(e) => setNewDesc(e.target.value)}
+            <DialogFooter>
+              <DialogClose
+                render={
+                  <Button variant="outline" type="button">
+                    Cancel
+                  </Button>
+                }
               />
-            </div>
-          </div>
-          <DialogFooter>
-            <DialogClose render={<Button variant="outline">Cancel</Button>} />
-            <Button
-              onClick={handleCreate}
-              disabled={!newName.trim() || createMutation.isPending}
-            >
-              {createMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              Create
-            </Button>
-          </DialogFooter>
+              <Button type="submit" disabled={createMutation.isPending}>
+                {createMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Create
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 

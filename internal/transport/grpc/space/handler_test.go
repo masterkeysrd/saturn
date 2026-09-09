@@ -6,11 +6,13 @@ import (
 	"time"
 
 	spacev1 "github.com/masterkeysrd/saturn/apis/saturn/space/v1"
+	spaceaggregator "github.com/masterkeysrd/saturn/internal/aggregator/space"
 	spaceapp "github.com/masterkeysrd/saturn/internal/application/space"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
 	"github.com/masterkeysrd/saturn/internal/transport/grpc/interceptors"
 	spacegrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/space"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -25,11 +27,11 @@ type mockSpaceService struct {
 	getSpaceFunc              func(ctx context.Context, session space.Session) (*space.Space, error)
 	updateSpaceFunc           func(ctx context.Context, session space.Session, sp *space.Space, mask []string) (*space.Space, error)
 	deleteSpaceFunc           func(ctx context.Context, session space.Session) error
-	listSpacesFunc            func(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) ([]*space.Space, string, error)
+	listSpacesFunc            func(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error)
 	addSpaceMemberFunc        func(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error)
 	removeSpaceMemberFunc     func(ctx context.Context, session space.Session, targetUserID space.SpaceID) error
 	updateSpaceMemberRoleFunc func(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error)
-	listSpaceMembersFunc      func(ctx context.Context, session space.Session, filter *space.ListMembersFilter) ([]*space.Member, string, error)
+	listSpaceMembersFunc      func(ctx context.Context, session space.Session, filter *space.ListMembersFilter) (*paging.Page[*space.Member], error)
 }
 
 func (m *mockSpaceService) CreateSpace(ctx context.Context, sp *space.Space) (*space.Space, error) {
@@ -60,11 +62,11 @@ func (m *mockSpaceService) DeleteSpace(ctx context.Context, session space.Sessio
 	return nil
 }
 
-func (m *mockSpaceService) ListSpaces(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) ([]*space.Space, string, error) {
+func (m *mockSpaceService) ListSpaces(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
 	if m.listSpacesFunc != nil {
 		return m.listSpacesFunc(ctx, userID, filter)
 	}
-	return []*space.Space{}, "", nil
+	return &paging.Page[*space.Space]{}, nil
 }
 
 func (m *mockSpaceService) AddSpaceMember(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error) {
@@ -88,11 +90,11 @@ func (m *mockSpaceService) UpdateSpaceMemberRole(ctx context.Context, session sp
 	return member, nil
 }
 
-func (m *mockSpaceService) ListSpaceMembers(ctx context.Context, session space.Session, filter *space.ListMembersFilter) ([]*space.Member, string, error) {
+func (m *mockSpaceService) ListSpaceMembers(ctx context.Context, session space.Session, filter *space.ListMembersFilter) (*paging.Page[*space.Member], error) {
 	if m.listSpaceMembersFunc != nil {
 		return m.listSpaceMembersFunc(ctx, session, filter)
 	}
-	return []*space.Member{}, "", nil
+	return &paging.Page[*space.Member]{}, nil
 }
 
 type mockIdentityService struct {
@@ -127,7 +129,8 @@ func TestHandler_CreateSpace(t *testing.T) {
 		SpaceService:    mockSpace,
 		IdentityService: mockID,
 	})
-	handler := spacegrpc.NewHandler(coordinator)
+	aggregator := spaceaggregator.NewService(mockSpace, mockID)
+	handler := spacegrpc.NewHandler(coordinator, aggregator)
 	interceptor := interceptors.ErrorUnaryInterceptor()
 
 	invokeCreate := func(ctx context.Context, req *spacev1.CreateSpaceRequest) (*spacev1.Space, error) {
@@ -209,7 +212,8 @@ func TestHandler_GetSpace(t *testing.T) {
 		SpaceService:    mockSpace,
 		IdentityService: mockID,
 	})
-	handler := spacegrpc.NewHandler(coordinator)
+	aggregator := spaceaggregator.NewService(mockSpace, mockID)
+	handler := spacegrpc.NewHandler(coordinator, aggregator)
 	interceptor := interceptors.ErrorUnaryInterceptor()
 
 	invokeGet := func(ctx context.Context, req *spacev1.GetSpaceRequest) (*spacev1.Space, error) {
@@ -271,7 +275,8 @@ func TestHandler_AddSpaceMember(t *testing.T) {
 		SpaceService:    mockSpace,
 		IdentityService: mockID,
 	})
-	handler := spacegrpc.NewHandler(coordinator)
+	aggregator := spaceaggregator.NewService(mockSpace, mockID)
+	handler := spacegrpc.NewHandler(coordinator, aggregator)
 	interceptor := interceptors.ErrorUnaryInterceptor()
 
 	invokeAdd := func(ctx context.Context, req *spacev1.AddSpaceMemberRequest) (*spacev1.SpaceMember, error) {
@@ -344,7 +349,8 @@ func TestHandler_UpdateSpace(t *testing.T) {
 		SpaceService:    mockSpace,
 		IdentityService: mockID,
 	})
-	handler := spacegrpc.NewHandler(coordinator)
+	aggregator := spaceaggregator.NewService(mockSpace, mockID)
+	handler := spacegrpc.NewHandler(coordinator, aggregator)
 	interceptor := interceptors.ErrorUnaryInterceptor()
 
 	invokeUpdate := func(ctx context.Context, req *spacev1.UpdateSpaceRequest) (*spacev1.Space, error) {

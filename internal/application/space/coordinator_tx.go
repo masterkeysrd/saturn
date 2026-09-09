@@ -46,10 +46,6 @@ func (t *TransactionalCoordinator) CreateSpace(ctx context.Context, req *CreateS
 	return res, nil
 }
 
-func (t *TransactionalCoordinator) GetSpace(ctx context.Context, spaceID space.SpaceID, userID space.SpaceID) (*space.Space, error) {
-	return t.next.GetSpace(ctx, spaceID, userID)
-}
-
 // UpdateSpace executes next.UpdateSpace inside a database transaction.
 func (t *TransactionalCoordinator) UpdateSpace(ctx context.Context, req *UpdateSpaceRequest) (*space.Space, error) {
 	ctx, tx, err := t.txr.Begin(ctx)
@@ -87,10 +83,6 @@ func (t *TransactionalCoordinator) DeleteSpace(ctx context.Context, req *DeleteS
 	}
 
 	return nil
-}
-
-func (t *TransactionalCoordinator) ListSpaces(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) ([]*space.Space, string, error) {
-	return t.next.ListSpaces(ctx, userID, filter)
 }
 
 // AddSpaceMember executes next.AddSpaceMember inside a database transaction.
@@ -150,8 +142,4 @@ func (t *TransactionalCoordinator) UpdateSpaceMemberRole(ctx context.Context, re
 	}
 
 	return res, nil
-}
-
-func (t *TransactionalCoordinator) ListSpaceMembers(ctx context.Context, req *ListSpaceMembersRequest) ([]*SpaceMember, string, error) {
-	return t.next.ListSpaceMembers(ctx, req)
 }

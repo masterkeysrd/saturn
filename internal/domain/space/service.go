@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
 // Dependencies holds all storage interfaces required by the Service.
@@ -33,9 +34,9 @@ func (s *Service) CreateSpace(ctx context.Context, space *Space) (*Space, error)
 	}
 
 	// Check if a space with this name already exists for this owner
-	spaces, _, err := s.deps.SpaceStore.ListByUserOwned(ctx, space.OwnerID, &ListSpacesFilter{})
-	if err == nil {
-		for _, sp := range spaces {
+	page, err := s.deps.SpaceStore.ListByUserOwned(ctx, space.OwnerID, &ListSpacesFilter{})
+	if err == nil && page != nil {
+		for _, sp := range page.Items {
 			if sp.Name == space.Name {
 				return nil, errors.E(op, errors.Exist, NameExists, "space name already exists")
 			}
@@ -155,46 +156,15 @@ func (s *Service) DeleteSpace(ctx context.Context, session Session) error {
 }
 
 // ListSpaces lists all spaces the user has access to (owned or joined).
-func (s *Service) ListSpaces(ctx context.Context, userID SpaceID, filter *ListSpacesFilter) ([]*Space, string, error) {
+func (s *Service) ListSpaces(ctx context.Context, userID SpaceID, filter *ListSpacesFilter) (*paging.Page[*Space], error) {
 	const op errors.Op = "domain/space.ListSpaces"
 
-	ownedSpaces, ownedToken, err := s.deps.SpaceStore.ListByUserOwned(ctx, userID, filter)
+	page, err := s.deps.SpaceStore.ListByUser(ctx, userID, filter)
 	if err != nil {
-		return nil, "", errors.E(op, err)
+		return nil, errors.E(op, err)
 	}
 
-	memberships, err := s.deps.MemberStore.ListByUser(ctx, userID)
-	if err != nil {
-		return nil, "", errors.E(op, err)
-	}
-
-	// Create a map of owned space IDs for O(1) deduplication
-	ownedSpaceIDs := make(map[SpaceID]bool)
-	for _, sp := range ownedSpaces {
-		ownedSpaceIDs[sp.ID] = true
-	}
-
-	// Get joined spaces (excluding owned ones)
-	joinedSpaceIDs := make(map[SpaceID]bool)
-	for _, m := range memberships {
-		joinedSpaceIDs[m.SpaceID] = true
-	}
-
-	var joinedSpaces []*Space
-	for spaceID := range joinedSpaceIDs {
-		if !ownedSpaceIDs[spaceID] {
-			sp, err := s.deps.SpaceStore.GetByID(ctx, spaceID)
-			if err != nil {
-				continue
-			}
-			joinedSpaces = append(joinedSpaces, sp)
-		}
-	}
-
-	// Merge owned and joined spaces
-	allSpaces := append(ownedSpaces, joinedSpaces...)
-
-	return allSpaces, ownedToken, nil
+	return page, nil
 }
 
 // AddSpaceMember adds a member to a workspace.
@@ -263,8 +233,17 @@ func (s *Service) RemoveSpaceMember(ctx context.Context, session Session, userID
 		return errors.E(op, errors.Permission, InsufficientRole, "insufficient role to remove members")
 	}
 
-	// Prevent owner from removing themselves
-	if userID == session.UserID {
+	// Fetch target member
+	targetMember, err := s.deps.MemberStore.GetByID(ctx, session.SpaceID, userID)
+	if err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return errors.E(op, errors.NotExist, MemberNotFound, "member not found")
+		}
+		return errors.E(op, err)
+	}
+
+	// Prevent removing space owner
+	if targetMember.IsOwner() {
 		return errors.E(op, errors.Permission, OwnerOnly, "cannot remove space owner")
 	}
 
@@ -294,11 +273,6 @@ func (s *Service) UpdateSpaceMemberRole(ctx context.Context, session Session, up
 		return nil, errors.E(op, errors.Permission, InsufficientRole, "insufficient role to update member roles")
 	}
 
-	// Prevent changing own role
-	if updated.UserID == session.UserID {
-		return nil, errors.E(op, errors.Permission, OwnerOnly, "cannot change own role")
-	}
-
 	// Check membership exists
 	existing, err := s.deps.MemberStore.GetByID(ctx, session.SpaceID, updated.UserID)
 	if err != nil {
@@ -306,6 +280,16 @@ func (s *Service) UpdateSpaceMemberRole(ctx context.Context, session Session, up
 			return nil, errors.E(op, errors.NotExist, MemberNotFound, "member not found")
 		}
 		return nil, errors.E(op, err)
+	}
+
+	// Prevent changing role of space owner
+	if existing.IsOwner() {
+		return nil, errors.E(op, errors.Permission, OwnerOnly, "cannot change space owner role")
+	}
+
+	// Prevent promoting someone else to owner via role update
+	if updated.Role == RoleOwner {
+		return nil, errors.E(op, errors.Permission, OwnerOnly, "cannot assign owner role")
 	}
 
 	existing.Role = updated.Role
@@ -318,22 +302,22 @@ func (s *Service) UpdateSpaceMemberRole(ctx context.Context, session Session, up
 }
 
 // ListSpaceMembers lists all members of a workspace. Requestor must be a member.
-func (s *Service) ListSpaceMembers(ctx context.Context, session Session, filter *ListMembersFilter) ([]*Member, string, error) {
+func (s *Service) ListSpaceMembers(ctx context.Context, session Session, filter *ListMembersFilter) (*paging.Page[*Member], error) {
 	const op errors.Op = "domain/space.ListSpaceMembers"
 
 	// Verify membership
 	if _, err := s.deps.MemberStore.GetByID(ctx, session.SpaceID, session.UserID); err != nil {
 		if errors.Is(err, errors.NotExist) {
-			return nil, "", errors.E(op, errors.Permission, InsufficientRole, "access denied to this space")
+			return nil, errors.E(op, errors.Permission, InsufficientRole, "access denied to this space")
 		}
-		return nil, "", errors.E(op, err)
+		return nil, errors.E(op, err)
 	}
 
-	members, nextToken, err := s.deps.MemberStore.ListBySpace(ctx, session.SpaceID, filter)
+	page, err := s.deps.MemberStore.ListBySpace(ctx, session.SpaceID, filter)
 	if err != nil {
-		return nil, "", errors.E(op, err)
+		return nil, errors.E(op, err)
 	}
-	return members, nextToken, nil
+	return page, nil
 }
 
 // GetMember retrieves a member by space ID and user ID.

@@ -3,15 +3,13 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"encoding/base64"
-	"encoding/json"
-	"fmt"
-	"strings"
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/platform/db"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
+	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
 
 // spaceDB is the internal DB record type for space.space.
@@ -65,10 +63,22 @@ func toDBSpace(s *space.Space) *spaceDB {
 func (s *SpaceStore) Create(ctx context.Context, sp *space.Space) error {
 	const op errors.Op = "domain/space/storage.Create"
 	rec := toDBSpace(sp)
-	query := `INSERT INTO space.space (id, name, description, owner_id, version, create_time, update_time)
-		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`
-	_, err := s.db.Exec(ctx, query, rec.ID, rec.Name, rec.Description, rec.OwnerID, rec.Version)
+	ds := pgDialect.Insert(goqu.S("space").Table("space")).Rows(
+		goqu.Record{
+			"id":          rec.ID,
+			"name":        rec.Name,
+			"description": rec.Description,
+			"owner_id":    rec.OwnerID,
+			"version":     rec.Version,
+			"create_time": goqu.L("NOW()"),
+			"update_time": goqu.L("NOW()"),
+		},
+	)
+	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
+		return errors.E(op, err)
+	}
+	if _, err := s.db.Exec(ctx, query, args...); err != nil {
 		return errors.E(op, err)
 	}
 	return nil
@@ -77,9 +87,15 @@ func (s *SpaceStore) Create(ctx context.Context, sp *space.Space) error {
 // GetByID retrieves a space by its unique ID.
 func (s *SpaceStore) GetByID(ctx context.Context, id space.SpaceID) (*space.Space, error) {
 	const op errors.Op = "domain/space/storage.GetByID"
-	query := `SELECT * FROM space.space WHERE id = $1`
+	ds := pgDialect.From(goqu.S("space").Table("space")).
+		Select("*").
+		Where(goqu.Ex{"id": string(id)})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
 	var rec spaceDB
-	if err := s.db.Get(ctx, &rec, query, id); err != nil {
+	if err := s.db.Get(ctx, &rec, query, args...); err != nil {
 		return nil, errors.E(op, err)
 	}
 	return toDomainSpace(&rec), nil
@@ -119,134 +135,117 @@ func (s *SpaceStore) Update(ctx context.Context, sp *space.Space) error {
 // Delete removes a space by its unique ID.
 func (s *SpaceStore) Delete(ctx context.Context, id space.SpaceID) error {
 	const op errors.Op = "domain/space/storage.Delete"
-	query := `DELETE FROM space.space WHERE id = $1`
-	if err := s.db.ExecOne(ctx, query, id); err != nil {
+	ds := pgDialect.Delete(goqu.S("space").Table("space")).
+		Where(goqu.Ex{"id": string(id)})
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return errors.E(op, err)
+	}
+	if err := s.db.ExecOne(ctx, query, args...); err != nil {
 		return errors.E(op, err)
 	}
 	return nil
 }
 
 // ListByUser returns spaces owned or joined by the user.
-func (s *SpaceStore) ListByUser(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) ([]*space.Space, string, error) {
+func (s *SpaceStore) ListByUser(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
 	const op errors.Op = "domain/space/storage.ListByUser"
-	if filter.PageSize <= 0 || filter.PageSize > 100 {
-		filter.PageSize = 20
+	pageSize := filter.PageSize
+	if pageSize <= 0 || pageSize > 100 {
+		pageSize = 20
 	}
 
-	query := `SELECT DISTINCT sp.* FROM space.space sp
-		INNER JOIN space.member m ON sp.id = m.space_id
-		WHERE m.user_id = $1`
+	ds := pgDialect.From(goqu.S("space").Table("space").As("sp")).
+		Join(goqu.S("space").Table("member").As("m"),
+			goqu.On(goqu.I("sp.id").Eq(goqu.I("m.space_id")))).
+		Select(
+			goqu.I("sp.id"),
+			goqu.I("sp.name"),
+			goqu.I("sp.description"),
+			goqu.I("sp.owner_id"),
+			goqu.I("sp.version"),
+			goqu.I("sp.create_time"),
+			goqu.I("sp.update_time"),
+		).
+		Distinct().
+		Where(goqu.I("m.user_id").Eq(string(userID)))
 
-	args := []any{string(userID)}
-	argIndex := 2
+	cursor, _ := paging.Decode(filter.NextPageToken)
 
-	if filter.NextPageToken != "" {
-		var cursor map[string]any
-		if err := json.Unmarshal([]byte(filter.NextPageToken), &cursor); err == nil {
-			if spaceID, ok := cursor["space_id"].(string); ok && spaceID != "" {
-				query += fmt.Sprintf(` AND (sp.id < $%d OR (sp.id = $%d AND sp.version < $%d))`, argIndex, argIndex+1, argIndex+2)
-				args = append(args, spaceID, spaceID)
-				if ver, ok := cursor["version"].(float64); ok {
-					args = append(args, int64(ver))
-				} else {
-					args = append(args, int64(0))
-				}
-				argIndex += 3
-			}
-		}
+	ds = paging.ApplyPagination(ds, paging.Options{
+		Sort:     sorting.SortOrder{Field: "sp.id", Ascending: true},
+		Cursor:   cursor,
+		PageSize: uint(pageSize),
+		IDColumn: "sp.id",
+	})
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, errors.E(op, err)
 	}
-
-	query += fmt.Sprintf(` ORDER BY sp.id LIMIT $%d`, argIndex)
-	args = append(args, filter.PageSize+1)
 
 	var dbSpaces []spaceDB
 	if err := s.db.Select(ctx, &dbSpaces, query, args...); err != nil {
-		return nil, "", errors.E(op, err)
+		return nil, errors.E(op, err)
 	}
 
-	hasMore := len(dbSpaces) > int(filter.PageSize)
-	if hasMore {
-		dbSpaces = dbSpaces[:filter.PageSize]
-	}
-
-	spaces := make([]*space.Space, 0, len(dbSpaces))
+	spaces := make([]*space.Space, len(dbSpaces))
 	for i := range dbSpaces {
-		spaces = append(spaces, toDomainSpace(&dbSpaces[i]))
+		spaces[i] = toDomainSpace(&dbSpaces[i])
 	}
 
-	var nextToken string
-	if hasMore && len(dbSpaces) > 0 {
-		lastSpace := dbSpaces[len(dbSpaces)-1]
-		cursor := map[string]any{
-			"space_id": lastSpace.ID,
-			"version":  lastSpace.Version,
+	page := paging.NewPage(spaces, int(pageSize), func(sp *space.Space) paging.Cursor {
+		return paging.Cursor{
+			SortValue: string(sp.ID),
+			ID:        string(sp.ID),
 		}
-		tokenBytes, err := json.Marshal(cursor)
-		if err == nil {
-			nextToken = base64.URLEncoding.EncodeToString(tokenBytes)
-		}
-	}
+	})
 
-	return spaces, nextToken, nil
+	return page, nil
 }
 
 // ListByUserOwned returns spaces owned by the user (without needing member table).
-func (s *SpaceStore) ListByUserOwned(ctx context.Context, ownerID space.SpaceID, filter *space.ListSpacesFilter) ([]*space.Space, string, error) {
+func (s *SpaceStore) ListByUserOwned(ctx context.Context, ownerID space.SpaceID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
 	const op errors.Op = "domain/space/storage.ListByUserOwned"
-	if filter.PageSize <= 0 || filter.PageSize > 100 {
-		filter.PageSize = 20
+	pageSize := filter.PageSize
+	if pageSize <= 0 || pageSize > 100 {
+		pageSize = 20
 	}
 
-	conditions := []string{"owner_id = $1"}
-	args := []any{string(ownerID)}
-	argIndex := 2
+	ds := pgDialect.From(goqu.S("space").Table("space")).
+		Select("*").
+		Where(goqu.Ex{"owner_id": string(ownerID)})
 
-	if filter.NextPageToken != "" {
-		var cursor map[string]any
-		if err := json.Unmarshal([]byte(filter.NextPageToken), &cursor); err == nil {
-			if spaceID, ok := cursor["space_id"].(string); ok && spaceID != "" {
-				conditions = append(conditions, fmt.Sprintf("(id < $%d OR (id = $%d AND version < $%d))", argIndex, argIndex+1, argIndex+2))
-				args = append(args, spaceID, spaceID)
-				if ver, ok := cursor["version"].(float64); ok {
-					args = append(args, int64(ver))
-				} else {
-					args = append(args, int64(0))
-				}
-				argIndex += 3
-			}
-		}
+	cursor, _ := paging.Decode(filter.NextPageToken)
+
+	ds = paging.ApplyPagination(ds, paging.Options{
+		Sort:     sorting.SortOrder{Field: "id", Ascending: true},
+		Cursor:   cursor,
+		PageSize: uint(pageSize),
+		IDColumn: "id",
+	})
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, errors.E(op, err)
 	}
-
-	query := fmt.Sprintf(`SELECT * FROM space.space WHERE %s ORDER BY id LIMIT $%d`, strings.Join(conditions, " AND "), argIndex)
-	args = append(args, filter.PageSize+1)
 
 	var dbSpaces []spaceDB
 	if err := s.db.Select(ctx, &dbSpaces, query, args...); err != nil {
-		return nil, "", errors.E(op, err)
+		return nil, errors.E(op, err)
 	}
 
-	hasMore := len(dbSpaces) > int(filter.PageSize)
-	if hasMore {
-		dbSpaces = dbSpaces[:filter.PageSize]
-	}
-
-	spaces := make([]*space.Space, 0, len(dbSpaces))
+	spaces := make([]*space.Space, len(dbSpaces))
 	for i := range dbSpaces {
-		spaces = append(spaces, toDomainSpace(&dbSpaces[i]))
+		spaces[i] = toDomainSpace(&dbSpaces[i])
 	}
 
-	var nextToken string
-	if hasMore && len(dbSpaces) > 0 {
-		lastSpace := dbSpaces[len(dbSpaces)-1]
-		cursor := map[string]any{
-			"space_id": lastSpace.ID,
-			"version":  lastSpace.Version,
+	page := paging.NewPage(spaces, int(pageSize), func(sp *space.Space) paging.Cursor {
+		return paging.Cursor{
+			SortValue: string(sp.ID),
+			ID:        string(sp.ID),
 		}
-		tokenBytes, err := json.Marshal(cursor)
-		if err == nil {
-			nextToken = base64.URLEncoding.EncodeToString(tokenBytes)
-		}
-	}
+	})
 
-	return spaces, nextToken, nil
+	return page, nil
 }

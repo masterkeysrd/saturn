@@ -9,6 +9,7 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
 type memorySpaceStore struct {
@@ -63,11 +64,11 @@ func (m *memorySpaceStore) Delete(ctx context.Context, id space.SpaceID) error {
 	return nil
 }
 
-func (m *memorySpaceStore) ListByUser(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) ([]*space.Space, string, error) {
+func (m *memorySpaceStore) ListByUser(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
 	return m.ListByUserOwned(ctx, userID, filter)
 }
 
-func (m *memorySpaceStore) ListByUserOwned(ctx context.Context, ownerID space.SpaceID, filter *space.ListSpacesFilter) ([]*space.Space, string, error) {
+func (m *memorySpaceStore) ListByUserOwned(ctx context.Context, ownerID space.SpaceID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	var res []*space.Space
@@ -76,7 +77,9 @@ func (m *memorySpaceStore) ListByUserOwned(ctx context.Context, ownerID space.Sp
 			res = append(res, s)
 		}
 	}
-	return res, "", nil
+	return &paging.Page[*space.Space]{
+		Items: res,
+	}, nil
 }
 
 type memoryMemberStore struct {
@@ -128,7 +131,7 @@ func (m *memoryMemberStore) Delete(ctx context.Context, spaceID, userID space.Sp
 	return nil
 }
 
-func (m *memoryMemberStore) ListBySpace(ctx context.Context, spaceID space.SpaceID, filter *space.ListMembersFilter) ([]*space.Member, string, error) {
+func (m *memoryMemberStore) ListBySpace(ctx context.Context, spaceID space.SpaceID, filter *space.ListMembersFilter) (*paging.Page[*space.Member], error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	var res []*space.Member
@@ -137,7 +140,9 @@ func (m *memoryMemberStore) ListBySpace(ctx context.Context, spaceID space.Space
 			res = append(res, mem)
 		}
 	}
-	return res, "", nil
+	return &paging.Page[*space.Member]{
+		Items: res,
+	}, nil
 }
 
 func (m *memoryMemberStore) ListByUser(ctx context.Context, userID space.SpaceID) ([]*space.Member, error) {

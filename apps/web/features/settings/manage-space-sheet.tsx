@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { useForm } from "react-hook-form"
+import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { usePatch } from "@/hooks/use-patch"
@@ -48,6 +48,13 @@ const spaceDetailsSchema = z.object({
 
 type SpaceDetailsFormValues = z.infer<typeof spaceDetailsSchema>
 
+const addMemberSchema = z.object({
+  userId: z.string().trim().min(1, "User ID is required"),
+  role: z.enum(["admin", "member", "viewer"]),
+})
+
+type AddMemberFormValues = z.infer<typeof addMemberSchema>
+
 interface ManageSpaceSheetProps {
   space: Space | null
   onClose: () => void
@@ -56,10 +63,16 @@ interface ManageSpaceSheetProps {
 export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
   const queryClient = useQueryClient()
 
-  const [newUserId, setNewUserId] = useState("")
-  const [newRole, setNewRole] = useState("member")
   const [generalError, setGeneralError] = useState("")
   const [memberError, setMemberError] = useState("")
+
+  const addMemberForm = useForm<AddMemberFormValues>({
+    resolver: zodResolver(addMemberSchema),
+    defaultValues: {
+      userId: "",
+      role: "member",
+    },
+  })
 
   // Queries & Mutations
   const spaceId = space?.id ?? ""
@@ -110,8 +123,9 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
         name: space.name,
         description: space.description || "",
       })
+      addMemberForm.reset()
     }
-  }, [space, reset])
+  }, [space, reset, addMemberForm])
 
   if (!space) return null
 
@@ -145,19 +159,17 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
     }
   }
 
-  const handleAddMember = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newUserId.trim()) return
+  const handleAddMember = async (data: AddMemberFormValues) => {
     setMemberError("")
     try {
       await addMemberMutation.mutateAsync({
         space_id: spaceId,
-        req: { spaceId, userId: newUserId.trim(), role: newRole },
+        req: { spaceId, userId: data.userId.trim(), role: data.role },
       })
       queryClient.invalidateQueries({
         queryKey: [`/api/v1/spaces/${spaceId}/members`],
       })
-      setNewUserId("")
+      addMemberForm.reset()
       toast.add({
         type: "success",
         title: "Member Added",
@@ -403,6 +415,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                               <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
                                 <SelectItem value="admin">Admin</SelectItem>
                                 <SelectItem value="member">Member</SelectItem>
+                                <SelectItem value="viewer">Viewer</SelectItem>
                               </SelectContent>
                             </Select>
                             <Button
@@ -423,42 +436,58 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
             )}
 
             {/* Add Member sub-form */}
-            <form onSubmit={handleAddMember} className="space-y-3 pt-3">
+            <form
+              onSubmit={addMemberForm.handleSubmit(handleAddMember)}
+              className="space-y-3 pt-3"
+            >
               <Label className="text-xs font-semibold text-muted-foreground select-none">
                 Add Workspace Member
               </Label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Enter User ID (usr_...)"
-                  value={newUserId}
-                  onChange={(e) => setNewUserId(e.target.value)}
-                  className="h-9 flex-1 rounded-xl border-border/40 bg-muted/10 text-xs focus:ring-2 focus:ring-primary/20"
-                />
-                <Select
-                  value={newRole}
-                  onValueChange={(val) => val && setNewRole(val)}
-                >
-                  <SelectTrigger className="!h-9 w-28 rounded-xl border-border/40 bg-background px-3 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="member">Member</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button
-                  type="submit"
-                  size="sm"
-                  variant="outline"
-                  className="h-9 shrink-0 rounded-xl px-3 transition-all hover:border-transparent hover:bg-primary hover:text-white"
-                  disabled={!newUserId.trim() || addMemberMutation.isPending}
-                >
-                  {addMemberMutation.isPending ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Plus className="h-4 w-4" />
-                  )}
-                </Button>
+              <div className="space-y-1.5">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Enter User ID (usr_...)"
+                    {...addMemberForm.register("userId")}
+                    className="h-9 flex-1 rounded-xl border-border/40 bg-muted/10 text-xs focus:ring-2 focus:ring-primary/20"
+                  />
+                  <Controller
+                    control={addMemberForm.control}
+                    name="role"
+                    render={({ field }) => (
+                      <Select
+                        value={field.value}
+                        onValueChange={(val) => val && field.onChange(val)}
+                      >
+                        <SelectTrigger className="!h-9 w-28 rounded-xl border-border/40 bg-background px-3 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="member">Member</SelectItem>
+                          <SelectItem value="viewer">Viewer</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  <Button
+                    type="submit"
+                    size="sm"
+                    variant="outline"
+                    className="h-9 shrink-0 rounded-xl px-3 transition-all hover:border-transparent hover:bg-primary hover:text-white"
+                    disabled={addMemberMutation.isPending}
+                  >
+                    {addMemberMutation.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                {addMemberForm.formState.errors.userId && (
+                  <p className="text-xs text-destructive">
+                    {addMemberForm.formState.errors.userId.message}
+                  </p>
+                )}
               </div>
             </form>
           </div>

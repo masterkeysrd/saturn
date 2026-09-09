@@ -37,6 +37,7 @@ import (
 	schedulerv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/scheduler/v1"
 	spacev1 "github.com/masterkeysrd/saturn/apis/saturn/space/v1"
 	financeaggregator "github.com/masterkeysrd/saturn/internal/aggregator/finance"
+	spaceaggregator "github.com/masterkeysrd/saturn/internal/aggregator/space"
 	agentapp "github.com/masterkeysrd/saturn/internal/application/agent"
 	financeapp "github.com/masterkeysrd/saturn/internal/application/finance"
 	"github.com/masterkeysrd/saturn/internal/application/iam"
@@ -208,7 +209,8 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 		}),
 		dbClient,
 	)
-	spaceHandler := spacegrpc.NewHandler(spaceCoordinator)
+	spaceAggregator := spaceaggregator.NewService(spaceService, identityService)
+	spaceHandler := spacegrpc.NewHandler(spaceCoordinator, spaceAggregator)
 	spacev1.RegisterSpacesServer(s.grpc, spaceHandler)
 
 	// Wire Finance service

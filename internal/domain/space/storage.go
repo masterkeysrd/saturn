@@ -2,6 +2,8 @@ package space
 
 import (
 	"context"
+
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
 // SpaceStore defines the interface for space persistence operations.
@@ -19,10 +21,10 @@ type SpaceStore interface {
 	Delete(ctx context.Context, id SpaceID) error
 
 	// ListByUser returns spaces owned or joined by the user.
-	ListByUser(ctx context.Context, userID SpaceID, filter *ListSpacesFilter) ([]*Space, string, error)
+	ListByUser(ctx context.Context, userID SpaceID, filter *ListSpacesFilter) (*paging.Page[*Space], error)
 
 	// ListByUserOwned returns spaces owned by the user.
-	ListByUserOwned(ctx context.Context, ownerID SpaceID, filter *ListSpacesFilter) ([]*Space, string, error)
+	ListByUserOwned(ctx context.Context, ownerID SpaceID, filter *ListSpacesFilter) (*paging.Page[*Space], error)
 }
 
 // MemberStore defines the interface for member persistence operations.
@@ -40,7 +42,7 @@ type MemberStore interface {
 	Delete(ctx context.Context, spaceID SpaceID, userID SpaceID) error
 
 	// ListBySpace returns all members of a space.
-	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListMembersFilter) ([]*Member, string, error)
+	ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListMembersFilter) (*paging.Page[*Member], error)
 
 	// ListByUser returns all spaces where the user is a member.
 	ListByUser(ctx context.Context, userID SpaceID) ([]*Member, error)

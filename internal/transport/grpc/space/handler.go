@@ -4,6 +4,7 @@ import (
 	"context"
 
 	spacev1 "github.com/masterkeysrd/saturn/apis/saturn/space/v1"
+	spaceaggregator "github.com/masterkeysrd/saturn/internal/aggregator/space"
 	spaceapp "github.com/masterkeysrd/saturn/internal/application/space"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
@@ -15,11 +16,15 @@ import (
 type Handler struct {
 	spacev1.UnimplementedSpacesServer
 	Coordinator spaceapp.Coordinator
+	Aggregator  *spaceaggregator.Service
 }
 
 // NewHandler creates a new Handler.
-func NewHandler(coordinator spaceapp.Coordinator) *Handler {
-	return &Handler{Coordinator: coordinator}
+func NewHandler(coordinator spaceapp.Coordinator, aggregator *spaceaggregator.Service) *Handler {
+	return &Handler{
+		Coordinator: coordinator,
+		Aggregator:  aggregator,
+	}
 }
 
 // toProtoSpace converts a domain Space to a proto Space.
@@ -60,8 +65,9 @@ func toProtoSpaceMember(m *space.Member) *spacev1.SpaceMember {
 	}
 }
 
-// toProtoSpaceMemberWithProfile converts a SpaceMember to a proto SpaceMember including the nested Profile message.
-func toProtoSpaceMemberWithProfile(m *spaceapp.SpaceMember) *spacev1.SpaceMember {
+
+// toProtoAggregatedSpaceMember converts a spaceaggregator.SpaceMember to a proto SpaceMember.
+func toProtoAggregatedSpaceMember(m *spaceaggregator.SpaceMember) *spacev1.SpaceMember {
 	var profile *spacev1.SpaceMember_Profile
 	if m.Profile != nil {
 		profile = &spacev1.SpaceMember_Profile{
@@ -126,7 +132,7 @@ func (h *Handler) GetSpace(ctx context.Context, req *spacev1.GetSpaceRequest) (*
 
 	spaceID := space.SpaceID(req.GetSpaceId())
 
-	sp, err := h.Coordinator.GetSpace(ctx, spaceID, space.SpaceID(userID))
+	sp, err := h.Aggregator.GetSpace(ctx, spaceID, space.SpaceID(userID))
 	if err != nil {
 		return nil, err
 	}
@@ -199,19 +205,19 @@ func (h *Handler) ListSpaces(ctx context.Context, req *spacev1.ListSpacesRequest
 		NextPageToken: req.GetNextPageToken(),
 	}
 
-	spaces, nextToken, err := h.Coordinator.ListSpaces(ctx, space.SpaceID(userID), filter)
+	page, err := h.Aggregator.ListSpaces(ctx, space.SpaceID(userID), filter)
 	if err != nil {
 		return nil, err
 	}
 
-	protoSpaces := make([]*spacev1.Space, 0, len(spaces))
-	for _, sp := range spaces {
+	protoSpaces := make([]*spacev1.Space, 0, len(page.Items))
+	for _, sp := range page.Items {
 		protoSpaces = append(protoSpaces, toProtoSpace(sp))
 	}
 
 	return &spacev1.ListSpacesResponse{
 		Spaces:        protoSpaces,
-		NextPageToken: nextToken,
+		NextPageToken: page.NextPageToken,
 	}, nil
 }
 
@@ -298,22 +304,18 @@ func (h *Handler) ListSpaceMembers(ctx context.Context, req *spacev1.ListSpaceMe
 		NextPageToken: req.GetNextPageToken(),
 	}
 
-	members, nextToken, err := h.Coordinator.ListSpaceMembers(ctx, &spaceapp.ListSpaceMembersRequest{
-		SpaceID: string(spaceID),
-		UserID:  userID,
-		Filter:  filter,
-	})
+	page, err := h.Aggregator.ListSpaceMembers(ctx, spaceID, space.SpaceID(userID), filter)
 	if err != nil {
 		return nil, err
 	}
 
-	protoMembers := make([]*spacev1.SpaceMember, 0, len(members))
-	for _, m := range members {
-		protoMembers = append(protoMembers, toProtoSpaceMemberWithProfile(m))
+	protoMembers := make([]*spacev1.SpaceMember, 0, len(page.Items))
+	for _, m := range page.Items {
+		protoMembers = append(protoMembers, toProtoAggregatedSpaceMember(m))
 	}
 
 	return &spacev1.ListSpaceMembersResponse{
 		Members:       protoMembers,
-		NextPageToken: nextToken,
+		NextPageToken: page.NextPageToken,
 	}, nil
 }

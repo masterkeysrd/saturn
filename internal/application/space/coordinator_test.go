@@ -14,14 +14,11 @@ import (
 
 type mockSpaceService struct {
 	createSpaceFunc           func(ctx context.Context, sp *space.Space) (*space.Space, error)
-	getSpaceFunc              func(ctx context.Context, session space.Session) (*space.Space, error)
 	updateSpaceFunc           func(ctx context.Context, session space.Session, sp *space.Space, mask []string) (*space.Space, error)
 	deleteSpaceFunc           func(ctx context.Context, session space.Session) error
-	listSpacesFunc            func(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) ([]*space.Space, string, error)
 	addSpaceMemberFunc        func(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error)
 	removeSpaceMemberFunc     func(ctx context.Context, session space.Session, targetUserID space.SpaceID) error
 	updateSpaceMemberRoleFunc func(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error)
-	listSpaceMembersFunc      func(ctx context.Context, session space.Session, filter *space.ListMembersFilter) ([]*space.Member, string, error)
 }
 
 func (m *mockSpaceService) CreateSpace(ctx context.Context, sp *space.Space) (*space.Space, error) {
@@ -29,13 +26,6 @@ func (m *mockSpaceService) CreateSpace(ctx context.Context, sp *space.Space) (*s
 		return m.createSpaceFunc(ctx, sp)
 	}
 	return sp, nil
-}
-
-func (m *mockSpaceService) GetSpace(ctx context.Context, session space.Session) (*space.Space, error) {
-	if m.getSpaceFunc != nil {
-		return m.getSpaceFunc(ctx, session)
-	}
-	return &space.Space{ID: session.SpaceID}, nil
 }
 
 func (m *mockSpaceService) UpdateSpace(ctx context.Context, session space.Session, sp *space.Space, mask []string) (*space.Space, error) {
@@ -50,13 +40,6 @@ func (m *mockSpaceService) DeleteSpace(ctx context.Context, session space.Sessio
 		return m.deleteSpaceFunc(ctx, session)
 	}
 	return nil
-}
-
-func (m *mockSpaceService) ListSpaces(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) ([]*space.Space, string, error) {
-	if m.listSpacesFunc != nil {
-		return m.listSpacesFunc(ctx, userID, filter)
-	}
-	return []*space.Space{}, "", nil
 }
 
 func (m *mockSpaceService) AddSpaceMember(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error) {
@@ -78,13 +61,6 @@ func (m *mockSpaceService) UpdateSpaceMemberRole(ctx context.Context, session sp
 		return m.updateSpaceMemberRoleFunc(ctx, session, member)
 	}
 	return member, nil
-}
-
-func (m *mockSpaceService) ListSpaceMembers(ctx context.Context, session space.Session, filter *space.ListMembersFilter) ([]*space.Member, string, error) {
-	if m.listSpaceMembersFunc != nil {
-		return m.listSpaceMembersFunc(ctx, session, filter)
-	}
-	return []*space.Member{}, "", nil
 }
 
 type mockIdentityService struct {
@@ -227,55 +203,6 @@ func TestCoordinator_AddSpaceMember(t *testing.T) {
 	})
 }
 
-func TestCoordinator_ListSpaceMembers(t *testing.T) {
-	ctx := context.Background()
-	mockSpace := &mockSpaceService{}
-	mockID := &mockIdentityService{}
-	coord := spaceapp.NewCoordinator(spaceapp.Dependencies{
-		SpaceService:    mockSpace,
-		IdentityService: mockID,
-	})
-
-	mockSpace.listSpaceMembersFunc = func(ctx context.Context, session space.Session, filter *space.ListMembersFilter) ([]*space.Member, string, error) {
-		return []*space.Member{
-			{SpaceID: "sp_1", UserID: "usr_1", Role: space.RoleOwner},
-			{SpaceID: "sp_1", UserID: "usr_2", Role: space.RoleMember},
-		}, "token_123", nil
-	}
-
-	mockID.getUserByIDFunc = func(ctx context.Context, id identity.UserID) (*identity.User, error) {
-		if id == "usr_1" {
-			return &identity.User{
-				ID:        "usr_1",
-				Username:  "owner_user",
-				Name:      "Owner",
-				AvatarURL: "https://example.com/avatar1.png",
-			}, nil
-		}
-		return nil, fmt.Errorf("user not found")
-	}
-
-	members, token, err := coord.ListSpaceMembers(ctx, &spaceapp.ListSpaceMembersRequest{
-		SpaceID: "sp_1",
-		UserID:  "usr_1",
-	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if token != "token_123" {
-		t.Errorf("expected token token_123, got %s", token)
-	}
-	if len(members) != 2 {
-		t.Fatalf("expected 2 members, got %d", len(members))
-	}
-	if members[0].Profile == nil || members[0].Profile.Username != "owner_user" {
-		t.Errorf("expected enriched profile for member 0")
-	}
-	if members[1].Profile != nil {
-		t.Errorf("expected nil profile fallback for member 1")
-	}
-}
-
 type mockTransactor struct {
 	beginCalled bool
 	lastCtrl    *db.TxController
@@ -371,27 +298,6 @@ func TestTransactionalCoordinator(t *testing.T) {
 		}
 		if !txr.lastCtrl.IsAborted() {
 			t.Errorf("expected transaction to be aborted due to error")
-		}
-	})
-
-	t.Run("GetSpace does not begin transaction", func(t *testing.T) {
-		txr := &mockTransactor{}
-		decorator := spaceapp.NewTransactionalCoordinator(baseCoord, txr)
-
-		ctx := context.Background()
-		mockSpace.getSpaceFunc = func(ctx context.Context, session space.Session) (*space.Space, error) {
-			return &space.Space{ID: session.SpaceID}, nil
-		}
-
-		sp, err := decorator.GetSpace(ctx, "sp_1", "usr_1")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if sp.ID != "sp_1" {
-			t.Errorf("expected space ID sp_1, got %s", sp.ID)
-		}
-		if txr.beginCalled {
-			t.Errorf("expected GetSpace to NOT begin transaction")
 		}
 	})
 
