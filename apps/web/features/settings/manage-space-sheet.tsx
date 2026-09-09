@@ -34,6 +34,7 @@ import {
   useUpdateSpaceMutation,
   type Space,
 } from "@/gen/saturn/space/v1/space"
+import { toast } from "@/components/ui/toast"
 
 interface ManageSpaceSheetProps {
   space: Space | null
@@ -84,10 +85,20 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
         req: { spaceId, name: name.trim(), description: description.trim() },
       })
       queryClient.invalidateQueries({ queryKey: ["/api/v1/spaces"] })
+      toast.add({
+        type: "success",
+        title: "Space Updated",
+        description: "Workspace details updated successfully.",
+      })
     } catch (err: unknown) {
-      setGeneralError(
+      const message =
         err instanceof Error ? err.message : "Failed to update details"
-      )
+      setGeneralError(message)
+      toast.add({
+        type: "error",
+        title: "Update Failed",
+        description: message,
+      })
     }
   }
 
@@ -104,10 +115,20 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
         queryKey: [`/api/v1/spaces/${spaceId}/members`],
       })
       setNewUserId("")
+      toast.add({
+        type: "success",
+        title: "Member Added",
+        description: "Member has been added to the workspace.",
+      })
     } catch (err: unknown) {
-      setMemberError(
+      const message =
         err instanceof Error ? err.message : "Failed to add member"
-      )
+      setMemberError(message)
+      toast.add({
+        type: "error",
+        title: "Failed to Add Member",
+        description: message,
+      })
     }
   }
 
@@ -122,10 +143,20 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
       queryClient.invalidateQueries({
         queryKey: [`/api/v1/spaces/${spaceId}/members`],
       })
+      toast.add({
+        type: "success",
+        title: "Member Removed",
+        description: "Member has been removed from the workspace.",
+      })
     } catch (err: unknown) {
-      setMemberError(
+      const message =
         err instanceof Error ? err.message : "Failed to remove member"
-      )
+      setMemberError(message)
+      toast.add({
+        type: "error",
+        title: "Failed to Remove Member",
+        description: message,
+      })
     }
   }
 
@@ -140,10 +171,20 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
       queryClient.invalidateQueries({
         queryKey: [`/api/v1/spaces/${spaceId}/members`],
       })
+      toast.add({
+        type: "success",
+        title: "Role Updated",
+        description: "Member role updated successfully.",
+      })
     } catch (err: unknown) {
-      setMemberError(
+      const message =
         err instanceof Error ? err.message : "Failed to update role"
-      )
+      setMemberError(message)
+      toast.add({
+        type: "error",
+        title: "Failed to Update Role",
+        description: message,
+      })
     }
   }
 

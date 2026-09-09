@@ -2,10 +2,11 @@ import { useSearchParams } from "react-router-dom"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { AccountSettings } from "./account-settings"
 import { SecuritySettings } from "./security-settings"
+import { SpaceSettings } from "./space-settings"
 import { PageLayout } from "@/components/ui/page-layout"
 import { Settings } from "lucide-react"
 
-type SettingsTab = "account" | "security"
+type SettingsTab = "account" | "security" | "spaces"
 
 export function SettingsView() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -38,6 +39,9 @@ export function SettingsView() {
           <TabsTrigger value="security" className="cursor-pointer">
             Security & Logins
           </TabsTrigger>
+          <TabsTrigger value="spaces" className="cursor-pointer">
+            Workspaces
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent
@@ -52,6 +56,13 @@ export function SettingsView() {
           className="mt-6 animate-in duration-200 fade-in"
         >
           <SecuritySettings />
+        </TabsContent>
+
+        <TabsContent
+          value="spaces"
+          className="mt-6 animate-in duration-200 fade-in"
+        >
+          <SpaceSettings />
         </TabsContent>
       </Tabs>
     </PageLayout>

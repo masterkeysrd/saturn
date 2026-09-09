@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { toast } from "@/components/ui/toast"
 
 export function NoSpaceActiveScreen() {
   const [name, setName] = useState("")
@@ -32,9 +33,21 @@ export function NoSpaceActiveScreen() {
         spaceName: space.name,
         spaceRole: "owner",
       })
+      toast.add({
+        type: "success",
+        title: "Workspace Created",
+        description: `Workspace "${space.name}" created successfully.`,
+      })
       navigate(`/space/${space.id}/finance`)
     } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to create workspace"
       console.error(err)
+      toast.add({
+        type: "error",
+        title: "Creation Failed",
+        description: message,
+      })
     } finally {
       setIsCreating(false)
     }

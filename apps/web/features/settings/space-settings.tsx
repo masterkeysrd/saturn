@@ -21,6 +21,7 @@ import {
   type CreateSpaceRequest,
   type Space,
 } from "@/gen/saturn/space/v1/space"
+import { toast } from "@/components/ui/toast"
 import { ManageSpaceSheet } from "./manage-space-sheet"
 
 export function SpaceSettings() {
@@ -51,7 +52,6 @@ export function SpaceSettings() {
     }
     try {
       const space = await createMutation.mutateAsync(req)
-      console.log(`Space "${space.name}" created`)
       queryClient.invalidateQueries({ queryKey: ["/api/v1/spaces"] })
       setCreateOpen(false)
       setNewName("")
@@ -61,9 +61,20 @@ export function SpaceSettings() {
         spaceName: space.name,
         spaceRole: "owner",
       })
+      toast.add({
+        type: "success",
+        title: "Space Created",
+        description: `Workspace "${space.name}" created successfully.`,
+      })
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Unknown error"
+      const message =
+        err instanceof Error ? err.message : "Failed to create space"
       console.error("Failed to create space:", message)
+      toast.add({
+        type: "error",
+        title: "Failed to Create Space",
+        description: message,
+      })
     }
   }
 
@@ -73,15 +84,25 @@ export function SpaceSettings() {
         space_id: targetId,
         req: { spaceId: targetId },
       })
-      console.log("Space deleted")
       queryClient.invalidateQueries({ queryKey: ["/api/v1/spaces"] })
       if (targetId === spaceId) {
         clearActiveSpace()
       }
       setDeleteTarget(null)
+      toast.add({
+        type: "success",
+        title: "Space Deleted",
+        description: "Workspace has been deleted.",
+      })
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Unknown error"
+      const message =
+        err instanceof Error ? err.message : "Failed to delete space"
       console.error("Failed to delete space:", message)
+      toast.add({
+        type: "error",
+        title: "Failed to Delete Space",
+        description: message,
+      })
     }
   }
 
