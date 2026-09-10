@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/log"
 )
 
@@ -76,8 +77,16 @@ func NewPostgresBackupManager(storage Storage, config PostgresConfig, localIndex
 
 // RunBackup streams pg_dump output to storage, compresses it, and updates metadata index.
 func (pm *PostgresBackupManager) RunBackup(ctx context.Context, triggeredBy string) (*BackupEntry, error) {
+	const op errors.Op = "platform/backup.RunBackup"
+
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
+
+	log.Info(ctx, "database backup started",
+		log.String("triggered_by", triggeredBy),
+		log.String("database", pm.config.Database),
+		log.String("host", pm.config.Host),
+	)
 
 	timestamp := time.Now().UTC().Format("20060102_150405")
 	filename := fmt.Sprintf("saturn_backup_%s.sql", timestamp)
@@ -109,7 +118,10 @@ func (pm *PostgresBackupManager) RunBackup(ctx context.Context, triggeredBy stri
 
 		if err := cmd.Run(); err != nil {
 			cmdErr = fmt.Errorf("pg_dump error: %v, stderr: %s", err, errBuf.String())
-			log.Error(ctx, "pg_dump failed", log.Err(cmdErr))
+			log.Error(ctx, "database backup pg_dump failed",
+				log.String("database", pm.config.Database),
+				log.Err(cmdErr),
+			)
 		}
 	}()
 
@@ -117,10 +129,14 @@ func (pm *PostgresBackupManager) RunBackup(ctx context.Context, triggeredBy stri
 	uploadErr := pm.storage.Upload(ctx, filename, tee)
 
 	if cmdErr != nil {
-		return nil, cmdErr
+		return nil, errors.E(op, errors.Internal, cmdErr)
 	}
 	if uploadErr != nil {
-		return nil, fmt.Errorf("storage upload failed: %w", uploadErr)
+		log.Error(ctx, "database backup upload failed",
+			log.String("filename", filename),
+			log.Err(uploadErr),
+		)
+		return nil, errors.E(op, errors.Internal, fmt.Errorf("storage upload failed: %w", uploadErr))
 	}
 
 	checksum := hex.EncodeToString(hash.Sum(nil))
@@ -136,6 +152,14 @@ func (pm *PostgresBackupManager) RunBackup(ctx context.Context, triggeredBy stri
 		CreatedAt:   time.Now().UTC(),
 	}
 
+	log.Info(ctx, "database backup completed successfully",
+		log.String("id", entry.ID),
+		log.String("filename", filename),
+		log.Int64("size_bytes", size),
+		log.String("sha256", checksum),
+		log.String("triggered_by", triggeredBy),
+	)
+
 	// Sync metadata index
 	if err := pm.syncIndex(ctx, entry); err != nil {
 		log.Error(ctx, "failed to sync backup index", log.Err(err))
@@ -146,6 +170,8 @@ func (pm *PostgresBackupManager) RunBackup(ctx context.Context, triggeredBy stri
 
 // syncIndex reads the index file, appends the new entry, prunes old backups, and uploads back.
 func (pm *PostgresBackupManager) syncIndex(ctx context.Context, newEntry BackupEntry) error {
+	const op errors.Op = "platform/backup.syncIndex"
+
 	var index MetadataIndex
 
 	// Try reading local index first
@@ -184,7 +210,7 @@ func (pm *PostgresBackupManager) syncIndex(ctx context.Context, newEntry BackupE
 	// Serialize index
 	indexData, err := json.MarshalIndent(index, "", "  ")
 	if err != nil {
-		return err
+		return errors.E(op, errors.Internal, err)
 	}
 
 	// Save index locally
@@ -194,7 +220,7 @@ func (pm *PostgresBackupManager) syncIndex(ctx context.Context, newEntry BackupE
 
 	// Upload index to remote storage
 	if err := pm.storage.Upload(ctx, pm.remoteIndex, bytes.NewReader(indexData)); err != nil {
-		return fmt.Errorf("remote index sync failed: %w", err)
+		return errors.E(op, errors.Internal, fmt.Errorf("remote index sync failed: %w", err))
 	}
 
 	return nil
@@ -202,6 +228,8 @@ func (pm *PostgresBackupManager) syncIndex(ctx context.Context, newEntry BackupE
 
 // ListBackups reads local or remote backups.json metadata index file.
 func (pm *PostgresBackupManager) ListBackups(ctx context.Context) (*MetadataIndex, error) {
+	const op errors.Op = "platform/backup.ListBackups"
+
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 
