@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -17,6 +15,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/conv"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
 
@@ -33,6 +32,14 @@ func NewHandler(coordinator financeapp.Coordinator, financeAggregator *financeag
 		Coordinator: coordinator,
 		Aggregator:  financeAggregator,
 	}
+}
+
+func getSpaceID(ctx context.Context, op errors.Op) (finance.SpaceID, error) {
+	spaceID, ok := auth.SpaceIDFromContext(ctx)
+	if !ok {
+		return "", errors.E(op, errors.Unauthenticated, "missing space-id context")
+	}
+	return finance.SpaceID(spaceID), nil
 }
 
 // --- Mappers ---
@@ -137,8 +144,10 @@ func toProtoBudget(b *finance.Budget) *financev1.Budget {
 }
 
 func toDomainBudget(pb *financev1.Budget) (*finance.Budget, error) {
+	const op errors.Op = "grpc/finance.toDomainBudget"
+
 	if pb == nil {
-		return nil, status.Error(codes.InvalidArgument, "budget payload is required")
+		return nil, errors.E(op, errors.Invalid, "budget payload is required")
 	}
 
 	var currency finance.Currency
@@ -146,7 +155,7 @@ func toDomainBudget(pb *financev1.Budget) (*finance.Budget, error) {
 		var err error
 		currency, err = finance.ParseCurrency(pb.GetCurrency())
 		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, err.Error())
+			return nil, errors.E(op, errors.Invalid, err)
 		}
 	}
 
@@ -192,9 +201,11 @@ func toProtoBudgetPeriod(p *financeaggregator.AggregatedBudgetPeriod) *financev1
 // --- gRPC Service Methods ---
 
 func (h *Handler) ConfigureFinance(ctx context.Context, req *financev1.ConfigureFinanceRequest) (*financev1.FinanceSettings, error) {
+	const op errors.Op = "grpc/finance.ConfigureFinance"
+
 	baseCurrency, err := finance.ParseCurrency(req.GetBaseCurrency())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	appReq := &financeapp.ConfigureFinanceRequest{
@@ -303,11 +314,12 @@ func (h *Handler) DeleteBudget(ctx context.Context, req *financev1.DeleteBudgetR
 }
 
 func (h *Handler) ListBudgets(ctx context.Context, req *financev1.ListBudgetsRequest) (*financev1.ListBudgetsResponse, error) {
-	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
-	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	const op errors.Op = "grpc/finance.ListBudgets"
+
+	spaceID, err := getSpaceID(ctx, op)
+	if err != nil {
+		return nil, err
 	}
-	spaceID := finance.SpaceID(spaceIDStr)
 
 	sortOrder := sorting.Parse(req.GetSort())
 
@@ -378,11 +390,12 @@ func (h *Handler) ListBudgets(ctx context.Context, req *financev1.ListBudgetsReq
 }
 
 func (h *Handler) GetBudgetPeriod(ctx context.Context, req *financev1.GetBudgetPeriodRequest) (*financev1.BudgetPeriod, error) {
-	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
-	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "space ID required")
+	const op errors.Op = "grpc/finance.GetBudgetPeriod"
+
+	spaceID, err := getSpaceID(ctx, op)
+	if err != nil {
+		return nil, err
 	}
-	spaceID := finance.SpaceID(spaceIDStr)
 
 	var targetDate time.Time
 	if req.GetDate() != nil {
@@ -401,21 +414,23 @@ func (h *Handler) GetBudgetPeriod(ctx context.Context, req *financev1.GetBudgetP
 }
 
 func (h *Handler) CreateExchangeRate(ctx context.Context, req *financev1.CreateExchangeRateRequest) (*financev1.ExchangeRate, error) {
+	const op errors.Op = "grpc/finance.CreateExchangeRate"
+
 	exRate := req.GetExchangeRate()
 	if exRate == nil {
-		return nil, status.Error(codes.InvalidArgument, "exchange_rate is required")
+		return nil, errors.E(op, errors.Invalid, "exchange_rate is required")
 	}
 	if exRate.GetRateDate() == nil {
-		return nil, status.Error(codes.InvalidArgument, "rate date is required")
+		return nil, errors.E(op, errors.Invalid, "rate date is required")
 	}
 
 	fromCurrency, err := finance.ParseCurrency(exRate.GetFromCurrency())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 	toCurrency, err := finance.ParseCurrency(exRate.GetToCurrency())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	appReq := &financeapp.CreateExchangeRateRequest{
@@ -434,15 +449,16 @@ func (h *Handler) CreateExchangeRate(ctx context.Context, req *financev1.CreateE
 }
 
 func (h *Handler) GetExchangeRate(ctx context.Context, req *financev1.GetExchangeRateRequest) (*financev1.ExchangeRate, error) {
+	const op errors.Op = "grpc/finance.GetExchangeRate"
+
 	if req.GetId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
+		return nil, errors.E(op, errors.Invalid, "id is required")
 	}
 
-	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
-	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	spaceID, err := getSpaceID(ctx, op)
+	if err != nil {
+		return nil, err
 	}
-	spaceID := finance.SpaceID(spaceIDStr)
 
 	rate, err := h.Aggregator.GetExchangeRate(ctx, spaceID, req.GetId())
 	if err != nil {
@@ -453,12 +469,14 @@ func (h *Handler) GetExchangeRate(ctx context.Context, req *financev1.GetExchang
 }
 
 func (h *Handler) UpdateExchangeRate(ctx context.Context, req *financev1.UpdateExchangeRateRequest) (*financev1.ExchangeRate, error) {
+	const op errors.Op = "grpc/finance.UpdateExchangeRate"
+
 	if req.GetId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
+		return nil, errors.E(op, errors.Invalid, "id is required")
 	}
 	exRate := req.GetExchangeRate()
 	if exRate == nil {
-		return nil, status.Error(codes.InvalidArgument, "exchange_rate is required")
+		return nil, errors.E(op, errors.Invalid, "exchange_rate is required")
 	}
 
 	appReq := &financeapp.UpdateExchangeRateRequest{
@@ -475,11 +493,12 @@ func (h *Handler) UpdateExchangeRate(ctx context.Context, req *financev1.UpdateE
 }
 
 func (h *Handler) ListExchangeRates(ctx context.Context, req *financev1.ListExchangeRatesRequest) (*financev1.ListExchangeRatesResponse, error) {
-	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
-	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	const op errors.Op = "grpc/finance.ListExchangeRates"
+
+	spaceID, err := getSpaceID(ctx, op)
+	if err != nil {
+		return nil, err
 	}
-	spaceID := finance.SpaceID(spaceIDStr)
 
 	filter := financeaggregator.ListExchangeRatesFilter{
 		ListExchangeRatesFilter: finance.ListExchangeRatesFilter{
@@ -492,14 +511,14 @@ func (h *Handler) ListExchangeRates(ctx context.Context, req *financev1.ListExch
 	if req.GetFromCurrency() != "" {
 		from, err := finance.ParseCurrency(req.GetFromCurrency())
 		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, err.Error())
+			return nil, errors.E(op, errors.Invalid, err)
 		}
 		filter.FromCurrency = &from
 	}
 	if req.GetToCurrency() != "" {
 		to, err := finance.ParseCurrency(req.GetToCurrency())
 		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, err.Error())
+			return nil, errors.E(op, errors.Invalid, err)
 		}
 		filter.ToCurrency = &to
 	}
@@ -529,8 +548,10 @@ func (h *Handler) ListExchangeRates(ctx context.Context, req *financev1.ListExch
 }
 
 func (h *Handler) DeleteExchangeRate(ctx context.Context, req *financev1.DeleteExchangeRateRequest) (*emptypb.Empty, error) {
+	const op errors.Op = "grpc/finance.DeleteExchangeRate"
+
 	if req.GetId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
+		return nil, errors.E(op, errors.Invalid, "id is required")
 	}
 
 	appReq := &financeapp.DeleteExchangeRateRequest{
@@ -564,14 +585,16 @@ func toProtoExchangeRate(rate *finance.ExchangeRate) *financev1.ExchangeRate {
 }
 
 func (h *Handler) CreateExpense(ctx context.Context, req *financev1.CreateExpenseRequest) (*financev1.Transaction, error) {
+	const op errors.Op = "grpc/finance.CreateExpense"
+
 	expense := req.GetExpense()
 	if expense == nil {
-		return nil, status.Error(codes.InvalidArgument, "expense details are required")
+		return nil, errors.E(op, errors.Invalid, "expense details are required")
 	}
 
 	currency, err := finance.ParseCurrency(expense.GetCurrency())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	var transactionDate time.Time
@@ -613,14 +636,16 @@ func (h *Handler) CreateExpense(ctx context.Context, req *financev1.CreateExpens
 }
 
 func (h *Handler) CreateIncome(ctx context.Context, req *financev1.CreateIncomeRequest) (*financev1.Transaction, error) {
+	const op errors.Op = "grpc/finance.CreateIncome"
+
 	income := req.GetIncome()
 	if income == nil {
-		return nil, status.Error(codes.InvalidArgument, "income details are required")
+		return nil, errors.E(op, errors.Invalid, "income details are required")
 	}
 
 	currency, err := finance.ParseCurrency(income.GetCurrency())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	var transactionDate time.Time
@@ -661,14 +686,16 @@ func (h *Handler) CreateIncome(ctx context.Context, req *financev1.CreateIncomeR
 }
 
 func (h *Handler) UpdateExpense(ctx context.Context, req *financev1.UpdateExpenseRequest) (*financev1.Transaction, error) {
+	const op errors.Op = "grpc/finance.UpdateExpense"
+
 	expense := req.GetExpense()
 	if expense == nil {
-		return nil, status.Error(codes.InvalidArgument, "expense details are required")
+		return nil, errors.E(op, errors.Invalid, "expense details are required")
 	}
 
 	currency, err := finance.ParseCurrency(expense.GetCurrency())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	var transactionDate time.Time
@@ -683,7 +710,7 @@ func (h *Handler) UpdateExpense(ctx context.Context, req *financev1.UpdateExpens
 
 	tID, err := finance.ParseTransactionID(req.GetId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	var accountID *finance.AccountID
@@ -712,14 +739,16 @@ func (h *Handler) UpdateExpense(ctx context.Context, req *financev1.UpdateExpens
 }
 
 func (h *Handler) UpdateIncome(ctx context.Context, req *financev1.UpdateIncomeRequest) (*financev1.Transaction, error) {
+	const op errors.Op = "grpc/finance.UpdateIncome"
+
 	income := req.GetIncome()
 	if income == nil {
-		return nil, status.Error(codes.InvalidArgument, "income details are required")
+		return nil, errors.E(op, errors.Invalid, "income details are required")
 	}
 
 	currency, err := finance.ParseCurrency(income.GetCurrency())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	var transactionDate time.Time
@@ -734,7 +763,7 @@ func (h *Handler) UpdateIncome(ctx context.Context, req *financev1.UpdateIncomeR
 
 	tID, err := finance.ParseTransactionID(req.GetId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	var accountID *finance.AccountID
@@ -762,9 +791,11 @@ func (h *Handler) UpdateIncome(ctx context.Context, req *financev1.UpdateIncomeR
 }
 
 func (h *Handler) DeleteTransaction(ctx context.Context, req *financev1.DeleteTransactionRequest) (*emptypb.Empty, error) {
+	const op errors.Op = "grpc/finance.DeleteTransaction"
+
 	tID, err := finance.ParseTransactionID(req.GetId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	err = h.Coordinator.DeleteTransaction(ctx, tID)
@@ -776,15 +807,16 @@ func (h *Handler) DeleteTransaction(ctx context.Context, req *financev1.DeleteTr
 }
 
 func (h *Handler) GetTransaction(ctx context.Context, req *financev1.GetTransactionRequest) (*financev1.Transaction, error) {
-	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
-	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	const op errors.Op = "grpc/finance.GetTransaction"
+
+	spaceID, err := getSpaceID(ctx, op)
+	if err != nil {
+		return nil, err
 	}
-	spaceID := finance.SpaceID(spaceIDStr)
 
 	tID, err := finance.ParseTransactionID(req.GetId())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid transaction id: %v", err)
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	view := financeaggregator.ViewBasic
@@ -800,11 +832,12 @@ func (h *Handler) GetTransaction(ctx context.Context, req *financev1.GetTransact
 }
 
 func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTransactionsRequest) (*financev1.ListTransactionsResponse, error) {
-	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
-	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	const op errors.Op = "grpc/finance.ListTransactions"
+
+	spaceID, err := getSpaceID(ctx, op)
+	if err != nil {
+		return nil, err
 	}
-	spaceID := finance.SpaceID(spaceIDStr)
 
 	var budgetID *finance.BudgetID
 	if req.GetBudgetId() != "" {
@@ -998,9 +1031,11 @@ func toProtoAggregatedTransaction(at *financeaggregator.AggregatedTransaction) *
 }
 
 func (h *Handler) ListTransactionEvents(ctx context.Context, req *financev1.ListTransactionEventsRequest) (*financev1.ListTransactionEventsResponse, error) {
+	const op errors.Op = "grpc/finance.ListTransactionEvents"
+
 	txnID, err := finance.ParseTransactionID(req.GetTxnId())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid transaction ID: %v", err)
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	appReq := &financeapp.ListTransactionEventsRequest{
@@ -1311,9 +1346,11 @@ func toProtoTransfer(t *finance.Transfer) *financev1.Transfer {
 }
 
 func (h *Handler) CreateAccount(ctx context.Context, req *financev1.CreateAccountRequest) (*financev1.Account, error) {
+	const op errors.Op = "grpc/finance.CreateAccount"
+
 	account := req.GetAccount()
 	if account == nil {
-		return nil, status.Error(codes.InvalidArgument, "account resource is required")
+		return nil, errors.E(op, errors.Invalid, "account resource is required")
 	}
 
 	appReq := &financeapp.CreateAccountRequest{
@@ -1355,15 +1392,16 @@ func toProtoAggregatedAccount(a *financeaggregator.AggregatedAccount, viewType f
 }
 
 func (h *Handler) GetAccount(ctx context.Context, req *financev1.GetAccountRequest) (*financev1.Account, error) {
-	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
-	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	const op errors.Op = "grpc/finance.GetAccount"
+
+	spaceID, err := getSpaceID(ctx, op)
+	if err != nil {
+		return nil, err
 	}
-	spaceID := finance.SpaceID(spaceIDStr)
 
 	aID, err := finance.ParseAccountID(req.GetId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	viewType := financeaggregator.ViewBasic
@@ -1380,9 +1418,11 @@ func (h *Handler) GetAccount(ctx context.Context, req *financev1.GetAccountReque
 }
 
 func (h *Handler) UpdateAccount(ctx context.Context, req *financev1.UpdateAccountRequest) (*financev1.Account, error) {
+	const op errors.Op = "grpc/finance.UpdateAccount"
+
 	account := req.GetAccount()
 	if account == nil {
-		return nil, status.Error(codes.InvalidArgument, "account resource is required")
+		return nil, errors.E(op, errors.Invalid, "account resource is required")
 	}
 
 	idStr := req.GetId()
@@ -1392,7 +1432,7 @@ func (h *Handler) UpdateAccount(ctx context.Context, req *financev1.UpdateAccoun
 
 	aID, err := finance.ParseAccountID(idStr)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	var mask []string
@@ -1423,13 +1463,15 @@ func (h *Handler) UpdateAccount(ctx context.Context, req *financev1.UpdateAccoun
 }
 
 func (h *Handler) AdjustAccountBalance(ctx context.Context, req *financev1.AdjustAccountBalanceRequest) (*financev1.Account, error) {
+	const op errors.Op = "grpc/finance.AdjustAccountBalance"
+
 	if req.GetAccountId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "account_id is required")
+		return nil, errors.E(op, errors.Invalid, "account_id is required")
 	}
 
 	aID, err := finance.ParseAccountID(req.GetAccountId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	acc, err := h.Coordinator.AdjustAccountBalance(ctx, aID, req.GetTargetBalance(), req.GetAdjustmentDate(), req.GetNote())
@@ -1441,9 +1483,11 @@ func (h *Handler) AdjustAccountBalance(ctx context.Context, req *financev1.Adjus
 }
 
 func (h *Handler) DeleteAccount(ctx context.Context, req *financev1.DeleteAccountRequest) (*emptypb.Empty, error) {
+	const op errors.Op = "grpc/finance.DeleteAccount"
+
 	aID, err := finance.ParseAccountID(req.GetId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	opts := finance.DeleteOptions{Version: req.GetVersion()}
@@ -1455,11 +1499,12 @@ func (h *Handler) DeleteAccount(ctx context.Context, req *financev1.DeleteAccoun
 }
 
 func (h *Handler) ListAccounts(ctx context.Context, req *financev1.ListAccountsRequest) (*financev1.ListAccountsResponse, error) {
-	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
-	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	const op errors.Op = "grpc/finance.ListAccounts"
+
+	spaceID, err := getSpaceID(ctx, op)
+	if err != nil {
+		return nil, err
 	}
-	spaceID := finance.SpaceID(spaceIDStr)
 
 	viewType := financeaggregator.ViewBasic
 	if req.GetView() == financev1.Account_FULL {
@@ -1764,11 +1809,13 @@ func toDomainInboxItem(pb *financev1.InboxItem) *finance.InboxItem {
 }
 
 func (h *Handler) UpdateInboxItem(ctx context.Context, req *financev1.UpdateInboxItemRequest) (*financev1.InboxItem, error) {
+	const op errors.Op = "grpc/finance.UpdateInboxItem"
+
 	if req.GetId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
+		return nil, errors.E(op, errors.Invalid, "id is required")
 	}
 	if req.GetInboxItem() == nil {
-		return nil, status.Error(codes.InvalidArgument, "inbox_item is required")
+		return nil, errors.E(op, errors.Invalid, "inbox_item is required")
 	}
 
 	domainItem := toDomainInboxItem(req.GetInboxItem())
@@ -1783,11 +1830,12 @@ func (h *Handler) UpdateInboxItem(ctx context.Context, req *financev1.UpdateInbo
 }
 
 func (h *Handler) ListInboxItems(ctx context.Context, req *financev1.ListInboxItemsRequest) (*financev1.ListInboxItemsResponse, error) {
-	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
-	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	const op errors.Op = "grpc/finance.ListInboxItems"
+
+	spaceID, err := getSpaceID(ctx, op)
+	if err != nil {
+		return nil, err
 	}
-	spaceID := finance.SpaceID(spaceIDStr)
 
 	var status *finance.InboxItemStatus
 	if req.Status != nil {
@@ -1836,8 +1884,10 @@ func (h *Handler) ListInboxItems(ctx context.Context, req *financev1.ListInboxIt
 }
 
 func (h *Handler) ApproveInboxItem(ctx context.Context, req *financev1.ApproveInboxItemRequest) (*financev1.InboxItem, error) {
+	const op errors.Op = "grpc/finance.ApproveInboxItem"
+
 	if req.GetId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
+		return nil, errors.E(op, errors.Invalid, "id is required")
 	}
 
 	item, err := h.Coordinator.ApproveInboxItem(ctx, req.GetId())
@@ -1849,8 +1899,10 @@ func (h *Handler) ApproveInboxItem(ctx context.Context, req *financev1.ApproveIn
 }
 
 func (h *Handler) DiscardInboxItem(ctx context.Context, req *financev1.DiscardInboxItemRequest) (*emptypb.Empty, error) {
+	const op errors.Op = "grpc/finance.DiscardInboxItem"
+
 	if req.GetId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
+		return nil, errors.E(op, errors.Invalid, "id is required")
 	}
 
 	err := h.Coordinator.DiscardInboxItem(ctx, req.GetId())
@@ -1862,9 +1914,11 @@ func (h *Handler) DiscardInboxItem(ctx context.Context, req *financev1.DiscardIn
 }
 
 func (h *Handler) CreateInstitution(ctx context.Context, req *financev1.CreateInstitutionRequest) (*financev1.Institution, error) {
+	const op errors.Op = "grpc/finance.CreateInstitution"
+
 	pbInst := req.GetInstitution()
 	if pbInst == nil {
-		return nil, status.Error(codes.InvalidArgument, "institution resource is required")
+		return nil, errors.E(op, errors.Invalid, "institution resource is required")
 	}
 
 	inst := &finance.Institution{
@@ -1883,14 +1937,16 @@ func (h *Handler) CreateInstitution(ctx context.Context, req *financev1.CreateIn
 }
 
 func (h *Handler) UpdateInstitution(ctx context.Context, req *financev1.UpdateInstitutionRequest) (*financev1.Institution, error) {
+	const op errors.Op = "grpc/finance.UpdateInstitution"
+
 	pbInst := req.GetInstitution()
 	if pbInst == nil {
-		return nil, status.Error(codes.InvalidArgument, "institution resource is required")
+		return nil, errors.E(op, errors.Invalid, "institution resource is required")
 	}
 
 	iid := finance.InstitutionID(req.GetId())
 	if err := iid.Validate(); err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	var version int64
@@ -1921,9 +1977,11 @@ func (h *Handler) UpdateInstitution(ctx context.Context, req *financev1.UpdateIn
 }
 
 func (h *Handler) DeleteInstitution(ctx context.Context, req *financev1.DeleteInstitutionRequest) (*emptypb.Empty, error) {
+	const op errors.Op = "grpc/finance.DeleteInstitution"
+
 	iid := finance.InstitutionID(req.GetId())
 	if err := iid.Validate(); err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	var version int64
@@ -1939,11 +1997,12 @@ func (h *Handler) DeleteInstitution(ctx context.Context, req *financev1.DeleteIn
 }
 
 func (h *Handler) ListInstitutions(ctx context.Context, req *financev1.ListInstitutionsRequest) (*financev1.ListInstitutionsResponse, error) {
-	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
-	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+	const op errors.Op = "grpc/finance.ListInstitutions"
+
+	spaceID, err := getSpaceID(ctx, op)
+	if err != nil {
+		return nil, err
 	}
-	spaceID := finance.SpaceID(spaceIDStr)
 
 	filter := &finance.ListInstitutionsFilter{
 		PageSize:      req.GetPageSize(),
@@ -1970,8 +2029,10 @@ func (h *Handler) ListInstitutions(ctx context.Context, req *financev1.ListInsti
 }
 
 func (h *Handler) ResolveInstitution(ctx context.Context, req *financev1.ResolveInstitutionRequest) (*financev1.ResolveInstitutionResponse, error) {
+	const op errors.Op = "grpc/finance.ResolveInstitution"
+
 	if req.GetName() == "" {
-		return nil, status.Error(codes.InvalidArgument, "name is required")
+		return nil, errors.E(op, errors.Invalid, "name is required")
 	}
 
 	res, err := h.Coordinator.ResolveInstitution(ctx, req.GetName())
@@ -1998,11 +2059,13 @@ func (h *Handler) ResolveInstitution(ctx context.Context, req *financev1.Resolve
 // Statement Reconciliation Handlers
 
 func (h *Handler) ImportStatement(ctx context.Context, req *financev1.ImportStatementRequest) (*financev1.Statement, error) {
+	const op errors.Op = "grpc/finance.ImportStatement"
+
 	if req.AccountId == "" {
-		return nil, status.Error(codes.InvalidArgument, "account_id is required")
+		return nil, errors.E(op, errors.Invalid, "account_id is required")
 	}
 	if req.Statement == nil {
-		return nil, status.Error(codes.InvalidArgument, "statement details are required")
+		return nil, errors.E(op, errors.Invalid, "statement details are required")
 	}
 
 	var stmtDate time.Time
@@ -2050,11 +2113,13 @@ func (h *Handler) ImportStatement(ctx context.Context, req *financev1.ImportStat
 }
 
 func (h *Handler) IngestStatementDocument(ctx context.Context, req *financev1.IngestStatementDocumentRequest) (*financev1.IngestStatementDocumentResponse, error) {
+	const op errors.Op = "grpc/finance.IngestStatementDocument"
+
 	if req.Filename == "" {
-		return nil, status.Error(codes.InvalidArgument, "filename is required")
+		return nil, errors.E(op, errors.Invalid, "filename is required")
 	}
 	if len(req.DocumentBytes) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "document_bytes is required")
+		return nil, errors.E(op, errors.Invalid, "document_bytes is required")
 	}
 
 	appReq := &financeapp.StatementDocumentRequest{
@@ -2098,11 +2163,13 @@ func (h *Handler) IngestStatementDocument(ctx context.Context, req *financev1.In
 }
 
 func (h *Handler) AnalyzeStatementDocument(ctx context.Context, req *financev1.AnalyzeStatementDocumentRequest) (*financev1.AnalyzeStatementDocumentResponse, error) {
+	const op errors.Op = "grpc/finance.AnalyzeStatementDocument"
+
 	if req.Filename == "" {
-		return nil, status.Error(codes.InvalidArgument, "filename is required")
+		return nil, errors.E(op, errors.Invalid, "filename is required")
 	}
 	if len(req.DocumentBytes) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "document_bytes is required")
+		return nil, errors.E(op, errors.Invalid, "document_bytes is required")
 	}
 
 	appReq := &financeapp.StatementDocumentRequest{
@@ -2141,15 +2208,16 @@ func (h *Handler) AnalyzeStatementDocument(ctx context.Context, req *financev1.A
 }
 
 func (h *Handler) GetStatement(ctx context.Context, req *financev1.GetStatementRequest) (*financev1.Statement, error) {
+	const op errors.Op = "grpc/finance.GetStatement"
+
 	if req.Id == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
+		return nil, errors.E(op, errors.Invalid, "id is required")
 	}
 
-	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
-	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "space_id not found in context")
+	spaceID, err := getSpaceID(ctx, op)
+	if err != nil {
+		return nil, err
 	}
-	spaceID := finance.SpaceID(spaceIDStr)
 
 	res, err := h.Aggregator.GetStatement(ctx, spaceID, finance.StatementID(req.Id))
 	if err != nil {
@@ -2160,8 +2228,10 @@ func (h *Handler) GetStatement(ctx context.Context, req *financev1.GetStatementR
 }
 
 func (h *Handler) DeleteStatement(ctx context.Context, req *financev1.DeleteStatementRequest) (*emptypb.Empty, error) {
+	const op errors.Op = "grpc/finance.DeleteStatement"
+
 	if req.Id == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
+		return nil, errors.E(op, errors.Invalid, "id is required")
 	}
 
 	opts := finance.DeleteOptions{Version: req.GetVersion()}
@@ -2174,11 +2244,12 @@ func (h *Handler) DeleteStatement(ctx context.Context, req *financev1.DeleteStat
 }
 
 func (h *Handler) ListStatements(ctx context.Context, req *financev1.ListStatementsRequest) (*financev1.ListStatementsResponse, error) {
-	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
-	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "space_id not found in context")
+	const op errors.Op = "grpc/finance.ListStatements"
+
+	spaceID, err := getSpaceID(ctx, op)
+	if err != nil {
+		return nil, err
 	}
-	spaceID := finance.SpaceID(spaceIDStr)
 
 	filter := &finance.ListStatementsFilter{
 		PageSize:  req.PageSize,
@@ -2222,15 +2293,16 @@ func (h *Handler) ListStatements(ctx context.Context, req *financev1.ListStateme
 }
 
 func (h *Handler) ListStatementLines(ctx context.Context, req *financev1.ListStatementLinesRequest) (*financev1.ListStatementLinesResponse, error) {
+	const op errors.Op = "grpc/finance.ListStatementLines"
+
 	if req.StatementId == "" {
-		return nil, status.Error(codes.InvalidArgument, "statement_id is required")
+		return nil, errors.E(op, errors.Invalid, "statement_id is required")
 	}
 
-	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
-	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "space_id not found in context")
+	spaceID, err := getSpaceID(ctx, op)
+	if err != nil {
+		return nil, err
 	}
-	spaceID := finance.SpaceID(spaceIDStr)
 
 	lines, err := h.Aggregator.ListStatementLines(ctx, spaceID, finance.StatementID(req.StatementId))
 	if err != nil {
@@ -2248,8 +2320,10 @@ func (h *Handler) ListStatementLines(ctx context.Context, req *financev1.ListSta
 }
 
 func (h *Handler) UpdateStatementLine(ctx context.Context, req *financev1.UpdateStatementLineRequest) (*financev1.StatementLine, error) {
+	const op errors.Op = "grpc/finance.UpdateStatementLine"
+
 	if req.StatementLine == nil || req.Id == "" {
-		return nil, status.Error(codes.InvalidArgument, "statement line with valid id is required")
+		return nil, errors.E(op, errors.Invalid, "statement line with valid id is required")
 	}
 
 	var maskPaths []string
@@ -2286,8 +2360,10 @@ func (h *Handler) UpdateStatementLine(ctx context.Context, req *financev1.Update
 }
 
 func (h *Handler) UpdateStatement(ctx context.Context, req *financev1.UpdateStatementRequest) (*financev1.Statement, error) {
+	const op errors.Op = "grpc/finance.UpdateStatement"
+
 	if req.Statement == nil || req.Id == "" {
-		return nil, status.Error(codes.InvalidArgument, "statement with valid id is required")
+		return nil, errors.E(op, errors.Invalid, "statement with valid id is required")
 	}
 
 	var maskPaths []string
@@ -2309,8 +2385,10 @@ func (h *Handler) UpdateStatement(ctx context.Context, req *financev1.UpdateStat
 }
 
 func (h *Handler) CompleteStatement(ctx context.Context, req *financev1.CompleteStatementRequest) (*financev1.Statement, error) {
+	const op errors.Op = "grpc/finance.CompleteStatement"
+
 	if req.Id == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
+		return nil, errors.E(op, errors.Invalid, "id is required")
 	}
 
 	res, err := h.Coordinator.CompleteStatement(ctx, finance.StatementID(req.Id))
@@ -2322,8 +2400,10 @@ func (h *Handler) CompleteStatement(ctx context.Context, req *financev1.Complete
 }
 
 func (h *Handler) InvertStatementSigns(ctx context.Context, req *financev1.InvertStatementSignsRequest) (*financev1.InvertStatementSignsResponse, error) {
+	const op errors.Op = "grpc/finance.InvertStatementSigns"
+
 	if req.Id == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
+		return nil, errors.E(op, errors.Invalid, "id is required")
 	}
 
 	stmt, lines, err := h.Coordinator.InvertStatementSigns(ctx, finance.StatementID(req.Id))

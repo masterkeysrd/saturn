@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -14,13 +12,16 @@ import (
 	financeapp "github.com/masterkeysrd/saturn/internal/application/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
 
 func (h *Handler) CreateRecurringTransaction(ctx context.Context, req *financev1.CreateRecurringTransactionRequest) (*financev1.RecurringTransaction, error) {
+	const op errors.Op = "grpc/finance.CreateRecurringTransaction"
+
 	exp := req.GetRecurringTransaction()
 	if exp == nil {
-		return nil, status.Error(codes.InvalidArgument, "recurring_transaction is required")
+		return nil, errors.E(op, errors.Invalid, "recurring_transaction is required")
 	}
 
 	var nextDueDate time.Time
@@ -30,7 +31,7 @@ func (h *Handler) CreateRecurringTransaction(ctx context.Context, req *financev1
 
 	currency, err := finance.ParseCurrency(exp.GetCurrency())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	interval, err := mapProtoIntervalToDomain(exp.GetInterval())
@@ -72,9 +73,11 @@ func (h *Handler) CreateRecurringTransaction(ctx context.Context, req *financev1
 }
 
 func (h *Handler) UpdateRecurringTransaction(ctx context.Context, req *financev1.UpdateRecurringTransactionRequest) (*financev1.RecurringTransaction, error) {
+	const op errors.Op = "grpc/finance.UpdateRecurringTransaction"
+
 	exp := req.GetRecurringTransaction()
 	if exp == nil {
-		return nil, status.Error(codes.InvalidArgument, "recurring_transaction is required")
+		return nil, errors.E(op, errors.Invalid, "recurring_transaction is required")
 	}
 
 	idStr := req.GetId()
@@ -83,7 +86,7 @@ func (h *Handler) UpdateRecurringTransaction(ctx context.Context, req *financev1
 	}
 	id, err := finance.ParseRecurringTransactionID(idStr)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	interval, err := mapProtoIntervalToDomain(exp.GetInterval())
@@ -144,9 +147,11 @@ func (h *Handler) UpdateRecurringTransaction(ctx context.Context, req *financev1
 }
 
 func (h *Handler) DeleteRecurringTransaction(ctx context.Context, req *financev1.DeleteRecurringTransactionRequest) (*emptypb.Empty, error) {
+	const op errors.Op = "grpc/finance.DeleteRecurringTransaction"
+
 	id, err := finance.ParseRecurringTransactionID(req.GetId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	var opts finance.DeleteOptions
@@ -162,9 +167,11 @@ func (h *Handler) DeleteRecurringTransaction(ctx context.Context, req *financev1
 }
 
 func (h *Handler) ListRecurringTransactions(ctx context.Context, req *financev1.ListRecurringTransactionsRequest) (*financev1.ListRecurringTransactionsResponse, error) {
+	const op errors.Op = "grpc/finance.ListRecurringTransactions"
+
 	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+		return nil, errors.E(op, errors.Unauthenticated, "missing space-id context")
 	}
 	spaceID := finance.SpaceID(spaceIDStr)
 
@@ -207,9 +214,11 @@ func (h *Handler) ListRecurringTransactions(ctx context.Context, req *financev1.
 }
 
 func (h *Handler) ListScheduledTransactions(ctx context.Context, req *financev1.ListScheduledTransactionsRequest) (*financev1.ListScheduledTransactionsResponse, error) {
+	const op errors.Op = "grpc/finance.ListScheduledTransactions"
+
 	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+		return nil, errors.E(op, errors.Unauthenticated, "missing space-id context")
 	}
 	spaceID := finance.SpaceID(spaceIDStr)
 
@@ -264,9 +273,11 @@ func (h *Handler) ListScheduledTransactions(ctx context.Context, req *financev1.
 }
 
 func (h *Handler) GetScheduledTransaction(ctx context.Context, req *financev1.GetScheduledTransactionRequest) (*financev1.ScheduledTransaction, error) {
+	const op errors.Op = "grpc/finance.GetScheduledTransaction"
+
 	spID, err := finance.ParseScheduledTransactionID(req.GetId())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid scheduled transaction id: %v", err)
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	sp, err := h.Coordinator.GetScheduledTransaction(ctx, spID)
@@ -278,9 +289,11 @@ func (h *Handler) GetScheduledTransaction(ctx context.Context, req *financev1.Ge
 }
 
 func (h *Handler) ConfirmScheduledTransaction(ctx context.Context, req *financev1.ConfirmScheduledTransactionRequest) (*financev1.Transaction, error) {
+	const op errors.Op = "grpc/finance.ConfirmScheduledTransaction"
+
 	paymentID, err := finance.ParseScheduledTransactionID(req.GetTransactionId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	var transactionDate time.Time
@@ -297,7 +310,7 @@ func (h *Handler) ConfirmScheduledTransaction(ctx context.Context, req *financev
 	if req.AccountId != nil && *req.AccountId != "" {
 		parsed, err := finance.ParseAccountID(*req.AccountId)
 		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, err.Error())
+			return nil, errors.E(op, errors.Invalid, err)
 		}
 		accountID = new(parsed)
 	}
@@ -306,7 +319,7 @@ func (h *Handler) ConfirmScheduledTransaction(ctx context.Context, req *financev
 	if req.BudgetId != nil && *req.BudgetId != "" {
 		parsed, err := finance.ParseBudgetID(*req.BudgetId)
 		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, err.Error())
+			return nil, errors.E(op, errors.Invalid, err)
 		}
 		budgetID = new(parsed)
 	}
@@ -336,14 +349,16 @@ func (h *Handler) ConfirmScheduledTransaction(ctx context.Context, req *financev
 }
 
 func (h *Handler) MatchScheduledTransaction(ctx context.Context, req *financev1.MatchScheduledTransactionRequest) (*financev1.Transaction, error) {
+	const op errors.Op = "grpc/finance.MatchScheduledTransaction"
+
 	paymentID, err := finance.ParseScheduledTransactionID(req.GetTransactionId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	txnID, err := finance.ParseTransactionID(req.GetMatchedTransactionId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	appReq := &financeapp.MatchScheduledTransactionRequest{
@@ -360,9 +375,11 @@ func (h *Handler) MatchScheduledTransaction(ctx context.Context, req *financev1.
 }
 
 func (h *Handler) SkipScheduledTransaction(ctx context.Context, req *financev1.SkipScheduledTransactionRequest) (*financev1.ScheduledTransaction, error) {
+	const op errors.Op = "grpc/finance.SkipScheduledTransaction"
+
 	id, err := finance.ParseScheduledTransactionID(req.GetId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	sp, err := h.Coordinator.SkipScheduledTransaction(ctx, id)
@@ -386,7 +403,7 @@ func mapProtoIntervalToDomain(interval financev1.RecurringTransaction_Interval) 
 	case financev1.RecurringTransaction_INTERVAL_UNSPECIFIED:
 		return "", nil
 	default:
-		return "", status.Error(codes.InvalidArgument, "invalid recurring transaction interval")
+		return "", errors.E(errors.Invalid, "invalid recurring transaction interval")
 	}
 }
 
@@ -414,7 +431,7 @@ func mapProtoStatusToDomain(st financev1.RecurringTransaction_Status) (finance.R
 	case financev1.RecurringTransaction_STATUS_UNSPECIFIED:
 		return "", nil
 	default:
-		return "", status.Error(codes.InvalidArgument, "invalid recurring transaction status")
+		return "", errors.E(errors.Invalid, "invalid recurring transaction status")
 	}
 }
 
@@ -455,7 +472,7 @@ func mapProtoPaymentStatusToDomain(st financev1.ScheduledTransaction_Status) (fi
 	case financev1.ScheduledTransaction_PAID:
 		return finance.ScheduledTransactionPaid, nil
 	default:
-		return "", status.Error(codes.InvalidArgument, "invalid scheduled transaction status")
+		return "", errors.E(errors.Invalid, "invalid scheduled transaction status")
 	}
 }
 

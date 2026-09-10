@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -14,18 +12,21 @@ import (
 	financeapp "github.com/masterkeysrd/saturn/internal/application/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
 
 func (h *Handler) CreateBorrowing(ctx context.Context, req *financev1.CreateBorrowingRequest) (*financev1.Borrowing, error) {
+	const op errors.Op = "grpc/finance.CreateBorrowing"
+
 	input := req.GetBorrowing()
 	if input == nil {
-		return nil, status.Error(codes.InvalidArgument, "missing borrowing payload")
+		return nil, errors.E(op, errors.Invalid, "missing borrowing payload")
 	}
 
 	currency, err := finance.ParseCurrency(input.GetCurrency())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	var establishedAt time.Time
@@ -68,14 +69,16 @@ func (h *Handler) CreateBorrowing(ctx context.Context, req *financev1.CreateBorr
 }
 
 func (h *Handler) GetBorrowing(ctx context.Context, req *financev1.GetBorrowingRequest) (*financev1.Borrowing, error) {
+	const op errors.Op = "grpc/finance.GetBorrowing"
+
 	bID, err := finance.ParseBorrowingID(req.GetId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+		return nil, errors.E(op, errors.Unauthenticated, "missing space-id context")
 	}
 	spaceID := finance.SpaceID(spaceIDStr)
 
@@ -88,9 +91,11 @@ func (h *Handler) GetBorrowing(ctx context.Context, req *financev1.GetBorrowingR
 }
 
 func (h *Handler) ListBorrowings(ctx context.Context, req *financev1.ListBorrowingsRequest) (*financev1.ListBorrowingsResponse, error) {
+	const op errors.Op = "grpc/finance.ListBorrowings"
+
 	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+		return nil, errors.E(op, errors.Unauthenticated, "missing space-id context")
 	}
 	spaceID := finance.SpaceID(spaceIDStr)
 
@@ -143,14 +148,16 @@ func (h *Handler) ListBorrowings(ctx context.Context, req *financev1.ListBorrowi
 }
 
 func (h *Handler) UpdateBorrowing(ctx context.Context, req *financev1.UpdateBorrowingRequest) (*financev1.Borrowing, error) {
+	const op errors.Op = "grpc/finance.UpdateBorrowing"
+
 	input := req.GetBorrowing()
 	if input == nil {
-		return nil, status.Error(codes.InvalidArgument, "missing borrowing payload")
+		return nil, errors.E(op, errors.Invalid, "missing borrowing payload")
 	}
 
 	currency, err := finance.ParseCurrency(input.GetCurrency())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	var establishedAt time.Time
@@ -168,7 +175,7 @@ func (h *Handler) UpdateBorrowing(ctx context.Context, req *financev1.UpdateBorr
 
 	bID, err := finance.ParseBorrowingID(req.GetId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	var accountID *finance.AccountID
@@ -207,9 +214,11 @@ func (h *Handler) UpdateBorrowing(ctx context.Context, req *financev1.UpdateBorr
 }
 
 func (h *Handler) DeleteBorrowing(ctx context.Context, req *financev1.DeleteBorrowingRequest) (*emptypb.Empty, error) {
+	const op errors.Op = "grpc/finance.DeleteBorrowing"
+
 	bID, err := finance.ParseBorrowingID(req.GetId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	err = h.Coordinator.DeleteBorrowing(ctx, bID)
@@ -221,21 +230,23 @@ func (h *Handler) DeleteBorrowing(ctx context.Context, req *financev1.DeleteBorr
 }
 
 func (h *Handler) LogBorrowingTransaction(ctx context.Context, req *financev1.LogBorrowingTransactionRequest) (*financev1.Transaction, error) {
+	const op errors.Op = "grpc/finance.LogBorrowingTransaction"
+
 	bID, err := finance.ParseBorrowingID(req.GetBorrowingId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	txn := req.GetTransaction()
 	if txn == nil {
-		return nil, status.Error(codes.InvalidArgument, "missing transaction payload")
+		return nil, errors.E(op, errors.Invalid, "missing transaction payload")
 	}
 
 	var accountIDPtr *finance.AccountID
 	if txn.AccountId != nil && *txn.AccountId != "" {
 		aID, parseErr := finance.ParseAccountID(*txn.AccountId)
 		if parseErr != nil {
-			return nil, status.Error(codes.InvalidArgument, parseErr.Error())
+			return nil, errors.E(op, errors.Invalid, parseErr)
 		}
 		accountIDPtr = &aID
 	}
@@ -270,26 +281,28 @@ func (h *Handler) LogBorrowingTransaction(ctx context.Context, req *financev1.Lo
 }
 
 func (h *Handler) UpdateBorrowingTransaction(ctx context.Context, req *financev1.UpdateBorrowingTransactionRequest) (*financev1.Transaction, error) {
+	const op errors.Op = "grpc/finance.UpdateBorrowingTransaction"
+
 	bID, err := finance.ParseBorrowingID(req.GetBorrowingId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	tID, err := finance.ParseTransactionID(req.GetTransactionId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	txn := req.GetTransaction()
 	if txn == nil {
-		return nil, status.Error(codes.InvalidArgument, "missing transaction payload")
+		return nil, errors.E(op, errors.Invalid, "missing transaction payload")
 	}
 
 	var accountIDPtr *finance.AccountID
 	if txn.AccountId != nil && *txn.AccountId != "" {
 		aID, parseErr := finance.ParseAccountID(*txn.AccountId)
 		if parseErr != nil {
-			return nil, status.Error(codes.InvalidArgument, parseErr.Error())
+			return nil, errors.E(op, errors.Invalid, parseErr)
 		}
 		accountIDPtr = &aID
 	}
@@ -325,14 +338,16 @@ func (h *Handler) UpdateBorrowingTransaction(ctx context.Context, req *financev1
 }
 
 func (h *Handler) DeleteBorrowingTransaction(ctx context.Context, req *financev1.DeleteBorrowingTransactionRequest) (*emptypb.Empty, error) {
+	const op errors.Op = "grpc/finance.DeleteBorrowingTransaction"
+
 	bID, err := finance.ParseBorrowingID(req.GetBorrowingId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	tID, err := finance.ParseTransactionID(req.GetTransactionId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	err = h.Coordinator.DeleteBorrowingTransaction(ctx, &financeapp.DeleteBorrowingTransactionRequest{
@@ -347,16 +362,18 @@ func (h *Handler) DeleteBorrowingTransaction(ctx context.Context, req *financev1
 }
 
 func (h *Handler) AdjustBorrowingBalance(ctx context.Context, req *financev1.AdjustBorrowingBalanceRequest) (*financev1.Borrowing, error) {
+	const op errors.Op = "grpc/finance.AdjustBorrowingBalance"
+
 	bID, err := finance.ParseBorrowingID(req.GetBorrowingId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	var accountIDPtr *finance.AccountID
 	if req.AccountId != nil && *req.AccountId != "" {
 		aID, parseErr := finance.ParseAccountID(*req.AccountId)
 		if parseErr != nil {
-			return nil, status.Error(codes.InvalidArgument, parseErr.Error())
+			return nil, errors.E(op, errors.Invalid, parseErr)
 		}
 		accountIDPtr = &aID
 	}
