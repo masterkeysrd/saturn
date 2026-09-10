@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"mime"
 	"mime/multipart"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/platform/email"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/integration"
 )
 
@@ -158,7 +158,7 @@ func extractRecipientAndToken(body []byte, headers map[string][]string) (recipie
 	}
 
 	if recipient == "" {
-		return "", "", nil, errors.New("missing recipient 'To' address in both email body and HTTP headers")
+		return "", "", nil, errors.E("transport/http/webhook/email.extractRecipientAndToken", errors.Invalid, "missing recipient 'To' address in both email body and HTTP headers")
 	}
 
 	toEmail := recipient
@@ -168,15 +168,15 @@ func extractRecipientAndToken(body []byte, headers map[string][]string) (recipie
 
 	plusIdx := strings.Index(toEmail, "+")
 	if plusIdx == -1 {
-		return "", "", nil, fmt.Errorf("invalid recipient email format, missing + symbol: %q", toEmail)
+		return "", "", nil, errors.E("transport/http/webhook/email.extractRecipientAndToken", errors.Invalid, fmt.Sprintf("invalid recipient email format, missing + symbol: %q", toEmail))
 	}
 	atIdx := strings.Index(toEmail[plusIdx:], "@")
 	if atIdx == -1 {
-		return "", "", nil, fmt.Errorf("invalid recipient email format, missing @ symbol: %q", toEmail)
+		return "", "", nil, errors.E("transport/http/webhook/email.extractRecipientAndToken", errors.Invalid, fmt.Sprintf("invalid recipient email format, missing @ symbol: %q", toEmail))
 	}
 	parsedToken := toEmail[plusIdx+1 : plusIdx+atIdx]
 	if parsedToken == "" {
-		return "", "", nil, fmt.Errorf("empty integration token in recipient email: %q", toEmail)
+		return "", "", nil, errors.E("transport/http/webhook/email.extractRecipientAndToken", errors.Invalid, fmt.Sprintf("empty integration token in recipient email: %q", toEmail))
 	}
 
 	return recipient, parsedToken, cfEvent, nil
@@ -185,28 +185,30 @@ func extractRecipientAndToken(body []byte, headers map[string][]string) (recipie
 // Verify authenticates that the incoming request originates from a trusted forwarder using the global secret
 // and verifies that the recipient integration token exists in the database.
 func (p *TransactionIngestionProvider) Verify(ctx context.Context, headers map[string][]string, body []byte) error {
+	const op errors.Op = "transport/http/webhook/email.Verify"
+
 	auths, exists := headers["Authorization"]
 	if !exists || len(auths) == 0 {
-		return errors.New("missing Authorization header")
+		return errors.E(op, errors.Unauthenticated, "missing Authorization header")
 	}
 
 	authVal := auths[0]
 	if !strings.HasPrefix(authVal, "Bearer ") {
-		return errors.New("authorization header must be a Bearer token")
+		return errors.E(op, errors.Unauthenticated, "authorization header must be a Bearer token")
 	}
 
 	tokenVal := strings.TrimPrefix(authVal, "Bearer ")
 	if tokenVal != p.globalSecret {
-		return errors.New("invalid global webhook secret")
+		return errors.E(op, errors.Unauthenticated, "invalid global webhook secret")
 	}
 
 	_, token, _, err := extractRecipientAndToken(body, headers)
 	if err != nil {
-		return fmt.Errorf("invalid payload: %w", err)
+		return errors.E(op, errors.Invalid, fmt.Errorf("invalid payload: %w", err))
 	}
 
 	if _, err := p.registry.ResolveByToken(ctx, token); err != nil {
-		return fmt.Errorf("invalid recipient integration token: %w", err)
+		return errors.E(op, errors.Unauthenticated, fmt.Errorf("invalid recipient integration token: %w", err))
 	}
 
 	return nil
@@ -307,7 +309,7 @@ func (p *TransactionIngestionProvider) Process(ctx context.Context, headers map[
 	}
 
 	if !allowed {
-		return fmt.Errorf("sender %q is not whitelisted for this space integration", parsedSender)
+		return errors.E("transport/http/webhook/email.Process", errors.Permission, fmt.Sprintf("sender %q is not whitelisted for this space integration", parsedSender))
 	}
 
 	// Auto-confirm Google forwarding confirmation URL if present in email body
@@ -336,7 +338,7 @@ func (p *TransactionIngestionProvider) Process(ctx context.Context, headers map[
 	// Trigger core finance ingestion logic
 	_, err = p.financeService.IngestEmail(ctx, integrationRecord.SpaceID, integrationRecord.ID, fromLower, parsedSubject, fullBody)
 	if err != nil {
-		return fmt.Errorf("ingest email transaction: %w", err)
+		return errors.E("transport/http/webhook/email.Process", fmt.Errorf("ingest email transaction: %w", err))
 	}
 
 	return nil
@@ -344,6 +346,8 @@ func (p *TransactionIngestionProvider) Process(ctx context.Context, headers map[
 
 // Simulate simulates parsing a mock payload (either JSON or multipart) and triggers ingestion.
 func (p *TransactionIngestionProvider) Simulate(ctx context.Context, spaceID string, headers map[string][]string, body []byte) (any, error) {
+	const op errors.Op = "transport/http/webhook/email.Simulate"
+
 	contentType := headers["Content-Type"]
 	var sender, subject, text string
 
@@ -355,7 +359,7 @@ func (p *TransactionIngestionProvider) Simulate(ctx context.Context, spaceID str
 			Body    string `json:"body"`
 		}
 		if err := json.Unmarshal(body, &payload); err != nil {
-			return nil, fmt.Errorf("decode json payload: %w", err)
+			return nil, errors.E(op, errors.Invalid, fmt.Errorf("decode json payload: %w", err))
 		}
 		sender = payload.Sender
 		subject = payload.Subject
@@ -364,16 +368,16 @@ func (p *TransactionIngestionProvider) Simulate(ctx context.Context, spaceID str
 		// Fallback to standard multipart form simulation
 		mediaType, params, err := mime.ParseMediaType(contentType[0])
 		if err != nil {
-			return nil, fmt.Errorf("parse media type: %w", err)
+			return nil, errors.E(op, errors.Invalid, fmt.Errorf("parse media type: %w", err))
 		}
 		if !strings.HasPrefix(mediaType, "multipart/") {
-			return nil, errors.New("request must be application/json or multipart/form-data")
+			return nil, errors.E(op, errors.Invalid, "request must be application/json or multipart/form-data")
 		}
 		boundary := params["boundary"]
 		mr := multipart.NewReader(bytes.NewReader(body), boundary)
 		form, err := mr.ReadForm(32 << 20)
 		if err != nil {
-			return nil, fmt.Errorf("read multipart form: %w", err)
+			return nil, errors.E(op, errors.Invalid, fmt.Errorf("read multipart form: %w", err))
 		}
 		defer func() { _ = form.RemoveAll() }()
 
@@ -393,13 +397,13 @@ func (p *TransactionIngestionProvider) Simulate(ctx context.Context, spaceID str
 	}
 
 	if sender == "" {
-		return nil, errors.New("sender is required")
+		return nil, errors.E(op, errors.Invalid, "sender is required")
 	}
 	if subject == "" {
-		return nil, errors.New("subject is required")
+		return nil, errors.E(op, errors.Invalid, "subject is required")
 	}
 	if text == "" {
-		return nil, errors.New("body is required")
+		return nil, errors.E(op, errors.Invalid, "body is required")
 	}
 
 	// Look up active integration record specifically by kind
@@ -409,10 +413,10 @@ func (p *TransactionIngestionProvider) Simulate(ctx context.Context, spaceID str
 		Kind:     p.Kind(),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("get integration settings: %w", err)
+		return nil, errors.E(op, err)
 	}
 	if integrationRecord == nil || !integrationRecord.IsEnabled {
-		return nil, errors.New("integration is not enabled or configured")
+		return nil, errors.E(op, errors.Precondition, "integration is not enabled or configured")
 	}
 
 	// Verify whitelisted sender from active integration config
@@ -469,7 +473,7 @@ func (p *TransactionIngestionProvider) Simulate(ctx context.Context, spaceID str
 	}
 
 	if !allowed {
-		return nil, fmt.Errorf("sender %q is not whitelisted for this space integration", sender)
+		return nil, errors.E(op, errors.Permission, fmt.Sprintf("sender %q is not whitelisted for this space integration", sender))
 	}
 
 	if isSystemVerification {

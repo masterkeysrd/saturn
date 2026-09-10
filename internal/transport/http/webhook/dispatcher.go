@@ -11,6 +11,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/eventbus"
 	"github.com/masterkeysrd/saturn/internal/platform/integration"
+	"github.com/masterkeysrd/saturn/internal/platform/log"
 )
 
 // Dispatcher handles the unified HTTP routing for both application-level and space-level webhooks.
@@ -67,14 +68,24 @@ func (d *Dispatcher) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (d *Dispatcher) handleApplicationWebhook(w http.ResponseWriter, ctx context.Context, source string, headers map[string][]string, body []byte) {
+	log.Info(ctx, "incoming application webhook received",
+		log.String("source", source),
+		log.Int("body_bytes", len(body)),
+	)
+
 	provider, exists := d.registry.GetProvider(source)
 	if !exists {
+		log.Warn(ctx, "unknown application webhook provider", log.String("source", source))
 		http.Error(w, "unknown webhook provider", http.StatusNotFound)
 		return
 	}
 
 	// 1. Instant Verification check
 	if err := provider.Verify(ctx, headers, body); err != nil {
+		log.Warn(ctx, "application webhook verification failed",
+			log.String("source", source),
+			log.Err(err),
+		)
 		http.Error(w, fmt.Sprintf("unauthorized: %v", err), http.StatusUnauthorized)
 		return
 	}
@@ -88,16 +99,33 @@ func (d *Dispatcher) handleApplicationWebhook(w http.ResponseWriter, ctx context
 	}
 
 	if err := integrationv1.PublishWebhookReceivedEvent(ctx, d.eventBus, evt); err != nil {
+		log.Error(ctx, "failed to enqueue application webhook event",
+			log.String("source", source),
+			log.Err(err),
+		)
 		http.Error(w, fmt.Sprintf("queue error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
+	log.Info(ctx, "application webhook successfully verified and enqueued",
+		log.String("source", source),
+	)
 	w.WriteHeader(http.StatusAccepted)
 }
 
 func (d *Dispatcher) handleUserWebhook(w http.ResponseWriter, ctx context.Context, source, spaceID string, headers map[string][]string, body []byte) {
+	log.Info(ctx, "incoming user webhook received",
+		log.String("source", source),
+		log.String("space_id", spaceID),
+		log.Int("body_bytes", len(body)),
+	)
+
 	provider, exists := d.registry.GetProvider(source)
 	if !exists {
+		log.Warn(ctx, "unknown user webhook provider",
+			log.String("source", source),
+			log.String("space_id", spaceID),
+		)
 		http.Error(w, "unknown webhook provider", http.StatusNotFound)
 		return
 	}
@@ -106,6 +134,11 @@ func (d *Dispatcher) handleUserWebhook(w http.ResponseWriter, ctx context.Contex
 
 	// 1. Instant Verification check
 	if err := provider.Verify(ctx, headers, body); err != nil {
+		log.Warn(ctx, "user webhook verification failed",
+			log.String("source", source),
+			log.String("space_id", spaceID),
+			log.Err(err),
+		)
 		http.Error(w, fmt.Sprintf("unauthorized: %v", err), http.StatusUnauthorized)
 		return
 	}
@@ -120,10 +153,19 @@ func (d *Dispatcher) handleUserWebhook(w http.ResponseWriter, ctx context.Contex
 	}
 
 	if err := integrationv1.PublishWebhookReceivedEvent(ctx, d.eventBus, evt); err != nil {
+		log.Error(ctx, "failed to enqueue user webhook event",
+			log.String("source", source),
+			log.String("space_id", spaceID),
+			log.Err(err),
+		)
 		http.Error(w, fmt.Sprintf("queue error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
+	log.Info(ctx, "user webhook successfully verified and enqueued",
+		log.String("source", source),
+		log.String("space_id", spaceID),
+	)
 	w.WriteHeader(http.StatusAccepted)
 }
 
