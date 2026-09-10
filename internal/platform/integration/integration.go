@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jmoiron/sqlx"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
 )
 
 // Descriptor holds catalog metadata for an integration.
@@ -54,13 +54,13 @@ type IntegrationToken struct {
 
 // Registry maintains a thread-safe map of active concrete integration providers in memory.
 type Registry struct {
-	db        *sqlx.DB
+	db        db.DB
 	providers map[string]Provider
 	mu        sync.RWMutex
 }
 
 // NewRegistry instantiates a new platform integration Registry.
-func NewRegistry(db *sqlx.DB) *Registry {
+func NewRegistry(db db.DB) *Registry {
 	return &Registry{
 		db:        db,
 		providers: make(map[string]Provider),
