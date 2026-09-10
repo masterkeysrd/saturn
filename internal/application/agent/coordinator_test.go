@@ -225,7 +225,12 @@ func TestCoordinator_CRUDAndSuggestions(t *testing.T) {
 			},
 		}
 		coord := NewCoordinator(mockStore, agent.NewClient())
-		_, err := coord.CreateAgent(ctx, "spc_1", nil, "Hyperion", nil, "INBOX_PARSER", nil, "model", nil, 0)
+		_, err := coord.CreateAgent(ctx, &CreateAgentRequest{
+			SpaceID:   "spc_1",
+			Name:      "Hyperion",
+			Purpose:   "INBOX_PARSER",
+			ModelName: "model",
+		})
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -234,6 +239,19 @@ func TestCoordinator_CRUDAndSuggestions(t *testing.T) {
 		}
 		if errors.CodeOf(err) != AgentExists {
 			t.Errorf("expected AgentExists code, got %v", errors.CodeOf(err))
+		}
+	})
+
+	t.Run("CreateProvider validates request", func(t *testing.T) {
+		coord := NewCoordinator(&mockAgentStore{}, agent.NewClient())
+		_, err := coord.CreateProvider(ctx, nil)
+		if err == nil || errors.KindOf(err) != errors.Invalid {
+			t.Fatalf("expected Invalid kind for nil req, got %v", err)
+		}
+
+		_, err = coord.CreateProvider(ctx, &CreateProviderRequest{SpaceID: "spc_1", Name: ""})
+		if err == nil || errors.KindOf(err) != errors.Invalid {
+			t.Fatalf("expected Invalid kind for empty name, got %v", err)
 		}
 	})
 

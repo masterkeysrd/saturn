@@ -89,9 +89,9 @@ func (l *LoggingCoordinator) RegisterSuggestionProcessor(purpose string, process
 }
 
 // CreateProvider executes next.CreateProvider and logs execution duration and errors.
-func (l *LoggingCoordinator) CreateProvider(ctx context.Context, spaceID string, name string, mode agent.CompatibilityMode, url *string, key *string) (*agent.LLMProvider, error) {
+func (l *LoggingCoordinator) CreateProvider(ctx context.Context, req *CreateProviderRequest) (*agent.LLMProvider, error) {
 	start := time.Now()
-	res, err := l.next.CreateProvider(ctx, spaceID, name, mode, url, key)
+	res, err := l.next.CreateProvider(ctx, req)
 	duration := time.Since(start)
 
 	if err != nil {
@@ -161,9 +161,9 @@ func (l *LoggingCoordinator) ListProviders(ctx context.Context, spaceID string) 
 }
 
 // UpdateProvider executes next.UpdateProvider and logs execution duration and errors.
-func (l *LoggingCoordinator) UpdateProvider(ctx context.Context, spaceID string, id string, name string, url *string, key *string) (*agent.LLMProvider, error) {
+func (l *LoggingCoordinator) UpdateProvider(ctx context.Context, req *UpdateProviderRequest) (*agent.LLMProvider, error) {
 	start := time.Now()
-	res, err := l.next.UpdateProvider(ctx, spaceID, id, name, url, key)
+	res, err := l.next.UpdateProvider(ctx, req)
 	duration := time.Since(start)
 
 	if err != nil {
@@ -209,9 +209,9 @@ func (l *LoggingCoordinator) DeleteProvider(ctx context.Context, spaceID string,
 }
 
 // CreateAgent executes next.CreateAgent and logs execution duration and errors.
-func (l *LoggingCoordinator) CreateAgent(ctx context.Context, spaceID string, providerID *string, name string, desc *string, purpose string, tags []string, model string, prompt *string, temp float64) (*agent.Agent, error) {
+func (l *LoggingCoordinator) CreateAgent(ctx context.Context, req *CreateAgentRequest) (*agent.Agent, error) {
 	start := time.Now()
-	res, err := l.next.CreateAgent(ctx, spaceID, providerID, name, desc, purpose, tags, model, prompt, temp)
+	res, err := l.next.CreateAgent(ctx, req)
 	duration := time.Since(start)
 
 	if err != nil {
@@ -281,9 +281,9 @@ func (l *LoggingCoordinator) ListAgents(ctx context.Context, spaceID string) ([]
 }
 
 // UpdateAgent executes next.UpdateAgent and logs execution duration and errors.
-func (l *LoggingCoordinator) UpdateAgent(ctx context.Context, spaceID string, id string, providerID *string, name string, desc *string, tags []string, model string, prompt *string, temp float64, isEnabled bool) (*agent.Agent, error) {
+func (l *LoggingCoordinator) UpdateAgent(ctx context.Context, req *UpdateAgentRequest) (*agent.Agent, error) {
 	start := time.Now()
-	res, err := l.next.UpdateAgent(ctx, spaceID, id, providerID, name, desc, tags, model, prompt, temp, isEnabled)
+	res, err := l.next.UpdateAgent(ctx, req)
 	duration := time.Since(start)
 
 	if err != nil {

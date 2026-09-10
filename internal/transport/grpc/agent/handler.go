@@ -2,14 +2,13 @@ package agent
 
 import (
 	"context"
+	"fmt"
 
 	agentv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/agent/v1"
 	agentapp "github.com/masterkeysrd/saturn/internal/application/agent"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/agent"
-	"github.com/masterkeysrd/saturn/internal/platform/log"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -18,11 +17,11 @@ import (
 // Handler implements the AgentService gRPC interface.
 type Handler struct {
 	agentv1.UnimplementedAgentServiceServer
-	coordinator *agentapp.Coordinator
+	coordinator agentapp.Coordinator
 }
 
 // NewHandler creates a new Agent Service Handler.
-func NewHandler(coordinator *agentapp.Coordinator) *Handler {
+func NewHandler(coordinator agentapp.Coordinator) *Handler {
 	return &Handler{
 		coordinator: coordinator,
 	}
@@ -106,9 +105,11 @@ func toProtoAgentRun(r *agent.AgentRun) *agentv1.AgentRun {
 // LLM Provider Operations
 
 func (h *Handler) CreateProvider(ctx context.Context, req *agentv1.CreateProviderRequest) (*agentv1.LLMProvider, error) {
+	const op errors.Op = "grpc/agent.CreateProvider"
+
 	spaceID, ok := auth.SpaceIDFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+		return nil, errors.E(op, errors.Unauthenticated, "missing space-id context")
 	}
 
 	var urlPtr, keyPtr *string
@@ -119,44 +120,46 @@ func (h *Handler) CreateProvider(ctx context.Context, req *agentv1.CreateProvide
 		keyPtr = new(req.ApiKey)
 	}
 
-	p, err := h.coordinator.GetStore().CreateProvider(ctx, spaceID, req.GetName(), agent.CompatibilityMode(req.GetCompatibilityMode()), urlPtr, keyPtr)
+	p, err := h.coordinator.CreateProvider(ctx, &agentapp.CreateProviderRequest{
+		SpaceID:           spaceID,
+		Name:              req.GetName(),
+		CompatibilityMode: agent.CompatibilityMode(req.GetCompatibilityMode()),
+		APIUrl:            urlPtr,
+		APIKey:            keyPtr,
+	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "create provider: %v", err)
+		return nil, err
 	}
 	return toProtoLLMProvider(p), nil
 }
 
 func (h *Handler) GetProvider(ctx context.Context, req *agentv1.GetProviderRequest) (*agentv1.LLMProvider, error) {
+	const op errors.Op = "grpc/agent.GetProvider"
+
 	spaceID, ok := auth.SpaceIDFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+		return nil, errors.E(op, errors.Unauthenticated, "missing space-id context")
 	}
 
-	p, err := h.coordinator.GetStore().GetProvider(ctx, agent.GetLLMProvider{SpaceID: spaceID, ID: req.GetId()})
+	p, err := h.coordinator.GetProvider(ctx, spaceID, req.GetId())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "get provider: %v", err)
-	}
-	if p == nil {
-		return nil, status.Errorf(codes.NotFound, "llm provider %s not found", req.GetId())
+		return nil, err
 	}
 	return toProtoLLMProvider(p), nil
 }
 
 func (h *Handler) ListProviders(ctx context.Context, _ *emptypb.Empty) (*agentv1.ListProvidersResponse, error) {
-	log.Info(ctx, "[Handler.ListProviders] Request received")
+	const op errors.Op = "grpc/agent.ListProviders"
+
 	spaceID, ok := auth.SpaceIDFromContext(ctx)
 	if !ok {
-		log.Warn(ctx, "[Handler.ListProviders] Missing space-id context")
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+		return nil, errors.E(op, errors.Unauthenticated, "missing space-id context")
 	}
-	log.Info(ctx, "[Handler.ListProviders] Resolved space-id", log.String("spaceID", spaceID))
 
-	list, err := h.coordinator.GetStore().ListProviders(ctx, spaceID)
+	list, err := h.coordinator.ListProviders(ctx, spaceID)
 	if err != nil {
-		log.Error(ctx, "[Handler.ListProviders] Failed to query providers", log.Err(err))
-		return nil, status.Errorf(codes.Internal, "list providers: %v", err)
+		return nil, err
 	}
-	log.Info(ctx, "[Handler.ListProviders] Successfully fetched providers", log.Int("count", len(list)))
 
 	res := &agentv1.ListProvidersResponse{}
 	for _, p := range list {
@@ -166,9 +169,11 @@ func (h *Handler) ListProviders(ctx context.Context, _ *emptypb.Empty) (*agentv1
 }
 
 func (h *Handler) UpdateProvider(ctx context.Context, req *agentv1.UpdateProviderRequest) (*agentv1.LLMProvider, error) {
+	const op errors.Op = "grpc/agent.UpdateProvider"
+
 	spaceID, ok := auth.SpaceIDFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+		return nil, errors.E(op, errors.Unauthenticated, "missing space-id context")
 	}
 
 	var urlPtr, keyPtr *string
@@ -179,22 +184,30 @@ func (h *Handler) UpdateProvider(ctx context.Context, req *agentv1.UpdateProvide
 		keyPtr = new(req.ApiKey)
 	}
 
-	p, err := h.coordinator.GetStore().UpdateProvider(ctx, spaceID, req.GetId(), req.GetName(), urlPtr, keyPtr)
+	p, err := h.coordinator.UpdateProvider(ctx, &agentapp.UpdateProviderRequest{
+		SpaceID: spaceID,
+		ID:      req.GetId(),
+		Name:    req.GetName(),
+		APIUrl:  urlPtr,
+		APIKey:  keyPtr,
+	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "update provider: %v", err)
+		return nil, err
 	}
 	return toProtoLLMProvider(p), nil
 }
 
 func (h *Handler) DeleteProvider(ctx context.Context, req *agentv1.DeleteProviderRequest) (*emptypb.Empty, error) {
+	const op errors.Op = "grpc/agent.DeleteProvider"
+
 	spaceID, ok := auth.SpaceIDFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+		return nil, errors.E(op, errors.Unauthenticated, "missing space-id context")
 	}
 
-	err := h.coordinator.GetStore().DeleteProvider(ctx, spaceID, req.GetId())
+	err := h.coordinator.DeleteProvider(ctx, spaceID, req.GetId())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "delete provider: %v", err)
+		return nil, err
 	}
 	return &emptypb.Empty{}, nil
 }
@@ -202,18 +215,11 @@ func (h *Handler) DeleteProvider(ctx context.Context, req *agentv1.DeleteProvide
 // Agent Instance Operations
 
 func (h *Handler) CreateAgent(ctx context.Context, req *agentv1.CreateAgentRequest) (*agentv1.Agent, error) {
+	const op errors.Op = "grpc/agent.CreateAgent"
+
 	spaceID, ok := auth.SpaceIDFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
-	}
-
-	// Detect if an agent configuration for this purpose already exists
-	existing, err := h.coordinator.GetStore().GetAgent(ctx, agent.GetAgent{SpaceID: spaceID, Purpose: req.GetPurpose()})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "check existing agent: %v", err)
-	}
-	if existing != nil {
-		return nil, status.Error(codes.AlreadyExists, "an agent configuration for this purpose already exists in this workspace")
+		return nil, errors.E(op, errors.Unauthenticated, "missing space-id context")
 	}
 
 	var provPtr *string
@@ -232,38 +238,49 @@ func (h *Handler) CreateAgent(ctx context.Context, req *agentv1.CreateAgentReque
 		sysPtr = &val
 	}
 
-	a, err := h.coordinator.GetStore().CreateAgent(ctx, spaceID, provPtr, req.GetName(), descPtr, req.GetPurpose(), req.GetTags(), req.GetModelName(), sysPtr, req.GetTemperature())
+	a, err := h.coordinator.CreateAgent(ctx, &agentapp.CreateAgentRequest{
+		SpaceID:           spaceID,
+		LLMProviderID:     provPtr,
+		Name:              req.GetName(),
+		Description:       descPtr,
+		Purpose:           req.GetPurpose(),
+		Tags:              req.GetTags(),
+		ModelName:         req.GetModelName(),
+		SystemInstruction: sysPtr,
+		Temperature:       req.GetTemperature(),
+	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "create agent: %v", err)
+		return nil, err
 	}
 	return toProtoAgent(a), nil
 }
 
 func (h *Handler) GetAgent(ctx context.Context, req *agentv1.GetAgentRequest) (*agentv1.Agent, error) {
+	const op errors.Op = "grpc/agent.GetAgent"
+
 	spaceID, ok := auth.SpaceIDFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+		return nil, errors.E(op, errors.Unauthenticated, "missing space-id context")
 	}
 
-	a, err := h.coordinator.GetStore().GetAgent(ctx, agent.GetAgent{SpaceID: spaceID, ID: req.GetId()})
+	a, err := h.coordinator.GetAgent(ctx, spaceID, req.GetId())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "get agent: %v", err)
-	}
-	if a == nil {
-		return nil, status.Errorf(codes.NotFound, "agent %s not found", req.GetId())
+		return nil, err
 	}
 	return toProtoAgent(a), nil
 }
 
 func (h *Handler) ListAgents(ctx context.Context, _ *emptypb.Empty) (*agentv1.ListAgentsResponse, error) {
+	const op errors.Op = "grpc/agent.ListAgents"
+
 	spaceID, ok := auth.SpaceIDFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+		return nil, errors.E(op, errors.Unauthenticated, "missing space-id context")
 	}
 
-	list, err := h.coordinator.GetStore().ListAgents(ctx, spaceID)
+	list, err := h.coordinator.ListAgents(ctx, spaceID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list agents: %v", err)
+		return nil, err
 	}
 
 	res := &agentv1.ListAgentsResponse{}
@@ -274,9 +291,11 @@ func (h *Handler) ListAgents(ctx context.Context, _ *emptypb.Empty) (*agentv1.Li
 }
 
 func (h *Handler) UpdateAgent(ctx context.Context, req *agentv1.UpdateAgentRequest) (*agentv1.Agent, error) {
+	const op errors.Op = "grpc/agent.UpdateAgent"
+
 	spaceID, ok := auth.SpaceIDFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+		return nil, errors.E(op, errors.Unauthenticated, "missing space-id context")
 	}
 
 	var provPtr *string
@@ -295,22 +314,35 @@ func (h *Handler) UpdateAgent(ctx context.Context, req *agentv1.UpdateAgentReque
 		sysPtr = &val
 	}
 
-	a, err := h.coordinator.GetStore().UpdateAgent(ctx, spaceID, req.GetId(), provPtr, req.GetName(), descPtr, req.GetTags(), req.GetModelName(), sysPtr, req.GetTemperature(), req.GetIsEnabled())
+	a, err := h.coordinator.UpdateAgent(ctx, &agentapp.UpdateAgentRequest{
+		SpaceID:           spaceID,
+		ID:                req.GetId(),
+		LLMProviderID:     provPtr,
+		Name:              req.GetName(),
+		Description:       descPtr,
+		Tags:              req.GetTags(),
+		ModelName:         req.GetModelName(),
+		SystemInstruction: sysPtr,
+		Temperature:       req.GetTemperature(),
+		IsEnabled:         req.GetIsEnabled(),
+	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "update agent: %v", err)
+		return nil, err
 	}
 	return toProtoAgent(a), nil
 }
 
 func (h *Handler) DeleteAgent(ctx context.Context, req *agentv1.DeleteAgentRequest) (*emptypb.Empty, error) {
+	const op errors.Op = "grpc/agent.DeleteAgent"
+
 	spaceID, ok := auth.SpaceIDFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+		return nil, errors.E(op, errors.Unauthenticated, "missing space-id context")
 	}
 
-	err := h.coordinator.GetStore().DeleteAgent(ctx, spaceID, req.GetId())
+	err := h.coordinator.DeleteAgent(ctx, spaceID, req.GetId())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "delete agent: %v", err)
+		return nil, err
 	}
 	return &emptypb.Empty{}, nil
 }
@@ -318,19 +350,21 @@ func (h *Handler) DeleteAgent(ctx context.Context, req *agentv1.DeleteAgentReque
 // Catalog and Audit Logs Operations
 
 func (h *Handler) ListAgentRuns(ctx context.Context, req *agentv1.ListAgentRunsRequest) (*agentv1.ListAgentRunsResponse, error) {
+	const op errors.Op = "grpc/agent.ListAgentRuns"
+
 	spaceID, ok := auth.SpaceIDFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
+		return nil, errors.E(op, errors.Unauthenticated, "missing space-id context")
 	}
 
-	page, err := h.coordinator.GetStore().ListRuns(ctx, agent.ListAgentRuns{
+	page, err := h.coordinator.ListRuns(ctx, agent.ListAgentRuns{
 		SpaceID:   spaceID,
 		AgentID:   req.GetAgentId(),
 		PageSize:  req.GetPageSize(),
 		PageToken: req.GetPageToken(),
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list agent runs: %v", err)
+		return nil, err
 	}
 
 	res := &agentv1.ListAgentRunsResponse{
@@ -376,13 +410,15 @@ func (h *Handler) GetProviderCatalog(ctx context.Context, _ *emptypb.Empty) (*ag
 }
 
 func (h *Handler) GetSuggestions(ctx context.Context, req *agentv1.GetSuggestionsRequest) (*agentv1.GetSuggestionsResponse, error) {
+	const op errors.Op = "grpc/agent.GetSuggestions"
+
 	spaceID, ok := auth.SpaceIDFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "unauthenticated")
+		return nil, errors.E(op, errors.Unauthenticated, "missing space-id context")
 	}
 
 	if req.GetPurpose() == "" {
-		return nil, status.Error(codes.InvalidArgument, "purpose is required")
+		return nil, errors.E(op, errors.Invalid, "purpose is required")
 	}
 
 	docs := make([]agentapp.DocumentFile, len(req.GetDocuments()))
@@ -401,12 +437,12 @@ func (h *Handler) GetSuggestions(ctx context.Context, req *agentv1.GetSuggestion
 
 	resMap, err := h.coordinator.GetSuggestions(ctx, string(spaceID), req.GetPurpose(), appReq)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "process suggestions: %v", err)
+		return nil, err
 	}
 
 	stStruct, err := structpb.NewStruct(resMap)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode structured suggestion: %v", err)
+		return nil, errors.E(op, errors.Internal, fmt.Errorf("encode structured suggestion: %w", err))
 	}
 
 	rawOutput := ""

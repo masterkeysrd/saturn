@@ -59,22 +59,69 @@ type ExecutionRequest struct {
 	Params  map[string]any
 }
 
+// CreateProviderRequest contains parameters for configuring a new LLM provider.
+type CreateProviderRequest struct {
+	SpaceID           string
+	Name              string
+	CompatibilityMode agent.CompatibilityMode
+	APIUrl            *string
+	APIKey            *string
+}
+
+// UpdateProviderRequest contains parameters for modifying an existing LLM provider.
+type UpdateProviderRequest struct {
+	SpaceID string
+	ID      string
+	Name    string
+	APIUrl  *string
+	APIKey  *string
+}
+
+// CreateAgentRequest contains parameters for registering a new AI agent blueprint.
+type CreateAgentRequest struct {
+	SpaceID           string
+	LLMProviderID     *string
+	Name              string
+	Description       *string
+	Purpose           string
+	Tags              []string
+	ModelName         string
+	SystemInstruction *string
+	Temperature       float64
+}
+
+// UpdateAgentRequest contains parameters for updating an existing AI agent configuration.
+type UpdateAgentRequest struct {
+	SpaceID           string
+	ID                string
+	LLMProviderID     *string
+	Name              string
+	Description       *string
+	Tags              []string
+	ModelName         string
+	SystemInstruction *string
+	Temperature       float64
+	IsEnabled         bool
+}
+
+//go:generate go run github.com/masterkeysrd/saturn/tools/loggen -target=Coordinator -component=agent
+
 // Coordinator orchestrates AI agent blueprints, LLM providers, audit runs, and suggestions.
 type Coordinator interface {
 	GetSuggestions(ctx context.Context, spaceID string, purpose string, req *SuggestionRequest) (map[string]any, error)
 	ExecuteAgent(ctx context.Context, req ExecutionRequest) (string, error)
 	RegisterSuggestionProcessor(purpose string, processor SuggestionProcessor)
 
-	CreateProvider(ctx context.Context, spaceID string, name string, mode agent.CompatibilityMode, url *string, key *string) (*agent.LLMProvider, error)
+	CreateProvider(ctx context.Context, req *CreateProviderRequest) (*agent.LLMProvider, error)
 	GetProvider(ctx context.Context, spaceID string, id string) (*agent.LLMProvider, error)
 	ListProviders(ctx context.Context, spaceID string) ([]*agent.LLMProvider, error)
-	UpdateProvider(ctx context.Context, spaceID string, id string, name string, url *string, key *string) (*agent.LLMProvider, error)
+	UpdateProvider(ctx context.Context, req *UpdateProviderRequest) (*agent.LLMProvider, error)
 	DeleteProvider(ctx context.Context, spaceID string, id string) error
 
-	CreateAgent(ctx context.Context, spaceID string, providerID *string, name string, desc *string, purpose string, tags []string, model string, prompt *string, temp float64) (*agent.Agent, error)
+	CreateAgent(ctx context.Context, req *CreateAgentRequest) (*agent.Agent, error)
 	GetAgent(ctx context.Context, spaceID string, id string) (*agent.Agent, error)
 	ListAgents(ctx context.Context, spaceID string) ([]*agent.Agent, error)
-	UpdateAgent(ctx context.Context, spaceID string, id string, providerID *string, name string, desc *string, tags []string, model string, prompt *string, temp float64, isEnabled bool) (*agent.Agent, error)
+	UpdateAgent(ctx context.Context, req *UpdateAgentRequest) (*agent.Agent, error)
 	DeleteAgent(ctx context.Context, spaceID string, id string) error
 
 	ListRuns(ctx context.Context, q agent.ListAgentRuns) (*paging.Page[*agent.AgentRun], error)
@@ -295,14 +342,17 @@ func (c *coordinator) ExecuteAgent(ctx context.Context, req ExecutionRequest) (s
 }
 
 // CreateProvider registers a new LLM provider.
-func (c *coordinator) CreateProvider(ctx context.Context, spaceID string, name string, mode agent.CompatibilityMode, url *string, key *string) (*agent.LLMProvider, error) {
+func (c *coordinator) CreateProvider(ctx context.Context, req *CreateProviderRequest) (*agent.LLMProvider, error) {
 	const op errors.Op = "application/agent.CreateProvider"
 
-	if name == "" {
+	if req == nil {
+		return nil, errors.E(op, errors.Invalid, "request is required")
+	}
+	if req.Name == "" {
 		return nil, errors.E(op, errors.Invalid, "provider name is required")
 	}
 
-	p, err := c.store.CreateProvider(ctx, spaceID, name, mode, url, key)
+	p, err := c.store.CreateProvider(ctx, req.SpaceID, req.Name, req.CompatibilityMode, req.APIUrl, req.APIKey)
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
@@ -335,10 +385,14 @@ func (c *coordinator) ListProviders(ctx context.Context, spaceID string) ([]*age
 }
 
 // UpdateProvider modifies an existing LLM provider.
-func (c *coordinator) UpdateProvider(ctx context.Context, spaceID string, id string, name string, url *string, key *string) (*agent.LLMProvider, error) {
+func (c *coordinator) UpdateProvider(ctx context.Context, req *UpdateProviderRequest) (*agent.LLMProvider, error) {
 	const op errors.Op = "application/agent.UpdateProvider"
 
-	p, err := c.store.UpdateProvider(ctx, spaceID, id, name, url, key)
+	if req == nil {
+		return nil, errors.E(op, errors.Invalid, "request is required")
+	}
+
+	p, err := c.store.UpdateProvider(ctx, req.SpaceID, req.ID, req.Name, req.APIUrl, req.APIKey)
 	if err != nil {
 		if errors.Is(err, errors.NotExist) {
 			return nil, errors.E(op, errors.NotExist, ProviderNotFound, "llm provider not found")
@@ -363,18 +417,21 @@ func (c *coordinator) DeleteProvider(ctx context.Context, spaceID string, id str
 }
 
 // CreateAgent registers a new agent instance.
-func (c *coordinator) CreateAgent(ctx context.Context, spaceID string, providerID *string, name string, desc *string, purpose string, tags []string, model string, prompt *string, temp float64) (*agent.Agent, error) {
+func (c *coordinator) CreateAgent(ctx context.Context, req *CreateAgentRequest) (*agent.Agent, error) {
 	const op errors.Op = "application/agent.CreateAgent"
 
-	if name == "" {
+	if req == nil {
+		return nil, errors.E(op, errors.Invalid, "request is required")
+	}
+	if req.Name == "" {
 		return nil, errors.E(op, errors.Invalid, "agent name is required")
 	}
-	if purpose == "" {
+	if req.Purpose == "" {
 		return nil, errors.E(op, errors.Invalid, "agent purpose is required")
 	}
 
 	// Detect if an agent configuration for this purpose already exists in this workspace
-	existing, err := c.store.GetAgent(ctx, agent.GetAgent{SpaceID: spaceID, Purpose: purpose})
+	existing, err := c.store.GetAgent(ctx, agent.GetAgent{SpaceID: req.SpaceID, Purpose: req.Purpose})
 	if err != nil && !errors.Is(err, errors.NotExist) {
 		return nil, errors.E(op, err)
 	}
@@ -382,7 +439,7 @@ func (c *coordinator) CreateAgent(ctx context.Context, spaceID string, providerI
 		return nil, errors.E(op, errors.Exist, AgentExists, "an agent configuration for this purpose already exists in this workspace")
 	}
 
-	a, err := c.store.CreateAgent(ctx, spaceID, providerID, name, desc, purpose, tags, model, prompt, temp)
+	a, err := c.store.CreateAgent(ctx, req.SpaceID, req.LLMProviderID, req.Name, req.Description, req.Purpose, req.Tags, req.ModelName, req.SystemInstruction, req.Temperature)
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
@@ -415,10 +472,14 @@ func (c *coordinator) ListAgents(ctx context.Context, spaceID string) ([]*agent.
 }
 
 // UpdateAgent modifies agent configuration.
-func (c *coordinator) UpdateAgent(ctx context.Context, spaceID string, id string, providerID *string, name string, desc *string, tags []string, model string, prompt *string, temp float64, isEnabled bool) (*agent.Agent, error) {
+func (c *coordinator) UpdateAgent(ctx context.Context, req *UpdateAgentRequest) (*agent.Agent, error) {
 	const op errors.Op = "application/agent.UpdateAgent"
 
-	a, err := c.store.UpdateAgent(ctx, spaceID, id, providerID, name, desc, tags, model, prompt, temp, isEnabled)
+	if req == nil {
+		return nil, errors.E(op, errors.Invalid, "request is required")
+	}
+
+	a, err := c.store.UpdateAgent(ctx, req.SpaceID, req.ID, req.LLMProviderID, req.Name, req.Description, req.Tags, req.ModelName, req.SystemInstruction, req.Temperature, req.IsEnabled)
 	if err != nil {
 		if errors.Is(err, errors.NotExist) {
 			return nil, errors.E(op, errors.NotExist, AgentNotFound, "agent not found")
