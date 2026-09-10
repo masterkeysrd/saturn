@@ -9,6 +9,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/id"
 	"github.com/masterkeysrd/saturn/internal/platform/log"
+	"github.com/masterkeysrd/saturn/internal/platform/requestid"
 )
 
 // Start begins the background loops for spawning cron schedules and executing pending jobs.
@@ -180,6 +181,10 @@ func (e *Engine) executePendingJobs(ctx context.Context) error {
 		default:
 			// Queue is full (backpressure), revert job status back to pending
 			// so another worker instance or poller tick can claim it later
+			log.Warn(ctx, "scheduler worker queue full; reverting job to pending",
+				log.String("job_id", j.ID),
+				log.String("job_type", j.JobType),
+			)
 			_, _ = e.db.Exec(ctx, `UPDATE platform.job SET status = 'pending', update_time = NOW() WHERE id = $1`, j.ID)
 		}
 	}
@@ -188,6 +193,9 @@ func (e *Engine) executePendingJobs(ctx context.Context) error {
 }
 
 func (e *Engine) executeJobInstance(ctx context.Context, j jobInstance) {
+	ctx, _ = requestid.FromOrNew(ctx)
+	start := time.Now()
+
 	defer func() {
 		if r := recover(); r != nil {
 			log.Error(ctx, "panic recovered during scheduler job execution",
@@ -213,6 +221,10 @@ func (e *Engine) executeJobInstance(ctx context.Context, j jobInstance) {
 	handler, exists := e.getHandler(j.JobType)
 	if !exists {
 		errMsg := fmt.Sprintf("no handler registered for job type %q", j.JobType)
+		log.Error(ctx, "no handler registered for scheduler job",
+			log.String("job_id", j.ID),
+			log.String("job_type", j.JobType),
+		)
 		_, _ = e.db.Exec(ctx, `UPDATE platform.job SET status = 'failed', last_error = $1, update_time = NOW() WHERE id = $2`, errMsg, j.ID)
 		return
 	}
@@ -228,11 +240,37 @@ func (e *Engine) executeJobInstance(ctx context.Context, j jobInstance) {
 		backoffMinutes := nextAttempt * 5
 		runAt := time.Now().Add(time.Duration(backoffMinutes) * time.Minute).UTC()
 
+		if status == "failed" {
+			log.Error(ctx, "scheduler job failed permanently (max attempts reached)",
+				log.String("job_id", j.ID),
+				log.String("job_type", j.JobType),
+				log.Int("attempts", nextAttempt),
+				log.Int("max_attempts", j.MaxAttempts),
+				log.Duration("duration", time.Since(start)),
+				log.Err(err),
+			)
+		} else {
+			log.Warn(ctx, "scheduler job failed; scheduled retry",
+				log.String("job_id", j.ID),
+				log.String("job_type", j.JobType),
+				log.Int("attempt", nextAttempt),
+				log.Int("max_attempts", j.MaxAttempts),
+				log.Time("next_run_at", runAt),
+				log.Duration("duration", time.Since(start)),
+				log.Err(err),
+			)
+		}
+
 		_, _ = e.db.Exec(ctx, `UPDATE platform.job 
 			SET status = $1, attempts = $2, run_at = $3, last_error = $4, update_time = NOW() 
 			WHERE id = $5`, status, nextAttempt, runAt, err.Error(), j.ID)
 	} else {
 		// Success -> Transition status to 'completed'
+		log.Info(ctx, "scheduler job completed successfully",
+			log.String("job_id", j.ID),
+			log.String("job_type", j.JobType),
+			log.Duration("duration", time.Since(start)),
+		)
 		_, _ = e.db.Exec(ctx, `UPDATE platform.job SET status = 'completed', update_time = NOW() WHERE id = $1`, j.ID)
 	}
 }

@@ -2,9 +2,27 @@ package scheduler
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 	"time"
+
+	"github.com/masterkeysrd/saturn/internal/platform/requestid"
 )
+
+type mockDB struct{}
+
+func (m *mockDB) Get(ctx context.Context, dest any, query string, args ...any) error    { return nil }
+func (m *mockDB) Select(ctx context.Context, dest any, query string, args ...any) error { return nil }
+func (m *mockDB) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	return nil, nil
+}
+func (m *mockDB) ExecOne(ctx context.Context, query string, args ...any) error { return nil }
+func (m *mockDB) Rebind(query string) string                                   { return query }
+func (m *mockDB) WithTx(ctx context.Context, fn func(ctx context.Context) error) error {
+	return fn(ctx)
+}
+
+var _ Database = (*mockDB)(nil)
 
 func TestEngineRegisterAndGetHandler(t *testing.T) {
 	engine := NewEngine(nil)
@@ -59,5 +77,42 @@ func TestEngineCronParsing(t *testing.T) {
 	_, err = engine.cronParser.Parse("invalid expression")
 	if err == nil {
 		t.Error("expected error parsing invalid cron expression")
+	}
+}
+
+func TestEngineExecuteJobInstance_RequestID(t *testing.T) {
+	engine := NewEngine(&mockDB{})
+
+	var receivedReqID string
+	engine.Register("test.request_id_job", func(ctx context.Context, payload []byte) error {
+		receivedReqID = requestid.From(ctx)
+		return nil
+	})
+
+	job := jobInstance{
+		ID:          "job_12345",
+		JobType:     "test.request_id_job",
+		Payload:     []byte("test"),
+		Attempts:    0,
+		MaxAttempts: 5,
+	}
+
+	// 1. Calling executeJobInstance without request_id on ctx -> generates fresh req_ ID
+	engine.executeJobInstance(context.Background(), job)
+
+	if receivedReqID == "" {
+		t.Fatal("expected request_id to be injected into context, got empty string")
+	}
+	if len(receivedReqID) < 5 || receivedReqID[:4] != "req_" {
+		t.Fatalf("expected request_id with prefix 'req_', got %q", receivedReqID)
+	}
+
+	// 2. Calling executeJobInstance with existing request_id on ctx -> preserves it via FromOrNew
+	existingReqID := "req_existing_correlation_id"
+	ctxWithExisting := requestid.With(context.Background(), existingReqID)
+	engine.executeJobInstance(ctxWithExisting, job)
+
+	if receivedReqID != existingReqID {
+		t.Fatalf("expected existing request_id %q to be preserved, got %q", existingReqID, receivedReqID)
 	}
 }
