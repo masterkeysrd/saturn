@@ -10,6 +10,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/db"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/id"
+	"github.com/masterkeysrd/saturn/internal/platform/log"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
@@ -94,18 +95,18 @@ func (e *Engine) WithWorkerCount(count int) *Engine {
 	return e
 }
 
-// UseProducer adds a middleware to the publishing pipeline.
-func (e *Engine) UseProducer(mw ProducerMiddleware) {
+// UseProducer adds middlewares to the publishing pipeline.
+func (e *Engine) UseProducer(mws ...ProducerMiddleware) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	e.producerMiddlewares = append(e.producerMiddlewares, mw)
+	e.producerMiddlewares = append(e.producerMiddlewares, mws...)
 }
 
-// UseConsumer adds a middleware to the consumer pipeline.
-func (e *Engine) UseConsumer(mw ConsumerMiddleware) {
+// UseConsumer adds middlewares to the consumer pipeline.
+func (e *Engine) UseConsumer(mws ...ConsumerMiddleware) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	e.consumerMiddlewares = append(e.consumerMiddlewares, mw)
+	e.consumerMiddlewares = append(e.consumerMiddlewares, mws...)
 }
 
 // Subscribe registers a subscriber callback for a specific topic.
@@ -202,6 +203,12 @@ func (e *Engine) rawPublish(ctx context.Context, msg *Message) error {
 	case e.notifyCh <- struct{}{}:
 	default:
 	}
+
+	log.Info(ctx, "eventbus message published",
+		log.String("message_id", msg.ID),
+		log.String("topic", msg.Topic),
+		log.Int("subscriber_count", len(subscribers)),
+	)
 
 	return nil
 }

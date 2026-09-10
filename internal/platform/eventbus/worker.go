@@ -202,9 +202,17 @@ func (e *Engine) executeDelivery(ctx context.Context, record DeliveryRecord) {
 
 	if handler == nil {
 		errMsg := fmt.Sprintf("no handler registered for subscriber %q on topic %q", record.SubscriberID, record.Topic)
+		log.Error(ctx, "no handler registered for eventbus subscriber",
+			log.String("delivery_id", record.ID),
+			log.String("subscriber_id", record.SubscriberID),
+			log.String("topic", record.Topic),
+			log.String("message_id", record.MessageID),
+		)
 		_, _ = e.db.Exec(context.Background(), `UPDATE platform.message_deliveries SET status = 'failed', last_error = $1, update_time = NOW() WHERE id = $2`, errMsg, record.ID)
 		return
 	}
+
+	start := time.Now()
 
 	// Build consumer middleware chain
 	chainedHandler := handler
@@ -222,12 +230,6 @@ func (e *Engine) executeDelivery(ctx context.Context, record DeliveryRecord) {
 	}()
 
 	if execErr != nil {
-		log.Error(ctx, "eventbus subscriber delivery execution failed",
-			log.String("subscriber_id", record.SubscriberID),
-			log.String("topic", record.Topic),
-			log.String("message_id", record.MessageID),
-			log.Err(execErr),
-		)
 		nextAttempt := record.Attempts + 1
 		status := "pending"
 		if nextAttempt >= record.MaxAttempts {
@@ -238,11 +240,43 @@ func (e *Engine) executeDelivery(ctx context.Context, record DeliveryRecord) {
 		backoffMinutes := 1 << (nextAttempt - 1)
 		scheduleTime := time.Now().Add(time.Duration(backoffMinutes) * time.Minute).UTC()
 
+		if status == "failed" {
+			log.Error(ctx, "eventbus delivery exhausted max attempts; marked as failed (dead-letter)",
+				log.String("delivery_id", record.ID),
+				log.String("subscriber_id", record.SubscriberID),
+				log.String("topic", record.Topic),
+				log.String("message_id", record.MessageID),
+				log.Int("attempts", nextAttempt),
+				log.Int("max_attempts", record.MaxAttempts),
+				log.Duration("duration", time.Since(start)),
+				log.Err(execErr),
+			)
+		} else {
+			log.Warn(ctx, "eventbus subscriber delivery execution failed; scheduled retry",
+				log.String("delivery_id", record.ID),
+				log.String("subscriber_id", record.SubscriberID),
+				log.String("topic", record.Topic),
+				log.String("message_id", record.MessageID),
+				log.Int("attempt", nextAttempt),
+				log.Int("max_attempts", record.MaxAttempts),
+				log.Time("next_schedule_time", scheduleTime),
+				log.Duration("duration", time.Since(start)),
+				log.Err(execErr),
+			)
+		}
+
 		_, _ = e.db.Exec(context.Background(), `UPDATE platform.message_deliveries 
 			SET status = $1, attempts = $2, schedule_time = $3, last_error = $4, update_time = NOW() 
 			WHERE id = $5`, status, nextAttempt, scheduleTime, execErr.Error(), record.ID)
 	} else {
 		// Mark completed
+		log.Info(ctx, "eventbus delivery completed successfully",
+			log.String("delivery_id", record.ID),
+			log.String("subscriber_id", record.SubscriberID),
+			log.String("topic", record.Topic),
+			log.String("message_id", record.MessageID),
+			log.Duration("duration", time.Since(start)),
+		)
 		_, _ = e.db.Exec(context.Background(), `UPDATE platform.message_deliveries 
 			SET status = 'completed', update_time = NOW() WHERE id = $1`, record.ID)
 	}

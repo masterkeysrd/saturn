@@ -18,7 +18,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/api"
 	"github.com/masterkeysrd/saturn/apps/web"
-	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/backup"
 	"github.com/masterkeysrd/saturn/internal/platform/eventbus"
 	"github.com/masterkeysrd/saturn/internal/platform/token"
@@ -57,6 +56,7 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
 	"github.com/masterkeysrd/saturn/internal/platform/shutdown"
 	"github.com/masterkeysrd/saturn/internal/transport/event"
+	eventmiddleware "github.com/masterkeysrd/saturn/internal/transport/event/middleware"
 	agentgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/agent"
 	backupgrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/backup"
 	financegrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/finance"
@@ -333,10 +333,16 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	integrationHandler := integrationgrpc.NewHandler(integrationCoordinator)
 	integrationv1.RegisterIntegrationServiceServer(s.grpc, integrationHandler)
 
-	// Wire EventBus service & register space context propagation middlewares
+	// Wire EventBus service & register context propagation middlewares (request_id, space_id)
 	eventBusEngine := eventbus.NewEngine(dbClient)
-	eventBusEngine.UseProducer(eventbus.HeaderContextInjector("space_id", auth.SpaceIDFromContext))
-	eventBusEngine.UseConsumer(eventbus.HeaderContextUnpacker("space_id", auth.WithSpaceID))
+	eventBusEngine.UseProducer(
+		eventmiddleware.RequestIDProducer(),
+		eventmiddleware.SpaceIDProducer(),
+	)
+	eventBusEngine.UseConsumer(
+		eventmiddleware.RequestIDConsumer(),
+		eventmiddleware.SpaceIDConsumer(),
+	)
 	eventBusEngine.Start(ctx)
 	s.EventBus = eventBusEngine
 
