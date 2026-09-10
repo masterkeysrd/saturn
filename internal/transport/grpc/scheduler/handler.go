@@ -3,12 +3,11 @@ package scheduler
 import (
 	"context"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	schedulerv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/scheduler/v1"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
 )
 
@@ -25,9 +24,11 @@ func NewHandler(engine *scheduler.Engine) *Handler {
 
 // ListSchedules lists all recurring schedules currently defined in the system.
 func (h *Handler) ListSchedules(ctx context.Context, req *schedulerv1.ListSchedulesRequest) (*schedulerv1.ListSchedulesResponse, error) {
+	const op errors.Op = "transport/grpc/scheduler.ListSchedules"
+
 	schedules, err := h.Engine.ListSchedules(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list schedules: %v", err)
+		return nil, errors.E(op, err)
 	}
 
 	protoSchedules := make([]*schedulerv1.ScheduleInfo, len(schedules))
@@ -49,9 +50,11 @@ func (h *Handler) ListSchedules(ctx context.Context, req *schedulerv1.ListSchedu
 
 // ListJobs lists all job instances in the queue (pending, processing, failed).
 func (h *Handler) ListJobs(ctx context.Context, req *schedulerv1.ListJobsRequest) (*schedulerv1.ListJobsResponse, error) {
+	const op errors.Op = "transport/grpc/scheduler.ListJobs"
+
 	jobs, err := h.Engine.ListJobs(ctx, req.Status)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list jobs: %v", err)
+		return nil, errors.E(op, err)
 	}
 
 	protoJobs := make([]*schedulerv1.JobInfo, len(jobs))
@@ -85,64 +88,76 @@ func (h *Handler) ListJobs(ctx context.Context, req *schedulerv1.ListJobsRequest
 
 // TriggerSchedule manually spawns a job instance from a schedule template immediately.
 func (h *Handler) TriggerSchedule(ctx context.Context, req *schedulerv1.TriggerScheduleRequest) (*emptypb.Empty, error) {
+	const op errors.Op = "transport/grpc/scheduler.TriggerSchedule"
+
 	if req.Id == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
+		return nil, errors.E(op, errors.Invalid, "id is required")
 	}
 	if err := h.Engine.TriggerSchedule(ctx, req.Id); err != nil {
-		return nil, status.Errorf(codes.Internal, "trigger schedule: %v", err)
+		return nil, errors.E(op, err)
 	}
 	return &emptypb.Empty{}, nil
 }
 
 // PauseSchedule pauses a recurring schedule template.
 func (h *Handler) PauseSchedule(ctx context.Context, req *schedulerv1.PauseScheduleRequest) (*emptypb.Empty, error) {
+	const op errors.Op = "transport/grpc/scheduler.PauseSchedule"
+
 	if req.Id == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
+		return nil, errors.E(op, errors.Invalid, "id is required")
 	}
 	if err := h.Engine.PauseSchedule(ctx, req.Id); err != nil {
-		return nil, status.Errorf(codes.Internal, "pause schedule: %v", err)
+		return nil, errors.E(op, err)
 	}
 	return &emptypb.Empty{}, nil
 }
 
 // ResumeSchedule resumes a paused recurring schedule template.
 func (h *Handler) ResumeSchedule(ctx context.Context, req *schedulerv1.ResumeScheduleRequest) (*emptypb.Empty, error) {
+	const op errors.Op = "transport/grpc/scheduler.ResumeSchedule"
+
 	if req.Id == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
+		return nil, errors.E(op, errors.Invalid, "id is required")
 	}
 	if err := h.Engine.ResumeSchedule(ctx, req.Id); err != nil {
-		return nil, status.Errorf(codes.Internal, "resume schedule: %v", err)
+		return nil, errors.E(op, err)
 	}
 	return &emptypb.Empty{}, nil
 }
 
 // RetryJob resets a failed job's attempt count and sets it to run immediately.
 func (h *Handler) RetryJob(ctx context.Context, req *schedulerv1.RetryJobRequest) (*emptypb.Empty, error) {
+	const op errors.Op = "transport/grpc/scheduler.RetryJob"
+
 	if req.Id == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
+		return nil, errors.E(op, errors.Invalid, "id is required")
 	}
 	if err := h.Engine.RetryJob(ctx, req.Id); err != nil {
-		return nil, status.Errorf(codes.Internal, "retry job: %v", err)
+		return nil, errors.E(op, err)
 	}
 	return &emptypb.Empty{}, nil
 }
 
 // DeleteJob removes a job instance from the queue.
 func (h *Handler) DeleteJob(ctx context.Context, req *schedulerv1.DeleteJobRequest) (*emptypb.Empty, error) {
+	const op errors.Op = "transport/grpc/scheduler.DeleteJob"
+
 	if req.Id == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
+		return nil, errors.E(op, errors.Invalid, "id is required")
 	}
 	if err := h.Engine.DeleteJob(ctx, req.Id); err != nil {
-		return nil, status.Errorf(codes.Internal, "delete job: %v", err)
+		return nil, errors.E(op, err)
 	}
 	return &emptypb.Empty{}, nil
 }
 
 // GetSchedulerStatus returns the scheduler runtime status (worker count and queue size).
 func (h *Handler) GetSchedulerStatus(ctx context.Context, req *schedulerv1.GetSchedulerStatusRequest) (*schedulerv1.GetSchedulerStatusResponse, error) {
+	const op errors.Op = "transport/grpc/scheduler.GetSchedulerStatus"
+
 	queueSize, err := h.Engine.GetQueueSize(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "get queue size: %v", err)
+		return nil, errors.E(op, err)
 	}
 
 	return &schedulerv1.GetSchedulerStatusResponse{

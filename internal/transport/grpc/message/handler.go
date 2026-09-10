@@ -3,12 +3,11 @@ package message
 import (
 	"context"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	messagev1 "github.com/masterkeysrd/saturn/apis/saturn/platform/message/v1"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/eventbus"
 )
 
@@ -25,9 +24,11 @@ func NewHandler(engine *eventbus.Engine) *Handler {
 
 // GetQueueMetrics returns aggregate and per-topic status counters for message deliveries.
 func (h *Handler) GetQueueMetrics(ctx context.Context, req *messagev1.GetQueueMetricsRequest) (*messagev1.GetQueueMetricsResponse, error) {
+	const op errors.Op = "transport/grpc/message.GetQueueMetrics"
+
 	metrics, err := h.Engine.GetMetrics(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "get queue metrics: %v", err)
+		return nil, errors.E(op, err)
 	}
 
 	protoTopics := make([]*messagev1.TopicMetrics, len(metrics.Topics))
@@ -54,6 +55,8 @@ func (h *Handler) GetQueueMetrics(ctx context.Context, req *messagev1.GetQueueMe
 
 // ListDeliveries retrieves a paginated list of message delivery records filtered by topic or status.
 func (h *Handler) ListDeliveries(ctx context.Context, req *messagev1.ListDeliveriesRequest) (*messagev1.ListDeliveriesResponse, error) {
+	const op errors.Op = "transport/grpc/message.ListDeliveries"
+
 	filter := eventbus.ListDeliveriesFilter{
 		Topic:        req.Topic,
 		Status:       req.Status,
@@ -64,7 +67,7 @@ func (h *Handler) ListDeliveries(ctx context.Context, req *messagev1.ListDeliver
 
 	page, err := h.Engine.ListDeliveries(ctx, filter)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list deliveries: %v", err)
+		return nil, errors.E(op, err)
 	}
 
 	protoDeliveries := make([]*messagev1.DeliveryInfo, len(page.Items))
@@ -92,12 +95,14 @@ func (h *Handler) ListDeliveries(ctx context.Context, req *messagev1.ListDeliver
 
 // RetryDelivery resets a failed or stuck delivery record so it can be re-processed immediately.
 func (h *Handler) RetryDelivery(ctx context.Context, req *messagev1.RetryDeliveryRequest) (*emptypb.Empty, error) {
+	const op errors.Op = "transport/grpc/message.RetryDelivery"
+
 	if req.Id == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
+		return nil, errors.E(op, errors.Invalid, "id is required")
 	}
 
 	if err := h.Engine.RetryDelivery(ctx, req.Id); err != nil {
-		return nil, status.Errorf(codes.Internal, "retry delivery: %v", err)
+		return nil, errors.E(op, err)
 	}
 
 	return &emptypb.Empty{}, nil
