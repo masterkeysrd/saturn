@@ -7,6 +7,7 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/log"
 )
 
@@ -56,18 +57,22 @@ func (e *Engine) pollerLoop(ctx context.Context) {
 
 // RecoverStaleDeliveries resets deliveries stuck in 'processing' state for longer than 5 minutes back to 'pending'.
 func (e *Engine) RecoverStaleDeliveries(ctx context.Context) error {
+	const op errors.Op = "platform/eventbus.RecoverStaleDeliveries"
+
 	query := `UPDATE platform.message_deliveries 
 		SET status = 'pending', schedule_time = NOW(), update_time = NOW() 
 		WHERE status = 'processing' AND update_time < NOW() - INTERVAL '5 minutes'`
-	_, err := e.db.ExecContext(ctx, query)
+	_, err := e.db.Exec(ctx, query)
 	if err != nil {
-		return fmt.Errorf("recover stale deliveries: %w", err)
+		return errors.E(op, err)
 	}
 	return nil
 }
 
 // PurgeOldMessages deletes completed or failed deliveries and orphaned messages older than retention window.
 func (e *Engine) PurgeOldMessages(ctx context.Context, retentionWindow time.Duration) error {
+	const op errors.Op = "platform/eventbus.PurgeOldMessages"
+
 	days := int(retentionWindow.Hours() / 24)
 	if days <= 0 {
 		days = 30
@@ -76,16 +81,16 @@ func (e *Engine) PurgeOldMessages(ctx context.Context, retentionWindow time.Dura
 	// 1. Delete completed or failed deliveries older than retention window
 	delQuery := fmt.Sprintf(`DELETE FROM platform.message_deliveries 
 		WHERE status IN ('completed', 'failed') AND update_time < NOW() - INTERVAL '%d days'`, days)
-	if _, err := e.db.ExecContext(ctx, delQuery); err != nil {
-		return fmt.Errorf("purge old deliveries: %w", err)
+	if _, err := e.db.Exec(ctx, delQuery); err != nil {
+		return errors.E(op, err)
 	}
 
 	// 2. Delete parent messages that no longer have any active or retained delivery records
 	msgQuery := fmt.Sprintf(`DELETE FROM platform.messages m
 		WHERE NOT EXISTS (SELECT 1 FROM platform.message_deliveries d WHERE d.message_id = m.id)
 		  AND m.create_time < NOW() - INTERVAL '%d days'`, days)
-	if _, err := e.db.ExecContext(ctx, msgQuery); err != nil {
-		return fmt.Errorf("purge unreferenced messages: %w", err)
+	if _, err := e.db.Exec(ctx, msgQuery); err != nil {
+		return errors.E(op, err)
 	}
 
 	return nil
@@ -130,38 +135,39 @@ func (e *Engine) processAvailableDeliveries(ctx context.Context) {
 }
 
 func (e *Engine) claimAndExecuteNextDelivery(ctx context.Context) (bool, error) {
-	tx, err := e.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return false, fmt.Errorf("begin claim tx: %w", err)
-	}
-	defer func() { _ = tx.Rollback() }()
+	const op errors.Op = "platform/eventbus.claimAndExecuteNextDelivery"
 
 	var record DeliveryRecord
+	var claimed bool
 
-	query := `SELECT 
-		d.id, d.message_id, d.subscriber_id, d.status, d.attempts, d.max_attempts,
-		m.topic, m.headers AS headers_json, m.payload
-		FROM platform.message_deliveries d
-		JOIN platform.messages m ON d.message_id = m.id
-		WHERE d.schedule_time <= NOW() AND d.status = 'pending'
-		ORDER BY d.schedule_time ASC
-		LIMIT 1
-		FOR UPDATE OF d SKIP LOCKED`
+	err := e.db.WithTx(ctx, func(txCtx context.Context) error {
+		query := `SELECT 
+			d.id, d.message_id, d.subscriber_id, d.status, d.attempts, d.max_attempts,
+			m.topic, m.headers AS headers_json, m.payload
+			FROM platform.message_deliveries d
+			JOIN platform.messages m ON d.message_id = m.id
+			WHERE d.schedule_time <= NOW() AND d.status = 'pending'
+			ORDER BY d.schedule_time ASC
+			LIMIT 1
+			FOR UPDATE OF d SKIP LOCKED`
 
-	err = tx.GetContext(ctx, &record, query)
+		err := e.db.Get(txCtx, &record, query)
+		if err != nil {
+			if errors.Is(err, errors.NotExist) {
+				return nil
+			}
+			return err
+		}
+
+		claimed = true
+		updateQuery := `UPDATE platform.message_deliveries SET status = 'processing', update_time = NOW() WHERE id = $1`
+		return e.db.ExecOne(txCtx, updateQuery, record.ID)
+	})
 	if err != nil {
-		// sql.ErrNoRows means no work is pending right now
+		return false, errors.E(op, err)
+	}
+	if !claimed {
 		return false, nil
-	}
-
-	// Update delivery status to processing
-	_, err = tx.ExecContext(ctx, `UPDATE platform.message_deliveries SET status = 'processing', update_time = NOW() WHERE id = $1`, record.ID)
-	if err != nil {
-		return false, fmt.Errorf("update delivery status to processing: %w", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return false, fmt.Errorf("commit claim tx: %w", err)
 	}
 
 	// Execute delivery in background worker thread
@@ -196,7 +202,7 @@ func (e *Engine) executeDelivery(ctx context.Context, record DeliveryRecord) {
 
 	if handler == nil {
 		errMsg := fmt.Sprintf("no handler registered for subscriber %q on topic %q", record.SubscriberID, record.Topic)
-		_, _ = e.db.ExecContext(context.Background(), `UPDATE platform.message_deliveries SET status = 'failed', last_error = $1, update_time = NOW() WHERE id = $2`, errMsg, record.ID)
+		_, _ = e.db.Exec(context.Background(), `UPDATE platform.message_deliveries SET status = 'failed', last_error = $1, update_time = NOW() WHERE id = $2`, errMsg, record.ID)
 		return
 	}
 
@@ -232,12 +238,12 @@ func (e *Engine) executeDelivery(ctx context.Context, record DeliveryRecord) {
 		backoffMinutes := 1 << (nextAttempt - 1)
 		scheduleTime := time.Now().Add(time.Duration(backoffMinutes) * time.Minute).UTC()
 
-		_, _ = e.db.ExecContext(context.Background(), `UPDATE platform.message_deliveries 
+		_, _ = e.db.Exec(context.Background(), `UPDATE platform.message_deliveries 
 			SET status = $1, attempts = $2, schedule_time = $3, last_error = $4, update_time = NOW() 
 			WHERE id = $5`, status, nextAttempt, scheduleTime, execErr.Error(), record.ID)
 	} else {
 		// Mark completed
-		_, _ = e.db.ExecContext(context.Background(), `UPDATE platform.message_deliveries 
+		_, _ = e.db.Exec(context.Background(), `UPDATE platform.message_deliveries 
 			SET status = 'completed', update_time = NOW() WHERE id = $1`, record.ID)
 	}
 }

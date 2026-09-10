@@ -334,7 +334,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	integrationv1.RegisterIntegrationServiceServer(s.grpc, integrationHandler)
 
 	// Wire EventBus service & register space context propagation middlewares
-	eventBusEngine := eventbus.NewEngine(sqlxDB)
+	eventBusEngine := eventbus.NewEngine(dbClient)
 	eventBusEngine.UseProducer(eventbus.HeaderContextInjector("space_id", auth.SpaceIDFromContext))
 	eventBusEngine.UseConsumer(eventbus.HeaderContextUnpacker("space_id", auth.WithSpaceID))
 	eventBusEngine.Start(ctx)
@@ -346,7 +346,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	messagev1.RegisterMessageAdminServer(s.grpc, messageHandler)
 
 	// Wire Scheduler service & start workers
-	schedulerEngine := scheduler.NewEngine(sqlxDB)
+	schedulerEngine := scheduler.NewEngine(dbClient)
 	schedulerEngine.Start(ctx)
 	schedulerHandler := schedulergrpc.NewHandler(schedulerEngine)
 	schedulerv1.RegisterSchedulerAdminServer(s.grpc, schedulerHandler)

@@ -7,7 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jmoiron/sqlx"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/id"
 	"github.com/robfig/cron/v3"
 )
@@ -23,7 +24,7 @@ type Job struct {
 	MaxAttempts int // Optional: defaults to 5 if not set
 }
 
-// Schedule represents a recurring cron job trigger template.
+// Schedule represents recurring configuration settings.
 type Schedule struct {
 	ID             string
 	JobType        string
@@ -46,9 +47,15 @@ type jobInstance struct {
 	MaxAttempts int    `db:"max_attempts"`
 }
 
+// Database defines the database capabilities required by scheduler Engine.
+type Database interface {
+	db.DB
+	WithTx(ctx context.Context, fn func(ctx context.Context) error) error
+}
+
 // Engine implements the Scheduler interface and manages background polling and job execution.
 type Engine struct {
-	db          *sqlx.DB
+	db          Database
 	handlers    map[string]Handler
 	mu          sync.RWMutex
 	cronParser  cron.Parser
@@ -57,9 +64,9 @@ type Engine struct {
 }
 
 // NewEngine instantiates a new scheduler Engine.
-func NewEngine(db *sqlx.DB) *Engine {
+func NewEngine(database Database) *Engine {
 	return &Engine{
-		db:       db,
+		db:       database,
 		handlers: make(map[string]Handler),
 		cronParser: cron.NewParser(
 			cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor,
@@ -85,14 +92,16 @@ func (e *Engine) Register(jobType string, handler Handler) {
 
 // Enqueue inserts a one-off deferred job instance in the queue.
 func (e *Engine) Enqueue(ctx context.Context, job Job) error {
+	const op errors.Op = "platform/scheduler.Enqueue"
+
 	payloadBytes, err := json.Marshal(job.Payload)
 	if err != nil {
-		return fmt.Errorf("marshal job payload: %w", err)
+		return errors.E(op, fmt.Errorf("marshal job payload: %w", err))
 	}
 
 	jobID, err := id.Generate("job_")
 	if err != nil {
-		return fmt.Errorf("generate job ID: %w", err)
+		return errors.E(op, fmt.Errorf("generate job ID: %w", err))
 	}
 
 	maxAttempts := job.MaxAttempts
@@ -101,9 +110,9 @@ func (e *Engine) Enqueue(ctx context.Context, job Job) error {
 	}
 
 	query := `INSERT INTO platform.job (id, job_type, payload, run_at, max_attempts) VALUES ($1, $2, $3, $4, $5)`
-	_, err = e.db.ExecContext(ctx, query, jobID, job.JobType, payloadBytes, job.RunAt.UTC(), maxAttempts)
+	_, err = e.db.Exec(ctx, query, jobID, job.JobType, payloadBytes, job.RunAt.UTC(), maxAttempts)
 	if err != nil {
-		return fmt.Errorf("insert job: %w", err)
+		return errors.E(op, err)
 	}
 
 	return nil
@@ -111,14 +120,16 @@ func (e *Engine) Enqueue(ctx context.Context, job Job) error {
 
 // RegisterSchedule registers or updates a recurrent job schedule.
 func (e *Engine) RegisterSchedule(ctx context.Context, s Schedule) error {
+	const op errors.Op = "platform/scheduler.RegisterSchedule"
+
 	schedule, err := e.cronParser.Parse(s.CronExpression)
 	if err != nil {
-		return fmt.Errorf("invalid cron expression %q: %w", s.CronExpression, err)
+		return errors.E(op, errors.Invalid, fmt.Errorf("invalid cron expression %q: %w", s.CronExpression, err))
 	}
 
 	payloadBytes, err := json.Marshal(s.Payload)
 	if err != nil {
-		return fmt.Errorf("marshal schedule payload: %w", err)
+		return errors.E(op, fmt.Errorf("marshal schedule payload: %w", err))
 	}
 
 	// Calculate the first execution time
@@ -134,9 +145,9 @@ func (e *Engine) RegisterSchedule(ctx context.Context, s Schedule) error {
 			status = 'active',
 			update_time = NOW()`
 
-	_, err = e.db.ExecContext(ctx, query, s.ID, s.JobType, payloadBytes, s.CronExpression, nextRunAt)
+	_, err = e.db.Exec(ctx, query, s.ID, s.JobType, payloadBytes, s.CronExpression, nextRunAt)
 	if err != nil {
-		return fmt.Errorf("register schedule: %w", err)
+		return errors.E(op, err)
 	}
 
 	return nil

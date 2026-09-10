@@ -6,8 +6,7 @@ import (
 	backupv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/backup/v1"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/backup"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -26,18 +25,20 @@ func NewHandler(manager backup.BackupManager) *Handler {
 
 // ListBackups handles fetching the logs index array.
 func (h *Handler) ListBackups(ctx context.Context, req *backupv1.ListBackupsRequest) (*backupv1.ListBackupsResponse, error) {
+	const op errors.Op = "transport/grpc/backup.ListBackups"
+
 	principal, ok := auth.PrincipalFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing principal")
+		return nil, errors.E(op, errors.Unauthenticated, "missing principal")
 	}
 
 	if principal.AccessLevel != "admin" {
-		return nil, status.Error(codes.PermissionDenied, "admin privilege required")
+		return nil, errors.E(op, errors.Permission, "admin privilege required")
 	}
 
 	index, err := h.manager.ListBackups(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list backups failed: %v", err)
+		return nil, errors.E(op, err)
 	}
 
 	resp := &backupv1.ListBackupsResponse{
@@ -62,18 +63,20 @@ func (h *Handler) ListBackups(ctx context.Context, req *backupv1.ListBackupsRequ
 
 // TriggerBackup triggers a manual backup run.
 func (h *Handler) TriggerBackup(ctx context.Context, req *backupv1.TriggerBackupRequest) (*backupv1.TriggerBackupResponse, error) {
+	const op errors.Op = "transport/grpc/backup.TriggerBackup"
+
 	principal, ok := auth.PrincipalFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing principal")
+		return nil, errors.E(op, errors.Unauthenticated, "missing principal")
 	}
 
 	if principal.AccessLevel != "admin" {
-		return nil, status.Error(codes.PermissionDenied, "admin privilege required")
+		return nil, errors.E(op, errors.Permission, "admin privilege required")
 	}
 
 	entry, err := h.manager.RunBackup(ctx, "web_admin_"+principal.Subject)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "backup run failed: %v", err)
+		return nil, errors.E(op, err)
 	}
 
 	return &backupv1.TriggerBackupResponse{

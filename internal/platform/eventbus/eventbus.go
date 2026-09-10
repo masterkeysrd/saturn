@@ -7,7 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jmoiron/sqlx"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/id"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
@@ -56,9 +57,15 @@ type subscriberRegistration struct {
 	handler      Handler
 }
 
+// Database defines the database capabilities required by eventbus Engine.
+type Database interface {
+	db.DB
+	WithTx(ctx context.Context, fn func(ctx context.Context) error) error
+}
+
 // Engine manages publishing, storing, and delivering event bus messages.
 type Engine struct {
-	db                  *sqlx.DB
+	db                  Database
 	subscribers         map[string][]subscriberRegistration
 	mu                  sync.RWMutex
 	workerCount         int
@@ -68,9 +75,9 @@ type Engine struct {
 }
 
 // NewEngine instantiates a new Event Bus engine.
-func NewEngine(db *sqlx.DB) *Engine {
+func NewEngine(database Database) *Engine {
 	return &Engine{
-		db:                  db,
+		db:                  database,
 		subscribers:         make(map[string][]subscriberRegistration),
 		workerCount:         10,
 		notifyCh:            make(chan struct{}, 100),
@@ -142,56 +149,53 @@ func (e *Engine) Publish(ctx context.Context, topic string, payload []byte) erro
 }
 
 func (e *Engine) rawPublish(ctx context.Context, msg *Message) error {
+	const op errors.Op = "platform/eventbus.rawPublish"
+
 	if msg.Headers == nil {
 		msg.Headers = make(map[string]string)
 	}
 
 	msgID, err := id.Generate("msg_")
 	if err != nil {
-		return fmt.Errorf("generate message ID: %w", err)
+		return errors.E(op, fmt.Errorf("generate message ID: %w", err))
 	}
 	msg.ID = msgID
 	msg.CreateTime = time.Now().UTC()
 
 	headersBytes, err := json.Marshal(msg.Headers)
 	if err != nil {
-		return fmt.Errorf("marshal headers: %w", err)
+		return errors.E(op, fmt.Errorf("marshal headers: %w", err))
 	}
 
 	e.mu.RLock()
 	subscribers := append([]subscriberRegistration(nil), e.subscribers[msg.Topic]...)
 	e.mu.RUnlock()
 
-	tx, err := e.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	insertMsgQuery := `INSERT INTO platform.messages (id, topic, headers, payload, create_time)
-		VALUES ($1, $2, $3, $4, $5)`
-	_, err = tx.ExecContext(ctx, insertMsgQuery, msg.ID, msg.Topic, headersBytes, msg.Payload, msg.CreateTime)
-	if err != nil {
-		return fmt.Errorf("insert message: %w", err)
-	}
-
-	for _, sub := range subscribers {
-		delID, err := id.Generate("del_")
-		if err != nil {
-			return fmt.Errorf("generate delivery ID: %w", err)
+	err = e.db.WithTx(ctx, func(txCtx context.Context) error {
+		insertMsgQuery := `INSERT INTO platform.messages (id, topic, headers, payload, create_time)
+			VALUES ($1, $2, $3, $4, $5)`
+		if _, err := e.db.Exec(txCtx, insertMsgQuery, msg.ID, msg.Topic, headersBytes, msg.Payload, msg.CreateTime); err != nil {
+			return errors.E(op, fmt.Errorf("insert message: %w", err))
 		}
 
-		insertDelQuery := `INSERT INTO platform.message_deliveries 
-			(id, message_id, subscriber_id, status, max_attempts, schedule_time, create_time, update_time)
-			VALUES ($1, $2, $3, 'pending', 5, NOW(), NOW(), NOW())`
-		_, err = tx.ExecContext(ctx, insertDelQuery, delID, msg.ID, sub.subscriberID)
-		if err != nil {
-			return fmt.Errorf("insert message delivery: %w", err)
-		}
-	}
+		for _, sub := range subscribers {
+			delID, err := id.Generate("del_")
+			if err != nil {
+				return errors.E(op, fmt.Errorf("generate delivery ID: %w", err))
+			}
 
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit publish tx: %w", err)
+			insertDelQuery := `INSERT INTO platform.message_deliveries 
+				(id, message_id, subscriber_id, status, max_attempts, schedule_time, create_time, update_time)
+				VALUES ($1, $2, $3, 'pending', 5, NOW(), NOW(), NOW())`
+			if _, err := e.db.Exec(txCtx, insertDelQuery, delID, msg.ID, sub.subscriberID); err != nil {
+				return errors.E(op, fmt.Errorf("insert message delivery: %w", err))
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return errors.E(op, err)
 	}
 
 	select {
@@ -260,6 +264,8 @@ type ListDeliveriesFilter struct {
 
 // GetMetrics returns aggregated queue metrics grouped by status and topic.
 func (e *Engine) GetMetrics(ctx context.Context) (*QueueMetrics, error) {
+	const op errors.Op = "platform/eventbus.GetMetrics"
+
 	query := `SELECT 
 		m.topic,
 		d.status,
@@ -268,46 +274,44 @@ func (e *Engine) GetMetrics(ctx context.Context) (*QueueMetrics, error) {
 		JOIN platform.messages m ON d.message_id = m.id
 		GROUP BY m.topic, d.status`
 
-	rows, err := e.db.QueryContext(ctx, query)
-	if err != nil {
-		return nil, fmt.Errorf("query queue metrics: %w", err)
+	var rows []struct {
+		Topic  string `db:"topic"`
+		Status string `db:"status"`
+		Count  int64  `db:"count"`
 	}
-	defer func() { _ = rows.Close() }()
+
+	if err := e.db.Select(ctx, &rows, query); err != nil {
+		return nil, errors.E(op, err)
+	}
 
 	topicMap := make(map[string]*TopicMetrics)
 	metrics := &QueueMetrics{
 		Topics: make([]TopicMetrics, 0),
 	}
 
-	for rows.Next() {
-		var topic, status string
-		var count int64
-		if err := rows.Scan(&topic, &status, &count); err != nil {
-			return nil, fmt.Errorf("scan queue metric row: %w", err)
-		}
-
-		tm, ok := topicMap[topic]
+	for _, r := range rows {
+		tm, ok := topicMap[r.Topic]
 		if !ok {
-			tm = &TopicMetrics{Topic: topic}
-			topicMap[topic] = tm
+			tm = &TopicMetrics{Topic: r.Topic}
+			topicMap[r.Topic] = tm
 		}
 
-		tm.Total += count
-		metrics.TotalDeliveries += count
+		tm.Total += r.Count
+		metrics.TotalDeliveries += r.Count
 
-		switch status {
+		switch r.Status {
 		case "pending":
-			tm.Pending += count
-			metrics.TotalPending += count
+			tm.Pending += r.Count
+			metrics.TotalPending += r.Count
 		case "processing":
-			tm.Processing += count
-			metrics.TotalProcessing += count
+			tm.Processing += r.Count
+			metrics.TotalProcessing += r.Count
 		case "completed":
-			tm.Completed += count
-			metrics.TotalCompleted += count
+			tm.Completed += r.Count
+			metrics.TotalCompleted += r.Count
 		case "failed":
-			tm.Failed += count
-			metrics.TotalFailed += count
+			tm.Failed += r.Count
+			metrics.TotalFailed += r.Count
 		}
 	}
 
@@ -320,6 +324,8 @@ func (e *Engine) GetMetrics(ctx context.Context) (*QueueMetrics, error) {
 
 // ListDeliveries retrieves a page of delivery records using cursor-based keyset pagination.
 func (e *Engine) ListDeliveries(ctx context.Context, filter ListDeliveriesFilter) (*paging.Page[*DeliveryRecord], error) {
+	const op errors.Op = "platform/eventbus.ListDeliveries"
+
 	pageSize := filter.PageSize
 	if pageSize <= 0 {
 		pageSize = 20
@@ -330,7 +336,7 @@ func (e *Engine) ListDeliveries(ctx context.Context, filter ListDeliveriesFilter
 
 	cursor, err := paging.Decode(filter.PageToken)
 	if err != nil {
-		return nil, fmt.Errorf("invalid page token: %w", err)
+		return nil, errors.E(op, errors.Invalid, fmt.Errorf("invalid page token: %w", err))
 	}
 
 	query := `SELECT 
@@ -375,9 +381,9 @@ func (e *Engine) ListDeliveries(ctx context.Context, filter ListDeliveriesFilter
 	args = append(args, pageSize+1)
 
 	var records []*DeliveryRecord
-	err = e.db.SelectContext(ctx, &records, query, args...)
+	err = e.db.Select(ctx, &records, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("list deliveries: %w", err)
+		return nil, errors.E(op, err)
 	}
 
 	return paging.NewPage(records, pageSize, func(item *DeliveryRecord) paging.Cursor {
@@ -390,16 +396,14 @@ func (e *Engine) ListDeliveries(ctx context.Context, filter ListDeliveriesFilter
 
 // RetryDelivery resets a failed or stuck message delivery back to 'pending' state so a worker can re-process it.
 func (e *Engine) RetryDelivery(ctx context.Context, deliveryID string) error {
+	const op errors.Op = "platform/eventbus.RetryDelivery"
+
 	query := `UPDATE platform.message_deliveries 
 		SET status = 'pending', schedule_time = NOW(), update_time = NOW() 
 		WHERE id = $1`
-	res, err := e.db.ExecContext(ctx, query, deliveryID)
+	err := e.db.ExecOne(ctx, query, deliveryID)
 	if err != nil {
-		return fmt.Errorf("retry delivery: %w", err)
-	}
-	rows, _ := res.RowsAffected()
-	if rows == 0 {
-		return fmt.Errorf("delivery record %q not found", deliveryID)
+		return errors.E(op, err)
 	}
 
 	e.triggerNotify()
