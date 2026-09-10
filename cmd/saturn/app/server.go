@@ -231,21 +231,21 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	spacev1.RegisterSpacesServer(s.grpc, spaceHandler)
 
 	// Wire Finance service
-	settingsStore := financestorage.NewSettingsStore(sqlxDB)
-	budgetStore := financestorage.NewBudgetStore(sqlxDB)
-	periodStore := financestorage.NewPeriodStore(sqlxDB)
-	rateStore := financestorage.NewExchangeRateStore(sqlxDB)
-	transactionStore := financestorage.NewTransactionStore(sqlxDB)
-	insightsStore := financestorage.NewInsightsStore(sqlxDB)
-	recurringTransactionStore := financestorage.NewRecurringTransactionStore(sqlxDB)
-	scheduledTransactionStore := financestorage.NewScheduledTransactionStore(sqlxDB)
-	borrowingStore := financestorage.NewBorrowingStore(sqlxDB)
-	accountStore := financestorage.NewAccountStore(sqlxDB)
-	transferStore := financestorage.NewTransferStore(sqlxDB)
-	transactionEventStore := financestorage.NewTransactionEventStore(sqlxDB)
-	inboxItemStore := financestorage.NewInboxItemStore(sqlxDB)
-	institutionStore := financestorage.NewInstitutionStore(sqlxDB)
-	statementStore := financestorage.NewStatementStore(sqlxDB)
+	settingsStore := financestorage.NewSettingsStore(dbClient)
+	budgetStore := financestorage.NewBudgetStore(dbClient)
+	periodStore := financestorage.NewPeriodStore(dbClient)
+	rateStore := financestorage.NewExchangeRateStore(dbClient)
+	transactionStore := financestorage.NewTransactionStore(dbClient)
+	insightsStore := financestorage.NewInsightsStore(dbClient)
+	recurringTransactionStore := financestorage.NewRecurringTransactionStore(dbClient)
+	scheduledTransactionStore := financestorage.NewScheduledTransactionStore(dbClient)
+	borrowingStore := financestorage.NewBorrowingStore(dbClient)
+	accountStore := financestorage.NewAccountStore(dbClient)
+	transferStore := financestorage.NewTransferStore(dbClient)
+	transactionEventStore := financestorage.NewTransactionEventStore(dbClient)
+	inboxItemStore := financestorage.NewInboxItemStore(dbClient)
+	institutionStore := financestorage.NewInstitutionStore(dbClient)
+	statementStore := financestorage.NewStatementStore(dbClient)
 
 	financeService := finance.NewService(finance.Dependencies{
 		SettingsStore:             settingsStore,
@@ -265,16 +265,16 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 		StatementStore:            statementStore,
 	})
 
-	integrationRegistry := integration.NewRegistry(sqlxDB)
+	integrationRegistry := integration.NewRegistry(dbClient)
 	s.IntegrationRegistry = integrationRegistry
 
-	rawAgentStore := agent.NewStore(sqlxDB)
+	rawAgentStore := agent.NewStore(dbClient)
 	agentStore, err := agent.NewEncryptedStore(rawAgentStore, cfg.Security.EncryptionKey)
 	if err != nil {
 		return fmt.Errorf("init encrypted agent store: %w", err)
 	}
 	agentClient := agent.NewClient()
-	agentCoordinator := agentapp.NewCoordinator(agentStore, agentClient)
+	agentCoordinator := agentapp.NewLoggingCoordinator(agentapp.NewCoordinator(agentStore, agentClient), appLogger)
 
 	classifier := financeapp.NewAgentDocumentClassifier(agentCoordinator)
 	parser := financeapp.NewAgentIngestionParser(agentCoordinator)
@@ -286,14 +286,20 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 		Extractor:      statementExtractor,
 	})
 
-	financeCoordinator := financeapp.NewCoordinator(financeapp.Dependencies{
-		FinanceService:    financeService,
-		SpaceService:      spaceService,
-		Classifier:        classifier,
-		Parser:            parser,
-		Deduplicator:      deduplicator,
-		StatementPipeline: statementPipeline,
-	})
+	financeCoordinator := financeapp.NewLoggingCoordinator(
+		financeapp.NewTransactionalCoordinator(
+			financeapp.NewCoordinator(financeapp.Dependencies{
+				FinanceService:    financeService,
+				SpaceService:      spaceService,
+				Classifier:        classifier,
+				Parser:            parser,
+				Deduplicator:      deduplicator,
+				StatementPipeline: statementPipeline,
+			}),
+			dbClient,
+		),
+		appLogger,
+	)
 
 	// Register email forwarding provider
 	emailSecret := cfg.Webhook.Secret
@@ -315,9 +321,12 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	agentv1.RegisterAgentServiceServer(s.grpc, agentHandler)
 
 	// Wire Integration service
-	integrationCoordinator := integrationapp.NewCoordinator(integrationapp.Dependencies{
-		Registry: integrationRegistry,
-	})
+	integrationCoordinator := integrationapp.NewLoggingCoordinator(
+		integrationapp.NewCoordinator(integrationapp.Dependencies{
+			Registry: integrationRegistry,
+		}),
+		appLogger,
+	)
 
 	integrationHandler := integrationgrpc.NewHandler(integrationCoordinator)
 	integrationv1.RegisterIntegrationServiceServer(s.grpc, integrationHandler)
