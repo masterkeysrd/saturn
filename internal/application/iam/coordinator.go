@@ -21,17 +21,20 @@ type Coordinator interface {
 	ListSecurityEvents(ctx context.Context, filter identity.SecurityEventFilter) (*paging.Page[*identity.SecurityEvent], error)
 	Login(ctx context.Context, req *LoginRequest) (*LoginResponse, error)
 	Logout(ctx context.Context, req *LogoutRequest) (*LogoutResponse, error)
+	// @transactional
 	RefreshSession(ctx context.Context, req *RefreshSessionRequest) (*RefreshSessionResponse, error)
 	// @transactional
 	Register(ctx context.Context, req *RegisterUserRequest) (*RegisterUserResponse, error)
 	// @transactional
 	AdminCreateUser(ctx context.Context, req *AdminCreateUserRequest) (*AdminCreateUserResponse, error)
+	// @transactional
 	ApproveUser(ctx context.Context, req *ApproveUserRequest) (*ApproveUserResponse, error)
 	RejectUser(ctx context.Context, req *RejectUserRequest) (*RejectUserResponse, error)
 	ListUsers(ctx context.Context, filter *ListUsersFilter) (*paging.Page[*identity.User], error)
 	UpdateUserRole(ctx context.Context, req *UpdateUserRoleRequest) (*UpdateUserRoleResponse, error)
 	ListActiveSessions(ctx context.Context, req *ListActiveSessionsRequest) (*ListActiveSessionsResponse, error)
 	RevokeSession(ctx context.Context, req *RevokeSessionRequest) (*RevokeSessionResponse, error)
+	// @transactional
 	RevokeAllSessions(ctx context.Context, req *RevokeAllSessionsRequest) (*RevokeAllSessionsResponse, error)
 }
 
@@ -104,7 +107,7 @@ type IdentityService interface {
 	CreateSession(ctx context.Context, req *identity.CreateSessionRequest) (*identity.Session, error)
 	RotateSession(ctx context.Context, req *identity.RotateSessionRequest) (*identity.Session, error)
 	RevokeSessionByHash(ctx context.Context, refreshTokenHash []byte) error
-	GetActiveSessions(ctx context.Context, userID identity.UserID) ([]*identity.Session, error)
+	ListActiveSessions(ctx context.Context, userID identity.UserID) ([]*identity.Session, error)
 	RevokeSessionByID(ctx context.Context, sessionID identity.SessionID, userID identity.UserID) error
 	UpdateLockoutState(ctx context.Context, req identity.UpdateLockoutRequest) error
 	CreateSecurityEvent(ctx context.Context, event *identity.SecurityEvent) error

@@ -3,6 +3,7 @@ package identity
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
@@ -133,6 +134,65 @@ func (m *mockCredentialStore) GetByUserID(ctx context.Context, userID UserID) ([
 		return m.getByUserFn(ctx, userID)
 	}
 	return nil, nil
+}
+
+type mockSessionStore struct {
+	createFn                func(ctx context.Context, session *Session) error
+	getByIDFn               func(ctx context.Context, id SessionID) (*Session, error)
+	getByRefreshTokenHashFn func(ctx context.Context, hash []byte) (*Session, error)
+	updateFn                func(ctx context.Context, session *Session) error
+	listActiveSessionsFn    func(ctx context.Context, userID UserID) ([]*Session, error)
+	revokeFamilyFn          func(ctx context.Context, familyID TokenFamilyID, now time.Time) error
+	revokeAllForUserFn      func(ctx context.Context, userID UserID, now time.Time) error
+}
+
+func (m *mockSessionStore) Create(ctx context.Context, session *Session) error {
+	if m.createFn != nil {
+		return m.createFn(ctx, session)
+	}
+	return nil
+}
+
+func (m *mockSessionStore) GetByID(ctx context.Context, id SessionID) (*Session, error) {
+	if m.getByIDFn != nil {
+		return m.getByIDFn(ctx, id)
+	}
+	return nil, nil
+}
+
+func (m *mockSessionStore) GetByRefreshTokenHash(ctx context.Context, hash []byte) (*Session, error) {
+	if m.getByRefreshTokenHashFn != nil {
+		return m.getByRefreshTokenHashFn(ctx, hash)
+	}
+	return nil, nil
+}
+
+func (m *mockSessionStore) Update(ctx context.Context, session *Session) error {
+	if m.updateFn != nil {
+		return m.updateFn(ctx, session)
+	}
+	return nil
+}
+
+func (m *mockSessionStore) ListActiveSessions(ctx context.Context, userID UserID) ([]*Session, error) {
+	if m.listActiveSessionsFn != nil {
+		return m.listActiveSessionsFn(ctx, userID)
+	}
+	return nil, nil
+}
+
+func (m *mockSessionStore) RevokeFamily(ctx context.Context, familyID TokenFamilyID, now time.Time) error {
+	if m.revokeFamilyFn != nil {
+		return m.revokeFamilyFn(ctx, familyID, now)
+	}
+	return nil
+}
+
+func (m *mockSessionStore) RevokeAllForUser(ctx context.Context, userID UserID, now time.Time) error {
+	if m.revokeAllForUserFn != nil {
+		return m.revokeAllForUserFn(ctx, userID, now)
+	}
+	return nil
 }
 
 type mockHasher struct {
@@ -420,6 +480,302 @@ func TestService_Authenticate(t *testing.T) {
 		}
 		if u == nil || u.ID != "usr_1" {
 			t.Errorf("expected user with ID usr_1, got %v", u)
+		}
+	})
+}
+
+func TestService_RotateSession(t *testing.T) {
+	ctx := context.Background()
+	now := time.Now()
+
+	t.Run("fails with SessionNotFound when token hash does not match", func(t *testing.T) {
+		sStore := &mockSessionStore{
+			getByRefreshTokenHashFn: func(ctx context.Context, hash []byte) (*Session, error) {
+				return nil, errors.E(errors.NotExist, "not found")
+			},
+		}
+
+		svc := NewService(Dependencies{SessionStore: sStore})
+		res, err := svc.RotateSession(ctx, &RotateSessionRequest{
+			RefreshTokenHash: []byte("unknown_hash"),
+			SuccessorHash:    []byte("new_hash"),
+			ExpiresAt:        now.Add(time.Hour),
+		})
+		if res != nil {
+			t.Errorf("expected nil session, got %v", res)
+		}
+		if errors.CodeOf(err) != SessionNotFound {
+			t.Errorf("expected SessionNotFound, got %v", errors.CodeOf(err))
+		}
+	})
+
+	t.Run("detects reuse attack and revokes family when session already replaced", func(t *testing.T) {
+		familyRevoked := false
+		replacedAt := now.Add(-5 * time.Minute)
+		sStore := &mockSessionStore{
+			getByRefreshTokenHashFn: func(ctx context.Context, hash []byte) (*Session, error) {
+				return &Session{
+					ID:            "ses_old",
+					TokenFamilyID: "tfm_compromised",
+					ReplacedAt:    &replacedAt,
+				}, nil
+			},
+			revokeFamilyFn: func(ctx context.Context, familyID TokenFamilyID, n time.Time) error {
+				if familyID == "tfm_compromised" {
+					familyRevoked = true
+				}
+				return nil
+			},
+		}
+
+		svc := NewService(Dependencies{SessionStore: sStore})
+		res, err := svc.RotateSession(ctx, &RotateSessionRequest{
+			RefreshTokenHash: []byte("used_hash"),
+			SuccessorHash:    []byte("new_hash"),
+			ExpiresAt:        now.Add(time.Hour),
+		})
+		if res != nil {
+			t.Errorf("expected nil session, got %v", res)
+		}
+		if errors.CodeOf(err) != SessionReused {
+			t.Errorf("expected SessionReused, got %v", errors.CodeOf(err))
+		}
+		if !familyRevoked {
+			t.Error("expected token family to be revoked on reuse attack")
+		}
+	})
+
+	t.Run("fails when session is already revoked", func(t *testing.T) {
+		revokedAt := now.Add(-10 * time.Minute)
+		sStore := &mockSessionStore{
+			getByRefreshTokenHashFn: func(ctx context.Context, hash []byte) (*Session, error) {
+				return &Session{
+					ID:            "ses_1",
+					TokenFamilyID: "tfm_1",
+					RevokedAt:     &revokedAt,
+				}, nil
+			},
+		}
+
+		svc := NewService(Dependencies{SessionStore: sStore})
+		res, err := svc.RotateSession(ctx, &RotateSessionRequest{
+			RefreshTokenHash: []byte("hash"),
+			SuccessorHash:    []byte("new_hash"),
+			ExpiresAt:        now.Add(time.Hour),
+		})
+		if res != nil {
+			t.Errorf("expected nil session, got %v", res)
+		}
+		if errors.CodeOf(err) != SessionRevoked {
+			t.Errorf("expected SessionRevoked, got %v", errors.CodeOf(err))
+		}
+	})
+
+	t.Run("fails when session is expired", func(t *testing.T) {
+		sStore := &mockSessionStore{
+			getByRefreshTokenHashFn: func(ctx context.Context, hash []byte) (*Session, error) {
+				return &Session{
+					ID:            "ses_1",
+					TokenFamilyID: "tfm_1",
+					ExpiresAt:     now.Add(-time.Minute),
+				}, nil
+			},
+		}
+
+		svc := NewService(Dependencies{SessionStore: sStore})
+		res, err := svc.RotateSession(ctx, &RotateSessionRequest{
+			RefreshTokenHash: []byte("hash"),
+			SuccessorHash:    []byte("new_hash"),
+			ExpiresAt:        now.Add(time.Hour),
+		})
+		if res != nil {
+			t.Errorf("expected nil session, got %v", res)
+		}
+		if errors.CodeOf(err) != SessionExpired {
+			t.Errorf("expected SessionExpired, got %v", errors.CodeOf(err))
+		}
+	})
+
+	t.Run("rotates successfully and persists old and successor", func(t *testing.T) {
+		oldUpdated := false
+		successorCreated := false
+
+		sStore := &mockSessionStore{
+			getByRefreshTokenHashFn: func(ctx context.Context, hash []byte) (*Session, error) {
+				return &Session{
+					ID:                "ses_1",
+					UserID:            "usr_1",
+					TokenFamilyID:     "tfm_1",
+					ExpiresAt:         now.Add(time.Hour),
+					AbsoluteExpiresAt: now.Add(24 * time.Hour),
+				}, nil
+			},
+			updateFn: func(ctx context.Context, session *Session) error {
+				if session.ID == "ses_1" && session.IsReplaced() {
+					oldUpdated = true
+				}
+				return nil
+			},
+			createFn: func(ctx context.Context, session *Session) error {
+				if session.UserID == "usr_1" && session.TokenFamilyID == "tfm_1" && *session.ParentSessionID == "ses_1" {
+					successorCreated = true
+				}
+				return nil
+			},
+		}
+
+		svc := NewService(Dependencies{SessionStore: sStore})
+		successor, err := svc.RotateSession(ctx, &RotateSessionRequest{
+			RefreshTokenHash: []byte("hash"),
+			SuccessorHash:    []byte("new_hash"),
+			ExpiresAt:        now.Add(2 * time.Hour),
+			UserAgent:        "test-agent",
+			IPAddress:        "127.0.0.1",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if successor == nil {
+			t.Fatal("expected successor session, got nil")
+		}
+		if !oldUpdated {
+			t.Error("expected old session to be updated with replaced status")
+		}
+		if !successorCreated {
+			t.Error("expected successor session to be created")
+		}
+	})
+}
+
+func TestService_RevokeSessionByID(t *testing.T) {
+	ctx := context.Background()
+	now := time.Now()
+
+	t.Run("fails when session does not belong to user", func(t *testing.T) {
+		sStore := &mockSessionStore{
+			getByIDFn: func(ctx context.Context, id SessionID) (*Session, error) {
+				return &Session{
+					ID:     id,
+					UserID: "usr_other",
+				}, nil
+			},
+		}
+
+		svc := NewService(Dependencies{SessionStore: sStore})
+		err := svc.RevokeSessionByID(ctx, "ses_1", "usr_attacker")
+		if err == nil {
+			t.Fatal("expected permission error, got nil")
+		}
+		if errors.KindOf(err) != errors.Permission {
+			t.Errorf("expected KindPermission, got %v", errors.KindOf(err))
+		}
+	})
+
+	t.Run("revokes and updates when session belongs to user", func(t *testing.T) {
+		updated := false
+		sStore := &mockSessionStore{
+			getByIDFn: func(ctx context.Context, id SessionID) (*Session, error) {
+				return &Session{
+					ID:     id,
+					UserID: "usr_1",
+				}, nil
+			},
+			updateFn: func(ctx context.Context, session *Session) error {
+				if session.ID == "ses_1" && session.IsRevoked() {
+					updated = true
+				}
+				return nil
+			},
+		}
+
+		svc := NewService(Dependencies{SessionStore: sStore})
+		err := svc.RevokeSessionByID(ctx, "ses_1", "usr_1")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !updated {
+			t.Error("expected session to be marked revoked and updated")
+		}
+	})
+
+	t.Run("is idempotent when already revoked", func(t *testing.T) {
+		revokedAt := now.Add(-time.Hour)
+		updated := false
+		sStore := &mockSessionStore{
+			getByIDFn: func(ctx context.Context, id SessionID) (*Session, error) {
+				return &Session{
+					ID:        id,
+					UserID:    "usr_1",
+					RevokedAt: &revokedAt,
+				}, nil
+			},
+			updateFn: func(ctx context.Context, session *Session) error {
+				updated = true
+				return nil
+			},
+		}
+
+		svc := NewService(Dependencies{SessionStore: sStore})
+		err := svc.RevokeSessionByID(ctx, "ses_1", "usr_1")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if updated {
+			t.Error("expected no update call when already revoked")
+		}
+	})
+}
+
+func TestService_RevokeSessionByHash(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("finds session and revokes family", func(t *testing.T) {
+		familyRevoked := false
+		sStore := &mockSessionStore{
+			getByRefreshTokenHashFn: func(ctx context.Context, hash []byte) (*Session, error) {
+				return &Session{
+					ID:            "ses_1",
+					TokenFamilyID: "tfm_1",
+				}, nil
+			},
+			revokeFamilyFn: func(ctx context.Context, familyID TokenFamilyID, now time.Time) error {
+				if familyID == "tfm_1" {
+					familyRevoked = true
+				}
+				return nil
+			},
+		}
+
+		svc := NewService(Dependencies{SessionStore: sStore})
+		err := svc.RevokeSessionByHash(ctx, []byte("hash"))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !familyRevoked {
+			t.Error("expected token family to be revoked")
+		}
+	})
+}
+
+func TestService_ListActiveSessions(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("delegates to session store ListActiveSessions", func(t *testing.T) {
+		sStore := &mockSessionStore{
+			listActiveSessionsFn: func(ctx context.Context, userID UserID) ([]*Session, error) {
+				return []*Session{
+					{ID: "ses_1", UserID: userID},
+				}, nil
+			},
+		}
+
+		svc := NewService(Dependencies{SessionStore: sStore})
+		sessions, err := svc.ListActiveSessions(ctx, "usr_1")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(sessions) != 1 || sessions[0].ID != "ses_1" {
+			t.Errorf("unexpected sessions: %+v", sessions)
 		}
 	})
 }

@@ -143,7 +143,7 @@ func (f *fakeIdentityService) RevokeSessionByHash(ctx context.Context, refreshTo
 	return nil
 }
 
-func (f *fakeIdentityService) GetActiveSessions(ctx context.Context, userID identity.UserID) ([]*identity.Session, error) {
+func (f *fakeIdentityService) ListActiveSessions(ctx context.Context, userID identity.UserID) ([]*identity.Session, error) {
 	return nil, nil
 }
 

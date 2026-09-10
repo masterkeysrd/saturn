@@ -45,7 +45,7 @@ type RevokeAllSessionsResponse struct{}
 
 // ListActiveSessions returns all currently active sessions for the user.
 func (c *coordinator) ListActiveSessions(ctx context.Context, req *ListActiveSessionsRequest) (*ListActiveSessionsResponse, error) {
-	domainSessions, err := c.identityService.GetActiveSessions(ctx, identity.UserID(req.UserID))
+	domainSessions, err := c.identityService.ListActiveSessions(ctx, identity.UserID(req.UserID))
 	if err != nil {
 		return nil, err
 	}

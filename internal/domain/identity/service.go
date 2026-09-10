@@ -367,46 +367,86 @@ func (s *Service) CreateSession(ctx context.Context, req *CreateSessionRequest) 
 	return session, nil
 }
 
-// RotateSession generates a successor Session ID and rotates the session.
+// RotateSession validates and rotates an existing session, returning the successor.
 func (s *Service) RotateSession(ctx context.Context, req *RotateSessionRequest) (*Session, error) {
 	const op errors.Op = "domain/identity.RotateSession"
+	now := time.Now()
 
+	session, err := s.deps.SessionStore.GetByRefreshTokenHash(ctx, req.RefreshTokenHash)
+	if err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return nil, errors.E(op, errors.NotExist, SessionNotFound, "session not found")
+		}
+		return nil, errors.E(op, err)
+	}
+
+	// 1. Detect token reuse attack: if token was already replaced, revoke the entire token family
+	if session.IsReplaced() {
+		_ = s.deps.SessionStore.RevokeFamily(ctx, session.TokenFamilyID, now)
+		return nil, errors.E(op, errors.Conflict, SessionReused, "session reused")
+	}
+
+	// 2. Validate session state
+	if session.IsRevoked() {
+		return nil, errors.E(op, errors.Unauthenticated, SessionRevoked, "session revoked")
+	}
+	if session.IsExpired(now) {
+		return nil, errors.E(op, errors.Unauthenticated, SessionExpired, "session expired")
+	}
+
+	// 3. Generate successor session ID
 	successorID, err := NewSessionID()
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
 
-	successor := &Session{
-		ID:               successorID,
-		RefreshTokenHash: req.SuccessorHash,
-		ExpiresAt:        req.ExpiresAt,
-		CreateTime:       time.Now(),
-		UserAgent:        req.UserAgent,
-		IPAddress:        req.IPAddress,
-	}
-
-	session, err := s.deps.SessionStore.Rotate(ctx, req.RefreshTokenHash, time.Now(), successor)
+	// 4. Rotate domain entity
+	successor, err := session.Rotate(RotateInput{
+		SuccessorID:   successorID,
+		SuccessorHash: req.SuccessorHash,
+		UserAgent:     req.UserAgent,
+		IPAddress:     req.IPAddress,
+		ExpiresAt:     req.ExpiresAt,
+		Now:           now,
+	})
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
-	return session, nil
+
+	// 5. Persist: update old session and insert successor
+	if err := s.deps.SessionStore.Update(ctx, session); err != nil {
+		return nil, errors.E(op, err)
+	}
+	if err := s.deps.SessionStore.Create(ctx, successor); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	return successor, nil
 }
 
-// RevokeSessionByHash delegates to the session store's RevokeByHash method.
+// RevokeSessionByHash revokes the token family associated with the given refresh token hash.
 func (s *Service) RevokeSessionByHash(ctx context.Context, refreshTokenHash []byte) error {
 	const op errors.Op = "domain/identity.RevokeSessionByHash"
 
-	if err := s.deps.SessionStore.RevokeByHash(ctx, refreshTokenHash, time.Now()); err != nil {
+	session, err := s.deps.SessionStore.GetByRefreshTokenHash(ctx, refreshTokenHash)
+	if err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return errors.E(op, errors.NotExist, SessionNotFound, "session not found")
+		}
+		return errors.E(op, err)
+	}
+
+	if err := s.deps.SessionStore.RevokeFamily(ctx, session.TokenFamilyID, time.Now()); err != nil {
 		return errors.E(op, err)
 	}
 	return nil
 }
 
-// GetActiveSessions returns all currently active sessions for the given user.
-func (s *Service) GetActiveSessions(ctx context.Context, userID UserID) ([]*Session, error) {
-	const op errors.Op = "domain/identity.GetActiveSessions"
+// ListActiveSessions returns all currently active sessions for the given user.
+func (s *Service) ListActiveSessions(ctx context.Context, userID UserID) ([]*Session, error) {
+	const op errors.Op = "domain/identity.ListActiveSessions"
 
-	sessions, err := s.deps.SessionStore.GetActiveSessions(ctx, userID)
+	sessions, err := s.deps.SessionStore.ListActiveSessions(ctx, userID)
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
@@ -417,7 +457,24 @@ func (s *Service) GetActiveSessions(ctx context.Context, userID UserID) ([]*Sess
 func (s *Service) RevokeSessionByID(ctx context.Context, sessionID SessionID, userID UserID) error {
 	const op errors.Op = "domain/identity.RevokeSessionByID"
 
-	if err := s.deps.SessionStore.RevokeByID(ctx, sessionID, userID, time.Now()); err != nil {
+	session, err := s.deps.SessionStore.GetByID(ctx, sessionID)
+	if err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return errors.E(op, errors.NotExist, SessionNotFound, "session not found")
+		}
+		return errors.E(op, err)
+	}
+
+	if session.UserID != userID {
+		return errors.E(op, errors.Permission, "session does not belong to user")
+	}
+
+	if session.IsRevoked() {
+		return nil
+	}
+
+	session.Revoke(time.Now())
+	if err := s.deps.SessionStore.Update(ctx, session); err != nil {
 		return errors.E(op, err)
 	}
 	return nil

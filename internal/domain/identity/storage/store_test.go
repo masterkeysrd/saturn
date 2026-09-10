@@ -294,7 +294,54 @@ func TestSessionStore(t *testing.T) {
 		}
 	})
 
-	t.Run("RevokeByID calls ExecOne", func(t *testing.T) {
+	t.Run("GetByID calls Get", func(t *testing.T) {
+		mock := &mockDB{
+			getFn: func(ctx context.Context, dest any, query string, args ...any) error {
+				ptr, ok := dest.(*sessionDB)
+				if !ok {
+					t.Fatalf("expected *sessionDB, got %T", dest)
+				}
+				ptr.ID = "ses_1"
+				ptr.UserID = "usr_1"
+				ptr.TokenFamilyID = "tfm_1"
+				return nil
+			},
+		}
+
+		store := NewSessionStore(mock)
+		s, err := store.GetByID(ctx, "ses_1")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if s.ID != "ses_1" || s.UserID != "usr_1" {
+			t.Errorf("unexpected session: %+v", s)
+		}
+	})
+
+	t.Run("GetByRefreshTokenHash calls Get", func(t *testing.T) {
+		mock := &mockDB{
+			getFn: func(ctx context.Context, dest any, query string, args ...any) error {
+				ptr, ok := dest.(*sessionDB)
+				if !ok {
+					t.Fatalf("expected *sessionDB, got %T", dest)
+				}
+				ptr.ID = "ses_1"
+				ptr.RefreshTokenHash = []byte("hash")
+				return nil
+			},
+		}
+
+		store := NewSessionStore(mock)
+		s, err := store.GetByRefreshTokenHash(ctx, []byte("hash"))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if s.ID != "ses_1" {
+			t.Errorf("unexpected session: %+v", s)
+		}
+	})
+
+	t.Run("Update calls ExecOne", func(t *testing.T) {
 		called := false
 		mock := &mockDB{
 			execOneFn: func(ctx context.Context, query string, args ...any) error {
@@ -304,12 +351,81 @@ func TestSessionStore(t *testing.T) {
 		}
 
 		store := NewSessionStore(mock)
-		err := store.RevokeByID(ctx, "ses_1", "usr_1", time.Now())
+		now := time.Now()
+		session := &identity.Session{
+			ID:         "ses_1",
+			RevokedAt:  &now,
+			ReplacedAt: &now,
+			LastUsedAt: &now,
+		}
+		err := store.Update(ctx, session)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		if !called {
 			t.Fatal("expected ExecOne to be called")
+		}
+	})
+
+	t.Run("ListActiveSessions calls Select", func(t *testing.T) {
+		mock := &mockDB{
+			selectFn: func(ctx context.Context, dest any, query string, args ...any) error {
+				ptr, ok := dest.(*[]sessionDB)
+				if !ok {
+					t.Fatalf("expected *[]sessionDB, got %T", dest)
+				}
+				*ptr = []sessionDB{
+					{ID: "ses_1", UserID: "usr_1"},
+				}
+				return nil
+			},
+		}
+
+		store := NewSessionStore(mock)
+		sessions, err := store.ListActiveSessions(ctx, "usr_1")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(sessions) != 1 || sessions[0].ID != "ses_1" {
+			t.Errorf("unexpected sessions: %+v", sessions)
+		}
+	})
+
+	t.Run("RevokeFamily calls Exec", func(t *testing.T) {
+		called := false
+		mock := &mockDB{
+			execFn: func(ctx context.Context, query string, args ...any) (sql.Result, error) {
+				called = true
+				return nil, nil
+			},
+		}
+
+		store := NewSessionStore(mock)
+		err := store.RevokeFamily(ctx, "tfm_1", time.Now())
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !called {
+			t.Fatal("expected Exec to be called")
+		}
+	})
+
+	t.Run("RevokeAllForUser calls Exec", func(t *testing.T) {
+		called := false
+		mock := &mockDB{
+			execFn: func(ctx context.Context, query string, args ...any) (sql.Result, error) {
+				called = true
+				return nil, nil
+			},
+		}
+
+		store := NewSessionStore(mock)
+		err := store.RevokeAllForUser(ctx, "usr_1", time.Now())
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !called {
+			t.Fatal("expected Exec to be called")
 		}
 	})
 }

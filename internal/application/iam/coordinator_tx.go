@@ -51,8 +51,24 @@ func (t *TransactionalCoordinator) Logout(ctx context.Context, req *LogoutReques
 	return t.next.Logout(ctx, req)
 }
 
+// RefreshSession executes next.RefreshSession inside a database transaction.
 func (t *TransactionalCoordinator) RefreshSession(ctx context.Context, req *RefreshSessionRequest) (*RefreshSessionResponse, error) {
-	return t.next.RefreshSession(ctx, req)
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.RefreshSession(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 // Register executes next.Register inside a database transaction.
@@ -95,8 +111,24 @@ func (t *TransactionalCoordinator) AdminCreateUser(ctx context.Context, req *Adm
 	return res, nil
 }
 
+// ApproveUser executes next.ApproveUser inside a database transaction.
 func (t *TransactionalCoordinator) ApproveUser(ctx context.Context, req *ApproveUserRequest) (*ApproveUserResponse, error) {
-	return t.next.ApproveUser(ctx, req)
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.ApproveUser(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (t *TransactionalCoordinator) RejectUser(ctx context.Context, req *RejectUserRequest) (*RejectUserResponse, error) {
@@ -119,6 +151,22 @@ func (t *TransactionalCoordinator) RevokeSession(ctx context.Context, req *Revok
 	return t.next.RevokeSession(ctx, req)
 }
 
+// RevokeAllSessions executes next.RevokeAllSessions inside a database transaction.
 func (t *TransactionalCoordinator) RevokeAllSessions(ctx context.Context, req *RevokeAllSessionsRequest) (*RevokeAllSessionsResponse, error) {
-	return t.next.RevokeAllSessions(ctx, req)
+	ctx, tx, err := t.txr.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := t.next.RevokeAllSessions(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
