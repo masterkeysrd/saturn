@@ -1,4 +1,4 @@
-package webhook
+package event
 
 import (
 	"context"
@@ -11,8 +11,8 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/log"
 )
 
-// RegisterSubscribers binds all webhook event bus subscribers with structured lifecycle logging.
-func RegisterSubscribers(bus *eventbus.Engine, registry *integration.Registry) {
+// RegisterWebhookSubscribers binds all webhook event bus subscribers with structured lifecycle logging.
+func RegisterWebhookSubscribers(bus *eventbus.Engine, registry *integration.Registry) {
 	integrationv1.SubscribeWebhookReceivedEvent(bus, "webhook_llm_processor", func(ctx context.Context, payload *integrationv1.WebhookReceivedEvent) error {
 		provider, exists := registry.GetProvider(payload.Source)
 		if !exists {

@@ -65,10 +65,12 @@ import (
 	messagegrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/message"
 	schedulergrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/scheduler"
 	spacegrpc "github.com/masterkeysrd/saturn/internal/transport/grpc/space"
+	"github.com/masterkeysrd/saturn/internal/transport/event"
 	"github.com/masterkeysrd/saturn/internal/transport/http/gateway"
 	"github.com/masterkeysrd/saturn/internal/transport/http/middleware"
 	"github.com/masterkeysrd/saturn/internal/transport/http/webhook"
-	"github.com/masterkeysrd/saturn/internal/transport/http/webhook/email"
+	"github.com/masterkeysrd/saturn/internal/transport/integration/email"
+	transportscheduler "github.com/masterkeysrd/saturn/internal/transport/scheduler"
 )
 
 // GRPCServer manages the standalone gRPC server listening on a Unix socket.
@@ -339,7 +341,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	s.EventBus = eventBusEngine
 
 	// Register webhook eventbus subscribers
-	webhook.RegisterSubscribers(eventBusEngine, integrationRegistry)
+	event.RegisterWebhookSubscribers(eventBusEngine, integrationRegistry)
 	messageHandler := messagegrpc.NewHandler(eventBusEngine)
 	messagev1.RegisterMessageAdminServer(s.grpc, messageHandler)
 
@@ -350,10 +352,10 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	schedulerv1.RegisterSchedulerAdminServer(s.grpc, schedulerHandler)
 
 	// Register background task handler execution callbacks
-	financev1.RegisterGenerateScheduledTransactionsPayload(schedulerEngine, financeHandler.HandleGenerateScheduledTransactions)
+	transportscheduler.RegisterFinanceJobs(schedulerEngine, financeCoordinator)
 
 	// Seed cron schedules / triggers
-	if err := financeHandler.RegisterSchedules(ctx, schedulerEngine); err != nil {
+	if err := transportscheduler.RegisterFinanceSchedules(ctx, schedulerEngine); err != nil {
 		return fmt.Errorf("register finance schedules: %w", err)
 	}
 
@@ -390,8 +392,8 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	backupv1.RegisterBackupAdminServer(s.grpc, backupHandler)
 
 	// Bind backup execution callback to scheduler and seed daily schedule
-	backupv1.RegisterRunDatabaseBackupPayload(schedulerEngine, backupHandler.HandleRunDatabaseBackup)
-	if err := backupHandler.RegisterSchedules(ctx, schedulerEngine); err != nil {
+	transportscheduler.RegisterBackupJobs(schedulerEngine, backupManager)
+	if err := transportscheduler.RegisterBackupSchedules(ctx, schedulerEngine); err != nil {
 		return fmt.Errorf("register backup schedules: %w", err)
 	}
 

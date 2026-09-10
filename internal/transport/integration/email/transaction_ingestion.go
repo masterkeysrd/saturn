@@ -158,7 +158,7 @@ func extractRecipientAndToken(body []byte, headers map[string][]string) (recipie
 	}
 
 	if recipient == "" {
-		return "", "", nil, errors.E("transport/http/webhook/email.extractRecipientAndToken", errors.Invalid, "missing recipient 'To' address in both email body and HTTP headers")
+		return "", "", nil, errors.E("transport/integration/email.extractRecipientAndToken", errors.Invalid, "missing recipient 'To' address in both email body and HTTP headers")
 	}
 
 	toEmail := recipient
@@ -168,15 +168,15 @@ func extractRecipientAndToken(body []byte, headers map[string][]string) (recipie
 
 	plusIdx := strings.Index(toEmail, "+")
 	if plusIdx == -1 {
-		return "", "", nil, errors.E("transport/http/webhook/email.extractRecipientAndToken", errors.Invalid, fmt.Sprintf("invalid recipient email format, missing + symbol: %q", toEmail))
+		return "", "", nil, errors.E("transport/integration/email.extractRecipientAndToken", errors.Invalid, fmt.Sprintf("invalid recipient email format, missing + symbol: %q", toEmail))
 	}
 	atIdx := strings.Index(toEmail[plusIdx:], "@")
 	if atIdx == -1 {
-		return "", "", nil, errors.E("transport/http/webhook/email.extractRecipientAndToken", errors.Invalid, fmt.Sprintf("invalid recipient email format, missing @ symbol: %q", toEmail))
+		return "", "", nil, errors.E("transport/integration/email.extractRecipientAndToken", errors.Invalid, fmt.Sprintf("invalid recipient email format, missing @ symbol: %q", toEmail))
 	}
 	parsedToken := toEmail[plusIdx+1 : plusIdx+atIdx]
 	if parsedToken == "" {
-		return "", "", nil, errors.E("transport/http/webhook/email.extractRecipientAndToken", errors.Invalid, fmt.Sprintf("empty integration token in recipient email: %q", toEmail))
+		return "", "", nil, errors.E("transport/integration/email.extractRecipientAndToken", errors.Invalid, fmt.Sprintf("empty integration token in recipient email: %q", toEmail))
 	}
 
 	return recipient, parsedToken, cfEvent, nil
@@ -185,7 +185,7 @@ func extractRecipientAndToken(body []byte, headers map[string][]string) (recipie
 // Verify authenticates that the incoming request originates from a trusted forwarder using the global secret
 // and verifies that the recipient integration token exists in the database.
 func (p *TransactionIngestionProvider) Verify(ctx context.Context, headers map[string][]string, body []byte) error {
-	const op errors.Op = "transport/http/webhook/email.Verify"
+	const op errors.Op = "transport/integration/email.Verify"
 
 	auths, exists := headers["Authorization"]
 	if !exists || len(auths) == 0 {
@@ -309,7 +309,7 @@ func (p *TransactionIngestionProvider) Process(ctx context.Context, headers map[
 	}
 
 	if !allowed {
-		return errors.E("transport/http/webhook/email.Process", errors.Permission, fmt.Sprintf("sender %q is not whitelisted for this space integration", parsedSender))
+		return errors.E("transport/integration/email.Process", errors.Permission, fmt.Sprintf("sender %q is not whitelisted for this space integration", parsedSender))
 	}
 
 	// Auto-confirm Google forwarding confirmation URL if present in email body
@@ -338,7 +338,7 @@ func (p *TransactionIngestionProvider) Process(ctx context.Context, headers map[
 	// Trigger core finance ingestion logic
 	_, err = p.financeService.IngestEmail(ctx, integrationRecord.SpaceID, integrationRecord.ID, fromLower, parsedSubject, fullBody)
 	if err != nil {
-		return errors.E("transport/http/webhook/email.Process", fmt.Errorf("ingest email transaction: %w", err))
+		return errors.E("transport/integration/email.Process", fmt.Errorf("ingest email transaction: %w", err))
 	}
 
 	return nil
@@ -346,7 +346,7 @@ func (p *TransactionIngestionProvider) Process(ctx context.Context, headers map[
 
 // Simulate simulates parsing a mock payload (either JSON or multipart) and triggers ingestion.
 func (p *TransactionIngestionProvider) Simulate(ctx context.Context, spaceID string, headers map[string][]string, body []byte) (any, error) {
-	const op errors.Op = "transport/http/webhook/email.Simulate"
+	const op errors.Op = "transport/integration/email.Simulate"
 
 	contentType := headers["Content-Type"]
 	var sender, subject, text string
