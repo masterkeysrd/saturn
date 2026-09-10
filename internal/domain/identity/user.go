@@ -44,9 +44,6 @@ type User struct {
 
 const userIDPrefix = "usr_"
 
-// ErrInvalidUserID is returned when a UserID does not conform to the expected format.
-var ErrInvalidUserID = fmt.Errorf("invalid user ID: must be a valid KSUID with prefix %q", userIDPrefix)
-
 // UserID is a custom string type representing a user's unique identifier (KSUID).
 type UserID string
 
@@ -62,7 +59,7 @@ func NewUserID() (UserID, error) {
 // ParseUserID parses a string into a UserID and validates it.
 func ParseUserID(s string) (UserID, error) {
 	if err := id.Validate(s, userIDPrefix); err != nil {
-		return "", fmt.Errorf("%w: %v", ErrInvalidUserID, err)
+		return "", fmt.Errorf("invalid user ID: %w", err)
 	}
 	return UserID(s), nil
 }

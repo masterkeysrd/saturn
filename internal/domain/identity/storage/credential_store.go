@@ -2,11 +2,11 @@ package storage
 
 import (
 	"context"
-	"errors"
 
-	"github.com/jmoiron/sqlx"
-
+	"github.com/doug-martin/goqu/v9"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 )
 
 // credentialDB is the internal DB record type for identity.user_credentials.
@@ -16,14 +16,14 @@ type credentialDB struct {
 	SecretData string `db:"secret_data"`
 }
 
-// CredentialStore implements identity.UserCredentialStore using sqlx.
+// CredentialStore implements identity.UserCredentialStore using db.DB.
 type CredentialStore struct {
-	db *sqlx.DB
+	db db.DB
 }
 
 // NewCredentialStore creates a new CredentialStore.
-func NewCredentialStore(db *sqlx.DB) *CredentialStore {
-	return &CredentialStore{db: db}
+func NewCredentialStore(database db.DB) *CredentialStore {
+	return &CredentialStore{db: database}
 }
 
 // toDomainCredential converts a credentialDB to a domain Credential.
@@ -35,7 +35,7 @@ func toDomainCredential(c *credentialDB) *identity.Credential {
 	}
 }
 
-// toDB converts a domain Credential to a credentialDB.
+// toDBCredential converts a domain Credential to a credentialDB.
 func toDBCredential(c *identity.Credential) *credentialDB {
 	return &credentialDB{
 		UserID:     string(c.UserID),
@@ -46,20 +46,47 @@ func toDBCredential(c *identity.Credential) *credentialDB {
 
 // Create inserts a new credential for the given user.
 func (s *CredentialStore) Create(ctx context.Context, credential *identity.Credential) error {
-	db := toDBCredential(credential)
-	query := `INSERT INTO identity.user_credentials (user_id, auth_type, secret_data)
-		VALUES ($1, $2, $3) ON CONFLICT (user_id, auth_type) DO UPDATE SET secret_data = $3`
-	_, err := s.db.ExecContext(ctx, query, db.UserID, db.AuthType, db.SecretData)
-	return err
+	const op errors.Op = "domain/identity/storage.CreateCredential"
+
+	dbRecord := toDBCredential(credential)
+	q, args, err := pgDialect.Insert(goqu.T("user_credentials").Schema("identity")).
+		Rows(goqu.Record{
+			"user_id":     dbRecord.UserID,
+			"auth_type":   dbRecord.AuthType,
+			"secret_data": dbRecord.SecretData,
+		}).
+		OnConflict(goqu.DoUpdate("user_id, auth_type", goqu.Record{
+			"secret_data": dbRecord.SecretData,
+		})).
+		Prepared(true).
+		ToSQL()
+	if err != nil {
+		return errors.E(op, err)
+	}
+
+	if _, err := s.db.Exec(ctx, q, args...); err != nil {
+		return errors.E(op, err)
+	}
+	return nil
 }
 
 // GetByUserID retrieves all credentials for a user.
 func (s *CredentialStore) GetByUserID(ctx context.Context, userID identity.UserID) ([]*identity.Credential, error) {
-	query := `SELECT * FROM identity.user_credentials WHERE user_id = $1`
-	var dbList []*credentialDB
-	if err := s.db.SelectContext(ctx, &dbList, query, userID); err != nil {
-		return nil, err
+	const op errors.Op = "domain/identity/storage.GetCredentialsByUserID"
+
+	q, args, err := pgDialect.From(goqu.T("user_credentials").Schema("identity")).
+		Where(goqu.C("user_id").Eq(string(userID))).
+		Prepared(true).
+		ToSQL()
+	if err != nil {
+		return nil, errors.E(op, err)
 	}
+
+	var dbList []*credentialDB
+	if err := s.db.Select(ctx, &dbList, q, args...); err != nil {
+		return nil, errors.E(op, err)
+	}
+
 	result := make([]*identity.Credential, len(dbList))
 	for i, db := range dbList {
 		result[i] = toDomainCredential(db)
@@ -69,45 +96,68 @@ func (s *CredentialStore) GetByUserID(ctx context.Context, userID identity.UserI
 
 // GetByUserIDAndAuthType retrieves a specific credential for a user.
 func (s *CredentialStore) GetByUserIDAndAuthType(ctx context.Context, userID identity.UserID, authType string) (*identity.Credential, error) {
-	query := `SELECT * FROM identity.user_credentials WHERE user_id = $1 AND auth_type = $2`
+	const op errors.Op = "domain/identity/storage.GetCredentialByUserIDAndAuthType"
+
+	q, args, err := pgDialect.From(goqu.T("user_credentials").Schema("identity")).
+		Where(
+			goqu.C("user_id").Eq(string(userID)),
+			goqu.C("auth_type").Eq(authType),
+		).
+		Prepared(true).
+		ToSQL()
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+
 	var db credentialDB
-	if err := s.db.GetContext(ctx, &db, query, userID, authType); err != nil {
-		return nil, err
+	if err := s.db.Get(ctx, &db, q, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 	return toDomainCredential(&db), nil
 }
 
 // Delete removes a credential for a user.
 func (s *CredentialStore) Delete(ctx context.Context, userID identity.UserID, authType string) error {
-	query := `DELETE FROM identity.user_credentials WHERE user_id = $1 AND auth_type = $2`
-	result, err := s.db.ExecContext(ctx, query, userID, authType)
+	const op errors.Op = "domain/identity/storage.DeleteCredential"
+
+	q, args, err := pgDialect.Delete(goqu.T("user_credentials").Schema("identity")).
+		Where(
+			goqu.C("user_id").Eq(string(userID)),
+			goqu.C("auth_type").Eq(authType),
+		).
+		Prepared(true).
+		ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return errors.New("delete failed: credential not found")
+
+	if err := s.db.ExecOne(ctx, q, args...); err != nil {
+		return errors.E(op, err)
 	}
 	return nil
 }
 
 // Update replaces the secret_data for an existing credential.
 func (s *CredentialStore) Update(ctx context.Context, credential *identity.Credential) error {
-	db := toDBCredential(credential)
-	query := `UPDATE identity.user_credentials SET secret_data = $3 WHERE user_id = $1 AND auth_type = $2`
-	result, err := s.db.ExecContext(ctx, query, db.UserID, db.AuthType, db.SecretData)
+	const op errors.Op = "domain/identity/storage.UpdateCredential"
+
+	dbRecord := toDBCredential(credential)
+	q, args, err := pgDialect.Update(goqu.T("user_credentials").Schema("identity")).
+		Set(goqu.Record{
+			"secret_data": dbRecord.SecretData,
+		}).
+		Where(
+			goqu.C("user_id").Eq(dbRecord.UserID),
+			goqu.C("auth_type").Eq(dbRecord.AuthType),
+		).
+		Prepared(true).
+		ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return errors.New("update failed: credential not found")
+
+	if err := s.db.ExecOne(ctx, q, args...); err != nil {
+		return errors.E(op, err)
 	}
 	return nil
 }

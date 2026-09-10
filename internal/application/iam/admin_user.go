@@ -32,7 +32,7 @@ type AdminCreateUserResponse struct {
 
 // AdminCreateUser creates a user by an admin. Users with admin access level are activated immediately,
 // while regular users start in pending_approval state.
-func (c *Coordinator) AdminCreateUser(ctx context.Context, req *AdminCreateUserRequest) (*AdminCreateUserResponse, error) {
+func (c *coordinator) AdminCreateUser(ctx context.Context, req *AdminCreateUserRequest) (*AdminCreateUserResponse, error) {
 	// 1. Generate user ID
 	userID, err := identity.NewUserID()
 	if err != nil {

@@ -2,28 +2,24 @@ package identity
 
 import (
 	"context"
-	"errors"
-	"log/slog"
 	"strings"
 
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
 	"github.com/masterkeysrd/saturn/internal/application/iam"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
-	"github.com/masterkeysrd/saturn/internal/platform/password"
-	"google.golang.org/grpc/codes"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // IAMApplication holds the identity application layer.
 type IAMApplication struct {
-	Coordinator *iam.Coordinator
+	Coordinator iam.Coordinator
 }
 
 // NewIAMApplication creates a new IAMApplication.
-func NewIAMApplication(coordinator *iam.Coordinator) *IAMApplication {
+func NewIAMApplication(coordinator iam.Coordinator) *IAMApplication {
 	return &IAMApplication{
 		Coordinator: coordinator,
 	}
@@ -53,22 +49,7 @@ func (h *Handler) LoginUser(ctx context.Context, req *identityv1.LoginUserReques
 		IPAddress:  ip,
 	})
 	if err != nil {
-		if errors.Is(err, identity.ErrAccountPendingApproval) {
-			return nil, status.Error(codes.PermissionDenied, "account pending approval")
-		}
-		if errors.Is(err, identity.ErrAccountSuspended) {
-			return nil, status.Error(codes.PermissionDenied, "account is suspended")
-		}
-		if errors.Is(err, identity.ErrAccountInactive) {
-			return nil, status.Error(codes.PermissionDenied, "account is inactive")
-		}
-		if strings.Contains(err.Error(), "temporarily locked") {
-			return nil, status.Error(codes.ResourceExhausted, err.Error())
-		}
-		if err.Error() != "invalid credentials" {
-			slog.Error("login failed with internal system error", "identifier", ident, "error", err)
-		}
-		return nil, status.Error(codes.Unauthenticated, "invalid credentials")
+		return nil, err
 	}
 
 	return &identityv1.LoginUserResponse{
@@ -92,10 +73,7 @@ func (h *Handler) RegisterUser(ctx context.Context, req *identityv1.RegisterUser
 
 	appResp, err := h.IAM.Coordinator.Register(ctx, appReq)
 	if err != nil {
-		if errors.Is(err, password.ErrInvalidPassword) {
-			return nil, status.Error(codes.InvalidArgument, "password must be at least 12 characters long")
-		}
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, err
 	}
 
 	return &identityv1.User{
@@ -115,12 +93,12 @@ func (h *Handler) RegisterUser(ctx context.Context, req *identityv1.RegisterUser
 func (h *Handler) GetCurrentUser(ctx context.Context, req *identityv1.GetCurrentUserRequest) (*identityv1.User, error) {
 	principal, ok := auth.PrincipalFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing principal")
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
 	}
 
 	user, err := h.IAM.Coordinator.GetCurrentUser(ctx, identity.UserID(principal.Subject))
 	if err != nil {
-		return nil, status.Error(codes.NotFound, "user not found")
+		return nil, err
 	}
 
 	return &identityv1.User{
@@ -150,16 +128,7 @@ func (h *Handler) RefreshSession(ctx context.Context, req *identityv1.RefreshSes
 		IPAddress:    ip,
 	})
 	if err != nil {
-		if errors.Is(err, identity.ErrSessionReused) {
-			return nil, status.Error(codes.PermissionDenied, "refresh token reused")
-		}
-		if errors.Is(err, identity.ErrSessionNotFound) {
-			return nil, status.Error(codes.Unauthenticated, "session not found")
-		}
-		if errors.Is(err, identity.ErrSessionExpired) || errors.Is(err, identity.ErrSessionRevoked) {
-			return nil, status.Error(codes.Unauthenticated, err.Error())
-		}
-		return nil, status.Error(codes.Internal, "failed to refresh session")
+		return nil, err
 	}
 
 	return &identityv1.RefreshSessionResponse{
@@ -181,7 +150,7 @@ func (h *Handler) Logout(ctx context.Context, req *identityv1.LogoutRequest) (*i
 		RefreshToken: refreshToken,
 	})
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to logout")
+		return nil, err
 	}
 	return &identityv1.LogoutResponse{}, nil
 }
@@ -209,14 +178,14 @@ func extractCookie(ctx context.Context, name string) string {
 func (h *Handler) ListActiveSessions(ctx context.Context, req *identityv1.ListActiveSessionsRequest) (*identityv1.ListActiveSessionsResponse, error) {
 	principal, ok := auth.PrincipalFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing principal")
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
 	}
 
 	resp, err := h.IAM.Coordinator.ListActiveSessions(ctx, &iam.ListActiveSessionsRequest{
 		UserID: principal.Subject,
 	})
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, err
 	}
 
 	sessions := make([]*identityv1.UserSession, len(resp.Sessions))
@@ -237,7 +206,7 @@ func (h *Handler) ListActiveSessions(ctx context.Context, req *identityv1.ListAc
 func (h *Handler) RevokeSession(ctx context.Context, req *identityv1.RevokeSessionRequest) (*identityv1.RevokeSessionResponse, error) {
 	principal, ok := auth.PrincipalFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing principal")
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
 	}
 
 	_, err := h.IAM.Coordinator.RevokeSession(ctx, &iam.RevokeSessionRequest{
@@ -245,10 +214,7 @@ func (h *Handler) RevokeSession(ctx context.Context, req *identityv1.RevokeSessi
 		UserID:    principal.Subject,
 	})
 	if err != nil {
-		if errors.Is(err, identity.ErrSessionNotFound) {
-			return nil, status.Error(codes.NotFound, "session not found")
-		}
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, err
 	}
 
 	return &identityv1.RevokeSessionResponse{}, nil
@@ -258,14 +224,14 @@ func (h *Handler) RevokeSession(ctx context.Context, req *identityv1.RevokeSessi
 func (h *Handler) RevokeAllSessions(ctx context.Context, req *identityv1.RevokeAllSessionsRequest) (*identityv1.RevokeAllSessionsResponse, error) {
 	principal, ok := auth.PrincipalFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing principal")
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
 	}
 
 	_, err := h.IAM.Coordinator.RevokeAllSessions(ctx, &iam.RevokeAllSessionsRequest{
 		UserID: principal.Subject,
 	})
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, err
 	}
 
 	return &identityv1.RevokeAllSessionsResponse{}, nil
@@ -275,21 +241,21 @@ func (h *Handler) RevokeAllSessions(ctx context.Context, req *identityv1.RevokeA
 func (h *Handler) ListMySecurityEvents(ctx context.Context, req *identityv1.ListMySecurityEventsRequest) (*identityv1.ListMySecurityEventsResponse, error) {
 	principal, ok := auth.PrincipalFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing principal")
+		return nil, errors.E(errors.Unauthenticated, "missing principal")
 	}
 
 	userID := identity.UserID(principal.Subject)
-	events, nextToken, err := h.IAM.Coordinator.ListSecurityEvents(ctx, identity.SecurityEventFilter{
+	page, err := h.IAM.Coordinator.ListSecurityEvents(ctx, identity.SecurityEventFilter{
 		UserID:        &userID,
 		Limit:         int(req.GetLimit()),
 		NextPageToken: req.GetNextPageToken(),
 	})
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, err
 	}
 
-	pbEvents := make([]*identityv1.SecurityEvent, 0, len(events))
-	for _, ev := range events {
+	pbEvents := make([]*identityv1.SecurityEvent, 0, len(page.Items))
+	for _, ev := range page.Items {
 		pbEvents = append(pbEvents, &identityv1.SecurityEvent{
 			Id:        ev.ID,
 			Email:     ev.Email,
@@ -302,7 +268,7 @@ func (h *Handler) ListMySecurityEvents(ctx context.Context, req *identityv1.List
 
 	return &identityv1.ListMySecurityEventsResponse{
 		Events:        pbEvents,
-		NextPageToken: nextToken,
+		NextPageToken: page.NextPageToken,
 	}, nil
 }
 

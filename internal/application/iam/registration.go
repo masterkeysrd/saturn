@@ -32,7 +32,7 @@ type RegisterUserResponse struct {
 }
 
 // Register handles the registration flow: creates user, creates credential, returns response.
-func (c *Coordinator) Register(ctx context.Context, req *RegisterUserRequest) (*RegisterUserResponse, error) {
+func (c *coordinator) Register(ctx context.Context, req *RegisterUserRequest) (*RegisterUserResponse, error) {
 	// 1. Generate user ID
 	userID, err := identity.NewUserID()
 	if err != nil {

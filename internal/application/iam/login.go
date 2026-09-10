@@ -2,12 +2,11 @@ package iam
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/hash"
 	"github.com/masterkeysrd/saturn/internal/platform/id"
 	"github.com/masterkeysrd/saturn/internal/platform/token"
@@ -31,7 +30,8 @@ type LoginResponse struct {
 }
 
 // Login authenticates credentials, issues access/refresh tokens, and persists the session.
-func (c *Coordinator) Login(ctx context.Context, req *LoginRequest) (*LoginResponse, error) {
+func (c *coordinator) Login(ctx context.Context, req *LoginRequest) (*LoginResponse, error) {
+	const op errors.Op = "application/iam.Login"
 	now := time.Now()
 
 	// Look up user record first to manage failed attempts and lockout checks
@@ -44,24 +44,21 @@ func (c *Coordinator) Login(ctx context.Context, req *LoginRequest) (*LoginRespo
 	// 1. If user does not exist, write fail event and abort (prevents timing side-channel leaks)
 	if err != nil || user == nil {
 		eventID, _ := id.Generate("evt_")
-		if err := c.identityService.CreateSecurityEvent(ctx, &identity.SecurityEvent{
+		_ = c.identityService.CreateSecurityEvent(ctx, &identity.SecurityEvent{
 			ID:        eventID,
-			UserID:    nil,
 			Email:     req.Identifier,
 			EventType: identity.SecurityEventLoginFailed,
 			IPAddress: req.IPAddress,
 			UserAgent: req.UserAgent,
 			CreatedAt: now,
-		}); err != nil {
-			slog.Error("failed to create security event", "error", err)
-		}
-		return nil, errors.New("invalid credentials")
+		})
+		return nil, errors.E(op, errors.Unauthenticated, identity.InvalidCredentials, "invalid credentials")
 	}
 
 	// 2. Check lockout status
 	if user.LockedUntil != nil && user.LockedUntil.After(now) {
 		eventID, _ := id.Generate("evt_")
-		if err := c.identityService.CreateSecurityEvent(ctx, &identity.SecurityEvent{
+		_ = c.identityService.CreateSecurityEvent(ctx, &identity.SecurityEvent{
 			ID:        eventID,
 			UserID:    &user.ID,
 			Email:     user.Email,
@@ -69,19 +66,18 @@ func (c *Coordinator) Login(ctx context.Context, req *LoginRequest) (*LoginRespo
 			IPAddress: req.IPAddress,
 			UserAgent: req.UserAgent,
 			CreatedAt: now,
-		}); err != nil {
-			slog.Error("failed to create security event", "error", err)
-		}
-		return nil, errors.New("account is temporarily locked due to too many failed login attempts; please try again later")
+		})
+		return nil, errors.E(op, errors.ResourceExhausted, identity.AccountLocked, "account is temporarily locked due to too many failed login attempts; please try again later")
 	}
 
 	// 3. Authenticate
 	authUser, err := c.identityService.Authenticate(ctx, req.Identifier, req.Password)
 	if err != nil {
-		if errors.Is(err, identity.ErrAccountPendingApproval) ||
-			errors.Is(err, identity.ErrAccountSuspended) ||
-			errors.Is(err, identity.ErrAccountInactive) {
-			return nil, err
+		code := errors.CodeOf(err)
+		if code == identity.AccountPending ||
+			code == identity.AccountSuspended ||
+			code == identity.AccountInactive {
+			return nil, errors.E(op, err)
 		}
 
 		// Increment failed attempts
@@ -90,7 +86,8 @@ func (c *Coordinator) Login(ctx context.Context, req *LoginRequest) (*LoginRespo
 		var eventType = identity.SecurityEventLoginFailed
 
 		if attempts >= 5 {
-			lockedUntil = new(now.Add(15 * time.Minute))
+			lockedUntil = new(time.Time)
+			*lockedUntil = now.Add(15 * time.Minute)
 			eventType = identity.SecurityEventAccountLocked
 		}
 
@@ -101,7 +98,7 @@ func (c *Coordinator) Login(ctx context.Context, req *LoginRequest) (*LoginRespo
 		})
 
 		eventID, _ := id.Generate("evt_")
-		if err := c.identityService.CreateSecurityEvent(ctx, &identity.SecurityEvent{
+		_ = c.identityService.CreateSecurityEvent(ctx, &identity.SecurityEvent{
 			ID:        eventID,
 			UserID:    &user.ID,
 			Email:     user.Email,
@@ -109,14 +106,12 @@ func (c *Coordinator) Login(ctx context.Context, req *LoginRequest) (*LoginRespo
 			IPAddress: req.IPAddress,
 			UserAgent: req.UserAgent,
 			CreatedAt: now,
-		}); err != nil {
-			slog.Error("failed to create security event", "error", err)
-		}
+		})
 
 		if attempts >= 5 {
-			return nil, errors.New("account is temporarily locked due to too many failed login attempts; please try again later")
+			return nil, errors.E(op, errors.ResourceExhausted, identity.AccountLocked, "account is temporarily locked due to too many failed login attempts; please try again later")
 		}
-		return nil, errors.New("invalid credentials")
+		return nil, errors.E(op, errors.Unauthenticated, identity.InvalidCredentials, "invalid credentials")
 	}
 
 	// 4. On successful login, reset failed attempts & write success audit
@@ -129,7 +124,7 @@ func (c *Coordinator) Login(ctx context.Context, req *LoginRequest) (*LoginRespo
 	}
 
 	eventID, _ := id.Generate("evt_")
-	if err := c.identityService.CreateSecurityEvent(ctx, &identity.SecurityEvent{
+	_ = c.identityService.CreateSecurityEvent(ctx, &identity.SecurityEvent{
 		ID:        eventID,
 		UserID:    &user.ID,
 		Email:     user.Email,
@@ -137,13 +132,11 @@ func (c *Coordinator) Login(ctx context.Context, req *LoginRequest) (*LoginRespo
 		IPAddress: req.IPAddress,
 		UserAgent: req.UserAgent,
 		CreatedAt: now,
-	}); err != nil {
-		slog.Error("failed to create security event", "error", err)
-	}
+	})
 
 	authVersion, err := c.identityService.GetAuthVersion(ctx, authUser.ID)
 	if err != nil {
-		return nil, fmt.Errorf("get auth version: %w", err)
+		return nil, errors.E(op, fmt.Errorf("get auth version: %w", err))
 	}
 
 	accessToken, _, err := c.tokenService.IssueAccessToken(token.IssueInput{
@@ -152,7 +145,7 @@ func (c *Coordinator) Login(ctx context.Context, req *LoginRequest) (*LoginRespo
 		AuthVersion: authVersion,
 	}, now)
 	if err != nil {
-		return nil, fmt.Errorf("issue access token: %w", err)
+		return nil, errors.E(op, fmt.Errorf("issue access token: %w", err))
 	}
 
 	// Session refresh token absolute expiry is 7 days, sliding window is 24 hours
@@ -162,7 +155,7 @@ func (c *Coordinator) Login(ctx context.Context, req *LoginRequest) (*LoginRespo
 		AuthVersion: authVersion,
 	}, now, now.Add(7*24*time.Hour))
 	if err != nil {
-		return nil, fmt.Errorf("issue refresh token: %w", err)
+		return nil, errors.E(op, fmt.Errorf("issue refresh token: %w", err))
 	}
 
 	refreshTokenHash := hash.SHA256String(refreshToken)
@@ -175,7 +168,7 @@ func (c *Coordinator) Login(ctx context.Context, req *LoginRequest) (*LoginRespo
 		ExpiresAt:         now.Add(24 * time.Hour),
 		AbsoluteExpiresAt: now.Add(7 * 24 * time.Hour),
 	}); err != nil {
-		return nil, fmt.Errorf("create session: %w", err)
+		return nil, errors.E(op, fmt.Errorf("create session: %w", err))
 	}
 
 	return &LoginResponse{

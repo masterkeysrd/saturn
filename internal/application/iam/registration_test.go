@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
 )
 
@@ -90,8 +91,8 @@ func (f *fakeIdentityService) UpdateUser(ctx context.Context, user *identity.Use
 	return nil
 }
 
-func (f *fakeIdentityService) ListUsers(ctx context.Context, filter *identity.ListUsersFilter) ([]*identity.User, string, error) {
-	return nil, "", nil
+func (f *fakeIdentityService) ListUsers(ctx context.Context, filter *identity.ListUsersFilter) (*paging.Page[*identity.User], error) {
+	return nil, nil
 }
 
 func (f *fakeIdentityService) ApproveUser(ctx context.Context, userID identity.UserID) (*identity.User, error) {
@@ -158,8 +159,8 @@ func (f *fakeIdentityService) CreateSecurityEvent(ctx context.Context, event *id
 	return nil
 }
 
-func (f *fakeIdentityService) ListSecurityEvents(ctx context.Context, filter identity.SecurityEventFilter) ([]*identity.SecurityEvent, string, error) {
-	return nil, "", nil
+func (f *fakeIdentityService) ListSecurityEvents(ctx context.Context, filter identity.SecurityEventFilter) (*paging.Page[*identity.SecurityEvent], error) {
+	return nil, nil
 }
 
 func TestRegisterHashesPassword(t *testing.T) {

@@ -3,12 +3,13 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"encoding/base64"
-	"fmt"
-	"strings"
 
-	"github.com/jmoiron/sqlx"
+	"github.com/doug-martin/goqu/v9"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
+	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
 
 type securityEventDB struct {
@@ -21,18 +22,20 @@ type securityEventDB struct {
 	CreatedAt sql.NullTime `db:"created_at"`
 }
 
-// SecurityEventStore implements identity.SecurityEventStore using sqlx.
+// SecurityEventStore implements identity.SecurityEventStore using db.DB.
 type SecurityEventStore struct {
-	db *sqlx.DB
+	db db.DB
 }
 
 // NewSecurityEventStore creates a new SQL store for security audit events.
-func NewSecurityEventStore(db *sqlx.DB) *SecurityEventStore {
-	return &SecurityEventStore{db: db}
+func NewSecurityEventStore(database db.DB) *SecurityEventStore {
+	return &SecurityEventStore{db: database}
 }
 
 // Create inserts a new security audit event record.
 func (s *SecurityEventStore) Create(ctx context.Context, event *identity.SecurityEvent) error {
+	const op errors.Op = "domain/identity/storage.CreateSecurityEvent"
+
 	var userID *string
 	if event.UserID != nil {
 		str := string(*event.UserID)
@@ -42,70 +45,71 @@ func (s *SecurityEventStore) Create(ctx context.Context, event *identity.Securit
 	if event.UserAgent != "" {
 		ua = &event.UserAgent
 	}
-	query := `INSERT INTO identity.security_events (id, user_id, email, event_type, ip_address, user_agent, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, NOW())`
-	_, err := s.db.ExecContext(ctx, query, event.ID, userID, event.Email, string(event.EventType), event.IPAddress, ua)
-	return err
+
+	q, args, err := pgDialect.Insert(goqu.T("security_events").Schema("identity")).
+		Rows(goqu.Record{
+			"id":         event.ID,
+			"user_id":    userID,
+			"email":      event.Email,
+			"event_type": string(event.EventType),
+			"ip_address": event.IPAddress,
+			"user_agent": ua,
+			"created_at": goqu.L("NOW()"),
+		}).
+		Prepared(true).
+		ToSQL()
+	if err != nil {
+		return errors.E(op, err)
+	}
+
+	if _, err := s.db.Exec(ctx, q, args...); err != nil {
+		return errors.E(op, err)
+	}
+	return nil
 }
 
 // List retrieves security audit events satisfying the filter conditions.
-func (s *SecurityEventStore) List(ctx context.Context, filter identity.SecurityEventFilter) ([]*identity.SecurityEvent, string, error) {
-	var args []interface{}
-	var conditions []string
-
-	if filter.UserID != nil {
-		conditions = append(conditions, fmt.Sprintf("user_id = $%d", len(args)+1))
-		args = append(args, string(*filter.UserID))
-	}
-	if filter.Email != "" {
-		conditions = append(conditions, fmt.Sprintf("email = $%d", len(args)+1))
-		args = append(args, filter.Email)
-	}
-	if filter.EventType != "" {
-		conditions = append(conditions, fmt.Sprintf("event_type = $%d", len(args)+1))
-		args = append(args, filter.EventType)
-	}
-
-	if filter.NextPageToken != "" {
-		var cursorID string
-		if decoded, err := base64.URLEncoding.DecodeString(filter.NextPageToken); err == nil {
-			cursorID = string(decoded)
-		} else {
-			cursorID = filter.NextPageToken
-		}
-		if cursorID != "" {
-			conditions = append(conditions, fmt.Sprintf("id < $%d", len(args)+1))
-			args = append(args, cursorID)
-		}
-	}
-
-	whereClause := ""
-	if len(conditions) > 0 {
-		whereClause = "WHERE " + strings.Join(conditions, " AND ")
-	}
+func (s *SecurityEventStore) List(ctx context.Context, filter identity.SecurityEventFilter) (*paging.Page[*identity.SecurityEvent], error) {
+	const op errors.Op = "domain/identity/storage.ListSecurityEvents"
 
 	limit := filter.Limit
-	if limit <= 0 {
+	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
-	limitPlus1 := limit + 1
 
-	query := fmt.Sprintf("SELECT * FROM identity.security_events %s ORDER BY id DESC LIMIT $%d", whereClause, len(args)+1)
-	args = append(args, limitPlus1)
+	ds := pgDialect.From(goqu.T("security_events").Schema("identity"))
+
+	if filter.UserID != nil {
+		ds = ds.Where(goqu.C("user_id").Eq(string(*filter.UserID)))
+	}
+	if filter.Email != "" {
+		ds = ds.Where(goqu.C("email").Eq(filter.Email))
+	}
+	if filter.EventType != "" {
+		ds = ds.Where(goqu.C("event_type").Eq(filter.EventType))
+	}
+
+	cursor, _ := paging.Decode(filter.NextPageToken)
+
+	ds = paging.ApplyPagination(ds, paging.Options{
+		Sort:     sorting.SortOrder{Field: "id", Ascending: false},
+		Cursor:   cursor,
+		PageSize: uint(limit),
+		IDColumn: "id",
+	})
+
+	q, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
 
 	var dbEvents []securityEventDB
-	err := s.db.SelectContext(ctx, &dbEvents, query, args...)
-	if err != nil {
-		return nil, "", err
+	if err := s.db.Select(ctx, &dbEvents, q, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 
-	hasMore := len(dbEvents) > limit
-	if hasMore {
-		dbEvents = dbEvents[:limit]
-	}
-
-	events := make([]*identity.SecurityEvent, 0, len(dbEvents))
-	for _, dbEv := range dbEvents {
+	events := make([]*identity.SecurityEvent, len(dbEvents))
+	for i, dbEv := range dbEvents {
 		var uID *identity.UserID
 		if dbEv.UserID != nil {
 			val := identity.UserID(*dbEv.UserID)
@@ -115,7 +119,7 @@ func (s *SecurityEventStore) List(ctx context.Context, filter identity.SecurityE
 		if dbEv.UserAgent != nil {
 			ua = *dbEv.UserAgent
 		}
-		events = append(events, &identity.SecurityEvent{
+		events[i] = &identity.SecurityEvent{
 			ID:        dbEv.ID,
 			UserID:    uID,
 			Email:     dbEv.Email,
@@ -123,13 +127,15 @@ func (s *SecurityEventStore) List(ctx context.Context, filter identity.SecurityE
 			IPAddress: dbEv.IPAddress,
 			UserAgent: ua,
 			CreatedAt: dbEv.CreatedAt.Time,
-		})
+		}
 	}
 
-	var nextToken string
-	if hasMore && len(dbEvents) > 0 {
-		nextToken = base64.URLEncoding.EncodeToString([]byte(dbEvents[len(dbEvents)-1].ID))
-	}
+	page := paging.NewPage(events, int(limit), func(e *identity.SecurityEvent) paging.Cursor {
+		return paging.Cursor{
+			SortValue: e.ID,
+			ID:        e.ID,
+		}
+	})
 
-	return events, nextToken, nil
+	return page, nil
 }

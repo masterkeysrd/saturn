@@ -3,7 +3,11 @@ package storage
 import (
 	"database/sql"
 	"time"
+
+	"github.com/doug-martin/goqu/v9"
 )
+
+var pgDialect = goqu.Dialect("postgres")
 
 // --- Helpers ---
 func ptrToString(p *string) string {

@@ -19,13 +19,13 @@ type ApproveUserResponse struct {
 }
 
 // ApproveUser activates a pending user account.
-func (c *Coordinator) ApproveUser(ctx context.Context, req *ApproveUserRequest) (*ApproveUserResponse, error) {
+func (c *coordinator) ApproveUser(ctx context.Context, req *ApproveUserRequest) (*ApproveUserResponse, error) {
 	userID := identity.UserID(req.UserID)
 
 	// Delegate to service layer for validation and execution
 	user, err := c.identityService.ApproveUser(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("approve user: %w", err)
+		return nil, err
 	}
 
 	// Create default workspace for approved user if space service is wired
@@ -36,7 +36,7 @@ func (c *Coordinator) ApproveUser(ctx context.Context, req *ApproveUserRequest) 
 			OwnerID:     space.SpaceID(userID),
 		}
 		if _, err := c.spaceService.CreateSpace(ctx, defaultSpace); err != nil {
-			return nil, fmt.Errorf("create default workspace: %w", err)
+			return nil, err
 		}
 	}
 
@@ -56,13 +56,13 @@ type RejectUserResponse struct {
 }
 
 // RejectUser deactivates a pending user account by setting status to inactive.
-func (c *Coordinator) RejectUser(ctx context.Context, req *RejectUserRequest) (*RejectUserResponse, error) {
+func (c *coordinator) RejectUser(ctx context.Context, req *RejectUserRequest) (*RejectUserResponse, error) {
 	userID := identity.UserID(req.UserID)
 
 	// Delegate to service layer for validation and execution
 	user, err := c.identityService.RejectUser(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("reject user: %w", err)
+		return nil, err
 	}
 
 	return &RejectUserResponse{

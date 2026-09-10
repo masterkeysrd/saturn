@@ -2,7 +2,6 @@ package iam
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
@@ -45,10 +44,10 @@ type RevokeAllSessionsRequest struct {
 type RevokeAllSessionsResponse struct{}
 
 // ListActiveSessions returns all currently active sessions for the user.
-func (c *Coordinator) ListActiveSessions(ctx context.Context, req *ListActiveSessionsRequest) (*ListActiveSessionsResponse, error) {
+func (c *coordinator) ListActiveSessions(ctx context.Context, req *ListActiveSessionsRequest) (*ListActiveSessionsResponse, error) {
 	domainSessions, err := c.identityService.GetActiveSessions(ctx, identity.UserID(req.UserID))
 	if err != nil {
-		return nil, fmt.Errorf("list active sessions: %w", err)
+		return nil, err
 	}
 
 	sessions := make([]*ActiveSession, len(domainSessions))
@@ -70,24 +69,24 @@ func (c *Coordinator) ListActiveSessions(ctx context.Context, req *ListActiveSes
 }
 
 // RevokeSession invalidates a specific session for the authenticated user.
-func (c *Coordinator) RevokeSession(ctx context.Context, req *RevokeSessionRequest) (*RevokeSessionResponse, error) {
+func (c *coordinator) RevokeSession(ctx context.Context, req *RevokeSessionRequest) (*RevokeSessionResponse, error) {
 	err := c.identityService.RevokeSessionByID(
 		ctx,
 		identity.SessionID(req.SessionID),
 		identity.UserID(req.UserID),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("revoke session: %w", err)
+		return nil, err
 	}
 
 	return &RevokeSessionResponse{}, nil
 }
 
 // RevokeAllSessions invalidates all sessions for the user and increments auth version.
-func (c *Coordinator) RevokeAllSessions(ctx context.Context, req *RevokeAllSessionsRequest) (*RevokeAllSessionsResponse, error) {
+func (c *coordinator) RevokeAllSessions(ctx context.Context, req *RevokeAllSessionsRequest) (*RevokeAllSessionsResponse, error) {
 	_, err := c.identityService.RevokeAllSessions(ctx, identity.UserID(req.UserID))
 	if err != nil {
-		return nil, fmt.Errorf("revoke all sessions: %w", err)
+		return nil, err
 	}
 
 	return &RevokeAllSessionsResponse{}, nil

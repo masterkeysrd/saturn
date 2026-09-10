@@ -243,19 +243,29 @@ func (e *TestEnv) getAdminToken(tb testing.TB) string {
 	adminPass := "AdminPassword123!"
 
 	// Ensure system admin exists in DB fixture
-	_, _ = e.DB.ExecContext(tb.Context(), `
+	if _, err := e.DB.ExecContext(tb.Context(), `
 		INSERT INTO identity.user (id, name, email, username, status, access_level)
 		VALUES ('usr_sysadmin', 'System Admin', 'system_admin@saturn.local', 'sysadmin', 'active', 'admin')
-		ON CONFLICT (email) DO NOTHING
-	`)
+		ON CONFLICT (email) DO UPDATE SET status = 'active', access_level = 'admin'
+	`); err != nil {
+		tb.Fatalf("failed to insert sysadmin user: %v", err)
+	}
 
-	hasher, _ := password.NewArgon2id(password.DefaultParams())
-	hash, _ := hasher.Hash(adminPass)
-	_, _ = e.DB.ExecContext(tb.Context(), `
+	hasher, err := password.NewArgon2id(password.DefaultParams())
+	if err != nil {
+		tb.Fatalf("failed to create hasher: %v", err)
+	}
+	hash, err := hasher.Hash(adminPass)
+	if err != nil {
+		tb.Fatalf("failed to hash adminPass: %v", err)
+	}
+	if _, err := e.DB.ExecContext(tb.Context(), `
 		INSERT INTO identity.user_credentials (user_id, auth_type, secret_data)
 		VALUES ('usr_sysadmin', 'password', $1)
-		ON CONFLICT (user_id, auth_type) DO NOTHING
-	`, hash)
+		ON CONFLICT (user_id, auth_type) DO UPDATE SET secret_data = EXCLUDED.secret_data
+	`, hash); err != nil {
+		tb.Fatalf("failed to insert sysadmin credentials: %v", err)
+	}
 
 	client := identityv1.NewClient(saturn.Config{
 		BaseURL:    e.ServerURL,

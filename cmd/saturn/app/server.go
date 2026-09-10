@@ -100,14 +100,15 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 
 	// Wire IAM application
 	sqlxDB := sqlx.NewDb(sqlDB, "postgres")
-	userStore := identitystorage.NewUserStore(sqlxDB)
-	credentialStore := identitystorage.NewCredentialStore(sqlxDB)
+	dbClient := db.New(sqlxDB)
+	userStore := identitystorage.NewUserStore(dbClient)
+	credentialStore := identitystorage.NewCredentialStore(dbClient)
 	passwordHasher, err := password.NewArgon2id(password.DefaultParams())
 	if err != nil {
 		return fmt.Errorf("create password hasher: %w", err)
 	}
-	sessionStore := identitystorage.NewSessionStore(sqlxDB)
-	securityEventStore := identitystorage.NewSecurityEventStore(sqlxDB)
+	sessionStore := identitystorage.NewSessionStore(dbClient)
+	securityEventStore := identitystorage.NewSecurityEventStore(dbClient)
 	identityService := identity.NewService(
 		identity.Dependencies{
 			UserStore:          userStore,
@@ -119,7 +120,6 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	)
 
 	// Wire Space stores
-	dbClient := db.New(sqlxDB)
 	spaceStore := spacestorage.NewSpaceStore(dbClient)
 	memberStore := spacestorage.NewMemberStore(dbClient)
 
@@ -157,12 +157,23 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	}
 	s.TokenService = tokenService
 
-	coordinator := iam.NewCoordinator(iam.Dependencies{
-		IdentityService: identityService,
-		PasswordHasher:  passwordHasher,
-		SpaceService:    spaceService,
-		TokenService:    tokenService,
-	})
+	appLogger := log.New(
+		log.WithLevel(logLevels[cfg.Log.Level]),
+		log.WithMiddleware(requestid.Enricher()),
+	)
+
+	coordinator := iam.NewLoggingCoordinator(
+		iam.NewTransactionalCoordinator(
+			iam.NewCoordinator(iam.Dependencies{
+				IdentityService: identityService,
+				PasswordHasher:  passwordHasher,
+				SpaceService:    spaceService,
+				TokenService:    tokenService,
+			}),
+			dbClient,
+		),
+		appLogger,
+	)
 
 	iamApp := identitygrpc.NewIAMApplication(coordinator)
 	identityHandler := identitygrpc.NewHandler(iamApp)
@@ -205,10 +216,6 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	adminHandler := identitygrpc.NewAdminHandler(coordinator)
 	admingrpc.RegisterAdminIdentityServer(s.grpc, adminHandler)
 
-	appLogger := log.New(
-		log.WithLevel(logLevels[cfg.Log.Level]),
-		log.WithMiddleware(requestid.Enricher()),
-	)
 	spaceCoordinator := spaceapp.NewLoggingCoordinator(
 		spaceapp.NewTransactionalCoordinator(
 			spaceapp.NewCoordinator(spaceapp.Dependencies{

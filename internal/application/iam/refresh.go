@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/hash"
 	"github.com/masterkeysrd/saturn/internal/platform/token"
 )
@@ -26,20 +27,21 @@ type RefreshSessionResponse struct {
 }
 
 // RefreshSession validates the refresh token, checks database auth version, and rotates the session.
-func (c *Coordinator) RefreshSession(ctx context.Context, req *RefreshSessionRequest) (*RefreshSessionResponse, error) {
+func (c *coordinator) RefreshSession(ctx context.Context, req *RefreshSessionRequest) (*RefreshSessionResponse, error) {
+	const op errors.Op = "application/iam.RefreshSession"
 	now := time.Now()
 
 	claims, err := c.tokenService.ValidateRefreshToken(req.RefreshToken, now)
 	if err != nil {
-		return nil, identity.ErrSessionExpired
+		return nil, errors.E(op, errors.Unauthenticated, identity.SessionExpired, "session expired")
 	}
 
 	authVersion, err := c.identityService.GetAuthVersion(ctx, identity.UserID(claims.Subject))
 	if err != nil {
-		return nil, fmt.Errorf("get auth version: %w", err)
+		return nil, errors.E(op, fmt.Errorf("get auth version: %w", err))
 	}
 	if claims.AuthVersion != authVersion {
-		return nil, identity.ErrSessionRevoked
+		return nil, errors.E(op, errors.Unauthenticated, identity.SessionRevoked, "session revoked")
 	}
 
 	accessToken, _, err := c.tokenService.IssueAccessToken(token.IssueInput{
@@ -48,7 +50,7 @@ func (c *Coordinator) RefreshSession(ctx context.Context, req *RefreshSessionReq
 		AuthVersion: authVersion,
 	}, now)
 	if err != nil {
-		return nil, fmt.Errorf("issue access token: %w", err)
+		return nil, errors.E(op, fmt.Errorf("issue access token: %w", err))
 	}
 
 	successorRefreshToken, _, err := c.tokenService.IssueRefreshToken(token.IssueInput{
@@ -57,7 +59,7 @@ func (c *Coordinator) RefreshSession(ctx context.Context, req *RefreshSessionReq
 		AuthVersion: authVersion,
 	}, now, claims.ExpiresAt.Time)
 	if err != nil {
-		return nil, fmt.Errorf("issue refresh token: %w", err)
+		return nil, errors.E(op, fmt.Errorf("issue refresh token: %w", err))
 	}
 
 	rawTokenHash := hash.SHA256String(req.RefreshToken)
@@ -71,7 +73,7 @@ func (c *Coordinator) RefreshSession(ctx context.Context, req *RefreshSessionReq
 		ExpiresAt:        now.Add(24 * time.Hour),
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 
 	return &RefreshSessionResponse{

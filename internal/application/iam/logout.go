@@ -16,7 +16,7 @@ type LogoutRequest struct {
 type LogoutResponse struct{}
 
 // Logout validates the refresh token and revokes the associated token family.
-func (c *Coordinator) Logout(ctx context.Context, req *LogoutRequest) (*LogoutResponse, error) {
+func (c *coordinator) Logout(ctx context.Context, req *LogoutRequest) (*LogoutResponse, error) {
 	now := time.Now()
 	_, err := c.tokenService.ValidateRefreshToken(req.RefreshToken, now)
 	if err != nil {

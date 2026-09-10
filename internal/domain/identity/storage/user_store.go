@@ -3,16 +3,14 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"encoding/base64"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"strings"
 	"time"
 
-	"github.com/jmoiron/sqlx"
-
+	"github.com/doug-martin/goqu/v9"
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
+	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
 
 // userDB is the internal DB record type for identity.user.
@@ -32,14 +30,14 @@ type userDB struct {
 	UpdateTime          sql.NullTime `db:"update_time"`
 }
 
-// UserStore implements identity.UserStore using sqlx.
+// UserStore implements identity.UserStore using db.DB.
 type UserStore struct {
-	db *sqlx.DB
+	db db.DB
 }
 
 // NewUserStore creates a new UserStore.
-func NewUserStore(db *sqlx.DB) *UserStore {
-	return &UserStore{db: db}
+func NewUserStore(database db.DB) *UserStore {
+	return &UserStore{db: database}
 }
 
 // toDomainUser converts a userDB to a domain User.
@@ -80,59 +78,120 @@ func toDBUser(u *identity.User) *userDB {
 	}
 }
 
-// Create inserts a new user and returns the created record.
+// Create inserts a new user record.
 func (s *UserStore) Create(ctx context.Context, user *identity.User) error {
-	db := toDBUser(user)
-	query := `INSERT INTO identity.user (id, email, username, name, avatar_url, status, access_level, version, create_time, update_time)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())`
-	_, err := s.db.ExecContext(ctx, query, db.ID, db.Email, db.Username, db.Name, db.AvatarURL, db.Status, db.AccessLevel, db.Version)
-	return err
+	const op errors.Op = "domain/identity/storage.Create"
+
+	dbRecord := toDBUser(user)
+	q, args, err := pgDialect.Insert(goqu.T("user").Schema("identity")).Rows(
+		goqu.Record{
+			"id":           dbRecord.ID,
+			"email":        dbRecord.Email,
+			"username":     dbRecord.Username,
+			"name":         dbRecord.Name,
+			"avatar_url":   dbRecord.AvatarURL,
+			"status":       dbRecord.Status,
+			"access_level": dbRecord.AccessLevel,
+			"version":      dbRecord.Version,
+			"create_time":  goqu.L("NOW()"),
+			"update_time":  goqu.L("NOW()"),
+		},
+	).Prepared(true).ToSQL()
+	if err != nil {
+		return errors.E(op, err)
+	}
+
+	if _, err := s.db.Exec(ctx, q, args...); err != nil {
+		return errors.E(op, err)
+	}
+	return nil
 }
 
 // GetByID retrieves a user by their unique ID.
 func (s *UserStore) GetByID(ctx context.Context, id identity.UserID) (*identity.User, error) {
-	query := `SELECT * FROM identity.user WHERE id = $1`
-	var db userDB
-	if err := s.db.GetContext(ctx, &db, query, id); err != nil {
-		return nil, err
+	const op errors.Op = "domain/identity/storage.GetByID"
+
+	q, args, err := pgDialect.From(goqu.T("user").Schema("identity")).
+		Where(goqu.C("id").Eq(string(id))).
+		Prepared(true).
+		ToSQL()
+	if err != nil {
+		return nil, errors.E(op, err)
 	}
-	return toDomainUser(&db), nil
+
+	var u userDB
+	if err := s.db.Get(ctx, &u, q, args...); err != nil {
+		return nil, errors.E(op, err)
+	}
+	return toDomainUser(&u), nil
 }
 
 // GetByEmail retrieves a user by their email address.
 func (s *UserStore) GetByEmail(ctx context.Context, email string) (*identity.User, error) {
-	query := `SELECT * FROM identity.user WHERE email = $1`
-	var db userDB
-	if err := s.db.GetContext(ctx, &db, query, email); err != nil {
-		return nil, err
+	const op errors.Op = "domain/identity/storage.GetByEmail"
+
+	q, args, err := pgDialect.From(goqu.T("user").Schema("identity")).
+		Where(goqu.C("email").Eq(email)).
+		Prepared(true).
+		ToSQL()
+	if err != nil {
+		return nil, errors.E(op, err)
 	}
-	return toDomainUser(&db), nil
+
+	var u userDB
+	if err := s.db.Get(ctx, &u, q, args...); err != nil {
+		return nil, errors.E(op, err)
+	}
+	return toDomainUser(&u), nil
 }
 
 // GetByUsername retrieves a user by their username.
 func (s *UserStore) GetByUsername(ctx context.Context, username string) (*identity.User, error) {
-	query := `SELECT * FROM identity.user WHERE username = $1`
-	var db userDB
-	if err := s.db.GetContext(ctx, &db, query, username); err != nil {
-		return nil, err
+	const op errors.Op = "domain/identity/storage.GetByUsername"
+
+	q, args, err := pgDialect.From(goqu.T("user").Schema("identity")).
+		Where(goqu.C("username").Eq(username)).
+		Prepared(true).
+		ToSQL()
+	if err != nil {
+		return nil, errors.E(op, err)
 	}
-	return toDomainUser(&db), nil
+
+	var u userDB
+	if err := s.db.Get(ctx, &u, q, args...); err != nil {
+		return nil, errors.E(op, err)
+	}
+	return toDomainUser(&u), nil
 }
 
 // Update modifies an existing user with optimistic locking.
 func (s *UserStore) Update(ctx context.Context, user *identity.User) error {
-	query := `UPDATE identity.user SET email = $2, username = $3, name = $4, avatar_url = $5, status = $6, access_level = $7, version = $8 + 1, update_time = NOW()
-		WHERE id = $1 AND version = $8`
-	result, err := s.db.ExecContext(ctx, query, user.ID, user.Email, user.Username, user.Name, user.AvatarURL, user.Status, string(user.AccessLevel), user.Version)
+	const op errors.Op = "domain/identity/storage.Update"
+
+	q, args, err := pgDialect.Update(goqu.T("user").Schema("identity")).
+		Set(goqu.Record{
+			"email":        user.Email,
+			"username":     user.Username,
+			"name":         user.Name,
+			"avatar_url":   strToPtr(user.AvatarURL),
+			"status":       string(user.Status),
+			"access_level": string(user.AccessLevel),
+			"version":      user.Version + 1,
+			"update_time":  goqu.L("NOW()"),
+		}).
+		Where(
+			goqu.C("id").Eq(string(user.ID)),
+			goqu.C("version").Eq(user.Version),
+		).Prepared(true).ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return errors.New("update failed: row not found or version mismatch")
+
+	if err := s.db.ExecOne(ctx, q, args...); err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return errors.E(op, errors.Conflict, identity.VersionMismatch, "user not found or version mismatch")
+		}
+		return errors.E(op, err)
 	}
 	user.Version++
 	return nil
@@ -140,130 +199,150 @@ func (s *UserStore) Update(ctx context.Context, user *identity.User) error {
 
 // Delete removes a user by their unique ID.
 func (s *UserStore) Delete(ctx context.Context, id identity.UserID) error {
-	query := `DELETE FROM identity.user WHERE id = $1`
-	result, err := s.db.ExecContext(ctx, query, id)
+	const op errors.Op = "domain/identity/storage.Delete"
+
+	q, args, err := pgDialect.Delete(goqu.T("user").Schema("identity")).
+		Where(goqu.C("id").Eq(string(id))).
+		Prepared(true).
+		ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return errors.New("delete failed: user not found")
+
+	if err := s.db.ExecOne(ctx, q, args...); err != nil {
+		return errors.E(op, err)
 	}
 	return nil
 }
 
-// GetUsers returns users with optional filtering by status and search query, using a filter struct for clarity.
-// Returns a slice of users, a next page token for cursor-based pagination, and any error.
-func (s *UserStore) GetUsers(ctx context.Context, filter *identity.ListUsersFilter) ([]*identity.User, string, error) {
-	if filter.PageSize <= 0 || filter.PageSize > 100 {
-		filter.PageSize = 20
+// GetUsers returns users with optional filtering and pagination.
+func (s *UserStore) GetUsers(ctx context.Context, filter *identity.ListUsersFilter) (*paging.Page[*identity.User], error) {
+	const op errors.Op = "domain/identity/storage.GetUsers"
+
+	pageSize := filter.PageSize
+	if pageSize <= 0 || pageSize > 100 {
+		pageSize = 20
 	}
 
-	conditions := []string{}
-	args := []any{}
-	argIndex := 1
+	ds := pgDialect.From(goqu.T("user").Schema("identity"))
 
 	if filter.StatusFilter != "" {
-		conditions = append(conditions, fmt.Sprintf("status = $%d", argIndex))
-		args = append(args, string(filter.StatusFilter))
-		argIndex++
+		ds = ds.Where(goqu.C("status").Eq(string(filter.StatusFilter)))
 	}
 
 	if filter.SearchQuery != "" {
 		searchPattern := "%" + filter.SearchQuery + "%"
-		conditions = append(conditions, fmt.Sprintf("(email ILIKE $%d OR username ILIKE $%d OR name ILIKE $%d)", argIndex, argIndex+1, argIndex+2))
-		args = append(args, searchPattern, searchPattern, searchPattern)
-		argIndex += 3
+		ds = ds.Where(goqu.Or(
+			goqu.C("email").ILike(searchPattern),
+			goqu.C("username").ILike(searchPattern),
+			goqu.C("name").ILike(searchPattern),
+		))
 	}
 
-	if filter.NextPageToken != "" {
-		var cursor map[string]any
-		if err := json.Unmarshal([]byte(filter.NextPageToken), &cursor); err == nil {
-			if email, ok := cursor["email"].(string); ok && email != "" {
-				conditions = append(conditions, fmt.Sprintf("(email < $%d OR (email = $%d AND id < $%d))", argIndex, argIndex+1, argIndex+2))
-				args = append(args, email, email)
-				if userID, ok := cursor["id"].(string); ok && userID != "" {
-					args = append(args, userID)
-				} else {
-					args = append(args, "") // placeholder for id comparison
-				}
-				argIndex += 3
-			}
-		}
-	}
+	cursor, _ := paging.Decode(filter.NextPageToken)
 
-	query := `SELECT * FROM identity.user`
-	if len(conditions) > 0 {
-		query += " WHERE " + strings.Join(conditions, " AND ")
+	ds = paging.ApplyPagination(ds, paging.Options{
+		Sort:     sorting.SortOrder{Field: "id", Ascending: true},
+		Cursor:   cursor,
+		PageSize: uint(pageSize),
+		IDColumn: "id",
+	})
+
+	q, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, errors.E(op, err)
 	}
-	query += fmt.Sprintf(` ORDER BY create_time DESC LIMIT $%d`, argIndex)
-	args = append(args, filter.PageSize+1) // fetch one extra to detect if there are more pages
 
 	var dbUsers []userDB
-	if err := s.db.SelectContext(ctx, &dbUsers, query, args...); err != nil {
-		return nil, "", err
+	if err := s.db.Select(ctx, &dbUsers, q, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 
-	hasMore := len(dbUsers) > int(filter.PageSize)
-	if hasMore {
-		dbUsers = dbUsers[:filter.PageSize]
-	}
-
-	users := make([]*identity.User, 0, len(dbUsers))
+	users := make([]*identity.User, len(dbUsers))
 	for i := range dbUsers {
-		users = append(users, toDomainUser(&dbUsers[i]))
+		users[i] = toDomainUser(&dbUsers[i])
 	}
 
-	var nextToken string
-	if hasMore && len(dbUsers) > 0 {
-		lastUser := dbUsers[len(dbUsers)-1]
-		cursor := map[string]any{
-			"email": lastUser.Email,
-			"id":    lastUser.ID,
+	page := paging.NewPage(users, int(pageSize), func(u *identity.User) paging.Cursor {
+		return paging.Cursor{
+			SortValue: string(u.ID),
+			ID:        string(u.ID),
 		}
-		tokenBytes, err := json.Marshal(cursor)
-		if err == nil {
-			nextToken = base64.URLEncoding.EncodeToString(tokenBytes)
-		}
-	}
+	})
 
-	return users, nextToken, nil
+	return page, nil
 }
 
 // GetAuthVersion retrieves the auth_version for a user.
 func (s *UserStore) GetAuthVersion(ctx context.Context, id identity.UserID) (int64, error) {
-	var authVersion int64
-	query := `SELECT auth_version FROM identity.user WHERE id = $1`
-	err := s.db.GetContext(ctx, &authVersion, query, string(id))
+	const op errors.Op = "domain/identity/storage.GetAuthVersion"
+
+	q, args, err := pgDialect.From(goqu.T("user").Schema("identity")).
+		Select("auth_version").
+		Where(goqu.C("id").Eq(string(id))).
+		Prepared(true).
+		ToSQL()
 	if err != nil {
-		return 0, err
+		return 0, errors.E(op, err)
+	}
+
+	var authVersion int64
+	if err := s.db.Get(ctx, &authVersion, q, args...); err != nil {
+		return 0, errors.E(op, err)
 	}
 	return authVersion, nil
 }
 
 // IncrementAuthVersion atomically increments the auth_version for a user.
 func (s *UserStore) IncrementAuthVersion(ctx context.Context, id identity.UserID) (int64, error) {
-	query := `UPDATE identity.user SET auth_version = auth_version + 1, update_time = NOW() WHERE id = $1 RETURNING auth_version`
-	var authVersion int64
-	err := s.db.GetContext(ctx, &authVersion, query, string(id))
+	const op errors.Op = "domain/identity/storage.IncrementAuthVersion"
+
+	q, args, err := pgDialect.Update(goqu.T("user").Schema("identity")).
+		Set(goqu.Record{
+			"auth_version": goqu.L("auth_version + 1"),
+			"update_time":  goqu.L("NOW()"),
+		}).
+		Where(goqu.C("id").Eq(string(id))).
+		Returning("auth_version").
+		Prepared(true).
+		ToSQL()
 	if err != nil {
-		return 0, err
+		return 0, errors.E(op, err)
+	}
+
+	var authVersion int64
+	if err := s.db.Get(ctx, &authVersion, q, args...); err != nil {
+		return 0, errors.E(op, err)
 	}
 	return authVersion, nil
 }
 
 // UpdateLockoutState updates only the failed login attempts and lockout expiration for a user.
 func (s *UserStore) UpdateLockoutState(ctx context.Context, req identity.UpdateLockoutRequest) error {
+	const op errors.Op = "domain/identity/storage.UpdateLockoutState"
+
 	var nullTime sql.NullTime
 	if req.LockedUntil != nil {
 		nullTime = sql.NullTime{Time: *req.LockedUntil, Valid: true}
 	}
-	query := `UPDATE identity.user SET failed_login_attempts = $2, locked_until = $3, update_time = NOW() WHERE id = $1`
-	_, err := s.db.ExecContext(ctx, query, string(req.UserID), req.Attempts, nullTime)
-	return err
+
+	q, args, err := pgDialect.Update(goqu.T("user").Schema("identity")).
+		Set(goqu.Record{
+			"failed_login_attempts": req.Attempts,
+			"locked_until":          nullTime,
+			"update_time":           goqu.L("NOW()"),
+		}).
+		Where(goqu.C("id").Eq(string(req.UserID))).
+		Prepared(true).
+		ToSQL()
+	if err != nil {
+		return errors.E(op, err)
+	}
+
+	if _, err := s.db.Exec(ctx, q, args...); err != nil {
+		return errors.E(op, err)
+	}
+	return nil
 }
 
 func nullTimeToTimePtr(nt sql.NullTime) *time.Time {

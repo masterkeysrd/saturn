@@ -12,11 +12,11 @@ import (
 // AdminHandler implements the adminidentityv1.AdminIdentityServer interface.
 type AdminHandler struct {
 	adminidentityv1.UnimplementedAdminIdentityServer
-	Coordinator *iam.Coordinator
+	Coordinator iam.Coordinator
 }
 
 // NewAdminHandler creates a new AdminHandler.
-func NewAdminHandler(coordinator *iam.Coordinator) *AdminHandler {
+func NewAdminHandler(coordinator iam.Coordinator) *AdminHandler {
 	return &AdminHandler{Coordinator: coordinator}
 }
 
@@ -84,19 +84,19 @@ func (h *AdminHandler) ListUsers(ctx context.Context, req *adminidentityv1.ListU
 		filter.StatusFilter = adminStatusToDomainStatus(req.GetStatusFilter())
 	}
 
-	resp, err := h.Coordinator.ListUsers(ctx, filter)
+	page, err := h.Coordinator.ListUsers(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
 
-	adminUsers := make([]*adminidentityv1.User, 0, len(resp.Users))
-	for _, u := range resp.Users {
+	adminUsers := make([]*adminidentityv1.User, 0, len(page.Items))
+	for _, u := range page.Items {
 		adminUsers = append(adminUsers, toAdminUser(u))
 	}
 
 	return &adminidentityv1.ListUsersResponse{
 		Users:         adminUsers,
-		NextPageToken: resp.NextPageToken,
+		NextPageToken: page.NextPageToken,
 	}, nil
 }
 
@@ -157,7 +157,7 @@ func (h *AdminHandler) RevokeAllSessions(ctx context.Context, req *adminidentity
 
 // ListSecurityEvents lists security audit logs.
 func (h *AdminHandler) ListSecurityEvents(ctx context.Context, req *adminidentityv1.ListSecurityEventsRequest) (*adminidentityv1.ListSecurityEventsResponse, error) {
-	events, nextToken, err := h.Coordinator.ListSecurityEvents(ctx, identity.SecurityEventFilter{
+	page, err := h.Coordinator.ListSecurityEvents(ctx, identity.SecurityEventFilter{
 		Email:         req.GetEmail(),
 		EventType:     req.GetEventType(),
 		Limit:         int(req.GetLimit()),
@@ -167,8 +167,8 @@ func (h *AdminHandler) ListSecurityEvents(ctx context.Context, req *adminidentit
 		return nil, err
 	}
 
-	pbEvents := make([]*adminidentityv1.SecurityEvent, 0, len(events))
-	for _, ev := range events {
+	pbEvents := make([]*adminidentityv1.SecurityEvent, 0, len(page.Items))
+	for _, ev := range page.Items {
 		var uID string
 		if ev.UserID != nil {
 			uID = string(*ev.UserID)
@@ -186,6 +186,6 @@ func (h *AdminHandler) ListSecurityEvents(ctx context.Context, req *adminidentit
 
 	return &adminidentityv1.ListSecurityEventsResponse{
 		Events:        pbEvents,
-		NextPageToken: nextToken,
+		NextPageToken: page.NextPageToken,
 	}, nil
 }

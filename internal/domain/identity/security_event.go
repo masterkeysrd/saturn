@@ -3,6 +3,8 @@ package identity
 import (
 	"context"
 	"time"
+
+	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
 // SecurityEventType represents the classification of a security event.
@@ -38,5 +40,5 @@ type SecurityEventFilter struct {
 // SecurityEventStore defines the persistence interface for security audit events.
 type SecurityEventStore interface {
 	Create(ctx context.Context, event *SecurityEvent) error
-	List(ctx context.Context, filter SecurityEventFilter) ([]*SecurityEvent, string, error)
+	List(ctx context.Context, filter SecurityEventFilter) (*paging.Page[*SecurityEvent], error)
 }

@@ -126,31 +126,34 @@ func Execute() error {
 			defer func() { _ = sqlDB.Close() }()
 
 			sqlxDB := sqlx.NewDb(sqlDB, "postgres")
-			userStore := identitystorage.NewUserStore(sqlxDB)
-			credentialStore := identitystorage.NewCredentialStore(sqlxDB)
+			dbClient := db.New(sqlxDB)
+			userStore := identitystorage.NewUserStore(dbClient)
+			credentialStore := identitystorage.NewCredentialStore(dbClient)
 			passwordHasher, err := password.NewArgon2id(password.DefaultParams())
 			if err != nil {
 				return fmt.Errorf("create password hasher: %w", err)
 			}
-			sessionStore := identitystorage.NewSessionStore(sqlxDB)
+			sessionStore := identitystorage.NewSessionStore(dbClient)
 			identityService := identity.NewService(identity.Dependencies{
 				UserStore:       userStore,
 				CredentialStore: credentialStore,
 				SessionStore:    sessionStore,
 				Hasher:          passwordHasher,
 			})
-			dbClient := db.New(sqlxDB)
 			spaceStore := spacestorage.NewSpaceStore(dbClient)
 			memberStore := spacestorage.NewMemberStore(dbClient)
 			spaceService := space.NewService(space.Dependencies{
 				SpaceStore:  spaceStore,
 				MemberStore: memberStore,
 			})
-			coordinator := iam.NewCoordinator(iam.Dependencies{
-				IdentityService: identityService,
-				PasswordHasher:  passwordHasher,
-				SpaceService:    spaceService,
-			})
+			coordinator := iam.NewTransactionalCoordinator(
+				iam.NewCoordinator(iam.Dependencies{
+					IdentityService: identityService,
+					PasswordHasher:  passwordHasher,
+					SpaceService:    spaceService,
+				}),
+				dbClient,
+			)
 
 			email, _ := cmd.Flags().GetString("email")
 			username, _ := cmd.Flags().GetString("username")
