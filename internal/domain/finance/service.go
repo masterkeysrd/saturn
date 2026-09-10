@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/id"
+	"github.com/masterkeysrd/saturn/internal/platform/log"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
@@ -68,7 +68,7 @@ func (s *Service) ConfigureFinance(ctx context.Context, settings *FinanceSetting
 	// Automatically initialize a default Cash Account for this space
 	if defaultCashAcc, err := settings.NewDefaultCashAccount(); err == nil {
 		if _, err := s.CreateAccount(ctx, defaultCashAcc); err != nil {
-			slog.WarnContext(ctx, "failed to create default cash account", "space_id", settings.SpaceID, "error", err)
+			log.Warn(ctx, "failed to create default cash account", log.String("space_id", string(settings.SpaceID)), log.Err(err))
 		}
 	}
 
@@ -2234,11 +2234,11 @@ func (s *Service) approveLinkedTransaction(ctx context.Context, spaceID SpaceID,
 	}
 
 	if _, err := s.LogTransactionEvent(ctx, item.NewReceiptIngestedEvent(txn.ID)); err != nil {
-		slog.WarnContext(ctx, "failed to log receipt ingested event", "transaction_id", string(txn.ID), "error", err)
+		log.Warn(ctx, "failed to log receipt ingested event", log.String("transaction_id", string(txn.ID)), log.Err(err))
 	}
 
 	if _, err := s.LogTransactionEvent(ctx, item.NewTransactionLinkedEvent(txn.ID, overwrite)); err != nil {
-		slog.WarnContext(ctx, "failed to log transaction linked event", "transaction_id", string(txn.ID), "error", err)
+		log.Warn(ctx, "failed to log transaction linked event", log.String("transaction_id", string(txn.ID)), log.Err(err))
 	}
 
 	return item, nil
@@ -2791,7 +2791,7 @@ func (s *Service) ListStatementLines(ctx context.Context, spaceID SpaceID, state
 
 	// Resolve dynamic suggestions in memory
 	if err := s.resolveSuggestions(ctx, spaceID, stmt.AccountID, lines); err != nil {
-		slog.ErrorContext(ctx, "failed to resolve reconciliation suggestions", "error", err)
+		log.Error(ctx, "failed to resolve reconciliation suggestions", log.Err(err))
 	}
 
 	return lines, nil

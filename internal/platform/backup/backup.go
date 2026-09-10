@@ -8,11 +8,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
 	"os/exec"
 	"sync"
 	"time"
+
+	"github.com/masterkeysrd/saturn/internal/platform/log"
 )
 
 // Storage defines the interface for uploading, downloading, and deleting files.
@@ -108,7 +109,7 @@ func (pm *PostgresBackupManager) RunBackup(ctx context.Context, triggeredBy stri
 
 		if err := cmd.Run(); err != nil {
 			cmdErr = fmt.Errorf("pg_dump error: %v, stderr: %s", err, errBuf.String())
-			slog.Error("pg_dump failed", "err", cmdErr)
+			log.Error(ctx, "pg_dump failed", log.Err(cmdErr))
 		}
 	}()
 
@@ -137,7 +138,7 @@ func (pm *PostgresBackupManager) RunBackup(ctx context.Context, triggeredBy stri
 
 	// Sync metadata index
 	if err := pm.syncIndex(ctx, entry); err != nil {
-		slog.Error("failed to sync backup index", "err", err)
+		log.Error(ctx, "failed to sync backup index", log.Err(err))
 	}
 
 	return &entry, nil
@@ -169,10 +170,10 @@ func (pm *PostgresBackupManager) syncIndex(ctx context.Context, newEntry BackupE
 
 	for _, b := range index.Backups {
 		if b.CreatedAt.Before(cutoff) {
-			slog.Info("pruning expired backup", "filename", b.Filename)
+			log.Info(ctx, "pruning expired backup", log.String("filename", b.Filename))
 			// Delete from storage
 			if err := pm.storage.Delete(ctx, b.Filename); err != nil {
-				slog.Warn("failed to delete expired backup from storage", "filename", b.Filename, "err", err)
+				log.Warn(ctx, "failed to delete expired backup from storage", log.String("filename", b.Filename), log.Err(err))
 			}
 		} else {
 			activeBackups = append(activeBackups, b)
@@ -188,7 +189,7 @@ func (pm *PostgresBackupManager) syncIndex(ctx context.Context, newEntry BackupE
 
 	// Save index locally
 	if err := os.WriteFile(pm.localIndex, indexData, 0644); err != nil {
-		slog.Warn("failed to write local backup index", "path", pm.localIndex, "err", err)
+		log.Warn(ctx, "failed to write local backup index", log.String("path", pm.localIndex), log.Err(err))
 	}
 
 	// Upload index to remote storage

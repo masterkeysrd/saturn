@@ -4,11 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log/slog"
 	"sync"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
+	"github.com/masterkeysrd/saturn/internal/platform/log"
 )
 
 // DB represents Saturn's unified, context-first database executor.
@@ -435,7 +435,7 @@ func (c *TxController) Rollback() error {
 
 	if err := c.tx.tx.Rollback(); err != nil {
 		if !errors.Is(err, sql.ErrTxDone) {
-			slog.Error("failed to rollback transaction", "error", err)
+			log.Error(context.Background(), "failed to rollback transaction", log.Err(err))
 			return c.tx.translateError(err)
 		}
 	}

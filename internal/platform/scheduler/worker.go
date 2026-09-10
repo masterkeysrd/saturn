@@ -3,11 +3,11 @@ package scheduler
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"runtime/debug"
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/id"
+	"github.com/masterkeysrd/saturn/internal/platform/log"
 )
 
 // Start begins the background loops for spawning cron schedules and executing pending jobs.
@@ -35,11 +35,11 @@ func (e *Engine) runSpawnerLoop(ctx context.Context) {
 		select {
 		case <-ticker.C:
 			if err := e.spawnRecurrentJobs(ctx); err != nil {
-				slog.Error("scheduler spawner execution error", "err", err)
+				log.Error(ctx, "scheduler spawner execution error", log.Err(err))
 			}
 			// Prune completed jobs older than 24 hours to keep the table clean
 			if _, err := e.db.ExecContext(ctx, `DELETE FROM platform.job WHERE status = 'completed' AND update_time < NOW() - INTERVAL '24 hours'`); err != nil {
-				slog.Error("scheduler job pruning error", "err", err)
+				log.Error(ctx, "scheduler job pruning error", log.Err(err))
 			}
 		case <-ctx.Done():
 			return
@@ -55,7 +55,7 @@ func (e *Engine) runExecutorLoop(ctx context.Context) {
 		select {
 		case <-ticker.C:
 			if err := e.executePendingJobs(ctx); err != nil {
-				slog.Error("scheduler executor execution error", "err", err)
+				log.Error(ctx, "scheduler executor execution error", log.Err(err))
 			}
 		case <-ctx.Done():
 			return
@@ -105,7 +105,7 @@ func (e *Engine) spawnRecurrentJobs(ctx context.Context) error {
 	for _, s := range schedules {
 		cronSched, err := e.cronParser.Parse(s.CronExpression)
 		if err != nil {
-			slog.Error("invalid cron expression in active schedule", "id", s.ID, "cron", s.CronExpression, "err", err)
+			log.Error(ctx, "invalid cron expression in active schedule", log.String("id", s.ID), log.String("cron", s.CronExpression), log.Err(err))
 			continue
 		}
 		nextRun := cronSched.Next(time.Now().UTC())
@@ -188,11 +188,11 @@ func (e *Engine) executePendingJobs(ctx context.Context) error {
 func (e *Engine) executeJobInstance(ctx context.Context, j jobInstance) {
 	defer func() {
 		if r := recover(); r != nil {
-			slog.Error("panic recovered during scheduler job execution",
-				"job_id", j.ID,
-				"job_type", j.JobType,
-				"panic", r,
-				"stack", string(debug.Stack()),
+			log.Error(ctx, "panic recovered during scheduler job execution",
+				log.String("job_id", j.ID),
+				log.String("job_type", j.JobType),
+				log.Any("panic", r),
+				log.String("stack", string(debug.Stack())),
 			)
 			nextAttempt := j.Attempts + 1
 			status := "pending"

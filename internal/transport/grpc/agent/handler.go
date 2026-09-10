@@ -2,12 +2,12 @@ package agent
 
 import (
 	"context"
-	"log/slog"
 
 	agentv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/agent/v1"
 	agentapp "github.com/masterkeysrd/saturn/internal/application/agent"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
 	"github.com/masterkeysrd/saturn/internal/platform/agent"
+	"github.com/masterkeysrd/saturn/internal/platform/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -143,20 +143,20 @@ func (h *Handler) GetProvider(ctx context.Context, req *agentv1.GetProviderReque
 }
 
 func (h *Handler) ListProviders(ctx context.Context, _ *emptypb.Empty) (*agentv1.ListProvidersResponse, error) {
-	slog.Info("[Handler.ListProviders] Request received")
+	log.Info(ctx, "[Handler.ListProviders] Request received")
 	spaceID, ok := auth.SpaceIDFromContext(ctx)
 	if !ok {
-		slog.Warn("[Handler.ListProviders] Missing space-id context")
+		log.Warn(ctx, "[Handler.ListProviders] Missing space-id context")
 		return nil, status.Error(codes.Unauthenticated, "missing space-id context")
 	}
-	slog.Info("[Handler.ListProviders] Resolved space-id", "spaceID", spaceID)
+	log.Info(ctx, "[Handler.ListProviders] Resolved space-id", log.String("spaceID", spaceID))
 
 	list, err := h.coordinator.GetStore().ListProviders(ctx, spaceID)
 	if err != nil {
-		slog.Error("[Handler.ListProviders] Failed to query providers", "err", err)
+		log.Error(ctx, "[Handler.ListProviders] Failed to query providers", log.Err(err))
 		return nil, status.Errorf(codes.Internal, "list providers: %v", err)
 	}
-	slog.Info("[Handler.ListProviders] Successfully fetched providers", "count", len(list))
+	log.Info(ctx, "[Handler.ListProviders] Successfully fetched providers", log.Int("count", len(list)))
 
 	res := &agentv1.ListProvidersResponse{}
 	for _, p := range list {

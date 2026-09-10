@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log/slog"
 	"text/template"
 
 	"github.com/masterkeysrd/saturn/internal/platform/agent"
+	"github.com/masterkeysrd/saturn/internal/platform/log"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
@@ -187,12 +187,12 @@ func (c *Coordinator) ExecuteAgent(ctx context.Context, req ExecutionRequest) (s
 	}
 
 	// Dispatch request to platform client
-	slog.Info("[Agent Coordinator.ExecuteAgent] Executing agent request",
-		"space_id", req.SpaceID,
-		"purpose", req.Purpose,
-		"model_name", modelName,
-		"provider_mode", providerMode,
-		"prompt_len", len(prompt),
+	log.Info(ctx, "[Agent Coordinator.ExecuteAgent] Executing agent request",
+		log.String("space_id", req.SpaceID),
+		log.String("purpose", req.Purpose),
+		log.String("model_name", modelName),
+		log.String("provider_mode", string(providerMode)),
+		log.Int("prompt_len", len(prompt)),
 	)
 
 	resp, err := c.client.Execute(ctx, agent.ExecutionRequest{
@@ -220,24 +220,24 @@ func (c *Coordinator) ExecuteAgent(ctx context.Context, req ExecutionRequest) (s
 		}
 		_, logErr := c.store.LogRun(ctx, agentID, req.SpaceID, status, prompt, output, errMsg, resp.TokensUsed)
 		if logErr != nil {
-			fmt.Printf("[Agent Coordinator] Warning: failed to log run execution: %v\n", logErr)
+			log.Warn(ctx, "failed to log run execution", log.Err(logErr))
 		}
 	}
 
 	if err != nil {
-		slog.Error("[Agent Coordinator.ExecuteAgent] Agent execution failed",
-			"space_id", req.SpaceID,
-			"purpose", req.Purpose,
-			"error", err,
+		log.Error(ctx, "[Agent Coordinator.ExecuteAgent] Agent execution failed",
+			log.String("space_id", req.SpaceID),
+			log.String("purpose", req.Purpose),
+			log.Err(err),
 		)
 		return "", fmt.Errorf("execute agent: %w", err)
 	}
 
-	slog.Info("[Agent Coordinator.ExecuteAgent] Agent execution succeeded",
-		"space_id", req.SpaceID,
-		"purpose", req.Purpose,
-		"tokens_used", resp.TokensUsed,
-		"response", resp.Text,
+	log.Info(ctx, "[Agent Coordinator.ExecuteAgent] Agent execution succeeded",
+		log.String("space_id", req.SpaceID),
+		log.String("purpose", req.Purpose),
+		log.Int("tokens_used", resp.TokensUsed),
+		log.String("response", resp.Text),
 	)
 
 	return resp.Text, nil

@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"runtime/debug"
 	"time"
+
+	"github.com/masterkeysrd/saturn/internal/platform/log"
 )
 
 // Start starts worker pool goroutines and background polling loop.
@@ -29,10 +30,10 @@ func (e *Engine) pollerLoop(ctx context.Context) {
 
 	// Initial stale delivery check and retention purge
 	if err := e.RecoverStaleDeliveries(ctx); err != nil {
-		slog.Error("failed initial stale delivery recovery", "err", err)
+		log.Error(ctx, "failed initial stale delivery recovery", log.Err(err))
 	}
 	if err := e.PurgeOldMessages(ctx, 30*24*time.Hour); err != nil {
-		slog.Error("failed initial message retention purge", "err", err)
+		log.Error(ctx, "failed initial message retention purge", log.Err(err))
 	}
 
 	for {
@@ -41,11 +42,11 @@ func (e *Engine) pollerLoop(ctx context.Context) {
 			e.triggerNotify()
 		case <-staleTicker.C:
 			if err := e.RecoverStaleDeliveries(ctx); err != nil {
-				slog.Error("failed to recover stale deliveries", "err", err)
+				log.Error(ctx, "failed to recover stale deliveries", log.Err(err))
 			}
 		case <-purgeTicker.C:
 			if err := e.PurgeOldMessages(ctx, 30*24*time.Hour); err != nil {
-				slog.Error("failed message retention purge", "err", err)
+				log.Error(ctx, "failed message retention purge", log.Err(err))
 			}
 		case <-ctx.Done():
 			return
@@ -118,7 +119,7 @@ func (e *Engine) processAvailableDeliveries(ctx context.Context) {
 
 		claimed, err := e.claimAndExecuteNextDelivery(ctx)
 		if err != nil {
-			slog.Error("eventbus delivery execution error", "err", err)
+			log.Error(ctx, "eventbus delivery execution error", log.Err(err))
 			return
 		}
 		if !claimed {
@@ -215,7 +216,12 @@ func (e *Engine) executeDelivery(ctx context.Context, record DeliveryRecord) {
 	}()
 
 	if execErr != nil {
-		slog.Error("eventbus subscriber delivery execution failed", "subscriber_id", record.SubscriberID, "topic", record.Topic, "message_id", record.MessageID, "err", execErr)
+		log.Error(ctx, "eventbus subscriber delivery execution failed",
+			log.String("subscriber_id", record.SubscriberID),
+			log.String("topic", record.Topic),
+			log.String("message_id", record.MessageID),
+			log.Err(execErr),
+		)
 		nextAttempt := record.Attempts + 1
 		status := "pending"
 		if nextAttempt >= record.MaxAttempts {

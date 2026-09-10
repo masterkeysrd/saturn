@@ -6,11 +6,12 @@ package shutdown
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/masterkeysrd/saturn/internal/platform/log"
 )
 
 // Callback is the signature for shutdown callbacks.
@@ -59,7 +60,7 @@ func (m *Manager) Register(cb Callback) {
 func (m *Manager) Defer() func() {
 	return func() {
 		if err := m.Execute(); err != nil {
-			slog.Error("shutdown failed", "err", err)
+			log.Error(context.Background(), "shutdown failed", log.Err(err))
 		}
 	}
 }
@@ -79,14 +80,14 @@ func (m *Manager) Execute() error {
 
 	// Execute in LIFO (stack) order: reverse iteration
 	for i := len(cbSlice) - 1; i >= 0; i-- {
-		slog.Info("executing shutdown callback", "index", i)
+		log.Info(ctx, "executing shutdown callback", log.Int("index", i))
 
 		// Recover from panics to ensure all callbacks are attempted
 		var err error
 		func() {
 			defer func() {
 				if r := recover(); r != nil {
-					slog.Error("shutdown callback panicked", "index", i, "panic", r)
+					log.Error(ctx, "shutdown callback panicked", log.Int("index", i), log.Any("panic", r))
 					err = fmt.Errorf("callback %d panicked: %v", i, r)
 				}
 			}()
@@ -94,7 +95,7 @@ func (m *Manager) Execute() error {
 		}()
 
 		if err != nil {
-			slog.Error("shutdown callback error", "index", i, "err", err)
+			log.Error(ctx, "shutdown callback error", log.Int("index", i), log.Err(err))
 			if firstErr == nil {
 				firstErr = fmt.Errorf("callback %d: %w", i, err)
 			}
@@ -119,7 +120,7 @@ func (m *Manager) Init() (context.Context, func()) {
 
 	go func() {
 		<-ctx.Done()
-		slog.Info("shutdown signal received", "reason", ctx.Err())
+		log.Info(ctx, "shutdown signal received", log.Err(ctx.Err()))
 		_ = m.Execute()
 	}()
 

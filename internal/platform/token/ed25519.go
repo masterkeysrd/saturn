@@ -1,19 +1,20 @@
 package token
 
 import (
+	"context"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/masterkeysrd/saturn/internal/platform/log"
 )
 
 var (
@@ -342,7 +343,7 @@ func LoadOrGeneratePrivateKey(path string) (ed25519.PrivateKey, error) {
 	}
 
 	// Key does not exist; generate one
-	slog.Info("JWT private key not found; generating a new Ed25519 key pair", "path", path)
+	log.Info(context.Background(), "JWT private key not found; generating a new Ed25519 key pair", log.String("path", path))
 	_, priv, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		return nil, fmt.Errorf("generate private key: %w", err)
