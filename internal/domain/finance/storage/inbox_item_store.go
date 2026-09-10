@@ -4,15 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
-	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/platform/conv"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
@@ -95,14 +94,15 @@ func toInboxItemDomain(db inboxItemDB) *finance.InboxItem {
 }
 
 type InboxItemStore struct {
-	db *sqlx.DB
+	db db.DB
 }
 
-func NewInboxItemStore(db *sqlx.DB) *InboxItemStore {
-	return &InboxItemStore{db: db}
+func NewInboxItemStore(database db.DB) *InboxItemStore {
+	return &InboxItemStore{db: database}
 }
 
 func (s *InboxItemStore) Insert(ctx context.Context, item *finance.InboxItem) error {
+	const op errors.Op = "domain/finance/storage.InsertInboxItem"
 	createTime := item.CreateTime
 	if createTime.IsZero() {
 		createTime = time.Now().UTC()
@@ -110,8 +110,8 @@ func (s *InboxItemStore) Insert(ctx context.Context, item *finance.InboxItem) er
 
 	var linkTypeStr *string
 	if item.BorrowingLinkType != nil {
-		s := string(*item.BorrowingLinkType)
-		linkTypeStr = &s
+		str := string(*item.BorrowingLinkType)
+		linkTypeStr = &str
 	}
 
 	metaJSON := "{}"
@@ -143,36 +143,33 @@ func (s *InboxItemStore) Insert(ctx context.Context, item *finance.InboxItem) er
 	})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	_, err = s.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return fmt.Errorf("insert inbox item: %w", err)
+	if _, err := s.db.Exec(ctx, query, args...); err != nil {
+		return errors.E(op, err)
 	}
 	return nil
 }
 
 func (s *InboxItemStore) Get(ctx context.Context, spaceID finance.SpaceID, id string) (*finance.InboxItem, error) {
+	const op errors.Op = "domain/finance/storage.GetInboxItem"
 	ds := pgDialect.From(goqu.S("finance").Table("inbox_item")).Select("*").Where(goqu.Ex{
 		"space_id": string(spaceID),
 		"id":       id,
 	})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 	var db inboxItemDB
-	err = s.db.GetContext(ctx, &db, query, args...)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("inbox item not found: %s", id)
-		}
-		return nil, fmt.Errorf("query inbox item: %w", err)
+	if err := s.db.Get(ctx, &db, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 	return toInboxItemDomain(db), nil
 }
 
 func (s *InboxItemStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListInboxItemsFilter) (*paging.Page[*finance.InboxItem], error) {
+	const op errors.Op = "domain/finance/storage.ListInboxItems"
 	if filter.PageSize <= 0 || filter.PageSize > 100 {
 		filter.PageSize = 20
 	}
@@ -225,12 +222,12 @@ func (s *InboxItemStore) ListBySpace(ctx context.Context, spaceID finance.SpaceI
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, fmt.Errorf("build sql query: %w", err)
+		return nil, errors.E(op, err)
 	}
 
 	var dbRows []inboxItemDB
-	if err := s.db.SelectContext(ctx, &dbRows, query, args...); err != nil {
-		return nil, fmt.Errorf("select context: %w", err)
+	if err := s.db.Select(ctx, &dbRows, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 
 	items := make([]*finance.InboxItem, len(dbRows))
@@ -249,29 +246,23 @@ func (s *InboxItemStore) ListBySpace(ctx context.Context, spaceID finance.SpaceI
 }
 
 func (s *InboxItemStore) Delete(ctx context.Context, spaceID finance.SpaceID, id string) error {
+	const op errors.Op = "domain/finance/storage.DeleteInboxItem"
 	ds := pgDialect.Delete(goqu.S("finance").Table("inbox_item")).Where(goqu.Ex{
 		"space_id": string(spaceID),
 		"id":       id,
 	})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	res, err := s.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return fmt.Errorf("delete inbox item: %w", err)
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return fmt.Errorf("inbox item not found: %s", id)
+	if err := s.db.ExecOne(ctx, query, args...); err != nil {
+		return errors.E(op, err)
 	}
 	return nil
 }
 
 func (s *InboxItemStore) Update(ctx context.Context, item *finance.InboxItem) error {
+	const op errors.Op = "domain/finance/storage.UpdateInboxItem"
 	var linkTypeStr *string
 	if item.BorrowingLinkType != nil {
 		str := string(*item.BorrowingLinkType)
@@ -309,18 +300,10 @@ func (s *InboxItemStore) Update(ctx context.Context, item *finance.InboxItem) er
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	res, err := s.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return fmt.Errorf("update inbox item: %w", err)
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return fmt.Errorf("inbox item not found for update: %s", item.ID)
+	if err := s.db.ExecOne(ctx, query, args...); err != nil {
+		return errors.E(op, err)
 	}
 	return nil
 }

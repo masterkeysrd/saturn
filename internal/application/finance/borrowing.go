@@ -20,7 +20,7 @@ type CreateBorrowingRequest struct {
 	AccountID           *finance.AccountID
 }
 
-func (c *Coordinator) CreateBorrowing(ctx context.Context, req *CreateBorrowingRequest) (*finance.Borrowing, error) {
+func (c *coordinator) CreateBorrowing(ctx context.Context, req *CreateBorrowingRequest) (*finance.Borrowing, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ type UpdateBorrowingRequest struct {
 	UpdateMask    []string
 }
 
-func (c *Coordinator) UpdateBorrowing(ctx context.Context, req *UpdateBorrowingRequest) (*finance.Borrowing, error) {
+func (c *coordinator) UpdateBorrowing(ctx context.Context, req *UpdateBorrowingRequest) (*finance.Borrowing, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func (c *Coordinator) UpdateBorrowing(ctx context.Context, req *UpdateBorrowingR
 	return c.financeService.UpdateBorrowing(ctx, b, req.UpdateMask)
 }
 
-func (c *Coordinator) DeleteBorrowing(ctx context.Context, id finance.BorrowingID) error {
+func (c *coordinator) DeleteBorrowing(ctx context.Context, id finance.BorrowingID) error {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return err
@@ -98,7 +98,7 @@ type AdjustBorrowingBalanceRequest struct {
 	AccountID      *finance.AccountID
 }
 
-func (c *Coordinator) AdjustBorrowingBalance(ctx context.Context, req *AdjustBorrowingBalanceRequest) (*finance.Borrowing, error) {
+func (c *coordinator) AdjustBorrowingBalance(ctx context.Context, req *AdjustBorrowingBalanceRequest) (*finance.Borrowing, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ type LogBorrowingTransactionRequest struct {
 	Notes           string
 }
 
-func (c *Coordinator) LogBorrowingTransaction(ctx context.Context, req *LogBorrowingTransactionRequest) (*finance.Transaction, error) {
+func (c *coordinator) LogBorrowingTransaction(ctx context.Context, req *LogBorrowingTransactionRequest) (*finance.Transaction, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -150,7 +150,7 @@ type UpdateBorrowingTransactionRequest struct {
 	Notes           string
 }
 
-func (c *Coordinator) UpdateBorrowingTransaction(ctx context.Context, req *UpdateBorrowingTransactionRequest) (*finance.Transaction, error) {
+func (c *coordinator) UpdateBorrowingTransaction(ctx context.Context, req *UpdateBorrowingTransactionRequest) (*finance.Transaction, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -173,7 +173,7 @@ type DeleteBorrowingTransactionRequest struct {
 	TransactionID finance.TransactionID
 }
 
-func (c *Coordinator) DeleteBorrowingTransaction(ctx context.Context, req *DeleteBorrowingTransactionRequest) error {
+func (c *coordinator) DeleteBorrowingTransaction(ctx context.Context, req *DeleteBorrowingTransactionRequest) error {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return err

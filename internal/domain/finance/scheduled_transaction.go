@@ -8,8 +8,6 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/id"
 )
 
-var ErrScheduledTransactionNotFound = errors.New("scheduled transaction not found")
-
 type ScheduledTransactionID string
 
 var ScheduledTransactionIDGenerator = id.NewPrefixGenerator("sctx_", "sch_")

@@ -61,7 +61,7 @@ func (h *Handler) CreateBorrowing(ctx context.Context, req *financev1.CreateBorr
 
 	b, err := h.Coordinator.CreateBorrowing(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoBorrowing(b), nil
@@ -81,7 +81,7 @@ func (h *Handler) GetBorrowing(ctx context.Context, req *financev1.GetBorrowingR
 
 	b, err := h.Aggregator.GetBorrowing(ctx, spaceID, bID)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoBorrowing(b), nil
@@ -128,7 +128,7 @@ func (h *Handler) ListBorrowings(ctx context.Context, req *financev1.ListBorrowi
 
 	list, nextToken, err := h.Aggregator.ListBorrowings(ctx, spaceID, filter)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	protoList := make([]*financev1.Borrowing, 0, len(list))
@@ -200,7 +200,7 @@ func (h *Handler) UpdateBorrowing(ctx context.Context, req *financev1.UpdateBorr
 
 	b, err := h.Coordinator.UpdateBorrowing(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoBorrowing(b), nil
@@ -214,7 +214,7 @@ func (h *Handler) DeleteBorrowing(ctx context.Context, req *financev1.DeleteBorr
 
 	err = h.Coordinator.DeleteBorrowing(ctx, bID)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return &emptypb.Empty{}, nil
@@ -263,7 +263,7 @@ func (h *Handler) LogBorrowingTransaction(ctx context.Context, req *financev1.Lo
 		Notes:           txn.GetNotes(),
 	})
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoTransaction(res), nil
@@ -318,7 +318,7 @@ func (h *Handler) UpdateBorrowingTransaction(ctx context.Context, req *financev1
 		Notes:           txn.GetNotes(),
 	})
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoTransaction(res), nil
@@ -340,7 +340,7 @@ func (h *Handler) DeleteBorrowingTransaction(ctx context.Context, req *financev1
 		TransactionID: tID,
 	})
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return &emptypb.Empty{}, nil
@@ -371,7 +371,7 @@ func (h *Handler) AdjustBorrowingBalance(ctx context.Context, req *financev1.Adj
 
 	b, err := h.Coordinator.AdjustBorrowingBalance(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoBorrowing(b), nil

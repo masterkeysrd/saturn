@@ -65,7 +65,7 @@ func (h *Handler) CreateRecurringTransaction(ctx context.Context, req *financev1
 
 	expense, err := h.Coordinator.CreateRecurringTransaction(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoRecurringTransaction(expense), nil
@@ -137,7 +137,7 @@ func (h *Handler) UpdateRecurringTransaction(ctx context.Context, req *financev1
 
 	expense, err := h.Coordinator.UpdateRecurringTransaction(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoRecurringTransaction(expense), nil
@@ -155,7 +155,7 @@ func (h *Handler) DeleteRecurringTransaction(ctx context.Context, req *financev1
 	}
 
 	if err := h.Coordinator.DeleteRecurringTransaction(ctx, id, opts); err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return &emptypb.Empty{}, nil
@@ -192,7 +192,7 @@ func (h *Handler) ListRecurringTransactions(ctx context.Context, req *financev1.
 
 	page, err := h.Aggregator.ListRecurringTransactions(ctx, spaceID, viewType, filter)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	protoExpenses := make([]*financev1.RecurringTransaction, 0, len(page.Items))
@@ -249,7 +249,7 @@ func (h *Handler) ListScheduledTransactions(ctx context.Context, req *financev1.
 
 	page, err := h.Aggregator.ListScheduledTransactions(ctx, spaceID, viewType, filter)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	protoPayments := make([]*financev1.ScheduledTransaction, 0, len(page.Items))
@@ -271,7 +271,7 @@ func (h *Handler) GetScheduledTransaction(ctx context.Context, req *financev1.Ge
 
 	sp, err := h.Coordinator.GetScheduledTransaction(ctx, spID)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoScheduledTransaction(sp), nil
@@ -329,7 +329,7 @@ func (h *Handler) ConfirmScheduledTransaction(ctx context.Context, req *financev
 
 	txn, err := h.Coordinator.ConfirmScheduledTransaction(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoTransaction(txn), nil
@@ -353,7 +353,7 @@ func (h *Handler) MatchScheduledTransaction(ctx context.Context, req *financev1.
 
 	txn, err := h.Coordinator.MatchScheduledTransaction(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoTransaction(txn), nil
@@ -367,7 +367,7 @@ func (h *Handler) SkipScheduledTransaction(ctx context.Context, req *financev1.S
 
 	sp, err := h.Coordinator.SkipScheduledTransaction(ctx, id)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoScheduledTransaction(sp), nil

@@ -21,7 +21,7 @@ type ListTransfersRequest struct {
 	PageToken string
 }
 
-func (c *Coordinator) CreateTransfer(ctx context.Context, req *CreateTransferRequest) (*finance.Transfer, error) {
+func (c *coordinator) CreateTransfer(ctx context.Context, req *CreateTransferRequest) (*finance.Transfer, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func (c *Coordinator) CreateTransfer(ctx context.Context, req *CreateTransferReq
 	return c.financeService.CreateTransfer(ctx, transfer)
 }
 
-func (c *Coordinator) GetTransfer(ctx context.Context, id finance.TransferID) (*finance.Transfer, error) {
+func (c *coordinator) GetTransfer(ctx context.Context, id finance.TransferID) (*finance.Transfer, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func (c *Coordinator) GetTransfer(ctx context.Context, id finance.TransferID) (*
 	return c.financeService.GetTransfer(ctx, rCtx.SpaceID, id)
 }
 
-func (c *Coordinator) DeleteTransfer(ctx context.Context, id finance.TransferID) error {
+func (c *coordinator) DeleteTransfer(ctx context.Context, id finance.TransferID) error {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return err
@@ -58,7 +58,7 @@ func (c *Coordinator) DeleteTransfer(ctx context.Context, id finance.TransferID)
 	return c.financeService.DeleteTransfer(ctx, rCtx.SpaceID, id)
 }
 
-func (c *Coordinator) ListTransfers(ctx context.Context, req *ListTransfersRequest) ([]*finance.Transfer, string, error) {
+func (c *coordinator) ListTransfers(ctx context.Context, req *ListTransfersRequest) ([]*finance.Transfer, string, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, "", err

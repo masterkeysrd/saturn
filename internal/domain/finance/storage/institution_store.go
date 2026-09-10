@@ -3,14 +3,13 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"errors"
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
-	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
@@ -56,14 +55,15 @@ func toDBInstitution(i *finance.Institution) institutionDB {
 }
 
 type InstitutionStore struct {
-	db *sqlx.DB
+	db db.DB
 }
 
-func NewInstitutionStore(db *sqlx.DB) *InstitutionStore {
-	return &InstitutionStore{db: db.Unsafe()}
+func NewInstitutionStore(database db.DB) *InstitutionStore {
+	return &InstitutionStore{db: database}
 }
 
 func (s *InstitutionStore) Create(ctx context.Context, inst *finance.Institution) error {
+	const op errors.Op = "domain/finance/storage.CreateInstitution"
 	if inst.Version == 0 {
 		inst.Version = 1
 	}
@@ -71,13 +71,16 @@ func (s *InstitutionStore) Create(ctx context.Context, inst *finance.Institution
 		Rows(toDBInstitution(inst)).
 		ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	_, err = s.db.ExecContext(ctx, query, args...)
-	return err
+	if _, err := s.db.Exec(ctx, query, args...); err != nil {
+		return errors.E(op, err)
+	}
+	return nil
 }
 
 func (s *InstitutionStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.InstitutionID) (*finance.Institution, error) {
+	const op errors.Op = "domain/finance/storage.GetInstitutionByID"
 	query, args, err := pgDialect.From(goqu.S("finance").Table("institution")).
 		Select(
 			goqu.C("id"),
@@ -93,20 +96,18 @@ func (s *InstitutionStore) GetByID(ctx context.Context, spaceID finance.SpaceID,
 		Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)}).
 		ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 
 	var row institutionDB
-	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("institution not found")
-		}
-		return nil, err
+	if err := s.db.Get(ctx, &row, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 	return row.toDomain(), nil
 }
 
 func (s *InstitutionStore) GetByName(ctx context.Context, spaceID finance.SpaceID, name string) (*finance.Institution, error) {
+	const op errors.Op = "domain/finance/storage.GetInstitutionByName"
 	query, args, err := pgDialect.From(goqu.S("finance").Table("institution")).
 		Select(
 			goqu.C("id"),
@@ -123,20 +124,18 @@ func (s *InstitutionStore) GetByName(ctx context.Context, spaceID finance.SpaceI
 		Where(goqu.L("LOWER(name) = ?", strings.ToLower(strings.TrimSpace(name)))).
 		ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 
 	var row institutionDB
-	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("institution not found")
-		}
-		return nil, err
+	if err := s.db.Get(ctx, &row, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 	return row.toDomain(), nil
 }
 
 func (s *InstitutionStore) GetByIDs(ctx context.Context, spaceID finance.SpaceID, ids []finance.InstitutionID) ([]*finance.Institution, error) {
+	const op errors.Op = "domain/finance/storage.GetInstitutionsByIDs"
 	if len(ids) == 0 {
 		return nil, nil
 	}
@@ -160,12 +159,12 @@ func (s *InstitutionStore) GetByIDs(ctx context.Context, spaceID finance.SpaceID
 		Where(goqu.Ex{"space_id": string(spaceID), "id": idStrs}).
 		ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 
 	var rows []institutionDB
-	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
-		return nil, err
+	if err := s.db.Select(ctx, &rows, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 
 	institutions := make([]*finance.Institution, len(rows))
@@ -176,6 +175,7 @@ func (s *InstitutionStore) GetByIDs(ctx context.Context, spaceID finance.SpaceID
 }
 
 func (s *InstitutionStore) Update(ctx context.Context, inst *finance.Institution) error {
+	const op errors.Op = "domain/finance/storage.UpdateInstitution"
 	row := toDBInstitution(inst)
 	query, args, err := pgDialect.Update(goqu.S("finance").Table("institution")).
 		Set(goqu.Record{
@@ -189,25 +189,21 @@ func (s *InstitutionStore) Update(ctx context.Context, inst *finance.Institution
 		Where(goqu.Ex{"id": row.ID, "version": row.Version}).
 		ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
 
-	res, err := s.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return finance.ErrInstitutionVersionMismatch
+	if err := s.db.ExecOne(ctx, query, args...); err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return errors.E(op, errors.Conflict, finance.InstitutionVersionMismatch, "institution version mismatch")
+		}
+		return errors.E(op, err)
 	}
 	inst.Version++
 	return nil
 }
 
 func (s *InstitutionStore) Delete(ctx context.Context, spaceID finance.SpaceID, id finance.InstitutionID, opts finance.DeleteOptions) error {
+	const op errors.Op = "domain/finance/storage.DeleteInstitution"
 	ex := goqu.Ex{"space_id": string(spaceID), "id": string(id)}
 	if opts.Version > 0 {
 		ex["version"] = opts.Version
@@ -216,24 +212,20 @@ func (s *InstitutionStore) Delete(ctx context.Context, spaceID finance.SpaceID, 
 		Where(ex).
 		ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
 
-	res, err := s.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return errors.New("institution not found")
+	if err := s.db.ExecOne(ctx, query, args...); err != nil {
+		if opts.Version > 0 && errors.Is(err, errors.NotExist) {
+			return errors.E(op, errors.Conflict, finance.InstitutionVersionMismatch, "institution version mismatch")
+		}
+		return errors.E(op, err)
 	}
 	return nil
 }
 
 func (s *InstitutionStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListInstitutionsFilter) (*paging.Page[*finance.Institution], error) {
+	const op errors.Op = "domain/finance/storage.ListInstitutionsBySpace"
 	if filter.PageSize <= 0 || filter.PageSize > 100 {
 		filter.PageSize = 50
 	}
@@ -263,12 +255,12 @@ func (s *InstitutionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, fmt.Errorf("build sql query: %w", err)
+		return nil, errors.E(op, err)
 	}
 
 	var rows []institutionDB
-	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
-		return nil, fmt.Errorf("select context: %w", err)
+	if err := s.db.Select(ctx, &rows, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 
 	institutions := make([]*finance.Institution, len(rows))

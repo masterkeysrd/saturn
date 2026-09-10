@@ -2,12 +2,13 @@ package financeapp
 
 import (
 	"context"
-	"errors"
 	"time"
 
+	agentapp "github.com/masterkeysrd/saturn/internal/application/agent"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/foundation/auth"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
@@ -160,8 +161,133 @@ type Dependencies struct {
 	StatementPipeline *StatementPipeline
 }
 
+//go:generate go run github.com/masterkeysrd/saturn/tools/txgen -target=Coordinator
+//go:generate go run github.com/masterkeysrd/saturn/tools/loggen -target=Coordinator -component=finance
+
 // Coordinator orchestrates requests across workspace and finance boundaries.
-type Coordinator struct {
+type Coordinator interface {
+	// @transactional
+	ConfigureFinance(ctx context.Context, req *ConfigureFinanceRequest) (*finance.FinanceSettings, error)
+	GetFinanceSettings(ctx context.Context) (*finance.FinanceSettings, error)
+	ListCurrencies(ctx context.Context) ([]finance.CurrencyInfo, error)
+
+	// @transactional
+	ImportStatement(ctx context.Context, accountID finance.AccountID, stmt *finance.Statement) (*finance.Statement, error)
+	// @transactional
+	DeleteStatement(ctx context.Context, id finance.StatementID, opts finance.DeleteOptions) error
+	// @transactional
+	UpdateStatement(ctx context.Context, stmt *finance.Statement, mask []string) (*finance.Statement, error)
+	// @transactional
+	UpdateStatementLine(ctx context.Context, line *finance.StatementLine, mask []string) (*finance.StatementLine, error)
+	// @transactional
+	CompleteStatement(ctx context.Context, id finance.StatementID) (*finance.Statement, error)
+	// @transactional
+	InvertStatementSigns(ctx context.Context, id finance.StatementID) (*finance.Statement, []*finance.StatementLine, error)
+	IngestStatementDocument(ctx context.Context, req *StatementDocumentRequest) (*IngestStatementResult, error)
+	AnalyzeStatementDocument(ctx context.Context, req *StatementDocumentRequest) (*StatementIngestionState, error)
+
+	// @transactional
+	CreateAccount(ctx context.Context, req *CreateAccountRequest) (*finance.Account, error)
+	// @transactional
+	UpdateAccount(ctx context.Context, req *UpdateAccountRequest) (*finance.Account, error)
+	// @transactional
+	DeleteAccount(ctx context.Context, id finance.AccountID, opts finance.DeleteOptions) error
+	// @transactional
+	AdjustAccountBalance(ctx context.Context, id finance.AccountID, targetBalance int64, adjustmentDate string, note string) (*finance.Account, error)
+
+	// @transactional
+	CreateBorrowing(ctx context.Context, req *CreateBorrowingRequest) (*finance.Borrowing, error)
+	// @transactional
+	UpdateBorrowing(ctx context.Context, req *UpdateBorrowingRequest) (*finance.Borrowing, error)
+	// @transactional
+	DeleteBorrowing(ctx context.Context, id finance.BorrowingID) error
+	// @transactional
+	AdjustBorrowingBalance(ctx context.Context, req *AdjustBorrowingBalanceRequest) (*finance.Borrowing, error)
+	// @transactional
+	LogBorrowingTransaction(ctx context.Context, req *LogBorrowingTransactionRequest) (*finance.Transaction, error)
+	// @transactional
+	UpdateBorrowingTransaction(ctx context.Context, req *UpdateBorrowingTransactionRequest) (*finance.Transaction, error)
+	// @transactional
+	DeleteBorrowingTransaction(ctx context.Context, req *DeleteBorrowingTransactionRequest) error
+
+	// @transactional
+	CreateBudget(ctx context.Context, req *CreateBudgetRequest) (*finance.Budget, error)
+	// @transactional
+	UpdateBudget(ctx context.Context, req *UpdateBudgetRequest) (*finance.Budget, error)
+	GetBudget(ctx context.Context, id finance.BudgetID) (*finance.Budget, error)
+	// @transactional
+	DeleteBudget(ctx context.Context, req *DeleteBudgetRequest) error
+
+	GetInsights(ctx context.Context, req *GetInsightsRequest) (*finance.Insights, error)
+
+	// @transactional
+	CreateInstitution(ctx context.Context, inst *finance.Institution) (*finance.Institution, error)
+	// @transactional
+	UpdateInstitution(ctx context.Context, inst *finance.Institution, mask []string) (*finance.Institution, error)
+	// @transactional
+	DeleteInstitution(ctx context.Context, id finance.InstitutionID, opts finance.DeleteOptions) error
+	ResolveInstitution(ctx context.Context, name string) (*finance.ResolveInstitutionResult, error)
+
+	// @transactional
+	CreateExchangeRate(ctx context.Context, req *CreateExchangeRateRequest) (*finance.ExchangeRate, error)
+	GetExchangeRate(ctx context.Context, req *GetExchangeRateRequest) (*finance.ExchangeRate, error)
+	// @transactional
+	UpdateExchangeRate(ctx context.Context, req *UpdateExchangeRateRequest) (*finance.ExchangeRate, error)
+	ListExchangeRates(ctx context.Context, req *ListExchangeRatesRequest) ([]*finance.ExchangeRate, string, error)
+	// @transactional
+	DeleteExchangeRate(ctx context.Context, req *DeleteExchangeRateRequest) error
+
+	// @transactional
+	CreateRecurringTransaction(ctx context.Context, req *CreateRecurringTransactionRequest) (*finance.RecurringTransaction, error)
+	// @transactional
+	UpdateRecurringTransaction(ctx context.Context, req *UpdateRecurringTransactionRequest) (*finance.RecurringTransaction, error)
+	// @transactional
+	DeleteRecurringTransaction(ctx context.Context, id finance.RecurringTransactionID, opts finance.DeleteOptions) error
+	// @transactional
+	ConfirmScheduledTransaction(ctx context.Context, req *ConfirmScheduledTransactionRequest) (*finance.Transaction, error)
+	// @transactional
+	MatchScheduledTransaction(ctx context.Context, req *MatchScheduledTransactionRequest) (*finance.Transaction, error)
+	// @transactional
+	SkipScheduledTransaction(ctx context.Context, id finance.ScheduledTransactionID) (*finance.ScheduledTransaction, error)
+	GetScheduledTransaction(ctx context.Context, id finance.ScheduledTransactionID) (*finance.ScheduledTransaction, error)
+	// @transactional
+	GenerateScheduledTransactions(ctx context.Context) error
+
+	// @transactional
+	CreateExpense(ctx context.Context, req *CreateExpenseRequest) (*finance.Transaction, error)
+	// @transactional
+	CreateIncome(ctx context.Context, req *CreateIncomeRequest) (*finance.Transaction, error)
+	// @transactional
+	UpdateExpense(ctx context.Context, req *UpdateExpenseRequest) (*finance.Transaction, error)
+	// @transactional
+	UpdateIncome(ctx context.Context, req *UpdateIncomeRequest) (*finance.Transaction, error)
+	// @transactional
+	DeleteTransaction(ctx context.Context, id finance.TransactionID) error
+	ListTransactionEvents(ctx context.Context, req *ListTransactionEventsRequest) ([]*finance.TransactionEvent, error)
+
+	// @transactional
+	CreateTransfer(ctx context.Context, req *CreateTransferRequest) (*finance.Transfer, error)
+	GetTransfer(ctx context.Context, id finance.TransferID) (*finance.Transfer, error)
+	// @transactional
+	DeleteTransfer(ctx context.Context, id finance.TransferID) error
+	ListTransfers(ctx context.Context, req *ListTransfersRequest) ([]*finance.Transfer, string, error)
+
+	IngestEmail(ctx context.Context, spaceID string, integrationID string, sender, subject, body string) (*finance.InboxItem, error)
+	// @transactional
+	DiscardInboxItem(ctx context.Context, id string) error
+	GetTransactionSuggestions(ctx context.Context, req *IngestionRequest) (*SignalSuggestion, error)
+	ProcessSuggestions(ctx context.Context, spaceID string, req *agentapp.SuggestionRequest) (map[string]any, error)
+	// @transactional
+	UpdateInboxItem(ctx context.Context, item *finance.InboxItem) (*finance.InboxItem, error)
+	// @transactional
+	ApproveInboxItem(ctx context.Context, id string) (*finance.InboxItem, error)
+
+	ProcessSignalPipeline(ctx context.Context, spaceID string, req *IngestionRequest) (*IngestionState, error)
+	GetSignalSuggestions(ctx context.Context, spaceID string, req *IngestionRequest) (*SignalSuggestion, error)
+}
+
+// coordinator orchestrates requests across workspace and finance boundaries.
+type coordinator struct {
 	financeService    FinanceService
 	spaceService      SpaceService
 	classifier        DocumentClassifier
@@ -171,8 +297,8 @@ type Coordinator struct {
 }
 
 // NewCoordinator instantiates a new Coordinator.
-func NewCoordinator(deps Dependencies) *Coordinator {
-	return &Coordinator{
+func NewCoordinator(deps Dependencies) Coordinator {
+	return &coordinator{
 		financeService:    deps.FinanceService,
 		spaceService:      deps.SpaceService,
 		classifier:        deps.Classifier,
@@ -182,6 +308,8 @@ func NewCoordinator(deps Dependencies) *Coordinator {
 	}
 }
 
+var _ Coordinator = (*coordinator)(nil)
+
 // RequestContext encapsulates the active request context properties.
 type RequestContext struct {
 	SpaceID finance.SpaceID
@@ -189,15 +317,17 @@ type RequestContext struct {
 }
 
 // resolveContext extracts space and user identity safely into a RequestContext struct.
-func (c *Coordinator) resolveContext(ctx context.Context) (*RequestContext, error) {
+func (c *coordinator) resolveContext(ctx context.Context) (*RequestContext, error) {
+	const op errors.Op = "application/finance.resolveContext"
+
 	spaceIDStr, ok := auth.SpaceIDFromContext(ctx)
 	if !ok {
-		return nil, errors.New("access denied: missing space-id context")
+		return nil, errors.E(op, errors.Unauthenticated, "access denied: missing space-id context")
 	}
 
 	principal, ok := auth.PrincipalFromContext(ctx)
 	if !ok {
-		return nil, errors.New("access denied: missing user principal")
+		return nil, errors.E(op, errors.Unauthenticated, "access denied: missing user principal")
 	}
 
 	return &RequestContext{
@@ -212,7 +342,7 @@ type ConfigureFinanceRequest struct {
 }
 
 // ConfigureFinance sets up base currency preferences for a workspace.
-func (c *Coordinator) ConfigureFinance(ctx context.Context, req *ConfigureFinanceRequest) (*finance.FinanceSettings, error) {
+func (c *coordinator) ConfigureFinance(ctx context.Context, req *ConfigureFinanceRequest) (*finance.FinanceSettings, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -227,7 +357,7 @@ func (c *Coordinator) ConfigureFinance(ctx context.Context, req *ConfigureFinanc
 }
 
 // GetFinanceSettings fetches workspace configuration.
-func (c *Coordinator) GetFinanceSettings(ctx context.Context) (*finance.FinanceSettings, error) {
+func (c *coordinator) GetFinanceSettings(ctx context.Context) (*finance.FinanceSettings, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -237,7 +367,7 @@ func (c *Coordinator) GetFinanceSettings(ctx context.Context) (*finance.FinanceS
 }
 
 // ListCurrencies returns the list of supported currencies.
-func (c *Coordinator) ListCurrencies(ctx context.Context) ([]finance.CurrencyInfo, error) {
+func (c *coordinator) ListCurrencies(ctx context.Context) ([]finance.CurrencyInfo, error) {
 	_, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -246,7 +376,7 @@ func (c *Coordinator) ListCurrencies(ctx context.Context) ([]finance.CurrencyInf
 }
 
 // ImportStatement imports a statement for the session's workspace.
-func (c *Coordinator) ImportStatement(ctx context.Context, accountID finance.AccountID, stmt *finance.Statement) (*finance.Statement, error) {
+func (c *coordinator) ImportStatement(ctx context.Context, accountID finance.AccountID, stmt *finance.Statement) (*finance.Statement, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -256,7 +386,7 @@ func (c *Coordinator) ImportStatement(ctx context.Context, accountID finance.Acc
 }
 
 // DeleteStatement deletes a statement for the session's workspace.
-func (c *Coordinator) DeleteStatement(ctx context.Context, id finance.StatementID, opts finance.DeleteOptions) error {
+func (c *coordinator) DeleteStatement(ctx context.Context, id finance.StatementID, opts finance.DeleteOptions) error {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return err
@@ -265,7 +395,7 @@ func (c *Coordinator) DeleteStatement(ctx context.Context, id finance.StatementI
 }
 
 // UpdateStatement updates statement metadata and balances.
-func (c *Coordinator) UpdateStatement(ctx context.Context, stmt *finance.Statement, mask []string) (*finance.Statement, error) {
+func (c *coordinator) UpdateStatement(ctx context.Context, stmt *finance.Statement, mask []string) (*finance.Statement, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -274,7 +404,7 @@ func (c *Coordinator) UpdateStatement(ctx context.Context, stmt *finance.Stateme
 }
 
 // UpdateStatementLine updates draft decisions on a statement line.
-func (c *Coordinator) UpdateStatementLine(ctx context.Context, line *finance.StatementLine, mask []string) (*finance.StatementLine, error) {
+func (c *coordinator) UpdateStatementLine(ctx context.Context, line *finance.StatementLine, mask []string) (*finance.StatementLine, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -283,7 +413,7 @@ func (c *Coordinator) UpdateStatementLine(ctx context.Context, line *finance.Sta
 }
 
 // CompleteStatement finalizes statement reconciliation.
-func (c *Coordinator) CompleteStatement(ctx context.Context, id finance.StatementID) (*finance.Statement, error) {
+func (c *coordinator) CompleteStatement(ctx context.Context, id finance.StatementID) (*finance.Statement, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -292,7 +422,7 @@ func (c *Coordinator) CompleteStatement(ctx context.Context, id finance.Statemen
 }
 
 // InvertStatementSigns inverts all line amounts and negates statement starting/ending balances.
-func (c *Coordinator) InvertStatementSigns(ctx context.Context, id finance.StatementID) (*finance.Statement, []*finance.StatementLine, error) {
+func (c *coordinator) InvertStatementSigns(ctx context.Context, id finance.StatementID) (*finance.Statement, []*finance.StatementLine, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -301,9 +431,10 @@ func (c *Coordinator) InvertStatementSigns(ctx context.Context, id finance.State
 }
 
 // IngestStatementDocument executes statement document ingestion for the session's workspace.
-func (c *Coordinator) IngestStatementDocument(ctx context.Context, req *StatementDocumentRequest) (*IngestStatementResult, error) {
+func (c *coordinator) IngestStatementDocument(ctx context.Context, req *StatementDocumentRequest) (*IngestStatementResult, error) {
+	const op errors.Op = "application/finance.IngestStatementDocument"
 	if c.statementPipeline == nil {
-		return nil, errors.New("statement pipeline is not configured")
+		return nil, errors.E(op, errors.Internal, "statement pipeline is not configured")
 	}
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
@@ -313,9 +444,10 @@ func (c *Coordinator) IngestStatementDocument(ctx context.Context, req *Statemen
 }
 
 // AnalyzeStatementDocument analyzes statement document without persisting drafts (preview mode).
-func (c *Coordinator) AnalyzeStatementDocument(ctx context.Context, req *StatementDocumentRequest) (*StatementIngestionState, error) {
+func (c *coordinator) AnalyzeStatementDocument(ctx context.Context, req *StatementDocumentRequest) (*StatementIngestionState, error) {
+	const op errors.Op = "application/finance.AnalyzeStatementDocument"
 	if c.statementPipeline == nil {
-		return nil, errors.New("statement pipeline is not configured")
+		return nil, errors.E(op, errors.Internal, "statement pipeline is not configured")
 	}
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {

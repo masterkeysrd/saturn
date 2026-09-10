@@ -3,12 +3,12 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
-	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
@@ -64,14 +64,15 @@ func (r *recurringTransactionDB) toDomain() *finance.RecurringTransaction {
 }
 
 type RecurringTransactionStore struct {
-	db *sqlx.DB
+	db db.DB
 }
 
-func NewRecurringTransactionStore(db *sqlx.DB) *RecurringTransactionStore {
-	return &RecurringTransactionStore{db: db}
+func NewRecurringTransactionStore(database db.DB) *RecurringTransactionStore {
+	return &RecurringTransactionStore{db: database}
 }
 
 func (s *RecurringTransactionStore) Create(ctx context.Context, re *finance.RecurringTransaction) error {
+	const op errors.Op = "domain/finance/storage.CreateRecurringTransaction"
 	if re.Version == 0 {
 		re.Version = 1
 	}
@@ -104,31 +105,32 @@ func (s *RecurringTransactionStore) Create(ctx context.Context, re *finance.Recu
 	})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	_, err = s.db.ExecContext(ctx, query, args...)
-	return err
+	if _, err := s.db.Exec(ctx, query, args...); err != nil {
+		return errors.E(op, err)
+	}
+	return nil
 }
 
 func (s *RecurringTransactionStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.RecurringTransactionID) (*finance.RecurringTransaction, error) {
+	const op errors.Op = "domain/finance/storage.GetRecurringTransactionByID"
 	ds := pgDialect.From(goqu.S("finance").Table("recurring_transaction")).
 		Select("*").
 		Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 	var row recurringTransactionDB
-	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("recurring transaction not found")
-		}
-		return nil, err
+	if err := s.db.Get(ctx, &row, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 	return row.toDomain(), nil
 }
 
 func (s *RecurringTransactionStore) GetByIDs(ctx context.Context, spaceID finance.SpaceID, ids []finance.RecurringTransactionID) ([]*finance.RecurringTransaction, error) {
+	const op errors.Op = "domain/finance/storage.GetRecurringTransactionsByIDs"
 	if len(ids) == 0 {
 		return nil, nil
 	}
@@ -142,12 +144,12 @@ func (s *RecurringTransactionStore) GetByIDs(ctx context.Context, spaceID financ
 		Where(goqu.Ex{"space_id": string(spaceID), "id": idStrings})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 
 	var rows []recurringTransactionDB
-	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
-		return nil, err
+	if err := s.db.Select(ctx, &rows, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 
 	transactions := make([]*finance.RecurringTransaction, len(rows))
@@ -158,6 +160,7 @@ func (s *RecurringTransactionStore) GetByIDs(ctx context.Context, spaceID financ
 }
 
 func (s *RecurringTransactionStore) Update(ctx context.Context, re *finance.RecurringTransaction) error {
+	const op errors.Op = "domain/finance/storage.UpdateRecurringTransaction"
 	var budgetID interface{}
 	if re.BudgetID != nil {
 		budgetID = string(*re.BudgetID)
@@ -189,24 +192,20 @@ func (s *RecurringTransactionStore) Update(ctx context.Context, re *finance.Recu
 		})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	res, err := s.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return finance.ErrRecurringTransactionVersionMismatch
+	if err := s.db.ExecOne(ctx, query, args...); err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return errors.E(op, errors.Conflict, finance.RecurringTransactionVersionMismatch, "recurring transaction version mismatch")
+		}
+		return errors.E(op, err)
 	}
 	re.Version++
 	return nil
 }
 
 func (s *RecurringTransactionStore) Delete(ctx context.Context, id finance.RecurringTransactionID, opts finance.DeleteOptions) error {
+	const op errors.Op = "domain/finance/storage.DeleteRecurringTransaction"
 	ds := pgDialect.Delete(goqu.S("finance").Table("recurring_transaction")).
 		Where(goqu.Ex{"id": string(id)})
 	if opts.Version > 0 {
@@ -214,26 +213,19 @@ func (s *RecurringTransactionStore) Delete(ctx context.Context, id finance.Recur
 	}
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	res, err := s.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		if opts.Version > 0 {
-			return finance.ErrRecurringTransactionVersionMismatch
+	if err := s.db.ExecOne(ctx, query, args...); err != nil {
+		if opts.Version > 0 && errors.Is(err, errors.NotExist) {
+			return errors.E(op, errors.Conflict, finance.VersionMismatch, "recurring transaction version mismatch")
 		}
-		return errors.New("recurring transaction not found")
+		return errors.E(op, err)
 	}
 	return nil
 }
 
 func (s *RecurringTransactionStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListRecurringTransactionsFilter) (*paging.Page[*finance.RecurringTransaction], error) {
+	const op errors.Op = "domain/finance/storage.ListRecurringTransactionsBySpace"
 	if filter.PageSize <= 0 || filter.PageSize > 100 {
 		filter.PageSize = 20
 	}
@@ -265,12 +257,12 @@ func (s *RecurringTransactionStore) ListBySpace(ctx context.Context, spaceID fin
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 
 	var rows []recurringTransactionDB
-	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
-		return nil, err
+	if err := s.db.Select(ctx, &rows, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 
 	transactions := make([]*finance.RecurringTransaction, len(rows))
@@ -287,6 +279,7 @@ func (s *RecurringTransactionStore) ListBySpace(ctx context.Context, spaceID fin
 }
 
 func (s *RecurringTransactionStore) ListPendingGeneration(ctx context.Context, maxDueDate time.Time) ([]*finance.RecurringTransaction, error) {
+	const op errors.Op = "domain/finance/storage.ListPendingGeneration"
 	ds := pgDialect.From(goqu.S("finance").Table("recurring_transaction")).
 		Select("*").
 		Where(goqu.Ex{
@@ -296,12 +289,12 @@ func (s *RecurringTransactionStore) ListPendingGeneration(ctx context.Context, m
 		Order(goqu.I("next_due_date").Asc())
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 
 	var rows []recurringTransactionDB
-	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
-		return nil, err
+	if err := s.db.Select(ctx, &rows, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 
 	transactions := make([]*finance.RecurringTransaction, len(rows))

@@ -2,12 +2,13 @@ package finance
 
 import (
 	"context"
-	"errors"
 	"math"
 	"slices"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 
 	"github.com/masterkeysrd/saturn/internal/platform/id"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
@@ -28,7 +29,7 @@ func (m *mockSettingsStore) Create(ctx context.Context, settings *FinanceSetting
 func (m *mockSettingsStore) GetByID(ctx context.Context, spaceID SpaceID) (*FinanceSettings, error) {
 	s, ok := m.data[spaceID]
 	if !ok {
-		return nil, ErrSettingsNotFound
+		return nil, errors.E(errors.NotExist, SettingsNotFound, "finance settings not found")
 	}
 	return s, nil
 }
@@ -48,7 +49,7 @@ func (m *mockBudgetStore) Create(ctx context.Context, b *Budget) error {
 func (m *mockBudgetStore) GetByID(ctx context.Context, spaceID SpaceID, id BudgetID) (*Budget, error) {
 	b, ok := m.data[id]
 	if !ok {
-		return nil, ErrBudgetNotFound
+		return nil, errors.E(errors.NotExist, BudgetNotFound, "budget not found")
 	}
 	if b.Status == "" {
 		b.Status = BudgetStatusActive
@@ -68,7 +69,7 @@ func (m *mockBudgetStore) GetByIDs(ctx context.Context, spaceID SpaceID, ids []B
 
 func (m *mockBudgetStore) Update(ctx context.Context, b *Budget) error {
 	if _, ok := m.data[b.ID]; !ok {
-		return ErrBudgetNotFound
+		return errors.E(errors.NotExist, BudgetNotFound, "budget not found")
 	}
 	m.data[b.ID] = b
 	return nil
@@ -77,10 +78,10 @@ func (m *mockBudgetStore) Update(ctx context.Context, b *Budget) error {
 func (m *mockBudgetStore) Delete(ctx context.Context, spaceID SpaceID, id BudgetID, opts DeleteOptions) error {
 	existing, ok := m.data[id]
 	if !ok {
-		return ErrBudgetNotFound
+		return errors.E(errors.NotExist, BudgetNotFound, "budget not found")
 	}
 	if opts.Version > 0 && existing.Version != opts.Version {
-		return ErrBudgetVersionMismatch
+		return errors.E(errors.Conflict, VersionMismatch, "budget version mismatch")
 	}
 	delete(m.data, id)
 	return nil
@@ -112,7 +113,7 @@ func (m *mockPeriodStore) GetByRange(ctx context.Context, budgetID BudgetID, sta
 	key := string(budgetID) + "_" + startDate.Format(time.RFC3339) + "_" + endDate.Format(time.RFC3339)
 	p, ok := m.data[key]
 	if !ok {
-		return nil, ErrPeriodNotFound
+		return nil, errors.E(errors.NotExist, PeriodNotFound, "budget period not found")
 	}
 	return p, nil
 }
@@ -135,7 +136,7 @@ func (m *mockPeriodStore) UpdateLimit(ctx context.Context, id PeriodID, limit in
 			return nil
 		}
 	}
-	return ErrPeriodNotFound
+	return errors.E(errors.NotExist, PeriodNotFound, "budget period not found")
 }
 
 func (m *mockPeriodStore) ListByBudget(ctx context.Context, budgetID BudgetID) ([]*BudgetPeriod, error) {
@@ -161,7 +162,7 @@ func (m *mockExchangeRateStore) Create(ctx context.Context, r *ExchangeRate) err
 func (m *mockExchangeRateStore) Update(ctx context.Context, r *ExchangeRate) error {
 	key := string(r.SpaceID) + "_" + string(r.FromCurrency) + "_" + string(r.ToCurrency) + "_" + r.RateDate.Format("2006-01-02")
 	if _, ok := m.rates[key]; !ok {
-		return ErrExchangeRateNotFound
+		return errors.E(errors.NotExist, ExchangeRateNotFound, "exchange rate not found")
 	}
 	m.rates[key] = r
 	return nil
@@ -171,7 +172,7 @@ func (m *mockExchangeRateStore) GetExactRate(ctx context.Context, query Exchange
 	key := string(query.SpaceID) + "_" + string(query.FromCurrency) + "_" + string(query.ToCurrency) + "_" + query.RateDate.Format("2006-01-02")
 	r, ok := m.rates[key]
 	if !ok {
-		return nil, ErrExchangeRateNotFound
+		return nil, errors.E(errors.NotExist, ExchangeRateNotFound, "exchange rate not found")
 	}
 	return r, nil
 }
@@ -189,7 +190,7 @@ func (m *mockExchangeRateStore) GetRate(ctx context.Context, query ExchangeRateK
 		}
 	}
 	if best == nil {
-		return nil, ErrExchangeRateNotFound
+		return nil, errors.E(errors.NotExist, ExchangeRateNotFound, "exchange rate not found")
 	}
 	return best, nil
 }
@@ -207,7 +208,7 @@ func (m *mockExchangeRateStore) GetNextRate(ctx context.Context, query ExchangeR
 		}
 	}
 	if best == nil {
-		return nil, ErrExchangeRateNotFound
+		return nil, errors.E(errors.NotExist, ExchangeRateNotFound, "exchange rate not found")
 	}
 	return best, nil
 }
@@ -265,7 +266,7 @@ func (m *mockTransactionStore) Create(ctx context.Context, t *Transaction) error
 func (m *mockTransactionStore) GetByID(ctx context.Context, spaceID SpaceID, id TransactionID) (*Transaction, error) {
 	t, ok := m.txns[id]
 	if !ok {
-		return nil, ErrTransactionNotFound
+		return nil, errors.E(errors.NotExist, TransactionNotFound, "transaction not found")
 	}
 	return t, nil
 }
@@ -285,7 +286,7 @@ func (m *mockTransactionStore) HasTransactions(ctx context.Context, spaceID Spac
 
 func (m *mockTransactionStore) Delete(ctx context.Context, id TransactionID) error {
 	if _, ok := m.txns[id]; !ok {
-		return ErrTransactionNotFound
+		return errors.E(errors.NotExist, TransactionNotFound, "transaction not found")
 	}
 	delete(m.txns, id)
 	return nil
@@ -293,7 +294,7 @@ func (m *mockTransactionStore) Delete(ctx context.Context, id TransactionID) err
 
 func (m *mockTransactionStore) Update(ctx context.Context, t *Transaction) error {
 	if _, ok := m.txns[t.ID]; !ok {
-		return ErrTransactionNotFound
+		return errors.E(errors.NotExist, TransactionNotFound, "transaction not found")
 	}
 	m.txns[t.ID] = t
 	return nil
@@ -442,7 +443,7 @@ func (m *mockAccountStore) Create(ctx context.Context, a *Account) error {
 func (m *mockAccountStore) GetByID(ctx context.Context, spaceID SpaceID, id AccountID) (*Account, error) {
 	a, ok := m.data[id]
 	if !ok || a.SpaceID != spaceID {
-		return nil, ErrAccountNotFound
+		return nil, errors.E(errors.NotExist, AccountNotFound, "account not found")
 	}
 	return a, nil
 }
@@ -450,7 +451,7 @@ func (m *mockAccountStore) GetByID(ctx context.Context, spaceID SpaceID, id Acco
 func (m *mockAccountStore) Update(ctx context.Context, a *Account) error {
 	existing, ok := m.data[a.ID]
 	if !ok || existing.SpaceID != a.SpaceID {
-		return ErrAccountNotFound
+		return errors.E(errors.NotExist, AccountNotFound, "account not found")
 	}
 	a.Version++
 	m.data[a.ID] = a
@@ -460,10 +461,10 @@ func (m *mockAccountStore) Update(ctx context.Context, a *Account) error {
 func (m *mockAccountStore) Delete(ctx context.Context, spaceID SpaceID, id AccountID, opts DeleteOptions) error {
 	existing, ok := m.data[id]
 	if !ok || existing.SpaceID != spaceID {
-		return ErrAccountNotFound
+		return errors.E(errors.NotExist, AccountNotFound, "account not found")
 	}
 	if opts.Version > 0 && existing.Version != opts.Version {
-		return ErrAccountVersionMismatch
+		return errors.E(errors.Conflict, VersionMismatch, "account version mismatch")
 	}
 	delete(m.data, id)
 	return nil
@@ -527,7 +528,7 @@ func (m *mockInstitutionStore) Delete(ctx context.Context, spaceID SpaceID, id I
 		return errors.New("institution not found")
 	}
 	if opts.Version > 0 && existing.Version != opts.Version {
-		return ErrInstitutionVersionMismatch
+		return errors.E(errors.Conflict, VersionMismatch, "institution version mismatch")
 	}
 	delete(m.data, id)
 	return nil
@@ -615,14 +616,14 @@ func (m *mockTransferStore) Create(ctx context.Context, t *Transfer) error {
 func (m *mockTransferStore) GetByID(ctx context.Context, spaceID SpaceID, id TransferID) (*Transfer, error) {
 	t, ok := m.data[id]
 	if !ok {
-		return nil, ErrTransferNotFound
+		return nil, errors.E(errors.NotExist, TransferNotFound, "transfer not found")
 	}
 	return t, nil
 }
 
 func (m *mockTransferStore) Delete(ctx context.Context, id TransferID) error {
 	if _, ok := m.data[id]; !ok {
-		return ErrTransferNotFound
+		return errors.E(errors.NotExist, TransferNotFound, "transfer not found")
 	}
 	delete(m.data, id)
 	return nil
@@ -669,7 +670,7 @@ func (m *mockBorrowingStore) Create(ctx context.Context, b *Borrowing) error {
 func (m *mockBorrowingStore) GetByID(ctx context.Context, spaceID SpaceID, id BorrowingID) (*Borrowing, error) {
 	b, ok := m.data[id]
 	if !ok {
-		return nil, ErrBorrowingNotFound
+		return nil, errors.E(errors.NotExist, BorrowingNotFound, "borrowing not found")
 	}
 	return b, nil
 }
@@ -719,14 +720,14 @@ func (m *mockScheduledTransactionStore) Create(ctx context.Context, payment *Sch
 func (m *mockScheduledTransactionStore) GetByID(ctx context.Context, spaceID SpaceID, id ScheduledTransactionID) (*ScheduledTransaction, error) {
 	p, ok := m.payments[id]
 	if !ok || p.SpaceID != spaceID {
-		return nil, ErrScheduledTransactionNotFound
+		return nil, errors.E(errors.NotExist, ScheduledTransactionNotFound, "scheduled transaction not found")
 	}
 	return p, nil
 }
 
 func (m *mockScheduledTransactionStore) Update(ctx context.Context, payment *ScheduledTransaction) error {
 	if _, ok := m.payments[payment.ID]; !ok {
-		return ErrScheduledTransactionNotFound
+		return errors.E(errors.NotExist, ScheduledTransactionNotFound, "scheduled transaction not found")
 	}
 	m.payments[payment.ID] = payment
 	return nil
@@ -735,7 +736,7 @@ func (m *mockScheduledTransactionStore) Update(ctx context.Context, payment *Sch
 func (m *mockScheduledTransactionStore) UpdateStatus(ctx context.Context, id ScheduledTransactionID, status ScheduledTransactionStatus) error {
 	p, ok := m.payments[id]
 	if !ok {
-		return ErrScheduledTransactionNotFound
+		return errors.E(errors.NotExist, ScheduledTransactionNotFound, "scheduled transaction not found")
 	}
 	p.Status = status
 	return nil
@@ -797,7 +798,7 @@ func (m *mockStatementStore) Create(ctx context.Context, statement *Statement, l
 func (m *mockStatementStore) GetByID(ctx context.Context, spaceID SpaceID, id StatementID) (*Statement, error) {
 	stmt, ok := m.statements[id]
 	if !ok || stmt.SpaceID != spaceID {
-		return nil, ErrStatementNotFound
+		return nil, errors.E(errors.NotExist, StatementNotFound, "statement not found")
 	}
 	cp := *stmt
 	return &cp, nil
@@ -825,10 +826,10 @@ func (m *mockStatementStore) List(ctx context.Context, spaceID SpaceID, filter *
 func (m *mockStatementStore) Delete(ctx context.Context, spaceID SpaceID, id StatementID, opts DeleteOptions) error {
 	stmt, ok := m.statements[id]
 	if !ok || stmt.SpaceID != spaceID {
-		return ErrStatementNotFound
+		return errors.E(errors.NotExist, StatementNotFound, "statement not found")
 	}
 	if opts.Version > 0 && stmt.Version != opts.Version {
-		return ErrStatementVersionMismatch
+		return errors.E(errors.Conflict, VersionMismatch, "statement version mismatch")
 	}
 	delete(m.statements, id)
 	delete(m.lines, id)
@@ -838,10 +839,10 @@ func (m *mockStatementStore) Delete(ctx context.Context, spaceID SpaceID, id Sta
 func (m *mockStatementStore) Update(ctx context.Context, statement *Statement) error {
 	existing, ok := m.statements[statement.ID]
 	if !ok {
-		return ErrStatementNotFound
+		return errors.E(errors.NotExist, StatementNotFound, "statement not found")
 	}
 	if statement.Version > 0 && existing.Version != statement.Version {
-		return ErrStatementVersionMismatch
+		return errors.E(errors.Conflict, VersionMismatch, "statement version mismatch")
 	}
 	existing.StatementStartingBalance = statement.StatementStartingBalance
 	existing.StatementEndingBalance = statement.StatementEndingBalance
@@ -856,7 +857,7 @@ func (m *mockStatementStore) Update(ctx context.Context, statement *Statement) e
 func (m *mockStatementStore) ListLines(ctx context.Context, statementID StatementID) ([]*StatementLine, error) {
 	lines, ok := m.lines[statementID]
 	if !ok {
-		return nil, ErrStatementLineNotFound
+		return nil, errors.E(errors.NotExist, StatementLineNotFound, "statement line not found")
 	}
 	return lines, nil
 }
@@ -870,7 +871,7 @@ func (m *mockStatementStore) GetLineByID(ctx context.Context, id StatementLineID
 			}
 		}
 	}
-	return nil, ErrStatementLineNotFound
+	return nil, errors.E(errors.NotExist, StatementLineNotFound, "statement line not found")
 }
 
 func (m *mockStatementStore) UpdateLineDraft(ctx context.Context, line *StatementLine) error {
@@ -879,7 +880,7 @@ func (m *mockStatementStore) UpdateLineDraft(ctx context.Context, line *Statemen
 		return err
 	}
 	if line.Version > 0 && existing.Version != line.Version {
-		return ErrStatementLineVersionMismatch
+		return errors.E(errors.Conflict, VersionMismatch, "statement line version mismatch")
 	}
 	existing.Status = line.Status
 	existing.Action = line.Action
@@ -892,7 +893,7 @@ func (m *mockStatementStore) UpdateLineDraft(ctx context.Context, line *Statemen
 func (m *mockStatementStore) UpdateStatementWithLines(ctx context.Context, stmt *Statement, lines []*StatementLine) error {
 	existing, ok := m.statements[stmt.ID]
 	if !ok {
-		return ErrStatementNotFound
+		return errors.E(errors.NotExist, StatementNotFound, "statement not found")
 	}
 	existing.StatementStartingBalance = stmt.StatementStartingBalance
 	existing.StatementEndingBalance = stmt.StatementEndingBalance
@@ -948,7 +949,7 @@ func TestUpdateBudget(t *testing.T) {
 		wantLimit int64
 	}{
 		{
-			name: "stale version returns ErrBudgetVersionMismatch",
+			name: "stale version returns VersionMismatch",
 			update: &Budget{
 				ID:          bID,
 				SpaceID:     spaceID,
@@ -956,7 +957,7 @@ func TestUpdateBudget(t *testing.T) {
 				LimitAmount: 40000,
 				Version:     1,
 			},
-			wantErr: ErrBudgetVersionMismatch,
+			wantErr: errors.E(errors.Conflict, VersionMismatch),
 		},
 		{
 			name: "valid matching version succeeds and updates fields",
@@ -1042,12 +1043,12 @@ func TestDeleteBudget(t *testing.T) {
 		{
 			name:    "deleting budget with active transactions fails",
 			bID:     bIDTxns,
-			wantErr: ErrBudgetHasTransactions,
+			wantErr: errors.E(errors.Precondition, BudgetHasTransactions),
 		},
 		{
 			name:    "deleting budget with active scheduled payments fails",
 			bID:     bIDSched,
-			wantErr: ErrBudgetHasScheduledTransactions,
+			wantErr: errors.E(errors.Precondition, BudgetHasScheduledTransactions),
 		},
 		{
 			name:    "deleting clean budget succeeds",
@@ -2323,10 +2324,10 @@ func TestDeleteBorrowing_BlockedWhenTransactionsExist(t *testing.T) {
 		t.Fatalf("CreateBorrowing with transaction failed: %v", err)
 	}
 
-	// 3. Attempt delete -> must be blocked with ErrBorrowingHasTransactions
+	// 3. Attempt delete -> must be blocked with BorrowingHasTransactions
 	err = svc.DeleteBorrowing(ctx, spaceID, b2.ID)
-	if !errors.Is(err, ErrBorrowingHasTransactions) {
-		t.Fatalf("DeleteBorrowing error = %v, want %v", err, ErrBorrowingHasTransactions)
+	if !errors.Is(err, BorrowingHasTransactions) {
+		t.Fatalf("DeleteBorrowing error = %v, want code %v", err, BorrowingHasTransactions)
 	}
 }
 
@@ -3416,7 +3417,7 @@ func TestUpdateAccount(t *testing.T) {
 		wantColor string
 	}{
 		{
-			name: "stale version returns ErrAccountVersionMismatch",
+			name: "stale version returns VersionMismatch",
 			update: &Account{
 				ID:      aID,
 				SpaceID: spaceID,
@@ -3424,7 +3425,7 @@ func TestUpdateAccount(t *testing.T) {
 				Version: 99,
 			},
 			mask:    []string{"color"},
-			wantErr: ErrAccountVersionMismatch,
+			wantErr: errors.E(errors.Conflict, VersionMismatch),
 		},
 		{
 			name: "valid version applies patch mask",
@@ -3484,7 +3485,7 @@ func TestUpdateInstitution(t *testing.T) {
 		wantColor string
 	}{
 		{
-			name: "stale version returns ErrInstitutionVersionMismatch",
+			name: "stale version returns VersionMismatch",
 			update: &Institution{
 				ID:      iID,
 				SpaceID: spaceID,
@@ -3492,7 +3493,7 @@ func TestUpdateInstitution(t *testing.T) {
 				Version: 99,
 			},
 			mask:    []string{"color"},
-			wantErr: ErrInstitutionVersionMismatch,
+			wantErr: errors.E(errors.Conflict, VersionMismatch),
 		},
 		{
 			name: "valid version applies patch mask",
@@ -3608,9 +3609,9 @@ func TestDeleteInstitution(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name:    "version mismatch returns ErrInstitutionVersionMismatch",
+			name:    "version mismatch returns VersionMismatch",
 			opts:    DeleteOptions{Version: 1},
-			wantErr: ErrInstitutionVersionMismatch,
+			wantErr: errors.E(errors.Conflict, VersionMismatch),
 		},
 		{
 			name:    "matching version succeeds",
@@ -3657,9 +3658,9 @@ func TestDeleteAccount(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name:    "version mismatch returns ErrAccountVersionMismatch",
+			name:    "version mismatch returns VersionMismatch",
 			opts:    DeleteOptions{Version: 1},
-			wantErr: ErrAccountVersionMismatch,
+			wantErr: errors.E(errors.Conflict, VersionMismatch),
 		},
 		{
 			name:    "matching version succeeds",
@@ -4596,7 +4597,7 @@ func TestService_UpdateStatement(t *testing.T) {
 			wantErr: nil,
 		},
 		{
-			name: "stale version returns ErrStatementVersionMismatch",
+			name: "stale version returns VersionMismatch",
 			setupStore: func() *mockStatementStore {
 				store := newMockStatementStore()
 				_ = store.Create(context.Background(), &Statement{
@@ -4620,7 +4621,7 @@ func TestService_UpdateStatement(t *testing.T) {
 				Version:                1,
 			},
 			mask:    []string{"statement_ending_balance", "version"},
-			wantErr: ErrStatementVersionMismatch,
+			wantErr: errors.E(errors.Conflict, VersionMismatch),
 		},
 	}
 
@@ -4675,7 +4676,7 @@ func TestService_DeleteStatement(t *testing.T) {
 			wantErr: nil,
 		},
 		{
-			name: "version mismatch returns ErrStatementVersionMismatch",
+			name: "version mismatch returns VersionMismatch",
 			setupStore: func() *mockStatementStore {
 				store := newMockStatementStore()
 				_ = store.Create(context.Background(), &Statement{
@@ -4688,7 +4689,7 @@ func TestService_DeleteStatement(t *testing.T) {
 				return store
 			},
 			opts:    DeleteOptions{Version: 1},
-			wantErr: ErrStatementVersionMismatch,
+			wantErr: errors.E(errors.Conflict, VersionMismatch),
 		},
 	}
 
@@ -4758,7 +4759,7 @@ func TestService_UpdateStatementLine(t *testing.T) {
 			wantErr: nil,
 		},
 		{
-			name: "stale line version returns ErrStatementLineVersionMismatch",
+			name: "stale line version returns VersionMismatch",
 			setupStore: func() *mockStatementStore {
 				store := newMockStatementStore()
 				_ = store.Create(context.Background(), &Statement{
@@ -4786,7 +4787,7 @@ func TestService_UpdateStatementLine(t *testing.T) {
 				Version: 1,
 			},
 			mask:    []string{"status", "version"},
-			wantErr: ErrStatementLineVersionMismatch,
+			wantErr: errors.E(errors.Conflict, VersionMismatch),
 		},
 	}
 

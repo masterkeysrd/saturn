@@ -76,10 +76,10 @@ func init() {
 
 // AgentDocumentClassifier implements DocumentClassifier using agent coordinator.
 type AgentDocumentClassifier struct {
-	coordinator *agentapp.Coordinator
+	coordinator agentapp.Coordinator
 }
 
-func NewAgentDocumentClassifier(c *agentapp.Coordinator) *AgentDocumentClassifier {
+func NewAgentDocumentClassifier(c agentapp.Coordinator) *AgentDocumentClassifier {
 	return &AgentDocumentClassifier{coordinator: c}
 }
 
@@ -108,10 +108,10 @@ func (a *AgentDocumentClassifier) Classify(ctx context.Context, spaceID string, 
 
 // AgentIngestionParser implements IngestionParser using agent coordinator.
 type AgentIngestionParser struct {
-	coordinator *agentapp.Coordinator
+	coordinator agentapp.Coordinator
 }
 
-func NewAgentIngestionParser(c *agentapp.Coordinator) *AgentIngestionParser {
+func NewAgentIngestionParser(c agentapp.Coordinator) *AgentIngestionParser {
 	return &AgentIngestionParser{coordinator: c}
 }
 
@@ -292,10 +292,10 @@ func (a *AgentIngestionParser) Parse(ctx context.Context, spaceID string, doc st
 
 // AgentIngestionDeduplicator implements IngestionDeduplicator using agent coordinator.
 type AgentIngestionDeduplicator struct {
-	coordinator *agentapp.Coordinator
+	coordinator agentapp.Coordinator
 }
 
-func NewAgentIngestionDeduplicator(c *agentapp.Coordinator) *AgentIngestionDeduplicator {
+func NewAgentIngestionDeduplicator(c agentapp.Coordinator) *AgentIngestionDeduplicator {
 	return &AgentIngestionDeduplicator{coordinator: c}
 }
 

@@ -3,12 +3,11 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"errors"
-	"fmt"
 
 	"github.com/doug-martin/goqu/v9"
-	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
@@ -59,14 +58,15 @@ func (row *accountDB) toDomain() *finance.Account {
 }
 
 type AccountStore struct {
-	db *sqlx.DB
+	db db.DB
 }
 
-func NewAccountStore(db *sqlx.DB) *AccountStore {
-	return &AccountStore{db: db.Unsafe()}
+func NewAccountStore(database db.DB) *AccountStore {
+	return &AccountStore{db: database}
 }
 
 func (s *AccountStore) Create(ctx context.Context, a *finance.Account) error {
+	const op errors.Op = "domain/finance/storage.Create"
 	version := a.Version
 	if version <= 0 {
 		version = 1
@@ -92,32 +92,37 @@ func (s *AccountStore) Create(ctx context.Context, a *finance.Account) error {
 	})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	_, err = s.db.ExecContext(ctx, query, args...)
-	if err == nil {
-		a.Version = version
+	if _, err := s.db.Exec(ctx, query, args...); err != nil {
+		return errors.E(op, err)
 	}
-	return err
+	a.Version = version
+	return nil
 }
 
 func (s *AccountStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.AccountID) (*finance.Account, error) {
-	ds := pgDialect.From(goqu.S("finance").Table("account")).Select("*").Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)})
+	const op errors.Op = "domain/finance/storage.GetByID"
+	ds := pgDialect.
+		From(goqu.S("finance").Table("account")).
+		Select("*").
+		Where(goqu.Ex{
+			"space_id": string(spaceID),
+			"id":       string(id),
+		})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 	var row accountDB
-	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, finance.ErrAccountNotFound
-		}
-		return nil, err
+	if err := s.db.Get(ctx, &row, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 	return row.toDomain(), nil
 }
 
 func (s *AccountStore) Update(ctx context.Context, a *finance.Account) error {
+	const op errors.Op = "domain/finance/storage.Update"
 	currentVersion := a.Version
 	newVersion := currentVersion + 1
 
@@ -146,24 +151,20 @@ func (s *AccountStore) Update(ctx context.Context, a *finance.Account) error {
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	res, err := s.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return finance.ErrAccountVersionMismatch
+	if err := s.db.ExecOne(ctx, query, args...); err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return errors.E(op, errors.Conflict, finance.VersionMismatch, "account not found or version mismatch")
+		}
+		return errors.E(op, err)
 	}
 	a.Version = newVersion
 	return nil
 }
 
 func (s *AccountStore) Delete(ctx context.Context, spaceID finance.SpaceID, id finance.AccountID, opts finance.DeleteOptions) error {
+	const op errors.Op = "domain/finance/storage.Delete"
 	ds := pgDialect.Delete(goqu.S("finance").Table("account")).
 		Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)})
 
@@ -173,23 +174,19 @@ func (s *AccountStore) Delete(ctx context.Context, spaceID finance.SpaceID, id f
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	res, err := s.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return finance.ErrAccountNotFound
+	if err := s.db.ExecOne(ctx, query, args...); err != nil {
+		if opts.Version > 0 && errors.Is(err, errors.NotExist) {
+			return errors.E(op, errors.Conflict, finance.VersionMismatch, "account version mismatch")
+		}
+		return errors.E(op, err)
 	}
 	return nil
 }
 
 func (s *AccountStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListAccountsFilter) (*paging.Page[*finance.Account], error) {
+	const op errors.Op = "domain/finance/storage.ListBySpace"
 	if filter.PageSize <= 0 || filter.PageSize > 100 {
 		filter.PageSize = 20
 	}
@@ -224,12 +221,12 @@ func (s *AccountStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID,
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, fmt.Errorf("build sql query: %w", err)
+		return nil, errors.E(op, err)
 	}
 
 	var rows []accountDB
-	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
-		return nil, fmt.Errorf("select context: %w", err)
+	if err := s.db.Select(ctx, &rows, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 
 	accounts := make([]*finance.Account, len(rows))
@@ -248,58 +245,64 @@ func (s *AccountStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID,
 }
 
 func (s *AccountStore) HasDefault(ctx context.Context, spaceID finance.SpaceID) (bool, error) {
+	const op errors.Op = "domain/finance/storage.HasDefault"
 	ds := pgDialect.From(goqu.S("finance").Table("account")).
 		Select(goqu.L("1")).
 		Where(goqu.Ex{"space_id": string(spaceID), "is_default": true}).
 		Limit(1)
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return false, err
+		return false, errors.E(op, err)
 	}
 	var dummy int
-	err = s.db.GetContext(ctx, &dummy, query, args...)
+	err = s.db.Get(ctx, &dummy, query, args...)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, errors.NotExist) {
 			return false, nil
 		}
-		return false, err
+		return false, errors.E(op, err)
 	}
 	return true, nil
 }
 
 func (s *AccountStore) UnsetDefaultsExcept(ctx context.Context, spaceID finance.SpaceID, id finance.AccountID) error {
+	const op errors.Op = "domain/finance/storage.UnsetDefaultsExcept"
 	ds := pgDialect.Update(goqu.S("finance").Table("account")).
 		Set(goqu.Record{"is_default": false}).
 		Where(goqu.Ex{"space_id": string(spaceID)}, goqu.I("id").Neq(string(id)))
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	_, err = s.db.ExecContext(ctx, query, args...)
-	return err
+	if _, err := s.db.Exec(ctx, query, args...); err != nil {
+		return errors.E(op, err)
+	}
+	return nil
 }
 
 func (s *AccountStore) HasAny(ctx context.Context, spaceID finance.SpaceID) (bool, error) {
+	const op errors.Op = "domain/finance/storage.HasAny"
 	ds := pgDialect.From(goqu.S("finance").Table("account")).
 		Select(goqu.L("1")).
 		Where(goqu.Ex{"space_id": string(spaceID)}).
 		Limit(1)
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return false, err
+		return false, errors.E(op, err)
 	}
 	var dummy int
-	err = s.db.GetContext(ctx, &dummy, query, args...)
+	err = s.db.Get(ctx, &dummy, query, args...)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, errors.NotExist) {
 			return false, nil
 		}
-		return false, err
+		return false, errors.E(op, err)
 	}
 	return true, nil
 }
 
 func (s *AccountStore) GetByIDs(ctx context.Context, spaceID finance.SpaceID, ids []finance.AccountID) ([]*finance.Account, error) {
+	const op errors.Op = "domain/finance/storage.GetByIDs"
 	if len(ids) == 0 {
 		return nil, nil
 	}
@@ -313,12 +316,12 @@ func (s *AccountStore) GetByIDs(ctx context.Context, spaceID finance.SpaceID, id
 		Where(goqu.Ex{"space_id": string(spaceID), "id": idStrings})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 
 	var rows []accountDB
-	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
-		return nil, err
+	if err := s.db.Select(ctx, &rows, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 
 	accounts := make([]*finance.Account, len(rows))

@@ -1,34 +1,41 @@
 package finance
 
-import "errors"
+import "github.com/masterkeysrd/saturn/internal/platform/errors"
 
-// Sentinel errors for core finance domain operations.
-var (
-	ErrSettingsNotFound                                       = errors.New("finance settings not found")
-	ErrBudgetNotFound                                         = errors.New("budget not found")
-	ErrPeriodNotFound                                         = errors.New("budget period not found")
-	ErrExchangeRateNotFound                                   = errors.New("exchange rate not found")
-	ErrTransactionNotFound                                    = errors.New("transaction not found")
-	ErrBorrowingNotFound                                      = errors.New("borrowing not found")
-	ErrRepaymentNotFound                                      = errors.New("borrowing repayment not found")
-	ErrAccountNotFound                                        = errors.New("account not found")
-	ErrTransferNotFound                                       = errors.New("transfer not found")
-	ErrCannotDeleteDefaultAccount                             = errors.New("cannot delete the default account. please select another account as default first")
-	ErrBudgetVersionMismatch                                  = errors.New("update failed: budget not found or version mismatch")
-	ErrBudgetHasTransactions                                  = errors.New("cannot delete budget with existing transactions. deactivate it instead")
-	ErrBudgetHasScheduledTransactions                         = errors.New("cannot delete budget with active scheduled transactions. cancel or reassign scheduled transactions first")
-	ErrCannotLinkReceiptToTransfer                            = errors.New("cannot link receipt to transfer transaction")
-	ErrCannotRelinkTransactionToDifferentBorrowing            = errors.New("cannot relink transaction to a different borrowing agreement")
-	ErrCannotRelinkTransactionToDifferentScheduledTransaction = errors.New("cannot relink transaction to a different scheduled transaction")
-	ErrAccountVersionMismatch                                 = errors.New("update failed: account not found or version mismatch")
-	ErrInstitutionVersionMismatch                             = errors.New("update failed: institution not found or version mismatch")
-	ErrBorrowingVersionMismatch                               = errors.New("update failed: borrowing not found or version mismatch")
-	ErrRecurringTransactionVersionMismatch                    = errors.New("update failed: recurring transaction not found or version mismatch")
-	ErrBorrowingHasTransactions                               = errors.New("cannot delete borrowing agreement with linked transactions")
-	ErrStatementNotFound                                      = errors.New("reconciliation statement not found")
-	ErrStatementLineNotFound                                  = errors.New("reconciliation statement line not found")
-	ErrStatementVersionMismatch                               = errors.New("update failed: statement not found or version mismatch")
-	ErrStatementLineVersionMismatch                           = errors.New("update failed: statement line not found or version mismatch")
-	ErrActiveStatementAlreadyExists                           = errors.New("an active statement reconciliation is already in progress for this account")
-	ErrStatementBalanceMismatch                               = errors.New("statement finalization failed: cash flow sum of matches does not equal statement balance difference")
+// Error codes for the finance domain.
+const (
+	SettingsNotFound                                       errors.Code = "FINANCE_SETTINGS_NOT_FOUND"
+	BudgetNotFound                                         errors.Code = "BUDGET_NOT_FOUND"
+	PeriodNotFound                                         errors.Code = "BUDGET_PERIOD_NOT_FOUND"
+	ExchangeRateNotFound                                   errors.Code = "EXCHANGE_RATE_NOT_FOUND"
+	TransactionNotFound                                    errors.Code = "TRANSACTION_NOT_FOUND"
+	ScheduledTransactionNotFound                           errors.Code = "SCHEDULED_TRANSACTION_NOT_FOUND"
+	BorrowingNotFound                                      errors.Code = "BORROWING_NOT_FOUND"
+	RepaymentNotFound                                      errors.Code = "BORROWING_REPAYMENT_NOT_FOUND"
+	AccountNotFound                                        errors.Code = "ACCOUNT_NOT_FOUND"
+	TransferNotFound                                       errors.Code = "TRANSFER_NOT_FOUND"
+	StatementNotFound                                      errors.Code = "STATEMENT_NOT_FOUND"
+	StatementLineNotFound                                  errors.Code = "STATEMENT_LINE_NOT_FOUND"
+	InstitutionNotFound                                    errors.Code = "INSTITUTION_NOT_FOUND"
+	InboxItemNotFound                                      errors.Code = "INBOX_ITEM_NOT_FOUND"
+	CannotDeleteDefaultAccount                             errors.Code = "CANNOT_DELETE_DEFAULT_ACCOUNT"
+	BudgetHasTransactions                                  errors.Code = "BUDGET_HAS_TRANSACTIONS"
+	BudgetHasScheduledTransactions                         errors.Code = "BUDGET_HAS_SCHEDULED_TRANSACTIONS"
+	CannotLinkReceiptToTransfer                            errors.Code = "CANNOT_LINK_RECEIPT_TO_TRANSFER"
+	CannotRelinkTransactionToDifferentBorrowing            errors.Code = "CANNOT_RELINK_TRANSACTION_TO_DIFFERENT_BORROWING"
+	CannotRelinkTransactionToDifferentScheduledTransaction errors.Code = "CANNOT_RELINK_TRANSACTION_TO_DIFFERENT_SCHEDULED_TRANSACTION"
+	BorrowingHasTransactions                               errors.Code = "BORROWING_HAS_TRANSACTIONS"
+	ActiveStatementExists                                  errors.Code = "ACTIVE_STATEMENT_EXISTS"
+	StatementBalanceMismatch                               errors.Code = "STATEMENT_BALANCE_MISMATCH"
+	CannotInvertCompletedStatement                         errors.Code = "CANNOT_INVERT_COMPLETED_STATEMENT"
+	VersionMismatch                                        errors.Code = "FINANCE_VERSION_MISMATCH"
+
+	// Entity-specific version mismatch aliases for convenience
+	BudgetVersionMismatch               errors.Code = VersionMismatch
+	AccountVersionMismatch              errors.Code = VersionMismatch
+	InstitutionVersionMismatch          errors.Code = VersionMismatch
+	BorrowingVersionMismatch            errors.Code = VersionMismatch
+	RecurringTransactionVersionMismatch errors.Code = VersionMismatch
+	StatementVersionMismatch            errors.Code = VersionMismatch
+	StatementLineVersionMismatch        errors.Code = VersionMismatch
 )

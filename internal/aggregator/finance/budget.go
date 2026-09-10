@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
@@ -111,7 +112,7 @@ func (s *Service) GetBudgetPeriod(ctx context.Context, spaceID finance.SpaceID, 
 
 	period, ok := periods[budgetID]
 	if !ok {
-		return nil, finance.ErrPeriodNotFound
+		return nil, errors.E(errors.NotExist, finance.PeriodNotFound, "budget period not found")
 	}
 
 	stats, err := s.financeService.AggregateSpentBatch(ctx, []finance.PeriodID{period.ID})

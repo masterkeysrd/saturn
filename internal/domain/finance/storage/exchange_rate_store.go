@@ -2,15 +2,14 @@ package storage
 
 import (
 	"context"
-	"database/sql"
-	"errors"
-	"fmt"
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
@@ -37,14 +36,15 @@ func (row *exchangeRateDB) toDomain() *finance.ExchangeRate {
 }
 
 type ExchangeRateStore struct {
-	db *sqlx.DB
+	db db.DB
 }
 
-func NewExchangeRateStore(db *sqlx.DB) *ExchangeRateStore {
-	return &ExchangeRateStore{db: db}
+func NewExchangeRateStore(database db.DB) *ExchangeRateStore {
+	return &ExchangeRateStore{db: database}
 }
 
 func (s *ExchangeRateStore) Create(ctx context.Context, r *finance.ExchangeRate) error {
+	const op errors.Op = "domain/finance/storage.Create"
 	ds := pgDialect.Insert(goqu.S("finance").Table("exchange_rate")).
 		Rows(goqu.Record{
 			"space_id":      string(r.SpaceID),
@@ -60,14 +60,17 @@ func (s *ExchangeRateStore) Create(ctx context.Context, r *finance.ExchangeRate)
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return fmt.Errorf("build sql query: %w", err)
+		return errors.E(op, err)
 	}
 
-	_, err = s.db.ExecContext(ctx, query, args...)
-	return err
+	if _, err := s.db.Exec(ctx, query, args...); err != nil {
+		return errors.E(op, err)
+	}
+	return nil
 }
 
 func (s *ExchangeRateStore) Update(ctx context.Context, r *finance.ExchangeRate) error {
+	const op errors.Op = "domain/finance/storage.Update"
 	ds := pgDialect.Update(goqu.S("finance").Table("exchange_rate")).
 		Set(goqu.Record{"rate": r.Rate}).
 		Where(goqu.Ex{
@@ -79,24 +82,17 @@ func (s *ExchangeRateStore) Update(ctx context.Context, r *finance.ExchangeRate)
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return fmt.Errorf("build sql query: %w", err)
+		return errors.E(op, err)
 	}
 
-	res, err := s.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return finance.ErrExchangeRateNotFound
+	if err := s.db.ExecOne(ctx, query, args...); err != nil {
+		return errors.E(op, err)
 	}
 	return nil
 }
 
 func (s *ExchangeRateStore) GetRate(ctx context.Context, key finance.ExchangeRateKey) (*finance.ExchangeRate, error) {
+	const op errors.Op = "domain/finance/storage.GetRate"
 	ds := pgDialect.From(goqu.S("finance").Table("exchange_rate")).
 		Select("*").
 		Where(goqu.Ex{
@@ -109,20 +105,18 @@ func (s *ExchangeRateStore) GetRate(ctx context.Context, key finance.ExchangeRat
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, fmt.Errorf("build sql query: %w", err)
+		return nil, errors.E(op, err)
 	}
 
 	var row exchangeRateDB
-	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, finance.ErrExchangeRateNotFound
-		}
-		return nil, err
+	if err := s.db.Get(ctx, &row, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 	return row.toDomain(), nil
 }
 
 func (s *ExchangeRateStore) GetExactRate(ctx context.Context, key finance.ExchangeRateKey) (*finance.ExchangeRate, error) {
+	const op errors.Op = "domain/finance/storage.GetExactRate"
 	ds := pgDialect.From(goqu.S("finance").Table("exchange_rate")).
 		Select("*").
 		Where(goqu.Ex{
@@ -135,20 +129,18 @@ func (s *ExchangeRateStore) GetExactRate(ctx context.Context, key finance.Exchan
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, fmt.Errorf("build sql query: %w", err)
+		return nil, errors.E(op, err)
 	}
 
 	var row exchangeRateDB
-	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, finance.ErrExchangeRateNotFound
-		}
-		return nil, err
+	if err := s.db.Get(ctx, &row, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 	return row.toDomain(), nil
 }
 
 func (s *ExchangeRateStore) GetNextRate(ctx context.Context, key finance.ExchangeRateKey) (*finance.ExchangeRate, error) {
+	const op errors.Op = "domain/finance/storage.GetNextRate"
 	ds := pgDialect.From(goqu.S("finance").Table("exchange_rate")).
 		Select("*").
 		Where(goqu.Ex{
@@ -161,20 +153,18 @@ func (s *ExchangeRateStore) GetNextRate(ctx context.Context, key finance.Exchang
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, fmt.Errorf("build sql query: %w", err)
+		return nil, errors.E(op, err)
 	}
 
 	var row exchangeRateDB
-	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, finance.ErrExchangeRateNotFound
-		}
-		return nil, err
+	if err := s.db.Get(ctx, &row, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 	return row.toDomain(), nil
 }
 
 func (s *ExchangeRateStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListExchangeRatesFilter) ([]*finance.ExchangeRate, string, error) {
+	const op errors.Op = "domain/finance/storage.ListBySpace"
 	if filter.PageSize <= 0 {
 		filter.PageSize = 100
 	}
@@ -212,12 +202,12 @@ func (s *ExchangeRateStore) ListBySpace(ctx context.Context, spaceID finance.Spa
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, "", fmt.Errorf("build sql query: %w", err)
+		return nil, "", errors.E(op, err)
 	}
 
 	var rows []exchangeRateDB
-	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
-		return nil, "", fmt.Errorf("select context: %w", err)
+	if err := s.db.Select(ctx, &rows, query, args...); err != nil {
+		return nil, "", errors.E(op, err)
 	}
 
 	rates := make([]*finance.ExchangeRate, len(rows))
@@ -236,6 +226,7 @@ func (s *ExchangeRateStore) ListBySpace(ctx context.Context, spaceID finance.Spa
 }
 
 func (s *ExchangeRateStore) Delete(ctx context.Context, key finance.ExchangeRateKey) error {
+	const op errors.Op = "domain/finance/storage.Delete"
 	ds := pgDialect.Delete(goqu.S("finance").Table("exchange_rate")).
 		Where(goqu.Ex{
 			"space_id":      string(key.SpaceID),
@@ -246,24 +237,17 @@ func (s *ExchangeRateStore) Delete(ctx context.Context, key finance.ExchangeRate
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return fmt.Errorf("build sql query: %w", err)
+		return errors.E(op, err)
 	}
 
-	res, err := s.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return finance.ErrExchangeRateNotFound
+	if err := s.db.ExecOne(ctx, query, args...); err != nil {
+		return errors.E(op, err)
 	}
 	return nil
 }
 
 func (s *ExchangeRateStore) GetLatestRates(ctx context.Context, spaceID finance.SpaceID, fromCurrencies []finance.Currency, toCurrency finance.Currency) ([]*finance.ExchangeRate, error) {
+	const op errors.Op = "domain/finance/storage.GetLatestRates"
 	if len(fromCurrencies) == 0 {
 		return nil, nil
 	}
@@ -299,14 +283,14 @@ func (s *ExchangeRateStore) GetLatestRates(ctx context.Context, spaceID finance.
 
 	query, args, err := sqlx.In(query, string(spaceID), string(toCurrency), currencies)
 	if err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 
 	query = s.db.Rebind(query)
 
 	var rows []exchangeRateDB
-	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
-		return nil, err
+	if err := s.db.Select(ctx, &rows, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 
 	rates := make([]*finance.ExchangeRate, len(rows))

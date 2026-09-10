@@ -37,7 +37,7 @@ func cleanJSON(s string) string {
 }
 
 // IngestEmail parses incoming email data, matches budgets/accounts/payments, and inserts it into the staging queue.
-func (c *Coordinator) IngestEmail(ctx context.Context, spaceID string, integrationID string, sender, subject, body string) (*finance.InboxItem, error) {
+func (c *coordinator) IngestEmail(ctx context.Context, spaceID string, integrationID string, sender, subject, body string) (*finance.InboxItem, error) {
 	req := &IngestionRequest{
 		TextContent: body,
 		Metadata: map[string]any{
@@ -84,7 +84,7 @@ func (c *Coordinator) IngestEmail(ctx context.Context, spaceID string, integrati
 }
 
 // DiscardInboxItem deletes a staging inbox item without ledger modification.
-func (c *Coordinator) DiscardInboxItem(ctx context.Context, id string) error {
+func (c *coordinator) DiscardInboxItem(ctx context.Context, id string) error {
 	rctx, err := c.resolveContext(ctx)
 	if err != nil {
 		return err
@@ -93,7 +93,7 @@ func (c *Coordinator) DiscardInboxItem(ctx context.Context, id string) error {
 }
 
 // GetTransactionSuggestions analyzes raw signal payloads and returns real-time form prefill suggestions.
-func (c *Coordinator) GetTransactionSuggestions(ctx context.Context, req *IngestionRequest) (*SignalSuggestion, error) {
+func (c *coordinator) GetTransactionSuggestions(ctx context.Context, req *IngestionRequest) (*SignalSuggestion, error) {
 	rctx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ func (c *Coordinator) GetTransactionSuggestions(ctx context.Context, req *Ingest
 }
 
 // ProcessSuggestions implements agentapp.SuggestionProcessor for transaction_extractor purpose.
-func (c *Coordinator) ProcessSuggestions(ctx context.Context, spaceID string, req *agentapp.SuggestionRequest) (map[string]any, error) {
+func (c *coordinator) ProcessSuggestions(ctx context.Context, spaceID string, req *agentapp.SuggestionRequest) (map[string]any, error) {
 	ingReq := &IngestionRequest{
 		TextContent: req.TextContent,
 		Metadata:    req.Metadata,
@@ -146,7 +146,7 @@ func (c *Coordinator) ProcessSuggestions(ctx context.Context, spaceID string, re
 }
 
 // UpdateInboxItem updates a staging inbox item's draft properties.
-func (c *Coordinator) UpdateInboxItem(ctx context.Context, item *finance.InboxItem) (*finance.InboxItem, error) {
+func (c *coordinator) UpdateInboxItem(ctx context.Context, item *finance.InboxItem) (*finance.InboxItem, error) {
 	rctx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -155,7 +155,7 @@ func (c *Coordinator) UpdateInboxItem(ctx context.Context, item *finance.InboxIt
 }
 
 // ApproveInboxItem commits a staged inbox item to the main transaction ledger, returning the updated item.
-func (c *Coordinator) ApproveInboxItem(ctx context.Context, id string) (*finance.InboxItem, error) {
+func (c *coordinator) ApproveInboxItem(ctx context.Context, id string) (*finance.InboxItem, error) {
 	rctx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err

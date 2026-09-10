@@ -7,7 +7,7 @@ import (
 )
 
 // CreateInstitution creates a new financial institution in the resolved space context.
-func (c *Coordinator) CreateInstitution(ctx context.Context, inst *finance.Institution) (*finance.Institution, error) {
+func (c *coordinator) CreateInstitution(ctx context.Context, inst *finance.Institution) (*finance.Institution, error) {
 	reqCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -17,7 +17,7 @@ func (c *Coordinator) CreateInstitution(ctx context.Context, inst *finance.Insti
 }
 
 // UpdateInstitution updates an existing financial institution.
-func (c *Coordinator) UpdateInstitution(ctx context.Context, inst *finance.Institution, mask []string) (*finance.Institution, error) {
+func (c *coordinator) UpdateInstitution(ctx context.Context, inst *finance.Institution, mask []string) (*finance.Institution, error) {
 	reqCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -27,7 +27,7 @@ func (c *Coordinator) UpdateInstitution(ctx context.Context, inst *finance.Insti
 }
 
 // DeleteInstitution soft-deletes a financial institution.
-func (c *Coordinator) DeleteInstitution(ctx context.Context, id finance.InstitutionID, opts finance.DeleteOptions) error {
+func (c *coordinator) DeleteInstitution(ctx context.Context, id finance.InstitutionID, opts finance.DeleteOptions) error {
 	reqCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return err
@@ -36,7 +36,7 @@ func (c *Coordinator) DeleteInstitution(ctx context.Context, id finance.Institut
 }
 
 // ResolveInstitution resolves web domain and color details for a named institution.
-func (c *Coordinator) ResolveInstitution(ctx context.Context, name string) (*finance.ResolveInstitutionResult, error) {
+func (c *coordinator) ResolveInstitution(ctx context.Context, name string) (*finance.ResolveInstitutionResult, error) {
 	reqCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err

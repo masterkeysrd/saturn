@@ -370,6 +370,6 @@ type StatementStore interface {
 	// UpdateLineDraft updates the draft choices (status, action, and matched_transaction_id) of a statement line.
 	UpdateLineDraft(ctx context.Context, line *StatementLine) error
 
-	// UpdateStatementWithLines updates a statement and all its lines in a single atomic database transaction.
+	// UpdateStatementWithLines updates a statement and all its lines.
 	UpdateStatementWithLines(ctx context.Context, statement *Statement, lines []*StatementLine) error
 }

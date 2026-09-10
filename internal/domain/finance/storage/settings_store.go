@@ -3,11 +3,11 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"errors"
 
 	"github.com/doug-martin/goqu/v9"
-	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 )
 
 type settingsDB struct {
@@ -18,14 +18,15 @@ type settingsDB struct {
 }
 
 type SettingsStore struct {
-	db *sqlx.DB
+	db db.DB
 }
 
-func NewSettingsStore(db *sqlx.DB) *SettingsStore {
-	return &SettingsStore{db: db}
+func NewSettingsStore(database db.DB) *SettingsStore {
+	return &SettingsStore{db: database}
 }
 
 func (s *SettingsStore) Create(ctx context.Context, settings *finance.FinanceSettings) error {
+	const op errors.Op = "domain/finance/storage.CreateSettings"
 	ds := pgDialect.Insert(goqu.S("finance").Table("settings")).Rows(goqu.Record{
 		"space_id":      string(settings.SpaceID),
 		"base_currency": string(settings.BaseCurrency),
@@ -34,26 +35,26 @@ func (s *SettingsStore) Create(ctx context.Context, settings *finance.FinanceSet
 	})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	_, err = s.db.ExecContext(ctx, query, args...)
-	return err
+	if _, err := s.db.Exec(ctx, query, args...); err != nil {
+		return errors.E(op, err)
+	}
+	return nil
 }
 
 func (s *SettingsStore) GetByID(ctx context.Context, spaceID finance.SpaceID) (*finance.FinanceSettings, error) {
+	const op errors.Op = "domain/finance/storage.GetSettingsByID"
 	ds := pgDialect.From(goqu.S("finance").Table("settings")).
 		Select("space_id", "base_currency", "create_time", "update_time").
 		Where(goqu.Ex{"space_id": string(spaceID)})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 	var row settingsDB
-	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, finance.ErrSettingsNotFound
-		}
-		return nil, err
+	if err := s.db.Get(ctx, &row, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 	return &finance.FinanceSettings{
 		SpaceID:      finance.SpaceID(row.SpaceID),

@@ -3,14 +3,13 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"errors"
-	"fmt"
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
-	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
@@ -58,14 +57,15 @@ func (row *borrowingDB) toDomain() *finance.Borrowing {
 }
 
 type BorrowingStore struct {
-	db *sqlx.DB
+	db db.DB
 }
 
-func NewBorrowingStore(db *sqlx.DB) *BorrowingStore {
-	return &BorrowingStore{db: db}
+func NewBorrowingStore(database db.DB) *BorrowingStore {
+	return &BorrowingStore{db: database}
 }
 
 func (s *BorrowingStore) Create(ctx context.Context, b *finance.Borrowing) error {
+	const op errors.Op = "domain/finance/storage.Create"
 	version := b.Version
 	if version == 0 {
 		version = 1
@@ -91,38 +91,37 @@ func (s *BorrowingStore) Create(ctx context.Context, b *finance.Borrowing) error
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return fmt.Errorf("build sql query: %w", err)
+		return errors.E(op, err)
 	}
 
-	_, err = s.db.ExecContext(ctx, query, args...)
-	if err == nil {
-		b.Version = version
+	if _, err := s.db.Exec(ctx, query, args...); err != nil {
+		return errors.E(op, err)
 	}
-	return err
+	b.Version = version
+	return nil
 }
 
 func (s *BorrowingStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.BorrowingID) (*finance.Borrowing, error) {
+	const op errors.Op = "domain/finance/storage.GetByID"
 	ds := pgDialect.From(goqu.S("finance").Table("borrowing")).
 		Select("*").
 		Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)})
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, fmt.Errorf("build sql query: %w", err)
+		return nil, errors.E(op, err)
 	}
 
 	var row borrowingDB
-	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, finance.ErrBorrowingNotFound
-		}
-		return nil, err
+	if err := s.db.Get(ctx, &row, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 
 	return row.toDomain(), nil
 }
 
 func (s *BorrowingStore) Update(ctx context.Context, b *finance.Borrowing) error {
+	const op errors.Op = "domain/finance/storage.Update"
 	currentVersion := b.Version
 	newVersion := currentVersion + 1
 	if currentVersion == 0 {
@@ -152,50 +151,36 @@ func (s *BorrowingStore) Update(ctx context.Context, b *finance.Borrowing) error
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return fmt.Errorf("build sql query: %w", err)
+		return errors.E(op, err)
 	}
 
-	res, err := s.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		if currentVersion > 0 {
-			return finance.ErrBorrowingVersionMismatch
+	if err := s.db.ExecOne(ctx, query, args...); err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return errors.E(op, errors.Conflict, finance.VersionMismatch, "borrowing version mismatch")
 		}
-		return finance.ErrBorrowingNotFound
+		return errors.E(op, err)
 	}
 	b.Version = newVersion
 	return nil
 }
 
 func (s *BorrowingStore) Delete(ctx context.Context, id finance.BorrowingID) error {
+	const op errors.Op = "domain/finance/storage.Delete"
 	ds := pgDialect.Delete(goqu.S("finance").Table("borrowing")).Where(goqu.Ex{"id": string(id)})
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return fmt.Errorf("build sql query: %w", err)
+		return errors.E(op, err)
 	}
 
-	res, err := s.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return finance.ErrBorrowingNotFound
+	if err := s.db.ExecOne(ctx, query, args...); err != nil {
+		return errors.E(op, err)
 	}
 	return nil
 }
 
 func (s *BorrowingStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListBorrowingsFilter) ([]*finance.Borrowing, string, error) {
+	const op errors.Op = "domain/finance/storage.ListBySpace"
 	if filter.PageSize <= 0 {
 		filter.PageSize = 20
 	}
@@ -224,12 +209,12 @@ func (s *BorrowingStore) ListBySpace(ctx context.Context, spaceID finance.SpaceI
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, "", fmt.Errorf("build sql query: %w", err)
+		return nil, "", errors.E(op, err)
 	}
 
 	var rows []borrowingDB
-	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
-		return nil, "", fmt.Errorf("select context: %w", err)
+	if err := s.db.Select(ctx, &rows, query, args...); err != nil {
+		return nil, "", errors.E(op, err)
 	}
 
 	borrowings := make([]*finance.Borrowing, len(rows))
@@ -280,14 +265,15 @@ func (row *borrowingRepaymentDB) toDomain() *finance.BorrowingRepayment {
 }
 
 type BorrowingRepaymentStore struct {
-	db *sqlx.DB
+	db db.DB
 }
 
-func NewBorrowingRepaymentStore(db *sqlx.DB) *BorrowingRepaymentStore {
-	return &BorrowingRepaymentStore{db: db}
+func NewBorrowingRepaymentStore(database db.DB) *BorrowingRepaymentStore {
+	return &BorrowingRepaymentStore{db: database}
 }
 
 func (s *BorrowingRepaymentStore) Create(ctx context.Context, r *finance.BorrowingRepayment) error {
+	const op errors.Op = "domain/finance/storage.CreateRepayment"
 	var accountID sql.NullString
 	if r.AccountID != nil {
 		accountID = sql.NullString{String: string(*r.AccountID), Valid: true}
@@ -307,57 +293,51 @@ func (s *BorrowingRepaymentStore) Create(ctx context.Context, r *finance.Borrowi
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return fmt.Errorf("build sql query: %w", err)
+		return errors.E(op, err)
 	}
 
-	_, err = s.db.ExecContext(ctx, query, args...)
-	return err
+	if _, err := s.db.Exec(ctx, query, args...); err != nil {
+		return errors.E(op, err)
+	}
+	return nil
 }
 
 func (s *BorrowingRepaymentStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.BorrowingRepaymentID) (*finance.BorrowingRepayment, error) {
+	const op errors.Op = "domain/finance/storage.GetRepaymentByID"
 	ds := pgDialect.From(goqu.S("finance").Table("borrowing_repayment")).
 		Select("*").
 		Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)})
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, fmt.Errorf("build sql query: %w", err)
+		return nil, errors.E(op, err)
 	}
 
 	var row borrowingRepaymentDB
-	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, finance.ErrRepaymentNotFound
-		}
-		return nil, err
+	if err := s.db.Get(ctx, &row, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 
 	return row.toDomain(), nil
 }
 
 func (s *BorrowingRepaymentStore) Delete(ctx context.Context, id finance.BorrowingRepaymentID) error {
+	const op errors.Op = "domain/finance/storage.DeleteRepayment"
 	ds := pgDialect.Delete(goqu.S("finance").Table("borrowing_repayment")).Where(goqu.Ex{"id": string(id)})
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return fmt.Errorf("build sql query: %w", err)
+		return errors.E(op, err)
 	}
 
-	res, err := s.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return finance.ErrRepaymentNotFound
+	if err := s.db.ExecOne(ctx, query, args...); err != nil {
+		return errors.E(op, err)
 	}
 	return nil
 }
 
 func (s *BorrowingRepaymentStore) ListByBorrowing(ctx context.Context, spaceID finance.SpaceID, borrowingID finance.BorrowingID) ([]*finance.BorrowingRepayment, error) {
+	const op errors.Op = "domain/finance/storage.ListByBorrowing"
 	ds := pgDialect.From(goqu.S("finance").Table("borrowing_repayment")).
 		Select("*").
 		Where(goqu.Ex{"space_id": string(spaceID), "borrowing_id": string(borrowingID)}).
@@ -365,12 +345,12 @@ func (s *BorrowingRepaymentStore) ListByBorrowing(ctx context.Context, spaceID f
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, fmt.Errorf("build sql query: %w", err)
+		return nil, errors.E(op, err)
 	}
 
 	var rows []borrowingRepaymentDB
-	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
-		return nil, err
+	if err := s.db.Select(ctx, &rows, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 
 	repayments := make([]*finance.BorrowingRepayment, len(rows))

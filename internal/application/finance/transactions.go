@@ -17,7 +17,7 @@ type CreateExpenseRequest struct {
 	AccountID       *finance.AccountID
 }
 
-func (c *Coordinator) CreateExpense(ctx context.Context, req *CreateExpenseRequest) (*finance.Transaction, error) {
+func (c *coordinator) CreateExpense(ctx context.Context, req *CreateExpenseRequest) (*finance.Transaction, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ type CreateIncomeRequest struct {
 	AccountID       *finance.AccountID
 }
 
-func (c *Coordinator) CreateIncome(ctx context.Context, req *CreateIncomeRequest) (*finance.Transaction, error) {
+func (c *coordinator) CreateIncome(ctx context.Context, req *CreateIncomeRequest) (*finance.Transaction, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -85,7 +85,7 @@ func (c *Coordinator) CreateIncome(ctx context.Context, req *CreateIncomeRequest
 	return c.financeService.CreateIncome(ctx, txn)
 }
 
-func (c *Coordinator) DeleteTransaction(ctx context.Context, id finance.TransactionID) error {
+func (c *coordinator) DeleteTransaction(ctx context.Context, id finance.TransactionID) error {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return err
@@ -104,7 +104,7 @@ type UpdateExpenseRequest struct {
 	AccountID       *finance.AccountID
 }
 
-func (c *Coordinator) UpdateExpense(ctx context.Context, req *UpdateExpenseRequest) (*finance.Transaction, error) {
+func (c *coordinator) UpdateExpense(ctx context.Context, req *UpdateExpenseRequest) (*finance.Transaction, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -145,7 +145,7 @@ type UpdateIncomeRequest struct {
 	AccountID       *finance.AccountID
 }
 
-func (c *Coordinator) UpdateIncome(ctx context.Context, req *UpdateIncomeRequest) (*finance.Transaction, error) {
+func (c *coordinator) UpdateIncome(ctx context.Context, req *UpdateIncomeRequest) (*finance.Transaction, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -179,7 +179,7 @@ type ListTransactionEventsRequest struct {
 	TransactionID finance.TransactionID
 }
 
-func (c *Coordinator) ListTransactionEvents(ctx context.Context, req *ListTransactionEventsRequest) ([]*finance.TransactionEvent, error) {
+func (c *coordinator) ListTransactionEvents(ctx context.Context, req *ListTransactionEventsRequest) ([]*finance.TransactionEvent, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err

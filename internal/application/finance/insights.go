@@ -13,7 +13,7 @@ type GetInsightsRequest struct {
 	EndDate     time.Time
 }
 
-func (c *Coordinator) GetInsights(ctx context.Context, req *GetInsightsRequest) (*finance.Insights, error) {
+func (c *coordinator) GetInsights(ctx context.Context, req *GetInsightsRequest) (*finance.Insights, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err

@@ -4,11 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"encoding/base64"
-	"errors"
 
 	"github.com/doug-martin/goqu/v9"
-	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 )
 
 type transferDB struct {
@@ -25,14 +25,15 @@ type transferDB struct {
 }
 
 type TransferStore struct {
-	db *sqlx.DB
+	db db.DB
 }
 
-func NewTransferStore(db *sqlx.DB) *TransferStore {
-	return &TransferStore{db: db}
+func NewTransferStore(database db.DB) *TransferStore {
+	return &TransferStore{db: database}
 }
 
 func (s *TransferStore) Create(ctx context.Context, t *finance.Transfer) error {
+	const op errors.Op = "domain/finance/storage.CreateTransfer"
 	ds := pgDialect.Insert(goqu.S("finance").Table("transfer")).Rows(goqu.Record{
 		"id":                     string(t.ID),
 		"space_id":               string(t.SpaceID),
@@ -47,26 +48,26 @@ func (s *TransferStore) Create(ctx context.Context, t *finance.Transfer) error {
 	})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	_, err = s.db.ExecContext(ctx, query, args...)
-	return err
+	if _, err := s.db.Exec(ctx, query, args...); err != nil {
+		return errors.E(op, err)
+	}
+	return nil
 }
 
 func (s *TransferStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.TransferID) (*finance.Transfer, error) {
+	const op errors.Op = "domain/finance/storage.GetTransferByID"
 	ds := pgDialect.From(goqu.S("finance").Table("transfer")).
 		Select("*").
 		Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 	var row transferDB
-	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, finance.ErrTransferNotFound
-		}
-		return nil, err
+	if err := s.db.Get(ctx, &row, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 	return &finance.Transfer{
 		ID:                   finance.TransferID(row.ID),
@@ -83,27 +84,21 @@ func (s *TransferStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id
 }
 
 func (s *TransferStore) Delete(ctx context.Context, id finance.TransferID) error {
+	const op errors.Op = "domain/finance/storage.DeleteTransfer"
 	ds := pgDialect.Delete(goqu.S("finance").Table("transfer")).
 		Where(goqu.Ex{"id": string(id)})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	res, err := s.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return finance.ErrTransferNotFound
+	if err := s.db.ExecOne(ctx, query, args...); err != nil {
+		return errors.E(op, err)
 	}
 	return nil
 }
 
 func (s *TransferStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, limit int32, pageToken string) ([]*finance.Transfer, string, error) {
+	const op errors.Op = "domain/finance/storage.ListTransfersBySpace"
 	if limit <= 0 || limit > 100 {
 		limit = 20
 	}
@@ -127,12 +122,12 @@ func (s *TransferStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, "", err
+		return nil, "", errors.E(op, err)
 	}
 
 	var rows []transferDB
-	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
-		return nil, "", err
+	if err := s.db.Select(ctx, &rows, query, args...); err != nil {
+		return nil, "", errors.E(op, err)
 	}
 
 	hasMore := len(rows) > int(limit)
@@ -147,7 +142,7 @@ func (s *TransferStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID
 			SpaceID:              finance.SpaceID(rows[i].SpaceID),
 			SourceAccountID:      finance.AccountID(rows[i].SourceAccountID),
 			DestinationAccountID: finance.AccountID(rows[i].DestinationAccountID),
-			SourceAmount:         rows[i].SourceAmount,
+			SourceAmount:         rowAmount(rows[i].SourceAmount),
 			DestinationAmount:    rows[i].DestinationAmount,
 			TransferDate:         nullTimeToTime(rows[i].TransferDate),
 			Notes:                rows[i].Notes,
@@ -163,4 +158,8 @@ func (s *TransferStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID
 	}
 
 	return transfers, nextToken, nil
+}
+
+func rowAmount(amount int64) int64 {
+	return amount
 }

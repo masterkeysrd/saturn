@@ -2,11 +2,12 @@ package finance
 
 import (
 	"encoding/csv"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 
 	"github.com/masterkeysrd/saturn/internal/platform/id"
 	"github.com/masterkeysrd/saturn/internal/platform/patch"
@@ -209,13 +210,10 @@ func (s *Statement) Validate() error {
 	return nil
 }
 
-// ErrCannotInvertCompletedStatement is returned when attempting to invert signs on a completed statement.
-var ErrCannotInvertCompletedStatement = errors.New("cannot invert signs on a completed statement reconciliation")
-
 // InvertSigns negates starting and ending balances and enforces that the statement is not completed.
 func (s *Statement) InvertSigns() error {
 	if s.Status == StatementStatusCompleted {
-		return ErrCannotInvertCompletedStatement
+		return errors.E(errors.Precondition, CannotInvertCompletedStatement, "cannot invert signs on a completed statement reconciliation")
 	}
 	s.StatementStartingBalance = -s.StatementStartingBalance
 	s.StatementEndingBalance = -s.StatementEndingBalance

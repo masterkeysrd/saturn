@@ -116,11 +116,11 @@ type StatementExtractor interface {
 
 // AgentStatementExtractor implements StatementExtractor using agent coordinator.
 type AgentStatementExtractor struct {
-	coordinator *agentapp.Coordinator
+	coordinator agentapp.Coordinator
 }
 
 // NewAgentStatementExtractor creates a new AgentStatementExtractor.
-func NewAgentStatementExtractor(c *agentapp.Coordinator) *AgentStatementExtractor {
+func NewAgentStatementExtractor(c agentapp.Coordinator) *AgentStatementExtractor {
 	return &AgentStatementExtractor{coordinator: c}
 }
 

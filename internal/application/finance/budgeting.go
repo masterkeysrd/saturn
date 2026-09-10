@@ -2,10 +2,10 @@ package financeapp
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 )
 
 // Request & Response structures
@@ -20,13 +20,14 @@ type UpdateBudgetRequest struct {
 }
 
 // CreateBudget orchestrates budget template creation.
-func (c *Coordinator) CreateBudget(ctx context.Context, req *CreateBudgetRequest) (*finance.Budget, error) {
+func (c *coordinator) CreateBudget(ctx context.Context, req *CreateBudgetRequest) (*finance.Budget, error) {
+	const op errors.Op = "application/finance.CreateBudget"
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if req.Budget == nil {
-		return nil, errors.New("budget payload is required")
+	if req == nil || req.Budget == nil {
+		return nil, errors.E(op, errors.Invalid, "budget payload is required")
 	}
 
 	req.Budget.SpaceID = rCtx.SpaceID
@@ -34,13 +35,14 @@ func (c *Coordinator) CreateBudget(ctx context.Context, req *CreateBudgetRequest
 }
 
 // UpdateBudget orchestrates budget template updates.
-func (c *Coordinator) UpdateBudget(ctx context.Context, req *UpdateBudgetRequest) (*finance.Budget, error) {
+func (c *coordinator) UpdateBudget(ctx context.Context, req *UpdateBudgetRequest) (*finance.Budget, error) {
+	const op errors.Op = "application/finance.UpdateBudget"
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if req.Budget == nil {
-		return nil, errors.New("budget payload is required")
+	if req == nil || req.Budget == nil {
+		return nil, errors.E(op, errors.Invalid, "budget payload is required")
 	}
 
 	req.Budget.SpaceID = rCtx.SpaceID
@@ -62,7 +64,7 @@ func (c *Coordinator) UpdateBudget(ctx context.Context, req *UpdateBudgetRequest
 }
 
 // GetBudget orchestrates fetching a single budget template.
-func (c *Coordinator) GetBudget(ctx context.Context, id finance.BudgetID) (*finance.Budget, error) {
+func (c *coordinator) GetBudget(ctx context.Context, id finance.BudgetID) (*finance.Budget, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -77,13 +79,14 @@ type DeleteBudgetRequest struct {
 }
 
 // DeleteBudget orchestrates budget template deletion.
-func (c *Coordinator) DeleteBudget(ctx context.Context, req *DeleteBudgetRequest) error {
+func (c *coordinator) DeleteBudget(ctx context.Context, req *DeleteBudgetRequest) error {
+	const op errors.Op = "application/finance.DeleteBudget"
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return err
 	}
 	if req == nil {
-		return errors.New("delete request is required")
+		return errors.E(op, errors.Invalid, "delete request is required")
 	}
 
 	return c.financeService.DeleteBudget(ctx, rCtx.SpaceID, req.ID, finance.DeleteOptions{

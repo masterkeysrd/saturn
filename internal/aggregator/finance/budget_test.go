@@ -11,6 +11,7 @@ import (
 	"github.com/segmentio/ksuid"
 
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
@@ -28,7 +29,7 @@ func (m *mockSettingsStore) Create(ctx context.Context, s *finance.FinanceSettin
 func (m *mockSettingsStore) GetByID(ctx context.Context, spaceID finance.SpaceID) (*finance.FinanceSettings, error) {
 	s, ok := m.settings[spaceID]
 	if !ok {
-		return nil, finance.ErrSettingsNotFound
+		return nil, errors.E(errors.NotExist, finance.SettingsNotFound, "finance settings not found")
 	}
 	return s, nil
 }
@@ -44,7 +45,7 @@ func (m *mockBudgetStore) Create(ctx context.Context, b *finance.Budget) error {
 func (m *mockBudgetStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.BudgetID) (*finance.Budget, error) {
 	b, ok := m.budgets[id]
 	if !ok {
-		return nil, finance.ErrBudgetNotFound
+		return nil, errors.E(errors.NotExist, finance.BudgetNotFound, "budget not found")
 	}
 	return b, nil
 }
@@ -177,7 +178,7 @@ func (m *mockPeriodStore) GetByRange(ctx context.Context, budgetID finance.Budge
 	key := string(budgetID) + "_" + startDate.Format(time.RFC3339) + "_" + endDate.Format(time.RFC3339)
 	p, ok := m.periods[key]
 	if !ok {
-		return nil, finance.ErrPeriodNotFound
+		return nil, errors.E(errors.NotExist, finance.PeriodNotFound, "budget period not found")
 	}
 	return p, nil
 }

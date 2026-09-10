@@ -116,7 +116,7 @@ func (s *IngestionState) MetadataString(key string) string {
 
 // ProcessSignalPipeline executes the core Loom Graph (Classifier -> Extractor -> Resolver -> Deduplicator).
 // Returns the enriched IngestionState without performing side-effects (e.g. DB staging).
-func (c *Coordinator) ProcessSignalPipeline(ctx context.Context, spaceID string, req *IngestionRequest) (*IngestionState, error) {
+func (c *coordinator) ProcessSignalPipeline(ctx context.Context, spaceID string, req *IngestionRequest) (*IngestionState, error) {
 	if req == nil {
 		req = &IngestionRequest{}
 	}
@@ -183,7 +183,7 @@ type SignalSuggestion struct {
 }
 
 // GetSignalSuggestions runs the signal pipeline without side-effects and returns prefill suggestions.
-func (c *Coordinator) GetSignalSuggestions(ctx context.Context, spaceID string, req *IngestionRequest) (*SignalSuggestion, error) {
+func (c *coordinator) GetSignalSuggestions(ctx context.Context, spaceID string, req *IngestionRequest) (*SignalSuggestion, error) {
 	state, err := c.ProcessSignalPipeline(ctx, spaceID, req)
 	if err != nil {
 		return nil, err
@@ -211,7 +211,7 @@ func (c *Coordinator) GetSignalSuggestions(ctx context.Context, spaceID string, 
 }
 
 // 1. Classifier Node: Decides if document is INVOICE, RECEIPT, BANK_NOTIFICATION, SYSTEM_VERIFICATION, or UNKNOWN.
-func (c *Coordinator) pipelineClassifyNode(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
+func (c *coordinator) pipelineClassifyNode(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
 	textContent := ""
 	if state.Request != nil {
 		textContent = state.Request.TextContent
@@ -252,7 +252,7 @@ func (c *Coordinator) pipelineClassifyNode(ctx context.Context, state *Ingestion
 }
 
 // 2. Extractor Node: Runs Hyperion to pull structured transaction details.
-func (c *Coordinator) pipelineExtractNode(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
+func (c *coordinator) pipelineExtractNode(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
 	textContent := ""
 	if state.Request != nil {
 		textContent = state.Request.TextContent
@@ -356,7 +356,7 @@ func (c *Coordinator) pipelineExtractNode(ctx context.Context, state *IngestionS
 }
 
 // 3. Resolve Node: Queries Saturn DB to match accounts, budgets, and categories.
-func (c *Coordinator) pipelineResolveNode(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
+func (c *coordinator) pipelineResolveNode(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
 	// 1. Resolve Source Account via unified financeService domain resolver
 	srcAcc, err := c.financeService.ResolveAccount(ctx, finance.SpaceID(state.SpaceID), finance.ResolveAccountOpts{
 		AccountID:   state.MetadataString("suggested_account_id"),
@@ -411,7 +411,7 @@ func (c *Coordinator) pipelineResolveNode(ctx context.Context, state *IngestionS
 }
 
 // 4. Deduplicate Node: Audits recently logged transactions to flag double-entries.
-func (c *Coordinator) pipelineDeduplicateNode(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
+func (c *coordinator) pipelineDeduplicateNode(ctx context.Context, state *IngestionState) (graph.Command[*IngestionState], error) {
 	var parsedDate time.Time
 	if state.Date != "" {
 		if t, err := time.Parse(time.RFC3339, state.Date); err == nil {

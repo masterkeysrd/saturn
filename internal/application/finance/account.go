@@ -36,7 +36,7 @@ type UpdateAccountRequest struct {
 	Version        int64
 }
 
-func (c *Coordinator) CreateAccount(ctx context.Context, req *CreateAccountRequest) (*finance.Account, error) {
+func (c *coordinator) CreateAccount(ctx context.Context, req *CreateAccountRequest) (*finance.Account, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -65,7 +65,7 @@ func (c *Coordinator) CreateAccount(ctx context.Context, req *CreateAccountReque
 	return c.financeService.CreateAccount(ctx, acc)
 }
 
-func (c *Coordinator) UpdateAccount(ctx context.Context, req *UpdateAccountRequest) (*finance.Account, error) {
+func (c *coordinator) UpdateAccount(ctx context.Context, req *UpdateAccountRequest) (*finance.Account, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func (c *Coordinator) UpdateAccount(ctx context.Context, req *UpdateAccountReque
 	return c.financeService.UpdateAccount(ctx, acc, req.Mask)
 }
 
-func (c *Coordinator) DeleteAccount(ctx context.Context, id finance.AccountID, opts finance.DeleteOptions) error {
+func (c *coordinator) DeleteAccount(ctx context.Context, id finance.AccountID, opts finance.DeleteOptions) error {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return err
@@ -104,7 +104,7 @@ func (c *Coordinator) DeleteAccount(ctx context.Context, id finance.AccountID, o
 	return c.financeService.DeleteAccount(ctx, rCtx.SpaceID, id, opts)
 }
 
-func (c *Coordinator) AdjustAccountBalance(ctx context.Context, id finance.AccountID, targetBalance int64, adjustmentDate string, note string) (*finance.Account, error) {
+func (c *coordinator) AdjustAccountBalance(ctx context.Context, id finance.AccountID, targetBalance int64, adjustmentDate string, note string) (*finance.Account, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err

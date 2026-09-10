@@ -4,13 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
-	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
@@ -100,19 +99,15 @@ func (row *statementLineDB) toDomain() *finance.StatementLine {
 }
 
 type StatementStore struct {
-	db *sqlx.DB
+	db db.DB
 }
 
-func NewStatementStore(db *sqlx.DB) *StatementStore {
-	return &StatementStore{db: db}
+func NewStatementStore(database db.DB) *StatementStore {
+	return &StatementStore{db: database}
 }
 
 func (s *StatementStore) Create(ctx context.Context, stmt *finance.Statement, lines []*finance.StatementLine) error {
-	tx, err := s.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
+	const op errors.Op = "domain/finance/storage.CreateStatement"
 
 	if stmt.Version == 0 {
 		stmt.Version = 1
@@ -137,10 +132,10 @@ func (s *StatementStore) Create(ctx context.Context, stmt *finance.Statement, li
 	})
 	stmtQuery, stmtArgs, err := stmtDS.Prepared(true).ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	if _, err := tx.ExecContext(ctx, stmtQuery, stmtArgs...); err != nil {
-		return err
+	if _, err := s.db.Exec(ctx, stmtQuery, stmtArgs...); err != nil {
+		return errors.E(op, err)
 	}
 
 	// Insert Lines
@@ -168,35 +163,34 @@ func (s *StatementStore) Create(ctx context.Context, stmt *finance.Statement, li
 		})
 		lineQuery, lineArgs, err := lineDS.Prepared(true).ToSQL()
 		if err != nil {
-			return err
+			return errors.E(op, err)
 		}
-		if _, err := tx.ExecContext(ctx, lineQuery, lineArgs...); err != nil {
-			return err
+		if _, err := s.db.Exec(ctx, lineQuery, lineArgs...); err != nil {
+			return errors.E(op, err)
 		}
 	}
 
-	return tx.Commit()
+	return nil
 }
 
 func (s *StatementStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID) (*finance.Statement, error) {
+	const op errors.Op = "domain/finance/storage.GetStatementByID"
 	ds := pgDialect.From(goqu.S("finance").Table("statement")).
 		Select("*").
 		Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 	var row statementDB
-	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, finance.ErrStatementNotFound
-		}
-		return nil, err
+	if err := s.db.Get(ctx, &row, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 	return row.toDomain(), nil
 }
 
 func (s *StatementStore) List(ctx context.Context, spaceID finance.SpaceID, filter *finance.ListStatementsFilter) (*paging.Page[*finance.Statement], error) {
+	const op errors.Op = "domain/finance/storage.ListStatements"
 	if filter.PageSize <= 0 || filter.PageSize > 100 {
 		filter.PageSize = 20
 	}
@@ -226,12 +220,12 @@ func (s *StatementStore) List(ctx context.Context, spaceID finance.SpaceID, filt
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, fmt.Errorf("build list statements query: %w", err)
+		return nil, errors.E(op, err)
 	}
 
 	var rows []statementDB
-	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
-		return nil, fmt.Errorf("execute list statements query: %w", err)
+	if err := s.db.Select(ctx, &rows, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 
 	statements := make([]*finance.Statement, len(rows))
@@ -250,41 +244,30 @@ func (s *StatementStore) List(ctx context.Context, spaceID finance.SpaceID, filt
 }
 
 func (s *StatementStore) Delete(ctx context.Context, spaceID finance.SpaceID, id finance.StatementID, opts finance.DeleteOptions) error {
-	ex := goqu.Ex{"space_id": string(spaceID), "id": string(id)}
+	const op errors.Op = "domain/finance/storage.DeleteStatement"
+	ex := goqu.Ex{
+		"space_id": string(spaceID),
+		"id":       string(id),
+	}
 	if opts.Version > 0 {
 		ex["version"] = opts.Version
 	}
 	ds := pgDialect.Delete(goqu.S("finance").Table("statement")).Where(ex)
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	res, err := s.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		if opts.Version > 0 {
-			var exists bool
-			checkQuery, checkArgs, _ := pgDialect.From(goqu.S("finance").Table("statement")).
-				Select(goqu.L("1")).
-				Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)}).
-				Prepared(true).ToSQL()
-			_ = s.db.GetContext(ctx, &exists, checkQuery, checkArgs...)
-			if exists {
-				return finance.ErrStatementVersionMismatch
-			}
+	if err := s.db.ExecOne(ctx, query, args...); err != nil {
+		if opts.Version > 0 && errors.Is(err, errors.NotExist) {
+			return errors.E(op, errors.Conflict, finance.StatementVersionMismatch, "statement version mismatch")
 		}
-		return finance.ErrStatementNotFound
+		return errors.E(op, err)
 	}
 	return nil
 }
 
 func (s *StatementStore) Update(ctx context.Context, stmt *finance.Statement) error {
+	const op errors.Op = "domain/finance/storage.UpdateStatement"
 	stmt.UpdateTime = time.Now().UTC()
 	rec := goqu.Record{
 		"status":                     string(stmt.Status),
@@ -303,46 +286,31 @@ func (s *StatementStore) Update(ctx context.Context, stmt *finance.Statement) er
 		Where(ex)
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	res, err := s.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		if stmt.Version > 0 {
-			var exists bool
-			checkQuery, checkArgs, _ := pgDialect.From(goqu.S("finance").Table("statement")).
-				Select(goqu.L("1")).
-				Where(goqu.Ex{"space_id": string(stmt.SpaceID), "id": string(stmt.ID)}).
-				Prepared(true).ToSQL()
-			_ = s.db.GetContext(ctx, &exists, checkQuery, checkArgs...)
-			if exists {
-				return finance.ErrStatementVersionMismatch
-			}
+	if err := s.db.ExecOne(ctx, query, args...); err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return errors.E(op, errors.Conflict, finance.StatementVersionMismatch, "statement version mismatch")
 		}
-		return finance.ErrStatementNotFound
+		return errors.E(op, err)
 	}
 	stmt.Version++
 	return nil
 }
 
 func (s *StatementStore) ListLines(ctx context.Context, statementID finance.StatementID) ([]*finance.StatementLine, error) {
+	const op errors.Op = "domain/finance/storage.ListStatementLines"
 	ds := pgDialect.From(goqu.S("finance").Table("statement_line")).
 		Select("*").
 		Where(goqu.Ex{"statement_id": string(statementID)}).
 		Order(goqu.I("row_index").Asc())
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 	var rows []statementLineDB
-	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
-		return nil, err
+	if err := s.db.Select(ctx, &rows, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 	lines := make([]*finance.StatementLine, len(rows))
 	for i := range rows {
@@ -352,24 +320,23 @@ func (s *StatementStore) ListLines(ctx context.Context, statementID finance.Stat
 }
 
 func (s *StatementStore) GetLineByID(ctx context.Context, id finance.StatementLineID) (*finance.StatementLine, error) {
+	const op errors.Op = "domain/finance/storage.GetStatementLineByID"
 	ds := pgDialect.From(goqu.S("finance").Table("statement_line")).
 		Select("*").
 		Where(goqu.Ex{"id": string(id)})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 	var row statementLineDB
-	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, finance.ErrStatementLineNotFound
-		}
-		return nil, err
+	if err := s.db.Get(ctx, &row, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 	return row.toDomain(), nil
 }
 
 func (s *StatementStore) UpdateLineDraft(ctx context.Context, line *finance.StatementLine) error {
+	const op errors.Op = "domain/finance/storage.UpdateStatementLineDraft"
 	actionJSON, _ := json.Marshal(line.Action)
 	if len(actionJSON) == 0 || string(actionJSON) == "null" {
 		actionJSON = []byte("{}")
@@ -395,41 +362,21 @@ func (s *StatementStore) UpdateLineDraft(ctx context.Context, line *finance.Stat
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	res, err := s.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		if line.Version > 0 {
-			var exists bool
-			checkQuery, checkArgs, _ := pgDialect.From(goqu.S("finance").Table("statement_line")).
-				Select(goqu.L("1")).
-				Where(goqu.Ex{"id": string(line.ID)}).
-				Prepared(true).ToSQL()
-			_ = s.db.GetContext(ctx, &exists, checkQuery, checkArgs...)
-			if exists {
-				return finance.ErrStatementLineVersionMismatch
-			}
+	if err := s.db.ExecOne(ctx, query, args...); err != nil {
+		if errors.Is(err, errors.NotExist) {
+			return errors.E(op, errors.Conflict, finance.VersionMismatch, "statement line version mismatch")
 		}
-		return finance.ErrStatementLineNotFound
+		return errors.E(op, err)
 	}
 	line.Version++
 	return nil
 }
 
-// UpdateStatementWithLines updates a statement and all its lines in a single atomic database transaction.
+// UpdateStatementWithLines updates a statement and all its lines.
 func (s *StatementStore) UpdateStatementWithLines(ctx context.Context, stmt *finance.Statement, lines []*finance.StatementLine) error {
-	tx, err := s.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
+	const op errors.Op = "domain/finance/storage.UpdateStatementWithLines"
 
 	now := time.Now().UTC()
 	updateStmtQuery := `
@@ -439,16 +386,8 @@ func (s *StatementStore) UpdateStatementWithLines(ctx context.Context, stmt *fin
 		    version = version + 1,
 		    update_time = $3
 		WHERE space_id = $4 AND id = $5`
-	res, err := tx.ExecContext(ctx, updateStmtQuery, stmt.StatementStartingBalance, stmt.StatementEndingBalance, now, string(stmt.SpaceID), string(stmt.ID))
-	if err != nil {
-		return fmt.Errorf("update statement: %w", err)
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return finance.ErrStatementNotFound
+	if err := s.db.ExecOne(ctx, updateStmtQuery, stmt.StatementStartingBalance, stmt.StatementEndingBalance, now, string(stmt.SpaceID), string(stmt.ID)); err != nil {
+		return errors.E(op, err)
 	}
 
 	updateLineQuery := `
@@ -462,19 +401,15 @@ func (s *StatementStore) UpdateStatementWithLines(ctx context.Context, stmt *fin
 		if l.Action.Type != "" {
 			b, err := json.Marshal(l.Action)
 			if err != nil {
-				return fmt.Errorf("marshal line action: %w", err)
+				return errors.E(op, err)
 			}
 			str := string(b)
 			actionJSON = &str
 		}
 
-		if _, err := tx.ExecContext(ctx, updateLineQuery, l.Amount, actionJSON, string(l.ID), string(stmt.ID)); err != nil {
-			return fmt.Errorf("update statement line %s: %w", l.ID, err)
+		if err := s.db.ExecOne(ctx, updateLineQuery, l.Amount, actionJSON, string(l.ID), string(stmt.ID)); err != nil {
+			return errors.E(op, err)
 		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return err
 	}
 
 	stmt.Version++

@@ -48,7 +48,7 @@ type ConfirmScheduledTransactionRequest struct {
 	Currency        *finance.Currency
 }
 
-func (c *Coordinator) CreateRecurringTransaction(ctx context.Context, req *CreateRecurringTransactionRequest) (*finance.RecurringTransaction, error) {
+func (c *coordinator) CreateRecurringTransaction(ctx context.Context, req *CreateRecurringTransactionRequest) (*finance.RecurringTransaction, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -82,7 +82,7 @@ func (c *Coordinator) CreateRecurringTransaction(ctx context.Context, req *Creat
 	return res, nil
 }
 
-func (c *Coordinator) UpdateRecurringTransaction(ctx context.Context, req *UpdateRecurringTransactionRequest) (*finance.RecurringTransaction, error) {
+func (c *coordinator) UpdateRecurringTransaction(ctx context.Context, req *UpdateRecurringTransactionRequest) (*finance.RecurringTransaction, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -108,7 +108,7 @@ func (c *Coordinator) UpdateRecurringTransaction(ctx context.Context, req *Updat
 	return c.financeService.UpdateRecurringTransaction(ctx, expense, req.UpdateMask)
 }
 
-func (c *Coordinator) DeleteRecurringTransaction(ctx context.Context, id finance.RecurringTransactionID, opts finance.DeleteOptions) error {
+func (c *coordinator) DeleteRecurringTransaction(ctx context.Context, id finance.RecurringTransactionID, opts finance.DeleteOptions) error {
 	_, err := c.resolveContext(ctx)
 	if err != nil {
 		return err
@@ -116,7 +116,7 @@ func (c *Coordinator) DeleteRecurringTransaction(ctx context.Context, id finance
 	return c.financeService.DeleteRecurringTransaction(ctx, id, opts)
 }
 
-func (c *Coordinator) ConfirmScheduledTransaction(ctx context.Context, req *ConfirmScheduledTransactionRequest) (*finance.Transaction, error) {
+func (c *coordinator) ConfirmScheduledTransaction(ctx context.Context, req *ConfirmScheduledTransactionRequest) (*finance.Transaction, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -140,7 +140,7 @@ type MatchScheduledTransactionRequest struct {
 	MatchedID     finance.TransactionID
 }
 
-func (c *Coordinator) MatchScheduledTransaction(ctx context.Context, req *MatchScheduledTransactionRequest) (*finance.Transaction, error) {
+func (c *coordinator) MatchScheduledTransaction(ctx context.Context, req *MatchScheduledTransactionRequest) (*finance.Transaction, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -153,7 +153,7 @@ func (c *Coordinator) MatchScheduledTransaction(ctx context.Context, req *MatchS
 	})
 }
 
-func (c *Coordinator) SkipScheduledTransaction(ctx context.Context, id finance.ScheduledTransactionID) (*finance.ScheduledTransaction, error) {
+func (c *coordinator) SkipScheduledTransaction(ctx context.Context, id finance.ScheduledTransactionID) (*finance.ScheduledTransaction, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -162,7 +162,7 @@ func (c *Coordinator) SkipScheduledTransaction(ctx context.Context, id finance.S
 	return c.financeService.SkipScheduledTransaction(ctx, rCtx.SpaceID, id)
 }
 
-func (c *Coordinator) GetScheduledTransaction(ctx context.Context, id finance.ScheduledTransactionID) (*finance.ScheduledTransaction, error) {
+func (c *coordinator) GetScheduledTransaction(ctx context.Context, id finance.ScheduledTransactionID) (*finance.ScheduledTransaction, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -171,6 +171,6 @@ func (c *Coordinator) GetScheduledTransaction(ctx context.Context, id finance.Sc
 	return c.financeService.GetScheduledTransaction(ctx, rCtx.SpaceID, id)
 }
 
-func (c *Coordinator) GenerateScheduledTransactions(ctx context.Context) error {
+func (c *coordinator) GenerateScheduledTransactions(ctx context.Context) error {
 	return c.financeService.GenerateScheduledTransactions(ctx)
 }

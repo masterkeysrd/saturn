@@ -4,14 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
-	"fmt"
 
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
 	"github.com/jmoiron/sqlx"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/platform/conv"
+	"github.com/masterkeysrd/saturn/internal/platform/db"
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
@@ -34,14 +34,15 @@ type transactionDB struct {
 }
 
 type TransactionStore struct {
-	db *sqlx.DB
+	db db.DB
 }
 
-func NewTransactionStore(db *sqlx.DB) *TransactionStore {
-	return &TransactionStore{db: db}
+func NewTransactionStore(database db.DB) *TransactionStore {
+	return &TransactionStore{db: database}
 }
 
 func (s *TransactionStore) Create(ctx context.Context, t *finance.Transaction) error {
+	const op errors.Op = "domain/finance/storage.CreateTransaction"
 	metaJSON, _ := json.Marshal(t.Metadata)
 	if len(metaJSON) == 0 || string(metaJSON) == "null" {
 		metaJSON = []byte("{}")
@@ -66,10 +67,12 @@ func (s *TransactionStore) Create(ctx context.Context, t *finance.Transaction) e
 	})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	_, err = s.db.ExecContext(ctx, query, args...)
-	return err
+	if _, err := s.db.Exec(ctx, query, args...); err != nil {
+		return errors.E(op, err)
+	}
+	return nil
 }
 
 func (row *transactionDB) toDomain() *finance.Transaction {
@@ -111,42 +114,34 @@ func (row *transactionDB) toDomain() *finance.Transaction {
 }
 
 func (s *TransactionStore) GetByID(ctx context.Context, spaceID finance.SpaceID, id finance.TransactionID) (*finance.Transaction, error) {
+	const op errors.Op = "domain/finance/storage.GetTransactionByID"
 	ds := pgDialect.From(goqu.S("finance").Table("transaction")).Select("*").Where(goqu.Ex{"space_id": string(spaceID), "id": string(id)})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 	var row transactionDB
-	if err := s.db.GetContext(ctx, &row, query, args...); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, finance.ErrTransactionNotFound
-		}
-		return nil, err
+	if err := s.db.Get(ctx, &row, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 	return row.toDomain(), nil
 }
 
 func (s *TransactionStore) Delete(ctx context.Context, id finance.TransactionID) error {
+	const op errors.Op = "domain/finance/storage.DeleteTransaction"
 	ds := pgDialect.Delete(goqu.S("finance").Table("transaction")).Where(goqu.Ex{"id": string(id)})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	res, err := s.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return finance.ErrTransactionNotFound
+	if err := s.db.ExecOne(ctx, query, args...); err != nil {
+		return errors.E(op, err)
 	}
 	return nil
 }
 
 func (s *TransactionStore) Update(ctx context.Context, t *finance.Transaction) error {
+	const op errors.Op = "domain/finance/storage.UpdateTransaction"
 	metaJSON, _ := json.Marshal(t.Metadata)
 	if len(metaJSON) == 0 || string(metaJSON) == "null" {
 		metaJSON = []byte("{}")
@@ -169,23 +164,16 @@ func (s *TransactionStore) Update(ctx context.Context, t *finance.Transaction) e
 		Where(goqu.Ex{"id": string(t.ID)})
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return err
+		return errors.E(op, err)
 	}
-	res, err := s.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return finance.ErrTransactionNotFound
+	if err := s.db.ExecOne(ctx, query, args...); err != nil {
+		return errors.E(op, err)
 	}
 	return nil
 }
 
 func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.SpaceID, filter *finance.TransactionFilter) (*paging.Page[*finance.Transaction], error) {
+	const op errors.Op = "domain/finance/storage.ListTransactionsBySpace"
 	if filter.PageSize <= 0 || filter.PageSize > 100 {
 		filter.PageSize = 20
 	}
@@ -255,12 +243,12 @@ func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
-		return nil, fmt.Errorf("build sql query: %w", err)
+		return nil, errors.E(op, err)
 	}
 
 	var dbRows []transactionDB
-	if err := s.db.SelectContext(ctx, &dbRows, query, args...); err != nil {
-		return nil, fmt.Errorf("select context: %w", err)
+	if err := s.db.Select(ctx, &dbRows, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 
 	txns := make([]*finance.Transaction, len(dbRows))
@@ -279,6 +267,7 @@ func (s *TransactionStore) ListBySpace(ctx context.Context, spaceID finance.Spac
 }
 
 func (s *TransactionStore) AggregateSpent(ctx context.Context, periodID finance.PeriodID, budgetCurrency finance.Currency, exchangeRateToBase float64) (int64, int64, error) {
+	const op errors.Op = "domain/finance/storage.AggregateSpent"
 	query := `SELECT 
 		COALESCE(SUM(amount_in_base), 0) as spent_in_base,
 		COALESCE(SUM(
@@ -296,14 +285,15 @@ func (s *TransactionStore) AggregateSpent(ctx context.Context, periodID finance.
 		SpentAmount int64 `db:"spent_amount"`
 	}
 
-	err := s.db.GetContext(ctx, &row, query, string(periodID), string(budgetCurrency), exchangeRateToBase)
+	err := s.db.Get(ctx, &row, query, string(periodID), string(budgetCurrency), exchangeRateToBase)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, errors.E(op, err)
 	}
 	return row.SpentInBase, row.SpentAmount, nil
 }
 
 func (s *TransactionStore) AggregateSpentBatch(ctx context.Context, periodIDs []finance.PeriodID) ([]finance.PeriodSpent, error) {
+	const op errors.Op = "domain/finance/storage.AggregateSpentBatch"
 	if len(periodIDs) == 0 {
 		return nil, nil
 	}
@@ -330,7 +320,7 @@ func (s *TransactionStore) AggregateSpentBatch(ctx context.Context, periodIDs []
 		GROUP BY t.period_id
 	`, idStrings)
 	if err != nil {
-		return nil, err
+		return nil, errors.E(op, err)
 	}
 
 	query = s.db.Rebind(query)
@@ -341,8 +331,8 @@ func (s *TransactionStore) AggregateSpentBatch(ctx context.Context, periodIDs []
 		SpentAmount int64  `db:"spent_amount"`
 	}
 
-	if err := s.db.SelectContext(ctx, &dbRows, query, args...); err != nil {
-		return nil, err
+	if err := s.db.Select(ctx, &dbRows, query, args...); err != nil {
+		return nil, errors.E(op, err)
 	}
 
 	results := make([]finance.PeriodSpent, len(dbRows))
@@ -357,6 +347,7 @@ func (s *TransactionStore) AggregateSpentBatch(ctx context.Context, periodIDs []
 }
 
 func (s *TransactionStore) HasTransactions(ctx context.Context, spaceID finance.SpaceID, filter *finance.TransactionFilter) (bool, error) {
+	const op errors.Op = "domain/finance/storage.HasTransactions"
 	ds := pgDialect.From(goqu.S("finance").Table("transaction")).Select(goqu.L("1")).Where(goqu.Ex{"space_id": string(spaceID)})
 
 	if filter != nil {
@@ -380,16 +371,16 @@ func (s *TransactionStore) HasTransactions(ctx context.Context, spaceID finance.
 
 	query, args, err := ds.Limit(1).ToSQL()
 	if err != nil {
-		return false, err
+		return false, errors.E(op, err)
 	}
 
 	var exists int
-	err = s.db.QueryRowContext(ctx, query, args...).Scan(&exists)
-	if errors.Is(err, sql.ErrNoRows) {
+	err = s.db.Get(ctx, &exists, query, args...)
+	if errors.Is(err, errors.NotExist) {
 		return false, nil
 	}
 	if err != nil {
-		return false, err
+		return false, errors.E(op, err)
 	}
 	return true, nil
 }

@@ -38,7 +38,7 @@ type DeleteExchangeRateRequest struct {
 	ID string
 }
 
-func (c *Coordinator) CreateExchangeRate(ctx context.Context, req *CreateExchangeRateRequest) (*finance.ExchangeRate, error) {
+func (c *coordinator) CreateExchangeRate(ctx context.Context, req *CreateExchangeRateRequest) (*finance.ExchangeRate, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -55,7 +55,7 @@ func (c *Coordinator) CreateExchangeRate(ctx context.Context, req *CreateExchang
 	return c.financeService.CreateExchangeRate(ctx, rate)
 }
 
-func (c *Coordinator) GetExchangeRate(ctx context.Context, req *GetExchangeRateRequest) (*finance.ExchangeRate, error) {
+func (c *coordinator) GetExchangeRate(ctx context.Context, req *GetExchangeRateRequest) (*finance.ExchangeRate, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func (c *Coordinator) GetExchangeRate(ctx context.Context, req *GetExchangeRateR
 	return c.financeService.GetExchangeRateByID(ctx, rCtx.SpaceID, req.ID)
 }
 
-func (c *Coordinator) UpdateExchangeRate(ctx context.Context, req *UpdateExchangeRateRequest) (*finance.ExchangeRate, error) {
+func (c *coordinator) UpdateExchangeRate(ctx context.Context, req *UpdateExchangeRateRequest) (*finance.ExchangeRate, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func (c *Coordinator) UpdateExchangeRate(ctx context.Context, req *UpdateExchang
 	return c.financeService.UpdateExchangeRate(ctx, rCtx.SpaceID, req.ID, rate)
 }
 
-func (c *Coordinator) ListExchangeRates(ctx context.Context, req *ListExchangeRatesRequest) ([]*finance.ExchangeRate, string, error) {
+func (c *coordinator) ListExchangeRates(ctx context.Context, req *ListExchangeRatesRequest) ([]*finance.ExchangeRate, string, error) {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return nil, "", err
@@ -96,7 +96,7 @@ func (c *Coordinator) ListExchangeRates(ctx context.Context, req *ListExchangeRa
 	return c.financeService.ListExchangeRates(ctx, rCtx.SpaceID, filter)
 }
 
-func (c *Coordinator) DeleteExchangeRate(ctx context.Context, req *DeleteExchangeRateRequest) error {
+func (c *coordinator) DeleteExchangeRate(ctx context.Context, req *DeleteExchangeRateRequest) error {
 	rCtx, err := c.resolveContext(ctx)
 	if err != nil {
 		return err

@@ -2,7 +2,6 @@ package finance
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -24,12 +23,12 @@ import (
 // Handler implements the financev1.FinanceServer interface.
 type Handler struct {
 	financev1.UnimplementedFinanceServer
-	Coordinator *financeapp.Coordinator
+	Coordinator financeapp.Coordinator
 	Aggregator  *financeaggregator.Service
 }
 
 // NewHandler creates a new Handler.
-func NewHandler(coordinator *financeapp.Coordinator, financeAggregator *financeaggregator.Service) *Handler {
+func NewHandler(coordinator financeapp.Coordinator, financeAggregator *financeaggregator.Service) *Handler {
 	return &Handler{
 		Coordinator: coordinator,
 		Aggregator:  financeAggregator,
@@ -204,7 +203,7 @@ func (h *Handler) ConfigureFinance(ctx context.Context, req *financev1.Configure
 
 	settings, err := h.Coordinator.ConfigureFinance(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoSettings(settings), nil
@@ -213,7 +212,7 @@ func (h *Handler) ConfigureFinance(ctx context.Context, req *financev1.Configure
 func (h *Handler) GetFinanceSettings(ctx context.Context, req *financev1.GetFinanceSettingsRequest) (*financev1.FinanceSettings, error) {
 	settings, err := h.Coordinator.GetFinanceSettings(ctx)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoSettings(settings), nil
@@ -222,7 +221,7 @@ func (h *Handler) GetFinanceSettings(ctx context.Context, req *financev1.GetFina
 func (h *Handler) ListCurrencies(ctx context.Context, req *financev1.ListCurrenciesRequest) (*financev1.ListCurrenciesResponse, error) {
 	list, err := h.Coordinator.ListCurrencies(ctx)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	currencies := make([]*financev1.CurrencyInfo, len(list))
@@ -250,7 +249,7 @@ func (h *Handler) CreateBudget(ctx context.Context, req *financev1.CreateBudgetR
 
 	budget, err := h.Coordinator.CreateBudget(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoBudget(budget), nil
@@ -259,7 +258,7 @@ func (h *Handler) CreateBudget(ctx context.Context, req *financev1.CreateBudgetR
 func (h *Handler) GetBudget(ctx context.Context, req *financev1.GetBudgetRequest) (*financev1.Budget, error) {
 	budget, err := h.Coordinator.GetBudget(ctx, finance.BudgetID(req.GetId()))
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoBudget(budget), nil
@@ -285,7 +284,7 @@ func (h *Handler) UpdateBudget(ctx context.Context, req *financev1.UpdateBudgetR
 
 	budget, err := h.Coordinator.UpdateBudget(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoBudget(budget), nil
@@ -297,7 +296,7 @@ func (h *Handler) DeleteBudget(ctx context.Context, req *financev1.DeleteBudgetR
 		Version: req.GetVersion(),
 	}
 	if err := h.Coordinator.DeleteBudget(ctx, appReq); err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return &emptypb.Empty{}, nil
@@ -352,7 +351,7 @@ func (h *Handler) ListBudgets(ctx context.Context, req *financev1.ListBudgetsReq
 		View:       viewType,
 	})
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	protoBudgets := make([]*financev1.Budget, 0, len(page.Items))
@@ -395,7 +394,7 @@ func (h *Handler) GetBudgetPeriod(ctx context.Context, req *financev1.GetBudgetP
 	bID := finance.BudgetID(req.GetBudgetId())
 	period, err := h.Aggregator.GetBudgetPeriod(ctx, spaceID, bID, targetDate)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoBudgetPeriod(period), nil
@@ -428,7 +427,7 @@ func (h *Handler) CreateExchangeRate(ctx context.Context, req *financev1.CreateE
 
 	rate, err := h.Coordinator.CreateExchangeRate(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoExchangeRate(rate), nil
@@ -447,7 +446,7 @@ func (h *Handler) GetExchangeRate(ctx context.Context, req *financev1.GetExchang
 
 	rate, err := h.Aggregator.GetExchangeRate(ctx, spaceID, req.GetId())
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoExchangeRate(rate), nil
@@ -469,7 +468,7 @@ func (h *Handler) UpdateExchangeRate(ctx context.Context, req *financev1.UpdateE
 
 	rate, err := h.Coordinator.UpdateExchangeRate(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoExchangeRate(rate), nil
@@ -515,7 +514,7 @@ func (h *Handler) ListExchangeRates(ctx context.Context, req *financev1.ListExch
 
 	rates, nextToken, err := h.Aggregator.ListExchangeRates(ctx, spaceID, filter)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	protoRates := make([]*financev1.ExchangeRate, 0, len(rates))
@@ -540,7 +539,7 @@ func (h *Handler) DeleteExchangeRate(ctx context.Context, req *financev1.DeleteE
 
 	err := h.Coordinator.DeleteExchangeRate(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return &emptypb.Empty{}, nil
@@ -562,40 +561,6 @@ func toProtoExchangeRate(rate *finance.ExchangeRate) *financev1.ExchangeRate {
 		RateDate:     timestamppb.New(rate.RateDate),
 		CreateTime:   timestamppb.New(rate.CreateTime),
 	}
-}
-
-// mapError translates domain and application errors to gRPC statuses.
-func (h *Handler) mapError(err error) error {
-	if err == nil {
-		return nil
-	}
-
-	if strings.Contains(err.Error(), "access denied") {
-		return status.Error(codes.PermissionDenied, err.Error())
-	}
-
-	switch {
-	case errors.Is(err, finance.ErrSettingsNotFound):
-		return status.Error(codes.NotFound, "finance settings not configured")
-	case errors.Is(err, finance.ErrBudgetNotFound):
-		return status.Error(codes.NotFound, "budget not found")
-	case errors.Is(err, finance.ErrPeriodNotFound):
-		return status.Error(codes.NotFound, "budget period not found")
-	case errors.Is(err, finance.ErrExchangeRateNotFound):
-		return status.Error(codes.FailedPrecondition, "exchange rate not found")
-	case errors.Is(err, finance.ErrTransactionNotFound):
-		return status.Error(codes.NotFound, "transaction not found")
-	case errors.Is(err, finance.ErrScheduledTransactionNotFound):
-		return status.Error(codes.NotFound, "scheduled transaction not found")
-	case errors.Is(err, finance.ErrBorrowingNotFound):
-		return status.Error(codes.NotFound, "borrowing not found")
-	case errors.Is(err, finance.ErrRepaymentNotFound):
-		return status.Error(codes.NotFound, "borrowing repayment not found")
-	case errors.Is(err, finance.ErrBudgetVersionMismatch), errors.Is(err, finance.ErrAccountVersionMismatch), errors.Is(err, finance.ErrInstitutionVersionMismatch), errors.Is(err, finance.ErrBorrowingVersionMismatch), errors.Is(err, finance.ErrRecurringTransactionVersionMismatch), errors.Is(err, finance.ErrStatementVersionMismatch), errors.Is(err, finance.ErrStatementLineVersionMismatch):
-		return status.Error(codes.Aborted, err.Error())
-	}
-
-	return status.Error(codes.InvalidArgument, err.Error())
 }
 
 func (h *Handler) CreateExpense(ctx context.Context, req *financev1.CreateExpenseRequest) (*financev1.Transaction, error) {
@@ -641,7 +606,7 @@ func (h *Handler) CreateExpense(ctx context.Context, req *financev1.CreateExpens
 
 	txn, err := h.Coordinator.CreateExpense(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoTransaction(txn), nil
@@ -689,7 +654,7 @@ func (h *Handler) CreateIncome(ctx context.Context, req *financev1.CreateIncomeR
 
 	txn, err := h.Coordinator.CreateIncome(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoTransaction(txn), nil
@@ -740,7 +705,7 @@ func (h *Handler) UpdateExpense(ctx context.Context, req *financev1.UpdateExpens
 
 	txn, err := h.Coordinator.UpdateExpense(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoTransaction(txn), nil
@@ -790,7 +755,7 @@ func (h *Handler) UpdateIncome(ctx context.Context, req *financev1.UpdateIncomeR
 
 	txn, err := h.Coordinator.UpdateIncome(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoTransaction(txn), nil
@@ -804,7 +769,7 @@ func (h *Handler) DeleteTransaction(ctx context.Context, req *financev1.DeleteTr
 
 	err = h.Coordinator.DeleteTransaction(ctx, tID)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return &emptypb.Empty{}, nil
@@ -828,7 +793,7 @@ func (h *Handler) GetTransaction(ctx context.Context, req *financev1.GetTransact
 	}
 	aggTxn, err := h.Aggregator.GetTransaction(ctx, spaceID, view, tID)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoAggregatedTransaction(aggTxn), nil
@@ -907,7 +872,7 @@ func (h *Handler) ListTransactions(ctx context.Context, req *financev1.ListTrans
 
 	page, err := h.Aggregator.ListTransactions(ctx, spaceID, view, filter)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	protoTxns := make([]*financev1.Transaction, 0, len(page.Items))
@@ -1044,7 +1009,7 @@ func (h *Handler) ListTransactionEvents(ctx context.Context, req *financev1.List
 
 	events, err := h.Coordinator.ListTransactionEvents(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	protoEvents := make([]*financev1.TransactionEvent, 0, len(events))
@@ -1089,7 +1054,7 @@ func (h *Handler) GetInsights(ctx context.Context, req *financev1.GetInsightsReq
 
 	insights, err := h.Coordinator.GetInsights(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoInsightsResponse(insights), nil
@@ -1366,7 +1331,7 @@ func (h *Handler) CreateAccount(ctx context.Context, req *financev1.CreateAccoun
 
 	acc, err := h.Coordinator.CreateAccount(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoAccount(acc), nil
@@ -1408,7 +1373,7 @@ func (h *Handler) GetAccount(ctx context.Context, req *financev1.GetAccountReque
 
 	a, err := h.Aggregator.GetAccount(ctx, spaceID, aID, viewType)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoAggregatedAccount(a, viewType), nil
@@ -1451,7 +1416,7 @@ func (h *Handler) UpdateAccount(ctx context.Context, req *financev1.UpdateAccoun
 
 	acc, err := h.Coordinator.UpdateAccount(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoAccount(acc), nil
@@ -1469,7 +1434,7 @@ func (h *Handler) AdjustAccountBalance(ctx context.Context, req *financev1.Adjus
 
 	acc, err := h.Coordinator.AdjustAccountBalance(ctx, aID, req.GetTargetBalance(), req.GetAdjustmentDate(), req.GetNote())
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoAccount(acc), nil
@@ -1483,7 +1448,7 @@ func (h *Handler) DeleteAccount(ctx context.Context, req *financev1.DeleteAccoun
 
 	opts := finance.DeleteOptions{Version: req.GetVersion()}
 	if err := h.Coordinator.DeleteAccount(ctx, aID, opts); err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return &emptypb.Empty{}, nil
@@ -1525,7 +1490,7 @@ func (h *Handler) ListAccounts(ctx context.Context, req *financev1.ListAccountsR
 
 	page, err := h.Aggregator.ListAccounts(ctx, spaceID, viewType, filter)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	protoAccounts := make([]*financev1.Account, 0, len(page.Items))
@@ -1558,7 +1523,7 @@ func (h *Handler) CreateTransfer(ctx context.Context, req *financev1.CreateTrans
 
 	trsf, err := h.Coordinator.CreateTransfer(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoTransfer(trsf), nil
@@ -1572,7 +1537,7 @@ func (h *Handler) ListTransfers(ctx context.Context, req *financev1.ListTransfer
 
 	list, nextToken, err := h.Coordinator.ListTransfers(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	protoTransfers := make([]*financev1.Transfer, 0, len(list))
@@ -1811,7 +1776,7 @@ func (h *Handler) UpdateInboxItem(ctx context.Context, req *financev1.UpdateInbo
 
 	res, err := h.Coordinator.UpdateInboxItem(ctx, domainItem)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoInboxItem(res), nil
@@ -1856,7 +1821,7 @@ func (h *Handler) ListInboxItems(ctx context.Context, req *financev1.ListInboxIt
 
 	page, err := h.Aggregator.ListInboxItems(ctx, spaceID, *filter)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	protoList := make([]*financev1.InboxItem, len(page.Items))
@@ -1877,7 +1842,7 @@ func (h *Handler) ApproveInboxItem(ctx context.Context, req *financev1.ApproveIn
 
 	item, err := h.Coordinator.ApproveInboxItem(ctx, req.GetId())
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoInboxItem(item), nil
@@ -1890,7 +1855,7 @@ func (h *Handler) DiscardInboxItem(ctx context.Context, req *financev1.DiscardIn
 
 	err := h.Coordinator.DiscardInboxItem(ctx, req.GetId())
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return &emptypb.Empty{}, nil
@@ -1911,7 +1876,7 @@ func (h *Handler) CreateInstitution(ctx context.Context, req *financev1.CreateIn
 
 	created, err := h.Coordinator.CreateInstitution(ctx, inst)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoInstitution(created), nil
@@ -1949,7 +1914,7 @@ func (h *Handler) UpdateInstitution(ctx context.Context, req *financev1.UpdateIn
 
 	updated, err := h.Coordinator.UpdateInstitution(ctx, incoming, mask)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoInstitution(updated), nil
@@ -1967,7 +1932,7 @@ func (h *Handler) DeleteInstitution(ctx context.Context, req *financev1.DeleteIn
 	}
 
 	if err := h.Coordinator.DeleteInstitution(ctx, iid, finance.DeleteOptions{Version: version}); err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return &emptypb.Empty{}, nil
@@ -1990,7 +1955,7 @@ func (h *Handler) ListInstitutions(ctx context.Context, req *financev1.ListInsti
 
 	page, err := h.Aggregator.ListInstitutions(ctx, spaceID, filter)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	items := make([]*financev1.Institution, len(page.Items))
@@ -2011,7 +1976,7 @@ func (h *Handler) ResolveInstitution(ctx context.Context, req *financev1.Resolve
 
 	res, err := h.Coordinator.ResolveInstitution(ctx, req.GetName())
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	resp := &financev1.ResolveInstitutionResponse{
@@ -2078,7 +2043,7 @@ func (h *Handler) ImportStatement(ctx context.Context, req *financev1.ImportStat
 
 	res, err := h.Coordinator.ImportStatement(ctx, finance.AccountID(req.AccountId), domainStmt)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoStatement(res), nil
@@ -2102,7 +2067,7 @@ func (h *Handler) IngestStatementDocument(ctx context.Context, req *financev1.In
 
 	res, err := h.Coordinator.IngestStatementDocument(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	protoRes := &financev1.IngestStatementDocumentResponse{
@@ -2150,7 +2115,7 @@ func (h *Handler) AnalyzeStatementDocument(ctx context.Context, req *financev1.A
 
 	state, err := h.Coordinator.AnalyzeStatementDocument(ctx, appReq)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	protoRes := &financev1.AnalyzeStatementDocumentResponse{
@@ -2188,7 +2153,7 @@ func (h *Handler) GetStatement(ctx context.Context, req *financev1.GetStatementR
 
 	res, err := h.Aggregator.GetStatement(ctx, spaceID, finance.StatementID(req.Id))
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoStatement(res), nil
@@ -2202,7 +2167,7 @@ func (h *Handler) DeleteStatement(ctx context.Context, req *financev1.DeleteStat
 	opts := finance.DeleteOptions{Version: req.GetVersion()}
 	err := h.Coordinator.DeleteStatement(ctx, finance.StatementID(req.Id), opts)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return &emptypb.Empty{}, nil
@@ -2242,7 +2207,7 @@ func (h *Handler) ListStatements(ctx context.Context, req *financev1.ListStateme
 
 	page, err := h.Aggregator.ListStatements(ctx, spaceID, filter)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	protoStatements := make([]*financev1.Statement, len(page.Items))
@@ -2269,7 +2234,7 @@ func (h *Handler) ListStatementLines(ctx context.Context, req *financev1.ListSta
 
 	lines, err := h.Aggregator.ListStatementLines(ctx, spaceID, finance.StatementID(req.StatementId))
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	protoLines := make([]*financev1.StatementLine, len(lines))
@@ -2314,7 +2279,7 @@ func (h *Handler) UpdateStatementLine(ctx context.Context, req *financev1.Update
 	}
 	res, err := h.Coordinator.UpdateStatementLine(ctx, domainLine, maskPaths)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoStatementLine(res), nil
@@ -2337,7 +2302,7 @@ func (h *Handler) UpdateStatement(ctx context.Context, req *financev1.UpdateStat
 	}
 	res, err := h.Coordinator.UpdateStatement(ctx, domainStmt, maskPaths)
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoStatement(res), nil
@@ -2350,7 +2315,7 @@ func (h *Handler) CompleteStatement(ctx context.Context, req *financev1.Complete
 
 	res, err := h.Coordinator.CompleteStatement(ctx, finance.StatementID(req.Id))
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	return toProtoStatement(res), nil
@@ -2363,7 +2328,7 @@ func (h *Handler) InvertStatementSigns(ctx context.Context, req *financev1.Inver
 
 	stmt, lines, err := h.Coordinator.InvertStatementSigns(ctx, finance.StatementID(req.Id))
 	if err != nil {
-		return nil, h.mapError(err)
+		return nil, err
 	}
 
 	protoLines := make([]*financev1.StatementLine, len(lines))

@@ -2,10 +2,11 @@ package finance
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 
 	"github.com/masterkeysrd/saturn/internal/platform/id"
 	"github.com/masterkeysrd/saturn/internal/platform/log"
@@ -53,7 +54,7 @@ func (s *Service) ConfigureFinance(ctx context.Context, settings *FinanceSetting
 		return existing, nil
 	}
 
-	if !errors.Is(err, ErrSettingsNotFound) {
+	if !errors.Is(err, errors.NotExist) {
 		return nil, err
 	}
 
@@ -107,13 +108,15 @@ func (s *Service) CreateBudget(ctx context.Context, budget *Budget) (*Budget, er
 // UpdateBudget modifies an existing budget template, optionally applying a field mask.
 // If mask is nil or empty, all registered patchable fields are updated.
 func (s *Service) UpdateBudget(ctx context.Context, budget *Budget, mask []string) (*Budget, error) {
+	const op errors.Op = "domain/finance.UpdateBudget"
+
 	existing, err := s.deps.BudgetStore.GetByID(ctx, budget.SpaceID, budget.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	if budget.Version > 0 && budget.Version != existing.Version {
-		return nil, ErrBudgetVersionMismatch
+		return nil, errors.E(op, errors.Conflict, VersionMismatch, "update failed: budget not found or version mismatch")
 	}
 
 	if err := existing.ApplyPatch(budget, mask); err != nil {
@@ -129,8 +132,10 @@ func (s *Service) UpdateBudget(ctx context.Context, budget *Budget, mask []strin
 
 // DeleteBudget removes a budget.
 func (s *Service) DeleteBudget(ctx context.Context, spaceID SpaceID, id BudgetID, opts DeleteOptions) error {
+	const op errors.Op = "domain/finance.DeleteBudget"
+
 	if string(id) == "" {
-		return errors.New("budget ID is required")
+		return errors.E(op, errors.Invalid, "budget ID is required")
 	}
 
 	hasTxns, err := s.deps.TransactionStore.HasTransactions(ctx, spaceID, &TransactionFilter{
@@ -140,7 +145,7 @@ func (s *Service) DeleteBudget(ctx context.Context, spaceID SpaceID, id BudgetID
 		return err
 	}
 	if hasTxns {
-		return ErrBudgetHasTransactions
+		return errors.E(op, errors.Precondition, BudgetHasTransactions, "cannot delete budget with existing transactions. deactivate it instead")
 	}
 
 	hasScheduled, err := s.deps.ScheduledTransactionStore.HasScheduledTransactions(ctx, spaceID, &ListScheduledTransactionsFilter{
@@ -150,7 +155,7 @@ func (s *Service) DeleteBudget(ctx context.Context, spaceID SpaceID, id BudgetID
 		return err
 	}
 	if hasScheduled {
-		return ErrBudgetHasScheduledTransactions
+		return errors.E(op, errors.Precondition, BudgetHasScheduledTransactions, "cannot delete budget with active scheduled transactions. cancel or reassign scheduled transactions first")
 	}
 
 	return s.deps.BudgetStore.Delete(ctx, spaceID, id, opts)
@@ -183,7 +188,7 @@ func (s *Service) GetOrCreatePeriod(ctx context.Context, spaceID SpaceID, budget
 	if err == nil {
 		return period, nil
 	}
-	if !errors.Is(err, ErrPeriodNotFound) {
+	if !errors.Is(err, errors.NotExist) {
 		return nil, err
 	}
 
@@ -312,12 +317,14 @@ func (s *Service) CreateExchangeRate(ctx context.Context, rate *ExchangeRate) (*
 
 // GetExchangeRateByID retrieves an exact exchange rate record by its ID.
 func (s *Service) GetExchangeRateByID(ctx context.Context, spaceID SpaceID, id string) (*ExchangeRate, error) {
+	const op errors.Op = "domain/finance.GetExchangeRateByID"
+
 	if err := spaceID.Validate(); err != nil {
-		return nil, fmt.Errorf("validate space ID: %w", err)
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 	from, to, t, err := ParseExchangeRateID(id)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrExchangeRateNotFound, err)
+		return nil, errors.E(op, errors.NotExist, ExchangeRateNotFound, err)
 	}
 	key := ExchangeRateKey{
 		SpaceID:      spaceID,
@@ -330,13 +337,15 @@ func (s *Service) GetExchangeRateByID(ctx context.Context, spaceID SpaceID, id s
 
 // UpdateExchangeRate corrects the multiplier on an existing exchange rate record.
 func (s *Service) UpdateExchangeRate(ctx context.Context, spaceID SpaceID, id string, rate *ExchangeRate) (*ExchangeRate, error) {
+	const op errors.Op = "domain/finance.UpdateExchangeRate"
+
 	if err := spaceID.Validate(); err != nil {
-		return nil, fmt.Errorf("validate space ID: %w", err)
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	from, to, t, err := ParseExchangeRateID(id)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrExchangeRateNotFound, err)
+		return nil, errors.E(op, errors.NotExist, ExchangeRateNotFound, err)
 	}
 
 	existing, err := s.deps.ExchangeRateStore.GetExactRate(ctx, ExchangeRateKey{
@@ -351,7 +360,7 @@ func (s *Service) UpdateExchangeRate(ctx context.Context, spaceID SpaceID, id st
 
 	existing.Rate = rate.Rate
 	if err := existing.Validate(); err != nil {
-		return nil, fmt.Errorf("validate exchange rate: %w", err)
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	if err := s.deps.ExchangeRateStore.Update(ctx, existing); err != nil {
@@ -370,12 +379,14 @@ func (s *Service) ListExchangeRates(ctx context.Context, spaceID SpaceID, filter
 
 // DeleteExchangeRateByID removes a daily rate conversion rule by ID.
 func (s *Service) DeleteExchangeRateByID(ctx context.Context, spaceID SpaceID, id string) error {
+	const op errors.Op = "domain/finance.DeleteExchangeRateByID"
+
 	if err := spaceID.Validate(); err != nil {
-		return fmt.Errorf("validate space ID: %w", err)
+		return errors.E(op, errors.Invalid, err)
 	}
 	from, to, t, err := ParseExchangeRateID(id)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrExchangeRateNotFound, err)
+		return errors.E(op, errors.NotExist, ExchangeRateNotFound, err)
 	}
 	key := ExchangeRateKey{
 		SpaceID:      spaceID,
@@ -394,7 +405,7 @@ func (s *Service) getExchangeRate(ctx context.Context, key ExchangeRateKey) (*Ex
 	if err == nil {
 		return rateRecord, nil
 	}
-	if !errors.Is(err, ErrExchangeRateNotFound) {
+	if !errors.Is(err, errors.NotExist) {
 		return nil, err
 	}
 
@@ -404,6 +415,7 @@ func (s *Service) getExchangeRate(ctx context.Context, key ExchangeRateKey) (*Ex
 // resolveExchangeRate returns 1.0 for matching currencies, or queries the exchange rate store for cross-currency rates.
 // If allowNotFoundFallback is true and no rate is configured, it returns 0.0 without failing.
 func (s *Service) resolveExchangeRate(ctx context.Context, spaceID SpaceID, from, to Currency, date time.Time, allowNotFoundFallback bool) (float64, error) {
+	const op errors.Op = "domain/finance.resolveExchangeRate"
 	if from == to {
 		return 1.0, nil
 	}
@@ -414,10 +426,13 @@ func (s *Service) resolveExchangeRate(ctx context.Context, spaceID SpaceID, from
 		RateDate:     date,
 	})
 	if err != nil {
-		if allowNotFoundFallback && errors.Is(err, ErrExchangeRateNotFound) {
-			return 0.0, nil
+		if errors.Is(err, errors.NotExist) {
+			if allowNotFoundFallback {
+				return 0.0, nil
+			}
+			return 0.0, errors.E(op, errors.NotExist, ExchangeRateNotFound, "exchange rate not found")
 		}
-		return 0.0, fmt.Errorf("fetch exchange rate from %s to %s for date %s: %w", from, to, date.Format("2006-01-02"), err)
+		return 0.0, errors.E(op, err)
 	}
 	return rateRecord.Rate, nil
 }
@@ -682,13 +697,15 @@ func (s *Service) GetRecurringTransactions(ctx context.Context, spaceID SpaceID,
 // UpdateRecurringTransaction modifies an existing recurring transaction template, optionally applying a field mask.
 // If mask is nil or empty, all registered patchable fields are updated.
 func (s *Service) UpdateRecurringTransaction(ctx context.Context, re *RecurringTransaction, mask []string) (*RecurringTransaction, error) {
+	const op errors.Op = "domain/finance.UpdateRecurringTransaction"
+
 	existing, err := s.deps.RecurringTransactionStore.GetByID(ctx, re.SpaceID, re.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	if re.Version > 0 && re.Version != existing.Version {
-		return nil, ErrRecurringTransactionVersionMismatch
+		return nil, errors.E(op, errors.Conflict, VersionMismatch, "update failed: recurring transaction not found or version mismatch")
 	}
 
 	if err := existing.ApplyPatch(re, mask); err != nil {
@@ -963,11 +980,13 @@ func (s *Service) GetScheduledTransaction(ctx context.Context, spaceID SpaceID, 
 
 // SkipScheduledTransaction marks a pending scheduled transaction as skipped for a cycle.
 func (s *Service) SkipScheduledTransaction(ctx context.Context, spaceID SpaceID, id ScheduledTransactionID) (*ScheduledTransaction, error) {
+	const op errors.Op = "domain/finance.SkipScheduledTransaction"
+
 	if err := spaceID.Validate(); err != nil {
-		return nil, err
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 	if err := id.Validate(); err != nil {
-		return nil, err
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	payment, err := s.deps.ScheduledTransactionStore.GetByID(ctx, spaceID, id)
@@ -976,7 +995,7 @@ func (s *Service) SkipScheduledTransaction(ctx context.Context, spaceID SpaceID,
 	}
 
 	if payment.SpaceID != spaceID {
-		return nil, ErrScheduledTransactionNotFound
+		return nil, errors.E(op, errors.NotExist, ScheduledTransactionNotFound, "scheduled transaction not found")
 	}
 
 	if err := payment.MarkSkipped(); err != nil {
@@ -1294,12 +1313,14 @@ func (s *Service) ListBorrowings(ctx context.Context, spaceID SpaceID, filter *L
 
 // UpdateBorrowing updates a borrowing record and its associated transaction.
 func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing, mask []string) (*Borrowing, error) {
+	const op errors.Op = "domain/finance.UpdateBorrowing"
+
 	existing, err := s.deps.BorrowingStore.GetByID(ctx, b.SpaceID, b.ID)
 	if err != nil {
 		return nil, err
 	}
 	if b.Version > 0 && b.Version != existing.Version {
-		return nil, ErrBorrowingVersionMismatch
+		return nil, errors.E(op, errors.Conflict, VersionMismatch, "update failed: borrowing not found or version mismatch")
 	}
 
 	wasUntouched := (existing.RemainingAmount == existing.TotalAmount)
@@ -1362,13 +1383,15 @@ func (s *Service) UpdateBorrowing(ctx context.Context, b *Borrowing, mask []stri
 
 // DeleteBorrowing removes a borrowing agreement if it has no linked transactions.
 func (s *Service) DeleteBorrowing(ctx context.Context, spaceID SpaceID, id BorrowingID) error {
+	const op errors.Op = "domain/finance.DeleteBorrowing"
+
 	b, err := s.deps.BorrowingStore.GetByID(ctx, spaceID, id)
 	if err != nil {
 		return err
 	}
 
 	if b.SpaceID != spaceID {
-		return errors.New("borrowing does not belong to space")
+		return errors.E(op, errors.Invalid, "borrowing does not belong to space")
 	}
 
 	// 1. Check if borrowing has linked transactions
@@ -1380,7 +1403,7 @@ func (s *Service) DeleteBorrowing(ctx context.Context, spaceID SpaceID, id Borro
 		return fmt.Errorf("check linked borrowing transactions: %w", err)
 	}
 	if len(page.Items) > 0 {
-		return ErrBorrowingHasTransactions
+		return errors.E(op, errors.Precondition, BorrowingHasTransactions, "cannot delete borrowing agreement with linked transactions")
 	}
 
 	// 2. Delete borrowing agreement from DB
@@ -1724,12 +1747,14 @@ func (s *Service) GetAccounts(ctx context.Context, spaceID SpaceID, ids []Accoun
 
 // UpdateAccount updates account metadata with field masking and optimistic concurrency control.
 func (s *Service) UpdateAccount(ctx context.Context, account *Account, mask []string) (*Account, error) {
+	const op errors.Op = "domain/finance.UpdateAccount"
+
 	existing, err := s.deps.AccountStore.GetByID(ctx, account.SpaceID, account.ID)
 	if err != nil {
 		return nil, err
 	}
 	if account.Version > 0 && account.Version != existing.Version {
-		return nil, ErrAccountVersionMismatch
+		return nil, errors.E(op, errors.Conflict, VersionMismatch, "update failed: account not found or version mismatch")
 	}
 
 	wasDefault := existing.IsDefault
@@ -1809,13 +1834,15 @@ func (s *Service) AdjustAccountBalance(ctx context.Context, spaceID SpaceID, acc
 
 // DeleteAccount deletes an account and moves default status if necessary.
 func (s *Service) DeleteAccount(ctx context.Context, spaceID SpaceID, id AccountID, opts DeleteOptions) error {
+	const op errors.Op = "domain/finance.DeleteAccount"
+
 	existing, err := s.deps.AccountStore.GetByID(ctx, spaceID, id)
 	if err != nil {
 		return err
 	}
 
 	if existing.IsDefault {
-		return ErrCannotDeleteDefaultAccount
+		return errors.E(op, errors.Invalid, CannotDeleteDefaultAccount, "cannot delete the default account. please select another account as default first")
 	}
 
 	return s.deps.AccountStore.Delete(ctx, spaceID, id, opts)
@@ -2180,7 +2207,7 @@ func (s *Service) approveLinkedTransaction(ctx context.Context, spaceID SpaceID,
 		return nil, fmt.Errorf("transaction does not belong to this space")
 	}
 	if txn.Type == TransactionTypeTransferOut || txn.Type == TransactionTypeTransferIn {
-		return nil, ErrCannotLinkReceiptToTransfer
+		return nil, errors.E(errors.Invalid, CannotLinkReceiptToTransfer, "cannot link receipt to transfer transaction")
 	}
 
 	overwrite := item.MetadataBool("overwrite_linked_transaction")
@@ -2394,7 +2421,7 @@ func (s *Service) handleBorrowingLinkForTransaction(ctx context.Context, spaceID
 
 	if txn.Metadata.BorrowingID != nil {
 		if *txn.Metadata.BorrowingID != borrowing.ID {
-			return ErrCannotRelinkTransactionToDifferentBorrowing
+			return errors.E(errors.Invalid, CannotRelinkTransactionToDifferentBorrowing, "cannot relink transaction to a different borrowing agreement")
 		}
 		// Already linked to this exact borrowing agreement (idempotent link attachment)
 		return nil
@@ -2452,7 +2479,7 @@ func (s *Service) handleScheduledTransactionLinkForTransaction(ctx context.Conte
 
 	if txn.Metadata.ScheduledTransactionID != nil {
 		if string(*txn.Metadata.ScheduledTransactionID) != string(payment.ID) {
-			return ErrCannotRelinkTransactionToDifferentScheduledTransaction
+			return errors.E(errors.Invalid, CannotRelinkTransactionToDifferentScheduledTransaction, "cannot relink transaction to a different scheduled transaction")
 		}
 		// Already linked to this exact scheduled transaction (ensure payment is marked paid)
 		if payment.Status != ScheduledTransactionPaid {
@@ -2552,12 +2579,14 @@ func (s *Service) GetInstitution(ctx context.Context, spaceID SpaceID, id Instit
 }
 
 func (s *Service) UpdateInstitution(ctx context.Context, inst *Institution, mask []string) (*Institution, error) {
+	const op errors.Op = "domain/finance.UpdateInstitution"
+
 	existing, err := s.deps.InstitutionStore.GetByID(ctx, inst.SpaceID, inst.ID)
 	if err != nil {
 		return nil, err
 	}
 	if inst.Version > 0 && inst.Version != existing.Version {
-		return nil, ErrInstitutionVersionMismatch
+		return nil, errors.E(op, errors.Conflict, VersionMismatch, "update failed: institution not found or version mismatch")
 	}
 	if err := existing.ApplyPatch(inst, mask); err != nil {
 		return nil, err
@@ -2799,11 +2828,13 @@ func (s *Service) ListStatementLines(ctx context.Context, spaceID SpaceID, state
 
 // UpdateStatementLine updates a statement line draft choice.
 func (s *Service) UpdateStatementLine(ctx context.Context, spaceID SpaceID, line *StatementLine, mask []string) (*StatementLine, error) {
+	const op errors.Op = "domain/finance.UpdateStatementLine"
+
 	if err := spaceID.Validate(); err != nil {
-		return nil, err
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 	if err := line.ID.Validate(); err != nil {
-		return nil, err
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	existing, err := s.deps.StatementStore.GetLineByID(ctx, line.ID)
@@ -2811,7 +2842,7 @@ func (s *Service) UpdateStatementLine(ctx context.Context, spaceID SpaceID, line
 		return nil, err
 	}
 	if line.Version > 0 && line.Version != existing.Version {
-		return nil, ErrStatementLineVersionMismatch
+		return nil, errors.E(op, errors.Conflict, VersionMismatch, "update failed: statement line not found or version mismatch")
 	}
 
 	stmt, err := s.deps.StatementStore.GetByID(ctx, spaceID, existing.StatementID)
@@ -2820,7 +2851,7 @@ func (s *Service) UpdateStatementLine(ctx context.Context, spaceID SpaceID, line
 	}
 
 	if stmt.Status == StatementStatusCompleted {
-		return nil, errors.New("cannot update statement line draft in a completed statement")
+		return nil, errors.E(op, errors.Precondition, "cannot update statement line draft in a completed statement")
 	}
 
 	if err := existing.ApplyPatch(line, mask); err != nil {
@@ -2836,11 +2867,13 @@ func (s *Service) UpdateStatementLine(ctx context.Context, spaceID SpaceID, line
 
 // UpdateStatement updates statement metadata and balances.
 func (s *Service) UpdateStatement(ctx context.Context, spaceID SpaceID, stmt *Statement, mask []string) (*Statement, error) {
+	const op errors.Op = "domain/finance.UpdateStatement"
+
 	if err := spaceID.Validate(); err != nil {
-		return nil, err
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 	if err := stmt.ID.Validate(); err != nil {
-		return nil, err
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	existing, err := s.deps.StatementStore.GetByID(ctx, spaceID, stmt.ID)
@@ -2848,11 +2881,11 @@ func (s *Service) UpdateStatement(ctx context.Context, spaceID SpaceID, stmt *St
 		return nil, err
 	}
 	if stmt.Version > 0 && stmt.Version != existing.Version {
-		return nil, ErrStatementVersionMismatch
+		return nil, errors.E(op, errors.Conflict, VersionMismatch, "update failed: statement not found or version mismatch")
 	}
 
 	if existing.Status == StatementStatusCompleted {
-		return nil, errors.New("cannot update a completed statement")
+		return nil, errors.E(op, errors.Precondition, "cannot update a completed statement")
 	}
 
 	if err := existing.ApplyPatch(stmt, mask); err != nil {
@@ -2903,11 +2936,13 @@ func (s *Service) InvertStatementSigns(ctx context.Context, spaceID SpaceID, id 
 
 // CompleteStatement finalizes and commits the statement.
 func (s *Service) CompleteStatement(ctx context.Context, spaceID SpaceID, id StatementID) (*Statement, error) {
+	const op errors.Op = "domain/finance.CompleteStatement"
+
 	if err := spaceID.Validate(); err != nil {
-		return nil, err
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 	if err := id.Validate(); err != nil {
-		return nil, err
+		return nil, errors.E(op, errors.Invalid, err)
 	}
 
 	stmt, err := s.deps.StatementStore.GetByID(ctx, spaceID, id)
@@ -2915,7 +2950,7 @@ func (s *Service) CompleteStatement(ctx context.Context, spaceID SpaceID, id Sta
 		return nil, err
 	}
 	if stmt.Status == StatementStatusCompleted {
-		return nil, errors.New("statement reconciliation is already completed")
+		return nil, errors.E(op, errors.Precondition, "statement reconciliation is already completed")
 	}
 
 	lines, err := s.deps.StatementStore.ListLines(ctx, id)
@@ -2932,7 +2967,7 @@ func (s *Service) CompleteStatement(ctx context.Context, spaceID SpaceID, id Sta
 	}
 	expectedFlow := stmt.StatementEndingBalance - stmt.StatementStartingBalance
 	if netFlow != expectedFlow {
-		return nil, ErrStatementBalanceMismatch
+		return nil, errors.E(op, errors.Precondition, StatementBalanceMismatch, "statement finalization failed: cash flow sum of matches does not equal statement balance difference")
 	}
 
 	// 2. Fetch account for default currency
