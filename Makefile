@@ -37,9 +37,12 @@ build: web-build
 		-o $(BINARY) \
 		./$(APP_DIR)
 
+apps/web/dist/index.html:
+	@mkdir -p apps/web/dist && touch apps/web/dist/index.html
+
 ## Build Go binary only (skips frontend rebuild)
 .PHONY: build-go
-build-go:
+build-go: apps/web/dist/index.html
 	@echo "→ Building $(APP_NAME) Go binary (version=$(VERSION))"
 	@mkdir -p bin
 	go build \
@@ -58,19 +61,19 @@ test: test-unit test-integration
 
 ## Run in-memory unit tests with race detection
 .PHONY: test-unit
-test-unit:
+test-unit: apps/web/dist/index.html
 	@echo "→ Running unit tests"
 	go test -race ./internal/... ./cmd/... ./apis/...
 
 ## Run integration test suites against PostgreSQL
 .PHONY: test-integration
-test-integration:
+test-integration: apps/web/dist/index.html
 	@echo "→ Running integration tests"
 	go test -tags=integration -v ./tests/...
 
 ## Generate unit test coverage report and verify threshold
 .PHONY: test-coverage
-test-coverage:
+test-coverage: apps/web/dist/index.html
 	@echo "→ Generating test coverage"
 	@mkdir -p coverage
 	go test -coverprofile=coverage/coverage.out ./internal/... ./cmd/...
@@ -137,7 +140,7 @@ lint: lint-go web-lint
 
 ## Lint Go codebase with golangci-lint
 .PHONY: lint-go
-lint-go:
+lint-go: apps/web/dist/index.html
 	@echo "→ Linting Go codebase"
 	golangci-lint run ./...
 

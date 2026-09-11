@@ -47,8 +47,11 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
 
+      - name: Ensure embedded web assets placeholder
+        run: mkdir -p apps/web/dist && touch apps/web/dist/index.html
+
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
           version: v2.13.1
           args: --timeout=5m
@@ -65,6 +68,9 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
+
+      - name: Ensure embedded web assets placeholder
+        run: mkdir -p apps/web/dist && touch apps/web/dist/index.html
 
       - name: Run unit tests with race detection
         run: make test-unit
@@ -101,6 +107,9 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
+
+      - name: Ensure embedded web assets placeholder
+        run: mkdir -p apps/web/dist && touch apps/web/dist/index.html
 
       - name: Run integration test suites
         env:
