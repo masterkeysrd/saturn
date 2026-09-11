@@ -348,10 +348,23 @@ func (p *TransactionIngestionProvider) Process(ctx context.Context, headers map[
 func (p *TransactionIngestionProvider) Simulate(ctx context.Context, spaceID string, headers map[string][]string, body []byte) (any, error) {
 	const op errors.Op = "transport/integration/email.Simulate"
 
-	contentType := headers["Content-Type"]
+	var contentType string
+	for k, v := range headers {
+		if strings.EqualFold(k, "Content-Type") && len(v) > 0 {
+			contentType = v[0]
+			break
+		}
+	}
+	if contentType == "" && strings.HasPrefix(strings.TrimSpace(string(body)), "{") {
+		contentType = "application/json"
+	}
+	if contentType == "" {
+		return nil, errors.E(op, errors.Invalid, "missing Content-Type header")
+	}
+
 	var sender, subject, text string
 
-	if len(contentType) > 0 && strings.Contains(contentType[0], "application/json") {
+	if strings.Contains(contentType, "application/json") {
 		// Decode mock email fields from generic JSON payload
 		var payload struct {
 			Sender  string `json:"sender"`
@@ -366,7 +379,7 @@ func (p *TransactionIngestionProvider) Simulate(ctx context.Context, spaceID str
 		text = payload.Body
 	} else {
 		// Fallback to standard multipart form simulation
-		mediaType, params, err := mime.ParseMediaType(contentType[0])
+		mediaType, params, err := mime.ParseMediaType(contentType)
 		if err != nil {
 			return nil, errors.E(op, errors.Invalid, fmt.Errorf("parse media type: %w", err))
 		}

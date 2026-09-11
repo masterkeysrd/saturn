@@ -1716,6 +1716,15 @@ func (f *FinanceDriver) AssertInboxItem(tb testing.TB, key string, fn func(item 
 	return f
 }
 
+// ListInboxItems fetches all staged inbox items matching the optional status.
+func (f *FinanceDriver) ListInboxItems(tb testing.TB, status *financev1.InboxItem_Status) (*financev1.ListInboxItemsResponse, error) {
+	tb.Helper()
+	client := f.getClient()
+	return client.ListInboxItems(tb.Context(), &financev1.ListInboxItemsRequest{
+		Status: status,
+	})
+}
+
 // GetInboxItemID returns the ID of a staged inbox item by key.
 func (f *FinanceDriver) GetInboxItemID(key string) string {
 	if info, ok := f.driver.state.InboxItems[key]; ok {

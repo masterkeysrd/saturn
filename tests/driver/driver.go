@@ -2,6 +2,8 @@ package driver
 
 import (
 	"net/http"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -13,11 +15,13 @@ type Driver struct {
 	state      *State
 	httpClient *http.Client
 
-	authSubdriver     *AuthDriver
-	spaceSubdriver    *SpaceDriver
-	financeSubdriver  *FinanceDriver
-	platformSubdriver *PlatformDriver
-	agentSubdriver    *AgentDriver
+	authSubdriver        *AuthDriver
+	spaceSubdriver       *SpaceDriver
+	financeSubdriver     *FinanceDriver
+	platformSubdriver    *PlatformDriver
+	agentSubdriver       *AgentDriver
+	integrationSubdriver *IntegrationDriver
+	backupSubdriver      *BackupDriver
 }
 
 // New creates a fresh Driver instance for a test run and automatically resets the database.
@@ -34,6 +38,8 @@ func New(t *testing.T, env *TestEnv) *Driver {
 	d.financeSubdriver = &FinanceDriver{driver: d}
 	d.platformSubdriver = &PlatformDriver{driver: d}
 	d.agentSubdriver = &AgentDriver{driver: d}
+	d.integrationSubdriver = &IntegrationDriver{driver: d}
+	d.backupSubdriver = &BackupDriver{driver: d}
 
 	// Auto-reset database & state before each test
 	d.ResetDB()
@@ -68,6 +74,16 @@ func (d *Driver) Platform() *PlatformDriver {
 // Agent returns the Agent domain sub-driver.
 func (d *Driver) Agent() *AgentDriver {
 	return d.agentSubdriver
+}
+
+// Integration returns the Integration domain sub-driver.
+func (d *Driver) Integration() *IntegrationDriver {
+	return d.integrationSubdriver
+}
+
+// Backup returns the Backup domain sub-driver.
+func (d *Driver) Backup() *BackupDriver {
+	return d.backupSubdriver
 }
 
 // State returns the driver's current test state.
@@ -129,6 +145,12 @@ func (d *Driver) ResetDB() *Driver {
 			_, err := d.env.DB.Exec(truncateSQL)
 			if err != nil {
 				d.t.Fatalf("failed to truncate test database: %v", err)
+			}
+		}
+		if d.env.BackupDir != "" {
+			entries, _ := os.ReadDir(d.env.BackupDir)
+			for _, entry := range entries {
+				_ = os.RemoveAll(filepath.Join(d.env.BackupDir, entry.Name()))
 			}
 		}
 	}

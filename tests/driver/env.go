@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -30,12 +31,14 @@ import (
 
 // TestEnv manages the database connection, test container (if any), and the live Saturn HTTP server.
 type TestEnv struct {
-	DB         *sqlx.DB
-	ServerURL  string
-	grpcSrv    *app.GRPCServer
-	gwSrv      *app.GRPCGatewayServer
-	container  testcontainers.Container
-	adminToken string
+	DB            *sqlx.DB
+	ServerURL     string
+	BackupDir     string
+	grpcSrv       *app.GRPCServer
+	gwSrv         *app.GRPCGatewayServer
+	container     testcontainers.Container
+	adminToken    string
+	cleanupPGDump func()
 }
 
 // StartTestEnv launches PostgreSQL (via Testcontainers or TEST_DATABASE_URL), runs migrations, and starts Saturn API servers.
@@ -115,6 +118,19 @@ func StartTestEnv() (*TestEnv, error) {
 		return nil, fmt.Errorf("create temp auth keys: %w", err)
 	}
 
+	cleanupPGDump, err := ensurePGDump()
+	if err != nil {
+		return nil, fmt.Errorf("ensure pg_dump: %w", err)
+	}
+
+	backupDir, err := os.MkdirTemp("", "saturn-test-backups-*")
+	if err != nil {
+		if cleanupPGDump != nil {
+			cleanupPGDump()
+		}
+		return nil, fmt.Errorf("create temp backup dir: %w", err)
+	}
+
 	cfg := &app.Config{
 		GRPC: app.GRPCConfig{
 			Socket: sockPath,
@@ -134,12 +150,16 @@ func StartTestEnv() (*TestEnv, error) {
 			EncryptionKey: "12345678901234567890123456789012",
 		},
 		Backup: app.BackupConfig{
-			LocalDir: filepath.Join(os.TempDir(), "saturn-test-backups"),
+			LocalDir: backupDir,
 		},
 	}
 
 	grpcSrv := app.NewGRPCServer(cfg)
 	if err := grpcSrv.Start(ctx, cfg, sqlDB); err != nil {
+		if cleanupPGDump != nil {
+			cleanupPGDump()
+		}
+		_ = os.RemoveAll(backupDir)
 		return nil, fmt.Errorf("start grpc server: %w", err)
 	}
 
@@ -149,6 +169,10 @@ func StartTestEnv() (*TestEnv, error) {
 
 	gwSrv := app.NewGRPCGatewayServer(cfg, grpcSrv.TokenService, grpcSrv.IntegrationRegistry, grpcSrv.EventBus)
 	if err := gwSrv.Start(ctx, cfg); err != nil {
+		if cleanupPGDump != nil {
+			cleanupPGDump()
+		}
+		_ = os.RemoveAll(backupDir)
 		return nil, fmt.Errorf("start gateway server: %w", err)
 	}
 
@@ -162,11 +186,13 @@ func StartTestEnv() (*TestEnv, error) {
 	waitForServer(serverURL, 5*time.Second)
 
 	return &TestEnv{
-		DB:        sqlxDB,
-		ServerURL: serverURL,
-		grpcSrv:   grpcSrv,
-		gwSrv:     gwSrv,
-		container: container,
+		DB:            sqlxDB,
+		ServerURL:     serverURL,
+		BackupDir:     backupDir,
+		grpcSrv:       grpcSrv,
+		gwSrv:         gwSrv,
+		container:     container,
+		cleanupPGDump: cleanupPGDump,
 	}, nil
 }
 
@@ -187,6 +213,47 @@ func (e *TestEnv) Stop() {
 	if e.DB != nil {
 		_ = e.DB.Close()
 	}
+	if e.BackupDir != "" {
+		_ = os.RemoveAll(e.BackupDir)
+	}
+	if e.cleanupPGDump != nil {
+		e.cleanupPGDump()
+	}
+}
+
+func ensurePGDump() (func(), error) {
+	if _, err := exec.LookPath("pg_dump"); err == nil {
+		return func() {}, nil
+	}
+
+	binDir, err := os.MkdirTemp("", "saturn-test-bin-*")
+	if err != nil {
+		return nil, fmt.Errorf("create temp bin dir: %w", err)
+	}
+
+	scriptPath := filepath.Join(binDir, "pg_dump")
+	scriptContent := "#!/bin/sh\n" +
+		"echo \"-- Saturn Test PostgreSQL Database Dump\"\n" +
+		"echo \"-- Dumped by pg_dump test stub\"\n" +
+		"echo \"SET statement_timeout = 0;\"\n" +
+		"echo \"SELECT 1;\"\n"
+
+	if err := os.WriteFile(scriptPath, []byte(scriptContent), 0755); err != nil {
+		_ = os.RemoveAll(binDir)
+		return nil, fmt.Errorf("write pg_dump script: %w", err)
+	}
+
+	oldPath := os.Getenv("PATH")
+	if err := os.Setenv("PATH", binDir+string(filepath.ListSeparator)+oldPath); err != nil {
+		_ = os.RemoveAll(binDir)
+		return nil, fmt.Errorf("set PATH: %w", err)
+	}
+
+	cleanup := func() {
+		_ = os.Setenv("PATH", oldPath)
+		_ = os.RemoveAll(binDir)
+	}
+	return cleanup, nil
 }
 
 func waitForServer(url string, timeout time.Duration) {
