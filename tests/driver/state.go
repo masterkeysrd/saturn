@@ -71,6 +71,22 @@ type StatementInfo struct {
 	Version   int64
 }
 
+// SpaceInfo stores registered space metadata.
+type SpaceInfo struct {
+	ID          string
+	Name        string
+	Description string
+	OwnerID     string
+	Version     int64
+}
+
+// SpaceMemberInfo stores registered space member metadata.
+type SpaceMemberInfo struct {
+	SpaceID string
+	UserID  string
+	Role    string
+}
+
 // State manages internal session and entity registries for a test run.
 type State struct {
 	T            *testing.T
@@ -78,6 +94,12 @@ type State struct {
 	SpaceID      string
 	UserEmail    string
 	UserPassword string
+
+	UserID       string
+	RefreshToken string
+
+	Spaces  map[string]*SpaceInfo
+	Members map[string]*SpaceMemberInfo
 
 	Accounts              map[string]*AccountInfo
 	Institutions          map[string]*InstitutionInfo
@@ -89,6 +111,8 @@ type State struct {
 	ScheduledTransactions map[string]string
 	Statements            map[string]*StatementInfo
 
+	LastSpace                           *SpaceInfo
+	LastMember                          *SpaceMemberInfo
 	LastAccount                         *AccountInfo
 	LastInstitution                     *InstitutionInfo
 	LastBorrowing                       *BorrowingInfo
@@ -101,11 +125,16 @@ type State struct {
 	LastRecurringTransactionID          string
 	LastScheduledTransactionID          string
 	LastConfirmedScheduledTransactionID string
+	LastProviderID                      string
+	LastAgentID                         string
+	LastAgentRunID                      string
 }
 
 func newState(t *testing.T) *State {
 	return &State{
 		T:                     t,
+		Spaces:                make(map[string]*SpaceInfo),
+		Members:               make(map[string]*SpaceMemberInfo),
 		Accounts:              make(map[string]*AccountInfo),
 		Institutions:          make(map[string]*InstitutionInfo),
 		Borrowings:            make(map[string]*BorrowingInfo),
@@ -121,9 +150,13 @@ func newState(t *testing.T) *State {
 // ClearRegistries resets all in-memory registries between tests.
 func (s *State) ClearRegistries() {
 	s.AccessToken = ""
+	s.RefreshToken = ""
+	s.UserID = ""
 	s.SpaceID = ""
 	s.UserEmail = ""
 	s.UserPassword = ""
+	s.Spaces = make(map[string]*SpaceInfo)
+	s.Members = make(map[string]*SpaceMemberInfo)
 	s.Accounts = make(map[string]*AccountInfo)
 	s.Institutions = make(map[string]*InstitutionInfo)
 	s.Borrowings = make(map[string]*BorrowingInfo)
@@ -133,6 +166,8 @@ func (s *State) ClearRegistries() {
 	s.Budgets = make(map[string]string)
 	s.ScheduledTransactions = make(map[string]string)
 	s.Statements = make(map[string]*StatementInfo)
+	s.LastSpace = nil
+	s.LastMember = nil
 	s.LastAccount = nil
 	s.LastInstitution = nil
 	s.LastBorrowing = nil
@@ -144,4 +179,7 @@ func (s *State) ClearRegistries() {
 	s.LastScheduledTransactionID = ""
 	s.LastRecurringTransactionID = ""
 	s.LastConfirmedScheduledTransactionID = ""
+	s.LastProviderID = ""
+	s.LastAgentID = ""
+	s.LastAgentRunID = ""
 }

@@ -80,6 +80,7 @@ type GRPCServer struct {
 	TokenService        token.Service
 	IntegrationRegistry *integration.Registry
 	EventBus            *eventbus.Engine
+	Scheduler           *scheduler.Engine
 }
 
 // NewGRPCServer creates a new GRPCServer instance.
@@ -354,6 +355,7 @@ func (s *GRPCServer) Start(ctx context.Context, cfg *Config, sqlDB *sql.DB) erro
 	// Wire Scheduler service & start workers
 	schedulerEngine := scheduler.NewEngine(dbClient)
 	schedulerEngine.Start(ctx)
+	s.Scheduler = schedulerEngine
 	schedulerHandler := schedulergrpc.NewHandler(schedulerEngine)
 	schedulerv1.RegisterSchedulerAdminServer(s.grpc, schedulerHandler)
 

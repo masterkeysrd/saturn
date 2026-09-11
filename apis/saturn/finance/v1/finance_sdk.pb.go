@@ -136,11 +136,23 @@ func (c *Client) ListBudgets(ctx context.Context, req *ListBudgetsRequest) (*Lis
 	var resp ListBudgetsResponse
 	path := "/api/v1/finance/budgets"
 	var query []string
-	if req.View != nil {
-		query = append(query, "view="+req.GetView().String())
+	if req.GetPageSize() != 0 {
+		query = append(query, fmt.Sprintf("page_size=%d", req.GetPageSize()))
 	}
-	for _, st := range req.GetStatuses() {
-		query = append(query, "statuses="+st.String())
+	if req.GetPageToken() != "" {
+		query = append(query, fmt.Sprintf("page_token=%s", req.GetPageToken()))
+	}
+	if req.GetSearchQuery() != "" {
+		query = append(query, fmt.Sprintf("search_query=%s", req.GetSearchQuery()))
+	}
+	if req.GetSort() != "" {
+		query = append(query, fmt.Sprintf("sort=%s", req.GetSort()))
+	}
+	if req.View != nil {
+		query = append(query, fmt.Sprintf("view=%s", req.GetView().String()))
+	}
+	for _, item := range req.GetStatuses() {
+		query = append(query, fmt.Sprintf("statuses=%s", item.String()))
 	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
@@ -220,6 +232,21 @@ func (c *Client) ListExchangeRates(ctx context.Context, req *ListExchangeRatesRe
 	var resp ListExchangeRatesResponse
 	path := "/api/v1/finance/exchange-rates"
 	var query []string
+	if req.PageSize != nil {
+		query = append(query, fmt.Sprintf("page_size=%d", req.GetPageSize()))
+	}
+	if req.GetPageToken() != "" {
+		query = append(query, fmt.Sprintf("page_token=%s", req.GetPageToken()))
+	}
+	if req.GetFromCurrency() != "" {
+		query = append(query, fmt.Sprintf("from_currency=%s", req.GetFromCurrency()))
+	}
+	if req.GetToCurrency() != "" {
+		query = append(query, fmt.Sprintf("to_currency=%s", req.GetToCurrency()))
+	}
+	if req.GetOrderBy() != "" {
+		query = append(query, fmt.Sprintf("order_by=%s", req.GetOrderBy()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
@@ -334,6 +361,39 @@ func (c *Client) ListTransactions(ctx context.Context, req *ListTransactionsRequ
 	var resp ListTransactionsResponse
 	path := "/api/v1/finance/transactions"
 	var query []string
+	if req.View != nil {
+		query = append(query, fmt.Sprintf("view=%s", req.GetView().String()))
+	}
+	if req.GetBudgetId() != "" {
+		query = append(query, fmt.Sprintf("budget_id=%s", req.GetBudgetId()))
+	}
+	for _, item := range req.GetTypes() {
+		query = append(query, fmt.Sprintf("types=%s", item.String()))
+	}
+	if req.GetAccountId() != "" {
+		query = append(query, fmt.Sprintf("account_id=%s", req.GetAccountId()))
+	}
+	if req.GetSearchQuery() != "" {
+		query = append(query, fmt.Sprintf("search_query=%s", req.GetSearchQuery()))
+	}
+	if req.PageSize != nil {
+		query = append(query, fmt.Sprintf("page_size=%d", req.GetPageSize()))
+	}
+	if req.GetPageToken() != "" {
+		query = append(query, fmt.Sprintf("page_token=%s", req.GetPageToken()))
+	}
+	if req.GetSort() != "" {
+		query = append(query, fmt.Sprintf("sort=%s", req.GetSort()))
+	}
+	if req.GetTransferId() != "" {
+		query = append(query, fmt.Sprintf("transfer_id=%s", req.GetTransferId()))
+	}
+	if req.GetScheduledTransactionId() != "" {
+		query = append(query, fmt.Sprintf("scheduled_transaction_id=%s", req.GetScheduledTransactionId()))
+	}
+	if req.GetBorrowingId() != "" {
+		query = append(query, fmt.Sprintf("borrowing_id=%s", req.GetBorrowingId()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
@@ -348,6 +408,9 @@ func (c *Client) GetTransaction(ctx context.Context, req *GetTransactionRequest)
 	var resp Transaction
 	path := fmt.Sprintf("/api/v1/finance/transactions/%s", req.GetId())
 	var query []string
+	if req.View != nil {
+		query = append(query, fmt.Sprintf("view=%s", req.GetView().String()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
@@ -376,6 +439,9 @@ func (c *Client) GetInsights(ctx context.Context, req *GetInsightsRequest) (*Get
 	var resp GetInsightsResponse
 	path := "/api/v1/finance/insights"
 	var query []string
+	if req.GetGranularity() != 0 {
+		query = append(query, fmt.Sprintf("granularity=%s", req.GetGranularity().String()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
@@ -451,6 +517,24 @@ func (c *Client) ListRecurringTransactions(ctx context.Context, req *ListRecurri
 	var resp ListRecurringTransactionsResponse
 	path := "/api/v1/finance/recurring-transactions"
 	var query []string
+	if req.GetStatus() != 0 {
+		query = append(query, fmt.Sprintf("status=%s", req.GetStatus().String()))
+	}
+	if req.GetPageSize() != 0 {
+		query = append(query, fmt.Sprintf("page_size=%d", req.GetPageSize()))
+	}
+	if req.GetPageToken() != "" {
+		query = append(query, fmt.Sprintf("page_token=%s", req.GetPageToken()))
+	}
+	if req.View != nil {
+		query = append(query, fmt.Sprintf("view=%s", req.GetView().String()))
+	}
+	if req.GetSearchQuery() != "" {
+		query = append(query, fmt.Sprintf("search_query=%s", req.GetSearchQuery()))
+	}
+	if req.GetSort() != "" {
+		query = append(query, fmt.Sprintf("sort=%s", req.GetSort()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
@@ -465,6 +549,24 @@ func (c *Client) ListScheduledTransactions(ctx context.Context, req *ListSchedul
 	var resp ListScheduledTransactionsResponse
 	path := "/api/v1/finance/scheduled-transactions"
 	var query []string
+	if req.GetStatus() != 0 {
+		query = append(query, fmt.Sprintf("status=%s", req.GetStatus().String()))
+	}
+	if req.GetPageSize() != 0 {
+		query = append(query, fmt.Sprintf("page_size=%d", req.GetPageSize()))
+	}
+	if req.GetPageToken() != "" {
+		query = append(query, fmt.Sprintf("page_token=%s", req.GetPageToken()))
+	}
+	if req.View != nil {
+		query = append(query, fmt.Sprintf("view=%s", req.GetView().String()))
+	}
+	if req.GetSearchQuery() != "" {
+		query = append(query, fmt.Sprintf("search_query=%s", req.GetSearchQuery()))
+	}
+	if req.GetSort() != "" {
+		query = append(query, fmt.Sprintf("sort=%s", req.GetSort()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
@@ -567,6 +669,21 @@ func (c *Client) ListBorrowings(ctx context.Context, req *ListBorrowingsRequest)
 	var resp ListBorrowingsResponse
 	path := "/api/v1/finance/borrowings"
 	var query []string
+	if req.Status != nil {
+		query = append(query, fmt.Sprintf("status=%s", req.GetStatus().String()))
+	}
+	if req.Direction != nil {
+		query = append(query, fmt.Sprintf("direction=%s", req.GetDirection().String()))
+	}
+	if req.PageSize != nil {
+		query = append(query, fmt.Sprintf("page_size=%d", req.GetPageSize()))
+	}
+	if req.GetPageToken() != "" {
+		query = append(query, fmt.Sprintf("page_token=%s", req.GetPageToken()))
+	}
+	if req.GetOrderBy() != "" {
+		query = append(query, fmt.Sprintf("order_by=%s", req.GetOrderBy()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
@@ -703,6 +820,9 @@ func (c *Client) GetAccount(ctx context.Context, req *GetAccountRequest) (*Accou
 	var resp Account
 	path := fmt.Sprintf("/api/v1/finance/accounts/%s", req.GetId())
 	var query []string
+	if req.View != nil {
+		query = append(query, fmt.Sprintf("view=%s", req.GetView().String()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
@@ -774,6 +894,24 @@ func (c *Client) ListAccounts(ctx context.Context, req *ListAccountsRequest) (*L
 	var resp ListAccountsResponse
 	path := "/api/v1/finance/accounts"
 	var query []string
+	if req.View != nil {
+		query = append(query, fmt.Sprintf("view=%s", req.GetView().String()))
+	}
+	if req.ActiveOnly != nil {
+		query = append(query, fmt.Sprintf("active_only=%t", req.GetActiveOnly()))
+	}
+	if req.GetSearchQuery() != "" {
+		query = append(query, fmt.Sprintf("search_query=%s", req.GetSearchQuery()))
+	}
+	if req.PageSize != nil {
+		query = append(query, fmt.Sprintf("page_size=%d", req.GetPageSize()))
+	}
+	if req.GetPageToken() != "" {
+		query = append(query, fmt.Sprintf("page_token=%s", req.GetPageToken()))
+	}
+	if req.GetSort() != "" {
+		query = append(query, fmt.Sprintf("sort=%s", req.GetSort()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
@@ -849,6 +987,15 @@ func (c *Client) ListInstitutions(ctx context.Context, req *ListInstitutionsRequ
 	var resp ListInstitutionsResponse
 	path := "/api/v1/finance/institutions"
 	var query []string
+	if req.GetPageSize() != 0 {
+		query = append(query, fmt.Sprintf("page_size=%d", req.GetPageSize()))
+	}
+	if req.GetPageToken() != "" {
+		query = append(query, fmt.Sprintf("page_token=%s", req.GetPageToken()))
+	}
+	if req.GetSearchQuery() != "" {
+		query = append(query, fmt.Sprintf("search_query=%s", req.GetSearchQuery()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
@@ -863,6 +1010,9 @@ func (c *Client) ResolveInstitution(ctx context.Context, req *ResolveInstitution
 	var resp ResolveInstitutionResponse
 	path := "/api/v1/finance/institutions:resolve"
 	var query []string
+	if req.GetName() != "" {
+		query = append(query, fmt.Sprintf("name=%s", req.GetName()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
@@ -891,6 +1041,12 @@ func (c *Client) ListTransfers(ctx context.Context, req *ListTransfersRequest) (
 	var resp ListTransfersResponse
 	path := "/api/v1/finance/transfers"
 	var query []string
+	if req.GetPageSize() != 0 {
+		query = append(query, fmt.Sprintf("page_size=%d", req.GetPageSize()))
+	}
+	if req.GetPageToken() != "" {
+		query = append(query, fmt.Sprintf("page_token=%s", req.GetPageToken()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
@@ -919,11 +1075,26 @@ func (c *Client) ListInboxItems(ctx context.Context, req *ListInboxItemsRequest)
 	var resp ListInboxItemsResponse
 	path := "/api/v1/finance/inbox-items"
 	var query []string
+	if req.GetPageSize() != 0 {
+		query = append(query, fmt.Sprintf("page_size=%d", req.GetPageSize()))
+	}
+	if req.GetPageToken() != "" {
+		query = append(query, fmt.Sprintf("page_token=%s", req.GetPageToken()))
+	}
+	if req.GetSearchQuery() != "" {
+		query = append(query, fmt.Sprintf("search_query=%s", req.GetSearchQuery()))
+	}
 	if req.Status != nil {
 		query = append(query, fmt.Sprintf("status=%s", req.GetStatus().String()))
 	}
 	if req.DocType != nil {
 		query = append(query, fmt.Sprintf("doc_type=%s", req.GetDocType().String()))
+	}
+	if req.GetSort() != "" {
+		query = append(query, fmt.Sprintf("sort=%s", req.GetSort()))
+	}
+	if req.GetView() != 0 {
+		query = append(query, fmt.Sprintf("view=%s", req.GetView().String()))
 	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
@@ -1058,6 +1229,18 @@ func (c *Client) ListStatements(ctx context.Context, req *ListStatementsRequest)
 	var resp ListStatementsResponse
 	path := "/api/v1/finance/statements"
 	var query []string
+	if req.GetAccountId() != "" {
+		query = append(query, fmt.Sprintf("account_id=%s", req.GetAccountId()))
+	}
+	if req.Status != nil {
+		query = append(query, fmt.Sprintf("status=%s", req.GetStatus().String()))
+	}
+	if req.GetPageSize() != 0 {
+		query = append(query, fmt.Sprintf("page_size=%d", req.GetPageSize()))
+	}
+	if req.GetPageToken() != "" {
+		query = append(query, fmt.Sprintf("page_token=%s", req.GetPageToken()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}

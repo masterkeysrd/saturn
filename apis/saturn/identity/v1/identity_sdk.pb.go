@@ -141,6 +141,12 @@ func (c *Client) ListMySecurityEvents(ctx context.Context, req *ListMySecurityEv
 	var resp ListMySecurityEventsResponse
 	path := "/api/v1/identity/users/me/security-events"
 	var query []string
+	if req.GetLimit() != 0 {
+		query = append(query, fmt.Sprintf("limit=%d", req.GetLimit()))
+	}
+	if req.GetNextPageToken() != "" {
+		query = append(query, fmt.Sprintf("next_page_token=%s", req.GetNextPageToken()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}

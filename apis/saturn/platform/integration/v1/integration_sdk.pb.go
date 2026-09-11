@@ -33,6 +33,9 @@ func (c *Client) GetIntegration(ctx context.Context, req *GetIntegrationRequest)
 	var resp Integration
 	path := fmt.Sprintf("/api/v1/platform/integrations/%s", req.GetProvider())
 	var query []string
+	if req.GetKind() != "" {
+		query = append(query, fmt.Sprintf("kind=%s", req.GetKind()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
@@ -131,6 +134,9 @@ func (c *Client) ListIntegrationTokens(ctx context.Context, req *ListIntegration
 	var resp ListIntegrationTokensResponse
 	path := fmt.Sprintf("/api/v1/platform/integrations/%s/tokens", req.GetProvider())
 	var query []string
+	if req.GetKind() != "" {
+		query = append(query, fmt.Sprintf("kind=%s", req.GetKind()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
@@ -145,6 +151,9 @@ func (c *Client) DeleteIntegrationToken(ctx context.Context, req *DeleteIntegrat
 	var resp emptypb.Empty
 	path := fmt.Sprintf("/api/v1/platform/integrations/%s/tokens/%s", req.GetProvider(), req.GetId())
 	var query []string
+	if req.GetKind() != "" {
+		query = append(query, fmt.Sprintf("kind=%s", req.GetKind()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}

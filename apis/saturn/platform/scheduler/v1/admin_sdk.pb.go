@@ -47,6 +47,9 @@ func (c *Client) ListJobs(ctx context.Context, req *ListJobsRequest) (*ListJobsR
 	var resp ListJobsResponse
 	path := "/api/v1/admin/scheduler/jobs"
 	var query []string
+	if req.GetStatus() != "" {
+		query = append(query, fmt.Sprintf("status=%s", req.GetStatus()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}

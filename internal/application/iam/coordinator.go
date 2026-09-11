@@ -21,7 +21,6 @@ type Coordinator interface {
 	ListSecurityEvents(ctx context.Context, filter identity.SecurityEventFilter) (*paging.Page[*identity.SecurityEvent], error)
 	Login(ctx context.Context, req *LoginRequest) (*LoginResponse, error)
 	Logout(ctx context.Context, req *LogoutRequest) (*LogoutResponse, error)
-	// @transactional
 	RefreshSession(ctx context.Context, req *RefreshSessionRequest) (*RefreshSessionResponse, error)
 	// @transactional
 	Register(ctx context.Context, req *RegisterUserRequest) (*RegisterUserResponse, error)

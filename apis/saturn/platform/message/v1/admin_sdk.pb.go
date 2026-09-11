@@ -47,6 +47,21 @@ func (c *Client) ListDeliveries(ctx context.Context, req *ListDeliveriesRequest)
 	var resp ListDeliveriesResponse
 	path := "/api/v1/admin/messages/deliveries"
 	var query []string
+	if req.GetTopic() != "" {
+		query = append(query, fmt.Sprintf("topic=%s", req.GetTopic()))
+	}
+	if req.GetStatus() != "" {
+		query = append(query, fmt.Sprintf("status=%s", req.GetStatus()))
+	}
+	if req.GetSubscriberId() != "" {
+		query = append(query, fmt.Sprintf("subscriber_id=%s", req.GetSubscriberId()))
+	}
+	if req.GetPageSize() != 0 {
+		query = append(query, fmt.Sprintf("page_size=%d", req.GetPageSize()))
+	}
+	if req.GetPageToken() != "" {
+		query = append(query, fmt.Sprintf("page_token=%s", req.GetPageToken()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}

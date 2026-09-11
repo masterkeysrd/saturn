@@ -51,24 +51,8 @@ func (t *TransactionalCoordinator) Logout(ctx context.Context, req *LogoutReques
 	return t.next.Logout(ctx, req)
 }
 
-// RefreshSession executes next.RefreshSession inside a database transaction.
 func (t *TransactionalCoordinator) RefreshSession(ctx context.Context, req *RefreshSessionRequest) (*RefreshSessionResponse, error) {
-	ctx, tx, err := t.txr.Begin(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	res, err := t.next.RefreshSession(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-
-	return res, nil
+	return t.next.RefreshSession(ctx, req)
 }
 
 // Register executes next.Register inside a database transaction.

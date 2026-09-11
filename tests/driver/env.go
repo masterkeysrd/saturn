@@ -19,7 +19,9 @@ import (
 	"github.com/masterkeysrd/saturn/apis/saturn"
 	identityv1 "github.com/masterkeysrd/saturn/apis/saturn/identity/v1"
 	"github.com/masterkeysrd/saturn/cmd/saturn/app"
+	"github.com/masterkeysrd/saturn/internal/platform/eventbus"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
+	"github.com/masterkeysrd/saturn/internal/platform/scheduler"
 	"github.com/masterkeysrd/saturn/migrations"
 	"github.com/testcontainers/testcontainers-go"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -286,4 +288,25 @@ func (e *TestEnv) getAdminToken(tb testing.TB) string {
 
 	e.adminToken = resp.GetAccessToken()
 	return e.adminToken
+}
+
+// AdminToken returns the active System Admin access token.
+func (e *TestEnv) AdminToken(tb testing.TB) string {
+	return e.getAdminToken(tb)
+}
+
+// EventBus returns the running EventBus Engine from the gRPC server.
+func (e *TestEnv) EventBus() *eventbus.Engine {
+	if e.grpcSrv != nil {
+		return e.grpcSrv.EventBus
+	}
+	return nil
+}
+
+// Scheduler returns the running Scheduler Engine from the gRPC server.
+func (e *TestEnv) Scheduler() *scheduler.Engine {
+	if e.grpcSrv != nil {
+		return e.grpcSrv.Scheduler
+	}
+	return nil
 }

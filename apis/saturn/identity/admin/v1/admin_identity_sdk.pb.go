@@ -29,6 +29,18 @@ func (c *Client) ListUsers(ctx context.Context, req *ListUsersRequest) (*ListUse
 	var resp ListUsersResponse
 	path := "/api/v1/admin/identity/users"
 	var query []string
+	if req.GetPageSize() != 0 {
+		query = append(query, fmt.Sprintf("page_size=%d", req.GetPageSize()))
+	}
+	if req.GetNextPageToken() != "" {
+		query = append(query, fmt.Sprintf("next_page_token=%s", req.GetNextPageToken()))
+	}
+	if req.GetStatusFilter() != 0 {
+		query = append(query, fmt.Sprintf("status_filter=%s", req.GetStatusFilter().String()))
+	}
+	if req.GetSearchQuery() != "" {
+		query = append(query, fmt.Sprintf("search_query=%s", req.GetSearchQuery()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
@@ -99,6 +111,18 @@ func (c *Client) ListSecurityEvents(ctx context.Context, req *ListSecurityEvents
 	var resp ListSecurityEventsResponse
 	path := "/api/v1/admin/identity/security-events"
 	var query []string
+	if req.GetEmail() != "" {
+		query = append(query, fmt.Sprintf("email=%s", req.GetEmail()))
+	}
+	if req.GetEventType() != "" {
+		query = append(query, fmt.Sprintf("event_type=%s", req.GetEventType()))
+	}
+	if req.GetLimit() != 0 {
+		query = append(query, fmt.Sprintf("limit=%d", req.GetLimit()))
+	}
+	if req.GetNextPageToken() != "" {
+		query = append(query, fmt.Sprintf("next_page_token=%s", req.GetNextPageToken()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}

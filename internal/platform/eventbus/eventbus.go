@@ -406,7 +406,7 @@ func (e *Engine) RetryDelivery(ctx context.Context, deliveryID string) error {
 	const op errors.Op = "platform/eventbus.RetryDelivery"
 
 	query := `UPDATE platform.message_deliveries 
-		SET status = 'pending', schedule_time = NOW(), update_time = NOW() 
+		SET status = 'pending', attempts = 0, schedule_time = NOW(), last_error = NULL, update_time = NOW() 
 		WHERE id = $1`
 	err := e.db.ExecOne(ctx, query, deliveryID)
 	if err != nil {

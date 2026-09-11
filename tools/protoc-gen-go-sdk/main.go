@@ -8,6 +8,7 @@ import (
 	"google.golang.org/genproto/googleapis/api/annotations"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/pluginpb"
 )
 
@@ -114,12 +115,14 @@ func generateSDKMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 
 	// Extract path variables from request
 	pathVars := pathParamRegex.FindAllStringSubmatch(pathPattern, -1)
+	pathVarNames := make(map[string]bool)
 	if len(pathVars) > 0 {
 		var fmtArgs []string
 		fmtPathPattern := pathPattern
 		for _, varMatch := range pathVars {
 			rawVar := varMatch[0]
 			varName := varMatch[1]
+			pathVarNames[varName] = true
 			getterName := "Get" + snakeToCamel(varName)
 			fmtPathPattern = strings.Replace(fmtPathPattern, rawVar, "%s", 1)
 			fmtArgs = append(fmtArgs, fmt.Sprintf("req.%s()", getterName))
@@ -155,20 +158,57 @@ func generateSDKMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 	}
 
 	if httpMethod == "GET" || httpMethod == "DELETE" {
-		if method.GoName == "ListBudgets" {
-			g.P("	if req.View != nil {")
-			g.P("		query = append(query, \"view=\" + req.GetView().String())")
-			g.P("	}")
-			g.P("	for _, st := range req.GetStatuses() {")
-			g.P("		query = append(query, \"statuses=\" + st.String())")
-			g.P("	}")
-		} else if method.GoName == "ListInboxItems" {
-			g.P("	if req.Status != nil {")
-			g.P("		query = append(query, fmt.Sprintf(\"status=%s\", req.GetStatus().String()))")
-			g.P("	}")
-			g.P("	if req.DocType != nil {")
-			g.P("		query = append(query, fmt.Sprintf(\"doc_type=%s\", req.GetDocType().String()))")
-			g.P("	}")
+		for _, field := range method.Input.Fields {
+			fieldName := string(field.Desc.Name())
+			if pathVarNames[fieldName] || field.GoName == "Version" || field.GoName == "UpdateMask" {
+				continue
+			}
+			if field.Desc.IsList() {
+				g.P(fmt.Sprintf("	for _, item := range req.Get%s() {", field.GoName))
+				if field.Desc.Kind() == protoreflect.EnumKind {
+					g.P(fmt.Sprintf("		query = append(query, fmt.Sprintf(\"%s=%%s\", item.String()))", fieldName))
+				} else {
+					g.P(fmt.Sprintf("		query = append(query, fmt.Sprintf(\"%s=%%v\", item))", fieldName))
+				}
+				g.P("	}")
+			} else {
+				switch field.Desc.Kind() {
+				case protoreflect.StringKind:
+					g.P(fmt.Sprintf("	if req.Get%s() != \"\" {", field.GoName))
+					g.P(fmt.Sprintf("		query = append(query, fmt.Sprintf(\"%s=%%s\", req.Get%s()))", fieldName, field.GoName))
+					g.P("	}")
+				case protoreflect.Int32Kind, protoreflect.Int64Kind, protoreflect.Uint32Kind, protoreflect.Uint64Kind:
+					if field.Desc.HasPresence() {
+						g.P(fmt.Sprintf("	if req.%s != nil {", field.GoName))
+						g.P(fmt.Sprintf("		query = append(query, fmt.Sprintf(\"%s=%%d\", req.Get%s()))", fieldName, field.GoName))
+						g.P("	}")
+					} else {
+						g.P(fmt.Sprintf("	if req.Get%s() != 0 {", field.GoName))
+						g.P(fmt.Sprintf("		query = append(query, fmt.Sprintf(\"%s=%%d\", req.Get%s()))", fieldName, field.GoName))
+						g.P("	}")
+					}
+				case protoreflect.BoolKind:
+					if field.Desc.HasPresence() {
+						g.P(fmt.Sprintf("	if req.%s != nil {", field.GoName))
+						g.P(fmt.Sprintf("		query = append(query, fmt.Sprintf(\"%s=%%t\", req.Get%s()))", fieldName, field.GoName))
+						g.P("	}")
+					} else {
+						g.P(fmt.Sprintf("	if req.Get%s() {", field.GoName))
+						g.P(fmt.Sprintf("		query = append(query, \"%s=true\")", fieldName))
+						g.P("	}")
+					}
+				case protoreflect.EnumKind:
+					if field.Desc.HasPresence() {
+						g.P(fmt.Sprintf("	if req.%s != nil {", field.GoName))
+						g.P(fmt.Sprintf("		query = append(query, fmt.Sprintf(\"%s=%%s\", req.Get%s().String()))", fieldName, field.GoName))
+						g.P("	}")
+					} else {
+						g.P(fmt.Sprintf("	if req.Get%s() != 0 {", field.GoName))
+						g.P(fmt.Sprintf("		query = append(query, fmt.Sprintf(\"%s=%%s\", req.Get%s().String()))", fieldName, field.GoName))
+						g.P("	}")
+					}
+				}
+			}
 		}
 		g.P("	if len(query) > 0 {")
 		g.P("		path += \"?\" + strings.Join(query, \"&\")")

@@ -17,6 +17,7 @@ type Driver struct {
 	spaceSubdriver    *SpaceDriver
 	financeSubdriver  *FinanceDriver
 	platformSubdriver *PlatformDriver
+	agentSubdriver    *AgentDriver
 }
 
 // New creates a fresh Driver instance for a test run and automatically resets the database.
@@ -32,6 +33,7 @@ func New(t *testing.T, env *TestEnv) *Driver {
 	d.spaceSubdriver = &SpaceDriver{driver: d}
 	d.financeSubdriver = &FinanceDriver{driver: d}
 	d.platformSubdriver = &PlatformDriver{driver: d}
+	d.agentSubdriver = &AgentDriver{driver: d}
 
 	// Auto-reset database & state before each test
 	d.ResetDB()
@@ -63,13 +65,37 @@ func (d *Driver) Platform() *PlatformDriver {
 	return d.platformSubdriver
 }
 
+// Agent returns the Agent domain sub-driver.
+func (d *Driver) Agent() *AgentDriver {
+	return d.agentSubdriver
+}
+
 // State returns the driver's current test state.
 func (d *Driver) State() *State {
 	return d.state
 }
 
+// Env returns the test environment.
+func (d *Driver) Env() *TestEnv {
+	return d.env
+}
+
+// HTTPClient returns the configured HTTP client.
+func (d *Driver) HTTPClient() *http.Client {
+	return d.httpClient
+}
+
 const truncateSQL = `
 TRUNCATE TABLE 
+    platform.message_deliveries,
+    platform.messages,
+    platform.agent_runs,
+    platform.agents,
+    platform.llm_providers,
+    platform.integration_token,
+    platform.integration,
+    platform.job,
+    platform.schedule,
     finance.statement_line,
     finance.statement,
     finance.transaction_events,

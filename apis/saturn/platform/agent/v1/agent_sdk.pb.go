@@ -173,6 +173,12 @@ func (c *Client) ListAgentRuns(ctx context.Context, req *ListAgentRunsRequest) (
 	var resp ListAgentRunsResponse
 	path := fmt.Sprintf("/api/v1/platform/agent/agents/%s/runs", req.GetAgentId())
 	var query []string
+	if req.GetPageSize() != 0 {
+		query = append(query, fmt.Sprintf("page_size=%d", req.GetPageSize()))
+	}
+	if req.GetPageToken() != "" {
+		query = append(query, fmt.Sprintf("page_token=%s", req.GetPageToken()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}

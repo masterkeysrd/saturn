@@ -97,6 +97,12 @@ func (c *Client) ListSpaces(ctx context.Context, req *ListSpacesRequest) (*ListS
 	var resp ListSpacesResponse
 	path := "/api/v1/spaces"
 	var query []string
+	if req.GetPageSize() != 0 {
+		query = append(query, fmt.Sprintf("page_size=%d", req.GetPageSize()))
+	}
+	if req.GetNextPageToken() != "" {
+		query = append(query, fmt.Sprintf("next_page_token=%s", req.GetNextPageToken()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
@@ -153,6 +159,12 @@ func (c *Client) ListSpaceMembers(ctx context.Context, req *ListSpaceMembersRequ
 	var resp ListSpaceMembersResponse
 	path := fmt.Sprintf("/api/v1/spaces/%s/members", req.GetSpaceId())
 	var query []string
+	if req.GetPageSize() != 0 {
+		query = append(query, fmt.Sprintf("page_size=%d", req.GetPageSize()))
+	}
+	if req.GetNextPageToken() != "" {
+		query = append(query, fmt.Sprintf("next_page_token=%s", req.GetNextPageToken()))
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
