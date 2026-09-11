@@ -52,11 +52,30 @@ build-go:
 run: build
 	@$(BINARY) serve
 
-## Run all tests
+## Run all tests (unit and integration)
 .PHONY: test
-test:
-	@echo "→ Running tests"
-	go test -v -race ./...
+test: test-unit test-integration
+
+## Run in-memory unit tests with race detection
+.PHONY: test-unit
+test-unit:
+	@echo "→ Running unit tests"
+	go test -race ./internal/... ./cmd/... ./apis/...
+
+## Run integration test suites against PostgreSQL
+.PHONY: test-integration
+test-integration:
+	@echo "→ Running integration tests"
+	go test -tags=integration -v ./tests/...
+
+## Generate unit test coverage report
+.PHONY: test-coverage
+test-coverage:
+	@echo "→ Generating test coverage"
+	@mkdir -p coverage
+	go test -coverprofile=coverage/coverage.out ./internal/... ./cmd/...
+	go tool cover -html=coverage/coverage.out -o coverage/coverage.html
+	@echo "Coverage report saved to coverage/coverage.html"
 
 ## Build the Docker image
 .PHONY: docker-build
@@ -99,7 +118,7 @@ compose-down:
 .PHONY: clean
 clean:
 	@echo "→ Cleaning"
-	rm -rf bin
+	rm -rf bin coverage
 
 ## Start the frontend development server
 .PHONY: web-dev
@@ -134,5 +153,4 @@ codegen:
 .PHONY: help
 help:
 	@echo "Saturn Makefile targets:"
-	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) \
-		| awk 'BEGIN {FS=":.*## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
+	@awk '/^## / { desc = substr($$0, 4); next } /^[a-zA-Z0-9_-]+:/ && desc { split($$1, a, ":"); printf "  \033[36m%-18s\033[0m %s\n", a[1], desc; desc = "" }' $(MAKEFILE_LIST)

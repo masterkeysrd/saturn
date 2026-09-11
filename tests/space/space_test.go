@@ -1,3 +1,5 @@
+//go:build integration
+
 package space_test
 
 import (

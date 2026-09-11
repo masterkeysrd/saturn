@@ -1,3 +1,5 @@
+//go:build integration
+
 package platform_test
 
 import (
