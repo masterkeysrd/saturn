@@ -68,12 +68,13 @@ test-integration:
 	@echo "→ Running integration tests"
 	go test -tags=integration -v ./tests/...
 
-## Generate unit test coverage report
+## Generate unit test coverage report and verify threshold
 .PHONY: test-coverage
 test-coverage:
 	@echo "→ Generating test coverage"
 	@mkdir -p coverage
 	go test -coverprofile=coverage/coverage.out ./internal/... ./cmd/...
+	go run ./tools/covercheck -coverprofile=coverage/coverage.out -min=25
 	go tool cover -html=coverage/coverage.out -o coverage/coverage.html
 	@echo "Coverage report saved to coverage/coverage.html"
 

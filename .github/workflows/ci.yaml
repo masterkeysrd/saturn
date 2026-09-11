@@ -54,7 +54,7 @@ jobs:
           args: --timeout=5m
 
   go-unit:
-    name: Go Unit Tests & Build
+    name: Go Unit Tests, Coverage & Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -68,6 +68,9 @@ jobs:
 
       - name: Run unit tests with race detection
         run: make test-unit
+
+      - name: Generate coverage report & verify threshold
+        run: make test-coverage
 
       - name: Verify Go binary compilation
         run: make build-go
