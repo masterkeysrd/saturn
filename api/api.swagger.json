@@ -39,7 +39,7 @@
     },
     {
       "name": "Spaces",
-      "description": "Spaces provides workspace (space) management including CRUD operations and member management."
+      "description": "Spaces provides workspace management including CRUD operations and member administration."
     }
   ],
   "consumes": [
@@ -234,6 +234,7 @@
         "parameters": [
           {
             "name": "userId",
+            "description": "Required. The unique identifier of the user to update. Values\nare of the form `usr_\u003cKSUID\u003e`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -273,6 +274,7 @@
         "parameters": [
           {
             "name": "userId",
+            "description": "Required. The unique identifier of the user to approve. Values\nare of the form `usr_\u003cKSUID\u003e`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -312,6 +314,7 @@
         "parameters": [
           {
             "name": "userId",
+            "description": "Required. The unique identifier of the user to reject. Values\nare of the form `usr_\u003cKSUID\u003e`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -351,6 +354,7 @@
         "parameters": [
           {
             "name": "userId",
+            "description": "Required. The unique identifier of the user whose sessions are to be revoked. Values\nare of the form `usr_\u003cKSUID\u003e`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -3817,6 +3821,7 @@
         "parameters": [
           {
             "name": "sessionId",
+            "description": "The session identifier to revoke.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -3981,6 +3986,7 @@
         "parameters": [
           {
             "name": "limit",
+            "description": "The maximum number of events to return in the response.",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -3988,6 +3994,7 @@
           },
           {
             "name": "nextPageToken",
+            "description": "A token to retrieve the next page of results.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -4806,7 +4813,7 @@
     },
     "/v1/spaces": {
       "get": {
-        "summary": "ListSpaces lists all spaces the authenticated user has access to.",
+        "summary": "Lists all workspaces the authenticated user has access to.",
         "operationId": "Spaces_ListSpaces",
         "responses": {
           "200": {
@@ -4825,15 +4832,15 @@
         "parameters": [
           {
             "name": "pageSize",
-            "description": "default 20, max 100",
+            "description": "Optional. The maximum number of spaces to return. The service may return fewer\nthan this value. If unspecified, at most 20 spaces are returned. The maximum\nvalue is 100; values above 100 will be coerced to 100.",
             "in": "query",
             "required": false,
             "type": "integer",
             "format": "int32"
           },
           {
-            "name": "nextPageToken",
-            "description": "cursor-based pagination token",
+            "name": "pageToken",
+            "description": "Optional. A page token, received from a previous `ListSpaces` call.\nProvide this to retrieve the subsequent page.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -4844,7 +4851,7 @@
         ]
       },
       "post": {
-        "summary": "CreateSpace creates a new workspace.",
+        "summary": "Creates a new workspace.",
         "operationId": "Spaces_CreateSpace",
         "responses": {
           "200": {
@@ -4863,7 +4870,7 @@
         "parameters": [
           {
             "name": "body",
-            "description": "CreateSpaceRequest contains the fields for creating a new workspace.",
+            "description": "Request message for Spaces.CreateSpace.",
             "in": "body",
             "required": true,
             "schema": {
@@ -4878,7 +4885,7 @@
     },
     "/v1/spaces/{spaceId}": {
       "get": {
-        "summary": "GetSpace retrieves a workspace by ID.",
+        "summary": "Retrieves a workspace by ID.",
         "operationId": "Spaces_GetSpace",
         "responses": {
           "200": {
@@ -4897,7 +4904,7 @@
         "parameters": [
           {
             "name": "spaceId",
-            "description": "The workspace ID.",
+            "description": "Required. The unique identifier of the workspace to retrieve.\nFormatted as `spc_\u003cksuid\u003e` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
             "in": "path",
             "required": true,
             "type": "string"
@@ -4908,13 +4915,14 @@
         ]
       },
       "delete": {
-        "summary": "DeleteSpace deletes a workspace.",
+        "summary": "Deletes a workspace by ID.",
         "operationId": "Spaces_DeleteSpace",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1DeleteSpaceResponse"
+              "type": "object",
+              "properties": {}
             }
           },
           "default": {
@@ -4927,7 +4935,7 @@
         "parameters": [
           {
             "name": "spaceId",
-            "description": "The workspace ID.",
+            "description": "Required. The unique identifier of the workspace to delete.\nFormatted as `spc_\u003cksuid\u003e` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
             "in": "path",
             "required": true,
             "type": "string"
@@ -4938,7 +4946,7 @@
         ]
       },
       "patch": {
-        "summary": "UpdateSpace updates a workspace.",
+        "summary": "Updates an existing workspace.",
         "operationId": "Spaces_UpdateSpace",
         "responses": {
           "200": {
@@ -4957,14 +4965,14 @@
         "parameters": [
           {
             "name": "spaceId",
-            "description": "Required. The workspace ID.",
+            "description": "Required. The unique identifier of the workspace to update.\nFormatted as `spc_\u003cksuid\u003e` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "space",
-            "description": "Required. Updated workspace parameters.",
+            "description": "Required. The workspace resource with updated values.",
             "in": "body",
             "required": true,
             "schema": {
@@ -4973,7 +4981,7 @@
           },
           {
             "name": "version",
-            "description": "Optional. Version number for optimistic concurrency control.",
+            "description": "Optional. The optimistic concurrency control version expected for this update.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -4987,7 +4995,7 @@
     },
     "/v1/spaces/{spaceId}/members": {
       "get": {
-        "summary": "ListSpaceMembers lists all members of a workspace.",
+        "summary": "Lists all members belonging to a workspace.",
         "operationId": "Spaces_ListSpaceMembers",
         "responses": {
           "200": {
@@ -5006,22 +5014,22 @@
         "parameters": [
           {
             "name": "spaceId",
-            "description": "The workspace ID.",
+            "description": "Required. The unique identifier of the workspace whose members are listed.\nFormatted as `spc_\u003cksuid\u003e` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "pageSize",
-            "description": "default 20, max 100",
+            "description": "Optional. The maximum number of members to return. The service may return fewer\nthan this value. If unspecified, at most 20 members are returned. The maximum\nvalue is 100; values above 100 will be coerced to 100.",
             "in": "query",
             "required": false,
             "type": "integer",
             "format": "int32"
           },
           {
-            "name": "nextPageToken",
-            "description": "cursor-based pagination token",
+            "name": "pageToken",
+            "description": "Optional. A page token, received from a previous `ListSpaceMembers` call.\nProvide this to retrieve the subsequent page.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -5032,8 +5040,8 @@
         ]
       },
       "post": {
-        "summary": "AddSpaceMember adds a member to a workspace.",
-        "operationId": "Spaces_AddSpaceMember",
+        "summary": "Creates a member in a workspace.",
+        "operationId": "Spaces_CreateSpaceMember",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5051,17 +5059,98 @@
         "parameters": [
           {
             "name": "spaceId",
-            "description": "The workspace ID.",
+            "description": "Required. The unique identifier of the workspace to add the member to.\nFormatted as `spc_\u003cksuid\u003e` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
-            "name": "body",
+            "name": "member",
+            "description": "Required. The member resource to add to the workspace.",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/SpacesAddSpaceMemberBody"
+              "$ref": "#/definitions/v1SpaceMember"
+            }
+          }
+        ],
+        "tags": [
+          "Spaces"
+        ]
+      }
+    },
+    "/v1/spaces/{spaceId}/members/{member.userId}": {
+      "patch": {
+        "summary": "Updates an existing member within a workspace.",
+        "operationId": "Spaces_UpdateSpaceMember",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SpaceMember"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "spaceId",
+            "description": "Required. The unique identifier of the workspace containing the member.\nFormatted as `spc_\u003cksuid\u003e` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "member.userId",
+            "description": "Required. The user identifier of the member.\nFormatted as `usr_\u003cksuid\u003e` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "member",
+            "description": "Required. The member resource containing updated fields.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "spaceId": {
+                  "type": "string",
+                  "description": "Output only. The unique identifier of the workspace this member belongs to.\nFormatted as `spc_\u003cksuid\u003e` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
+                  "readOnly": true
+                },
+                "role": {
+                  "$ref": "#/definitions/SpaceMemberRole",
+                  "description": "Required. The member's role within the workspace."
+                },
+                "createTime": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "Output only. The timestamp when the member joined the workspace.",
+                  "readOnly": true
+                },
+                "updateTime": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "Output only. The timestamp when the member's details or role were last updated.",
+                  "readOnly": true
+                },
+                "profile": {
+                  "$ref": "#/definitions/SpaceMemberProfile",
+                  "description": "Output only. The member's user profile details.",
+                  "readOnly": true
+                }
+              },
+              "title": "Required. The member resource containing updated fields.",
+              "required": [
+                "role"
+              ]
             }
           }
         ],
@@ -5072,13 +5161,14 @@
     },
     "/v1/spaces/{spaceId}/members/{userId}": {
       "delete": {
-        "summary": "RemoveSpaceMember removes a member from a workspace.",
-        "operationId": "Spaces_RemoveSpaceMember",
+        "summary": "Deletes a member from a workspace.",
+        "operationId": "Spaces_DeleteSpaceMember",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1RemoveSpaceMemberResponse"
+              "type": "object",
+              "properties": {}
             }
           },
           "default": {
@@ -5091,62 +5181,17 @@
         "parameters": [
           {
             "name": "spaceId",
-            "description": "The workspace ID.",
+            "description": "Required. The unique identifier of the workspace to remove the member from.\nFormatted as `spc_\u003cksuid\u003e` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "userId",
-            "description": "The user ID to remove.",
+            "description": "Required. The user identifier of the member to remove.\nFormatted as `usr_\u003cksuid\u003e` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
             "in": "path",
             "required": true,
             "type": "string"
-          }
-        ],
-        "tags": [
-          "Spaces"
-        ]
-      },
-      "patch": {
-        "summary": "UpdateSpaceMemberRole updates a member's role in a workspace.",
-        "operationId": "Spaces_UpdateSpaceMemberRole",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1SpaceMember"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/googleRpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "spaceId",
-            "description": "The workspace ID.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "userId",
-            "description": "The user ID.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/SpacesUpdateSpaceMemberRoleBody"
-            }
           }
         ],
         "tags": [
@@ -5205,18 +5250,22 @@
       ]
     },
     "AdminIdentityApproveUserBody": {
-      "type": "object"
+      "type": "object",
+      "description": "Request message for AdminIdentity.ApproveUser."
     },
     "AdminIdentityRejectUserBody": {
-      "type": "object"
+      "type": "object",
+      "description": "Request message for AdminIdentity.RejectUser."
     },
     "AdminIdentityUpdateUserRoleBody": {
       "type": "object",
       "properties": {
         "accessLevel": {
-          "$ref": "#/definitions/v1AccessLevel"
+          "$ref": "#/definitions/v1AccessLevel",
+          "description": "Required. The new access level for the user."
         }
       },
+      "description": "Request message for AdminIdentity.UpdateUserRole.",
       "required": [
         "accessLevel"
       ]
@@ -5781,47 +5830,32 @@
       "type": "object",
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The member's full or display name.",
+          "readOnly": true
         },
         "username": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The member's username.",
+          "readOnly": true
         },
         "avatarUrl": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The URL to the member's profile avatar image.",
+          "readOnly": true
         }
       },
       "description": "The nested user profile details."
     },
-    "SpacesAddSpaceMemberBody": {
-      "type": "object",
-      "properties": {
-        "userId": {
-          "type": "string",
-          "description": "The user ID to add as a member."
-        },
-        "role": {
-          "type": "string",
-          "description": "The role to assign."
-        }
-      },
-      "description": "AddSpaceMemberRequest contains the fields for adding a member.",
-      "required": [
-        "userId",
-        "role"
-      ]
-    },
-    "SpacesUpdateSpaceMemberRoleBody": {
-      "type": "object",
-      "properties": {
-        "role": {
-          "type": "string",
-          "description": "The new role."
-        }
-      },
-      "description": "UpdateSpaceMemberRoleRequest contains the fields for updating a member's role.",
-      "required": [
-        "role"
-      ]
+    "SpaceMemberRole": {
+      "type": "string",
+      "enum": [
+        "ROLE_OWNER",
+        "ROLE_ADMIN",
+        "ROLE_MEMBER",
+        "ROLE_VIEWER"
+      ],
+      "description": "Role defines the member's role and permissions within a workspace.\n\n - ROLE_OWNER: Workspace owner with full administrative and billing control.\n - ROLE_ADMIN: Workspace administrator with member management and settings access.\n - ROLE_MEMBER: Standard workspace member with regular read and write access.\n - ROLE_VIEWER: Workspace viewer with read-only access."
     },
     "SpentInsightsBudgetContribution": {
       "type": "object",
@@ -6075,9 +6109,11 @@
       "properties": {
         "revokedCount": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "The number of sessions that were revoked for the user."
         }
-      }
+      },
+      "description": "Response message for AdminIdentity.RevokeAllSessions."
     },
     "identityAdminV1SecurityEvent": {
       "type": "object",
@@ -6170,23 +6206,29 @@
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "The unique identifier for the security event."
         },
         "email": {
-          "type": "string"
+          "type": "string",
+          "description": "The email of the user associated with the event."
         },
         "eventType": {
-          "type": "string"
+          "type": "string",
+          "description": "The type of security event (e.g., login, password change)."
         },
         "ipAddress": {
-          "type": "string"
+          "type": "string",
+          "description": "The IP address from which the event originated."
         },
         "userAgent": {
-          "type": "string"
+          "type": "string",
+          "description": "The user agent string of the client that triggered the event."
         },
         "createdAt": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "The timestamp when the event was created."
         }
       }
     },
@@ -6240,7 +6282,8 @@
       "enum": [
         "ACCESS_LEVEL_USER",
         "ACCESS_LEVEL_ADMIN"
-      ]
+      ],
+      "description": "AccessLevel defines the level of access a user has within the system.\n\n - ACCESS_LEVEL_USER: Regular user access level.\n - ACCESS_LEVEL_ADMIN: Admin access level with elevated privileges."
     },
     "v1Account": {
       "type": "object",
@@ -6358,7 +6401,8 @@
       "description": "View controls the hydration of related metadata.\n\n - BASIC: Returns account details without base currency conversion calculations.\n - FULL: Hydrates complete structure including exchange rate conversion metrics."
     },
     "v1AdminIdentityRevokeAllSessionsBody": {
-      "type": "object"
+      "type": "object",
+      "description": "Request message for AdminIdentity.RevokeAllSessions."
     },
     "v1Agent": {
       "type": "object",
@@ -6534,9 +6578,11 @@
       "type": "object",
       "properties": {
         "user": {
-          "$ref": "#/definitions/identityAdminV1User"
+          "$ref": "#/definitions/identityAdminV1User",
+          "description": "The approved user object."
         }
-      }
+      },
+      "description": "Response message for AdminIdentity.ApproveUser."
     },
     "v1BackupEntry": {
       "type": "object",
@@ -7034,14 +7080,14 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "The workspace's name."
+          "description": "Required. The workspace's display name."
         },
         "description": {
           "type": "string",
-          "description": "The workspace's description."
+          "description": "Optional. A user-provided description of the workspace."
         }
       },
-      "description": "CreateSpaceRequest contains the fields for creating a new workspace.",
+      "description": "Request message for Spaces.CreateSpace.",
       "required": [
         "name"
       ]
@@ -7103,10 +7149,6 @@
         "code",
         "name"
       ]
-    },
-    "v1DeleteSpaceResponse": {
-      "type": "object",
-      "description": "DeleteSpaceResponse is empty on success."
     },
     "v1DeliveryInfo": {
       "type": "object",
@@ -8147,12 +8189,15 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/saturnIdentityV1SecurityEvent"
-          }
+          },
+          "description": "The list of security events for the authenticated user."
         },
         "nextPageToken": {
-          "type": "string"
+          "type": "string",
+          "description": "A token to retrieve the next page of results, if any."
         }
-      }
+      },
+      "description": "ListMySecurityEventsResponse returns a list of security events with pagination support."
     },
     "v1ListProvidersResponse": {
       "type": "object",
@@ -8237,13 +8282,17 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1SpaceMember"
-          }
+          },
+          "description": "Output only. The list of workspace members.",
+          "readOnly": true
         },
         "nextPageToken": {
-          "type": "string"
+          "type": "string",
+          "description": "A token, which can be sent as `page_token` to retrieve the next page.\nIf this field is omitted, there are no subsequent pages.",
+          "readOnly": true
         }
       },
-      "description": "ListSpaceMembersResponse contains the list of members and pagination token."
+      "description": "Response message for Spaces.ListSpaceMembers."
     },
     "v1ListSpacesResponse": {
       "type": "object",
@@ -8253,13 +8302,17 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1Space"
-          }
+          },
+          "description": "Output only. The list of requested workspaces.",
+          "readOnly": true
         },
         "nextPageToken": {
-          "type": "string"
+          "type": "string",
+          "description": "A token, which can be sent as `page_token` to retrieve the next page.\nIf this field is omitted, there are no subsequent pages.",
+          "readOnly": true
         }
       },
-      "description": "ListSpacesResponse contains the list of spaces and pagination token."
+      "description": "Response message for Spaces.ListSpaces."
     },
     "v1ListStatementLinesResponse": {
       "type": "object",
@@ -8354,7 +8407,8 @@
           "type": "string",
           "title": "empty if no more pages"
         }
-      }
+      },
+      "description": "Response message for AdminIdentity.ListUsers."
     },
     "v1LoginUserRequest": {
       "type": "object",
@@ -8398,7 +8452,8 @@
       "type": "object",
       "properties": {
         "refreshToken": {
-          "type": "string"
+          "type": "string",
+          "description": "The refresh token to be revoked."
         }
       },
       "description": "LogoutRequest contains the refresh token to revoke.",
@@ -8577,7 +8632,8 @@
       "type": "object",
       "properties": {
         "refreshToken": {
-          "type": "string"
+          "type": "string",
+          "description": "The refresh token to exchange for new tokens."
         }
       },
       "description": "RefreshSessionRequest contains a valid refresh token.",
@@ -8589,18 +8645,22 @@
       "type": "object",
       "properties": {
         "accessToken": {
-          "type": "string"
+          "type": "string",
+          "description": "The new access token for authenticated requests."
         },
         "accessTokenExpiresAt": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Expiration time of the new access token (Unix seconds)."
         },
         "refreshToken": {
-          "type": "string"
+          "type": "string",
+          "description": "The new opaque refresh token."
         },
         "refreshTokenExpiresAt": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Expiration time of the new refresh token (Unix seconds)."
         }
       },
       "description": "RefreshSessionResponse contains newly issued tokens."
@@ -8636,10 +8696,6 @@
         "name",
         "password"
       ]
-    },
-    "v1RemoveSpaceMemberResponse": {
-      "type": "object",
-      "description": "RemoveSpaceMemberResponse is empty on success."
     },
     "v1ResolveInstitutionResponse": {
       "type": "object",
@@ -8896,40 +8952,42 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "The workspace's unique identifier.",
+          "description": "Output only. The workspace's unique identifier.\nFormatted as `spc_\u003cksuid\u003e` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
           "readOnly": true
         },
         "name": {
           "type": "string",
-          "description": "The workspace's name."
+          "description": "Required. The workspace's display name."
         },
         "description": {
           "type": "string",
-          "description": "The workspace's description."
+          "description": "Optional. A user-provided description of the workspace."
         },
         "ownerId": {
           "type": "string",
-          "description": "The owner's user ID.",
+          "description": "Output only. The user identifier of the workspace owner.\nFormatted as `usr_\u003cksuid\u003e` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
           "readOnly": true
         },
         "version": {
           "type": "string",
           "format": "int64",
-          "description": "The optimistic locking version.",
+          "description": "Output only. The optimistic concurrency control version number.",
           "readOnly": true
         },
         "createTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The creation timestamp."
+          "description": "Output only. The timestamp when the workspace was created.",
+          "readOnly": true
         },
         "updateTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The last update timestamp."
+          "description": "Output only. The timestamp when the workspace was last updated.",
+          "readOnly": true
         }
       },
-      "description": "Space represents a workspace.",
+      "description": "Space represents a workspace resource.",
       "required": [
         "name"
       ]
@@ -8939,31 +8997,40 @@
       "properties": {
         "spaceId": {
           "type": "string",
-          "description": "The workspace ID."
+          "description": "Output only. The unique identifier of the workspace this member belongs to.\nFormatted as `spc_\u003cksuid\u003e` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
+          "readOnly": true
         },
         "userId": {
           "type": "string",
-          "description": "The member's user ID."
+          "description": "Required. The user identifier of the member.\nFormatted as `usr_\u003cksuid\u003e` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`)."
         },
         "role": {
-          "type": "string",
-          "description": "The member's role within the workspace."
+          "$ref": "#/definitions/SpaceMemberRole",
+          "description": "Required. The member's role within the workspace."
         },
         "createTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The creation timestamp."
+          "description": "Output only. The timestamp when the member joined the workspace.",
+          "readOnly": true
         },
         "updateTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The last update timestamp."
+          "description": "Output only. The timestamp when the member's details or role were last updated.",
+          "readOnly": true
         },
         "profile": {
-          "$ref": "#/definitions/SpaceMemberProfile"
+          "$ref": "#/definitions/SpaceMemberProfile",
+          "description": "Output only. The member's user profile details.",
+          "readOnly": true
         }
       },
-      "description": "SpaceMember represents a member of a workspace."
+      "description": "SpaceMember represents a member of a workspace.",
+      "required": [
+        "userId",
+        "role"
+      ]
     },
     "v1SpentInsights": {
       "type": "object",
@@ -9502,9 +9569,11 @@
       "type": "object",
       "properties": {
         "user": {
-          "$ref": "#/definitions/identityAdminV1User"
+          "$ref": "#/definitions/identityAdminV1User",
+          "description": "The updated user object reflecting the new access level."
         }
-      }
+      },
+      "description": "Response message for AdminIdentity.UpdateUserRole."
     },
     "v1UserSession": {
       "type": "object",

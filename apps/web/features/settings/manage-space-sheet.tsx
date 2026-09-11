@@ -32,14 +32,23 @@ import {
 } from "lucide-react"
 import {
   useListSpaceMembersQuery,
-  useAddSpaceMemberMutation,
-  useRemoveSpaceMemberMutation,
-  useUpdateSpaceMemberRoleMutation,
+  useCreateSpaceMemberMutation,
+  useDeleteSpaceMemberMutation,
+  useUpdateSpaceMemberMutation,
   useUpdateSpaceMutation,
   type Space,
+  type SpaceMember_Role,
   type UpdateSpaceRequest,
 } from "@/gen/saturn/space/v1/space"
 import { toast } from "@/components/ui/toast"
+
+const roleLabels: Record<SpaceMember_Role, string> = {
+  ROLE_UNSPECIFIED: "Unspecified",
+  OWNER: "Owner",
+  ADMIN: "Admin",
+  MEMBER: "Member",
+  VIEWER: "Viewer",
+}
 
 const spaceDetailsSchema = z.object({
   name: z.string().trim().min(1, "Space name is required").max(255),
@@ -50,7 +59,7 @@ type SpaceDetailsFormValues = z.infer<typeof spaceDetailsSchema>
 
 const addMemberSchema = z.object({
   userId: z.string().trim().min(1, "User ID is required"),
-  role: z.enum(["admin", "member", "viewer"]),
+  role: z.enum(["ADMIN", "MEMBER", "VIEWER"]),
 })
 
 type AddMemberFormValues = z.infer<typeof addMemberSchema>
@@ -70,7 +79,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
     resolver: zodResolver(addMemberSchema),
     defaultValues: {
       userId: "",
-      role: "member",
+      role: "MEMBER",
     },
   })
 
@@ -78,14 +87,14 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
   const spaceId = space?.id ?? ""
   const { data: membersData, isLoading: isMembersLoading } =
     useListSpaceMembersQuery(
-      { spaceId, pageSize: 50, nextPageToken: "" },
+      { spaceId, pageSize: 50, pageToken: "" },
       { enabled: !!spaceId }
     )
 
   const updateSpaceMutation = useUpdateSpaceMutation()
-  const addMemberMutation = useAddSpaceMemberMutation()
-  const removeMemberMutation = useRemoveSpaceMemberMutation()
-  const updateRoleMutation = useUpdateSpaceMemberRoleMutation()
+  const createMemberMutation = useCreateSpaceMemberMutation()
+  const deleteMemberMutation = useDeleteSpaceMemberMutation()
+  const updateMemberMutation = useUpdateSpaceMemberMutation()
 
   const patchMutation = usePatch<
     Space,
@@ -162,9 +171,15 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
   const handleAddMember = async (data: AddMemberFormValues) => {
     setMemberError("")
     try {
-      await addMemberMutation.mutateAsync({
+      await createMemberMutation.mutateAsync({
         space_id: spaceId,
-        req: { spaceId, userId: data.userId.trim(), role: data.role },
+        req: {
+          spaceId,
+          member: {
+            userId: data.userId.trim(),
+            role: data.role,
+          },
+        },
       })
       queryClient.invalidateQueries({
         queryKey: [`/api/v1/spaces/${spaceId}/members`],
@@ -190,7 +205,7 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
   const handleRemoveMember = async (userId: string) => {
     setMemberError("")
     try {
-      await removeMemberMutation.mutateAsync({
+      await deleteMemberMutation.mutateAsync({
         space_id: spaceId,
         user_id: userId,
         req: { spaceId, userId },
@@ -215,13 +230,20 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
     }
   }
 
-  const handleRoleChange = async (userId: string, role: string) => {
+  const handleRoleChange = async (userId: string, role: SpaceMember_Role) => {
     setMemberError("")
     try {
-      await updateRoleMutation.mutateAsync({
+      await updateMemberMutation.mutateAsync({
         space_id: spaceId,
         user_id: userId,
-        req: { spaceId, userId, role },
+        req: {
+          spaceId,
+          member: {
+            userId,
+            role,
+          },
+          updateMask: { paths: ["role"] },
+        },
       })
       queryClient.invalidateQueries({
         queryKey: [`/api/v1/spaces/${spaceId}/members`],
@@ -390,13 +412,13 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                             {member.profile?.username
                               ? `@${member.profile.username} • `
                               : ""}
-                            {member.role}
+                            {roleLabels[member.role] || member.role}
                           </span>
                         </div>
                       </div>
 
                       <div className="flex shrink-0 items-center gap-2">
-                        {member.role === "owner" ? (
+                        {member.role === "OWNER" ? (
                           <div className="flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold text-primary uppercase select-none">
                             <ShieldCheck className="h-3 w-3" />
                             Owner
@@ -406,23 +428,31 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                             <Select
                               value={member.role}
                               onValueChange={(val) =>
-                                val && handleRoleChange(member.userId, val)
+                                val &&
+                                member.userId &&
+                                handleRoleChange(
+                                  member.userId,
+                                  val as SpaceMember_Role
+                                )
                               }
                             >
                               <SelectTrigger className="!h-7 w-24 rounded-lg border-border/40 bg-background px-2.5 py-1 text-[11px]">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                                <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="member">Member</SelectItem>
-                                <SelectItem value="viewer">Viewer</SelectItem>
+                                <SelectItem value="ADMIN">Admin</SelectItem>
+                                <SelectItem value="MEMBER">Member</SelectItem>
+                                <SelectItem value="VIEWER">Viewer</SelectItem>
                               </SelectContent>
                             </Select>
                             <Button
                               variant="ghost"
                               size="icon-xs"
                               className="rounded-lg text-destructive hover:bg-destructive/10 hover:text-destructive"
-                              onClick={() => handleRemoveMember(member.userId)}
+                              onClick={() =>
+                                member.userId &&
+                                handleRemoveMember(member.userId)
+                              }
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
@@ -462,9 +492,9 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="rounded-xl border border-border/50 bg-card/90 p-1.5 shadow-xl backdrop-blur-xl">
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="member">Member</SelectItem>
-                          <SelectItem value="viewer">Viewer</SelectItem>
+                          <SelectItem value="ADMIN">Admin</SelectItem>
+                          <SelectItem value="MEMBER">Member</SelectItem>
+                          <SelectItem value="VIEWER">Viewer</SelectItem>
                         </SelectContent>
                       </Select>
                     )}
@@ -474,9 +504,9 @@ export function ManageSpaceSheet({ space, onClose }: ManageSpaceSheetProps) {
                     size="sm"
                     variant="outline"
                     className="h-9 shrink-0 rounded-xl px-3 transition-all hover:border-transparent hover:bg-primary hover:text-white"
-                    disabled={addMemberMutation.isPending}
+                    disabled={createMemberMutation.isPending}
                   >
-                    {addMemberMutation.isPending ? (
+                    {createMemberMutation.isPending ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     ) : (
                       <Plus className="h-4 w-4" />

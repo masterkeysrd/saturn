@@ -22,6 +22,7 @@ type mockSpaceService struct {
 	addSpaceMemberFunc        func(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error)
 	removeSpaceMemberFunc     func(ctx context.Context, session space.Session, targetUserID space.SpaceID) error
 	updateSpaceMemberRoleFunc func(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error)
+	updateSpaceMemberFunc     func(ctx context.Context, session space.Session, member *space.Member, mask []string) (*space.Member, error)
 }
 
 func (m *mockSpaceService) CreateSpace(ctx context.Context, sp *space.Space) (*space.Space, error) {
@@ -57,6 +58,16 @@ func (m *mockSpaceService) RemoveSpaceMember(ctx context.Context, session space.
 		return m.removeSpaceMemberFunc(ctx, session, targetUserID)
 	}
 	return nil
+}
+
+func (m *mockSpaceService) UpdateSpaceMember(ctx context.Context, session space.Session, member *space.Member, mask []string) (*space.Member, error) {
+	if m.updateSpaceMemberFunc != nil {
+		return m.updateSpaceMemberFunc(ctx, session, member, mask)
+	}
+	if m.updateSpaceMemberRoleFunc != nil {
+		return m.updateSpaceMemberRoleFunc(ctx, session, member)
+	}
+	return member, nil
 }
 
 func (m *mockSpaceService) UpdateSpaceMemberRole(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error) {
@@ -132,78 +143,322 @@ func TestCoordinator_CreateSpace(t *testing.T) {
 
 func TestCoordinator_AddSpaceMember(t *testing.T) {
 	ctx := context.Background()
-	mockSpace := &mockSpaceService{}
-	mockID := &mockIdentityService{}
-	coord := spaceapp.NewCoordinator(spaceapp.Dependencies{
-		SpaceService:    mockSpace,
-		IdentityService: mockID,
-	})
 
-	t.Run("user not active returns UserNotActive", func(t *testing.T) {
-		mockID.getUserByIDFunc = func(ctx context.Context, id identity.UserID) (*identity.User, error) {
-			return &identity.User{
-				ID:     id,
-				Status: identity.UserStatusSuspended,
-			}, nil
-		}
+	tests := []struct {
+		name       string
+		req        *spaceapp.AddSpaceMemberRequest
+		userStatus identity.UserStatus
+		lookupErr  error
+		wantErr    bool
+		wantKind   errors.Kind
+		wantCode   errors.Code
+	}{
+		{
+			name: "nil member returns Invalid",
+			req: &spaceapp.AddSpaceMemberRequest{
+				SpaceID: "sp_123",
+				UserID:  "usr_owner",
+				Member:  nil,
+			},
+			wantErr:  true,
+			wantKind: errors.Invalid,
+		},
+		{
+			name: "empty user_id returns Invalid",
+			req: &spaceapp.AddSpaceMemberRequest{
+				SpaceID: "sp_123",
+				UserID:  "usr_owner",
+				Member:  &space.Member{UserID: "", Role: space.RoleMember},
+			},
+			wantErr:  true,
+			wantKind: errors.Invalid,
+		},
+		{
+			name: "invalid role returns Invalid",
+			req: &spaceapp.AddSpaceMemberRequest{
+				SpaceID: "sp_123",
+				UserID:  "usr_owner",
+				Member:  &space.Member{UserID: "usr_target", Role: "invalid"},
+			},
+			wantErr:  true,
+			wantKind: errors.Invalid,
+			wantCode: space.InvalidRole,
+		},
+		{
+			name: "identity lookup failure",
+			req: &spaceapp.AddSpaceMemberRequest{
+				SpaceID: "sp_123",
+				UserID:  "usr_owner",
+				Member:  &space.Member{UserID: "usr_target", Role: space.RoleMember},
+			},
+			lookupErr: fmt.Errorf("network timeout"),
+			wantErr:   true,
+		},
+		{
+			name: "user not active returns Precondition with UserNotActive code",
+			req: &spaceapp.AddSpaceMemberRequest{
+				SpaceID: "sp_123",
+				UserID:  "usr_owner",
+				Member:  &space.Member{UserID: "usr_target", Role: space.RoleMember},
+			},
+			userStatus: identity.UserStatusSuspended,
+			wantErr:    true,
+			wantKind:   errors.Precondition,
+			wantCode:   spaceapp.UserNotActive,
+		},
+		{
+			name: "success for active user",
+			req: &spaceapp.AddSpaceMemberRequest{
+				SpaceID: "sp_123",
+				UserID:  "usr_owner",
+				Member:  &space.Member{UserID: "usr_target", Role: space.RoleMember},
+			},
+			userStatus: identity.UserStatusActive,
+			wantErr:    false,
+		},
+	}
 
-		_, err := coord.AddSpaceMember(ctx, &spaceapp.AddSpaceMemberRequest{
-			SpaceID:      "sp_123",
-			UserID:       "usr_owner",
-			TargetUserID: "usr_target",
-			Role:         string(space.RoleMember),
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockSpace := &mockSpaceService{
+				addSpaceMemberFunc: func(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error) {
+					return member, nil
+				},
+			}
+			mockID := &mockIdentityService{
+				getUserByIDFunc: func(ctx context.Context, id identity.UserID) (*identity.User, error) {
+					if tt.lookupErr != nil {
+						return nil, tt.lookupErr
+					}
+					return &identity.User{
+						ID:     id,
+						Status: tt.userStatus,
+					}, nil
+				},
+			}
+			coord := spaceapp.NewCoordinator(spaceapp.Dependencies{
+				SpaceService:    mockSpace,
+				IdentityService: mockID,
+			})
+
+			mem, err := coord.AddSpaceMember(ctx, tt.req)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if tt.wantKind != errors.Other && errors.KindOf(err) != tt.wantKind {
+					t.Errorf("expected kind %v, got %v", tt.wantKind, errors.KindOf(err))
+				}
+				if tt.wantCode != "" && errors.CodeOf(err) != tt.wantCode {
+					t.Errorf("expected code %v, got %v", tt.wantCode, errors.CodeOf(err))
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if mem == nil || mem.UserID != tt.req.Member.UserID {
+				t.Errorf("unexpected member returned: %+v", mem)
+			}
 		})
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		if code := errors.CodeOf(err); code != spaceapp.UserNotActive {
-			t.Errorf("expected code %v, got %v", spaceapp.UserNotActive, code)
-		}
-		if kind := errors.KindOf(err); kind != errors.Precondition {
-			t.Errorf("expected kind Precondition, got %v", kind)
-		}
-	})
+	}
+}
 
-	t.Run("identity lookup failure", func(t *testing.T) {
-		mockID.getUserByIDFunc = func(ctx context.Context, id identity.UserID) (*identity.User, error) {
-			return nil, fmt.Errorf("network timeout")
-		}
+func TestCoordinator_UpdateSpaceMember(t *testing.T) {
+	ctx := context.Background()
 
-		_, err := coord.AddSpaceMember(ctx, &spaceapp.AddSpaceMemberRequest{
-			SpaceID:      "sp_123",
-			UserID:       "usr_owner",
-			TargetUserID: "usr_target",
-			Role:         string(space.RoleMember),
+	tests := []struct {
+		name        string
+		req         *spaceapp.UpdateSpaceMemberRequest
+		serviceFunc func(ctx context.Context, session space.Session, member *space.Member, mask []string) (*space.Member, error)
+		wantErr     bool
+		wantKind    errors.Kind
+		wantCode    errors.Code
+	}{
+		{
+			name: "service returns error (not found)",
+			req: &spaceapp.UpdateSpaceMemberRequest{
+				SpaceID:    "sp_123",
+				UserID:     "usr_caller",
+				Member:     &space.Member{UserID: "usr_target", Role: space.RoleAdmin},
+				UpdateMask: []string{"role"},
+			},
+			serviceFunc: func(ctx context.Context, session space.Session, member *space.Member, mask []string) (*space.Member, error) {
+				return nil, errors.E(errors.NotExist, space.MemberNotFound, "member not found")
+			},
+			wantErr:  true,
+			wantKind: errors.NotExist,
+			wantCode: space.MemberNotFound,
+		},
+		{
+			name: "service returns error (owner demotion denied)",
+			req: &spaceapp.UpdateSpaceMemberRequest{
+				SpaceID:    "sp_123",
+				UserID:     "usr_caller",
+				Member:     &space.Member{UserID: "usr_owner", Role: space.RoleMember},
+				UpdateMask: []string{"role"},
+			},
+			serviceFunc: func(ctx context.Context, session space.Session, member *space.Member, mask []string) (*space.Member, error) {
+				return nil, errors.E(errors.Permission, space.OwnerOnly, "cannot change space owner role")
+			},
+			wantErr:  true,
+			wantKind: errors.Permission,
+			wantCode: space.OwnerOnly,
+		},
+		{
+			name: "service returns error (invalid role)",
+			req: &spaceapp.UpdateSpaceMemberRequest{
+				SpaceID:    "sp_123",
+				UserID:     "usr_caller",
+				Member:     &space.Member{UserID: "usr_target", Role: "unknown"},
+				UpdateMask: []string{"role"},
+			},
+			serviceFunc: func(ctx context.Context, session space.Session, member *space.Member, mask []string) (*space.Member, error) {
+				return nil, errors.E(errors.Invalid, space.InvalidRole, "invalid role")
+			},
+			wantErr:  true,
+			wantKind: errors.Invalid,
+			wantCode: space.InvalidRole,
+		},
+		{
+			name: "successful update with mask",
+			req: &spaceapp.UpdateSpaceMemberRequest{
+				SpaceID:    "sp_123",
+				UserID:     "usr_caller",
+				Member:     &space.Member{UserID: "usr_target", Role: space.RoleAdmin},
+				UpdateMask: []string{"role"},
+			},
+			serviceFunc: func(ctx context.Context, session space.Session, member *space.Member, mask []string) (*space.Member, error) {
+				if session.SpaceID != "sp_123" || session.UserID != "usr_caller" {
+					t.Errorf("unexpected session: %+v", session)
+				}
+				if len(mask) != 1 || mask[0] != "role" {
+					t.Errorf("unexpected mask: %v", mask)
+				}
+				return member, nil
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockSpace := &mockSpaceService{
+				updateSpaceMemberFunc: tt.serviceFunc,
+			}
+			coord := spaceapp.NewCoordinator(spaceapp.Dependencies{
+				SpaceService: mockSpace,
+			})
+
+			res, err := coord.UpdateSpaceMember(ctx, tt.req)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if tt.wantKind != errors.Other && errors.KindOf(err) != tt.wantKind {
+					t.Errorf("expected kind %v, got %v", tt.wantKind, errors.KindOf(err))
+				}
+				if tt.wantCode != "" && errors.CodeOf(err) != tt.wantCode {
+					t.Errorf("expected code %v, got %v", tt.wantCode, errors.CodeOf(err))
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if res == nil || res.UserID != tt.req.Member.UserID || res.Role != tt.req.Member.Role {
+				t.Errorf("unexpected member returned: %+v", res)
+			}
 		})
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-	})
+	}
+}
 
-	t.Run("success for active user", func(t *testing.T) {
-		mockID.getUserByIDFunc = func(ctx context.Context, id identity.UserID) (*identity.User, error) {
-			return &identity.User{
-				ID:     id,
-				Status: identity.UserStatusActive,
-			}, nil
-		}
-		mockSpace.addSpaceMemberFunc = func(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error) {
-			return member, nil
-		}
+func TestCoordinator_RemoveSpaceMember(t *testing.T) {
+	ctx := context.Background()
 
-		mem, err := coord.AddSpaceMember(ctx, &spaceapp.AddSpaceMemberRequest{
-			SpaceID:      "sp_123",
-			UserID:       "usr_owner",
-			TargetUserID: "usr_target",
-			Role:         string(space.RoleMember),
+	tests := []struct {
+		name        string
+		req         *spaceapp.RemoveSpaceMemberRequest
+		serviceFunc func(ctx context.Context, session space.Session, targetUserID space.SpaceID) error
+		wantErr     bool
+		wantKind    errors.Kind
+		wantCode    errors.Code
+	}{
+		{
+			name: "service returns error (owner cannot be removed)",
+			req: &spaceapp.RemoveSpaceMemberRequest{
+				SpaceID:      "sp_123",
+				UserID:       "usr_caller",
+				TargetUserID: "usr_owner",
+			},
+			serviceFunc: func(ctx context.Context, session space.Session, targetUserID space.SpaceID) error {
+				return errors.E(errors.Permission, space.OwnerOnly, "cannot remove space owner")
+			},
+			wantErr:  true,
+			wantKind: errors.Permission,
+			wantCode: space.OwnerOnly,
+		},
+		{
+			name: "service returns error (member not found)",
+			req: &spaceapp.RemoveSpaceMemberRequest{
+				SpaceID:      "sp_123",
+				UserID:       "usr_caller",
+				TargetUserID: "usr_target",
+			},
+			serviceFunc: func(ctx context.Context, session space.Session, targetUserID space.SpaceID) error {
+				return errors.E(errors.NotExist, space.MemberNotFound, "member not found")
+			},
+			wantErr:  true,
+			wantKind: errors.NotExist,
+			wantCode: space.MemberNotFound,
+		},
+		{
+			name: "successful remove",
+			req: &spaceapp.RemoveSpaceMemberRequest{
+				SpaceID:      "sp_123",
+				UserID:       "usr_caller",
+				TargetUserID: "usr_target",
+			},
+			serviceFunc: func(ctx context.Context, session space.Session, targetUserID space.SpaceID) error {
+				if session.SpaceID != "sp_123" || session.UserID != "usr_caller" {
+					t.Errorf("unexpected session: %+v", session)
+				}
+				if targetUserID != "usr_target" {
+					t.Errorf("unexpected targetUserID: %s", targetUserID)
+				}
+				return nil
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockSpace := &mockSpaceService{
+				removeSpaceMemberFunc: tt.serviceFunc,
+			}
+			coord := spaceapp.NewCoordinator(spaceapp.Dependencies{
+				SpaceService: mockSpace,
+			})
+
+			err := coord.RemoveSpaceMember(ctx, tt.req)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if tt.wantKind != errors.Other && errors.KindOf(err) != tt.wantKind {
+					t.Errorf("expected kind %v, got %v", tt.wantKind, errors.KindOf(err))
+				}
+				if tt.wantCode != "" && errors.CodeOf(err) != tt.wantCode {
+					t.Errorf("expected code %v, got %v", tt.wantCode, errors.CodeOf(err))
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 		})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if mem.UserID != "usr_target" {
-			t.Errorf("expected UserID usr_target, got %s", mem.UserID)
-		}
-	})
+	}
 }
 
 type mockTransactor struct {

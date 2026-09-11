@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	spacev1 "github.com/masterkeysrd/saturn/apis/saturn/space/v1"
 	"github.com/masterkeysrd/saturn/tests/driver"
 )
 
@@ -25,14 +26,13 @@ func TestSpaceMemberLifecycleAndRoles(t *testing.T) {
 	}
 	spaceID := space.GetId()
 
-	// User B registers & gets approved
-	nano := time.Now().UnixNano()
-	userBEmail := fmt.Sprintf("teammate_%d@saturn.local", nano)
+	// Register and approve User B
+	userBEmail := fmt.Sprintf("teammate_%d@saturn.local", time.Now().UnixNano())
 	userBPass := "Password123!"
 	uB, err := d.Auth().RegisterUser(t, driver.RegisterUserOptions{
 		Name:     "Teammate Bob",
 		Email:    userBEmail,
-		Username: fmt.Sprintf("bob_%d", nano),
+		Username: fmt.Sprintf("teammate_%d", time.Now().UnixNano()),
 		Password: userBPass,
 	})
 	if err != nil {
@@ -44,11 +44,11 @@ func TestSpaceMemberLifecycleAndRoles(t *testing.T) {
 	userBID := uB.GetId()
 
 	// 1. User A adds User B as member
-	member, err := d.Space().AddSpaceMember(t, spaceID, userBID, "member")
+	member, err := d.Space().CreateSpaceMember(t, spaceID, userBID, spacev1.SpaceMember_MEMBER)
 	if err != nil {
 		t.Fatalf("failed to add member: %v", err)
 	}
-	if member.GetRole() != "member" {
+	if member.GetRole() != spacev1.SpaceMember_MEMBER {
 		t.Errorf("member role = %s, want member", member.GetRole())
 	}
 	if member.GetUserId() != userBID {
@@ -72,11 +72,11 @@ func TestSpaceMemberLifecycleAndRoles(t *testing.T) {
 
 	// 3. User A updates User B role to admin
 	d.Auth().Login(t) // switch back to Owner
-	updatedMember, err := d.Space().UpdateSpaceMemberRole(t, spaceID, userBID, "admin")
+	updatedMember, err := d.Space().UpdateSpaceMember(t, spaceID, userBID, spacev1.SpaceMember_ADMIN)
 	if err != nil {
 		t.Fatalf("failed to update member role: %v", err)
 	}
-	if updatedMember.GetRole() != "admin" {
+	if updatedMember.GetRole() != spacev1.SpaceMember_ADMIN {
 		t.Errorf("updated member role = %s, want admin", updatedMember.GetRole())
 	}
 
@@ -93,7 +93,7 @@ func TestSpaceMemberLifecycleAndRoles(t *testing.T) {
 	for _, m := range membersList.GetMembers() {
 		if m.GetUserId() == userBID {
 			foundBob = true
-			if m.GetRole() != "admin" {
+			if m.GetRole() != spacev1.SpaceMember_ADMIN {
 				t.Errorf("Bob's role in list = %s, want admin", m.GetRole())
 			}
 			if m.GetProfile() == nil || m.GetProfile().GetName() != "Teammate Bob" {
@@ -106,7 +106,7 @@ func TestSpaceMemberLifecycleAndRoles(t *testing.T) {
 	}
 
 	// 5. User A removes User B from space
-	_, err = d.Space().RemoveSpaceMember(t, spaceID, userBID)
+	_, err = d.Space().DeleteSpaceMember(t, spaceID, userBID)
 	if err != nil {
 		t.Fatalf("failed to remove space member: %v", err)
 	}
@@ -136,13 +136,13 @@ func TestSpaceOwnerProtectionGuards(t *testing.T) {
 	spaceID := space.GetId()
 
 	// 1. Owner cannot demote self
-	_, err = d.Space().UpdateSpaceMemberRole(t, spaceID, ownerID, "member")
+	_, err = d.Space().UpdateSpaceMember(t, spaceID, ownerID, spacev1.SpaceMember_MEMBER)
 	if err == nil {
 		t.Fatalf("expected owner demotion to fail, but succeeded")
 	}
 
 	// 2. Owner cannot remove self from workspace
-	_, err = d.Space().RemoveSpaceMember(t, spaceID, ownerID)
+	_, err = d.Space().DeleteSpaceMember(t, spaceID, ownerID)
 	if err == nil {
 		t.Fatalf("expected owner removal to fail, but succeeded")
 	}
@@ -176,7 +176,7 @@ func TestMemberListPagination(t *testing.T) {
 		if _, err := d.Auth().ApproveUser(t, u.GetId()); err != nil {
 			t.Fatalf("failed to approve member %d: %v", i, err)
 		}
-		if _, err := d.Space().AddSpaceMember(t, spaceID, u.GetId(), "member"); err != nil {
+		if _, err := d.Space().CreateSpaceMember(t, spaceID, u.GetId(), spacev1.SpaceMember_MEMBER); err != nil {
 			t.Fatalf("failed to add member %d to space: %v", i, err)
 		}
 	}

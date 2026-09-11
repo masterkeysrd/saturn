@@ -124,15 +124,15 @@ func (t *TransactionalCoordinator) RemoveSpaceMember(ctx context.Context, req *R
 	return nil
 }
 
-// UpdateSpaceMemberRole executes next.UpdateSpaceMemberRole inside a database transaction.
-func (t *TransactionalCoordinator) UpdateSpaceMemberRole(ctx context.Context, req *UpdateSpaceMemberRoleRequest) (*space.Member, error) {
+// UpdateSpaceMember executes next.UpdateSpaceMember inside a database transaction.
+func (t *TransactionalCoordinator) UpdateSpaceMember(ctx context.Context, req *UpdateSpaceMemberRequest) (*space.Member, error) {
 	ctx, tx, err := t.txr.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
 
-	res, err := t.next.UpdateSpaceMemberRole(ctx, req)
+	res, err := t.next.UpdateSpaceMember(ctx, req)
 	if err != nil {
 		return nil, err
 	}

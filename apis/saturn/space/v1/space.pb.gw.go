@@ -256,13 +256,13 @@ func local_request_Spaces_ListSpaces_0(ctx context.Context, marshaler runtime.Ma
 	return msg, metadata, err
 }
 
-func request_Spaces_AddSpaceMember_0(ctx context.Context, marshaler runtime.Marshaler, client SpacesClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Spaces_CreateSpaceMember_0(ctx context.Context, marshaler runtime.Marshaler, client SpacesClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq AddSpaceMemberRequest
+		protoReq CreateSpaceMemberRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq.Member); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	val, ok := pathParams["space_id"]
@@ -276,17 +276,17 @@ func request_Spaces_AddSpaceMember_0(ctx context.Context, marshaler runtime.Mars
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	msg, err := client.AddSpaceMember(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.CreateSpaceMember(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 }
 
-func local_request_Spaces_AddSpaceMember_0(ctx context.Context, marshaler runtime.Marshaler, server SpacesServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_Spaces_CreateSpaceMember_0(ctx context.Context, marshaler runtime.Marshaler, server SpacesServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq AddSpaceMemberRequest
+		protoReq CreateSpaceMemberRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq.Member); err != nil && !errors.Is(err, io.EOF) {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	val, ok := pathParams["space_id"]
@@ -297,74 +297,16 @@ func local_request_Spaces_AddSpaceMember_0(ctx context.Context, marshaler runtim
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
 	}
-	msg, err := server.AddSpaceMember(ctx, &protoReq)
+	msg, err := server.CreateSpaceMember(ctx, &protoReq)
 	return msg, metadata, err
 }
 
-func request_Spaces_RemoveSpaceMember_0(ctx context.Context, marshaler runtime.Marshaler, client SpacesClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Spaces_DeleteSpaceMember_0(ctx context.Context, marshaler runtime.Marshaler, client SpacesClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq RemoveSpaceMemberRequest
+		protoReq DeleteSpaceMemberRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["user_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_id")
-	}
-	protoReq.UserId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_id", err)
-	}
-	if req.Body != nil {
-		_, _ = io.Copy(io.Discard, req.Body)
-	}
-	msg, err := client.RemoveSpaceMember(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-}
-
-func local_request_Spaces_RemoveSpaceMember_0(ctx context.Context, marshaler runtime.Marshaler, server SpacesServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var (
-		protoReq RemoveSpaceMemberRequest
-		metadata runtime.ServerMetadata
-		err      error
-	)
-	val, ok := pathParams["space_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
-	}
-	protoReq.SpaceId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
-	}
-	val, ok = pathParams["user_id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "user_id")
-	}
-	protoReq.UserId, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_id", err)
-	}
-	msg, err := server.RemoveSpaceMember(ctx, &protoReq)
-	return msg, metadata, err
-}
-
-func request_Spaces_UpdateSpaceMemberRole_0(ctx context.Context, marshaler runtime.Marshaler, client SpacesClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var (
-		protoReq UpdateSpaceMemberRoleRequest
-		metadata runtime.ServerMetadata
-		err      error
-	)
-	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
 	val, ok := pathParams["space_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
@@ -384,19 +326,16 @@ func request_Spaces_UpdateSpaceMemberRole_0(ctx context.Context, marshaler runti
 	if req.Body != nil {
 		_, _ = io.Copy(io.Discard, req.Body)
 	}
-	msg, err := client.UpdateSpaceMemberRole(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.DeleteSpaceMember(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 }
 
-func local_request_Spaces_UpdateSpaceMemberRole_0(ctx context.Context, marshaler runtime.Marshaler, server SpacesServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_Spaces_DeleteSpaceMember_0(ctx context.Context, marshaler runtime.Marshaler, server SpacesServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq UpdateSpaceMemberRoleRequest
+		protoReq DeleteSpaceMemberRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
-	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
 	val, ok := pathParams["space_id"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
@@ -413,7 +352,104 @@ func local_request_Spaces_UpdateSpaceMemberRole_0(ctx context.Context, marshaler
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "user_id", err)
 	}
-	msg, err := server.UpdateSpaceMemberRole(ctx, &protoReq)
+	msg, err := server.DeleteSpaceMember(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+var filter_Spaces_UpdateSpaceMember_0 = &utilities.DoubleArray{Encoding: map[string]int{"member": 0, "space_id": 1, "user_id": 2}, Base: []int{1, 2, 3, 1, 0, 0, 0}, Check: []int{0, 1, 1, 2, 4, 2, 3}}
+
+func request_Spaces_UpdateSpaceMember_0(ctx context.Context, marshaler runtime.Marshaler, client SpacesClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq UpdateSpaceMemberRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	newReader, berr := utilities.IOReaderFactory(req.Body)
+	if berr != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
+	}
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq.Member); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if protoReq.UpdateMask == nil || len(protoReq.UpdateMask.GetPaths()) == 0 {
+		if fieldMask, err := runtime.FieldMaskFromRequestBody(newReader(), protoReq.Member); err != nil {
+			return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+		} else {
+			protoReq.UpdateMask = fieldMask
+		}
+	}
+	val, ok := pathParams["space_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
+	}
+	protoReq.SpaceId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
+	}
+	val, ok = pathParams["member.user_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "member.user_id")
+	}
+	err = runtime.PopulateFieldFromPath(&protoReq, "member.user_id", val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "member.user_id", err)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Spaces_UpdateSpaceMember_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	msg, err := client.UpdateSpaceMember(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_Spaces_UpdateSpaceMember_0(ctx context.Context, marshaler runtime.Marshaler, server SpacesServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq UpdateSpaceMemberRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	newReader, berr := utilities.IOReaderFactory(req.Body)
+	if berr != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
+	}
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq.Member); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if protoReq.UpdateMask == nil || len(protoReq.UpdateMask.GetPaths()) == 0 {
+		if fieldMask, err := runtime.FieldMaskFromRequestBody(newReader(), protoReq.Member); err != nil {
+			return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+		} else {
+			protoReq.UpdateMask = fieldMask
+		}
+	}
+	val, ok := pathParams["space_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "space_id")
+	}
+	protoReq.SpaceId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "space_id", err)
+	}
+	val, ok = pathParams["member.user_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "member.user_id")
+	}
+	err = runtime.PopulateFieldFromPath(&protoReq, "member.user_id", val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "member.user_id", err)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Spaces_UpdateSpaceMember_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.UpdateSpaceMember(ctx, &protoReq)
 	return msg, metadata, err
 }
 
@@ -576,65 +612,65 @@ func RegisterSpacesHandlerServer(ctx context.Context, mux *runtime.ServeMux, ser
 		}
 		forward_Spaces_ListSpaces_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPost, pattern_Spaces_AddSpaceMember_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPost, pattern_Spaces_CreateSpaceMember_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.space.v1.Spaces/AddSpaceMember", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/members"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.space.v1.Spaces/CreateSpaceMember", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/members"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_Spaces_AddSpaceMember_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Spaces_CreateSpaceMember_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Spaces_AddSpaceMember_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Spaces_CreateSpaceMember_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodDelete, pattern_Spaces_RemoveSpaceMember_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodDelete, pattern_Spaces_DeleteSpaceMember_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.space.v1.Spaces/RemoveSpaceMember", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/members/{user_id}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.space.v1.Spaces/DeleteSpaceMember", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/members/{user_id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_Spaces_RemoveSpaceMember_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Spaces_DeleteSpaceMember_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Spaces_RemoveSpaceMember_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Spaces_DeleteSpaceMember_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPatch, pattern_Spaces_UpdateSpaceMemberRole_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPatch, pattern_Spaces_UpdateSpaceMember_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.space.v1.Spaces/UpdateSpaceMemberRole", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/members/{user_id}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/saturn.space.v1.Spaces/UpdateSpaceMember", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/members/{member.user_id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_Spaces_UpdateSpaceMemberRole_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Spaces_UpdateSpaceMember_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Spaces_UpdateSpaceMemberRole_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Spaces_UpdateSpaceMember_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
 	mux.Handle(http.MethodGet, pattern_Spaces_ListSpaceMembers_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -781,56 +817,56 @@ func RegisterSpacesHandlerClient(ctx context.Context, mux *runtime.ServeMux, cli
 		}
 		forward_Spaces_ListSpaces_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPost, pattern_Spaces_AddSpaceMember_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPost, pattern_Spaces_CreateSpaceMember_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.space.v1.Spaces/AddSpaceMember", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/members"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.space.v1.Spaces/CreateSpaceMember", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/members"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_Spaces_AddSpaceMember_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Spaces_CreateSpaceMember_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Spaces_AddSpaceMember_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Spaces_CreateSpaceMember_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodDelete, pattern_Spaces_RemoveSpaceMember_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodDelete, pattern_Spaces_DeleteSpaceMember_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.space.v1.Spaces/RemoveSpaceMember", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/members/{user_id}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.space.v1.Spaces/DeleteSpaceMember", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/members/{user_id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_Spaces_RemoveSpaceMember_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Spaces_DeleteSpaceMember_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Spaces_RemoveSpaceMember_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Spaces_DeleteSpaceMember_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPatch, pattern_Spaces_UpdateSpaceMemberRole_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPatch, pattern_Spaces_UpdateSpaceMember_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.space.v1.Spaces/UpdateSpaceMemberRole", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/members/{user_id}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/saturn.space.v1.Spaces/UpdateSpaceMember", runtime.WithHTTPPathPattern("/v1/spaces/{space_id}/members/{member.user_id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_Spaces_UpdateSpaceMemberRole_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Spaces_UpdateSpaceMember_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_Spaces_UpdateSpaceMemberRole_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Spaces_UpdateSpaceMember_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
 	mux.Handle(http.MethodGet, pattern_Spaces_ListSpaceMembers_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -853,25 +889,25 @@ func RegisterSpacesHandlerClient(ctx context.Context, mux *runtime.ServeMux, cli
 }
 
 var (
-	pattern_Spaces_CreateSpace_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "spaces"}, ""))
-	pattern_Spaces_GetSpace_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "spaces", "space_id"}, ""))
-	pattern_Spaces_UpdateSpace_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "spaces", "space_id"}, ""))
-	pattern_Spaces_DeleteSpace_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "spaces", "space_id"}, ""))
-	pattern_Spaces_ListSpaces_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "spaces"}, ""))
-	pattern_Spaces_AddSpaceMember_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "spaces", "space_id", "members"}, ""))
-	pattern_Spaces_RemoveSpaceMember_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "spaces", "space_id", "members", "user_id"}, ""))
-	pattern_Spaces_UpdateSpaceMemberRole_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "spaces", "space_id", "members", "user_id"}, ""))
-	pattern_Spaces_ListSpaceMembers_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "spaces", "space_id", "members"}, ""))
+	pattern_Spaces_CreateSpace_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "spaces"}, ""))
+	pattern_Spaces_GetSpace_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "spaces", "space_id"}, ""))
+	pattern_Spaces_UpdateSpace_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "spaces", "space_id"}, ""))
+	pattern_Spaces_DeleteSpace_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1", "spaces", "space_id"}, ""))
+	pattern_Spaces_ListSpaces_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1", "spaces"}, ""))
+	pattern_Spaces_CreateSpaceMember_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "spaces", "space_id", "members"}, ""))
+	pattern_Spaces_DeleteSpaceMember_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "spaces", "space_id", "members", "user_id"}, ""))
+	pattern_Spaces_UpdateSpaceMember_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"v1", "spaces", "space_id", "members", "member.user_id"}, ""))
+	pattern_Spaces_ListSpaceMembers_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2, 2, 3}, []string{"v1", "spaces", "space_id", "members"}, ""))
 )
 
 var (
-	forward_Spaces_CreateSpace_0           = runtime.ForwardResponseMessage
-	forward_Spaces_GetSpace_0              = runtime.ForwardResponseMessage
-	forward_Spaces_UpdateSpace_0           = runtime.ForwardResponseMessage
-	forward_Spaces_DeleteSpace_0           = runtime.ForwardResponseMessage
-	forward_Spaces_ListSpaces_0            = runtime.ForwardResponseMessage
-	forward_Spaces_AddSpaceMember_0        = runtime.ForwardResponseMessage
-	forward_Spaces_RemoveSpaceMember_0     = runtime.ForwardResponseMessage
-	forward_Spaces_UpdateSpaceMemberRole_0 = runtime.ForwardResponseMessage
-	forward_Spaces_ListSpaceMembers_0      = runtime.ForwardResponseMessage
+	forward_Spaces_CreateSpace_0       = runtime.ForwardResponseMessage
+	forward_Spaces_GetSpace_0          = runtime.ForwardResponseMessage
+	forward_Spaces_UpdateSpace_0       = runtime.ForwardResponseMessage
+	forward_Spaces_DeleteSpace_0       = runtime.ForwardResponseMessage
+	forward_Spaces_ListSpaces_0        = runtime.ForwardResponseMessage
+	forward_Spaces_CreateSpaceMember_0 = runtime.ForwardResponseMessage
+	forward_Spaces_DeleteSpaceMember_0 = runtime.ForwardResponseMessage
+	forward_Spaces_UpdateSpaceMember_0 = runtime.ForwardResponseMessage
+	forward_Spaces_ListSpaceMembers_0  = runtime.ForwardResponseMessage
 )

@@ -29,7 +29,7 @@ type Coordinator interface {
 	// @transactional
 	RemoveSpaceMember(ctx context.Context, req *RemoveSpaceMemberRequest) error
 	// @transactional
-	UpdateSpaceMemberRole(ctx context.Context, req *UpdateSpaceMemberRoleRequest) (*space.Member, error)
+	UpdateSpaceMember(ctx context.Context, req *UpdateSpaceMemberRequest) (*space.Member, error)
 }
 
 // Dependencies defines the inputs for creating a new Coordinator.
@@ -77,10 +77,9 @@ type DeleteSpaceRequest struct {
 
 // AddSpaceMemberRequest represents the input for adding a member.
 type AddSpaceMemberRequest struct {
-	SpaceID      string
-	UserID       string
-	TargetUserID string
-	Role         string
+	SpaceID string
+	UserID  string
+	Member  *space.Member
 }
 
 // RemoveSpaceMemberRequest represents the input for removing a member.
@@ -90,12 +89,12 @@ type RemoveSpaceMemberRequest struct {
 	TargetUserID string
 }
 
-// UpdateSpaceMemberRoleRequest represents the input for updating a member's role.
-type UpdateSpaceMemberRoleRequest struct {
-	SpaceID      string
-	UserID       string
-	TargetUserID string
-	Role         string
+// UpdateSpaceMemberRequest represents the input for updating a member.
+type UpdateSpaceMemberRequest struct {
+	SpaceID    string
+	UserID     string
+	Member     *space.Member
+	UpdateMask []string
 }
 
 // CreateSpace orchestrates space creation.
@@ -116,9 +115,6 @@ func (c *coordinator) CreateSpace(ctx context.Context, req *CreateSpaceRequest) 
 // UpdateSpace orchestrates workspace metadata updates.
 func (c *coordinator) UpdateSpace(ctx context.Context, req *UpdateSpaceRequest) (*space.Space, error) {
 	const op errors.Op = "application/space.UpdateSpace"
-	if req.Space == nil {
-		return nil, errors.E(op, errors.Invalid, "space payload is required")
-	}
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
 		UserID:  space.SpaceID(req.UserID),
@@ -147,8 +143,12 @@ func (c *coordinator) DeleteSpace(ctx context.Context, req *DeleteSpaceRequest) 
 func (c *coordinator) AddSpaceMember(ctx context.Context, req *AddSpaceMemberRequest) (*space.Member, error) {
 	const op errors.Op = "application/space.AddSpaceMember"
 
+	if err := req.Member.Validate(); err != nil {
+		return nil, errors.E(op, err)
+	}
+
 	// Verify target user exists and is active in Identity system
-	user, err := c.identityService.GetUserByID(ctx, identity.UserID(req.TargetUserID))
+	user, err := c.identityService.GetUserByID(ctx, identity.UserID(req.Member.UserID))
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
@@ -160,11 +160,7 @@ func (c *coordinator) AddSpaceMember(ctx context.Context, req *AddSpaceMemberReq
 		SpaceID: space.SpaceID(req.SpaceID),
 		UserID:  space.SpaceID(req.UserID),
 	}
-	m := &space.Member{
-		UserID: space.SpaceID(req.TargetUserID),
-		Role:   space.SpaceRole(req.Role),
-	}
-	res, err := c.spaceService.AddSpaceMember(ctx, session, m)
+	res, err := c.spaceService.AddSpaceMember(ctx, session, req.Member)
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
@@ -184,18 +180,14 @@ func (c *coordinator) RemoveSpaceMember(ctx context.Context, req *RemoveSpaceMem
 	return nil
 }
 
-// UpdateSpaceMemberRole orchestrates updating a member's role in a workspace.
-func (c *coordinator) UpdateSpaceMemberRole(ctx context.Context, req *UpdateSpaceMemberRoleRequest) (*space.Member, error) {
-	const op errors.Op = "application/space.UpdateSpaceMemberRole"
+// UpdateSpaceMember orchestrates updating a member in a workspace.
+func (c *coordinator) UpdateSpaceMember(ctx context.Context, req *UpdateSpaceMemberRequest) (*space.Member, error) {
+	const op errors.Op = "application/space.UpdateSpaceMember"
 	session := space.Session{
 		SpaceID: space.SpaceID(req.SpaceID),
 		UserID:  space.SpaceID(req.UserID),
 	}
-	m := &space.Member{
-		UserID: space.SpaceID(req.TargetUserID),
-		Role:   space.SpaceRole(req.Role),
-	}
-	res, err := c.spaceService.UpdateSpaceMemberRole(ctx, session, m)
+	res, err := c.spaceService.UpdateSpaceMember(ctx, session, req.Member, req.UpdateMask)
 	if err != nil {
 		return nil, errors.E(op, err)
 	}
@@ -209,7 +201,7 @@ type SpaceService interface {
 	DeleteSpace(ctx context.Context, session space.Session) error
 	AddSpaceMember(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error)
 	RemoveSpaceMember(ctx context.Context, session space.Session, targetUserID space.SpaceID) error
-	UpdateSpaceMemberRole(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error)
+	UpdateSpaceMember(ctx context.Context, session space.Session, member *space.Member, mask []string) (*space.Member, error)
 }
 
 // IdentityService defines the interface for required identity operations.

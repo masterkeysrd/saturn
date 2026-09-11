@@ -227,7 +227,7 @@ func generateMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 			fName := string(f.Desc.Name())
 			isPath := false
 			for _, p := range pathParams {
-				if p == fName {
+				if p == fName || pathParamVar(p) == fName {
 					isPath = true
 					break
 				}
@@ -248,7 +248,7 @@ func generateMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 	// Build parameters list
 	var paramsList []string
 	for _, p := range pathParams {
-		paramsList = append(paramsList, fmt.Sprintf("%s: string", p))
+		paramsList = append(paramsList, fmt.Sprintf("%s: string", pathParamVar(p)))
 	}
 	reqSuffix := ""
 	if len(method.Input.Fields) == 0 {
@@ -259,9 +259,10 @@ func generateMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 	// Map path parameters to their camelCased JSON name from the input message fields
 	var pathParamJSONNames []string
 	for _, p := range pathParams {
-		jsonName := p // fallback
+		vName := pathParamVar(p)
+		jsonName := vName // fallback
 		for _, f := range method.Input.Fields {
-			if string(f.Desc.Name()) == p {
+			if string(f.Desc.Name()) == p || string(f.Desc.Name()) == vName {
 				jsonName = f.Desc.JSONName()
 				break
 			}
@@ -274,7 +275,11 @@ func generateMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 
 	var urlStr string
 	if len(pathParams) > 0 {
-		urlStr = "`" + "/api" + strings.ReplaceAll(strings.ReplaceAll(path, "{", "${"), "}", "}") + "`"
+		interpolated := path
+		for _, p := range pathParams {
+			interpolated = strings.ReplaceAll(interpolated, "{"+p+"}", "${"+pathParamVar(p)+"}")
+		}
+		urlStr = "`" + "/api" + interpolated + "`"
 	} else {
 		urlStr = fmt.Sprintf("%q", "/api"+path)
 	}
@@ -350,9 +355,10 @@ func generateMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 			var destruct []string
 			var args []string
 			for _, p := range pathParams {
-				fields = append(fields, fmt.Sprintf("%s: string", p))
-				destruct = append(destruct, p)
-				args = append(args, p)
+				v := pathParamVar(p)
+				fields = append(fields, fmt.Sprintf("%s: string", v))
+				destruct = append(destruct, v)
+				args = append(args, v)
 			}
 			fields = append(fields, fmt.Sprintf("req: %s", reqType))
 			destruct = append(destruct, "req")
@@ -541,4 +547,11 @@ func isOutputOnly(field *protogen.Field) bool {
 		}
 	}
 	return false
+}
+
+func pathParamVar(p string) string {
+	if idx := strings.LastIndex(p, "."); idx != -1 {
+		return p[idx+1:]
+	}
+	return p
 }

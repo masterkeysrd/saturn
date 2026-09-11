@@ -7,6 +7,7 @@ import (
 
 	"github.com/masterkeysrd/saturn/apis/saturn"
 	spacev1 "github.com/masterkeysrd/saturn/apis/saturn/space/v1"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
@@ -98,7 +99,7 @@ func (s *SpaceDriver) UpdateSpace(tb testing.TB, spaceID, name, description stri
 }
 
 // DeleteSpace deletes a workspace by ID.
-func (s *SpaceDriver) DeleteSpace(tb testing.TB, spaceID string) (*spacev1.DeleteSpaceResponse, error) {
+func (s *SpaceDriver) DeleteSpace(tb testing.TB, spaceID string) (*emptypb.Empty, error) {
 	tb.Helper()
 	client := s.getClient()
 	return client.DeleteSpace(tb.Context(), &spacev1.DeleteSpaceRequest{
@@ -111,38 +112,45 @@ func (s *SpaceDriver) ListSpaces(tb testing.TB, pageSize int32, pageToken string
 	tb.Helper()
 	client := s.getClient()
 	return client.ListSpaces(tb.Context(), &spacev1.ListSpacesRequest{
-		PageSize:      pageSize,
-		NextPageToken: pageToken,
+		PageSize:  pageSize,
+		PageToken: pageToken,
 	})
 }
 
-// AddSpaceMember adds a member to a workspace.
-func (s *SpaceDriver) AddSpaceMember(tb testing.TB, spaceID, userID, role string) (*spacev1.SpaceMember, error) {
+// CreateSpaceMember adds a member to a workspace.
+func (s *SpaceDriver) CreateSpaceMember(tb testing.TB, spaceID, userID string, role spacev1.SpaceMember_Role) (*spacev1.SpaceMember, error) {
 	tb.Helper()
 	client := s.getClient()
-	return client.AddSpaceMember(tb.Context(), &spacev1.AddSpaceMemberRequest{
+	return client.CreateSpaceMember(tb.Context(), &spacev1.CreateSpaceMemberRequest{
 		SpaceId: spaceID,
-		UserId:  userID,
-		Role:    role,
+		Member: &spacev1.SpaceMember{
+			UserId: userID,
+			Role:   role,
+		},
 	})
 }
 
-// UpdateSpaceMemberRole updates a member's role in a workspace.
-func (s *SpaceDriver) UpdateSpaceMemberRole(tb testing.TB, spaceID, userID, role string) (*spacev1.SpaceMember, error) {
+// UpdateSpaceMember updates a member's role in a workspace.
+func (s *SpaceDriver) UpdateSpaceMember(tb testing.TB, spaceID, userID string, role spacev1.SpaceMember_Role) (*spacev1.SpaceMember, error) {
 	tb.Helper()
 	client := s.getClient()
-	return client.UpdateSpaceMemberRole(tb.Context(), &spacev1.UpdateSpaceMemberRoleRequest{
+	return client.UpdateSpaceMember(tb.Context(), &spacev1.UpdateSpaceMemberRequest{
 		SpaceId: spaceID,
-		UserId:  userID,
-		Role:    role,
+		Member: &spacev1.SpaceMember{
+			UserId: userID,
+			Role:   role,
+		},
+		UpdateMask: &fieldmaskpb.FieldMask{
+			Paths: []string{"role"},
+		},
 	})
 }
 
-// RemoveSpaceMember removes a member from a workspace.
-func (s *SpaceDriver) RemoveSpaceMember(tb testing.TB, spaceID, userID string) (*spacev1.RemoveSpaceMemberResponse, error) {
+// DeleteSpaceMember removes a member from a workspace.
+func (s *SpaceDriver) DeleteSpaceMember(tb testing.TB, spaceID, userID string) (*emptypb.Empty, error) {
 	tb.Helper()
 	client := s.getClient()
-	return client.RemoveSpaceMember(tb.Context(), &spacev1.RemoveSpaceMemberRequest{
+	return client.DeleteSpaceMember(tb.Context(), &spacev1.DeleteSpaceMemberRequest{
 		SpaceId: spaceID,
 		UserId:  userID,
 	})
@@ -153,8 +161,8 @@ func (s *SpaceDriver) ListSpaceMembers(tb testing.TB, spaceID string, pageSize i
 	tb.Helper()
 	client := s.getClient()
 	return client.ListSpaceMembers(tb.Context(), &spacev1.ListSpaceMembersRequest{
-		SpaceId:       spaceID,
-		PageSize:      pageSize,
-		NextPageToken: pageToken,
+		SpaceId:   spaceID,
+		PageSize:  pageSize,
+		PageToken: pageToken,
 	})
 }

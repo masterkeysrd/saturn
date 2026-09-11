@@ -3,203 +3,297 @@ syntax = "proto3";
 package saturn.space.v1;
 
 import "google/api/annotations.proto";
+import "google/api/client.proto";
 import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/masterkeysrd/saturn/apis/saturn/space/v1;spacev1";
 
-// Spaces provides workspace (space) management including CRUD operations and member management.
+// Spaces provides workspace management including CRUD operations and member administration.
 service Spaces {
-  // CreateSpace creates a new workspace.
+  // Creates a new workspace.
   rpc CreateSpace(CreateSpaceRequest) returns (Space) {
     option (google.api.http) = {
       post: "/v1/spaces"
       body: "*"
     };
+    option (google.api.method_signature) = "name";
   }
 
-  // GetSpace retrieves a workspace by ID.
+  // Retrieves a workspace by ID.
   rpc GetSpace(GetSpaceRequest) returns (Space) {
     option (google.api.http) = {get: "/v1/spaces/{space_id}"};
+    option (google.api.method_signature) = "space_id";
   }
 
-  // UpdateSpace updates a workspace.
+  // Updates an existing workspace.
   rpc UpdateSpace(UpdateSpaceRequest) returns (Space) {
     option (google.api.http) = {
       patch: "/v1/spaces/{space_id}"
       body: "space"
     };
+    option (google.api.method_signature) = "space,update_mask";
   }
 
-  // DeleteSpace deletes a workspace.
-  rpc DeleteSpace(DeleteSpaceRequest) returns (DeleteSpaceResponse) {
+  // Deletes a workspace by ID.
+  rpc DeleteSpace(DeleteSpaceRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {delete: "/v1/spaces/{space_id}"};
+    option (google.api.method_signature) = "space_id";
   }
 
-  // ListSpaces lists all spaces the authenticated user has access to.
+  // Lists all workspaces the authenticated user has access to.
   rpc ListSpaces(ListSpacesRequest) returns (ListSpacesResponse) {
     option (google.api.http) = {get: "/v1/spaces"};
   }
 
-  // AddSpaceMember adds a member to a workspace.
-  rpc AddSpaceMember(AddSpaceMemberRequest) returns (SpaceMember) {
+  // Creates a member in a workspace.
+  rpc CreateSpaceMember(CreateSpaceMemberRequest) returns (SpaceMember) {
     option (google.api.http) = {
       post: "/v1/spaces/{space_id}/members"
-      body: "*"
+      body: "member"
     };
+    option (google.api.method_signature) = "space_id,member";
   }
 
-  // RemoveSpaceMember removes a member from a workspace.
-  rpc RemoveSpaceMember(RemoveSpaceMemberRequest) returns (RemoveSpaceMemberResponse) {
+  // Deletes a member from a workspace.
+  rpc DeleteSpaceMember(DeleteSpaceMemberRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {delete: "/v1/spaces/{space_id}/members/{user_id}"};
+    option (google.api.method_signature) = "space_id,user_id";
   }
 
-  // UpdateSpaceMemberRole updates a member's role in a workspace.
-  rpc UpdateSpaceMemberRole(UpdateSpaceMemberRoleRequest) returns (SpaceMember) {
+  // Updates an existing member within a workspace.
+  rpc UpdateSpaceMember(UpdateSpaceMemberRequest) returns (SpaceMember) {
     option (google.api.http) = {
-      patch: "/v1/spaces/{space_id}/members/{user_id}"
-      body: "*"
+      patch: "/v1/spaces/{space_id}/members/{member.user_id}"
+      body: "member"
     };
+    option (google.api.method_signature) = "space_id,member,update_mask";
   }
 
-  // ListSpaceMembers lists all members of a workspace.
+  // Lists all members belonging to a workspace.
   rpc ListSpaceMembers(ListSpaceMembersRequest) returns (ListSpaceMembersResponse) {
     option (google.api.http) = {get: "/v1/spaces/{space_id}/members"};
+    option (google.api.method_signature) = "space_id";
   }
 }
 
-// Space represents a workspace.
+// Space represents a workspace resource.
 message Space {
-  // The workspace's unique identifier.
+  // Output only. The workspace's unique identifier.
+  // Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
   string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
-  // The workspace's name.
+
+  // Required. The workspace's display name.
   string name = 2 [(google.api.field_behavior) = REQUIRED];
-  // The workspace's description.
-  string description = 3;
-  // The owner's user ID.
+
+  // Optional. A user-provided description of the workspace.
+  string description = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. The user identifier of the workspace owner.
+  // Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
   string owner_id = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
-  // The optimistic locking version.
+
+  // Output only. The optimistic concurrency control version number.
   int64 version = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
-  // The creation timestamp.
-  google.protobuf.Timestamp create_time = 6;
-  // The last update timestamp.
-  google.protobuf.Timestamp update_time = 7;
+
+  // Output only. The timestamp when the workspace was created.
+  google.protobuf.Timestamp create_time = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The timestamp when the workspace was last updated.
+  google.protobuf.Timestamp update_time = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // SpaceMember represents a member of a workspace.
 message SpaceMember {
-  // The workspace ID.
-  string space_id = 1;
-  // The member's user ID.
-  string user_id = 2;
-  // The member's role within the workspace.
-  string role = 3;
-  // The creation timestamp.
-  google.protobuf.Timestamp create_time = 4;
-  // The last update timestamp.
-  google.protobuf.Timestamp update_time = 5;
+  // Role defines the member's role and permissions within a workspace.
+  enum Role {
+    // Default unspecified role.
+    ROLE_UNSPECIFIED = 0;
+
+    // Workspace owner with full administrative and billing control.
+    OWNER = 1;
+
+    // Workspace administrator with member management and settings access.
+    ADMIN = 2;
+
+    // Standard workspace member with regular read and write access.
+    MEMBER = 3;
+
+    // Workspace viewer with read-only access.
+    VIEWER = 4;
+  }
+
+  // Output only. The unique identifier of the workspace this member belongs to.
+  // Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+  string space_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. The user identifier of the member.
+  // Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+  string user_id = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.field_behavior) = IMMUTABLE
+  ];
+
+  // Required. The member's role within the workspace.
+  Role role = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Output only. The timestamp when the member joined the workspace.
+  google.protobuf.Timestamp create_time = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The timestamp when the member's details or role were last updated.
+  google.protobuf.Timestamp update_time = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // The nested user profile details.
   message Profile {
-    string name = 1;
-    string username = 2;
-    string avatar_url = 3;
+    // Output only. The member's full or display name.
+    string name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. The member's username.
+    string username = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. The URL to the member's profile avatar image.
+    string avatar_url = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
   }
-  Profile profile = 6;
+
+  // Output only. The member's user profile details.
+  Profile profile = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
-// CreateSpaceRequest contains the fields for creating a new workspace.
+// Request message for Spaces.CreateSpace.
 message CreateSpaceRequest {
-  // The workspace's name.
+  // Required. The workspace's display name.
   string name = 1 [(google.api.field_behavior) = REQUIRED];
-  // The workspace's description.
-  string description = 2;
+
+  // Optional. A user-provided description of the workspace.
+  string description = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 
-// GetSpaceRequest contains the fields for retrieving a workspace.
+// Request message for Spaces.GetSpace.
 message GetSpaceRequest {
-  // The workspace ID.
+  // Required. The unique identifier of the workspace to retrieve.
+  // Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
   string space_id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
-// UpdateSpaceRequest contains the fields for updating a workspace.
+// Request message for Spaces.UpdateSpace.
 message UpdateSpaceRequest {
-  // Required. The workspace ID.
+  // Required. The unique identifier of the workspace to update.
+  // Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
   string space_id = 1 [(google.api.field_behavior) = REQUIRED];
 
-  // Required. Updated workspace parameters.
+  // Required. The workspace resource with updated values.
   Space space = 2 [(google.api.field_behavior) = REQUIRED];
 
-  // Optional. Field mask defining which fields to update for partial updates.
-  optional google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
+  // Required. The list of fields to update.
+  // A mask specifying which fields (e.g. `name`, `description`) in the `space`
+  // field should be updated. This mask is relative to the `space` field, not to
+  // the request message. The wildcard (*) path is currently not supported.
+  // Currently UpdateSpace is only supported for the following fields:
+  //
+  // * `name`
+  // * `description`
+  //
+  // If an unsupported field is set in `update_mask`, it will return an
+  // INVALID_ARGUMENT error.
+  google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = REQUIRED];
 
-  // Optional. Version number for optimistic concurrency control.
+  // Optional. The optimistic concurrency control version expected for this update.
   optional int64 version = 4 [(google.api.field_behavior) = OPTIONAL];
 }
 
-// DeleteSpaceRequest contains the fields for deleting a workspace.
+// Request message for Spaces.DeleteSpace.
 message DeleteSpaceRequest {
-  // The workspace ID.
+  // Required. The unique identifier of the workspace to delete.
+  // Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
   string space_id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
-// DeleteSpaceResponse is empty on success.
-message DeleteSpaceResponse {}
-
-// ListSpacesRequest contains the fields for listing user workspaces.
+// Request message for Spaces.ListSpaces.
 message ListSpacesRequest {
-  int32 page_size = 1; // default 20, max 100
-  string next_page_token = 2; // cursor-based pagination token
+  // Optional. The maximum number of spaces to return. The service may return fewer
+  // than this value. If unspecified, at most 20 spaces are returned. The maximum
+  // value is 100; values above 100 will be coerced to 100.
+  int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. A page token, received from a previous `ListSpaces` call.
+  // Provide this to retrieve the subsequent page.
+  string page_token = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 
-// ListSpacesResponse contains the list of spaces and pagination token.
+// Response message for Spaces.ListSpaces.
 message ListSpacesResponse {
-  repeated Space spaces = 1;
-  string next_page_token = 2;
+  // Output only. The list of requested workspaces.
+  repeated Space spaces = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // A token, which can be sent as `page_token` to retrieve the next page.
+  // If this field is omitted, there are no subsequent pages.
+  string next_page_token = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
-// AddSpaceMemberRequest contains the fields for adding a member.
-message AddSpaceMemberRequest {
-  // The workspace ID.
+// Request message for Spaces.CreateSpaceMember.
+message CreateSpaceMemberRequest {
+  // Required. The unique identifier of the workspace to add the member to.
+  // Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
   string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  // The user ID to add as a member.
-  string user_id = 2 [(google.api.field_behavior) = REQUIRED];
-  // The role to assign.
-  string role = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The member resource to add to the workspace.
+  SpaceMember member = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
-// RemoveSpaceMemberRequest contains the fields for removing a member.
-message RemoveSpaceMemberRequest {
-  // The workspace ID.
+// Request message for Spaces.DeleteSpaceMember.
+message DeleteSpaceMemberRequest {
+  // Required. The unique identifier of the workspace to remove the member from.
+  // Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
   string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  // The user ID to remove.
+
+  // Required. The user identifier of the member to remove.
+  // Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
   string user_id = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
-// RemoveSpaceMemberResponse is empty on success.
-message RemoveSpaceMemberResponse {}
-
-// UpdateSpaceMemberRoleRequest contains the fields for updating a member's role.
-message UpdateSpaceMemberRoleRequest {
-  // The workspace ID.
+// Request message for Spaces.UpdateSpaceMember.
+message UpdateSpaceMemberRequest {
+  // Required. The unique identifier of the workspace containing the member.
+  // Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
   string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  // The user ID.
-  string user_id = 2 [(google.api.field_behavior) = REQUIRED];
-  // The new role.
-  string role = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The member resource containing updated fields.
+  SpaceMember member = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. The list of fields to update.
+  // A mask specifying which fields in the `member` field should be updated.
+  // Currently UpdateSpaceMember only supports the following field:
+  //
+  // * `role`
+  //
+  // Setting any other field will return an INVALID_ARGUMENT error.
+  optional google.protobuf.FieldMask update_mask = 3 [(google.api.field_behavior) = OPTIONAL];
 }
 
-// ListSpaceMembersRequest contains the fields for listing workspace members.
+// Request message for Spaces.ListSpaceMembers.
 message ListSpaceMembersRequest {
-  // The workspace ID.
+  // Required. The unique identifier of the workspace whose members are listed.
+  // Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
   string space_id = 1 [(google.api.field_behavior) = REQUIRED];
-  int32 page_size = 2; // default 20, max 100
-  string next_page_token = 3; // cursor-based pagination token
+
+  // Optional. The maximum number of members to return. The service may return fewer
+  // than this value. If unspecified, at most 20 members are returned. The maximum
+  // value is 100; values above 100 will be coerced to 100.
+  int32 page_size = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. A page token, received from a previous `ListSpaceMembers` call.
+  // Provide this to retrieve the subsequent page.
+  string page_token = 3 [(google.api.field_behavior) = OPTIONAL];
 }
 
-// ListSpaceMembersResponse contains the list of members and pagination token.
+// Response message for Spaces.ListSpaceMembers.
 message ListSpaceMembersResponse {
-  repeated SpaceMember members = 1;
-  string next_page_token = 2;
+  // Output only. The list of workspace members.
+  repeated SpaceMember members = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // A token, which can be sent as `page_token` to retrieve the next page.
+  // If this field is omitted, there are no subsequent pages.
+  string next_page_token = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 }

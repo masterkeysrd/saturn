@@ -31,6 +31,7 @@ type mockSpaceService struct {
 	addSpaceMemberFunc        func(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error)
 	removeSpaceMemberFunc     func(ctx context.Context, session space.Session, targetUserID space.SpaceID) error
 	updateSpaceMemberRoleFunc func(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error)
+	updateSpaceMemberFunc     func(ctx context.Context, session space.Session, member *space.Member, mask []string) (*space.Member, error)
 	listSpaceMembersFunc      func(ctx context.Context, session space.Session, filter *space.ListMembersFilter) (*paging.Page[*space.Member], error)
 }
 
@@ -51,6 +52,9 @@ func (m *mockSpaceService) GetSpace(ctx context.Context, session space.Session) 
 func (m *mockSpaceService) UpdateSpace(ctx context.Context, session space.Session, sp *space.Space, mask []string) (*space.Space, error) {
 	if m.updateSpaceFunc != nil {
 		return m.updateSpaceFunc(ctx, session, sp, mask)
+	}
+	if err := sp.Validate(); err != nil {
+		return nil, errors.E("domain/space.UpdateSpace", err)
 	}
 	return sp, nil
 }
@@ -73,6 +77,9 @@ func (m *mockSpaceService) AddSpaceMember(ctx context.Context, session space.Ses
 	if m.addSpaceMemberFunc != nil {
 		return m.addSpaceMemberFunc(ctx, session, member)
 	}
+	if err := member.Validate(); err != nil {
+		return nil, errors.E("domain/space.AddSpaceMember", err)
+	}
 	return member, nil
 }
 
@@ -81,6 +88,24 @@ func (m *mockSpaceService) RemoveSpaceMember(ctx context.Context, session space.
 		return m.removeSpaceMemberFunc(ctx, session, targetUserID)
 	}
 	return nil
+}
+
+func (m *mockSpaceService) UpdateSpaceMember(ctx context.Context, session space.Session, member *space.Member, mask []string) (*space.Member, error) {
+	if m.updateSpaceMemberFunc != nil {
+		return m.updateSpaceMemberFunc(ctx, session, member, mask)
+	}
+	if err := member.Validate(); err != nil {
+		return nil, errors.E("domain/space.UpdateSpaceMember", err)
+	}
+	for _, p := range mask {
+		if p != "role" {
+			return nil, errors.E("domain/space.UpdateSpaceMember", errors.Invalid, "unsupported or unpatchable field: "+p)
+		}
+	}
+	if m.updateSpaceMemberRoleFunc != nil {
+		return m.updateSpaceMemberRoleFunc(ctx, session, member)
+	}
+	return member, nil
 }
 
 func (m *mockSpaceService) UpdateSpaceMemberRole(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error) {
@@ -268,7 +293,7 @@ func TestHandler_GetSpace(t *testing.T) {
 	})
 }
 
-func TestHandler_AddSpaceMember(t *testing.T) {
+func TestHandler_CreateSpaceMember(t *testing.T) {
 	mockSpace := &mockSpaceService{}
 	mockID := &mockIdentityService{}
 	coordinator := spaceapp.NewCoordinator(spaceapp.Dependencies{
@@ -279,10 +304,10 @@ func TestHandler_AddSpaceMember(t *testing.T) {
 	handler := spacegrpc.NewHandler(coordinator, aggregator)
 	interceptor := interceptors.ErrorUnaryInterceptor()
 
-	invokeAdd := func(ctx context.Context, req *spacev1.AddSpaceMemberRequest) (*spacev1.SpaceMember, error) {
-		info := &grpc.UnaryServerInfo{FullMethod: "/saturn.space.v1.Spaces/AddSpaceMember"}
+	invokeCreate := func(ctx context.Context, req *spacev1.CreateSpaceMemberRequest) (*spacev1.SpaceMember, error) {
+		info := &grpc.UnaryServerInfo{FullMethod: "/saturn.space.v1.Spaces/CreateSpaceMember"}
 		resp, err := interceptor(ctx, req, info, func(c context.Context, r any) (any, error) {
-			return handler.AddSpaceMember(c, r.(*spacev1.AddSpaceMemberRequest))
+			return handler.CreateSpaceMember(c, r.(*spacev1.CreateSpaceMemberRequest))
 		})
 		if err != nil {
 			return nil, err
@@ -297,10 +322,12 @@ func TestHandler_AddSpaceMember(t *testing.T) {
 			return &identity.User{ID: id, Status: identity.UserStatusSuspended}, nil
 		}
 
-		_, err := invokeAdd(ctx, &spacev1.AddSpaceMemberRequest{
+		_, err := invokeCreate(ctx, &spacev1.CreateSpaceMemberRequest{
 			SpaceId: "sp_1",
-			UserId:  "usr_inactive",
-			Role:    string(space.RoleMember),
+			Member: &spacev1.SpaceMember{
+				UserId: "usr_inactive",
+				Role:   spacev1.SpaceMember_MEMBER,
+			},
 		})
 		if err == nil {
 			t.Fatal("expected error, got nil")
@@ -323,10 +350,12 @@ func TestHandler_AddSpaceMember(t *testing.T) {
 			return nil, errors.E("domain/space.AddSpaceMember", errors.Exist, space.MemberAlreadyExists, "member already exists")
 		}
 
-		_, err := invokeAdd(ctx, &spacev1.AddSpaceMemberRequest{
+		_, err := invokeCreate(ctx, &spacev1.CreateSpaceMemberRequest{
 			SpaceId: "sp_1",
-			UserId:  "usr_existing",
-			Role:    string(space.RoleMember),
+			Member: &spacev1.SpaceMember{
+				UserId: "usr_existing",
+				Role:   spacev1.SpaceMember_MEMBER,
+			},
 		})
 		if err == nil {
 			t.Fatal("expected error, got nil")
@@ -338,6 +367,115 @@ func TestHandler_AddSpaceMember(t *testing.T) {
 		ei := extractErrorInfo(st)
 		if ei == nil || ei.Reason != string(space.MemberAlreadyExists) {
 			t.Errorf("expected Reason %q, got %v", space.MemberAlreadyExists, ei)
+		}
+	})
+}
+
+func TestHandler_UpdateSpaceMember(t *testing.T) {
+	mockSpace := &mockSpaceService{}
+	mockID := &mockIdentityService{}
+	coordinator := spaceapp.NewCoordinator(spaceapp.Dependencies{
+		SpaceService:    mockSpace,
+		IdentityService: mockID,
+	})
+	aggregator := spaceaggregator.NewService(mockSpace, mockID)
+	handler := spacegrpc.NewHandler(coordinator, aggregator)
+	interceptor := interceptors.ErrorUnaryInterceptor()
+
+	invokeUpdate := func(ctx context.Context, req *spacev1.UpdateSpaceMemberRequest) (*spacev1.SpaceMember, error) {
+		info := &grpc.UnaryServerInfo{FullMethod: "/saturn.space.v1.Spaces/UpdateSpaceMember"}
+		resp, err := interceptor(ctx, req, info, func(c context.Context, r any) (any, error) {
+			return handler.UpdateSpaceMember(c, r.(*spacev1.UpdateSpaceMemberRequest))
+		})
+		if err != nil {
+			return nil, err
+		}
+		return resp.(*spacev1.SpaceMember), nil
+	}
+
+	ctx := auth.WithPrincipal(context.Background(), auth.Principal{Subject: "usr_owner"})
+
+	t.Run("missing member.user_id returns InvalidArgument", func(t *testing.T) {
+		_, err := invokeUpdate(ctx, &spacev1.UpdateSpaceMemberRequest{
+			SpaceId: "sp_1",
+			Member: &spacev1.SpaceMember{
+				Role: spacev1.SpaceMember_ADMIN,
+			},
+		})
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		st, ok := status.FromError(err)
+		if !ok || st.Code() != codes.InvalidArgument {
+			t.Errorf("expected InvalidArgument, got %v", st.Code())
+		}
+	})
+
+	t.Run("unsupported update_mask path returns InvalidArgument", func(t *testing.T) {
+		_, err := invokeUpdate(ctx, &spacev1.UpdateSpaceMemberRequest{
+			SpaceId: "sp_1",
+			Member: &spacev1.SpaceMember{
+				UserId: "usr_2",
+				Role:   spacev1.SpaceMember_ADMIN,
+			},
+			UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"invalid_field"}},
+		})
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		st, ok := status.FromError(err)
+		if !ok || st.Code() != codes.InvalidArgument {
+			t.Errorf("expected InvalidArgument, got %v", st.Code())
+		}
+	})
+
+	t.Run("successful role update returns updated proto SpaceMember", func(t *testing.T) {
+		mockSpace.updateSpaceMemberRoleFunc = func(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error) {
+			return &space.Member{
+				SpaceID: session.SpaceID,
+				UserID:  member.UserID,
+				Role:    member.Role,
+			}, nil
+		}
+
+		res, err := invokeUpdate(ctx, &spacev1.UpdateSpaceMemberRequest{
+			SpaceId: "sp_1",
+			Member: &spacev1.SpaceMember{
+				UserId: "usr_2",
+				Role:   spacev1.SpaceMember_ADMIN,
+			},
+			UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"role"}},
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if res.GetRole() != spacev1.SpaceMember_ADMIN {
+			t.Errorf("expected ADMIN, got %v", res.GetRole())
+		}
+	})
+
+	t.Run("empty update_mask defaults to updating all fields", func(t *testing.T) {
+		mockSpace.updateSpaceMemberRoleFunc = func(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error) {
+			return &space.Member{
+				SpaceID: session.SpaceID,
+				UserID:  member.UserID,
+				Role:    member.Role,
+			}, nil
+		}
+
+		res, err := invokeUpdate(ctx, &spacev1.UpdateSpaceMemberRequest{
+			SpaceId: "sp_1",
+			Member: &spacev1.SpaceMember{
+				UserId: "usr_2",
+				Role:   spacev1.SpaceMember_VIEWER,
+			},
+			UpdateMask: nil,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if res.GetRole() != spacev1.SpaceMember_VIEWER {
+			t.Errorf("expected VIEWER, got %v", res.GetRole())
 		}
 	})
 }

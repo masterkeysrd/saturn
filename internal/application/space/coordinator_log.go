@@ -146,25 +146,25 @@ func (l *LoggingCoordinator) RemoveSpaceMember(ctx context.Context, req *RemoveS
 	return nil
 }
 
-// UpdateSpaceMemberRole executes next.UpdateSpaceMemberRole and logs execution duration and errors.
-func (l *LoggingCoordinator) UpdateSpaceMemberRole(ctx context.Context, req *UpdateSpaceMemberRoleRequest) (*space.Member, error) {
+// UpdateSpaceMember executes next.UpdateSpaceMember and logs execution duration and errors.
+func (l *LoggingCoordinator) UpdateSpaceMember(ctx context.Context, req *UpdateSpaceMemberRequest) (*space.Member, error) {
 	start := time.Now()
-	res, err := l.next.UpdateSpaceMemberRole(ctx, req)
+	res, err := l.next.UpdateSpaceMember(ctx, req)
 	duration := time.Since(start)
 
 	if err != nil {
-		l.logger.Error(ctx, "space.UpdateSpaceMemberRole failed",
+		l.logger.Error(ctx, "space.UpdateSpaceMember failed",
 			log.String("component", "space"),
-			log.String("operation", "UpdateSpaceMemberRole"),
+			log.String("operation", "UpdateSpaceMember"),
 			log.Duration("duration", duration),
 			log.Err(err),
 		)
 		return nil, err
 	}
 
-	l.logger.Info(ctx, "space.UpdateSpaceMemberRole completed",
+	l.logger.Info(ctx, "space.UpdateSpaceMember completed",
 		log.String("component", "space"),
-		log.String("operation", "UpdateSpaceMemberRole"),
+		log.String("operation", "UpdateSpaceMember"),
 		log.Duration("duration", duration),
 	)
 	return res, nil

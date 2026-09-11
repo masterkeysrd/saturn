@@ -2,6 +2,10 @@
 package spacev1
 
 import (
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
+)
+
+import (
 	"context"
 	"fmt"
 	"strings"
@@ -79,8 +83,8 @@ func (c *Client) UpdateSpace(ctx context.Context, req *UpdateSpaceRequest) (*Spa
 }
 
 // DeleteSpace executes DELETE /api/v1/spaces/{space_id}.
-func (c *Client) DeleteSpace(ctx context.Context, req *DeleteSpaceRequest) (*DeleteSpaceResponse, error) {
-	var resp DeleteSpaceResponse
+func (c *Client) DeleteSpace(ctx context.Context, req *DeleteSpaceRequest) (*emptypb.Empty, error) {
+	var resp emptypb.Empty
 	path := fmt.Sprintf("/api/v1/spaces/%s", req.GetSpaceId())
 	var query []string
 	if len(query) > 0 {
@@ -100,8 +104,8 @@ func (c *Client) ListSpaces(ctx context.Context, req *ListSpacesRequest) (*ListS
 	if req.GetPageSize() != 0 {
 		query = append(query, fmt.Sprintf("page_size=%d", req.GetPageSize()))
 	}
-	if req.GetNextPageToken() != "" {
-		query = append(query, fmt.Sprintf("next_page_token=%s", req.GetNextPageToken()))
+	if req.GetPageToken() != "" {
+		query = append(query, fmt.Sprintf("page_token=%s", req.GetPageToken()))
 	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
@@ -112,23 +116,27 @@ func (c *Client) ListSpaces(ctx context.Context, req *ListSpacesRequest) (*ListS
 	return &resp, nil
 }
 
-// AddSpaceMember executes POST /api/v1/spaces/{space_id}/members.
-func (c *Client) AddSpaceMember(ctx context.Context, req *AddSpaceMemberRequest) (*SpaceMember, error) {
+// CreateSpaceMember executes POST /api/v1/spaces/{space_id}/members.
+func (c *Client) CreateSpaceMember(ctx context.Context, req *CreateSpaceMemberRequest) (*SpaceMember, error) {
 	var resp SpaceMember
 	path := fmt.Sprintf("/api/v1/spaces/%s/members", req.GetSpaceId())
 	var query []string
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
-	if err := c.base.Do(ctx, "POST", path, req, &resp); err != nil {
+	payload := req.GetMember()
+	if payload == nil {
+		return nil, fmt.Errorf("member payload is required")
+	}
+	if err := c.base.Do(ctx, "POST", path, payload, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil
 }
 
-// RemoveSpaceMember executes DELETE /api/v1/spaces/{space_id}/members/{user_id}.
-func (c *Client) RemoveSpaceMember(ctx context.Context, req *RemoveSpaceMemberRequest) (*RemoveSpaceMemberResponse, error) {
-	var resp RemoveSpaceMemberResponse
+// DeleteSpaceMember executes DELETE /api/v1/spaces/{space_id}/members/{user_id}.
+func (c *Client) DeleteSpaceMember(ctx context.Context, req *DeleteSpaceMemberRequest) (*emptypb.Empty, error) {
+	var resp emptypb.Empty
 	path := fmt.Sprintf("/api/v1/spaces/%s/members/%s", req.GetSpaceId(), req.GetUserId())
 	var query []string
 	if len(query) > 0 {
@@ -140,15 +148,24 @@ func (c *Client) RemoveSpaceMember(ctx context.Context, req *RemoveSpaceMemberRe
 	return &resp, nil
 }
 
-// UpdateSpaceMemberRole executes PATCH /api/v1/spaces/{space_id}/members/{user_id}.
-func (c *Client) UpdateSpaceMemberRole(ctx context.Context, req *UpdateSpaceMemberRoleRequest) (*SpaceMember, error) {
+// UpdateSpaceMember executes PATCH /api/v1/spaces/{space_id}/members/{member.user_id}.
+func (c *Client) UpdateSpaceMember(ctx context.Context, req *UpdateSpaceMemberRequest) (*SpaceMember, error) {
 	var resp SpaceMember
-	path := fmt.Sprintf("/api/v1/spaces/%s/members/%s", req.GetSpaceId(), req.GetUserId())
+	path := fmt.Sprintf("/api/v1/spaces/%s/members/{member.user_id}", req.GetSpaceId())
 	var query []string
+	if req.UpdateMask != nil {
+		for _, p := range req.GetUpdateMask().GetPaths() {
+			query = append(query, fmt.Sprintf("update_mask.paths=%s", p))
+		}
+	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")
 	}
-	if err := c.base.Do(ctx, "PATCH", path, req, &resp); err != nil {
+	payload := req.GetMember()
+	if payload == nil {
+		return nil, fmt.Errorf("member payload is required")
+	}
+	if err := c.base.Do(ctx, "PATCH", path, payload, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil
@@ -162,8 +179,8 @@ func (c *Client) ListSpaceMembers(ctx context.Context, req *ListSpaceMembersRequ
 	if req.GetPageSize() != 0 {
 		query = append(query, fmt.Sprintf("page_size=%d", req.GetPageSize()))
 	}
-	if req.GetNextPageToken() != "" {
-		query = append(query, fmt.Sprintf("next_page_token=%s", req.GetNextPageToken()))
+	if req.GetPageToken() != "" {
+		query = append(query, fmt.Sprintf("page_token=%s", req.GetPageToken()))
 	}
 	if len(query) > 0 {
 		path += "?" + strings.Join(query, "&")

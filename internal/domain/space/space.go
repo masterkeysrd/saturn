@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/id"
 	"github.com/masterkeysrd/saturn/internal/platform/patch"
 )
@@ -92,12 +93,15 @@ type Space struct {
 
 // Validate checks the space for business rule violations and sanitizes inputs.
 func (s *Space) Validate() error {
+	if s == nil {
+		return errors.E(errors.Invalid, "space payload is required")
+	}
 	s.Name = trimSpace(s.Name)
 	if s.Name == "" {
-		return fmt.Errorf("space name is required")
+		return errors.E(errors.Invalid, "space name is required")
 	}
 	if len(s.Name) > 255 {
-		return fmt.Errorf("space name must not exceed 255 characters")
+		return errors.E(errors.Invalid, "space name must not exceed 255 characters")
 	}
 	return nil
 }
@@ -121,8 +125,11 @@ var SpacePatchSchema = patch.NewSchema[Space]().
 
 // ApplyPatch applies partial updates from an incoming space based on the field mask.
 func (s *Space) ApplyPatch(incoming *Space, mask []string) error {
+	if incoming == nil {
+		return errors.E(errors.Invalid, "space payload is required")
+	}
 	if err := SpacePatchSchema.Apply(s, incoming, mask); err != nil {
-		return err
+		return errors.E(errors.Invalid, err)
 	}
 	s.UpdateTime = time.Now().UTC()
 	return s.Validate()

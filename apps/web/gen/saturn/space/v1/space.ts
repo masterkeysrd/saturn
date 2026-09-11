@@ -10,37 +10,64 @@ import {
 } from "@tanstack/react-query"
 
 /**
- * Space represents a workspace.
+ * Role defines the member's role and permissions within a workspace.
+ */
+export type SpaceMember_Role =
+  /**
+   * Default unspecified role.
+   */
+  | "ROLE_UNSPECIFIED"
+  /**
+   * Workspace owner with full administrative and billing control.
+   */
+  | "OWNER"
+  /**
+   * Workspace administrator with member management and settings access.
+   */
+  | "ADMIN"
+  /**
+   * Standard workspace member with regular read and write access.
+   */
+  | "MEMBER"
+  /**
+   * Workspace viewer with read-only access.
+   */
+  | "VIEWER"
+
+/**
+ * Space represents a workspace resource.
  */
 export interface Space {
   /**
-   * The workspace's unique identifier.
+   * Output only. The workspace's unique identifier.
+   * Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
    */
   id?: string
   /**
-   * The workspace's name.
+   * Required. The workspace's display name.
    */
   name: string
   /**
-   * The workspace's description.
+   * Optional. A user-provided description of the workspace.
    */
   description: string
   /**
-   * The owner's user ID.
+   * Output only. The user identifier of the workspace owner.
+   * Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
    */
   ownerId?: string
   /**
-   * The optimistic locking version.
+   * Output only. The optimistic concurrency control version number.
    */
   version?: string
   /**
-   * The creation timestamp.
+   * Output only. The timestamp when the workspace was created.
    */
-  createTime: string
+  createTime?: string
   /**
-   * The last update timestamp.
+   * Output only. The timestamp when the workspace was last updated.
    */
-  updateTime: string
+  updateTime?: string
 }
 
 /**
@@ -48,210 +75,250 @@ export interface Space {
  */
 export interface SpaceMember {
   /**
-   * The workspace ID.
+   * Output only. The unique identifier of the workspace this member belongs to.
+   * Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
    */
-  spaceId: string
+  spaceId?: string
   /**
-   * The member's user ID.
+   * Required. The user identifier of the member.
+   * Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
    */
   userId: string
   /**
-   * The member's role within the workspace.
+   * Required. The member's role within the workspace.
    */
-  role: string
+  role: SpaceMember_Role
   /**
-   * The creation timestamp.
+   * Output only. The timestamp when the member joined the workspace.
    */
-  createTime: string
+  createTime?: string
   /**
-   * The last update timestamp.
+   * Output only. The timestamp when the member's details or role were last updated.
    */
-  updateTime: string
-  profile: SpaceMember_Profile
+  updateTime?: string
+  /**
+   * Output only. The member's user profile details.
+   */
+  profile?: SpaceMember_Profile
 }
 
 /**
  * The nested user profile details.
  */
 export interface SpaceMember_Profile {
-  name: string
-  username: string
-  avatarUrl: string
+  /**
+   * Output only. The member's full or display name.
+   */
+  name?: string
+  /**
+   * Output only. The member's username.
+   */
+  username?: string
+  /**
+   * Output only. The URL to the member's profile avatar image.
+   */
+  avatarUrl?: string
 }
 
 /**
- * CreateSpaceRequest contains the fields for creating a new workspace.
+ * Request message for Spaces.CreateSpace.
  */
 export interface CreateSpaceRequest {
   /**
-   * The workspace's name.
+   * Required. The workspace's display name.
    */
   name: string
   /**
-   * The workspace's description.
+   * Optional. A user-provided description of the workspace.
    */
   description: string
 }
 
 /**
- * GetSpaceRequest contains the fields for retrieving a workspace.
+ * Request message for Spaces.GetSpace.
  */
 export interface GetSpaceRequest {
   /**
-   * The workspace ID.
+   * Required. The unique identifier of the workspace to retrieve.
+   * Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
    */
   spaceId: string
 }
 
 /**
- * UpdateSpaceRequest contains the fields for updating a workspace.
+ * Request message for Spaces.UpdateSpace.
  */
 export interface UpdateSpaceRequest {
   /**
-   * Required. The workspace ID.
+   * Required. The unique identifier of the workspace to update.
+   * Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
    */
   spaceId: string
   /**
-   * Required. Updated workspace parameters.
+   * Required. The workspace resource with updated values.
    */
   space: Space
   /**
-   * Optional. Field mask defining which fields to update for partial updates.
+   * Required. The list of fields to update.
+   * A mask specifying which fields (e.g. `name`, `description`) in the `space`
+   * field should be updated. This mask is relative to the `space` field, not to
+   * the request message. The wildcard (*) path is currently not supported.
+   * Currently UpdateSpace is only supported for the following fields:
+   *
+   * * `name`
+   * * `description`
+   *
+   * If an unsupported field is set in `update_mask`, it will return an
+   * INVALID_ARGUMENT error.
    */
-  updateMask?: { paths?: string[] }
+  updateMask: { paths?: string[] }
   /**
-   * Optional. Version number for optimistic concurrency control.
+   * Optional. The optimistic concurrency control version expected for this update.
    */
   version?: string
 }
 
 /**
- * DeleteSpaceRequest contains the fields for deleting a workspace.
+ * Request message for Spaces.DeleteSpace.
  */
 export interface DeleteSpaceRequest {
   /**
-   * The workspace ID.
+   * Required. The unique identifier of the workspace to delete.
+   * Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
    */
   spaceId: string
 }
 
 /**
- * DeleteSpaceResponse is empty on success.
- */
-export type DeleteSpaceResponse = Record<string, never>
-
-/**
- * ListSpacesRequest contains the fields for listing user workspaces.
+ * Request message for Spaces.ListSpaces.
  */
 export interface ListSpacesRequest {
   /**
-   *
-   * @description default 20, max 100
+   * Optional. The maximum number of spaces to return. The service may return fewer
+   * than this value. If unspecified, at most 20 spaces are returned. The maximum
+   * value is 100; values above 100 will be coerced to 100.
    */
   pageSize: number
   /**
-   *
-   * @description cursor-based pagination token
+   * Optional. A page token, received from a previous `ListSpaces` call.
+   * Provide this to retrieve the subsequent page.
    */
-  nextPageToken: string
+  pageToken: string
 }
 
 /**
- * ListSpacesResponse contains the list of spaces and pagination token.
+ * Response message for Spaces.ListSpaces.
  */
 export interface ListSpacesResponse {
-  spaces: Space[]
-  nextPageToken: string
+  /**
+   * Output only. The list of requested workspaces.
+   */
+  spaces?: Space[]
+  /**
+   * A token, which can be sent as `page_token` to retrieve the next page.
+   * If this field is omitted, there are no subsequent pages.
+   */
+  nextPageToken?: string
 }
 
 /**
- * AddSpaceMemberRequest contains the fields for adding a member.
+ * Request message for Spaces.CreateSpaceMember.
  */
-export interface AddSpaceMemberRequest {
+export interface CreateSpaceMemberRequest {
   /**
-   * The workspace ID.
+   * Required. The unique identifier of the workspace to add the member to.
+   * Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
    */
   spaceId: string
   /**
-   * The user ID to add as a member.
+   * Required. The member resource to add to the workspace.
    */
-  userId: string
-  /**
-   * The role to assign.
-   */
-  role: string
+  member: SpaceMember
 }
 
 /**
- * RemoveSpaceMemberRequest contains the fields for removing a member.
+ * Request message for Spaces.DeleteSpaceMember.
  */
-export interface RemoveSpaceMemberRequest {
+export interface DeleteSpaceMemberRequest {
   /**
-   * The workspace ID.
+   * Required. The unique identifier of the workspace to remove the member from.
+   * Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
    */
   spaceId: string
   /**
-   * The user ID to remove.
+   * Required. The user identifier of the member to remove.
+   * Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
    */
   userId: string
 }
 
 /**
- * RemoveSpaceMemberResponse is empty on success.
+ * Request message for Spaces.UpdateSpaceMember.
  */
-export type RemoveSpaceMemberResponse = Record<string, never>
-
-/**
- * UpdateSpaceMemberRoleRequest contains the fields for updating a member's role.
- */
-export interface UpdateSpaceMemberRoleRequest {
+export interface UpdateSpaceMemberRequest {
   /**
-   * The workspace ID.
+   * Required. The unique identifier of the workspace containing the member.
+   * Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
    */
   spaceId: string
   /**
-   * The user ID.
+   * Required. The member resource containing updated fields.
    */
-  userId: string
+  member: SpaceMember
   /**
-   * The new role.
+   * Optional. The list of fields to update.
+   * A mask specifying which fields in the `member` field should be updated.
+   * Currently UpdateSpaceMember only supports the following field:
+   *
+   * * `role`
+   *
+   * Setting any other field will return an INVALID_ARGUMENT error.
    */
-  role: string
+  updateMask?: { paths?: string[] }
 }
 
 /**
- * ListSpaceMembersRequest contains the fields for listing workspace members.
+ * Request message for Spaces.ListSpaceMembers.
  */
 export interface ListSpaceMembersRequest {
   /**
-   * The workspace ID.
+   * Required. The unique identifier of the workspace whose members are listed.
+   * Formatted as `spc_<ksuid>` (e.g., `spc_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
    */
   spaceId: string
   /**
-   *
-   * @description default 20, max 100
+   * Optional. The maximum number of members to return. The service may return fewer
+   * than this value. If unspecified, at most 20 members are returned. The maximum
+   * value is 100; values above 100 will be coerced to 100.
    */
   pageSize: number
   /**
-   *
-   * @description cursor-based pagination token
+   * Optional. A page token, received from a previous `ListSpaceMembers` call.
+   * Provide this to retrieve the subsequent page.
    */
-  nextPageToken: string
+  pageToken: string
 }
 
 /**
- * ListSpaceMembersResponse contains the list of members and pagination token.
+ * Response message for Spaces.ListSpaceMembers.
  */
 export interface ListSpaceMembersResponse {
-  members: SpaceMember[]
-  nextPageToken: string
+  /**
+   * Output only. The list of workspace members.
+   */
+  members?: SpaceMember[]
+  /**
+   * A token, which can be sent as `page_token` to retrieve the next page.
+   * If this field is omitted, there are no subsequent pages.
+   */
+  nextPageToken?: string
 }
 
 /**
- * Spaces provides workspace (space) management including CRUD operations and member management.
+ * Spaces provides workspace management including CRUD operations and member administration.
  */
 /**
- * CreateSpace creates a new workspace.
+ * Creates a new workspace.
  */
 export async function createSpace(req: CreateSpaceRequest): Promise<Space> {
   return request<Space>({
@@ -271,7 +338,7 @@ export function useCreateSpaceMutation(
 }
 
 /**
- * GetSpace retrieves a workspace by ID.
+ * Retrieves a workspace by ID.
  */
 export async function getSpace(
   space_id: string,
@@ -295,7 +362,7 @@ export function useGetSpaceQuery(
 }
 
 /**
- * UpdateSpace updates a workspace.
+ * Updates an existing workspace.
  */
 export async function updateSpace(
   space_id: string,
@@ -330,13 +397,13 @@ export function useUpdateSpaceMutation(
 }
 
 /**
- * DeleteSpace deletes a workspace.
+ * Deletes a workspace by ID.
  */
 export async function deleteSpace(
   space_id: string,
   _req: DeleteSpaceRequest
-): Promise<DeleteSpaceResponse> {
-  return request<DeleteSpaceResponse>({
+): Promise<Record<string, never>> {
+  return request<Record<string, never>>({
     method: "DELETE",
     url: `/api/v1/spaces/${space_id}`,
   })
@@ -344,13 +411,13 @@ export async function deleteSpace(
 
 export function useDeleteSpaceMutation(
   options?: UseMutationOptions<
-    DeleteSpaceResponse,
+    Record<string, never>,
     Error,
     { space_id: string; req: DeleteSpaceRequest }
   >
 ) {
   return useMutation<
-    DeleteSpaceResponse,
+    Record<string, never>,
     Error,
     { space_id: string; req: DeleteSpaceRequest }
   >({
@@ -360,7 +427,7 @@ export function useDeleteSpaceMutation(
 }
 
 /**
- * ListSpaces lists all spaces the authenticated user has access to.
+ * Lists all workspaces the authenticated user has access to.
  */
 export async function listSpaces(
   req: ListSpacesRequest
@@ -388,103 +455,108 @@ export function useListSpacesQuery(
 }
 
 /**
- * AddSpaceMember adds a member to a workspace.
+ * Creates a member in a workspace.
  */
-export async function addSpaceMember(
+export async function createSpaceMember(
   space_id: string,
-  req: AddSpaceMemberRequest
+  req: CreateSpaceMemberRequest
 ): Promise<SpaceMember> {
   return request<SpaceMember>({
     method: "POST",
     url: `/api/v1/spaces/${space_id}/members`,
-    data: req,
+    data: req.member,
   })
 }
 
-export function useAddSpaceMemberMutation(
+export function useCreateSpaceMemberMutation(
   options?: UseMutationOptions<
     SpaceMember,
     Error,
-    { space_id: string; req: AddSpaceMemberRequest }
+    { space_id: string; req: CreateSpaceMemberRequest }
   >
 ) {
   return useMutation<
     SpaceMember,
     Error,
-    { space_id: string; req: AddSpaceMemberRequest }
+    { space_id: string; req: CreateSpaceMemberRequest }
   >({
-    mutationFn: ({ space_id, req }) => addSpaceMember(space_id, req),
+    mutationFn: ({ space_id, req }) => createSpaceMember(space_id, req),
     ...options,
   })
 }
 
 /**
- * RemoveSpaceMember removes a member from a workspace.
+ * Deletes a member from a workspace.
  */
-export async function removeSpaceMember(
+export async function deleteSpaceMember(
   space_id: string,
   user_id: string,
-  _req: RemoveSpaceMemberRequest
-): Promise<RemoveSpaceMemberResponse> {
-  return request<RemoveSpaceMemberResponse>({
+  _req: DeleteSpaceMemberRequest
+): Promise<Record<string, never>> {
+  return request<Record<string, never>>({
     method: "DELETE",
     url: `/api/v1/spaces/${space_id}/members/${user_id}`,
   })
 }
 
-export function useRemoveSpaceMemberMutation(
+export function useDeleteSpaceMemberMutation(
   options?: UseMutationOptions<
-    RemoveSpaceMemberResponse,
+    Record<string, never>,
     Error,
-    { space_id: string; user_id: string; req: RemoveSpaceMemberRequest }
+    { space_id: string; user_id: string; req: DeleteSpaceMemberRequest }
   >
 ) {
   return useMutation<
-    RemoveSpaceMemberResponse,
+    Record<string, never>,
     Error,
-    { space_id: string; user_id: string; req: RemoveSpaceMemberRequest }
+    { space_id: string; user_id: string; req: DeleteSpaceMemberRequest }
   >({
     mutationFn: ({ space_id, user_id, req }) =>
-      removeSpaceMember(space_id, user_id, req),
+      deleteSpaceMember(space_id, user_id, req),
     ...options,
   })
 }
 
 /**
- * UpdateSpaceMemberRole updates a member's role in a workspace.
+ * Updates an existing member within a workspace.
  */
-export async function updateSpaceMemberRole(
+export async function updateSpaceMember(
   space_id: string,
   user_id: string,
-  req: UpdateSpaceMemberRoleRequest
+  req: UpdateSpaceMemberRequest
 ): Promise<SpaceMember> {
+  const params = { ...req }
+  delete (params as Record<string, unknown>).spaceId
+  delete (params as Record<string, unknown>).user_id
+  delete (params as Record<string, unknown>).member
   return request<SpaceMember>({
     method: "PATCH",
     url: `/api/v1/spaces/${space_id}/members/${user_id}`,
-    data: req,
+    params: params,
+    data: req.member,
   })
 }
 
-export function useUpdateSpaceMemberRoleMutation(
+export function useUpdateSpaceMemberMutation(
   options?: UseMutationOptions<
     SpaceMember,
     Error,
-    { space_id: string; user_id: string; req: UpdateSpaceMemberRoleRequest }
+    { space_id: string; user_id: string; req: UpdateSpaceMemberRequest }
   >
 ) {
   return useMutation<
     SpaceMember,
     Error,
-    { space_id: string; user_id: string; req: UpdateSpaceMemberRoleRequest }
+    { space_id: string; user_id: string; req: UpdateSpaceMemberRequest }
   >({
     mutationFn: ({ space_id, user_id, req }) =>
-      updateSpaceMemberRole(space_id, user_id, req),
+      updateSpaceMember(space_id, user_id, req),
     ...options,
   })
 }
 
 /**
- * ListSpaceMembers lists all members of a workspace.
+ * Lists all members belonging to a workspace.
  */
 export async function listSpaceMembers(
   space_id: string,

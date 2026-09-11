@@ -171,9 +171,14 @@ func (s *Service) ListSpaces(ctx context.Context, userID SpaceID, filter *ListSp
 func (s *Service) AddSpaceMember(ctx context.Context, session Session, member *Member) (*Member, error) {
 	const op errors.Op = "domain/space.AddSpaceMember"
 
-	// Validate role using model validation
-	if !member.Role.IsValid() {
-		return nil, errors.E(op, errors.Invalid, InvalidRole, "invalid role")
+	// Validate member invariants using model validation
+	if err := member.Validate(); err != nil {
+		return nil, errors.E(op, err)
+	}
+
+	// Prevent adding another owner
+	if member.Role == RoleOwner {
+		return nil, errors.E(op, errors.Permission, OwnerOnly, "cannot assign owner role")
 	}
 
 	// Check requestor has permission
@@ -253,12 +258,13 @@ func (s *Service) RemoveSpaceMember(ctx context.Context, session Session, userID
 	return nil
 }
 
-// UpdateSpaceMemberRole updates a member's role.
-func (s *Service) UpdateSpaceMemberRole(ctx context.Context, session Session, updated *Member) (*Member, error) {
-	const op errors.Op = "domain/space.UpdateSpaceMemberRole"
+// UpdateSpaceMember updates a member in a workspace using partial patch update.
+func (s *Service) UpdateSpaceMember(ctx context.Context, session Session, updated *Member, mask []string) (*Member, error) {
+	const op errors.Op = "domain/space.UpdateSpaceMember"
 
-	if !updated.Role.IsValid() {
-		return nil, errors.E(op, errors.Invalid, InvalidRole, "invalid role")
+	// Validate incoming update model invariants
+	if err := updated.Validate(); err != nil {
+		return nil, errors.E(op, err)
 	}
 
 	// Check requestor has permission
@@ -287,18 +293,31 @@ func (s *Service) UpdateSpaceMemberRole(ctx context.Context, session Session, up
 		return nil, errors.E(op, errors.Permission, OwnerOnly, "cannot change space owner role")
 	}
 
+	// Apply partial update via MemberPatchSchema
+	if err := existing.ApplyPatch(updated, mask); err != nil {
+		return nil, errors.E(op, errors.Invalid, err)
+	}
+
 	// Prevent promoting someone else to owner via role update
-	if updated.Role == RoleOwner {
+	if existing.Role == RoleOwner {
 		return nil, errors.E(op, errors.Permission, OwnerOnly, "cannot assign owner role")
 	}
 
-	existing.Role = updated.Role
-	existing.UpdateTime = time.Now()
 	if err := s.deps.MemberStore.Update(ctx, existing); err != nil {
 		return nil, errors.E(op, err)
 	}
 
 	return existing, nil
+}
+
+// UpdateSpaceMemberRole updates a member's role.
+func (s *Service) UpdateSpaceMemberRole(ctx context.Context, session Session, updated *Member) (*Member, error) {
+	const op errors.Op = "domain/space.UpdateSpaceMemberRole"
+	res, err := s.UpdateSpaceMember(ctx, session, updated, []string{"role"})
+	if err != nil {
+		return nil, errors.E(op, err)
+	}
+	return res, nil
 }
 
 // ListSpaceMembers lists all members of a workspace. Requestor must be a member.

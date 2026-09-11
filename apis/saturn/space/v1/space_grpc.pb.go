@@ -11,6 +11,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -19,40 +20,40 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Spaces_CreateSpace_FullMethodName           = "/saturn.space.v1.Spaces/CreateSpace"
-	Spaces_GetSpace_FullMethodName              = "/saturn.space.v1.Spaces/GetSpace"
-	Spaces_UpdateSpace_FullMethodName           = "/saturn.space.v1.Spaces/UpdateSpace"
-	Spaces_DeleteSpace_FullMethodName           = "/saturn.space.v1.Spaces/DeleteSpace"
-	Spaces_ListSpaces_FullMethodName            = "/saturn.space.v1.Spaces/ListSpaces"
-	Spaces_AddSpaceMember_FullMethodName        = "/saturn.space.v1.Spaces/AddSpaceMember"
-	Spaces_RemoveSpaceMember_FullMethodName     = "/saturn.space.v1.Spaces/RemoveSpaceMember"
-	Spaces_UpdateSpaceMemberRole_FullMethodName = "/saturn.space.v1.Spaces/UpdateSpaceMemberRole"
-	Spaces_ListSpaceMembers_FullMethodName      = "/saturn.space.v1.Spaces/ListSpaceMembers"
+	Spaces_CreateSpace_FullMethodName       = "/saturn.space.v1.Spaces/CreateSpace"
+	Spaces_GetSpace_FullMethodName          = "/saturn.space.v1.Spaces/GetSpace"
+	Spaces_UpdateSpace_FullMethodName       = "/saturn.space.v1.Spaces/UpdateSpace"
+	Spaces_DeleteSpace_FullMethodName       = "/saturn.space.v1.Spaces/DeleteSpace"
+	Spaces_ListSpaces_FullMethodName        = "/saturn.space.v1.Spaces/ListSpaces"
+	Spaces_CreateSpaceMember_FullMethodName = "/saturn.space.v1.Spaces/CreateSpaceMember"
+	Spaces_DeleteSpaceMember_FullMethodName = "/saturn.space.v1.Spaces/DeleteSpaceMember"
+	Spaces_UpdateSpaceMember_FullMethodName = "/saturn.space.v1.Spaces/UpdateSpaceMember"
+	Spaces_ListSpaceMembers_FullMethodName  = "/saturn.space.v1.Spaces/ListSpaceMembers"
 )
 
 // SpacesClient is the client API for Spaces service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// Spaces provides workspace (space) management including CRUD operations and member management.
+// Spaces provides workspace management including CRUD operations and member administration.
 type SpacesClient interface {
-	// CreateSpace creates a new workspace.
+	// Creates a new workspace.
 	CreateSpace(ctx context.Context, in *CreateSpaceRequest, opts ...grpc.CallOption) (*Space, error)
-	// GetSpace retrieves a workspace by ID.
+	// Retrieves a workspace by ID.
 	GetSpace(ctx context.Context, in *GetSpaceRequest, opts ...grpc.CallOption) (*Space, error)
-	// UpdateSpace updates a workspace.
+	// Updates an existing workspace.
 	UpdateSpace(ctx context.Context, in *UpdateSpaceRequest, opts ...grpc.CallOption) (*Space, error)
-	// DeleteSpace deletes a workspace.
-	DeleteSpace(ctx context.Context, in *DeleteSpaceRequest, opts ...grpc.CallOption) (*DeleteSpaceResponse, error)
-	// ListSpaces lists all spaces the authenticated user has access to.
+	// Deletes a workspace by ID.
+	DeleteSpace(ctx context.Context, in *DeleteSpaceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Lists all workspaces the authenticated user has access to.
 	ListSpaces(ctx context.Context, in *ListSpacesRequest, opts ...grpc.CallOption) (*ListSpacesResponse, error)
-	// AddSpaceMember adds a member to a workspace.
-	AddSpaceMember(ctx context.Context, in *AddSpaceMemberRequest, opts ...grpc.CallOption) (*SpaceMember, error)
-	// RemoveSpaceMember removes a member from a workspace.
-	RemoveSpaceMember(ctx context.Context, in *RemoveSpaceMemberRequest, opts ...grpc.CallOption) (*RemoveSpaceMemberResponse, error)
-	// UpdateSpaceMemberRole updates a member's role in a workspace.
-	UpdateSpaceMemberRole(ctx context.Context, in *UpdateSpaceMemberRoleRequest, opts ...grpc.CallOption) (*SpaceMember, error)
-	// ListSpaceMembers lists all members of a workspace.
+	// Creates a member in a workspace.
+	CreateSpaceMember(ctx context.Context, in *CreateSpaceMemberRequest, opts ...grpc.CallOption) (*SpaceMember, error)
+	// Deletes a member from a workspace.
+	DeleteSpaceMember(ctx context.Context, in *DeleteSpaceMemberRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Updates an existing member within a workspace.
+	UpdateSpaceMember(ctx context.Context, in *UpdateSpaceMemberRequest, opts ...grpc.CallOption) (*SpaceMember, error)
+	// Lists all members belonging to a workspace.
 	ListSpaceMembers(ctx context.Context, in *ListSpaceMembersRequest, opts ...grpc.CallOption) (*ListSpaceMembersResponse, error)
 }
 
@@ -94,9 +95,9 @@ func (c *spacesClient) UpdateSpace(ctx context.Context, in *UpdateSpaceRequest, 
 	return out, nil
 }
 
-func (c *spacesClient) DeleteSpace(ctx context.Context, in *DeleteSpaceRequest, opts ...grpc.CallOption) (*DeleteSpaceResponse, error) {
+func (c *spacesClient) DeleteSpace(ctx context.Context, in *DeleteSpaceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DeleteSpaceResponse)
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Spaces_DeleteSpace_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -114,30 +115,30 @@ func (c *spacesClient) ListSpaces(ctx context.Context, in *ListSpacesRequest, op
 	return out, nil
 }
 
-func (c *spacesClient) AddSpaceMember(ctx context.Context, in *AddSpaceMemberRequest, opts ...grpc.CallOption) (*SpaceMember, error) {
+func (c *spacesClient) CreateSpaceMember(ctx context.Context, in *CreateSpaceMemberRequest, opts ...grpc.CallOption) (*SpaceMember, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SpaceMember)
-	err := c.cc.Invoke(ctx, Spaces_AddSpaceMember_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Spaces_CreateSpaceMember_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *spacesClient) RemoveSpaceMember(ctx context.Context, in *RemoveSpaceMemberRequest, opts ...grpc.CallOption) (*RemoveSpaceMemberResponse, error) {
+func (c *spacesClient) DeleteSpaceMember(ctx context.Context, in *DeleteSpaceMemberRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RemoveSpaceMemberResponse)
-	err := c.cc.Invoke(ctx, Spaces_RemoveSpaceMember_FullMethodName, in, out, cOpts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Spaces_DeleteSpaceMember_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *spacesClient) UpdateSpaceMemberRole(ctx context.Context, in *UpdateSpaceMemberRoleRequest, opts ...grpc.CallOption) (*SpaceMember, error) {
+func (c *spacesClient) UpdateSpaceMember(ctx context.Context, in *UpdateSpaceMemberRequest, opts ...grpc.CallOption) (*SpaceMember, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SpaceMember)
-	err := c.cc.Invoke(ctx, Spaces_UpdateSpaceMemberRole_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Spaces_UpdateSpaceMember_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -158,25 +159,25 @@ func (c *spacesClient) ListSpaceMembers(ctx context.Context, in *ListSpaceMember
 // All implementations should embed UnimplementedSpacesServer
 // for forward compatibility.
 //
-// Spaces provides workspace (space) management including CRUD operations and member management.
+// Spaces provides workspace management including CRUD operations and member administration.
 type SpacesServer interface {
-	// CreateSpace creates a new workspace.
+	// Creates a new workspace.
 	CreateSpace(context.Context, *CreateSpaceRequest) (*Space, error)
-	// GetSpace retrieves a workspace by ID.
+	// Retrieves a workspace by ID.
 	GetSpace(context.Context, *GetSpaceRequest) (*Space, error)
-	// UpdateSpace updates a workspace.
+	// Updates an existing workspace.
 	UpdateSpace(context.Context, *UpdateSpaceRequest) (*Space, error)
-	// DeleteSpace deletes a workspace.
-	DeleteSpace(context.Context, *DeleteSpaceRequest) (*DeleteSpaceResponse, error)
-	// ListSpaces lists all spaces the authenticated user has access to.
+	// Deletes a workspace by ID.
+	DeleteSpace(context.Context, *DeleteSpaceRequest) (*emptypb.Empty, error)
+	// Lists all workspaces the authenticated user has access to.
 	ListSpaces(context.Context, *ListSpacesRequest) (*ListSpacesResponse, error)
-	// AddSpaceMember adds a member to a workspace.
-	AddSpaceMember(context.Context, *AddSpaceMemberRequest) (*SpaceMember, error)
-	// RemoveSpaceMember removes a member from a workspace.
-	RemoveSpaceMember(context.Context, *RemoveSpaceMemberRequest) (*RemoveSpaceMemberResponse, error)
-	// UpdateSpaceMemberRole updates a member's role in a workspace.
-	UpdateSpaceMemberRole(context.Context, *UpdateSpaceMemberRoleRequest) (*SpaceMember, error)
-	// ListSpaceMembers lists all members of a workspace.
+	// Creates a member in a workspace.
+	CreateSpaceMember(context.Context, *CreateSpaceMemberRequest) (*SpaceMember, error)
+	// Deletes a member from a workspace.
+	DeleteSpaceMember(context.Context, *DeleteSpaceMemberRequest) (*emptypb.Empty, error)
+	// Updates an existing member within a workspace.
+	UpdateSpaceMember(context.Context, *UpdateSpaceMemberRequest) (*SpaceMember, error)
+	// Lists all members belonging to a workspace.
 	ListSpaceMembers(context.Context, *ListSpaceMembersRequest) (*ListSpaceMembersResponse, error)
 }
 
@@ -196,20 +197,20 @@ func (UnimplementedSpacesServer) GetSpace(context.Context, *GetSpaceRequest) (*S
 func (UnimplementedSpacesServer) UpdateSpace(context.Context, *UpdateSpaceRequest) (*Space, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateSpace not implemented")
 }
-func (UnimplementedSpacesServer) DeleteSpace(context.Context, *DeleteSpaceRequest) (*DeleteSpaceResponse, error) {
+func (UnimplementedSpacesServer) DeleteSpace(context.Context, *DeleteSpaceRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteSpace not implemented")
 }
 func (UnimplementedSpacesServer) ListSpaces(context.Context, *ListSpacesRequest) (*ListSpacesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSpaces not implemented")
 }
-func (UnimplementedSpacesServer) AddSpaceMember(context.Context, *AddSpaceMemberRequest) (*SpaceMember, error) {
-	return nil, status.Error(codes.Unimplemented, "method AddSpaceMember not implemented")
+func (UnimplementedSpacesServer) CreateSpaceMember(context.Context, *CreateSpaceMemberRequest) (*SpaceMember, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateSpaceMember not implemented")
 }
-func (UnimplementedSpacesServer) RemoveSpaceMember(context.Context, *RemoveSpaceMemberRequest) (*RemoveSpaceMemberResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method RemoveSpaceMember not implemented")
+func (UnimplementedSpacesServer) DeleteSpaceMember(context.Context, *DeleteSpaceMemberRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteSpaceMember not implemented")
 }
-func (UnimplementedSpacesServer) UpdateSpaceMemberRole(context.Context, *UpdateSpaceMemberRoleRequest) (*SpaceMember, error) {
-	return nil, status.Error(codes.Unimplemented, "method UpdateSpaceMemberRole not implemented")
+func (UnimplementedSpacesServer) UpdateSpaceMember(context.Context, *UpdateSpaceMemberRequest) (*SpaceMember, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateSpaceMember not implemented")
 }
 func (UnimplementedSpacesServer) ListSpaceMembers(context.Context, *ListSpaceMembersRequest) (*ListSpaceMembersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSpaceMembers not implemented")
@@ -324,56 +325,56 @@ func _Spaces_ListSpaces_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Spaces_AddSpaceMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AddSpaceMemberRequest)
+func _Spaces_CreateSpaceMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateSpaceMemberRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SpacesServer).AddSpaceMember(ctx, in)
+		return srv.(SpacesServer).CreateSpaceMember(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Spaces_AddSpaceMember_FullMethodName,
+		FullMethod: Spaces_CreateSpaceMember_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SpacesServer).AddSpaceMember(ctx, req.(*AddSpaceMemberRequest))
+		return srv.(SpacesServer).CreateSpaceMember(ctx, req.(*CreateSpaceMemberRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Spaces_RemoveSpaceMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RemoveSpaceMemberRequest)
+func _Spaces_DeleteSpaceMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteSpaceMemberRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SpacesServer).RemoveSpaceMember(ctx, in)
+		return srv.(SpacesServer).DeleteSpaceMember(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Spaces_RemoveSpaceMember_FullMethodName,
+		FullMethod: Spaces_DeleteSpaceMember_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SpacesServer).RemoveSpaceMember(ctx, req.(*RemoveSpaceMemberRequest))
+		return srv.(SpacesServer).DeleteSpaceMember(ctx, req.(*DeleteSpaceMemberRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Spaces_UpdateSpaceMemberRole_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateSpaceMemberRoleRequest)
+func _Spaces_UpdateSpaceMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateSpaceMemberRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SpacesServer).UpdateSpaceMemberRole(ctx, in)
+		return srv.(SpacesServer).UpdateSpaceMember(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Spaces_UpdateSpaceMemberRole_FullMethodName,
+		FullMethod: Spaces_UpdateSpaceMember_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SpacesServer).UpdateSpaceMemberRole(ctx, req.(*UpdateSpaceMemberRoleRequest))
+		return srv.(SpacesServer).UpdateSpaceMember(ctx, req.(*UpdateSpaceMemberRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -424,16 +425,16 @@ var Spaces_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Spaces_ListSpaces_Handler,
 		},
 		{
-			MethodName: "AddSpaceMember",
-			Handler:    _Spaces_AddSpaceMember_Handler,
+			MethodName: "CreateSpaceMember",
+			Handler:    _Spaces_CreateSpaceMember_Handler,
 		},
 		{
-			MethodName: "RemoveSpaceMember",
-			Handler:    _Spaces_RemoveSpaceMember_Handler,
+			MethodName: "DeleteSpaceMember",
+			Handler:    _Spaces_DeleteSpaceMember_Handler,
 		},
 		{
-			MethodName: "UpdateSpaceMemberRole",
-			Handler:    _Spaces_UpdateSpaceMemberRole_Handler,
+			MethodName: "UpdateSpaceMember",
+			Handler:    _Spaces_UpdateSpaceMember_Handler,
 		},
 		{
 			MethodName: "ListSpaceMembers",

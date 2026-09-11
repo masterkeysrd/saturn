@@ -421,50 +421,91 @@ func TestMemberOperations(t *testing.T) {
 
 	ownerSession := space.Session{SpaceID: created.ID, UserID: "owner-1"}
 
-	t.Run("add member with invalid role", func(t *testing.T) {
-		_, err := svc.AddSpaceMember(ctx, ownerSession, &space.Member{
-			UserID: "user-2",
-			Role:   "invalid_role",
-		})
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		if kind := errors.KindOf(err); kind != errors.Invalid {
-			t.Errorf("expected kind Invalid, got %v", kind)
-		}
-		if code := errors.CodeOf(err); code != space.InvalidRole {
-			t.Errorf("expected code %v, got %v", space.InvalidRole, code)
-		}
-	})
+	addMemberTests := []struct {
+		name     string
+		session  space.Session
+		member   *space.Member
+		wantErr  bool
+		wantKind errors.Kind
+		wantCode errors.Code
+	}{
+		{
+			name:     "nil member returns Invalid",
+			session:  ownerSession,
+			member:   nil,
+			wantErr:  true,
+			wantKind: errors.Invalid,
+		},
+		{
+			name:     "missing user_id returns Invalid",
+			session:  ownerSession,
+			member:   &space.Member{UserID: "", Role: space.RoleMember},
+			wantErr:  true,
+			wantKind: errors.Invalid,
+		},
+		{
+			name:     "invalid role returns Invalid with InvalidRole code",
+			session:  ownerSession,
+			member:   &space.Member{UserID: "user-invalid", Role: "invalid_role"},
+			wantErr:  true,
+			wantKind: errors.Invalid,
+			wantCode: space.InvalidRole,
+		},
+		{
+			name:     "assigning owner role returns Permission with OwnerOnly code",
+			session:  ownerSession,
+			member:   &space.Member{UserID: "user-owner", Role: space.RoleOwner},
+			wantErr:  true,
+			wantKind: errors.Permission,
+			wantCode: space.OwnerOnly,
+		},
+		{
+			name:     "unauthorized user returns Permission with InsufficientRole code",
+			session:  space.Session{SpaceID: created.ID, UserID: "stranger"},
+			member:   &space.Member{UserID: "user-stranger", Role: space.RoleMember},
+			wantErr:  true,
+			wantKind: errors.Permission,
+			wantCode: space.InsufficientRole,
+		},
+		{
+			name:    "add member success",
+			session: ownerSession,
+			member:  &space.Member{UserID: "user-2", Role: space.RoleMember},
+			wantErr: false,
+		},
+		{
+			name:     "duplicate member returns Exist with MemberAlreadyExists code",
+			session:  ownerSession,
+			member:   &space.Member{UserID: "user-2", Role: space.RoleMember},
+			wantErr:  true,
+			wantKind: errors.Exist,
+			wantCode: space.MemberAlreadyExists,
+		},
+	}
 
-	t.Run("add member success", func(t *testing.T) {
-		mem, err := svc.AddSpaceMember(ctx, ownerSession, &space.Member{
-			UserID: "user-2",
-			Role:   space.RoleMember,
+	for _, tt := range addMemberTests {
+		t.Run(tt.name, func(t *testing.T) {
+			mem, err := svc.AddSpaceMember(ctx, tt.session, tt.member)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if tt.wantKind != errors.Other && errors.KindOf(err) != tt.wantKind {
+					t.Errorf("expected kind %v, got %v", tt.wantKind, errors.KindOf(err))
+				}
+				if tt.wantCode != "" && errors.CodeOf(err) != tt.wantCode {
+					t.Errorf("expected code %v, got %v", tt.wantCode, errors.CodeOf(err))
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if mem == nil || mem.UserID != tt.member.UserID || mem.Role != tt.member.Role {
+				t.Errorf("unexpected member returned: %+v", mem)
+			}
 		})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if mem.UserID != "user-2" || mem.Role != space.RoleMember {
-			t.Errorf("unexpected member returned: %+v", mem)
-		}
-	})
-
-	t.Run("add existing member returns MemberAlreadyExists", func(t *testing.T) {
-		_, err := svc.AddSpaceMember(ctx, ownerSession, &space.Member{
-			UserID: "user-2",
-			Role:   space.RoleMember,
-		})
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		if kind := errors.KindOf(err); kind != errors.Exist {
-			t.Errorf("expected kind Exist, got %v", kind)
-		}
-		if code := errors.CodeOf(err); code != space.MemberAlreadyExists {
-			t.Errorf("expected code %v, got %v", space.MemberAlreadyExists, code)
-		}
-	})
+	}
 
 	t.Run("remove owner returns OwnerOnly", func(t *testing.T) {
 		err := svc.RemoveSpaceMember(ctx, ownerSession, "owner-1")
@@ -607,6 +648,158 @@ func TestSpace_ApplyPatch(t *testing.T) {
 		}
 		if sp.Description != "Full update description" {
 			t.Errorf("expected Description 'Full update description', got '%s'", sp.Description)
+		}
+	})
+}
+
+func TestMember_ApplyPatch(t *testing.T) {
+	createTime := time.Now().Add(-24 * time.Hour).UTC()
+	original := &space.Member{
+		SpaceID:    "sp_123",
+		UserID:     "usr_456",
+		Role:       space.RoleMember,
+		CreateTime: createTime,
+		UpdateTime: createTime,
+	}
+
+	t.Run("successfully patches role with mask", func(t *testing.T) {
+		m := *original
+		incoming := &space.Member{
+			Role: space.RoleAdmin,
+		}
+
+		err := m.ApplyPatch(incoming, []string{"role"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if m.Role != space.RoleAdmin {
+			t.Errorf("expected role Admin, got %s", m.Role)
+		}
+		if !m.UpdateTime.After(createTime) {
+			t.Errorf("expected UpdateTime to be refreshed, got %v", m.UpdateTime)
+		}
+	})
+
+	t.Run("returns error on invalid role", func(t *testing.T) {
+		m := *original
+		incoming := &space.Member{
+			Role: "invalid_role",
+		}
+
+		err := m.ApplyPatch(incoming, []string{"role"})
+		if err == nil {
+			t.Fatal("expected error for invalid role, got nil")
+		}
+		if code := errors.CodeOf(err); code != space.InvalidRole {
+			t.Errorf("expected code %v, got %v", space.InvalidRole, code)
+		}
+	})
+
+	t.Run("returns error on unsupported mask field", func(t *testing.T) {
+		m := *original
+		incoming := &space.Member{
+			Role: space.RoleViewer,
+		}
+
+		err := m.ApplyPatch(incoming, []string{"unsupported_field"})
+		if err == nil {
+			t.Fatal("expected error for unsupported field, got nil")
+		}
+	})
+
+	t.Run("full update when mask is nil or empty", func(t *testing.T) {
+		m := *original
+		incoming := &space.Member{
+			Role: space.RoleViewer,
+		}
+
+		err := m.ApplyPatch(incoming, nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if m.Role != space.RoleViewer {
+			t.Errorf("expected role Viewer, got %s", m.Role)
+		}
+	})
+}
+
+func TestMember_Validate(t *testing.T) {
+	t.Run("nil member returns error", func(t *testing.T) {
+		var m *space.Member
+		err := m.Validate()
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if errors.KindOf(err) != errors.Invalid {
+			t.Errorf("expected kind Invalid, got %v", errors.KindOf(err))
+		}
+	})
+
+	t.Run("missing user_id returns error", func(t *testing.T) {
+		m := &space.Member{
+			Role: space.RoleAdmin,
+		}
+		err := m.Validate()
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if errors.KindOf(err) != errors.Invalid {
+			t.Errorf("expected kind Invalid, got %v", errors.KindOf(err))
+		}
+	})
+
+	t.Run("invalid role returns InvalidRole code", func(t *testing.T) {
+		m := &space.Member{
+			UserID: "usr_123",
+			Role:   "invalid",
+		}
+		err := m.Validate()
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if errors.CodeOf(err) != space.InvalidRole {
+			t.Errorf("expected code InvalidRole, got %v", errors.CodeOf(err))
+		}
+	})
+
+	t.Run("valid member returns nil", func(t *testing.T) {
+		m := &space.Member{
+			UserID: "usr_123",
+			Role:   space.RoleMember,
+		}
+		if err := m.Validate(); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestSpace_Validate(t *testing.T) {
+	t.Run("nil space returns error", func(t *testing.T) {
+		var s *space.Space
+		err := s.Validate()
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if errors.KindOf(err) != errors.Invalid {
+			t.Errorf("expected kind Invalid, got %v", errors.KindOf(err))
+		}
+	})
+
+	t.Run("empty name returns error", func(t *testing.T) {
+		s := &space.Space{Name: "   "}
+		err := s.Validate()
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if errors.KindOf(err) != errors.Invalid {
+			t.Errorf("expected kind Invalid, got %v", errors.KindOf(err))
+		}
+	})
+
+	t.Run("valid space returns nil", func(t *testing.T) {
+		s := &space.Space{Name: "Valid Space"}
+		if err := s.Validate(); err != nil {
+			t.Fatalf("unexpected error: %v", err)
 		}
 	})
 }
