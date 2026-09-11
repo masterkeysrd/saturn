@@ -34,6 +34,7 @@ func TestWith_And_From(t *testing.T) {
 	if got := requestid.From(ctx); got != "" {
 		t.Errorf("expected empty string from empty context, got %q", got)
 	}
+	//nolint:staticcheck // intentional nil context test
 	if got := requestid.From(nil); got != "" {
 		t.Errorf("expected empty string from nil context, got %q", got)
 	}

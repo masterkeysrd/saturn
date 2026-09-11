@@ -19,10 +19,11 @@ var janusPrompt string
 func init() {
 	// Register the Janus statement and reconciliation agent template at startup
 	agent.RegisterAgent(agent.AgentDescriptor{
-		Purpose:     "STATEMENT_PARSER",
-		DisplayName: "Janus",
-		Description: "Deploys Janus, the autonomous financial statement and reconciliation audit agent that extracts multi-currency ledgers, balances, and line items.",
-		DefaultTags: []string{"finance", "statement", "reconciliation", "audit", "janus"},
+		Purpose:                  "STATEMENT_PARSER",
+		DisplayName:              "Janus",
+		Description:              "Deploys Janus, the autonomous financial statement and reconciliation audit agent that extracts multi-currency ledgers, balances, and line items.",
+		DefaultTags:              []string{"finance", "statement", "reconciliation", "audit", "janus"},
+		DefaultSystemInstruction: janusPrompt,
 		DefaultPromptTemplate: `{{if .accounts}}
 <accounts>
   Available accounts in this Saturn workspace to match against:

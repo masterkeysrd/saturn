@@ -153,7 +153,7 @@ func (sp *ScheduledTransaction) NewConfirmationTransaction(opts ConfirmOpts) (*T
 		effDate = date
 	}
 
-	var budgetID *BudgetID = sp.BudgetID
+	budgetID := sp.BudgetID
 	if opts.BudgetID != nil {
 		budgetID = opts.BudgetID
 	}
@@ -188,7 +188,7 @@ func (sp *ScheduledTransaction) NewConfirmationTransaction(opts ConfirmOpts) (*T
 		meta.RecurringTransactionID = &rtID
 	}
 
-	var accountID *AccountID = sp.AccountID
+	accountID := sp.AccountID
 	if opts.AccountID != nil {
 		accountID = opts.AccountID
 	}
@@ -203,8 +203,8 @@ func (sp *ScheduledTransaction) NewConfirmationTransaction(opts ConfirmOpts) (*T
 		Currency:        curr,
 		AmountInBase:    opts.AmountInBase,
 		Description:     desc,
-		TransactionDate: opts.TransactionDate,
-		EffectiveDate:   opts.EffectiveDate,
+		TransactionDate: date,
+		EffectiveDate:   effDate,
 		Metadata:        meta,
 	}
 

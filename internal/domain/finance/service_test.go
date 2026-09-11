@@ -3348,7 +3348,8 @@ func TestService_InvoiceBranch(t *testing.T) {
 				_, _ = svc.UpdateInboxItem(ctx, spID, staged)
 			}
 
-			if tt.action == "approve" {
+			switch tt.action {
+			case "approve":
 				_, err := svc.ApproveInboxItem(ctx, spID, staged.ID)
 				if err != nil {
 					t.Fatalf("ApproveInboxItem failed: %v", err)
@@ -3368,7 +3369,7 @@ func TestService_InvoiceBranch(t *testing.T) {
 					}
 				}
 
-			} else if tt.action == "discard" {
+			case "discard":
 				err := svc.DiscardInboxItem(ctx, spID, staged.ID)
 				if err != nil {
 					t.Fatalf("DiscardInboxItem failed: %v", err)

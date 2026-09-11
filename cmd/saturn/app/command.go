@@ -43,7 +43,7 @@ func Execute() error {
 			mgr := shutdown.New(shutdown.WithTimeout(cfg.Shutdown.Timeout))
 			ctx, cancel := mgr.Init()
 			defer cancel()
-			defer mgr.Defer()
+			defer mgr.Defer()()
 
 			return StartAll(ctx, mgr, cfg)
 		},

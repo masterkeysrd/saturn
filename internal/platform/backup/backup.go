@@ -228,8 +228,6 @@ func (pm *PostgresBackupManager) syncIndex(ctx context.Context, newEntry BackupE
 
 // ListBackups reads local or remote backups.json metadata index file.
 func (pm *PostgresBackupManager) ListBackups(ctx context.Context) (*MetadataIndex, error) {
-	const op errors.Op = "platform/backup.ListBackups"
-
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 

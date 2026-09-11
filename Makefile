@@ -130,6 +130,16 @@ web-dev:
 web-build:
 	npm --prefix apps/web run build
 
+## Run all linters (Go and frontend)
+.PHONY: lint
+lint: lint-go web-lint
+
+## Lint Go codebase with golangci-lint
+.PHONY: lint-go
+lint-go:
+	@echo "→ Linting Go codebase"
+	golangci-lint run ./...
+
 ## Lint the frontend codebase
 .PHONY: web-lint
 web-lint:

@@ -69,7 +69,7 @@ func StartTestEnv() (*TestEnv, error) {
 
 		connStr, err := pgContainer.ConnectionString(ctx, "sslmode=disable")
 		if err != nil {
-			pgContainer.Terminate(ctx)
+			_ = pgContainer.Terminate(ctx)
 			return nil, fmt.Errorf("failed to get container connection string: %w", err)
 		}
 		dbURL = connStr
