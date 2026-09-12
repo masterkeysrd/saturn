@@ -144,9 +144,12 @@ func (InsightGranularity) EnumDescriptor() ([]byte, []int) {
 type RecurringType int32
 
 const (
+	// Default unspecified recurring type.
 	RecurringType_RECURRING_TYPE_UNSPECIFIED RecurringType = 0
-	RecurringType_EXPENSE                    RecurringType = 1
-	RecurringType_INCOME                     RecurringType = 2
+	// Expense recurring transaction.
+	RecurringType_EXPENSE RecurringType = 1
+	// Income recurring transaction.
+	RecurringType_INCOME RecurringType = 2
 )
 
 // Enum value maps for RecurringType.
@@ -247,10 +250,14 @@ func (BorrowingTransactionType) EnumDescriptor() ([]byte, []int) {
 type BorrowingLinkType int32
 
 const (
-	BorrowingLinkType_BORROWING_LINK_TYPE_UNSPECIFIED     BorrowingLinkType = 0
-	BorrowingLinkType_BORROWING_LINK_TYPE_INITIAL_RECEIPT BorrowingLinkType = 1 // Original funding proof ($0 balance adjustment)
-	BorrowingLinkType_BORROWING_LINK_TYPE_REPAYMENT       BorrowingLinkType = 2 // Installment payback (reduces remaining balance)
-	BorrowingLinkType_BORROWING_LINK_TYPE_ADDITIONAL_LOAN BorrowingLinkType = 3 // Top-up / extra drawdown (increases balance)
+	// Default unspecified borrowing link type.
+	BorrowingLinkType_BORROWING_LINK_TYPE_UNSPECIFIED BorrowingLinkType = 0
+	// Original funding proof ($0 balance adjustment).
+	BorrowingLinkType_BORROWING_LINK_TYPE_INITIAL_RECEIPT BorrowingLinkType = 1
+	// Installment payback (reduces remaining balance).
+	BorrowingLinkType_BORROWING_LINK_TYPE_REPAYMENT BorrowingLinkType = 2
+	// Top-up or extra drawdown (increases balance).
+	BorrowingLinkType_BORROWING_LINK_TYPE_ADDITIONAL_LOAN BorrowingLinkType = 3
 )
 
 // Enum value maps for BorrowingLinkType.
@@ -589,9 +596,12 @@ func (Transaction_View) EnumDescriptor() ([]byte, []int) {
 type RecurringTransaction_View int32
 
 const (
+	// Default unspecified view.
 	RecurringTransaction_VIEW_UNSPECIFIED RecurringTransaction_View = 0
-	RecurringTransaction_BASIC            RecurringTransaction_View = 1
-	RecurringTransaction_FULL             RecurringTransaction_View = 2
+	// Basic view including summary fields.
+	RecurringTransaction_BASIC RecurringTransaction_View = 1
+	// Full view including hydrated associations.
+	RecurringTransaction_FULL RecurringTransaction_View = 2
 )
 
 // Enum value maps for RecurringTransaction_View.
@@ -639,10 +649,14 @@ func (RecurringTransaction_View) EnumDescriptor() ([]byte, []int) {
 type RecurringTransaction_Interval int32
 
 const (
+	// Default unspecified interval.
 	RecurringTransaction_INTERVAL_UNSPECIFIED RecurringTransaction_Interval = 0
-	RecurringTransaction_WEEKLY               RecurringTransaction_Interval = 1
-	RecurringTransaction_MONTHLY              RecurringTransaction_Interval = 2
-	RecurringTransaction_YEARLY               RecurringTransaction_Interval = 3
+	// Weekly recurrence interval.
+	RecurringTransaction_WEEKLY RecurringTransaction_Interval = 1
+	// Monthly recurrence interval.
+	RecurringTransaction_MONTHLY RecurringTransaction_Interval = 2
+	// Yearly recurrence interval.
+	RecurringTransaction_YEARLY RecurringTransaction_Interval = 3
 )
 
 // Enum value maps for RecurringTransaction_Interval.
@@ -692,10 +706,14 @@ func (RecurringTransaction_Interval) EnumDescriptor() ([]byte, []int) {
 type RecurringTransaction_Status int32
 
 const (
+	// Default unspecified status.
 	RecurringTransaction_STATUS_UNSPECIFIED RecurringTransaction_Status = 0
-	RecurringTransaction_ACTIVE             RecurringTransaction_Status = 1
-	RecurringTransaction_PAUSED             RecurringTransaction_Status = 2
-	RecurringTransaction_ENDED              RecurringTransaction_Status = 3
+	// Recurring transaction is active.
+	RecurringTransaction_ACTIVE RecurringTransaction_Status = 1
+	// Recurring transaction is paused.
+	RecurringTransaction_PAUSED RecurringTransaction_Status = 2
+	// Recurring transaction has ended.
+	RecurringTransaction_ENDED RecurringTransaction_Status = 3
 )
 
 // Enum value maps for RecurringTransaction_Status.
@@ -745,9 +763,12 @@ func (RecurringTransaction_Status) EnumDescriptor() ([]byte, []int) {
 type ScheduledTransaction_View int32
 
 const (
+	// Default unspecified view.
 	ScheduledTransaction_VIEW_UNSPECIFIED ScheduledTransaction_View = 0
-	ScheduledTransaction_BASIC            ScheduledTransaction_View = 1
-	ScheduledTransaction_FULL             ScheduledTransaction_View = 2
+	// Basic view including summary fields.
+	ScheduledTransaction_BASIC ScheduledTransaction_View = 1
+	// Full view including hydrated associations.
+	ScheduledTransaction_FULL ScheduledTransaction_View = 2
 )
 
 // Enum value maps for ScheduledTransaction_View.
@@ -795,10 +816,14 @@ func (ScheduledTransaction_View) EnumDescriptor() ([]byte, []int) {
 type ScheduledTransaction_SourceType int32
 
 const (
+	// Default unspecified source type.
 	ScheduledTransaction_SOURCE_TYPE_UNSPECIFIED ScheduledTransaction_SourceType = 0
-	ScheduledTransaction_RECURRENT_TRANSACTION   ScheduledTransaction_SourceType = 1
-	ScheduledTransaction_LOAN                    ScheduledTransaction_SourceType = 2
-	ScheduledTransaction_TAX                     ScheduledTransaction_SourceType = 3
+	// Created from a recurring transaction template.
+	ScheduledTransaction_RECURRENT_TRANSACTION ScheduledTransaction_SourceType = 1
+	// Created from a loan or borrowing schedule.
+	ScheduledTransaction_LOAN ScheduledTransaction_SourceType = 2
+	// Created from a tax schedule.
+	ScheduledTransaction_TAX ScheduledTransaction_SourceType = 3
 )
 
 // Enum value maps for ScheduledTransaction_SourceType.
@@ -848,11 +873,16 @@ func (ScheduledTransaction_SourceType) EnumDescriptor() ([]byte, []int) {
 type ScheduledTransaction_Status int32
 
 const (
+	// Default unspecified status.
 	ScheduledTransaction_STATUS_UNSPECIFIED ScheduledTransaction_Status = 0
-	ScheduledTransaction_PENDING            ScheduledTransaction_Status = 1
-	ScheduledTransaction_PROCESSING         ScheduledTransaction_Status = 2
-	ScheduledTransaction_SKIPPED            ScheduledTransaction_Status = 3
-	ScheduledTransaction_PAID               ScheduledTransaction_Status = 4
+	// Transaction is pending payment.
+	ScheduledTransaction_PENDING ScheduledTransaction_Status = 1
+	// Transaction is currently being processed.
+	ScheduledTransaction_PROCESSING ScheduledTransaction_Status = 2
+	// Transaction was skipped.
+	ScheduledTransaction_SKIPPED ScheduledTransaction_Status = 3
+	// Transaction has been paid.
+	ScheduledTransaction_PAID ScheduledTransaction_Status = 4
 )
 
 // Enum value maps for ScheduledTransaction_Status.
@@ -1124,11 +1154,16 @@ func (Account_View) EnumDescriptor() ([]byte, []int) {
 type InboxItem_Status int32
 
 const (
+	// Default unspecified status.
 	InboxItem_STATUS_UNSPECIFIED InboxItem_Status = 0
-	InboxItem_PENDING            InboxItem_Status = 1
-	InboxItem_PROCESSING         InboxItem_Status = 2
-	InboxItem_RESOLVED           InboxItem_Status = 3
-	InboxItem_ARCHIVED           InboxItem_Status = 4
+	// Item is pending processing.
+	InboxItem_PENDING InboxItem_Status = 1
+	// Item is currently being processed.
+	InboxItem_PROCESSING InboxItem_Status = 2
+	// Item has been resolved and linked.
+	InboxItem_RESOLVED InboxItem_Status = 3
+	// Item is archived.
+	InboxItem_ARCHIVED InboxItem_Status = 4
 )
 
 // Enum value maps for InboxItem_Status.
@@ -1180,12 +1215,18 @@ func (InboxItem_Status) EnumDescriptor() ([]byte, []int) {
 type InboxItem_DocType int32
 
 const (
+	// Default unspecified document type.
 	InboxItem_DOC_TYPE_UNSPECIFIED InboxItem_DocType = 0
-	InboxItem_INVOICE              InboxItem_DocType = 1
-	InboxItem_RECEIPT              InboxItem_DocType = 2
-	InboxItem_BANK_NOTIFICATION    InboxItem_DocType = 3
-	InboxItem_UNKNOWN              InboxItem_DocType = 4
-	InboxItem_SYSTEM_VERIFICATION  InboxItem_DocType = 5
+	// Invoice document.
+	InboxItem_INVOICE InboxItem_DocType = 1
+	// Receipt document.
+	InboxItem_RECEIPT InboxItem_DocType = 2
+	// Bank notification document.
+	InboxItem_BANK_NOTIFICATION InboxItem_DocType = 3
+	// Unknown document type.
+	InboxItem_UNKNOWN InboxItem_DocType = 4
+	// System verification document.
+	InboxItem_SYSTEM_VERIFICATION InboxItem_DocType = 5
 )
 
 // Enum value maps for InboxItem_DocType.
@@ -1239,9 +1280,12 @@ func (InboxItem_DocType) EnumDescriptor() ([]byte, []int) {
 type InboxItem_View int32
 
 const (
+	// Default unspecified view.
 	InboxItem_VIEW_UNSPECIFIED InboxItem_View = 0
-	InboxItem_BASIC            InboxItem_View = 1 // Excludes raw_payload and metadata
-	InboxItem_FULL             InboxItem_View = 2 // Returns complete fields
+	// Basic view excluding raw payload and metadata.
+	InboxItem_BASIC InboxItem_View = 1
+	// Full view returning complete fields.
+	InboxItem_FULL InboxItem_View = 2
 )
 
 // Enum value maps for InboxItem_View.
@@ -4052,6 +4096,7 @@ type RecurringTransaction struct {
 	// Output only. Hydrated minimal budget details. Available only on FULL view.
 	Budget *RecurringTransaction_BudgetInfo `protobuf:"bytes,16,opt,name=budget,proto3,oneof" json:"budget,omitempty"`
 	// Optional. Default financial account identifier to impact.
+	// Values are of the form `acc_[a-zA-Z0-9]+`.
 	AccountId     *string `protobuf:"bytes,17,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -4242,6 +4287,7 @@ type ScheduledTransaction struct {
 	// Required. Transaction type (EXPENSE or INCOME).
 	Type RecurringType `protobuf:"varint,15,opt,name=type,proto3,enum=saturn.finance.v1.RecurringType" json:"type,omitempty"`
 	// Optional. Settle account identifier.
+	// Values are of the form `acc_[a-zA-Z0-9]+`.
 	AccountId     *string `protobuf:"bytes,16,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -4441,6 +4487,7 @@ func (x *CreateRecurringTransactionRequest) GetRecurringTransaction() *Recurring
 type UpdateRecurringTransactionRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Required. Unique identifier of the template to update.
+	// Values are of the form `rec_[a-zA-Z0-9]+`.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Required. The recurring transaction template to update.
 	RecurringTransaction *RecurringTransaction `protobuf:"bytes,2,opt,name=recurring_transaction,json=recurringTransaction,proto3" json:"recurring_transaction,omitempty"`
@@ -6382,7 +6429,8 @@ func (x *Account) GetUpdateTime() *timestamppb.Timestamp {
 // Institution represents a financial bank, brokerage, or payment platform.
 type Institution struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Output only. Unique resource identifier (e.g. "inst_3HnhtBQD...").
+	// Output only. Unique identifier.
+	// Values are of the form `inst_[a-zA-Z0-9]+`.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Required. User-friendly name of the institution (e.g. "Chase", "Banco Popular").
 	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
@@ -6488,6 +6536,8 @@ func (x *Institution) GetUpdateTime() *timestamppb.Timestamp {
 	return nil
 }
 
+// The request for
+// [CreateInstitution][saturn.finance.v1.Finance.CreateInstitution].
 type CreateInstitutionRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Required. The institution payload to create.
@@ -6533,9 +6583,12 @@ func (x *CreateInstitutionRequest) GetInstitution() *Institution {
 	return nil
 }
 
+// The request for
+// [UpdateInstitution][saturn.finance.v1.Finance.UpdateInstitution].
 type UpdateInstitutionRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Required. Identifier of the institution to update.
+	// Values are of the form `inst_[a-zA-Z0-9]+`.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Required. Updated institution details.
 	Institution *Institution `protobuf:"bytes,2,opt,name=institution,proto3" json:"institution,omitempty"`
@@ -6605,9 +6658,12 @@ func (x *UpdateInstitutionRequest) GetVersion() int64 {
 	return 0
 }
 
+// The request for
+// [DeleteInstitution][saturn.finance.v1.Finance.DeleteInstitution].
 type DeleteInstitutionRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Required. Identifier of the institution to delete.
+	// Values are of the form `inst_[a-zA-Z0-9]+`.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Optional. Expected resource version.
 	Version       *int64 `protobuf:"varint,2,opt,name=version,proto3,oneof" json:"version,omitempty"`
@@ -6659,6 +6715,8 @@ func (x *DeleteInstitutionRequest) GetVersion() int64 {
 	return 0
 }
 
+// The request for
+// [ListInstitutions][saturn.finance.v1.Finance.ListInstitutions].
 type ListInstitutionsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Optional. Maximum number of items to return in a single page.
@@ -6722,6 +6780,8 @@ func (x *ListInstitutionsRequest) GetSearchQuery() string {
 	return ""
 }
 
+// The response for
+// [ListInstitutions][saturn.finance.v1.Finance.ListInstitutions].
 type ListInstitutionsResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// List of institutions registered in the space.
@@ -6776,6 +6836,8 @@ func (x *ListInstitutionsResponse) GetNextPageToken() string {
 	return ""
 }
 
+// The request for
+// [ResolveInstitution][saturn.finance.v1.Finance.ResolveInstitution].
 type ResolveInstitutionRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Required. Institution name to auto-resolve (e.g. "Chase" or "Banco Popular").
@@ -6821,6 +6883,8 @@ func (x *ResolveInstitutionRequest) GetName() string {
 	return ""
 }
 
+// The response for
+// [ResolveInstitution][saturn.finance.v1.Finance.ResolveInstitution].
 type ResolveInstitutionResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Resolved canonical institution name.
@@ -6832,6 +6896,7 @@ type ResolveInstitutionResponse struct {
 	// Recommended theme color.
 	Color string `protobuf:"bytes,4,opt,name=color,proto3" json:"color,omitempty"`
 	// Optional matching existing institution ID if an exact/fuzzy match already exists in the space.
+	// Values are of the form `inst_[a-zA-Z0-9]+`.
 	ExistingInstitutionId *string `protobuf:"bytes,5,opt,name=existing_institution_id,json=existingInstitutionId,proto3,oneof" json:"existing_institution_id,omitempty"`
 	// Optional existing matching institution name if a near match exists in the space.
 	ExistingInstitutionName *string `protobuf:"bytes,6,opt,name=existing_institution_name,json=existingInstitutionName,proto3,oneof" json:"existing_institution_name,omitempty"`
@@ -7900,8 +7965,10 @@ type InboxItem struct {
 	// Values are of the form `inb_[a-zA-Z0-9]+`.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Output only. Space identifier.
+	// Values are of the form `spc_[a-zA-Z0-9]+`.
 	SpaceId string `protobuf:"bytes,2,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
 	// Output only. Ingestion integration channel identifier.
+	// Values are of the form `int_[a-zA-Z0-9]+`.
 	IntegrationId string `protobuf:"bytes,3,opt,name=integration_id,json=integrationId,proto3" json:"integration_id,omitempty"`
 	// Output only. Staging lifecycle status.
 	Status InboxItem_Status `protobuf:"varint,4,opt,name=status,proto3,enum=saturn.finance.v1.InboxItem_Status" json:"status,omitempty"`
@@ -8415,8 +8482,10 @@ type Statement struct {
 	// Values are of the form `stmt_[a-zA-Z0-9]+`.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Output only. Associated workspace identifier.
+	// Values are of the form `spc_[a-zA-Z0-9]+`.
 	SpaceId string `protobuf:"bytes,2,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
 	// Output only. Identifier of the account this statement belongs to.
+	// Values are of the form `acc_[a-zA-Z0-9]+`.
 	AccountId string `protobuf:"bytes,3,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
 	// Output only. Current reconciliation status.
 	Status Statement_Status `protobuf:"varint,4,opt,name=status,proto3,enum=saturn.finance.v1.Statement_Status" json:"status,omitempty"`
@@ -8570,6 +8639,7 @@ type StatementLine struct {
 	// Values are of the form `stln_[a-zA-Z0-9]+`.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Output only. Identifier of the parent statement.
+	// Values are of the form `stmt_[a-zA-Z0-9]+`.
 	StatementId string `protobuf:"bytes,2,opt,name=statement_id,json=statementId,proto3" json:"statement_id,omitempty"`
 	// Output only. Line index inside the source statement (0-indexed).
 	RowIndex int32 `protobuf:"varint,3,opt,name=row_index,json=rowIndex,proto3" json:"row_index,omitempty"`
@@ -8582,6 +8652,7 @@ type StatementLine struct {
 	// Current reconciliation status of the line.
 	Status StatementLine_Status `protobuf:"varint,7,opt,name=status,proto3,enum=saturn.finance.v1.StatementLine_Status" json:"status,omitempty"`
 	// Output only. Linked transaction ID once committed/completed.
+	// Values are of the form `txn_[a-zA-Z0-9]+`.
 	MatchedTransactionId *string `protobuf:"bytes,8,opt,name=matched_transaction_id,json=matchedTransactionId,proto3,oneof" json:"matched_transaction_id,omitempty"`
 	// Output only. Bank confirmation number or wire reference.
 	Reference *string `protobuf:"bytes,9,opt,name=reference,proto3,oneof" json:"reference,omitempty"`
@@ -8596,7 +8667,8 @@ type StatementLine struct {
 	//	*StatementLine_ConfirmScheduled
 	//	*StatementLine_CreateRepayment
 	//	*StatementLine_Skip
-	Action      isStatementLine_Action     `protobuf_oneof:"action"`
+	Action isStatementLine_Action `protobuf_oneof:"action"`
+	// Output only. Grouped suggestions resolved dynamically by the matching engine.
 	Suggestions *StatementLine_Suggestions `protobuf:"bytes,17,opt,name=suggestions,proto3,oneof" json:"suggestions,omitempty"`
 	// Output only. Optimistic concurrency control version identifier.
 	Version       int64 `protobuf:"varint,18,opt,name=version,proto3" json:"version,omitempty"`
@@ -8786,30 +8858,37 @@ type isStatementLine_Action interface {
 }
 
 type StatementLine_Match struct {
+	// Match line to an existing transaction.
 	Match *StatementLine_MatchAction `protobuf:"bytes,10,opt,name=match,proto3,oneof"`
 }
 
 type StatementLine_CreateExpense struct {
+	// Create a new expense transaction.
 	CreateExpense *StatementLine_CreateExpenseAction `protobuf:"bytes,11,opt,name=create_expense,json=createExpense,proto3,oneof"`
 }
 
 type StatementLine_CreateIncome struct {
+	// Create a new income transaction.
 	CreateIncome *StatementLine_CreateIncomeAction `protobuf:"bytes,12,opt,name=create_income,json=createIncome,proto3,oneof"`
 }
 
 type StatementLine_CreateTransfer struct {
+	// Create a transfer between accounts.
 	CreateTransfer *StatementLine_CreateTransferAction `protobuf:"bytes,13,opt,name=create_transfer,json=createTransfer,proto3,oneof"`
 }
 
 type StatementLine_ConfirmScheduled struct {
+	// Confirm a pending scheduled transaction.
 	ConfirmScheduled *StatementLine_ConfirmScheduledAction `protobuf:"bytes,14,opt,name=confirm_scheduled,json=confirmScheduled,proto3,oneof"`
 }
 
 type StatementLine_CreateRepayment struct {
+	// Create a loan repayment.
 	CreateRepayment *StatementLine_CreateRepaymentAction `protobuf:"bytes,15,opt,name=create_repayment,json=createRepayment,proto3,oneof"`
 }
 
 type StatementLine_Skip struct {
+	// Skip this statement line.
 	Skip *StatementLine_SkipAction `protobuf:"bytes,16,opt,name=skip,proto3,oneof"`
 }
 
@@ -8827,10 +8906,12 @@ func (*StatementLine_CreateRepayment) isStatementLine_Action() {}
 
 func (*StatementLine_Skip) isStatementLine_Action() {}
 
-// Request to import a new statement.
+// The request for
+// [ImportStatement][saturn.finance.v1.Finance.ImportStatement].
 type ImportStatementRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Required. Target account identifier to upload the statement under.
+	// Values are of the form `acc_[a-zA-Z0-9]+`.
 	AccountId string `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
 	// Required. The statement resource properties to import.
 	Statement     *Statement `protobuf:"bytes,2,opt,name=statement,proto3" json:"statement,omitempty"`
@@ -8882,10 +8963,13 @@ func (x *ImportStatementRequest) GetStatement() *Statement {
 	return nil
 }
 
-// Request to get a statement.
+// The request for
+// [GetStatement][saturn.finance.v1.Finance.GetStatement].
 type GetStatementRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. Unique identifier of the statement to retrieve.
+	// Values are of the form `stmt_[a-zA-Z0-9]+`.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -8927,11 +9011,15 @@ func (x *GetStatementRequest) GetId() string {
 	return ""
 }
 
-// Request to delete a statement.
+// The request for
+// [DeleteStatement][saturn.finance.v1.Finance.DeleteStatement].
 type DeleteStatementRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Version       *int64                 `protobuf:"varint,2,opt,name=version,proto3,oneof" json:"version,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. Unique identifier of the statement to delete.
+	// Values are of the form `stmt_[a-zA-Z0-9]+`.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Optional. Expected resource version for optimistic concurrency control.
+	Version       *int64 `protobuf:"varint,2,opt,name=version,proto3,oneof" json:"version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -8980,10 +9068,12 @@ func (x *DeleteStatementRequest) GetVersion() int64 {
 	return 0
 }
 
-// Request to list statements in a space.
+// The request for
+// [ListStatements][saturn.finance.v1.Finance.ListStatements].
 type ListStatementsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Optional. Filter statements by account identifier.
+	// Values are of the form `acc_[a-zA-Z0-9]+`.
 	AccountId *string `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
 	// Optional. Filter statements by status.
 	Status *Statement_Status `protobuf:"varint,2,opt,name=status,proto3,enum=saturn.finance.v1.Statement_Status,oneof" json:"status,omitempty"`
@@ -9053,11 +9143,14 @@ func (x *ListStatementsRequest) GetPageToken() string {
 	return ""
 }
 
-// Response from listing statements.
+// The response for
+// [ListStatements][saturn.finance.v1.Finance.ListStatements].
 type ListStatementsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Statements    []*Statement           `protobuf:"bytes,1,rep,name=statements,proto3" json:"statements,omitempty"`
-	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// List of statements.
+	Statements []*Statement `protobuf:"bytes,1,rep,name=statements,proto3" json:"statements,omitempty"`
+	// Keyset token to fetch the next page of results. Empty if no more pages are available.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -9106,10 +9199,13 @@ func (x *ListStatementsResponse) GetNextPageToken() string {
 	return ""
 }
 
-// Request to list lines of a statement.
+// The request for
+// [ListStatementLines][saturn.finance.v1.Finance.ListStatementLines].
 type ListStatementLinesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	StatementId   string                 `protobuf:"bytes,1,opt,name=statement_id,json=statementId,proto3" json:"statement_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. Unique identifier of the parent statement.
+	// Values are of the form `stmt_[a-zA-Z0-9]+`.
+	StatementId   string `protobuf:"bytes,1,opt,name=statement_id,json=statementId,proto3" json:"statement_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -9151,10 +9247,12 @@ func (x *ListStatementLinesRequest) GetStatementId() string {
 	return ""
 }
 
-// Response from listing lines.
+// The response for
+// [ListStatementLines][saturn.finance.v1.Finance.ListStatementLines].
 type ListStatementLinesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Lines         []*StatementLine       `protobuf:"bytes,1,rep,name=lines,proto3" json:"lines,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// List of statement lines.
+	Lines         []*StatementLine `protobuf:"bytes,1,rep,name=lines,proto3" json:"lines,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -9196,10 +9294,12 @@ func (x *ListStatementLinesResponse) GetLines() []*StatementLine {
 	return nil
 }
 
-// Request to update a statement line's draft parameters.
+// The request for
+// [UpdateStatementLine][saturn.finance.v1.Finance.UpdateStatementLine].
 type UpdateStatementLineRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Required. Unique identifier of the statement line to update.
+	// Values are of the form `stln_[a-zA-Z0-9]+`.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Required. Updated statement line properties.
 	StatementLine *StatementLine `protobuf:"bytes,2,opt,name=statement_line,json=statementLine,proto3" json:"statement_line,omitempty"`
@@ -9269,10 +9369,12 @@ func (x *UpdateStatementLineRequest) GetVersion() int64 {
 	return 0
 }
 
-// Request to update a statement's properties (such as starting or ending balances).
+// The request for
+// [UpdateStatement][saturn.finance.v1.Finance.UpdateStatement].
 type UpdateStatementRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Required. Unique identifier of the statement to update.
+	// Values are of the form `stmt_[a-zA-Z0-9]+`.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Required. Updated statement properties.
 	Statement *Statement `protobuf:"bytes,2,opt,name=statement,proto3" json:"statement,omitempty"`
@@ -9342,10 +9444,13 @@ func (x *UpdateStatementRequest) GetVersion() int64 {
 	return 0
 }
 
-// Request to finalize and commit the statement.
+// The request for
+// [CompleteStatement][saturn.finance.v1.Finance.CompleteStatement].
 type CompleteStatementRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. Unique identifier of the statement to complete.
+	// Values are of the form `stmt_[a-zA-Z0-9]+`.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -9387,10 +9492,13 @@ func (x *CompleteStatementRequest) GetId() string {
 	return ""
 }
 
-// Request to invert all line amounts and negate starting/ending balances on an in-progress statement.
+// The request for
+// [InvertStatementSigns][saturn.finance.v1.Finance.InvertStatementSigns].
 type InvertStatementSignsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. Unique identifier of the statement to invert.
+	// Values are of the form `stmt_[a-zA-Z0-9]+`.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -9432,11 +9540,14 @@ func (x *InvertStatementSignsRequest) GetId() string {
 	return ""
 }
 
-// Response after inverting statement signs.
+// The response for
+// [InvertStatementSigns][saturn.finance.v1.Finance.InvertStatementSigns].
 type InvertStatementSignsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Statement     *Statement             `protobuf:"bytes,1,opt,name=statement,proto3" json:"statement,omitempty"`
-	Lines         []*StatementLine       `protobuf:"bytes,2,rep,name=lines,proto3" json:"lines,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The inverted statement.
+	Statement *Statement `protobuf:"bytes,1,opt,name=statement,proto3" json:"statement,omitempty"`
+	// List of updated statement lines with inverted amounts.
+	Lines         []*StatementLine `protobuf:"bytes,2,rep,name=lines,proto3" json:"lines,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -9487,17 +9598,25 @@ func (x *InvertStatementSignsResponse) GetLines() []*StatementLine {
 
 // SectionValidationReport summarizes the mathematical verification of an extracted currency section.
 type SectionValidationReport struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Currency         string                 `protobuf:"bytes,1,opt,name=currency,proto3" json:"currency,omitempty"`
-	StartingBalance  int64                  `protobuf:"varint,2,opt,name=starting_balance,json=startingBalance,proto3" json:"starting_balance,omitempty"`
-	EndingBalance    int64                  `protobuf:"varint,3,opt,name=ending_balance,json=endingBalance,proto3" json:"ending_balance,omitempty"`
-	CalculatedEnding int64                  `protobuf:"varint,4,opt,name=calculated_ending,json=calculatedEnding,proto3" json:"calculated_ending,omitempty"`
-	NetFlow          int64                  `protobuf:"varint,5,opt,name=net_flow,json=netFlow,proto3" json:"net_flow,omitempty"`
-	Discrepancy      int64                  `protobuf:"varint,6,opt,name=discrepancy,proto3" json:"discrepancy,omitempty"`
-	IsBalanced       bool                   `protobuf:"varint,7,opt,name=is_balanced,json=isBalanced,proto3" json:"is_balanced,omitempty"`
-	LineCount        int32                  `protobuf:"varint,8,opt,name=line_count,json=lineCount,proto3" json:"line_count,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Currency code for this section.
+	Currency string `protobuf:"bytes,1,opt,name=currency,proto3" json:"currency,omitempty"`
+	// Starting balance reported on the statement section in cents.
+	StartingBalance int64 `protobuf:"varint,2,opt,name=starting_balance,json=startingBalance,proto3" json:"starting_balance,omitempty"`
+	// Ending balance reported on the statement section in cents.
+	EndingBalance int64 `protobuf:"varint,3,opt,name=ending_balance,json=endingBalance,proto3" json:"ending_balance,omitempty"`
+	// Calculated ending balance based on starting balance and net line flows.
+	CalculatedEnding int64 `protobuf:"varint,4,opt,name=calculated_ending,json=calculatedEnding,proto3" json:"calculated_ending,omitempty"`
+	// Net sum of all line amounts in the section.
+	NetFlow int64 `protobuf:"varint,5,opt,name=net_flow,json=netFlow,proto3" json:"net_flow,omitempty"`
+	// Discrepancy between calculated ending balance and reported ending balance.
+	Discrepancy int64 `protobuf:"varint,6,opt,name=discrepancy,proto3" json:"discrepancy,omitempty"`
+	// Indicates whether the section is mathematically balanced.
+	IsBalanced bool `protobuf:"varint,7,opt,name=is_balanced,json=isBalanced,proto3" json:"is_balanced,omitempty"`
+	// Total number of transaction lines extracted in this section.
+	LineCount     int32 `protobuf:"varint,8,opt,name=line_count,json=lineCount,proto3" json:"line_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SectionValidationReport) Reset() {
@@ -9586,10 +9705,12 @@ func (x *SectionValidationReport) GetLineCount() int32 {
 	return 0
 }
 
-// Request to ingest an unstructured statement document and persist drafts.
+// The request for
+// [IngestStatementDocument][saturn.finance.v1.Finance.IngestStatementDocument].
 type IngestStatementDocumentRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Optional. Target account identifier override.
+	// Values are of the form `acc_[a-zA-Z0-9]+`.
 	TargetAccountId *string `protobuf:"bytes,1,opt,name=target_account_id,json=targetAccountId,proto3,oneof" json:"target_account_id,omitempty"`
 	// Required. Original file name.
 	Filename string `protobuf:"bytes,2,opt,name=filename,proto3" json:"filename,omitempty"`
@@ -9668,17 +9789,24 @@ func (x *IngestStatementDocumentRequest) GetPassword() string {
 	return ""
 }
 
-// Response from statement document ingestion.
+// The response for
+// [IngestStatementDocument][saturn.finance.v1.Finance.IngestStatementDocument].
 type IngestStatementDocumentResponse struct {
-	state             protoimpl.MessageState     `protogen:"open.v1"`
-	BatchId           string                     `protobuf:"bytes,1,opt,name=batch_id,json=batchId,proto3" json:"batch_id,omitempty"`
-	CreatedStatements []*Statement               `protobuf:"bytes,2,rep,name=created_statements,json=createdStatements,proto3" json:"created_statements,omitempty"`
-	SectionReports    []*SectionValidationReport `protobuf:"bytes,3,rep,name=section_reports,json=sectionReports,proto3" json:"section_reports,omitempty"`
-	UnmappedSections  []string                   `protobuf:"bytes,4,rep,name=unmapped_sections,json=unmappedSections,proto3" json:"unmapped_sections,omitempty"`
-	NeedsPassword     bool                       `protobuf:"varint,5,opt,name=needs_password,json=needsPassword,proto3" json:"needs_password,omitempty"`
-	Errors            []string                   `protobuf:"bytes,6,rep,name=errors,proto3" json:"errors,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Ingestion batch identifier.
+	BatchId string `protobuf:"bytes,1,opt,name=batch_id,json=batchId,proto3" json:"batch_id,omitempty"`
+	// List of created statement drafts.
+	CreatedStatements []*Statement `protobuf:"bytes,2,rep,name=created_statements,json=createdStatements,proto3" json:"created_statements,omitempty"`
+	// Section balance validation reports.
+	SectionReports []*SectionValidationReport `protobuf:"bytes,3,rep,name=section_reports,json=sectionReports,proto3" json:"section_reports,omitempty"`
+	// List of unmapped currency sections found in the document.
+	UnmappedSections []string `protobuf:"bytes,4,rep,name=unmapped_sections,json=unmappedSections,proto3" json:"unmapped_sections,omitempty"`
+	// Indicates whether a password is required to decrypt the document.
+	NeedsPassword bool `protobuf:"varint,5,opt,name=needs_password,json=needsPassword,proto3" json:"needs_password,omitempty"`
+	// Extraction or validation warning and error messages.
+	Errors        []string `protobuf:"bytes,6,rep,name=errors,proto3" json:"errors,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *IngestStatementDocumentResponse) Reset() {
@@ -9753,10 +9881,12 @@ func (x *IngestStatementDocumentResponse) GetErrors() []string {
 	return nil
 }
 
-// Request to analyze a statement document without creating DB drafts (preview mode).
+// The request for
+// [AnalyzeStatementDocument][saturn.finance.v1.Finance.AnalyzeStatementDocument].
 type AnalyzeStatementDocumentRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Optional. Target account identifier override.
+	// Values are of the form `acc_[a-zA-Z0-9]+`.
 	TargetAccountId *string `protobuf:"bytes,1,opt,name=target_account_id,json=targetAccountId,proto3,oneof" json:"target_account_id,omitempty"`
 	// Required. Original file name.
 	Filename string `protobuf:"bytes,2,opt,name=filename,proto3" json:"filename,omitempty"`
@@ -9835,15 +9965,20 @@ func (x *AnalyzeStatementDocumentRequest) GetPassword() string {
 	return ""
 }
 
-// Response from statement document analysis.
+// The response for
+// [AnalyzeStatementDocument][saturn.finance.v1.Finance.AnalyzeStatementDocument].
 type AnalyzeStatementDocumentResponse struct {
-	state            protoimpl.MessageState     `protogen:"open.v1"`
-	SectionReports   []*SectionValidationReport `protobuf:"bytes,1,rep,name=section_reports,json=sectionReports,proto3" json:"section_reports,omitempty"`
-	UnmappedSections []string                   `protobuf:"bytes,2,rep,name=unmapped_sections,json=unmappedSections,proto3" json:"unmapped_sections,omitempty"`
-	NeedsPassword    bool                       `protobuf:"varint,3,opt,name=needs_password,json=needsPassword,proto3" json:"needs_password,omitempty"`
-	Errors           []string                   `protobuf:"bytes,4,rep,name=errors,proto3" json:"errors,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Section balance validation reports.
+	SectionReports []*SectionValidationReport `protobuf:"bytes,1,rep,name=section_reports,json=sectionReports,proto3" json:"section_reports,omitempty"`
+	// List of unmapped currency sections found in the document.
+	UnmappedSections []string `protobuf:"bytes,2,rep,name=unmapped_sections,json=unmappedSections,proto3" json:"unmapped_sections,omitempty"`
+	// Indicates whether a password is required to decrypt the document.
+	NeedsPassword bool `protobuf:"varint,3,opt,name=needs_password,json=needsPassword,proto3" json:"needs_password,omitempty"`
+	// Extraction or validation warning and error messages.
+	Errors        []string `protobuf:"bytes,4,rep,name=errors,proto3" json:"errors,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AnalyzeStatementDocumentResponse) Reset() {
@@ -10871,11 +11006,16 @@ func (x *IncomeInsights_HighValueIncome) GetEffectiveDate() *timestamppb.Timesta
 
 // BudgetInfo wraps minimal budget details required for UI listing.
 type RecurringTransaction_BudgetInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Color         string                 `protobuf:"bytes,3,opt,name=color,proto3" json:"color,omitempty"`
-	Icon          string                 `protobuf:"bytes,4,opt,name=icon,proto3" json:"icon,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Unique identifier of the budget.
+	// Values are of the form `bud_[a-zA-Z0-9]+`.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// User-friendly name of the budget.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// Color hex code representing the budget.
+	Color string `protobuf:"bytes,3,opt,name=color,proto3" json:"color,omitempty"`
+	// Icon name representing the budget.
+	Icon          string `protobuf:"bytes,4,opt,name=icon,proto3" json:"icon,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -10995,11 +11135,16 @@ func (x *RecurringTransaction_ExecutionState) GetLastPaymentDate() *timestamppb.
 
 // BudgetInfo wraps minimal budget details required for UI listing.
 type ScheduledTransaction_BudgetInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Color         string                 `protobuf:"bytes,3,opt,name=color,proto3" json:"color,omitempty"`
-	Icon          string                 `protobuf:"bytes,4,opt,name=icon,proto3" json:"icon,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Unique identifier of the budget.
+	// Values are of the form `bud_[a-zA-Z0-9]+`.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// User-friendly name of the budget.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// Color hex code representing the budget.
+	Color string `protobuf:"bytes,3,opt,name=color,proto3" json:"color,omitempty"`
+	// Icon name representing the budget.
+	Icon          string `protobuf:"bytes,4,opt,name=icon,proto3" json:"icon,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -11064,9 +11209,13 @@ func (x *ScheduledTransaction_BudgetInfo) GetIcon() string {
 
 // RecurringTransactionInfo wraps parent template details.
 type ScheduledTransaction_RecurringTransactionInfo struct {
-	state         protoimpl.MessageState        `protogen:"open.v1"`
-	Id            string                        `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                        `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Unique identifier of the recurring transaction template.
+	// Values are of the form `rec_[a-zA-Z0-9]+`.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// User-friendly name of the recurring transaction template.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// Recurrence interval rule.
 	Interval      RecurringTransaction_Interval `protobuf:"varint,3,opt,name=interval,proto3,enum=saturn.finance.v1.RecurringTransaction_Interval" json:"interval,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -11125,13 +11274,19 @@ func (x *ScheduledTransaction_RecurringTransactionInfo) GetInterval() RecurringT
 
 // Metadata wraps context metadata for scheduled transactions.
 type ScheduledTransaction_Metadata struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	DueDate       string                 `protobuf:"bytes,2,opt,name=due_date,json=dueDate,proto3" json:"due_date,omitempty"`
-	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	VendorName    string                 `protobuf:"bytes,4,opt,name=vendor_name,json=vendorName,proto3" json:"vendor_name,omitempty"`
-	InvoiceId     string                 `protobuf:"bytes,5,opt,name=invoice_id,json=invoiceId,proto3" json:"invoice_id,omitempty"`
-	Notes         string                 `protobuf:"bytes,6,opt,name=notes,proto3" json:"notes,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// User-friendly name of the scheduled item.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// Due date formatted as a date string.
+	DueDate string `protobuf:"bytes,2,opt,name=due_date,json=dueDate,proto3" json:"due_date,omitempty"`
+	// Descriptive memo or note for the transaction.
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// Counterparty or vendor name.
+	VendorName string `protobuf:"bytes,4,opt,name=vendor_name,json=vendorName,proto3" json:"vendor_name,omitempty"`
+	// Associated billing invoice identifier.
+	InvoiceId string `protobuf:"bytes,5,opt,name=invoice_id,json=invoiceId,proto3" json:"invoice_id,omitempty"`
+	// Additional notes or comments.
+	Notes         string `protobuf:"bytes,6,opt,name=notes,proto3" json:"notes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -11348,6 +11503,8 @@ func (x *Account_InstitutionInfo) GetColor() string {
 // Nested parsing configuration.
 type Statement_Config struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// Specific file format parsing configuration.
+	//
 	// Types that are valid to be assigned to Format:
 	//
 	//	*Statement_Config_Csv
@@ -11407,24 +11564,35 @@ type isStatement_Config_Format interface {
 }
 
 type Statement_Config_Csv struct {
+	// Configuration for parsing CSV statement files.
 	Csv *Statement_Config_CsvConfig `protobuf:"bytes,1,opt,name=csv,proto3,oneof"`
 }
 
 func (*Statement_Config_Csv) isStatement_Config_Format() {}
 
+// CSV file parsing configuration.
 type Statement_Config_CsvConfig struct {
-	state                  protoimpl.MessageState `protogen:"open.v1"`
-	HasHeader              bool                   `protobuf:"varint,1,opt,name=has_header,json=hasHeader,proto3" json:"has_header,omitempty"`
-	Delimiter              string                 `protobuf:"bytes,2,opt,name=delimiter,proto3" json:"delimiter,omitempty"`
-	DateFormat             string                 `protobuf:"bytes,3,opt,name=date_format,json=dateFormat,proto3" json:"date_format,omitempty"`
-	DateColumnIndex        int32                  `protobuf:"varint,4,opt,name=date_column_index,json=dateColumnIndex,proto3" json:"date_column_index,omitempty"`
-	DescriptionColumnIndex int32                  `protobuf:"varint,5,opt,name=description_column_index,json=descriptionColumnIndex,proto3" json:"description_column_index,omitempty"`
-	ReferenceColumnIndex   int32                  `protobuf:"varint,6,opt,name=reference_column_index,json=referenceColumnIndex,proto3" json:"reference_column_index,omitempty"`
-	AmountColumnIndex      int32                  `protobuf:"varint,7,opt,name=amount_column_index,json=amountColumnIndex,proto3" json:"amount_column_index,omitempty"`
-	DebitColumnIndex       int32                  `protobuf:"varint,8,opt,name=debit_column_index,json=debitColumnIndex,proto3" json:"debit_column_index,omitempty"`
-	CreditColumnIndex      int32                  `protobuf:"varint,9,opt,name=credit_column_index,json=creditColumnIndex,proto3" json:"credit_column_index,omitempty"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Indicates whether the CSV file includes a header row.
+	HasHeader bool `protobuf:"varint,1,opt,name=has_header,json=hasHeader,proto3" json:"has_header,omitempty"`
+	// Delimiter character separating fields (e.g. "," or ";").
+	Delimiter string `protobuf:"bytes,2,opt,name=delimiter,proto3" json:"delimiter,omitempty"`
+	// Format string for parsing transaction dates (e.g. "YYYY-MM-DD").
+	DateFormat string `protobuf:"bytes,3,opt,name=date_format,json=dateFormat,proto3" json:"date_format,omitempty"`
+	// Zero-based column index for the transaction date.
+	DateColumnIndex int32 `protobuf:"varint,4,opt,name=date_column_index,json=dateColumnIndex,proto3" json:"date_column_index,omitempty"`
+	// Zero-based column index for the transaction description.
+	DescriptionColumnIndex int32 `protobuf:"varint,5,opt,name=description_column_index,json=descriptionColumnIndex,proto3" json:"description_column_index,omitempty"`
+	// Zero-based column index for the reference or check number.
+	ReferenceColumnIndex int32 `protobuf:"varint,6,opt,name=reference_column_index,json=referenceColumnIndex,proto3" json:"reference_column_index,omitempty"`
+	// Zero-based column index for the single signed amount column.
+	AmountColumnIndex int32 `protobuf:"varint,7,opt,name=amount_column_index,json=amountColumnIndex,proto3" json:"amount_column_index,omitempty"`
+	// Zero-based column index for debit amounts in split debit/credit files.
+	DebitColumnIndex int32 `protobuf:"varint,8,opt,name=debit_column_index,json=debitColumnIndex,proto3" json:"debit_column_index,omitempty"`
+	// Zero-based column index for credit amounts in split debit/credit files.
+	CreditColumnIndex int32 `protobuf:"varint,9,opt,name=credit_column_index,json=creditColumnIndex,proto3" json:"credit_column_index,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *Statement_Config_CsvConfig) Reset() {
@@ -11520,11 +11688,14 @@ func (x *Statement_Config_CsvConfig) GetCreditColumnIndex() int32 {
 	return 0
 }
 
-// Draft actions
+// MatchAction links the statement line to an existing transaction.
 type StatementLine_MatchAction struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	TransactionId        string                 `protobuf:"bytes,1,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
-	OverwriteTransaction *bool                  `protobuf:"varint,2,opt,name=overwrite_transaction,json=overwriteTransaction,proto3,oneof" json:"overwrite_transaction,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Identifier of the existing transaction to match against.
+	// Values are of the form `txn_[a-zA-Z0-9]+`.
+	TransactionId string `protobuf:"bytes,1,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
+	// Optional flag to overwrite the existing transaction's details with statement line data.
+	OverwriteTransaction *bool `protobuf:"varint,2,opt,name=overwrite_transaction,json=overwriteTransaction,proto3,oneof" json:"overwrite_transaction,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -11573,9 +11744,12 @@ func (x *StatementLine_MatchAction) GetOverwriteTransaction() bool {
 	return false
 }
 
+// CreateExpenseAction creates a new expense transaction from the statement line.
 type StatementLine_CreateExpenseAction struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	BudgetId      string                 `protobuf:"bytes,1,opt,name=budget_id,json=budgetId,proto3" json:"budget_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Identifier of the budget category to assign the expense to.
+	// Values are of the form `bud_[a-zA-Z0-9]+`.
+	BudgetId      string `protobuf:"bytes,1,opt,name=budget_id,json=budgetId,proto3" json:"budget_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -11617,6 +11791,7 @@ func (x *StatementLine_CreateExpenseAction) GetBudgetId() string {
 	return ""
 }
 
+// CreateIncomeAction creates a new income transaction from the statement line.
 type StatementLine_CreateIncomeAction struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -11653,9 +11828,12 @@ func (*StatementLine_CreateIncomeAction) Descriptor() ([]byte, []int) {
 	return file_saturn_finance_v1_finance_proto_rawDescGZIP(), []int{93, 2}
 }
 
+// CreateTransferAction creates a transfer transaction between accounts.
 type StatementLine_CreateTransferAction struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	CounterpartAccountId string                 `protobuf:"bytes,1,opt,name=counterpart_account_id,json=counterpartAccountId,proto3" json:"counterpart_account_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Identifier of the counterpart account involved in the transfer.
+	// Values are of the form `acc_[a-zA-Z0-9]+`.
+	CounterpartAccountId string `protobuf:"bytes,1,opt,name=counterpart_account_id,json=counterpartAccountId,proto3" json:"counterpart_account_id,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -11697,9 +11875,12 @@ func (x *StatementLine_CreateTransferAction) GetCounterpartAccountId() string {
 	return ""
 }
 
+// ConfirmScheduledAction confirms a pending scheduled transaction matching the statement line.
 type StatementLine_ConfirmScheduledAction struct {
-	state                  protoimpl.MessageState `protogen:"open.v1"`
-	ScheduledTransactionId string                 `protobuf:"bytes,1,opt,name=scheduled_transaction_id,json=scheduledTransactionId,proto3" json:"scheduled_transaction_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Identifier of the scheduled transaction to confirm.
+	// Values are of the form `sch_[a-zA-Z0-9]+`.
+	ScheduledTransactionId string `protobuf:"bytes,1,opt,name=scheduled_transaction_id,json=scheduledTransactionId,proto3" json:"scheduled_transaction_id,omitempty"`
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
@@ -11741,9 +11922,12 @@ func (x *StatementLine_ConfirmScheduledAction) GetScheduledTransactionId() strin
 	return ""
 }
 
+// CreateRepaymentAction creates a repayment against an existing borrowing agreement.
 type StatementLine_CreateRepaymentAction struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	BorrowingId   string                 `protobuf:"bytes,1,opt,name=borrowing_id,json=borrowingId,proto3" json:"borrowing_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Identifier of the borrowing agreement to apply the repayment to.
+	// Values are of the form `bor_[a-zA-Z0-9]+`.
+	BorrowingId   string `protobuf:"bytes,1,opt,name=borrowing_id,json=borrowingId,proto3" json:"borrowing_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -11785,6 +11969,7 @@ func (x *StatementLine_CreateRepaymentAction) GetBorrowingId() string {
 	return ""
 }
 
+// SkipAction skips reconciliation for this statement line.
 type StatementLine_SkipAction struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -11823,12 +12008,16 @@ func (*StatementLine_SkipAction) Descriptor() ([]byte, []int) {
 
 // Grouped suggestions resolved dynamically by the matching engine on fetch.
 type StatementLine_Suggestions struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	TransactionType Transaction_Type       `protobuf:"varint,1,opt,name=transaction_type,json=transactionType,proto3,enum=saturn.finance.v1.Transaction_Type" json:"transaction_type,omitempty"`
-	BudgetId        *string                `protobuf:"bytes,2,opt,name=budget_id,json=budgetId,proto3,oneof" json:"budget_id,omitempty"`
-	Matches         []*Transaction         `protobuf:"bytes,3,rep,name=matches,proto3" json:"matches,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. Suggested transaction type based on amount sign and context.
+	TransactionType Transaction_Type `protobuf:"varint,1,opt,name=transaction_type,json=transactionType,proto3,enum=saturn.finance.v1.Transaction_Type" json:"transaction_type,omitempty"`
+	// Output only. Suggested budget category identifier.
+	// Values are of the form `bud_[a-zA-Z0-9]+`.
+	BudgetId *string `protobuf:"bytes,2,opt,name=budget_id,json=budgetId,proto3,oneof" json:"budget_id,omitempty"`
+	// Output only. Candidate transactions that potentially match this statement line.
+	Matches       []*Transaction `protobuf:"bytes,3,rep,name=matches,proto3" json:"matches,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *StatementLine_Suggestions) Reset() {

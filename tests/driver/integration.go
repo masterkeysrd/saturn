@@ -10,8 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"google.golang.org/protobuf/types/known/emptypb"
-
 	"github.com/masterkeysrd/saturn/apis/saturn"
 	integrationv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/integration/v1"
 )

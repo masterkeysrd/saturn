@@ -1355,8 +1355,13 @@ message GenerateScheduledTransactionsPayload {
 
 // RecurringType defines the type of recurring transaction.
 enum RecurringType {
+  // Default unspecified recurring type.
   RECURRING_TYPE_UNSPECIFIED = 0;
+
+  // Expense recurring transaction.
   EXPENSE = 1;
+
+  // Income recurring transaction.
   INCOME = 2;
 }
 
@@ -1364,32 +1369,59 @@ enum RecurringType {
 message RecurringTransaction {
   // Scoped resource representation view level.
   enum View {
+    // Default unspecified view.
     VIEW_UNSPECIFIED = 0;
+
+    // Basic view including summary fields.
     BASIC = 1;
+
+    // Full view including hydrated associations.
     FULL = 2;
   }
 
   // BudgetInfo wraps minimal budget details required for UI listing.
   message BudgetInfo {
+    // Unique identifier of the budget.
+    // Values are of the form `bud_[a-zA-Z0-9]+`.
     string id = 1;
+
+    // User-friendly name of the budget.
     string name = 2;
+
+    // Color hex code representing the budget.
     string color = 3;
+
+    // Icon name representing the budget.
     string icon = 4;
   }
 
   // Execution interval recurrence rule.
   enum Interval {
+    // Default unspecified interval.
     INTERVAL_UNSPECIFIED = 0;
+
+    // Weekly recurrence interval.
     WEEKLY = 1;
+
+    // Monthly recurrence interval.
     MONTHLY = 2;
+
+    // Yearly recurrence interval.
     YEARLY = 3;
   }
 
   // Active template status.
   enum Status {
+    // Default unspecified status.
     STATUS_UNSPECIFIED = 0;
+
+    // Recurring transaction is active.
     ACTIVE = 1;
+
+    // Recurring transaction is paused.
     PAUSED = 2;
+
+    // Recurring transaction has ended.
     ENDED = 3;
   }
 
@@ -1453,6 +1485,7 @@ message RecurringTransaction {
   optional BudgetInfo budget = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Optional. Default financial account identifier to impact.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
   optional string account_id = 17 [(google.api.field_behavior) = OPTIONAL];
 }
 
@@ -1460,33 +1493,63 @@ message RecurringTransaction {
 message ScheduledTransaction {
   // Scoped resource representation view level.
   enum View {
+    // Default unspecified view.
     VIEW_UNSPECIFIED = 0;
+
+    // Basic view including summary fields.
     BASIC = 1;
+
+    // Full view including hydrated associations.
     FULL = 2;
   }
 
   // BudgetInfo wraps minimal budget details required for UI listing.
   message BudgetInfo {
+    // Unique identifier of the budget.
+    // Values are of the form `bud_[a-zA-Z0-9]+`.
     string id = 1;
+
+    // User-friendly name of the budget.
     string name = 2;
+
+    // Color hex code representing the budget.
     string color = 3;
+
+    // Icon name representing the budget.
     string icon = 4;
   }
 
   // RecurringTransactionInfo wraps parent template details.
   message RecurringTransactionInfo {
+    // Unique identifier of the recurring transaction template.
+    // Values are of the form `rec_[a-zA-Z0-9]+`.
     string id = 1;
+
+    // User-friendly name of the recurring transaction template.
     string name = 2;
+
+    // Recurrence interval rule.
     RecurringTransaction.Interval interval = 3;
   }
 
   // Metadata wraps context metadata for scheduled transactions.
   message Metadata {
+    // User-friendly name of the scheduled item.
     string name = 1;
+
+    // Due date formatted as a date string.
     string due_date = 2;
+
+    // Descriptive memo or note for the transaction.
     string description = 3;
+
+    // Counterparty or vendor name.
     string vendor_name = 4;
+
+    // Associated billing invoice identifier.
     string invoice_id = 5;
+
+    // Additional notes or comments.
     string notes = 6;
   }
 
@@ -1503,9 +1566,16 @@ message ScheduledTransaction {
 
   // Parent template source type.
   enum SourceType {
+    // Default unspecified source type.
     SOURCE_TYPE_UNSPECIFIED = 0;
+
+    // Created from a recurring transaction template.
     RECURRENT_TRANSACTION = 1;
+
+    // Created from a loan or borrowing schedule.
     LOAN = 2;
+
+    // Created from a tax schedule.
     TAX = 3;
   }
 
@@ -1526,10 +1596,19 @@ message ScheduledTransaction {
 
   // Instance execution status.
   enum Status {
+    // Default unspecified status.
     STATUS_UNSPECIFIED = 0;
+
+    // Transaction is pending payment.
     PENDING = 1;
+
+    // Transaction is currently being processed.
     PROCESSING = 2;
+
+    // Transaction was skipped.
     SKIPPED = 3;
+
+    // Transaction has been paid.
     PAID = 4;
   }
 
@@ -1555,6 +1634,7 @@ message ScheduledTransaction {
   RecurringType type = 15 [(google.api.field_behavior) = REQUIRED];
 
   // Optional. Settle account identifier.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
   optional string account_id = 16 [(google.api.field_behavior) = OPTIONAL];
 }
 
@@ -1569,6 +1649,7 @@ message CreateRecurringTransactionRequest {
 // [UpdateRecurringTransaction][saturn.finance.v1.Finance.UpdateRecurringTransaction].
 message UpdateRecurringTransactionRequest {
   // Required. Unique identifier of the template to update.
+  // Values are of the form `rec_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 
   // Required. The recurring transaction template to update.
@@ -2079,7 +2160,8 @@ message Account {
 
 // Institution represents a financial bank, brokerage, or payment platform.
 message Institution {
-  // Output only. Unique resource identifier (e.g. "inst_3HnhtBQD...").
+  // Output only. Unique identifier.
+  // Values are of the form `inst_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Required. User-friendly name of the institution (e.g. "Chase", "Banco Popular").
@@ -2104,13 +2186,18 @@ message Institution {
   google.protobuf.Timestamp update_time = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// The request for
+// [CreateInstitution][saturn.finance.v1.Finance.CreateInstitution].
 message CreateInstitutionRequest {
   // Required. The institution payload to create.
   Institution institution = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
+// The request for
+// [UpdateInstitution][saturn.finance.v1.Finance.UpdateInstitution].
 message UpdateInstitutionRequest {
   // Required. Identifier of the institution to update.
+  // Values are of the form `inst_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 
   // Required. Updated institution details.
@@ -2123,14 +2210,19 @@ message UpdateInstitutionRequest {
   optional int64 version = 4 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// The request for
+// [DeleteInstitution][saturn.finance.v1.Finance.DeleteInstitution].
 message DeleteInstitutionRequest {
   // Required. Identifier of the institution to delete.
+  // Values are of the form `inst_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 
   // Optional. Expected resource version.
   optional int64 version = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// The request for
+// [ListInstitutions][saturn.finance.v1.Finance.ListInstitutions].
 message ListInstitutionsRequest {
   // Optional. Maximum number of items to return in a single page.
   int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
@@ -2142,6 +2234,8 @@ message ListInstitutionsRequest {
   optional string search_query = 3 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// The response for
+// [ListInstitutions][saturn.finance.v1.Finance.ListInstitutions].
 message ListInstitutionsResponse {
   // List of institutions registered in the space.
   repeated Institution institutions = 1;
@@ -2150,11 +2244,15 @@ message ListInstitutionsResponse {
   string next_page_token = 2;
 }
 
+// The request for
+// [ResolveInstitution][saturn.finance.v1.Finance.ResolveInstitution].
 message ResolveInstitutionRequest {
   // Required. Institution name to auto-resolve (e.g. "Chase" or "Banco Popular").
   string name = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
+// The response for
+// [ResolveInstitution][saturn.finance.v1.Finance.ResolveInstitution].
 message ResolveInstitutionResponse {
   // Resolved canonical institution name.
   string name = 1;
@@ -2169,6 +2267,7 @@ message ResolveInstitutionResponse {
   string color = 4;
 
   // Optional matching existing institution ID if an exact/fuzzy match already exists in the space.
+  // Values are of the form `inst_[a-zA-Z0-9]+`.
   optional string existing_institution_id = 5;
 
   // Optional existing matching institution name if a near match exists in the space.
@@ -2391,20 +2490,40 @@ message ListTransactionEventsResponse {
 message InboxItem {
   // Staging lifecycle status enum.
   enum Status {
+    // Default unspecified status.
     STATUS_UNSPECIFIED = 0;
+
+    // Item is pending processing.
     PENDING = 1;
+
+    // Item is currently being processed.
     PROCESSING = 2;
+
+    // Item has been resolved and linked.
     RESOLVED = 3;
+
+    // Item is archived.
     ARCHIVED = 4;
   }
 
   // Document category classification enum.
   enum DocType {
+    // Default unspecified document type.
     DOC_TYPE_UNSPECIFIED = 0;
+
+    // Invoice document.
     INVOICE = 1;
+
+    // Receipt document.
     RECEIPT = 2;
+
+    // Bank notification document.
     BANK_NOTIFICATION = 3;
+
+    // Unknown document type.
     UNKNOWN = 4;
+
+    // System verification document.
     SYSTEM_VERIFICATION = 5;
   }
 
@@ -2413,9 +2532,11 @@ message InboxItem {
   string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output only. Space identifier.
+  // Values are of the form `spc_[a-zA-Z0-9]+`.
   string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output only. Ingestion integration channel identifier.
+  // Values are of the form `int_[a-zA-Z0-9]+`.
   string integration_id = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output only. Staging lifecycle status.
@@ -2470,18 +2591,30 @@ message InboxItem {
 
   // Optional representation view.
   enum View {
+    // Default unspecified view.
     VIEW_UNSPECIFIED = 0;
-    BASIC = 1; // Excludes raw_payload and metadata
-    FULL = 2; // Returns complete fields
+
+    // Basic view excluding raw payload and metadata.
+    BASIC = 1;
+
+    // Full view returning complete fields.
+    FULL = 2;
   }
 }
 
 // Borrowing link classification type.
 enum BorrowingLinkType {
+  // Default unspecified borrowing link type.
   BORROWING_LINK_TYPE_UNSPECIFIED = 0;
-  BORROWING_LINK_TYPE_INITIAL_RECEIPT = 1; // Original funding proof ($0 balance adjustment)
-  BORROWING_LINK_TYPE_REPAYMENT = 2; // Installment payback (reduces remaining balance)
-  BORROWING_LINK_TYPE_ADDITIONAL_LOAN = 3; // Top-up / extra drawdown (increases balance)
+
+  // Original funding proof ($0 balance adjustment).
+  BORROWING_LINK_TYPE_INITIAL_RECEIPT = 1;
+
+  // Installment payback (reduces remaining balance).
+  BORROWING_LINK_TYPE_REPAYMENT = 2;
+
+  // Top-up or extra drawdown (increases balance).
+  BORROWING_LINK_TYPE_ADDITIONAL_LOAN = 3;
 }
 
 // The request for
@@ -2560,20 +2693,39 @@ message Statement {
 
   // Nested parsing configuration.
   message Config {
+    // CSV file parsing configuration.
     message CsvConfig {
+      // Indicates whether the CSV file includes a header row.
       bool has_header = 1;
+
+      // Delimiter character separating fields (e.g. "," or ";").
       string delimiter = 2;
+
+      // Format string for parsing transaction dates (e.g. "YYYY-MM-DD").
       string date_format = 3;
 
+      // Zero-based column index for the transaction date.
       int32 date_column_index = 4;
+
+      // Zero-based column index for the transaction description.
       int32 description_column_index = 5;
+
+      // Zero-based column index for the reference or check number.
       int32 reference_column_index = 6;
+
+      // Zero-based column index for the single signed amount column.
       int32 amount_column_index = 7;
+
+      // Zero-based column index for debit amounts in split debit/credit files.
       int32 debit_column_index = 8;
+
+      // Zero-based column index for credit amounts in split debit/credit files.
       int32 credit_column_index = 9;
     }
 
+    // Specific file format parsing configuration.
     oneof format {
+      // Configuration for parsing CSV statement files.
       CsvConfig csv = 1;
     }
   }
@@ -2583,9 +2735,11 @@ message Statement {
   string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output only. Associated workspace identifier.
+  // Values are of the form `spc_[a-zA-Z0-9]+`.
   string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output only. Identifier of the account this statement belongs to.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
   string account_id = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output only. Current reconciliation status.
@@ -2640,6 +2794,7 @@ message StatementLine {
   string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output only. Identifier of the parent statement.
+  // Values are of the form `stmt_[a-zA-Z0-9]+`.
   string statement_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output only. Line index inside the source statement (0-indexed).
@@ -2658,105 +2813,177 @@ message StatementLine {
   Status status = 7;
 
   // Output only. Linked transaction ID once committed/completed.
+  // Values are of the form `txn_[a-zA-Z0-9]+`.
   optional string matched_transaction_id = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output only. Bank confirmation number or wire reference.
   optional string reference = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
 
-  // Draft actions
+  // MatchAction links the statement line to an existing transaction.
   message MatchAction {
+    // Identifier of the existing transaction to match against.
+    // Values are of the form `txn_[a-zA-Z0-9]+`.
     string transaction_id = 1;
+
+    // Optional flag to overwrite the existing transaction's details with statement line data.
     optional bool overwrite_transaction = 2;
   }
+
+  // CreateExpenseAction creates a new expense transaction from the statement line.
   message CreateExpenseAction {
+    // Identifier of the budget category to assign the expense to.
+    // Values are of the form `bud_[a-zA-Z0-9]+`.
     string budget_id = 1;
   }
+
+  // CreateIncomeAction creates a new income transaction from the statement line.
   message CreateIncomeAction {}
+
+  // CreateTransferAction creates a transfer transaction between accounts.
   message CreateTransferAction {
+    // Identifier of the counterpart account involved in the transfer.
+    // Values are of the form `acc_[a-zA-Z0-9]+`.
     string counterpart_account_id = 1;
   }
+
+  // ConfirmScheduledAction confirms a pending scheduled transaction matching the statement line.
   message ConfirmScheduledAction {
+    // Identifier of the scheduled transaction to confirm.
+    // Values are of the form `sch_[a-zA-Z0-9]+`.
     string scheduled_transaction_id = 1;
   }
+
+  // CreateRepaymentAction creates a repayment against an existing borrowing agreement.
   message CreateRepaymentAction {
+    // Identifier of the borrowing agreement to apply the repayment to.
+    // Values are of the form `bor_[a-zA-Z0-9]+`.
     string borrowing_id = 1;
   }
+
+  // SkipAction skips reconciliation for this statement line.
   message SkipAction {}
 
   // The draft action representing the user's matching/categorization choice.
   oneof action {
+    // Match line to an existing transaction.
     MatchAction match = 10;
+
+    // Create a new expense transaction.
     CreateExpenseAction create_expense = 11;
+
+    // Create a new income transaction.
     CreateIncomeAction create_income = 12;
+
+    // Create a transfer between accounts.
     CreateTransferAction create_transfer = 13;
+
+    // Confirm a pending scheduled transaction.
     ConfirmScheduledAction confirm_scheduled = 14;
+
+    // Create a loan repayment.
     CreateRepaymentAction create_repayment = 15;
+
+    // Skip this statement line.
     SkipAction skip = 16;
   }
 
   // Grouped suggestions resolved dynamically by the matching engine on fetch.
   message Suggestions {
+    // Output only. Suggested transaction type based on amount sign and context.
     Transaction.Type transaction_type = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Suggested budget category identifier.
+    // Values are of the form `bud_[a-zA-Z0-9]+`.
     optional string budget_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+    // Output only. Candidate transactions that potentially match this statement line.
     repeated Transaction matches = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
   }
+
+  // Output only. Grouped suggestions resolved dynamically by the matching engine.
   optional Suggestions suggestions = 17 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output only. Optimistic concurrency control version identifier.
   int64 version = 18 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
-// Request to import a new statement.
+// The request for
+// [ImportStatement][saturn.finance.v1.Finance.ImportStatement].
 message ImportStatementRequest {
   // Required. Target account identifier to upload the statement under.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
   string account_id = 1 [(google.api.field_behavior) = REQUIRED];
 
   // Required. The statement resource properties to import.
   Statement statement = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
-// Request to get a statement.
+// The request for
+// [GetStatement][saturn.finance.v1.Finance.GetStatement].
 message GetStatementRequest {
+  // Required. Unique identifier of the statement to retrieve.
+  // Values are of the form `stmt_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
-// Request to delete a statement.
+// The request for
+// [DeleteStatement][saturn.finance.v1.Finance.DeleteStatement].
 message DeleteStatementRequest {
+  // Required. Unique identifier of the statement to delete.
+  // Values are of the form `stmt_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. Expected resource version for optimistic concurrency control.
   optional int64 version = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 
-// Request to list statements in a space.
+// The request for
+// [ListStatements][saturn.finance.v1.Finance.ListStatements].
 message ListStatementsRequest {
   // Optional. Filter statements by account identifier.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
   optional string account_id = 1 [(google.api.field_behavior) = OPTIONAL];
+
   // Optional. Filter statements by status.
   optional Statement.Status status = 2 [(google.api.field_behavior) = OPTIONAL];
+
   // Optional. Number of statements to return.
   int32 page_size = 3 [(google.api.field_behavior) = OPTIONAL];
+
   // Optional. Keyset pagination token.
   string page_token = 4 [(google.api.field_behavior) = OPTIONAL];
 }
 
-// Response from listing statements.
+// The response for
+// [ListStatements][saturn.finance.v1.Finance.ListStatements].
 message ListStatementsResponse {
+  // List of statements.
   repeated Statement statements = 1;
+
+  // Keyset token to fetch the next page of results. Empty if no more pages are available.
   string next_page_token = 2;
 }
 
-// Request to list lines of a statement.
+// The request for
+// [ListStatementLines][saturn.finance.v1.Finance.ListStatementLines].
 message ListStatementLinesRequest {
+  // Required. Unique identifier of the parent statement.
+  // Values are of the form `stmt_[a-zA-Z0-9]+`.
   string statement_id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
-// Response from listing lines.
+// The response for
+// [ListStatementLines][saturn.finance.v1.Finance.ListStatementLines].
 message ListStatementLinesResponse {
+  // List of statement lines.
   repeated StatementLine lines = 1;
 }
 
-// Request to update a statement line's draft parameters.
+// The request for
+// [UpdateStatementLine][saturn.finance.v1.Finance.UpdateStatementLine].
 message UpdateStatementLineRequest {
   // Required. Unique identifier of the statement line to update.
+  // Values are of the form `stln_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 
   // Required. Updated statement line properties.
@@ -2769,9 +2996,11 @@ message UpdateStatementLineRequest {
   optional int64 version = 4 [(google.api.field_behavior) = OPTIONAL];
 }
 
-// Request to update a statement's properties (such as starting or ending balances).
+// The request for
+// [UpdateStatement][saturn.finance.v1.Finance.UpdateStatement].
 message UpdateStatementRequest {
   // Required. Unique identifier of the statement to update.
+  // Values are of the form `stmt_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 
   // Required. Updated statement properties.
@@ -2784,37 +3013,64 @@ message UpdateStatementRequest {
   optional int64 version = 4 [(google.api.field_behavior) = OPTIONAL];
 }
 
-// Request to finalize and commit the statement.
+// The request for
+// [CompleteStatement][saturn.finance.v1.Finance.CompleteStatement].
 message CompleteStatementRequest {
+  // Required. Unique identifier of the statement to complete.
+  // Values are of the form `stmt_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
-// Request to invert all line amounts and negate starting/ending balances on an in-progress statement.
+// The request for
+// [InvertStatementSigns][saturn.finance.v1.Finance.InvertStatementSigns].
 message InvertStatementSignsRequest {
+  // Required. Unique identifier of the statement to invert.
+  // Values are of the form `stmt_[a-zA-Z0-9]+`.
   string id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
-// Response after inverting statement signs.
+// The response for
+// [InvertStatementSigns][saturn.finance.v1.Finance.InvertStatementSigns].
 message InvertStatementSignsResponse {
+  // The inverted statement.
   Statement statement = 1;
+
+  // List of updated statement lines with inverted amounts.
   repeated StatementLine lines = 2;
 }
 
 // SectionValidationReport summarizes the mathematical verification of an extracted currency section.
 message SectionValidationReport {
+  // Currency code for this section.
   string currency = 1;
+
+  // Starting balance reported on the statement section in cents.
   int64 starting_balance = 2;
+
+  // Ending balance reported on the statement section in cents.
   int64 ending_balance = 3;
+
+  // Calculated ending balance based on starting balance and net line flows.
   int64 calculated_ending = 4;
+
+  // Net sum of all line amounts in the section.
   int64 net_flow = 5;
+
+  // Discrepancy between calculated ending balance and reported ending balance.
   int64 discrepancy = 6;
+
+  // Indicates whether the section is mathematically balanced.
   bool is_balanced = 7;
+
+  // Total number of transaction lines extracted in this section.
   int32 line_count = 8;
 }
 
-// Request to ingest an unstructured statement document and persist drafts.
+// The request for
+// [IngestStatementDocument][saturn.finance.v1.Finance.IngestStatementDocument].
 message IngestStatementDocumentRequest {
   // Optional. Target account identifier override.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
   optional string target_account_id = 1 [(google.api.field_behavior) = OPTIONAL];
 
   // Required. Original file name.
@@ -2830,19 +3086,33 @@ message IngestStatementDocumentRequest {
   optional string password = 5 [(google.api.field_behavior) = OPTIONAL];
 }
 
-// Response from statement document ingestion.
+// The response for
+// [IngestStatementDocument][saturn.finance.v1.Finance.IngestStatementDocument].
 message IngestStatementDocumentResponse {
+  // Ingestion batch identifier.
   string batch_id = 1;
+
+  // List of created statement drafts.
   repeated Statement created_statements = 2;
+
+  // Section balance validation reports.
   repeated SectionValidationReport section_reports = 3;
+
+  // List of unmapped currency sections found in the document.
   repeated string unmapped_sections = 4;
+
+  // Indicates whether a password is required to decrypt the document.
   bool needs_password = 5;
+
+  // Extraction or validation warning and error messages.
   repeated string errors = 6;
 }
 
-// Request to analyze a statement document without creating DB drafts (preview mode).
+// The request for
+// [AnalyzeStatementDocument][saturn.finance.v1.Finance.AnalyzeStatementDocument].
 message AnalyzeStatementDocumentRequest {
   // Optional. Target account identifier override.
+  // Values are of the form `acc_[a-zA-Z0-9]+`.
   optional string target_account_id = 1 [(google.api.field_behavior) = OPTIONAL];
 
   // Required. Original file name.
@@ -2858,10 +3128,18 @@ message AnalyzeStatementDocumentRequest {
   optional string password = 5 [(google.api.field_behavior) = OPTIONAL];
 }
 
-// Response from statement document analysis.
+// The response for
+// [AnalyzeStatementDocument][saturn.finance.v1.Finance.AnalyzeStatementDocument].
 message AnalyzeStatementDocumentResponse {
+  // Section balance validation reports.
   repeated SectionValidationReport section_reports = 1;
+
+  // List of unmapped currency sections found in the document.
   repeated string unmapped_sections = 2;
+
+  // Indicates whether a password is required to decrypt the document.
   bool needs_password = 3;
+
+  // Extraction or validation warning and error messages.
   repeated string errors = 4;
 }

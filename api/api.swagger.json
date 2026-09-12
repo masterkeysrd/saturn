@@ -903,7 +903,7 @@
         "parameters": [
           {
             "name": "accountId",
-            "description": "Required. Target account identifier to upload the statement under.",
+            "description": "Required. Target account identifier to upload the statement under.\nValues are of the form `acc_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -2111,7 +2111,7 @@
           },
           {
             "name": "status",
-            "description": "Optional. Stage status to filter by.",
+            "description": "Optional. Stage status to filter by.\n\n - PENDING: Item is pending processing.\n - PROCESSING: Item is currently being processed.\n - RESOLVED: Item has been resolved and linked.\n - ARCHIVED: Item is archived.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -2124,7 +2124,7 @@
           },
           {
             "name": "docType",
-            "description": "Optional. Document category classification filter.",
+            "description": "Optional. Document category classification filter.\n\n - INVOICE: Invoice document.\n - RECEIPT: Receipt document.\n - BANK_NOTIFICATION: Bank notification document.\n - UNKNOWN: Unknown document type.\n - SYSTEM_VERIFICATION: System verification document.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -2145,7 +2145,7 @@
           },
           {
             "name": "view",
-            "description": "Optional. Representation view.\n\n - BASIC: Excludes raw_payload and metadata\n - FULL: Returns complete fields",
+            "description": "Optional. Representation view.\n\n - BASIC: Basic view excluding raw payload and metadata.\n - FULL: Full view returning complete fields.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -2502,7 +2502,7 @@
         "parameters": [
           {
             "name": "id",
-            "description": "Required. Identifier of the institution to delete.",
+            "description": "Required. Identifier of the institution to delete.\nValues are of the form `inst_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -2540,7 +2540,7 @@
         "parameters": [
           {
             "name": "id",
-            "description": "Required. Identifier of the institution to update.",
+            "description": "Required. Identifier of the institution to update.\nValues are of the form `inst_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -2621,7 +2621,7 @@
         "parameters": [
           {
             "name": "status",
-            "description": "Optional. Filter templates by active status.",
+            "description": "Optional. Filter templates by active status.\n\n - ACTIVE: Recurring transaction is active.\n - PAUSED: Recurring transaction is paused.\n - ENDED: Recurring transaction has ended.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -2648,7 +2648,7 @@
           },
           {
             "name": "view",
-            "description": "Optional. Representation view level.",
+            "description": "Optional. Representation view level.\n\n - BASIC: Basic view including summary fields.\n - FULL: Full view including hydrated associations.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -2769,7 +2769,7 @@
         "parameters": [
           {
             "name": "id",
-            "description": "Required. Unique identifier of the template to update.",
+            "description": "Required. Unique identifier of the template to update.\nValues are of the form `rec_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -2818,7 +2818,7 @@
         "parameters": [
           {
             "name": "status",
-            "description": "Optional. Filter instances by transaction status.",
+            "description": "Optional. Filter instances by transaction status.\n\n - PENDING: Transaction is pending payment.\n - PROCESSING: Transaction is currently being processed.\n - SKIPPED: Transaction was skipped.\n - PAID: Transaction has been paid.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -2862,7 +2862,7 @@
           },
           {
             "name": "view",
-            "description": "Optional. Representation view level.",
+            "description": "Optional. Representation view level.\n\n - BASIC: Basic view including summary fields.\n - FULL: Full view including hydrated associations.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -3119,7 +3119,7 @@
         "parameters": [
           {
             "name": "id",
-            "description": "Required. Unique identifier of the statement line to update.",
+            "description": "Required. Unique identifier of the statement line to update.\nValues are of the form `stln_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -3168,7 +3168,7 @@
         "parameters": [
           {
             "name": "accountId",
-            "description": "Optional. Filter statements by account identifier.",
+            "description": "Optional. Filter statements by account identifier.\nValues are of the form `acc_[a-zA-Z0-9]+`.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -3226,6 +3226,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. Unique identifier of the statement to retrieve.\nValues are of the form `stmt_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -3256,12 +3257,14 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. Unique identifier of the statement to delete.\nValues are of the form `stmt_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "version",
+            "description": "Optional. Expected resource version for optimistic concurrency control.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -3292,7 +3295,7 @@
         "parameters": [
           {
             "name": "id",
-            "description": "Required. Unique identifier of the statement to update.",
+            "description": "Required. Unique identifier of the statement to update.\nValues are of the form `stmt_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -3341,6 +3344,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. Unique identifier of the statement to complete.\nValues are of the form `stmt_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -3380,6 +3384,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. Unique identifier of the statement to invert.\nValues are of the form `stmt_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -3419,6 +3424,7 @@
         "parameters": [
           {
             "name": "statementId",
+            "description": "Required. Unique identifier of the parent statement.\nValues are of the form `stmt_[a-zA-Z0-9]+`.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -3450,7 +3456,7 @@
         "parameters": [
           {
             "name": "body",
-            "description": "Request to analyze a statement document without creating DB drafts (preview mode).",
+            "description": "The request for\n[AnalyzeStatementDocument][saturn.finance.v1.Finance.AnalyzeStatementDocument].",
             "in": "body",
             "required": true,
             "schema": {
@@ -3484,7 +3490,7 @@
         "parameters": [
           {
             "name": "body",
-            "description": "Request to ingest an unstructured statement document and persist drafts.",
+            "description": "The request for\n[IngestStatementDocument][saturn.finance.v1.Finance.IngestStatementDocument].",
             "in": "body",
             "required": true,
             "schema": {
@@ -5444,39 +5450,49 @@
       "type": "object",
       "properties": {
         "hasHeader": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Indicates whether the CSV file includes a header row."
         },
         "delimiter": {
-          "type": "string"
+          "type": "string",
+          "description": "Delimiter character separating fields (e.g. \",\" or \";\")."
         },
         "dateFormat": {
-          "type": "string"
+          "type": "string",
+          "description": "Format string for parsing transaction dates (e.g. \"YYYY-MM-DD\")."
         },
         "dateColumnIndex": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Zero-based column index for the transaction date."
         },
         "descriptionColumnIndex": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Zero-based column index for the transaction description."
         },
         "referenceColumnIndex": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Zero-based column index for the reference or check number."
         },
         "amountColumnIndex": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Zero-based column index for the single signed amount column."
         },
         "debitColumnIndex": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Zero-based column index for debit amounts in split debit/credit files."
         },
         "creditColumnIndex": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Zero-based column index for credit amounts in split debit/credit files."
         }
-      }
+      },
+      "description": "CSV file parsing configuration."
     },
     "FinanceAdjustAccountBalanceBody": {
       "type": "object",
@@ -5532,7 +5548,7 @@
     },
     "FinanceCompleteStatementBody": {
       "type": "object",
-      "description": "Request to finalize and commit the statement."
+      "description": "The request for\n[CompleteStatement][saturn.finance.v1.Finance.CompleteStatement]."
     },
     "FinanceConfirmScheduledTransactionBody": {
       "type": "object",
@@ -5584,14 +5600,14 @@
           "description": "Required. The statement resource properties to import."
         }
       },
-      "description": "Request to import a new statement.",
+      "description": "The request for\n[ImportStatement][saturn.finance.v1.Finance.ImportStatement].",
       "required": [
         "statement"
       ]
     },
     "FinanceInvertStatementSignsBody": {
       "type": "object",
-      "description": "Request to invert all line amounts and negate starting/ending balances on an in-progress statement."
+      "description": "The request for\n[InvertStatementSigns][saturn.finance.v1.Finance.InvertStatementSigns]."
     },
     "FinanceMatchScheduledTransactionBody": {
       "type": "object",
@@ -5623,7 +5639,7 @@
         "UNKNOWN",
         "SYSTEM_VERIFICATION"
       ],
-      "description": "Document category classification enum."
+      "description": "Document category classification enum.\n\n - INVOICE: Invoice document.\n - RECEIPT: Receipt document.\n - BANK_NOTIFICATION: Bank notification document.\n - UNKNOWN: Unknown document type.\n - SYSTEM_VERIFICATION: System verification document."
     },
     "IncomeInsightsAccountContribution": {
       "type": "object",
@@ -5826,28 +5842,34 @@
         "MONTHLY",
         "YEARLY"
       ],
-      "description": "Execution interval recurrence rule."
+      "description": "Execution interval recurrence rule.\n\n - WEEKLY: Weekly recurrence interval.\n - MONTHLY: Monthly recurrence interval.\n - YEARLY: Yearly recurrence interval."
     },
     "ScheduledTransactionMetadata": {
       "type": "object",
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "User-friendly name of the scheduled item."
         },
         "dueDate": {
-          "type": "string"
+          "type": "string",
+          "description": "Due date formatted as a date string."
         },
         "description": {
-          "type": "string"
+          "type": "string",
+          "description": "Descriptive memo or note for the transaction."
         },
         "vendorName": {
-          "type": "string"
+          "type": "string",
+          "description": "Counterparty or vendor name."
         },
         "invoiceId": {
-          "type": "string"
+          "type": "string",
+          "description": "Associated billing invoice identifier."
         },
         "notes": {
-          "type": "string"
+          "type": "string",
+          "description": "Additional notes or comments."
         }
       },
       "description": "Metadata wraps context metadata for scheduled transactions."
@@ -5856,13 +5878,16 @@
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Unique identifier of the recurring transaction template.\nValues are of the form `rec_[a-zA-Z0-9]+`."
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "User-friendly name of the recurring transaction template."
         },
         "interval": {
-          "$ref": "#/definitions/RecurringTransactionInterval"
+          "$ref": "#/definitions/RecurringTransactionInterval",
+          "description": "Recurrence interval rule."
         }
       },
       "description": "RecurringTransactionInfo wraps parent template details."
@@ -5874,7 +5899,7 @@
         "LOAN",
         "TAX"
       ],
-      "description": "Parent template source type."
+      "description": "Parent template source type.\n\n - RECURRENT_TRANSACTION: Created from a recurring transaction template.\n - LOAN: Created from a loan or borrowing schedule.\n - TAX: Created from a tax schedule."
     },
     "SchedulerAdminPauseScheduleBody": {
       "type": "object",
@@ -6048,7 +6073,8 @@
       "type": "object",
       "properties": {
         "csv": {
-          "$ref": "#/definitions/ConfigCsvConfig"
+          "$ref": "#/definitions/ConfigCsvConfig",
+          "description": "Configuration for parsing CSV statement files."
         }
       },
       "description": "Nested parsing configuration."
@@ -6057,61 +6083,75 @@
       "type": "object",
       "properties": {
         "scheduledTransactionId": {
-          "type": "string"
+          "type": "string",
+          "description": "Identifier of the scheduled transaction to confirm.\nValues are of the form `sch_[a-zA-Z0-9]+`."
         }
-      }
+      },
+      "description": "ConfirmScheduledAction confirms a pending scheduled transaction matching the statement line."
     },
     "StatementLineCreateExpenseAction": {
       "type": "object",
       "properties": {
         "budgetId": {
-          "type": "string"
+          "type": "string",
+          "description": "Identifier of the budget category to assign the expense to.\nValues are of the form `bud_[a-zA-Z0-9]+`."
         }
-      }
+      },
+      "description": "CreateExpenseAction creates a new expense transaction from the statement line."
     },
     "StatementLineCreateIncomeAction": {
-      "type": "object"
+      "type": "object",
+      "description": "CreateIncomeAction creates a new income transaction from the statement line."
     },
     "StatementLineCreateRepaymentAction": {
       "type": "object",
       "properties": {
         "borrowingId": {
-          "type": "string"
+          "type": "string",
+          "description": "Identifier of the borrowing agreement to apply the repayment to.\nValues are of the form `bor_[a-zA-Z0-9]+`."
         }
-      }
+      },
+      "description": "CreateRepaymentAction creates a repayment against an existing borrowing agreement."
     },
     "StatementLineCreateTransferAction": {
       "type": "object",
       "properties": {
         "counterpartAccountId": {
-          "type": "string"
+          "type": "string",
+          "description": "Identifier of the counterpart account involved in the transfer.\nValues are of the form `acc_[a-zA-Z0-9]+`."
         }
-      }
+      },
+      "description": "CreateTransferAction creates a transfer transaction between accounts."
     },
     "StatementLineMatchAction": {
       "type": "object",
       "properties": {
         "transactionId": {
-          "type": "string"
+          "type": "string",
+          "description": "Identifier of the existing transaction to match against.\nValues are of the form `txn_[a-zA-Z0-9]+`."
         },
         "overwriteTransaction": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Optional flag to overwrite the existing transaction's details with statement line data."
         }
       },
-      "title": "Draft actions"
+      "description": "MatchAction links the statement line to an existing transaction."
     },
     "StatementLineSkipAction": {
-      "type": "object"
+      "type": "object",
+      "description": "SkipAction skips reconciliation for this statement line."
     },
     "StatementLineSuggestions": {
       "type": "object",
       "properties": {
         "transactionType": {
           "$ref": "#/definitions/v1TransactionType",
+          "description": "Output only. Suggested transaction type based on amount sign and context.",
           "readOnly": true
         },
         "budgetId": {
           "type": "string",
+          "description": "Output only. Suggested budget category identifier.\nValues are of the form `bud_[a-zA-Z0-9]+`.",
           "readOnly": true
         },
         "matches": {
@@ -6120,6 +6160,7 @@
             "type": "object",
             "$ref": "#/definitions/v1Transaction"
           },
+          "description": "Output only. Candidate transactions that potentially match this statement line.",
           "readOnly": true
         }
       },
@@ -6693,7 +6734,7 @@
       "properties": {
         "targetAccountId": {
           "type": "string",
-          "description": "Optional. Target account identifier override."
+          "description": "Optional. Target account identifier override.\nValues are of the form `acc_[a-zA-Z0-9]+`."
         },
         "filename": {
           "type": "string",
@@ -6713,7 +6754,7 @@
           "description": "Optional. Password for encrypted PDFs."
         }
       },
-      "description": "Request to analyze a statement document without creating DB drafts (preview mode).",
+      "description": "The request for\n[AnalyzeStatementDocument][saturn.finance.v1.Finance.AnalyzeStatementDocument].",
       "required": [
         "filename",
         "contentType",
@@ -6728,25 +6769,29 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1SectionValidationReport"
-          }
+          },
+          "description": "Section balance validation reports."
         },
         "unmappedSections": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "description": "List of unmapped currency sections found in the document."
         },
         "needsPassword": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Indicates whether a password is required to decrypt the document."
         },
         "errors": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Extraction or validation warning and error messages."
         }
       },
-      "description": "Response from statement document analysis."
+      "description": "The response for\n[AnalyzeStatementDocument][saturn.finance.v1.Finance.AnalyzeStatementDocument]."
     },
     "v1ApproveUserResponse": {
       "type": "object",
@@ -6904,7 +6949,7 @@
         "BORROWING_LINK_TYPE_REPAYMENT",
         "BORROWING_LINK_TYPE_ADDITIONAL_LOAN"
       ],
-      "description": "Borrowing link classification type.\n\n - BORROWING_LINK_TYPE_INITIAL_RECEIPT: Original funding proof ($0 balance adjustment)\n - BORROWING_LINK_TYPE_REPAYMENT: Installment payback (reduces remaining balance)\n - BORROWING_LINK_TYPE_ADDITIONAL_LOAN: Top-up / extra drawdown (increases balance)"
+      "description": "Borrowing link classification type.\n\n - BORROWING_LINK_TYPE_INITIAL_RECEIPT: Original funding proof ($0 balance adjustment).\n - BORROWING_LINK_TYPE_REPAYMENT: Installment payback (reduces remaining balance).\n - BORROWING_LINK_TYPE_ADDITIONAL_LOAN: Top-up or extra drawdown (increases balance)."
     },
     "v1BorrowingStatus": {
       "type": "string",
@@ -7744,12 +7789,12 @@
         },
         "spaceId": {
           "type": "string",
-          "description": "Output only. Space identifier.",
+          "description": "Output only. Space identifier.\nValues are of the form `spc_[a-zA-Z0-9]+`.",
           "readOnly": true
         },
         "integrationId": {
           "type": "string",
-          "description": "Output only. Ingestion integration channel identifier.",
+          "description": "Output only. Ingestion integration channel identifier.\nValues are of the form `int_[a-zA-Z0-9]+`.",
           "readOnly": true
         },
         "status": {
@@ -7832,7 +7877,7 @@
         "RESOLVED",
         "ARCHIVED"
       ],
-      "description": "Staging lifecycle status enum."
+      "description": "Staging lifecycle status enum.\n\n - PENDING: Item is pending processing.\n - PROCESSING: Item is currently being processed.\n - RESOLVED: Item has been resolved and linked.\n - ARCHIVED: Item is archived."
     },
     "v1InboxItemView": {
       "type": "string",
@@ -7840,7 +7885,7 @@
         "BASIC",
         "FULL"
       ],
-      "description": "Optional representation view.\n\n - BASIC: Excludes raw_payload and metadata\n - FULL: Returns complete fields"
+      "description": "Optional representation view.\n\n - BASIC: Basic view excluding raw payload and metadata.\n - FULL: Full view returning complete fields."
     },
     "v1IncomeInput": {
       "type": "object",
@@ -7951,7 +7996,7 @@
       "properties": {
         "targetAccountId": {
           "type": "string",
-          "description": "Optional. Target account identifier override."
+          "description": "Optional. Target account identifier override.\nValues are of the form `acc_[a-zA-Z0-9]+`."
         },
         "filename": {
           "type": "string",
@@ -7971,7 +8016,7 @@
           "description": "Optional. Password for encrypted PDFs."
         }
       },
-      "description": "Request to ingest an unstructured statement document and persist drafts.",
+      "description": "The request for\n[IngestStatementDocument][saturn.finance.v1.Finance.IngestStatementDocument].",
       "required": [
         "filename",
         "contentType",
@@ -7982,39 +8027,45 @@
       "type": "object",
       "properties": {
         "batchId": {
-          "type": "string"
+          "type": "string",
+          "description": "Ingestion batch identifier."
         },
         "createdStatements": {
           "type": "array",
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1Statement"
-          }
+          },
+          "description": "List of created statement drafts."
         },
         "sectionReports": {
           "type": "array",
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1SectionValidationReport"
-          }
+          },
+          "description": "Section balance validation reports."
         },
         "unmappedSections": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "description": "List of unmapped currency sections found in the document."
         },
         "needsPassword": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Indicates whether a password is required to decrypt the document."
         },
         "errors": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Extraction or validation warning and error messages."
         }
       },
-      "description": "Response from statement document ingestion."
+      "description": "The response for\n[IngestStatementDocument][saturn.finance.v1.Finance.IngestStatementDocument]."
     },
     "v1InsightGranularity": {
       "type": "string",
@@ -8031,7 +8082,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "Output only. Unique resource identifier (e.g. \"inst_3HnhtBQD...\").",
+          "description": "Output only. Unique identifier.\nValues are of the form `inst_[a-zA-Z0-9]+`.",
           "readOnly": true
         },
         "name": {
@@ -8171,17 +8222,19 @@
       "type": "object",
       "properties": {
         "statement": {
-          "$ref": "#/definitions/v1Statement"
+          "$ref": "#/definitions/v1Statement",
+          "description": "The inverted statement."
         },
         "lines": {
           "type": "array",
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1StatementLine"
-          }
+          },
+          "description": "List of updated statement lines with inverted amounts."
         }
       },
-      "description": "Response after inverting statement signs."
+      "description": "The response for\n[InvertStatementSigns][saturn.finance.v1.Finance.InvertStatementSigns]."
     },
     "v1JobInfo": {
       "type": "object",
@@ -8530,7 +8583,8 @@
           "type": "string",
           "description": "Keyset page token."
         }
-      }
+      },
+      "description": "The response for\n[ListInstitutions][saturn.finance.v1.Finance.ListInstitutions]."
     },
     "v1ListIntegrationTokensResponse": {
       "type": "object",
@@ -8731,10 +8785,11 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1StatementLine"
-          }
+          },
+          "description": "List of statement lines."
         }
       },
-      "description": "Response from listing lines."
+      "description": "The response for\n[ListStatementLines][saturn.finance.v1.Finance.ListStatementLines]."
     },
     "v1ListStatementsResponse": {
       "type": "object",
@@ -8744,13 +8799,15 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1Statement"
-          }
+          },
+          "description": "List of statements."
         },
         "nextPageToken": {
-          "type": "string"
+          "type": "string",
+          "description": "Keyset token to fetch the next page of results. Empty if no more pages are available."
         }
       },
-      "description": "Response from listing statements."
+      "description": "The response for\n[ListStatements][saturn.finance.v1.Finance.ListStatements]."
     },
     "v1ListTransactionEventsResponse": {
       "type": "object",
@@ -9003,7 +9060,7 @@
         },
         "accountId": {
           "type": "string",
-          "description": "Optional. Default financial account identifier to impact."
+          "description": "Optional. Default financial account identifier to impact.\nValues are of the form `acc_[a-zA-Z0-9]+`."
         }
       },
       "description": "RecurringTransaction represents a template rule to repeat payments or incomes.",
@@ -9021,16 +9078,20 @@
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Unique identifier of the budget.\nValues are of the form `bud_[a-zA-Z0-9]+`."
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "User-friendly name of the budget."
         },
         "color": {
-          "type": "string"
+          "type": "string",
+          "description": "Color hex code representing the budget."
         },
         "icon": {
-          "type": "string"
+          "type": "string",
+          "description": "Icon name representing the budget."
         }
       },
       "description": "BudgetInfo wraps minimal budget details required for UI listing."
@@ -9042,7 +9103,7 @@
         "PAUSED",
         "ENDED"
       ],
-      "description": "Active template status."
+      "description": "Active template status.\n\n - ACTIVE: Recurring transaction is active.\n - PAUSED: Recurring transaction is paused.\n - ENDED: Recurring transaction has ended."
     },
     "v1RecurringTransactionView": {
       "type": "string",
@@ -9050,7 +9111,7 @@
         "BASIC",
         "FULL"
       ],
-      "description": "Scoped resource representation view level."
+      "description": "Scoped resource representation view level.\n\n - BASIC: Basic view including summary fields.\n - FULL: Full view including hydrated associations."
     },
     "v1RecurringType": {
       "type": "string",
@@ -9058,7 +9119,7 @@
         "EXPENSE",
         "INCOME"
       ],
-      "description": "RecurringType defines the type of recurring transaction."
+      "description": "RecurringType defines the type of recurring transaction.\n\n - EXPENSE: Expense recurring transaction.\n - INCOME: Income recurring transaction."
     },
     "v1RefreshSessionRequest": {
       "type": "object",
@@ -9165,13 +9226,14 @@
         },
         "existingInstitutionId": {
           "type": "string",
-          "description": "Optional matching existing institution ID if an exact/fuzzy match already exists in the space."
+          "description": "Optional matching existing institution ID if an exact/fuzzy match already exists in the space.\nValues are of the form `inst_[a-zA-Z0-9]+`."
         },
         "existingInstitutionName": {
           "type": "string",
           "description": "Optional existing matching institution name if a near match exists in the space."
         }
-      }
+      },
+      "description": "The response for\n[ResolveInstitution][saturn.finance.v1.Finance.ResolveInstitution]."
     },
     "v1RevokeSessionResponse": {
       "type": "object",
@@ -9312,7 +9374,7 @@
         },
         "accountId": {
           "type": "string",
-          "description": "Optional. Settle account identifier."
+          "description": "Optional. Settle account identifier.\nValues are of the form `acc_[a-zA-Z0-9]+`."
         }
       },
       "description": "ScheduledTransaction represents a spawned pending payment or income instance.",
@@ -9330,16 +9392,20 @@
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Unique identifier of the budget.\nValues are of the form `bud_[a-zA-Z0-9]+`."
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "User-friendly name of the budget."
         },
         "color": {
-          "type": "string"
+          "type": "string",
+          "description": "Color hex code representing the budget."
         },
         "icon": {
-          "type": "string"
+          "type": "string",
+          "description": "Icon name representing the budget."
         }
       },
       "description": "BudgetInfo wraps minimal budget details required for UI listing."
@@ -9352,7 +9418,7 @@
         "SKIPPED",
         "PAID"
       ],
-      "description": "Instance execution status."
+      "description": "Instance execution status.\n\n - PENDING: Transaction is pending payment.\n - PROCESSING: Transaction is currently being processed.\n - SKIPPED: Transaction was skipped.\n - PAID: Transaction has been paid."
     },
     "v1ScheduledTransactionView": {
       "type": "string",
@@ -9360,40 +9426,48 @@
         "BASIC",
         "FULL"
       ],
-      "description": "Scoped resource representation view level."
+      "description": "Scoped resource representation view level.\n\n - BASIC: Basic view including summary fields.\n - FULL: Full view including hydrated associations."
     },
     "v1SectionValidationReport": {
       "type": "object",
       "properties": {
         "currency": {
-          "type": "string"
+          "type": "string",
+          "description": "Currency code for this section."
         },
         "startingBalance": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Starting balance reported on the statement section in cents."
         },
         "endingBalance": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Ending balance reported on the statement section in cents."
         },
         "calculatedEnding": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Calculated ending balance based on starting balance and net line flows."
         },
         "netFlow": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Net sum of all line amounts in the section."
         },
         "discrepancy": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Discrepancy between calculated ending balance and reported ending balance."
         },
         "isBalanced": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Indicates whether the section is mathematically balanced."
         },
         "lineCount": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Total number of transaction lines extracted in this section."
         }
       },
       "description": "SectionValidationReport summarizes the mathematical verification of an extracted currency section."
@@ -9596,12 +9670,12 @@
         },
         "spaceId": {
           "type": "string",
-          "description": "Output only. Associated workspace identifier.",
+          "description": "Output only. Associated workspace identifier.\nValues are of the form `spc_[a-zA-Z0-9]+`.",
           "readOnly": true
         },
         "accountId": {
           "type": "string",
-          "description": "Output only. Identifier of the account this statement belongs to.",
+          "description": "Output only. Identifier of the account this statement belongs to.\nValues are of the form `acc_[a-zA-Z0-9]+`.",
           "readOnly": true
         },
         "status": {
@@ -9674,7 +9748,7 @@
         },
         "statementId": {
           "type": "string",
-          "description": "Output only. Identifier of the parent statement.",
+          "description": "Output only. Identifier of the parent statement.\nValues are of the form `stmt_[a-zA-Z0-9]+`.",
           "readOnly": true
         },
         "rowIndex": {
@@ -9705,7 +9779,7 @@
         },
         "matchedTransactionId": {
           "type": "string",
-          "description": "Output only. Linked transaction ID once committed/completed.",
+          "description": "Output only. Linked transaction ID once committed/completed.\nValues are of the form `txn_[a-zA-Z0-9]+`.",
           "readOnly": true
         },
         "reference": {
@@ -9714,28 +9788,36 @@
           "readOnly": true
         },
         "match": {
-          "$ref": "#/definitions/StatementLineMatchAction"
+          "$ref": "#/definitions/StatementLineMatchAction",
+          "description": "Match line to an existing transaction."
         },
         "createExpense": {
-          "$ref": "#/definitions/StatementLineCreateExpenseAction"
+          "$ref": "#/definitions/StatementLineCreateExpenseAction",
+          "description": "Create a new expense transaction."
         },
         "createIncome": {
-          "$ref": "#/definitions/StatementLineCreateIncomeAction"
+          "$ref": "#/definitions/StatementLineCreateIncomeAction",
+          "description": "Create a new income transaction."
         },
         "createTransfer": {
-          "$ref": "#/definitions/StatementLineCreateTransferAction"
+          "$ref": "#/definitions/StatementLineCreateTransferAction",
+          "description": "Create a transfer between accounts."
         },
         "confirmScheduled": {
-          "$ref": "#/definitions/StatementLineConfirmScheduledAction"
+          "$ref": "#/definitions/StatementLineConfirmScheduledAction",
+          "description": "Confirm a pending scheduled transaction."
         },
         "createRepayment": {
-          "$ref": "#/definitions/StatementLineCreateRepaymentAction"
+          "$ref": "#/definitions/StatementLineCreateRepaymentAction",
+          "description": "Create a loan repayment."
         },
         "skip": {
-          "$ref": "#/definitions/StatementLineSkipAction"
+          "$ref": "#/definitions/StatementLineSkipAction",
+          "description": "Skip this statement line."
         },
         "suggestions": {
           "$ref": "#/definitions/StatementLineSuggestions",
+          "description": "Output only. Grouped suggestions resolved dynamically by the matching engine.",
           "readOnly": true
         },
         "version": {

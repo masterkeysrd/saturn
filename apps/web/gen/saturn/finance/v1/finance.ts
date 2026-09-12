@@ -54,7 +54,19 @@ export type InsightGranularity =
 /**
  * RecurringType defines the type of recurring transaction.
  */
-export type RecurringType = "RECURRING_TYPE_UNSPECIFIED" | "EXPENSE" | "INCOME"
+export type RecurringType =
+  /**
+   * Default unspecified recurring type.
+   */
+  | "RECURRING_TYPE_UNSPECIFIED"
+  /**
+   * Expense recurring transaction.
+   */
+  | "EXPENSE"
+  /**
+   * Income recurring transaction.
+   */
+  | "INCOME"
 
 /**
  * Enum representing the type of borrowing transaction.
@@ -77,9 +89,21 @@ export type BorrowingTransactionType =
  * Borrowing link classification type.
  */
 export type BorrowingLinkType =
+  /**
+   * Default unspecified borrowing link type.
+   */
   | "BORROWING_LINK_TYPE_UNSPECIFIED"
+  /**
+   * Original funding proof ($0 balance adjustment).
+   */
   | "BORROWING_LINK_TYPE_INITIAL_RECEIPT"
+  /**
+   * Installment payback (reduces remaining balance).
+   */
   | "BORROWING_LINK_TYPE_REPAYMENT"
+  /**
+   * Top-up or extra drawdown (increases balance).
+   */
   | "BORROWING_LINK_TYPE_ADDITIONAL_LOAN"
 
 /**
@@ -194,36 +218,124 @@ export type Transaction_View =
 /**
  * Scoped resource representation view level.
  */
-export type RecurringTransaction_View = "VIEW_UNSPECIFIED" | "BASIC" | "FULL"
+export type RecurringTransaction_View =
+  /**
+   * Default unspecified view.
+   */
+  | "VIEW_UNSPECIFIED"
+  /**
+   * Basic view including summary fields.
+   */
+  | "BASIC"
+  /**
+   * Full view including hydrated associations.
+   */
+  | "FULL"
 
 /**
  * Execution interval recurrence rule.
  */
 export type RecurringTransaction_Interval =
-  "INTERVAL_UNSPECIFIED" | "WEEKLY" | "MONTHLY" | "YEARLY"
+  /**
+   * Default unspecified interval.
+   */
+  | "INTERVAL_UNSPECIFIED"
+  /**
+   * Weekly recurrence interval.
+   */
+  | "WEEKLY"
+  /**
+   * Monthly recurrence interval.
+   */
+  | "MONTHLY"
+  /**
+   * Yearly recurrence interval.
+   */
+  | "YEARLY"
 
 /**
  * Active template status.
  */
 export type RecurringTransaction_Status =
-  "STATUS_UNSPECIFIED" | "ACTIVE" | "PAUSED" | "ENDED"
+  /**
+   * Default unspecified status.
+   */
+  | "STATUS_UNSPECIFIED"
+  /**
+   * Recurring transaction is active.
+   */
+  | "ACTIVE"
+  /**
+   * Recurring transaction is paused.
+   */
+  | "PAUSED"
+  /**
+   * Recurring transaction has ended.
+   */
+  | "ENDED"
 
 /**
  * Scoped resource representation view level.
  */
-export type ScheduledTransaction_View = "VIEW_UNSPECIFIED" | "BASIC" | "FULL"
+export type ScheduledTransaction_View =
+  /**
+   * Default unspecified view.
+   */
+  | "VIEW_UNSPECIFIED"
+  /**
+   * Basic view including summary fields.
+   */
+  | "BASIC"
+  /**
+   * Full view including hydrated associations.
+   */
+  | "FULL"
 
 /**
  * Parent template source type.
  */
 export type ScheduledTransaction_SourceType =
-  "SOURCE_TYPE_UNSPECIFIED" | "RECURRENT_TRANSACTION" | "LOAN" | "TAX"
+  /**
+   * Default unspecified source type.
+   */
+  | "SOURCE_TYPE_UNSPECIFIED"
+  /**
+   * Created from a recurring transaction template.
+   */
+  | "RECURRENT_TRANSACTION"
+  /**
+   * Created from a loan or borrowing schedule.
+   */
+  | "LOAN"
+  /**
+   * Created from a tax schedule.
+   */
+  | "TAX"
 
 /**
  * Instance execution status.
  */
 export type ScheduledTransaction_Status =
-  "STATUS_UNSPECIFIED" | "PENDING" | "PROCESSING" | "SKIPPED" | "PAID"
+  /**
+   * Default unspecified status.
+   */
+  | "STATUS_UNSPECIFIED"
+  /**
+   * Transaction is pending payment.
+   */
+  | "PENDING"
+  /**
+   * Transaction is currently being processed.
+   */
+  | "PROCESSING"
+  /**
+   * Transaction was skipped.
+   */
+  | "SKIPPED"
+  /**
+   * Transaction has been paid.
+   */
+  | "PAID"
 
 /**
  * BorrowingDirection defines the type/direction of personal debt agreements.
@@ -305,23 +417,72 @@ export type Account_View =
  * Staging lifecycle status enum.
  */
 export type InboxItem_Status =
-  "STATUS_UNSPECIFIED" | "PENDING" | "PROCESSING" | "RESOLVED" | "ARCHIVED"
+  /**
+   * Default unspecified status.
+   */
+  | "STATUS_UNSPECIFIED"
+  /**
+   * Item is pending processing.
+   */
+  | "PENDING"
+  /**
+   * Item is currently being processed.
+   */
+  | "PROCESSING"
+  /**
+   * Item has been resolved and linked.
+   */
+  | "RESOLVED"
+  /**
+   * Item is archived.
+   */
+  | "ARCHIVED"
 
 /**
  * Document category classification enum.
  */
 export type InboxItem_DocType =
+  /**
+   * Default unspecified document type.
+   */
   | "DOC_TYPE_UNSPECIFIED"
+  /**
+   * Invoice document.
+   */
   | "INVOICE"
+  /**
+   * Receipt document.
+   */
   | "RECEIPT"
+  /**
+   * Bank notification document.
+   */
   | "BANK_NOTIFICATION"
+  /**
+   * Unknown document type.
+   */
   | "UNKNOWN"
+  /**
+   * System verification document.
+   */
   | "SYSTEM_VERIFICATION"
 
 /**
  * Optional representation view.
  */
-export type InboxItem_View = "VIEW_UNSPECIFIED" | "BASIC" | "FULL"
+export type InboxItem_View =
+  /**
+   * Default unspecified view.
+   */
+  | "VIEW_UNSPECIFIED"
+  /**
+   * Basic view excluding raw payload and metadata.
+   */
+  | "BASIC"
+  /**
+   * Full view returning complete fields.
+   */
+  | "FULL"
 
 /**
  * Status defines the lifecycle phase of the statement.
@@ -1574,6 +1735,7 @@ export interface RecurringTransaction {
   budget?: RecurringTransaction_BudgetInfo
   /**
    * Optional. Default financial account identifier to impact.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
    */
   accountId?: string
 }
@@ -1582,9 +1744,22 @@ export interface RecurringTransaction {
  * BudgetInfo wraps minimal budget details required for UI listing.
  */
 export interface RecurringTransaction_BudgetInfo {
+  /**
+   * Unique identifier of the budget.
+   * Values are of the form `bud_[a-zA-Z0-9]+`.
+   */
   id: string
+  /**
+   * User-friendly name of the budget.
+   */
   name: string
+  /**
+   * Color hex code representing the budget.
+   */
   color: string
+  /**
+   * Icon name representing the budget.
+   */
   icon: string
 }
 
@@ -1670,6 +1845,7 @@ export interface ScheduledTransaction {
   type: RecurringType
   /**
    * Optional. Settle account identifier.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
    */
   accountId?: string
 }
@@ -1678,9 +1854,22 @@ export interface ScheduledTransaction {
  * BudgetInfo wraps minimal budget details required for UI listing.
  */
 export interface ScheduledTransaction_BudgetInfo {
+  /**
+   * Unique identifier of the budget.
+   * Values are of the form `bud_[a-zA-Z0-9]+`.
+   */
   id: string
+  /**
+   * User-friendly name of the budget.
+   */
   name: string
+  /**
+   * Color hex code representing the budget.
+   */
   color: string
+  /**
+   * Icon name representing the budget.
+   */
   icon: string
 }
 
@@ -1688,8 +1877,18 @@ export interface ScheduledTransaction_BudgetInfo {
  * RecurringTransactionInfo wraps parent template details.
  */
 export interface ScheduledTransaction_RecurringTransactionInfo {
+  /**
+   * Unique identifier of the recurring transaction template.
+   * Values are of the form `rec_[a-zA-Z0-9]+`.
+   */
   id: string
+  /**
+   * User-friendly name of the recurring transaction template.
+   */
   name: string
+  /**
+   * Recurrence interval rule.
+   */
   interval: RecurringTransaction_Interval
 }
 
@@ -1697,11 +1896,29 @@ export interface ScheduledTransaction_RecurringTransactionInfo {
  * Metadata wraps context metadata for scheduled transactions.
  */
 export interface ScheduledTransaction_Metadata {
+  /**
+   * User-friendly name of the scheduled item.
+   */
   name: string
+  /**
+   * Due date formatted as a date string.
+   */
   dueDate: string
+  /**
+   * Descriptive memo or note for the transaction.
+   */
   description: string
+  /**
+   * Counterparty or vendor name.
+   */
   vendorName: string
+  /**
+   * Associated billing invoice identifier.
+   */
   invoiceId: string
+  /**
+   * Additional notes or comments.
+   */
   notes: string
 }
 
@@ -1723,6 +1940,7 @@ export interface CreateRecurringTransactionRequest {
 export interface UpdateRecurringTransactionRequest {
   /**
    * Required. Unique identifier of the template to update.
+   * Values are of the form `rec_[a-zA-Z0-9]+`.
    */
   id: string
   /**
@@ -2372,7 +2590,8 @@ export interface Account_InstitutionInfo {
  */
 export interface Institution {
   /**
-   * Output only. Unique resource identifier (e.g. "inst_3HnhtBQD...").
+   * Output only. Unique identifier.
+   * Values are of the form `inst_[a-zA-Z0-9]+`.
    */
   id?: string
   /**
@@ -2405,6 +2624,10 @@ export interface Institution {
   updateTime?: string
 }
 
+/**
+ * The request for
+ * [CreateInstitution][saturn.finance.v1.Finance.CreateInstitution].
+ */
 export interface CreateInstitutionRequest {
   /**
    * Required. The institution payload to create.
@@ -2412,9 +2635,14 @@ export interface CreateInstitutionRequest {
   institution: Institution
 }
 
+/**
+ * The request for
+ * [UpdateInstitution][saturn.finance.v1.Finance.UpdateInstitution].
+ */
 export interface UpdateInstitutionRequest {
   /**
    * Required. Identifier of the institution to update.
+   * Values are of the form `inst_[a-zA-Z0-9]+`.
    */
   id: string
   /**
@@ -2431,9 +2659,14 @@ export interface UpdateInstitutionRequest {
   version?: string
 }
 
+/**
+ * The request for
+ * [DeleteInstitution][saturn.finance.v1.Finance.DeleteInstitution].
+ */
 export interface DeleteInstitutionRequest {
   /**
    * Required. Identifier of the institution to delete.
+   * Values are of the form `inst_[a-zA-Z0-9]+`.
    */
   id: string
   /**
@@ -2442,6 +2675,10 @@ export interface DeleteInstitutionRequest {
   version?: string
 }
 
+/**
+ * The request for
+ * [ListInstitutions][saturn.finance.v1.Finance.ListInstitutions].
+ */
 export interface ListInstitutionsRequest {
   /**
    * Optional. Maximum number of items to return in a single page.
@@ -2457,6 +2694,10 @@ export interface ListInstitutionsRequest {
   searchQuery?: string
 }
 
+/**
+ * The response for
+ * [ListInstitutions][saturn.finance.v1.Finance.ListInstitutions].
+ */
 export interface ListInstitutionsResponse {
   /**
    * List of institutions registered in the space.
@@ -2468,6 +2709,10 @@ export interface ListInstitutionsResponse {
   nextPageToken: string
 }
 
+/**
+ * The request for
+ * [ResolveInstitution][saturn.finance.v1.Finance.ResolveInstitution].
+ */
 export interface ResolveInstitutionRequest {
   /**
    * Required. Institution name to auto-resolve (e.g. "Chase" or "Banco Popular").
@@ -2475,6 +2720,10 @@ export interface ResolveInstitutionRequest {
   name: string
 }
 
+/**
+ * The response for
+ * [ResolveInstitution][saturn.finance.v1.Finance.ResolveInstitution].
+ */
 export interface ResolveInstitutionResponse {
   /**
    * Resolved canonical institution name.
@@ -2494,6 +2743,7 @@ export interface ResolveInstitutionResponse {
   color: string
   /**
    * Optional matching existing institution ID if an exact/fuzzy match already exists in the space.
+   * Values are of the form `inst_[a-zA-Z0-9]+`.
    */
   existingInstitutionId?: string
   /**
@@ -2816,10 +3066,12 @@ export interface InboxItem {
   id?: string
   /**
    * Output only. Space identifier.
+   * Values are of the form `spc_[a-zA-Z0-9]+`.
    */
   spaceId?: string
   /**
    * Output only. Ingestion integration channel identifier.
+   * Values are of the form `int_[a-zA-Z0-9]+`.
    */
   integrationId?: string
   /**
@@ -2990,10 +3242,12 @@ export interface Statement {
   id?: string
   /**
    * Output only. Associated workspace identifier.
+   * Values are of the form `spc_[a-zA-Z0-9]+`.
    */
   spaceId?: string
   /**
    * Output only. Identifier of the account this statement belongs to.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
    */
   accountId?: string
   /**
@@ -3042,18 +3296,51 @@ export interface Statement {
  * Nested parsing configuration.
  */
 export interface Statement_Config {
+  /**
+   * Configuration for parsing CSV statement files.
+   */
   csv?: Statement_Config_CsvConfig
 }
 
+/**
+ * CSV file parsing configuration.
+ */
 export interface Statement_Config_CsvConfig {
+  /**
+   * Indicates whether the CSV file includes a header row.
+   */
   hasHeader: boolean
+  /**
+   * Delimiter character separating fields (e.g. "," or ";").
+   */
   delimiter: string
+  /**
+   * Format string for parsing transaction dates (e.g. "YYYY-MM-DD").
+   */
   dateFormat: string
+  /**
+   * Zero-based column index for the transaction date.
+   */
   dateColumnIndex: number
+  /**
+   * Zero-based column index for the transaction description.
+   */
   descriptionColumnIndex: number
+  /**
+   * Zero-based column index for the reference or check number.
+   */
   referenceColumnIndex: number
+  /**
+   * Zero-based column index for the single signed amount column.
+   */
   amountColumnIndex: number
+  /**
+   * Zero-based column index for debit amounts in split debit/credit files.
+   */
   debitColumnIndex: number
+  /**
+   * Zero-based column index for credit amounts in split debit/credit files.
+   */
   creditColumnIndex: number
 }
 
@@ -3068,6 +3355,7 @@ export interface StatementLine {
   id?: string
   /**
    * Output only. Identifier of the parent statement.
+   * Values are of the form `stmt_[a-zA-Z0-9]+`.
    */
   statementId?: string
   /**
@@ -3092,19 +3380,44 @@ export interface StatementLine {
   status: StatementLine_Status
   /**
    * Output only. Linked transaction ID once committed/completed.
+   * Values are of the form `txn_[a-zA-Z0-9]+`.
    */
   matchedTransactionId?: string
   /**
    * Output only. Bank confirmation number or wire reference.
    */
   reference?: string
+  /**
+   * Match line to an existing transaction.
+   */
   match?: StatementLine_MatchAction
+  /**
+   * Create a new expense transaction.
+   */
   createExpense?: StatementLine_CreateExpenseAction
+  /**
+   * Create a new income transaction.
+   */
   createIncome?: StatementLine_CreateIncomeAction
+  /**
+   * Create a transfer between accounts.
+   */
   createTransfer?: StatementLine_CreateTransferAction
+  /**
+   * Confirm a pending scheduled transaction.
+   */
   confirmScheduled?: StatementLine_ConfirmScheduledAction
+  /**
+   * Create a loan repayment.
+   */
   createRepayment?: StatementLine_CreateRepaymentAction
+  /**
+   * Skip this statement line.
+   */
   skip?: StatementLine_SkipAction
+  /**
+   * Output only. Grouped suggestions resolved dynamically by the matching engine.
+   */
   suggestions?: StatementLine_Suggestions
   /**
    * Output only. Optimistic concurrency control version identifier.
@@ -3113,48 +3426,101 @@ export interface StatementLine {
 }
 
 /**
- * Draft actions
+ * MatchAction links the statement line to an existing transaction.
  */
 export interface StatementLine_MatchAction {
+  /**
+   * Identifier of the existing transaction to match against.
+   * Values are of the form `txn_[a-zA-Z0-9]+`.
+   */
   transactionId: string
+  /**
+   * Optional flag to overwrite the existing transaction's details with statement line data.
+   */
   overwriteTransaction?: boolean
 }
 
+/**
+ * CreateExpenseAction creates a new expense transaction from the statement line.
+ */
 export interface StatementLine_CreateExpenseAction {
+  /**
+   * Identifier of the budget category to assign the expense to.
+   * Values are of the form `bud_[a-zA-Z0-9]+`.
+   */
   budgetId: string
 }
 
+/**
+ * CreateIncomeAction creates a new income transaction from the statement line.
+ */
 export type StatementLine_CreateIncomeAction = Record<string, never>
 
+/**
+ * CreateTransferAction creates a transfer transaction between accounts.
+ */
 export interface StatementLine_CreateTransferAction {
+  /**
+   * Identifier of the counterpart account involved in the transfer.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
+   */
   counterpartAccountId: string
 }
 
+/**
+ * ConfirmScheduledAction confirms a pending scheduled transaction matching the statement line.
+ */
 export interface StatementLine_ConfirmScheduledAction {
+  /**
+   * Identifier of the scheduled transaction to confirm.
+   * Values are of the form `sch_[a-zA-Z0-9]+`.
+   */
   scheduledTransactionId: string
 }
 
+/**
+ * CreateRepaymentAction creates a repayment against an existing borrowing agreement.
+ */
 export interface StatementLine_CreateRepaymentAction {
+  /**
+   * Identifier of the borrowing agreement to apply the repayment to.
+   * Values are of the form `bor_[a-zA-Z0-9]+`.
+   */
   borrowingId: string
 }
 
+/**
+ * SkipAction skips reconciliation for this statement line.
+ */
 export type StatementLine_SkipAction = Record<string, never>
 
 /**
  * Grouped suggestions resolved dynamically by the matching engine on fetch.
  */
 export interface StatementLine_Suggestions {
+  /**
+   * Output only. Suggested transaction type based on amount sign and context.
+   */
   transactionType?: Transaction_Type
+  /**
+   * Output only. Suggested budget category identifier.
+   * Values are of the form `bud_[a-zA-Z0-9]+`.
+   */
   budgetId?: string
+  /**
+   * Output only. Candidate transactions that potentially match this statement line.
+   */
   matches?: Transaction[]
 }
 
 /**
- * Request to import a new statement.
+ * The request for
+ * [ImportStatement][saturn.finance.v1.Finance.ImportStatement].
  */
 export interface ImportStatementRequest {
   /**
    * Required. Target account identifier to upload the statement under.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
    */
   accountId: string
   /**
@@ -3164,26 +3530,41 @@ export interface ImportStatementRequest {
 }
 
 /**
- * Request to get a statement.
+ * The request for
+ * [GetStatement][saturn.finance.v1.Finance.GetStatement].
  */
 export interface GetStatementRequest {
+  /**
+   * Required. Unique identifier of the statement to retrieve.
+   * Values are of the form `stmt_[a-zA-Z0-9]+`.
+   */
   id: string
 }
 
 /**
- * Request to delete a statement.
+ * The request for
+ * [DeleteStatement][saturn.finance.v1.Finance.DeleteStatement].
  */
 export interface DeleteStatementRequest {
+  /**
+   * Required. Unique identifier of the statement to delete.
+   * Values are of the form `stmt_[a-zA-Z0-9]+`.
+   */
   id: string
+  /**
+   * Optional. Expected resource version for optimistic concurrency control.
+   */
   version?: string
 }
 
 /**
- * Request to list statements in a space.
+ * The request for
+ * [ListStatements][saturn.finance.v1.Finance.ListStatements].
  */
 export interface ListStatementsRequest {
   /**
    * Optional. Filter statements by account identifier.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
    */
   accountId?: string
   /**
@@ -3201,33 +3582,51 @@ export interface ListStatementsRequest {
 }
 
 /**
- * Response from listing statements.
+ * The response for
+ * [ListStatements][saturn.finance.v1.Finance.ListStatements].
  */
 export interface ListStatementsResponse {
+  /**
+   * List of statements.
+   */
   statements: Statement[]
+  /**
+   * Keyset token to fetch the next page of results. Empty if no more pages are available.
+   */
   nextPageToken: string
 }
 
 /**
- * Request to list lines of a statement.
+ * The request for
+ * [ListStatementLines][saturn.finance.v1.Finance.ListStatementLines].
  */
 export interface ListStatementLinesRequest {
+  /**
+   * Required. Unique identifier of the parent statement.
+   * Values are of the form `stmt_[a-zA-Z0-9]+`.
+   */
   statementId: string
 }
 
 /**
- * Response from listing lines.
+ * The response for
+ * [ListStatementLines][saturn.finance.v1.Finance.ListStatementLines].
  */
 export interface ListStatementLinesResponse {
+  /**
+   * List of statement lines.
+   */
   lines: StatementLine[]
 }
 
 /**
- * Request to update a statement line's draft parameters.
+ * The request for
+ * [UpdateStatementLine][saturn.finance.v1.Finance.UpdateStatementLine].
  */
 export interface UpdateStatementLineRequest {
   /**
    * Required. Unique identifier of the statement line to update.
+   * Values are of the form `stln_[a-zA-Z0-9]+`.
    */
   id: string
   /**
@@ -3245,11 +3644,13 @@ export interface UpdateStatementLineRequest {
 }
 
 /**
- * Request to update a statement's properties (such as starting or ending balances).
+ * The request for
+ * [UpdateStatement][saturn.finance.v1.Finance.UpdateStatement].
  */
 export interface UpdateStatementRequest {
   /**
    * Required. Unique identifier of the statement to update.
+   * Values are of the form `stmt_[a-zA-Z0-9]+`.
    */
   id: string
   /**
@@ -3267,24 +3668,41 @@ export interface UpdateStatementRequest {
 }
 
 /**
- * Request to finalize and commit the statement.
+ * The request for
+ * [CompleteStatement][saturn.finance.v1.Finance.CompleteStatement].
  */
 export interface CompleteStatementRequest {
+  /**
+   * Required. Unique identifier of the statement to complete.
+   * Values are of the form `stmt_[a-zA-Z0-9]+`.
+   */
   id: string
 }
 
 /**
- * Request to invert all line amounts and negate starting/ending balances on an in-progress statement.
+ * The request for
+ * [InvertStatementSigns][saturn.finance.v1.Finance.InvertStatementSigns].
  */
 export interface InvertStatementSignsRequest {
+  /**
+   * Required. Unique identifier of the statement to invert.
+   * Values are of the form `stmt_[a-zA-Z0-9]+`.
+   */
   id: string
 }
 
 /**
- * Response after inverting statement signs.
+ * The response for
+ * [InvertStatementSigns][saturn.finance.v1.Finance.InvertStatementSigns].
  */
 export interface InvertStatementSignsResponse {
+  /**
+   * The inverted statement.
+   */
   statement: Statement
+  /**
+   * List of updated statement lines with inverted amounts.
+   */
   lines: StatementLine[]
 }
 
@@ -3292,22 +3710,48 @@ export interface InvertStatementSignsResponse {
  * SectionValidationReport summarizes the mathematical verification of an extracted currency section.
  */
 export interface SectionValidationReport {
+  /**
+   * Currency code for this section.
+   */
   currency: string
+  /**
+   * Starting balance reported on the statement section in cents.
+   */
   startingBalance: string
+  /**
+   * Ending balance reported on the statement section in cents.
+   */
   endingBalance: string
+  /**
+   * Calculated ending balance based on starting balance and net line flows.
+   */
   calculatedEnding: string
+  /**
+   * Net sum of all line amounts in the section.
+   */
   netFlow: string
+  /**
+   * Discrepancy between calculated ending balance and reported ending balance.
+   */
   discrepancy: string
+  /**
+   * Indicates whether the section is mathematically balanced.
+   */
   isBalanced: boolean
+  /**
+   * Total number of transaction lines extracted in this section.
+   */
   lineCount: number
 }
 
 /**
- * Request to ingest an unstructured statement document and persist drafts.
+ * The request for
+ * [IngestStatementDocument][saturn.finance.v1.Finance.IngestStatementDocument].
  */
 export interface IngestStatementDocumentRequest {
   /**
    * Optional. Target account identifier override.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
    */
   targetAccountId?: string
   /**
@@ -3329,23 +3773,44 @@ export interface IngestStatementDocumentRequest {
 }
 
 /**
- * Response from statement document ingestion.
+ * The response for
+ * [IngestStatementDocument][saturn.finance.v1.Finance.IngestStatementDocument].
  */
 export interface IngestStatementDocumentResponse {
+  /**
+   * Ingestion batch identifier.
+   */
   batchId: string
+  /**
+   * List of created statement drafts.
+   */
   createdStatements: Statement[]
+  /**
+   * Section balance validation reports.
+   */
   sectionReports: SectionValidationReport[]
+  /**
+   * List of unmapped currency sections found in the document.
+   */
   unmappedSections: string[]
+  /**
+   * Indicates whether a password is required to decrypt the document.
+   */
   needsPassword: boolean
+  /**
+   * Extraction or validation warning and error messages.
+   */
   errors: string[]
 }
 
 /**
- * Request to analyze a statement document without creating DB drafts (preview mode).
+ * The request for
+ * [AnalyzeStatementDocument][saturn.finance.v1.Finance.AnalyzeStatementDocument].
  */
 export interface AnalyzeStatementDocumentRequest {
   /**
    * Optional. Target account identifier override.
+   * Values are of the form `acc_[a-zA-Z0-9]+`.
    */
   targetAccountId?: string
   /**
@@ -3367,12 +3832,25 @@ export interface AnalyzeStatementDocumentRequest {
 }
 
 /**
- * Response from statement document analysis.
+ * The response for
+ * [AnalyzeStatementDocument][saturn.finance.v1.Finance.AnalyzeStatementDocument].
  */
 export interface AnalyzeStatementDocumentResponse {
+  /**
+   * Section balance validation reports.
+   */
   sectionReports: SectionValidationReport[]
+  /**
+   * List of unmapped currency sections found in the document.
+   */
   unmappedSections: string[]
+  /**
+   * Indicates whether a password is required to decrypt the document.
+   */
   needsPassword: boolean
+  /**
+   * Extraction or validation warning and error messages.
+   */
   errors: string[]
 }
 
