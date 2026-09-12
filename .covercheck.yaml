@@ -1,0 +1,23 @@
+# Saturn Code Coverage Configuration (.covercheck.yaml)
+
+# Minimum overall statement coverage percentage required to pass
+min_coverage: 25.0
+
+# Path to the coverage profile file
+coverprofile: coverage/coverage.out
+
+# Automatically rewrite the coverage profile excluding skipped packages
+# so downstream tools (e.g., `go tool cover -html`) only show application code
+filter_profile: true
+
+# Packages and file patterns to exclude from coverage metrics and reports
+exclude:
+  - "apis/**"          # Auto-generated Protobuf and gRPC stubs
+  - "*.pb.go"          # Protobuf struct definitions
+  - "*.pb.gw.go"       # gRPC gateway handlers
+  - "*.pb.message.go"  # EventBus message extensions
+  - "*.pb.scheduler.go"# Scheduler job definitions
+  - "*_sdk.pb.go"      # Generated client SDKs
+  - "tools/**"         # CLI code generators and developer tools
+  - "apps/web/**"      # Web application node_modules and frontend assets
+  - "migrations/**"    # SQL migration files

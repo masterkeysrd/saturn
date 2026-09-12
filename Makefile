@@ -63,7 +63,7 @@ test: test-unit test-integration
 .PHONY: test-unit
 test-unit: apps/web/dist/index.html
 	@echo "→ Running unit tests"
-	go test -race ./internal/... ./cmd/... ./apis/...
+	go test -race ./...
 
 ## Run integration test suites against PostgreSQL
 .PHONY: test-integration
@@ -76,8 +76,8 @@ test-integration: apps/web/dist/index.html
 test-coverage: apps/web/dist/index.html
 	@echo "→ Generating test coverage"
 	@mkdir -p coverage
-	go test -coverprofile=coverage/coverage.out ./internal/... ./cmd/...
-	go run ./tools/covercheck -coverprofile=coverage/coverage.out -min=25
+	go test -coverprofile=coverage/coverage.out ./...
+	go run ./tools/covercheck
 	go tool cover -html=coverage/coverage.out -o coverage/coverage.html
 	@echo "Coverage report saved to coverage/coverage.html"
 
