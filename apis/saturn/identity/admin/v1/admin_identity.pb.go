@@ -23,12 +23,16 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// AccessLevel defines the administrative authorization level of a user.
 type AccessLevel int32
 
 const (
+	// Default unspecified access level.
 	AccessLevel_ACCESS_LEVEL_UNSPECIFIED AccessLevel = 0
-	AccessLevel_ACCESS_LEVEL_USER        AccessLevel = 1
-	AccessLevel_ACCESS_LEVEL_ADMIN       AccessLevel = 2
+	// Standard user access level with basic permissions.
+	AccessLevel_ACCESS_LEVEL_USER AccessLevel = 1
+	// Administrator access level with elevated management permissions.
+	AccessLevel_ACCESS_LEVEL_ADMIN AccessLevel = 2
 )
 
 // Enum value maps for AccessLevel.
@@ -72,14 +76,20 @@ func (AccessLevel) EnumDescriptor() ([]byte, []int) {
 	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{0}
 }
 
+// StatusFilter allows filtering users by their account lifecycle status.
 type ListUsersRequest_StatusFilter int32
 
 const (
+	// Default unspecified status filter.
 	ListUsersRequest_STATUS_FILTER_UNSPECIFIED ListUsersRequest_StatusFilter = 0
-	ListUsersRequest_ACTIVE                    ListUsersRequest_StatusFilter = 1
-	ListUsersRequest_PENDING_APPROVAL          ListUsersRequest_StatusFilter = 2
-	ListUsersRequest_INACTIVE                  ListUsersRequest_StatusFilter = 3
-	ListUsersRequest_SUSPENDED                 ListUsersRequest_StatusFilter = 4
+	// Filter for active user accounts.
+	ListUsersRequest_ACTIVE ListUsersRequest_StatusFilter = 1
+	// Filter for accounts pending administrator approval.
+	ListUsersRequest_PENDING_APPROVAL ListUsersRequest_StatusFilter = 2
+	// Filter for inactive user accounts.
+	ListUsersRequest_INACTIVE ListUsersRequest_StatusFilter = 3
+	// Filter for suspended user accounts.
+	ListUsersRequest_SUSPENDED ListUsersRequest_StatusFilter = 4
 )
 
 // Enum value maps for ListUsersRequest_StatusFilter.
@@ -127,12 +137,20 @@ func (ListUsersRequest_StatusFilter) EnumDescriptor() ([]byte, []int) {
 	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{0, 0}
 }
 
+// Request message for AdminIdentity.ListUsers.
 type ListUsersRequest struct {
-	state         protoimpl.MessageState        `protogen:"open.v1"`
-	PageSize      int32                         `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`                                                                         // default 20, max 100
-	NextPageToken string                        `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`                                                         // cursor-based pagination token
-	StatusFilter  ListUsersRequest_StatusFilter `protobuf:"varint,3,opt,name=status_filter,json=statusFilter,proto3,enum=saturn.identity.admin.v1.ListUsersRequest_StatusFilter" json:"status_filter,omitempty"` // optional: filter by user status
-	SearchQuery   string                        `protobuf:"bytes,4,opt,name=search_query,json=searchQuery,proto3" json:"search_query,omitempty"`                                                                 // optional: search across email/username/name
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Optional. The maximum number of users to return. The service may return fewer
+	// than this value. If unspecified, at most 20 users are returned. The maximum
+	// value is 100; values above 100 will be coerced to 100.
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Optional. A page token, received from a previous `ListUsers` call.
+	// Provide this to retrieve the subsequent page.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	// Optional. Filter users by their account status.
+	StatusFilter ListUsersRequest_StatusFilter `protobuf:"varint,3,opt,name=status_filter,json=statusFilter,proto3,enum=saturn.identity.admin.v1.ListUsersRequest_StatusFilter" json:"status_filter,omitempty"`
+	// Optional. A search query across user email, username, and display name.
+	SearchQuery   string `protobuf:"bytes,4,opt,name=search_query,json=searchQuery,proto3" json:"search_query,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -195,10 +213,14 @@ func (x *ListUsersRequest) GetSearchQuery() string {
 	return ""
 }
 
+// Response message for AdminIdentity.ListUsers.
 type ListUsersResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Users         []*User                `protobuf:"bytes,1,rep,name=users,proto3" json:"users,omitempty"`
-	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"` // empty if no more pages
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The list of users matching the request criteria.
+	Users []*User `protobuf:"bytes,1,rep,name=users,proto3" json:"users,omitempty"`
+	// Output only. A token, which can be sent as `next_page_token` to retrieve the next page.
+	// If this field is omitted, there are no subsequent pages.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -247,9 +269,12 @@ func (x *ListUsersResponse) GetNextPageToken() string {
 	return ""
 }
 
+// Request message for AdminIdentity.ApproveUser.
 type ApproveUserRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the user to approve.
+	// Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+	UserId        string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -291,16 +316,65 @@ func (x *ApproveUserRequest) GetUserId() string {
 	return ""
 }
 
+// Response message for AdminIdentity.ApproveUser.
+type ApproveUserResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The approved user resource.
+	User          *User `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApproveUserResponse) Reset() {
+	*x = ApproveUserResponse{}
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApproveUserResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApproveUserResponse) ProtoMessage() {}
+
+func (x *ApproveUserResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApproveUserResponse.ProtoReflect.Descriptor instead.
+func (*ApproveUserResponse) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ApproveUserResponse) GetUser() *User {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+// Request message for AdminIdentity.RejectUser.
 type RejectUserRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the user to reject.
+	// Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+	UserId        string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RejectUserRequest) Reset() {
 	*x = RejectUserRequest{}
-	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[3]
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -312,7 +386,7 @@ func (x *RejectUserRequest) String() string {
 func (*RejectUserRequest) ProtoMessage() {}
 
 func (x *RejectUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[3]
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -325,7 +399,7 @@ func (x *RejectUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RejectUserRequest.ProtoReflect.Descriptor instead.
 func (*RejectUserRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{3}
+	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *RejectUserRequest) GetUserId() string {
@@ -335,17 +409,67 @@ func (x *RejectUserRequest) GetUserId() string {
 	return ""
 }
 
+// Response message for AdminIdentity.RejectUser.
+type RejectUserResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The rejected user resource.
+	User          *User `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RejectUserResponse) Reset() {
+	*x = RejectUserResponse{}
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RejectUserResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RejectUserResponse) ProtoMessage() {}
+
+func (x *RejectUserResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RejectUserResponse.ProtoReflect.Descriptor instead.
+func (*RejectUserResponse) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *RejectUserResponse) GetUser() *User {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+// Request message for AdminIdentity.UpdateUserRole.
 type UpdateUserRoleRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	AccessLevel   AccessLevel            `protobuf:"varint,2,opt,name=access_level,json=accessLevel,proto3,enum=saturn.identity.admin.v1.AccessLevel" json:"access_level,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the user to update.
+	// Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+	UserId string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// Required. The new access level for the user.
+	AccessLevel   AccessLevel `protobuf:"varint,2,opt,name=access_level,json=accessLevel,proto3,enum=saturn.identity.admin.v1.AccessLevel" json:"access_level,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateUserRoleRequest) Reset() {
 	*x = UpdateUserRoleRequest{}
-	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[4]
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -357,7 +481,7 @@ func (x *UpdateUserRoleRequest) String() string {
 func (*UpdateUserRoleRequest) ProtoMessage() {}
 
 func (x *UpdateUserRoleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[4]
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -370,7 +494,7 @@ func (x *UpdateUserRoleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateUserRoleRequest.ProtoReflect.Descriptor instead.
 func (*UpdateUserRoleRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{4}
+	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *UpdateUserRoleRequest) GetUserId() string {
@@ -387,97 +511,11 @@ func (x *UpdateUserRoleRequest) GetAccessLevel() AccessLevel {
 	return AccessLevel_ACCESS_LEVEL_UNSPECIFIED
 }
 
-type RevokeAllSessionsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RevokeAllSessionsRequest) Reset() {
-	*x = RevokeAllSessionsRequest{}
-	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RevokeAllSessionsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RevokeAllSessionsRequest) ProtoMessage() {}
-
-func (x *RevokeAllSessionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RevokeAllSessionsRequest.ProtoReflect.Descriptor instead.
-func (*RevokeAllSessionsRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *RevokeAllSessionsRequest) GetUserId() string {
-	if x != nil {
-		return x.UserId
-	}
-	return ""
-}
-
-type RevokeAllSessionsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RevokedCount  int64                  `protobuf:"varint,1,opt,name=revoked_count,json=revokedCount,proto3" json:"revoked_count,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RevokeAllSessionsResponse) Reset() {
-	*x = RevokeAllSessionsResponse{}
-	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RevokeAllSessionsResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RevokeAllSessionsResponse) ProtoMessage() {}
-
-func (x *RevokeAllSessionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RevokeAllSessionsResponse.ProtoReflect.Descriptor instead.
-func (*RevokeAllSessionsResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *RevokeAllSessionsResponse) GetRevokedCount() int64 {
-	if x != nil {
-		return x.RevokedCount
-	}
-	return 0
-}
-
+// Response message for AdminIdentity.UpdateUserRole.
 type UpdateUserRoleResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	User          *User                  `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The updated user resource reflecting the new access level.
+	User          *User `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -519,27 +557,30 @@ func (x *UpdateUserRoleResponse) GetUser() *User {
 	return nil
 }
 
-type ApproveUserResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	User          *User                  `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+// Request message for AdminIdentity.RevokeAllSessions.
+type RevokeAllSessionsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the user whose sessions are to be revoked.
+	// Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+	UserId        string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ApproveUserResponse) Reset() {
-	*x = ApproveUserResponse{}
+func (x *RevokeAllSessionsRequest) Reset() {
+	*x = RevokeAllSessionsRequest{}
 	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ApproveUserResponse) String() string {
+func (x *RevokeAllSessionsRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ApproveUserResponse) ProtoMessage() {}
+func (*RevokeAllSessionsRequest) ProtoMessage() {}
 
-func (x *ApproveUserResponse) ProtoReflect() protoreflect.Message {
+func (x *RevokeAllSessionsRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -551,30 +592,87 @@ func (x *ApproveUserResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ApproveUserResponse.ProtoReflect.Descriptor instead.
-func (*ApproveUserResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use RevokeAllSessionsRequest.ProtoReflect.Descriptor instead.
+func (*RevokeAllSessionsRequest) Descriptor() ([]byte, []int) {
 	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{8}
 }
 
-func (x *ApproveUserResponse) GetUser() *User {
+func (x *RevokeAllSessionsRequest) GetUserId() string {
 	if x != nil {
-		return x.User
+		return x.UserId
 	}
-	return nil
+	return ""
 }
 
-// Shared user message — mirrors the v1.User but scoped to admin context.
+// Response message for AdminIdentity.RevokeAllSessions.
+type RevokeAllSessionsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The number of sessions that were revoked for the user.
+	RevokedCount  int64 `protobuf:"varint,1,opt,name=revoked_count,json=revokedCount,proto3" json:"revoked_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeAllSessionsResponse) Reset() {
+	*x = RevokeAllSessionsResponse{}
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeAllSessionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeAllSessionsResponse) ProtoMessage() {}
+
+func (x *RevokeAllSessionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeAllSessionsResponse.ProtoReflect.Descriptor instead.
+func (*RevokeAllSessionsResponse) Descriptor() ([]byte, []int) {
+	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *RevokeAllSessionsResponse) GetRevokedCount() int64 {
+	if x != nil {
+		return x.RevokedCount
+	}
+	return 0
+}
+
+// User represents a user account resource in the admin context.
 type User struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Email         string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
-	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
-	Name          string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
-	AvatarUrl     string                 `protobuf:"bytes,5,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
-	Status        string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
-	AccessLevel   AccessLevel            `protobuf:"varint,7,opt,name=access_level,json=accessLevel,proto3,enum=saturn.identity.admin.v1.AccessLevel" json:"access_level,omitempty"`
-	Version       int64                  `protobuf:"varint,8,opt,name=version,proto3" json:"version,omitempty"`
-	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The user's unique identifier.
+	// Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Required. The user's primary email address.
+	Email string `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+	// Required. The user's unique username.
+	Username string `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	// Required. The user's full or display name.
+	Name string `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	// Optional. The URL pointing to the user's avatar image.
+	AvatarUrl string `protobuf:"bytes,5,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	// Output only. The current account lifecycle status (e.g., active, pending_approval, suspended).
+	Status string `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
+	// Required. The user's administrative access level.
+	AccessLevel AccessLevel `protobuf:"varint,7,opt,name=access_level,json=accessLevel,proto3,enum=saturn.identity.admin.v1.AccessLevel" json:"access_level,omitempty"`
+	// Output only. The optimistic concurrency control version number.
+	Version int64 `protobuf:"varint,8,opt,name=version,proto3" json:"version,omitempty"`
+	// Output only. The timestamp when the user account was created.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// Output only. The timestamp when the user account was last updated.
 	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -582,7 +680,7 @@ type User struct {
 
 func (x *User) Reset() {
 	*x = User{}
-	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[9]
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -594,7 +692,7 @@ func (x *User) String() string {
 func (*User) ProtoMessage() {}
 
 func (x *User) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[9]
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -607,7 +705,7 @@ func (x *User) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use User.ProtoReflect.Descriptor instead.
 func (*User) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{9}
+	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *User) GetId() string {
@@ -680,14 +778,23 @@ func (x *User) GetUpdateTime() *timestamppb.Timestamp {
 	return nil
 }
 
+// SecurityEvent represents a security audit event in the admin context.
 type SecurityEvent struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Email         string                 `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
-	EventType     string                 `protobuf:"bytes,4,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
-	IpAddress     string                 `protobuf:"bytes,5,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`
-	UserAgent     string                 `protobuf:"bytes,6,opt,name=user_agent,json=userAgent,proto3" json:"user_agent,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The unique identifier of the security event.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Optional. The unique identifier of the user associated with the event.
+	// Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+	UserId string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// Required. The email address associated with the event.
+	Email string `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
+	// Required. The type of security event that occurred.
+	EventType string `protobuf:"bytes,4,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
+	// Optional. The IP address from which the event originated.
+	IpAddress string `protobuf:"bytes,5,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`
+	// Optional. The User-Agent string from the client that triggered the event.
+	UserAgent string `protobuf:"bytes,6,opt,name=user_agent,json=userAgent,proto3" json:"user_agent,omitempty"`
+	// Output only. The timestamp when the security event occurred.
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -695,7 +802,7 @@ type SecurityEvent struct {
 
 func (x *SecurityEvent) Reset() {
 	*x = SecurityEvent{}
-	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[10]
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -707,7 +814,7 @@ func (x *SecurityEvent) String() string {
 func (*SecurityEvent) ProtoMessage() {}
 
 func (x *SecurityEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[10]
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -720,7 +827,7 @@ func (x *SecurityEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SecurityEvent.ProtoReflect.Descriptor instead.
 func (*SecurityEvent) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{10}
+	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *SecurityEvent) GetId() string {
@@ -772,19 +879,25 @@ func (x *SecurityEvent) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// Request message for AdminIdentity.ListSecurityEvents.
 type ListSecurityEventsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
-	EventType     string                 `protobuf:"bytes,2,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
-	Limit         int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
-	NextPageToken string                 `protobuf:"bytes,4,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Optional. Filter security events by user email.
+	Email string `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+	// Optional. Filter security events by event type.
+	EventType string `protobuf:"bytes,2,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
+	// Optional. The maximum number of events to return.
+	Limit int32 `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Optional. A page token, received from a previous `ListSecurityEvents` call.
+	// Provide this to retrieve the subsequent page.
+	NextPageToken string `protobuf:"bytes,4,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListSecurityEventsRequest) Reset() {
 	*x = ListSecurityEventsRequest{}
-	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[11]
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -796,7 +909,7 @@ func (x *ListSecurityEventsRequest) String() string {
 func (*ListSecurityEventsRequest) ProtoMessage() {}
 
 func (x *ListSecurityEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[11]
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -809,7 +922,7 @@ func (x *ListSecurityEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSecurityEventsRequest.ProtoReflect.Descriptor instead.
 func (*ListSecurityEventsRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{11}
+	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ListSecurityEventsRequest) GetEmail() string {
@@ -840,17 +953,21 @@ func (x *ListSecurityEventsRequest) GetNextPageToken() string {
 	return ""
 }
 
+// Response message for AdminIdentity.ListSecurityEvents.
 type ListSecurityEventsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Events        []*SecurityEvent       `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
-	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The list of security events matching the request.
+	Events []*SecurityEvent `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
+	// Output only. A token, which can be sent as `next_page_token` to retrieve the next page.
+	// If this field is omitted, there are no subsequent pages.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListSecurityEventsResponse) Reset() {
 	*x = ListSecurityEventsResponse{}
-	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[12]
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -862,7 +979,7 @@ func (x *ListSecurityEventsResponse) String() string {
 func (*ListSecurityEventsResponse) ProtoMessage() {}
 
 func (x *ListSecurityEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[12]
+	mi := &file_saturn_identity_admin_v1_admin_identity_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -875,7 +992,7 @@ func (x *ListSecurityEventsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSecurityEventsResponse.ProtoReflect.Descriptor instead.
 func (*ListSecurityEventsResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{12}
+	return file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ListSecurityEventsResponse) GetEvents() []*SecurityEvent {
@@ -896,84 +1013,86 @@ var File_saturn_identity_admin_v1_admin_identity_proto protoreflect.FileDescript
 
 const file_saturn_identity_admin_v1_admin_identity_proto_rawDesc = "" +
 	"\n" +
-	"-saturn/identity/admin/v1/admin_identity.proto\x12\x18saturn.identity.admin.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc6\x02\n" +
-	"\x10ListUsersRequest\x12\x1b\n" +
-	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\\\n" +
-	"\rstatus_filter\x18\x03 \x01(\x0e27.saturn.identity.admin.v1.ListUsersRequest.StatusFilterR\fstatusFilter\x12!\n" +
-	"\fsearch_query\x18\x04 \x01(\tR\vsearchQuery\"l\n" +
+	"-saturn/identity/admin/v1/admin_identity.proto\x12\x18saturn.identity.admin.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xda\x02\n" +
+	"\x10ListUsersRequest\x12 \n" +
+	"\tpage_size\x18\x01 \x01(\x05B\x03\xe0A\x01R\bpageSize\x12+\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tB\x03\xe0A\x01R\rnextPageToken\x12a\n" +
+	"\rstatus_filter\x18\x03 \x01(\x0e27.saturn.identity.admin.v1.ListUsersRequest.StatusFilterB\x03\xe0A\x01R\fstatusFilter\x12&\n" +
+	"\fsearch_query\x18\x04 \x01(\tB\x03\xe0A\x01R\vsearchQuery\"l\n" +
 	"\fStatusFilter\x12\x1d\n" +
 	"\x19STATUS_FILTER_UNSPECIFIED\x10\x00\x12\n" +
 	"\n" +
 	"\x06ACTIVE\x10\x01\x12\x14\n" +
 	"\x10PENDING_APPROVAL\x10\x02\x12\f\n" +
 	"\bINACTIVE\x10\x03\x12\r\n" +
-	"\tSUSPENDED\x10\x04\"q\n" +
-	"\x11ListUsersResponse\x124\n" +
-	"\x05users\x18\x01 \x03(\v2\x1e.saturn.identity.admin.v1.UserR\x05users\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"2\n" +
+	"\tSUSPENDED\x10\x04\"{\n" +
+	"\x11ListUsersResponse\x129\n" +
+	"\x05users\x18\x01 \x03(\v2\x1e.saturn.identity.admin.v1.UserB\x03\xe0A\x03R\x05users\x12+\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tB\x03\xe0A\x03R\rnextPageToken\"2\n" +
 	"\x12ApproveUserRequest\x12\x1c\n" +
-	"\auser_id\x18\x01 \x01(\tB\x03\xe0A\x02R\x06userId\"1\n" +
+	"\auser_id\x18\x01 \x01(\tB\x03\xe0A\x02R\x06userId\"N\n" +
+	"\x13ApproveUserResponse\x127\n" +
+	"\x04user\x18\x01 \x01(\v2\x1e.saturn.identity.admin.v1.UserB\x03\xe0A\x03R\x04user\"1\n" +
 	"\x11RejectUserRequest\x12\x1c\n" +
-	"\auser_id\x18\x01 \x01(\tB\x03\xe0A\x02R\x06userId\"\x84\x01\n" +
+	"\auser_id\x18\x01 \x01(\tB\x03\xe0A\x02R\x06userId\"M\n" +
+	"\x12RejectUserResponse\x127\n" +
+	"\x04user\x18\x01 \x01(\v2\x1e.saturn.identity.admin.v1.UserB\x03\xe0A\x03R\x04user\"\x84\x01\n" +
 	"\x15UpdateUserRoleRequest\x12\x1c\n" +
 	"\auser_id\x18\x01 \x01(\tB\x03\xe0A\x02R\x06userId\x12M\n" +
-	"\faccess_level\x18\x02 \x01(\x0e2%.saturn.identity.admin.v1.AccessLevelB\x03\xe0A\x02R\vaccessLevel\"8\n" +
+	"\faccess_level\x18\x02 \x01(\x0e2%.saturn.identity.admin.v1.AccessLevelB\x03\xe0A\x02R\vaccessLevel\"Q\n" +
+	"\x16UpdateUserRoleResponse\x127\n" +
+	"\x04user\x18\x01 \x01(\v2\x1e.saturn.identity.admin.v1.UserB\x03\xe0A\x03R\x04user\"8\n" +
 	"\x18RevokeAllSessionsRequest\x12\x1c\n" +
-	"\auser_id\x18\x01 \x01(\tB\x03\xe0A\x02R\x06userId\"@\n" +
-	"\x19RevokeAllSessionsResponse\x12#\n" +
-	"\rrevoked_count\x18\x01 \x01(\x03R\frevokedCount\"L\n" +
-	"\x16UpdateUserRoleResponse\x122\n" +
-	"\x04user\x18\x01 \x01(\v2\x1e.saturn.identity.admin.v1.UserR\x04user\"I\n" +
-	"\x13ApproveUserResponse\x122\n" +
-	"\x04user\x18\x01 \x01(\v2\x1e.saturn.identity.admin.v1.UserR\x04user\"\xf1\x02\n" +
-	"\x04User\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
-	"\x05email\x18\x02 \x01(\tR\x05email\x12\x1a\n" +
-	"\busername\x18\x03 \x01(\tR\busername\x12\x12\n" +
-	"\x04name\x18\x04 \x01(\tR\x04name\x12\x1d\n" +
+	"\auser_id\x18\x01 \x01(\tB\x03\xe0A\x02R\x06userId\"E\n" +
+	"\x19RevokeAllSessionsResponse\x12(\n" +
+	"\rrevoked_count\x18\x01 \x01(\x03B\x03\xe0A\x03R\frevokedCount\"\xa3\x03\n" +
+	"\x04User\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x19\n" +
+	"\x05email\x18\x02 \x01(\tB\x03\xe0A\x02R\x05email\x12\x1f\n" +
+	"\busername\x18\x03 \x01(\tB\x03\xe0A\x02R\busername\x12\x17\n" +
+	"\x04name\x18\x04 \x01(\tB\x03\xe0A\x02R\x04name\x12\"\n" +
 	"\n" +
-	"avatar_url\x18\x05 \x01(\tR\tavatarUrl\x12\x16\n" +
-	"\x06status\x18\x06 \x01(\tR\x06status\x12H\n" +
-	"\faccess_level\x18\a \x01(\x0e2%.saturn.identity.admin.v1.AccessLevelR\vaccessLevel\x12\x18\n" +
-	"\aversion\x18\b \x01(\x03R\aversion\x12;\n" +
-	"\vcreate_time\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"createTime\x12;\n" +
+	"avatar_url\x18\x05 \x01(\tB\x03\xe0A\x01R\tavatarUrl\x12\x1b\n" +
+	"\x06status\x18\x06 \x01(\tB\x03\xe0A\x03R\x06status\x12M\n" +
+	"\faccess_level\x18\a \x01(\x0e2%.saturn.identity.admin.v1.AccessLevelB\x03\xe0A\x02R\vaccessLevel\x12\x1d\n" +
+	"\aversion\x18\b \x01(\x03B\x03\xe0A\x03R\aversion\x12@\n" +
+	"\vcreate_time\x18\t \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"createTime\x12@\n" +
 	"\vupdate_time\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime\"\xe6\x01\n" +
-	"\rSecurityEvent\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x14\n" +
-	"\x05email\x18\x03 \x01(\tR\x05email\x12\x1d\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"updateTime\"\x89\x02\n" +
+	"\rSecurityEvent\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x1c\n" +
+	"\auser_id\x18\x02 \x01(\tB\x03\xe0A\x01R\x06userId\x12\x19\n" +
+	"\x05email\x18\x03 \x01(\tB\x03\xe0A\x02R\x05email\x12\"\n" +
 	"\n" +
-	"event_type\x18\x04 \x01(\tR\teventType\x12\x1d\n" +
+	"event_type\x18\x04 \x01(\tB\x03\xe0A\x02R\teventType\x12\"\n" +
 	"\n" +
-	"ip_address\x18\x05 \x01(\tR\tipAddress\x12\x1d\n" +
+	"ip_address\x18\x05 \x01(\tB\x03\xe0A\x01R\tipAddress\x12\"\n" +
 	"\n" +
-	"user_agent\x18\x06 \x01(\tR\tuserAgent\x129\n" +
+	"user_agent\x18\x06 \x01(\tB\x03\xe0A\x01R\tuserAgent\x12>\n" +
 	"\n" +
-	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\x8e\x01\n" +
-	"\x19ListSecurityEventsRequest\x12\x14\n" +
-	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1d\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tcreatedAt\"\xa2\x01\n" +
+	"\x19ListSecurityEventsRequest\x12\x19\n" +
+	"\x05email\x18\x01 \x01(\tB\x03\xe0A\x01R\x05email\x12\"\n" +
 	"\n" +
-	"event_type\x18\x02 \x01(\tR\teventType\x12\x14\n" +
-	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12&\n" +
-	"\x0fnext_page_token\x18\x04 \x01(\tR\rnextPageToken\"\x85\x01\n" +
-	"\x1aListSecurityEventsResponse\x12?\n" +
-	"\x06events\x18\x01 \x03(\v2'.saturn.identity.admin.v1.SecurityEventR\x06events\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken*Z\n" +
+	"event_type\x18\x02 \x01(\tB\x03\xe0A\x01R\teventType\x12\x19\n" +
+	"\x05limit\x18\x03 \x01(\x05B\x03\xe0A\x01R\x05limit\x12+\n" +
+	"\x0fnext_page_token\x18\x04 \x01(\tB\x03\xe0A\x01R\rnextPageToken\"\x8f\x01\n" +
+	"\x1aListSecurityEventsResponse\x12D\n" +
+	"\x06events\x18\x01 \x03(\v2'.saturn.identity.admin.v1.SecurityEventB\x03\xe0A\x03R\x06events\x12+\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tB\x03\xe0A\x03R\rnextPageToken*Z\n" +
 	"\vAccessLevel\x12\x1c\n" +
 	"\x18ACCESS_LEVEL_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11ACCESS_LEVEL_USER\x10\x01\x12\x16\n" +
-	"\x12ACCESS_LEVEL_ADMIN\x10\x022\xee\a\n" +
+	"\x12ACCESS_LEVEL_ADMIN\x10\x022\xa2\b\n" +
 	"\rAdminIdentity\x12\x86\x01\n" +
-	"\tListUsers\x12*.saturn.identity.admin.v1.ListUsersRequest\x1a+.saturn.identity.admin.v1.ListUsersResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/v1/admin/identity/users\x12\xa1\x01\n" +
-	"\vApproveUser\x12,.saturn.identity.admin.v1.ApproveUserRequest\x1a-.saturn.identity.admin.v1.ApproveUserResponse\"5\x82\xd3\xe4\x93\x02/:\x01*\"*/v1/admin/identity/users/{user_id}:approve\x12\x9e\x01\n" +
+	"\tListUsers\x12*.saturn.identity.admin.v1.ListUsersRequest\x1a+.saturn.identity.admin.v1.ListUsersResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/v1/admin/identity/users\x12\xab\x01\n" +
+	"\vApproveUser\x12,.saturn.identity.admin.v1.ApproveUserRequest\x1a-.saturn.identity.admin.v1.ApproveUserResponse\"?\xdaA\auser_id\x82\xd3\xe4\x93\x02/:\x01*\"*/v1/admin/identity/users/{user_id}:approve\x12\xa7\x01\n" +
 	"\n" +
-	"RejectUser\x12+.saturn.identity.admin.v1.RejectUserRequest\x1a-.saturn.identity.admin.v1.ApproveUserResponse\"4\x82\xd3\xe4\x93\x02.:\x01*\")/v1/admin/identity/users/{user_id}:reject\x12\xa2\x01\n" +
-	"\x0eUpdateUserRole\x12/.saturn.identity.admin.v1.UpdateUserRoleRequest\x1a0.saturn.identity.admin.v1.UpdateUserRoleResponse\"-\x82\xd3\xe4\x93\x02':\x01*2\"/v1/admin/identity/users/{user_id}\x12\xbb\x01\n" +
-	"\x11RevokeAllSessions\x122.saturn.identity.admin.v1.RevokeAllSessionsRequest\x1a3.saturn.identity.admin.v1.RevokeAllSessionsResponse\"=\x82\xd3\xe4\x93\x027:\x01*\"2/v1/admin/identity/users/{user_id}:revoke-sessions\x12\xab\x01\n" +
+	"RejectUser\x12+.saturn.identity.admin.v1.RejectUserRequest\x1a,.saturn.identity.admin.v1.RejectUserResponse\">\xdaA\auser_id\x82\xd3\xe4\x93\x02.:\x01*\")/v1/admin/identity/users/{user_id}:reject\x12\xb9\x01\n" +
+	"\x0eUpdateUserRole\x12/.saturn.identity.admin.v1.UpdateUserRoleRequest\x1a0.saturn.identity.admin.v1.UpdateUserRoleResponse\"D\xdaA\x14user_id,access_level\x82\xd3\xe4\x93\x02':\x01*2\"/v1/admin/identity/users/{user_id}\x12\xc5\x01\n" +
+	"\x11RevokeAllSessions\x122.saturn.identity.admin.v1.RevokeAllSessionsRequest\x1a3.saturn.identity.admin.v1.RevokeAllSessionsResponse\"G\xdaA\auser_id\x82\xd3\xe4\x93\x027:\x01*\"2/v1/admin/identity/users/{user_id}:revoke-sessions\x12\xab\x01\n" +
 	"\x12ListSecurityEvents\x123.saturn.identity.admin.v1.ListSecurityEventsRequest\x1a4.saturn.identity.admin.v1.ListSecurityEventsResponse\"*\x82\xd3\xe4\x93\x02$\x12\"/v1/admin/identity/security-eventsBNZLgithub.com/masterkeysrd/saturn/apis/saturn/identity/admin/v1;adminidentityv1b\x06proto3"
 
 var (
@@ -989,53 +1108,55 @@ func file_saturn_identity_admin_v1_admin_identity_proto_rawDescGZIP() []byte {
 }
 
 var file_saturn_identity_admin_v1_admin_identity_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_saturn_identity_admin_v1_admin_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_saturn_identity_admin_v1_admin_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_saturn_identity_admin_v1_admin_identity_proto_goTypes = []any{
 	(AccessLevel)(0),                   // 0: saturn.identity.admin.v1.AccessLevel
 	(ListUsersRequest_StatusFilter)(0), // 1: saturn.identity.admin.v1.ListUsersRequest.StatusFilter
 	(*ListUsersRequest)(nil),           // 2: saturn.identity.admin.v1.ListUsersRequest
 	(*ListUsersResponse)(nil),          // 3: saturn.identity.admin.v1.ListUsersResponse
 	(*ApproveUserRequest)(nil),         // 4: saturn.identity.admin.v1.ApproveUserRequest
-	(*RejectUserRequest)(nil),          // 5: saturn.identity.admin.v1.RejectUserRequest
-	(*UpdateUserRoleRequest)(nil),      // 6: saturn.identity.admin.v1.UpdateUserRoleRequest
-	(*RevokeAllSessionsRequest)(nil),   // 7: saturn.identity.admin.v1.RevokeAllSessionsRequest
-	(*RevokeAllSessionsResponse)(nil),  // 8: saturn.identity.admin.v1.RevokeAllSessionsResponse
+	(*ApproveUserResponse)(nil),        // 5: saturn.identity.admin.v1.ApproveUserResponse
+	(*RejectUserRequest)(nil),          // 6: saturn.identity.admin.v1.RejectUserRequest
+	(*RejectUserResponse)(nil),         // 7: saturn.identity.admin.v1.RejectUserResponse
+	(*UpdateUserRoleRequest)(nil),      // 8: saturn.identity.admin.v1.UpdateUserRoleRequest
 	(*UpdateUserRoleResponse)(nil),     // 9: saturn.identity.admin.v1.UpdateUserRoleResponse
-	(*ApproveUserResponse)(nil),        // 10: saturn.identity.admin.v1.ApproveUserResponse
-	(*User)(nil),                       // 11: saturn.identity.admin.v1.User
-	(*SecurityEvent)(nil),              // 12: saturn.identity.admin.v1.SecurityEvent
-	(*ListSecurityEventsRequest)(nil),  // 13: saturn.identity.admin.v1.ListSecurityEventsRequest
-	(*ListSecurityEventsResponse)(nil), // 14: saturn.identity.admin.v1.ListSecurityEventsResponse
-	(*timestamppb.Timestamp)(nil),      // 15: google.protobuf.Timestamp
+	(*RevokeAllSessionsRequest)(nil),   // 10: saturn.identity.admin.v1.RevokeAllSessionsRequest
+	(*RevokeAllSessionsResponse)(nil),  // 11: saturn.identity.admin.v1.RevokeAllSessionsResponse
+	(*User)(nil),                       // 12: saturn.identity.admin.v1.User
+	(*SecurityEvent)(nil),              // 13: saturn.identity.admin.v1.SecurityEvent
+	(*ListSecurityEventsRequest)(nil),  // 14: saturn.identity.admin.v1.ListSecurityEventsRequest
+	(*ListSecurityEventsResponse)(nil), // 15: saturn.identity.admin.v1.ListSecurityEventsResponse
+	(*timestamppb.Timestamp)(nil),      // 16: google.protobuf.Timestamp
 }
 var file_saturn_identity_admin_v1_admin_identity_proto_depIdxs = []int32{
 	1,  // 0: saturn.identity.admin.v1.ListUsersRequest.status_filter:type_name -> saturn.identity.admin.v1.ListUsersRequest.StatusFilter
-	11, // 1: saturn.identity.admin.v1.ListUsersResponse.users:type_name -> saturn.identity.admin.v1.User
-	0,  // 2: saturn.identity.admin.v1.UpdateUserRoleRequest.access_level:type_name -> saturn.identity.admin.v1.AccessLevel
-	11, // 3: saturn.identity.admin.v1.UpdateUserRoleResponse.user:type_name -> saturn.identity.admin.v1.User
-	11, // 4: saturn.identity.admin.v1.ApproveUserResponse.user:type_name -> saturn.identity.admin.v1.User
-	0,  // 5: saturn.identity.admin.v1.User.access_level:type_name -> saturn.identity.admin.v1.AccessLevel
-	15, // 6: saturn.identity.admin.v1.User.create_time:type_name -> google.protobuf.Timestamp
-	15, // 7: saturn.identity.admin.v1.User.update_time:type_name -> google.protobuf.Timestamp
-	15, // 8: saturn.identity.admin.v1.SecurityEvent.created_at:type_name -> google.protobuf.Timestamp
-	12, // 9: saturn.identity.admin.v1.ListSecurityEventsResponse.events:type_name -> saturn.identity.admin.v1.SecurityEvent
-	2,  // 10: saturn.identity.admin.v1.AdminIdentity.ListUsers:input_type -> saturn.identity.admin.v1.ListUsersRequest
-	4,  // 11: saturn.identity.admin.v1.AdminIdentity.ApproveUser:input_type -> saturn.identity.admin.v1.ApproveUserRequest
-	5,  // 12: saturn.identity.admin.v1.AdminIdentity.RejectUser:input_type -> saturn.identity.admin.v1.RejectUserRequest
-	6,  // 13: saturn.identity.admin.v1.AdminIdentity.UpdateUserRole:input_type -> saturn.identity.admin.v1.UpdateUserRoleRequest
-	7,  // 14: saturn.identity.admin.v1.AdminIdentity.RevokeAllSessions:input_type -> saturn.identity.admin.v1.RevokeAllSessionsRequest
-	13, // 15: saturn.identity.admin.v1.AdminIdentity.ListSecurityEvents:input_type -> saturn.identity.admin.v1.ListSecurityEventsRequest
-	3,  // 16: saturn.identity.admin.v1.AdminIdentity.ListUsers:output_type -> saturn.identity.admin.v1.ListUsersResponse
-	10, // 17: saturn.identity.admin.v1.AdminIdentity.ApproveUser:output_type -> saturn.identity.admin.v1.ApproveUserResponse
-	10, // 18: saturn.identity.admin.v1.AdminIdentity.RejectUser:output_type -> saturn.identity.admin.v1.ApproveUserResponse
-	9,  // 19: saturn.identity.admin.v1.AdminIdentity.UpdateUserRole:output_type -> saturn.identity.admin.v1.UpdateUserRoleResponse
-	8,  // 20: saturn.identity.admin.v1.AdminIdentity.RevokeAllSessions:output_type -> saturn.identity.admin.v1.RevokeAllSessionsResponse
-	14, // 21: saturn.identity.admin.v1.AdminIdentity.ListSecurityEvents:output_type -> saturn.identity.admin.v1.ListSecurityEventsResponse
-	16, // [16:22] is the sub-list for method output_type
-	10, // [10:16] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	12, // 1: saturn.identity.admin.v1.ListUsersResponse.users:type_name -> saturn.identity.admin.v1.User
+	12, // 2: saturn.identity.admin.v1.ApproveUserResponse.user:type_name -> saturn.identity.admin.v1.User
+	12, // 3: saturn.identity.admin.v1.RejectUserResponse.user:type_name -> saturn.identity.admin.v1.User
+	0,  // 4: saturn.identity.admin.v1.UpdateUserRoleRequest.access_level:type_name -> saturn.identity.admin.v1.AccessLevel
+	12, // 5: saturn.identity.admin.v1.UpdateUserRoleResponse.user:type_name -> saturn.identity.admin.v1.User
+	0,  // 6: saturn.identity.admin.v1.User.access_level:type_name -> saturn.identity.admin.v1.AccessLevel
+	16, // 7: saturn.identity.admin.v1.User.create_time:type_name -> google.protobuf.Timestamp
+	16, // 8: saturn.identity.admin.v1.User.update_time:type_name -> google.protobuf.Timestamp
+	16, // 9: saturn.identity.admin.v1.SecurityEvent.created_at:type_name -> google.protobuf.Timestamp
+	13, // 10: saturn.identity.admin.v1.ListSecurityEventsResponse.events:type_name -> saturn.identity.admin.v1.SecurityEvent
+	2,  // 11: saturn.identity.admin.v1.AdminIdentity.ListUsers:input_type -> saturn.identity.admin.v1.ListUsersRequest
+	4,  // 12: saturn.identity.admin.v1.AdminIdentity.ApproveUser:input_type -> saturn.identity.admin.v1.ApproveUserRequest
+	6,  // 13: saturn.identity.admin.v1.AdminIdentity.RejectUser:input_type -> saturn.identity.admin.v1.RejectUserRequest
+	8,  // 14: saturn.identity.admin.v1.AdminIdentity.UpdateUserRole:input_type -> saturn.identity.admin.v1.UpdateUserRoleRequest
+	10, // 15: saturn.identity.admin.v1.AdminIdentity.RevokeAllSessions:input_type -> saturn.identity.admin.v1.RevokeAllSessionsRequest
+	14, // 16: saturn.identity.admin.v1.AdminIdentity.ListSecurityEvents:input_type -> saturn.identity.admin.v1.ListSecurityEventsRequest
+	3,  // 17: saturn.identity.admin.v1.AdminIdentity.ListUsers:output_type -> saturn.identity.admin.v1.ListUsersResponse
+	5,  // 18: saturn.identity.admin.v1.AdminIdentity.ApproveUser:output_type -> saturn.identity.admin.v1.ApproveUserResponse
+	7,  // 19: saturn.identity.admin.v1.AdminIdentity.RejectUser:output_type -> saturn.identity.admin.v1.RejectUserResponse
+	9,  // 20: saturn.identity.admin.v1.AdminIdentity.UpdateUserRole:output_type -> saturn.identity.admin.v1.UpdateUserRoleResponse
+	11, // 21: saturn.identity.admin.v1.AdminIdentity.RevokeAllSessions:output_type -> saturn.identity.admin.v1.RevokeAllSessionsResponse
+	15, // 22: saturn.identity.admin.v1.AdminIdentity.ListSecurityEvents:output_type -> saturn.identity.admin.v1.ListSecurityEventsResponse
+	17, // [17:23] is the sub-list for method output_type
+	11, // [11:17] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_saturn_identity_admin_v1_admin_identity_proto_init() }
@@ -1049,7 +1170,7 @@ func file_saturn_identity_admin_v1_admin_identity_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_identity_admin_v1_admin_identity_proto_rawDesc), len(file_saturn_identity_admin_v1_admin_identity_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   13,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

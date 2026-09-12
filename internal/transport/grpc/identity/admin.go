@@ -115,7 +115,7 @@ func (h *AdminHandler) ApproveUser(ctx context.Context, req *adminidentityv1.App
 }
 
 // RejectUser deactivates a pending user account.
-func (h *AdminHandler) RejectUser(ctx context.Context, req *adminidentityv1.RejectUserRequest) (*adminidentityv1.ApproveUserResponse, error) {
+func (h *AdminHandler) RejectUser(ctx context.Context, req *adminidentityv1.RejectUserRequest) (*adminidentityv1.RejectUserResponse, error) {
 	resp, err := h.Coordinator.RejectUser(ctx, &iam.RejectUserRequest{
 		UserID: req.GetUserId(),
 	})
@@ -123,7 +123,7 @@ func (h *AdminHandler) RejectUser(ctx context.Context, req *adminidentityv1.Reje
 		return nil, err
 	}
 
-	return &adminidentityv1.ApproveUserResponse{
+	return &adminidentityv1.RejectUserResponse{
 		User: toAdminUser(resp.User),
 	}, nil
 }

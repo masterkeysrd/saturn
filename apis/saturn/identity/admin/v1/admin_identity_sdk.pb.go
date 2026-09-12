@@ -65,8 +65,8 @@ func (c *Client) ApproveUser(ctx context.Context, req *ApproveUserRequest) (*App
 }
 
 // RejectUser executes POST /api/v1/admin/identity/users/{user_id}:reject.
-func (c *Client) RejectUser(ctx context.Context, req *RejectUserRequest) (*ApproveUserResponse, error) {
-	var resp ApproveUserResponse
+func (c *Client) RejectUser(ctx context.Context, req *RejectUserRequest) (*RejectUserResponse, error) {
+	var resp RejectUserResponse
 	path := fmt.Sprintf("/api/v1/admin/identity/users/%s:reject", req.GetUserId())
 	var query []string
 	if len(query) > 0 {

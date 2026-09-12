@@ -23,9 +23,11 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// LoginUserRequest contains user credentials for authentication.
+// Request message for Identity.LoginUser.
 type LoginUserRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The authentication method to use for signing in.
+	//
 	// Types that are valid to be assigned to Method:
 	//
 	//	*LoginUserRequest_UserPassword_
@@ -85,24 +87,25 @@ type isLoginUserRequest_Method interface {
 }
 
 type LoginUserRequest_UserPassword_ struct {
-	// UserPassword authentication method.
+	// Password-based authentication credentials.
 	UserPassword *LoginUserRequest_UserPassword `protobuf:"bytes,1,opt,name=user_password,json=userPassword,proto3,oneof"`
 }
 
 func (*LoginUserRequest_UserPassword_) isLoginUserRequest_Method() {}
 
-// LoginUserResponse contains the authentication result with both tokens.
+// Response message for Identity.LoginUser.
 type LoginUserResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The user's unique identifier.
+	// Output only. The user's unique identifier.
+	// Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
 	UserId string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	// The access token for authenticated requests.
+	// Output only. The access token for authenticated requests.
 	AccessToken string `protobuf:"bytes,2,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
-	// Expiration time of the access token (Unix seconds).
+	// Output only. The expiration time of the access token in Unix seconds.
 	AccessTokenExpiresAt int64 `protobuf:"varint,3,opt,name=access_token_expires_at,json=accessTokenExpiresAt,proto3" json:"access_token_expires_at,omitempty"`
-	// The opaque refresh token.
+	// Output only. The opaque refresh token.
 	RefreshToken string `protobuf:"bytes,4,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
-	// Expiration time of the refresh token (Unix seconds).
+	// Output only. The expiration time of the refresh token in Unix seconds.
 	RefreshTokenExpiresAt int64 `protobuf:"varint,5,opt,name=refresh_token_expires_at,json=refreshTokenExpiresAt,proto3" json:"refresh_token_expires_at,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
@@ -173,18 +176,18 @@ func (x *LoginUserResponse) GetRefreshTokenExpiresAt() int64 {
 	return 0
 }
 
-// RegisterUserRequest contains the fields for creating a new user account.
+// Request message for Identity.RegisterUser.
 type RegisterUserRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The user's email address.
+	// Required. The user's primary email address.
 	Email string `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
-	// The user's chosen username.
+	// Required. The user's chosen unique username.
 	Username string `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
-	// The user's display name.
+	// Required. The user's full or display name.
 	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	// The user's avatar URL (optional).
+	// Optional. The URL pointing to the user's avatar image.
 	AvatarUrl string `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
-	// The user's password for authentication.
+	// Required. The user's password for authentication.
 	Password      string `protobuf:"bytes,5,opt,name=password,proto3" json:"password,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -255,27 +258,28 @@ func (x *RegisterUserRequest) GetPassword() string {
 	return ""
 }
 
-// User represents a registered user in the system.
+// User represents a registered user account resource.
 type User struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The user's unique identifier.
+	// Output only. The user's unique identifier.
+	// Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// The user's email address.
+	// Required. The user's primary email address.
 	Email string `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
-	// The user's chosen username.
+	// Required. The user's unique username.
 	Username string `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
-	// The user's display name.
+	// Required. The user's full or display name.
 	Name string `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
-	// The user's avatar URL.
+	// Optional. The URL pointing to the user's avatar image.
 	AvatarUrl string `protobuf:"bytes,5,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
-	// The current status of the user account.
+	// Output only. The current account lifecycle status (e.g., active, pending_approval, suspended).
 	Status string `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
-	// The optimistic locking version.
-	Version int64 `protobuf:"varint,9,opt,name=version,proto3" json:"version,omitempty"`
-	// The creation timestamp.
+	// Output only. The timestamp when the user account was created.
 	CreateTime *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
-	// The last update timestamp.
-	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	// Output only. The timestamp when the user account was last updated.
+	UpdateTime *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	// Output only. The optimistic concurrency control version number.
+	Version       int64 `protobuf:"varint,9,opt,name=version,proto3" json:"version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -352,13 +356,6 @@ func (x *User) GetStatus() string {
 	return ""
 }
 
-func (x *User) GetVersion() int64 {
-	if x != nil {
-		return x.Version
-	}
-	return 0
-}
-
 func (x *User) GetCreateTime() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CreateTime
@@ -373,10 +370,18 @@ func (x *User) GetUpdateTime() *timestamppb.Timestamp {
 	return nil
 }
 
-// RefreshSessionRequest contains a valid refresh token.
+func (x *User) GetVersion() int64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+// Request message for Identity.RefreshSession.
 type RefreshSessionRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RefreshToken  string                 `protobuf:"bytes,1,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The refresh token to exchange for new tokens.
+	RefreshToken  string `protobuf:"bytes,1,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -418,13 +423,17 @@ func (x *RefreshSessionRequest) GetRefreshToken() string {
 	return ""
 }
 
-// RefreshSessionResponse contains newly issued tokens.
+// Response message for Identity.RefreshSession.
 type RefreshSessionResponse struct {
-	state                 protoimpl.MessageState `protogen:"open.v1"`
-	AccessToken           string                 `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
-	AccessTokenExpiresAt  int64                  `protobuf:"varint,2,opt,name=access_token_expires_at,json=accessTokenExpiresAt,proto3" json:"access_token_expires_at,omitempty"`
-	RefreshToken          string                 `protobuf:"bytes,3,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
-	RefreshTokenExpiresAt int64                  `protobuf:"varint,4,opt,name=refresh_token_expires_at,json=refreshTokenExpiresAt,proto3" json:"refresh_token_expires_at,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The new access token for authenticated requests.
+	AccessToken string `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	// Output only. The expiration time of the new access token in Unix seconds.
+	AccessTokenExpiresAt int64 `protobuf:"varint,2,opt,name=access_token_expires_at,json=accessTokenExpiresAt,proto3" json:"access_token_expires_at,omitempty"`
+	// Output only. The new opaque refresh token.
+	RefreshToken string `protobuf:"bytes,3,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	// Output only. The expiration time of the new refresh token in Unix seconds.
+	RefreshTokenExpiresAt int64 `protobuf:"varint,4,opt,name=refresh_token_expires_at,json=refreshTokenExpiresAt,proto3" json:"refresh_token_expires_at,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -487,10 +496,11 @@ func (x *RefreshSessionResponse) GetRefreshTokenExpiresAt() int64 {
 	return 0
 }
 
-// LogoutRequest contains the refresh token to revoke.
+// Request message for Identity.Logout.
 type LogoutRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RefreshToken  string                 `protobuf:"bytes,1,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The refresh token to be revoked.
+	RefreshToken  string `protobuf:"bytes,1,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -532,7 +542,7 @@ func (x *LogoutRequest) GetRefreshToken() string {
 	return ""
 }
 
-// LogoutResponse is empty on success.
+// Response message for Identity.Logout.
 type LogoutResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -569,7 +579,7 @@ func (*LogoutResponse) Descriptor() ([]byte, []int) {
 	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{7}
 }
 
-// GetCurrentUserRequest is an empty request for fetching the current user's profile.
+// Request message for Identity.GetCurrentUser.
 type GetCurrentUserRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -606,18 +616,18 @@ func (*GetCurrentUserRequest) Descriptor() ([]byte, []int) {
 	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{8}
 }
 
-// UserSession represents an active user session.
+// UserSession represents an active user session resource.
 type UserSession struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The session identifier.
+	// Output only. The unique identifier of the session.
 	SessionId string `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	// User Agent string associated with the session.
+	// Output only. The User-Agent string associated with the session.
 	UserAgent string `protobuf:"bytes,2,opt,name=user_agent,json=userAgent,proto3" json:"user_agent,omitempty"`
-	// IP address of the client that created the session.
+	// Output only. The IP address of the client that created the session.
 	IpAddress string `protobuf:"bytes,3,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`
-	// When the session was initialized.
+	// Output only. The timestamp when the session was initialized.
 	CreateTime *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
-	// When the session was last utilized.
+	// Output only. The timestamp when the session was last utilized.
 	LastUsedAt    *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=last_used_at,json=lastUsedAt,proto3" json:"last_used_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -688,7 +698,7 @@ func (x *UserSession) GetLastUsedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-// ListActiveSessionsRequest is an empty request for listing sessions.
+// Request message for Identity.ListActiveSessions.
 type ListActiveSessionsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -725,10 +735,11 @@ func (*ListActiveSessionsRequest) Descriptor() ([]byte, []int) {
 	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{10}
 }
 
-// ListActiveSessionsResponse lists active sessions.
+// Response message for Identity.ListActiveSessions.
 type ListActiveSessionsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Sessions      []*UserSession         `protobuf:"bytes,1,rep,name=sessions,proto3" json:"sessions,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The list of active sessions for the authenticated user.
+	Sessions      []*UserSession `protobuf:"bytes,1,rep,name=sessions,proto3" json:"sessions,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -770,10 +781,11 @@ func (x *ListActiveSessionsResponse) GetSessions() []*UserSession {
 	return nil
 }
 
-// RevokeSessionRequest targets a specific session to invalidate.
+// Request message for Identity.RevokeSession.
 type RevokeSessionRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the session to revoke.
+	SessionId     string `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -815,7 +827,7 @@ func (x *RevokeSessionRequest) GetSessionId() string {
 	return ""
 }
 
-// RevokeSessionResponse is empty on success.
+// Response message for Identity.RevokeSession.
 type RevokeSessionResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -852,7 +864,7 @@ func (*RevokeSessionResponse) Descriptor() ([]byte, []int) {
 	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{13}
 }
 
-// RevokeAllSessionsRequest is an empty request for global session invalidation.
+// Request message for Identity.RevokeAllSessions.
 type RevokeAllSessionsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -889,7 +901,7 @@ func (*RevokeAllSessionsRequest) Descriptor() ([]byte, []int) {
 	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{14}
 }
 
-// RevokeAllSessionsResponse is empty on success.
+// Response message for Identity.RevokeAllSessions.
 type RevokeAllSessionsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -926,13 +938,20 @@ func (*RevokeAllSessionsResponse) Descriptor() ([]byte, []int) {
 	return file_saturn_identity_v1_identity_proto_rawDescGZIP(), []int{15}
 }
 
+// SecurityEvent represents a security audit log entry for the user account.
 type SecurityEvent struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Email         string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
-	EventType     string                 `protobuf:"bytes,3,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
-	IpAddress     string                 `protobuf:"bytes,4,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`
-	UserAgent     string                 `protobuf:"bytes,5,opt,name=user_agent,json=userAgent,proto3" json:"user_agent,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The unique identifier of the security event.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Output only. The email address of the user associated with the event.
+	Email string `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+	// Output only. The type of security event that occurred (e.g., login, password change).
+	EventType string `protobuf:"bytes,3,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
+	// Output only. The IP address from which the event originated.
+	IpAddress string `protobuf:"bytes,4,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`
+	// Output only. The User-Agent string of the client that triggered the event.
+	UserAgent string `protobuf:"bytes,5,opt,name=user_agent,json=userAgent,proto3" json:"user_agent,omitempty"`
+	// Output only. The timestamp when the event was created.
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1010,10 +1029,14 @@ func (x *SecurityEvent) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// Request message for Identity.ListMySecurityEvents.
 type ListMySecurityEventsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
-	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Optional. The maximum number of security events to return.
+	Limit int32 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Optional. A page token, received from a previous `ListMySecurityEvents` call.
+	// Provide this to retrieve the subsequent page.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1062,10 +1085,14 @@ func (x *ListMySecurityEventsRequest) GetNextPageToken() string {
 	return ""
 }
 
+// Response message for Identity.ListMySecurityEvents.
 type ListMySecurityEventsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Events        []*SecurityEvent       `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
-	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The list of security events for the authenticated user.
+	Events []*SecurityEvent `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
+	// Output only. A token, which can be sent as `next_page_token` to retrieve the next page.
+	// If this field is omitted, there are no subsequent pages.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1114,12 +1141,12 @@ func (x *ListMySecurityEventsResponse) GetNextPageToken() string {
 	return ""
 }
 
-// UserPassword authentication method.
+// UserPassword contains credentials for password authentication.
 type LoginUserRequest_UserPassword struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Username or email of the user.
+	// Required. The username or email of the user.
 	Identifier string `protobuf:"bytes,1,opt,name=identifier,proto3" json:"identifier,omitempty"`
-	// Password of the user.
+	// Required. The password of the user.
 	Password      string `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1173,7 +1200,7 @@ var File_saturn_identity_v1_identity_proto protoreflect.FileDescriptor
 
 const file_saturn_identity_v1_identity_proto_rawDesc = "" +
 	"\n" +
-	"!saturn/identity/v1/identity.proto\x12\x12saturn.identity.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcc\x01\n" +
+	"!saturn/identity/v1/identity.proto\x12\x12saturn.identity.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcc\x01\n" +
 	"\x10LoginUserRequest\x12X\n" +
 	"\ruser_password\x18\x01 \x01(\v21.saturn.identity.v1.LoginUserRequest.UserPasswordH\x00R\fuserPassword\x1aT\n" +
 	"\fUserPassword\x12#\n" +
@@ -1181,90 +1208,91 @@ const file_saturn_identity_v1_identity_proto_rawDesc = "" +
 	"identifier\x18\x01 \x01(\tB\x03\xe0A\x02R\n" +
 	"identifier\x12\x1f\n" +
 	"\bpassword\x18\x02 \x01(\tB\x03\xe0A\x02R\bpasswordB\b\n" +
-	"\x06method\"\xe4\x01\n" +
-	"\x11LoginUserResponse\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\x12!\n" +
-	"\faccess_token\x18\x02 \x01(\tR\vaccessToken\x125\n" +
-	"\x17access_token_expires_at\x18\x03 \x01(\x03R\x14accessTokenExpiresAt\x12#\n" +
-	"\rrefresh_token\x18\x04 \x01(\tR\frefreshToken\x127\n" +
-	"\x18refresh_token_expires_at\x18\x05 \x01(\x03R\x15refreshTokenExpiresAt\"\xaa\x01\n" +
+	"\x06method\"\xfd\x01\n" +
+	"\x11LoginUserResponse\x12\x1c\n" +
+	"\auser_id\x18\x01 \x01(\tB\x03\xe0A\x03R\x06userId\x12&\n" +
+	"\faccess_token\x18\x02 \x01(\tB\x03\xe0A\x03R\vaccessToken\x12:\n" +
+	"\x17access_token_expires_at\x18\x03 \x01(\x03B\x03\xe0A\x03R\x14accessTokenExpiresAt\x12(\n" +
+	"\rrefresh_token\x18\x04 \x01(\tB\x03\xe0A\x03R\frefreshToken\x12<\n" +
+	"\x18refresh_token_expires_at\x18\x05 \x01(\x03B\x03\xe0A\x03R\x15refreshTokenExpiresAt\"\xaf\x01\n" +
 	"\x13RegisterUserRequest\x12\x19\n" +
 	"\x05email\x18\x01 \x01(\tB\x03\xe0A\x02R\x05email\x12\x1f\n" +
 	"\busername\x18\x02 \x01(\tB\x03\xe0A\x02R\busername\x12\x17\n" +
-	"\x04name\x18\x03 \x01(\tB\x03\xe0A\x02R\x04name\x12\x1d\n" +
+	"\x04name\x18\x03 \x01(\tB\x03\xe0A\x02R\x04name\x12\"\n" +
 	"\n" +
-	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x12\x1f\n" +
-	"\bpassword\x18\x05 \x01(\tB\x03\xe0A\x02R\bpassword\"\xa7\x02\n" +
-	"\x04User\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
-	"\x05email\x18\x02 \x01(\tR\x05email\x12\x1a\n" +
-	"\busername\x18\x03 \x01(\tR\busername\x12\x12\n" +
-	"\x04name\x18\x04 \x01(\tR\x04name\x12\x1d\n" +
+	"avatar_url\x18\x04 \x01(\tB\x03\xe0A\x01R\tavatarUrl\x12\x1f\n" +
+	"\bpassword\x18\x05 \x01(\tB\x03\xe0A\x02R\bpassword\"\xd4\x02\n" +
+	"\x04User\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x19\n" +
+	"\x05email\x18\x02 \x01(\tB\x03\xe0A\x02R\x05email\x12\x1f\n" +
+	"\busername\x18\x03 \x01(\tB\x03\xe0A\x02R\busername\x12\x17\n" +
+	"\x04name\x18\x04 \x01(\tB\x03\xe0A\x02R\x04name\x12\"\n" +
 	"\n" +
-	"avatar_url\x18\x05 \x01(\tR\tavatarUrl\x12\x16\n" +
-	"\x06status\x18\x06 \x01(\tR\x06status\x12\x18\n" +
-	"\aversion\x18\t \x01(\x03R\aversion\x12;\n" +
-	"\vcreate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"createTime\x12;\n" +
-	"\vupdate_time\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime\"A\n" +
+	"avatar_url\x18\x05 \x01(\tB\x03\xe0A\x01R\tavatarUrl\x12\x1b\n" +
+	"\x06status\x18\x06 \x01(\tB\x03\xe0A\x03R\x06status\x12@\n" +
+	"\vcreate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"createTime\x12@\n" +
+	"\vupdate_time\x18\b \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"updateTime\x12\x1d\n" +
+	"\aversion\x18\t \x01(\x03B\x03\xe0A\x03R\aversion\"A\n" +
 	"\x15RefreshSessionRequest\x12(\n" +
-	"\rrefresh_token\x18\x01 \x01(\tB\x03\xe0A\x02R\frefreshToken\"\xd0\x01\n" +
-	"\x16RefreshSessionResponse\x12!\n" +
-	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x125\n" +
-	"\x17access_token_expires_at\x18\x02 \x01(\x03R\x14accessTokenExpiresAt\x12#\n" +
-	"\rrefresh_token\x18\x03 \x01(\tR\frefreshToken\x127\n" +
-	"\x18refresh_token_expires_at\x18\x04 \x01(\x03R\x15refreshTokenExpiresAt\"9\n" +
+	"\rrefresh_token\x18\x01 \x01(\tB\x03\xe0A\x02R\frefreshToken\"\xe4\x01\n" +
+	"\x16RefreshSessionResponse\x12&\n" +
+	"\faccess_token\x18\x01 \x01(\tB\x03\xe0A\x03R\vaccessToken\x12:\n" +
+	"\x17access_token_expires_at\x18\x02 \x01(\x03B\x03\xe0A\x03R\x14accessTokenExpiresAt\x12(\n" +
+	"\rrefresh_token\x18\x03 \x01(\tB\x03\xe0A\x03R\frefreshToken\x12<\n" +
+	"\x18refresh_token_expires_at\x18\x04 \x01(\x03B\x03\xe0A\x03R\x15refreshTokenExpiresAt\"9\n" +
 	"\rLogoutRequest\x12(\n" +
 	"\rrefresh_token\x18\x01 \x01(\tB\x03\xe0A\x02R\frefreshToken\"\x10\n" +
 	"\x0eLogoutResponse\"\x17\n" +
-	"\x15GetCurrentUserRequest\"\xe5\x01\n" +
-	"\vUserSession\x12\x1d\n" +
+	"\x15GetCurrentUserRequest\"\xfe\x01\n" +
+	"\vUserSession\x12\"\n" +
 	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1d\n" +
+	"session_id\x18\x01 \x01(\tB\x03\xe0A\x03R\tsessionId\x12\"\n" +
 	"\n" +
-	"user_agent\x18\x02 \x01(\tR\tuserAgent\x12\x1d\n" +
+	"user_agent\x18\x02 \x01(\tB\x03\xe0A\x03R\tuserAgent\x12\"\n" +
 	"\n" +
-	"ip_address\x18\x03 \x01(\tR\tipAddress\x12;\n" +
-	"\vcreate_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"createTime\x12<\n" +
-	"\flast_used_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"ip_address\x18\x03 \x01(\tB\x03\xe0A\x03R\tipAddress\x12@\n" +
+	"\vcreate_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"createTime\x12A\n" +
+	"\flast_used_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"lastUsedAt\"\x1b\n" +
-	"\x19ListActiveSessionsRequest\"Y\n" +
-	"\x1aListActiveSessionsResponse\x12;\n" +
-	"\bsessions\x18\x01 \x03(\v2\x1f.saturn.identity.v1.UserSessionR\bsessions\":\n" +
+	"\x19ListActiveSessionsRequest\"^\n" +
+	"\x1aListActiveSessionsResponse\x12@\n" +
+	"\bsessions\x18\x01 \x03(\v2\x1f.saturn.identity.v1.UserSessionB\x03\xe0A\x03R\bsessions\":\n" +
 	"\x14RevokeSessionRequest\x12\"\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tB\x03\xe0A\x02R\tsessionId\"\x17\n" +
 	"\x15RevokeSessionResponse\"\x1a\n" +
 	"\x18RevokeAllSessionsRequest\"\x1b\n" +
-	"\x19RevokeAllSessionsResponse\"\xcd\x01\n" +
-	"\rSecurityEvent\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
-	"\x05email\x18\x02 \x01(\tR\x05email\x12\x1d\n" +
+	"\x19RevokeAllSessionsResponse\"\xeb\x01\n" +
+	"\rSecurityEvent\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x19\n" +
+	"\x05email\x18\x02 \x01(\tB\x03\xe0A\x03R\x05email\x12\"\n" +
 	"\n" +
-	"event_type\x18\x03 \x01(\tR\teventType\x12\x1d\n" +
+	"event_type\x18\x03 \x01(\tB\x03\xe0A\x03R\teventType\x12\"\n" +
 	"\n" +
-	"ip_address\x18\x04 \x01(\tR\tipAddress\x12\x1d\n" +
+	"ip_address\x18\x04 \x01(\tB\x03\xe0A\x03R\tipAddress\x12\"\n" +
 	"\n" +
-	"user_agent\x18\x05 \x01(\tR\tuserAgent\x129\n" +
+	"user_agent\x18\x05 \x01(\tB\x03\xe0A\x03R\tuserAgent\x12>\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"[\n" +
-	"\x1bListMySecurityEventsRequest\x12\x14\n" +
-	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\x81\x01\n" +
-	"\x1cListMySecurityEventsResponse\x129\n" +
-	"\x06events\x18\x01 \x03(\v2!.saturn.identity.v1.SecurityEventR\x06events\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken2\x85\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tcreatedAt\"e\n" +
+	"\x1bListMySecurityEventsRequest\x12\x19\n" +
+	"\x05limit\x18\x01 \x01(\x05B\x03\xe0A\x01R\x05limit\x12+\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tB\x03\xe0A\x01R\rnextPageToken\"\x8b\x01\n" +
+	"\x1cListMySecurityEventsResponse\x12>\n" +
+	"\x06events\x18\x01 \x03(\v2!.saturn.identity.v1.SecurityEventB\x03\xe0A\x03R\x06events\x12+\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tB\x03\xe0A\x03R\rnextPageToken2\xd3\n" +
 	"\n" +
 	"\bIdentity\x12}\n" +
-	"\tLoginUser\x12$.saturn.identity.v1.LoginUserRequest\x1a%.saturn.identity.v1.LoginUserResponse\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/v1/identity/users:login\x12y\n" +
-	"\fRegisterUser\x12'.saturn.identity.v1.RegisterUserRequest\x1a\x18.saturn.identity.v1.User\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/v1/identity/users:register\x12\x91\x01\n" +
-	"\x0eRefreshSession\x12).saturn.identity.v1.RefreshSessionRequest\x1a*.saturn.identity.v1.RefreshSessionResponse\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/v1/identity/sessions:refresh\x12x\n" +
-	"\x06Logout\x12!.saturn.identity.v1.LogoutRequest\x1a\".saturn.identity.v1.LogoutResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/identity/sessions:logout\x12t\n" +
+	"\tLoginUser\x12$.saturn.identity.v1.LoginUserRequest\x1a%.saturn.identity.v1.LoginUserResponse\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/v1/identity/users:login\x12\x98\x01\n" +
+	"\fRegisterUser\x12'.saturn.identity.v1.RegisterUserRequest\x1a\x18.saturn.identity.v1.User\"E\xdaA\x1cemail,username,name,password\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/v1/identity/users:register\x12\xa1\x01\n" +
+	"\x0eRefreshSession\x12).saturn.identity.v1.RefreshSessionRequest\x1a*.saturn.identity.v1.RefreshSessionResponse\"8\xdaA\rrefresh_token\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/v1/identity/sessions:refresh\x12\x88\x01\n" +
+	"\x06Logout\x12!.saturn.identity.v1.LogoutRequest\x1a\".saturn.identity.v1.LogoutResponse\"7\xdaA\rrefresh_token\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/identity/sessions:logout\x12t\n" +
 	"\x0eGetCurrentUser\x12).saturn.identity.v1.GetCurrentUserRequest\x1a\x18.saturn.identity.v1.User\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/identity/users/me\x12\x92\x01\n" +
-	"\x12ListActiveSessions\x12-.saturn.identity.v1.ListActiveSessionsRequest\x1a..saturn.identity.v1.ListActiveSessionsResponse\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/identity/sessions\x12\x9a\x01\n" +
-	"\rRevokeSession\x12(.saturn.identity.v1.RevokeSessionRequest\x1a).saturn.identity.v1.RevokeSessionResponse\"4\x82\xd3\xe4\x93\x02.:\x01*\")/v1/identity/sessions/{session_id}:revoke\x12\x9d\x01\n" +
+	"\x12ListActiveSessions\x12-.saturn.identity.v1.ListActiveSessionsRequest\x1a..saturn.identity.v1.ListActiveSessionsResponse\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/identity/sessions\x12\xa7\x01\n" +
+	"\rRevokeSession\x12(.saturn.identity.v1.RevokeSessionRequest\x1a).saturn.identity.v1.RevokeSessionResponse\"A\xdaA\n" +
+	"session_id\x82\xd3\xe4\x93\x02.:\x01*\")/v1/identity/sessions/{session_id}:revoke\x12\x9d\x01\n" +
 	"\x11RevokeAllSessions\x12,.saturn.identity.v1.RevokeAllSessionsRequest\x1a-.saturn.identity.v1.RevokeAllSessionsResponse\"+\x82\xd3\xe4\x93\x02%:\x01*\" /v1/identity/sessions:revoke-all\x12\xa8\x01\n" +
 	"\x14ListMySecurityEvents\x12/.saturn.identity.v1.ListMySecurityEventsRequest\x1a0.saturn.identity.v1.ListMySecurityEventsResponse\"-\x82\xd3\xe4\x93\x02'\x12%/v1/identity/users/me/security-eventsBCZAgithub.com/masterkeysrd/saturn/apis/saturn/identity/v1;identityv1b\x06proto3"
 

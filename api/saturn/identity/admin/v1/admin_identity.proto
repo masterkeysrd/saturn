@@ -3,143 +3,255 @@ syntax = "proto3";
 package saturn.identity.admin.v1;
 
 import "google/api/annotations.proto";
+import "google/api/client.proto";
 import "google/api/field_behavior.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/masterkeysrd/saturn/apis/saturn/identity/admin/v1;adminidentityv1";
 
-// AdminIdentity provides administrative operations for user management.
+// AdminIdentity provides administrative operations for user and session management.
 service AdminIdentity {
-  // ListUsers returns users with optional filtering by status or search query.
+  // Lists users with optional filtering by status or search query.
   rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {
     option (google.api.http) = {get: "/v1/admin/identity/users"};
   }
 
-  // ApproveUser activates a pending user account.
+  // Approves and activates a pending user account.
   rpc ApproveUser(ApproveUserRequest) returns (ApproveUserResponse) {
     option (google.api.http) = {
       post: "/v1/admin/identity/users/{user_id}:approve"
       body: "*"
     };
+    option (google.api.method_signature) = "user_id";
   }
 
-  // RejectUser deactivates a pending user account.
-  rpc RejectUser(RejectUserRequest) returns (ApproveUserResponse) {
+  // Rejects and deactivates a pending user account.
+  rpc RejectUser(RejectUserRequest) returns (RejectUserResponse) {
     option (google.api.http) = {
       post: "/v1/admin/identity/users/{user_id}:reject"
       body: "*"
     };
+    option (google.api.method_signature) = "user_id";
   }
 
-  // UpdateUserRole changes a user's access level.
+  // Updates a user's access level.
   rpc UpdateUserRole(UpdateUserRoleRequest) returns (UpdateUserRoleResponse) {
     option (google.api.http) = {
       patch: "/v1/admin/identity/users/{user_id}"
       body: "*"
     };
+    option (google.api.method_signature) = "user_id,access_level";
   }
 
-  // RevokeAllSessions revokes all sessions for a user and increments auth_version.
+  // Revokes all active sessions for a user globally and increments the authentication version.
   rpc RevokeAllSessions(RevokeAllSessionsRequest) returns (RevokeAllSessionsResponse) {
     option (google.api.http) = {
       post: "/v1/admin/identity/users/{user_id}:revoke-sessions"
       body: "*"
     };
+    option (google.api.method_signature) = "user_id";
   }
 
-  // ListSecurityEvents returns a list of security audit logs.
+  // Lists security audit log events.
   rpc ListSecurityEvents(ListSecurityEventsRequest) returns (ListSecurityEventsResponse) {
     option (google.api.http) = {get: "/v1/admin/identity/security-events"};
   }
 }
 
+// Request message for AdminIdentity.ListUsers.
 message ListUsersRequest {
+  // StatusFilter allows filtering users by their account lifecycle status.
   enum StatusFilter {
+    // Default unspecified status filter.
     STATUS_FILTER_UNSPECIFIED = 0;
+
+    // Filter for active user accounts.
     ACTIVE = 1;
+
+    // Filter for accounts pending administrator approval.
     PENDING_APPROVAL = 2;
+
+    // Filter for inactive user accounts.
     INACTIVE = 3;
+
+    // Filter for suspended user accounts.
     SUSPENDED = 4;
   }
 
-  int32 page_size = 1; // default 20, max 100
-  string next_page_token = 2; // cursor-based pagination token
-  StatusFilter status_filter = 3; // optional: filter by user status
-  string search_query = 4; // optional: search across email/username/name
+  // Optional. The maximum number of users to return. The service may return fewer
+  // than this value. If unspecified, at most 20 users are returned. The maximum
+  // value is 100; values above 100 will be coerced to 100.
+  int32 page_size = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. A page token, received from a previous `ListUsers` call.
+  // Provide this to retrieve the subsequent page.
+  string next_page_token = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter users by their account status.
+  StatusFilter status_filter = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. A search query across user email, username, and display name.
+  string search_query = 4 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// Response message for AdminIdentity.ListUsers.
 message ListUsersResponse {
-  repeated User users = 1;
-  string next_page_token = 2; // empty if no more pages
+  // Output only. The list of users matching the request criteria.
+  repeated User users = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. A token, which can be sent as `next_page_token` to retrieve the next page.
+  // If this field is omitted, there are no subsequent pages.
+  string next_page_token = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// Request message for AdminIdentity.ApproveUser.
 message ApproveUserRequest {
+  // Required. The unique identifier of the user to approve.
+  // Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
   string user_id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
+// Response message for AdminIdentity.ApproveUser.
+message ApproveUserResponse {
+  // Output only. The approved user resource.
+  User user = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for AdminIdentity.RejectUser.
 message RejectUserRequest {
+  // Required. The unique identifier of the user to reject.
+  // Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
   string user_id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
+// Response message for AdminIdentity.RejectUser.
+message RejectUserResponse {
+  // Output only. The rejected user resource.
+  User user = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for AdminIdentity.UpdateUserRole.
 message UpdateUserRoleRequest {
+  // Required. The unique identifier of the user to update.
+  // Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
   string user_id = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The new access level for the user.
   AccessLevel access_level = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
+// Response message for AdminIdentity.UpdateUserRole.
+message UpdateUserRoleResponse {
+  // Output only. The updated user resource reflecting the new access level.
+  User user = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Request message for AdminIdentity.RevokeAllSessions.
 message RevokeAllSessionsRequest {
+  // Required. The unique identifier of the user whose sessions are to be revoked.
+  // Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
   string user_id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
+// Response message for AdminIdentity.RevokeAllSessions.
 message RevokeAllSessionsResponse {
-  int64 revoked_count = 1;
+  // Output only. The number of sessions that were revoked for the user.
+  int64 revoked_count = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// AccessLevel defines the administrative authorization level of a user.
 enum AccessLevel {
+  // Default unspecified access level.
   ACCESS_LEVEL_UNSPECIFIED = 0;
+
+  // Standard user access level with basic permissions.
   ACCESS_LEVEL_USER = 1;
+
+  // Administrator access level with elevated management permissions.
   ACCESS_LEVEL_ADMIN = 2;
 }
 
-message UpdateUserRoleResponse {
-  User user = 1;
-}
-
-message ApproveUserResponse {
-  User user = 1;
-}
-
-// Shared user message — mirrors the v1.User but scoped to admin context.
+// User represents a user account resource in the admin context.
 message User {
-  string id = 1;
-  string email = 2;
-  string username = 3;
-  string name = 4;
-  string avatar_url = 5;
-  string status = 6;
-  AccessLevel access_level = 7;
-  int64 version = 8;
-  google.protobuf.Timestamp create_time = 9;
-  google.protobuf.Timestamp update_time = 10;
+  // Output only. The user's unique identifier.
+  // Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. The user's primary email address.
+  string email = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The user's unique username.
+  string username = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The user's full or display name.
+  string name = 4 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. The URL pointing to the user's avatar image.
+  string avatar_url = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. The current account lifecycle status (e.g., active, pending_approval, suspended).
+  string status = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. The user's administrative access level.
+  AccessLevel access_level = 7 [(google.api.field_behavior) = REQUIRED];
+
+  // Output only. The optimistic concurrency control version number.
+  int64 version = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The timestamp when the user account was created.
+  google.protobuf.Timestamp create_time = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The timestamp when the user account was last updated.
+  google.protobuf.Timestamp update_time = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// SecurityEvent represents a security audit event in the admin context.
 message SecurityEvent {
-  string id = 1;
-  string user_id = 2;
-  string email = 3;
-  string event_type = 4;
-  string ip_address = 5;
-  string user_agent = 6;
-  google.protobuf.Timestamp created_at = 7;
+  // Output only. The unique identifier of the security event.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. The unique identifier of the user associated with the event.
+  // Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+  string user_id = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Required. The email address associated with the event.
+  string email = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The type of security event that occurred.
+  string event_type = 4 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. The IP address from which the event originated.
+  string ip_address = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. The User-Agent string from the client that triggered the event.
+  string user_agent = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. The timestamp when the security event occurred.
+  google.protobuf.Timestamp created_at = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// Request message for AdminIdentity.ListSecurityEvents.
 message ListSecurityEventsRequest {
-  string email = 1;
-  string event_type = 2;
-  int32 limit = 3;
-  string next_page_token = 4;
+  // Optional. Filter security events by user email.
+  string email = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter security events by event type.
+  string event_type = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. The maximum number of events to return.
+  int32 limit = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. A page token, received from a previous `ListSecurityEvents` call.
+  // Provide this to retrieve the subsequent page.
+  string next_page_token = 4 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// Response message for AdminIdentity.ListSecurityEvents.
 message ListSecurityEventsResponse {
-  repeated SecurityEvent events = 1;
-  string next_page_token = 2;
+  // Output only. The list of security events matching the request.
+  repeated SecurityEvent events = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. A token, which can be sent as `next_page_token` to retrieve the next page.
+  // If this field is omitted, there are no subsequent pages.
+  string next_page_token = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 }

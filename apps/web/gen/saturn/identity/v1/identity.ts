@@ -10,241 +10,308 @@ import {
 } from "@tanstack/react-query"
 
 /**
- * LoginUserRequest contains user credentials for authentication.
+ * Request message for Identity.LoginUser.
  */
 export interface LoginUserRequest {
   /**
-   * UserPassword authentication method.
+   * Password-based authentication credentials.
    */
   userPassword?: LoginUserRequest_UserPassword
 }
 
 /**
- * UserPassword authentication method.
+ * UserPassword contains credentials for password authentication.
  */
 export interface LoginUserRequest_UserPassword {
   /**
-   * Username or email of the user.
+   * Required. The username or email of the user.
    */
   identifier: string
   /**
-   * Password of the user.
+   * Required. The password of the user.
    */
   password: string
 }
 
 /**
- * LoginUserResponse contains the authentication result with both tokens.
+ * Response message for Identity.LoginUser.
  */
 export interface LoginUserResponse {
   /**
-   * The user's unique identifier.
+   * Output only. The user's unique identifier.
+   * Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
    */
-  userId: string
+  userId?: string
   /**
-   * The access token for authenticated requests.
+   * Output only. The access token for authenticated requests.
    */
-  accessToken: string
+  accessToken?: string
   /**
-   * Expiration time of the access token (Unix seconds).
+   * Output only. The expiration time of the access token in Unix seconds.
    */
-  accessTokenExpiresAt: string
+  accessTokenExpiresAt?: string
   /**
-   * The opaque refresh token.
+   * Output only. The opaque refresh token.
    */
-  refreshToken: string
+  refreshToken?: string
   /**
-   * Expiration time of the refresh token (Unix seconds).
+   * Output only. The expiration time of the refresh token in Unix seconds.
    */
-  refreshTokenExpiresAt: string
+  refreshTokenExpiresAt?: string
 }
 
 /**
- * RegisterUserRequest contains the fields for creating a new user account.
+ * Request message for Identity.RegisterUser.
  */
 export interface RegisterUserRequest {
   /**
-   * The user's email address.
+   * Required. The user's primary email address.
    */
   email: string
   /**
-   * The user's chosen username.
+   * Required. The user's chosen unique username.
    */
   username: string
   /**
-   * The user's display name.
+   * Required. The user's full or display name.
    */
   name: string
   /**
-   * The user's avatar URL (optional).
+   * Optional. The URL pointing to the user's avatar image.
    */
   avatarUrl: string
   /**
-   * The user's password for authentication.
+   * Required. The user's password for authentication.
    */
   password: string
 }
 
 /**
- * User represents a registered user in the system.
+ * User represents a registered user account resource.
  */
 export interface User {
   /**
-   * The user's unique identifier.
+   * Output only. The user's unique identifier.
+   * Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
    */
-  id: string
+  id?: string
   /**
-   * The user's email address.
+   * Required. The user's primary email address.
    */
   email: string
   /**
-   * The user's chosen username.
+   * Required. The user's unique username.
    */
   username: string
   /**
-   * The user's display name.
+   * Required. The user's full or display name.
    */
   name: string
   /**
-   * The user's avatar URL.
+   * Optional. The URL pointing to the user's avatar image.
    */
   avatarUrl: string
   /**
-   * The current status of the user account.
+   * Output only. The current account lifecycle status (e.g., active, pending_approval, suspended).
    */
-  status: string
+  status?: string
   /**
-   * The optimistic locking version.
+   * Output only. The timestamp when the user account was created.
    */
-  version: string
+  createTime?: string
   /**
-   * The creation timestamp.
+   * Output only. The timestamp when the user account was last updated.
    */
-  createTime: string
+  updateTime?: string
   /**
-   * The last update timestamp.
+   * Output only. The optimistic concurrency control version number.
    */
-  updateTime: string
+  version?: string
 }
 
 /**
- * RefreshSessionRequest contains a valid refresh token.
+ * Request message for Identity.RefreshSession.
  */
 export interface RefreshSessionRequest {
+  /**
+   * Required. The refresh token to exchange for new tokens.
+   */
   refreshToken: string
 }
 
 /**
- * RefreshSessionResponse contains newly issued tokens.
+ * Response message for Identity.RefreshSession.
  */
 export interface RefreshSessionResponse {
-  accessToken: string
-  accessTokenExpiresAt: string
-  refreshToken: string
-  refreshTokenExpiresAt: string
+  /**
+   * Output only. The new access token for authenticated requests.
+   */
+  accessToken?: string
+  /**
+   * Output only. The expiration time of the new access token in Unix seconds.
+   */
+  accessTokenExpiresAt?: string
+  /**
+   * Output only. The new opaque refresh token.
+   */
+  refreshToken?: string
+  /**
+   * Output only. The expiration time of the new refresh token in Unix seconds.
+   */
+  refreshTokenExpiresAt?: string
 }
 
 /**
- * LogoutRequest contains the refresh token to revoke.
+ * Request message for Identity.Logout.
  */
 export interface LogoutRequest {
+  /**
+   * Required. The refresh token to be revoked.
+   */
   refreshToken: string
 }
 
 /**
- * LogoutResponse is empty on success.
+ * Response message for Identity.Logout.
  */
 export type LogoutResponse = Record<string, never>
 
 /**
- * GetCurrentUserRequest is an empty request for fetching the current user's profile.
+ * Request message for Identity.GetCurrentUser.
  */
 export type GetCurrentUserRequest = Record<string, never>
 
 /**
- * UserSession represents an active user session.
+ * UserSession represents an active user session resource.
  */
 export interface UserSession {
   /**
-   * The session identifier.
+   * Output only. The unique identifier of the session.
    */
-  sessionId: string
+  sessionId?: string
   /**
-   * User Agent string associated with the session.
+   * Output only. The User-Agent string associated with the session.
    */
-  userAgent: string
+  userAgent?: string
   /**
-   * IP address of the client that created the session.
+   * Output only. The IP address of the client that created the session.
    */
-  ipAddress: string
+  ipAddress?: string
   /**
-   * When the session was initialized.
+   * Output only. The timestamp when the session was initialized.
    */
-  createTime: string
+  createTime?: string
   /**
-   * When the session was last utilized.
+   * Output only. The timestamp when the session was last utilized.
    */
-  lastUsedAt: string
+  lastUsedAt?: string
 }
 
 /**
- * ListActiveSessionsRequest is an empty request for listing sessions.
+ * Request message for Identity.ListActiveSessions.
  */
 export type ListActiveSessionsRequest = Record<string, never>
 
 /**
- * ListActiveSessionsResponse lists active sessions.
+ * Response message for Identity.ListActiveSessions.
  */
 export interface ListActiveSessionsResponse {
-  sessions: UserSession[]
+  /**
+   * Output only. The list of active sessions for the authenticated user.
+   */
+  sessions?: UserSession[]
 }
 
 /**
- * RevokeSessionRequest targets a specific session to invalidate.
+ * Request message for Identity.RevokeSession.
  */
 export interface RevokeSessionRequest {
+  /**
+   * Required. The unique identifier of the session to revoke.
+   */
   sessionId: string
 }
 
 /**
- * RevokeSessionResponse is empty on success.
+ * Response message for Identity.RevokeSession.
  */
 export type RevokeSessionResponse = Record<string, never>
 
 /**
- * RevokeAllSessionsRequest is an empty request for global session invalidation.
+ * Request message for Identity.RevokeAllSessions.
  */
 export type RevokeAllSessionsRequest = Record<string, never>
 
 /**
- * RevokeAllSessionsResponse is empty on success.
+ * Response message for Identity.RevokeAllSessions.
  */
 export type RevokeAllSessionsResponse = Record<string, never>
 
+/**
+ * SecurityEvent represents a security audit log entry for the user account.
+ */
 export interface SecurityEvent {
-  id: string
-  email: string
-  eventType: string
-  ipAddress: string
-  userAgent: string
-  createdAt: string
+  /**
+   * Output only. The unique identifier of the security event.
+   */
+  id?: string
+  /**
+   * Output only. The email address of the user associated with the event.
+   */
+  email?: string
+  /**
+   * Output only. The type of security event that occurred (e.g., login, password change).
+   */
+  eventType?: string
+  /**
+   * Output only. The IP address from which the event originated.
+   */
+  ipAddress?: string
+  /**
+   * Output only. The User-Agent string of the client that triggered the event.
+   */
+  userAgent?: string
+  /**
+   * Output only. The timestamp when the event was created.
+   */
+  createdAt?: string
 }
 
+/**
+ * Request message for Identity.ListMySecurityEvents.
+ */
 export interface ListMySecurityEventsRequest {
+  /**
+   * Optional. The maximum number of security events to return.
+   */
   limit: number
-  nextPageToken: string
-}
-
-export interface ListMySecurityEventsResponse {
-  events: SecurityEvent[]
+  /**
+   * Optional. A page token, received from a previous `ListMySecurityEvents` call.
+   * Provide this to retrieve the subsequent page.
+   */
   nextPageToken: string
 }
 
 /**
- * Identity service provides user authentication and account management.
+ * Response message for Identity.ListMySecurityEvents.
+ */
+export interface ListMySecurityEventsResponse {
+  /**
+   * Output only. The list of security events for the authenticated user.
+   */
+  events?: SecurityEvent[]
+  /**
+   * Output only. A token, which can be sent as `next_page_token` to retrieve the next page.
+   * If this field is omitted, there are no subsequent pages.
+   */
+  nextPageToken?: string
+}
+
+/**
+ * Identity provides user authentication and session management.
  */
 /**
- * LoginUser authenticates a user and returns access and refresh tokens.
+ * Authenticates a user and returns access and refresh tokens.
  */
 export async function loginUser(
   req: LoginUserRequest
@@ -266,7 +333,7 @@ export function useLoginUserMutation(
 }
 
 /**
- * RegisterUser creates a new user account.
+ * Registers a new user account.
  */
 export async function registerUser(req: RegisterUserRequest): Promise<User> {
   return request<User>({
@@ -286,7 +353,7 @@ export function useRegisterUserMutation(
 }
 
 /**
- * RefreshSession issues new tokens using a valid refresh token.
+ * Refreshes an authenticated session and issues a new token pair.
  */
 export async function refreshSession(
   req: RefreshSessionRequest
@@ -312,7 +379,7 @@ export function useRefreshSessionMutation(
 }
 
 /**
- * Logout revokes the presented refresh token.
+ * Terminates the current session by revoking the refresh token.
  */
 export async function logout(req: LogoutRequest): Promise<LogoutResponse> {
   return request<LogoutResponse>({
@@ -332,7 +399,7 @@ export function useLogoutMutation(
 }
 
 /**
- * GetCurrentUser retrieves the profile of the authenticated user.
+ * Retrieves the profile of the currently authenticated user.
  */
 export async function getCurrentUser(
   _req?: GetCurrentUserRequest
@@ -355,7 +422,7 @@ export function useGetCurrentUserQuery(
 }
 
 /**
- * ListActiveSessions returns all non-expired, non-revoked sessions for the user.
+ * Lists all active, non-expired sessions for the authenticated user.
  */
 export async function listActiveSessions(
   _req?: ListActiveSessionsRequest
@@ -381,7 +448,7 @@ export function useListActiveSessionsQuery(
 }
 
 /**
- * RevokeSession invalidates a specific user session by ID.
+ * Revokes a specific active user session by ID.
  */
 export async function revokeSession(
   session_id: string,
@@ -412,7 +479,7 @@ export function useRevokeSessionMutation(
 }
 
 /**
- * RevokeAllSessions invalidates all sessions for the user globally.
+ * Revokes all active sessions for the authenticated user globally.
  */
 export async function revokeAllSessions(
   req?: RevokeAllSessionsRequest
@@ -442,7 +509,7 @@ export function useRevokeAllSessionsMutation(
 }
 
 /**
- * ListMySecurityEvents retrieves the security audit logs for the authenticated user.
+ * Lists security audit log events for the authenticated user.
  */
 export async function listMySecurityEvents(
   req: ListMySecurityEventsRequest

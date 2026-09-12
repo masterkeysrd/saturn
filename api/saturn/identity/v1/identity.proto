@@ -3,14 +3,15 @@ syntax = "proto3";
 package saturn.identity.v1;
 
 import "google/api/annotations.proto";
+import "google/api/client.proto";
 import "google/api/field_behavior.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/masterkeysrd/saturn/apis/saturn/identity/v1;identityv1";
 
-// Identity service provides user authentication and account management.
+// Identity provides user authentication and session management.
 service Identity {
-  // LoginUser authenticates a user and returns access and refresh tokens.
+  // Authenticates a user and returns access and refresh tokens.
   rpc LoginUser(LoginUserRequest) returns (LoginUserResponse) {
     option (google.api.http) = {
       post: "/v1/identity/users:login"
@@ -18,49 +19,53 @@ service Identity {
     };
   }
 
-  // RegisterUser creates a new user account.
+  // Registers a new user account.
   rpc RegisterUser(RegisterUserRequest) returns (User) {
     option (google.api.http) = {
       post: "/v1/identity/users:register"
       body: "*"
     };
+    option (google.api.method_signature) = "email,username,name,password";
   }
 
-  // RefreshSession issues new tokens using a valid refresh token.
+  // Refreshes an authenticated session and issues a new token pair.
   rpc RefreshSession(RefreshSessionRequest) returns (RefreshSessionResponse) {
     option (google.api.http) = {
       post: "/v1/identity/sessions:refresh"
       body: "*"
     };
+    option (google.api.method_signature) = "refresh_token";
   }
 
-  // Logout revokes the presented refresh token.
+  // Terminates the current session by revoking the refresh token.
   rpc Logout(LogoutRequest) returns (LogoutResponse) {
     option (google.api.http) = {
       post: "/v1/identity/sessions:logout"
       body: "*"
     };
+    option (google.api.method_signature) = "refresh_token";
   }
 
-  // GetCurrentUser retrieves the profile of the authenticated user.
+  // Retrieves the profile of the currently authenticated user.
   rpc GetCurrentUser(GetCurrentUserRequest) returns (User) {
     option (google.api.http) = {get: "/v1/identity/users/me"};
   }
 
-  // ListActiveSessions returns all non-expired, non-revoked sessions for the user.
+  // Lists all active, non-expired sessions for the authenticated user.
   rpc ListActiveSessions(ListActiveSessionsRequest) returns (ListActiveSessionsResponse) {
     option (google.api.http) = {get: "/v1/identity/sessions"};
   }
 
-  // RevokeSession invalidates a specific user session by ID.
+  // Revokes a specific active user session by ID.
   rpc RevokeSession(RevokeSessionRequest) returns (RevokeSessionResponse) {
     option (google.api.http) = {
       post: "/v1/identity/sessions/{session_id}:revoke"
       body: "*"
     };
+    option (google.api.method_signature) = "session_id";
   }
 
-  // RevokeAllSessions invalidates all sessions for the user globally.
+  // Revokes all active sessions for the authenticated user globally.
   rpc RevokeAllSessions(RevokeAllSessionsRequest) returns (RevokeAllSessionsResponse) {
     option (google.api.http) = {
       post: "/v1/identity/sessions:revoke-all"
@@ -68,153 +73,210 @@ service Identity {
     };
   }
 
-  // ListMySecurityEvents retrieves the security audit logs for the authenticated user.
+  // Lists security audit log events for the authenticated user.
   rpc ListMySecurityEvents(ListMySecurityEventsRequest) returns (ListMySecurityEventsResponse) {
     option (google.api.http) = {get: "/v1/identity/users/me/security-events"};
   }
 }
 
-// LoginUserRequest contains user credentials for authentication.
+// Request message for Identity.LoginUser.
 message LoginUserRequest {
-  // UserPassword authentication method.
+  // UserPassword contains credentials for password authentication.
   message UserPassword {
-    // Username or email of the user.
+    // Required. The username or email of the user.
     string identifier = 1 [(google.api.field_behavior) = REQUIRED];
-    // Password of the user.
+
+    // Required. The password of the user.
     string password = 2 [(google.api.field_behavior) = REQUIRED];
   }
 
+  // Required. The authentication method to use for signing in.
   oneof method {
-    // UserPassword authentication method.
+    // Password-based authentication credentials.
     UserPassword user_password = 1;
   }
 }
 
-// LoginUserResponse contains the authentication result with both tokens.
+// Response message for Identity.LoginUser.
 message LoginUserResponse {
-  // The user's unique identifier.
-  string user_id = 1;
-  // The access token for authenticated requests.
-  string access_token = 2;
-  // Expiration time of the access token (Unix seconds).
-  int64 access_token_expires_at = 3;
-  // The opaque refresh token.
-  string refresh_token = 4;
-  // Expiration time of the refresh token (Unix seconds).
-  int64 refresh_token_expires_at = 5;
+  // Output only. The user's unique identifier.
+  // Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+  string user_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The access token for authenticated requests.
+  string access_token = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The expiration time of the access token in Unix seconds.
+  int64 access_token_expires_at = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The opaque refresh token.
+  string refresh_token = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The expiration time of the refresh token in Unix seconds.
+  int64 refresh_token_expires_at = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
-// RegisterUserRequest contains the fields for creating a new user account.
+// Request message for Identity.RegisterUser.
 message RegisterUserRequest {
-  // The user's email address.
+  // Required. The user's primary email address.
   string email = 1 [(google.api.field_behavior) = REQUIRED];
-  // The user's chosen username.
+
+  // Required. The user's chosen unique username.
   string username = 2 [(google.api.field_behavior) = REQUIRED];
-  // The user's display name.
+
+  // Required. The user's full or display name.
   string name = 3 [(google.api.field_behavior) = REQUIRED];
-  // The user's avatar URL (optional).
-  string avatar_url = 4;
-  // The user's password for authentication.
+
+  // Optional. The URL pointing to the user's avatar image.
+  string avatar_url = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Required. The user's password for authentication.
   string password = 5 [(google.api.field_behavior) = REQUIRED];
 }
 
-// User represents a registered user in the system.
+// User represents a registered user account resource.
 message User {
-  // The user's unique identifier.
-  string id = 1;
-  // The user's email address.
-  string email = 2;
-  // The user's chosen username.
-  string username = 3;
-  // The user's display name.
-  string name = 4;
-  // The user's avatar URL.
-  string avatar_url = 5;
-  // The current status of the user account.
-  string status = 6;
-  // The optimistic locking version.
-  int64 version = 9;
-  // The creation timestamp.
-  google.protobuf.Timestamp create_time = 7;
-  // The last update timestamp.
-  google.protobuf.Timestamp update_time = 8;
+  // Output only. The user's unique identifier.
+  // Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. The user's primary email address.
+  string email = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The user's unique username.
+  string username = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The user's full or display name.
+  string name = 4 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. The URL pointing to the user's avatar image.
+  string avatar_url = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. The current account lifecycle status (e.g., active, pending_approval, suspended).
+  string status = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The timestamp when the user account was created.
+  google.protobuf.Timestamp create_time = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The timestamp when the user account was last updated.
+  google.protobuf.Timestamp update_time = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The optimistic concurrency control version number.
+  int64 version = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
-// RefreshSessionRequest contains a valid refresh token.
+// Request message for Identity.RefreshSession.
 message RefreshSessionRequest {
+  // Required. The refresh token to exchange for new tokens.
   string refresh_token = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
-// RefreshSessionResponse contains newly issued tokens.
+// Response message for Identity.RefreshSession.
 message RefreshSessionResponse {
-  string access_token = 1;
-  int64 access_token_expires_at = 2;
-  string refresh_token = 3;
-  int64 refresh_token_expires_at = 4;
+  // Output only. The new access token for authenticated requests.
+  string access_token = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The expiration time of the new access token in Unix seconds.
+  int64 access_token_expires_at = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The new opaque refresh token.
+  string refresh_token = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The expiration time of the new refresh token in Unix seconds.
+  int64 refresh_token_expires_at = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
-// LogoutRequest contains the refresh token to revoke.
+// Request message for Identity.Logout.
 message LogoutRequest {
+  // Required. The refresh token to be revoked.
   string refresh_token = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
-// LogoutResponse is empty on success.
+// Response message for Identity.Logout.
 message LogoutResponse {}
 
-// GetCurrentUserRequest is an empty request for fetching the current user's profile.
+// Request message for Identity.GetCurrentUser.
 message GetCurrentUserRequest {}
 
-// UserSession represents an active user session.
+// UserSession represents an active user session resource.
 message UserSession {
-  // The session identifier.
-  string session_id = 1;
-  // User Agent string associated with the session.
-  string user_agent = 2;
-  // IP address of the client that created the session.
-  string ip_address = 3;
-  // When the session was initialized.
-  google.protobuf.Timestamp create_time = 4;
-  // When the session was last utilized.
-  google.protobuf.Timestamp last_used_at = 5;
+  // Output only. The unique identifier of the session.
+  string session_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The User-Agent string associated with the session.
+  string user_agent = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The IP address of the client that created the session.
+  string ip_address = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The timestamp when the session was initialized.
+  google.protobuf.Timestamp create_time = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The timestamp when the session was last utilized.
+  google.protobuf.Timestamp last_used_at = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
-// ListActiveSessionsRequest is an empty request for listing sessions.
+// Request message for Identity.ListActiveSessions.
 message ListActiveSessionsRequest {}
 
-// ListActiveSessionsResponse lists active sessions.
+// Response message for Identity.ListActiveSessions.
 message ListActiveSessionsResponse {
-  repeated UserSession sessions = 1;
+  // Output only. The list of active sessions for the authenticated user.
+  repeated UserSession sessions = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
-// RevokeSessionRequest targets a specific session to invalidate.
+// Request message for Identity.RevokeSession.
 message RevokeSessionRequest {
+  // Required. The unique identifier of the session to revoke.
   string session_id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
-// RevokeSessionResponse is empty on success.
+// Response message for Identity.RevokeSession.
 message RevokeSessionResponse {}
 
-// RevokeAllSessionsRequest is an empty request for global session invalidation.
+// Request message for Identity.RevokeAllSessions.
 message RevokeAllSessionsRequest {}
 
-// RevokeAllSessionsResponse is empty on success.
+// Response message for Identity.RevokeAllSessions.
 message RevokeAllSessionsResponse {}
 
+// SecurityEvent represents a security audit log entry for the user account.
 message SecurityEvent {
-  string id = 1;
-  string email = 2;
-  string event_type = 3;
-  string ip_address = 4;
-  string user_agent = 5;
-  google.protobuf.Timestamp created_at = 6;
+  // Output only. The unique identifier of the security event.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The email address of the user associated with the event.
+  string email = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The type of security event that occurred (e.g., login, password change).
+  string event_type = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The IP address from which the event originated.
+  string ip_address = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The User-Agent string of the client that triggered the event.
+  string user_agent = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The timestamp when the event was created.
+  google.protobuf.Timestamp created_at = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// Request message for Identity.ListMySecurityEvents.
 message ListMySecurityEventsRequest {
-  int32 limit = 1;
-  string next_page_token = 2;
+  // Optional. The maximum number of security events to return.
+  int32 limit = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. A page token, received from a previous `ListMySecurityEvents` call.
+  // Provide this to retrieve the subsequent page.
+  string next_page_token = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// Response message for Identity.ListMySecurityEvents.
 message ListMySecurityEventsResponse {
-  repeated SecurityEvent events = 1;
-  string next_page_token = 2;
+  // Output only. The list of security events for the authenticated user.
+  repeated SecurityEvent events = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. A token, which can be sent as `next_page_token` to retrieve the next page.
+  // If this field is omitted, there are no subsequent pages.
+  string next_page_token = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 }

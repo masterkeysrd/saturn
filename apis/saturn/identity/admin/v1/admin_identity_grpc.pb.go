@@ -31,19 +31,19 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// AdminIdentity provides administrative operations for user management.
+// AdminIdentity provides administrative operations for user and session management.
 type AdminIdentityClient interface {
-	// ListUsers returns users with optional filtering by status or search query.
+	// Lists users with optional filtering by status or search query.
 	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
-	// ApproveUser activates a pending user account.
+	// Approves and activates a pending user account.
 	ApproveUser(ctx context.Context, in *ApproveUserRequest, opts ...grpc.CallOption) (*ApproveUserResponse, error)
-	// RejectUser deactivates a pending user account.
-	RejectUser(ctx context.Context, in *RejectUserRequest, opts ...grpc.CallOption) (*ApproveUserResponse, error)
-	// UpdateUserRole changes a user's access level.
+	// Rejects and deactivates a pending user account.
+	RejectUser(ctx context.Context, in *RejectUserRequest, opts ...grpc.CallOption) (*RejectUserResponse, error)
+	// Updates a user's access level.
 	UpdateUserRole(ctx context.Context, in *UpdateUserRoleRequest, opts ...grpc.CallOption) (*UpdateUserRoleResponse, error)
-	// RevokeAllSessions revokes all sessions for a user and increments auth_version.
+	// Revokes all active sessions for a user globally and increments the authentication version.
 	RevokeAllSessions(ctx context.Context, in *RevokeAllSessionsRequest, opts ...grpc.CallOption) (*RevokeAllSessionsResponse, error)
-	// ListSecurityEvents returns a list of security audit logs.
+	// Lists security audit log events.
 	ListSecurityEvents(ctx context.Context, in *ListSecurityEventsRequest, opts ...grpc.CallOption) (*ListSecurityEventsResponse, error)
 }
 
@@ -75,9 +75,9 @@ func (c *adminIdentityClient) ApproveUser(ctx context.Context, in *ApproveUserRe
 	return out, nil
 }
 
-func (c *adminIdentityClient) RejectUser(ctx context.Context, in *RejectUserRequest, opts ...grpc.CallOption) (*ApproveUserResponse, error) {
+func (c *adminIdentityClient) RejectUser(ctx context.Context, in *RejectUserRequest, opts ...grpc.CallOption) (*RejectUserResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ApproveUserResponse)
+	out := new(RejectUserResponse)
 	err := c.cc.Invoke(ctx, AdminIdentity_RejectUser_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -119,19 +119,19 @@ func (c *adminIdentityClient) ListSecurityEvents(ctx context.Context, in *ListSe
 // All implementations should embed UnimplementedAdminIdentityServer
 // for forward compatibility.
 //
-// AdminIdentity provides administrative operations for user management.
+// AdminIdentity provides administrative operations for user and session management.
 type AdminIdentityServer interface {
-	// ListUsers returns users with optional filtering by status or search query.
+	// Lists users with optional filtering by status or search query.
 	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
-	// ApproveUser activates a pending user account.
+	// Approves and activates a pending user account.
 	ApproveUser(context.Context, *ApproveUserRequest) (*ApproveUserResponse, error)
-	// RejectUser deactivates a pending user account.
-	RejectUser(context.Context, *RejectUserRequest) (*ApproveUserResponse, error)
-	// UpdateUserRole changes a user's access level.
+	// Rejects and deactivates a pending user account.
+	RejectUser(context.Context, *RejectUserRequest) (*RejectUserResponse, error)
+	// Updates a user's access level.
 	UpdateUserRole(context.Context, *UpdateUserRoleRequest) (*UpdateUserRoleResponse, error)
-	// RevokeAllSessions revokes all sessions for a user and increments auth_version.
+	// Revokes all active sessions for a user globally and increments the authentication version.
 	RevokeAllSessions(context.Context, *RevokeAllSessionsRequest) (*RevokeAllSessionsResponse, error)
-	// ListSecurityEvents returns a list of security audit logs.
+	// Lists security audit log events.
 	ListSecurityEvents(context.Context, *ListSecurityEventsRequest) (*ListSecurityEventsResponse, error)
 }
 
@@ -148,7 +148,7 @@ func (UnimplementedAdminIdentityServer) ListUsers(context.Context, *ListUsersReq
 func (UnimplementedAdminIdentityServer) ApproveUser(context.Context, *ApproveUserRequest) (*ApproveUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ApproveUser not implemented")
 }
-func (UnimplementedAdminIdentityServer) RejectUser(context.Context, *RejectUserRequest) (*ApproveUserResponse, error) {
+func (UnimplementedAdminIdentityServer) RejectUser(context.Context, *RejectUserRequest) (*RejectUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RejectUser not implemented")
 }
 func (UnimplementedAdminIdentityServer) UpdateUserRole(context.Context, *UpdateUserRoleRequest) (*UpdateUserRoleResponse, error) {

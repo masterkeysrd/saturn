@@ -9,120 +9,301 @@ import {
   type UseMutationOptions,
 } from "@tanstack/react-query"
 
+/**
+ * AccessLevel defines the administrative authorization level of a user.
+ */
 export type AccessLevel =
-  "ACCESS_LEVEL_UNSPECIFIED" | "ACCESS_LEVEL_USER" | "ACCESS_LEVEL_ADMIN"
+  /**
+   * Default unspecified access level.
+   */
+  | "ACCESS_LEVEL_UNSPECIFIED"
+  /**
+   * Standard user access level with basic permissions.
+   */
+  | "ACCESS_LEVEL_USER"
+  /**
+   * Administrator access level with elevated management permissions.
+   */
+  | "ACCESS_LEVEL_ADMIN"
 
+/**
+ * StatusFilter allows filtering users by their account lifecycle status.
+ */
 export type ListUsersRequest_StatusFilter =
+  /**
+   * Default unspecified status filter.
+   */
   | "STATUS_FILTER_UNSPECIFIED"
+  /**
+   * Filter for active user accounts.
+   */
   | "ACTIVE"
+  /**
+   * Filter for accounts pending administrator approval.
+   */
   | "PENDING_APPROVAL"
+  /**
+   * Filter for inactive user accounts.
+   */
   | "INACTIVE"
+  /**
+   * Filter for suspended user accounts.
+   */
   | "SUSPENDED"
 
+/**
+ * Request message for AdminIdentity.ListUsers.
+ */
 export interface ListUsersRequest {
   /**
-   *
-   * @description default 20, max 100
+   * Optional. The maximum number of users to return. The service may return fewer
+   * than this value. If unspecified, at most 20 users are returned. The maximum
+   * value is 100; values above 100 will be coerced to 100.
    */
   pageSize: number
   /**
-   *
-   * @description cursor-based pagination token
+   * Optional. A page token, received from a previous `ListUsers` call.
+   * Provide this to retrieve the subsequent page.
    */
   nextPageToken: string
   /**
-   *
-   * @description optional: filter by user status
+   * Optional. Filter users by their account status.
    */
   statusFilter: ListUsersRequest_StatusFilter
   /**
-   *
-   * @description optional: search across email/username/name
+   * Optional. A search query across user email, username, and display name.
    */
   searchQuery: string
 }
 
+/**
+ * Response message for AdminIdentity.ListUsers.
+ */
 export interface ListUsersResponse {
-  users: User[]
   /**
-   *
-   * @description empty if no more pages
+   * Output only. The list of users matching the request criteria.
+   */
+  users?: User[]
+  /**
+   * Output only. A token, which can be sent as `next_page_token` to retrieve the next page.
+   * If this field is omitted, there are no subsequent pages.
+   */
+  nextPageToken?: string
+}
+
+/**
+ * Request message for AdminIdentity.ApproveUser.
+ */
+export interface ApproveUserRequest {
+  /**
+   * Required. The unique identifier of the user to approve.
+   * Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+   */
+  userId: string
+}
+
+/**
+ * Response message for AdminIdentity.ApproveUser.
+ */
+export interface ApproveUserResponse {
+  /**
+   * Output only. The approved user resource.
+   */
+  user?: User
+}
+
+/**
+ * Request message for AdminIdentity.RejectUser.
+ */
+export interface RejectUserRequest {
+  /**
+   * Required. The unique identifier of the user to reject.
+   * Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+   */
+  userId: string
+}
+
+/**
+ * Response message for AdminIdentity.RejectUser.
+ */
+export interface RejectUserResponse {
+  /**
+   * Output only. The rejected user resource.
+   */
+  user?: User
+}
+
+/**
+ * Request message for AdminIdentity.UpdateUserRole.
+ */
+export interface UpdateUserRoleRequest {
+  /**
+   * Required. The unique identifier of the user to update.
+   * Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+   */
+  userId: string
+  /**
+   * Required. The new access level for the user.
+   */
+  accessLevel: AccessLevel
+}
+
+/**
+ * Response message for AdminIdentity.UpdateUserRole.
+ */
+export interface UpdateUserRoleResponse {
+  /**
+   * Output only. The updated user resource reflecting the new access level.
+   */
+  user?: User
+}
+
+/**
+ * Request message for AdminIdentity.RevokeAllSessions.
+ */
+export interface RevokeAllSessionsRequest {
+  /**
+   * Required. The unique identifier of the user whose sessions are to be revoked.
+   * Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+   */
+  userId: string
+}
+
+/**
+ * Response message for AdminIdentity.RevokeAllSessions.
+ */
+export interface RevokeAllSessionsResponse {
+  /**
+   * Output only. The number of sessions that were revoked for the user.
+   */
+  revokedCount?: string
+}
+
+/**
+ * User represents a user account resource in the admin context.
+ */
+export interface User {
+  /**
+   * Output only. The user's unique identifier.
+   * Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+   */
+  id?: string
+  /**
+   * Required. The user's primary email address.
+   */
+  email: string
+  /**
+   * Required. The user's unique username.
+   */
+  username: string
+  /**
+   * Required. The user's full or display name.
+   */
+  name: string
+  /**
+   * Optional. The URL pointing to the user's avatar image.
+   */
+  avatarUrl: string
+  /**
+   * Output only. The current account lifecycle status (e.g., active, pending_approval, suspended).
+   */
+  status?: string
+  /**
+   * Required. The user's administrative access level.
+   */
+  accessLevel: AccessLevel
+  /**
+   * Output only. The optimistic concurrency control version number.
+   */
+  version?: string
+  /**
+   * Output only. The timestamp when the user account was created.
+   */
+  createTime?: string
+  /**
+   * Output only. The timestamp when the user account was last updated.
+   */
+  updateTime?: string
+}
+
+/**
+ * SecurityEvent represents a security audit event in the admin context.
+ */
+export interface SecurityEvent {
+  /**
+   * Output only. The unique identifier of the security event.
+   */
+  id?: string
+  /**
+   * Optional. The unique identifier of the user associated with the event.
+   * Formatted as `usr_<ksuid>` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).
+   */
+  userId: string
+  /**
+   * Required. The email address associated with the event.
+   */
+  email: string
+  /**
+   * Required. The type of security event that occurred.
+   */
+  eventType: string
+  /**
+   * Optional. The IP address from which the event originated.
+   */
+  ipAddress: string
+  /**
+   * Optional. The User-Agent string from the client that triggered the event.
+   */
+  userAgent: string
+  /**
+   * Output only. The timestamp when the security event occurred.
+   */
+  createdAt?: string
+}
+
+/**
+ * Request message for AdminIdentity.ListSecurityEvents.
+ */
+export interface ListSecurityEventsRequest {
+  /**
+   * Optional. Filter security events by user email.
+   */
+  email: string
+  /**
+   * Optional. Filter security events by event type.
+   */
+  eventType: string
+  /**
+   * Optional. The maximum number of events to return.
+   */
+  limit: number
+  /**
+   * Optional. A page token, received from a previous `ListSecurityEvents` call.
+   * Provide this to retrieve the subsequent page.
    */
   nextPageToken: string
 }
 
-export interface ApproveUserRequest {
-  userId: string
-}
-
-export interface RejectUserRequest {
-  userId: string
-}
-
-export interface UpdateUserRoleRequest {
-  userId: string
-  accessLevel: AccessLevel
-}
-
-export interface RevokeAllSessionsRequest {
-  userId: string
-}
-
-export interface RevokeAllSessionsResponse {
-  revokedCount: string
-}
-
-export interface UpdateUserRoleResponse {
-  user: User
-}
-
-export interface ApproveUserResponse {
-  user: User
-}
-
 /**
- * Shared user message — mirrors the v1.User but scoped to admin context.
+ * Response message for AdminIdentity.ListSecurityEvents.
  */
-export interface User {
-  id: string
-  email: string
-  username: string
-  name: string
-  avatarUrl: string
-  status: string
-  accessLevel: AccessLevel
-  version: string
-  createTime: string
-  updateTime: string
-}
-
-export interface SecurityEvent {
-  id: string
-  userId: string
-  email: string
-  eventType: string
-  ipAddress: string
-  userAgent: string
-  createdAt: string
-}
-
-export interface ListSecurityEventsRequest {
-  email: string
-  eventType: string
-  limit: number
-  nextPageToken: string
-}
-
 export interface ListSecurityEventsResponse {
-  events: SecurityEvent[]
-  nextPageToken: string
+  /**
+   * Output only. The list of security events matching the request.
+   */
+  events?: SecurityEvent[]
+  /**
+   * Output only. A token, which can be sent as `next_page_token` to retrieve the next page.
+   * If this field is omitted, there are no subsequent pages.
+   */
+  nextPageToken?: string
 }
 
 /**
- * AdminIdentity provides administrative operations for user management.
+ * AdminIdentity provides administrative operations for user and session management.
  */
 /**
- * ListUsers returns users with optional filtering by status or search query.
+ * Lists users with optional filtering by status or search query.
  */
 export async function listUsers(
   req: ListUsersRequest
@@ -150,7 +331,7 @@ export function useListUsersQuery(
 }
 
 /**
- * ApproveUser activates a pending user account.
+ * Approves and activates a pending user account.
  */
 export async function approveUser(
   user_id: string,
@@ -181,13 +362,13 @@ export function useApproveUserMutation(
 }
 
 /**
- * RejectUser deactivates a pending user account.
+ * Rejects and deactivates a pending user account.
  */
 export async function rejectUser(
   user_id: string,
   req: RejectUserRequest
-): Promise<ApproveUserResponse> {
-  return request<ApproveUserResponse>({
+): Promise<RejectUserResponse> {
+  return request<RejectUserResponse>({
     method: "POST",
     url: `/api/v1/admin/identity/users/${user_id}:reject`,
     data: req,
@@ -196,13 +377,13 @@ export async function rejectUser(
 
 export function useRejectUserMutation(
   options?: UseMutationOptions<
-    ApproveUserResponse,
+    RejectUserResponse,
     Error,
     { user_id: string; req: RejectUserRequest }
   >
 ) {
   return useMutation<
-    ApproveUserResponse,
+    RejectUserResponse,
     Error,
     { user_id: string; req: RejectUserRequest }
   >({
@@ -212,7 +393,7 @@ export function useRejectUserMutation(
 }
 
 /**
- * UpdateUserRole changes a user's access level.
+ * Updates a user's access level.
  */
 export async function updateUserRole(
   user_id: string,
@@ -243,7 +424,7 @@ export function useUpdateUserRoleMutation(
 }
 
 /**
- * RevokeAllSessions revokes all sessions for a user and increments auth_version.
+ * Revokes all active sessions for a user globally and increments the authentication version.
  */
 export async function revokeAllSessions(
   user_id: string,
@@ -274,7 +455,7 @@ export function useRevokeAllSessionsMutation(
 }
 
 /**
- * ListSecurityEvents returns a list of security audit logs.
+ * Lists security audit log events.
  */
 export async function listSecurityEvents(
   req: ListSecurityEventsRequest

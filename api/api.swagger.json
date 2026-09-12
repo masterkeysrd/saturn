@@ -11,11 +11,11 @@
     },
     {
       "name": "AdminIdentity",
-      "description": "AdminIdentity provides administrative operations for user management."
+      "description": "AdminIdentity provides administrative operations for user and session management."
     },
     {
       "name": "Identity",
-      "description": "Identity service provides user authentication and account management."
+      "description": "Identity provides user authentication and session management."
     },
     {
       "name": "AgentService",
@@ -105,7 +105,7 @@
     },
     "/v1/admin/identity/security-events": {
       "get": {
-        "summary": "ListSecurityEvents returns a list of security audit logs.",
+        "summary": "Lists security audit log events.",
         "operationId": "AdminIdentity_ListSecurityEvents",
         "responses": {
           "200": {
@@ -124,18 +124,21 @@
         "parameters": [
           {
             "name": "email",
+            "description": "Optional. Filter security events by user email.",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "eventType",
+            "description": "Optional. Filter security events by event type.",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "limit",
+            "description": "Optional. The maximum number of events to return.",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -143,6 +146,7 @@
           },
           {
             "name": "nextPageToken",
+            "description": "Optional. A page token, received from a previous `ListSecurityEvents` call.\nProvide this to retrieve the subsequent page.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -155,7 +159,7 @@
     },
     "/v1/admin/identity/users": {
       "get": {
-        "summary": "ListUsers returns users with optional filtering by status or search query.",
+        "summary": "Lists users with optional filtering by status or search query.",
         "operationId": "AdminIdentity_ListUsers",
         "responses": {
           "200": {
@@ -174,7 +178,7 @@
         "parameters": [
           {
             "name": "pageSize",
-            "description": "default 20, max 100",
+            "description": "Optional. The maximum number of users to return. The service may return fewer\nthan this value. If unspecified, at most 20 users are returned. The maximum\nvalue is 100; values above 100 will be coerced to 100.",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -182,14 +186,14 @@
           },
           {
             "name": "nextPageToken",
-            "description": "cursor-based pagination token",
+            "description": "Optional. A page token, received from a previous `ListUsers` call.\nProvide this to retrieve the subsequent page.",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "statusFilter",
-            "description": "optional: filter by user status",
+            "description": "Optional. Filter users by their account status.\n\n - ACTIVE: Filter for active user accounts.\n - PENDING_APPROVAL: Filter for accounts pending administrator approval.\n - INACTIVE: Filter for inactive user accounts.\n - SUSPENDED: Filter for suspended user accounts.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -202,7 +206,7 @@
           },
           {
             "name": "searchQuery",
-            "description": "optional: search across email/username/name",
+            "description": "Optional. A search query across user email, username, and display name.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -215,7 +219,7 @@
     },
     "/v1/admin/identity/users/{userId}": {
       "patch": {
-        "summary": "UpdateUserRole changes a user's access level.",
+        "summary": "Updates a user's access level.",
         "operationId": "AdminIdentity_UpdateUserRole",
         "responses": {
           "200": {
@@ -234,7 +238,7 @@
         "parameters": [
           {
             "name": "userId",
-            "description": "Required. The unique identifier of the user to update. Values\nare of the form `usr_\u003cKSUID\u003e`.",
+            "description": "Required. The unique identifier of the user to update.\nFormatted as `usr_\u003cksuid\u003e` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
             "in": "path",
             "required": true,
             "type": "string"
@@ -255,7 +259,7 @@
     },
     "/v1/admin/identity/users/{userId}:approve": {
       "post": {
-        "summary": "ApproveUser activates a pending user account.",
+        "summary": "Approves and activates a pending user account.",
         "operationId": "AdminIdentity_ApproveUser",
         "responses": {
           "200": {
@@ -274,7 +278,7 @@
         "parameters": [
           {
             "name": "userId",
-            "description": "Required. The unique identifier of the user to approve. Values\nare of the form `usr_\u003cKSUID\u003e`.",
+            "description": "Required. The unique identifier of the user to approve.\nFormatted as `usr_\u003cksuid\u003e` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
             "in": "path",
             "required": true,
             "type": "string"
@@ -295,13 +299,13 @@
     },
     "/v1/admin/identity/users/{userId}:reject": {
       "post": {
-        "summary": "RejectUser deactivates a pending user account.",
+        "summary": "Rejects and deactivates a pending user account.",
         "operationId": "AdminIdentity_RejectUser",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ApproveUserResponse"
+              "$ref": "#/definitions/v1RejectUserResponse"
             }
           },
           "default": {
@@ -314,7 +318,7 @@
         "parameters": [
           {
             "name": "userId",
-            "description": "Required. The unique identifier of the user to reject. Values\nare of the form `usr_\u003cKSUID\u003e`.",
+            "description": "Required. The unique identifier of the user to reject.\nFormatted as `usr_\u003cksuid\u003e` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
             "in": "path",
             "required": true,
             "type": "string"
@@ -335,7 +339,7 @@
     },
     "/v1/admin/identity/users/{userId}:revoke-sessions": {
       "post": {
-        "summary": "RevokeAllSessions revokes all sessions for a user and increments auth_version.",
+        "summary": "Revokes all active sessions for a user globally and increments the authentication version.",
         "operationId": "AdminIdentity_RevokeAllSessions",
         "responses": {
           "200": {
@@ -354,7 +358,7 @@
         "parameters": [
           {
             "name": "userId",
-            "description": "Required. The unique identifier of the user whose sessions are to be revoked. Values\nare of the form `usr_\u003cKSUID\u003e`.",
+            "description": "Required. The unique identifier of the user whose sessions are to be revoked.\nFormatted as `usr_\u003cksuid\u003e` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
             "in": "path",
             "required": true,
             "type": "string"
@@ -3779,7 +3783,7 @@
     },
     "/v1/identity/sessions": {
       "get": {
-        "summary": "ListActiveSessions returns all non-expired, non-revoked sessions for the user.",
+        "summary": "Lists all active, non-expired sessions for the authenticated user.",
         "operationId": "Identity_ListActiveSessions",
         "responses": {
           "200": {
@@ -3802,7 +3806,7 @@
     },
     "/v1/identity/sessions/{sessionId}:revoke": {
       "post": {
-        "summary": "RevokeSession invalidates a specific user session by ID.",
+        "summary": "Revokes a specific active user session by ID.",
         "operationId": "Identity_RevokeSession",
         "responses": {
           "200": {
@@ -3821,7 +3825,7 @@
         "parameters": [
           {
             "name": "sessionId",
-            "description": "The session identifier to revoke.",
+            "description": "Required. The unique identifier of the session to revoke.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -3842,7 +3846,7 @@
     },
     "/v1/identity/sessions:logout": {
       "post": {
-        "summary": "Logout revokes the presented refresh token.",
+        "summary": "Terminates the current session by revoking the refresh token.",
         "operationId": "Identity_Logout",
         "responses": {
           "200": {
@@ -3861,7 +3865,7 @@
         "parameters": [
           {
             "name": "body",
-            "description": "LogoutRequest contains the refresh token to revoke.",
+            "description": "Request message for Identity.Logout.",
             "in": "body",
             "required": true,
             "schema": {
@@ -3876,7 +3880,7 @@
     },
     "/v1/identity/sessions:refresh": {
       "post": {
-        "summary": "RefreshSession issues new tokens using a valid refresh token.",
+        "summary": "Refreshes an authenticated session and issues a new token pair.",
         "operationId": "Identity_RefreshSession",
         "responses": {
           "200": {
@@ -3895,7 +3899,7 @@
         "parameters": [
           {
             "name": "body",
-            "description": "RefreshSessionRequest contains a valid refresh token.",
+            "description": "Request message for Identity.RefreshSession.",
             "in": "body",
             "required": true,
             "schema": {
@@ -3910,7 +3914,7 @@
     },
     "/v1/identity/sessions:revoke-all": {
       "post": {
-        "summary": "RevokeAllSessions invalidates all sessions for the user globally.",
+        "summary": "Revokes all active sessions for the authenticated user globally.",
         "operationId": "Identity_RevokeAllSessions",
         "responses": {
           "200": {
@@ -3929,7 +3933,7 @@
         "parameters": [
           {
             "name": "body",
-            "description": "RevokeAllSessionsRequest is an empty request for global session invalidation.",
+            "description": "Request message for Identity.RevokeAllSessions.",
             "in": "body",
             "required": true,
             "schema": {
@@ -3944,7 +3948,7 @@
     },
     "/v1/identity/users/me": {
       "get": {
-        "summary": "GetCurrentUser retrieves the profile of the authenticated user.",
+        "summary": "Retrieves the profile of the currently authenticated user.",
         "operationId": "Identity_GetCurrentUser",
         "responses": {
           "200": {
@@ -3967,7 +3971,7 @@
     },
     "/v1/identity/users/me/security-events": {
       "get": {
-        "summary": "ListMySecurityEvents retrieves the security audit logs for the authenticated user.",
+        "summary": "Lists security audit log events for the authenticated user.",
         "operationId": "Identity_ListMySecurityEvents",
         "responses": {
           "200": {
@@ -3986,7 +3990,7 @@
         "parameters": [
           {
             "name": "limit",
-            "description": "The maximum number of events to return in the response.",
+            "description": "Optional. The maximum number of security events to return.",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -3994,7 +3998,7 @@
           },
           {
             "name": "nextPageToken",
-            "description": "A token to retrieve the next page of results.",
+            "description": "Optional. A page token, received from a previous `ListMySecurityEvents` call.\nProvide this to retrieve the subsequent page.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -4007,7 +4011,7 @@
     },
     "/v1/identity/users:login": {
       "post": {
-        "summary": "LoginUser authenticates a user and returns access and refresh tokens.",
+        "summary": "Authenticates a user and returns access and refresh tokens.",
         "operationId": "Identity_LoginUser",
         "responses": {
           "200": {
@@ -4026,7 +4030,7 @@
         "parameters": [
           {
             "name": "body",
-            "description": "LoginUserRequest contains user credentials for authentication.",
+            "description": "Request message for Identity.LoginUser.",
             "in": "body",
             "required": true,
             "schema": {
@@ -4041,7 +4045,7 @@
     },
     "/v1/identity/users:register": {
       "post": {
-        "summary": "RegisterUser creates a new user account.",
+        "summary": "Registers a new user account.",
         "operationId": "Identity_RegisterUser",
         "responses": {
           "200": {
@@ -4060,7 +4064,7 @@
         "parameters": [
           {
             "name": "body",
-            "description": "RegisterUserRequest contains the fields for creating a new user account.",
+            "description": "Request message for Identity.RegisterUser.",
             "in": "body",
             "required": true,
             "schema": {
@@ -5561,7 +5565,7 @@
     },
     "IdentityRevokeSessionBody": {
       "type": "object",
-      "description": "RevokeSessionRequest targets a specific session to invalidate."
+      "description": "Request message for Identity.RevokeSession."
     },
     "InboxItemDocType": {
       "type": "string",
@@ -5714,21 +5718,22 @@
         "PENDING_APPROVAL",
         "INACTIVE",
         "SUSPENDED"
-      ]
+      ],
+      "description": "StatusFilter allows filtering users by their account lifecycle status.\n\n - ACTIVE: Filter for active user accounts.\n - PENDING_APPROVAL: Filter for accounts pending administrator approval.\n - INACTIVE: Filter for inactive user accounts.\n - SUSPENDED: Filter for suspended user accounts."
     },
     "LoginUserRequestUserPassword": {
       "type": "object",
       "properties": {
         "identifier": {
           "type": "string",
-          "description": "Username or email of the user."
+          "description": "Required. The username or email of the user."
         },
         "password": {
           "type": "string",
-          "description": "Password of the user."
+          "description": "Required. The password of the user."
         }
       },
-      "description": "UserPassword authentication method.",
+      "description": "UserPassword contains credentials for password authentication.",
       "required": [
         "identifier",
         "password"
@@ -5850,12 +5855,12 @@
     "SpaceMemberRole": {
       "type": "string",
       "enum": [
-        "ROLE_OWNER",
-        "ROLE_ADMIN",
-        "ROLE_MEMBER",
-        "ROLE_VIEWER"
+        "OWNER",
+        "ADMIN",
+        "MEMBER",
+        "VIEWER"
       ],
-      "description": "Role defines the member's role and permissions within a workspace.\n\n - ROLE_OWNER: Workspace owner with full administrative and billing control.\n - ROLE_ADMIN: Workspace administrator with member management and settings access.\n - ROLE_MEMBER: Standard workspace member with regular read and write access.\n - ROLE_VIEWER: Workspace viewer with read-only access."
+      "description": "Role defines the member's role and permissions within a workspace.\n\n - OWNER: Workspace owner with full administrative and billing control.\n - ADMIN: Workspace administrator with member management and settings access.\n - MEMBER: Standard workspace member with regular read and write access.\n - VIEWER: Workspace viewer with read-only access."
     },
     "SpentInsightsBudgetContribution": {
       "type": "object",
@@ -6110,7 +6115,8 @@
         "revokedCount": {
           "type": "string",
           "format": "int64",
-          "description": "The number of sessions that were revoked for the user."
+          "description": "Output only. The number of sessions that were revoked for the user.",
+          "readOnly": true
         }
       },
       "description": "Response message for AdminIdentity.RevokeAllSessions."
@@ -6119,67 +6125,102 @@
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The unique identifier of the security event.",
+          "readOnly": true
         },
         "userId": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. The unique identifier of the user associated with the event.\nFormatted as `usr_\u003cksuid\u003e` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`)."
         },
         "email": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The email address associated with the event."
         },
         "eventType": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The type of security event that occurred."
         },
         "ipAddress": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. The IP address from which the event originated."
         },
         "userAgent": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. The User-Agent string from the client that triggered the event."
         },
         "createdAt": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. The timestamp when the security event occurred.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "SecurityEvent represents a security audit event in the admin context.",
+      "required": [
+        "email",
+        "eventType"
+      ]
     },
     "identityAdminV1User": {
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The user's unique identifier.\nFormatted as `usr_\u003cksuid\u003e` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
+          "readOnly": true
         },
         "email": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The user's primary email address."
         },
         "username": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The user's unique username."
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The user's full or display name."
         },
         "avatarUrl": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. The URL pointing to the user's avatar image."
         },
         "status": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The current account lifecycle status (e.g., active, pending_approval, suspended).",
+          "readOnly": true
         },
         "accessLevel": {
-          "$ref": "#/definitions/v1AccessLevel"
+          "$ref": "#/definitions/v1AccessLevel",
+          "description": "Required. The user's administrative access level."
         },
         "version": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Output only. The optimistic concurrency control version number.",
+          "readOnly": true
         },
         "createTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. The timestamp when the user account was created.",
+          "readOnly": true
         },
         "updateTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. The timestamp when the user account was last updated.",
+          "readOnly": true
         }
       },
-      "description": "Shared user message — mirrors the v1.User but scoped to admin context."
+      "description": "User represents a user account resource in the admin context.",
+      "required": [
+        "email",
+        "username",
+        "name",
+        "accessLevel"
+      ]
     },
     "protobufAny": {
       "type": "object",
@@ -6196,86 +6237,103 @@
     },
     "saturnIdentityV1RevokeAllSessionsRequest": {
       "type": "object",
-      "description": "RevokeAllSessionsRequest is an empty request for global session invalidation."
+      "description": "Request message for Identity.RevokeAllSessions."
     },
     "saturnIdentityV1RevokeAllSessionsResponse": {
       "type": "object",
-      "description": "RevokeAllSessionsResponse is empty on success."
+      "description": "Response message for Identity.RevokeAllSessions."
     },
     "saturnIdentityV1SecurityEvent": {
       "type": "object",
       "properties": {
         "id": {
           "type": "string",
-          "description": "The unique identifier for the security event."
+          "description": "Output only. The unique identifier of the security event.",
+          "readOnly": true
         },
         "email": {
           "type": "string",
-          "description": "The email of the user associated with the event."
+          "description": "Output only. The email address of the user associated with the event.",
+          "readOnly": true
         },
         "eventType": {
           "type": "string",
-          "description": "The type of security event (e.g., login, password change)."
+          "description": "Output only. The type of security event that occurred (e.g., login, password change).",
+          "readOnly": true
         },
         "ipAddress": {
           "type": "string",
-          "description": "The IP address from which the event originated."
+          "description": "Output only. The IP address from which the event originated.",
+          "readOnly": true
         },
         "userAgent": {
           "type": "string",
-          "description": "The user agent string of the client that triggered the event."
+          "description": "Output only. The User-Agent string of the client that triggered the event.",
+          "readOnly": true
         },
         "createdAt": {
           "type": "string",
           "format": "date-time",
-          "description": "The timestamp when the event was created."
+          "description": "Output only. The timestamp when the event was created.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "SecurityEvent represents a security audit log entry for the user account."
     },
     "saturnIdentityV1User": {
       "type": "object",
       "properties": {
         "id": {
           "type": "string",
-          "description": "The user's unique identifier."
+          "description": "Output only. The user's unique identifier.\nFormatted as `usr_\u003cksuid\u003e` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
+          "readOnly": true
         },
         "email": {
           "type": "string",
-          "description": "The user's email address."
+          "description": "Required. The user's primary email address."
         },
         "username": {
           "type": "string",
-          "description": "The user's chosen username."
+          "description": "Required. The user's unique username."
         },
         "name": {
           "type": "string",
-          "description": "The user's display name."
+          "description": "Required. The user's full or display name."
         },
         "avatarUrl": {
           "type": "string",
-          "description": "The user's avatar URL."
+          "description": "Optional. The URL pointing to the user's avatar image."
         },
         "status": {
           "type": "string",
-          "description": "The current status of the user account."
-        },
-        "version": {
-          "type": "string",
-          "format": "int64",
-          "description": "The optimistic locking version."
+          "description": "Output only. The current account lifecycle status (e.g., active, pending_approval, suspended).",
+          "readOnly": true
         },
         "createTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The creation timestamp."
+          "description": "Output only. The timestamp when the user account was created.",
+          "readOnly": true
         },
         "updateTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The last update timestamp."
+          "description": "Output only. The timestamp when the user account was last updated.",
+          "readOnly": true
+        },
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "Output only. The optimistic concurrency control version number.",
+          "readOnly": true
         }
       },
-      "description": "User represents a registered user in the system."
+      "description": "User represents a registered user account resource.",
+      "required": [
+        "email",
+        "username",
+        "name"
+      ]
     },
     "v1AccessLevel": {
       "type": "string",
@@ -6283,7 +6341,7 @@
         "ACCESS_LEVEL_USER",
         "ACCESS_LEVEL_ADMIN"
       ],
-      "description": "AccessLevel defines the level of access a user has within the system.\n\n - ACCESS_LEVEL_USER: Regular user access level.\n - ACCESS_LEVEL_ADMIN: Admin access level with elevated privileges."
+      "description": "AccessLevel defines the administrative authorization level of a user.\n\n - ACCESS_LEVEL_USER: Standard user access level with basic permissions.\n - ACCESS_LEVEL_ADMIN: Administrator access level with elevated management permissions."
     },
     "v1Account": {
       "type": "object",
@@ -6579,7 +6637,8 @@
       "properties": {
         "user": {
           "$ref": "#/definitions/identityAdminV1User",
-          "description": "The approved user object."
+          "description": "Output only. The approved user resource.",
+          "readOnly": true
         }
       },
       "description": "Response message for AdminIdentity.ApproveUser."
@@ -7967,10 +8026,12 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1UserSession"
-          }
+          },
+          "description": "Output only. The list of active sessions for the authenticated user.",
+          "readOnly": true
         }
       },
-      "description": "ListActiveSessionsResponse lists active sessions."
+      "description": "Response message for Identity.ListActiveSessions."
     },
     "v1ListAgentRunsResponse": {
       "type": "object",
@@ -8190,14 +8251,16 @@
             "type": "object",
             "$ref": "#/definitions/saturnIdentityV1SecurityEvent"
           },
-          "description": "The list of security events for the authenticated user."
+          "description": "Output only. The list of security events for the authenticated user.",
+          "readOnly": true
         },
         "nextPageToken": {
           "type": "string",
-          "description": "A token to retrieve the next page of results, if any."
+          "description": "Output only. A token, which can be sent as `next_page_token` to retrieve the next page.\nIf this field is omitted, there are no subsequent pages.",
+          "readOnly": true
         }
       },
-      "description": "ListMySecurityEventsResponse returns a list of security events with pagination support."
+      "description": "Response message for Identity.ListMySecurityEvents."
     },
     "v1ListProvidersResponse": {
       "type": "object",
@@ -8267,12 +8330,17 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/identityAdminV1SecurityEvent"
-          }
+          },
+          "description": "Output only. The list of security events matching the request.",
+          "readOnly": true
         },
         "nextPageToken": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. A token, which can be sent as `next_page_token` to retrieve the next page.\nIf this field is omitted, there are no subsequent pages.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Response message for AdminIdentity.ListSecurityEvents."
     },
     "v1ListSpaceMembersResponse": {
       "type": "object",
@@ -8401,11 +8469,14 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/identityAdminV1User"
-          }
+          },
+          "description": "Output only. The list of users matching the request criteria.",
+          "readOnly": true
         },
         "nextPageToken": {
           "type": "string",
-          "title": "empty if no more pages"
+          "description": "Output only. A token, which can be sent as `next_page_token` to retrieve the next page.\nIf this field is omitted, there are no subsequent pages.",
+          "readOnly": true
         }
       },
       "description": "Response message for AdminIdentity.ListUsers."
@@ -8415,55 +8486,60 @@
       "properties": {
         "userPassword": {
           "$ref": "#/definitions/LoginUserRequestUserPassword",
-          "description": "UserPassword authentication method."
+          "description": "Password-based authentication credentials."
         }
       },
-      "description": "LoginUserRequest contains user credentials for authentication."
+      "description": "Request message for Identity.LoginUser."
     },
     "v1LoginUserResponse": {
       "type": "object",
       "properties": {
         "userId": {
           "type": "string",
-          "description": "The user's unique identifier."
+          "description": "Output only. The user's unique identifier.\nFormatted as `usr_\u003cksuid\u003e` (e.g., `usr_01H7B6K5Z8A3QW9J4C2N6P0Y1R`).",
+          "readOnly": true
         },
         "accessToken": {
           "type": "string",
-          "description": "The access token for authenticated requests."
+          "description": "Output only. The access token for authenticated requests.",
+          "readOnly": true
         },
         "accessTokenExpiresAt": {
           "type": "string",
           "format": "int64",
-          "description": "Expiration time of the access token (Unix seconds)."
+          "description": "Output only. The expiration time of the access token in Unix seconds.",
+          "readOnly": true
         },
         "refreshToken": {
           "type": "string",
-          "description": "The opaque refresh token."
+          "description": "Output only. The opaque refresh token.",
+          "readOnly": true
         },
         "refreshTokenExpiresAt": {
           "type": "string",
           "format": "int64",
-          "description": "Expiration time of the refresh token (Unix seconds)."
+          "description": "Output only. The expiration time of the refresh token in Unix seconds.",
+          "readOnly": true
         }
       },
-      "description": "LoginUserResponse contains the authentication result with both tokens."
+      "description": "Response message for Identity.LoginUser."
     },
     "v1LogoutRequest": {
       "type": "object",
       "properties": {
         "refreshToken": {
           "type": "string",
-          "description": "The refresh token to be revoked."
+          "description": "Required. The refresh token to be revoked."
         }
       },
-      "description": "LogoutRequest contains the refresh token to revoke.",
+      "description": "Request message for Identity.Logout.",
       "required": [
         "refreshToken"
       ]
     },
     "v1LogoutResponse": {
       "type": "object",
-      "description": "LogoutResponse is empty on success."
+      "description": "Response message for Identity.Logout."
     },
     "v1ProviderBlueprintDescriptor": {
       "type": "object",
@@ -8633,10 +8709,10 @@
       "properties": {
         "refreshToken": {
           "type": "string",
-          "description": "The refresh token to exchange for new tokens."
+          "description": "Required. The refresh token to exchange for new tokens."
         }
       },
-      "description": "RefreshSessionRequest contains a valid refresh token.",
+      "description": "Request message for Identity.RefreshSession.",
       "required": [
         "refreshToken"
       ]
@@ -8646,56 +8722,71 @@
       "properties": {
         "accessToken": {
           "type": "string",
-          "description": "The new access token for authenticated requests."
+          "description": "Output only. The new access token for authenticated requests.",
+          "readOnly": true
         },
         "accessTokenExpiresAt": {
           "type": "string",
           "format": "int64",
-          "description": "Expiration time of the new access token (Unix seconds)."
+          "description": "Output only. The expiration time of the new access token in Unix seconds.",
+          "readOnly": true
         },
         "refreshToken": {
           "type": "string",
-          "description": "The new opaque refresh token."
+          "description": "Output only. The new opaque refresh token.",
+          "readOnly": true
         },
         "refreshTokenExpiresAt": {
           "type": "string",
           "format": "int64",
-          "description": "Expiration time of the new refresh token (Unix seconds)."
+          "description": "Output only. The expiration time of the new refresh token in Unix seconds.",
+          "readOnly": true
         }
       },
-      "description": "RefreshSessionResponse contains newly issued tokens."
+      "description": "Response message for Identity.RefreshSession."
     },
     "v1RegisterUserRequest": {
       "type": "object",
       "properties": {
         "email": {
           "type": "string",
-          "description": "The user's email address."
+          "description": "Required. The user's primary email address."
         },
         "username": {
           "type": "string",
-          "description": "The user's chosen username."
+          "description": "Required. The user's chosen unique username."
         },
         "name": {
           "type": "string",
-          "description": "The user's display name."
+          "description": "Required. The user's full or display name."
         },
         "avatarUrl": {
           "type": "string",
-          "description": "The user's avatar URL (optional)."
+          "description": "Optional. The URL pointing to the user's avatar image."
         },
         "password": {
           "type": "string",
-          "description": "The user's password for authentication."
+          "description": "Required. The user's password for authentication."
         }
       },
-      "description": "RegisterUserRequest contains the fields for creating a new user account.",
+      "description": "Request message for Identity.RegisterUser.",
       "required": [
         "email",
         "username",
         "name",
         "password"
       ]
+    },
+    "v1RejectUserResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/identityAdminV1User",
+          "description": "Output only. The rejected user resource.",
+          "readOnly": true
+        }
+      },
+      "description": "Response message for AdminIdentity.RejectUser."
     },
     "v1ResolveInstitutionResponse": {
       "type": "object",
@@ -8728,7 +8819,7 @@
     },
     "v1RevokeSessionResponse": {
       "type": "object",
-      "description": "RevokeSessionResponse is empty on success."
+      "description": "Response message for Identity.RevokeSession."
     },
     "v1RotateIntegrationTokenResponse": {
       "type": "object",
@@ -9570,7 +9661,8 @@
       "properties": {
         "user": {
           "$ref": "#/definitions/identityAdminV1User",
-          "description": "The updated user object reflecting the new access level."
+          "description": "Output only. The updated user resource reflecting the new access level.",
+          "readOnly": true
         }
       },
       "description": "Response message for AdminIdentity.UpdateUserRole."
@@ -9580,28 +9672,33 @@
       "properties": {
         "sessionId": {
           "type": "string",
-          "description": "The session identifier."
+          "description": "Output only. The unique identifier of the session.",
+          "readOnly": true
         },
         "userAgent": {
           "type": "string",
-          "description": "User Agent string associated with the session."
+          "description": "Output only. The User-Agent string associated with the session.",
+          "readOnly": true
         },
         "ipAddress": {
           "type": "string",
-          "description": "IP address of the client that created the session."
+          "description": "Output only. The IP address of the client that created the session.",
+          "readOnly": true
         },
         "createTime": {
           "type": "string",
           "format": "date-time",
-          "description": "When the session was initialized."
+          "description": "Output only. The timestamp when the session was initialized.",
+          "readOnly": true
         },
         "lastUsedAt": {
           "type": "string",
           "format": "date-time",
-          "description": "When the session was last utilized."
+          "description": "Output only. The timestamp when the session was last utilized.",
+          "readOnly": true
         }
       },
-      "description": "UserSession represents an active user session."
+      "description": "UserSession represents an active user session resource."
     }
   }
 }

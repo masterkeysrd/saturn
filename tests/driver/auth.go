@@ -116,7 +116,7 @@ func (a *AuthDriver) ApproveUser(tb testing.TB, userID string) (*adminidentityv1
 }
 
 // RejectUser rejects a specific user by ID.
-func (a *AuthDriver) RejectUser(tb testing.TB, userID string) (*adminidentityv1.ApproveUserResponse, error) {
+func (a *AuthDriver) RejectUser(tb testing.TB, userID string) (*adminidentityv1.RejectUserResponse, error) {
 	tb.Helper()
 	adminClient := a.getAdminClient(tb)
 	return adminClient.RejectUser(tb.Context(), &adminidentityv1.RejectUserRequest{

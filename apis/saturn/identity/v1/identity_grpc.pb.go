@@ -34,25 +34,25 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// Identity service provides user authentication and account management.
+// Identity provides user authentication and session management.
 type IdentityClient interface {
-	// LoginUser authenticates a user and returns access and refresh tokens.
+	// Authenticates a user and returns access and refresh tokens.
 	LoginUser(ctx context.Context, in *LoginUserRequest, opts ...grpc.CallOption) (*LoginUserResponse, error)
-	// RegisterUser creates a new user account.
+	// Registers a new user account.
 	RegisterUser(ctx context.Context, in *RegisterUserRequest, opts ...grpc.CallOption) (*User, error)
-	// RefreshSession issues new tokens using a valid refresh token.
+	// Refreshes an authenticated session and issues a new token pair.
 	RefreshSession(ctx context.Context, in *RefreshSessionRequest, opts ...grpc.CallOption) (*RefreshSessionResponse, error)
-	// Logout revokes the presented refresh token.
+	// Terminates the current session by revoking the refresh token.
 	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
-	// GetCurrentUser retrieves the profile of the authenticated user.
+	// Retrieves the profile of the currently authenticated user.
 	GetCurrentUser(ctx context.Context, in *GetCurrentUserRequest, opts ...grpc.CallOption) (*User, error)
-	// ListActiveSessions returns all non-expired, non-revoked sessions for the user.
+	// Lists all active, non-expired sessions for the authenticated user.
 	ListActiveSessions(ctx context.Context, in *ListActiveSessionsRequest, opts ...grpc.CallOption) (*ListActiveSessionsResponse, error)
-	// RevokeSession invalidates a specific user session by ID.
+	// Revokes a specific active user session by ID.
 	RevokeSession(ctx context.Context, in *RevokeSessionRequest, opts ...grpc.CallOption) (*RevokeSessionResponse, error)
-	// RevokeAllSessions invalidates all sessions for the user globally.
+	// Revokes all active sessions for the authenticated user globally.
 	RevokeAllSessions(ctx context.Context, in *RevokeAllSessionsRequest, opts ...grpc.CallOption) (*RevokeAllSessionsResponse, error)
-	// ListMySecurityEvents retrieves the security audit logs for the authenticated user.
+	// Lists security audit log events for the authenticated user.
 	ListMySecurityEvents(ctx context.Context, in *ListMySecurityEventsRequest, opts ...grpc.CallOption) (*ListMySecurityEventsResponse, error)
 }
 
@@ -158,25 +158,25 @@ func (c *identityClient) ListMySecurityEvents(ctx context.Context, in *ListMySec
 // All implementations should embed UnimplementedIdentityServer
 // for forward compatibility.
 //
-// Identity service provides user authentication and account management.
+// Identity provides user authentication and session management.
 type IdentityServer interface {
-	// LoginUser authenticates a user and returns access and refresh tokens.
+	// Authenticates a user and returns access and refresh tokens.
 	LoginUser(context.Context, *LoginUserRequest) (*LoginUserResponse, error)
-	// RegisterUser creates a new user account.
+	// Registers a new user account.
 	RegisterUser(context.Context, *RegisterUserRequest) (*User, error)
-	// RefreshSession issues new tokens using a valid refresh token.
+	// Refreshes an authenticated session and issues a new token pair.
 	RefreshSession(context.Context, *RefreshSessionRequest) (*RefreshSessionResponse, error)
-	// Logout revokes the presented refresh token.
+	// Terminates the current session by revoking the refresh token.
 	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
-	// GetCurrentUser retrieves the profile of the authenticated user.
+	// Retrieves the profile of the currently authenticated user.
 	GetCurrentUser(context.Context, *GetCurrentUserRequest) (*User, error)
-	// ListActiveSessions returns all non-expired, non-revoked sessions for the user.
+	// Lists all active, non-expired sessions for the authenticated user.
 	ListActiveSessions(context.Context, *ListActiveSessionsRequest) (*ListActiveSessionsResponse, error)
-	// RevokeSession invalidates a specific user session by ID.
+	// Revokes a specific active user session by ID.
 	RevokeSession(context.Context, *RevokeSessionRequest) (*RevokeSessionResponse, error)
-	// RevokeAllSessions invalidates all sessions for the user globally.
+	// Revokes all active sessions for the authenticated user globally.
 	RevokeAllSessions(context.Context, *RevokeAllSessionsRequest) (*RevokeAllSessionsResponse, error)
-	// ListMySecurityEvents retrieves the security audit logs for the authenticated user.
+	// Lists security audit log events for the authenticated user.
 	ListMySecurityEvents(context.Context, *ListMySecurityEventsRequest) (*ListMySecurityEventsResponse, error)
 }
 
