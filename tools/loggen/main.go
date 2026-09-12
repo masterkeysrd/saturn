@@ -1,44 +1,14 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
-	"go/ast"
-	"go/format"
-	"go/parser"
-	"go/printer"
-	"go/token"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
+
+	"github.com/masterkeysrd/saturn/internal/codegen"
 )
-
-type methodParam struct {
-	Name string
-	Type string
-}
-
-type methodResult struct {
-	Type string
-}
-
-type methodInfo struct {
-	Name        string
-	Doc         string
-	SkipLogging bool
-	Params      []methodParam
-	Results     []methodResult
-}
-
-type targetInfo struct {
-	PkgName    string
-	TargetName string
-	Component  string
-	Methods    []methodInfo
-	Imports    map[string]string // aliasOrPkgName -> fullImportPath
-}
 
 func main() {
 	target := flag.String("target", "", "Name of the interface to decorate (required)")
@@ -54,7 +24,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	info, err := parseTarget(*dir, *target)
+	info, err := codegen.ParseTarget(*dir, *target)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing target %q in %q: %v\n", *target, *dir, err)
 		os.Exit(1)
@@ -64,10 +34,9 @@ func main() {
 		info.PkgName = *pkgFlag
 	}
 
-	if *componentFlag != "" {
-		info.Component = *componentFlag
-	} else if info.Component == "" {
-		info.Component = info.PkgName
+	component := *componentFlag
+	if component == "" {
+		component = info.PkgName
 	}
 
 	outPath := *output
@@ -75,13 +44,13 @@ func main() {
 		outPath = filepath.Join(*dir, strings.ToLower(*target)+"_log.go")
 	}
 
-	generated, err := generateDecorator(info)
+	file, err := generateDecorator(info, component, outPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error generating decorator: %v\n", err)
 		os.Exit(1)
 	}
 
-	if err := os.WriteFile(outPath, generated, 0644); err != nil {
+	if err := file.Save(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error writing output file %q: %v\n", outPath, err)
 		os.Exit(1)
 	}
@@ -89,422 +58,204 @@ func main() {
 	fmt.Printf("Successfully generated %s for interface %s (in package %s)\n", outPath, *target, info.PkgName)
 }
 
-func parseTarget(dir string, targetName string) (*targetInfo, error) {
-	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, dir, func(fi os.FileInfo) bool {
-		name := fi.Name()
-		return !strings.HasSuffix(name, "_test.go") &&
-			!strings.HasSuffix(name, "_tx.go") &&
-			!strings.HasSuffix(name, "_log.go")
-	}, parser.ParseComments)
-	if err != nil {
-		return nil, fmt.Errorf("parse dir: %w", err)
-	}
-
-	var foundPkgName string
-	var foundInterface *ast.InterfaceType
-	var sourceFiles []*ast.File
-
-	for pkgName, pkg := range pkgs {
-		for _, file := range pkg.Files {
-			sourceFiles = append(sourceFiles, file)
-			ast.Inspect(file, func(n ast.Node) bool {
-				ts, ok := n.(*ast.TypeSpec)
-				if !ok {
-					return true
-				}
-				if ts.Name.Name == targetName {
-					if iface, ok := ts.Type.(*ast.InterfaceType); ok {
-						foundInterface = iface
-						foundPkgName = pkgName
-					}
-				}
-				return true
-			})
-		}
-	}
-
-	if foundInterface == nil {
-		return nil, fmt.Errorf("interface %s not found in %s", targetName, dir)
-	}
-
-	// Map all available imports from source files
-	availableImports := make(map[string]string)
-	for _, file := range sourceFiles {
-		for _, imp := range file.Imports {
-			path := strings.Trim(imp.Path.Value, `"`)
-			if imp.Name != nil && imp.Name.Name != "" && imp.Name.Name != "_" {
-				availableImports[imp.Name.Name] = path
-			} else {
-				parts := strings.Split(path, "/")
-				pkg := parts[len(parts)-1]
-				availableImports[pkg] = path
-			}
-		}
-	}
-
-	usedPkgs := make(map[string]bool)
-	var methods []methodInfo
-
-	for _, field := range foundInterface.Methods.List {
-		if len(field.Names) == 0 {
-			// Embedded interface, skip
-			continue
-		}
-		mName := field.Names[0].Name
-		ft, ok := field.Type.(*ast.FuncType)
-		if !ok {
-			continue
-		}
-
-		docText := ""
-		if field.Doc != nil {
-			docText = field.Doc.Text()
-		}
-		if field.Comment != nil {
-			docText += "\n" + field.Comment.Text()
-		}
-
-		skipLogging := strings.Contains(docText, "@nolog") ||
-			strings.Contains(docText, "//log:skip") ||
-			strings.Contains(docText, "@log:skip")
-
-		// Collect package qualifiers in parameters and results
-		ast.Inspect(ft, func(n ast.Node) bool {
-			if sel, ok := n.(*ast.SelectorExpr); ok {
-				if id, ok := sel.X.(*ast.Ident); ok {
-					usedPkgs[id.Name] = true
-				}
-			}
-			return true
-		})
-
-		// Parse parameters
-		var params []methodParam
-		paramIdx := 0
-		if ft.Params != nil {
-			for _, p := range ft.Params.List {
-				typeStr := exprToString(fset, p.Type)
-				if len(p.Names) == 0 {
-					name := fmt.Sprintf("arg%d", paramIdx)
-					if typeStr == "context.Context" {
-						name = "ctx"
-					}
-					params = append(params, methodParam{Name: name, Type: typeStr})
-					paramIdx++
-				} else {
-					for _, nameIdent := range p.Names {
-						params = append(params, methodParam{Name: nameIdent.Name, Type: typeStr})
-						paramIdx++
-					}
-				}
-			}
-		}
-
-		// Parse results
-		var results []methodResult
-		if ft.Results != nil {
-			for _, r := range ft.Results.List {
-				typeStr := exprToString(fset, r.Type)
-				if len(r.Names) == 0 {
-					results = append(results, methodResult{Type: typeStr})
-				} else {
-					for range r.Names {
-						results = append(results, methodResult{Type: typeStr})
-					}
-				}
-			}
-		}
-
-		methods = append(methods, methodInfo{
-			Name:        mName,
-			Doc:         strings.TrimSpace(docText),
-			SkipLogging: skipLogging,
-			Params:      params,
-			Results:     results,
-		})
-	}
-
-	// Filter imports to only those used
-	neededImports := make(map[string]string)
-	for pkg := range usedPkgs {
-		if path, ok := availableImports[pkg]; ok {
-			neededImports[pkg] = path
-		}
-	}
-
-	return &targetInfo{
-		PkgName:    foundPkgName,
-		TargetName: targetName,
-		Component:  foundPkgName,
-		Methods:    methods,
-		Imports:    neededImports,
-	}, nil
+func shouldSkipLogging(m codegen.MethodInfo) bool {
+	return m.HasAnnotation("@nolog") ||
+		m.HasAnnotation("@skiplog") ||
+		m.HasAnnotation("log:skip")
 }
 
-func exprToString(fset *token.FileSet, expr ast.Expr) string {
-	var buf bytes.Buffer
-	_ = printer.Fprint(&buf, fset, expr)
-	return buf.String()
-}
+func generateDecorator(info *codegen.InterfaceInfo, component string, outPath string) (*codegen.File, error) {
+	decoratorName := "Logging" + info.Name
 
-func zeroValueOf(typeStr string) string {
-	switch {
-	case strings.HasPrefix(typeStr, "*") ||
-		strings.HasPrefix(typeStr, "[]") ||
-		strings.HasPrefix(typeStr, "map[") ||
-		strings.HasPrefix(typeStr, "chan ") ||
-		strings.HasPrefix(typeStr, "<-chan ") ||
-		strings.HasPrefix(typeStr, "func(") ||
-		typeStr == "any" || typeStr == "interface{}":
-		return "nil"
-	case typeStr == "string":
-		return `""`
-	case typeStr == "bool":
-		return "false"
-	case typeStr == "int" || typeStr == "int8" || typeStr == "int16" || typeStr == "int32" || typeStr == "int64" ||
-		typeStr == "uint" || typeStr == "uint8" || typeStr == "uint16" || typeStr == "uint32" || typeStr == "uint64" ||
-		typeStr == "uintptr" || typeStr == "byte" || typeStr == "rune" ||
-		typeStr == "float32" || typeStr == "float64":
-		return "0"
-	default:
-		return typeStr + "{}"
-	}
-}
-
-func generateDecorator(info *targetInfo) ([]byte, error) {
-	var buf bytes.Buffer
-
-	decoratorName := "Logging" + info.TargetName
-
-	buf.WriteString("// Code generated by loggen. DO NOT EDIT.\n\n")
-	buf.WriteString(fmt.Sprintf("package %s\n\n", info.PkgName))
-
-	// Collect all imports
-	importPaths := make(map[string]string)
-	importPaths["context"] = ""
-	importPaths["time"] = ""
-	importPaths["github.com/masterkeysrd/saturn/internal/platform/log"] = ""
-
-	for alias, path := range info.Imports {
-		parts := strings.Split(path, "/")
-		defaultPkg := parts[len(parts)-1]
-		if alias != defaultPkg {
-			importPaths[path] = alias
-		} else {
-			if _, exists := importPaths[path]; !exists {
-				importPaths[path] = ""
-			}
-		}
-	}
-
-	var sortedPaths []string
-	for p := range importPaths {
-		sortedPaths = append(sortedPaths, p)
-	}
-	sort.Strings(sortedPaths)
-
-	buf.WriteString("import (\n")
-	for _, p := range sortedPaths {
-		alias := importPaths[p]
-		if alias != "" {
-			buf.WriteString(fmt.Sprintf("\t%s %q\n", alias, p))
-		} else {
-			buf.WriteString(fmt.Sprintf("\t%q\n", p))
-		}
-	}
-	buf.WriteString(")\n\n")
+	file := codegen.NewFile(outPath, info.PkgName)
+	file.SetHeader("// Code generated by loggen. DO NOT EDIT.\n")
+	file.Import("context")
+	file.Import("time")
+	file.Import("github.com/masterkeysrd/saturn/internal/platform/log")
+	file.AddImports(info.Imports)
 
 	// Struct definition
-	buf.WriteString(fmt.Sprintf("// %s wraps a %s and logs operation durations and errors.\n", decoratorName, info.TargetName))
-	buf.WriteString(fmt.Sprintf("type %s struct {\n", decoratorName))
-	buf.WriteString(fmt.Sprintf("\tnext   %s\n", info.TargetName))
-	buf.WriteString("\tlogger log.Logger\n")
-	buf.WriteString("}\n\n")
+	file.P("// ", decoratorName, " wraps a ", info.Name, " and logs operation durations and errors.")
+	file.P("type ", decoratorName, " struct {")
+	file.P("\tnext   ", info.Name)
+	file.P("\tlogger log.Logger")
+	file.P("}")
+	file.P()
 
 	// Constructor
-	buf.WriteString(fmt.Sprintf("// New%s creates a new %s decorator.\n", decoratorName, decoratorName))
-	buf.WriteString(fmt.Sprintf("func New%s(next %s, logger log.Logger) *%s {\n", decoratorName, info.TargetName, decoratorName))
-	buf.WriteString(fmt.Sprintf("\treturn &%s{\n", decoratorName))
-	buf.WriteString("\t\tnext:   next,\n")
-	buf.WriteString("\t\tlogger: logger,\n")
-	buf.WriteString("\t}\n")
-	buf.WriteString("}\n\n")
+	file.P("// New", decoratorName, " creates a new ", decoratorName, " decorator.")
+	file.P("func New", decoratorName, "(next ", info.Name, ", logger log.Logger) *", decoratorName, " {")
+	file.P("\treturn &", decoratorName, "{")
+	file.P("\t\tnext:   next,")
+	file.P("\t\tlogger: logger,")
+	file.P("\t}")
+	file.P("}")
+	file.P()
 
 	// Interface compile assertion
-	buf.WriteString(fmt.Sprintf("// Compile-time interface assertion.\nvar _ %s = (*%s)(nil)\n\n", info.TargetName, decoratorName))
+	file.P("// Compile-time interface assertion.")
+	file.P("var _ ", info.Name, " = (*", decoratorName, ")(nil)")
+	file.P()
 
 	// Methods
 	for _, m := range info.Methods {
-		// Build signature parameter string
-		var paramDecls []string
-		var callArgs []string
+		paramsSig := m.ParamsSignature()
+		callArgs := m.CallArgs()
+		retSig := m.ResultsSignature()
+		retSigWithSpace := retSig
+		if retSigWithSpace != "" {
+			retSigWithSpace = " " + retSigWithSpace
+		}
+
 		ctxArgName := ""
 		for _, p := range m.Params {
-			paramDecls = append(paramDecls, fmt.Sprintf("%s %s", p.Name, p.Type))
-			if strings.HasPrefix(p.Type, "...") {
-				callArgs = append(callArgs, p.Name+"...")
-			} else {
-				callArgs = append(callArgs, p.Name)
-			}
 			if ctxArgName == "" && (p.Type == "context.Context" || strings.HasSuffix(p.Type, ".Context")) {
 				ctxArgName = p.Name
 			}
 		}
-		paramsSig := strings.Join(paramDecls, ", ")
-
 		if ctxArgName == "" {
 			ctxArgName = "context.Background()"
 		}
 
-		// Build return signature string
-		var retTypes []string
-		for _, r := range m.Results {
-			retTypes = append(retTypes, r.Type)
-		}
-		retSig := strings.Join(retTypes, ", ")
-		if len(retTypes) > 1 {
-			retSig = "(" + retSig + ")"
-		}
-
-		if m.SkipLogging {
+		if shouldSkipLogging(m) {
 			// Direct pass-through
 			if len(m.Results) == 0 {
-				buf.WriteString(fmt.Sprintf("func (l *%s) %s(%s) {\n", decoratorName, m.Name, paramsSig))
-				buf.WriteString(fmt.Sprintf("\tl.next.%s(%s)\n", m.Name, strings.Join(callArgs, ", ")))
-				buf.WriteString("}\n\n")
+				file.P("func (l *", decoratorName, ") ", m.Name, "(", paramsSig, ") {")
+				file.P("\tl.next.", m.Name, "(", callArgs, ")")
+				file.P("}")
+				file.P()
 			} else {
-				buf.WriteString(fmt.Sprintf("func (l *%s) %s(%s) %s {\n", decoratorName, m.Name, paramsSig, retSig))
-				buf.WriteString(fmt.Sprintf("\treturn l.next.%s(%s)\n", m.Name, strings.Join(callArgs, ", ")))
-				buf.WriteString("}\n\n")
+				file.P("func (l *", decoratorName, ") ", m.Name, "(", paramsSig, ")", retSigWithSpace, " {")
+				file.P("\treturn l.next.", m.Name, "(", callArgs, ")")
+				file.P("}")
+				file.P()
 			}
 			continue
 		}
 
-		hasError := len(m.Results) > 0 && m.Results[len(m.Results)-1].Type == "error"
-		msgOp := fmt.Sprintf("%s.%s", info.Component, m.Name)
+		hasError := m.HasErrorResult()
+		msgOp := fmt.Sprintf("%s.%s", component, m.Name)
 
-		buf.WriteString(fmt.Sprintf("// %s executes next.%s and logs execution duration and errors.\n", m.Name, m.Name))
+		file.P("// ", m.Name, " executes next.", m.Name, " and logs execution duration and errors.")
 		if len(m.Results) == 0 {
-			buf.WriteString(fmt.Sprintf("func (l *%s) %s(%s) {\n", decoratorName, m.Name, paramsSig))
-			buf.WriteString("\tstart := time.Now()\n")
-			buf.WriteString(fmt.Sprintf("\tl.next.%s(%s)\n", m.Name, strings.Join(callArgs, ", ")))
-			buf.WriteString("\tduration := time.Since(start)\n\n")
-			buf.WriteString(fmt.Sprintf("\tl.logger.Info(%s, %q,\n", ctxArgName, msgOp+" completed"))
-			buf.WriteString(fmt.Sprintf("\t\tlog.String(\"component\", %q),\n", info.Component))
-			buf.WriteString(fmt.Sprintf("\t\tlog.String(\"operation\", %q),\n", m.Name))
-			buf.WriteString("\t\tlog.Duration(\"duration\", duration),\n")
-			buf.WriteString("\t)\n")
-			buf.WriteString("}\n\n")
+			file.P("func (l *", decoratorName, ") ", m.Name, "(", paramsSig, ") {")
+			file.P("\tstart := time.Now()")
+			file.P("\tl.next.", m.Name, "(", callArgs, ")")
+			file.P("\tduration := time.Since(start)")
+			file.P()
+			file.P("\tl.logger.Info(", ctxArgName, ", ", fmt.Sprintf("%q", msgOp+" completed"), ",")
+			file.P("\t\tlog.String(\"component\", ", fmt.Sprintf("%q", component), "),")
+			file.P("\t\tlog.String(\"operation\", ", fmt.Sprintf("%q", m.Name), "),")
+			file.P("\t\tlog.Duration(\"duration\", duration),")
+			file.P("\t)")
+			file.P("}")
+			file.P()
 			continue
 		}
 
-		buf.WriteString(fmt.Sprintf("func (l *%s) %s(%s) %s {\n", decoratorName, m.Name, paramsSig, retSig))
-		buf.WriteString("\tstart := time.Now()\n")
+		file.P("func (l *", decoratorName, ") ", m.Name, "(", paramsSig, ")", retSigWithSpace, " {")
+		file.P("\tstart := time.Now()")
 
 		if hasError {
-			// Zero values for non-error returns
-			var zeroReturns []string
-			for i := 0; i < len(m.Results)-1; i++ {
-				zeroReturns = append(zeroReturns, zeroValueOf(m.Results[i].Type))
-			}
+			zeroReturns := m.ZeroReturns()
 
 			if len(m.Results) == 1 {
-				buf.WriteString(fmt.Sprintf("\terr := l.next.%s(%s)\n", m.Name, strings.Join(callArgs, ", ")))
-				buf.WriteString("\tduration := time.Since(start)\n\n")
-				buf.WriteString("\tif err != nil {\n")
-				buf.WriteString(fmt.Sprintf("\t\tl.logger.Error(%s, %q,\n", ctxArgName, msgOp+" failed"))
-				buf.WriteString(fmt.Sprintf("\t\t\tlog.String(\"component\", %q),\n", info.Component))
-				buf.WriteString(fmt.Sprintf("\t\t\tlog.String(\"operation\", %q),\n", m.Name))
-				buf.WriteString("\t\t\tlog.Duration(\"duration\", duration),\n")
-				buf.WriteString("\t\t\tlog.Err(err),\n")
-				buf.WriteString("\t\t)\n")
-				buf.WriteString("\t\treturn err\n")
-				buf.WriteString("\t}\n\n")
-
-				buf.WriteString(fmt.Sprintf("\tl.logger.Info(%s, %q,\n", ctxArgName, msgOp+" completed"))
-				buf.WriteString(fmt.Sprintf("\t\tlog.String(\"component\", %q),\n", info.Component))
-				buf.WriteString(fmt.Sprintf("\t\tlog.String(\"operation\", %q),\n", m.Name))
-				buf.WriteString("\t\tlog.Duration(\"duration\", duration),\n")
-				buf.WriteString("\t)\n")
-				buf.WriteString("\treturn nil\n")
+				file.P("\terr := l.next.", m.Name, "(", callArgs, ")")
+				file.P("\tduration := time.Since(start)")
+				file.P()
+				file.P("\tif err != nil {")
+				file.P("\t\tl.logger.Error(", ctxArgName, ", ", fmt.Sprintf("%q", msgOp+" failed"), ",")
+				file.P("\t\t\tlog.String(\"component\", ", fmt.Sprintf("%q", component), "),")
+				file.P("\t\t\tlog.String(\"operation\", ", fmt.Sprintf("%q", m.Name), "),")
+				file.P("\t\t\tlog.Duration(\"duration\", duration),")
+				file.P("\t\t\tlog.Err(err),")
+				file.P("\t\t)")
+				file.P("\t\treturn err")
+				file.P("\t}")
+				file.P()
+				file.P("\tl.logger.Info(", ctxArgName, ", ", fmt.Sprintf("%q", msgOp+" completed"), ",")
+				file.P("\t\tlog.String(\"component\", ", fmt.Sprintf("%q", component), "),")
+				file.P("\t\tlog.String(\"operation\", ", fmt.Sprintf("%q", m.Name), "),")
+				file.P("\t\tlog.Duration(\"duration\", duration),")
+				file.P("\t)")
+				file.P("\treturn nil")
 			} else if len(m.Results) == 2 {
-				buf.WriteString(fmt.Sprintf("\tres, err := l.next.%s(%s)\n", m.Name, strings.Join(callArgs, ", ")))
-				buf.WriteString("\tduration := time.Since(start)\n\n")
-				buf.WriteString("\tif err != nil {\n")
-				buf.WriteString(fmt.Sprintf("\t\tl.logger.Error(%s, %q,\n", ctxArgName, msgOp+" failed"))
-				buf.WriteString(fmt.Sprintf("\t\t\tlog.String(\"component\", %q),\n", info.Component))
-				buf.WriteString(fmt.Sprintf("\t\t\tlog.String(\"operation\", %q),\n", m.Name))
-				buf.WriteString("\t\t\tlog.Duration(\"duration\", duration),\n")
-				buf.WriteString("\t\t\tlog.Err(err),\n")
-				buf.WriteString("\t\t)\n")
-				buf.WriteString(fmt.Sprintf("\t\treturn %s, err\n", zeroReturns[0]))
-				buf.WriteString("\t}\n\n")
-
-				buf.WriteString(fmt.Sprintf("\tl.logger.Info(%s, %q,\n", ctxArgName, msgOp+" completed"))
-				buf.WriteString(fmt.Sprintf("\t\tlog.String(\"component\", %q),\n", info.Component))
-				buf.WriteString(fmt.Sprintf("\t\tlog.String(\"operation\", %q),\n", m.Name))
-				buf.WriteString("\t\tlog.Duration(\"duration\", duration),\n")
-				buf.WriteString("\t)\n")
-				buf.WriteString("\treturn res, nil\n")
+				file.P("\tres, err := l.next.", m.Name, "(", callArgs, ")")
+				file.P("\tduration := time.Since(start)")
+				file.P()
+				file.P("\tif err != nil {")
+				file.P("\t\tl.logger.Error(", ctxArgName, ", ", fmt.Sprintf("%q", msgOp+" failed"), ",")
+				file.P("\t\t\tlog.String(\"component\", ", fmt.Sprintf("%q", component), "),")
+				file.P("\t\t\tlog.String(\"operation\", ", fmt.Sprintf("%q", m.Name), "),")
+				file.P("\t\t\tlog.Duration(\"duration\", duration),")
+				file.P("\t\t\tlog.Err(err),")
+				file.P("\t\t)")
+				file.P("\t\treturn ", zeroReturns[0], ", err")
+				file.P("\t}")
+				file.P()
+				file.P("\tl.logger.Info(", ctxArgName, ", ", fmt.Sprintf("%q", msgOp+" completed"), ",")
+				file.P("\t\tlog.String(\"component\", ", fmt.Sprintf("%q", component), "),")
+				file.P("\t\tlog.String(\"operation\", ", fmt.Sprintf("%q", m.Name), "),")
+				file.P("\t\tlog.Duration(\"duration\", duration),")
+				file.P("\t)")
+				file.P("\treturn res, nil")
 			} else {
 				var resNames []string
 				for i := 0; i < len(m.Results)-1; i++ {
 					resNames = append(resNames, fmt.Sprintf("res%d", i+1))
 				}
-				buf.WriteString(fmt.Sprintf("\t%s, err := l.next.%s(%s)\n", strings.Join(resNames, ", "), m.Name, strings.Join(callArgs, ", ")))
-				buf.WriteString("\tduration := time.Since(start)\n\n")
-				buf.WriteString("\tif err != nil {\n")
-				buf.WriteString(fmt.Sprintf("\t\tl.logger.Error(%s, %q,\n", ctxArgName, msgOp+" failed"))
-				buf.WriteString(fmt.Sprintf("\t\t\tlog.String(\"component\", %q),\n", info.Component))
-				buf.WriteString(fmt.Sprintf("\t\t\tlog.String(\"operation\", %q),\n", m.Name))
-				buf.WriteString("\t\t\tlog.Duration(\"duration\", duration),\n")
-				buf.WriteString("\t\t\tlog.Err(err),\n")
-				buf.WriteString("\t\t)\n")
-				buf.WriteString(fmt.Sprintf("\t\treturn %s, err\n", strings.Join(zeroReturns, ", ")))
-				buf.WriteString("\t}\n\n")
-
-				buf.WriteString(fmt.Sprintf("\tl.logger.Info(%s, %q,\n", ctxArgName, msgOp+" completed"))
-				buf.WriteString(fmt.Sprintf("\t\tlog.String(\"component\", %q),\n", info.Component))
-				buf.WriteString(fmt.Sprintf("\t\tlog.String(\"operation\", %q),\n", m.Name))
-				buf.WriteString("\t\tlog.Duration(\"duration\", duration),\n")
-				buf.WriteString("\t)\n")
-				buf.WriteString(fmt.Sprintf("\treturn %s, nil\n", strings.Join(resNames, ", ")))
+				file.P("\t", strings.Join(resNames, ", "), ", err := l.next.", m.Name, "(", callArgs, ")")
+				file.P("\tduration := time.Since(start)")
+				file.P()
+				file.P("\tif err != nil {")
+				file.P("\t\tl.logger.Error(", ctxArgName, ", ", fmt.Sprintf("%q", msgOp+" failed"), ",")
+				file.P("\t\t\tlog.String(\"component\", ", fmt.Sprintf("%q", component), "),")
+				file.P("\t\t\tlog.String(\"operation\", ", fmt.Sprintf("%q", m.Name), "),")
+				file.P("\t\t\tlog.Duration(\"duration\", duration),")
+				file.P("\t\t\tlog.Err(err),")
+				file.P("\t\t)")
+				file.P("\t\treturn ", strings.Join(zeroReturns, ", "), ", err")
+				file.P("\t}")
+				file.P()
+				file.P("\tl.logger.Info(", ctxArgName, ", ", fmt.Sprintf("%q", msgOp+" completed"), ",")
+				file.P("\t\tlog.String(\"component\", ", fmt.Sprintf("%q", component), "),")
+				file.P("\t\tlog.String(\"operation\", ", fmt.Sprintf("%q", m.Name), "),")
+				file.P("\t\tlog.Duration(\"duration\", duration),")
+				file.P("\t)")
+				file.P("\treturn ", strings.Join(resNames, ", "), ", nil")
 			}
 		} else {
-			// No error in return values
+			// No error return: always log completed
 			if len(m.Results) == 1 {
-				buf.WriteString(fmt.Sprintf("\tres := l.next.%s(%s)\n", m.Name, strings.Join(callArgs, ", ")))
-				buf.WriteString("\tduration := time.Since(start)\n\n")
-				buf.WriteString(fmt.Sprintf("\tl.logger.Info(%s, %q,\n", ctxArgName, msgOp+" completed"))
-				buf.WriteString(fmt.Sprintf("\t\tlog.String(\"component\", %q),\n", info.Component))
-				buf.WriteString(fmt.Sprintf("\t\tlog.String(\"operation\", %q),\n", m.Name))
-				buf.WriteString("\t\tlog.Duration(\"duration\", duration),\n")
-				buf.WriteString("\t)\n")
-				buf.WriteString("\treturn res\n")
+				file.P("\tres := l.next.", m.Name, "(", callArgs, ")")
+				file.P("\tduration := time.Since(start)")
+				file.P()
+				file.P("\tl.logger.Info(", ctxArgName, ", ", fmt.Sprintf("%q", msgOp+" completed"), ",")
+				file.P("\t\tlog.String(\"component\", ", fmt.Sprintf("%q", component), "),")
+				file.P("\t\tlog.String(\"operation\", ", fmt.Sprintf("%q", m.Name), "),")
+				file.P("\t\tlog.Duration(\"duration\", duration),")
+				file.P("\t)")
+				file.P("\treturn res")
 			} else {
 				var resNames []string
-				for i := range m.Results {
+				for i := 0; i < len(m.Results); i++ {
 					resNames = append(resNames, fmt.Sprintf("res%d", i+1))
 				}
-				buf.WriteString(fmt.Sprintf("\t%s := l.next.%s(%s)\n", strings.Join(resNames, ", "), m.Name, strings.Join(callArgs, ", ")))
-				buf.WriteString("\tduration := time.Since(start)\n\n")
-				buf.WriteString(fmt.Sprintf("\tl.logger.Info(%s, %q,\n", ctxArgName, msgOp+" completed"))
-				buf.WriteString(fmt.Sprintf("\t\tlog.String(\"component\", %q),\n", info.Component))
-				buf.WriteString(fmt.Sprintf("\t\tlog.String(\"operation\", %q),\n", m.Name))
-				buf.WriteString("\t\tlog.Duration(\"duration\", duration),\n")
-				buf.WriteString("\t)\n")
-				buf.WriteString(fmt.Sprintf("\treturn %s\n", strings.Join(resNames, ", ")))
+				file.P("\t", strings.Join(resNames, ", "), " := l.next.", m.Name, "(", callArgs, ")")
+				file.P("\tduration := time.Since(start)")
+				file.P()
+				file.P("\tl.logger.Info(", ctxArgName, ", ", fmt.Sprintf("%q", msgOp+" completed"), ",")
+				file.P("\t\tlog.String(\"component\", ", fmt.Sprintf("%q", component), "),")
+				file.P("\t\tlog.String(\"operation\", ", fmt.Sprintf("%q", m.Name), "),")
+				file.P("\t\tlog.Duration(\"duration\", duration),")
+				file.P("\t)")
+				file.P("\treturn ", strings.Join(resNames, ", "))
 			}
 		}
 
-		buf.WriteString("}\n\n")
+		file.P("}")
+		file.P()
 	}
 
-	formatted, err := format.Source(buf.Bytes())
-	if err != nil {
-		return nil, fmt.Errorf("format generated code: %w\nRaw Code:\n%s", err, buf.String())
-	}
-
-	return formatted, nil
+	return file, nil
 }
