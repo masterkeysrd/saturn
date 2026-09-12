@@ -6,6 +6,10 @@ Saturn is a multi-tenant personal Life Operating System (Life OS) that helps you
 
 <div align="center">
 
+[![CI](https://github.com/masterkeysrd/saturn/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/masterkeysrd/saturn/actions/workflows/ci.yaml)
+[![CodeQL](https://github.com/masterkeysrd/saturn/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/masterkeysrd/saturn/actions/workflows/codeql.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/masterkeysrd/saturn.svg)](https://pkg.go.dev/github.com/masterkeysrd/saturn)
+[![Go Report Card](https://goreportcard.com/badge/github.com/masterkeysrd/saturn)](https://goreportcard.com/report/github.com/masterkeysrd/saturn)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Go Version](https://img.shields.io/badge/Go-1.26%2B-blue.svg)](https://go.dev/)
 [![gRPC](https://img.shields.io/badge/gRPC-enabled-blue.svg)](https://grpc.io/)
