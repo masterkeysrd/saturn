@@ -24,6 +24,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Request message for MessageAdmin.GetQueueMetrics.
 type GetQueueMetricsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -60,14 +61,21 @@ func (*GetQueueMetricsRequest) Descriptor() ([]byte, []int) {
 	return file_saturn_platform_message_v1_admin_proto_rawDescGZIP(), []int{0}
 }
 
+// TopicMetrics represents status counters for a specific event topic.
 type TopicMetrics struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Topic         string                 `protobuf:"bytes,1,opt,name=topic,proto3" json:"topic,omitempty"`
-	Pending       int64                  `protobuf:"varint,2,opt,name=pending,proto3" json:"pending,omitempty"`
-	Processing    int64                  `protobuf:"varint,3,opt,name=processing,proto3" json:"processing,omitempty"`
-	Completed     int64                  `protobuf:"varint,4,opt,name=completed,proto3" json:"completed,omitempty"`
-	Failed        int64                  `protobuf:"varint,5,opt,name=failed,proto3" json:"failed,omitempty"`
-	Total         int64                  `protobuf:"varint,6,opt,name=total,proto3" json:"total,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The event topic name.
+	Topic string `protobuf:"bytes,1,opt,name=topic,proto3" json:"topic,omitempty"`
+	// Output only. Number of deliveries waiting in the queue.
+	Pending int64 `protobuf:"varint,2,opt,name=pending,proto3" json:"pending,omitempty"`
+	// Output only. Number of deliveries currently being processed.
+	Processing int64 `protobuf:"varint,3,opt,name=processing,proto3" json:"processing,omitempty"`
+	// Output only. Number of deliveries successfully completed.
+	Completed int64 `protobuf:"varint,4,opt,name=completed,proto3" json:"completed,omitempty"`
+	// Output only. Number of deliveries that have failed after max attempts.
+	Failed int64 `protobuf:"varint,5,opt,name=failed,proto3" json:"failed,omitempty"`
+	// Output only. Total number of deliveries recorded for this topic.
+	Total         int64 `protobuf:"varint,6,opt,name=total,proto3" json:"total,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -144,16 +152,23 @@ func (x *TopicMetrics) GetTotal() int64 {
 	return 0
 }
 
+// Response message for MessageAdmin.GetQueueMetrics.
 type GetQueueMetricsResponse struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	TotalPending    int64                  `protobuf:"varint,1,opt,name=total_pending,json=totalPending,proto3" json:"total_pending,omitempty"`
-	TotalProcessing int64                  `protobuf:"varint,2,opt,name=total_processing,json=totalProcessing,proto3" json:"total_processing,omitempty"`
-	TotalCompleted  int64                  `protobuf:"varint,3,opt,name=total_completed,json=totalCompleted,proto3" json:"total_completed,omitempty"`
-	TotalFailed     int64                  `protobuf:"varint,4,opt,name=total_failed,json=totalFailed,proto3" json:"total_failed,omitempty"`
-	TotalDeliveries int64                  `protobuf:"varint,5,opt,name=total_deliveries,json=totalDeliveries,proto3" json:"total_deliveries,omitempty"`
-	Topics          []*TopicMetrics        `protobuf:"bytes,6,rep,name=topics,proto3" json:"topics,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. Total pending deliveries across all topics.
+	TotalPending int64 `protobuf:"varint,1,opt,name=total_pending,json=totalPending,proto3" json:"total_pending,omitempty"`
+	// Output only. Total processing deliveries across all topics.
+	TotalProcessing int64 `protobuf:"varint,2,opt,name=total_processing,json=totalProcessing,proto3" json:"total_processing,omitempty"`
+	// Output only. Total completed deliveries across all topics.
+	TotalCompleted int64 `protobuf:"varint,3,opt,name=total_completed,json=totalCompleted,proto3" json:"total_completed,omitempty"`
+	// Output only. Total failed deliveries across all topics.
+	TotalFailed int64 `protobuf:"varint,4,opt,name=total_failed,json=totalFailed,proto3" json:"total_failed,omitempty"`
+	// Output only. Total recorded deliveries across all topics.
+	TotalDeliveries int64 `protobuf:"varint,5,opt,name=total_deliveries,json=totalDeliveries,proto3" json:"total_deliveries,omitempty"`
+	// Output only. Detailed metrics broken down by topic.
+	Topics        []*TopicMetrics `protobuf:"bytes,6,rep,name=topics,proto3" json:"topics,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetQueueMetricsResponse) Reset() {
@@ -228,13 +243,19 @@ func (x *GetQueueMetricsResponse) GetTopics() []*TopicMetrics {
 	return nil
 }
 
+// Request message for MessageAdmin.ListDeliveries.
 type ListDeliveriesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Topic         string                 `protobuf:"bytes,1,opt,name=topic,proto3" json:"topic,omitempty"`
-	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
-	SubscriberId  string                 `protobuf:"bytes,3,opt,name=subscriber_id,json=subscriberId,proto3" json:"subscriber_id,omitempty"`
-	PageSize      int32                  `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken     string                 `protobuf:"bytes,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Optional. Filter deliveries by topic name.
+	Topic string `protobuf:"bytes,1,opt,name=topic,proto3" json:"topic,omitempty"`
+	// Optional. Filter deliveries by current status (e.g., pending, processing, completed, failed).
+	Status string `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	// Optional. Filter deliveries by subscriber identifier.
+	SubscriberId string `protobuf:"bytes,3,opt,name=subscriber_id,json=subscriberId,proto3" json:"subscriber_id,omitempty"`
+	// Optional. The maximum number of delivery records to return.
+	PageSize int32 `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Optional. The cursor-based pagination token from a previous response.
+	PageToken     string `protobuf:"bytes,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -304,18 +325,30 @@ func (x *ListDeliveriesRequest) GetPageToken() string {
 	return ""
 }
 
+// DeliveryInfo represents a single message delivery attempt record.
 type DeliveryInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	MessageId     string                 `protobuf:"bytes,2,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
-	SubscriberId  string                 `protobuf:"bytes,3,opt,name=subscriber_id,json=subscriberId,proto3" json:"subscriber_id,omitempty"`
-	Topic         string                 `protobuf:"bytes,4,opt,name=topic,proto3" json:"topic,omitempty"`
-	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
-	Attempts      int32                  `protobuf:"varint,6,opt,name=attempts,proto3" json:"attempts,omitempty"`
-	MaxAttempts   int32                  `protobuf:"varint,7,opt,name=max_attempts,json=maxAttempts,proto3" json:"max_attempts,omitempty"`
-	LastError     string                 `protobuf:"bytes,8,opt,name=last_error,json=lastError,proto3" json:"last_error,omitempty"`
-	ScheduleTime  *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=schedule_time,json=scheduleTime,proto3" json:"schedule_time,omitempty"`
-	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The unique identifier of the delivery attempt.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Output only. The underlying event message identifier.
+	MessageId string `protobuf:"bytes,2,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	// Output only. The subscriber identifier processing this delivery.
+	SubscriberId string `protobuf:"bytes,3,opt,name=subscriber_id,json=subscriberId,proto3" json:"subscriber_id,omitempty"`
+	// Output only. The topic name of the event.
+	Topic string `protobuf:"bytes,4,opt,name=topic,proto3" json:"topic,omitempty"`
+	// Output only. The current status of the delivery.
+	Status string `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	// Output only. Current attempt count.
+	Attempts int32 `protobuf:"varint,6,opt,name=attempts,proto3" json:"attempts,omitempty"`
+	// Output only. Maximum retry attempts allowed.
+	MaxAttempts int32 `protobuf:"varint,7,opt,name=max_attempts,json=maxAttempts,proto3" json:"max_attempts,omitempty"`
+	// Output only. Last error message encountered, if any.
+	LastError string `protobuf:"bytes,8,opt,name=last_error,json=lastError,proto3" json:"last_error,omitempty"`
+	// Output only. Scheduled execution time for the next retry attempt.
+	ScheduleTime *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=schedule_time,json=scheduleTime,proto3" json:"schedule_time,omitempty"`
+	// Output only. Timestamp when the delivery was initially created.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// Output only. Timestamp when the delivery was last updated.
 	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -428,10 +461,13 @@ func (x *DeliveryInfo) GetUpdateTime() *timestamppb.Timestamp {
 	return nil
 }
 
+// Response message for MessageAdmin.ListDeliveries.
 type ListDeliveriesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Deliveries    []*DeliveryInfo        `protobuf:"bytes,1,rep,name=deliveries,proto3" json:"deliveries,omitempty"`
-	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The list of matching delivery records.
+	Deliveries []*DeliveryInfo `protobuf:"bytes,1,rep,name=deliveries,proto3" json:"deliveries,omitempty"`
+	// Output only. Cursor token to retrieve the next page of results, or empty if no more pages.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -480,9 +516,11 @@ func (x *ListDeliveriesResponse) GetNextPageToken() string {
 	return ""
 }
 
+// Request message for MessageAdmin.RetryDelivery.
 type RetryDeliveryRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the delivery to retry.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -528,59 +566,59 @@ var File_saturn_platform_message_v1_admin_proto protoreflect.FileDescriptor
 
 const file_saturn_platform_message_v1_admin_proto_rawDesc = "" +
 	"\n" +
-	"&saturn/platform/message/v1/admin.proto\x12\x1asaturn.platform.message.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x18\n" +
-	"\x16GetQueueMetricsRequest\"\xaa\x01\n" +
-	"\fTopicMetrics\x12\x14\n" +
-	"\x05topic\x18\x01 \x01(\tR\x05topic\x12\x18\n" +
-	"\apending\x18\x02 \x01(\x03R\apending\x12\x1e\n" +
+	"&saturn/platform/message/v1/admin.proto\x12\x1asaturn.platform.message.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x18\n" +
+	"\x16GetQueueMetricsRequest\"\xc8\x01\n" +
+	"\fTopicMetrics\x12\x19\n" +
+	"\x05topic\x18\x01 \x01(\tB\x03\xe0A\x03R\x05topic\x12\x1d\n" +
+	"\apending\x18\x02 \x01(\x03B\x03\xe0A\x03R\apending\x12#\n" +
 	"\n" +
-	"processing\x18\x03 \x01(\x03R\n" +
-	"processing\x12\x1c\n" +
-	"\tcompleted\x18\x04 \x01(\x03R\tcompleted\x12\x16\n" +
-	"\x06failed\x18\x05 \x01(\x03R\x06failed\x12\x14\n" +
-	"\x05total\x18\x06 \x01(\x03R\x05total\"\xa2\x02\n" +
-	"\x17GetQueueMetricsResponse\x12#\n" +
-	"\rtotal_pending\x18\x01 \x01(\x03R\ftotalPending\x12)\n" +
-	"\x10total_processing\x18\x02 \x01(\x03R\x0ftotalProcessing\x12'\n" +
-	"\x0ftotal_completed\x18\x03 \x01(\x03R\x0etotalCompleted\x12!\n" +
-	"\ftotal_failed\x18\x04 \x01(\x03R\vtotalFailed\x12)\n" +
-	"\x10total_deliveries\x18\x05 \x01(\x03R\x0ftotalDeliveries\x12@\n" +
-	"\x06topics\x18\x06 \x03(\v2(.saturn.platform.message.v1.TopicMetricsR\x06topics\"\xa6\x01\n" +
-	"\x15ListDeliveriesRequest\x12\x14\n" +
-	"\x05topic\x18\x01 \x01(\tR\x05topic\x12\x16\n" +
-	"\x06status\x18\x02 \x01(\tR\x06status\x12#\n" +
-	"\rsubscriber_id\x18\x03 \x01(\tR\fsubscriberId\x12\x1b\n" +
-	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"processing\x18\x03 \x01(\x03B\x03\xe0A\x03R\n" +
+	"processing\x12!\n" +
+	"\tcompleted\x18\x04 \x01(\x03B\x03\xe0A\x03R\tcompleted\x12\x1b\n" +
+	"\x06failed\x18\x05 \x01(\x03B\x03\xe0A\x03R\x06failed\x12\x19\n" +
+	"\x05total\x18\x06 \x01(\x03B\x03\xe0A\x03R\x05total\"\xc0\x02\n" +
+	"\x17GetQueueMetricsResponse\x12(\n" +
+	"\rtotal_pending\x18\x01 \x01(\x03B\x03\xe0A\x03R\ftotalPending\x12.\n" +
+	"\x10total_processing\x18\x02 \x01(\x03B\x03\xe0A\x03R\x0ftotalProcessing\x12,\n" +
+	"\x0ftotal_completed\x18\x03 \x01(\x03B\x03\xe0A\x03R\x0etotalCompleted\x12&\n" +
+	"\ftotal_failed\x18\x04 \x01(\x03B\x03\xe0A\x03R\vtotalFailed\x12.\n" +
+	"\x10total_deliveries\x18\x05 \x01(\x03B\x03\xe0A\x03R\x0ftotalDeliveries\x12E\n" +
+	"\x06topics\x18\x06 \x03(\v2(.saturn.platform.message.v1.TopicMetricsB\x03\xe0A\x03R\x06topics\"\xbf\x01\n" +
+	"\x15ListDeliveriesRequest\x12\x19\n" +
+	"\x05topic\x18\x01 \x01(\tB\x03\xe0A\x01R\x05topic\x12\x1b\n" +
+	"\x06status\x18\x02 \x01(\tB\x03\xe0A\x01R\x06status\x12(\n" +
+	"\rsubscriber_id\x18\x03 \x01(\tB\x03\xe0A\x01R\fsubscriberId\x12 \n" +
+	"\tpage_size\x18\x04 \x01(\x05B\x03\xe0A\x01R\bpageSize\x12\"\n" +
 	"\n" +
-	"page_token\x18\x05 \x01(\tR\tpageToken\"\xa9\x03\n" +
-	"\fDeliveryInfo\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
+	"page_token\x18\x05 \x01(\tB\x03\xe0A\x01R\tpageToken\"\xe0\x03\n" +
+	"\fDeliveryInfo\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\"\n" +
 	"\n" +
-	"message_id\x18\x02 \x01(\tR\tmessageId\x12#\n" +
-	"\rsubscriber_id\x18\x03 \x01(\tR\fsubscriberId\x12\x14\n" +
-	"\x05topic\x18\x04 \x01(\tR\x05topic\x12\x16\n" +
-	"\x06status\x18\x05 \x01(\tR\x06status\x12\x1a\n" +
-	"\battempts\x18\x06 \x01(\x05R\battempts\x12!\n" +
-	"\fmax_attempts\x18\a \x01(\x05R\vmaxAttempts\x12\x1d\n" +
+	"message_id\x18\x02 \x01(\tB\x03\xe0A\x03R\tmessageId\x12(\n" +
+	"\rsubscriber_id\x18\x03 \x01(\tB\x03\xe0A\x03R\fsubscriberId\x12\x19\n" +
+	"\x05topic\x18\x04 \x01(\tB\x03\xe0A\x03R\x05topic\x12\x1b\n" +
+	"\x06status\x18\x05 \x01(\tB\x03\xe0A\x03R\x06status\x12\x1f\n" +
+	"\battempts\x18\x06 \x01(\x05B\x03\xe0A\x03R\battempts\x12&\n" +
+	"\fmax_attempts\x18\a \x01(\x05B\x03\xe0A\x03R\vmaxAttempts\x12\"\n" +
 	"\n" +
-	"last_error\x18\b \x01(\tR\tlastError\x12?\n" +
-	"\rschedule_time\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\fscheduleTime\x12;\n" +
+	"last_error\x18\b \x01(\tB\x03\xe0A\x03R\tlastError\x12D\n" +
+	"\rschedule_time\x18\t \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\fscheduleTime\x12@\n" +
 	"\vcreate_time\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"createTime\x12;\n" +
-	"\vupdate_time\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime\"\x8a\x01\n" +
-	"\x16ListDeliveriesResponse\x12H\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"createTime\x12@\n" +
+	"\vupdate_time\x18\v \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"updateTime\"\x94\x01\n" +
+	"\x16ListDeliveriesResponse\x12M\n" +
 	"\n" +
-	"deliveries\x18\x01 \x03(\v2(.saturn.platform.message.v1.DeliveryInfoR\n" +
-	"deliveries\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"&\n" +
-	"\x14RetryDeliveryRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id2\xe1\x03\n" +
+	"deliveries\x18\x01 \x03(\v2(.saturn.platform.message.v1.DeliveryInfoB\x03\xe0A\x03R\n" +
+	"deliveries\x12+\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tB\x03\xe0A\x03R\rnextPageToken\"+\n" +
+	"\x14RetryDeliveryRequest\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id2\xe6\x03\n" +
 	"\fMessageAdmin\x12\x9e\x01\n" +
 	"\x0fGetQueueMetrics\x122.saturn.platform.message.v1.GetQueueMetricsRequest\x1a3.saturn.platform.message.v1.GetQueueMetricsResponse\"\"\x82\xd3\xe4\x93\x02\x1c\x12\x1a/v1/admin/messages/metrics\x12\x9e\x01\n" +
-	"\x0eListDeliveries\x121.saturn.platform.message.v1.ListDeliveriesRequest\x1a2.saturn.platform.message.v1.ListDeliveriesResponse\"%\x82\xd3\xe4\x93\x02\x1f\x12\x1d/v1/admin/messages/deliveries\x12\x8e\x01\n" +
-	"\rRetryDelivery\x120.saturn.platform.message.v1.RetryDeliveryRequest\x1a\x16.google.protobuf.Empty\"3\x82\xd3\xe4\x93\x02-:\x01*\"(/v1/admin/messages/deliveries/{id}/retryBJZHgithub.com/masterkeysrd/saturn/apis/saturn/platform/message/v1;messagev1b\x06proto3"
+	"\x0eListDeliveries\x121.saturn.platform.message.v1.ListDeliveriesRequest\x1a2.saturn.platform.message.v1.ListDeliveriesResponse\"%\x82\xd3\xe4\x93\x02\x1f\x12\x1d/v1/admin/messages/deliveries\x12\x93\x01\n" +
+	"\rRetryDelivery\x120.saturn.platform.message.v1.RetryDeliveryRequest\x1a\x16.google.protobuf.Empty\"8\xdaA\x02id\x82\xd3\xe4\x93\x02-:\x01*\"(/v1/admin/messages/deliveries/{id}/retryBJZHgithub.com/masterkeysrd/saturn/apis/saturn/platform/message/v1;messagev1b\x06proto3"
 
 var (
 	file_saturn_platform_message_v1_admin_proto_rawDescOnce sync.Once

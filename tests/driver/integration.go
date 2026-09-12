@@ -170,14 +170,14 @@ func (i *IntegrationDriver) Get(tb testing.TB, opts GetIntegrationOptions) (*int
 func (i *IntegrationDriver) List(tb testing.TB) (*integrationv1.ListIntegrationsResponse, error) {
 	tb.Helper()
 	client := i.getClient()
-	return client.ListIntegrations(tb.Context(), &emptypb.Empty{})
+	return client.ListIntegrations(tb.Context(), &integrationv1.ListIntegrationsRequest{})
 }
 
 // ListCatalog retrieves the registered integration descriptors.
 func (i *IntegrationDriver) ListCatalog(tb testing.TB) (*integrationv1.ListCatalogResponse, error) {
 	tb.Helper()
 	client := i.getClient()
-	return client.ListCatalog(tb.Context(), &emptypb.Empty{})
+	return client.ListCatalog(tb.Context(), &integrationv1.ListCatalogRequest{})
 }
 
 // CreateToken issues a new access/routing token for an integration.

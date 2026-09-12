@@ -22,7 +22,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // Suppress "imported and not used" errors
@@ -208,7 +207,7 @@ func local_request_IntegrationService_SimulateWebhook_0(ctx context.Context, mar
 
 func request_IntegrationService_ListCatalog_0(ctx context.Context, marshaler runtime.Marshaler, client IntegrationServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq emptypb.Empty
+		protoReq ListCatalogRequest
 		metadata runtime.ServerMetadata
 	)
 	if req.Body != nil {
@@ -220,7 +219,7 @@ func request_IntegrationService_ListCatalog_0(ctx context.Context, marshaler run
 
 func local_request_IntegrationService_ListCatalog_0(ctx context.Context, marshaler runtime.Marshaler, server IntegrationServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq emptypb.Empty
+		protoReq ListCatalogRequest
 		metadata runtime.ServerMetadata
 	)
 	msg, err := server.ListCatalog(ctx, &protoReq)
@@ -229,7 +228,7 @@ func local_request_IntegrationService_ListCatalog_0(ctx context.Context, marshal
 
 func request_IntegrationService_ListIntegrations_0(ctx context.Context, marshaler runtime.Marshaler, client IntegrationServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq emptypb.Empty
+		protoReq ListIntegrationsRequest
 		metadata runtime.ServerMetadata
 	)
 	if req.Body != nil {
@@ -241,7 +240,7 @@ func request_IntegrationService_ListIntegrations_0(ctx context.Context, marshale
 
 func local_request_IntegrationService_ListIntegrations_0(ctx context.Context, marshaler runtime.Marshaler, server IntegrationServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq emptypb.Empty
+		protoReq ListIntegrationsRequest
 		metadata runtime.ServerMetadata
 	)
 	msg, err := server.ListIntegrations(ctx, &protoReq)

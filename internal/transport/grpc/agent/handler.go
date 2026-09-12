@@ -148,7 +148,7 @@ func (h *Handler) GetProvider(ctx context.Context, req *agentv1.GetProviderReque
 	return toProtoLLMProvider(p), nil
 }
 
-func (h *Handler) ListProviders(ctx context.Context, _ *emptypb.Empty) (*agentv1.ListProvidersResponse, error) {
+func (h *Handler) ListProviders(ctx context.Context, _ *agentv1.ListProvidersRequest) (*agentv1.ListProvidersResponse, error) {
 	const op errors.Op = "grpc/agent.ListProviders"
 
 	spaceID, ok := auth.SpaceIDFromContext(ctx)
@@ -270,7 +270,7 @@ func (h *Handler) GetAgent(ctx context.Context, req *agentv1.GetAgentRequest) (*
 	return toProtoAgent(a), nil
 }
 
-func (h *Handler) ListAgents(ctx context.Context, _ *emptypb.Empty) (*agentv1.ListAgentsResponse, error) {
+func (h *Handler) ListAgents(ctx context.Context, _ *agentv1.ListAgentsRequest) (*agentv1.ListAgentsResponse, error) {
 	const op errors.Op = "grpc/agent.ListAgents"
 
 	spaceID, ok := auth.SpaceIDFromContext(ctx)
@@ -376,7 +376,7 @@ func (h *Handler) ListAgentRuns(ctx context.Context, req *agentv1.ListAgentRunsR
 	return res, nil
 }
 
-func (h *Handler) GetAgentCatalog(ctx context.Context, _ *emptypb.Empty) (*agentv1.GetAgentCatalogResponse, error) {
+func (h *Handler) GetAgentCatalog(ctx context.Context, _ *agentv1.GetAgentCatalogRequest) (*agentv1.GetAgentCatalogResponse, error) {
 	catalog := agent.GetAgentCatalog()
 	res := &agentv1.GetAgentCatalogResponse{}
 	for _, desc := range catalog {
@@ -392,7 +392,7 @@ func (h *Handler) GetAgentCatalog(ctx context.Context, _ *emptypb.Empty) (*agent
 	return res, nil
 }
 
-func (h *Handler) GetProviderCatalog(ctx context.Context, _ *emptypb.Empty) (*agentv1.GetProviderCatalogResponse, error) {
+func (h *Handler) GetProviderCatalog(ctx context.Context, _ *agentv1.GetProviderCatalogRequest) (*agentv1.GetProviderCatalogResponse, error) {
 	catalog := agent.GetProviderCatalog()
 	res := &agentv1.GetProviderCatalogResponse{}
 	for _, desc := range catalog {

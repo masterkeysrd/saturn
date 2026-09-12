@@ -57,7 +57,7 @@ func (c *Client) GetProvider(ctx context.Context, req *GetProviderRequest) (*LLM
 }
 
 // ListProviders executes GET /api/v1/platform/agent/providers.
-func (c *Client) ListProviders(ctx context.Context, req *emptypb.Empty) (*ListProvidersResponse, error) {
+func (c *Client) ListProviders(ctx context.Context, req *ListProvidersRequest) (*ListProvidersResponse, error) {
 	var resp ListProvidersResponse
 	path := "/api/v1/platform/agent/providers"
 	var query []string
@@ -127,7 +127,7 @@ func (c *Client) GetAgent(ctx context.Context, req *GetAgentRequest) (*Agent, er
 }
 
 // ListAgents executes GET /api/v1/platform/agent/agents.
-func (c *Client) ListAgents(ctx context.Context, req *emptypb.Empty) (*ListAgentsResponse, error) {
+func (c *Client) ListAgents(ctx context.Context, req *ListAgentsRequest) (*ListAgentsResponse, error) {
 	var resp ListAgentsResponse
 	path := "/api/v1/platform/agent/agents"
 	var query []string
@@ -189,7 +189,7 @@ func (c *Client) ListAgentRuns(ctx context.Context, req *ListAgentRunsRequest) (
 }
 
 // GetAgentCatalog executes GET /api/v1/platform/agent/agents-catalog.
-func (c *Client) GetAgentCatalog(ctx context.Context, req *emptypb.Empty) (*GetAgentCatalogResponse, error) {
+func (c *Client) GetAgentCatalog(ctx context.Context, req *GetAgentCatalogRequest) (*GetAgentCatalogResponse, error) {
 	var resp GetAgentCatalogResponse
 	path := "/api/v1/platform/agent/agents-catalog"
 	var query []string
@@ -203,7 +203,7 @@ func (c *Client) GetAgentCatalog(ctx context.Context, req *emptypb.Empty) (*GetA
 }
 
 // GetProviderCatalog executes GET /api/v1/platform/agent/providers-catalog.
-func (c *Client) GetProviderCatalog(ctx context.Context, req *emptypb.Empty) (*GetProviderCatalogResponse, error) {
+func (c *Client) GetProviderCatalog(ctx context.Context, req *GetProviderCatalogRequest) (*GetProviderCatalogResponse, error) {
 	var resp GetProviderCatalogResponse
 	path := "/api/v1/platform/agent/providers-catalog"
 	var query []string

@@ -33,14 +33,16 @@ export function BackupAdminView() {
     },
   })
 
-  const handleCopy = (text: string, id: string) => {
+  const handleCopy = (text?: string, id?: string) => {
+    if (!text || !id) return
     navigator.clipboard.writeText(text)
     setCopiedId(id)
     setTimeout(() => setCopiedId(null), 2000)
   }
 
   // Format timestamp nicely
-  const formatDateTime = (dateStr: string) => {
+  const formatDateTime = (dateStr?: string) => {
+    if (!dateStr) return "Never"
     try {
       const d = new Date(dateStr)
       if (isNaN(d.getTime())) return "Never"
@@ -58,7 +60,8 @@ export function BackupAdminView() {
   }
 
   // Format file size
-  const formatBytes = (bytes: string | number) => {
+  const formatBytes = (bytes?: string | number) => {
+    if (bytes === undefined || bytes === null) return "0 Bytes"
     const num = typeof bytes === "string" ? parseInt(bytes, 10) : bytes
     if (isNaN(num) || num === 0) return "0 Bytes"
     const k = 1024
@@ -162,8 +165,8 @@ export function BackupAdminView() {
           <CheckCircle2Icon className="h-5 w-5 shrink-0" />
           <div className="text-sm">
             <span className="font-bold">Backup Completed Successfully: </span>
-            {triggerMutation.data?.backup.filename} (
-            {formatBytes(triggerMutation.data?.backup.sizeBytes)})
+            {triggerMutation.data?.backup?.filename} (
+            {formatBytes(triggerMutation.data?.backup?.sizeBytes)})
           </div>
         </div>
       )}

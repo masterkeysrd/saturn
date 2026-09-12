@@ -80,27 +80,27 @@ export function AgentsListView() {
     if (existingAgent) {
       setSelectedAgent(existingAgent)
       setAgentForm({
-        id: existingAgent.id,
-        name: existingAgent.name,
+        id: existingAgent.id || "",
+        name: existingAgent.name || "",
         description: existingAgent.description || "",
         llmProviderId: existingAgent.llmProviderId || "",
-        modelName: existingAgent.modelName,
+        modelName: existingAgent.modelName || "",
         systemInstruction: existingAgent.systemInstruction || "",
-        temperature: existingAgent.temperature,
-        isEnabled: existingAgent.isEnabled,
+        temperature: existingAgent.temperature ?? 0.0,
+        isEnabled: existingAgent.isEnabled ?? true,
       })
     } else {
-      const blueprint = agentCatalog?.blueprints.find(
+      const blueprint = agentCatalog?.blueprints?.find(
         (b) => b.purpose === purpose
       )
       setSelectedAgent(null)
       setAgentForm({
         id: "",
         name: blueprint ? `${blueprint.displayName} Agent` : `${purpose} Agent`,
-        description: blueprint ? blueprint.description : "",
+        description: blueprint?.description || "",
         llmProviderId: "",
         modelName: "gemini-2.5-flash",
-        systemInstruction: blueprint ? blueprint.defaultSystemInstruction : "",
+        systemInstruction: blueprint?.defaultSystemInstruction || "",
         temperature: 0.0,
         isEnabled: true,
       })
@@ -151,7 +151,7 @@ export function AgentsListView() {
     }
   }
 
-  const currentProvider = providersData?.providers.find(
+  const currentProvider = providersData?.providers?.find(
     (p) => p.id === agentForm.llmProviderId
   )
 
@@ -170,9 +170,9 @@ export function AgentsListView() {
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          {agentCatalog?.blueprints.map((b) => {
+          {agentCatalog?.blueprints?.map((b) => {
             const purpose = b.purpose || ""
-            const customAgent = agentsData?.agents.find(
+            const customAgent = agentsData?.agents?.find(
               (a) => a.purpose === purpose
             )
 
@@ -253,7 +253,9 @@ export function AgentsListView() {
                         variant="ghost"
                         size="icon-sm"
                         className="h-9 w-9 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground"
-                        onClick={() => handleResetAgent(customAgent.id)}
+                        onClick={() =>
+                          customAgent.id && handleResetAgent(customAgent.id)
+                        }
                         title="Reset to default settings"
                       >
                         <RotateCcw className="h-4 w-4" />
@@ -264,7 +266,7 @@ export function AgentsListView() {
               </Card>
             )
           })}
-          {agentCatalog?.blueprints.length === 0 && (
+          {agentCatalog?.blueprints?.length === 0 && (
             <div className="col-span-full rounded-3xl border border-dashed border-border/30 bg-card/10 px-4 py-14 text-center text-muted-foreground select-none">
               No agent templates registered in the backend system database.
             </div>
@@ -329,7 +331,7 @@ export function AgentsListView() {
                 Blueprint Template
               </Label>
               <div className="flex h-11 w-full items-center rounded-xl border border-border/60 bg-muted/30 px-3.5 text-sm font-semibold">
-                {agentCatalog?.blueprints.find(
+                {agentCatalog?.blueprints?.find(
                   (b) => b.purpose === targetPurpose
                 )?.displayName || targetPurpose}
               </div>
@@ -357,7 +359,7 @@ export function AgentsListView() {
                   <SelectItem value="none">
                     Default Saturn Gateway (None)
                   </SelectItem>
-                  {providersData?.providers.map((p) => (
+                  {providersData?.providers?.map((p) => (
                     <SelectItem key={p.id || ""} value={p.id || ""}>
                       {p.name} ({p.compatibilityMode.replace("_", " ")})
                     </SelectItem>

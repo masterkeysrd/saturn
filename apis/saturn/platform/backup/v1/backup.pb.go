@@ -24,6 +24,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Request message for BackupAdmin.ListBackups.
 type ListBackupsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -60,14 +61,22 @@ func (*ListBackupsRequest) Descriptor() ([]byte, []int) {
 	return file_saturn_platform_backup_v1_backup_proto_rawDescGZIP(), []int{0}
 }
 
+// BackupEntry represents a database backup snapshot record.
 type BackupEntry struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Filename      string                 `protobuf:"bytes,2,opt,name=filename,proto3" json:"filename,omitempty"`
-	SizeBytes     int64                  `protobuf:"varint,3,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
-	TriggeredBy   string                 `protobuf:"bytes,4,opt,name=triggered_by,json=triggeredBy,proto3" json:"triggered_by,omitempty"`
-	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
-	Sha256        string                 `protobuf:"bytes,6,opt,name=sha256,proto3" json:"sha256,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The unique identifier of the backup entry.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Output only. The filename of the backup snapshot archive.
+	Filename string `protobuf:"bytes,2,opt,name=filename,proto3" json:"filename,omitempty"`
+	// Output only. The size of the backup archive in bytes.
+	SizeBytes int64 `protobuf:"varint,3,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
+	// Output only. The initiator of the backup (e.g., system scheduler or administrator).
+	TriggeredBy string `protobuf:"bytes,4,opt,name=triggered_by,json=triggeredBy,proto3" json:"triggered_by,omitempty"`
+	// Output only. The status of the backup operation (e.g., success, failed).
+	Status string `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	// Output only. The SHA256 checksum of the backup archive file.
+	Sha256 string `protobuf:"bytes,6,opt,name=sha256,proto3" json:"sha256,omitempty"`
+	// Output only. The timestamp when the backup was created.
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -152,10 +161,13 @@ func (x *BackupEntry) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// Response message for BackupAdmin.ListBackups.
 type ListBackupsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	LastUpdated   *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=last_updated,json=lastUpdated,proto3" json:"last_updated,omitempty"`
-	Backups       []*BackupEntry         `protobuf:"bytes,2,rep,name=backups,proto3" json:"backups,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The timestamp when the backup index was last updated.
+	LastUpdated *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=last_updated,json=lastUpdated,proto3" json:"last_updated,omitempty"`
+	// Output only. The list of database backup entries.
+	Backups       []*BackupEntry `protobuf:"bytes,2,rep,name=backups,proto3" json:"backups,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -204,6 +216,7 @@ func (x *ListBackupsResponse) GetBackups() []*BackupEntry {
 	return nil
 }
 
+// Request message for BackupAdmin.TriggerBackup.
 type TriggerBackupRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -240,9 +253,11 @@ func (*TriggerBackupRequest) Descriptor() ([]byte, []int) {
 	return file_saturn_platform_backup_v1_backup_proto_rawDescGZIP(), []int{3}
 }
 
+// Response message for BackupAdmin.TriggerBackup.
 type TriggerBackupResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Backup        *BackupEntry           `protobuf:"bytes,1,opt,name=backup,proto3" json:"backup,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The newly created backup entry.
+	Backup        *BackupEntry `protobuf:"bytes,1,opt,name=backup,proto3" json:"backup,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -284,6 +299,7 @@ func (x *TriggerBackupResponse) GetBackup() *BackupEntry {
 	return nil
 }
 
+// Payload for triggering scheduled database backups.
 type RunDatabaseBackupPayload struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -324,24 +340,24 @@ var File_saturn_platform_backup_v1_backup_proto protoreflect.FileDescriptor
 
 const file_saturn_platform_backup_v1_backup_proto_rawDesc = "" +
 	"\n" +
-	"&saturn/platform/backup/v1/backup.proto\x12\x19saturn.platform.backup.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a*saturn/platform/scheduler/v1/options.proto\"\x14\n" +
-	"\x12ListBackupsRequest\"\xe6\x01\n" +
-	"\vBackupEntry\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
-	"\bfilename\x18\x02 \x01(\tR\bfilename\x12\x1d\n" +
+	"&saturn/platform/backup/v1/backup.proto\x12\x19saturn.platform.backup.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a*saturn/platform/scheduler/v1/options.proto\"\x14\n" +
+	"\x12ListBackupsRequest\"\x89\x02\n" +
+	"\vBackupEntry\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x1f\n" +
+	"\bfilename\x18\x02 \x01(\tB\x03\xe0A\x03R\bfilename\x12\"\n" +
 	"\n" +
-	"size_bytes\x18\x03 \x01(\x03R\tsizeBytes\x12!\n" +
-	"\ftriggered_by\x18\x04 \x01(\tR\vtriggeredBy\x12\x16\n" +
-	"\x06status\x18\x05 \x01(\tR\x06status\x12\x16\n" +
-	"\x06sha256\x18\x06 \x01(\tR\x06sha256\x129\n" +
+	"size_bytes\x18\x03 \x01(\x03B\x03\xe0A\x03R\tsizeBytes\x12&\n" +
+	"\ftriggered_by\x18\x04 \x01(\tB\x03\xe0A\x03R\vtriggeredBy\x12\x1b\n" +
+	"\x06status\x18\x05 \x01(\tB\x03\xe0A\x03R\x06status\x12\x1b\n" +
+	"\x06sha256\x18\x06 \x01(\tB\x03\xe0A\x03R\x06sha256\x12>\n" +
 	"\n" +
-	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\x96\x01\n" +
-	"\x13ListBackupsResponse\x12=\n" +
-	"\flast_updated\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\vlastUpdated\x12@\n" +
-	"\abackups\x18\x02 \x03(\v2&.saturn.platform.backup.v1.BackupEntryR\abackups\"\x16\n" +
-	"\x14TriggerBackupRequest\"W\n" +
-	"\x15TriggerBackupResponse\x12>\n" +
-	"\x06backup\x18\x01 \x01(\v2&.saturn.platform.backup.v1.BackupEntryR\x06backup\"8\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tcreatedAt\"\xa0\x01\n" +
+	"\x13ListBackupsResponse\x12B\n" +
+	"\flast_updated\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\vlastUpdated\x12E\n" +
+	"\abackups\x18\x02 \x03(\v2&.saturn.platform.backup.v1.BackupEntryB\x03\xe0A\x03R\abackups\"\x16\n" +
+	"\x14TriggerBackupRequest\"\\\n" +
+	"\x15TriggerBackupResponse\x12C\n" +
+	"\x06backup\x18\x01 \x01(\v2&.saturn.platform.backup.v1.BackupEntryB\x03\xe0A\x03R\x06backup\"8\n" +
 	"\x18RunDatabaseBackupPayload:\x1c\x8a\xb5\x18\x18backup.RunDatabaseBackup2\xaa\x02\n" +
 	"\vBackupAdmin\x12\x87\x01\n" +
 	"\vListBackups\x12-.saturn.platform.backup.v1.ListBackupsRequest\x1a..saturn.platform.backup.v1.ListBackupsResponse\"\x19\x82\xd3\xe4\x93\x02\x13\x12\x11/v1/admin/backups\x12\x90\x01\n" +

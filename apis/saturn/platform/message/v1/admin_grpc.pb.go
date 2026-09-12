@@ -31,11 +31,11 @@ const (
 //
 // MessageAdmin service provides administrative endpoints for monitoring event bus message queues.
 type MessageAdminClient interface {
-	// GetQueueMetrics returns aggregate and per-topic status counters for message deliveries.
+	// Retrieves aggregate and per-topic status counters for message deliveries.
 	GetQueueMetrics(ctx context.Context, in *GetQueueMetricsRequest, opts ...grpc.CallOption) (*GetQueueMetricsResponse, error)
-	// ListDeliveries retrieves a paginated list of message delivery records filtered by topic or status.
+	// Lists message delivery records filtered by topic or status.
 	ListDeliveries(ctx context.Context, in *ListDeliveriesRequest, opts ...grpc.CallOption) (*ListDeliveriesResponse, error)
-	// RetryDelivery resets a failed or stuck delivery record so it can be re-processed immediately.
+	// Retries a failed or stuck delivery record so it can be reprocessed immediately.
 	RetryDelivery(ctx context.Context, in *RetryDeliveryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
@@ -83,11 +83,11 @@ func (c *messageAdminClient) RetryDelivery(ctx context.Context, in *RetryDeliver
 //
 // MessageAdmin service provides administrative endpoints for monitoring event bus message queues.
 type MessageAdminServer interface {
-	// GetQueueMetrics returns aggregate and per-topic status counters for message deliveries.
+	// Retrieves aggregate and per-topic status counters for message deliveries.
 	GetQueueMetrics(context.Context, *GetQueueMetricsRequest) (*GetQueueMetricsResponse, error)
-	// ListDeliveries retrieves a paginated list of message delivery records filtered by topic or status.
+	// Lists message delivery records filtered by topic or status.
 	ListDeliveries(context.Context, *ListDeliveriesRequest) (*ListDeliveriesResponse, error)
-	// RetryDelivery resets a failed or stuck delivery record so it can be re-processed immediately.
+	// Retries a failed or stuck delivery record so it can be reprocessed immediately.
 	RetryDelivery(context.Context, *RetryDeliveryRequest) (*emptypb.Empty, error)
 }
 

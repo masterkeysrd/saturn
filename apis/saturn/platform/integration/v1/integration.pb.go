@@ -26,16 +26,26 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Integration represents a configured third-party integration instance.
 type Integration struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	SpaceId       string                 `protobuf:"bytes,2,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
-	Kind          string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
-	Provider      string                 `protobuf:"bytes,4,opt,name=provider,proto3" json:"provider,omitempty"`
-	Token         string                 `protobuf:"bytes,5,opt,name=token,proto3" json:"token,omitempty"`                             // Only returned on Create/Rotate/Get, raw unhashed token shown to the user once
-	ConfigJson    string                 `protobuf:"bytes,6,opt,name=config_json,json=configJson,proto3" json:"config_json,omitempty"` // JSON string representing the config settings (allowed_senders, secrets, etc.)
-	IsEnabled     bool                   `protobuf:"varint,7,opt,name=is_enabled,json=isEnabled,proto3" json:"is_enabled,omitempty"`
-	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The unique identifier of the integration.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Output only. The workspace identifier that owns this integration.
+	SpaceId string `protobuf:"bytes,2,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
+	// Required. The integration category or kind (e.g., email, bank, webhook).
+	Kind string `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
+	// Required. The provider identifier (e.g., plaid, resend, custom).
+	Provider string `protobuf:"bytes,4,opt,name=provider,proto3" json:"provider,omitempty"`
+	// Output only. The raw unhashed authentication token, shown once on creation or rotation.
+	Token string `protobuf:"bytes,5,opt,name=token,proto3" json:"token,omitempty"`
+	// Optional. The JSON configuration settings for the integration.
+	ConfigJson string `protobuf:"bytes,6,opt,name=config_json,json=configJson,proto3" json:"config_json,omitempty"`
+	// Optional. Whether the integration is currently active and processing events.
+	IsEnabled bool `protobuf:"varint,7,opt,name=is_enabled,json=isEnabled,proto3" json:"is_enabled,omitempty"`
+	// Output only. The timestamp when the integration was created.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// Output only. The timestamp when the integration was last updated.
 	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -134,13 +144,20 @@ func (x *Integration) GetUpdateTime() *timestamppb.Timestamp {
 	return nil
 }
 
+// IntegrationToken represents an authentication token for an integration.
 type IntegrationToken struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	IntegrationId string                 `protobuf:"bytes,2,opt,name=integration_id,json=integrationId,proto3" json:"integration_id,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	TokenHash     string                 `protobuf:"bytes,4,opt,name=token_hash,json=tokenHash,proto3" json:"token_hash,omitempty"`
-	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The unique identifier of the token.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Output only. The integration identifier associated with this token.
+	IntegrationId string `protobuf:"bytes,2,opt,name=integration_id,json=integrationId,proto3" json:"integration_id,omitempty"`
+	// Required. The user-assigned descriptive name for the token.
+	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	// Output only. The secure cryptographic hash of the token.
+	TokenHash string `protobuf:"bytes,4,opt,name=token_hash,json=tokenHash,proto3" json:"token_hash,omitempty"`
+	// Output only. The timestamp when the token was created.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// Output only. The timestamp when the token was last used.
 	LastUsedTime  *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=last_used_time,json=lastUsedTime,proto3" json:"last_used_time,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -218,10 +235,13 @@ func (x *IntegrationToken) GetLastUsedTime() *timestamppb.Timestamp {
 	return nil
 }
 
+// Request message for IntegrationService.GetIntegration.
 type GetIntegrationRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Provider      string                 `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
-	Kind          string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The provider identifier to retrieve.
+	Provider string `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
+	// Optional. The integration kind or category.
+	Kind          string `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -270,12 +290,17 @@ func (x *GetIntegrationRequest) GetKind() string {
 	return ""
 }
 
+// Request message for IntegrationService.ConfigureIntegration.
 type ConfigureIntegrationRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Provider      string                 `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
-	Kind          string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
-	ConfigJson    string                 `protobuf:"bytes,3,opt,name=config_json,json=configJson,proto3" json:"config_json,omitempty"`
-	IsEnabled     bool                   `protobuf:"varint,4,opt,name=is_enabled,json=isEnabled,proto3" json:"is_enabled,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The provider identifier to configure.
+	Provider string `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
+	// Required. The integration category or kind.
+	Kind string `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	// Required. The JSON configuration payload for the provider.
+	ConfigJson string `protobuf:"bytes,3,opt,name=config_json,json=configJson,proto3" json:"config_json,omitempty"`
+	// Optional. Whether to immediately enable the integration.
+	IsEnabled     bool `protobuf:"varint,4,opt,name=is_enabled,json=isEnabled,proto3" json:"is_enabled,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -338,10 +363,13 @@ func (x *ConfigureIntegrationRequest) GetIsEnabled() bool {
 	return false
 }
 
+// Request message for IntegrationService.RotateIntegrationToken.
 type RotateIntegrationTokenRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Provider      string                 `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
-	Kind          string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The provider identifier whose token is to be rotated.
+	Provider string `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
+	// Optional. The integration kind or category.
+	Kind          string `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -390,9 +418,11 @@ func (x *RotateIntegrationTokenRequest) GetKind() string {
 	return ""
 }
 
+// Response message for IntegrationService.RotateIntegrationToken.
 type RotateIntegrationTokenResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"` // The newly generated raw unhashed token
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The newly generated raw unhashed authentication token.
+	Token         string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -434,12 +464,17 @@ func (x *RotateIntegrationTokenResponse) GetToken() string {
 	return ""
 }
 
+// Request message for IntegrationService.SimulateWebhook.
 type SimulateWebhookRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Provider      string                 `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
-	Payload       string                 `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
-	Headers       map[string]string      `protobuf:"bytes,3,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Kind          string                 `protobuf:"bytes,4,opt,name=kind,proto3" json:"kind,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The provider identifier to simulate.
+	Provider string `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
+	// Required. The raw webhook payload body to parse and simulate.
+	Payload string `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
+	// Optional. HTTP headers accompanying the simulated webhook request.
+	Headers map[string]string `protobuf:"bytes,3,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Optional. The integration kind or category.
+	Kind          string `protobuf:"bytes,4,opt,name=kind,proto3" json:"kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -502,11 +537,15 @@ func (x *SimulateWebhookRequest) GetKind() string {
 	return ""
 }
 
+// Response message for IntegrationService.SimulateWebhook.
 type SimulateWebhookResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
-	Result        *structpb.Struct       `protobuf:"bytes,3,opt,name=result,proto3" json:"result,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. Whether the webhook simulation completed successfully.
+	Success bool `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	// Output only. A descriptive status message regarding the simulation result.
+	Message string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	// Output only. Structured output produced by processing the simulated webhook.
+	Result        *structpb.Struct `protobuf:"bytes,3,opt,name=result,proto3" json:"result,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -562,19 +601,29 @@ func (x *SimulateWebhookResponse) GetResult() *structpb.Struct {
 	return nil
 }
 
+// CatalogDescriptor represents metadata for an available integration type.
 type CatalogDescriptor struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Provider       string                 `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
-	Kind           string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
-	Name           string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Description    string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
-	Icon           string                 `protobuf:"bytes,5,opt,name=icon,proto3" json:"icon,omitempty"`
-	ConfigSchema   string                 `protobuf:"bytes,6,opt,name=config_schema,json=configSchema,proto3" json:"config_schema,omitempty"`
-	RequestSchema  string                 `protobuf:"bytes,7,opt,name=request_schema,json=requestSchema,proto3" json:"request_schema,omitempty"`
-	ResponseSchema string                 `protobuf:"bytes,8,opt,name=response_schema,json=responseSchema,proto3" json:"response_schema,omitempty"`
-	SamplePayload  string                 `protobuf:"bytes,9,opt,name=sample_payload,json=samplePayload,proto3" json:"sample_payload,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the provider.
+	Provider string `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
+	// Required. The category or kind of integration.
+	Kind string `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	// Required. The display name of the integration provider.
+	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	// Optional. A human-readable description of the integration capabilities.
+	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	// Optional. An icon identifier or URL representing the provider.
+	Icon string `protobuf:"bytes,5,opt,name=icon,proto3" json:"icon,omitempty"`
+	// Optional. JSON schema describing configuration parameters.
+	ConfigSchema string `protobuf:"bytes,6,opt,name=config_schema,json=configSchema,proto3" json:"config_schema,omitempty"`
+	// Optional. JSON schema describing expected incoming requests.
+	RequestSchema string `protobuf:"bytes,7,opt,name=request_schema,json=requestSchema,proto3" json:"request_schema,omitempty"`
+	// Optional. JSON schema describing response payloads.
+	ResponseSchema string `protobuf:"bytes,8,opt,name=response_schema,json=responseSchema,proto3" json:"response_schema,omitempty"`
+	// Optional. An example payload demonstrating typical webhook data.
+	SamplePayload string `protobuf:"bytes,9,opt,name=sample_payload,json=samplePayload,proto3" json:"sample_payload,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CatalogDescriptor) Reset() {
@@ -670,16 +719,55 @@ func (x *CatalogDescriptor) GetSamplePayload() string {
 	return ""
 }
 
-type ListCatalogResponse struct {
+// Request message for IntegrationService.ListCatalog.
+type ListCatalogRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Catalog       []*CatalogDescriptor   `protobuf:"bytes,1,rep,name=catalog,proto3" json:"catalog,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCatalogRequest) Reset() {
+	*x = ListCatalogRequest{}
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCatalogRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCatalogRequest) ProtoMessage() {}
+
+func (x *ListCatalogRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCatalogRequest.ProtoReflect.Descriptor instead.
+func (*ListCatalogRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{9}
+}
+
+// Response message for IntegrationService.ListCatalog.
+type ListCatalogResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The list of available integration descriptors.
+	Catalog       []*CatalogDescriptor `protobuf:"bytes,1,rep,name=catalog,proto3" json:"catalog,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListCatalogResponse) Reset() {
 	*x = ListCatalogResponse{}
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[9]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -691,7 +779,7 @@ func (x *ListCatalogResponse) String() string {
 func (*ListCatalogResponse) ProtoMessage() {}
 
 func (x *ListCatalogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[9]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -704,7 +792,7 @@ func (x *ListCatalogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCatalogResponse.ProtoReflect.Descriptor instead.
 func (*ListCatalogResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{9}
+	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ListCatalogResponse) GetCatalog() []*CatalogDescriptor {
@@ -714,16 +802,55 @@ func (x *ListCatalogResponse) GetCatalog() []*CatalogDescriptor {
 	return nil
 }
 
-type ListIntegrationsResponse struct {
+// Request message for IntegrationService.ListIntegrations.
+type ListIntegrationsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Integrations  []*Integration         `protobuf:"bytes,2,rep,name=integrations,proto3" json:"integrations,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListIntegrationsRequest) Reset() {
+	*x = ListIntegrationsRequest{}
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListIntegrationsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListIntegrationsRequest) ProtoMessage() {}
+
+func (x *ListIntegrationsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListIntegrationsRequest.ProtoReflect.Descriptor instead.
+func (*ListIntegrationsRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{11}
+}
+
+// Response message for IntegrationService.ListIntegrations.
+type ListIntegrationsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The list of configured integration instances.
+	Integrations  []*Integration `protobuf:"bytes,2,rep,name=integrations,proto3" json:"integrations,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListIntegrationsResponse) Reset() {
 	*x = ListIntegrationsResponse{}
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[10]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -735,7 +862,7 @@ func (x *ListIntegrationsResponse) String() string {
 func (*ListIntegrationsResponse) ProtoMessage() {}
 
 func (x *ListIntegrationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[10]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -748,7 +875,7 @@ func (x *ListIntegrationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListIntegrationsResponse.ProtoReflect.Descriptor instead.
 func (*ListIntegrationsResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{10}
+	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ListIntegrationsResponse) GetIntegrations() []*Integration {
@@ -758,18 +885,22 @@ func (x *ListIntegrationsResponse) GetIntegrations() []*Integration {
 	return nil
 }
 
+// Request message for IntegrationService.CreateIntegrationToken.
 type CreateIntegrationTokenRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Provider      string                 `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Kind          string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The provider identifier to create a token for.
+	Provider string `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
+	// Required. A descriptive name identifying the intended use of the token.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// Optional. The integration kind or category.
+	Kind          string `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateIntegrationTokenRequest) Reset() {
 	*x = CreateIntegrationTokenRequest{}
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[11]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -781,7 +912,7 @@ func (x *CreateIntegrationTokenRequest) String() string {
 func (*CreateIntegrationTokenRequest) ProtoMessage() {}
 
 func (x *CreateIntegrationTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[11]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -794,7 +925,7 @@ func (x *CreateIntegrationTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateIntegrationTokenRequest.ProtoReflect.Descriptor instead.
 func (*CreateIntegrationTokenRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{11}
+	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *CreateIntegrationTokenRequest) GetProvider() string {
@@ -818,17 +949,20 @@ func (x *CreateIntegrationTokenRequest) GetKind() string {
 	return ""
 }
 
+// Response message for IntegrationService.CreateIntegrationToken.
 type CreateIntegrationTokenResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Token         *IntegrationToken      `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
-	RawToken      string                 `protobuf:"bytes,2,opt,name=raw_token,json=rawToken,proto3" json:"raw_token,omitempty"` // Raw unhashed token shown once
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The persisted token metadata.
+	Token *IntegrationToken `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	// Output only. The raw unhashed authentication token, shown once.
+	RawToken      string `protobuf:"bytes,2,opt,name=raw_token,json=rawToken,proto3" json:"raw_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateIntegrationTokenResponse) Reset() {
 	*x = CreateIntegrationTokenResponse{}
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[12]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -840,7 +974,7 @@ func (x *CreateIntegrationTokenResponse) String() string {
 func (*CreateIntegrationTokenResponse) ProtoMessage() {}
 
 func (x *CreateIntegrationTokenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[12]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -853,7 +987,7 @@ func (x *CreateIntegrationTokenResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateIntegrationTokenResponse.ProtoReflect.Descriptor instead.
 func (*CreateIntegrationTokenResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{12}
+	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *CreateIntegrationTokenResponse) GetToken() *IntegrationToken {
@@ -870,17 +1004,20 @@ func (x *CreateIntegrationTokenResponse) GetRawToken() string {
 	return ""
 }
 
+// Request message for IntegrationService.ListIntegrationTokens.
 type ListIntegrationTokensRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Provider      string                 `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
-	Kind          string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The provider identifier whose tokens are to be listed.
+	Provider string `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
+	// Optional. The integration kind or category.
+	Kind          string `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListIntegrationTokensRequest) Reset() {
 	*x = ListIntegrationTokensRequest{}
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[13]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -892,7 +1029,7 @@ func (x *ListIntegrationTokensRequest) String() string {
 func (*ListIntegrationTokensRequest) ProtoMessage() {}
 
 func (x *ListIntegrationTokensRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[13]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -905,7 +1042,7 @@ func (x *ListIntegrationTokensRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListIntegrationTokensRequest.ProtoReflect.Descriptor instead.
 func (*ListIntegrationTokensRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{13}
+	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ListIntegrationTokensRequest) GetProvider() string {
@@ -922,16 +1059,18 @@ func (x *ListIntegrationTokensRequest) GetKind() string {
 	return ""
 }
 
+// Response message for IntegrationService.ListIntegrationTokens.
 type ListIntegrationTokensResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Tokens        []*IntegrationToken    `protobuf:"bytes,1,rep,name=tokens,proto3" json:"tokens,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The active authentication tokens for the integration.
+	Tokens        []*IntegrationToken `protobuf:"bytes,1,rep,name=tokens,proto3" json:"tokens,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListIntegrationTokensResponse) Reset() {
 	*x = ListIntegrationTokensResponse{}
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[14]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -943,7 +1082,7 @@ func (x *ListIntegrationTokensResponse) String() string {
 func (*ListIntegrationTokensResponse) ProtoMessage() {}
 
 func (x *ListIntegrationTokensResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[14]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -956,7 +1095,7 @@ func (x *ListIntegrationTokensResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListIntegrationTokensResponse.ProtoReflect.Descriptor instead.
 func (*ListIntegrationTokensResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{14}
+	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ListIntegrationTokensResponse) GetTokens() []*IntegrationToken {
@@ -966,18 +1105,22 @@ func (x *ListIntegrationTokensResponse) GetTokens() []*IntegrationToken {
 	return nil
 }
 
+// Request message for IntegrationService.DeleteIntegrationToken.
 type DeleteIntegrationTokenRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Provider      string                 `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
-	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
-	Kind          string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The provider identifier owning the token.
+	Provider string `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
+	// Required. The unique identifier of the token to delete.
+	Id string `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	// Optional. The integration kind or category.
+	Kind          string `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DeleteIntegrationTokenRequest) Reset() {
 	*x = DeleteIntegrationTokenRequest{}
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[15]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -989,7 +1132,7 @@ func (x *DeleteIntegrationTokenRequest) String() string {
 func (*DeleteIntegrationTokenRequest) ProtoMessage() {}
 
 func (x *DeleteIntegrationTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[15]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1002,7 +1145,7 @@ func (x *DeleteIntegrationTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteIntegrationTokenRequest.ProtoReflect.Descriptor instead.
 func (*DeleteIntegrationTokenRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{15}
+	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *DeleteIntegrationTokenRequest) GetProvider() string {
@@ -1026,19 +1169,24 @@ func (x *DeleteIntegrationTokenRequest) GetKind() string {
 	return ""
 }
 
+// WebhookReceivedEvent is published when an incoming webhook payload is received.
 type WebhookReceivedEvent struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Source        string                 `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`
-	SpaceId       string                 `protobuf:"bytes,2,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
-	Headers       map[string]string      `protobuf:"bytes,3,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Body          []byte                 `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The origin source identifier of the webhook.
+	Source string `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`
+	// Required. The workspace identifier the webhook is associated with.
+	SpaceId string `protobuf:"bytes,2,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
+	// Optional. The HTTP headers received with the webhook request.
+	Headers map[string]string `protobuf:"bytes,3,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Required. The raw binary payload of the webhook request.
+	Body          []byte `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *WebhookReceivedEvent) Reset() {
 	*x = WebhookReceivedEvent{}
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[16]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1050,7 +1198,7 @@ func (x *WebhookReceivedEvent) String() string {
 func (*WebhookReceivedEvent) ProtoMessage() {}
 
 func (x *WebhookReceivedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[16]
+	mi := &file_saturn_platform_integration_v1_integration_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1063,7 +1211,7 @@ func (x *WebhookReceivedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WebhookReceivedEvent.ProtoReflect.Descriptor instead.
 func (*WebhookReceivedEvent) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{16}
+	return file_saturn_platform_integration_v1_integration_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *WebhookReceivedEvent) GetSource() string {
@@ -1098,105 +1246,107 @@ var File_saturn_platform_integration_v1_integration_proto protoreflect.FileDescr
 
 const file_saturn_platform_integration_v1_integration_proto_rawDesc = "" +
 	"\n" +
-	"0saturn/platform/integration/v1/integration.proto\x12\x1esaturn.platform.integration.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a(saturn/platform/message/v1/options.proto\"\xb8\x02\n" +
-	"\vIntegration\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
-	"\bspace_id\x18\x02 \x01(\tR\aspaceId\x12\x12\n" +
-	"\x04kind\x18\x03 \x01(\tR\x04kind\x12\x1a\n" +
-	"\bprovider\x18\x04 \x01(\tR\bprovider\x12\x14\n" +
-	"\x05token\x18\x05 \x01(\tR\x05token\x12\x1f\n" +
-	"\vconfig_json\x18\x06 \x01(\tR\n" +
-	"configJson\x12\x1d\n" +
+	"0saturn/platform/integration/v1/integration.proto\x12\x1esaturn.platform.integration.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a(saturn/platform/message/v1/options.proto\"\xe5\x02\n" +
+	"\vIntegration\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x1e\n" +
+	"\bspace_id\x18\x02 \x01(\tB\x03\xe0A\x03R\aspaceId\x12\x17\n" +
+	"\x04kind\x18\x03 \x01(\tB\x03\xe0A\x02R\x04kind\x12\x1f\n" +
+	"\bprovider\x18\x04 \x01(\tB\x03\xe0A\x02R\bprovider\x12\x19\n" +
+	"\x05token\x18\x05 \x01(\tB\x03\xe0A\x03R\x05token\x12$\n" +
+	"\vconfig_json\x18\x06 \x01(\tB\x03\xe0A\x01R\n" +
+	"configJson\x12\"\n" +
 	"\n" +
-	"is_enabled\x18\a \x01(\bR\tisEnabled\x12;\n" +
-	"\vcreate_time\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"createTime\x12;\n" +
-	"\vupdate_time\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime\"\xfb\x01\n" +
-	"\x10IntegrationToken\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12%\n" +
-	"\x0eintegration_id\x18\x02 \x01(\tR\rintegrationId\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1d\n" +
-	"\n" +
-	"token_hash\x18\x04 \x01(\tR\ttokenHash\x12;\n" +
-	"\vcreate_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"is_enabled\x18\a \x01(\bB\x03\xe0A\x01R\tisEnabled\x12@\n" +
+	"\vcreate_time\x18\b \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"createTime\x12@\n" +
-	"\x0elast_used_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\flastUsedTime\"L\n" +
+	"\vupdate_time\x18\t \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"updateTime\"\x99\x02\n" +
+	"\x10IntegrationToken\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12*\n" +
+	"\x0eintegration_id\x18\x02 \x01(\tB\x03\xe0A\x03R\rintegrationId\x12\x17\n" +
+	"\x04name\x18\x03 \x01(\tB\x03\xe0A\x02R\x04name\x12\"\n" +
+	"\n" +
+	"token_hash\x18\x04 \x01(\tB\x03\xe0A\x03R\ttokenHash\x12@\n" +
+	"\vcreate_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"createTime\x12E\n" +
+	"\x0elast_used_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\flastUsedTime\"Q\n" +
 	"\x15GetIntegrationRequest\x12\x1f\n" +
-	"\bprovider\x18\x01 \x01(\tB\x03\xe0A\x02R\bprovider\x12\x12\n" +
-	"\x04kind\x18\x02 \x01(\tR\x04kind\"\x9c\x01\n" +
+	"\bprovider\x18\x01 \x01(\tB\x03\xe0A\x02R\bprovider\x12\x17\n" +
+	"\x04kind\x18\x02 \x01(\tB\x03\xe0A\x01R\x04kind\"\xa1\x01\n" +
 	"\x1bConfigureIntegrationRequest\x12\x1f\n" +
 	"\bprovider\x18\x01 \x01(\tB\x03\xe0A\x02R\bprovider\x12\x17\n" +
 	"\x04kind\x18\x02 \x01(\tB\x03\xe0A\x02R\x04kind\x12$\n" +
 	"\vconfig_json\x18\x03 \x01(\tB\x03\xe0A\x02R\n" +
-	"configJson\x12\x1d\n" +
+	"configJson\x12\"\n" +
 	"\n" +
-	"is_enabled\x18\x04 \x01(\bR\tisEnabled\"T\n" +
+	"is_enabled\x18\x04 \x01(\bB\x03\xe0A\x01R\tisEnabled\"Y\n" +
 	"\x1dRotateIntegrationTokenRequest\x12\x1f\n" +
-	"\bprovider\x18\x01 \x01(\tB\x03\xe0A\x02R\bprovider\x12\x12\n" +
-	"\x04kind\x18\x02 \x01(\tR\x04kind\"6\n" +
-	"\x1eRotateIntegrationTokenResponse\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\"\x87\x02\n" +
+	"\bprovider\x18\x01 \x01(\tB\x03\xe0A\x02R\bprovider\x12\x17\n" +
+	"\x04kind\x18\x02 \x01(\tB\x03\xe0A\x01R\x04kind\";\n" +
+	"\x1eRotateIntegrationTokenResponse\x12\x19\n" +
+	"\x05token\x18\x01 \x01(\tB\x03\xe0A\x03R\x05token\"\x91\x02\n" +
 	"\x16SimulateWebhookRequest\x12\x1f\n" +
 	"\bprovider\x18\x01 \x01(\tB\x03\xe0A\x02R\bprovider\x12\x1d\n" +
-	"\apayload\x18\x02 \x01(\tB\x03\xe0A\x02R\apayload\x12]\n" +
-	"\aheaders\x18\x03 \x03(\v2C.saturn.platform.integration.v1.SimulateWebhookRequest.HeadersEntryR\aheaders\x12\x12\n" +
-	"\x04kind\x18\x04 \x01(\tR\x04kind\x1a:\n" +
+	"\apayload\x18\x02 \x01(\tB\x03\xe0A\x02R\apayload\x12b\n" +
+	"\aheaders\x18\x03 \x03(\v2C.saturn.platform.integration.v1.SimulateWebhookRequest.HeadersEntryB\x03\xe0A\x01R\aheaders\x12\x17\n" +
+	"\x04kind\x18\x04 \x01(\tB\x03\xe0A\x01R\x04kind\x1a:\n" +
 	"\fHeadersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"~\n" +
-	"\x17SimulateWebhookResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\x12/\n" +
-	"\x06result\x18\x03 \x01(\v2\x17.google.protobuf.StructR\x06result\"\xa9\x02\n" +
-	"\x11CatalogDescriptor\x12\x1a\n" +
-	"\bprovider\x18\x01 \x01(\tR\bprovider\x12\x12\n" +
-	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x12\n" +
-	"\x04icon\x18\x05 \x01(\tR\x04icon\x12#\n" +
-	"\rconfig_schema\x18\x06 \x01(\tR\fconfigSchema\x12%\n" +
-	"\x0erequest_schema\x18\a \x01(\tR\rrequestSchema\x12'\n" +
-	"\x0fresponse_schema\x18\b \x01(\tR\x0eresponseSchema\x12%\n" +
-	"\x0esample_payload\x18\t \x01(\tR\rsamplePayload\"b\n" +
-	"\x13ListCatalogResponse\x12K\n" +
-	"\acatalog\x18\x01 \x03(\v21.saturn.platform.integration.v1.CatalogDescriptorR\acatalog\"k\n" +
-	"\x18ListIntegrationsResponse\x12O\n" +
-	"\fintegrations\x18\x02 \x03(\v2+.saturn.platform.integration.v1.IntegrationR\fintegrations\"m\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x8d\x01\n" +
+	"\x17SimulateWebhookResponse\x12\x1d\n" +
+	"\asuccess\x18\x01 \x01(\bB\x03\xe0A\x03R\asuccess\x12\x1d\n" +
+	"\amessage\x18\x02 \x01(\tB\x03\xe0A\x03R\amessage\x124\n" +
+	"\x06result\x18\x03 \x01(\v2\x17.google.protobuf.StructB\x03\xe0A\x03R\x06result\"\xd6\x02\n" +
+	"\x11CatalogDescriptor\x12\x1f\n" +
+	"\bprovider\x18\x01 \x01(\tB\x03\xe0A\x02R\bprovider\x12\x17\n" +
+	"\x04kind\x18\x02 \x01(\tB\x03\xe0A\x02R\x04kind\x12\x17\n" +
+	"\x04name\x18\x03 \x01(\tB\x03\xe0A\x02R\x04name\x12%\n" +
+	"\vdescription\x18\x04 \x01(\tB\x03\xe0A\x01R\vdescription\x12\x17\n" +
+	"\x04icon\x18\x05 \x01(\tB\x03\xe0A\x01R\x04icon\x12(\n" +
+	"\rconfig_schema\x18\x06 \x01(\tB\x03\xe0A\x01R\fconfigSchema\x12*\n" +
+	"\x0erequest_schema\x18\a \x01(\tB\x03\xe0A\x01R\rrequestSchema\x12,\n" +
+	"\x0fresponse_schema\x18\b \x01(\tB\x03\xe0A\x01R\x0eresponseSchema\x12*\n" +
+	"\x0esample_payload\x18\t \x01(\tB\x03\xe0A\x01R\rsamplePayload\"\x14\n" +
+	"\x12ListCatalogRequest\"g\n" +
+	"\x13ListCatalogResponse\x12P\n" +
+	"\acatalog\x18\x01 \x03(\v21.saturn.platform.integration.v1.CatalogDescriptorB\x03\xe0A\x03R\acatalog\"\x19\n" +
+	"\x17ListIntegrationsRequest\"p\n" +
+	"\x18ListIntegrationsResponse\x12T\n" +
+	"\fintegrations\x18\x02 \x03(\v2+.saturn.platform.integration.v1.IntegrationB\x03\xe0A\x03R\fintegrations\"r\n" +
 	"\x1dCreateIntegrationTokenRequest\x12\x1f\n" +
 	"\bprovider\x18\x01 \x01(\tB\x03\xe0A\x02R\bprovider\x12\x17\n" +
-	"\x04name\x18\x02 \x01(\tB\x03\xe0A\x02R\x04name\x12\x12\n" +
-	"\x04kind\x18\x03 \x01(\tR\x04kind\"\x85\x01\n" +
-	"\x1eCreateIntegrationTokenResponse\x12F\n" +
-	"\x05token\x18\x01 \x01(\v20.saturn.platform.integration.v1.IntegrationTokenR\x05token\x12\x1b\n" +
-	"\traw_token\x18\x02 \x01(\tR\brawToken\"S\n" +
+	"\x04name\x18\x02 \x01(\tB\x03\xe0A\x02R\x04name\x12\x17\n" +
+	"\x04kind\x18\x03 \x01(\tB\x03\xe0A\x01R\x04kind\"\x8f\x01\n" +
+	"\x1eCreateIntegrationTokenResponse\x12K\n" +
+	"\x05token\x18\x01 \x01(\v20.saturn.platform.integration.v1.IntegrationTokenB\x03\xe0A\x03R\x05token\x12 \n" +
+	"\traw_token\x18\x02 \x01(\tB\x03\xe0A\x03R\brawToken\"X\n" +
 	"\x1cListIntegrationTokensRequest\x12\x1f\n" +
-	"\bprovider\x18\x01 \x01(\tB\x03\xe0A\x02R\bprovider\x12\x12\n" +
-	"\x04kind\x18\x02 \x01(\tR\x04kind\"i\n" +
-	"\x1dListIntegrationTokensResponse\x12H\n" +
-	"\x06tokens\x18\x01 \x03(\v20.saturn.platform.integration.v1.IntegrationTokenR\x06tokens\"i\n" +
+	"\bprovider\x18\x01 \x01(\tB\x03\xe0A\x02R\bprovider\x12\x17\n" +
+	"\x04kind\x18\x02 \x01(\tB\x03\xe0A\x01R\x04kind\"n\n" +
+	"\x1dListIntegrationTokensResponse\x12M\n" +
+	"\x06tokens\x18\x01 \x03(\v20.saturn.platform.integration.v1.IntegrationTokenB\x03\xe0A\x03R\x06tokens\"n\n" +
 	"\x1dDeleteIntegrationTokenRequest\x12\x1f\n" +
 	"\bprovider\x18\x01 \x01(\tB\x03\xe0A\x02R\bprovider\x12\x13\n" +
-	"\x02id\x18\x02 \x01(\tB\x03\xe0A\x02R\x02id\x12\x12\n" +
-	"\x04kind\x18\x03 \x01(\tR\x04kind\"\x8c\x02\n" +
-	"\x14WebhookReceivedEvent\x12\x16\n" +
-	"\x06source\x18\x01 \x01(\tR\x06source\x12\x19\n" +
-	"\bspace_id\x18\x02 \x01(\tR\aspaceId\x12[\n" +
-	"\aheaders\x18\x03 \x03(\v2A.saturn.platform.integration.v1.WebhookReceivedEvent.HeadersEntryR\aheaders\x12\x12\n" +
-	"\x04body\x18\x04 \x01(\fR\x04body\x1a:\n" +
+	"\x02id\x18\x02 \x01(\tB\x03\xe0A\x02R\x02id\x12\x17\n" +
+	"\x04kind\x18\x03 \x01(\tB\x03\xe0A\x01R\x04kind\"\xa0\x02\n" +
+	"\x14WebhookReceivedEvent\x12\x1b\n" +
+	"\x06source\x18\x01 \x01(\tB\x03\xe0A\x02R\x06source\x12\x1e\n" +
+	"\bspace_id\x18\x02 \x01(\tB\x03\xe0A\x02R\aspaceId\x12`\n" +
+	"\aheaders\x18\x03 \x03(\v2A.saturn.platform.integration.v1.WebhookReceivedEvent.HeadersEntryB\x03\xe0A\x01R\aheaders\x12\x17\n" +
+	"\x04body\x18\x04 \x01(\fB\x03\xe0A\x02R\x04body\x1a:\n" +
 	"\fHeadersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x14\x92\xb5\x18\x10webhook.received2\xd5\f\n" +
-	"\x12IntegrationService\x12\xa2\x01\n" +
-	"\x0eGetIntegration\x125.saturn.platform.integration.v1.GetIntegrationRequest\x1a+.saturn.platform.integration.v1.Integration\",\x82\xd3\xe4\x93\x02&\x12$/v1/platform/integrations/{provider}\x12\xa6\x01\n" +
-	"\x14ConfigureIntegration\x12;.saturn.platform.integration.v1.ConfigureIntegrationRequest\x1a+.saturn.platform.integration.v1.Integration\"$\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/v1/platform/integrations\x12\xd5\x01\n" +
-	"\x16RotateIntegrationToken\x12=.saturn.platform.integration.v1.RotateIntegrationTokenRequest\x1a>.saturn.platform.integration.v1.RotateIntegrationTokenResponse\"<\x82\xd3\xe4\x93\x026:\x01*\"1/v1/platform/integrations/{provider}:rotate-token\x12\xbc\x01\n" +
-	"\x0fSimulateWebhook\x126.saturn.platform.integration.v1.SimulateWebhookRequest\x1a7.saturn.platform.integration.v1.SimulateWebhookResponse\"8\x82\xd3\xe4\x93\x022:\x01*\"-/v1/platform/integrations/{provider}:simulate\x12\x85\x01\n" +
-	"\vListCatalog\x12\x16.google.protobuf.Empty\x1a3.saturn.platform.integration.v1.ListCatalogResponse\")\x82\xd3\xe4\x93\x02#\x12!/v1/platform/integrations/catalog\x12\x87\x01\n" +
-	"\x10ListIntegrations\x12\x16.google.protobuf.Empty\x1a8.saturn.platform.integration.v1.ListIntegrationsResponse\"!\x82\xd3\xe4\x93\x02\x1b\x12\x19/v1/platform/integrations\x12\xcf\x01\n" +
-	"\x16CreateIntegrationToken\x12=.saturn.platform.integration.v1.CreateIntegrationTokenRequest\x1a>.saturn.platform.integration.v1.CreateIntegrationTokenResponse\"6\x82\xd3\xe4\x93\x020:\x01*\"+/v1/platform/integrations/{provider}/tokens\x12\xc9\x01\n" +
-	"\x15ListIntegrationTokens\x12<.saturn.platform.integration.v1.ListIntegrationTokensRequest\x1a=.saturn.platform.integration.v1.ListIntegrationTokensResponse\"3\x82\xd3\xe4\x93\x02-\x12+/v1/platform/integrations/{provider}/tokens\x12\xa9\x01\n" +
-	"\x16DeleteIntegrationToken\x12=.saturn.platform.integration.v1.DeleteIntegrationTokenRequest\x1a\x16.google.protobuf.Empty\"8\x82\xd3\xe4\x93\x022*0/v1/platform/integrations/{provider}/tokens/{id}BRZPgithub.com/masterkeysrd/saturn/apis/saturn/platform/integration/v1;integrationv1b\x06proto3"
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x14\x92\xb5\x18\x10webhook.received2\x80\x0e\n" +
+	"\x12IntegrationService\x12\xad\x01\n" +
+	"\x0eGetIntegration\x125.saturn.platform.integration.v1.GetIntegrationRequest\x1a+.saturn.platform.integration.v1.Integration\"7\xdaA\bprovider\x82\xd3\xe4\x93\x02&\x12$/v1/platform/integrations/{provider}\x12\xc2\x01\n" +
+	"\x14ConfigureIntegration\x12;.saturn.platform.integration.v1.ConfigureIntegrationRequest\x1a+.saturn.platform.integration.v1.Integration\"@\xdaA\x19provider,kind,config_json\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/v1/platform/integrations\x12\xe0\x01\n" +
+	"\x16RotateIntegrationToken\x12=.saturn.platform.integration.v1.RotateIntegrationTokenRequest\x1a>.saturn.platform.integration.v1.RotateIntegrationTokenResponse\"G\xdaA\bprovider\x82\xd3\xe4\x93\x026:\x01*\"1/v1/platform/integrations/{provider}:rotate-token\x12\xcf\x01\n" +
+	"\x0fSimulateWebhook\x126.saturn.platform.integration.v1.SimulateWebhookRequest\x1a7.saturn.platform.integration.v1.SimulateWebhookResponse\"K\xdaA\x10provider,payload\x82\xd3\xe4\x93\x022:\x01*\"-/v1/platform/integrations/{provider}:simulate\x12\xa1\x01\n" +
+	"\vListCatalog\x122.saturn.platform.integration.v1.ListCatalogRequest\x1a3.saturn.platform.integration.v1.ListCatalogResponse\")\x82\xd3\xe4\x93\x02#\x12!/v1/platform/integrations/catalog\x12\xa8\x01\n" +
+	"\x10ListIntegrations\x127.saturn.platform.integration.v1.ListIntegrationsRequest\x1a8.saturn.platform.integration.v1.ListIntegrationsResponse\"!\x82\xd3\xe4\x93\x02\x1b\x12\x19/v1/platform/integrations\x12\xdf\x01\n" +
+	"\x16CreateIntegrationToken\x12=.saturn.platform.integration.v1.CreateIntegrationTokenRequest\x1a>.saturn.platform.integration.v1.CreateIntegrationTokenResponse\"F\xdaA\rprovider,name\x82\xd3\xe4\x93\x020:\x01*\"+/v1/platform/integrations/{provider}/tokens\x12\xd4\x01\n" +
+	"\x15ListIntegrationTokens\x12<.saturn.platform.integration.v1.ListIntegrationTokensRequest\x1a=.saturn.platform.integration.v1.ListIntegrationTokensResponse\">\xdaA\bprovider\x82\xd3\xe4\x93\x02-\x12+/v1/platform/integrations/{provider}/tokens\x12\xb7\x01\n" +
+	"\x16DeleteIntegrationToken\x12=.saturn.platform.integration.v1.DeleteIntegrationTokenRequest\x1a\x16.google.protobuf.Empty\"F\xdaA\vprovider,id\x82\xd3\xe4\x93\x022*0/v1/platform/integrations/{provider}/tokens/{id}BRZPgithub.com/masterkeysrd/saturn/apis/saturn/platform/integration/v1;integrationv1b\x06proto3"
 
 var (
 	file_saturn_platform_integration_v1_integration_proto_rawDescOnce sync.Once
@@ -1210,7 +1360,7 @@ func file_saturn_platform_integration_v1_integration_proto_rawDescGZIP() []byte 
 	return file_saturn_platform_integration_v1_integration_proto_rawDescData
 }
 
-var file_saturn_platform_integration_v1_integration_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_saturn_platform_integration_v1_integration_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_saturn_platform_integration_v1_integration_proto_goTypes = []any{
 	(*Integration)(nil),                    // 0: saturn.platform.integration.v1.Integration
 	(*IntegrationToken)(nil),               // 1: saturn.platform.integration.v1.IntegrationToken
@@ -1221,50 +1371,52 @@ var file_saturn_platform_integration_v1_integration_proto_goTypes = []any{
 	(*SimulateWebhookRequest)(nil),         // 6: saturn.platform.integration.v1.SimulateWebhookRequest
 	(*SimulateWebhookResponse)(nil),        // 7: saturn.platform.integration.v1.SimulateWebhookResponse
 	(*CatalogDescriptor)(nil),              // 8: saturn.platform.integration.v1.CatalogDescriptor
-	(*ListCatalogResponse)(nil),            // 9: saturn.platform.integration.v1.ListCatalogResponse
-	(*ListIntegrationsResponse)(nil),       // 10: saturn.platform.integration.v1.ListIntegrationsResponse
-	(*CreateIntegrationTokenRequest)(nil),  // 11: saturn.platform.integration.v1.CreateIntegrationTokenRequest
-	(*CreateIntegrationTokenResponse)(nil), // 12: saturn.platform.integration.v1.CreateIntegrationTokenResponse
-	(*ListIntegrationTokensRequest)(nil),   // 13: saturn.platform.integration.v1.ListIntegrationTokensRequest
-	(*ListIntegrationTokensResponse)(nil),  // 14: saturn.platform.integration.v1.ListIntegrationTokensResponse
-	(*DeleteIntegrationTokenRequest)(nil),  // 15: saturn.platform.integration.v1.DeleteIntegrationTokenRequest
-	(*WebhookReceivedEvent)(nil),           // 16: saturn.platform.integration.v1.WebhookReceivedEvent
-	nil,                                    // 17: saturn.platform.integration.v1.SimulateWebhookRequest.HeadersEntry
-	nil,                                    // 18: saturn.platform.integration.v1.WebhookReceivedEvent.HeadersEntry
-	(*timestamppb.Timestamp)(nil),          // 19: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),                // 20: google.protobuf.Struct
-	(*emptypb.Empty)(nil),                  // 21: google.protobuf.Empty
+	(*ListCatalogRequest)(nil),             // 9: saturn.platform.integration.v1.ListCatalogRequest
+	(*ListCatalogResponse)(nil),            // 10: saturn.platform.integration.v1.ListCatalogResponse
+	(*ListIntegrationsRequest)(nil),        // 11: saturn.platform.integration.v1.ListIntegrationsRequest
+	(*ListIntegrationsResponse)(nil),       // 12: saturn.platform.integration.v1.ListIntegrationsResponse
+	(*CreateIntegrationTokenRequest)(nil),  // 13: saturn.platform.integration.v1.CreateIntegrationTokenRequest
+	(*CreateIntegrationTokenResponse)(nil), // 14: saturn.platform.integration.v1.CreateIntegrationTokenResponse
+	(*ListIntegrationTokensRequest)(nil),   // 15: saturn.platform.integration.v1.ListIntegrationTokensRequest
+	(*ListIntegrationTokensResponse)(nil),  // 16: saturn.platform.integration.v1.ListIntegrationTokensResponse
+	(*DeleteIntegrationTokenRequest)(nil),  // 17: saturn.platform.integration.v1.DeleteIntegrationTokenRequest
+	(*WebhookReceivedEvent)(nil),           // 18: saturn.platform.integration.v1.WebhookReceivedEvent
+	nil,                                    // 19: saturn.platform.integration.v1.SimulateWebhookRequest.HeadersEntry
+	nil,                                    // 20: saturn.platform.integration.v1.WebhookReceivedEvent.HeadersEntry
+	(*timestamppb.Timestamp)(nil),          // 21: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),                // 22: google.protobuf.Struct
+	(*emptypb.Empty)(nil),                  // 23: google.protobuf.Empty
 }
 var file_saturn_platform_integration_v1_integration_proto_depIdxs = []int32{
-	19, // 0: saturn.platform.integration.v1.Integration.create_time:type_name -> google.protobuf.Timestamp
-	19, // 1: saturn.platform.integration.v1.Integration.update_time:type_name -> google.protobuf.Timestamp
-	19, // 2: saturn.platform.integration.v1.IntegrationToken.create_time:type_name -> google.protobuf.Timestamp
-	19, // 3: saturn.platform.integration.v1.IntegrationToken.last_used_time:type_name -> google.protobuf.Timestamp
-	17, // 4: saturn.platform.integration.v1.SimulateWebhookRequest.headers:type_name -> saturn.platform.integration.v1.SimulateWebhookRequest.HeadersEntry
-	20, // 5: saturn.platform.integration.v1.SimulateWebhookResponse.result:type_name -> google.protobuf.Struct
+	21, // 0: saturn.platform.integration.v1.Integration.create_time:type_name -> google.protobuf.Timestamp
+	21, // 1: saturn.platform.integration.v1.Integration.update_time:type_name -> google.protobuf.Timestamp
+	21, // 2: saturn.platform.integration.v1.IntegrationToken.create_time:type_name -> google.protobuf.Timestamp
+	21, // 3: saturn.platform.integration.v1.IntegrationToken.last_used_time:type_name -> google.protobuf.Timestamp
+	19, // 4: saturn.platform.integration.v1.SimulateWebhookRequest.headers:type_name -> saturn.platform.integration.v1.SimulateWebhookRequest.HeadersEntry
+	22, // 5: saturn.platform.integration.v1.SimulateWebhookResponse.result:type_name -> google.protobuf.Struct
 	8,  // 6: saturn.platform.integration.v1.ListCatalogResponse.catalog:type_name -> saturn.platform.integration.v1.CatalogDescriptor
 	0,  // 7: saturn.platform.integration.v1.ListIntegrationsResponse.integrations:type_name -> saturn.platform.integration.v1.Integration
 	1,  // 8: saturn.platform.integration.v1.CreateIntegrationTokenResponse.token:type_name -> saturn.platform.integration.v1.IntegrationToken
 	1,  // 9: saturn.platform.integration.v1.ListIntegrationTokensResponse.tokens:type_name -> saturn.platform.integration.v1.IntegrationToken
-	18, // 10: saturn.platform.integration.v1.WebhookReceivedEvent.headers:type_name -> saturn.platform.integration.v1.WebhookReceivedEvent.HeadersEntry
+	20, // 10: saturn.platform.integration.v1.WebhookReceivedEvent.headers:type_name -> saturn.platform.integration.v1.WebhookReceivedEvent.HeadersEntry
 	2,  // 11: saturn.platform.integration.v1.IntegrationService.GetIntegration:input_type -> saturn.platform.integration.v1.GetIntegrationRequest
 	3,  // 12: saturn.platform.integration.v1.IntegrationService.ConfigureIntegration:input_type -> saturn.platform.integration.v1.ConfigureIntegrationRequest
 	4,  // 13: saturn.platform.integration.v1.IntegrationService.RotateIntegrationToken:input_type -> saturn.platform.integration.v1.RotateIntegrationTokenRequest
 	6,  // 14: saturn.platform.integration.v1.IntegrationService.SimulateWebhook:input_type -> saturn.platform.integration.v1.SimulateWebhookRequest
-	21, // 15: saturn.platform.integration.v1.IntegrationService.ListCatalog:input_type -> google.protobuf.Empty
-	21, // 16: saturn.platform.integration.v1.IntegrationService.ListIntegrations:input_type -> google.protobuf.Empty
-	11, // 17: saturn.platform.integration.v1.IntegrationService.CreateIntegrationToken:input_type -> saturn.platform.integration.v1.CreateIntegrationTokenRequest
-	13, // 18: saturn.platform.integration.v1.IntegrationService.ListIntegrationTokens:input_type -> saturn.platform.integration.v1.ListIntegrationTokensRequest
-	15, // 19: saturn.platform.integration.v1.IntegrationService.DeleteIntegrationToken:input_type -> saturn.platform.integration.v1.DeleteIntegrationTokenRequest
+	9,  // 15: saturn.platform.integration.v1.IntegrationService.ListCatalog:input_type -> saturn.platform.integration.v1.ListCatalogRequest
+	11, // 16: saturn.platform.integration.v1.IntegrationService.ListIntegrations:input_type -> saturn.platform.integration.v1.ListIntegrationsRequest
+	13, // 17: saturn.platform.integration.v1.IntegrationService.CreateIntegrationToken:input_type -> saturn.platform.integration.v1.CreateIntegrationTokenRequest
+	15, // 18: saturn.platform.integration.v1.IntegrationService.ListIntegrationTokens:input_type -> saturn.platform.integration.v1.ListIntegrationTokensRequest
+	17, // 19: saturn.platform.integration.v1.IntegrationService.DeleteIntegrationToken:input_type -> saturn.platform.integration.v1.DeleteIntegrationTokenRequest
 	0,  // 20: saturn.platform.integration.v1.IntegrationService.GetIntegration:output_type -> saturn.platform.integration.v1.Integration
 	0,  // 21: saturn.platform.integration.v1.IntegrationService.ConfigureIntegration:output_type -> saturn.platform.integration.v1.Integration
 	5,  // 22: saturn.platform.integration.v1.IntegrationService.RotateIntegrationToken:output_type -> saturn.platform.integration.v1.RotateIntegrationTokenResponse
 	7,  // 23: saturn.platform.integration.v1.IntegrationService.SimulateWebhook:output_type -> saturn.platform.integration.v1.SimulateWebhookResponse
-	9,  // 24: saturn.platform.integration.v1.IntegrationService.ListCatalog:output_type -> saturn.platform.integration.v1.ListCatalogResponse
-	10, // 25: saturn.platform.integration.v1.IntegrationService.ListIntegrations:output_type -> saturn.platform.integration.v1.ListIntegrationsResponse
-	12, // 26: saturn.platform.integration.v1.IntegrationService.CreateIntegrationToken:output_type -> saturn.platform.integration.v1.CreateIntegrationTokenResponse
-	14, // 27: saturn.platform.integration.v1.IntegrationService.ListIntegrationTokens:output_type -> saturn.platform.integration.v1.ListIntegrationTokensResponse
-	21, // 28: saturn.platform.integration.v1.IntegrationService.DeleteIntegrationToken:output_type -> google.protobuf.Empty
+	10, // 24: saturn.platform.integration.v1.IntegrationService.ListCatalog:output_type -> saturn.platform.integration.v1.ListCatalogResponse
+	12, // 25: saturn.platform.integration.v1.IntegrationService.ListIntegrations:output_type -> saturn.platform.integration.v1.ListIntegrationsResponse
+	14, // 26: saturn.platform.integration.v1.IntegrationService.CreateIntegrationToken:output_type -> saturn.platform.integration.v1.CreateIntegrationTokenResponse
+	16, // 27: saturn.platform.integration.v1.IntegrationService.ListIntegrationTokens:output_type -> saturn.platform.integration.v1.ListIntegrationTokensResponse
+	23, // 28: saturn.platform.integration.v1.IntegrationService.DeleteIntegrationToken:output_type -> google.protobuf.Empty
 	20, // [20:29] is the sub-list for method output_type
 	11, // [11:20] is the sub-list for method input_type
 	11, // [11:11] is the sub-list for extension type_name
@@ -1283,7 +1435,7 @@ func file_saturn_platform_integration_v1_integration_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_platform_integration_v1_integration_proto_rawDesc), len(file_saturn_platform_integration_v1_integration_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

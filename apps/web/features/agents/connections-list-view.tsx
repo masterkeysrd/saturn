@@ -60,9 +60,9 @@ export function ConnectionsListView() {
     if (p) {
       setSelectedProvider(p)
       setProviderForm({
-        id: p.id,
-        name: p.name,
-        compatibilityMode: p.compatibilityMode,
+        id: p.id || "",
+        name: p.name || "",
+        compatibilityMode: p.compatibilityMode || "GEMINI_NATIVE",
         apiUrl: p.apiUrl || "",
         apiKey: "", // Masked
       })
@@ -109,7 +109,7 @@ export function ConnectionsListView() {
     }
   }
 
-  const currentBlueprint = providerCatalog?.blueprints.find(
+  const currentBlueprint = providerCatalog?.blueprints?.find(
     (b) => b.compatibilityMode === providerForm.compatibilityMode
   )
 
@@ -136,7 +136,7 @@ export function ConnectionsListView() {
         </div>
 
         <div className="grid max-w-4xl grid-cols-1 gap-4 md:grid-cols-2">
-          {providersData?.providers.map((p) => (
+          {providersData?.providers?.map((p) => (
             <Card
               key={p.id}
               className="border border-border/40 bg-card/45 backdrop-blur-xl transition-all duration-300 hover:border-primary/25 hover:shadow-xl"
@@ -157,7 +157,7 @@ export function ConnectionsListView() {
                     </div>
                   </div>
                   <span className="shrink-0 rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-[9px] font-extrabold text-primary select-none">
-                    {providerCatalog?.blueprints.find(
+                    {providerCatalog?.blueprints?.find(
                       (b) => b.compatibilityMode === p.compatibilityMode
                     )?.displayName || p.compatibilityMode.replace("_", " ")}
                   </span>
@@ -175,7 +175,7 @@ export function ConnectionsListView() {
                   <Button
                     variant="destructive"
                     className="flex h-9 w-9 items-center justify-center rounded-lg p-0"
-                    onClick={() => handleDeleteProvider(p.id)}
+                    onClick={() => p.id && handleDeleteProvider(p.id)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
@@ -183,7 +183,7 @@ export function ConnectionsListView() {
               </div>
             </Card>
           ))}
-          {providersData?.providers.length === 0 && (
+          {providersData?.providers?.length === 0 && (
             <div className="col-span-full rounded-3xl border border-dashed border-border/30 bg-card/10 px-4 py-14 text-center select-none">
               <Key className="mx-auto mb-2 h-8 w-8 text-muted-foreground/60" />
               <h4 className="text-sm font-bold text-foreground">
@@ -256,7 +256,7 @@ export function ConnectionsListView() {
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border border-border/50 bg-card/90 shadow-xl backdrop-blur-xl">
-                  {providerCatalog?.blueprints.map((b) => (
+                  {providerCatalog?.blueprints?.map((b) => (
                     <SelectItem
                       key={b.id || ""}
                       value={b.compatibilityMode || ""}

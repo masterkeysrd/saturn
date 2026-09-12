@@ -25,18 +25,27 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Configuration details for an external LLM provider connection.
 type LLMProvider struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	SpaceId           string                 `protobuf:"bytes,2,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
-	Name              string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	CompatibilityMode string                 `protobuf:"bytes,4,opt,name=compatibility_mode,json=compatibilityMode,proto3" json:"compatibility_mode,omitempty"`
-	ApiUrl            string                 `protobuf:"bytes,5,opt,name=api_url,json=apiUrl,proto3" json:"api_url,omitempty"`
-	ApiKey            string                 `protobuf:"bytes,6,opt,name=api_key,json=apiKey,proto3" json:"api_key,omitempty"`
-	CreateTime        *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
-	UpdateTime        *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The unique identifier of the LLM provider.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Output only. The identifier of the workspace owning this provider.
+	SpaceId string `protobuf:"bytes,2,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
+	// Required. The human-readable name of the provider connection.
+	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	// Required. The compatibility protocol mode (e.g. GEMINI_NATIVE, OPENAI_COMPATIBLE).
+	CompatibilityMode string `protobuf:"bytes,4,opt,name=compatibility_mode,json=compatibilityMode,proto3" json:"compatibility_mode,omitempty"`
+	// Optional. The base endpoint URL of the LLM API.
+	ApiUrl string `protobuf:"bytes,5,opt,name=api_url,json=apiUrl,proto3" json:"api_url,omitempty"`
+	// Optional. The authentication key or bearer token used to access the provider.
+	ApiKey string `protobuf:"bytes,6,opt,name=api_key,json=apiKey,proto3" json:"api_key,omitempty"`
+	// Output only. The timestamp when the provider was registered.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// Output only. The timestamp when the provider was last updated.
+	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *LLMProvider) Reset() {
@@ -125,23 +134,37 @@ func (x *LLMProvider) GetUpdateTime() *timestamppb.Timestamp {
 	return nil
 }
 
+// Configuration details for an autonomous AI worker agent.
 type Agent struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	SpaceId           string                 `protobuf:"bytes,2,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
-	LlmProviderId     string                 `protobuf:"bytes,3,opt,name=llm_provider_id,json=llmProviderId,proto3" json:"llm_provider_id,omitempty"`
-	Name              string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
-	Description       string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
-	Purpose           string                 `protobuf:"bytes,6,opt,name=purpose,proto3" json:"purpose,omitempty"`
-	Tags              []string               `protobuf:"bytes,7,rep,name=tags,proto3" json:"tags,omitempty"`
-	ModelName         string                 `protobuf:"bytes,8,opt,name=model_name,json=modelName,proto3" json:"model_name,omitempty"`
-	SystemInstruction string                 `protobuf:"bytes,9,opt,name=system_instruction,json=systemInstruction,proto3" json:"system_instruction,omitempty"`
-	Temperature       float64                `protobuf:"fixed64,10,opt,name=temperature,proto3" json:"temperature,omitempty"`
-	IsEnabled         bool                   `protobuf:"varint,11,opt,name=is_enabled,json=isEnabled,proto3" json:"is_enabled,omitempty"`
-	CreateTime        *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
-	UpdateTime        *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The unique identifier of the agent.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Output only. The identifier of the workspace owning this agent.
+	SpaceId string `protobuf:"bytes,2,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
+	// Optional. The identifier of the linked LLM provider connection.
+	LlmProviderId string `protobuf:"bytes,3,opt,name=llm_provider_id,json=llmProviderId,proto3" json:"llm_provider_id,omitempty"`
+	// Required. The display name of the agent.
+	Name string `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	// Optional. A detailed description of the agent's responsibilities.
+	Description string `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	// Required. The functional purpose blueprint of the agent (e.g. INBOX_PARSER).
+	Purpose string `protobuf:"bytes,6,opt,name=purpose,proto3" json:"purpose,omitempty"`
+	// Optional. Organizational tags categorized with this agent.
+	Tags []string `protobuf:"bytes,7,rep,name=tags,proto3" json:"tags,omitempty"`
+	// Required. The model identifier (e.g. gemini-2.5-flash).
+	ModelName string `protobuf:"bytes,8,opt,name=model_name,json=modelName,proto3" json:"model_name,omitempty"`
+	// Optional. System prompt instructions guiding agent execution.
+	SystemInstruction string `protobuf:"bytes,9,opt,name=system_instruction,json=systemInstruction,proto3" json:"system_instruction,omitempty"`
+	// Optional. Sampling temperature parameter controlling randomness.
+	Temperature float64 `protobuf:"fixed64,10,opt,name=temperature,proto3" json:"temperature,omitempty"`
+	// Optional. Whether the agent is active and participating in workflows.
+	IsEnabled bool `protobuf:"varint,11,opt,name=is_enabled,json=isEnabled,proto3" json:"is_enabled,omitempty"`
+	// Output only. The timestamp when the agent was created.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// Output only. The timestamp when the agent was last updated.
+	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Agent) Reset() {
@@ -265,16 +288,26 @@ func (x *Agent) GetUpdateTime() *timestamppb.Timestamp {
 	return nil
 }
 
+// Record of an individual execution run performed by an agent.
 type AgentRun struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	AgentId       string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	SpaceId       string                 `protobuf:"bytes,3,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
-	Status        string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
-	InputRaw      string                 `protobuf:"bytes,5,opt,name=input_raw,json=inputRaw,proto3" json:"input_raw,omitempty"`
-	OutputRaw     string                 `protobuf:"bytes,6,opt,name=output_raw,json=outputRaw,proto3" json:"output_raw,omitempty"`
-	ErrorMessage  string                 `protobuf:"bytes,7,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
-	TokensUsed    int32                  `protobuf:"varint,8,opt,name=tokens_used,json=tokensUsed,proto3" json:"tokens_used,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The unique identifier of the run.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Output only. The identifier of the agent that executed the run.
+	AgentId string `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	// Output only. The identifier of the workspace where the run occurred.
+	SpaceId string `protobuf:"bytes,3,opt,name=space_id,json=spaceId,proto3" json:"space_id,omitempty"`
+	// Output only. The terminal execution status (e.g. SUCCESS, FAILED).
+	Status string `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
+	// Output only. The raw input prompt or payload provided to the agent.
+	InputRaw string `protobuf:"bytes,5,opt,name=input_raw,json=inputRaw,proto3" json:"input_raw,omitempty"`
+	// Output only. The raw output text returned by the model.
+	OutputRaw string `protobuf:"bytes,6,opt,name=output_raw,json=outputRaw,proto3" json:"output_raw,omitempty"`
+	// Output only. Any error message returned if the execution failed.
+	ErrorMessage string `protobuf:"bytes,7,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
+	// Output only. The total number of LLM tokens consumed during execution.
+	TokensUsed int32 `protobuf:"varint,8,opt,name=tokens_used,json=tokensUsed,proto3" json:"tokens_used,omitempty"`
+	// Output only. The timestamp when the run completed or was recorded.
 	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -373,14 +406,19 @@ func (x *AgentRun) GetCreateTime() *timestamppb.Timestamp {
 	return nil
 }
 
+// Request message for creating an LLM provider.
 type CreateProviderRequest struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Name              string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	CompatibilityMode string                 `protobuf:"bytes,2,opt,name=compatibility_mode,json=compatibilityMode,proto3" json:"compatibility_mode,omitempty"`
-	ApiUrl            string                 `protobuf:"bytes,3,opt,name=api_url,json=apiUrl,proto3" json:"api_url,omitempty"`
-	ApiKey            string                 `protobuf:"bytes,4,opt,name=api_key,json=apiKey,proto3" json:"api_key,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The human-readable name of the provider connection.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// Required. The compatibility protocol mode (e.g. GEMINI_NATIVE, OPENAI_COMPATIBLE).
+	CompatibilityMode string `protobuf:"bytes,2,opt,name=compatibility_mode,json=compatibilityMode,proto3" json:"compatibility_mode,omitempty"`
+	// Optional. The base endpoint URL of the LLM API.
+	ApiUrl string `protobuf:"bytes,3,opt,name=api_url,json=apiUrl,proto3" json:"api_url,omitempty"`
+	// Optional. The authentication key or bearer token.
+	ApiKey        string `protobuf:"bytes,4,opt,name=api_key,json=apiKey,proto3" json:"api_key,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateProviderRequest) Reset() {
@@ -441,9 +479,11 @@ func (x *CreateProviderRequest) GetApiKey() string {
 	return ""
 }
 
+// Request message for retrieving an LLM provider.
 type GetProviderRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the provider.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -485,16 +525,55 @@ func (x *GetProviderRequest) GetId() string {
 	return ""
 }
 
-type ListProvidersResponse struct {
+// Request message for listing LLM providers.
+type ListProvidersRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Providers     []*LLMProvider         `protobuf:"bytes,1,rep,name=providers,proto3" json:"providers,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListProvidersRequest) Reset() {
+	*x = ListProvidersRequest{}
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListProvidersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListProvidersRequest) ProtoMessage() {}
+
+func (x *ListProvidersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListProvidersRequest.ProtoReflect.Descriptor instead.
+func (*ListProvidersRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{5}
+}
+
+// Response message for listing LLM providers.
+type ListProvidersResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The list of configured LLM providers.
+	Providers     []*LLMProvider `protobuf:"bytes,1,rep,name=providers,proto3" json:"providers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListProvidersResponse) Reset() {
 	*x = ListProvidersResponse{}
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[5]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -506,7 +585,7 @@ func (x *ListProvidersResponse) String() string {
 func (*ListProvidersResponse) ProtoMessage() {}
 
 func (x *ListProvidersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[5]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -519,7 +598,7 @@ func (x *ListProvidersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProvidersResponse.ProtoReflect.Descriptor instead.
 func (*ListProvidersResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{5}
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ListProvidersResponse) GetProviders() []*LLMProvider {
@@ -529,19 +608,24 @@ func (x *ListProvidersResponse) GetProviders() []*LLMProvider {
 	return nil
 }
 
+// Request message for updating an LLM provider.
 type UpdateProviderRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	ApiUrl        string                 `protobuf:"bytes,3,opt,name=api_url,json=apiUrl,proto3" json:"api_url,omitempty"`
-	ApiKey        string                 `protobuf:"bytes,4,opt,name=api_key,json=apiKey,proto3" json:"api_key,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the provider to update.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Required. The updated name of the provider connection.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// Optional. The updated base endpoint URL.
+	ApiUrl string `protobuf:"bytes,3,opt,name=api_url,json=apiUrl,proto3" json:"api_url,omitempty"`
+	// Optional. The updated authentication key or bearer token.
+	ApiKey        string `protobuf:"bytes,4,opt,name=api_key,json=apiKey,proto3" json:"api_key,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateProviderRequest) Reset() {
 	*x = UpdateProviderRequest{}
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[6]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -553,7 +637,7 @@ func (x *UpdateProviderRequest) String() string {
 func (*UpdateProviderRequest) ProtoMessage() {}
 
 func (x *UpdateProviderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[6]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -566,7 +650,7 @@ func (x *UpdateProviderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateProviderRequest.ProtoReflect.Descriptor instead.
 func (*UpdateProviderRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{6}
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *UpdateProviderRequest) GetId() string {
@@ -597,16 +681,18 @@ func (x *UpdateProviderRequest) GetApiKey() string {
 	return ""
 }
 
+// Request message for deleting an LLM provider.
 type DeleteProviderRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the provider to delete.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DeleteProviderRequest) Reset() {
 	*x = DeleteProviderRequest{}
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[7]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -618,7 +704,7 @@ func (x *DeleteProviderRequest) String() string {
 func (*DeleteProviderRequest) ProtoMessage() {}
 
 func (x *DeleteProviderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[7]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -631,7 +717,7 @@ func (x *DeleteProviderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteProviderRequest.ProtoReflect.Descriptor instead.
 func (*DeleteProviderRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{7}
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *DeleteProviderRequest) GetId() string {
@@ -641,23 +727,32 @@ func (x *DeleteProviderRequest) GetId() string {
 	return ""
 }
 
+// Request message for creating an AI agent.
 type CreateAgentRequest struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	LlmProviderId     string                 `protobuf:"bytes,1,opt,name=llm_provider_id,json=llmProviderId,proto3" json:"llm_provider_id,omitempty"`
-	Name              string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Description       string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	Purpose           string                 `protobuf:"bytes,4,opt,name=purpose,proto3" json:"purpose,omitempty"`
-	Tags              []string               `protobuf:"bytes,5,rep,name=tags,proto3" json:"tags,omitempty"`
-	ModelName         string                 `protobuf:"bytes,6,opt,name=model_name,json=modelName,proto3" json:"model_name,omitempty"`
-	SystemInstruction string                 `protobuf:"bytes,7,opt,name=system_instruction,json=systemInstruction,proto3" json:"system_instruction,omitempty"`
-	Temperature       float64                `protobuf:"fixed64,8,opt,name=temperature,proto3" json:"temperature,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Optional. The identifier of the linked LLM provider.
+	LlmProviderId string `protobuf:"bytes,1,opt,name=llm_provider_id,json=llmProviderId,proto3" json:"llm_provider_id,omitempty"`
+	// Required. The display name of the agent.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// Optional. A detailed description of the agent's role.
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// Required. The functional purpose blueprint (e.g. INBOX_PARSER).
+	Purpose string `protobuf:"bytes,4,opt,name=purpose,proto3" json:"purpose,omitempty"`
+	// Optional. Organizational tags assigned to the agent.
+	Tags []string `protobuf:"bytes,5,rep,name=tags,proto3" json:"tags,omitempty"`
+	// Required. The model identifier to use (e.g. gemini-2.5-flash).
+	ModelName string `protobuf:"bytes,6,opt,name=model_name,json=modelName,proto3" json:"model_name,omitempty"`
+	// Optional. System prompt instructions guiding agent behavior.
+	SystemInstruction string `protobuf:"bytes,7,opt,name=system_instruction,json=systemInstruction,proto3" json:"system_instruction,omitempty"`
+	// Optional. Sampling temperature parameter controlling randomness.
+	Temperature   float64 `protobuf:"fixed64,8,opt,name=temperature,proto3" json:"temperature,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateAgentRequest) Reset() {
 	*x = CreateAgentRequest{}
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[8]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -669,7 +764,7 @@ func (x *CreateAgentRequest) String() string {
 func (*CreateAgentRequest) ProtoMessage() {}
 
 func (x *CreateAgentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[8]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -682,7 +777,7 @@ func (x *CreateAgentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAgentRequest.ProtoReflect.Descriptor instead.
 func (*CreateAgentRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{8}
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *CreateAgentRequest) GetLlmProviderId() string {
@@ -741,16 +836,18 @@ func (x *CreateAgentRequest) GetTemperature() float64 {
 	return 0
 }
 
+// Request message for retrieving an AI agent.
 type GetAgentRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the agent.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetAgentRequest) Reset() {
 	*x = GetAgentRequest{}
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[9]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -762,7 +859,7 @@ func (x *GetAgentRequest) String() string {
 func (*GetAgentRequest) ProtoMessage() {}
 
 func (x *GetAgentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[9]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -775,7 +872,7 @@ func (x *GetAgentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAgentRequest.ProtoReflect.Descriptor instead.
 func (*GetAgentRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{9}
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GetAgentRequest) GetId() string {
@@ -785,16 +882,55 @@ func (x *GetAgentRequest) GetId() string {
 	return ""
 }
 
-type ListAgentsResponse struct {
+// Request message for listing AI agents.
+type ListAgentsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Agents        []*Agent               `protobuf:"bytes,1,rep,name=agents,proto3" json:"agents,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAgentsRequest) Reset() {
+	*x = ListAgentsRequest{}
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAgentsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAgentsRequest) ProtoMessage() {}
+
+func (x *ListAgentsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAgentsRequest.ProtoReflect.Descriptor instead.
+func (*ListAgentsRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{11}
+}
+
+// Response message for listing AI agents.
+type ListAgentsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The list of configured agents.
+	Agents        []*Agent `protobuf:"bytes,1,rep,name=agents,proto3" json:"agents,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListAgentsResponse) Reset() {
 	*x = ListAgentsResponse{}
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[10]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -806,7 +942,7 @@ func (x *ListAgentsResponse) String() string {
 func (*ListAgentsResponse) ProtoMessage() {}
 
 func (x *ListAgentsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[10]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -819,7 +955,7 @@ func (x *ListAgentsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAgentsResponse.ProtoReflect.Descriptor instead.
 func (*ListAgentsResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{10}
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ListAgentsResponse) GetAgents() []*Agent {
@@ -829,24 +965,34 @@ func (x *ListAgentsResponse) GetAgents() []*Agent {
 	return nil
 }
 
+// Request message for updating an AI agent.
 type UpdateAgentRequest struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	LlmProviderId     string                 `protobuf:"bytes,2,opt,name=llm_provider_id,json=llmProviderId,proto3" json:"llm_provider_id,omitempty"`
-	Name              string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Description       string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
-	Tags              []string               `protobuf:"bytes,5,rep,name=tags,proto3" json:"tags,omitempty"`
-	ModelName         string                 `protobuf:"bytes,6,opt,name=model_name,json=modelName,proto3" json:"model_name,omitempty"`
-	SystemInstruction string                 `protobuf:"bytes,7,opt,name=system_instruction,json=systemInstruction,proto3" json:"system_instruction,omitempty"`
-	Temperature       float64                `protobuf:"fixed64,8,opt,name=temperature,proto3" json:"temperature,omitempty"`
-	IsEnabled         bool                   `protobuf:"varint,9,opt,name=is_enabled,json=isEnabled,proto3" json:"is_enabled,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the agent to update.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Optional. The identifier of the linked LLM provider.
+	LlmProviderId string `protobuf:"bytes,2,opt,name=llm_provider_id,json=llmProviderId,proto3" json:"llm_provider_id,omitempty"`
+	// Required. The updated display name.
+	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	// Optional. The updated description.
+	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	// Optional. The updated tags.
+	Tags []string `protobuf:"bytes,5,rep,name=tags,proto3" json:"tags,omitempty"`
+	// Required. The updated model identifier.
+	ModelName string `protobuf:"bytes,6,opt,name=model_name,json=modelName,proto3" json:"model_name,omitempty"`
+	// Optional. The updated system prompt instructions.
+	SystemInstruction string `protobuf:"bytes,7,opt,name=system_instruction,json=systemInstruction,proto3" json:"system_instruction,omitempty"`
+	// Optional. The updated sampling temperature.
+	Temperature float64 `protobuf:"fixed64,8,opt,name=temperature,proto3" json:"temperature,omitempty"`
+	// Optional. Whether the agent is active and enabled.
+	IsEnabled     bool `protobuf:"varint,9,opt,name=is_enabled,json=isEnabled,proto3" json:"is_enabled,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateAgentRequest) Reset() {
 	*x = UpdateAgentRequest{}
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[11]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -858,7 +1004,7 @@ func (x *UpdateAgentRequest) String() string {
 func (*UpdateAgentRequest) ProtoMessage() {}
 
 func (x *UpdateAgentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[11]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -871,7 +1017,7 @@ func (x *UpdateAgentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAgentRequest.ProtoReflect.Descriptor instead.
 func (*UpdateAgentRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{11}
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *UpdateAgentRequest) GetId() string {
@@ -937,16 +1083,18 @@ func (x *UpdateAgentRequest) GetIsEnabled() bool {
 	return false
 }
 
+// Request message for deleting an AI agent.
 type DeleteAgentRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the agent to delete.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DeleteAgentRequest) Reset() {
 	*x = DeleteAgentRequest{}
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[12]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -958,7 +1106,7 @@ func (x *DeleteAgentRequest) String() string {
 func (*DeleteAgentRequest) ProtoMessage() {}
 
 func (x *DeleteAgentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[12]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -971,7 +1119,7 @@ func (x *DeleteAgentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAgentRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAgentRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{12}
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *DeleteAgentRequest) GetId() string {
@@ -981,18 +1129,22 @@ func (x *DeleteAgentRequest) GetId() string {
 	return ""
 }
 
+// Request message for listing agent execution runs.
 type ListAgentRunsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AgentId       string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	PageSize      int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken     string                 `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the agent whose runs to list.
+	AgentId string `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	// Optional. The maximum number of runs to return in a single response page.
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Optional. A pagination token received from a previous listing call.
+	PageToken     string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListAgentRunsRequest) Reset() {
 	*x = ListAgentRunsRequest{}
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[13]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1004,7 +1156,7 @@ func (x *ListAgentRunsRequest) String() string {
 func (*ListAgentRunsRequest) ProtoMessage() {}
 
 func (x *ListAgentRunsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[13]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1017,7 +1169,7 @@ func (x *ListAgentRunsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAgentRunsRequest.ProtoReflect.Descriptor instead.
 func (*ListAgentRunsRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{13}
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ListAgentRunsRequest) GetAgentId() string {
@@ -1041,17 +1193,20 @@ func (x *ListAgentRunsRequest) GetPageToken() string {
 	return ""
 }
 
+// Response message for listing agent execution runs.
 type ListAgentRunsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Runs          []*AgentRun            `protobuf:"bytes,1,rep,name=runs,proto3" json:"runs,omitempty"`
-	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The list of execution runs.
+	Runs []*AgentRun `protobuf:"bytes,1,rep,name=runs,proto3" json:"runs,omitempty"`
+	// Output only. A token that can be sent as `page_token` to retrieve the next page.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListAgentRunsResponse) Reset() {
 	*x = ListAgentRunsResponse{}
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[14]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1063,7 +1218,7 @@ func (x *ListAgentRunsResponse) String() string {
 func (*ListAgentRunsResponse) ProtoMessage() {}
 
 func (x *ListAgentRunsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[14]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1076,7 +1231,7 @@ func (x *ListAgentRunsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAgentRunsResponse.ProtoReflect.Descriptor instead.
 func (*ListAgentRunsResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{14}
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ListAgentRunsResponse) GetRuns() []*AgentRun {
@@ -1093,21 +1248,28 @@ func (x *ListAgentRunsResponse) GetNextPageToken() string {
 	return ""
 }
 
+// Specification blueprint defining a standard system agent purpose.
 type AgentBlueprintDescriptor struct {
-	state                    protoimpl.MessageState `protogen:"open.v1"`
-	Purpose                  string                 `protobuf:"bytes,1,opt,name=purpose,proto3" json:"purpose,omitempty"`
-	DisplayName              string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	Description              string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	DefaultTags              []string               `protobuf:"bytes,4,rep,name=default_tags,json=defaultTags,proto3" json:"default_tags,omitempty"`
-	DefaultSystemInstruction string                 `protobuf:"bytes,5,opt,name=default_system_instruction,json=defaultSystemInstruction,proto3" json:"default_system_instruction,omitempty"`
-	RequiredResponseSchema   string                 `protobuf:"bytes,6,opt,name=required_response_schema,json=requiredResponseSchema,proto3" json:"required_response_schema,omitempty"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The unique purpose identifier of the blueprint (e.g. INBOX_PARSER).
+	Purpose string `protobuf:"bytes,1,opt,name=purpose,proto3" json:"purpose,omitempty"`
+	// Output only. The human-readable title of the blueprint.
+	DisplayName string `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// Output only. Detailed description of what this agent purpose accomplishes.
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// Output only. Default categorization tags recommended for this blueprint.
+	DefaultTags []string `protobuf:"bytes,4,rep,name=default_tags,json=defaultTags,proto3" json:"default_tags,omitempty"`
+	// Output only. Recommended default system prompt instructions.
+	DefaultSystemInstruction string `protobuf:"bytes,5,opt,name=default_system_instruction,json=defaultSystemInstruction,proto3" json:"default_system_instruction,omitempty"`
+	// Output only. JSON schema string describing the expected structured response format.
+	RequiredResponseSchema string `protobuf:"bytes,6,opt,name=required_response_schema,json=requiredResponseSchema,proto3" json:"required_response_schema,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *AgentBlueprintDescriptor) Reset() {
 	*x = AgentBlueprintDescriptor{}
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[15]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1119,7 +1281,7 @@ func (x *AgentBlueprintDescriptor) String() string {
 func (*AgentBlueprintDescriptor) ProtoMessage() {}
 
 func (x *AgentBlueprintDescriptor) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[15]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1132,7 +1294,7 @@ func (x *AgentBlueprintDescriptor) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentBlueprintDescriptor.ProtoReflect.Descriptor instead.
 func (*AgentBlueprintDescriptor) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{15}
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *AgentBlueprintDescriptor) GetPurpose() string {
@@ -1177,8 +1339,47 @@ func (x *AgentBlueprintDescriptor) GetRequiredResponseSchema() string {
 	return ""
 }
 
+// Request message for retrieving agent blueprints catalog.
+type GetAgentCatalogRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAgentCatalogRequest) Reset() {
+	*x = GetAgentCatalogRequest{}
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAgentCatalogRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAgentCatalogRequest) ProtoMessage() {}
+
+func (x *GetAgentCatalogRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAgentCatalogRequest.ProtoReflect.Descriptor instead.
+func (*GetAgentCatalogRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{18}
+}
+
+// Response message containing available agent purpose blueprints.
 type GetAgentCatalogResponse struct {
-	state         protoimpl.MessageState      `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The list of supported agent blueprints.
 	Blueprints    []*AgentBlueprintDescriptor `protobuf:"bytes,1,rep,name=blueprints,proto3" json:"blueprints,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1186,7 +1387,7 @@ type GetAgentCatalogResponse struct {
 
 func (x *GetAgentCatalogResponse) Reset() {
 	*x = GetAgentCatalogResponse{}
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[16]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1198,7 +1399,7 @@ func (x *GetAgentCatalogResponse) String() string {
 func (*GetAgentCatalogResponse) ProtoMessage() {}
 
 func (x *GetAgentCatalogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[16]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1211,7 +1412,7 @@ func (x *GetAgentCatalogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAgentCatalogResponse.ProtoReflect.Descriptor instead.
 func (*GetAgentCatalogResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{16}
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *GetAgentCatalogResponse) GetBlueprints() []*AgentBlueprintDescriptor {
@@ -1221,22 +1422,30 @@ func (x *GetAgentCatalogResponse) GetBlueprints() []*AgentBlueprintDescriptor {
 	return nil
 }
 
+// Specification blueprint describing a supported LLM provider type.
 type ProviderBlueprintDescriptor struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	DisplayName       string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	Description       string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	CompatibilityMode string                 `protobuf:"bytes,4,opt,name=compatibility_mode,json=compatibilityMode,proto3" json:"compatibility_mode,omitempty"`
-	DefaultApiUrl     string                 `protobuf:"bytes,5,opt,name=default_api_url,json=defaultApiUrl,proto3" json:"default_api_url,omitempty"`
-	IsApiKeyRequired  bool                   `protobuf:"varint,6,opt,name=is_api_key_required,json=isApiKeyRequired,proto3" json:"is_api_key_required,omitempty"`
-	LogoIcon          string                 `protobuf:"bytes,7,opt,name=logo_icon,json=logoIcon,proto3" json:"logo_icon,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The unique identifier of the provider template.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Output only. The human-readable display name (e.g. Google Gemini, Ollama).
+	DisplayName string `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// Output only. Description of the provider and protocol compatibility.
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// Output only. The compatibility mode constant.
+	CompatibilityMode string `protobuf:"bytes,4,opt,name=compatibility_mode,json=compatibilityMode,proto3" json:"compatibility_mode,omitempty"`
+	// Output only. The default endpoint URL for this provider type.
+	DefaultApiUrl string `protobuf:"bytes,5,opt,name=default_api_url,json=defaultApiUrl,proto3" json:"default_api_url,omitempty"`
+	// Output only. Whether this provider requires an API key for authentication.
+	IsApiKeyRequired bool `protobuf:"varint,6,opt,name=is_api_key_required,json=isApiKeyRequired,proto3" json:"is_api_key_required,omitempty"`
+	// Output only. Icon identifier or SVG name for UI display.
+	LogoIcon      string `protobuf:"bytes,7,opt,name=logo_icon,json=logoIcon,proto3" json:"logo_icon,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ProviderBlueprintDescriptor) Reset() {
 	*x = ProviderBlueprintDescriptor{}
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[17]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1248,7 +1457,7 @@ func (x *ProviderBlueprintDescriptor) String() string {
 func (*ProviderBlueprintDescriptor) ProtoMessage() {}
 
 func (x *ProviderBlueprintDescriptor) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[17]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1261,7 +1470,7 @@ func (x *ProviderBlueprintDescriptor) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProviderBlueprintDescriptor.ProtoReflect.Descriptor instead.
 func (*ProviderBlueprintDescriptor) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{17}
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ProviderBlueprintDescriptor) GetId() string {
@@ -1313,8 +1522,47 @@ func (x *ProviderBlueprintDescriptor) GetLogoIcon() string {
 	return ""
 }
 
+// Request message for retrieving provider blueprints catalog.
+type GetProviderCatalogRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetProviderCatalogRequest) Reset() {
+	*x = GetProviderCatalogRequest{}
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProviderCatalogRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProviderCatalogRequest) ProtoMessage() {}
+
+func (x *GetProviderCatalogRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetProviderCatalogRequest.ProtoReflect.Descriptor instead.
+func (*GetProviderCatalogRequest) Descriptor() ([]byte, []int) {
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{21}
+}
+
+// Response message containing available LLM provider blueprints.
 type GetProviderCatalogResponse struct {
-	state         protoimpl.MessageState         `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The list of supported provider blueprints.
 	Blueprints    []*ProviderBlueprintDescriptor `protobuf:"bytes,1,rep,name=blueprints,proto3" json:"blueprints,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1322,7 +1570,7 @@ type GetProviderCatalogResponse struct {
 
 func (x *GetProviderCatalogResponse) Reset() {
 	*x = GetProviderCatalogResponse{}
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[18]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1334,7 +1582,7 @@ func (x *GetProviderCatalogResponse) String() string {
 func (*GetProviderCatalogResponse) ProtoMessage() {}
 
 func (x *GetProviderCatalogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[18]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1347,7 +1595,7 @@ func (x *GetProviderCatalogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProviderCatalogResponse.ProtoReflect.Descriptor instead.
 func (*GetProviderCatalogResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{18}
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *GetProviderCatalogResponse) GetBlueprints() []*ProviderBlueprintDescriptor {
@@ -1357,19 +1605,22 @@ func (x *GetProviderCatalogResponse) GetBlueprints() []*ProviderBlueprintDescrip
 	return nil
 }
 
-// DocumentFilePayload represents an uploaded file for signal analysis.
+// File payload containing document content uploaded for analysis.
 type DocumentFilePayload struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Filename      string                 `protobuf:"bytes,1,opt,name=filename,proto3" json:"filename,omitempty"`
-	ContentType   string                 `protobuf:"bytes,2,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
-	Content       []byte                 `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The original filename of the document.
+	Filename string `protobuf:"bytes,1,opt,name=filename,proto3" json:"filename,omitempty"`
+	// Required. The MIME type of the document (e.g. application/pdf, text/csv).
+	ContentType string `protobuf:"bytes,2,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	// Required. The raw binary content of the document.
+	Content       []byte `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DocumentFilePayload) Reset() {
 	*x = DocumentFilePayload{}
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[19]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1381,7 +1632,7 @@ func (x *DocumentFilePayload) String() string {
 func (*DocumentFilePayload) ProtoMessage() {}
 
 func (x *DocumentFilePayload) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[19]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1394,7 +1645,7 @@ func (x *DocumentFilePayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DocumentFilePayload.ProtoReflect.Descriptor instead.
 func (*DocumentFilePayload) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{19}
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *DocumentFilePayload) GetFilename() string {
@@ -1420,9 +1671,12 @@ func (x *DocumentFilePayload) GetContent() []byte {
 
 // Request message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions].
 type GetSuggestionsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Purpose       string                 `protobuf:"bytes,1,opt,name=purpose,proto3" json:"purpose,omitempty"`
-	TextContent   string                 `protobuf:"bytes,2,opt,name=text_content,json=textContent,proto3" json:"text_content,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The target agent purpose blueprint guiding analysis.
+	Purpose string `protobuf:"bytes,1,opt,name=purpose,proto3" json:"purpose,omitempty"`
+	// Optional. Textual content or query prompt to analyze.
+	TextContent string `protobuf:"bytes,2,opt,name=text_content,json=textContent,proto3" json:"text_content,omitempty"`
+	// Optional. Attached document files to be ingested and analyzed.
 	Documents     []*DocumentFilePayload `protobuf:"bytes,3,rep,name=documents,proto3" json:"documents,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1430,7 +1684,7 @@ type GetSuggestionsRequest struct {
 
 func (x *GetSuggestionsRequest) Reset() {
 	*x = GetSuggestionsRequest{}
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[20]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1442,7 +1696,7 @@ func (x *GetSuggestionsRequest) String() string {
 func (*GetSuggestionsRequest) ProtoMessage() {}
 
 func (x *GetSuggestionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[20]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1455,7 +1709,7 @@ func (x *GetSuggestionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSuggestionsRequest.ProtoReflect.Descriptor instead.
 func (*GetSuggestionsRequest) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{20}
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *GetSuggestionsRequest) GetPurpose() string {
@@ -1481,16 +1735,18 @@ func (x *GetSuggestionsRequest) GetDocuments() []*DocumentFilePayload {
 
 // Response message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions].
 type GetSuggestionsResponse struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	RawOutput            string                 `protobuf:"bytes,1,opt,name=raw_output,json=rawOutput,proto3" json:"raw_output,omitempty"`
-	StructuredSuggestion *structpb.Struct       `protobuf:"bytes,2,opt,name=structured_suggestion,json=structuredSuggestion,proto3" json:"structured_suggestion,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The raw model completion text.
+	RawOutput string `protobuf:"bytes,1,opt,name=raw_output,json=rawOutput,proto3" json:"raw_output,omitempty"`
+	// Output only. The parsed structured suggestions matching the purpose schema.
+	StructuredSuggestion *structpb.Struct `protobuf:"bytes,2,opt,name=structured_suggestion,json=structuredSuggestion,proto3" json:"structured_suggestion,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
 
 func (x *GetSuggestionsResponse) Reset() {
 	*x = GetSuggestionsResponse{}
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[21]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1502,7 +1758,7 @@ func (x *GetSuggestionsResponse) String() string {
 func (*GetSuggestionsResponse) ProtoMessage() {}
 
 func (x *GetSuggestionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[21]
+	mi := &file_saturn_platform_agent_v1_agent_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1515,7 +1771,7 @@ func (x *GetSuggestionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSuggestionsResponse.ProtoReflect.Descriptor instead.
 func (*GetSuggestionsResponse) Descriptor() ([]byte, []int) {
-	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{21}
+	return file_saturn_platform_agent_v1_agent_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *GetSuggestionsResponse) GetRawOutput() string {
@@ -1536,153 +1792,157 @@ var File_saturn_platform_agent_v1_agent_proto protoreflect.FileDescriptor
 
 const file_saturn_platform_agent_v1_agent_proto_rawDesc = "" +
 	"\n" +
-	"$saturn/platform/agent/v1/agent.proto\x12\x18saturn.platform.agent.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa7\x02\n" +
-	"\vLLMProvider\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
-	"\bspace_id\x18\x02 \x01(\tR\aspaceId\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\x12-\n" +
-	"\x12compatibility_mode\x18\x04 \x01(\tR\x11compatibilityMode\x12\x17\n" +
-	"\aapi_url\x18\x05 \x01(\tR\x06apiUrl\x12\x17\n" +
-	"\aapi_key\x18\x06 \x01(\tR\x06apiKey\x12;\n" +
-	"\vcreate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"createTime\x12;\n" +
-	"\vupdate_time\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime\"\xc7\x03\n" +
-	"\x05Agent\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
-	"\bspace_id\x18\x02 \x01(\tR\aspaceId\x12&\n" +
-	"\x0fllm_provider_id\x18\x03 \x01(\tR\rllmProviderId\x12\x12\n" +
-	"\x04name\x18\x04 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x18\n" +
-	"\apurpose\x18\x06 \x01(\tR\apurpose\x12\x12\n" +
-	"\x04tags\x18\a \x03(\tR\x04tags\x12\x1d\n" +
+	"$saturn/platform/agent/v1/agent.proto\x12\x18saturn.platform.agent.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcf\x02\n" +
+	"\vLLMProvider\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x1e\n" +
+	"\bspace_id\x18\x02 \x01(\tB\x03\xe0A\x03R\aspaceId\x12\x17\n" +
+	"\x04name\x18\x03 \x01(\tB\x03\xe0A\x02R\x04name\x122\n" +
+	"\x12compatibility_mode\x18\x04 \x01(\tB\x03\xe0A\x02R\x11compatibilityMode\x12\x1c\n" +
+	"\aapi_url\x18\x05 \x01(\tB\x03\xe0A\x01R\x06apiUrl\x12\x1c\n" +
+	"\aapi_key\x18\x06 \x01(\tB\x03\xe0A\x01R\x06apiKey\x12@\n" +
+	"\vcreate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"createTime\x12@\n" +
+	"\vupdate_time\x18\b \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"updateTime\"\x88\x04\n" +
+	"\x05Agent\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x1e\n" +
+	"\bspace_id\x18\x02 \x01(\tB\x03\xe0A\x03R\aspaceId\x12+\n" +
+	"\x0fllm_provider_id\x18\x03 \x01(\tB\x03\xe0A\x01R\rllmProviderId\x12\x17\n" +
+	"\x04name\x18\x04 \x01(\tB\x03\xe0A\x02R\x04name\x12%\n" +
+	"\vdescription\x18\x05 \x01(\tB\x03\xe0A\x01R\vdescription\x12\x1d\n" +
+	"\apurpose\x18\x06 \x01(\tB\x03\xe0A\x02R\apurpose\x12\x17\n" +
+	"\x04tags\x18\a \x03(\tB\x03\xe0A\x01R\x04tags\x12\"\n" +
 	"\n" +
-	"model_name\x18\b \x01(\tR\tmodelName\x12-\n" +
-	"\x12system_instruction\x18\t \x01(\tR\x11systemInstruction\x12 \n" +
+	"model_name\x18\b \x01(\tB\x03\xe0A\x02R\tmodelName\x122\n" +
+	"\x12system_instruction\x18\t \x01(\tB\x03\xe0A\x01R\x11systemInstruction\x12%\n" +
 	"\vtemperature\x18\n" +
-	" \x01(\x01R\vtemperature\x12\x1d\n" +
+	" \x01(\x01B\x03\xe0A\x01R\vtemperature\x12\"\n" +
 	"\n" +
-	"is_enabled\x18\v \x01(\bR\tisEnabled\x12;\n" +
-	"\vcreate_time\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"createTime\x12;\n" +
-	"\vupdate_time\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime\"\xa7\x02\n" +
-	"\bAgentRun\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
-	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x19\n" +
-	"\bspace_id\x18\x03 \x01(\tR\aspaceId\x12\x16\n" +
-	"\x06status\x18\x04 \x01(\tR\x06status\x12\x1b\n" +
-	"\tinput_raw\x18\x05 \x01(\tR\binputRaw\x12\x1d\n" +
+	"is_enabled\x18\v \x01(\bB\x03\xe0A\x01R\tisEnabled\x12@\n" +
+	"\vcreate_time\x18\f \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"createTime\x12@\n" +
+	"\vupdate_time\x18\r \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"updateTime\"\xd4\x02\n" +
+	"\bAgentRun\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x1e\n" +
+	"\bagent_id\x18\x02 \x01(\tB\x03\xe0A\x03R\aagentId\x12\x1e\n" +
+	"\bspace_id\x18\x03 \x01(\tB\x03\xe0A\x03R\aspaceId\x12\x1b\n" +
+	"\x06status\x18\x04 \x01(\tB\x03\xe0A\x03R\x06status\x12 \n" +
+	"\tinput_raw\x18\x05 \x01(\tB\x03\xe0A\x03R\binputRaw\x12\"\n" +
 	"\n" +
-	"output_raw\x18\x06 \x01(\tR\toutputRaw\x12#\n" +
-	"\rerror_message\x18\a \x01(\tR\ferrorMessage\x12\x1f\n" +
-	"\vtokens_used\x18\b \x01(\x05R\n" +
-	"tokensUsed\x12;\n" +
-	"\vcreate_time\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"createTime\"\x96\x01\n" +
+	"output_raw\x18\x06 \x01(\tB\x03\xe0A\x03R\toutputRaw\x12(\n" +
+	"\rerror_message\x18\a \x01(\tB\x03\xe0A\x03R\ferrorMessage\x12$\n" +
+	"\vtokens_used\x18\b \x01(\x05B\x03\xe0A\x03R\n" +
+	"tokensUsed\x12@\n" +
+	"\vcreate_time\x18\t \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"createTime\"\xa0\x01\n" +
 	"\x15CreateProviderRequest\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x122\n" +
-	"\x12compatibility_mode\x18\x02 \x01(\tB\x03\xe0A\x02R\x11compatibilityMode\x12\x17\n" +
-	"\aapi_url\x18\x03 \x01(\tR\x06apiUrl\x12\x17\n" +
-	"\aapi_key\x18\x04 \x01(\tR\x06apiKey\")\n" +
+	"\x12compatibility_mode\x18\x02 \x01(\tB\x03\xe0A\x02R\x11compatibilityMode\x12\x1c\n" +
+	"\aapi_url\x18\x03 \x01(\tB\x03\xe0A\x01R\x06apiUrl\x12\x1c\n" +
+	"\aapi_key\x18\x04 \x01(\tB\x03\xe0A\x01R\x06apiKey\")\n" +
 	"\x12GetProviderRequest\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"\\\n" +
-	"\x15ListProvidersResponse\x12C\n" +
-	"\tproviders\x18\x01 \x03(\v2%.saturn.platform.agent.v1.LLMProviderR\tproviders\"w\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"\x16\n" +
+	"\x14ListProvidersRequest\"a\n" +
+	"\x15ListProvidersResponse\x12H\n" +
+	"\tproviders\x18\x01 \x03(\v2%.saturn.platform.agent.v1.LLMProviderB\x03\xe0A\x03R\tproviders\"\x81\x01\n" +
 	"\x15UpdateProviderRequest\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x12\x17\n" +
-	"\x04name\x18\x02 \x01(\tB\x03\xe0A\x02R\x04name\x12\x17\n" +
-	"\aapi_url\x18\x03 \x01(\tR\x06apiUrl\x12\x17\n" +
-	"\aapi_key\x18\x04 \x01(\tR\x06apiKey\",\n" +
+	"\x04name\x18\x02 \x01(\tB\x03\xe0A\x02R\x04name\x12\x1c\n" +
+	"\aapi_url\x18\x03 \x01(\tB\x03\xe0A\x01R\x06apiUrl\x12\x1c\n" +
+	"\aapi_key\x18\x04 \x01(\tB\x03\xe0A\x01R\x06apiKey\",\n" +
 	"\x15DeleteProviderRequest\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"\x9f\x02\n" +
-	"\x12CreateAgentRequest\x12&\n" +
-	"\x0fllm_provider_id\x18\x01 \x01(\tR\rllmProviderId\x12\x17\n" +
-	"\x04name\x18\x02 \x01(\tB\x03\xe0A\x02R\x04name\x12 \n" +
-	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x1d\n" +
-	"\apurpose\x18\x04 \x01(\tB\x03\xe0A\x02R\apurpose\x12\x12\n" +
-	"\x04tags\x18\x05 \x03(\tR\x04tags\x12\"\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"\xb8\x02\n" +
+	"\x12CreateAgentRequest\x12+\n" +
+	"\x0fllm_provider_id\x18\x01 \x01(\tB\x03\xe0A\x01R\rllmProviderId\x12\x17\n" +
+	"\x04name\x18\x02 \x01(\tB\x03\xe0A\x02R\x04name\x12%\n" +
+	"\vdescription\x18\x03 \x01(\tB\x03\xe0A\x01R\vdescription\x12\x1d\n" +
+	"\apurpose\x18\x04 \x01(\tB\x03\xe0A\x02R\apurpose\x12\x17\n" +
+	"\x04tags\x18\x05 \x03(\tB\x03\xe0A\x01R\x04tags\x12\"\n" +
 	"\n" +
-	"model_name\x18\x06 \x01(\tB\x03\xe0A\x02R\tmodelName\x12-\n" +
-	"\x12system_instruction\x18\a \x01(\tR\x11systemInstruction\x12 \n" +
-	"\vtemperature\x18\b \x01(\x01R\vtemperature\"&\n" +
+	"model_name\x18\x06 \x01(\tB\x03\xe0A\x02R\tmodelName\x122\n" +
+	"\x12system_instruction\x18\a \x01(\tB\x03\xe0A\x01R\x11systemInstruction\x12%\n" +
+	"\vtemperature\x18\b \x01(\x01B\x03\xe0A\x01R\vtemperature\"&\n" +
 	"\x0fGetAgentRequest\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"M\n" +
-	"\x12ListAgentsResponse\x127\n" +
-	"\x06agents\x18\x01 \x03(\v2\x1f.saturn.platform.agent.v1.AgentR\x06agents\"\xb4\x02\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"\x13\n" +
+	"\x11ListAgentsRequest\"R\n" +
+	"\x12ListAgentsResponse\x12<\n" +
+	"\x06agents\x18\x01 \x03(\v2\x1f.saturn.platform.agent.v1.AgentB\x03\xe0A\x03R\x06agents\"\xd2\x02\n" +
 	"\x12UpdateAgentRequest\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x12&\n" +
-	"\x0fllm_provider_id\x18\x02 \x01(\tR\rllmProviderId\x12\x17\n" +
-	"\x04name\x18\x03 \x01(\tB\x03\xe0A\x02R\x04name\x12 \n" +
-	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x12\n" +
-	"\x04tags\x18\x05 \x03(\tR\x04tags\x12\"\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\x12+\n" +
+	"\x0fllm_provider_id\x18\x02 \x01(\tB\x03\xe0A\x01R\rllmProviderId\x12\x17\n" +
+	"\x04name\x18\x03 \x01(\tB\x03\xe0A\x02R\x04name\x12%\n" +
+	"\vdescription\x18\x04 \x01(\tB\x03\xe0A\x01R\vdescription\x12\x17\n" +
+	"\x04tags\x18\x05 \x03(\tB\x03\xe0A\x01R\x04tags\x12\"\n" +
 	"\n" +
-	"model_name\x18\x06 \x01(\tB\x03\xe0A\x02R\tmodelName\x12-\n" +
-	"\x12system_instruction\x18\a \x01(\tR\x11systemInstruction\x12 \n" +
-	"\vtemperature\x18\b \x01(\x01R\vtemperature\x12\x1d\n" +
+	"model_name\x18\x06 \x01(\tB\x03\xe0A\x02R\tmodelName\x122\n" +
+	"\x12system_instruction\x18\a \x01(\tB\x03\xe0A\x01R\x11systemInstruction\x12%\n" +
+	"\vtemperature\x18\b \x01(\x01B\x03\xe0A\x01R\vtemperature\x12\"\n" +
 	"\n" +
-	"is_enabled\x18\t \x01(\bR\tisEnabled\")\n" +
+	"is_enabled\x18\t \x01(\bB\x03\xe0A\x01R\tisEnabled\")\n" +
 	"\x12DeleteAgentRequest\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"r\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"|\n" +
 	"\x14ListAgentRunsRequest\x12\x1e\n" +
-	"\bagent_id\x18\x01 \x01(\tB\x03\xe0A\x02R\aagentId\x12\x1b\n" +
-	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\bagent_id\x18\x01 \x01(\tB\x03\xe0A\x02R\aagentId\x12 \n" +
+	"\tpage_size\x18\x02 \x01(\x05B\x03\xe0A\x01R\bpageSize\x12\"\n" +
 	"\n" +
-	"page_token\x18\x03 \x01(\tR\tpageToken\"w\n" +
-	"\x15ListAgentRunsResponse\x126\n" +
-	"\x04runs\x18\x01 \x03(\v2\".saturn.platform.agent.v1.AgentRunR\x04runs\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\x94\x02\n" +
-	"\x18AgentBlueprintDescriptor\x12\x18\n" +
-	"\apurpose\x18\x01 \x01(\tR\apurpose\x12!\n" +
-	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12 \n" +
-	"\vdescription\x18\x03 \x01(\tR\vdescription\x12!\n" +
-	"\fdefault_tags\x18\x04 \x03(\tR\vdefaultTags\x12<\n" +
-	"\x1adefault_system_instruction\x18\x05 \x01(\tR\x18defaultSystemInstruction\x128\n" +
-	"\x18required_response_schema\x18\x06 \x01(\tR\x16requiredResponseSchema\"m\n" +
-	"\x17GetAgentCatalogResponse\x12R\n" +
+	"page_token\x18\x03 \x01(\tB\x03\xe0A\x01R\tpageToken\"\x81\x01\n" +
+	"\x15ListAgentRunsResponse\x12;\n" +
+	"\x04runs\x18\x01 \x03(\v2\".saturn.platform.agent.v1.AgentRunB\x03\xe0A\x03R\x04runs\x12+\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tB\x03\xe0A\x03R\rnextPageToken\"\xb2\x02\n" +
+	"\x18AgentBlueprintDescriptor\x12\x1d\n" +
+	"\apurpose\x18\x01 \x01(\tB\x03\xe0A\x03R\apurpose\x12&\n" +
+	"\fdisplay_name\x18\x02 \x01(\tB\x03\xe0A\x03R\vdisplayName\x12%\n" +
+	"\vdescription\x18\x03 \x01(\tB\x03\xe0A\x03R\vdescription\x12&\n" +
+	"\fdefault_tags\x18\x04 \x03(\tB\x03\xe0A\x03R\vdefaultTags\x12A\n" +
+	"\x1adefault_system_instruction\x18\x05 \x01(\tB\x03\xe0A\x03R\x18defaultSystemInstruction\x12=\n" +
+	"\x18required_response_schema\x18\x06 \x01(\tB\x03\xe0A\x03R\x16requiredResponseSchema\"\x18\n" +
+	"\x16GetAgentCatalogRequest\"r\n" +
+	"\x17GetAgentCatalogResponse\x12W\n" +
 	"\n" +
-	"blueprints\x18\x01 \x03(\v22.saturn.platform.agent.v1.AgentBlueprintDescriptorR\n" +
-	"blueprints\"\x95\x02\n" +
-	"\x1bProviderBlueprintDescriptor\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
-	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12 \n" +
-	"\vdescription\x18\x03 \x01(\tR\vdescription\x12-\n" +
-	"\x12compatibility_mode\x18\x04 \x01(\tR\x11compatibilityMode\x12&\n" +
-	"\x0fdefault_api_url\x18\x05 \x01(\tR\rdefaultApiUrl\x12-\n" +
-	"\x13is_api_key_required\x18\x06 \x01(\bR\x10isApiKeyRequired\x12\x1b\n" +
-	"\tlogo_icon\x18\a \x01(\tR\blogoIcon\"s\n" +
-	"\x1aGetProviderCatalogResponse\x12U\n" +
+	"blueprints\x18\x01 \x03(\v22.saturn.platform.agent.v1.AgentBlueprintDescriptorB\x03\xe0A\x03R\n" +
+	"blueprints\"\xb8\x02\n" +
+	"\x1bProviderBlueprintDescriptor\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12&\n" +
+	"\fdisplay_name\x18\x02 \x01(\tB\x03\xe0A\x03R\vdisplayName\x12%\n" +
+	"\vdescription\x18\x03 \x01(\tB\x03\xe0A\x03R\vdescription\x122\n" +
+	"\x12compatibility_mode\x18\x04 \x01(\tB\x03\xe0A\x03R\x11compatibilityMode\x12+\n" +
+	"\x0fdefault_api_url\x18\x05 \x01(\tB\x03\xe0A\x03R\rdefaultApiUrl\x122\n" +
+	"\x13is_api_key_required\x18\x06 \x01(\bB\x03\xe0A\x03R\x10isApiKeyRequired\x12 \n" +
+	"\tlogo_icon\x18\a \x01(\tB\x03\xe0A\x03R\blogoIcon\"\x1b\n" +
+	"\x19GetProviderCatalogRequest\"x\n" +
+	"\x1aGetProviderCatalogResponse\x12Z\n" +
 	"\n" +
-	"blueprints\x18\x01 \x03(\v25.saturn.platform.agent.v1.ProviderBlueprintDescriptorR\n" +
-	"blueprints\"n\n" +
-	"\x13DocumentFilePayload\x12\x1a\n" +
-	"\bfilename\x18\x01 \x01(\tR\bfilename\x12!\n" +
-	"\fcontent_type\x18\x02 \x01(\tR\vcontentType\x12\x18\n" +
-	"\acontent\x18\x03 \x01(\fR\acontent\"\xa1\x01\n" +
-	"\x15GetSuggestionsRequest\x12\x18\n" +
-	"\apurpose\x18\x01 \x01(\tR\apurpose\x12!\n" +
-	"\ftext_content\x18\x02 \x01(\tR\vtextContent\x12K\n" +
-	"\tdocuments\x18\x03 \x03(\v2-.saturn.platform.agent.v1.DocumentFilePayloadR\tdocuments\"\x85\x01\n" +
-	"\x16GetSuggestionsResponse\x12\x1d\n" +
+	"blueprints\x18\x01 \x03(\v25.saturn.platform.agent.v1.ProviderBlueprintDescriptorB\x03\xe0A\x03R\n" +
+	"blueprints\"}\n" +
+	"\x13DocumentFilePayload\x12\x1f\n" +
+	"\bfilename\x18\x01 \x01(\tB\x03\xe0A\x02R\bfilename\x12&\n" +
+	"\fcontent_type\x18\x02 \x01(\tB\x03\xe0A\x02R\vcontentType\x12\x1d\n" +
+	"\acontent\x18\x03 \x01(\fB\x03\xe0A\x02R\acontent\"\xb0\x01\n" +
+	"\x15GetSuggestionsRequest\x12\x1d\n" +
+	"\apurpose\x18\x01 \x01(\tB\x03\xe0A\x02R\apurpose\x12&\n" +
+	"\ftext_content\x18\x02 \x01(\tB\x03\xe0A\x01R\vtextContent\x12P\n" +
+	"\tdocuments\x18\x03 \x03(\v2-.saturn.platform.agent.v1.DocumentFilePayloadB\x03\xe0A\x01R\tdocuments\"\x8f\x01\n" +
+	"\x16GetSuggestionsResponse\x12\"\n" +
 	"\n" +
-	"raw_output\x18\x01 \x01(\tR\trawOutput\x12L\n" +
-	"\x15structured_suggestion\x18\x02 \x01(\v2\x17.google.protobuf.StructR\x14structuredSuggestion2\xb9\x0f\n" +
-	"\fAgentService\x12\x91\x01\n" +
-	"\x0eCreateProvider\x12/.saturn.platform.agent.v1.CreateProviderRequest\x1a%.saturn.platform.agent.v1.LLMProvider\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/platform/agent/providers\x12\x8d\x01\n" +
-	"\vGetProvider\x12,.saturn.platform.agent.v1.GetProviderRequest\x1a%.saturn.platform.agent.v1.LLMProvider\")\x82\xd3\xe4\x93\x02#\x12!/v1/platform/agent/providers/{id}\x12~\n" +
-	"\rListProviders\x12\x16.google.protobuf.Empty\x1a/.saturn.platform.agent.v1.ListProvidersResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/v1/platform/agent/providers\x12\x96\x01\n" +
-	"\x0eUpdateProvider\x12/.saturn.platform.agent.v1.UpdateProviderRequest\x1a%.saturn.platform.agent.v1.LLMProvider\",\x82\xd3\xe4\x93\x02&:\x01*\x1a!/v1/platform/agent/providers/{id}\x12\x84\x01\n" +
-	"\x0eDeleteProvider\x12/.saturn.platform.agent.v1.DeleteProviderRequest\x1a\x16.google.protobuf.Empty\")\x82\xd3\xe4\x93\x02#*!/v1/platform/agent/providers/{id}\x12\x82\x01\n" +
-	"\vCreateAgent\x12,.saturn.platform.agent.v1.CreateAgentRequest\x1a\x1f.saturn.platform.agent.v1.Agent\"$\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/v1/platform/agent/agents\x12~\n" +
-	"\bGetAgent\x12).saturn.platform.agent.v1.GetAgentRequest\x1a\x1f.saturn.platform.agent.v1.Agent\"&\x82\xd3\xe4\x93\x02 \x12\x1e/v1/platform/agent/agents/{id}\x12u\n" +
+	"raw_output\x18\x01 \x01(\tB\x03\xe0A\x03R\trawOutput\x12Q\n" +
+	"\x15structured_suggestion\x18\x02 \x01(\v2\x17.google.protobuf.StructB\x03\xe0A\x03R\x14structuredSuggestion2\xaa\x11\n" +
+	"\fAgentService\x12\xab\x01\n" +
+	"\x0eCreateProvider\x12/.saturn.platform.agent.v1.CreateProviderRequest\x1a%.saturn.platform.agent.v1.LLMProvider\"A\xdaA\x17name,compatibility_mode\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/platform/agent/providers\x12\x92\x01\n" +
+	"\vGetProvider\x12,.saturn.platform.agent.v1.GetProviderRequest\x1a%.saturn.platform.agent.v1.LLMProvider\".\xdaA\x02id\x82\xd3\xe4\x93\x02#\x12!/v1/platform/agent/providers/{id}\x12\x96\x01\n" +
+	"\rListProviders\x12..saturn.platform.agent.v1.ListProvidersRequest\x1a/.saturn.platform.agent.v1.ListProvidersResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/v1/platform/agent/providers\x12\xa0\x01\n" +
+	"\x0eUpdateProvider\x12/.saturn.platform.agent.v1.UpdateProviderRequest\x1a%.saturn.platform.agent.v1.LLMProvider\"6\xdaA\aid,name\x82\xd3\xe4\x93\x02&:\x01*\x1a!/v1/platform/agent/providers/{id}\x12\x89\x01\n" +
+	"\x0eDeleteProvider\x12/.saturn.platform.agent.v1.DeleteProviderRequest\x1a\x16.google.protobuf.Empty\".\xdaA\x02id\x82\xd3\xe4\x93\x02#*!/v1/platform/agent/providers/{id}\x12\x9c\x01\n" +
+	"\vCreateAgent\x12,.saturn.platform.agent.v1.CreateAgentRequest\x1a\x1f.saturn.platform.agent.v1.Agent\">\xdaA\x17name,purpose,model_name\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/v1/platform/agent/agents\x12\x83\x01\n" +
+	"\bGetAgent\x12).saturn.platform.agent.v1.GetAgentRequest\x1a\x1f.saturn.platform.agent.v1.Agent\"+\xdaA\x02id\x82\xd3\xe4\x93\x02 \x12\x1e/v1/platform/agent/agents/{id}\x12\x8a\x01\n" +
 	"\n" +
-	"ListAgents\x12\x16.google.protobuf.Empty\x1a,.saturn.platform.agent.v1.ListAgentsResponse\"!\x82\xd3\xe4\x93\x02\x1b\x12\x19/v1/platform/agent/agents\x12\x87\x01\n" +
-	"\vUpdateAgent\x12,.saturn.platform.agent.v1.UpdateAgentRequest\x1a\x1f.saturn.platform.agent.v1.Agent\")\x82\xd3\xe4\x93\x02#:\x01*\x1a\x1e/v1/platform/agent/agents/{id}\x12{\n" +
-	"\vDeleteAgent\x12,.saturn.platform.agent.v1.DeleteAgentRequest\x1a\x16.google.protobuf.Empty\"&\x82\xd3\xe4\x93\x02 *\x1e/v1/platform/agent/agents/{id}\x12\xa3\x01\n" +
-	"\rListAgentRuns\x12..saturn.platform.agent.v1.ListAgentRunsRequest\x1a/.saturn.platform.agent.v1.ListAgentRunsResponse\"1\x82\xd3\xe4\x93\x02+\x12)/v1/platform/agent/agents/{agent_id}/runs\x12\x87\x01\n" +
-	"\x0fGetAgentCatalog\x12\x16.google.protobuf.Empty\x1a1.saturn.platform.agent.v1.GetAgentCatalogResponse\")\x82\xd3\xe4\x93\x02#\x12!/v1/platform/agent/agents-catalog\x12\x90\x01\n" +
-	"\x12GetProviderCatalog\x12\x16.google.protobuf.Empty\x1a4.saturn.platform.agent.v1.GetProviderCatalogResponse\",\x82\xd3\xe4\x93\x02&\x12$/v1/platform/agent/providers-catalog\x12\x9e\x01\n" +
-	"\x0eGetSuggestions\x12/.saturn.platform.agent.v1.GetSuggestionsRequest\x1a0.saturn.platform.agent.v1.GetSuggestionsResponse\")\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/v1/platform/agent/suggestionsBFZDgithub.com/masterkeysrd/saturn/apis/saturn/platform/agent/v1;agentv1b\x06proto3"
+	"ListAgents\x12+.saturn.platform.agent.v1.ListAgentsRequest\x1a,.saturn.platform.agent.v1.ListAgentsResponse\"!\x82\xd3\xe4\x93\x02\x1b\x12\x19/v1/platform/agent/agents\x12\x9c\x01\n" +
+	"\vUpdateAgent\x12,.saturn.platform.agent.v1.UpdateAgentRequest\x1a\x1f.saturn.platform.agent.v1.Agent\">\xdaA\x12id,name,model_name\x82\xd3\xe4\x93\x02#:\x01*\x1a\x1e/v1/platform/agent/agents/{id}\x12\x80\x01\n" +
+	"\vDeleteAgent\x12,.saturn.platform.agent.v1.DeleteAgentRequest\x1a\x16.google.protobuf.Empty\"+\xdaA\x02id\x82\xd3\xe4\x93\x02 *\x1e/v1/platform/agent/agents/{id}\x12\xae\x01\n" +
+	"\rListAgentRuns\x12..saturn.platform.agent.v1.ListAgentRunsRequest\x1a/.saturn.platform.agent.v1.ListAgentRunsResponse\"<\xdaA\bagent_id\x82\xd3\xe4\x93\x02+\x12)/v1/platform/agent/agents/{agent_id}/runs\x12\xa1\x01\n" +
+	"\x0fGetAgentCatalog\x120.saturn.platform.agent.v1.GetAgentCatalogRequest\x1a1.saturn.platform.agent.v1.GetAgentCatalogResponse\")\x82\xd3\xe4\x93\x02#\x12!/v1/platform/agent/agents-catalog\x12\xad\x01\n" +
+	"\x12GetProviderCatalog\x123.saturn.platform.agent.v1.GetProviderCatalogRequest\x1a4.saturn.platform.agent.v1.GetProviderCatalogResponse\",\x82\xd3\xe4\x93\x02&\x12$/v1/platform/agent/providers-catalog\x12\xb5\x01\n" +
+	"\x0eGetSuggestions\x12/.saturn.platform.agent.v1.GetSuggestionsRequest\x1a0.saturn.platform.agent.v1.GetSuggestionsResponse\"@\xdaA\x14purpose,text_content\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/v1/platform/agent/suggestionsBFZDgithub.com/masterkeysrd/saturn/apis/saturn/platform/agent/v1;agentv1b\x06proto3"
 
 var (
 	file_saturn_platform_agent_v1_agent_proto_rawDescOnce sync.Once
@@ -1696,75 +1956,79 @@ func file_saturn_platform_agent_v1_agent_proto_rawDescGZIP() []byte {
 	return file_saturn_platform_agent_v1_agent_proto_rawDescData
 }
 
-var file_saturn_platform_agent_v1_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_saturn_platform_agent_v1_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_saturn_platform_agent_v1_agent_proto_goTypes = []any{
 	(*LLMProvider)(nil),                 // 0: saturn.platform.agent.v1.LLMProvider
 	(*Agent)(nil),                       // 1: saturn.platform.agent.v1.Agent
 	(*AgentRun)(nil),                    // 2: saturn.platform.agent.v1.AgentRun
 	(*CreateProviderRequest)(nil),       // 3: saturn.platform.agent.v1.CreateProviderRequest
 	(*GetProviderRequest)(nil),          // 4: saturn.platform.agent.v1.GetProviderRequest
-	(*ListProvidersResponse)(nil),       // 5: saturn.platform.agent.v1.ListProvidersResponse
-	(*UpdateProviderRequest)(nil),       // 6: saturn.platform.agent.v1.UpdateProviderRequest
-	(*DeleteProviderRequest)(nil),       // 7: saturn.platform.agent.v1.DeleteProviderRequest
-	(*CreateAgentRequest)(nil),          // 8: saturn.platform.agent.v1.CreateAgentRequest
-	(*GetAgentRequest)(nil),             // 9: saturn.platform.agent.v1.GetAgentRequest
-	(*ListAgentsResponse)(nil),          // 10: saturn.platform.agent.v1.ListAgentsResponse
-	(*UpdateAgentRequest)(nil),          // 11: saturn.platform.agent.v1.UpdateAgentRequest
-	(*DeleteAgentRequest)(nil),          // 12: saturn.platform.agent.v1.DeleteAgentRequest
-	(*ListAgentRunsRequest)(nil),        // 13: saturn.platform.agent.v1.ListAgentRunsRequest
-	(*ListAgentRunsResponse)(nil),       // 14: saturn.platform.agent.v1.ListAgentRunsResponse
-	(*AgentBlueprintDescriptor)(nil),    // 15: saturn.platform.agent.v1.AgentBlueprintDescriptor
-	(*GetAgentCatalogResponse)(nil),     // 16: saturn.platform.agent.v1.GetAgentCatalogResponse
-	(*ProviderBlueprintDescriptor)(nil), // 17: saturn.platform.agent.v1.ProviderBlueprintDescriptor
-	(*GetProviderCatalogResponse)(nil),  // 18: saturn.platform.agent.v1.GetProviderCatalogResponse
-	(*DocumentFilePayload)(nil),         // 19: saturn.platform.agent.v1.DocumentFilePayload
-	(*GetSuggestionsRequest)(nil),       // 20: saturn.platform.agent.v1.GetSuggestionsRequest
-	(*GetSuggestionsResponse)(nil),      // 21: saturn.platform.agent.v1.GetSuggestionsResponse
-	(*timestamppb.Timestamp)(nil),       // 22: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),             // 23: google.protobuf.Struct
-	(*emptypb.Empty)(nil),               // 24: google.protobuf.Empty
+	(*ListProvidersRequest)(nil),        // 5: saturn.platform.agent.v1.ListProvidersRequest
+	(*ListProvidersResponse)(nil),       // 6: saturn.platform.agent.v1.ListProvidersResponse
+	(*UpdateProviderRequest)(nil),       // 7: saturn.platform.agent.v1.UpdateProviderRequest
+	(*DeleteProviderRequest)(nil),       // 8: saturn.platform.agent.v1.DeleteProviderRequest
+	(*CreateAgentRequest)(nil),          // 9: saturn.platform.agent.v1.CreateAgentRequest
+	(*GetAgentRequest)(nil),             // 10: saturn.platform.agent.v1.GetAgentRequest
+	(*ListAgentsRequest)(nil),           // 11: saturn.platform.agent.v1.ListAgentsRequest
+	(*ListAgentsResponse)(nil),          // 12: saturn.platform.agent.v1.ListAgentsResponse
+	(*UpdateAgentRequest)(nil),          // 13: saturn.platform.agent.v1.UpdateAgentRequest
+	(*DeleteAgentRequest)(nil),          // 14: saturn.platform.agent.v1.DeleteAgentRequest
+	(*ListAgentRunsRequest)(nil),        // 15: saturn.platform.agent.v1.ListAgentRunsRequest
+	(*ListAgentRunsResponse)(nil),       // 16: saturn.platform.agent.v1.ListAgentRunsResponse
+	(*AgentBlueprintDescriptor)(nil),    // 17: saturn.platform.agent.v1.AgentBlueprintDescriptor
+	(*GetAgentCatalogRequest)(nil),      // 18: saturn.platform.agent.v1.GetAgentCatalogRequest
+	(*GetAgentCatalogResponse)(nil),     // 19: saturn.platform.agent.v1.GetAgentCatalogResponse
+	(*ProviderBlueprintDescriptor)(nil), // 20: saturn.platform.agent.v1.ProviderBlueprintDescriptor
+	(*GetProviderCatalogRequest)(nil),   // 21: saturn.platform.agent.v1.GetProviderCatalogRequest
+	(*GetProviderCatalogResponse)(nil),  // 22: saturn.platform.agent.v1.GetProviderCatalogResponse
+	(*DocumentFilePayload)(nil),         // 23: saturn.platform.agent.v1.DocumentFilePayload
+	(*GetSuggestionsRequest)(nil),       // 24: saturn.platform.agent.v1.GetSuggestionsRequest
+	(*GetSuggestionsResponse)(nil),      // 25: saturn.platform.agent.v1.GetSuggestionsResponse
+	(*timestamppb.Timestamp)(nil),       // 26: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),             // 27: google.protobuf.Struct
+	(*emptypb.Empty)(nil),               // 28: google.protobuf.Empty
 }
 var file_saturn_platform_agent_v1_agent_proto_depIdxs = []int32{
-	22, // 0: saturn.platform.agent.v1.LLMProvider.create_time:type_name -> google.protobuf.Timestamp
-	22, // 1: saturn.platform.agent.v1.LLMProvider.update_time:type_name -> google.protobuf.Timestamp
-	22, // 2: saturn.platform.agent.v1.Agent.create_time:type_name -> google.protobuf.Timestamp
-	22, // 3: saturn.platform.agent.v1.Agent.update_time:type_name -> google.protobuf.Timestamp
-	22, // 4: saturn.platform.agent.v1.AgentRun.create_time:type_name -> google.protobuf.Timestamp
+	26, // 0: saturn.platform.agent.v1.LLMProvider.create_time:type_name -> google.protobuf.Timestamp
+	26, // 1: saturn.platform.agent.v1.LLMProvider.update_time:type_name -> google.protobuf.Timestamp
+	26, // 2: saturn.platform.agent.v1.Agent.create_time:type_name -> google.protobuf.Timestamp
+	26, // 3: saturn.platform.agent.v1.Agent.update_time:type_name -> google.protobuf.Timestamp
+	26, // 4: saturn.platform.agent.v1.AgentRun.create_time:type_name -> google.protobuf.Timestamp
 	0,  // 5: saturn.platform.agent.v1.ListProvidersResponse.providers:type_name -> saturn.platform.agent.v1.LLMProvider
 	1,  // 6: saturn.platform.agent.v1.ListAgentsResponse.agents:type_name -> saturn.platform.agent.v1.Agent
 	2,  // 7: saturn.platform.agent.v1.ListAgentRunsResponse.runs:type_name -> saturn.platform.agent.v1.AgentRun
-	15, // 8: saturn.platform.agent.v1.GetAgentCatalogResponse.blueprints:type_name -> saturn.platform.agent.v1.AgentBlueprintDescriptor
-	17, // 9: saturn.platform.agent.v1.GetProviderCatalogResponse.blueprints:type_name -> saturn.platform.agent.v1.ProviderBlueprintDescriptor
-	19, // 10: saturn.platform.agent.v1.GetSuggestionsRequest.documents:type_name -> saturn.platform.agent.v1.DocumentFilePayload
-	23, // 11: saturn.platform.agent.v1.GetSuggestionsResponse.structured_suggestion:type_name -> google.protobuf.Struct
+	17, // 8: saturn.platform.agent.v1.GetAgentCatalogResponse.blueprints:type_name -> saturn.platform.agent.v1.AgentBlueprintDescriptor
+	20, // 9: saturn.platform.agent.v1.GetProviderCatalogResponse.blueprints:type_name -> saturn.platform.agent.v1.ProviderBlueprintDescriptor
+	23, // 10: saturn.platform.agent.v1.GetSuggestionsRequest.documents:type_name -> saturn.platform.agent.v1.DocumentFilePayload
+	27, // 11: saturn.platform.agent.v1.GetSuggestionsResponse.structured_suggestion:type_name -> google.protobuf.Struct
 	3,  // 12: saturn.platform.agent.v1.AgentService.CreateProvider:input_type -> saturn.platform.agent.v1.CreateProviderRequest
 	4,  // 13: saturn.platform.agent.v1.AgentService.GetProvider:input_type -> saturn.platform.agent.v1.GetProviderRequest
-	24, // 14: saturn.platform.agent.v1.AgentService.ListProviders:input_type -> google.protobuf.Empty
-	6,  // 15: saturn.platform.agent.v1.AgentService.UpdateProvider:input_type -> saturn.platform.agent.v1.UpdateProviderRequest
-	7,  // 16: saturn.platform.agent.v1.AgentService.DeleteProvider:input_type -> saturn.platform.agent.v1.DeleteProviderRequest
-	8,  // 17: saturn.platform.agent.v1.AgentService.CreateAgent:input_type -> saturn.platform.agent.v1.CreateAgentRequest
-	9,  // 18: saturn.platform.agent.v1.AgentService.GetAgent:input_type -> saturn.platform.agent.v1.GetAgentRequest
-	24, // 19: saturn.platform.agent.v1.AgentService.ListAgents:input_type -> google.protobuf.Empty
-	11, // 20: saturn.platform.agent.v1.AgentService.UpdateAgent:input_type -> saturn.platform.agent.v1.UpdateAgentRequest
-	12, // 21: saturn.platform.agent.v1.AgentService.DeleteAgent:input_type -> saturn.platform.agent.v1.DeleteAgentRequest
-	13, // 22: saturn.platform.agent.v1.AgentService.ListAgentRuns:input_type -> saturn.platform.agent.v1.ListAgentRunsRequest
-	24, // 23: saturn.platform.agent.v1.AgentService.GetAgentCatalog:input_type -> google.protobuf.Empty
-	24, // 24: saturn.platform.agent.v1.AgentService.GetProviderCatalog:input_type -> google.protobuf.Empty
-	20, // 25: saturn.platform.agent.v1.AgentService.GetSuggestions:input_type -> saturn.platform.agent.v1.GetSuggestionsRequest
+	5,  // 14: saturn.platform.agent.v1.AgentService.ListProviders:input_type -> saturn.platform.agent.v1.ListProvidersRequest
+	7,  // 15: saturn.platform.agent.v1.AgentService.UpdateProvider:input_type -> saturn.platform.agent.v1.UpdateProviderRequest
+	8,  // 16: saturn.platform.agent.v1.AgentService.DeleteProvider:input_type -> saturn.platform.agent.v1.DeleteProviderRequest
+	9,  // 17: saturn.platform.agent.v1.AgentService.CreateAgent:input_type -> saturn.platform.agent.v1.CreateAgentRequest
+	10, // 18: saturn.platform.agent.v1.AgentService.GetAgent:input_type -> saturn.platform.agent.v1.GetAgentRequest
+	11, // 19: saturn.platform.agent.v1.AgentService.ListAgents:input_type -> saturn.platform.agent.v1.ListAgentsRequest
+	13, // 20: saturn.platform.agent.v1.AgentService.UpdateAgent:input_type -> saturn.platform.agent.v1.UpdateAgentRequest
+	14, // 21: saturn.platform.agent.v1.AgentService.DeleteAgent:input_type -> saturn.platform.agent.v1.DeleteAgentRequest
+	15, // 22: saturn.platform.agent.v1.AgentService.ListAgentRuns:input_type -> saturn.platform.agent.v1.ListAgentRunsRequest
+	18, // 23: saturn.platform.agent.v1.AgentService.GetAgentCatalog:input_type -> saturn.platform.agent.v1.GetAgentCatalogRequest
+	21, // 24: saturn.platform.agent.v1.AgentService.GetProviderCatalog:input_type -> saturn.platform.agent.v1.GetProviderCatalogRequest
+	24, // 25: saturn.platform.agent.v1.AgentService.GetSuggestions:input_type -> saturn.platform.agent.v1.GetSuggestionsRequest
 	0,  // 26: saturn.platform.agent.v1.AgentService.CreateProvider:output_type -> saturn.platform.agent.v1.LLMProvider
 	0,  // 27: saturn.platform.agent.v1.AgentService.GetProvider:output_type -> saturn.platform.agent.v1.LLMProvider
-	5,  // 28: saturn.platform.agent.v1.AgentService.ListProviders:output_type -> saturn.platform.agent.v1.ListProvidersResponse
+	6,  // 28: saturn.platform.agent.v1.AgentService.ListProviders:output_type -> saturn.platform.agent.v1.ListProvidersResponse
 	0,  // 29: saturn.platform.agent.v1.AgentService.UpdateProvider:output_type -> saturn.platform.agent.v1.LLMProvider
-	24, // 30: saturn.platform.agent.v1.AgentService.DeleteProvider:output_type -> google.protobuf.Empty
+	28, // 30: saturn.platform.agent.v1.AgentService.DeleteProvider:output_type -> google.protobuf.Empty
 	1,  // 31: saturn.platform.agent.v1.AgentService.CreateAgent:output_type -> saturn.platform.agent.v1.Agent
 	1,  // 32: saturn.platform.agent.v1.AgentService.GetAgent:output_type -> saturn.platform.agent.v1.Agent
-	10, // 33: saturn.platform.agent.v1.AgentService.ListAgents:output_type -> saturn.platform.agent.v1.ListAgentsResponse
+	12, // 33: saturn.platform.agent.v1.AgentService.ListAgents:output_type -> saturn.platform.agent.v1.ListAgentsResponse
 	1,  // 34: saturn.platform.agent.v1.AgentService.UpdateAgent:output_type -> saturn.platform.agent.v1.Agent
-	24, // 35: saturn.platform.agent.v1.AgentService.DeleteAgent:output_type -> google.protobuf.Empty
-	14, // 36: saturn.platform.agent.v1.AgentService.ListAgentRuns:output_type -> saturn.platform.agent.v1.ListAgentRunsResponse
-	16, // 37: saturn.platform.agent.v1.AgentService.GetAgentCatalog:output_type -> saturn.platform.agent.v1.GetAgentCatalogResponse
-	18, // 38: saturn.platform.agent.v1.AgentService.GetProviderCatalog:output_type -> saturn.platform.agent.v1.GetProviderCatalogResponse
-	21, // 39: saturn.platform.agent.v1.AgentService.GetSuggestions:output_type -> saturn.platform.agent.v1.GetSuggestionsResponse
+	28, // 35: saturn.platform.agent.v1.AgentService.DeleteAgent:output_type -> google.protobuf.Empty
+	16, // 36: saturn.platform.agent.v1.AgentService.ListAgentRuns:output_type -> saturn.platform.agent.v1.ListAgentRunsResponse
+	19, // 37: saturn.platform.agent.v1.AgentService.GetAgentCatalog:output_type -> saturn.platform.agent.v1.GetAgentCatalogResponse
+	22, // 38: saturn.platform.agent.v1.AgentService.GetProviderCatalog:output_type -> saturn.platform.agent.v1.GetProviderCatalogResponse
+	25, // 39: saturn.platform.agent.v1.AgentService.GetSuggestions:output_type -> saturn.platform.agent.v1.GetSuggestionsResponse
 	26, // [26:40] is the sub-list for method output_type
 	12, // [12:26] is the sub-list for method input_type
 	12, // [12:12] is the sub-list for extension type_name
@@ -1783,7 +2047,7 @@ func file_saturn_platform_agent_v1_agent_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_saturn_platform_agent_v1_agent_proto_rawDesc), len(file_saturn_platform_agent_v1_agent_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -60,7 +60,7 @@ export function AgentRunsListView() {
   const logAgentId =
     urlAgentId ||
     (agentsData?.agents && agentsData.agents.length > 0
-      ? agentsData.agents[0].id
+      ? agentsData.agents[0].id || ""
       : "")
 
   const handleAgentChange = (id: string | null) => {
@@ -99,7 +99,7 @@ export function AgentRunsListView() {
     }
   )
 
-  const selectedAgent = agentsData?.agents.find((a) => a.id === logAgentId)
+  const selectedAgent = agentsData?.agents?.find((a) => a.id === logAgentId)
 
   return (
     <TooltipProvider>
@@ -129,8 +129,8 @@ export function AgentRunsListView() {
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border border-border/50 bg-card/90 shadow-xl backdrop-blur-xl">
-                  {agentsData?.agents.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
+                  {agentsData?.agents?.map((a) => (
+                    <SelectItem key={a.id || ""} value={a.id || ""}>
                       {a.name}
                     </SelectItem>
                   ))}
@@ -190,7 +190,9 @@ export function AgentRunsListView() {
                         </div>
                         <div className="min-w-0">
                           <div className="text-xs leading-tight font-bold text-foreground">
-                            {new Date(r.createTime).toLocaleString()}
+                            {r.createTime
+                              ? new Date(r.createTime).toLocaleString()
+                              : "-"}
                           </div>
                           <Tooltip>
                             <TooltipTrigger>
@@ -290,7 +292,7 @@ export function AgentRunsListView() {
                     </SheetTitle>
                     <SheetDescription className="font-mono text-xs text-muted-foreground">
                       ID: {selectedRun?.id} •{" "}
-                      {selectedRun
+                      {selectedRun?.createTime
                         ? new Date(selectedRun.createTime).toLocaleString()
                         : ""}
                     </SheetDescription>
@@ -323,7 +325,9 @@ export function AgentRunsListView() {
                     <span className="mb-0.5 block font-sans font-bold text-foreground">
                       Execution Time
                     </span>
-                    {new Date(selectedRun.createTime).toLocaleTimeString()}
+                    {selectedRun.createTime
+                      ? new Date(selectedRun.createTime).toLocaleTimeString()
+                      : "-"}
                   </div>
                 </div>
 
@@ -338,7 +342,9 @@ export function AgentRunsListView() {
                       size="sm"
                       className="h-8 cursor-pointer rounded-lg border border-border/60 bg-transparent px-3 text-xs font-semibold text-muted-foreground hover:bg-muted/50"
                       onClick={() =>
-                        navigator.clipboard.writeText(selectedRun.inputRaw)
+                        navigator.clipboard.writeText(
+                          selectedRun.inputRaw || ""
+                        )
                       }
                     >
                       <Copy className="mr-1.5 h-3.5 w-3.5" />
@@ -362,7 +368,9 @@ export function AgentRunsListView() {
                         size="sm"
                         className="h-8 cursor-pointer rounded-lg border border-border/60 bg-transparent px-3 text-xs font-semibold text-primary hover:bg-muted/50"
                         onClick={() =>
-                          navigator.clipboard.writeText(selectedRun.outputRaw)
+                          navigator.clipboard.writeText(
+                            selectedRun.outputRaw || ""
+                          )
                         }
                       >
                         <Copy className="mr-1.5 h-3.5 w-3.5 text-primary" />

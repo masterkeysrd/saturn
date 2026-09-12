@@ -23,11 +23,11 @@
     },
     {
       "name": "BackupAdmin",
-      "description": "BackupAdmin service handles manual backup runs and logs list monitoring."
+      "description": "BackupAdmin service handles manual backup runs and log monitoring."
     },
     {
       "name": "IntegrationService",
-      "description": "IntegrationService handles configuring, getting, and managing active integrations and their keys."
+      "description": "IntegrationService handles configuring, getting, and managing active integrations and their tokens."
     },
     {
       "name": "MessageAdmin",
@@ -35,7 +35,7 @@
     },
     {
       "name": "SchedulerAdmin",
-      "description": "SchedulerAdmin service provides endpoints for operations monitoring,\nscheduling manual runs, and retrying/killing queued jobs."
+      "description": "SchedulerAdmin provides endpoints for operations monitoring,\nscheduling manual runs, and retrying or killing queued jobs."
     },
     {
       "name": "Spaces",
@@ -51,7 +51,7 @@
   "paths": {
     "/v1/admin/backups": {
       "get": {
-        "summary": "ListBackups returns a list of database backup entries from the index.",
+        "summary": "Lists database backup entries from the index.",
         "operationId": "BackupAdmin_ListBackups",
         "responses": {
           "200": {
@@ -72,7 +72,7 @@
         ]
       },
       "post": {
-        "summary": "TriggerBackup runs a database backup immediately.",
+        "summary": "Triggers an immediate database backup.",
         "operationId": "BackupAdmin_TriggerBackup",
         "responses": {
           "200": {
@@ -91,6 +91,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Request message for BackupAdmin.TriggerBackup.",
             "in": "body",
             "required": true,
             "schema": {
@@ -379,7 +380,7 @@
     },
     "/v1/admin/messages/deliveries": {
       "get": {
-        "summary": "ListDeliveries retrieves a paginated list of message delivery records filtered by topic or status.",
+        "summary": "Lists message delivery records filtered by topic or status.",
         "operationId": "MessageAdmin_ListDeliveries",
         "responses": {
           "200": {
@@ -398,24 +399,28 @@
         "parameters": [
           {
             "name": "topic",
+            "description": "Optional. Filter deliveries by topic name.",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "status",
+            "description": "Optional. Filter deliveries by current status (e.g., pending, processing, completed, failed).",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "subscriberId",
+            "description": "Optional. Filter deliveries by subscriber identifier.",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "pageSize",
+            "description": "Optional. The maximum number of delivery records to return.",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -423,6 +428,7 @@
           },
           {
             "name": "pageToken",
+            "description": "Optional. The cursor-based pagination token from a previous response.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -435,7 +441,7 @@
     },
     "/v1/admin/messages/deliveries/{id}/retry": {
       "post": {
-        "summary": "RetryDelivery resets a failed or stuck delivery record so it can be re-processed immediately.",
+        "summary": "Retries a failed or stuck delivery record so it can be reprocessed immediately.",
         "operationId": "MessageAdmin_RetryDelivery",
         "responses": {
           "200": {
@@ -455,6 +461,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. The unique identifier of the delivery to retry.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -475,7 +482,7 @@
     },
     "/v1/admin/messages/metrics": {
       "get": {
-        "summary": "GetQueueMetrics returns aggregate and per-topic status counters for message deliveries.",
+        "summary": "Retrieves aggregate and per-topic status counters for message deliveries.",
         "operationId": "MessageAdmin_GetQueueMetrics",
         "responses": {
           "200": {
@@ -498,7 +505,7 @@
     },
     "/v1/admin/scheduler/jobs": {
       "get": {
-        "summary": "ListJobs lists all job instances in the queue (pending, processing, failed).",
+        "summary": "Lists all job instances in the queue (pending, processing, failed).",
         "operationId": "SchedulerAdmin_ListJobs",
         "responses": {
           "200": {
@@ -517,7 +524,7 @@
         "parameters": [
           {
             "name": "status",
-            "description": "Optional filter: pending, processing, failed",
+            "description": "Optional. Filter jobs by status (e.g. pending, processing, failed).",
             "in": "query",
             "required": false,
             "type": "string"
@@ -530,7 +537,7 @@
     },
     "/v1/admin/scheduler/jobs/{id}": {
       "delete": {
-        "summary": "DeleteJob removes a job instance from the queue.",
+        "summary": "Removes a job instance from the queue.",
         "operationId": "SchedulerAdmin_DeleteJob",
         "responses": {
           "200": {
@@ -550,6 +557,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. The unique identifier of the job instance to delete.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -562,7 +570,7 @@
     },
     "/v1/admin/scheduler/jobs/{id}/retry": {
       "post": {
-        "summary": "RetryJob resets a failed job's attempt count and sets it to run immediately.",
+        "summary": "Resets a failed job's attempt count and sets it to run immediately.",
         "operationId": "SchedulerAdmin_RetryJob",
         "responses": {
           "200": {
@@ -582,6 +590,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. The unique identifier of the job instance to retry.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -602,7 +611,7 @@
     },
     "/v1/admin/scheduler/schedules": {
       "get": {
-        "summary": "ListSchedules lists all recurring schedules currently defined in the system.",
+        "summary": "Lists all recurring schedules currently defined in the system.",
         "operationId": "SchedulerAdmin_ListSchedules",
         "responses": {
           "200": {
@@ -625,7 +634,7 @@
     },
     "/v1/admin/scheduler/schedules/{id}/pause": {
       "post": {
-        "summary": "PauseSchedule pauses a recurring schedule template.",
+        "summary": "Pauses a recurring schedule template.",
         "operationId": "SchedulerAdmin_PauseSchedule",
         "responses": {
           "200": {
@@ -645,6 +654,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. The unique identifier of the schedule to pause.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -665,7 +675,7 @@
     },
     "/v1/admin/scheduler/schedules/{id}/resume": {
       "post": {
-        "summary": "ResumeSchedule resumes a paused recurring schedule template.",
+        "summary": "Resumes a paused recurring schedule template.",
         "operationId": "SchedulerAdmin_ResumeSchedule",
         "responses": {
           "200": {
@@ -685,6 +695,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. The unique identifier of the schedule to resume.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -705,7 +716,7 @@
     },
     "/v1/admin/scheduler/schedules/{id}/trigger": {
       "post": {
-        "summary": "TriggerSchedule manually spawns a job instance from a schedule template immediately.",
+        "summary": "Manually spawns a job instance from a schedule template immediately.",
         "operationId": "SchedulerAdmin_TriggerSchedule",
         "responses": {
           "200": {
@@ -725,6 +736,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. The unique identifier of the schedule to trigger.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -745,7 +757,7 @@
     },
     "/v1/admin/scheduler/status": {
       "get": {
-        "summary": "GetSchedulerStatus retrieves the current scheduler engine configuration and status.",
+        "summary": "Retrieves the current scheduler engine configuration and status.",
         "operationId": "SchedulerAdmin_GetSchedulerStatus",
         "responses": {
           "200": {
@@ -4079,7 +4091,7 @@
     },
     "/v1/platform/agent/agents": {
       "get": {
-        "summary": "ListAgents lists all active AI Agent instances in the workspace.",
+        "summary": "Lists all active AI Agent instances in the workspace.",
         "operationId": "AgentService_ListAgents",
         "responses": {
           "200": {
@@ -4100,7 +4112,7 @@
         ]
       },
       "post": {
-        "summary": "CreateAgent creates a new AI Agent configured with prompt instructions.",
+        "summary": "Creates a new AI Agent configured with prompt instructions.",
         "operationId": "AgentService_CreateAgent",
         "responses": {
           "200": {
@@ -4119,6 +4131,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Request message for creating an AI agent.",
             "in": "body",
             "required": true,
             "schema": {
@@ -4133,7 +4146,7 @@
     },
     "/v1/platform/agent/agents-catalog": {
       "get": {
-        "summary": "GetAgentCatalog retrieves standard agent purpose blueprints (descriptors).",
+        "summary": "Retrieves standard agent purpose blueprints (descriptors).",
         "operationId": "AgentService_GetAgentCatalog",
         "responses": {
           "200": {
@@ -4156,7 +4169,7 @@
     },
     "/v1/platform/agent/agents/{agentId}/runs": {
       "get": {
-        "summary": "ListAgentRuns retrieves execution history logs for a specific agent.",
+        "summary": "Lists execution history logs for a specific agent.",
         "operationId": "AgentService_ListAgentRuns",
         "responses": {
           "200": {
@@ -4175,12 +4188,14 @@
         "parameters": [
           {
             "name": "agentId",
+            "description": "Required. The unique identifier of the agent whose runs to list.",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "pageSize",
+            "description": "Optional. The maximum number of runs to return in a single response page.",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -4188,6 +4203,7 @@
           },
           {
             "name": "pageToken",
+            "description": "Optional. A pagination token received from a previous listing call.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -4200,7 +4216,7 @@
     },
     "/v1/platform/agent/agents/{id}": {
       "get": {
-        "summary": "GetAgent retrieves a configured Agent's parameters.",
+        "summary": "Retrieves a configured Agent's parameters.",
         "operationId": "AgentService_GetAgent",
         "responses": {
           "200": {
@@ -4219,6 +4235,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. The unique identifier of the agent.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -4229,7 +4246,7 @@
         ]
       },
       "delete": {
-        "summary": "DeleteAgent deletes an AI Agent configuration.",
+        "summary": "Deletes an AI Agent configuration.",
         "operationId": "AgentService_DeleteAgent",
         "responses": {
           "200": {
@@ -4249,6 +4266,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. The unique identifier of the agent to delete.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -4259,7 +4277,7 @@
         ]
       },
       "put": {
-        "summary": "UpdateAgent modifies agent prompt directives or model settings.",
+        "summary": "Updates agent prompt directives or model settings.",
         "operationId": "AgentService_UpdateAgent",
         "responses": {
           "200": {
@@ -4278,6 +4296,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. The unique identifier of the agent to update.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -4298,7 +4317,7 @@
     },
     "/v1/platform/agent/providers": {
       "get": {
-        "summary": "ListProviders lists all configured LLM providers in the workspace.",
+        "summary": "Lists all configured LLM providers in the workspace.",
         "operationId": "AgentService_ListProviders",
         "responses": {
           "200": {
@@ -4319,7 +4338,7 @@
         ]
       },
       "post": {
-        "summary": "CreateProvider registers a new LLM provider connection in the workspace.",
+        "summary": "Creates a new LLM provider connection in the workspace.",
         "operationId": "AgentService_CreateProvider",
         "responses": {
           "200": {
@@ -4338,6 +4357,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Request message for creating an LLM provider.",
             "in": "body",
             "required": true,
             "schema": {
@@ -4352,7 +4372,7 @@
     },
     "/v1/platform/agent/providers-catalog": {
       "get": {
-        "summary": "GetProviderCatalog retrieves standard connection type templates.",
+        "summary": "Retrieves standard connection type templates.",
         "operationId": "AgentService_GetProviderCatalog",
         "responses": {
           "200": {
@@ -4375,7 +4395,7 @@
     },
     "/v1/platform/agent/providers/{id}": {
       "get": {
-        "summary": "GetProvider retrieves a single LLM provider configuration.",
+        "summary": "Retrieves a single LLM provider configuration.",
         "operationId": "AgentService_GetProvider",
         "responses": {
           "200": {
@@ -4394,6 +4414,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. The unique identifier of the provider.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -4404,7 +4425,7 @@
         ]
       },
       "delete": {
-        "summary": "DeleteProvider deletes an LLM provider connection.",
+        "summary": "Deletes an LLM provider connection.",
         "operationId": "AgentService_DeleteProvider",
         "responses": {
           "200": {
@@ -4424,6 +4445,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. The unique identifier of the provider to delete.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -4434,7 +4456,7 @@
         ]
       },
       "put": {
-        "summary": "UpdateProvider modifies LLM provider details (rotates API keys, etc.).",
+        "summary": "Updates LLM provider details (rotates API keys, etc.).",
         "operationId": "AgentService_UpdateProvider",
         "responses": {
           "200": {
@@ -4453,6 +4475,7 @@
         "parameters": [
           {
             "name": "id",
+            "description": "Required. The unique identifier of the provider to update.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -4507,7 +4530,7 @@
     },
     "/v1/platform/integrations": {
       "get": {
-        "summary": "ListIntegrations retrieves all configured integrations for the active Space.",
+        "summary": "Lists all configured integrations for the active workspace.",
         "operationId": "IntegrationService_ListIntegrations",
         "responses": {
           "200": {
@@ -4528,7 +4551,7 @@
         ]
       },
       "post": {
-        "summary": "ConfigureIntegration registers or updates an integration for a Space.",
+        "summary": "Registers or updates an integration configuration for a workspace.",
         "operationId": "IntegrationService_ConfigureIntegration",
         "responses": {
           "200": {
@@ -4547,6 +4570,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Request message for IntegrationService.ConfigureIntegration.",
             "in": "body",
             "required": true,
             "schema": {
@@ -4561,7 +4585,7 @@
     },
     "/v1/platform/integrations/catalog": {
       "get": {
-        "summary": "ListCatalog returns the metadata of all available integrations in the catalog.",
+        "summary": "Lists all available integration descriptors from the catalog.",
         "operationId": "IntegrationService_ListCatalog",
         "responses": {
           "200": {
@@ -4584,7 +4608,7 @@
     },
     "/v1/platform/integrations/{provider}": {
       "get": {
-        "summary": "GetIntegration retrieves the configuration details for a specific provider.",
+        "summary": "Retrieves the configuration details for a specific integration provider.",
         "operationId": "IntegrationService_GetIntegration",
         "responses": {
           "200": {
@@ -4603,12 +4627,14 @@
         "parameters": [
           {
             "name": "provider",
+            "description": "Required. The provider identifier to retrieve.",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "kind",
+            "description": "Optional. The integration kind or category.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -4621,7 +4647,7 @@
     },
     "/v1/platform/integrations/{provider}/tokens": {
       "get": {
-        "summary": "ListIntegrationTokens retrieves all active tokens for an integration.",
+        "summary": "Lists all active authentication tokens for an integration.",
         "operationId": "IntegrationService_ListIntegrationTokens",
         "responses": {
           "200": {
@@ -4640,12 +4666,14 @@
         "parameters": [
           {
             "name": "provider",
+            "description": "Required. The provider identifier whose tokens are to be listed.",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "kind",
+            "description": "Optional. The integration kind or category.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -4656,7 +4684,7 @@
         ]
       },
       "post": {
-        "summary": "CreateIntegrationToken generates a new named token for an integration.",
+        "summary": "Generates a new named authentication token for an integration.",
         "operationId": "IntegrationService_CreateIntegrationToken",
         "responses": {
           "200": {
@@ -4675,6 +4703,7 @@
         "parameters": [
           {
             "name": "provider",
+            "description": "Required. The provider identifier to create a token for.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -4695,7 +4724,7 @@
     },
     "/v1/platform/integrations/{provider}/tokens/{id}": {
       "delete": {
-        "summary": "DeleteIntegrationToken revokes/deletes a specific token by its ID.",
+        "summary": "Revokes and deletes a specific authentication token by ID.",
         "operationId": "IntegrationService_DeleteIntegrationToken",
         "responses": {
           "200": {
@@ -4715,18 +4744,21 @@
         "parameters": [
           {
             "name": "provider",
+            "description": "Required. The provider identifier owning the token.",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "id",
+            "description": "Required. The unique identifier of the token to delete.",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "kind",
+            "description": "Optional. The integration kind or category.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -4739,7 +4771,7 @@
     },
     "/v1/platform/integrations/{provider}:rotate-token": {
       "post": {
-        "summary": "RotateIntegrationToken rotates the hashed token for a specific integration (backwards-compatible single key helper).",
+        "summary": "Rotates the hashed token for an integration.",
         "operationId": "IntegrationService_RotateIntegrationToken",
         "responses": {
           "200": {
@@ -4758,6 +4790,7 @@
         "parameters": [
           {
             "name": "provider",
+            "description": "Required. The provider identifier whose token is to be rotated.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -4778,7 +4811,7 @@
     },
     "/v1/platform/integrations/{provider}:simulate": {
       "post": {
-        "summary": "SimulateWebhook runs a developer simulation parsing a mock webhook payload.",
+        "summary": "Runs a developer simulation parsing a mock webhook payload.",
         "operationId": "IntegrationService_SimulateWebhook",
         "responses": {
           "200": {
@@ -4797,6 +4830,7 @@
         "parameters": [
           {
             "name": "provider",
+            "description": "Required. The provider identifier to simulate.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -5278,34 +5312,43 @@
       "type": "object",
       "properties": {
         "llmProviderId": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. The identifier of the linked LLM provider."
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The updated display name."
         },
         "description": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. The updated description."
         },
         "tags": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Optional. The updated tags."
         },
         "modelName": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The updated model identifier."
         },
         "systemInstruction": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. The updated system prompt instructions."
         },
         "temperature": {
           "type": "number",
-          "format": "double"
+          "format": "double",
+          "description": "Optional. The updated sampling temperature."
         },
         "isEnabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Optional. Whether the agent is active and enabled."
         }
       },
+      "description": "Request message for updating an AI agent.",
       "required": [
         "name",
         "modelName"
@@ -5315,15 +5358,19 @@
       "type": "object",
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The updated name of the provider connection."
         },
         "apiUrl": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. The updated base endpoint URL."
         },
         "apiKey": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. The updated authentication key or bearer token."
         }
       },
+      "description": "Request message for updating an LLM provider.",
       "required": [
         "name"
       ]
@@ -5673,12 +5720,15 @@
       "type": "object",
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. A descriptive name identifying the intended use of the token."
         },
         "kind": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. The integration kind or category."
         }
       },
+      "description": "Request message for IntegrationService.CreateIntegrationToken.",
       "required": [
         "name"
       ]
@@ -5687,26 +5737,32 @@
       "type": "object",
       "properties": {
         "kind": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. The integration kind or category."
         }
-      }
+      },
+      "description": "Request message for IntegrationService.RotateIntegrationToken."
     },
     "IntegrationServiceSimulateWebhookBody": {
       "type": "object",
       "properties": {
         "payload": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The raw webhook payload body to parse and simulate."
         },
         "headers": {
           "type": "object",
           "additionalProperties": {
             "type": "string"
-          }
+          },
+          "description": "Optional. HTTP headers accompanying the simulated webhook request."
         },
         "kind": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. The integration kind or category."
         }
       },
+      "description": "Request message for IntegrationService.SimulateWebhook.",
       "required": [
         "payload"
       ]
@@ -5740,7 +5796,8 @@
       ]
     },
     "MessageAdminRetryDeliveryBody": {
-      "type": "object"
+      "type": "object",
+      "description": "Request message for MessageAdmin.RetryDelivery."
     },
     "RecurringTransactionExecutionState": {
       "type": "object",
@@ -5820,16 +5877,20 @@
       "description": "Parent template source type."
     },
     "SchedulerAdminPauseScheduleBody": {
-      "type": "object"
+      "type": "object",
+      "description": "Request message for pausing a recurring schedule."
     },
     "SchedulerAdminResumeScheduleBody": {
-      "type": "object"
+      "type": "object",
+      "description": "Request message for resuming a paused recurring schedule."
     },
     "SchedulerAdminRetryJobBody": {
-      "type": "object"
+      "type": "object",
+      "description": "Request message for retrying a failed job instance."
     },
     "SchedulerAdminTriggerScheduleBody": {
-      "type": "object"
+      "type": "object",
+      "description": "Request message for triggering a recurring schedule immediately."
     },
     "SpaceMemberProfile": {
       "type": "object",
@@ -6466,111 +6527,166 @@
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The unique identifier of the agent.",
+          "readOnly": true
         },
         "spaceId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The identifier of the workspace owning this agent.",
+          "readOnly": true
         },
         "llmProviderId": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. The identifier of the linked LLM provider connection."
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The display name of the agent."
         },
         "description": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. A detailed description of the agent's responsibilities."
         },
         "purpose": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The functional purpose blueprint of the agent (e.g. INBOX_PARSER)."
         },
         "tags": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Optional. Organizational tags categorized with this agent."
         },
         "modelName": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The model identifier (e.g. gemini-2.5-flash)."
         },
         "systemInstruction": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. System prompt instructions guiding agent execution."
         },
         "temperature": {
           "type": "number",
-          "format": "double"
+          "format": "double",
+          "description": "Optional. Sampling temperature parameter controlling randomness."
         },
         "isEnabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Optional. Whether the agent is active and participating in workflows."
         },
         "createTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. The timestamp when the agent was created.",
+          "readOnly": true
         },
         "updateTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. The timestamp when the agent was last updated.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Configuration details for an autonomous AI worker agent.",
+      "required": [
+        "name",
+        "purpose",
+        "modelName"
+      ]
     },
     "v1AgentBlueprintDescriptor": {
       "type": "object",
       "properties": {
         "purpose": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The unique purpose identifier of the blueprint (e.g. INBOX_PARSER).",
+          "readOnly": true
         },
         "displayName": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The human-readable title of the blueprint.",
+          "readOnly": true
         },
         "description": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Detailed description of what this agent purpose accomplishes.",
+          "readOnly": true
         },
         "defaultTags": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Output only. Default categorization tags recommended for this blueprint.",
+          "readOnly": true
         },
         "defaultSystemInstruction": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Recommended default system prompt instructions.",
+          "readOnly": true
         },
         "requiredResponseSchema": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. JSON schema string describing the expected structured response format.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Specification blueprint defining a standard system agent purpose."
     },
     "v1AgentRun": {
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The unique identifier of the run.",
+          "readOnly": true
         },
         "agentId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The identifier of the agent that executed the run.",
+          "readOnly": true
         },
         "spaceId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The identifier of the workspace where the run occurred.",
+          "readOnly": true
         },
         "status": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The terminal execution status (e.g. SUCCESS, FAILED).",
+          "readOnly": true
         },
         "inputRaw": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The raw input prompt or payload provided to the agent.",
+          "readOnly": true
         },
         "outputRaw": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The raw output text returned by the model.",
+          "readOnly": true
         },
         "errorMessage": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Any error message returned if the execution failed.",
+          "readOnly": true
         },
         "tokensUsed": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Output only. The total number of LLM tokens consumed during execution.",
+          "readOnly": true
         },
         "createTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. The timestamp when the run completed or was recorded.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Record of an individual execution run performed by an agent."
     },
     "v1AnalyzeStatementDocumentRequest": {
       "type": "object",
@@ -6647,29 +6763,44 @@
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The unique identifier of the backup entry.",
+          "readOnly": true
         },
         "filename": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The filename of the backup snapshot archive.",
+          "readOnly": true
         },
         "sizeBytes": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Output only. The size of the backup archive in bytes.",
+          "readOnly": true
         },
         "triggeredBy": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The initiator of the backup (e.g., system scheduler or administrator).",
+          "readOnly": true
         },
         "status": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The status of the backup operation (e.g., success, failed).",
+          "readOnly": true
         },
         "sha256": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The SHA256 checksum of the backup archive file.",
+          "readOnly": true
         },
         "createdAt": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. The timestamp when the backup was created.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "BackupEntry represents a database backup snapshot record."
     },
     "v1Borrowing": {
       "type": "object",
@@ -7000,33 +7131,48 @@
       "type": "object",
       "properties": {
         "provider": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The unique identifier of the provider."
         },
         "kind": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The category or kind of integration."
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The display name of the integration provider."
         },
         "description": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. A human-readable description of the integration capabilities."
         },
         "icon": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. An icon identifier or URL representing the provider."
         },
         "configSchema": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. JSON schema describing configuration parameters."
         },
         "requestSchema": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. JSON schema describing expected incoming requests."
         },
         "responseSchema": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. JSON schema describing response payloads."
         },
         "samplePayload": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. An example payload demonstrating typical webhook data."
         }
-      }
+      },
+      "description": "CatalogDescriptor represents metadata for an available integration type.",
+      "required": [
+        "provider",
+        "kind",
+        "name"
+      ]
     },
     "v1ConfigureFinanceRequest": {
       "type": "object",
@@ -7045,18 +7191,23 @@
       "type": "object",
       "properties": {
         "provider": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The provider identifier to configure."
         },
         "kind": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The integration category or kind."
         },
         "configJson": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The JSON configuration payload for the provider."
         },
         "isEnabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Optional. Whether to immediately enable the integration."
         }
       },
+      "description": "Request message for IntegrationService.ConfigureIntegration.",
       "required": [
         "provider",
         "kind",
@@ -7067,34 +7218,43 @@
       "type": "object",
       "properties": {
         "llmProviderId": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. The identifier of the linked LLM provider."
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The display name of the agent."
         },
         "description": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. A detailed description of the agent's role."
         },
         "purpose": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The functional purpose blueprint (e.g. INBOX_PARSER)."
         },
         "tags": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Optional. Organizational tags assigned to the agent."
         },
         "modelName": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The model identifier to use (e.g. gemini-2.5-flash)."
         },
         "systemInstruction": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. System prompt instructions guiding agent behavior."
         },
         "temperature": {
           "type": "number",
-          "format": "double"
+          "format": "double",
+          "description": "Optional. Sampling temperature parameter controlling randomness."
         }
       },
+      "description": "Request message for creating an AI agent.",
       "required": [
         "name",
         "purpose",
@@ -7105,30 +7265,39 @@
       "type": "object",
       "properties": {
         "token": {
-          "$ref": "#/definitions/v1IntegrationToken"
+          "$ref": "#/definitions/v1IntegrationToken",
+          "description": "Output only. The persisted token metadata.",
+          "readOnly": true
         },
         "rawToken": {
           "type": "string",
-          "title": "Raw unhashed token shown once"
+          "description": "Output only. The raw unhashed authentication token, shown once.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Response message for IntegrationService.CreateIntegrationToken."
     },
     "v1CreateProviderRequest": {
       "type": "object",
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The human-readable name of the provider connection."
         },
         "compatibilityMode": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The compatibility protocol mode (e.g. GEMINI_NATIVE, OPENAI_COMPATIBLE)."
         },
         "apiUrl": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. The base endpoint URL of the LLM API."
         },
         "apiKey": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. The authentication key or bearer token."
         }
       },
+      "description": "Request message for creating an LLM provider.",
       "required": [
         "name",
         "compatibilityMode"
@@ -7213,60 +7382,91 @@
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The unique identifier of the delivery attempt.",
+          "readOnly": true
         },
         "messageId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The underlying event message identifier.",
+          "readOnly": true
         },
         "subscriberId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The subscriber identifier processing this delivery.",
+          "readOnly": true
         },
         "topic": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The topic name of the event.",
+          "readOnly": true
         },
         "status": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The current status of the delivery.",
+          "readOnly": true
         },
         "attempts": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Output only. Current attempt count.",
+          "readOnly": true
         },
         "maxAttempts": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Output only. Maximum retry attempts allowed.",
+          "readOnly": true
         },
         "lastError": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Last error message encountered, if any.",
+          "readOnly": true
         },
         "scheduleTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Scheduled execution time for the next retry attempt.",
+          "readOnly": true
         },
         "createTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Timestamp when the delivery was initially created.",
+          "readOnly": true
         },
         "updateTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. Timestamp when the delivery was last updated.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "DeliveryInfo represents a single message delivery attempt record."
     },
     "v1DocumentFilePayload": {
       "type": "object",
       "properties": {
         "filename": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The original filename of the document."
         },
         "contentType": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The MIME type of the document (e.g. application/pdf, text/csv)."
         },
         "content": {
           "type": "string",
-          "format": "byte"
+          "format": "byte",
+          "description": "Required. The raw binary content of the document."
         }
       },
-      "description": "DocumentFilePayload represents an uploaded file for signal analysis."
+      "description": "File payload containing document content uploaded for analysis.",
+      "required": [
+        "filename",
+        "contentType",
+        "content"
+      ]
     },
     "v1ExchangeRate": {
       "type": "object",
@@ -7394,9 +7594,12 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1AgentBlueprintDescriptor"
-          }
+          },
+          "description": "Output only. The list of supported agent blueprints.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Response message containing available agent purpose blueprints."
     },
     "v1GetInsightsResponse": {
       "type": "object",
@@ -7420,82 +7623,113 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1ProviderBlueprintDescriptor"
-          }
+          },
+          "description": "Output only. The list of supported provider blueprints.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Response message containing available LLM provider blueprints."
     },
     "v1GetQueueMetricsResponse": {
       "type": "object",
       "properties": {
         "totalPending": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Output only. Total pending deliveries across all topics.",
+          "readOnly": true
         },
         "totalProcessing": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Output only. Total processing deliveries across all topics.",
+          "readOnly": true
         },
         "totalCompleted": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Output only. Total completed deliveries across all topics.",
+          "readOnly": true
         },
         "totalFailed": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Output only. Total failed deliveries across all topics.",
+          "readOnly": true
         },
         "totalDeliveries": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Output only. Total recorded deliveries across all topics.",
+          "readOnly": true
         },
         "topics": {
           "type": "array",
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1TopicMetrics"
-          }
+          },
+          "description": "Output only. Detailed metrics broken down by topic.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Response message for MessageAdmin.GetQueueMetrics."
     },
     "v1GetSchedulerStatusResponse": {
       "type": "object",
       "properties": {
         "workerCount": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Output only. The number of active worker routines in the scheduler pool.",
+          "readOnly": true
         },
         "queueSize": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Output only. The number of jobs currently queued or running.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Response message containing scheduler engine configuration and status."
     },
     "v1GetSuggestionsRequest": {
       "type": "object",
       "properties": {
         "purpose": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The target agent purpose blueprint guiding analysis."
         },
         "textContent": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. Textual content or query prompt to analyze."
         },
         "documents": {
           "type": "array",
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1DocumentFilePayload"
-          }
+          },
+          "description": "Optional. Attached document files to be ingested and analyzed."
         }
       },
-      "description": "Request message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions]."
+      "description": "Request message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions].",
+      "required": [
+        "purpose"
+      ]
     },
     "v1GetSuggestionsResponse": {
       "type": "object",
       "properties": {
         "rawOutput": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The raw model completion text.",
+          "readOnly": true
         },
         "structuredSuggestion": {
-          "type": "object"
+          "type": "object",
+          "description": "Output only. The parsed structured suggestions matching the purpose schema.",
+          "readOnly": true
         }
       },
       "description": "Response message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions]."
@@ -7844,62 +8078,94 @@
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The unique identifier of the integration.",
+          "readOnly": true
         },
         "spaceId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The workspace identifier that owns this integration.",
+          "readOnly": true
         },
         "kind": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The integration category or kind (e.g., email, bank, webhook)."
         },
         "provider": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The provider identifier (e.g., plaid, resend, custom)."
         },
         "token": {
           "type": "string",
-          "title": "Only returned on Create/Rotate/Get, raw unhashed token shown to the user once"
+          "description": "Output only. The raw unhashed authentication token, shown once on creation or rotation.",
+          "readOnly": true
         },
         "configJson": {
           "type": "string",
-          "title": "JSON string representing the config settings (allowed_senders, secrets, etc.)"
+          "description": "Optional. The JSON configuration settings for the integration."
         },
         "isEnabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Optional. Whether the integration is currently active and processing events."
         },
         "createTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. The timestamp when the integration was created.",
+          "readOnly": true
         },
         "updateTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. The timestamp when the integration was last updated.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Integration represents a configured third-party integration instance.",
+      "required": [
+        "kind",
+        "provider"
+      ]
     },
     "v1IntegrationToken": {
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The unique identifier of the token.",
+          "readOnly": true
         },
         "integrationId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The integration identifier associated with this token.",
+          "readOnly": true
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The user-assigned descriptive name for the token."
         },
         "tokenHash": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The secure cryptographic hash of the token.",
+          "readOnly": true
         },
         "createTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. The timestamp when the token was created.",
+          "readOnly": true
         },
         "lastUsedTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. The timestamp when the token was last used.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "IntegrationToken represents an authentication token for an integration.",
+      "required": [
+        "name"
+      ]
     },
     "v1InvertStatementSignsResponse": {
       "type": "object",
@@ -7921,76 +8187,115 @@
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The unique identifier of the job instance.",
+          "readOnly": true
         },
         "scheduleId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The identifier of the parent schedule if triggered by one.",
+          "readOnly": true
         },
         "jobType": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The job type or task handler executed by this job.",
+          "readOnly": true
         },
         "payload": {
           "type": "string",
-          "title": "JSON representation of the payload"
+          "description": "Output only. JSON representation of the payload parameters.",
+          "readOnly": true
         },
         "runAt": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. The scheduled execution time.",
+          "readOnly": true
         },
         "status": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The current status of the job (e.g. pending, processing, completed, failed).",
+          "readOnly": true
         },
         "attempts": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Output only. The number of attempts executed so far.",
+          "readOnly": true
         },
         "maxAttempts": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Output only. The maximum number of retry attempts permitted.",
+          "readOnly": true
         },
         "lastError": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The error message from the last failed execution attempt.",
+          "readOnly": true
         },
         "createTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. The timestamp when the job was queued.",
+          "readOnly": true
         },
         "updateTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. The timestamp when the job was last updated.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Details of an individual queued job instance."
     },
     "v1LLMProvider": {
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The unique identifier of the LLM provider.",
+          "readOnly": true
         },
         "spaceId": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The identifier of the workspace owning this provider.",
+          "readOnly": true
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The human-readable name of the provider connection."
         },
         "compatibilityMode": {
-          "type": "string"
+          "type": "string",
+          "description": "Required. The compatibility protocol mode (e.g. GEMINI_NATIVE, OPENAI_COMPATIBLE)."
         },
         "apiUrl": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. The base endpoint URL of the LLM API."
         },
         "apiKey": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional. The authentication key or bearer token used to access the provider."
         },
         "createTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. The timestamp when the provider was registered.",
+          "readOnly": true
         },
         "updateTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. The timestamp when the provider was last updated.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Configuration details for an external LLM provider connection.",
+      "required": [
+        "name",
+        "compatibilityMode"
+      ]
     },
     "v1LimitPropagation": {
       "type": "string",
@@ -8041,12 +8346,17 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1AgentRun"
-          }
+          },
+          "description": "Output only. The list of execution runs.",
+          "readOnly": true
         },
         "nextPageToken": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. A token that can be sent as `page_token` to retrieve the next page.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Response message for listing agent execution runs."
     },
     "v1ListAgentsResponse": {
       "type": "object",
@@ -8056,25 +8366,33 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1Agent"
-          }
+          },
+          "description": "Output only. The list of configured agents.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Response message for listing AI agents."
     },
     "v1ListBackupsResponse": {
       "type": "object",
       "properties": {
         "lastUpdated": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. The timestamp when the backup index was last updated.",
+          "readOnly": true
         },
         "backups": {
           "type": "array",
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1BackupEntry"
-          }
+          },
+          "description": "Output only. The list of database backup entries.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Response message for BackupAdmin.ListBackups."
     },
     "v1ListBorrowingsResponse": {
       "type": "object",
@@ -8120,9 +8438,12 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1CatalogDescriptor"
-          }
+          },
+          "description": "Output only. The list of available integration descriptors.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Response message for IntegrationService.ListCatalog."
     },
     "v1ListCurrenciesResponse": {
       "type": "object",
@@ -8146,12 +8467,17 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1DeliveryInfo"
-          }
+          },
+          "description": "Output only. The list of matching delivery records.",
+          "readOnly": true
         },
         "nextPageToken": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Cursor token to retrieve the next page of results, or empty if no more pages.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Response message for MessageAdmin.ListDeliveries."
     },
     "v1ListExchangeRatesResponse": {
       "type": "object",
@@ -8214,9 +8540,12 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1IntegrationToken"
-          }
+          },
+          "description": "Output only. The active authentication tokens for the integration.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Response message for IntegrationService.ListIntegrationTokens."
     },
     "v1ListIntegrationsResponse": {
       "type": "object",
@@ -8226,9 +8555,12 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1Integration"
-          }
+          },
+          "description": "Output only. The list of configured integration instances.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Response message for IntegrationService.ListIntegrations."
     },
     "v1ListJobsResponse": {
       "type": "object",
@@ -8238,9 +8570,12 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1JobInfo"
-          }
+          },
+          "description": "Output only. The list of queued jobs.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Response message for listing queued job instances."
     },
     "v1ListMySecurityEventsResponse": {
       "type": "object",
@@ -8270,9 +8605,12 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1LLMProvider"
-          }
+          },
+          "description": "Output only. The list of configured LLM providers.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Response message for listing LLM providers."
     },
     "v1ListRecurringTransactionsResponse": {
       "type": "object",
@@ -8318,9 +8656,12 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1ScheduleInfo"
-          }
+          },
+          "description": "Output only. The list of recurring schedules.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Response message for listing recurring schedules."
     },
     "v1ListSecurityEventsResponse": {
       "type": "object",
@@ -8545,27 +8886,42 @@
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The unique identifier of the provider template.",
+          "readOnly": true
         },
         "displayName": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The human-readable display name (e.g. Google Gemini, Ollama).",
+          "readOnly": true
         },
         "description": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Description of the provider and protocol compatibility.",
+          "readOnly": true
         },
         "compatibilityMode": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The compatibility mode constant.",
+          "readOnly": true
         },
         "defaultApiUrl": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The default endpoint URL for this provider type.",
+          "readOnly": true
         },
         "isApiKeyRequired": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Output only. Whether this provider requires an API key for authentication.",
+          "readOnly": true
         },
         "logoIcon": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. Icon identifier or SVG name for UI display.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Specification blueprint describing a supported LLM provider type."
     },
     "v1RecurringTransaction": {
       "type": "object",
@@ -8826,42 +9182,60 @@
       "properties": {
         "token": {
           "type": "string",
-          "title": "The newly generated raw unhashed token"
+          "description": "Output only. The newly generated raw unhashed authentication token.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Response message for IntegrationService.RotateIntegrationToken."
     },
     "v1ScheduleInfo": {
       "type": "object",
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The unique identifier of the schedule.",
+          "readOnly": true
         },
         "jobType": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The job type or task name executed by this schedule.",
+          "readOnly": true
         },
         "payload": {
           "type": "string",
-          "title": "JSON representation of the payload"
+          "description": "Output only. JSON representation of the payload parameters.",
+          "readOnly": true
         },
         "cronExpression": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The cron expression defining schedule frequency.",
+          "readOnly": true
         },
         "nextRunAt": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. The next scheduled execution time.",
+          "readOnly": true
         },
         "status": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The current operational status of the schedule (e.g. active, paused).",
+          "readOnly": true
         },
         "createTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. The timestamp when the schedule was created.",
+          "readOnly": true
         },
         "updateTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Output only. The timestamp when the schedule was last updated.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Details of a recurring schedule template."
     },
     "v1ScheduledTransaction": {
       "type": "object",
@@ -9028,15 +9402,22 @@
       "type": "object",
       "properties": {
         "success": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Output only. Whether the webhook simulation completed successfully.",
+          "readOnly": true
         },
         "message": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. A descriptive status message regarding the simulation result.",
+          "readOnly": true
         },
         "result": {
-          "type": "object"
+          "type": "object",
+          "description": "Output only. Structured output produced by processing the simulated webhook.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Response message for IntegrationService.SimulateWebhook."
     },
     "v1Space": {
       "type": "object",
@@ -9388,29 +9769,42 @@
       "type": "object",
       "properties": {
         "topic": {
-          "type": "string"
+          "type": "string",
+          "description": "Output only. The event topic name.",
+          "readOnly": true
         },
         "pending": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Output only. Number of deliveries waiting in the queue.",
+          "readOnly": true
         },
         "processing": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Output only. Number of deliveries currently being processed.",
+          "readOnly": true
         },
         "completed": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Output only. Number of deliveries successfully completed.",
+          "readOnly": true
         },
         "failed": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Output only. Number of deliveries that have failed after max attempts.",
+          "readOnly": true
         },
         "total": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "Output only. Total number of deliveries recorded for this topic.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "TopicMetrics represents status counters for a specific event topic."
     },
     "v1Transaction": {
       "type": "object",
@@ -9646,15 +10040,19 @@
       ]
     },
     "v1TriggerBackupRequest": {
-      "type": "object"
+      "type": "object",
+      "description": "Request message for BackupAdmin.TriggerBackup."
     },
     "v1TriggerBackupResponse": {
       "type": "object",
       "properties": {
         "backup": {
-          "$ref": "#/definitions/v1BackupEntry"
+          "$ref": "#/definitions/v1BackupEntry",
+          "description": "Output only. The newly created backup entry.",
+          "readOnly": true
         }
-      }
+      },
+      "description": "Response message for BackupAdmin.TriggerBackup."
     },
     "v1UpdateUserRoleResponse": {
       "type": "object",

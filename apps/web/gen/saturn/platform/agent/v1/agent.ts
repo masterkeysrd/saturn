@@ -9,150 +9,479 @@ import {
   type UseMutationOptions,
 } from "@tanstack/react-query"
 
+/**
+ * Configuration details for an external LLM provider connection.
+ */
 export interface LLMProvider {
-  id: string
-  spaceId: string
+  /**
+   * Output only. The unique identifier of the LLM provider.
+   */
+  id?: string
+  /**
+   * Output only. The identifier of the workspace owning this provider.
+   */
+  spaceId?: string
+  /**
+   * Required. The human-readable name of the provider connection.
+   */
   name: string
+  /**
+   * Required. The compatibility protocol mode (e.g. GEMINI_NATIVE, OPENAI_COMPATIBLE).
+   */
   compatibilityMode: string
+  /**
+   * Optional. The base endpoint URL of the LLM API.
+   */
   apiUrl: string
+  /**
+   * Optional. The authentication key or bearer token used to access the provider.
+   */
   apiKey: string
-  createTime: string
-  updateTime: string
-}
-
-export interface Agent {
-  id: string
-  spaceId: string
-  llmProviderId: string
-  name: string
-  description: string
-  purpose: string
-  tags: string[]
-  modelName: string
-  systemInstruction: string
-  temperature: number
-  isEnabled: boolean
-  createTime: string
-  updateTime: string
-}
-
-export interface AgentRun {
-  id: string
-  agentId: string
-  spaceId: string
-  status: string
-  inputRaw: string
-  outputRaw: string
-  errorMessage: string
-  tokensUsed: number
-  createTime: string
-}
-
-export interface CreateProviderRequest {
-  name: string
-  compatibilityMode: string
-  apiUrl: string
-  apiKey: string
-}
-
-export interface GetProviderRequest {
-  id: string
-}
-
-export interface ListProvidersResponse {
-  providers: LLMProvider[]
-}
-
-export interface UpdateProviderRequest {
-  id: string
-  name: string
-  apiUrl: string
-  apiKey: string
-}
-
-export interface DeleteProviderRequest {
-  id: string
-}
-
-export interface CreateAgentRequest {
-  llmProviderId: string
-  name: string
-  description: string
-  purpose: string
-  tags?: string[]
-  modelName: string
-  systemInstruction: string
-  temperature: number
-}
-
-export interface GetAgentRequest {
-  id: string
-}
-
-export interface ListAgentsResponse {
-  agents: Agent[]
-}
-
-export interface UpdateAgentRequest {
-  id: string
-  llmProviderId: string
-  name: string
-  description: string
-  tags?: string[]
-  modelName: string
-  systemInstruction: string
-  temperature: number
-  isEnabled: boolean
-}
-
-export interface DeleteAgentRequest {
-  id: string
-}
-
-export interface ListAgentRunsRequest {
-  agentId: string
-  pageSize: number
-  pageToken: string
-}
-
-export interface ListAgentRunsResponse {
-  runs: AgentRun[]
-  nextPageToken: string
-}
-
-export interface AgentBlueprintDescriptor {
-  purpose: string
-  displayName: string
-  description: string
-  defaultTags: string[]
-  defaultSystemInstruction: string
-  requiredResponseSchema: string
-}
-
-export interface GetAgentCatalogResponse {
-  blueprints: AgentBlueprintDescriptor[]
-}
-
-export interface ProviderBlueprintDescriptor {
-  id: string
-  displayName: string
-  description: string
-  compatibilityMode: string
-  defaultApiUrl: string
-  isApiKeyRequired: boolean
-  logoIcon: string
-}
-
-export interface GetProviderCatalogResponse {
-  blueprints: ProviderBlueprintDescriptor[]
+  /**
+   * Output only. The timestamp when the provider was registered.
+   */
+  createTime?: string
+  /**
+   * Output only. The timestamp when the provider was last updated.
+   */
+  updateTime?: string
 }
 
 /**
- * DocumentFilePayload represents an uploaded file for signal analysis.
+ * Configuration details for an autonomous AI worker agent.
+ */
+export interface Agent {
+  /**
+   * Output only. The unique identifier of the agent.
+   */
+  id?: string
+  /**
+   * Output only. The identifier of the workspace owning this agent.
+   */
+  spaceId?: string
+  /**
+   * Optional. The identifier of the linked LLM provider connection.
+   */
+  llmProviderId: string
+  /**
+   * Required. The display name of the agent.
+   */
+  name: string
+  /**
+   * Optional. A detailed description of the agent's responsibilities.
+   */
+  description: string
+  /**
+   * Required. The functional purpose blueprint of the agent (e.g. INBOX_PARSER).
+   */
+  purpose: string
+  /**
+   * Optional. Organizational tags categorized with this agent.
+   */
+  tags: string[]
+  /**
+   * Required. The model identifier (e.g. gemini-2.5-flash).
+   */
+  modelName: string
+  /**
+   * Optional. System prompt instructions guiding agent execution.
+   */
+  systemInstruction: string
+  /**
+   * Optional. Sampling temperature parameter controlling randomness.
+   */
+  temperature: number
+  /**
+   * Optional. Whether the agent is active and participating in workflows.
+   */
+  isEnabled: boolean
+  /**
+   * Output only. The timestamp when the agent was created.
+   */
+  createTime?: string
+  /**
+   * Output only. The timestamp when the agent was last updated.
+   */
+  updateTime?: string
+}
+
+/**
+ * Record of an individual execution run performed by an agent.
+ */
+export interface AgentRun {
+  /**
+   * Output only. The unique identifier of the run.
+   */
+  id?: string
+  /**
+   * Output only. The identifier of the agent that executed the run.
+   */
+  agentId?: string
+  /**
+   * Output only. The identifier of the workspace where the run occurred.
+   */
+  spaceId?: string
+  /**
+   * Output only. The terminal execution status (e.g. SUCCESS, FAILED).
+   */
+  status?: string
+  /**
+   * Output only. The raw input prompt or payload provided to the agent.
+   */
+  inputRaw?: string
+  /**
+   * Output only. The raw output text returned by the model.
+   */
+  outputRaw?: string
+  /**
+   * Output only. Any error message returned if the execution failed.
+   */
+  errorMessage?: string
+  /**
+   * Output only. The total number of LLM tokens consumed during execution.
+   */
+  tokensUsed?: number
+  /**
+   * Output only. The timestamp when the run completed or was recorded.
+   */
+  createTime?: string
+}
+
+/**
+ * Request message for creating an LLM provider.
+ */
+export interface CreateProviderRequest {
+  /**
+   * Required. The human-readable name of the provider connection.
+   */
+  name: string
+  /**
+   * Required. The compatibility protocol mode (e.g. GEMINI_NATIVE, OPENAI_COMPATIBLE).
+   */
+  compatibilityMode: string
+  /**
+   * Optional. The base endpoint URL of the LLM API.
+   */
+  apiUrl: string
+  /**
+   * Optional. The authentication key or bearer token.
+   */
+  apiKey: string
+}
+
+/**
+ * Request message for retrieving an LLM provider.
+ */
+export interface GetProviderRequest {
+  /**
+   * Required. The unique identifier of the provider.
+   */
+  id: string
+}
+
+/**
+ * Request message for listing LLM providers.
+ */
+export type ListProvidersRequest = Record<string, never>
+
+/**
+ * Response message for listing LLM providers.
+ */
+export interface ListProvidersResponse {
+  /**
+   * Output only. The list of configured LLM providers.
+   */
+  providers?: LLMProvider[]
+}
+
+/**
+ * Request message for updating an LLM provider.
+ */
+export interface UpdateProviderRequest {
+  /**
+   * Required. The unique identifier of the provider to update.
+   */
+  id: string
+  /**
+   * Required. The updated name of the provider connection.
+   */
+  name: string
+  /**
+   * Optional. The updated base endpoint URL.
+   */
+  apiUrl: string
+  /**
+   * Optional. The updated authentication key or bearer token.
+   */
+  apiKey: string
+}
+
+/**
+ * Request message for deleting an LLM provider.
+ */
+export interface DeleteProviderRequest {
+  /**
+   * Required. The unique identifier of the provider to delete.
+   */
+  id: string
+}
+
+/**
+ * Request message for creating an AI agent.
+ */
+export interface CreateAgentRequest {
+  /**
+   * Optional. The identifier of the linked LLM provider.
+   */
+  llmProviderId: string
+  /**
+   * Required. The display name of the agent.
+   */
+  name: string
+  /**
+   * Optional. A detailed description of the agent's role.
+   */
+  description: string
+  /**
+   * Required. The functional purpose blueprint (e.g. INBOX_PARSER).
+   */
+  purpose: string
+  /**
+   * Optional. Organizational tags assigned to the agent.
+   */
+  tags?: string[]
+  /**
+   * Required. The model identifier to use (e.g. gemini-2.5-flash).
+   */
+  modelName: string
+  /**
+   * Optional. System prompt instructions guiding agent behavior.
+   */
+  systemInstruction: string
+  /**
+   * Optional. Sampling temperature parameter controlling randomness.
+   */
+  temperature: number
+}
+
+/**
+ * Request message for retrieving an AI agent.
+ */
+export interface GetAgentRequest {
+  /**
+   * Required. The unique identifier of the agent.
+   */
+  id: string
+}
+
+/**
+ * Request message for listing AI agents.
+ */
+export type ListAgentsRequest = Record<string, never>
+
+/**
+ * Response message for listing AI agents.
+ */
+export interface ListAgentsResponse {
+  /**
+   * Output only. The list of configured agents.
+   */
+  agents?: Agent[]
+}
+
+/**
+ * Request message for updating an AI agent.
+ */
+export interface UpdateAgentRequest {
+  /**
+   * Required. The unique identifier of the agent to update.
+   */
+  id: string
+  /**
+   * Optional. The identifier of the linked LLM provider.
+   */
+  llmProviderId: string
+  /**
+   * Required. The updated display name.
+   */
+  name: string
+  /**
+   * Optional. The updated description.
+   */
+  description: string
+  /**
+   * Optional. The updated tags.
+   */
+  tags?: string[]
+  /**
+   * Required. The updated model identifier.
+   */
+  modelName: string
+  /**
+   * Optional. The updated system prompt instructions.
+   */
+  systemInstruction: string
+  /**
+   * Optional. The updated sampling temperature.
+   */
+  temperature: number
+  /**
+   * Optional. Whether the agent is active and enabled.
+   */
+  isEnabled: boolean
+}
+
+/**
+ * Request message for deleting an AI agent.
+ */
+export interface DeleteAgentRequest {
+  /**
+   * Required. The unique identifier of the agent to delete.
+   */
+  id: string
+}
+
+/**
+ * Request message for listing agent execution runs.
+ */
+export interface ListAgentRunsRequest {
+  /**
+   * Required. The unique identifier of the agent whose runs to list.
+   */
+  agentId: string
+  /**
+   * Optional. The maximum number of runs to return in a single response page.
+   */
+  pageSize: number
+  /**
+   * Optional. A pagination token received from a previous listing call.
+   */
+  pageToken: string
+}
+
+/**
+ * Response message for listing agent execution runs.
+ */
+export interface ListAgentRunsResponse {
+  /**
+   * Output only. The list of execution runs.
+   */
+  runs?: AgentRun[]
+  /**
+   * Output only. A token that can be sent as `page_token` to retrieve the next page.
+   */
+  nextPageToken?: string
+}
+
+/**
+ * Specification blueprint defining a standard system agent purpose.
+ */
+export interface AgentBlueprintDescriptor {
+  /**
+   * Output only. The unique purpose identifier of the blueprint (e.g. INBOX_PARSER).
+   */
+  purpose?: string
+  /**
+   * Output only. The human-readable title of the blueprint.
+   */
+  displayName?: string
+  /**
+   * Output only. Detailed description of what this agent purpose accomplishes.
+   */
+  description?: string
+  /**
+   * Output only. Default categorization tags recommended for this blueprint.
+   */
+  defaultTags?: string[]
+  /**
+   * Output only. Recommended default system prompt instructions.
+   */
+  defaultSystemInstruction?: string
+  /**
+   * Output only. JSON schema string describing the expected structured response format.
+   */
+  requiredResponseSchema?: string
+}
+
+/**
+ * Request message for retrieving agent blueprints catalog.
+ */
+export type GetAgentCatalogRequest = Record<string, never>
+
+/**
+ * Response message containing available agent purpose blueprints.
+ */
+export interface GetAgentCatalogResponse {
+  /**
+   * Output only. The list of supported agent blueprints.
+   */
+  blueprints?: AgentBlueprintDescriptor[]
+}
+
+/**
+ * Specification blueprint describing a supported LLM provider type.
+ */
+export interface ProviderBlueprintDescriptor {
+  /**
+   * Output only. The unique identifier of the provider template.
+   */
+  id?: string
+  /**
+   * Output only. The human-readable display name (e.g. Google Gemini, Ollama).
+   */
+  displayName?: string
+  /**
+   * Output only. Description of the provider and protocol compatibility.
+   */
+  description?: string
+  /**
+   * Output only. The compatibility mode constant.
+   */
+  compatibilityMode?: string
+  /**
+   * Output only. The default endpoint URL for this provider type.
+   */
+  defaultApiUrl?: string
+  /**
+   * Output only. Whether this provider requires an API key for authentication.
+   */
+  isApiKeyRequired?: boolean
+  /**
+   * Output only. Icon identifier or SVG name for UI display.
+   */
+  logoIcon?: string
+}
+
+/**
+ * Request message for retrieving provider blueprints catalog.
+ */
+export type GetProviderCatalogRequest = Record<string, never>
+
+/**
+ * Response message containing available LLM provider blueprints.
+ */
+export interface GetProviderCatalogResponse {
+  /**
+   * Output only. The list of supported provider blueprints.
+   */
+  blueprints?: ProviderBlueprintDescriptor[]
+}
+
+/**
+ * File payload containing document content uploaded for analysis.
  */
 export interface DocumentFilePayload {
+  /**
+   * Required. The original filename of the document.
+   */
   filename: string
+  /**
+   * Required. The MIME type of the document (e.g. application/pdf, text/csv).
+   */
   contentType: string
+  /**
+   * Required. The raw binary content of the document.
+   */
   content: string
 }
 
@@ -160,8 +489,17 @@ export interface DocumentFilePayload {
  * Request message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions].
  */
 export interface GetSuggestionsRequest {
+  /**
+   * Required. The target agent purpose blueprint guiding analysis.
+   */
   purpose: string
+  /**
+   * Optional. Textual content or query prompt to analyze.
+   */
   textContent: string
+  /**
+   * Optional. Attached document files to be ingested and analyzed.
+   */
   documents?: DocumentFilePayload[]
 }
 
@@ -169,15 +507,21 @@ export interface GetSuggestionsRequest {
  * Response message for [GetSuggestions][saturn.platform.agent.v1.AgentService.GetSuggestions].
  */
 export interface GetSuggestionsResponse {
-  rawOutput: string
-  structuredSuggestion: Record<string, unknown>
+  /**
+   * Output only. The raw model completion text.
+   */
+  rawOutput?: string
+  /**
+   * Output only. The parsed structured suggestions matching the purpose schema.
+   */
+  structuredSuggestion?: Record<string, unknown>
 }
 
 /**
  * AgentService manages LLM connection providers, AI agent instances, and logs.
  */
 /**
- * CreateProvider registers a new LLM provider connection in the workspace.
+ * Creates a new LLM provider connection in the workspace.
  */
 export async function createProvider(
   req: CreateProviderRequest
@@ -199,7 +543,7 @@ export function useCreateProviderMutation(
 }
 
 /**
- * GetProvider retrieves a single LLM provider configuration.
+ * Retrieves a single LLM provider configuration.
  */
 export async function getProvider(
   id: string,
@@ -223,10 +567,10 @@ export function useGetProviderQuery(
 }
 
 /**
- * ListProviders lists all configured LLM providers in the workspace.
+ * Lists all configured LLM providers in the workspace.
  */
 export async function listProviders(
-  _req?: Record<string, never>
+  _req?: ListProvidersRequest
 ): Promise<ListProvidersResponse> {
   return request<ListProvidersResponse>({
     method: "GET",
@@ -235,7 +579,7 @@ export async function listProviders(
 }
 
 export function useListProvidersQuery(
-  req: Record<string, never>,
+  req: ListProvidersRequest,
   options?: Omit<
     UseQueryOptions<ListProvidersResponse, Error>,
     "queryKey" | "queryFn"
@@ -249,7 +593,7 @@ export function useListProvidersQuery(
 }
 
 /**
- * UpdateProvider modifies LLM provider details (rotates API keys, etc.).
+ * Updates LLM provider details (rotates API keys, etc.).
  */
 export async function updateProvider(
   id: string,
@@ -280,7 +624,7 @@ export function useUpdateProviderMutation(
 }
 
 /**
- * DeleteProvider deletes an LLM provider connection.
+ * Deletes an LLM provider connection.
  */
 export async function deleteProvider(
   id: string,
@@ -310,7 +654,7 @@ export function useDeleteProviderMutation(
 }
 
 /**
- * CreateAgent creates a new AI Agent configured with prompt instructions.
+ * Creates a new AI Agent configured with prompt instructions.
  */
 export async function createAgent(req: CreateAgentRequest): Promise<Agent> {
   return request<Agent>({
@@ -330,7 +674,7 @@ export function useCreateAgentMutation(
 }
 
 /**
- * GetAgent retrieves a configured Agent's parameters.
+ * Retrieves a configured Agent's parameters.
  */
 export async function getAgent(
   id: string,
@@ -354,10 +698,10 @@ export function useGetAgentQuery(
 }
 
 /**
- * ListAgents lists all active AI Agent instances in the workspace.
+ * Lists all active AI Agent instances in the workspace.
  */
 export async function listAgents(
-  _req?: Record<string, never>
+  _req?: ListAgentsRequest
 ): Promise<ListAgentsResponse> {
   return request<ListAgentsResponse>({
     method: "GET",
@@ -366,7 +710,7 @@ export async function listAgents(
 }
 
 export function useListAgentsQuery(
-  req: Record<string, never>,
+  req: ListAgentsRequest,
   options?: Omit<
     UseQueryOptions<ListAgentsResponse, Error>,
     "queryKey" | "queryFn"
@@ -380,7 +724,7 @@ export function useListAgentsQuery(
 }
 
 /**
- * UpdateAgent modifies agent prompt directives or model settings.
+ * Updates agent prompt directives or model settings.
  */
 export async function updateAgent(
   id: string,
@@ -407,7 +751,7 @@ export function useUpdateAgentMutation(
 }
 
 /**
- * DeleteAgent deletes an AI Agent configuration.
+ * Deletes an AI Agent configuration.
  */
 export async function deleteAgent(
   id: string,
@@ -437,7 +781,7 @@ export function useDeleteAgentMutation(
 }
 
 /**
- * ListAgentRuns retrieves execution history logs for a specific agent.
+ * Lists execution history logs for a specific agent.
  */
 export async function listAgentRuns(
   agent_id: string,
@@ -467,10 +811,10 @@ export function useListAgentRunsQuery(
 }
 
 /**
- * GetAgentCatalog retrieves standard agent purpose blueprints (descriptors).
+ * Retrieves standard agent purpose blueprints (descriptors).
  */
 export async function getAgentCatalog(
-  _req?: Record<string, never>
+  _req?: GetAgentCatalogRequest
 ): Promise<GetAgentCatalogResponse> {
   return request<GetAgentCatalogResponse>({
     method: "GET",
@@ -479,7 +823,7 @@ export async function getAgentCatalog(
 }
 
 export function useGetAgentCatalogQuery(
-  req: Record<string, never>,
+  req: GetAgentCatalogRequest,
   options?: Omit<
     UseQueryOptions<GetAgentCatalogResponse, Error>,
     "queryKey" | "queryFn"
@@ -493,10 +837,10 @@ export function useGetAgentCatalogQuery(
 }
 
 /**
- * GetProviderCatalog retrieves standard connection type templates.
+ * Retrieves standard connection type templates.
  */
 export async function getProviderCatalog(
-  _req?: Record<string, never>
+  _req?: GetProviderCatalogRequest
 ): Promise<GetProviderCatalogResponse> {
   return request<GetProviderCatalogResponse>({
     method: "GET",
@@ -505,7 +849,7 @@ export async function getProviderCatalog(
 }
 
 export function useGetProviderCatalogQuery(
-  req: Record<string, never>,
+  req: GetProviderCatalogRequest,
   options?: Omit<
     UseQueryOptions<GetProviderCatalogResponse, Error>,
     "queryKey" | "queryFn"

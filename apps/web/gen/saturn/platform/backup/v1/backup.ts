@@ -9,36 +9,84 @@ import {
   type UseMutationOptions,
 } from "@tanstack/react-query"
 
+/**
+ * Request message for BackupAdmin.ListBackups.
+ */
 export type ListBackupsRequest = Record<string, never>
 
+/**
+ * BackupEntry represents a database backup snapshot record.
+ */
 export interface BackupEntry {
-  id: string
-  filename: string
-  sizeBytes: string
-  triggeredBy: string
-  status: string
-  sha256: string
-  createdAt: string
+  /**
+   * Output only. The unique identifier of the backup entry.
+   */
+  id?: string
+  /**
+   * Output only. The filename of the backup snapshot archive.
+   */
+  filename?: string
+  /**
+   * Output only. The size of the backup archive in bytes.
+   */
+  sizeBytes?: string
+  /**
+   * Output only. The initiator of the backup (e.g., system scheduler or administrator).
+   */
+  triggeredBy?: string
+  /**
+   * Output only. The status of the backup operation (e.g., success, failed).
+   */
+  status?: string
+  /**
+   * Output only. The SHA256 checksum of the backup archive file.
+   */
+  sha256?: string
+  /**
+   * Output only. The timestamp when the backup was created.
+   */
+  createdAt?: string
 }
 
+/**
+ * Response message for BackupAdmin.ListBackups.
+ */
 export interface ListBackupsResponse {
-  lastUpdated: string
-  backups: BackupEntry[]
+  /**
+   * Output only. The timestamp when the backup index was last updated.
+   */
+  lastUpdated?: string
+  /**
+   * Output only. The list of database backup entries.
+   */
+  backups?: BackupEntry[]
 }
 
+/**
+ * Request message for BackupAdmin.TriggerBackup.
+ */
 export type TriggerBackupRequest = Record<string, never>
 
+/**
+ * Response message for BackupAdmin.TriggerBackup.
+ */
 export interface TriggerBackupResponse {
-  backup: BackupEntry
+  /**
+   * Output only. The newly created backup entry.
+   */
+  backup?: BackupEntry
 }
 
+/**
+ * Payload for triggering scheduled database backups.
+ */
 export type RunDatabaseBackupPayload = Record<string, never>
 
 /**
- * BackupAdmin service handles manual backup runs and logs list monitoring.
+ * BackupAdmin service handles manual backup runs and log monitoring.
  */
 /**
- * ListBackups returns a list of database backup entries from the index.
+ * Lists database backup entries from the index.
  */
 export async function listBackups(
   _req?: ListBackupsRequest
@@ -64,7 +112,7 @@ export function useListBackupsQuery(
 }
 
 /**
- * TriggerBackup runs a database backup immediately.
+ * Triggers an immediate database backup.
  */
 export async function triggerBackup(
   req?: TriggerBackupRequest

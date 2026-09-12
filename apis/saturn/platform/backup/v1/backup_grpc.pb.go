@@ -27,11 +27,11 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// BackupAdmin service handles manual backup runs and logs list monitoring.
+// BackupAdmin service handles manual backup runs and log monitoring.
 type BackupAdminClient interface {
-	// ListBackups returns a list of database backup entries from the index.
+	// Lists database backup entries from the index.
 	ListBackups(ctx context.Context, in *ListBackupsRequest, opts ...grpc.CallOption) (*ListBackupsResponse, error)
-	// TriggerBackup runs a database backup immediately.
+	// Triggers an immediate database backup.
 	TriggerBackup(ctx context.Context, in *TriggerBackupRequest, opts ...grpc.CallOption) (*TriggerBackupResponse, error)
 }
 
@@ -67,11 +67,11 @@ func (c *backupAdminClient) TriggerBackup(ctx context.Context, in *TriggerBackup
 // All implementations should embed UnimplementedBackupAdminServer
 // for forward compatibility.
 //
-// BackupAdmin service handles manual backup runs and logs list monitoring.
+// BackupAdmin service handles manual backup runs and log monitoring.
 type BackupAdminServer interface {
-	// ListBackups returns a list of database backup entries from the index.
+	// Lists database backup entries from the index.
 	ListBackups(context.Context, *ListBackupsRequest) (*ListBackupsResponse, error)
-	// TriggerBackup runs a database backup immediately.
+	// Triggers an immediate database backup.
 	TriggerBackup(context.Context, *TriggerBackupRequest) (*TriggerBackupResponse, error)
 }
 

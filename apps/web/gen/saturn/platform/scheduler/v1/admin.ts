@@ -9,90 +9,204 @@ import {
   type UseMutationOptions,
 } from "@tanstack/react-query"
 
+/**
+ * Request message for listing recurring schedules.
+ */
 export type ListSchedulesRequest = Record<string, never>
 
+/**
+ * Details of a recurring schedule template.
+ */
 export interface ScheduleInfo {
-  id: string
-  jobType: string
   /**
-   *
-   * @description JSON representation of the payload
+   * Output only. The unique identifier of the schedule.
    */
-  payload: string
-  cronExpression: string
-  nextRunAt: string
-  status: string
-  createTime: string
-  updateTime: string
+  id?: string
+  /**
+   * Output only. The job type or task name executed by this schedule.
+   */
+  jobType?: string
+  /**
+   * Output only. JSON representation of the payload parameters.
+   */
+  payload?: string
+  /**
+   * Output only. The cron expression defining schedule frequency.
+   */
+  cronExpression?: string
+  /**
+   * Output only. The next scheduled execution time.
+   */
+  nextRunAt?: string
+  /**
+   * Output only. The current operational status of the schedule (e.g. active, paused).
+   */
+  status?: string
+  /**
+   * Output only. The timestamp when the schedule was created.
+   */
+  createTime?: string
+  /**
+   * Output only. The timestamp when the schedule was last updated.
+   */
+  updateTime?: string
 }
 
+/**
+ * Response message for listing recurring schedules.
+ */
 export interface ListSchedulesResponse {
-  schedules: ScheduleInfo[]
+  /**
+   * Output only. The list of recurring schedules.
+   */
+  schedules?: ScheduleInfo[]
 }
 
+/**
+ * Request message for listing queued job instances.
+ */
 export interface ListJobsRequest {
   /**
-   *
-   * @description Optional filter: pending, processing, failed
+   * Optional. Filter jobs by status (e.g. pending, processing, failed).
    */
   status: string
 }
 
+/**
+ * Details of an individual queued job instance.
+ */
 export interface JobInfo {
-  id: string
-  scheduleId: string
-  jobType: string
   /**
-   *
-   * @description JSON representation of the payload
+   * Output only. The unique identifier of the job instance.
    */
-  payload: string
-  runAt: string
-  status: string
-  attempts: number
-  maxAttempts: number
-  lastError: string
-  createTime: string
-  updateTime: string
+  id?: string
+  /**
+   * Output only. The identifier of the parent schedule if triggered by one.
+   */
+  scheduleId?: string
+  /**
+   * Output only. The job type or task handler executed by this job.
+   */
+  jobType?: string
+  /**
+   * Output only. JSON representation of the payload parameters.
+   */
+  payload?: string
+  /**
+   * Output only. The scheduled execution time.
+   */
+  runAt?: string
+  /**
+   * Output only. The current status of the job (e.g. pending, processing, completed, failed).
+   */
+  status?: string
+  /**
+   * Output only. The number of attempts executed so far.
+   */
+  attempts?: number
+  /**
+   * Output only. The maximum number of retry attempts permitted.
+   */
+  maxAttempts?: number
+  /**
+   * Output only. The error message from the last failed execution attempt.
+   */
+  lastError?: string
+  /**
+   * Output only. The timestamp when the job was queued.
+   */
+  createTime?: string
+  /**
+   * Output only. The timestamp when the job was last updated.
+   */
+  updateTime?: string
 }
 
+/**
+ * Response message for listing queued job instances.
+ */
 export interface ListJobsResponse {
-  jobs: JobInfo[]
+  /**
+   * Output only. The list of queued jobs.
+   */
+  jobs?: JobInfo[]
 }
 
+/**
+ * Request message for triggering a recurring schedule immediately.
+ */
 export interface TriggerScheduleRequest {
+  /**
+   * Required. The unique identifier of the schedule to trigger.
+   */
   id: string
 }
 
+/**
+ * Request message for pausing a recurring schedule.
+ */
 export interface PauseScheduleRequest {
+  /**
+   * Required. The unique identifier of the schedule to pause.
+   */
   id: string
 }
 
+/**
+ * Request message for resuming a paused recurring schedule.
+ */
 export interface ResumeScheduleRequest {
+  /**
+   * Required. The unique identifier of the schedule to resume.
+   */
   id: string
 }
 
+/**
+ * Request message for retrying a failed job instance.
+ */
 export interface RetryJobRequest {
+  /**
+   * Required. The unique identifier of the job instance to retry.
+   */
   id: string
 }
 
+/**
+ * Request message for deleting a job instance from the queue.
+ */
 export interface DeleteJobRequest {
+  /**
+   * Required. The unique identifier of the job instance to delete.
+   */
   id: string
 }
 
+/**
+ * Request message for retrieving scheduler engine status.
+ */
 export type GetSchedulerStatusRequest = Record<string, never>
 
+/**
+ * Response message containing scheduler engine configuration and status.
+ */
 export interface GetSchedulerStatusResponse {
-  workerCount: number
-  queueSize: number
+  /**
+   * Output only. The number of active worker routines in the scheduler pool.
+   */
+  workerCount?: number
+  /**
+   * Output only. The number of jobs currently queued or running.
+   */
+  queueSize?: number
 }
 
 /**
- * SchedulerAdmin service provides endpoints for operations monitoring,
- * scheduling manual runs, and retrying/killing queued jobs.
+ * SchedulerAdmin provides endpoints for operations monitoring,
+ * scheduling manual runs, and retrying or killing queued jobs.
  */
 /**
- * ListSchedules lists all recurring schedules currently defined in the system.
+ * Lists all recurring schedules currently defined in the system.
  */
 export async function listSchedules(
   _req?: ListSchedulesRequest
@@ -118,7 +232,7 @@ export function useListSchedulesQuery(
 }
 
 /**
- * ListJobs lists all job instances in the queue (pending, processing, failed).
+ * Lists all job instances in the queue (pending, processing, failed).
  */
 export async function listJobs(
   req: ListJobsRequest
@@ -146,7 +260,7 @@ export function useListJobsQuery(
 }
 
 /**
- * GetSchedulerStatus retrieves the current scheduler engine configuration and status.
+ * Retrieves the current scheduler engine configuration and status.
  */
 export async function getSchedulerStatus(
   _req?: GetSchedulerStatusRequest
@@ -172,7 +286,7 @@ export function useGetSchedulerStatusQuery(
 }
 
 /**
- * TriggerSchedule manually spawns a job instance from a schedule template immediately.
+ * Manually spawns a job instance from a schedule template immediately.
  */
 export async function triggerSchedule(
   id: string,
@@ -203,7 +317,7 @@ export function useTriggerScheduleMutation(
 }
 
 /**
- * PauseSchedule pauses a recurring schedule template.
+ * Pauses a recurring schedule template.
  */
 export async function pauseSchedule(
   id: string,
@@ -234,7 +348,7 @@ export function usePauseScheduleMutation(
 }
 
 /**
- * ResumeSchedule resumes a paused recurring schedule template.
+ * Resumes a paused recurring schedule template.
  */
 export async function resumeSchedule(
   id: string,
@@ -265,7 +379,7 @@ export function useResumeScheduleMutation(
 }
 
 /**
- * RetryJob resets a failed job's attempt count and sets it to run immediately.
+ * Resets a failed job's attempt count and sets it to run immediately.
  */
 export async function retryJob(
   id: string,
@@ -296,7 +410,7 @@ export function useRetryJobMutation(
 }
 
 /**
- * DeleteJob removes a job instance from the queue.
+ * Removes a job instance from the queue.
  */
 export async function deleteJob(
   id: string,

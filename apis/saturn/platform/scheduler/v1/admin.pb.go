@@ -24,6 +24,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Request message for listing recurring schedules.
 type ListSchedulesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -60,18 +61,27 @@ func (*ListSchedulesRequest) Descriptor() ([]byte, []int) {
 	return file_saturn_platform_scheduler_v1_admin_proto_rawDescGZIP(), []int{0}
 }
 
+// Details of a recurring schedule template.
 type ScheduleInfo struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	JobType        string                 `protobuf:"bytes,2,opt,name=job_type,json=jobType,proto3" json:"job_type,omitempty"`
-	Payload        string                 `protobuf:"bytes,3,opt,name=payload,proto3" json:"payload,omitempty"` // JSON representation of the payload
-	CronExpression string                 `protobuf:"bytes,4,opt,name=cron_expression,json=cronExpression,proto3" json:"cron_expression,omitempty"`
-	NextRunAt      *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=next_run_at,json=nextRunAt,proto3" json:"next_run_at,omitempty"`
-	Status         string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
-	CreateTime     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
-	UpdateTime     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The unique identifier of the schedule.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Output only. The job type or task name executed by this schedule.
+	JobType string `protobuf:"bytes,2,opt,name=job_type,json=jobType,proto3" json:"job_type,omitempty"`
+	// Output only. JSON representation of the payload parameters.
+	Payload string `protobuf:"bytes,3,opt,name=payload,proto3" json:"payload,omitempty"`
+	// Output only. The cron expression defining schedule frequency.
+	CronExpression string `protobuf:"bytes,4,opt,name=cron_expression,json=cronExpression,proto3" json:"cron_expression,omitempty"`
+	// Output only. The next scheduled execution time.
+	NextRunAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=next_run_at,json=nextRunAt,proto3" json:"next_run_at,omitempty"`
+	// Output only. The current operational status of the schedule (e.g. active, paused).
+	Status string `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
+	// Output only. The timestamp when the schedule was created.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// Output only. The timestamp when the schedule was last updated.
+	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ScheduleInfo) Reset() {
@@ -160,9 +170,11 @@ func (x *ScheduleInfo) GetUpdateTime() *timestamppb.Timestamp {
 	return nil
 }
 
+// Response message for listing recurring schedules.
 type ListSchedulesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Schedules     []*ScheduleInfo        `protobuf:"bytes,1,rep,name=schedules,proto3" json:"schedules,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The list of recurring schedules.
+	Schedules     []*ScheduleInfo `protobuf:"bytes,1,rep,name=schedules,proto3" json:"schedules,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -204,9 +216,11 @@ func (x *ListSchedulesResponse) GetSchedules() []*ScheduleInfo {
 	return nil
 }
 
+// Request message for listing queued job instances.
 type ListJobsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"` // Optional filter: pending, processing, failed
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Optional. Filter jobs by status (e.g. pending, processing, failed).
+	Status        string `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -248,18 +262,30 @@ func (x *ListJobsRequest) GetStatus() string {
 	return ""
 }
 
+// Details of an individual queued job instance.
 type JobInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ScheduleId    string                 `protobuf:"bytes,2,opt,name=schedule_id,json=scheduleId,proto3" json:"schedule_id,omitempty"`
-	JobType       string                 `protobuf:"bytes,3,opt,name=job_type,json=jobType,proto3" json:"job_type,omitempty"`
-	Payload       string                 `protobuf:"bytes,4,opt,name=payload,proto3" json:"payload,omitempty"` // JSON representation of the payload
-	RunAt         *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=run_at,json=runAt,proto3" json:"run_at,omitempty"`
-	Status        string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
-	Attempts      int32                  `protobuf:"varint,7,opt,name=attempts,proto3" json:"attempts,omitempty"`
-	MaxAttempts   int32                  `protobuf:"varint,8,opt,name=max_attempts,json=maxAttempts,proto3" json:"max_attempts,omitempty"`
-	LastError     string                 `protobuf:"bytes,9,opt,name=last_error,json=lastError,proto3" json:"last_error,omitempty"`
-	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The unique identifier of the job instance.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Output only. The identifier of the parent schedule if triggered by one.
+	ScheduleId string `protobuf:"bytes,2,opt,name=schedule_id,json=scheduleId,proto3" json:"schedule_id,omitempty"`
+	// Output only. The job type or task handler executed by this job.
+	JobType string `protobuf:"bytes,3,opt,name=job_type,json=jobType,proto3" json:"job_type,omitempty"`
+	// Output only. JSON representation of the payload parameters.
+	Payload string `protobuf:"bytes,4,opt,name=payload,proto3" json:"payload,omitempty"`
+	// Output only. The scheduled execution time.
+	RunAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=run_at,json=runAt,proto3" json:"run_at,omitempty"`
+	// Output only. The current status of the job (e.g. pending, processing, completed, failed).
+	Status string `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
+	// Output only. The number of attempts executed so far.
+	Attempts int32 `protobuf:"varint,7,opt,name=attempts,proto3" json:"attempts,omitempty"`
+	// Output only. The maximum number of retry attempts permitted.
+	MaxAttempts int32 `protobuf:"varint,8,opt,name=max_attempts,json=maxAttempts,proto3" json:"max_attempts,omitempty"`
+	// Output only. The error message from the last failed execution attempt.
+	LastError string `protobuf:"bytes,9,opt,name=last_error,json=lastError,proto3" json:"last_error,omitempty"`
+	// Output only. The timestamp when the job was queued.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// Output only. The timestamp when the job was last updated.
 	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -372,9 +398,11 @@ func (x *JobInfo) GetUpdateTime() *timestamppb.Timestamp {
 	return nil
 }
 
+// Response message for listing queued job instances.
 type ListJobsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Jobs          []*JobInfo             `protobuf:"bytes,1,rep,name=jobs,proto3" json:"jobs,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The list of queued jobs.
+	Jobs          []*JobInfo `protobuf:"bytes,1,rep,name=jobs,proto3" json:"jobs,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -416,9 +444,11 @@ func (x *ListJobsResponse) GetJobs() []*JobInfo {
 	return nil
 }
 
+// Request message for triggering a recurring schedule immediately.
 type TriggerScheduleRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the schedule to trigger.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -460,9 +490,11 @@ func (x *TriggerScheduleRequest) GetId() string {
 	return ""
 }
 
+// Request message for pausing a recurring schedule.
 type PauseScheduleRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the schedule to pause.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -504,9 +536,11 @@ func (x *PauseScheduleRequest) GetId() string {
 	return ""
 }
 
+// Request message for resuming a paused recurring schedule.
 type ResumeScheduleRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the schedule to resume.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -548,9 +582,11 @@ func (x *ResumeScheduleRequest) GetId() string {
 	return ""
 }
 
+// Request message for retrying a failed job instance.
 type RetryJobRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the job instance to retry.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -592,9 +628,11 @@ func (x *RetryJobRequest) GetId() string {
 	return ""
 }
 
+// Request message for deleting a job instance from the queue.
 type DeleteJobRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required. The unique identifier of the job instance to delete.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -636,6 +674,7 @@ func (x *DeleteJobRequest) GetId() string {
 	return ""
 }
 
+// Request message for retrieving scheduler engine status.
 type GetSchedulerStatusRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -672,10 +711,13 @@ func (*GetSchedulerStatusRequest) Descriptor() ([]byte, []int) {
 	return file_saturn_platform_scheduler_v1_admin_proto_rawDescGZIP(), []int{11}
 }
 
+// Response message containing scheduler engine configuration and status.
 type GetSchedulerStatusResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	WorkerCount   int32                  `protobuf:"varint,1,opt,name=worker_count,json=workerCount,proto3" json:"worker_count,omitempty"`
-	QueueSize     int32                  `protobuf:"varint,2,opt,name=queue_size,json=queueSize,proto3" json:"queue_size,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Output only. The number of active worker routines in the scheduler pool.
+	WorkerCount int32 `protobuf:"varint,1,opt,name=worker_count,json=workerCount,proto3" json:"worker_count,omitempty"`
+	// Output only. The number of jobs currently queued or running.
+	QueueSize     int32 `protobuf:"varint,2,opt,name=queue_size,json=queueSize,proto3" json:"queue_size,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -728,66 +770,66 @@ var File_saturn_platform_scheduler_v1_admin_proto protoreflect.FileDescriptor
 
 const file_saturn_platform_scheduler_v1_admin_proto_rawDesc = "" +
 	"\n" +
-	"(saturn/platform/scheduler/v1/admin.proto\x12\x1csaturn.platform.scheduler.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x16\n" +
-	"\x14ListSchedulesRequest\"\xca\x02\n" +
-	"\fScheduleInfo\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
-	"\bjob_type\x18\x02 \x01(\tR\ajobType\x12\x18\n" +
-	"\apayload\x18\x03 \x01(\tR\apayload\x12'\n" +
-	"\x0fcron_expression\x18\x04 \x01(\tR\x0ecronExpression\x12:\n" +
-	"\vnext_run_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tnextRunAt\x12\x16\n" +
-	"\x06status\x18\x06 \x01(\tR\x06status\x12;\n" +
-	"\vcreate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"createTime\x12;\n" +
-	"\vupdate_time\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime\"a\n" +
-	"\x15ListSchedulesResponse\x12H\n" +
-	"\tschedules\x18\x01 \x03(\v2*.saturn.platform.scheduler.v1.ScheduleInfoR\tschedules\")\n" +
-	"\x0fListJobsRequest\x12\x16\n" +
-	"\x06status\x18\x01 \x01(\tR\x06status\"\x92\x03\n" +
-	"\aJobInfo\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
-	"\vschedule_id\x18\x02 \x01(\tR\n" +
-	"scheduleId\x12\x19\n" +
-	"\bjob_type\x18\x03 \x01(\tR\ajobType\x12\x18\n" +
-	"\apayload\x18\x04 \x01(\tR\apayload\x121\n" +
-	"\x06run_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\x05runAt\x12\x16\n" +
-	"\x06status\x18\x06 \x01(\tR\x06status\x12\x1a\n" +
-	"\battempts\x18\a \x01(\x05R\battempts\x12!\n" +
-	"\fmax_attempts\x18\b \x01(\x05R\vmaxAttempts\x12\x1d\n" +
+	"(saturn/platform/scheduler/v1/admin.proto\x12\x1csaturn.platform.scheduler.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17google/api/client.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x16\n" +
+	"\x14ListSchedulesRequest\"\xf2\x02\n" +
+	"\fScheduleInfo\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\x1e\n" +
+	"\bjob_type\x18\x02 \x01(\tB\x03\xe0A\x03R\ajobType\x12\x1d\n" +
+	"\apayload\x18\x03 \x01(\tB\x03\xe0A\x03R\apayload\x12,\n" +
+	"\x0fcron_expression\x18\x04 \x01(\tB\x03\xe0A\x03R\x0ecronExpression\x12?\n" +
+	"\vnext_run_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tnextRunAt\x12\x1b\n" +
+	"\x06status\x18\x06 \x01(\tB\x03\xe0A\x03R\x06status\x12@\n" +
+	"\vcreate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"createTime\x12@\n" +
+	"\vupdate_time\x18\b \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"updateTime\"f\n" +
+	"\x15ListSchedulesResponse\x12M\n" +
+	"\tschedules\x18\x01 \x03(\v2*.saturn.platform.scheduler.v1.ScheduleInfoB\x03\xe0A\x03R\tschedules\".\n" +
+	"\x0fListJobsRequest\x12\x1b\n" +
+	"\x06status\x18\x01 \x01(\tB\x03\xe0A\x01R\x06status\"\xc9\x03\n" +
+	"\aJobInfo\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12$\n" +
+	"\vschedule_id\x18\x02 \x01(\tB\x03\xe0A\x03R\n" +
+	"scheduleId\x12\x1e\n" +
+	"\bjob_type\x18\x03 \x01(\tB\x03\xe0A\x03R\ajobType\x12\x1d\n" +
+	"\apayload\x18\x04 \x01(\tB\x03\xe0A\x03R\apayload\x126\n" +
+	"\x06run_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\x05runAt\x12\x1b\n" +
+	"\x06status\x18\x06 \x01(\tB\x03\xe0A\x03R\x06status\x12\x1f\n" +
+	"\battempts\x18\a \x01(\x05B\x03\xe0A\x03R\battempts\x12&\n" +
+	"\fmax_attempts\x18\b \x01(\x05B\x03\xe0A\x03R\vmaxAttempts\x12\"\n" +
 	"\n" +
-	"last_error\x18\t \x01(\tR\tlastError\x12;\n" +
+	"last_error\x18\t \x01(\tB\x03\xe0A\x03R\tlastError\x12@\n" +
 	"\vcreate_time\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"createTime\x12;\n" +
-	"\vupdate_time\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime\"M\n" +
-	"\x10ListJobsResponse\x129\n" +
-	"\x04jobs\x18\x01 \x03(\v2%.saturn.platform.scheduler.v1.JobInfoR\x04jobs\"(\n" +
-	"\x16TriggerScheduleRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"&\n" +
-	"\x14PauseScheduleRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"'\n" +
-	"\x15ResumeScheduleRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"!\n" +
-	"\x0fRetryJobRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\"\n" +
-	"\x10DeleteJobRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\x1b\n" +
-	"\x19GetSchedulerStatusRequest\"^\n" +
-	"\x1aGetSchedulerStatusResponse\x12!\n" +
-	"\fworker_count\x18\x01 \x01(\x05R\vworkerCount\x12\x1d\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"createTime\x12@\n" +
+	"\vupdate_time\x18\v \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"updateTime\"R\n" +
+	"\x10ListJobsResponse\x12>\n" +
+	"\x04jobs\x18\x01 \x03(\v2%.saturn.platform.scheduler.v1.JobInfoB\x03\xe0A\x03R\x04jobs\"-\n" +
+	"\x16TriggerScheduleRequest\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"+\n" +
+	"\x14PauseScheduleRequest\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\",\n" +
+	"\x15ResumeScheduleRequest\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"&\n" +
+	"\x0fRetryJobRequest\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"'\n" +
+	"\x10DeleteJobRequest\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x02R\x02id\"\x1b\n" +
+	"\x19GetSchedulerStatusRequest\"h\n" +
+	"\x1aGetSchedulerStatusResponse\x12&\n" +
+	"\fworker_count\x18\x01 \x01(\x05B\x03\xe0A\x03R\vworkerCount\x12\"\n" +
 	"\n" +
-	"queue_size\x18\x02 \x01(\x05R\tqueueSize2\xb0\t\n" +
+	"queue_size\x18\x02 \x01(\x05B\x03\xe0A\x03R\tqueueSize2\xc9\t\n" +
 	"\x0eSchedulerAdmin\x12\x9f\x01\n" +
 	"\rListSchedules\x122.saturn.platform.scheduler.v1.ListSchedulesRequest\x1a3.saturn.platform.scheduler.v1.ListSchedulesResponse\"%\x82\xd3\xe4\x93\x02\x1f\x12\x1d/v1/admin/scheduler/schedules\x12\x8b\x01\n" +
 	"\bListJobs\x12-.saturn.platform.scheduler.v1.ListJobsRequest\x1a..saturn.platform.scheduler.v1.ListJobsResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/v1/admin/scheduler/jobs\x12\xab\x01\n" +
-	"\x12GetSchedulerStatus\x127.saturn.platform.scheduler.v1.GetSchedulerStatusRequest\x1a8.saturn.platform.scheduler.v1.GetSchedulerStatusResponse\"\"\x82\xd3\xe4\x93\x02\x1c\x12\x1a/v1/admin/scheduler/status\x12\x96\x01\n" +
-	"\x0fTriggerSchedule\x124.saturn.platform.scheduler.v1.TriggerScheduleRequest\x1a\x16.google.protobuf.Empty\"5\x82\xd3\xe4\x93\x02/:\x01*\"*/v1/admin/scheduler/schedules/{id}/trigger\x12\x90\x01\n" +
-	"\rPauseSchedule\x122.saturn.platform.scheduler.v1.PauseScheduleRequest\x1a\x16.google.protobuf.Empty\"3\x82\xd3\xe4\x93\x02-:\x01*\"(/v1/admin/scheduler/schedules/{id}/pause\x12\x93\x01\n" +
-	"\x0eResumeSchedule\x123.saturn.platform.scheduler.v1.ResumeScheduleRequest\x1a\x16.google.protobuf.Empty\"4\x82\xd3\xe4\x93\x02.:\x01*\")/v1/admin/scheduler/schedules/{id}/resume\x12\x81\x01\n" +
-	"\bRetryJob\x12-.saturn.platform.scheduler.v1.RetryJobRequest\x1a\x16.google.protobuf.Empty\".\x82\xd3\xe4\x93\x02(:\x01*\"#/v1/admin/scheduler/jobs/{id}/retry\x12z\n" +
-	"\tDeleteJob\x12..saturn.platform.scheduler.v1.DeleteJobRequest\x1a\x16.google.protobuf.Empty\"%\x82\xd3\xe4\x93\x02\x1f*\x1d/v1/admin/scheduler/jobs/{id}BNZLgithub.com/masterkeysrd/saturn/apis/saturn/platform/scheduler/v1;schedulerv1b\x06proto3"
+	"\x12GetSchedulerStatus\x127.saturn.platform.scheduler.v1.GetSchedulerStatusRequest\x1a8.saturn.platform.scheduler.v1.GetSchedulerStatusResponse\"\"\x82\xd3\xe4\x93\x02\x1c\x12\x1a/v1/admin/scheduler/status\x12\x9b\x01\n" +
+	"\x0fTriggerSchedule\x124.saturn.platform.scheduler.v1.TriggerScheduleRequest\x1a\x16.google.protobuf.Empty\":\xdaA\x02id\x82\xd3\xe4\x93\x02/:\x01*\"*/v1/admin/scheduler/schedules/{id}/trigger\x12\x95\x01\n" +
+	"\rPauseSchedule\x122.saturn.platform.scheduler.v1.PauseScheduleRequest\x1a\x16.google.protobuf.Empty\"8\xdaA\x02id\x82\xd3\xe4\x93\x02-:\x01*\"(/v1/admin/scheduler/schedules/{id}/pause\x12\x98\x01\n" +
+	"\x0eResumeSchedule\x123.saturn.platform.scheduler.v1.ResumeScheduleRequest\x1a\x16.google.protobuf.Empty\"9\xdaA\x02id\x82\xd3\xe4\x93\x02.:\x01*\")/v1/admin/scheduler/schedules/{id}/resume\x12\x86\x01\n" +
+	"\bRetryJob\x12-.saturn.platform.scheduler.v1.RetryJobRequest\x1a\x16.google.protobuf.Empty\"3\xdaA\x02id\x82\xd3\xe4\x93\x02(:\x01*\"#/v1/admin/scheduler/jobs/{id}/retry\x12\x7f\n" +
+	"\tDeleteJob\x12..saturn.platform.scheduler.v1.DeleteJobRequest\x1a\x16.google.protobuf.Empty\"*\xdaA\x02id\x82\xd3\xe4\x93\x02\x1f*\x1d/v1/admin/scheduler/jobs/{id}BNZLgithub.com/masterkeysrd/saturn/apis/saturn/platform/scheduler/v1;schedulerv1b\x06proto3"
 
 var (
 	file_saturn_platform_scheduler_v1_admin_proto_rawDescOnce sync.Once

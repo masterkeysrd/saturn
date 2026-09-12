@@ -22,7 +22,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // Suppress "imported and not used" errors
@@ -104,7 +103,7 @@ func local_request_AgentService_GetProvider_0(ctx context.Context, marshaler run
 
 func request_AgentService_ListProviders_0(ctx context.Context, marshaler runtime.Marshaler, client AgentServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq emptypb.Empty
+		protoReq ListProvidersRequest
 		metadata runtime.ServerMetadata
 	)
 	if req.Body != nil {
@@ -116,7 +115,7 @@ func request_AgentService_ListProviders_0(ctx context.Context, marshaler runtime
 
 func local_request_AgentService_ListProviders_0(ctx context.Context, marshaler runtime.Marshaler, server AgentServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq emptypb.Empty
+		protoReq ListProvidersRequest
 		metadata runtime.ServerMetadata
 	)
 	msg, err := server.ListProviders(ctx, &protoReq)
@@ -275,7 +274,7 @@ func local_request_AgentService_GetAgent_0(ctx context.Context, marshaler runtim
 
 func request_AgentService_ListAgents_0(ctx context.Context, marshaler runtime.Marshaler, client AgentServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq emptypb.Empty
+		protoReq ListAgentsRequest
 		metadata runtime.ServerMetadata
 	)
 	if req.Body != nil {
@@ -287,7 +286,7 @@ func request_AgentService_ListAgents_0(ctx context.Context, marshaler runtime.Ma
 
 func local_request_AgentService_ListAgents_0(ctx context.Context, marshaler runtime.Marshaler, server AgentServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq emptypb.Empty
+		protoReq ListAgentsRequest
 		metadata runtime.ServerMetadata
 	)
 	msg, err := server.ListAgents(ctx, &protoReq)
@@ -433,7 +432,7 @@ func local_request_AgentService_ListAgentRuns_0(ctx context.Context, marshaler r
 
 func request_AgentService_GetAgentCatalog_0(ctx context.Context, marshaler runtime.Marshaler, client AgentServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq emptypb.Empty
+		protoReq GetAgentCatalogRequest
 		metadata runtime.ServerMetadata
 	)
 	if req.Body != nil {
@@ -445,7 +444,7 @@ func request_AgentService_GetAgentCatalog_0(ctx context.Context, marshaler runti
 
 func local_request_AgentService_GetAgentCatalog_0(ctx context.Context, marshaler runtime.Marshaler, server AgentServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq emptypb.Empty
+		protoReq GetAgentCatalogRequest
 		metadata runtime.ServerMetadata
 	)
 	msg, err := server.GetAgentCatalog(ctx, &protoReq)
@@ -454,7 +453,7 @@ func local_request_AgentService_GetAgentCatalog_0(ctx context.Context, marshaler
 
 func request_AgentService_GetProviderCatalog_0(ctx context.Context, marshaler runtime.Marshaler, client AgentServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq emptypb.Empty
+		protoReq GetProviderCatalogRequest
 		metadata runtime.ServerMetadata
 	)
 	if req.Body != nil {
@@ -466,7 +465,7 @@ func request_AgentService_GetProviderCatalog_0(ctx context.Context, marshaler ru
 
 func local_request_AgentService_GetProviderCatalog_0(ctx context.Context, marshaler runtime.Marshaler, server AgentServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq emptypb.Empty
+		protoReq GetProviderCatalogRequest
 		metadata runtime.ServerMetadata
 	)
 	msg, err := server.GetProviderCatalog(ctx, &protoReq)

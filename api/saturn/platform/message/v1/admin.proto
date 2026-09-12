@@ -3,6 +3,8 @@ syntax = "proto3";
 package saturn.platform.message.v1;
 
 import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -10,72 +12,136 @@ option go_package = "github.com/masterkeysrd/saturn/apis/saturn/platform/message
 
 // MessageAdmin service provides administrative endpoints for monitoring event bus message queues.
 service MessageAdmin {
-  // GetQueueMetrics returns aggregate and per-topic status counters for message deliveries.
+  // Retrieves aggregate and per-topic status counters for message deliveries.
   rpc GetQueueMetrics(GetQueueMetricsRequest) returns (GetQueueMetricsResponse) {
     option (google.api.http) = {get: "/v1/admin/messages/metrics"};
   }
 
-  // ListDeliveries retrieves a paginated list of message delivery records filtered by topic or status.
+  // Lists message delivery records filtered by topic or status.
   rpc ListDeliveries(ListDeliveriesRequest) returns (ListDeliveriesResponse) {
     option (google.api.http) = {get: "/v1/admin/messages/deliveries"};
   }
 
-  // RetryDelivery resets a failed or stuck delivery record so it can be re-processed immediately.
+  // Retries a failed or stuck delivery record so it can be reprocessed immediately.
   rpc RetryDelivery(RetryDeliveryRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/v1/admin/messages/deliveries/{id}/retry"
       body: "*"
     };
+    option (google.api.method_signature) = "id";
   }
 }
 
+// Request message for MessageAdmin.GetQueueMetrics.
 message GetQueueMetricsRequest {}
 
+// TopicMetrics represents status counters for a specific event topic.
 message TopicMetrics {
-  string topic = 1;
-  int64 pending = 2;
-  int64 processing = 3;
-  int64 completed = 4;
-  int64 failed = 5;
-  int64 total = 6;
+  // Output only. The event topic name.
+  string topic = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Number of deliveries waiting in the queue.
+  int64 pending = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Number of deliveries currently being processed.
+  int64 processing = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Number of deliveries successfully completed.
+  int64 completed = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Number of deliveries that have failed after max attempts.
+  int64 failed = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Total number of deliveries recorded for this topic.
+  int64 total = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// Response message for MessageAdmin.GetQueueMetrics.
 message GetQueueMetricsResponse {
-  int64 total_pending = 1;
-  int64 total_processing = 2;
-  int64 total_completed = 3;
-  int64 total_failed = 4;
-  int64 total_deliveries = 5;
-  repeated TopicMetrics topics = 6;
+  // Output only. Total pending deliveries across all topics.
+  int64 total_pending = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Total processing deliveries across all topics.
+  int64 total_processing = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Total completed deliveries across all topics.
+  int64 total_completed = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Total failed deliveries across all topics.
+  int64 total_failed = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Total recorded deliveries across all topics.
+  int64 total_deliveries = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Detailed metrics broken down by topic.
+  repeated TopicMetrics topics = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// Request message for MessageAdmin.ListDeliveries.
 message ListDeliveriesRequest {
-  string topic = 1;
-  string status = 2;
-  string subscriber_id = 3;
-  int32 page_size = 4;
-  string page_token = 5;
+  // Optional. Filter deliveries by topic name.
+  string topic = 1 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter deliveries by current status (e.g., pending, processing, completed, failed).
+  string status = 2 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Filter deliveries by subscriber identifier.
+  string subscriber_id = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. The maximum number of delivery records to return.
+  int32 page_size = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. The cursor-based pagination token from a previous response.
+  string page_token = 5 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// DeliveryInfo represents a single message delivery attempt record.
 message DeliveryInfo {
-  string id = 1;
-  string message_id = 2;
-  string subscriber_id = 3;
-  string topic = 4;
-  string status = 5;
-  int32 attempts = 6;
-  int32 max_attempts = 7;
-  string last_error = 8;
-  google.protobuf.Timestamp schedule_time = 9;
-  google.protobuf.Timestamp create_time = 10;
-  google.protobuf.Timestamp update_time = 11;
+  // Output only. The unique identifier of the delivery attempt.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The underlying event message identifier.
+  string message_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The subscriber identifier processing this delivery.
+  string subscriber_id = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The topic name of the event.
+  string topic = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The current status of the delivery.
+  string status = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Current attempt count.
+  int32 attempts = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Maximum retry attempts allowed.
+  int32 max_attempts = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Last error message encountered, if any.
+  string last_error = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Scheduled execution time for the next retry attempt.
+  google.protobuf.Timestamp schedule_time = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp when the delivery was initially created.
+  google.protobuf.Timestamp create_time = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Timestamp when the delivery was last updated.
+  google.protobuf.Timestamp update_time = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// Response message for MessageAdmin.ListDeliveries.
 message ListDeliveriesResponse {
-  repeated DeliveryInfo deliveries = 1;
-  string next_page_token = 2;
+  // Output only. The list of matching delivery records.
+  repeated DeliveryInfo deliveries = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Cursor token to retrieve the next page of results, or empty if no more pages.
+  string next_page_token = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// Request message for MessageAdmin.RetryDelivery.
 message RetryDeliveryRequest {
-  string id = 1;
+  // Required. The unique identifier of the delivery to retry.
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
 }

@@ -9,54 +9,168 @@ import {
   type UseMutationOptions,
 } from "@tanstack/react-query"
 
+/**
+ * Request message for MessageAdmin.GetQueueMetrics.
+ */
 export type GetQueueMetricsRequest = Record<string, never>
 
+/**
+ * TopicMetrics represents status counters for a specific event topic.
+ */
 export interface TopicMetrics {
-  topic: string
-  pending: string
-  processing: string
-  completed: string
-  failed: string
-  total: string
+  /**
+   * Output only. The event topic name.
+   */
+  topic?: string
+  /**
+   * Output only. Number of deliveries waiting in the queue.
+   */
+  pending?: string
+  /**
+   * Output only. Number of deliveries currently being processed.
+   */
+  processing?: string
+  /**
+   * Output only. Number of deliveries successfully completed.
+   */
+  completed?: string
+  /**
+   * Output only. Number of deliveries that have failed after max attempts.
+   */
+  failed?: string
+  /**
+   * Output only. Total number of deliveries recorded for this topic.
+   */
+  total?: string
 }
 
+/**
+ * Response message for MessageAdmin.GetQueueMetrics.
+ */
 export interface GetQueueMetricsResponse {
-  totalPending: string
-  totalProcessing: string
-  totalCompleted: string
-  totalFailed: string
-  totalDeliveries: string
-  topics: TopicMetrics[]
+  /**
+   * Output only. Total pending deliveries across all topics.
+   */
+  totalPending?: string
+  /**
+   * Output only. Total processing deliveries across all topics.
+   */
+  totalProcessing?: string
+  /**
+   * Output only. Total completed deliveries across all topics.
+   */
+  totalCompleted?: string
+  /**
+   * Output only. Total failed deliveries across all topics.
+   */
+  totalFailed?: string
+  /**
+   * Output only. Total recorded deliveries across all topics.
+   */
+  totalDeliveries?: string
+  /**
+   * Output only. Detailed metrics broken down by topic.
+   */
+  topics?: TopicMetrics[]
 }
 
+/**
+ * Request message for MessageAdmin.ListDeliveries.
+ */
 export interface ListDeliveriesRequest {
+  /**
+   * Optional. Filter deliveries by topic name.
+   */
   topic: string
+  /**
+   * Optional. Filter deliveries by current status (e.g., pending, processing, completed, failed).
+   */
   status: string
+  /**
+   * Optional. Filter deliveries by subscriber identifier.
+   */
   subscriberId: string
+  /**
+   * Optional. The maximum number of delivery records to return.
+   */
   pageSize: number
+  /**
+   * Optional. The cursor-based pagination token from a previous response.
+   */
   pageToken: string
 }
 
+/**
+ * DeliveryInfo represents a single message delivery attempt record.
+ */
 export interface DeliveryInfo {
-  id: string
-  messageId: string
-  subscriberId: string
-  topic: string
-  status: string
-  attempts: number
-  maxAttempts: number
-  lastError: string
-  scheduleTime: string
-  createTime: string
-  updateTime: string
+  /**
+   * Output only. The unique identifier of the delivery attempt.
+   */
+  id?: string
+  /**
+   * Output only. The underlying event message identifier.
+   */
+  messageId?: string
+  /**
+   * Output only. The subscriber identifier processing this delivery.
+   */
+  subscriberId?: string
+  /**
+   * Output only. The topic name of the event.
+   */
+  topic?: string
+  /**
+   * Output only. The current status of the delivery.
+   */
+  status?: string
+  /**
+   * Output only. Current attempt count.
+   */
+  attempts?: number
+  /**
+   * Output only. Maximum retry attempts allowed.
+   */
+  maxAttempts?: number
+  /**
+   * Output only. Last error message encountered, if any.
+   */
+  lastError?: string
+  /**
+   * Output only. Scheduled execution time for the next retry attempt.
+   */
+  scheduleTime?: string
+  /**
+   * Output only. Timestamp when the delivery was initially created.
+   */
+  createTime?: string
+  /**
+   * Output only. Timestamp when the delivery was last updated.
+   */
+  updateTime?: string
 }
 
+/**
+ * Response message for MessageAdmin.ListDeliveries.
+ */
 export interface ListDeliveriesResponse {
-  deliveries: DeliveryInfo[]
-  nextPageToken: string
+  /**
+   * Output only. The list of matching delivery records.
+   */
+  deliveries?: DeliveryInfo[]
+  /**
+   * Output only. Cursor token to retrieve the next page of results, or empty if no more pages.
+   */
+  nextPageToken?: string
 }
 
+/**
+ * Request message for MessageAdmin.RetryDelivery.
+ */
 export interface RetryDeliveryRequest {
+  /**
+   * Required. The unique identifier of the delivery to retry.
+   */
   id: string
 }
 
@@ -64,7 +178,7 @@ export interface RetryDeliveryRequest {
  * MessageAdmin service provides administrative endpoints for monitoring event bus message queues.
  */
 /**
- * GetQueueMetrics returns aggregate and per-topic status counters for message deliveries.
+ * Retrieves aggregate and per-topic status counters for message deliveries.
  */
 export async function getQueueMetrics(
   _req?: GetQueueMetricsRequest
@@ -90,7 +204,7 @@ export function useGetQueueMetricsQuery(
 }
 
 /**
- * ListDeliveries retrieves a paginated list of message delivery records filtered by topic or status.
+ * Lists message delivery records filtered by topic or status.
  */
 export async function listDeliveries(
   req: ListDeliveriesRequest
@@ -118,7 +232,7 @@ export function useListDeliveriesQuery(
 }
 
 /**
- * RetryDelivery resets a failed or stuck delivery record so it can be re-processed immediately.
+ * Retries a failed or stuck delivery record so it can be reprocessed immediately.
  */
 export async function retryDelivery(
   id: string,

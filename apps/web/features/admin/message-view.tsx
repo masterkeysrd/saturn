@@ -138,7 +138,8 @@ export function MessageQueueAdminView() {
     setTimeout(() => setCopiedKey(null), 2000)
   }
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status?: string) => {
+    if (!status) return null
     switch (status.toLowerCase()) {
       case "completed":
         return (
@@ -298,7 +299,7 @@ export function MessageQueueAdminView() {
                       <div
                         key={t.topic}
                         onClick={() =>
-                          handleTopicChange(isSelected ? "" : t.topic)
+                          handleTopicChange(isSelected ? "" : t.topic || "")
                         }
                         className={`group cursor-pointer rounded-lg border p-2.5 transition-all ${
                           isSelected
@@ -322,22 +323,22 @@ export function MessageQueueAdminView() {
                         <div className="mt-1.5 flex items-center justify-between text-xs text-muted-foreground">
                           <span>Total: {t.total}</span>
                           <div className="flex items-center gap-2">
-                            {parseInt(t.pending) > 0 && (
+                            {parseInt(t.pending || "0") > 0 && (
                               <span className="font-medium text-amber-500">
                                 {t.pending} pend
                               </span>
                             )}
-                            {parseInt(t.processing) > 0 && (
+                            {parseInt(t.processing || "0") > 0 && (
                               <span className="font-medium text-blue-500">
                                 {t.processing} proc
                               </span>
                             )}
-                            {parseInt(t.failed) > 0 && (
+                            {parseInt(t.failed || "0") > 0 && (
                               <span className="font-medium text-destructive">
                                 {t.failed} fail
                               </span>
                             )}
-                            {parseInt(t.completed) > 0 && (
+                            {parseInt(t.completed || "0") > 0 && (
                               <span className="font-medium text-emerald-500">
                                 {t.completed} ok
                               </span>
@@ -509,7 +510,7 @@ export function MessageQueueAdminView() {
                             )}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                            {formatRelativeTime(item.createTime, now)}
+                            {formatRelativeTime(item.createTime || "", now)}
                           </td>
                           <td
                             className="px-4 py-3 pr-6 text-right"
@@ -529,6 +530,7 @@ export function MessageQueueAdminView() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() =>
+                                  item.id &&
                                   retryMutation.mutate({
                                     id: item.id,
                                     req: { id: item.id },
@@ -643,7 +645,7 @@ export function MessageQueueAdminView() {
                         size="icon-sm"
                         className="h-5 w-5 shrink-0"
                         onClick={() =>
-                          handleCopy(selectedDelivery.messageId, "msgId")
+                          handleCopy(selectedDelivery.messageId || "", "msgId")
                         }
                       >
                         {copiedKey === "msgId" ? (
@@ -679,7 +681,9 @@ export function MessageQueueAdminView() {
                       Created Time
                     </span>
                     <span className="mt-0.5 block truncate font-medium text-foreground">
-                      {new Date(selectedDelivery.createTime).toLocaleString()}
+                      {selectedDelivery.createTime
+                        ? new Date(selectedDelivery.createTime).toLocaleString()
+                        : "-"}
                     </span>
                   </div>
 
@@ -688,7 +692,11 @@ export function MessageQueueAdminView() {
                       Schedule Time
                     </span>
                     <span className="mt-0.5 block truncate font-medium text-foreground">
-                      {new Date(selectedDelivery.scheduleTime).toLocaleString()}
+                      {selectedDelivery.scheduleTime
+                        ? new Date(
+                            selectedDelivery.scheduleTime
+                          ).toLocaleString()
+                        : "-"}
                     </span>
                   </div>
 
@@ -697,7 +705,9 @@ export function MessageQueueAdminView() {
                       Last Update
                     </span>
                     <span className="mt-0.5 block truncate font-medium text-foreground">
-                      {new Date(selectedDelivery.updateTime).toLocaleString()}
+                      {selectedDelivery.updateTime
+                        ? new Date(selectedDelivery.updateTime).toLocaleString()
+                        : "-"}
                     </span>
                   </div>
                 </div>
@@ -714,7 +724,7 @@ export function MessageQueueAdminView() {
                         variant="ghost"
                         size="xs"
                         onClick={() =>
-                          handleCopy(selectedDelivery.lastError, "error")
+                          handleCopy(selectedDelivery.lastError || "", "error")
                         }
                         className="h-6 shrink-0 gap-1 text-[11px] text-muted-foreground hover:text-foreground"
                       >
@@ -750,10 +760,12 @@ export function MessageQueueAdminView() {
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    retryMutation.mutate({
-                      id: selectedDelivery.id,
-                      req: { id: selectedDelivery.id },
-                    })
+                    if (selectedDelivery.id) {
+                      retryMutation.mutate({
+                        id: selectedDelivery.id,
+                        req: { id: selectedDelivery.id },
+                      })
+                    }
                   }}
                   disabled={retryMutation.isPending}
                   className="gap-1.5"

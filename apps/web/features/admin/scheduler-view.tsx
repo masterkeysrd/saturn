@@ -172,7 +172,7 @@ export function SchedulerAdminView() {
     retryMutation.isPending ||
     deleteMutation.isPending
 
-  const formatTime = (timeStr: string) => {
+  const formatTime = (timeStr?: string) => {
     if (!timeStr) return "N/A"
     const d = new Date(timeStr)
     return d.toLocaleString()
@@ -501,7 +501,7 @@ export function SchedulerAdminView() {
                           <div className="flex items-center justify-end gap-2">
                             {isActive ? (
                               <Button
-                                onClick={() => handlePause(s.id)}
+                                onClick={() => s.id && handlePause(s.id)}
                                 disabled={isActionPending}
                                 variant="ghost"
                                 size="sm"
@@ -512,7 +512,7 @@ export function SchedulerAdminView() {
                               </Button>
                             ) : (
                               <Button
-                                onClick={() => handleResume(s.id)}
+                                onClick={() => s.id && handleResume(s.id)}
                                 disabled={isActionPending}
                                 variant="ghost"
                                 size="sm"
@@ -524,7 +524,7 @@ export function SchedulerAdminView() {
                             )}
 
                             <Button
-                              onClick={() => handleTrigger(s.id)}
+                              onClick={() => s.id && handleTrigger(s.id)}
                               disabled={isActionPending}
                               className="h-8 cursor-pointer rounded-xl bg-primary px-3 text-primary-foreground shadow-sm hover:bg-primary/95"
                             >
@@ -671,7 +671,7 @@ export function SchedulerAdminView() {
                         <div className="flex items-center justify-end gap-1.5">
                           {isFailed && (
                             <Button
-                              onClick={() => handleRetry(j.id)}
+                              onClick={() => j.id && handleRetry(j.id)}
                               disabled={isActionPending}
                               variant="ghost"
                               size="sm"
@@ -684,7 +684,7 @@ export function SchedulerAdminView() {
 
                           {!isProcessing && (
                             <Button
-                              onClick={() => handleDelete(j.id)}
+                              onClick={() => j.id && handleDelete(j.id)}
                               disabled={isActionPending}
                               variant="ghost"
                               size="sm"

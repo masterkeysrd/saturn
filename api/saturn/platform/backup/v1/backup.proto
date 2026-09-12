@@ -3,19 +3,20 @@ syntax = "proto3";
 package saturn.platform.backup.v1;
 
 import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
 import "google/protobuf/timestamp.proto";
 import "saturn/platform/scheduler/v1/options.proto";
 
 option go_package = "github.com/masterkeysrd/saturn/apis/saturn/platform/backup/v1;backupv1";
 
-// BackupAdmin service handles manual backup runs and logs list monitoring.
+// BackupAdmin service handles manual backup runs and log monitoring.
 service BackupAdmin {
-  // ListBackups returns a list of database backup entries from the index.
+  // Lists database backup entries from the index.
   rpc ListBackups(ListBackupsRequest) returns (ListBackupsResponse) {
     option (google.api.http) = {get: "/v1/admin/backups"};
   }
 
-  // TriggerBackup runs a database backup immediately.
+  // Triggers an immediate database backup.
   rpc TriggerBackup(TriggerBackupRequest) returns (TriggerBackupResponse) {
     option (google.api.http) = {
       post: "/v1/admin/backups"
@@ -24,29 +25,52 @@ service BackupAdmin {
   }
 }
 
+// Request message for BackupAdmin.ListBackups.
 message ListBackupsRequest {}
 
+// BackupEntry represents a database backup snapshot record.
 message BackupEntry {
-  string id = 1;
-  string filename = 2;
-  int64 size_bytes = 3;
-  string triggered_by = 4;
-  string status = 5;
-  string sha256 = 6;
-  google.protobuf.Timestamp created_at = 7;
+  // Output only. The unique identifier of the backup entry.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The filename of the backup snapshot archive.
+  string filename = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The size of the backup archive in bytes.
+  int64 size_bytes = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The initiator of the backup (e.g., system scheduler or administrator).
+  string triggered_by = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The status of the backup operation (e.g., success, failed).
+  string status = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The SHA256 checksum of the backup archive file.
+  string sha256 = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The timestamp when the backup was created.
+  google.protobuf.Timestamp created_at = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// Response message for BackupAdmin.ListBackups.
 message ListBackupsResponse {
-  google.protobuf.Timestamp last_updated = 1;
-  repeated BackupEntry backups = 2;
+  // Output only. The timestamp when the backup index was last updated.
+  google.protobuf.Timestamp last_updated = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The list of database backup entries.
+  repeated BackupEntry backups = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// Request message for BackupAdmin.TriggerBackup.
 message TriggerBackupRequest {}
 
+// Response message for BackupAdmin.TriggerBackup.
 message TriggerBackupResponse {
-  BackupEntry backup = 1;
+  // Output only. The newly created backup entry.
+  BackupEntry backup = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// Payload for triggering scheduled database backups.
 message RunDatabaseBackupPayload {
   option (saturn.platform.scheduler.v1.job_type) = "backup.RunDatabaseBackup";
 }

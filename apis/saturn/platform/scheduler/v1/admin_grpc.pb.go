@@ -34,24 +34,24 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// SchedulerAdmin service provides endpoints for operations monitoring,
-// scheduling manual runs, and retrying/killing queued jobs.
+// SchedulerAdmin provides endpoints for operations monitoring,
+// scheduling manual runs, and retrying or killing queued jobs.
 type SchedulerAdminClient interface {
-	// ListSchedules lists all recurring schedules currently defined in the system.
+	// Lists all recurring schedules currently defined in the system.
 	ListSchedules(ctx context.Context, in *ListSchedulesRequest, opts ...grpc.CallOption) (*ListSchedulesResponse, error)
-	// ListJobs lists all job instances in the queue (pending, processing, failed).
+	// Lists all job instances in the queue (pending, processing, failed).
 	ListJobs(ctx context.Context, in *ListJobsRequest, opts ...grpc.CallOption) (*ListJobsResponse, error)
-	// GetSchedulerStatus retrieves the current scheduler engine configuration and status.
+	// Retrieves the current scheduler engine configuration and status.
 	GetSchedulerStatus(ctx context.Context, in *GetSchedulerStatusRequest, opts ...grpc.CallOption) (*GetSchedulerStatusResponse, error)
-	// TriggerSchedule manually spawns a job instance from a schedule template immediately.
+	// Manually spawns a job instance from a schedule template immediately.
 	TriggerSchedule(ctx context.Context, in *TriggerScheduleRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// PauseSchedule pauses a recurring schedule template.
+	// Pauses a recurring schedule template.
 	PauseSchedule(ctx context.Context, in *PauseScheduleRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// ResumeSchedule resumes a paused recurring schedule template.
+	// Resumes a paused recurring schedule template.
 	ResumeSchedule(ctx context.Context, in *ResumeScheduleRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// RetryJob resets a failed job's attempt count and sets it to run immediately.
+	// Resets a failed job's attempt count and sets it to run immediately.
 	RetryJob(ctx context.Context, in *RetryJobRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// DeleteJob removes a job instance from the queue.
+	// Removes a job instance from the queue.
 	DeleteJob(ctx context.Context, in *DeleteJobRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
@@ -147,24 +147,24 @@ func (c *schedulerAdminClient) DeleteJob(ctx context.Context, in *DeleteJobReque
 // All implementations should embed UnimplementedSchedulerAdminServer
 // for forward compatibility.
 //
-// SchedulerAdmin service provides endpoints for operations monitoring,
-// scheduling manual runs, and retrying/killing queued jobs.
+// SchedulerAdmin provides endpoints for operations monitoring,
+// scheduling manual runs, and retrying or killing queued jobs.
 type SchedulerAdminServer interface {
-	// ListSchedules lists all recurring schedules currently defined in the system.
+	// Lists all recurring schedules currently defined in the system.
 	ListSchedules(context.Context, *ListSchedulesRequest) (*ListSchedulesResponse, error)
-	// ListJobs lists all job instances in the queue (pending, processing, failed).
+	// Lists all job instances in the queue (pending, processing, failed).
 	ListJobs(context.Context, *ListJobsRequest) (*ListJobsResponse, error)
-	// GetSchedulerStatus retrieves the current scheduler engine configuration and status.
+	// Retrieves the current scheduler engine configuration and status.
 	GetSchedulerStatus(context.Context, *GetSchedulerStatusRequest) (*GetSchedulerStatusResponse, error)
-	// TriggerSchedule manually spawns a job instance from a schedule template immediately.
+	// Manually spawns a job instance from a schedule template immediately.
 	TriggerSchedule(context.Context, *TriggerScheduleRequest) (*emptypb.Empty, error)
-	// PauseSchedule pauses a recurring schedule template.
+	// Pauses a recurring schedule template.
 	PauseSchedule(context.Context, *PauseScheduleRequest) (*emptypb.Empty, error)
-	// ResumeSchedule resumes a paused recurring schedule template.
+	// Resumes a paused recurring schedule template.
 	ResumeSchedule(context.Context, *ResumeScheduleRequest) (*emptypb.Empty, error)
-	// RetryJob resets a failed job's attempt count and sets it to run immediately.
+	// Resets a failed job's attempt count and sets it to run immediately.
 	RetryJob(context.Context, *RetryJobRequest) (*emptypb.Empty, error)
-	// DeleteJob removes a job instance from the queue.
+	// Removes a job instance from the queue.
 	DeleteJob(context.Context, *DeleteJobRequest) (*emptypb.Empty, error)
 }
 

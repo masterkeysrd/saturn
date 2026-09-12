@@ -42,32 +42,32 @@ const (
 //
 // AgentService manages LLM connection providers, AI agent instances, and logs.
 type AgentServiceClient interface {
-	// CreateProvider registers a new LLM provider connection in the workspace.
+	// Creates a new LLM provider connection in the workspace.
 	CreateProvider(ctx context.Context, in *CreateProviderRequest, opts ...grpc.CallOption) (*LLMProvider, error)
-	// GetProvider retrieves a single LLM provider configuration.
+	// Retrieves a single LLM provider configuration.
 	GetProvider(ctx context.Context, in *GetProviderRequest, opts ...grpc.CallOption) (*LLMProvider, error)
-	// ListProviders lists all configured LLM providers in the workspace.
-	ListProviders(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListProvidersResponse, error)
-	// UpdateProvider modifies LLM provider details (rotates API keys, etc.).
+	// Lists all configured LLM providers in the workspace.
+	ListProviders(ctx context.Context, in *ListProvidersRequest, opts ...grpc.CallOption) (*ListProvidersResponse, error)
+	// Updates LLM provider details (rotates API keys, etc.).
 	UpdateProvider(ctx context.Context, in *UpdateProviderRequest, opts ...grpc.CallOption) (*LLMProvider, error)
-	// DeleteProvider deletes an LLM provider connection.
+	// Deletes an LLM provider connection.
 	DeleteProvider(ctx context.Context, in *DeleteProviderRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// CreateAgent creates a new AI Agent configured with prompt instructions.
+	// Creates a new AI Agent configured with prompt instructions.
 	CreateAgent(ctx context.Context, in *CreateAgentRequest, opts ...grpc.CallOption) (*Agent, error)
-	// GetAgent retrieves a configured Agent's parameters.
+	// Retrieves a configured Agent's parameters.
 	GetAgent(ctx context.Context, in *GetAgentRequest, opts ...grpc.CallOption) (*Agent, error)
-	// ListAgents lists all active AI Agent instances in the workspace.
-	ListAgents(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListAgentsResponse, error)
-	// UpdateAgent modifies agent prompt directives or model settings.
+	// Lists all active AI Agent instances in the workspace.
+	ListAgents(ctx context.Context, in *ListAgentsRequest, opts ...grpc.CallOption) (*ListAgentsResponse, error)
+	// Updates agent prompt directives or model settings.
 	UpdateAgent(ctx context.Context, in *UpdateAgentRequest, opts ...grpc.CallOption) (*Agent, error)
-	// DeleteAgent deletes an AI Agent configuration.
+	// Deletes an AI Agent configuration.
 	DeleteAgent(ctx context.Context, in *DeleteAgentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// ListAgentRuns retrieves execution history logs for a specific agent.
+	// Lists execution history logs for a specific agent.
 	ListAgentRuns(ctx context.Context, in *ListAgentRunsRequest, opts ...grpc.CallOption) (*ListAgentRunsResponse, error)
-	// GetAgentCatalog retrieves standard agent purpose blueprints (descriptors).
-	GetAgentCatalog(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetAgentCatalogResponse, error)
-	// GetProviderCatalog retrieves standard connection type templates.
-	GetProviderCatalog(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetProviderCatalogResponse, error)
+	// Retrieves standard agent purpose blueprints (descriptors).
+	GetAgentCatalog(ctx context.Context, in *GetAgentCatalogRequest, opts ...grpc.CallOption) (*GetAgentCatalogResponse, error)
+	// Retrieves standard connection type templates.
+	GetProviderCatalog(ctx context.Context, in *GetProviderCatalogRequest, opts ...grpc.CallOption) (*GetProviderCatalogResponse, error)
 	// Analyzes signal content against a target agent purpose blueprint and returns structured suggestions.
 	GetSuggestions(ctx context.Context, in *GetSuggestionsRequest, opts ...grpc.CallOption) (*GetSuggestionsResponse, error)
 }
@@ -100,7 +100,7 @@ func (c *agentServiceClient) GetProvider(ctx context.Context, in *GetProviderReq
 	return out, nil
 }
 
-func (c *agentServiceClient) ListProviders(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListProvidersResponse, error) {
+func (c *agentServiceClient) ListProviders(ctx context.Context, in *ListProvidersRequest, opts ...grpc.CallOption) (*ListProvidersResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListProvidersResponse)
 	err := c.cc.Invoke(ctx, AgentService_ListProviders_FullMethodName, in, out, cOpts...)
@@ -150,7 +150,7 @@ func (c *agentServiceClient) GetAgent(ctx context.Context, in *GetAgentRequest, 
 	return out, nil
 }
 
-func (c *agentServiceClient) ListAgents(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListAgentsResponse, error) {
+func (c *agentServiceClient) ListAgents(ctx context.Context, in *ListAgentsRequest, opts ...grpc.CallOption) (*ListAgentsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListAgentsResponse)
 	err := c.cc.Invoke(ctx, AgentService_ListAgents_FullMethodName, in, out, cOpts...)
@@ -190,7 +190,7 @@ func (c *agentServiceClient) ListAgentRuns(ctx context.Context, in *ListAgentRun
 	return out, nil
 }
 
-func (c *agentServiceClient) GetAgentCatalog(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetAgentCatalogResponse, error) {
+func (c *agentServiceClient) GetAgentCatalog(ctx context.Context, in *GetAgentCatalogRequest, opts ...grpc.CallOption) (*GetAgentCatalogResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetAgentCatalogResponse)
 	err := c.cc.Invoke(ctx, AgentService_GetAgentCatalog_FullMethodName, in, out, cOpts...)
@@ -200,7 +200,7 @@ func (c *agentServiceClient) GetAgentCatalog(ctx context.Context, in *emptypb.Em
 	return out, nil
 }
 
-func (c *agentServiceClient) GetProviderCatalog(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetProviderCatalogResponse, error) {
+func (c *agentServiceClient) GetProviderCatalog(ctx context.Context, in *GetProviderCatalogRequest, opts ...grpc.CallOption) (*GetProviderCatalogResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetProviderCatalogResponse)
 	err := c.cc.Invoke(ctx, AgentService_GetProviderCatalog_FullMethodName, in, out, cOpts...)
@@ -226,32 +226,32 @@ func (c *agentServiceClient) GetSuggestions(ctx context.Context, in *GetSuggesti
 //
 // AgentService manages LLM connection providers, AI agent instances, and logs.
 type AgentServiceServer interface {
-	// CreateProvider registers a new LLM provider connection in the workspace.
+	// Creates a new LLM provider connection in the workspace.
 	CreateProvider(context.Context, *CreateProviderRequest) (*LLMProvider, error)
-	// GetProvider retrieves a single LLM provider configuration.
+	// Retrieves a single LLM provider configuration.
 	GetProvider(context.Context, *GetProviderRequest) (*LLMProvider, error)
-	// ListProviders lists all configured LLM providers in the workspace.
-	ListProviders(context.Context, *emptypb.Empty) (*ListProvidersResponse, error)
-	// UpdateProvider modifies LLM provider details (rotates API keys, etc.).
+	// Lists all configured LLM providers in the workspace.
+	ListProviders(context.Context, *ListProvidersRequest) (*ListProvidersResponse, error)
+	// Updates LLM provider details (rotates API keys, etc.).
 	UpdateProvider(context.Context, *UpdateProviderRequest) (*LLMProvider, error)
-	// DeleteProvider deletes an LLM provider connection.
+	// Deletes an LLM provider connection.
 	DeleteProvider(context.Context, *DeleteProviderRequest) (*emptypb.Empty, error)
-	// CreateAgent creates a new AI Agent configured with prompt instructions.
+	// Creates a new AI Agent configured with prompt instructions.
 	CreateAgent(context.Context, *CreateAgentRequest) (*Agent, error)
-	// GetAgent retrieves a configured Agent's parameters.
+	// Retrieves a configured Agent's parameters.
 	GetAgent(context.Context, *GetAgentRequest) (*Agent, error)
-	// ListAgents lists all active AI Agent instances in the workspace.
-	ListAgents(context.Context, *emptypb.Empty) (*ListAgentsResponse, error)
-	// UpdateAgent modifies agent prompt directives or model settings.
+	// Lists all active AI Agent instances in the workspace.
+	ListAgents(context.Context, *ListAgentsRequest) (*ListAgentsResponse, error)
+	// Updates agent prompt directives or model settings.
 	UpdateAgent(context.Context, *UpdateAgentRequest) (*Agent, error)
-	// DeleteAgent deletes an AI Agent configuration.
+	// Deletes an AI Agent configuration.
 	DeleteAgent(context.Context, *DeleteAgentRequest) (*emptypb.Empty, error)
-	// ListAgentRuns retrieves execution history logs for a specific agent.
+	// Lists execution history logs for a specific agent.
 	ListAgentRuns(context.Context, *ListAgentRunsRequest) (*ListAgentRunsResponse, error)
-	// GetAgentCatalog retrieves standard agent purpose blueprints (descriptors).
-	GetAgentCatalog(context.Context, *emptypb.Empty) (*GetAgentCatalogResponse, error)
-	// GetProviderCatalog retrieves standard connection type templates.
-	GetProviderCatalog(context.Context, *emptypb.Empty) (*GetProviderCatalogResponse, error)
+	// Retrieves standard agent purpose blueprints (descriptors).
+	GetAgentCatalog(context.Context, *GetAgentCatalogRequest) (*GetAgentCatalogResponse, error)
+	// Retrieves standard connection type templates.
+	GetProviderCatalog(context.Context, *GetProviderCatalogRequest) (*GetProviderCatalogResponse, error)
 	// Analyzes signal content against a target agent purpose blueprint and returns structured suggestions.
 	GetSuggestions(context.Context, *GetSuggestionsRequest) (*GetSuggestionsResponse, error)
 }
@@ -269,7 +269,7 @@ func (UnimplementedAgentServiceServer) CreateProvider(context.Context, *CreatePr
 func (UnimplementedAgentServiceServer) GetProvider(context.Context, *GetProviderRequest) (*LLMProvider, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetProvider not implemented")
 }
-func (UnimplementedAgentServiceServer) ListProviders(context.Context, *emptypb.Empty) (*ListProvidersResponse, error) {
+func (UnimplementedAgentServiceServer) ListProviders(context.Context, *ListProvidersRequest) (*ListProvidersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListProviders not implemented")
 }
 func (UnimplementedAgentServiceServer) UpdateProvider(context.Context, *UpdateProviderRequest) (*LLMProvider, error) {
@@ -284,7 +284,7 @@ func (UnimplementedAgentServiceServer) CreateAgent(context.Context, *CreateAgent
 func (UnimplementedAgentServiceServer) GetAgent(context.Context, *GetAgentRequest) (*Agent, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAgent not implemented")
 }
-func (UnimplementedAgentServiceServer) ListAgents(context.Context, *emptypb.Empty) (*ListAgentsResponse, error) {
+func (UnimplementedAgentServiceServer) ListAgents(context.Context, *ListAgentsRequest) (*ListAgentsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListAgents not implemented")
 }
 func (UnimplementedAgentServiceServer) UpdateAgent(context.Context, *UpdateAgentRequest) (*Agent, error) {
@@ -296,10 +296,10 @@ func (UnimplementedAgentServiceServer) DeleteAgent(context.Context, *DeleteAgent
 func (UnimplementedAgentServiceServer) ListAgentRuns(context.Context, *ListAgentRunsRequest) (*ListAgentRunsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListAgentRuns not implemented")
 }
-func (UnimplementedAgentServiceServer) GetAgentCatalog(context.Context, *emptypb.Empty) (*GetAgentCatalogResponse, error) {
+func (UnimplementedAgentServiceServer) GetAgentCatalog(context.Context, *GetAgentCatalogRequest) (*GetAgentCatalogResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAgentCatalog not implemented")
 }
-func (UnimplementedAgentServiceServer) GetProviderCatalog(context.Context, *emptypb.Empty) (*GetProviderCatalogResponse, error) {
+func (UnimplementedAgentServiceServer) GetProviderCatalog(context.Context, *GetProviderCatalogRequest) (*GetProviderCatalogResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetProviderCatalog not implemented")
 }
 func (UnimplementedAgentServiceServer) GetSuggestions(context.Context, *GetSuggestionsRequest) (*GetSuggestionsResponse, error) {
@@ -362,7 +362,7 @@ func _AgentService_GetProvider_Handler(srv interface{}, ctx context.Context, dec
 }
 
 func _AgentService_ListProviders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
+	in := new(ListProvidersRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -374,7 +374,7 @@ func _AgentService_ListProviders_Handler(srv interface{}, ctx context.Context, d
 		FullMethod: AgentService_ListProviders_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgentServiceServer).ListProviders(ctx, req.(*emptypb.Empty))
+		return srv.(AgentServiceServer).ListProviders(ctx, req.(*ListProvidersRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -452,7 +452,7 @@ func _AgentService_GetAgent_Handler(srv interface{}, ctx context.Context, dec fu
 }
 
 func _AgentService_ListAgents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
+	in := new(ListAgentsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -464,7 +464,7 @@ func _AgentService_ListAgents_Handler(srv interface{}, ctx context.Context, dec 
 		FullMethod: AgentService_ListAgents_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgentServiceServer).ListAgents(ctx, req.(*emptypb.Empty))
+		return srv.(AgentServiceServer).ListAgents(ctx, req.(*ListAgentsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -524,7 +524,7 @@ func _AgentService_ListAgentRuns_Handler(srv interface{}, ctx context.Context, d
 }
 
 func _AgentService_GetAgentCatalog_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
+	in := new(GetAgentCatalogRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -536,13 +536,13 @@ func _AgentService_GetAgentCatalog_Handler(srv interface{}, ctx context.Context,
 		FullMethod: AgentService_GetAgentCatalog_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgentServiceServer).GetAgentCatalog(ctx, req.(*emptypb.Empty))
+		return srv.(AgentServiceServer).GetAgentCatalog(ctx, req.(*GetAgentCatalogRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _AgentService_GetProviderCatalog_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
+	in := new(GetProviderCatalogRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -554,7 +554,7 @@ func _AgentService_GetProviderCatalog_Handler(srv interface{}, ctx context.Conte
 		FullMethod: AgentService_GetProviderCatalog_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgentServiceServer).GetProviderCatalog(ctx, req.(*emptypb.Empty))
+		return srv.(AgentServiceServer).GetProviderCatalog(ctx, req.(*GetProviderCatalogRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

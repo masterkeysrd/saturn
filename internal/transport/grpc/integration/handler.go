@@ -145,7 +145,7 @@ func (h *Handler) SimulateWebhook(ctx context.Context, req *integrationv1.Simula
 	}, nil
 }
 
-func (h *Handler) ListCatalog(ctx context.Context, _ *emptypb.Empty) (*integrationv1.ListCatalogResponse, error) {
+func (h *Handler) ListCatalog(ctx context.Context, _ *integrationv1.ListCatalogRequest) (*integrationv1.ListCatalogResponse, error) {
 	const op errors.Op = "grpc/integration.ListCatalog"
 
 	_, ok := auth.SpaceIDFromContext(ctx)
@@ -172,7 +172,7 @@ func (h *Handler) ListCatalog(ctx context.Context, _ *emptypb.Empty) (*integrati
 	return &integrationv1.ListCatalogResponse{Catalog: descriptors}, nil
 }
 
-func (h *Handler) ListIntegrations(ctx context.Context, _ *emptypb.Empty) (*integrationv1.ListIntegrationsResponse, error) {
+func (h *Handler) ListIntegrations(ctx context.Context, _ *integrationv1.ListIntegrationsRequest) (*integrationv1.ListIntegrationsResponse, error) {
 	const op errors.Op = "grpc/integration.ListIntegrations"
 
 	spaceID, ok := auth.SpaceIDFromContext(ctx)

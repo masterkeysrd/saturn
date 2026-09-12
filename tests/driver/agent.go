@@ -6,8 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"google.golang.org/protobuf/types/known/emptypb"
-
 	"github.com/masterkeysrd/saturn/apis/saturn"
 	agentv1 "github.com/masterkeysrd/saturn/apis/saturn/platform/agent/v1"
 )
@@ -145,7 +143,7 @@ func (a *AgentDriver) GetProvider(tb testing.TB, id string) (*agentv1.LLMProvide
 func (a *AgentDriver) ListProviders(tb testing.TB) (*agentv1.ListProvidersResponse, error) {
 	tb.Helper()
 	client := a.getClient()
-	return client.ListProviders(tb.Context(), &emptypb.Empty{})
+	return client.ListProviders(tb.Context(), &agentv1.ListProvidersRequest{})
 }
 
 // UpdateProvider updates existing LLM provider parameters.
@@ -234,7 +232,7 @@ func (a *AgentDriver) GetAgent(tb testing.TB, id string) (*agentv1.Agent, error)
 func (a *AgentDriver) ListAgents(tb testing.TB) (*agentv1.ListAgentsResponse, error) {
 	tb.Helper()
 	client := a.getClient()
-	return client.ListAgents(tb.Context(), &emptypb.Empty{})
+	return client.ListAgents(tb.Context(), &agentv1.ListAgentsRequest{})
 }
 
 // UpdateAgent updates an existing agent blueprint configuration.
@@ -311,14 +309,14 @@ func (a *AgentDriver) ListAgentRuns(tb testing.TB, opts ListAgentRunsOptions) (*
 func (a *AgentDriver) GetAgentCatalog(tb testing.TB) (*agentv1.GetAgentCatalogResponse, error) {
 	tb.Helper()
 	client := a.getClient()
-	return client.GetAgentCatalog(tb.Context(), &emptypb.Empty{})
+	return client.GetAgentCatalog(tb.Context(), &agentv1.GetAgentCatalogRequest{})
 }
 
 // GetProviderCatalog retrieves the system-supported LLM connection blueprints.
 func (a *AgentDriver) GetProviderCatalog(tb testing.TB) (*agentv1.GetProviderCatalogResponse, error) {
 	tb.Helper()
 	client := a.getClient()
-	return client.GetProviderCatalog(tb.Context(), &emptypb.Empty{})
+	return client.GetProviderCatalog(tb.Context(), &agentv1.GetProviderCatalogRequest{})
 }
 
 // GetSuggestions dispatches a suggestion request to the registered processor for the given purpose.

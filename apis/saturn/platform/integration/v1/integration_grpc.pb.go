@@ -35,25 +35,25 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// IntegrationService handles configuring, getting, and managing active integrations and their keys.
+// IntegrationService handles configuring, getting, and managing active integrations and their tokens.
 type IntegrationServiceClient interface {
-	// GetIntegration retrieves the configuration details for a specific provider.
+	// Retrieves the configuration details for a specific integration provider.
 	GetIntegration(ctx context.Context, in *GetIntegrationRequest, opts ...grpc.CallOption) (*Integration, error)
-	// ConfigureIntegration registers or updates an integration for a Space.
+	// Registers or updates an integration configuration for a workspace.
 	ConfigureIntegration(ctx context.Context, in *ConfigureIntegrationRequest, opts ...grpc.CallOption) (*Integration, error)
-	// RotateIntegrationToken rotates the hashed token for a specific integration (backwards-compatible single key helper).
+	// Rotates the hashed token for an integration.
 	RotateIntegrationToken(ctx context.Context, in *RotateIntegrationTokenRequest, opts ...grpc.CallOption) (*RotateIntegrationTokenResponse, error)
-	// SimulateWebhook runs a developer simulation parsing a mock webhook payload.
+	// Runs a developer simulation parsing a mock webhook payload.
 	SimulateWebhook(ctx context.Context, in *SimulateWebhookRequest, opts ...grpc.CallOption) (*SimulateWebhookResponse, error)
-	// ListCatalog returns the metadata of all available integrations in the catalog.
-	ListCatalog(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListCatalogResponse, error)
-	// ListIntegrations retrieves all configured integrations for the active Space.
-	ListIntegrations(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListIntegrationsResponse, error)
-	// CreateIntegrationToken generates a new named token for an integration.
+	// Lists all available integration descriptors from the catalog.
+	ListCatalog(ctx context.Context, in *ListCatalogRequest, opts ...grpc.CallOption) (*ListCatalogResponse, error)
+	// Lists all configured integrations for the active workspace.
+	ListIntegrations(ctx context.Context, in *ListIntegrationsRequest, opts ...grpc.CallOption) (*ListIntegrationsResponse, error)
+	// Generates a new named authentication token for an integration.
 	CreateIntegrationToken(ctx context.Context, in *CreateIntegrationTokenRequest, opts ...grpc.CallOption) (*CreateIntegrationTokenResponse, error)
-	// ListIntegrationTokens retrieves all active tokens for an integration.
+	// Lists all active authentication tokens for an integration.
 	ListIntegrationTokens(ctx context.Context, in *ListIntegrationTokensRequest, opts ...grpc.CallOption) (*ListIntegrationTokensResponse, error)
-	// DeleteIntegrationToken revokes/deletes a specific token by its ID.
+	// Revokes and deletes a specific authentication token by ID.
 	DeleteIntegrationToken(ctx context.Context, in *DeleteIntegrationTokenRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
@@ -105,7 +105,7 @@ func (c *integrationServiceClient) SimulateWebhook(ctx context.Context, in *Simu
 	return out, nil
 }
 
-func (c *integrationServiceClient) ListCatalog(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListCatalogResponse, error) {
+func (c *integrationServiceClient) ListCatalog(ctx context.Context, in *ListCatalogRequest, opts ...grpc.CallOption) (*ListCatalogResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListCatalogResponse)
 	err := c.cc.Invoke(ctx, IntegrationService_ListCatalog_FullMethodName, in, out, cOpts...)
@@ -115,7 +115,7 @@ func (c *integrationServiceClient) ListCatalog(ctx context.Context, in *emptypb.
 	return out, nil
 }
 
-func (c *integrationServiceClient) ListIntegrations(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListIntegrationsResponse, error) {
+func (c *integrationServiceClient) ListIntegrations(ctx context.Context, in *ListIntegrationsRequest, opts ...grpc.CallOption) (*ListIntegrationsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListIntegrationsResponse)
 	err := c.cc.Invoke(ctx, IntegrationService_ListIntegrations_FullMethodName, in, out, cOpts...)
@@ -159,25 +159,25 @@ func (c *integrationServiceClient) DeleteIntegrationToken(ctx context.Context, i
 // All implementations should embed UnimplementedIntegrationServiceServer
 // for forward compatibility.
 //
-// IntegrationService handles configuring, getting, and managing active integrations and their keys.
+// IntegrationService handles configuring, getting, and managing active integrations and their tokens.
 type IntegrationServiceServer interface {
-	// GetIntegration retrieves the configuration details for a specific provider.
+	// Retrieves the configuration details for a specific integration provider.
 	GetIntegration(context.Context, *GetIntegrationRequest) (*Integration, error)
-	// ConfigureIntegration registers or updates an integration for a Space.
+	// Registers or updates an integration configuration for a workspace.
 	ConfigureIntegration(context.Context, *ConfigureIntegrationRequest) (*Integration, error)
-	// RotateIntegrationToken rotates the hashed token for a specific integration (backwards-compatible single key helper).
+	// Rotates the hashed token for an integration.
 	RotateIntegrationToken(context.Context, *RotateIntegrationTokenRequest) (*RotateIntegrationTokenResponse, error)
-	// SimulateWebhook runs a developer simulation parsing a mock webhook payload.
+	// Runs a developer simulation parsing a mock webhook payload.
 	SimulateWebhook(context.Context, *SimulateWebhookRequest) (*SimulateWebhookResponse, error)
-	// ListCatalog returns the metadata of all available integrations in the catalog.
-	ListCatalog(context.Context, *emptypb.Empty) (*ListCatalogResponse, error)
-	// ListIntegrations retrieves all configured integrations for the active Space.
-	ListIntegrations(context.Context, *emptypb.Empty) (*ListIntegrationsResponse, error)
-	// CreateIntegrationToken generates a new named token for an integration.
+	// Lists all available integration descriptors from the catalog.
+	ListCatalog(context.Context, *ListCatalogRequest) (*ListCatalogResponse, error)
+	// Lists all configured integrations for the active workspace.
+	ListIntegrations(context.Context, *ListIntegrationsRequest) (*ListIntegrationsResponse, error)
+	// Generates a new named authentication token for an integration.
 	CreateIntegrationToken(context.Context, *CreateIntegrationTokenRequest) (*CreateIntegrationTokenResponse, error)
-	// ListIntegrationTokens retrieves all active tokens for an integration.
+	// Lists all active authentication tokens for an integration.
 	ListIntegrationTokens(context.Context, *ListIntegrationTokensRequest) (*ListIntegrationTokensResponse, error)
-	// DeleteIntegrationToken revokes/deletes a specific token by its ID.
+	// Revokes and deletes a specific authentication token by ID.
 	DeleteIntegrationToken(context.Context, *DeleteIntegrationTokenRequest) (*emptypb.Empty, error)
 }
 
@@ -200,10 +200,10 @@ func (UnimplementedIntegrationServiceServer) RotateIntegrationToken(context.Cont
 func (UnimplementedIntegrationServiceServer) SimulateWebhook(context.Context, *SimulateWebhookRequest) (*SimulateWebhookResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SimulateWebhook not implemented")
 }
-func (UnimplementedIntegrationServiceServer) ListCatalog(context.Context, *emptypb.Empty) (*ListCatalogResponse, error) {
+func (UnimplementedIntegrationServiceServer) ListCatalog(context.Context, *ListCatalogRequest) (*ListCatalogResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListCatalog not implemented")
 }
-func (UnimplementedIntegrationServiceServer) ListIntegrations(context.Context, *emptypb.Empty) (*ListIntegrationsResponse, error) {
+func (UnimplementedIntegrationServiceServer) ListIntegrations(context.Context, *ListIntegrationsRequest) (*ListIntegrationsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListIntegrations not implemented")
 }
 func (UnimplementedIntegrationServiceServer) CreateIntegrationToken(context.Context, *CreateIntegrationTokenRequest) (*CreateIntegrationTokenResponse, error) {
@@ -308,7 +308,7 @@ func _IntegrationService_SimulateWebhook_Handler(srv interface{}, ctx context.Co
 }
 
 func _IntegrationService_ListCatalog_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
+	in := new(ListCatalogRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -320,13 +320,13 @@ func _IntegrationService_ListCatalog_Handler(srv interface{}, ctx context.Contex
 		FullMethod: IntegrationService_ListCatalog_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(IntegrationServiceServer).ListCatalog(ctx, req.(*emptypb.Empty))
+		return srv.(IntegrationServiceServer).ListCatalog(ctx, req.(*ListCatalogRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _IntegrationService_ListIntegrations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
+	in := new(ListIntegrationsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -338,7 +338,7 @@ func _IntegrationService_ListIntegrations_Handler(srv interface{}, ctx context.C
 		FullMethod: IntegrationService_ListIntegrations_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(IntegrationServiceServer).ListIntegrations(ctx, req.(*emptypb.Empty))
+		return srv.(IntegrationServiceServer).ListIntegrations(ctx, req.(*ListIntegrationsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

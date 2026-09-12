@@ -3,6 +3,7 @@ syntax = "proto3";
 package saturn.platform.integration.v1;
 
 import "google/api/annotations.proto";
+import "google/api/client.proto";
 import "google/api/field_behavior.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/struct.proto";
@@ -11,172 +12,299 @@ import "saturn/platform/message/v1/options.proto";
 
 option go_package = "github.com/masterkeysrd/saturn/apis/saturn/platform/integration/v1;integrationv1";
 
-// IntegrationService handles configuring, getting, and managing active integrations and their keys.
+// IntegrationService handles configuring, getting, and managing active integrations and their tokens.
 service IntegrationService {
-  // GetIntegration retrieves the configuration details for a specific provider.
+  // Retrieves the configuration details for a specific integration provider.
   rpc GetIntegration(GetIntegrationRequest) returns (Integration) {
     option (google.api.http) = {get: "/v1/platform/integrations/{provider}"};
+    option (google.api.method_signature) = "provider";
   }
 
-  // ConfigureIntegration registers or updates an integration for a Space.
+  // Registers or updates an integration configuration for a workspace.
   rpc ConfigureIntegration(ConfigureIntegrationRequest) returns (Integration) {
     option (google.api.http) = {
       post: "/v1/platform/integrations"
       body: "*"
     };
+    option (google.api.method_signature) = "provider,kind,config_json";
   }
 
-  // RotateIntegrationToken rotates the hashed token for a specific integration (backwards-compatible single key helper).
+  // Rotates the hashed token for an integration.
   rpc RotateIntegrationToken(RotateIntegrationTokenRequest) returns (RotateIntegrationTokenResponse) {
     option (google.api.http) = {
       post: "/v1/platform/integrations/{provider}:rotate-token"
       body: "*"
     };
+    option (google.api.method_signature) = "provider";
   }
 
-  // SimulateWebhook runs a developer simulation parsing a mock webhook payload.
+  // Runs a developer simulation parsing a mock webhook payload.
   rpc SimulateWebhook(SimulateWebhookRequest) returns (SimulateWebhookResponse) {
     option (google.api.http) = {
       post: "/v1/platform/integrations/{provider}:simulate"
       body: "*"
     };
+    option (google.api.method_signature) = "provider,payload";
   }
 
-  // ListCatalog returns the metadata of all available integrations in the catalog.
-  rpc ListCatalog(google.protobuf.Empty) returns (ListCatalogResponse) {
+  // Lists all available integration descriptors from the catalog.
+  rpc ListCatalog(ListCatalogRequest) returns (ListCatalogResponse) {
     option (google.api.http) = {get: "/v1/platform/integrations/catalog"};
   }
 
-  // ListIntegrations retrieves all configured integrations for the active Space.
-  rpc ListIntegrations(google.protobuf.Empty) returns (ListIntegrationsResponse) {
+  // Lists all configured integrations for the active workspace.
+  rpc ListIntegrations(ListIntegrationsRequest) returns (ListIntegrationsResponse) {
     option (google.api.http) = {get: "/v1/platform/integrations"};
   }
 
-  // CreateIntegrationToken generates a new named token for an integration.
+  // Generates a new named authentication token for an integration.
   rpc CreateIntegrationToken(CreateIntegrationTokenRequest) returns (CreateIntegrationTokenResponse) {
     option (google.api.http) = {
       post: "/v1/platform/integrations/{provider}/tokens"
       body: "*"
     };
+    option (google.api.method_signature) = "provider,name";
   }
 
-  // ListIntegrationTokens retrieves all active tokens for an integration.
+  // Lists all active authentication tokens for an integration.
   rpc ListIntegrationTokens(ListIntegrationTokensRequest) returns (ListIntegrationTokensResponse) {
     option (google.api.http) = {get: "/v1/platform/integrations/{provider}/tokens"};
+    option (google.api.method_signature) = "provider";
   }
 
-  // DeleteIntegrationToken revokes/deletes a specific token by its ID.
+  // Revokes and deletes a specific authentication token by ID.
   rpc DeleteIntegrationToken(DeleteIntegrationTokenRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {delete: "/v1/platform/integrations/{provider}/tokens/{id}"};
+    option (google.api.method_signature) = "provider,id";
   }
 }
 
+// Integration represents a configured third-party integration instance.
 message Integration {
-  string id = 1;
-  string space_id = 2;
-  string kind = 3;
-  string provider = 4;
-  string token = 5; // Only returned on Create/Rotate/Get, raw unhashed token shown to the user once
-  string config_json = 6; // JSON string representing the config settings (allowed_senders, secrets, etc.)
-  bool is_enabled = 7;
-  google.protobuf.Timestamp create_time = 8;
-  google.protobuf.Timestamp update_time = 9;
+  // Output only. The unique identifier of the integration.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The workspace identifier that owns this integration.
+  string space_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. The integration category or kind (e.g., email, bank, webhook).
+  string kind = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The provider identifier (e.g., plaid, resend, custom).
+  string provider = 4 [(google.api.field_behavior) = REQUIRED];
+
+  // Output only. The raw unhashed authentication token, shown once on creation or rotation.
+  string token = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Optional. The JSON configuration settings for the integration.
+  string config_json = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. Whether the integration is currently active and processing events.
+  bool is_enabled = 7 [(google.api.field_behavior) = OPTIONAL];
+
+  // Output only. The timestamp when the integration was created.
+  google.protobuf.Timestamp create_time = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The timestamp when the integration was last updated.
+  google.protobuf.Timestamp update_time = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// IntegrationToken represents an authentication token for an integration.
 message IntegrationToken {
-  string id = 1;
-  string integration_id = 2;
-  string name = 3;
-  string token_hash = 4;
-  google.protobuf.Timestamp create_time = 5;
-  google.protobuf.Timestamp last_used_time = 6;
+  // Output only. The unique identifier of the token.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The integration identifier associated with this token.
+  string integration_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Required. The user-assigned descriptive name for the token.
+  string name = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Output only. The secure cryptographic hash of the token.
+  string token_hash = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The timestamp when the token was created.
+  google.protobuf.Timestamp create_time = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The timestamp when the token was last used.
+  google.protobuf.Timestamp last_used_time = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// Request message for IntegrationService.GetIntegration.
 message GetIntegrationRequest {
+  // Required. The provider identifier to retrieve.
   string provider = 1 [(google.api.field_behavior) = REQUIRED];
-  string kind = 2;
+
+  // Optional. The integration kind or category.
+  string kind = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// Request message for IntegrationService.ConfigureIntegration.
 message ConfigureIntegrationRequest {
+  // Required. The provider identifier to configure.
   string provider = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The integration category or kind.
   string kind = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The JSON configuration payload for the provider.
   string config_json = 3 [(google.api.field_behavior) = REQUIRED];
-  bool is_enabled = 4;
+
+  // Optional. Whether to immediately enable the integration.
+  bool is_enabled = 4 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// Request message for IntegrationService.RotateIntegrationToken.
 message RotateIntegrationTokenRequest {
+  // Required. The provider identifier whose token is to be rotated.
   string provider = 1 [(google.api.field_behavior) = REQUIRED];
-  string kind = 2;
+
+  // Optional. The integration kind or category.
+  string kind = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// Response message for IntegrationService.RotateIntegrationToken.
 message RotateIntegrationTokenResponse {
-  string token = 1; // The newly generated raw unhashed token
+  // Output only. The newly generated raw unhashed authentication token.
+  string token = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// Request message for IntegrationService.SimulateWebhook.
 message SimulateWebhookRequest {
+  // Required. The provider identifier to simulate.
   string provider = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The raw webhook payload body to parse and simulate.
   string payload = 2 [(google.api.field_behavior) = REQUIRED];
-  map<string, string> headers = 3;
-  string kind = 4;
+
+  // Optional. HTTP headers accompanying the simulated webhook request.
+  map<string, string> headers = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. The integration kind or category.
+  string kind = 4 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// Response message for IntegrationService.SimulateWebhook.
 message SimulateWebhookResponse {
-  bool success = 1;
-  string message = 2;
-  google.protobuf.Struct result = 3;
+  // Output only. Whether the webhook simulation completed successfully.
+  bool success = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. A descriptive status message regarding the simulation result.
+  string message = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Structured output produced by processing the simulated webhook.
+  google.protobuf.Struct result = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// CatalogDescriptor represents metadata for an available integration type.
 message CatalogDescriptor {
-  string provider = 1;
-  string kind = 2;
-  string name = 3;
-  string description = 4;
-  string icon = 5;
-  string config_schema = 6;
-  string request_schema = 7;
-  string response_schema = 8;
-  string sample_payload = 9;
+  // Required. The unique identifier of the provider.
+  string provider = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The category or kind of integration.
+  string kind = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The display name of the integration provider.
+  string name = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. A human-readable description of the integration capabilities.
+  string description = 4 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. An icon identifier or URL representing the provider.
+  string icon = 5 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. JSON schema describing configuration parameters.
+  string config_schema = 6 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. JSON schema describing expected incoming requests.
+  string request_schema = 7 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. JSON schema describing response payloads.
+  string response_schema = 8 [(google.api.field_behavior) = OPTIONAL];
+
+  // Optional. An example payload demonstrating typical webhook data.
+  string sample_payload = 9 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// Request message for IntegrationService.ListCatalog.
+message ListCatalogRequest {}
+
+// Response message for IntegrationService.ListCatalog.
 message ListCatalogResponse {
-  repeated CatalogDescriptor catalog = 1;
+  // Output only. The list of available integration descriptors.
+  repeated CatalogDescriptor catalog = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// Request message for IntegrationService.ListIntegrations.
+message ListIntegrationsRequest {}
+
+// Response message for IntegrationService.ListIntegrations.
 message ListIntegrationsResponse {
-  repeated Integration integrations = 2;
+  // Output only. The list of configured integration instances.
+  repeated Integration integrations = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// Request message for IntegrationService.CreateIntegrationToken.
 message CreateIntegrationTokenRequest {
+  // Required. The provider identifier to create a token for.
   string provider = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. A descriptive name identifying the intended use of the token.
   string name = 2 [(google.api.field_behavior) = REQUIRED];
-  string kind = 3;
+
+  // Optional. The integration kind or category.
+  string kind = 3 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// Response message for IntegrationService.CreateIntegrationToken.
 message CreateIntegrationTokenResponse {
-  IntegrationToken token = 1;
-  string raw_token = 2; // Raw unhashed token shown once
+  // Output only. The persisted token metadata.
+  IntegrationToken token = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The raw unhashed authentication token, shown once.
+  string raw_token = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// Request message for IntegrationService.ListIntegrationTokens.
 message ListIntegrationTokensRequest {
+  // Required. The provider identifier whose tokens are to be listed.
   string provider = 1 [(google.api.field_behavior) = REQUIRED];
-  string kind = 2;
+
+  // Optional. The integration kind or category.
+  string kind = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// Response message for IntegrationService.ListIntegrationTokens.
 message ListIntegrationTokensResponse {
-  repeated IntegrationToken tokens = 1;
+  // Output only. The active authentication tokens for the integration.
+  repeated IntegrationToken tokens = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// Request message for IntegrationService.DeleteIntegrationToken.
 message DeleteIntegrationTokenRequest {
+  // Required. The provider identifier owning the token.
   string provider = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The unique identifier of the token to delete.
   string id = 2 [(google.api.field_behavior) = REQUIRED];
-  string kind = 3;
+
+  // Optional. The integration kind or category.
+  string kind = 3 [(google.api.field_behavior) = OPTIONAL];
 }
 
+// WebhookReceivedEvent is published when an incoming webhook payload is received.
 message WebhookReceivedEvent {
   option (saturn.platform.message.v1.topic) = "webhook.received";
 
-  string source = 1;
-  string space_id = 2;
-  map<string, string> headers = 3;
-  bytes body = 4;
+  // Required. The origin source identifier of the webhook.
+  string source = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Required. The workspace identifier the webhook is associated with.
+  string space_id = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. The HTTP headers received with the webhook request.
+  map<string, string> headers = 3 [(google.api.field_behavior) = OPTIONAL];
+
+  // Required. The raw binary payload of the webhook request.
+  bytes body = 4 [(google.api.field_behavior) = REQUIRED];
 }

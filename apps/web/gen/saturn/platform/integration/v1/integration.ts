@@ -9,135 +9,351 @@ import {
   type UseMutationOptions,
 } from "@tanstack/react-query"
 
+/**
+ * Integration represents a configured third-party integration instance.
+ */
 export interface Integration {
-  id: string
-  spaceId: string
+  /**
+   * Output only. The unique identifier of the integration.
+   */
+  id?: string
+  /**
+   * Output only. The workspace identifier that owns this integration.
+   */
+  spaceId?: string
+  /**
+   * Required. The integration category or kind (e.g., email, bank, webhook).
+   */
   kind: string
+  /**
+   * Required. The provider identifier (e.g., plaid, resend, custom).
+   */
   provider: string
   /**
-   *
-   * @description Only returned on Create/Rotate/Get, raw unhashed token shown to the user once
+   * Output only. The raw unhashed authentication token, shown once on creation or rotation.
    */
-  token: string
+  token?: string
   /**
-   *
-   * @description JSON string representing the config settings (allowed_senders, secrets, etc.)
+   * Optional. The JSON configuration settings for the integration.
    */
   configJson: string
+  /**
+   * Optional. Whether the integration is currently active and processing events.
+   */
   isEnabled: boolean
-  createTime: string
-  updateTime: string
+  /**
+   * Output only. The timestamp when the integration was created.
+   */
+  createTime?: string
+  /**
+   * Output only. The timestamp when the integration was last updated.
+   */
+  updateTime?: string
 }
 
+/**
+ * IntegrationToken represents an authentication token for an integration.
+ */
 export interface IntegrationToken {
-  id: string
-  integrationId: string
+  /**
+   * Output only. The unique identifier of the token.
+   */
+  id?: string
+  /**
+   * Output only. The integration identifier associated with this token.
+   */
+  integrationId?: string
+  /**
+   * Required. The user-assigned descriptive name for the token.
+   */
   name: string
-  tokenHash: string
-  createTime: string
-  lastUsedTime: string
+  /**
+   * Output only. The secure cryptographic hash of the token.
+   */
+  tokenHash?: string
+  /**
+   * Output only. The timestamp when the token was created.
+   */
+  createTime?: string
+  /**
+   * Output only. The timestamp when the token was last used.
+   */
+  lastUsedTime?: string
 }
 
+/**
+ * Request message for IntegrationService.GetIntegration.
+ */
 export interface GetIntegrationRequest {
+  /**
+   * Required. The provider identifier to retrieve.
+   */
   provider: string
+  /**
+   * Optional. The integration kind or category.
+   */
   kind: string
 }
 
+/**
+ * Request message for IntegrationService.ConfigureIntegration.
+ */
 export interface ConfigureIntegrationRequest {
+  /**
+   * Required. The provider identifier to configure.
+   */
   provider: string
+  /**
+   * Required. The integration category or kind.
+   */
   kind: string
+  /**
+   * Required. The JSON configuration payload for the provider.
+   */
   configJson: string
+  /**
+   * Optional. Whether to immediately enable the integration.
+   */
   isEnabled: boolean
 }
 
+/**
+ * Request message for IntegrationService.RotateIntegrationToken.
+ */
 export interface RotateIntegrationTokenRequest {
+  /**
+   * Required. The provider identifier whose token is to be rotated.
+   */
   provider: string
+  /**
+   * Optional. The integration kind or category.
+   */
   kind: string
 }
 
+/**
+ * Response message for IntegrationService.RotateIntegrationToken.
+ */
 export interface RotateIntegrationTokenResponse {
   /**
-   *
-   * @description The newly generated raw unhashed token
+   * Output only. The newly generated raw unhashed authentication token.
    */
-  token: string
+  token?: string
 }
 
+/**
+ * Request message for IntegrationService.SimulateWebhook.
+ */
 export interface SimulateWebhookRequest {
+  /**
+   * Required. The provider identifier to simulate.
+   */
   provider: string
+  /**
+   * Required. The raw webhook payload body to parse and simulate.
+   */
   payload: string
+  /**
+   * Optional. HTTP headers accompanying the simulated webhook request.
+   */
   headers: Record<string, string>
+  /**
+   * Optional. The integration kind or category.
+   */
   kind: string
 }
 
+/**
+ * Response message for IntegrationService.SimulateWebhook.
+ */
 export interface SimulateWebhookResponse {
-  success: boolean
-  message: string
-  result: Record<string, unknown>
+  /**
+   * Output only. Whether the webhook simulation completed successfully.
+   */
+  success?: boolean
+  /**
+   * Output only. A descriptive status message regarding the simulation result.
+   */
+  message?: string
+  /**
+   * Output only. Structured output produced by processing the simulated webhook.
+   */
+  result?: Record<string, unknown>
 }
 
+/**
+ * CatalogDescriptor represents metadata for an available integration type.
+ */
 export interface CatalogDescriptor {
+  /**
+   * Required. The unique identifier of the provider.
+   */
   provider: string
+  /**
+   * Required. The category or kind of integration.
+   */
   kind: string
+  /**
+   * Required. The display name of the integration provider.
+   */
   name: string
+  /**
+   * Optional. A human-readable description of the integration capabilities.
+   */
   description: string
+  /**
+   * Optional. An icon identifier or URL representing the provider.
+   */
   icon: string
+  /**
+   * Optional. JSON schema describing configuration parameters.
+   */
   configSchema: string
+  /**
+   * Optional. JSON schema describing expected incoming requests.
+   */
   requestSchema: string
+  /**
+   * Optional. JSON schema describing response payloads.
+   */
   responseSchema: string
+  /**
+   * Optional. An example payload demonstrating typical webhook data.
+   */
   samplePayload: string
 }
 
+/**
+ * Request message for IntegrationService.ListCatalog.
+ */
+export type ListCatalogRequest = Record<string, never>
+
+/**
+ * Response message for IntegrationService.ListCatalog.
+ */
 export interface ListCatalogResponse {
-  catalog: CatalogDescriptor[]
-}
-
-export interface ListIntegrationsResponse {
-  integrations: Integration[]
-}
-
-export interface CreateIntegrationTokenRequest {
-  provider: string
-  name: string
-  kind: string
-}
-
-export interface CreateIntegrationTokenResponse {
-  token: IntegrationToken
   /**
-   *
-   * @description Raw unhashed token shown once
+   * Output only. The list of available integration descriptors.
    */
-  rawToken: string
+  catalog?: CatalogDescriptor[]
 }
 
+/**
+ * Request message for IntegrationService.ListIntegrations.
+ */
+export type ListIntegrationsRequest = Record<string, never>
+
+/**
+ * Response message for IntegrationService.ListIntegrations.
+ */
+export interface ListIntegrationsResponse {
+  /**
+   * Output only. The list of configured integration instances.
+   */
+  integrations?: Integration[]
+}
+
+/**
+ * Request message for IntegrationService.CreateIntegrationToken.
+ */
+export interface CreateIntegrationTokenRequest {
+  /**
+   * Required. The provider identifier to create a token for.
+   */
+  provider: string
+  /**
+   * Required. A descriptive name identifying the intended use of the token.
+   */
+  name: string
+  /**
+   * Optional. The integration kind or category.
+   */
+  kind: string
+}
+
+/**
+ * Response message for IntegrationService.CreateIntegrationToken.
+ */
+export interface CreateIntegrationTokenResponse {
+  /**
+   * Output only. The persisted token metadata.
+   */
+  token?: IntegrationToken
+  /**
+   * Output only. The raw unhashed authentication token, shown once.
+   */
+  rawToken?: string
+}
+
+/**
+ * Request message for IntegrationService.ListIntegrationTokens.
+ */
 export interface ListIntegrationTokensRequest {
+  /**
+   * Required. The provider identifier whose tokens are to be listed.
+   */
   provider: string
+  /**
+   * Optional. The integration kind or category.
+   */
   kind: string
 }
 
+/**
+ * Response message for IntegrationService.ListIntegrationTokens.
+ */
 export interface ListIntegrationTokensResponse {
-  tokens: IntegrationToken[]
+  /**
+   * Output only. The active authentication tokens for the integration.
+   */
+  tokens?: IntegrationToken[]
 }
 
+/**
+ * Request message for IntegrationService.DeleteIntegrationToken.
+ */
 export interface DeleteIntegrationTokenRequest {
+  /**
+   * Required. The provider identifier owning the token.
+   */
   provider: string
+  /**
+   * Required. The unique identifier of the token to delete.
+   */
   id: string
+  /**
+   * Optional. The integration kind or category.
+   */
   kind: string
 }
 
+/**
+ * WebhookReceivedEvent is published when an incoming webhook payload is received.
+ */
 export interface WebhookReceivedEvent {
+  /**
+   * Required. The origin source identifier of the webhook.
+   */
   source: string
+  /**
+   * Required. The workspace identifier the webhook is associated with.
+   */
   spaceId: string
+  /**
+   * Optional. The HTTP headers received with the webhook request.
+   */
   headers: Record<string, string>
+  /**
+   * Required. The raw binary payload of the webhook request.
+   */
   body: string
 }
 
 /**
- * IntegrationService handles configuring, getting, and managing active integrations and their keys.
+ * IntegrationService handles configuring, getting, and managing active integrations and their tokens.
  */
 /**
- * GetIntegration retrieves the configuration details for a specific provider.
+ * Retrieves the configuration details for a specific integration provider.
  */
 export async function getIntegration(
   provider: string,
@@ -164,7 +380,7 @@ export function useGetIntegrationQuery(
 }
 
 /**
- * ConfigureIntegration registers or updates an integration for a Space.
+ * Registers or updates an integration configuration for a workspace.
  */
 export async function configureIntegration(
   req: ConfigureIntegrationRequest
@@ -186,7 +402,7 @@ export function useConfigureIntegrationMutation(
 }
 
 /**
- * RotateIntegrationToken rotates the hashed token for a specific integration (backwards-compatible single key helper).
+ * Rotates the hashed token for an integration.
  */
 export async function rotateIntegrationToken(
   provider: string,
@@ -217,7 +433,7 @@ export function useRotateIntegrationTokenMutation(
 }
 
 /**
- * SimulateWebhook runs a developer simulation parsing a mock webhook payload.
+ * Runs a developer simulation parsing a mock webhook payload.
  */
 export async function simulateWebhook(
   provider: string,
@@ -248,10 +464,10 @@ export function useSimulateWebhookMutation(
 }
 
 /**
- * ListCatalog returns the metadata of all available integrations in the catalog.
+ * Lists all available integration descriptors from the catalog.
  */
 export async function listCatalog(
-  _req?: Record<string, never>
+  _req?: ListCatalogRequest
 ): Promise<ListCatalogResponse> {
   return request<ListCatalogResponse>({
     method: "GET",
@@ -260,7 +476,7 @@ export async function listCatalog(
 }
 
 export function useListCatalogQuery(
-  req: Record<string, never>,
+  req: ListCatalogRequest,
   options?: Omit<
     UseQueryOptions<ListCatalogResponse, Error>,
     "queryKey" | "queryFn"
@@ -274,10 +490,10 @@ export function useListCatalogQuery(
 }
 
 /**
- * ListIntegrations retrieves all configured integrations for the active Space.
+ * Lists all configured integrations for the active workspace.
  */
 export async function listIntegrations(
-  _req?: Record<string, never>
+  _req?: ListIntegrationsRequest
 ): Promise<ListIntegrationsResponse> {
   return request<ListIntegrationsResponse>({
     method: "GET",
@@ -286,7 +502,7 @@ export async function listIntegrations(
 }
 
 export function useListIntegrationsQuery(
-  req: Record<string, never>,
+  req: ListIntegrationsRequest,
   options?: Omit<
     UseQueryOptions<ListIntegrationsResponse, Error>,
     "queryKey" | "queryFn"
@@ -300,7 +516,7 @@ export function useListIntegrationsQuery(
 }
 
 /**
- * CreateIntegrationToken generates a new named token for an integration.
+ * Generates a new named authentication token for an integration.
  */
 export async function createIntegrationToken(
   provider: string,
@@ -331,7 +547,7 @@ export function useCreateIntegrationTokenMutation(
 }
 
 /**
- * ListIntegrationTokens retrieves all active tokens for an integration.
+ * Lists all active authentication tokens for an integration.
  */
 export async function listIntegrationTokens(
   provider: string,
@@ -361,7 +577,7 @@ export function useListIntegrationTokensQuery(
 }
 
 /**
- * DeleteIntegrationToken revokes/deletes a specific token by its ID.
+ * Revokes and deletes a specific authentication token by ID.
  */
 export async function deleteIntegrationToken(
   provider: string,

@@ -88,7 +88,7 @@ func (c *Client) SimulateWebhook(ctx context.Context, req *SimulateWebhookReques
 }
 
 // ListCatalog executes GET /api/v1/platform/integrations/catalog.
-func (c *Client) ListCatalog(ctx context.Context, req *emptypb.Empty) (*ListCatalogResponse, error) {
+func (c *Client) ListCatalog(ctx context.Context, req *ListCatalogRequest) (*ListCatalogResponse, error) {
 	var resp ListCatalogResponse
 	path := "/api/v1/platform/integrations/catalog"
 	var query []string
@@ -102,7 +102,7 @@ func (c *Client) ListCatalog(ctx context.Context, req *emptypb.Empty) (*ListCata
 }
 
 // ListIntegrations executes GET /api/v1/platform/integrations.
-func (c *Client) ListIntegrations(ctx context.Context, req *emptypb.Empty) (*ListIntegrationsResponse, error) {
+func (c *Client) ListIntegrations(ctx context.Context, req *ListIntegrationsRequest) (*ListIntegrationsResponse, error) {
 	var resp ListIntegrationsResponse
 	path := "/api/v1/platform/integrations"
 	var query []string

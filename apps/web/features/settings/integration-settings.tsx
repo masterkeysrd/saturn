@@ -660,7 +660,9 @@ export function IntegrationSettings() {
                   ) : (
                     <div className="no-scrollbar max-h-56 space-y-2 overflow-y-auto rounded-2xl border border-border/10 bg-background/25 p-2 pr-1">
                       {tokensData.tokens.map((tok) => {
-                        const maskedEmail = `inbound+${tok.tokenHash.substring(0, 8)}... @saturn.masterkeys.dev`
+                        const maskedEmail = tok.tokenHash
+                          ? `inbound+${tok.tokenHash.substring(0, 8)}... @saturn.masterkeys.dev`
+                          : ""
                         return (
                           <div
                             key={tok.id}
@@ -679,7 +681,9 @@ export function IntegrationSettings() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-6 w-6 cursor-pointer text-muted-foreground hover:text-red-400"
-                                onClick={() => handleDeleteToken(tok.id)}
+                                onClick={() =>
+                                  tok.id && handleDeleteToken(tok.id)
+                                }
                                 disabled={deleteTokenMutation.isPending}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
