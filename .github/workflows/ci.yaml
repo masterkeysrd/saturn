@@ -11,6 +11,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  proto-lint:
+    name: Protobuf (Buf)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Buf action
+        uses: bufbuild/buf-action@v1
+        with:
+          lint: true
+          push: false
+
   web-verify:
     name: Frontend (Lint & Build)
     runs-on: ubuntu-latest
