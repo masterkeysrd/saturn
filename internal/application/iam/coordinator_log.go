@@ -4,10 +4,11 @@ package iam
 
 import (
 	"context"
+	"time"
+
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/platform/log"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
-	"time"
 )
 
 // LoggingCoordinator wraps a Coordinator and logs operation durations and errors.

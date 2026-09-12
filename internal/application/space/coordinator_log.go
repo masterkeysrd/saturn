@@ -4,9 +4,10 @@ package space
 
 import (
 	"context"
+	"time"
+
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/platform/log"
-	"time"
 )
 
 // LoggingCoordinator wraps a Coordinator and logs operation durations and errors.

@@ -8,102 +8,13 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/agent"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/log"
-	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
-
-type mockAgentStore struct {
-	getAgentFn       func(ctx context.Context, q agent.GetAgent) (*agent.Agent, error)
-	getProviderFn    func(ctx context.Context, q agent.GetLLMProvider) (*agent.LLMProvider, error)
-	logRunFn         func(ctx context.Context, agentID string, spaceID string, status agent.AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*agent.AgentRun, error)
-	createProviderFn func(ctx context.Context, spaceID string, name string, mode agent.CompatibilityMode, url *string, key *string) (*agent.LLMProvider, error)
-	listProvidersFn  func(ctx context.Context, spaceID string) ([]*agent.LLMProvider, error)
-	updateProviderFn func(ctx context.Context, spaceID string, id string, name string, url *string, key *string) (*agent.LLMProvider, error)
-	deleteProviderFn func(ctx context.Context, spaceID string, id string) error
-	createAgentFn    func(ctx context.Context, spaceID string, providerID *string, name string, desc *string, purpose string, tags []string, model string, prompt *string, temp float64) (*agent.Agent, error)
-	listAgentsFn     func(ctx context.Context, spaceID string) ([]*agent.Agent, error)
-	updateAgentFn    func(ctx context.Context, spaceID string, id string, providerID *string, name string, desc *string, tags []string, model string, prompt *string, temp float64, isEnabled bool) (*agent.Agent, error)
-	deleteAgentFn    func(ctx context.Context, spaceID string, id string) error
-	listRunsFn       func(ctx context.Context, q agent.ListAgentRuns) (*paging.Page[*agent.AgentRun], error)
-}
-
-func (m *mockAgentStore) GetAgent(ctx context.Context, q agent.GetAgent) (*agent.Agent, error) {
-	if m.getAgentFn != nil {
-		return m.getAgentFn(ctx, q)
-	}
-	return nil, nil
-}
-func (m *mockAgentStore) GetProvider(ctx context.Context, q agent.GetLLMProvider) (*agent.LLMProvider, error) {
-	if m.getProviderFn != nil {
-		return m.getProviderFn(ctx, q)
-	}
-	return nil, nil
-}
-func (m *mockAgentStore) LogRun(ctx context.Context, agentID string, spaceID string, status agent.AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*agent.AgentRun, error) {
-	if m.logRunFn != nil {
-		return m.logRunFn(ctx, agentID, spaceID, status, input, output, errMsg, tokens)
-	}
-	return &agent.AgentRun{ID: "run_test"}, nil
-}
-func (m *mockAgentStore) CreateProvider(ctx context.Context, spaceID string, name string, mode agent.CompatibilityMode, url *string, key *string) (*agent.LLMProvider, error) {
-	if m.createProviderFn != nil {
-		return m.createProviderFn(ctx, spaceID, name, mode, url, key)
-	}
-	return &agent.LLMProvider{ID: "prv_1", SpaceID: spaceID, Name: name}, nil
-}
-func (m *mockAgentStore) ListProviders(ctx context.Context, spaceID string) ([]*agent.LLMProvider, error) {
-	if m.listProvidersFn != nil {
-		return m.listProvidersFn(ctx, spaceID)
-	}
-	return nil, nil
-}
-func (m *mockAgentStore) UpdateProvider(ctx context.Context, spaceID string, id string, name string, url *string, key *string) (*agent.LLMProvider, error) {
-	if m.updateProviderFn != nil {
-		return m.updateProviderFn(ctx, spaceID, id, name, url, key)
-	}
-	return &agent.LLMProvider{ID: id, SpaceID: spaceID, Name: name}, nil
-}
-func (m *mockAgentStore) DeleteProvider(ctx context.Context, spaceID string, id string) error {
-	if m.deleteProviderFn != nil {
-		return m.deleteProviderFn(ctx, spaceID, id)
-	}
-	return nil
-}
-func (m *mockAgentStore) CreateAgent(ctx context.Context, spaceID string, providerID *string, name string, desc *string, purpose string, tags []string, model string, prompt *string, temp float64) (*agent.Agent, error) {
-	if m.createAgentFn != nil {
-		return m.createAgentFn(ctx, spaceID, providerID, name, desc, purpose, tags, model, prompt, temp)
-	}
-	return &agent.Agent{ID: "agt_1", SpaceID: spaceID, Name: name, Purpose: purpose}, nil
-}
-func (m *mockAgentStore) ListAgents(ctx context.Context, spaceID string) ([]*agent.Agent, error) {
-	if m.listAgentsFn != nil {
-		return m.listAgentsFn(ctx, spaceID)
-	}
-	return nil, nil
-}
-func (m *mockAgentStore) UpdateAgent(ctx context.Context, spaceID string, id string, providerID *string, name string, desc *string, tags []string, model string, prompt *string, temp float64, isEnabled bool) (*agent.Agent, error) {
-	if m.updateAgentFn != nil {
-		return m.updateAgentFn(ctx, spaceID, id, providerID, name, desc, tags, model, prompt, temp, isEnabled)
-	}
-	return &agent.Agent{ID: id, SpaceID: spaceID, Name: name}, nil
-}
-func (m *mockAgentStore) DeleteAgent(ctx context.Context, spaceID string, id string) error {
-	if m.deleteAgentFn != nil {
-		return m.deleteAgentFn(ctx, spaceID, id)
-	}
-	return nil
-}
-func (m *mockAgentStore) ListRuns(ctx context.Context, q agent.ListAgentRuns) (*paging.Page[*agent.AgentRun], error) {
-	if m.listRunsFn != nil {
-		return m.listRunsFn(ctx, q)
-	}
-	return &paging.Page[*agent.AgentRun]{}, nil
-}
 
 func TestCoordinator_ExecuteAgent(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("Unsupported purpose returns Invalid", func(t *testing.T) {
-		coord := NewCoordinator(&mockAgentStore{}, agent.NewClient())
+		coord := NewCoordinator(&AgentStoreMock{}, agent.NewClient())
 		_, err := coord.ExecuteAgent(ctx, ExecutionRequest{
 			SpaceID: "spc_1",
 			Purpose: "NON_EXISTENT_PURPOSE",
@@ -124,8 +35,8 @@ func TestCoordinator_ExecuteAgent(t *testing.T) {
 	})
 
 	t.Run("Mock execution succeeds with catalog purpose", func(t *testing.T) {
-		mockStore := &mockAgentStore{
-			getAgentFn: func(ctx context.Context, q agent.GetAgent) (*agent.Agent, error) {
+		mockStore := &AgentStoreMock{
+			GetAgentFunc: func(ctx context.Context, q agent.GetAgent) (*agent.Agent, error) {
 				provID := "prv_1"
 				return &agent.Agent{
 					ID:            "agt_1",
@@ -135,7 +46,7 @@ func TestCoordinator_ExecuteAgent(t *testing.T) {
 					ModelName:     "gemini-2.5-flash",
 				}, nil
 			},
-			getProviderFn: func(ctx context.Context, q agent.GetLLMProvider) (*agent.LLMProvider, error) {
+			GetProviderFunc: func(ctx context.Context, q agent.GetLLMProvider) (*agent.LLMProvider, error) {
 				apiKey := "mock-key"
 				return &agent.LLMProvider{
 					ID:                "prv_1",
@@ -143,6 +54,9 @@ func TestCoordinator_ExecuteAgent(t *testing.T) {
 					CompatibilityMode: agent.ModeGeminiNative,
 					APIKey:            &apiKey,
 				}, nil
+			},
+			LogRunFunc: func(ctx context.Context, agentID string, spaceID string, status agent.AgentRunStatus, input string, output *string, errMsg *string, tokens int) (*agent.AgentRun, error) {
+				return &agent.AgentRun{ID: "run_test"}, nil
 			},
 		}
 
@@ -219,8 +133,8 @@ func TestCoordinator_CRUDAndSuggestions(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("CreateAgent detects existing agent for same purpose", func(t *testing.T) {
-		mockStore := &mockAgentStore{
-			getAgentFn: func(ctx context.Context, q agent.GetAgent) (*agent.Agent, error) {
+		mockStore := &AgentStoreMock{
+			GetAgentFunc: func(ctx context.Context, q agent.GetAgent) (*agent.Agent, error) {
 				return &agent.Agent{ID: "agt_existing", Purpose: "INBOX_PARSER"}, nil
 			},
 		}
@@ -243,7 +157,7 @@ func TestCoordinator_CRUDAndSuggestions(t *testing.T) {
 	})
 
 	t.Run("CreateProvider validates request", func(t *testing.T) {
-		coord := NewCoordinator(&mockAgentStore{}, agent.NewClient())
+		coord := NewCoordinator(&AgentStoreMock{}, agent.NewClient())
 		_, err := coord.CreateProvider(ctx, nil)
 		if err == nil || errors.KindOf(err) != errors.Invalid {
 			t.Fatalf("expected Invalid kind for nil req, got %v", err)
@@ -256,8 +170,8 @@ func TestCoordinator_CRUDAndSuggestions(t *testing.T) {
 	})
 
 	t.Run("GetProvider returns NotExist when nil", func(t *testing.T) {
-		mockStore := &mockAgentStore{
-			getProviderFn: func(ctx context.Context, q agent.GetLLMProvider) (*agent.LLMProvider, error) {
+		mockStore := &AgentStoreMock{
+			GetProviderFunc: func(ctx context.Context, q agent.GetLLMProvider) (*agent.LLMProvider, error) {
 				return nil, nil
 			},
 		}
@@ -275,7 +189,7 @@ func TestCoordinator_CRUDAndSuggestions(t *testing.T) {
 	})
 
 	t.Run("GetSuggestions fails for unregistered purpose", func(t *testing.T) {
-		coord := NewCoordinator(&mockAgentStore{}, agent.NewClient())
+		coord := NewCoordinator(&AgentStoreMock{}, agent.NewClient())
 		_, err := coord.GetSuggestions(ctx, "spc_1", "unknown_purpose", &SuggestionRequest{})
 		if err == nil {
 			t.Fatal("expected error, got nil")
@@ -289,8 +203,8 @@ func TestCoordinator_CRUDAndSuggestions(t *testing.T) {
 	})
 
 	t.Run("LoggingCoordinator wraps Coordinator transparently", func(t *testing.T) {
-		mockStore := &mockAgentStore{
-			listProvidersFn: func(ctx context.Context, spaceID string) ([]*agent.LLMProvider, error) {
+		mockStore := &AgentStoreMock{
+			ListProvidersFunc: func(ctx context.Context, spaceID string) ([]*agent.LLMProvider, error) {
 				return []*agent.LLMProvider{{ID: "prv_1"}}, nil
 			},
 		}

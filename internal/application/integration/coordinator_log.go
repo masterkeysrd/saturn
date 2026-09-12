@@ -4,9 +4,10 @@ package integration
 
 import (
 	"context"
+	"time"
+
 	"github.com/masterkeysrd/saturn/internal/platform/integration"
 	"github.com/masterkeysrd/saturn/internal/platform/log"
-	"time"
 )
 
 // LoggingCoordinator wraps a Coordinator and logs operation durations and errors.

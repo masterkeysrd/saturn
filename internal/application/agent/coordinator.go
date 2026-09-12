@@ -14,7 +14,10 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
+//go:generate go run github.com/masterkeysrd/saturn/tools/mockgen .
+
 // AgentStore abstracts database operations for retrieving configurations and logging runs.
+// @Mock
 type AgentStore interface {
 	GetAgent(ctx context.Context, q agent.GetAgent) (*agent.Agent, error)
 	GetProvider(ctx context.Context, q agent.GetLLMProvider) (*agent.LLMProvider, error)
@@ -48,6 +51,7 @@ type SuggestionRequest struct {
 }
 
 // SuggestionProcessor interface abstracts purpose-based suggestion engines.
+// @Mock
 type SuggestionProcessor interface {
 	ProcessSuggestions(ctx context.Context, spaceID string, req *SuggestionRequest) (map[string]any, error)
 }

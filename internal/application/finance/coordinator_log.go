@@ -4,10 +4,11 @@ package financeapp
 
 import (
 	"context"
+	"time"
+
 	agentapp "github.com/masterkeysrd/saturn/internal/application/agent"
 	"github.com/masterkeysrd/saturn/internal/domain/finance"
 	"github.com/masterkeysrd/saturn/internal/platform/log"
-	"time"
 )
 
 // LoggingCoordinator wraps a Coordinator and logs operation durations and errors.
