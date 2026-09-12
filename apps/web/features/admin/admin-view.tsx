@@ -242,7 +242,7 @@ export function AdminView() {
                                 : "border-destructive/20 bg-destructive/10 text-destructive"
                           }`}
                         >
-                          {account.status.replace("_", " ")}
+                          {(account.status || "").replace("_", " ")}
                         </span>
                       </td>
 
@@ -251,7 +251,9 @@ export function AdminView() {
                         {isPending ? (
                           <div className="flex items-center justify-end gap-2">
                             <Button
-                              onClick={() => handleReject(account.id)}
+                              onClick={() =>
+                                account.id && handleReject(account.id)
+                              }
                               disabled={isPendingOperation}
                               variant="ghost"
                               size="sm"
@@ -261,7 +263,9 @@ export function AdminView() {
                               Deny
                             </Button>
                             <Button
-                              onClick={() => handleApprove(account.id)}
+                              onClick={() =>
+                                account.id && handleApprove(account.id)
+                              }
                               disabled={isPendingOperation}
                               className="h-8 cursor-pointer rounded-xl bg-green-600 px-3.5 text-white shadow-sm shadow-green-600/10 hover:bg-green-700"
                             >

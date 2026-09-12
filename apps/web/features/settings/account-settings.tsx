@@ -145,7 +145,9 @@ export function AccountSettings() {
               const formattedDate = session.lastUsedAt
                 ? new Date(session.lastUsedAt).toLocaleString()
                 : "Unknown"
-              const { device, isMobile } = parseUserAgent(session.userAgent)
+              const { device, isMobile } = parseUserAgent(
+                session.userAgent || ""
+              )
 
               return (
                 <div
@@ -178,6 +180,7 @@ export function AccountSettings() {
                   <button
                     onClick={() => {
                       if (
+                        session.sessionId &&
                         confirm("Are you sure you want to revoke this session?")
                       ) {
                         revokeSessionMutation.mutate({

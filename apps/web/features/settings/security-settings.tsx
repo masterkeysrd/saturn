@@ -108,8 +108,8 @@ export function SecuritySettings() {
               </thead>
               <tbody className="divide-y divide-border/30">
                 {data.events.map((ev) => {
-                  const meta = getEventMeta(ev.eventType)
-                  const parsedDevice = parseUserAgent(ev.userAgent)
+                  const meta = getEventMeta(ev.eventType || "")
+                  const parsedDevice = parseUserAgent(ev.userAgent || "")
                   const dateStr = ev.createdAt
                     ? new Date(ev.createdAt).toLocaleString()
                     : "Unknown time"

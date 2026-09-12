@@ -15,13 +15,14 @@ import {
 import type {
   LoginUserRequest,
   RegisterUserRequest,
+  RefreshSessionResponse,
 } from "@/gen/saturn/identity/v1/identity"
 import { AuthContext, type AuthUser } from "./auth-context"
 import { authStorage } from "@/lib/auth-storage"
 import { decodeJwt } from "@/lib/jwt"
 
 // Global promise cache to deduplicate silent refresh calls on mount (e.g. under React Strict Mode)
-let initialRefreshPromise: Promise<{ accessToken: string }> | null = null
+let initialRefreshPromise: Promise<RefreshSessionResponse> | null = null
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(null)
@@ -45,8 +46,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             })
           }
           const res = await initialRefreshPromise
-          authStorage.setSession(res.accessToken)
-          setAccessToken(res.accessToken)
+          if (res?.accessToken) {
+            authStorage.setSession(res.accessToken)
+            setAccessToken(res.accessToken)
+          } else {
+            authStorage.clearSession()
+            setAccessToken(null)
+          }
         } catch {
           authStorage.clearSession()
         } finally {
@@ -95,9 +101,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await loginUser(req)
 
       // Store tokens only — user profile is fetched from API
-      authStorage.setSession(res.accessToken)
-
-      setAccessToken(res.accessToken)
+      if (res.accessToken) {
+        authStorage.setSession(res.accessToken)
+        setAccessToken(res.accessToken)
+      }
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to authenticate"
