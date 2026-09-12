@@ -151,7 +151,7 @@ func (c *Client) DeleteSpaceMember(ctx context.Context, req *DeleteSpaceMemberRe
 // UpdateSpaceMember executes PATCH /api/v1/spaces/{space_id}/members/{member.user_id}.
 func (c *Client) UpdateSpaceMember(ctx context.Context, req *UpdateSpaceMemberRequest) (*SpaceMember, error) {
 	var resp SpaceMember
-	path := fmt.Sprintf("/api/v1/spaces/%s/members/{member.user_id}", req.GetSpaceId())
+	path := fmt.Sprintf("/api/v1/spaces/%s/members/%s", req.GetSpaceId(), req.GetMember().GetUserId())
 	var query []string
 	if req.UpdateMask != nil {
 		for _, p := range req.GetUpdateMask().GetPaths() {

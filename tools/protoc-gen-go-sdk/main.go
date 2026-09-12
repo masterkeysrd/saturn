@@ -66,7 +66,7 @@ func generateSDKFile(gen *protogen.Plugin, f *protogen.File) {
 	}
 }
 
-var pathParamRegex = regexp.MustCompile(`\{([a-zA-Z0-9_]+)\}`)
+var pathParamRegex = regexp.MustCompile(`\{([a-zA-Z0-9_.]+)\}`)
 
 func generateSDKMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 	httpMethod := "POST"
@@ -123,9 +123,16 @@ func generateSDKMethod(g *protogen.GeneratedFile, method *protogen.Method) {
 			rawVar := varMatch[0]
 			varName := varMatch[1]
 			pathVarNames[varName] = true
-			getterName := "Get" + snakeToCamel(varName)
+			parts := strings.Split(varName, ".")
+			if len(parts) > 0 {
+				pathVarNames[parts[0]] = true
+			}
+			getterExpr := "req"
+			for _, part := range parts {
+				getterExpr += ".Get" + snakeToCamel(part) + "()"
+			}
 			fmtPathPattern = strings.Replace(fmtPathPattern, rawVar, "%s", 1)
-			fmtArgs = append(fmtArgs, fmt.Sprintf("req.%s()", getterName))
+			fmtArgs = append(fmtArgs, getterExpr)
 		}
 		g.P("	path := fmt.Sprintf(", quote(fmtPathPattern), ", ", strings.Join(fmtArgs, ", "), ")")
 	} else {

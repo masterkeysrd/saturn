@@ -336,11 +336,19 @@ func (h *Handler) UpdateSpaceMember(ctx context.Context, req *spacev1.UpdateSpac
 		mInput.SpaceID = space.SpaceID(req.GetSpaceId())
 	}
 
+	var mask []string
+	for _, p := range req.GetUpdateMask().GetPaths() {
+		if p == "user_id" || p == "member.user_id" || p == "space_id" {
+			continue
+		}
+		mask = append(mask, p)
+	}
+
 	m, err := h.Coordinator.UpdateSpaceMember(ctx, &spaceapp.UpdateSpaceMemberRequest{
 		SpaceID:    req.GetSpaceId(),
 		UserID:     userID,
 		Member:     mInput,
-		UpdateMask: req.GetUpdateMask().GetPaths(),
+		UpdateMask: mask,
 	})
 	if err != nil {
 		return nil, errors.E(op, err)
