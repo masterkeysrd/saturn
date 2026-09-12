@@ -1,4 +1,4 @@
-package agent
+package agent_test
 
 import (
 	"context"
@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/masterkeysrd/saturn/internal/platform/agent"
 )
 
 func TestExecuteOpenAI(t *testing.T) {
@@ -22,9 +24,9 @@ func TestExecuteOpenAI(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient()
-	resp, err := client.Execute(context.Background(), ExecutionRequest{
-		CompatibilityMode: ModeOpenAICompatible,
+	client := agent.NewClient()
+	resp, err := client.Execute(context.Background(), agent.ExecutionRequest{
+		CompatibilityMode: agent.ModeOpenAICompatible,
 		APIUrl:            server.URL,
 		APIKey:            "test-key",
 		ModelName:         "gpt-4o",
@@ -70,9 +72,9 @@ func TestExecuteAnthropic(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient()
-	resp, err := client.Execute(context.Background(), ExecutionRequest{
-		CompatibilityMode: ModeAnthropicCompat,
+	client := agent.NewClient()
+	resp, err := client.Execute(context.Background(), agent.ExecutionRequest{
+		CompatibilityMode: agent.ModeAnthropicCompat,
 		APIUrl:            server.URL,
 		APIKey:            "test-key",
 		ModelName:         "claude-3",
@@ -91,9 +93,9 @@ func TestExecuteAnthropic(t *testing.T) {
 }
 
 func TestExecuteGeminiMockFallback(t *testing.T) {
-	client := NewClient()
-	resp, err := client.Execute(context.Background(), ExecutionRequest{
-		CompatibilityMode: ModeGeminiNative,
+	client := agent.NewClient()
+	resp, err := client.Execute(context.Background(), agent.ExecutionRequest{
+		CompatibilityMode: agent.ModeGeminiNative,
 		APIKey:            "mock-key",
 		Prompt:            "Extract this receipt",
 	})
@@ -114,5 +116,41 @@ func TestExecuteGeminiMockFallback(t *testing.T) {
 	}
 	if parsed.ReferenceNumber != "MOCK-TXN-129380" {
 		t.Errorf("expected reference number 'MOCK-TXN-129380', got %q", parsed.ReferenceNumber)
+	}
+}
+
+func TestExecute_ValidationErrors(t *testing.T) {
+	client := agent.NewClient()
+	ctx := context.Background()
+
+	// 1. Missing API Key
+	_, err := client.Execute(ctx, agent.ExecutionRequest{
+		CompatibilityMode: agent.ModeOpenAICompatible,
+		APIKey:            "",
+		Prompt:            "Hello",
+	})
+	if err == nil || !strings.Contains(err.Error(), "api_key is required") {
+		t.Errorf("expected api_key is required error, got: %v", err)
+	}
+
+	// 2. Unsupported Compatibility Mode
+	_, err = client.Execute(ctx, agent.ExecutionRequest{
+		CompatibilityMode: "unsupported_mode",
+		APIKey:            "some-key",
+		Prompt:            "Hello",
+	})
+	if err == nil || !strings.Contains(err.Error(), "unsupported compatibility mode") {
+		t.Errorf("expected unsupported compatibility mode error, got: %v", err)
+	}
+
+	// 3. Ollama missing host URL
+	_, err = client.Execute(ctx, agent.ExecutionRequest{
+		CompatibilityMode: agent.ModeOllamaNative,
+		APIKey:            "some-key",
+		APIUrl:            "",
+		Prompt:            "Hello",
+	})
+	if err == nil || !strings.Contains(err.Error(), "api_url (Ollama Host) is required") {
+		t.Errorf("expected Ollama Host required error, got: %v", err)
 	}
 }

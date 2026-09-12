@@ -1,7 +1,7 @@
 # Saturn Code Coverage Configuration (.covercheck.yaml)
 
 # Minimum overall statement coverage percentage required to pass
-min_coverage: 25.0
+min_coverage: 30.0
 
 # Path to the coverage profile file
 coverprofile: coverage/coverage.out
