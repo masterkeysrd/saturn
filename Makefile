@@ -69,7 +69,7 @@ test-unit: apps/web/dist/index.html
 .PHONY: test-integration
 test-integration: apps/web/dist/index.html
 	@echo "→ Running integration tests"
-	go test -tags=integration -v ./tests/...
+	go test -tags=integration -p=1 -v ./tests/...
 
 ## Generate unit test coverage report and verify threshold
 .PHONY: test-coverage

@@ -11,9 +11,11 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -133,7 +135,42 @@ func StartTestEnv() (*TestEnv, error) {
 		return nil, fmt.Errorf("create temp backup dir: %w", err)
 	}
 
+	dbPort := 5432
+	dbHost := "localhost"
+	dbUser := "saturn"
+	dbPass := "saturn_password"
+	dbName := "saturn_test"
+
+	if parsedURL, err := url.Parse(dbURL); err == nil {
+		if h := parsedURL.Hostname(); h != "" {
+			dbHost = h
+		}
+		if p := parsedURL.Port(); p != "" {
+			if portNum, err := strconv.Atoi(p); err == nil {
+				dbPort = portNum
+			}
+		}
+		if parsedURL.User != nil {
+			if u := parsedURL.User.Username(); u != "" {
+				dbUser = u
+			}
+			if pass, ok := parsedURL.User.Password(); ok {
+				dbPass = pass
+			}
+		}
+		if path := strings.TrimPrefix(parsedURL.Path, "/"); path != "" {
+			dbName = path
+		}
+	}
+
 	cfg := &app.Config{
+		DB: app.DBConfig{
+			Host:     dbHost,
+			Port:     dbPort,
+			User:     dbUser,
+			Password: dbPass,
+			Name:     dbName,
+		},
 		GRPC: app.GRPCConfig{
 			Socket: sockPath,
 		},
@@ -224,10 +261,6 @@ func (e *TestEnv) Stop() {
 }
 
 func ensurePGDump() (func(), error) {
-	if _, err := exec.LookPath("pg_dump"); err == nil {
-		return func() {}, nil
-	}
-
 	binDir, err := os.MkdirTemp("", "saturn-test-bin-*")
 	if err != nil {
 		return nil, fmt.Errorf("create temp bin dir: %w", err)
@@ -313,15 +346,6 @@ func (e *TestEnv) getAdminToken(tb testing.TB) string {
 	adminEmail := "system_admin@saturn.local"
 	adminPass := "AdminPassword123!"
 
-	// Ensure system admin exists in DB fixture
-	if _, err := e.DB.ExecContext(tb.Context(), `
-		INSERT INTO identity.user (id, name, email, username, status, access_level)
-		VALUES ('usr_sysadmin', 'System Admin', 'system_admin@saturn.local', 'sysadmin', 'active', 'admin')
-		ON CONFLICT (email) DO UPDATE SET status = 'active', access_level = 'admin'
-	`); err != nil {
-		tb.Fatalf("failed to insert sysadmin user: %v", err)
-	}
-
 	hasher, err := password.NewArgon2id(password.DefaultParams())
 	if err != nil {
 		tb.Fatalf("failed to create hasher: %v", err)
@@ -330,12 +354,32 @@ func (e *TestEnv) getAdminToken(tb testing.TB) string {
 	if err != nil {
 		tb.Fatalf("failed to hash adminPass: %v", err)
 	}
-	if _, err := e.DB.ExecContext(tb.Context(), `
+
+	tx, err := e.DB.BeginTx(tb.Context(), nil)
+	if err != nil {
+		tb.Fatalf("failed to begin tx for sysadmin fixture: %v", err)
+	}
+	defer tx.Rollback()
+
+	// Ensure system admin exists in DB fixture
+	if _, err := tx.ExecContext(tb.Context(), `
+		INSERT INTO identity.user (id, name, email, username, status, access_level)
+		VALUES ('usr_sysadmin', 'System Admin', 'system_admin@saturn.local', 'sysadmin', 'active', 'admin')
+		ON CONFLICT (email) DO UPDATE SET status = 'active', access_level = 'admin'
+	`); err != nil {
+		tb.Fatalf("failed to insert sysadmin user: %v", err)
+	}
+
+	if _, err := tx.ExecContext(tb.Context(), `
 		INSERT INTO identity.user_credentials (user_id, auth_type, secret_data)
 		VALUES ('usr_sysadmin', 'password', $1)
 		ON CONFLICT (user_id, auth_type) DO UPDATE SET secret_data = EXCLUDED.secret_data
 	`, hash); err != nil {
 		tb.Fatalf("failed to insert sysadmin credentials: %v", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		tb.Fatalf("failed to commit sysadmin credentials: %v", err)
 	}
 
 	client := identityv1.NewClient(saturn.Config{
