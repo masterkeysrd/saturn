@@ -524,6 +524,13 @@ func (s *GRPCGatewayServer) Start(ctx context.Context, cfg *Config) error {
 		handler.Handle(swaggerPath, SwaggerHandler(swaggerJSONPath))
 	}
 
+	// Liveness and readiness probe endpoint
+	handler.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	})
+
 	// Serve static files from embedded React UI assets with client-routing fallback
 	uiFS := web.GetUIFS()
 	fileServer := http.FileServer(http.FS(uiFS))
