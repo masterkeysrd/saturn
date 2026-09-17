@@ -9,7 +9,10 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
+//go:generate go run github.com/masterkeysrd/saturn/tools/mockgen .
+
 // SpaceService defines the domain service methods required by the aggregator.
+// @Mock
 type SpaceService interface {
 	GetSpace(ctx context.Context, session space.Session) (*space.Space, error)
 	ListSpaces(ctx context.Context, userID space.SpaceID, filter *space.ListSpacesFilter) (*paging.Page[*space.Space], error)
@@ -17,6 +20,7 @@ type SpaceService interface {
 }
 
 // IdentityService defines the IAM operations required by the aggregator.
+// @Mock
 type IdentityService interface {
 	GetUserByID(ctx context.Context, id identity.UserID) (*identity.User, error)
 }
