@@ -2,16 +2,18 @@ package scheduler
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
 
-	"github.com/masterkeysrd/saturn/internal/platform/db"
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
 	"github.com/masterkeysrd/saturn/internal/platform/id"
 	"github.com/robfig/cron/v3"
 )
+
+//go:generate go run github.com/masterkeysrd/saturn/tools/mockgen .
 
 // Handler defines the callback function signature for a job type.
 type Handler func(ctx context.Context, payload []byte) error
@@ -33,6 +35,7 @@ type Schedule struct {
 }
 
 // Scheduler provides a system-wide interface for enqueuing one-off jobs and registering schedules.
+// @Mock
 type Scheduler interface {
 	Enqueue(ctx context.Context, job Job) error
 	RegisterSchedule(ctx context.Context, s Schedule) error
@@ -48,10 +51,18 @@ type jobInstance struct {
 }
 
 // Database defines the database capabilities required by scheduler Engine.
+// @Mock
 type Database interface {
-	db.DB
+	Get(ctx context.Context, dest any, query string, args ...any) error
+	Select(ctx context.Context, dest any, query string, args ...any) error
+	Exec(ctx context.Context, query string, args ...any) (sql.Result, error)
+	ExecOne(ctx context.Context, query string, args ...any) error
+	Rebind(query string) string
 	WithTx(ctx context.Context, fn func(ctx context.Context) error) error
 }
+
+// Compile-time interface assertion.
+var _ Scheduler = (*Engine)(nil)
 
 // Engine implements the Scheduler interface and manages background polling and job execution.
 type Engine struct {

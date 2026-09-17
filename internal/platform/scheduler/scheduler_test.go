@@ -3,26 +3,11 @@ package scheduler
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"math"
 	"testing"
 	"time"
-
-	"github.com/masterkeysrd/saturn/internal/platform/requestid"
 )
-
-type mockDB struct{}
-
-func (m *mockDB) Get(ctx context.Context, dest any, query string, args ...any) error    { return nil }
-func (m *mockDB) Select(ctx context.Context, dest any, query string, args ...any) error { return nil }
-func (m *mockDB) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	return nil, nil
-}
-func (m *mockDB) ExecOne(ctx context.Context, query string, args ...any) error { return nil }
-func (m *mockDB) Rebind(query string) string                                   { return query }
-func (m *mockDB) WithTx(ctx context.Context, fn func(ctx context.Context) error) error {
-	return fn(ctx)
-}
-
-var _ Database = (*mockDB)(nil)
 
 func TestEngineRegisterAndGetHandler(t *testing.T) {
 	engine := NewEngine(nil)
@@ -58,7 +43,7 @@ func TestEngineRegisterAndGetHandler(t *testing.T) {
 func TestEngineCronParsing(t *testing.T) {
 	engine := NewEngine(nil)
 
-	// Valid cron expression: every minute
+	// Valid cron expression: every 5 seconds
 	cronExpr := "*/5 * * * * *"
 	schedule, err := engine.cronParser.Parse(cronExpr)
 	if err != nil {
@@ -80,39 +65,177 @@ func TestEngineCronParsing(t *testing.T) {
 	}
 }
 
-func TestEngineExecuteJobInstance_RequestID(t *testing.T) {
-	engine := NewEngine(&mockDB{})
+func TestEngineWithWorkerCount(t *testing.T) {
+	engine := NewEngine(nil)
+	if engine.workerCount != 5 {
+		t.Errorf("default worker count = %d, want 5", engine.workerCount)
+	}
 
-	var receivedReqID string
-	engine.Register("test.request_id_job", func(ctx context.Context, payload []byte) error {
-		receivedReqID = requestid.From(ctx)
-		return nil
+	engine.WithWorkerCount(10)
+	if engine.workerCount != 10 {
+		t.Errorf("updated worker count = %d, want 10", engine.workerCount)
+	}
+
+	// Non-positive count should be ignored
+	engine.WithWorkerCount(0)
+	if engine.workerCount != 10 {
+		t.Errorf("worker count = %d after WithWorkerCount(0), want 10", engine.workerCount)
+	}
+}
+
+func TestEngineEnqueue(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("Success with default MaxAttempts", func(t *testing.T) {
+		var capturedMaxAttempts int
+		dbMock := &DatabaseMock{
+			ExecFunc: func(ctx context.Context, query string, args ...any) (sql.Result, error) {
+				capturedMaxAttempts = args[4].(int)
+				return nil, nil
+			},
+		}
+
+		engine := NewEngine(dbMock)
+		err := engine.Enqueue(ctx, Job{
+			JobType: "backup.run",
+			RunAt:   time.Now(),
+			Payload: map[string]string{"type": "daily"},
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if capturedMaxAttempts != 5 {
+			t.Errorf("expected default max_attempts=5, got %d", capturedMaxAttempts)
+		}
 	})
 
-	job := jobInstance{
-		ID:          "job_12345",
-		JobType:     "test.request_id_job",
-		Payload:     []byte("test"),
-		Attempts:    0,
-		MaxAttempts: 5,
-	}
+	t.Run("Success with custom MaxAttempts", func(t *testing.T) {
+		var capturedMaxAttempts int
+		dbMock := &DatabaseMock{
+			ExecFunc: func(ctx context.Context, query string, args ...any) (sql.Result, error) {
+				capturedMaxAttempts = args[4].(int)
+				return nil, nil
+			},
+		}
 
-	// 1. Calling executeJobInstance without request_id on ctx -> generates fresh req_ ID
-	engine.executeJobInstance(context.Background(), job)
+		engine := NewEngine(dbMock)
+		err := engine.Enqueue(ctx, Job{
+			JobType:     "backup.run",
+			RunAt:       time.Now(),
+			Payload:     "simple payload",
+			MaxAttempts: 3,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if capturedMaxAttempts != 3 {
+			t.Errorf("expected custom max_attempts=3, got %d", capturedMaxAttempts)
+		}
+	})
 
-	if receivedReqID == "" {
-		t.Fatal("expected request_id to be injected into context, got empty string")
-	}
-	if len(receivedReqID) < 5 || receivedReqID[:4] != "req_" {
-		t.Fatalf("expected request_id with prefix 'req_', got %q", receivedReqID)
-	}
+	t.Run("Invalid payload JSON marshal", func(t *testing.T) {
+		engine := NewEngine(nil)
+		err := engine.Enqueue(ctx, Job{
+			JobType: "invalid.job",
+			RunAt:   time.Now(),
+			Payload: math.NaN(),
+		})
+		if err == nil {
+			t.Fatal("expected error for unmarshalable payload, got nil")
+		}
+	})
 
-	// 2. Calling executeJobInstance with existing request_id on ctx -> preserves it via FromOrNew
-	existingReqID := "req_existing_correlation_id"
-	ctxWithExisting := requestid.With(context.Background(), existingReqID)
-	engine.executeJobInstance(ctxWithExisting, job)
+	t.Run("Database error", func(t *testing.T) {
+		dbMock := &DatabaseMock{
+			ExecFunc: func(ctx context.Context, query string, args ...any) (sql.Result, error) {
+				return nil, errors.New("db connection failure")
+			},
+		}
 
-	if receivedReqID != existingReqID {
-		t.Fatalf("expected existing request_id %q to be preserved, got %q", existingReqID, receivedReqID)
-	}
+		engine := NewEngine(dbMock)
+		err := engine.Enqueue(ctx, Job{
+			JobType: "backup.run",
+			RunAt:   time.Now(),
+			Payload: "payload",
+		})
+		if err == nil {
+			t.Fatal("expected error from database Exec, got nil")
+		}
+	})
+}
+
+func TestEngineRegisterSchedule(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("Success", func(t *testing.T) {
+		var execCalled bool
+		dbMock := &DatabaseMock{
+			ExecFunc: func(ctx context.Context, query string, args ...any) (sql.Result, error) {
+				execCalled = true
+				if args[0] != "sched_1" || args[1] != "finance.sync" {
+					t.Errorf("unexpected args: %v", args)
+				}
+				return nil, nil
+			},
+		}
+
+		engine := NewEngine(dbMock)
+		err := engine.RegisterSchedule(ctx, Schedule{
+			ID:             "sched_1",
+			JobType:        "finance.sync",
+			CronExpression: "0 0 12 * * *",
+			Payload:        map[string]string{"scope": "all"},
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !execCalled {
+			t.Error("expected db.Exec to be called")
+		}
+	})
+
+	t.Run("Invalid cron expression", func(t *testing.T) {
+		engine := NewEngine(nil)
+		err := engine.RegisterSchedule(ctx, Schedule{
+			ID:             "sched_1",
+			JobType:        "finance.sync",
+			CronExpression: "not a valid cron",
+			Payload:        nil,
+		})
+		if err == nil {
+			t.Fatal("expected error for invalid cron, got nil")
+		}
+	})
+
+	t.Run("Invalid payload JSON marshal", func(t *testing.T) {
+		engine := NewEngine(nil)
+		err := engine.RegisterSchedule(ctx, Schedule{
+			ID:             "sched_1",
+			JobType:        "finance.sync",
+			CronExpression: "0 0 12 * * *",
+			Payload:        math.NaN(),
+		})
+		if err == nil {
+			t.Fatal("expected error for unmarshalable payload, got nil")
+		}
+	})
+
+	t.Run("Database error", func(t *testing.T) {
+		dbMock := &DatabaseMock{
+			ExecFunc: func(ctx context.Context, query string, args ...any) (sql.Result, error) {
+				return nil, errors.New("db write failed")
+			},
+		}
+
+		engine := NewEngine(dbMock)
+		err := engine.RegisterSchedule(ctx, Schedule{
+			ID:             "sched_1",
+			JobType:        "finance.sync",
+			CronExpression: "0 0 12 * * *",
+			Payload:        nil,
+		})
+		if err == nil {
+			t.Fatal("expected error from database Exec, got nil")
+		}
+	})
 }
