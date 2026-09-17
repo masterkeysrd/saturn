@@ -111,6 +111,7 @@ type UpdateAgentRequest struct {
 //go:generate go run github.com/masterkeysrd/saturn/tools/loggen -target=Coordinator -component=agent
 
 // Coordinator orchestrates AI agent blueprints, LLM providers, audit runs, and suggestions.
+// @Mock
 type Coordinator interface {
 	GetSuggestions(ctx context.Context, spaceID string, purpose string, req *SuggestionRequest) (map[string]any, error)
 	ExecuteAgent(ctx context.Context, req ExecutionRequest) (string, error)
@@ -130,6 +131,9 @@ type Coordinator interface {
 
 	ListRuns(ctx context.Context, q agent.ListAgentRuns) (*paging.Page[*agent.AgentRun], error)
 }
+
+// Compile-time interface assertion.
+var _ Coordinator = (*coordinator)(nil)
 
 type coordinator struct {
 	store      AgentStore

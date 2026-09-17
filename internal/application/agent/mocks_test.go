@@ -620,3 +620,527 @@ func (mock *SuggestionProcessorMock) ProcessSuggestionsCalls() []struct {
 	defer mock.lockProcessSuggestions.RUnlock()
 	return mock.calls.ProcessSuggestions
 }
+
+// Compile-time interface assertion.
+var _ Coordinator = (*CoordinatorMock)(nil)
+
+// CoordinatorMock is a mock implementation of Coordinator.
+type CoordinatorMock struct {
+	// GetSuggestionsFunc mocks the GetSuggestions method.
+	GetSuggestionsFunc func(ctx context.Context, spaceID string, purpose string, req *SuggestionRequest) (map[string]any, error)
+
+	// ExecuteAgentFunc mocks the ExecuteAgent method.
+	ExecuteAgentFunc func(ctx context.Context, req ExecutionRequest) (string, error)
+
+	// RegisterSuggestionProcessorFunc mocks the RegisterSuggestionProcessor method.
+	RegisterSuggestionProcessorFunc func(purpose string, processor SuggestionProcessor)
+
+	// CreateProviderFunc mocks the CreateProvider method.
+	CreateProviderFunc func(ctx context.Context, req *CreateProviderRequest) (*agent.LLMProvider, error)
+
+	// GetProviderFunc mocks the GetProvider method.
+	GetProviderFunc func(ctx context.Context, spaceID string, id string) (*agent.LLMProvider, error)
+
+	// ListProvidersFunc mocks the ListProviders method.
+	ListProvidersFunc func(ctx context.Context, spaceID string) ([]*agent.LLMProvider, error)
+
+	// UpdateProviderFunc mocks the UpdateProvider method.
+	UpdateProviderFunc func(ctx context.Context, req *UpdateProviderRequest) (*agent.LLMProvider, error)
+
+	// DeleteProviderFunc mocks the DeleteProvider method.
+	DeleteProviderFunc func(ctx context.Context, spaceID string, id string) error
+
+	// CreateAgentFunc mocks the CreateAgent method.
+	CreateAgentFunc func(ctx context.Context, req *CreateAgentRequest) (*agent.Agent, error)
+
+	// GetAgentFunc mocks the GetAgent method.
+	GetAgentFunc func(ctx context.Context, spaceID string, id string) (*agent.Agent, error)
+
+	// ListAgentsFunc mocks the ListAgents method.
+	ListAgentsFunc func(ctx context.Context, spaceID string) ([]*agent.Agent, error)
+
+	// UpdateAgentFunc mocks the UpdateAgent method.
+	UpdateAgentFunc func(ctx context.Context, req *UpdateAgentRequest) (*agent.Agent, error)
+
+	// DeleteAgentFunc mocks the DeleteAgent method.
+	DeleteAgentFunc func(ctx context.Context, spaceID string, id string) error
+
+	// ListRunsFunc mocks the ListRuns method.
+	ListRunsFunc func(ctx context.Context, q agent.ListAgentRuns) (*paging.Page[*agent.AgentRun], error)
+
+	// calls tracks calls to the methods.
+	calls struct {
+		GetSuggestions []struct {
+			Ctx     context.Context
+			SpaceID string
+			Purpose string
+			Req     *SuggestionRequest
+		}
+		ExecuteAgent []struct {
+			Ctx context.Context
+			Req ExecutionRequest
+		}
+		RegisterSuggestionProcessor []struct {
+			Purpose   string
+			Processor SuggestionProcessor
+		}
+		CreateProvider []struct {
+			Ctx context.Context
+			Req *CreateProviderRequest
+		}
+		GetProvider []struct {
+			Ctx     context.Context
+			SpaceID string
+			Id      string
+		}
+		ListProviders []struct {
+			Ctx     context.Context
+			SpaceID string
+		}
+		UpdateProvider []struct {
+			Ctx context.Context
+			Req *UpdateProviderRequest
+		}
+		DeleteProvider []struct {
+			Ctx     context.Context
+			SpaceID string
+			Id      string
+		}
+		CreateAgent []struct {
+			Ctx context.Context
+			Req *CreateAgentRequest
+		}
+		GetAgent []struct {
+			Ctx     context.Context
+			SpaceID string
+			Id      string
+		}
+		ListAgents []struct {
+			Ctx     context.Context
+			SpaceID string
+		}
+		UpdateAgent []struct {
+			Ctx context.Context
+			Req *UpdateAgentRequest
+		}
+		DeleteAgent []struct {
+			Ctx     context.Context
+			SpaceID string
+			Id      string
+		}
+		ListRuns []struct {
+			Ctx context.Context
+			Q   agent.ListAgentRuns
+		}
+	}
+	lockGetSuggestions              sync.RWMutex
+	lockExecuteAgent                sync.RWMutex
+	lockRegisterSuggestionProcessor sync.RWMutex
+	lockCreateProvider              sync.RWMutex
+	lockGetProvider                 sync.RWMutex
+	lockListProviders               sync.RWMutex
+	lockUpdateProvider              sync.RWMutex
+	lockDeleteProvider              sync.RWMutex
+	lockCreateAgent                 sync.RWMutex
+	lockGetAgent                    sync.RWMutex
+	lockListAgents                  sync.RWMutex
+	lockUpdateAgent                 sync.RWMutex
+	lockDeleteAgent                 sync.RWMutex
+	lockListRuns                    sync.RWMutex
+}
+
+// GetSuggestions calls GetSuggestionsFunc.
+func (mock *CoordinatorMock) GetSuggestions(ctx context.Context, spaceID string, purpose string, req *SuggestionRequest) (map[string]any, error) {
+	if mock.GetSuggestionsFunc == nil {
+		panic("CoordinatorMock.GetSuggestionsFunc: method is nil but Coordinator.GetSuggestions was just called")
+	}
+	mock.lockGetSuggestions.Lock()
+	mock.calls.GetSuggestions = append(mock.calls.GetSuggestions, struct {
+		Ctx     context.Context
+		SpaceID string
+		Purpose string
+		Req     *SuggestionRequest
+	}{
+		Ctx:     ctx,
+		SpaceID: spaceID,
+		Purpose: purpose,
+		Req:     req,
+	})
+	mock.lockGetSuggestions.Unlock()
+	return mock.GetSuggestionsFunc(ctx, spaceID, purpose, req)
+}
+
+// GetSuggestionsCalls returns all calls made to GetSuggestions.
+func (mock *CoordinatorMock) GetSuggestionsCalls() []struct {
+	Ctx     context.Context
+	SpaceID string
+	Purpose string
+	Req     *SuggestionRequest
+} {
+	mock.lockGetSuggestions.RLock()
+	defer mock.lockGetSuggestions.RUnlock()
+	return mock.calls.GetSuggestions
+}
+
+// ExecuteAgent calls ExecuteAgentFunc.
+func (mock *CoordinatorMock) ExecuteAgent(ctx context.Context, req ExecutionRequest) (string, error) {
+	if mock.ExecuteAgentFunc == nil {
+		panic("CoordinatorMock.ExecuteAgentFunc: method is nil but Coordinator.ExecuteAgent was just called")
+	}
+	mock.lockExecuteAgent.Lock()
+	mock.calls.ExecuteAgent = append(mock.calls.ExecuteAgent, struct {
+		Ctx context.Context
+		Req ExecutionRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockExecuteAgent.Unlock()
+	return mock.ExecuteAgentFunc(ctx, req)
+}
+
+// ExecuteAgentCalls returns all calls made to ExecuteAgent.
+func (mock *CoordinatorMock) ExecuteAgentCalls() []struct {
+	Ctx context.Context
+	Req ExecutionRequest
+} {
+	mock.lockExecuteAgent.RLock()
+	defer mock.lockExecuteAgent.RUnlock()
+	return mock.calls.ExecuteAgent
+}
+
+// RegisterSuggestionProcessor calls RegisterSuggestionProcessorFunc.
+func (mock *CoordinatorMock) RegisterSuggestionProcessor(purpose string, processor SuggestionProcessor) {
+	if mock.RegisterSuggestionProcessorFunc == nil {
+		panic("CoordinatorMock.RegisterSuggestionProcessorFunc: method is nil but Coordinator.RegisterSuggestionProcessor was just called")
+	}
+	mock.lockRegisterSuggestionProcessor.Lock()
+	mock.calls.RegisterSuggestionProcessor = append(mock.calls.RegisterSuggestionProcessor, struct {
+		Purpose   string
+		Processor SuggestionProcessor
+	}{
+		Purpose:   purpose,
+		Processor: processor,
+	})
+	mock.lockRegisterSuggestionProcessor.Unlock()
+	mock.RegisterSuggestionProcessorFunc(purpose, processor)
+}
+
+// RegisterSuggestionProcessorCalls returns all calls made to RegisterSuggestionProcessor.
+func (mock *CoordinatorMock) RegisterSuggestionProcessorCalls() []struct {
+	Purpose   string
+	Processor SuggestionProcessor
+} {
+	mock.lockRegisterSuggestionProcessor.RLock()
+	defer mock.lockRegisterSuggestionProcessor.RUnlock()
+	return mock.calls.RegisterSuggestionProcessor
+}
+
+// CreateProvider calls CreateProviderFunc.
+func (mock *CoordinatorMock) CreateProvider(ctx context.Context, req *CreateProviderRequest) (*agent.LLMProvider, error) {
+	if mock.CreateProviderFunc == nil {
+		panic("CoordinatorMock.CreateProviderFunc: method is nil but Coordinator.CreateProvider was just called")
+	}
+	mock.lockCreateProvider.Lock()
+	mock.calls.CreateProvider = append(mock.calls.CreateProvider, struct {
+		Ctx context.Context
+		Req *CreateProviderRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockCreateProvider.Unlock()
+	return mock.CreateProviderFunc(ctx, req)
+}
+
+// CreateProviderCalls returns all calls made to CreateProvider.
+func (mock *CoordinatorMock) CreateProviderCalls() []struct {
+	Ctx context.Context
+	Req *CreateProviderRequest
+} {
+	mock.lockCreateProvider.RLock()
+	defer mock.lockCreateProvider.RUnlock()
+	return mock.calls.CreateProvider
+}
+
+// GetProvider calls GetProviderFunc.
+func (mock *CoordinatorMock) GetProvider(ctx context.Context, spaceID string, id string) (*agent.LLMProvider, error) {
+	if mock.GetProviderFunc == nil {
+		panic("CoordinatorMock.GetProviderFunc: method is nil but Coordinator.GetProvider was just called")
+	}
+	mock.lockGetProvider.Lock()
+	mock.calls.GetProvider = append(mock.calls.GetProvider, struct {
+		Ctx     context.Context
+		SpaceID string
+		Id      string
+	}{
+		Ctx:     ctx,
+		SpaceID: spaceID,
+		Id:      id,
+	})
+	mock.lockGetProvider.Unlock()
+	return mock.GetProviderFunc(ctx, spaceID, id)
+}
+
+// GetProviderCalls returns all calls made to GetProvider.
+func (mock *CoordinatorMock) GetProviderCalls() []struct {
+	Ctx     context.Context
+	SpaceID string
+	Id      string
+} {
+	mock.lockGetProvider.RLock()
+	defer mock.lockGetProvider.RUnlock()
+	return mock.calls.GetProvider
+}
+
+// ListProviders calls ListProvidersFunc.
+func (mock *CoordinatorMock) ListProviders(ctx context.Context, spaceID string) ([]*agent.LLMProvider, error) {
+	if mock.ListProvidersFunc == nil {
+		panic("CoordinatorMock.ListProvidersFunc: method is nil but Coordinator.ListProviders was just called")
+	}
+	mock.lockListProviders.Lock()
+	mock.calls.ListProviders = append(mock.calls.ListProviders, struct {
+		Ctx     context.Context
+		SpaceID string
+	}{
+		Ctx:     ctx,
+		SpaceID: spaceID,
+	})
+	mock.lockListProviders.Unlock()
+	return mock.ListProvidersFunc(ctx, spaceID)
+}
+
+// ListProvidersCalls returns all calls made to ListProviders.
+func (mock *CoordinatorMock) ListProvidersCalls() []struct {
+	Ctx     context.Context
+	SpaceID string
+} {
+	mock.lockListProviders.RLock()
+	defer mock.lockListProviders.RUnlock()
+	return mock.calls.ListProviders
+}
+
+// UpdateProvider calls UpdateProviderFunc.
+func (mock *CoordinatorMock) UpdateProvider(ctx context.Context, req *UpdateProviderRequest) (*agent.LLMProvider, error) {
+	if mock.UpdateProviderFunc == nil {
+		panic("CoordinatorMock.UpdateProviderFunc: method is nil but Coordinator.UpdateProvider was just called")
+	}
+	mock.lockUpdateProvider.Lock()
+	mock.calls.UpdateProvider = append(mock.calls.UpdateProvider, struct {
+		Ctx context.Context
+		Req *UpdateProviderRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockUpdateProvider.Unlock()
+	return mock.UpdateProviderFunc(ctx, req)
+}
+
+// UpdateProviderCalls returns all calls made to UpdateProvider.
+func (mock *CoordinatorMock) UpdateProviderCalls() []struct {
+	Ctx context.Context
+	Req *UpdateProviderRequest
+} {
+	mock.lockUpdateProvider.RLock()
+	defer mock.lockUpdateProvider.RUnlock()
+	return mock.calls.UpdateProvider
+}
+
+// DeleteProvider calls DeleteProviderFunc.
+func (mock *CoordinatorMock) DeleteProvider(ctx context.Context, spaceID string, id string) error {
+	if mock.DeleteProviderFunc == nil {
+		panic("CoordinatorMock.DeleteProviderFunc: method is nil but Coordinator.DeleteProvider was just called")
+	}
+	mock.lockDeleteProvider.Lock()
+	mock.calls.DeleteProvider = append(mock.calls.DeleteProvider, struct {
+		Ctx     context.Context
+		SpaceID string
+		Id      string
+	}{
+		Ctx:     ctx,
+		SpaceID: spaceID,
+		Id:      id,
+	})
+	mock.lockDeleteProvider.Unlock()
+	return mock.DeleteProviderFunc(ctx, spaceID, id)
+}
+
+// DeleteProviderCalls returns all calls made to DeleteProvider.
+func (mock *CoordinatorMock) DeleteProviderCalls() []struct {
+	Ctx     context.Context
+	SpaceID string
+	Id      string
+} {
+	mock.lockDeleteProvider.RLock()
+	defer mock.lockDeleteProvider.RUnlock()
+	return mock.calls.DeleteProvider
+}
+
+// CreateAgent calls CreateAgentFunc.
+func (mock *CoordinatorMock) CreateAgent(ctx context.Context, req *CreateAgentRequest) (*agent.Agent, error) {
+	if mock.CreateAgentFunc == nil {
+		panic("CoordinatorMock.CreateAgentFunc: method is nil but Coordinator.CreateAgent was just called")
+	}
+	mock.lockCreateAgent.Lock()
+	mock.calls.CreateAgent = append(mock.calls.CreateAgent, struct {
+		Ctx context.Context
+		Req *CreateAgentRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockCreateAgent.Unlock()
+	return mock.CreateAgentFunc(ctx, req)
+}
+
+// CreateAgentCalls returns all calls made to CreateAgent.
+func (mock *CoordinatorMock) CreateAgentCalls() []struct {
+	Ctx context.Context
+	Req *CreateAgentRequest
+} {
+	mock.lockCreateAgent.RLock()
+	defer mock.lockCreateAgent.RUnlock()
+	return mock.calls.CreateAgent
+}
+
+// GetAgent calls GetAgentFunc.
+func (mock *CoordinatorMock) GetAgent(ctx context.Context, spaceID string, id string) (*agent.Agent, error) {
+	if mock.GetAgentFunc == nil {
+		panic("CoordinatorMock.GetAgentFunc: method is nil but Coordinator.GetAgent was just called")
+	}
+	mock.lockGetAgent.Lock()
+	mock.calls.GetAgent = append(mock.calls.GetAgent, struct {
+		Ctx     context.Context
+		SpaceID string
+		Id      string
+	}{
+		Ctx:     ctx,
+		SpaceID: spaceID,
+		Id:      id,
+	})
+	mock.lockGetAgent.Unlock()
+	return mock.GetAgentFunc(ctx, spaceID, id)
+}
+
+// GetAgentCalls returns all calls made to GetAgent.
+func (mock *CoordinatorMock) GetAgentCalls() []struct {
+	Ctx     context.Context
+	SpaceID string
+	Id      string
+} {
+	mock.lockGetAgent.RLock()
+	defer mock.lockGetAgent.RUnlock()
+	return mock.calls.GetAgent
+}
+
+// ListAgents calls ListAgentsFunc.
+func (mock *CoordinatorMock) ListAgents(ctx context.Context, spaceID string) ([]*agent.Agent, error) {
+	if mock.ListAgentsFunc == nil {
+		panic("CoordinatorMock.ListAgentsFunc: method is nil but Coordinator.ListAgents was just called")
+	}
+	mock.lockListAgents.Lock()
+	mock.calls.ListAgents = append(mock.calls.ListAgents, struct {
+		Ctx     context.Context
+		SpaceID string
+	}{
+		Ctx:     ctx,
+		SpaceID: spaceID,
+	})
+	mock.lockListAgents.Unlock()
+	return mock.ListAgentsFunc(ctx, spaceID)
+}
+
+// ListAgentsCalls returns all calls made to ListAgents.
+func (mock *CoordinatorMock) ListAgentsCalls() []struct {
+	Ctx     context.Context
+	SpaceID string
+} {
+	mock.lockListAgents.RLock()
+	defer mock.lockListAgents.RUnlock()
+	return mock.calls.ListAgents
+}
+
+// UpdateAgent calls UpdateAgentFunc.
+func (mock *CoordinatorMock) UpdateAgent(ctx context.Context, req *UpdateAgentRequest) (*agent.Agent, error) {
+	if mock.UpdateAgentFunc == nil {
+		panic("CoordinatorMock.UpdateAgentFunc: method is nil but Coordinator.UpdateAgent was just called")
+	}
+	mock.lockUpdateAgent.Lock()
+	mock.calls.UpdateAgent = append(mock.calls.UpdateAgent, struct {
+		Ctx context.Context
+		Req *UpdateAgentRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	})
+	mock.lockUpdateAgent.Unlock()
+	return mock.UpdateAgentFunc(ctx, req)
+}
+
+// UpdateAgentCalls returns all calls made to UpdateAgent.
+func (mock *CoordinatorMock) UpdateAgentCalls() []struct {
+	Ctx context.Context
+	Req *UpdateAgentRequest
+} {
+	mock.lockUpdateAgent.RLock()
+	defer mock.lockUpdateAgent.RUnlock()
+	return mock.calls.UpdateAgent
+}
+
+// DeleteAgent calls DeleteAgentFunc.
+func (mock *CoordinatorMock) DeleteAgent(ctx context.Context, spaceID string, id string) error {
+	if mock.DeleteAgentFunc == nil {
+		panic("CoordinatorMock.DeleteAgentFunc: method is nil but Coordinator.DeleteAgent was just called")
+	}
+	mock.lockDeleteAgent.Lock()
+	mock.calls.DeleteAgent = append(mock.calls.DeleteAgent, struct {
+		Ctx     context.Context
+		SpaceID string
+		Id      string
+	}{
+		Ctx:     ctx,
+		SpaceID: spaceID,
+		Id:      id,
+	})
+	mock.lockDeleteAgent.Unlock()
+	return mock.DeleteAgentFunc(ctx, spaceID, id)
+}
+
+// DeleteAgentCalls returns all calls made to DeleteAgent.
+func (mock *CoordinatorMock) DeleteAgentCalls() []struct {
+	Ctx     context.Context
+	SpaceID string
+	Id      string
+} {
+	mock.lockDeleteAgent.RLock()
+	defer mock.lockDeleteAgent.RUnlock()
+	return mock.calls.DeleteAgent
+}
+
+// ListRuns calls ListRunsFunc.
+func (mock *CoordinatorMock) ListRuns(ctx context.Context, q agent.ListAgentRuns) (*paging.Page[*agent.AgentRun], error) {
+	if mock.ListRunsFunc == nil {
+		panic("CoordinatorMock.ListRunsFunc: method is nil but Coordinator.ListRuns was just called")
+	}
+	mock.lockListRuns.Lock()
+	mock.calls.ListRuns = append(mock.calls.ListRuns, struct {
+		Ctx context.Context
+		Q   agent.ListAgentRuns
+	}{
+		Ctx: ctx,
+		Q:   q,
+	})
+	mock.lockListRuns.Unlock()
+	return mock.ListRunsFunc(ctx, q)
+}
+
+// ListRunsCalls returns all calls made to ListRuns.
+func (mock *CoordinatorMock) ListRunsCalls() []struct {
+	Ctx context.Context
+	Q   agent.ListAgentRuns
+} {
+	mock.lockListRuns.RLock()
+	defer mock.lockListRuns.RUnlock()
+	return mock.calls.ListRuns
+}
