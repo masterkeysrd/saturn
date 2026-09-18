@@ -12,12 +12,16 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
 )
 
+//go:generate go run github.com/masterkeysrd/saturn/tools/mockgen .
+
 // SpaceService defines the decoupled interface for workspace accessibility check.
+// @Mock
 type SpaceService interface {
 	GetSpace(ctx context.Context, session space.Session) (*space.Space, error)
 }
 
 // FinanceService defines the interface for underlying finance domain rules.
+// @Mock
 type FinanceService interface {
 	ConfigureFinance(ctx context.Context, settings *finance.FinanceSettings) (*finance.FinanceSettings, error)
 	GetFinanceSettings(ctx context.Context, spaceID finance.SpaceID) (*finance.FinanceSettings, error)
@@ -130,13 +134,15 @@ type IngestionContext struct {
 }
 
 // DocumentClassifier defines the interface for running document-type classification.
+// @Mock
 type DocumentClassifier interface {
 	Classify(ctx context.Context, spaceID string, doc string) (string, error)
 }
 
 // IngestionParser defines the interface for running transaction metadata extraction.
+// @Mock
 type IngestionParser interface {
-	Parse(ctx context.Context, spaceID string, doc string, context IngestionContext) (*ParsedTransaction, error)
+	Parse(ctx context.Context, spaceID string, doc string, ingCtx IngestionContext) (*ParsedTransaction, error)
 }
 
 // DeduplicationResult represents semantic duplicate checking output from the agent.
@@ -147,6 +153,7 @@ type DeduplicationResult struct {
 }
 
 // IngestionDeduplicator defines the interface for running semantic transaction deduplication.
+// @Mock
 type IngestionDeduplicator interface {
 	Deduplicate(ctx context.Context, spaceID string, tx *ParsedTransaction, recent []*finance.Transaction) (*DeduplicationResult, error)
 }
@@ -165,6 +172,7 @@ type Dependencies struct {
 //go:generate go run github.com/masterkeysrd/saturn/tools/loggen -target=Coordinator -component=finance
 
 // Coordinator orchestrates requests across workspace and finance boundaries.
+// @Mock
 type Coordinator interface {
 	// @transactional
 	ConfigureFinance(ctx context.Context, req *ConfigureFinanceRequest) (*finance.FinanceSettings, error)

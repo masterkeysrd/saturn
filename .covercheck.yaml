@@ -18,6 +18,8 @@ exclude:
   - "*.pb.message.go"  # EventBus message extensions
   - "*.pb.scheduler.go"# Scheduler job definitions
   - "*_sdk.pb.go"      # Generated client SDKs
+  - "*_tx.go"          # Generated transactional proxies (txgen)
+  - "*_log.go"         # Generated logging wrappers (loggen)
   - "tools/**"         # CLI code generators and developer tools
   - "apps/web/**"      # Web application node_modules and frontend assets
   - "migrations/**"    # SQL migration files

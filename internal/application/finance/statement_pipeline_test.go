@@ -2,6 +2,7 @@ package financeapp
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -643,4 +644,291 @@ func TestStatementPipeline_CreditCardInvertedPositiveCharges(t *testing.T) {
 
 func stringPtr(s string) *string {
 	return &s
+}
+
+func TestStatementPipeline_Nodes(t *testing.T) {
+	t.Run("nodePreprocess", func(t *testing.T) {
+		tests := []struct {
+			name          string
+			req           *StatementDocumentRequest
+			expectedErr   string
+			expectNeedsPW bool
+			expectText    string
+		}{
+			{
+				name:        "Missing document bytes",
+				req:         &StatementDocumentRequest{DocumentBytes: nil},
+				expectedErr: "missing document bytes",
+			},
+			{
+				name: "Empty plain text",
+				req: &StatementDocumentRequest{
+					DocumentBytes: []byte("   \n\t  "),
+					ContentType:   "text/plain",
+				},
+				expectedErr: "document contains no readable text",
+			},
+			{
+				name: "Valid plain text",
+				req: &StatementDocumentRequest{
+					DocumentBytes: []byte("Statement line 1\nStatement line 2"),
+					ContentType:   "text/plain",
+				},
+				expectText: "Statement line 1\nStatement line 2",
+			},
+			{
+				name: "Corrupt PDF error",
+				req: &StatementDocumentRequest{
+					Filename:      "test.pdf",
+					ContentType:   "application/pdf",
+					DocumentBytes: []byte("%PDF-1.4 invalid pdf stream"),
+				},
+				expectedErr: "extract text from document",
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				p := &StatementPipeline{}
+				state := &StatementIngestionState{Request: tc.req}
+				cmd, err := p.nodePreprocess(context.Background(), state)
+				if err != nil {
+					t.Fatalf("unexpected node error: %v", err)
+				}
+				mutated := cmd.Apply(state)
+				if tc.expectedErr != "" {
+					found := false
+					for _, e := range mutated.Errors {
+						if strings.Contains(e, tc.expectedErr) {
+							found = true
+							break
+						}
+					}
+					if !found {
+						t.Errorf("expected error containing %q, got errors: %v", tc.expectedErr, mutated.Errors)
+					}
+				}
+				if tc.expectNeedsPW && !mutated.NeedsPassword {
+					t.Error("expected NeedsPassword to be true")
+				}
+				if tc.expectText != "" && mutated.ExtractedText != tc.expectText {
+					t.Errorf("expected text %q, got %q", tc.expectText, mutated.ExtractedText)
+				}
+			})
+		}
+	})
+
+	t.Run("nodeExtract", func(t *testing.T) {
+		tests := []struct {
+			name        string
+			docText     string
+			extractor   StatementExtractor
+			expectedErr string
+			expectSecs  int
+		}{
+			{
+				name:    "Extractor error sets state errors",
+				docText: "text",
+				extractor: &mockStatementExtractor{
+					err: errors.New("janus extractor crashed"),
+				},
+				expectedErr: "extract statement document: janus extractor crashed",
+			},
+			{
+				name:    "All empty sections filtered out",
+				docText: "text",
+				extractor: &mockStatementExtractor{
+					doc: &ParsedStatementDocument{
+						Sections: []ParsedStatementSection{
+							{StartingBalance: 0, EndingBalance: 0, Lines: nil},
+						},
+					},
+				},
+				expectedErr: "no ledger sections could be extracted",
+			},
+			{
+				name:    "Active sections kept",
+				docText: "text",
+				extractor: &mockStatementExtractor{
+					doc: &ParsedStatementDocument{
+						Sections: []ParsedStatementSection{
+							{
+								Currency:        "USD",
+								StartingBalance: 1000,
+								EndingBalance:   2000,
+								Lines:           []ParsedStatementLine{{Amount: 1000}},
+							},
+							{
+								Currency:        "DOP",
+								StartingBalance: 0,
+								EndingBalance:   0,
+								Lines:           nil, // Empty section filtered out
+							},
+						},
+					},
+				},
+				expectSecs: 1,
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				finService := &mockFinanceServiceForPipeline{}
+				p := &StatementPipeline{
+					financeService: finService,
+					extractor:      tc.extractor,
+				}
+				state := &StatementIngestionState{
+					SpaceID:       "spc_1",
+					ExtractedText: tc.docText,
+				}
+				cmd, err := p.nodeExtract(context.Background(), state)
+				if err != nil {
+					t.Fatalf("unexpected node error: %v", err)
+				}
+				mutated := cmd.Apply(state)
+				if tc.expectedErr != "" {
+					found := false
+					for _, e := range mutated.Errors {
+						if strings.Contains(e, tc.expectedErr) {
+							found = true
+							break
+						}
+					}
+					if !found {
+						t.Errorf("expected error containing %q, got: %v", tc.expectedErr, mutated.Errors)
+					}
+				}
+				if tc.expectSecs > 0 && len(mutated.ParsedDocument.Sections) != tc.expectSecs {
+					t.Errorf("expected %d sections, got %d", tc.expectSecs, len(mutated.ParsedDocument.Sections))
+				}
+			})
+		}
+	})
+
+	t.Run("nodeResolveAccounts", func(t *testing.T) {
+		accUSD := &finance.Account{
+			ID:       "acc_usd",
+			Currency: "USD",
+			LastFour: "1234",
+		}
+		accEUR := &finance.Account{
+			ID:       "acc_eur",
+			Currency: "EUR",
+			LastFour: "5678",
+		}
+
+		tests := []struct {
+			name           string
+			req            *StatementDocumentRequest
+			parsedDoc      *ParsedStatementDocument
+			expectedMapped map[string]string
+			expectedUnmap  []string
+		}{
+			{
+				name: "Nil parsed document no-op",
+				req:  &StatementDocumentRequest{},
+			},
+			{
+				name: "Match by SuggestedAccountID",
+				req:  &StatementDocumentRequest{},
+				parsedDoc: &ParsedStatementDocument{
+					Sections: []ParsedStatementSection{
+						{
+							Currency:           "USD",
+							SuggestedAccountID: "acc_usd",
+						},
+					},
+				},
+				expectedMapped: map[string]string{"USD": "acc_usd"},
+			},
+			{
+				name: "Match by explicit TargetAccountID",
+				req: &StatementDocumentRequest{
+					TargetAccountID: stringPtr("acc_eur"),
+				},
+				parsedDoc: &ParsedStatementDocument{
+					Sections: []ParsedStatementSection{
+						{
+							Currency: "EUR",
+						},
+					},
+				},
+				expectedMapped: map[string]string{"EUR": "acc_eur"},
+			},
+			{
+				name: "Unmapped currency",
+				req:  &StatementDocumentRequest{},
+				parsedDoc: &ParsedStatementDocument{
+					Sections: []ParsedStatementSection{
+						{
+							Currency: "JPY",
+						},
+					},
+				},
+				expectedUnmap: []string{"JPY"},
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				finService := &mockFinanceServiceForPipeline{
+					accounts: []*finance.Account{accUSD, accEUR},
+				}
+				p := &StatementPipeline{financeService: finService}
+				state := &StatementIngestionState{
+					SpaceID:        "spc_1",
+					Request:        tc.req,
+					ParsedDocument: tc.parsedDoc,
+				}
+				cmd, err := p.nodeResolveAccounts(context.Background(), state)
+				if err != nil {
+					t.Fatalf("unexpected node error: %v", err)
+				}
+				mutated := cmd.Apply(state)
+				for curr, expectedAccID := range tc.expectedMapped {
+					if acc, ok := mutated.AccountMappings[curr]; !ok || string(acc.ID) != expectedAccID {
+						t.Errorf("expected mapping %s -> %s, got %+v", curr, expectedAccID, acc)
+					}
+				}
+				if len(tc.expectedUnmap) > 0 {
+					if len(mutated.UnmappedSections) != len(tc.expectedUnmap) {
+						t.Errorf("expected %d unmapped sections, got %d", len(tc.expectedUnmap), len(mutated.UnmappedSections))
+					}
+				}
+			})
+		}
+	})
+
+	t.Run("generateStandardizedCSV", func(t *testing.T) {
+		ref := "REF999"
+		tests := []struct {
+			name        string
+			lines       []ParsedStatementLine
+			expectSub   string
+			expectLines int
+		}{
+			{
+				name: "Multiple lines with and without reference",
+				lines: []ParsedStatementLine{
+					{DateStr: "2026-09-01", Description: "Payment", Amount: -5000, Reference: &ref},
+					{DateStr: "2026-09-02", Description: "Deposit", Amount: 10000, Reference: nil},
+				},
+				expectSub:   "2026-09-01,Payment,-50.00,REF999\n2026-09-02,Deposit,100.00,\n",
+				expectLines: 3, // header + 2 lines
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				csvStr, err := generateStandardizedCSV(tc.lines)
+				if err != nil {
+					t.Fatalf("unexpected CSV error: %v", err)
+				}
+				if !strings.Contains(csvStr, tc.expectSub) {
+					t.Errorf("expected CSV to contain %q, got:\n%s", tc.expectSub, csvStr)
+				}
+			})
+		}
+	})
 }

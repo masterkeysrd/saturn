@@ -76,6 +76,7 @@ test-integration: apps/web/dist/index.html
 test-coverage: apps/web/dist/index.html
 	@echo "→ Generating test coverage"
 	@mkdir -p coverage
+	@rm -f coverage/coverage.out
 	go test -coverprofile=coverage/coverage.out ./...
 	go run ./tools/covercheck
 	go tool cover -html=coverage/coverage.out -o coverage/coverage.html

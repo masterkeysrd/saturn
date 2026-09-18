@@ -111,6 +111,7 @@ type ParsedStatementLine struct {
 }
 
 // StatementExtractor defines the contract for extracting statement text into structured documents.
+// @Mock
 type StatementExtractor interface {
 	Extract(ctx context.Context, spaceID string, docText string, accounts []*finance.Account) (*ParsedStatementDocument, error)
 }
