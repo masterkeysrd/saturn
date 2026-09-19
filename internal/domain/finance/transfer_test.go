@@ -82,6 +82,45 @@ func TestTransfer_Validate(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "zero destination amount",
+			transfer: Transfer{
+				ID:                   trsfID,
+				SpaceID:              spaceID,
+				SourceAccountID:      srcAccID,
+				DestinationAccountID: dstAccID,
+				SourceAmount:         10000,
+				DestinationAmount:    0,
+				TransferDate:         now,
+			},
+			wantErr: true,
+		},
+		{
+			name: "zero transfer date",
+			transfer: Transfer{
+				ID:                   trsfID,
+				SpaceID:              spaceID,
+				SourceAccountID:      srcAccID,
+				DestinationAccountID: dstAccID,
+				SourceAmount:         10000,
+				DestinationAmount:    10000,
+				TransferDate:         time.Time{},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid transfer ID",
+			transfer: Transfer{
+				ID:                   "invalid_id",
+				SpaceID:              spaceID,
+				SourceAccountID:      srcAccID,
+				DestinationAccountID: dstAccID,
+				SourceAmount:         10000,
+				DestinationAmount:    10000,
+				TransferDate:         now,
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -89,6 +128,32 @@ func TestTransfer_Validate(t *testing.T) {
 			err := tt.transfer.Validate()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Transfer.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestParseTransferID_Table(t *testing.T) {
+	trsfID, _ := NewTransferID()
+
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+	}{
+		{"valid transfer ID", string(trsfID), false},
+		{"invalid prefix", "txn_12345", true},
+		{"empty string", "", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parsed, err := ParseTransferID(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseTransferID(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+			}
+			if !tt.wantErr && parsed != trsfID {
+				t.Errorf("parsed = %v, want %v", parsed, trsfID)
 			}
 		})
 	}

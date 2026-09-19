@@ -2,917 +2,14 @@ package finance
 
 import (
 	"context"
-	"math"
-	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/masterkeysrd/saturn/internal/platform/errors"
-
 	"github.com/masterkeysrd/saturn/internal/platform/id"
-	"github.com/masterkeysrd/saturn/internal/platform/paging"
 	"github.com/segmentio/ksuid"
 )
-
-// --- In-Memory Mocks for Stores ---
-
-type mockSettingsStore struct {
-	data map[SpaceID]*FinanceSettings
-}
-
-func (m *mockSettingsStore) Create(ctx context.Context, settings *FinanceSettings) error {
-	m.data[settings.SpaceID] = settings
-	return nil
-}
-
-func (m *mockSettingsStore) GetByID(ctx context.Context, spaceID SpaceID) (*FinanceSettings, error) {
-	s, ok := m.data[spaceID]
-	if !ok {
-		return nil, errors.E(errors.NotExist, SettingsNotFound, "finance settings not found")
-	}
-	return s, nil
-}
-
-type mockBudgetStore struct {
-	data map[BudgetID]*Budget
-}
-
-func (m *mockBudgetStore) Create(ctx context.Context, b *Budget) error {
-	if b.Status == "" {
-		b.Status = BudgetStatusActive
-	}
-	m.data[b.ID] = b
-	return nil
-}
-
-func (m *mockBudgetStore) GetByID(ctx context.Context, spaceID SpaceID, id BudgetID) (*Budget, error) {
-	b, ok := m.data[id]
-	if !ok {
-		return nil, errors.E(errors.NotExist, BudgetNotFound, "budget not found")
-	}
-	if b.Status == "" {
-		b.Status = BudgetStatusActive
-	}
-	return b, nil
-}
-
-func (m *mockBudgetStore) GetByIDs(ctx context.Context, spaceID SpaceID, ids []BudgetID) ([]*Budget, error) {
-	var list []*Budget
-	for _, id := range ids {
-		if b, ok := m.data[id]; ok {
-			list = append(list, b)
-		}
-	}
-	return list, nil
-}
-
-func (m *mockBudgetStore) Update(ctx context.Context, b *Budget) error {
-	if _, ok := m.data[b.ID]; !ok {
-		return errors.E(errors.NotExist, BudgetNotFound, "budget not found")
-	}
-	m.data[b.ID] = b
-	return nil
-}
-
-func (m *mockBudgetStore) Delete(ctx context.Context, spaceID SpaceID, id BudgetID, opts DeleteOptions) error {
-	existing, ok := m.data[id]
-	if !ok {
-		return errors.E(errors.NotExist, BudgetNotFound, "budget not found")
-	}
-	if opts.Version > 0 && existing.Version != opts.Version {
-		return errors.E(errors.Conflict, VersionMismatch, "budget version mismatch")
-	}
-	delete(m.data, id)
-	return nil
-}
-
-func (m *mockBudgetStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListBudgetsFilter) (*paging.Page[*Budget], error) {
-	var list []*Budget
-	for _, b := range m.data {
-		if b.SpaceID == spaceID {
-			list = append(list, b)
-		}
-	}
-	return &paging.Page[*Budget]{
-		Items: list,
-	}, nil
-}
-
-type mockPeriodStore struct {
-	data map[string]*BudgetPeriod
-}
-
-func (m *mockPeriodStore) Create(ctx context.Context, p *BudgetPeriod) error {
-	key := string(p.BudgetID) + "_" + p.StartDate.Format(time.RFC3339) + "_" + p.EndDate.Format(time.RFC3339)
-	m.data[key] = p
-	return nil
-}
-
-func (m *mockPeriodStore) GetByRange(ctx context.Context, budgetID BudgetID, startDate, endDate time.Time) (*BudgetPeriod, error) {
-	key := string(budgetID) + "_" + startDate.Format(time.RFC3339) + "_" + endDate.Format(time.RFC3339)
-	p, ok := m.data[key]
-	if !ok {
-		return nil, errors.E(errors.NotExist, PeriodNotFound, "budget period not found")
-	}
-	return p, nil
-}
-
-func (m *mockPeriodStore) GetByRanges(ctx context.Context, keys []PeriodRangeKey) ([]*BudgetPeriod, error) {
-	var list []*BudgetPeriod
-	for _, key := range keys {
-		k := string(key.BudgetID) + "_" + key.StartDate.Format(time.RFC3339) + "_" + key.EndDate.Format(time.RFC3339)
-		if p, ok := m.data[k]; ok {
-			list = append(list, p)
-		}
-	}
-	return list, nil
-}
-
-func (m *mockPeriodStore) UpdateLimit(ctx context.Context, id PeriodID, limit int64) error {
-	for _, p := range m.data {
-		if p.ID == id {
-			p.LimitAmount = limit
-			return nil
-		}
-	}
-	return errors.E(errors.NotExist, PeriodNotFound, "budget period not found")
-}
-
-func (m *mockPeriodStore) ListByBudget(ctx context.Context, budgetID BudgetID) ([]*BudgetPeriod, error) {
-	var list []*BudgetPeriod
-	for _, p := range m.data {
-		if p.BudgetID == budgetID {
-			list = append(list, p)
-		}
-	}
-	return list, nil
-}
-
-type mockExchangeRateStore struct {
-	rates map[string]*ExchangeRate
-}
-
-func (m *mockExchangeRateStore) Create(ctx context.Context, r *ExchangeRate) error {
-	key := string(r.SpaceID) + "_" + string(r.FromCurrency) + "_" + string(r.ToCurrency) + "_" + r.RateDate.Format("2006-01-02")
-	m.rates[key] = r
-	return nil
-}
-
-func (m *mockExchangeRateStore) Update(ctx context.Context, r *ExchangeRate) error {
-	key := string(r.SpaceID) + "_" + string(r.FromCurrency) + "_" + string(r.ToCurrency) + "_" + r.RateDate.Format("2006-01-02")
-	if _, ok := m.rates[key]; !ok {
-		return errors.E(errors.NotExist, ExchangeRateNotFound, "exchange rate not found")
-	}
-	m.rates[key] = r
-	return nil
-}
-
-func (m *mockExchangeRateStore) GetExactRate(ctx context.Context, query ExchangeRateKey) (*ExchangeRate, error) {
-	key := string(query.SpaceID) + "_" + string(query.FromCurrency) + "_" + string(query.ToCurrency) + "_" + query.RateDate.Format("2006-01-02")
-	r, ok := m.rates[key]
-	if !ok {
-		return nil, errors.E(errors.NotExist, ExchangeRateNotFound, "exchange rate not found")
-	}
-	return r, nil
-}
-
-func (m *mockExchangeRateStore) GetRate(ctx context.Context, query ExchangeRateKey) (*ExchangeRate, error) {
-	// Look up rate exactly, or fallback to the closest date before
-	var best *ExchangeRate
-	for _, r := range m.rates {
-		if r.SpaceID == query.SpaceID && r.FromCurrency == query.FromCurrency && r.ToCurrency == query.ToCurrency {
-			if !r.RateDate.After(query.RateDate) {
-				if best == nil || r.RateDate.After(best.RateDate) {
-					best = r
-				}
-			}
-		}
-	}
-	if best == nil {
-		return nil, errors.E(errors.NotExist, ExchangeRateNotFound, "exchange rate not found")
-	}
-	return best, nil
-}
-
-func (m *mockExchangeRateStore) GetNextRate(ctx context.Context, query ExchangeRateKey) (*ExchangeRate, error) {
-	// Look up the closest date after query.RateDate
-	var best *ExchangeRate
-	for _, r := range m.rates {
-		if r.SpaceID == query.SpaceID && r.FromCurrency == query.FromCurrency && r.ToCurrency == query.ToCurrency {
-			if r.RateDate.After(query.RateDate) {
-				if best == nil || r.RateDate.Before(best.RateDate) {
-					best = r
-				}
-			}
-		}
-	}
-	if best == nil {
-		return nil, errors.E(errors.NotExist, ExchangeRateNotFound, "exchange rate not found")
-	}
-	return best, nil
-}
-
-func (m *mockExchangeRateStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListExchangeRatesFilter) ([]*ExchangeRate, string, error) {
-	var results []*ExchangeRate
-	for _, r := range m.rates {
-		if r.SpaceID == spaceID {
-			results = append(results, r)
-		}
-	}
-	return results, "", nil
-}
-
-func (m *mockExchangeRateStore) Delete(ctx context.Context, query ExchangeRateKey) error {
-	key := string(query.SpaceID) + "_" + string(query.FromCurrency) + "_" + string(query.ToCurrency) + "_" + query.RateDate.Format("2006-01-02")
-	delete(m.rates, key)
-	return nil
-}
-
-func (m *mockExchangeRateStore) GetLatestRates(ctx context.Context, spaceID SpaceID, fromCurrencies []Currency, toCurrency Currency) ([]*ExchangeRate, error) {
-	type currencyPair struct {
-		from Currency
-		to   Currency
-	}
-	latestRates := make(map[currencyPair]*ExchangeRate)
-	for _, r := range m.rates {
-		if r.SpaceID == spaceID && r.ToCurrency == toCurrency {
-			match := slices.Contains(fromCurrencies, r.FromCurrency)
-			if match {
-				pair := currencyPair{from: r.FromCurrency, to: r.ToCurrency}
-				existing, ok := latestRates[pair]
-				if !ok || r.RateDate.After(existing.RateDate) {
-					latestRates[pair] = r
-				}
-			}
-		}
-	}
-	var result []*ExchangeRate
-	for _, r := range latestRates {
-		result = append(result, r)
-	}
-	return result, nil
-}
-
-type mockTransactionStore struct {
-	txns map[TransactionID]*Transaction
-}
-
-func (m *mockTransactionStore) Create(ctx context.Context, t *Transaction) error {
-	m.txns[t.ID] = t
-	return nil
-}
-
-func (m *mockTransactionStore) GetByID(ctx context.Context, spaceID SpaceID, id TransactionID) (*Transaction, error) {
-	t, ok := m.txns[id]
-	if !ok {
-		return nil, errors.E(errors.NotExist, TransactionNotFound, "transaction not found")
-	}
-	return t, nil
-}
-
-func (m *mockTransactionStore) HasTransactions(ctx context.Context, spaceID SpaceID, filter *TransactionFilter) (bool, error) {
-	for _, t := range m.txns {
-		if t.SpaceID != spaceID {
-			continue
-		}
-		if filter != nil && filter.BudgetID != nil && (t.BudgetID == nil || *t.BudgetID != *filter.BudgetID) {
-			continue
-		}
-		return true, nil
-	}
-	return false, nil
-}
-
-func (m *mockTransactionStore) Delete(ctx context.Context, id TransactionID) error {
-	if _, ok := m.txns[id]; !ok {
-		return errors.E(errors.NotExist, TransactionNotFound, "transaction not found")
-	}
-	delete(m.txns, id)
-	return nil
-}
-
-func (m *mockTransactionStore) Update(ctx context.Context, t *Transaction) error {
-	if _, ok := m.txns[t.ID]; !ok {
-		return errors.E(errors.NotExist, TransactionNotFound, "transaction not found")
-	}
-	m.txns[t.ID] = t
-	return nil
-}
-
-func (m *mockTransactionStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *TransactionFilter) (*paging.Page[*Transaction], error) {
-	var list []*Transaction
-	for _, t := range m.txns {
-		if t.SpaceID == spaceID {
-			if filter.BudgetID != nil && (t.BudgetID == nil || *t.BudgetID != *filter.BudgetID) {
-				continue
-			}
-			if len(filter.Types) > 0 {
-				match := false
-				for _, ft := range filter.Types {
-					if t.Type == ft {
-						match = true
-						break
-					}
-				}
-				if !match {
-					continue
-				}
-			}
-			if filter.BorrowingID != nil && (t.Metadata.BorrowingID == nil || *t.Metadata.BorrowingID != *filter.BorrowingID) {
-				continue
-			}
-			if len(filter.BorrowingRoles) > 0 {
-				matchRole := false
-				for _, r := range filter.BorrowingRoles {
-					if t.Metadata.BorrowingRole == r {
-						matchRole = true
-						break
-					}
-				}
-				if !matchRole {
-					continue
-				}
-			}
-			if filter.MinAmount != nil && t.Amount < *filter.MinAmount {
-				continue
-			}
-			if filter.MaxAmount != nil && t.Amount > *filter.MaxAmount {
-				continue
-			}
-			if filter.StartDate != nil && t.TransactionDate.Before(*filter.StartDate) {
-				continue
-			}
-			if filter.EndDate != nil && t.TransactionDate.After(*filter.EndDate) {
-				continue
-			}
-			if filter.SearchQuery != nil && *filter.SearchQuery != "" {
-				descLower := strings.ToLower(t.Description)
-				queryLower := strings.ToLower(*filter.SearchQuery)
-				if !strings.Contains(descLower, queryLower) {
-					continue
-				}
-			}
-			list = append(list, t)
-		}
-	}
-	return &paging.Page[*Transaction]{
-		Items: list,
-	}, nil
-}
-
-func (m *mockTransactionStore) AggregateSpent(ctx context.Context, periodID PeriodID, budgetCurrency Currency, exchangeRateToBase float64) (int64, int64, error) {
-	var spentInBase int64
-	var spentAmount int64
-	for _, t := range m.txns {
-		if t.PeriodID != nil && *t.PeriodID == periodID {
-			spentInBase += t.AmountInBase
-			if t.Currency == budgetCurrency {
-				spentAmount += t.Amount
-			} else if exchangeRateToBase > 0 {
-				spentAmount += int64(math.Round(float64(t.AmountInBase) / exchangeRateToBase))
-			}
-		}
-	}
-	return spentInBase, spentAmount, nil
-}
-
-func (m *mockTransactionStore) AggregateSpentBatch(ctx context.Context, periodIDs []PeriodID) ([]PeriodSpent, error) {
-	results := make([]PeriodSpent, len(periodIDs))
-	for i, periodID := range periodIDs {
-		var spentInBase int64
-		var spentAmount int64
-		for _, t := range m.txns {
-			if t.PeriodID != nil && *t.PeriodID == periodID {
-				spentInBase += t.AmountInBase
-				spentAmount += t.Amount
-			}
-		}
-		results[i] = PeriodSpent{
-			PeriodID:    periodID,
-			SpentInBase: spentInBase,
-			SpentAmount: spentAmount,
-		}
-	}
-	return results, nil
-}
-
-type mockInsightsStore struct {
-	spentTrend         []*SpentTrend
-	budgetDistribution []*BudgetDistribution
-	topExpenses        []*TopExpense
-	err                error
-}
-
-func (m *mockInsightsStore) GetSpentTrend(ctx context.Context, filter *SpentTrendFilter) ([]*SpentTrend, error) {
-	return m.spentTrend, m.err
-}
-
-func (m *mockInsightsStore) GetBudgetDistribution(ctx context.Context, filter *BudgetDistributionFilter) ([]*BudgetDistribution, error) {
-	return m.budgetDistribution, m.err
-}
-
-func (m *mockInsightsStore) GetTopExpenses(ctx context.Context, filter *TopExpensesFilter) ([]*TopExpense, error) {
-	return m.topExpenses, m.err
-}
-
-func (m *mockInsightsStore) GetIncomeTrend(ctx context.Context, filter *IncomeTrendFilter) ([]*IncomeTrend, error) {
-	return nil, m.err
-}
-
-func (m *mockInsightsStore) GetIncomeSources(ctx context.Context, filter *IncomeSourcesFilter) ([]*IncomeSourceRow, error) {
-	return nil, m.err
-}
-
-func (m *mockInsightsStore) GetTopIncomes(ctx context.Context, filter *TopIncomesFilter) ([]*TopIncome, error) {
-	return nil, m.err
-}
-
-type mockAccountStore struct {
-	data map[AccountID]*Account
-}
-
-func (m *mockAccountStore) Create(ctx context.Context, a *Account) error {
-	if a.Version == 0 {
-		a.Version = 1
-	}
-	m.data[a.ID] = a
-	return nil
-}
-
-func (m *mockAccountStore) GetByID(ctx context.Context, spaceID SpaceID, id AccountID) (*Account, error) {
-	a, ok := m.data[id]
-	if !ok || a.SpaceID != spaceID {
-		return nil, errors.E(errors.NotExist, AccountNotFound, "account not found")
-	}
-	return a, nil
-}
-
-func (m *mockAccountStore) Update(ctx context.Context, a *Account) error {
-	existing, ok := m.data[a.ID]
-	if !ok || existing.SpaceID != a.SpaceID {
-		return errors.E(errors.NotExist, AccountNotFound, "account not found")
-	}
-	a.Version++
-	m.data[a.ID] = a
-	return nil
-}
-
-func (m *mockAccountStore) Delete(ctx context.Context, spaceID SpaceID, id AccountID, opts DeleteOptions) error {
-	existing, ok := m.data[id]
-	if !ok || existing.SpaceID != spaceID {
-		return errors.E(errors.NotExist, AccountNotFound, "account not found")
-	}
-	if opts.Version > 0 && existing.Version != opts.Version {
-		return errors.E(errors.Conflict, VersionMismatch, "account version mismatch")
-	}
-	delete(m.data, id)
-	return nil
-}
-
-type mockInstitutionStore struct {
-	data map[InstitutionID]*Institution
-}
-
-func (m *mockInstitutionStore) Create(ctx context.Context, inst *Institution) error {
-	if m.data == nil {
-		m.data = make(map[InstitutionID]*Institution)
-	}
-	if inst.Version == 0 {
-		inst.Version = 1
-	}
-	m.data[inst.ID] = inst
-	return nil
-}
-
-func (m *mockInstitutionStore) GetByID(ctx context.Context, spaceID SpaceID, id InstitutionID) (*Institution, error) {
-	inst, ok := m.data[id]
-	if !ok || inst.SpaceID != spaceID {
-		return nil, errors.New("institution not found")
-	}
-	return inst, nil
-}
-
-func (m *mockInstitutionStore) GetByName(ctx context.Context, spaceID SpaceID, name string) (*Institution, error) {
-	for _, inst := range m.data {
-		if inst.SpaceID == spaceID && strings.EqualFold(inst.Name, name) {
-			return inst, nil
-		}
-	}
-	return nil, errors.New("institution not found")
-}
-
-func (m *mockInstitutionStore) GetByIDs(ctx context.Context, spaceID SpaceID, ids []InstitutionID) ([]*Institution, error) {
-	var list []*Institution
-	for _, id := range ids {
-		if inst, ok := m.data[id]; ok && inst.SpaceID == spaceID {
-			list = append(list, inst)
-		}
-	}
-	return list, nil
-}
-
-func (m *mockInstitutionStore) Update(ctx context.Context, inst *Institution) error {
-	existing, ok := m.data[inst.ID]
-	if !ok || existing.SpaceID != inst.SpaceID {
-		return errors.New("institution not found")
-	}
-	inst.Version++
-	m.data[inst.ID] = inst
-	return nil
-}
-
-func (m *mockInstitutionStore) Delete(ctx context.Context, spaceID SpaceID, id InstitutionID, opts DeleteOptions) error {
-	existing, ok := m.data[id]
-	if !ok || existing.SpaceID != spaceID {
-		return errors.New("institution not found")
-	}
-	if opts.Version > 0 && existing.Version != opts.Version {
-		return errors.E(errors.Conflict, VersionMismatch, "institution version mismatch")
-	}
-	delete(m.data, id)
-	return nil
-}
-
-func (m *mockInstitutionStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListInstitutionsFilter) (*paging.Page[*Institution], error) {
-	var list []*Institution
-	for _, inst := range m.data {
-		if inst.SpaceID == spaceID {
-			if filter != nil && filter.SearchQuery != nil && *filter.SearchQuery != "" {
-				if !strings.Contains(strings.ToLower(inst.Name), strings.ToLower(*filter.SearchQuery)) {
-					continue
-				}
-			}
-			list = append(list, inst)
-		}
-	}
-	return &paging.Page[*Institution]{Items: list}, nil
-}
-
-func (m *mockAccountStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListAccountsFilter) (*paging.Page[*Account], error) {
-	var list []*Account
-	for _, a := range m.data {
-		if a.SpaceID == spaceID {
-			if filter != nil && filter.ActiveOnly != nil && *filter.ActiveOnly && !a.IsActive {
-				continue
-			}
-			if filter != nil && filter.LastFour != nil && *filter.LastFour != "" && a.LastFour != *filter.LastFour {
-				continue
-			}
-			list = append(list, a)
-		}
-	}
-	return &paging.Page[*Account]{
-		Items: list,
-	}, nil
-}
-
-func (m *mockAccountStore) HasDefault(ctx context.Context, spaceID SpaceID) (bool, error) {
-	for _, a := range m.data {
-		if a.SpaceID == spaceID && a.IsDefault {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-func (m *mockAccountStore) GetByIDs(ctx context.Context, spaceID SpaceID, ids []AccountID) ([]*Account, error) {
-	var list []*Account
-	for _, id := range ids {
-		if a, ok := m.data[id]; ok && a.SpaceID == spaceID {
-			list = append(list, a)
-		}
-	}
-	return list, nil
-}
-
-func (m *mockAccountStore) UnsetDefaultsExcept(ctx context.Context, spaceID SpaceID, id AccountID) error {
-	for _, a := range m.data {
-		if a.SpaceID == spaceID && a.ID != id {
-			a.IsDefault = false
-		}
-	}
-	return nil
-}
-
-func (m *mockAccountStore) HasAny(ctx context.Context, spaceID SpaceID) (bool, error) {
-	for _, a := range m.data {
-		if a.SpaceID == spaceID {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-type mockTransferStore struct {
-	data map[TransferID]*Transfer
-}
-
-func (m *mockTransferStore) Create(ctx context.Context, t *Transfer) error {
-	m.data[t.ID] = t
-	return nil
-}
-
-func (m *mockTransferStore) GetByID(ctx context.Context, spaceID SpaceID, id TransferID) (*Transfer, error) {
-	t, ok := m.data[id]
-	if !ok {
-		return nil, errors.E(errors.NotExist, TransferNotFound, "transfer not found")
-	}
-	return t, nil
-}
-
-func (m *mockTransferStore) Delete(ctx context.Context, id TransferID) error {
-	if _, ok := m.data[id]; !ok {
-		return errors.E(errors.NotExist, TransferNotFound, "transfer not found")
-	}
-	delete(m.data, id)
-	return nil
-}
-
-func (m *mockTransferStore) ListBySpace(ctx context.Context, spaceID SpaceID, limit int32, pageToken string) ([]*Transfer, string, error) {
-	var list []*Transfer
-	for _, t := range m.data {
-		if t.SpaceID == spaceID {
-			list = append(list, t)
-		}
-	}
-	return list, "", nil
-}
-
-type mockTransactionEventStore struct {
-	events map[TransactionEventID]*TransactionEvent
-}
-
-func (m *mockTransactionEventStore) Create(ctx context.Context, e *TransactionEvent) error {
-	m.events[e.ID] = e
-	return nil
-}
-
-func (m *mockTransactionEventStore) ListByTransaction(ctx context.Context, spaceID SpaceID, txnID TransactionID) ([]*TransactionEvent, error) {
-	var list []*TransactionEvent
-	for _, e := range m.events {
-		if e.SpaceID == spaceID && e.TransactionID == txnID {
-			list = append(list, e)
-		}
-	}
-	return list, nil
-}
-
-type mockBorrowingStore struct {
-	data map[BorrowingID]*Borrowing
-}
-
-func (m *mockBorrowingStore) Create(ctx context.Context, b *Borrowing) error {
-	m.data[b.ID] = b
-	return nil
-}
-
-func (m *mockBorrowingStore) GetByID(ctx context.Context, spaceID SpaceID, id BorrowingID) (*Borrowing, error) {
-	b, ok := m.data[id]
-	if !ok {
-		return nil, errors.E(errors.NotExist, BorrowingNotFound, "borrowing not found")
-	}
-	return b, nil
-}
-
-func (m *mockBorrowingStore) GetByIDs(ctx context.Context, spaceID SpaceID, ids []BorrowingID) ([]*Borrowing, error) {
-	var list []*Borrowing
-	for _, id := range ids {
-		if b, ok := m.data[id]; ok {
-			list = append(list, b)
-		}
-	}
-	return list, nil
-}
-
-func (m *mockBorrowingStore) Update(ctx context.Context, b *Borrowing) error {
-	m.data[b.ID] = b
-	return nil
-}
-
-func (m *mockBorrowingStore) Delete(ctx context.Context, id BorrowingID) error {
-	delete(m.data, id)
-	return nil
-}
-
-func (m *mockBorrowingStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListBorrowingsFilter) ([]*Borrowing, string, error) {
-	var list []*Borrowing
-	for _, b := range m.data {
-		if b.SpaceID == spaceID {
-			list = append(list, b)
-		}
-	}
-	return list, "", nil
-}
-
-type mockScheduledTransactionStore struct {
-	payments map[ScheduledTransactionID]*ScheduledTransaction
-}
-
-func (m *mockScheduledTransactionStore) Create(ctx context.Context, payment *ScheduledTransaction) error {
-	if m.payments == nil {
-		m.payments = make(map[ScheduledTransactionID]*ScheduledTransaction)
-	}
-	m.payments[payment.ID] = payment
-	return nil
-}
-
-func (m *mockScheduledTransactionStore) GetByID(ctx context.Context, spaceID SpaceID, id ScheduledTransactionID) (*ScheduledTransaction, error) {
-	p, ok := m.payments[id]
-	if !ok || p.SpaceID != spaceID {
-		return nil, errors.E(errors.NotExist, ScheduledTransactionNotFound, "scheduled transaction not found")
-	}
-	return p, nil
-}
-
-func (m *mockScheduledTransactionStore) Update(ctx context.Context, payment *ScheduledTransaction) error {
-	if _, ok := m.payments[payment.ID]; !ok {
-		return errors.E(errors.NotExist, ScheduledTransactionNotFound, "scheduled transaction not found")
-	}
-	m.payments[payment.ID] = payment
-	return nil
-}
-
-func (m *mockScheduledTransactionStore) UpdateStatus(ctx context.Context, id ScheduledTransactionID, status ScheduledTransactionStatus) error {
-	p, ok := m.payments[id]
-	if !ok {
-		return errors.E(errors.NotExist, ScheduledTransactionNotFound, "scheduled transaction not found")
-	}
-	p.Status = status
-	return nil
-}
-
-func (m *mockScheduledTransactionStore) Delete(ctx context.Context, id ScheduledTransactionID) error {
-	delete(m.payments, id)
-	return nil
-}
-
-func (m *mockScheduledTransactionStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListScheduledTransactionsFilter) (*paging.Page[*ScheduledTransaction], error) {
-	var list []*ScheduledTransaction
-	for _, p := range m.payments {
-		if p.SpaceID == spaceID {
-			list = append(list, p)
-		}
-	}
-	return &paging.Page[*ScheduledTransaction]{Items: list}, nil
-}
-
-func (m *mockScheduledTransactionStore) HasScheduledTransactions(ctx context.Context, spaceID SpaceID, filter *ListScheduledTransactionsFilter) (bool, error) {
-	for _, p := range m.payments {
-		if p.SpaceID == spaceID {
-			if filter != nil && filter.BudgetID != nil && (p.BudgetID == nil || *p.BudgetID != *filter.BudgetID) {
-				continue
-			}
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-type mockStatementStore struct {
-	statements map[StatementID]*Statement
-	lines      map[StatementID][]*StatementLine
-}
-
-func newMockStatementStore() *mockStatementStore {
-	return &mockStatementStore{
-		statements: make(map[StatementID]*Statement),
-		lines:      make(map[StatementID][]*StatementLine),
-	}
-}
-
-func (m *mockStatementStore) Create(ctx context.Context, statement *Statement, lines []*StatementLine) error {
-	if statement.Version == 0 {
-		statement.Version = 1
-	}
-	for _, l := range lines {
-		if l.Version == 0 {
-			l.Version = 1
-		}
-	}
-	m.statements[statement.ID] = statement
-	m.lines[statement.ID] = lines
-	return nil
-}
-
-func (m *mockStatementStore) GetByID(ctx context.Context, spaceID SpaceID, id StatementID) (*Statement, error) {
-	stmt, ok := m.statements[id]
-	if !ok || stmt.SpaceID != spaceID {
-		return nil, errors.E(errors.NotExist, StatementNotFound, "statement not found")
-	}
-	cp := *stmt
-	return &cp, nil
-}
-
-func (m *mockStatementStore) List(ctx context.Context, spaceID SpaceID, filter *ListStatementsFilter) (*paging.Page[*Statement], error) {
-	var matched []*Statement
-	for _, stmt := range m.statements {
-		if stmt.SpaceID != spaceID {
-			continue
-		}
-		if filter.AccountID != nil && stmt.AccountID != *filter.AccountID {
-			continue
-		}
-		if filter.Status != nil && stmt.Status != *filter.Status {
-			continue
-		}
-		matched = append(matched, stmt)
-	}
-	return &paging.Page[*Statement]{
-		Items: matched,
-	}, nil
-}
-
-func (m *mockStatementStore) Delete(ctx context.Context, spaceID SpaceID, id StatementID, opts DeleteOptions) error {
-	stmt, ok := m.statements[id]
-	if !ok || stmt.SpaceID != spaceID {
-		return errors.E(errors.NotExist, StatementNotFound, "statement not found")
-	}
-	if opts.Version > 0 && stmt.Version != opts.Version {
-		return errors.E(errors.Conflict, VersionMismatch, "statement version mismatch")
-	}
-	delete(m.statements, id)
-	delete(m.lines, id)
-	return nil
-}
-
-func (m *mockStatementStore) Update(ctx context.Context, statement *Statement) error {
-	existing, ok := m.statements[statement.ID]
-	if !ok {
-		return errors.E(errors.NotExist, StatementNotFound, "statement not found")
-	}
-	if statement.Version > 0 && existing.Version != statement.Version {
-		return errors.E(errors.Conflict, VersionMismatch, "statement version mismatch")
-	}
-	existing.StatementStartingBalance = statement.StatementStartingBalance
-	existing.StatementEndingBalance = statement.StatementEndingBalance
-	existing.StatementDate = statement.StatementDate
-	existing.Status = statement.Status
-	existing.UpdateTime = statement.UpdateTime
-	existing.Version++
-	statement.Version = existing.Version
-	return nil
-}
-
-func (m *mockStatementStore) ListLines(ctx context.Context, statementID StatementID) ([]*StatementLine, error) {
-	lines, ok := m.lines[statementID]
-	if !ok {
-		return nil, errors.E(errors.NotExist, StatementLineNotFound, "statement line not found")
-	}
-	return lines, nil
-}
-
-func (m *mockStatementStore) GetLineByID(ctx context.Context, id StatementLineID) (*StatementLine, error) {
-	for _, lines := range m.lines {
-		for _, l := range lines {
-			if l.ID == id {
-				cp := *l
-				return &cp, nil
-			}
-		}
-	}
-	return nil, errors.E(errors.NotExist, StatementLineNotFound, "statement line not found")
-}
-
-func (m *mockStatementStore) UpdateLineDraft(ctx context.Context, line *StatementLine) error {
-	existing, err := m.GetLineByID(ctx, line.ID)
-	if err != nil {
-		return err
-	}
-	if line.Version > 0 && existing.Version != line.Version {
-		return errors.E(errors.Conflict, VersionMismatch, "statement line version mismatch")
-	}
-	existing.Status = line.Status
-	existing.Action = line.Action
-	existing.MatchedTransactionID = line.MatchedTransactionID
-	existing.Version++
-	line.Version = existing.Version
-	return nil
-}
-
-func (m *mockStatementStore) UpdateStatementWithLines(ctx context.Context, stmt *Statement, lines []*StatementLine) error {
-	existing, ok := m.statements[stmt.ID]
-	if !ok {
-		return errors.E(errors.NotExist, StatementNotFound, "statement not found")
-	}
-	existing.StatementStartingBalance = stmt.StatementStartingBalance
-	existing.StatementEndingBalance = stmt.StatementEndingBalance
-	existing.Version++
-	stmt.Version = existing.Version
-
-	for _, l := range lines {
-		for _, exLine := range m.lines[stmt.ID] {
-			if exLine.ID == l.ID {
-				exLine.Amount = l.Amount
-				exLine.Action = l.Action
-				exLine.Version++
-				l.Version = exLine.Version
-				break
-			}
-		}
-	}
-	return nil
-}
 
 // --- Test Cases ---
 
@@ -921,8 +18,8 @@ func TestUpdateBudget(t *testing.T) {
 	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	bID, _ := NewBudgetID()
 
-	budgetStore := &mockBudgetStore{data: make(map[BudgetID]*Budget)}
-	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+	budgetStore := newBudgetStoreMock(nil)
+	settingsStore := newSettingsStoreMock(nil)
 	_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
 
 	_ = budgetStore.Create(ctx, &Budget{
@@ -1005,9 +102,9 @@ func TestDeleteBudget(t *testing.T) {
 	bIDTxns, _ := NewBudgetID()
 	bIDSched, _ := NewBudgetID()
 
-	budgetStore := &mockBudgetStore{data: make(map[BudgetID]*Budget)}
-	txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
-	schedStore := &mockScheduledTransactionStore{payments: make(map[ScheduledTransactionID]*ScheduledTransaction)}
+	budgetStore := newBudgetStoreMock(nil)
+	txnStore := newTransactionStoreMock(nil)
+	schedStore := newScheduledTransactionStoreMock(nil)
 
 	_ = budgetStore.Create(ctx, &Budget{ID: bIDClean, SpaceID: spaceID, Name: "Clean Budget", Status: BudgetStatusActive})
 	_ = budgetStore.Create(ctx, &Budget{ID: bIDTxns, SpaceID: spaceID, Name: "Txn Budget", Status: BudgetStatusActive})
@@ -1076,18 +173,16 @@ func TestGetScheduledTransaction(t *testing.T) {
 	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	spID := ScheduledTransactionID("sch_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 
-	mockStore := &mockScheduledTransactionStore{
-		payments: map[ScheduledTransactionID]*ScheduledTransaction{
-			spID: {
-				ID:       spID,
-				SpaceID:  spaceID,
-				Amount:   1500,
-				Currency: Currency("USD"),
-				Status:   ScheduledTransactionPending,
-				Type:     TransactionTypeExpense,
-			},
+	mockStore := newScheduledTransactionStoreMock(map[ScheduledTransactionID]*ScheduledTransaction{
+		spID: {
+			ID:       spID,
+			SpaceID:  spaceID,
+			Amount:   1500,
+			Currency: Currency("USD"),
+			Status:   ScheduledTransactionPending,
+			Type:     TransactionTypeExpense,
 		},
-	}
+	})
 
 	svc := NewService(Dependencies{
 		ScheduledTransactionStore: mockStore,
@@ -1150,10 +245,10 @@ func TestGetOrCreatePeriod_MultiCurrencyRateResolution(t *testing.T) {
 	bID, _ := NewBudgetID()
 	now := time.Now().UTC()
 
-	budgetStore := &mockBudgetStore{data: make(map[BudgetID]*Budget)}
-	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
-	periodStore := &mockPeriodStore{data: make(map[string]*BudgetPeriod)}
-	rateStore := &mockExchangeRateStore{rates: make(map[string]*ExchangeRate)}
+	budgetStore := newBudgetStoreMock(nil)
+	settingsStore := newSettingsStoreMock(nil)
+	periodStore := newPeriodStoreMock(nil)
+	rateStore := newExchangeRateStoreMock(nil)
 
 	_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
 	_ = budgetStore.Create(ctx, &Budget{
@@ -1249,12 +344,12 @@ func TestCalculateBounds(t *testing.T) {
 }
 
 func TestConfigureFinance(t *testing.T) {
-	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+	settingsStore := newSettingsStoreMock(nil)
 	svc := NewService(Dependencies{
 		SettingsStore:         settingsStore,
-		AccountStore:          &mockAccountStore{data: make(map[AccountID]*Account)},
-		TransferStore:         &mockTransferStore{data: make(map[TransferID]*Transfer)},
-		TransactionEventStore: &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)},
+		AccountStore:          newAccountStoreMock(nil),
+		TransferStore:         newTransferStoreMock(nil),
+		TransactionEventStore: newTransactionEventStoreMock(nil),
 	})
 
 	spIDStr, _ := id.Generate("spc_")
@@ -1298,12 +393,12 @@ func TestConfigureFinance(t *testing.T) {
 }
 
 func TestGetOrCreatePeriod(t *testing.T) {
-	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
-	budgetStore := &mockBudgetStore{data: make(map[BudgetID]*Budget)}
-	periodStore := &mockPeriodStore{data: make(map[string]*BudgetPeriod)}
-	rateStore := &mockExchangeRateStore{rates: make(map[string]*ExchangeRate)}
+	settingsStore := newSettingsStoreMock(nil)
+	budgetStore := newBudgetStoreMock(nil)
+	periodStore := newPeriodStoreMock(nil)
+	rateStore := newExchangeRateStoreMock(nil)
 
-	txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
+	txnStore := newTransactionStoreMock(nil)
 
 	svc := NewService(Dependencies{
 		SettingsStore:         settingsStore,
@@ -1311,10 +406,10 @@ func TestGetOrCreatePeriod(t *testing.T) {
 		PeriodStore:           periodStore,
 		ExchangeRateStore:     rateStore,
 		TransactionStore:      txnStore,
-		InsightsStore:         &mockInsightsStore{},
-		AccountStore:          &mockAccountStore{data: make(map[AccountID]*Account)},
-		TransferStore:         &mockTransferStore{data: make(map[TransferID]*Transfer)},
-		TransactionEventStore: &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)},
+		InsightsStore:         newInsightsStoreMock(nil, nil, nil, nil, nil, nil, nil),
+		AccountStore:          newAccountStoreMock(nil),
+		TransferStore:         newTransferStoreMock(nil),
+		TransactionEventStore: newTransactionEventStoreMock(nil),
 	})
 
 	ctx := context.Background()
@@ -1383,11 +478,11 @@ func TestGetOrCreatePeriod(t *testing.T) {
 }
 
 func TestTransactions(t *testing.T) {
-	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
-	budgetStore := &mockBudgetStore{data: make(map[BudgetID]*Budget)}
-	periodStore := &mockPeriodStore{data: make(map[string]*BudgetPeriod)}
-	rateStore := &mockExchangeRateStore{rates: make(map[string]*ExchangeRate)}
-	txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
+	settingsStore := newSettingsStoreMock(nil)
+	budgetStore := newBudgetStoreMock(nil)
+	periodStore := newPeriodStoreMock(nil)
+	rateStore := newExchangeRateStoreMock(nil)
+	txnStore := newTransactionStoreMock(nil)
 
 	svc := NewService(Dependencies{
 		SettingsStore:         settingsStore,
@@ -1395,10 +490,10 @@ func TestTransactions(t *testing.T) {
 		PeriodStore:           periodStore,
 		ExchangeRateStore:     rateStore,
 		TransactionStore:      txnStore,
-		InsightsStore:         &mockInsightsStore{},
-		AccountStore:          &mockAccountStore{data: make(map[AccountID]*Account)},
-		TransferStore:         &mockTransferStore{data: make(map[TransferID]*Transfer)},
-		TransactionEventStore: &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)},
+		InsightsStore:         newInsightsStoreMock(nil, nil, nil, nil, nil, nil, nil),
+		AccountStore:          newAccountStoreMock(nil),
+		TransferStore:         newTransferStoreMock(nil),
+		TransactionEventStore: newTransactionEventStoreMock(nil),
 	})
 
 	ctx := context.Background()
@@ -1542,8 +637,8 @@ func TestExchangeRateFallback(t *testing.T) {
 	ctx := context.Background()
 	spaceID := SpaceID("test-space")
 
-	rateStore := &mockExchangeRateStore{rates: make(map[string]*ExchangeRate)}
-	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+	rateStore := newExchangeRateStoreMock(nil)
+	settingsStore := newSettingsStoreMock(nil)
 
 	// Create service
 	svc := NewService(Dependencies{
@@ -1629,10 +724,11 @@ func TestAdjustAccountBalance(t *testing.T) {
 	accIDStr, _ := id.Generate("acc_")
 	accID := AccountID(accIDStr)
 
-	accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
-	txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
-	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
-	eventStore := &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)}
+	accountStore := newAccountStoreMock(nil)
+	txnData := make(map[TransactionID]*Transaction)
+	txnStore := newTransactionStoreMock(txnData)
+	settingsStore := newSettingsStoreMock(nil)
+	eventStore := newTransactionEventStoreMock(nil)
 
 	_ = settingsStore.Create(ctx, &FinanceSettings{
 		SpaceID:      spaceID,
@@ -1668,12 +764,12 @@ func TestAdjustAccountBalance(t *testing.T) {
 	}
 
 	// Verify logged transaction
-	if len(txnStore.txns) != 1 {
-		t.Fatalf("expected 1 logged transaction, got %d", len(txnStore.txns))
+	if len(txnData) != 1 {
+		t.Fatalf("expected 1 logged transaction, got %d", len(txnData))
 	}
 
 	var loggedTxn *Transaction
-	for _, tx := range txnStore.txns {
+	for _, tx := range txnData {
 		loggedTxn = tx
 	}
 
@@ -1710,10 +806,10 @@ func TestCreateBorrowingRepayment_SameCurrencyLent(t *testing.T) {
 	accID, _ := NewAccountID()
 	borID, _ := NewBorrowingID()
 
-	accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
-	txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
-	borrowingStore := &mockBorrowingStore{data: make(map[BorrowingID]*Borrowing)}
-	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+	accountStore := newAccountStoreMock(nil)
+	txnStore := newTransactionStoreMock(nil)
+	borrowingStore := newBorrowingStoreMock(nil)
+	settingsStore := newSettingsStoreMock(nil)
 
 	_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
 	_ = accountStore.Create(ctx, &Account{
@@ -1789,11 +885,11 @@ func TestCreateBorrowingRepayment_MultiCurrency(t *testing.T) {
 	accID, _ := NewAccountID()
 	borID, _ := NewBorrowingID()
 
-	accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
-	txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
-	borrowingStore := &mockBorrowingStore{data: make(map[BorrowingID]*Borrowing)}
-	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
-	rateStore := &mockExchangeRateStore{rates: make(map[string]*ExchangeRate)}
+	accountStore := newAccountStoreMock(nil)
+	txnStore := newTransactionStoreMock(nil)
+	borrowingStore := newBorrowingStoreMock(nil)
+	settingsStore := newSettingsStoreMock(nil)
+	rateStore := newExchangeRateStoreMock(nil)
 
 	_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
 	_ = rateStore.Create(ctx, &ExchangeRate{
@@ -1969,10 +1065,12 @@ func TestAdjustBorrowingBalance(t *testing.T) {
 			accID, _ := NewAccountID()
 			borID, _ := NewBorrowingID()
 
-			accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
-			txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
-			borrowingStore := &mockBorrowingStore{data: make(map[BorrowingID]*Borrowing)}
-			settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+			accData := make(map[AccountID]*Account)
+			accountStore := newAccountStoreMock(accData)
+			txnData := make(map[TransactionID]*Transaction)
+			txnStore := newTransactionStoreMock(txnData)
+			borrowingStore := newBorrowingStoreMock(nil)
+			settingsStore := newSettingsStoreMock(nil)
 
 			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
 			_ = accountStore.Create(ctx, &Account{
@@ -2043,7 +1141,7 @@ func TestAdjustBorrowingBalance(t *testing.T) {
 			}
 
 			// Verify base currency amount calculation on the generated adjustment transaction
-			for _, txn := range txnStore.txns {
+			for _, txn := range txnData {
 				if txn.Metadata.BorrowingRole == "ADJUSTMENT" {
 					if txn.AmountInBase == 0 {
 						t.Errorf("Adjustment transaction AmountInBase is 0, expected non-zero base currency amount")
@@ -2120,10 +1218,10 @@ func TestLogAndUpdateBorrowingTransaction(t *testing.T) {
 			accID, _ := NewAccountID()
 			borID, _ := NewBorrowingID()
 
-			accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
-			txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
-			borrowingStore := &mockBorrowingStore{data: make(map[BorrowingID]*Borrowing)}
-			settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+			accountStore := newAccountStoreMock(nil)
+			txnStore := newTransactionStoreMock(nil)
+			borrowingStore := newBorrowingStoreMock(nil)
+			settingsStore := newSettingsStoreMock(nil)
 
 			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
 			_ = accountStore.Create(ctx, &Account{
@@ -2215,9 +1313,9 @@ func TestDeleteBorrowingAdjustment(t *testing.T) {
 	spaceID := SpaceID(spIDStr)
 	borID, _ := NewBorrowingID()
 
-	txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
-	borrowingStore := &mockBorrowingStore{data: make(map[BorrowingID]*Borrowing)}
-	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+	txnStore := newTransactionStoreMock(nil)
+	borrowingStore := newBorrowingStoreMock(nil)
+	settingsStore := newSettingsStoreMock(nil)
 
 	_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
 	_ = borrowingStore.Create(ctx, &Borrowing{
@@ -2279,11 +1377,11 @@ func TestDeleteBorrowing_BlockedWhenTransactionsExist(t *testing.T) {
 	rawSpace, _ := id.Generate("spc_")
 	spaceID := SpaceID(rawSpace)
 
-	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+	settingsStore := newSettingsStoreMock(nil)
 	_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
 
-	borrowingStore := &mockBorrowingStore{data: make(map[BorrowingID]*Borrowing)}
-	txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
+	borrowingStore := newBorrowingStoreMock(nil)
+	txnStore := newTransactionStoreMock(nil)
 
 	svc := NewService(Dependencies{
 		SettingsStore:    settingsStore,
@@ -2365,9 +1463,9 @@ func TestUpdateBorrowing(t *testing.T) {
 			spaceID := SpaceID(spIDStr)
 			borID, _ := NewBorrowingID()
 
-			txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
-			borrowingStore := &mockBorrowingStore{data: make(map[BorrowingID]*Borrowing)}
-			settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+			txnStore := newTransactionStoreMock(nil)
+			borrowingStore := newBorrowingStoreMock(nil)
+			settingsStore := newSettingsStoreMock(nil)
 
 			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spaceID, BaseCurrency: "USD"})
 			_ = borrowingStore.Create(ctx, &Borrowing{
@@ -2428,7 +1526,7 @@ func TestService_CreateTransfer(t *testing.T) {
 	tests := []struct {
 		name               string
 		transfer           *Transfer
-		setupAccounts      func(accStore *mockAccountStore)
+		setupAccounts      func(accStore *AccountStoreMock)
 		wantErr            bool
 		errContains        string
 		expectedSrcBalance int64
@@ -2445,7 +1543,7 @@ func TestService_CreateTransfer(t *testing.T) {
 				TransferDate:         time.Now().UTC(),
 				Notes:                "Single currency savings transfer",
 			},
-			setupAccounts: func(as *mockAccountStore) {
+			setupAccounts: func(as *AccountStoreMock) {
 				_ = as.Create(ctx, &Account{ID: srcUSD, SpaceID: spID, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
 				_ = as.Create(ctx, &Account{ID: dstUSD, SpaceID: spID, Name: "Savings USD", Currency: "USD", CurrentBalance: 0, IsActive: true})
 			},
@@ -2464,7 +1562,7 @@ func TestService_CreateTransfer(t *testing.T) {
 				TransferDate:         time.Now().UTC(),
 				Notes:                "Multi currency transfer",
 			},
-			setupAccounts: func(as *mockAccountStore) {
+			setupAccounts: func(as *AccountStoreMock) {
 				_ = as.Create(ctx, &Account{ID: srcUSD, SpaceID: spID, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
 				_ = as.Create(ctx, &Account{ID: dstEUR, SpaceID: spID, Name: "Savings EUR", Currency: "EUR", CurrentBalance: 0, IsActive: true})
 			},
@@ -2482,7 +1580,7 @@ func TestService_CreateTransfer(t *testing.T) {
 				DestinationAmount:    10000,
 				TransferDate:         time.Now().UTC(),
 			},
-			setupAccounts: func(as *mockAccountStore) {
+			setupAccounts: func(as *AccountStoreMock) {
 				_ = as.Create(ctx, &Account{ID: srcUSD, SpaceID: spID, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
 			},
 			wantErr:     true,
@@ -2498,7 +1596,7 @@ func TestService_CreateTransfer(t *testing.T) {
 				DestinationAmount:    40000,
 				TransferDate:         time.Now().UTC(),
 			},
-			setupAccounts: func(as *mockAccountStore) {
+			setupAccounts: func(as *AccountStoreMock) {
 				_ = as.Create(ctx, &Account{ID: srcUSD, SpaceID: spID, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
 				_ = as.Create(ctx, &Account{ID: dstUSD, SpaceID: spID, Name: "Savings USD", Currency: "USD", CurrentBalance: 0, IsActive: true})
 			},
@@ -2515,7 +1613,7 @@ func TestService_CreateTransfer(t *testing.T) {
 				DestinationAmount:    10000,
 				TransferDate:         time.Now().UTC(),
 			},
-			setupAccounts: func(as *mockAccountStore) {
+			setupAccounts: func(as *AccountStoreMock) {
 				_ = as.Create(ctx, &Account{ID: srcUSD, SpaceID: spID, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
 				_ = as.Create(ctx, &Account{ID: dstUSD, SpaceID: spID, Name: "Savings USD", Currency: "USD", CurrentBalance: 0, IsActive: true})
 			},
@@ -2532,7 +1630,7 @@ func TestService_CreateTransfer(t *testing.T) {
 				DestinationAmount:    10000,
 				TransferDate:         time.Now().UTC(),
 			},
-			setupAccounts: func(as *mockAccountStore) {
+			setupAccounts: func(as *AccountStoreMock) {
 				_ = as.Create(ctx, &Account{ID: srcUSD, SpaceID: spID, Name: "Checking USD", Currency: "USD", CurrentBalance: 100000, IsActive: true})
 				_ = as.Create(ctx, &Account{ID: otherSpaceAcc, SpaceID: otherSpID, Name: "Foreign Space Account", Currency: "USD", CurrentBalance: 0, IsActive: true})
 			},
@@ -2543,11 +1641,11 @@ func TestService_CreateTransfer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+			settingsStore := newSettingsStoreMock(nil)
 			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spID, BaseCurrency: "USD"})
 			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: otherSpID, BaseCurrency: "USD"})
 
-			rateStore := &mockExchangeRateStore{rates: make(map[string]*ExchangeRate)}
+			rateStore := newExchangeRateStoreMock(nil)
 			_ = rateStore.Create(ctx, &ExchangeRate{
 				SpaceID:      spID,
 				FromCurrency: "EUR",
@@ -2556,11 +1654,12 @@ func TestService_CreateTransfer(t *testing.T) {
 				RateDate:     time.Now().UTC(),
 			})
 
-			accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
+			accountStore := newAccountStoreMock(nil)
 			tt.setupAccounts(accountStore)
 
-			transactionStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
-			transferStore := &mockTransferStore{data: make(map[TransferID]*Transfer)}
+			txnData := make(map[TransactionID]*Transaction)
+			transactionStore := newTransactionStoreMock(txnData)
+			transferStore := newTransferStoreMock(nil)
 
 			svc := NewService(Dependencies{
 				SettingsStore:         settingsStore,
@@ -2568,7 +1667,7 @@ func TestService_CreateTransfer(t *testing.T) {
 				AccountStore:          accountStore,
 				TransactionStore:      transactionStore,
 				TransferStore:         transferStore,
-				TransactionEventStore: &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)},
+				TransactionEventStore: newTransactionEventStoreMock(nil),
 			})
 
 			res, err := svc.CreateTransfer(ctx, tt.transfer)
@@ -2598,7 +1697,7 @@ func TestService_CreateTransfer(t *testing.T) {
 
 			// Verify transaction legs
 			var outflow, inflow *Transaction
-			for _, tx := range transactionStore.txns {
+			for _, tx := range txnData {
 				if tx.Metadata.TransferID != nil && *tx.Metadata.TransferID == res.ID {
 					switch tx.Type {
 					case TransactionTypeTransferOut:
@@ -2632,13 +1731,13 @@ func TestService_DeleteTransfer(t *testing.T) {
 	tests := []struct {
 		name        string
 		transferID  TransferID
-		setupData   func(svc *Service, accStore *mockAccountStore) TransferID
+		setupData   func(svc *Service, accStore *AccountStoreMock) TransferID
 		wantErr     bool
 		errContains string
 	}{
 		{
 			name: "Success - Delete Existing Transfer & Roll Back Balances",
-			setupData: func(svc *Service, as *mockAccountStore) TransferID {
+			setupData: func(svc *Service, as *AccountStoreMock) TransferID {
 				_ = as.Create(ctx, &Account{ID: srcAccID, SpaceID: spID, Name: "Checking", Currency: "USD", CurrentBalance: 100000, IsActive: true})
 				_ = as.Create(ctx, &Account{ID: dstAccID, SpaceID: spID, Name: "Savings", Currency: "USD", CurrentBalance: 0, IsActive: true})
 				tr, _ := svc.CreateTransfer(ctx, &Transfer{
@@ -2655,7 +1754,7 @@ func TestService_DeleteTransfer(t *testing.T) {
 		},
 		{
 			name: "Err - Transfer Not Found",
-			setupData: func(svc *Service, as *mockAccountStore) TransferID {
+			setupData: func(svc *Service, as *AccountStoreMock) TransferID {
 				dummyID, _ := NewTransferID()
 				return dummyID
 			},
@@ -2666,19 +1765,19 @@ func TestService_DeleteTransfer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+			settingsStore := newSettingsStoreMock(nil)
 			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spID, BaseCurrency: "USD"})
 
-			accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
-			transactionStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
-			transferStore := &mockTransferStore{data: make(map[TransferID]*Transfer)}
+			accountStore := newAccountStoreMock(nil)
+			transactionStore := newTransactionStoreMock(nil)
+			transferStore := newTransferStoreMock(nil)
 
 			svc := NewService(Dependencies{
 				SettingsStore:         settingsStore,
 				AccountStore:          accountStore,
 				TransactionStore:      transactionStore,
 				TransferStore:         transferStore,
-				TransactionEventStore: &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)},
+				TransactionEventStore: newTransactionEventStoreMock(nil),
 			})
 
 			targetID := tt.setupData(svc, accountStore)
@@ -2721,19 +1820,19 @@ func TestService_GetAndListTransfers(t *testing.T) {
 	spIDStr, _ := id.Generate("spc_")
 	spID := SpaceID(spIDStr)
 
-	settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+	settingsStore := newSettingsStoreMock(nil)
 	_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spID, BaseCurrency: "USD"})
 
-	accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
-	transactionStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
-	transferStore := &mockTransferStore{data: make(map[TransferID]*Transfer)}
+	accountStore := newAccountStoreMock(nil)
+	transactionStore := newTransactionStoreMock(nil)
+	transferStore := newTransferStoreMock(nil)
 
 	svc := NewService(Dependencies{
 		SettingsStore:         settingsStore,
 		AccountStore:          accountStore,
 		TransactionStore:      transactionStore,
 		TransferStore:         transferStore,
-		TransactionEventStore: &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)},
+		TransactionEventStore: newTransactionEventStoreMock(nil),
 	})
 
 	srcAccID, _ := NewAccountID()
@@ -2787,46 +1886,6 @@ func TestService_GetAndListTransfers(t *testing.T) {
 	if len(list) != 1 {
 		t.Errorf("ListTransfers count = %d, want 1", len(list))
 	}
-}
-
-type mockInboxItemStore struct {
-	items map[string]*InboxItem
-}
-
-func (m *mockInboxItemStore) Insert(ctx context.Context, item *InboxItem) error {
-	if m.items == nil {
-		m.items = make(map[string]*InboxItem)
-	}
-	m.items[item.ID] = item
-	return nil
-}
-
-func (m *mockInboxItemStore) Get(ctx context.Context, spaceID SpaceID, id string) (*InboxItem, error) {
-	item, ok := m.items[id]
-	if !ok || item.SpaceID != string(spaceID) {
-		return nil, errors.New("inbox item not found")
-	}
-	return item, nil
-}
-
-func (m *mockInboxItemStore) ListBySpace(ctx context.Context, spaceID SpaceID, filter *ListInboxItemsFilter) (*paging.Page[*InboxItem], error) {
-	var list []*InboxItem
-	for _, item := range m.items {
-		if item.SpaceID == string(spaceID) {
-			list = append(list, item)
-		}
-	}
-	return &paging.Page[*InboxItem]{Items: list}, nil
-}
-
-func (m *mockInboxItemStore) Update(ctx context.Context, item *InboxItem) error {
-	m.items[item.ID] = item
-	return nil
-}
-
-func (m *mockInboxItemStore) Delete(ctx context.Context, spaceID SpaceID, id string) error {
-	delete(m.items, id)
-	return nil
 }
 
 func TestService_ApproveInboxItem(t *testing.T) {
@@ -2938,10 +1997,10 @@ func TestService_ApproveInboxItem(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+			settingsStore := newSettingsStoreMock(nil)
 			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spID, BaseCurrency: Currency("USD")})
 
-			accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
+			accountStore := newAccountStoreMock(nil)
 			srcAccID, _ := NewAccountID()
 			srcAcc := &Account{
 				ID:             srcAccID,
@@ -2964,7 +2023,7 @@ func TestService_ApproveInboxItem(t *testing.T) {
 			}
 			_ = accountStore.Create(ctx, dstAcc)
 
-			budgetStore := &mockBudgetStore{data: make(map[BudgetID]*Budget)}
+			budgetStore := newBudgetStoreMock(nil)
 			bID, _ := NewBudgetID()
 			bg := &Budget{
 				ID:          bID,
@@ -2975,13 +2034,14 @@ func TestService_ApproveInboxItem(t *testing.T) {
 			}
 			_ = budgetStore.Create(ctx, bg)
 
-			periodStore := &mockPeriodStore{data: make(map[string]*BudgetPeriod)}
+			periodStore := newPeriodStoreMock(nil)
 
-			txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
-			eventStore := &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)}
-			transferStore := &mockTransferStore{data: make(map[TransferID]*Transfer)}
-			scheduledStore := &mockScheduledTransactionStore{payments: make(map[ScheduledTransactionID]*ScheduledTransaction)}
-			inboxStore := &mockInboxItemStore{items: make(map[string]*InboxItem)}
+			txnStore := newTransactionStoreMock(nil)
+			eventStore := newTransactionEventStoreMock(nil)
+			transferData := make(map[TransferID]*Transfer)
+			transferStore := newTransferStoreMock(transferData)
+			scheduledStore := newScheduledTransactionStoreMock(nil)
+			inboxStore := newInboxItemStoreMock(nil)
 
 			svc := NewService(Dependencies{
 				SettingsStore:             settingsStore,
@@ -3064,8 +2124,8 @@ func TestService_ApproveInboxItem(t *testing.T) {
 			}
 
 			if tt.expectedTransferMade {
-				if len(transferStore.data) != 1 {
-					t.Errorf("Transfer count = %d, want 1", len(transferStore.data))
+				if len(transferData) != 1 {
+					t.Errorf("Transfer count = %d, want 1", len(transferData))
 				}
 			}
 
@@ -3113,14 +2173,17 @@ func TestService_SystemVerification(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+			settingsStore := newSettingsStoreMock(nil)
 			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spID, BaseCurrency: Currency("USD")})
 
-			txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
-			eventStore := &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)}
-			transferStore := &mockTransferStore{data: make(map[TransferID]*Transfer)}
-			scheduledStore := &mockScheduledTransactionStore{payments: make(map[ScheduledTransactionID]*ScheduledTransaction)}
-			inboxStore := &mockInboxItemStore{items: make(map[string]*InboxItem)}
+			txnData := make(map[TransactionID]*Transaction)
+			txnStore := newTransactionStoreMock(txnData)
+			eventStore := newTransactionEventStoreMock(nil)
+			transferData := make(map[TransferID]*Transfer)
+			transferStore := newTransferStoreMock(transferData)
+			schedData := make(map[ScheduledTransactionID]*ScheduledTransaction)
+			scheduledStore := newScheduledTransactionStoreMock(schedData)
+			inboxStore := newInboxItemStoreMock(nil)
 
 			svc := NewService(Dependencies{
 				SettingsStore:             settingsStore,
@@ -3176,14 +2239,14 @@ func TestService_SystemVerification(t *testing.T) {
 			}
 
 			// Assert 0 side-effect ledger entities created across all cases
-			if len(txnStore.txns) != 0 {
-				t.Errorf("Transactions created = %d, want 0", len(txnStore.txns))
+			if len(txnData) != 0 {
+				t.Errorf("Transactions created = %d, want 0", len(txnData))
 			}
-			if len(transferStore.data) != 0 {
-				t.Errorf("Transfers created = %d, want 0", len(transferStore.data))
+			if len(transferData) != 0 {
+				t.Errorf("Transfers created = %d, want 0", len(transferData))
 			}
-			if len(scheduledStore.payments) != 0 {
-				t.Errorf("Scheduled transactions created = %d, want 0", len(scheduledStore.payments))
+			if len(schedData) != 0 {
+				t.Errorf("Scheduled transactions created = %d, want 0", len(schedData))
 			}
 		})
 	}
@@ -3241,10 +2304,10 @@ func TestService_InvoiceBranch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			settingsStore := &mockSettingsStore{data: make(map[SpaceID]*FinanceSettings)}
+			settingsStore := newSettingsStoreMock(nil)
 			_ = settingsStore.Create(ctx, &FinanceSettings{SpaceID: spID, BaseCurrency: Currency("USD")})
 
-			accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
+			accountStore := newAccountStoreMock(nil)
 			accID, _ := NewAccountID()
 			_ = accountStore.Create(ctx, &Account{
 				ID:             accID,
@@ -3255,7 +2318,7 @@ func TestService_InvoiceBranch(t *testing.T) {
 				IsActive:       true,
 			})
 
-			budgetStore := &mockBudgetStore{data: make(map[BudgetID]*Budget)}
+			budgetStore := newBudgetStoreMock(nil)
 			bIDVal, _ := NewBudgetID()
 			bg := &Budget{
 				ID:       bIDVal,
@@ -3265,13 +2328,15 @@ func TestService_InvoiceBranch(t *testing.T) {
 			}
 			_ = budgetStore.Create(ctx, bg)
 
-			periodStore := &mockPeriodStore{data: make(map[string]*BudgetPeriod)}
+			periodStore := newPeriodStoreMock(nil)
 
-			txnStore := &mockTransactionStore{txns: make(map[TransactionID]*Transaction)}
-			eventStore := &mockTransactionEventStore{events: make(map[TransactionEventID]*TransactionEvent)}
-			transferStore := &mockTransferStore{data: make(map[TransferID]*Transfer)}
-			scheduledStore := &mockScheduledTransactionStore{payments: make(map[ScheduledTransactionID]*ScheduledTransaction)}
-			inboxStore := &mockInboxItemStore{items: make(map[string]*InboxItem)}
+			txnData := make(map[TransactionID]*Transaction)
+			txnStore := newTransactionStoreMock(txnData)
+			eventStore := newTransactionEventStoreMock(nil)
+			transferStore := newTransferStoreMock(nil)
+			schedData := make(map[ScheduledTransactionID]*ScheduledTransaction)
+			scheduledStore := newScheduledTransactionStoreMock(schedData)
+			inboxStore := newInboxItemStoreMock(nil)
 
 			svc := NewService(Dependencies{
 				SettingsStore:             settingsStore,
@@ -3381,11 +2446,11 @@ func TestService_InvoiceBranch(t *testing.T) {
 				}
 			}
 
-			if len(scheduledStore.payments) != tt.expectedScheduledCount {
-				t.Errorf("Scheduled Payments count = %d, want %d", len(scheduledStore.payments), tt.expectedScheduledCount)
+			if len(schedData) != tt.expectedScheduledCount {
+				t.Errorf("Scheduled Payments count = %d, want %d", len(schedData), tt.expectedScheduledCount)
 			}
-			if len(txnStore.txns) != tt.expectedTransactionCount {
-				t.Errorf("Transactions count = %d, want %d", len(txnStore.txns), tt.expectedTransactionCount)
+			if len(txnData) != tt.expectedTransactionCount {
+				t.Errorf("Transactions count = %d, want %d", len(txnData), tt.expectedTransactionCount)
 			}
 		})
 	}
@@ -3396,7 +2461,7 @@ func TestUpdateAccount(t *testing.T) {
 	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	aID, _ := NewAccountID()
 
-	accStore := &mockAccountStore{data: make(map[AccountID]*Account)}
+	accStore := newAccountStoreMock(nil)
 	_ = accStore.Create(ctx, &Account{
 		ID:             aID,
 		SpaceID:        spaceID,
@@ -3466,7 +2531,7 @@ func TestUpdateInstitution(t *testing.T) {
 	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	iID, _ := NewInstitutionID()
 
-	instStore := &mockInstitutionStore{data: make(map[InstitutionID]*Institution)}
+	instStore := newInstitutionStoreMock(nil)
 	_ = instStore.Create(ctx, &Institution{
 		ID:      iID,
 		SpaceID: spaceID,
@@ -3532,7 +2597,7 @@ func TestUpdateInstitution(t *testing.T) {
 func TestCreateInstitution(t *testing.T) {
 	ctx := context.Background()
 	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
-	instStore := &mockInstitutionStore{data: make(map[InstitutionID]*Institution)}
+	instStore := newInstitutionStoreMock(nil)
 	svc := NewService(Dependencies{InstitutionStore: instStore})
 
 	tests := []struct {
@@ -3594,7 +2659,7 @@ func TestDeleteInstitution(t *testing.T) {
 	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	iID, _ := NewInstitutionID()
 
-	instStore := &mockInstitutionStore{data: make(map[InstitutionID]*Institution)}
+	instStore := newInstitutionStoreMock(nil)
 	_ = instStore.Create(ctx, &Institution{
 		ID:      iID,
 		SpaceID: spaceID,
@@ -3642,7 +2707,7 @@ func TestDeleteAccount(t *testing.T) {
 	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
 	aID, _ := NewAccountID()
 
-	accStore := &mockAccountStore{data: make(map[AccountID]*Account)}
+	accStore := newAccountStoreMock(nil)
 	_ = accStore.Create(ctx, &Account{
 		ID:        aID,
 		SpaceID:   spaceID,
@@ -3774,29 +2839,26 @@ func TestService_ImportStatement(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			spaceID := SpaceID("spc_" + ksuid.New().String())
 			accountID := AccountID("acc_" + ksuid.New().String())
-			statementStore := newMockStatementStore()
+			linesMap := make(map[StatementID][]*StatementLine)
+			statementStore := newStatementStoreMock(nil, linesMap)
 
 			deps := Dependencies{
-				SettingsStore: &mockSettingsStore{
-					data: map[SpaceID]*FinanceSettings{
-						spaceID: {SpaceID: spaceID, BaseCurrency: Currency("USD")},
+				SettingsStore: newSettingsStoreMock(map[SpaceID]*FinanceSettings{
+					spaceID: {SpaceID: spaceID, BaseCurrency: Currency("USD")},
+				}),
+				AccountStore: newAccountStoreMock(map[AccountID]*Account{
+					accountID: {
+						ID:             accountID,
+						SpaceID:        spaceID,
+						Name:           "Main Checking",
+						Type:           AccountTypeBank,
+						Currency:       Currency("USD"),
+						CurrentBalance: 100000,
+						IsActive:       true,
 					},
-				},
-				AccountStore: &mockAccountStore{
-					data: map[AccountID]*Account{
-						accountID: {
-							ID:             accountID,
-							SpaceID:        spaceID,
-							Name:           "Main Checking",
-							Type:           AccountTypeBank,
-							Currency:       Currency("USD"),
-							CurrentBalance: 100000,
-							IsActive:       true,
-						},
-					},
-				},
+				}),
 				StatementStore:   statementStore,
-				TransactionStore: &mockTransactionStore{txns: make(map[TransactionID]*Transaction)},
+				TransactionStore: newTransactionStoreMock(nil),
 			}
 
 			svc := NewService(deps)
@@ -3824,7 +2886,7 @@ func TestService_ImportStatement(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			lines := statementStore.lines[imported.ID]
+			lines := linesMap[imported.ID]
 			if tt.verifyLines != nil {
 				tt.verifyLines(t, lines)
 			}
@@ -3838,15 +2900,17 @@ func TestService_InvertStatementSigns(t *testing.T) {
 	accountID := AccountID("acc_" + ksuid.New().String())
 	stmtID := StatementID("stmt_" + ksuid.New().String())
 
-	statementStore := newMockStatementStore()
-	accountStore := &mockAccountStore{data: make(map[AccountID]*Account)}
-	accountStore.data[accountID] = &Account{
-		ID:             accountID,
-		SpaceID:        spaceID,
-		Type:           AccountTypeCreditCard,
-		CurrentBalance: 50000,
-		Currency:       Currency("USD"),
+	statementStore := newStatementStoreMock(nil, nil)
+	accountData := map[AccountID]*Account{
+		accountID: {
+			ID:             accountID,
+			SpaceID:        spaceID,
+			Type:           AccountTypeCreditCard,
+			CurrentBalance: 50000,
+			Currency:       Currency("USD"),
+		},
 	}
+	accountStore := newAccountStoreMock(accountData)
 
 	stmt := &Statement{
 		ID:                       stmtID,
@@ -3889,7 +2953,7 @@ func TestService_InvertStatementSigns(t *testing.T) {
 	deps := Dependencies{
 		StatementStore:   statementStore,
 		AccountStore:     accountStore,
-		TransactionStore: &mockTransactionStore{txns: make(map[TransactionID]*Transaction)},
+		TransactionStore: newTransactionStoreMock(nil),
 	}
 
 	svc := NewService(deps)
@@ -3931,11 +2995,11 @@ func TestService_CompleteStatement(t *testing.T) {
 		name            string
 		startingBalance int64
 		endingBalance   int64
-		setupStores     func(spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies)
-		setupLines      func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine
+		setupStores     func(spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing)
+		setupLines      func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) []*StatementLine
 		wantErr         bool
 		errContains     string
-		verifyResults   func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies)
+		verifyResults   func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction)
 	}
 
 	tests := []testFixture{
@@ -3943,7 +3007,7 @@ func TestService_CompleteStatement(t *testing.T) {
 			name:            "Match_ExistingTransaction_Outflow",
 			startingBalance: 100000,
 			endingBalance:   95000,
-			setupStores: func(spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies) {
+			setupStores: func(spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) {
 				txID := TransactionID("txn_" + ksuid.New().String())
 				txn := &Transaction{
 					ID:              txID,
@@ -3957,9 +3021,9 @@ func TestService_CompleteStatement(t *testing.T) {
 				}
 				_ = deps.TransactionStore.Create(context.Background(), txn)
 			},
-			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine {
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) []*StatementLine {
 				var txID TransactionID
-				for id := range deps.TransactionStore.(*mockTransactionStore).txns {
+				for id := range txns {
 					txID = id
 				}
 				return []*StatementLine{
@@ -3978,7 +3042,7 @@ func TestService_CompleteStatement(t *testing.T) {
 					},
 				}
 			},
-			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies) {
+			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
 				if stmt.Status != StatementStatusCompleted {
 					t.Errorf("expected statement completed, got %s", stmt.Status)
 				}
@@ -4005,7 +3069,7 @@ func TestService_CompleteStatement(t *testing.T) {
 			name:            "Match_ExistingTransaction_WithOverwrite_IncreaseExpense",
 			startingBalance: 100000,
 			endingBalance:   85000,
-			setupStores: func(spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies) {
+			setupStores: func(spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) {
 				txID := TransactionID("txn_" + ksuid.New().String())
 				txn := &Transaction{
 					ID:              txID,
@@ -4019,9 +3083,9 @@ func TestService_CompleteStatement(t *testing.T) {
 				}
 				_ = deps.TransactionStore.Create(context.Background(), txn)
 			},
-			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine {
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) []*StatementLine {
 				var txID TransactionID
-				for id := range deps.TransactionStore.(*mockTransactionStore).txns {
+				for id := range txns {
 					txID = id
 				}
 				overwrite := true
@@ -4042,7 +3106,7 @@ func TestService_CompleteStatement(t *testing.T) {
 					},
 				}
 			},
-			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies) {
+			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
 				if stmt.Status != StatementStatusCompleted {
 					t.Errorf("expected statement completed, got %s", stmt.Status)
 				}
@@ -4078,7 +3142,7 @@ func TestService_CompleteStatement(t *testing.T) {
 			name:            "CreateExpense_Standalone",
 			startingBalance: 100000,
 			endingBalance:   92500,
-			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine {
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) []*StatementLine {
 				return []*StatementLine{
 					{
 						ID:          StatementLineID("stln_" + ksuid.New().String()),
@@ -4094,7 +3158,7 @@ func TestService_CompleteStatement(t *testing.T) {
 					},
 				}
 			},
-			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies) {
+			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
 				line := lines[0]
 				if line.MatchedTransactionID == nil {
 					t.Fatal("expected matched transaction ID to be populated")
@@ -4115,7 +3179,7 @@ func TestService_CompleteStatement(t *testing.T) {
 			name:            "CreateIncome_Standalone",
 			startingBalance: 100000,
 			endingBalance:   220000,
-			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine {
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) []*StatementLine {
 				return []*StatementLine{
 					{
 						ID:          StatementLineID("stln_" + ksuid.New().String()),
@@ -4131,7 +3195,7 @@ func TestService_CompleteStatement(t *testing.T) {
 					},
 				}
 			},
-			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies) {
+			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
 				line := lines[0]
 				if line.MatchedTransactionID == nil {
 					t.Fatal("expected matched transaction ID to be populated")
@@ -4152,7 +3216,7 @@ func TestService_CompleteStatement(t *testing.T) {
 			name:            "CreateTransfer_Outflow_StampsOutflowLegOnly",
 			startingBalance: 100000,
 			endingBalance:   70000,
-			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine {
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) []*StatementLine {
 				return []*StatementLine{
 					{
 						ID:          StatementLineID("stln_" + ksuid.New().String()),
@@ -4169,7 +3233,7 @@ func TestService_CompleteStatement(t *testing.T) {
 					},
 				}
 			},
-			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies) {
+			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
 				line := lines[0]
 				if line.MatchedTransactionID == nil {
 					t.Fatal("expected matched transaction ID to be populated")
@@ -4186,7 +3250,7 @@ func TestService_CompleteStatement(t *testing.T) {
 				}
 
 				// Verify inflow leg is NOT marked reconciled
-				for _, tx := range deps.TransactionStore.(*mockTransactionStore).txns {
+				for _, tx := range txns {
 					if tx.Type == TransactionTypeTransferIn {
 						if tx.Metadata.Reconciled {
 							t.Error("expected destination inflow leg not to be reconciled")
@@ -4199,7 +3263,7 @@ func TestService_CompleteStatement(t *testing.T) {
 			name:            "CreateTransfer_Inflow_StampsInflowLegOnly",
 			startingBalance: 100000,
 			endingBalance:   145000,
-			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine {
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) []*StatementLine {
 				return []*StatementLine{
 					{
 						ID:          StatementLineID("stln_" + ksuid.New().String()),
@@ -4216,7 +3280,7 @@ func TestService_CompleteStatement(t *testing.T) {
 					},
 				}
 			},
-			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies) {
+			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
 				line := lines[0]
 				if line.MatchedTransactionID == nil {
 					t.Fatal("expected matched transaction ID to be populated")
@@ -4233,7 +3297,7 @@ func TestService_CompleteStatement(t *testing.T) {
 				}
 
 				// Verify counterpart outflow leg is NOT marked reconciled
-				for _, tx := range deps.TransactionStore.(*mockTransactionStore).txns {
+				for _, tx := range txns {
 					if tx.Type == TransactionTypeTransferOut {
 						if tx.Metadata.Reconciled {
 							t.Error("expected source counterpart outflow leg not to be reconciled")
@@ -4246,7 +3310,7 @@ func TestService_CompleteStatement(t *testing.T) {
 			name:            "ConfirmScheduled_Payment",
 			startingBalance: 100000,
 			endingBalance:   85000,
-			setupStores: func(spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies) {
+			setupStores: func(spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) {
 				schedID := ScheduledTransactionID("sch_" + ksuid.New().String())
 				payment := &ScheduledTransaction{
 					ID:         schedID,
@@ -4260,9 +3324,9 @@ func TestService_CompleteStatement(t *testing.T) {
 				}
 				_ = deps.ScheduledTransactionStore.Create(context.Background(), payment)
 			},
-			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine {
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) []*StatementLine {
 				var schedID ScheduledTransactionID
-				for id := range deps.ScheduledTransactionStore.(*mockScheduledTransactionStore).payments {
+				for id := range sched {
 					schedID = id
 				}
 				return []*StatementLine{
@@ -4281,7 +3345,7 @@ func TestService_CompleteStatement(t *testing.T) {
 					},
 				}
 			},
-			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies) {
+			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
 				line := lines[0]
 				if line.MatchedTransactionID == nil {
 					t.Fatal("expected matched transaction ID to be populated")
@@ -4299,7 +3363,7 @@ func TestService_CompleteStatement(t *testing.T) {
 			name:            "CreateRepayment_Borrowing",
 			startingBalance: 100000,
 			endingBalance:   80000,
-			setupStores: func(spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies) {
+			setupStores: func(spaceID SpaceID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) {
 				bID := BorrowingID("bor_" + ksuid.New().String())
 				b := &Borrowing{
 					ID:              bID,
@@ -4313,9 +3377,9 @@ func TestService_CompleteStatement(t *testing.T) {
 				}
 				_ = deps.BorrowingStore.Create(context.Background(), b)
 			},
-			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine {
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) []*StatementLine {
 				var bID BorrowingID
-				for id := range deps.BorrowingStore.(*mockBorrowingStore).data {
+				for id := range bor {
 					bID = id
 				}
 				return []*StatementLine{
@@ -4334,7 +3398,7 @@ func TestService_CompleteStatement(t *testing.T) {
 					},
 				}
 			},
-			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies) {
+			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
 				line := lines[0]
 				if line.MatchedTransactionID == nil {
 					t.Fatal("expected matched transaction ID to be populated")
@@ -4355,7 +3419,7 @@ func TestService_CompleteStatement(t *testing.T) {
 			name:            "Skip_Line",
 			startingBalance: 100000,
 			endingBalance:   99900,
-			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine {
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) []*StatementLine {
 				return []*StatementLine{
 					{
 						ID:          StatementLineID("stln_" + ksuid.New().String()),
@@ -4371,7 +3435,7 @@ func TestService_CompleteStatement(t *testing.T) {
 					},
 				}
 			},
-			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies) {
+			verifyResults: func(t *testing.T, spaceID SpaceID, stmt *Statement, lines []*StatementLine, deps *Dependencies, txns map[TransactionID]*Transaction) {
 				line := lines[0]
 				if line.MatchedTransactionID != nil {
 					t.Errorf("expected nil matched transaction ID for skipped line, got %v", line.MatchedTransactionID)
@@ -4385,7 +3449,7 @@ func TestService_CompleteStatement(t *testing.T) {
 			name:            "Error_Transfer_MissingCounterpartAccount",
 			startingBalance: 100000,
 			endingBalance:   95000,
-			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine {
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) []*StatementLine {
 				return []*StatementLine{
 					{
 						ID:          StatementLineID("stln_" + ksuid.New().String()),
@@ -4409,7 +3473,7 @@ func TestService_CompleteStatement(t *testing.T) {
 			name:            "Error_StatementBalanceMismatch",
 			startingBalance: 100000,
 			endingBalance:   200000, // Expected 150000, reported 200000
-			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies) []*StatementLine {
+			setupLines: func(spaceID SpaceID, stmtID StatementID, accountID AccountID, counterpartID AccountID, deps *Dependencies, txns map[TransactionID]*Transaction, sched map[ScheduledTransactionID]*ScheduledTransaction, bor map[BorrowingID]*Borrowing) []*StatementLine {
 				return []*StatementLine{
 					{
 						ID:          StatementLineID("stln_" + ksuid.New().String()),
@@ -4439,70 +3503,72 @@ func TestService_CompleteStatement(t *testing.T) {
 			bgtID := BudgetID("bgt_" + ksuid.New().String())
 			periodID := PeriodID("bgp_" + ksuid.New().String())
 
+			txnData := make(map[TransactionID]*Transaction)
+			schedData := make(map[ScheduledTransactionID]*ScheduledTransaction)
+			borData := make(map[BorrowingID]*Borrowing)
+			transferData := make(map[TransferID]*Transfer)
+
+			settingsData := map[SpaceID]*FinanceSettings{
+				spaceID: {
+					SpaceID:      spaceID,
+					BaseCurrency: Currency("USD"),
+				},
+			}
+			budgetData := map[BudgetID]*Budget{
+				bgtID: {
+					ID:          bgtID,
+					SpaceID:     spaceID,
+					Name:        "Operations",
+					LimitAmount: 1000000,
+					Currency:    Currency("USD"),
+					Status:      BudgetStatusActive,
+				},
+			}
+			periodData := map[string]*BudgetPeriod{
+				string(bgtID) + "_" + time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339) + "_" + time.Date(2026, 8, 31, 23, 59, 59, 0, time.UTC).Format(time.RFC3339): {
+					ID:          periodID,
+					SpaceID:     spaceID,
+					BudgetID:    bgtID,
+					StartDate:   time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC),
+					EndDate:     time.Date(2026, 8, 31, 23, 59, 59, 0, time.UTC),
+					LimitAmount: 1000000,
+				},
+			}
+			accountData := map[AccountID]*Account{
+				accountID: {
+					ID:             accountID,
+					SpaceID:        spaceID,
+					Name:           "Main Checking",
+					Type:           AccountTypeBank,
+					Currency:       Currency("USD"),
+					CurrentBalance: tt.startingBalance,
+					IsActive:       true,
+				},
+				counterpartID: {
+					ID:             counterpartID,
+					SpaceID:        spaceID,
+					Name:           "High Yield Savings",
+					Type:           AccountTypeBank,
+					Currency:       Currency("USD"),
+					CurrentBalance: 500000,
+					IsActive:       true,
+				},
+			}
+
 			deps := Dependencies{
-				SettingsStore: &mockSettingsStore{
-					data: map[SpaceID]*FinanceSettings{
-						spaceID: {
-							SpaceID:      spaceID,
-							BaseCurrency: Currency("USD"),
-						},
-					},
-				},
-				BudgetStore: &mockBudgetStore{
-					data: map[BudgetID]*Budget{
-						bgtID: {
-							ID:          bgtID,
-							SpaceID:     spaceID,
-							Name:        "Operations",
-							LimitAmount: 1000000,
-							Currency:    Currency("USD"),
-							Status:      BudgetStatusActive,
-						},
-					},
-				},
-				PeriodStore: &mockPeriodStore{
-					data: map[string]*BudgetPeriod{
-						string(bgtID) + "_" + time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339) + "_" + time.Date(2026, 8, 31, 23, 59, 59, 0, time.UTC).Format(time.RFC3339): {
-							ID:          periodID,
-							SpaceID:     spaceID,
-							BudgetID:    bgtID,
-							StartDate:   time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC),
-							EndDate:     time.Date(2026, 8, 31, 23, 59, 59, 0, time.UTC),
-							LimitAmount: 1000000,
-						},
-					},
-				},
-				AccountStore: &mockAccountStore{
-					data: map[AccountID]*Account{
-						accountID: {
-							ID:             accountID,
-							SpaceID:        spaceID,
-							Name:           "Main Checking",
-							Type:           AccountTypeBank,
-							Currency:       Currency("USD"),
-							CurrentBalance: tt.startingBalance,
-							IsActive:       true,
-						},
-						counterpartID: {
-							ID:             counterpartID,
-							SpaceID:        spaceID,
-							Name:           "High Yield Savings",
-							Type:           AccountTypeBank,
-							Currency:       Currency("USD"),
-							CurrentBalance: 500000,
-							IsActive:       true,
-						},
-					},
-				},
-				StatementStore:            newMockStatementStore(),
-				TransactionStore:          &mockTransactionStore{txns: make(map[TransactionID]*Transaction)},
-				TransferStore:             &mockTransferStore{data: make(map[TransferID]*Transfer)},
-				ScheduledTransactionStore: &mockScheduledTransactionStore{payments: make(map[ScheduledTransactionID]*ScheduledTransaction)},
-				BorrowingStore:            &mockBorrowingStore{data: make(map[BorrowingID]*Borrowing)},
+				SettingsStore:             newSettingsStoreMock(settingsData),
+				BudgetStore:               newBudgetStoreMock(budgetData),
+				PeriodStore:               newPeriodStoreMock(periodData),
+				AccountStore:              newAccountStoreMock(accountData),
+				StatementStore:            newStatementStoreMock(nil, nil),
+				TransactionStore:          newTransactionStoreMock(txnData),
+				TransferStore:             newTransferStoreMock(transferData),
+				ScheduledTransactionStore: newScheduledTransactionStoreMock(schedData),
+				BorrowingStore:            newBorrowingStoreMock(borData),
 			}
 
 			if tt.setupStores != nil {
-				tt.setupStores(spaceID, accountID, counterpartID, &deps)
+				tt.setupStores(spaceID, accountID, counterpartID, &deps, txnData, schedData, borData)
 			}
 
 			stmt := &Statement{
@@ -4517,7 +3583,7 @@ func TestService_CompleteStatement(t *testing.T) {
 
 			var lines []*StatementLine
 			if tt.setupLines != nil {
-				lines = tt.setupLines(spaceID, stmtID, accountID, counterpartID, &deps)
+				lines = tt.setupLines(spaceID, stmtID, accountID, counterpartID, &deps, txnData, schedData, borData)
 				for _, l := range lines {
 					if l.Amount < 0 && l.Action.BudgetID == nil {
 						l.Action.BudgetID = &bgtID
@@ -4550,7 +3616,7 @@ func TestService_CompleteStatement(t *testing.T) {
 			}
 
 			if tt.verifyResults != nil {
-				tt.verifyResults(t, spaceID, completedStmt, updatedLines, &deps)
+				tt.verifyResults(t, spaceID, completedStmt, updatedLines, &deps, txnData)
 			}
 		})
 	}
@@ -4563,7 +3629,7 @@ func TestService_UpdateStatement(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		setupStore func() *mockStatementStore
+		setupStore func() *StatementStoreMock
 		updateStmt *Statement
 		mask       []string
 		wantVer    int64
@@ -4571,8 +3637,8 @@ func TestService_UpdateStatement(t *testing.T) {
 	}{
 		{
 			name: "successful update increments version",
-			setupStore: func() *mockStatementStore {
-				store := newMockStatementStore()
+			setupStore: func() *StatementStoreMock {
+				store := newStatementStoreMock(nil, nil)
 				_ = store.Create(context.Background(), &Statement{
 					ID:                       stmtID,
 					SpaceID:                  spaceID,
@@ -4599,8 +3665,8 @@ func TestService_UpdateStatement(t *testing.T) {
 		},
 		{
 			name: "stale version returns VersionMismatch",
-			setupStore: func() *mockStatementStore {
-				store := newMockStatementStore()
+			setupStore: func() *StatementStoreMock {
+				store := newStatementStoreMock(nil, nil)
 				_ = store.Create(context.Background(), &Statement{
 					ID:                       stmtID,
 					SpaceID:                  spaceID,
@@ -4656,14 +3722,14 @@ func TestService_DeleteStatement(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		setupStore func() *mockStatementStore
+		setupStore func() *StatementStoreMock
 		opts       DeleteOptions
 		wantErr    error
 	}{
 		{
 			name: "successful delete matching version",
-			setupStore: func() *mockStatementStore {
-				store := newMockStatementStore()
+			setupStore: func() *StatementStoreMock {
+				store := newStatementStoreMock(nil, nil)
 				_ = store.Create(context.Background(), &Statement{
 					ID:        stmtID,
 					SpaceID:   spaceID,
@@ -4678,8 +3744,8 @@ func TestService_DeleteStatement(t *testing.T) {
 		},
 		{
 			name: "version mismatch returns VersionMismatch",
-			setupStore: func() *mockStatementStore {
-				store := newMockStatementStore()
+			setupStore: func() *StatementStoreMock {
+				store := newStatementStoreMock(nil, nil)
 				_ = store.Create(context.Background(), &Statement{
 					ID:        stmtID,
 					SpaceID:   spaceID,
@@ -4721,7 +3787,7 @@ func TestService_UpdateStatementLine(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		setupStore func() *mockStatementStore
+		setupStore func() *StatementStoreMock
 		updateLine *StatementLine
 		mask       []string
 		wantVer    int64
@@ -4729,8 +3795,8 @@ func TestService_UpdateStatementLine(t *testing.T) {
 	}{
 		{
 			name: "successful update increments line version",
-			setupStore: func() *mockStatementStore {
-				store := newMockStatementStore()
+			setupStore: func() *StatementStoreMock {
+				store := newStatementStoreMock(nil, nil)
 				_ = store.Create(context.Background(), &Statement{
 					ID:        stmtID,
 					SpaceID:   spaceID,
@@ -4761,8 +3827,8 @@ func TestService_UpdateStatementLine(t *testing.T) {
 		},
 		{
 			name: "stale line version returns VersionMismatch",
-			setupStore: func() *mockStatementStore {
-				store := newMockStatementStore()
+			setupStore: func() *StatementStoreMock {
+				store := newStatementStoreMock(nil, nil)
 				_ = store.Create(context.Background(), &Statement{
 					ID:        stmtID,
 					SpaceID:   spaceID,
@@ -4812,4 +3878,6259 @@ func TestService_UpdateStatementLine(t *testing.T) {
 			}
 		})
 	}
+}
+
+// --- Tests from service_account_test.go ---
+
+func TestService_AccountsAndCurrencies(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	validAccID, _ := NewAccountID()
+
+	t.Run("ListCurrencies", func(t *testing.T) {
+		svc := NewService(Dependencies{})
+		currencies, err := svc.ListCurrencies(ctx)
+		if err != nil {
+			t.Fatalf("ListCurrencies() error = %v", err)
+		}
+		if len(currencies) == 0 {
+			t.Error("expected non-empty currencies list")
+		}
+	})
+
+	t.Run("GetAccount", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			id      AccountID
+			exists  bool
+			wantErr bool
+		}{
+			{
+				name:    "valid retrieval",
+				spaceID: validSpace,
+				id:      validAccID,
+				exists:  true,
+				wantErr: false,
+			},
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				id:      validAccID,
+				exists:  true,
+				wantErr: true,
+			},
+			{
+				name:    "invalid account ID",
+				spaceID: validSpace,
+				id:      "invalid_acc",
+				exists:  true,
+				wantErr: true,
+			},
+			{
+				name:    "account not found",
+				spaceID: validSpace,
+				id:      validAccID,
+				exists:  false,
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				data := make(map[AccountID]*Account)
+				if tt.exists {
+					data[validAccID] = &Account{ID: validAccID, SpaceID: validSpace, Name: "Checking"}
+				}
+				store := newAccountStoreMock(data)
+				svc := NewService(Dependencies{AccountStore: store})
+				res, err := svc.GetAccount(ctx, tt.spaceID, tt.id)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("GetAccount() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res.ID != tt.id {
+					t.Errorf("res.ID = %v, want %v", res.ID, tt.id)
+				}
+			})
+		}
+	})
+
+	t.Run("GetAccounts", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			ids     []AccountID
+			wantErr bool
+		}{
+			{
+				name:    "valid bulk retrieval",
+				spaceID: validSpace,
+				ids:     []AccountID{validAccID},
+				wantErr: false,
+			},
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				ids:     []AccountID{validAccID},
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				store := newAccountStoreMock(map[AccountID]*Account{
+					validAccID: {ID: validAccID, SpaceID: validSpace, Name: "Savings"},
+				})
+				svc := NewService(Dependencies{AccountStore: store})
+				res, err := svc.GetAccounts(ctx, tt.spaceID, tt.ids)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("GetAccounts() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && len(res) != 1 {
+					t.Errorf("len(res) = %d, want 1", len(res))
+				}
+			})
+		}
+	})
+
+	t.Run("ListAccounts", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			wantErr bool
+		}{
+			{
+				name:    "valid list",
+				spaceID: validSpace,
+				wantErr: false,
+			},
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				store := newAccountStoreMock(nil)
+				svc := NewService(Dependencies{AccountStore: store})
+				_, err := svc.ListAccounts(ctx, tt.spaceID, nil)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("ListAccounts() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			})
+		}
+	})
+}
+
+func TestService_ResolveAccount_Table(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	acc1ID, _ := NewAccountID()
+	acc2ID, _ := NewAccountID()
+
+	acc1 := &Account{
+		ID:             acc1ID,
+		SpaceID:        validSpace,
+		Name:           "Checking",
+		Currency:       "USD",
+		LastFour:       "1111",
+		IsActive:       true,
+		CurrentBalance: 1000,
+	}
+	acc2 := &Account{
+		ID:             acc2ID,
+		SpaceID:        validSpace,
+		Name:           "Savings",
+		Currency:       "EUR",
+		LastFour:       "2222",
+		IsActive:       true,
+		CurrentBalance: 5000,
+	}
+
+	tests := []struct {
+		name         string
+		spaceID      SpaceID
+		opts         ResolveAccountOpts
+		setupStore   func() *AccountStoreMock
+		wantMatchID  AccountID
+		wantErr      bool
+		wantNilMatch bool
+	}{
+		{
+			name:    "invalid space ID returns error",
+			spaceID: "invalid_space",
+			opts:    ResolveAccountOpts{},
+			setupStore: func() *AccountStoreMock {
+				return newAccountStoreMock(nil)
+			},
+			wantErr: true,
+		},
+		{
+			name:    "empty store returns nil",
+			spaceID: validSpace,
+			opts:    ResolveAccountOpts{AccountName: "Checking"},
+			setupStore: func() *AccountStoreMock {
+				return newAccountStoreMock(nil)
+			},
+			wantNilMatch: true,
+		},
+		{
+			name:    "match by explicit AccountID",
+			spaceID: validSpace,
+			opts:    ResolveAccountOpts{AccountID: string(acc1ID)},
+			setupStore: func() *AccountStoreMock {
+				return newAccountStoreMock(map[AccountID]*Account{
+					acc1ID: acc1,
+					acc2ID: acc2,
+				})
+			},
+			wantMatchID: acc1ID,
+		},
+		{
+			name:    "match by Name and Currency",
+			spaceID: validSpace,
+			opts:    ResolveAccountOpts{AccountName: "Checking", Currency: "USD"},
+			setupStore: func() *AccountStoreMock {
+				return newAccountStoreMock(map[AccountID]*Account{
+					acc1ID: acc1,
+					acc2ID: acc2,
+				})
+			},
+			wantMatchID: acc1ID,
+		},
+		{
+			name:    "match by Name fallback when currency differs",
+			spaceID: validSpace,
+			opts:    ResolveAccountOpts{AccountName: "Checking", Currency: "CAD"},
+			setupStore: func() *AccountStoreMock {
+				return newAccountStoreMock(map[AccountID]*Account{
+					acc1ID: acc1,
+				})
+			},
+			wantMatchID: acc1ID,
+		},
+		{
+			name:    "match by LastFour and Currency",
+			spaceID: validSpace,
+			opts:    ResolveAccountOpts{LastFour: "2222", Currency: "EUR"},
+			setupStore: func() *AccountStoreMock {
+				return newAccountStoreMock(map[AccountID]*Account{
+					acc1ID: acc1,
+					acc2ID: acc2,
+				})
+			},
+			wantMatchID: acc2ID,
+		},
+		{
+			name:    "single active account fallback when no criteria provided",
+			spaceID: validSpace,
+			opts:    ResolveAccountOpts{},
+			setupStore: func() *AccountStoreMock {
+				return newAccountStoreMock(map[AccountID]*Account{
+					acc1ID: acc1,
+				})
+			},
+			wantMatchID: acc1ID,
+		},
+		{
+			name:    "multiple accounts and no criteria returns nil",
+			spaceID: validSpace,
+			opts:    ResolveAccountOpts{},
+			setupStore: func() *AccountStoreMock {
+				return newAccountStoreMock(map[AccountID]*Account{
+					acc1ID: acc1,
+					acc2ID: acc2,
+				})
+			},
+			wantNilMatch: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := tt.setupStore()
+			svc := NewService(Dependencies{AccountStore: store})
+			acc, err := svc.ResolveAccount(ctx, tt.spaceID, tt.opts)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ResolveAccount() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantNilMatch && acc != nil {
+				t.Errorf("expected nil account, got %+v", acc)
+			}
+			if tt.wantMatchID != "" {
+				if acc == nil || acc.ID != tt.wantMatchID {
+					t.Errorf("matched ID = %v, want %v", acc, tt.wantMatchID)
+				}
+			}
+		})
+	}
+}
+
+func TestService_CreateAccount_Table(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	existingID, _ := NewAccountID()
+
+	tests := []struct {
+		name        string
+		account     *Account
+		hasAny      bool
+		wantDefault bool
+		wantErr     bool
+	}{
+		{
+			name: "first account automatically becomes default",
+			account: &Account{
+				SpaceID:   validSpace,
+				Name:      "First Bank",
+				Type:      AccountTypeBank,
+				Currency:  "USD",
+				IsDefault: false,
+			},
+			hasAny:      false,
+			wantDefault: true,
+			wantErr:     false,
+		},
+		{
+			name: "subsequent account with IsDefault true",
+			account: &Account{
+				SpaceID:   validSpace,
+				Name:      "Second Card",
+				Type:      AccountTypeCreditCard,
+				Currency:  "USD",
+				IsDefault: true,
+			},
+			hasAny:      true,
+			wantDefault: true,
+			wantErr:     false,
+		},
+		{
+			name: "subsequent account with IsDefault false",
+			account: &Account{
+				SpaceID:   validSpace,
+				Name:      "Third Account",
+				Type:      AccountTypeBank,
+				Currency:  "USD",
+				IsDefault: false,
+			},
+			hasAny:      true,
+			wantDefault: false,
+			wantErr:     false,
+		},
+		{
+			name: "invalid account fails validation",
+			account: &Account{
+				SpaceID:  validSpace,
+				Name:     "",
+				Currency: "USD",
+			},
+			hasAny:      false,
+			wantDefault: false,
+			wantErr:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := make(map[AccountID]*Account)
+			if tt.hasAny {
+				data[existingID] = &Account{
+					ID:        existingID,
+					SpaceID:   validSpace,
+					IsDefault: true,
+					IsActive:  true,
+				}
+			}
+			store := newAccountStoreMock(data)
+			svc := NewService(Dependencies{AccountStore: store})
+			created, err := svc.CreateAccount(ctx, tt.account)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CreateAccount() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && created.IsDefault != tt.wantDefault {
+				t.Errorf("created.IsDefault = %v, want %v", created.IsDefault, tt.wantDefault)
+			}
+		})
+	}
+}
+
+func TestService_UpdateAccount_Table(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	accID, _ := NewAccountID()
+	otherAccID, _ := NewAccountID()
+
+	tests := []struct {
+		name       string
+		patchAcc   *Account
+		mask       []string
+		setupStore func() *AccountStoreMock
+		wantErr    bool
+	}{
+		{
+			name: "not found",
+			patchAcc: &Account{
+				ID:      accID,
+				SpaceID: validSpace,
+			},
+			mask: []string{"name"},
+			setupStore: func() *AccountStoreMock {
+				return newAccountStoreMock(nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "version mismatch conflict",
+			patchAcc: &Account{
+				ID:      accID,
+				SpaceID: validSpace,
+				Version: 2,
+			},
+			mask: []string{"name"},
+			setupStore: func() *AccountStoreMock {
+				return newAccountStoreMock(map[AccountID]*Account{
+					accID: {ID: accID, SpaceID: validSpace, Version: 1},
+				})
+			},
+			wantErr: true,
+		},
+		{
+			name: "successful name update",
+			patchAcc: &Account{
+				ID:      accID,
+				SpaceID: validSpace,
+				Name:    "Updated Checking",
+				Version: 1,
+			},
+			mask: []string{"name"},
+			setupStore: func() *AccountStoreMock {
+				return newAccountStoreMock(map[AccountID]*Account{
+					accID: {
+						ID:       accID,
+						SpaceID:  validSpace,
+						Name:     "Old Checking",
+						Type:     AccountTypeBank,
+						Currency: "USD",
+						IsActive: true,
+						Version:  1,
+					},
+				})
+			},
+			wantErr: false,
+		},
+		{
+			name: "make default unsets other defaults",
+			patchAcc: &Account{
+				ID:        accID,
+				SpaceID:   validSpace,
+				IsDefault: true,
+				Version:   1,
+			},
+			mask: []string{"is_default"},
+			setupStore: func() *AccountStoreMock {
+				return newAccountStoreMock(map[AccountID]*Account{
+					accID: {
+						ID:        accID,
+						SpaceID:   validSpace,
+						Name:      "Savings",
+						Type:      AccountTypeBank,
+						Currency:  "USD",
+						IsActive:  true,
+						IsDefault: false,
+						Version:   1,
+					},
+					otherAccID: {
+						ID:        otherAccID,
+						SpaceID:   validSpace,
+						Name:      "Checking",
+						Type:      AccountTypeBank,
+						Currency:  "USD",
+						IsActive:  true,
+						IsDefault: true,
+						Version:   1,
+					},
+				})
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := tt.setupStore()
+			svc := NewService(Dependencies{AccountStore: store})
+			updated, err := svc.UpdateAccount(ctx, tt.patchAcc, tt.mask)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("UpdateAccount() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && updated == nil {
+				t.Error("expected non-nil updated account")
+			}
+		})
+	}
+}
+
+func TestService_AdjustAccountBalance_Table(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	accID, _ := NewAccountID()
+
+	tests := []struct {
+		name          string
+		initBalance   int64
+		targetBalance int64
+		dateStr       string
+		wantErr       bool
+	}{
+		{
+			name:          "target equals current (no delta)",
+			initBalance:   5000,
+			targetBalance: 5000,
+			dateStr:       "2026-08-01",
+			wantErr:       false,
+		},
+		{
+			name:          "target differs with date string",
+			initBalance:   5000,
+			targetBalance: 7500,
+			dateStr:       "2026-08-01",
+			wantErr:       false,
+		},
+		{
+			name:          "target differs with RFC3339 date",
+			initBalance:   5000,
+			targetBalance: 3000,
+			dateStr:       "2026-08-01T12:00:00Z",
+			wantErr:       false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			accStore := newAccountStoreMock(map[AccountID]*Account{
+				accID: {
+					ID:             accID,
+					SpaceID:        validSpace,
+					Name:           "Audit Account",
+					Type:           AccountTypeBank,
+					Currency:       "USD",
+					CurrentBalance: tt.initBalance,
+					IsActive:       true,
+				},
+			})
+			txnStore := newTransactionStoreMock(nil)
+			settingsStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{
+				validSpace: {BaseCurrency: "USD"},
+			})
+			svc := NewService(Dependencies{
+				AccountStore:     accStore,
+				TransactionStore: txnStore,
+				SettingsStore:    settingsStore,
+			})
+			res, err := svc.AdjustAccountBalance(ctx, validSpace, accID, tt.targetBalance, tt.dateStr, "Reconciliation")
+			if (err != nil) != tt.wantErr {
+				t.Errorf("AdjustAccountBalance() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && res == nil {
+				t.Error("expected non-nil account")
+			}
+		})
+	}
+}
+
+func TestService_DeleteAccount_Table(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	defaultAccID, _ := NewAccountID()
+	nonDefaultAccID, _ := NewAccountID()
+
+	tests := []struct {
+		name    string
+		accID   AccountID
+		wantErr bool
+	}{
+		{
+			name:    "cannot delete default account",
+			accID:   defaultAccID,
+			wantErr: true,
+		},
+		{
+			name:    "can delete non-default account",
+			accID:   nonDefaultAccID,
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := newAccountStoreMock(map[AccountID]*Account{
+				defaultAccID: {
+					ID:        defaultAccID,
+					SpaceID:   validSpace,
+					IsDefault: true,
+				},
+				nonDefaultAccID: {
+					ID:        nonDefaultAccID,
+					SpaceID:   validSpace,
+					IsDefault: false,
+				},
+			})
+			svc := NewService(Dependencies{AccountStore: store})
+			err := svc.DeleteAccount(ctx, validSpace, tt.accID, DeleteOptions{})
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DeleteAccount() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// --- Tests from service_borrowing_test.go ---
+
+func TestService_Borrowings(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	validBID, _ := NewBorrowingID()
+	validTID, _ := NewTransactionID()
+	validAccID, _ := NewAccountID()
+	now := time.Now().UTC()
+
+	t.Run("GetBorrowing", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			id      BorrowingID
+			exists  bool
+			wantErr bool
+		}{
+			{
+				name:    "valid retrieval",
+				spaceID: validSpace,
+				id:      validBID,
+				exists:  true,
+				wantErr: false,
+			},
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				id:      validBID,
+				exists:  true,
+				wantErr: true,
+			},
+			{
+				name:    "invalid borrowing ID",
+				spaceID: validSpace,
+				id:      "invalid_bid",
+				exists:  true,
+				wantErr: true,
+			},
+			{
+				name:    "borrowing not found",
+				spaceID: validSpace,
+				id:      validBID,
+				exists:  false,
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				data := make(map[BorrowingID]*Borrowing)
+				if tt.exists {
+					data[validBID] = &Borrowing{ID: validBID, SpaceID: validSpace, Counterparty: "Alice"}
+				}
+				store := newBorrowingStoreMock(data)
+				svc := NewService(Dependencies{BorrowingStore: store})
+				res, err := svc.GetBorrowing(ctx, tt.spaceID, tt.id)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("GetBorrowing() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res.ID != tt.id {
+					t.Errorf("res.ID = %v, want %v", res.ID, tt.id)
+				}
+			})
+		}
+	})
+
+	t.Run("ListBorrowings", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			wantErr bool
+		}{
+			{
+				name:    "valid list",
+				spaceID: validSpace,
+				wantErr: false,
+			},
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				store := newBorrowingStoreMock(nil)
+				svc := NewService(Dependencies{BorrowingStore: store})
+				_, _, err := svc.ListBorrowings(ctx, tt.spaceID, nil)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("ListBorrowings() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			})
+		}
+	})
+
+	t.Run("UpdateBorrowingTransaction", func(t *testing.T) {
+		tests := []struct {
+			name      string
+			req       UpdateBorrowingTransactionRequest
+			setupTxn  bool
+			wrongLink bool
+			wantErr   bool
+		}{
+			{
+				name: "valid update of repayment",
+				req: UpdateBorrowingTransactionRequest{
+					SpaceID:         validSpace,
+					BorrowingID:     validBID,
+					TransactionID:   validTID,
+					Type:            BorrowingTransactionTypePayment,
+					Amount:          2000,
+					TransactionDate: now,
+					AccountID:       &validAccID,
+				},
+				setupTxn:  true,
+				wrongLink: false,
+				wantErr:   false,
+			},
+			{
+				name: "transaction linked to different borrowing",
+				req: UpdateBorrowingTransactionRequest{
+					SpaceID:         validSpace,
+					BorrowingID:     validBID,
+					TransactionID:   validTID,
+					Type:            BorrowingTransactionTypePayment,
+					Amount:          2000,
+					TransactionDate: now,
+				},
+				setupTxn:  true,
+				wrongLink: true,
+				wantErr:   true,
+			},
+			{
+				name: "invalid space ID",
+				req: UpdateBorrowingTransactionRequest{
+					SpaceID:       "invalid_space",
+					BorrowingID:   validBID,
+					TransactionID: validTID,
+				},
+				setupTxn: false,
+				wantErr:  true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				bStore := newBorrowingStoreMock(map[BorrowingID]*Borrowing{
+					validBID: {
+						ID:              validBID,
+						SpaceID:         validSpace,
+						Direction:       BorrowingDirectionBorrowed,
+						Counterparty:    "Bob",
+						TotalAmount:     10000,
+						RemainingAmount: 5000,
+						Currency:        "USD",
+						Status:          BorrowingStatusActive,
+						EstablishedAt:   now,
+					},
+				})
+
+				txnMap := make(map[TransactionID]*Transaction)
+				if tt.setupTxn {
+					linkID := validBID
+					if tt.wrongLink {
+						linkID = "bor_other"
+					}
+					txnMap[validTID] = &Transaction{
+						ID:              validTID,
+						SpaceID:         validSpace,
+						Amount:          1000,
+						AmountInBase:    1000,
+						Currency:        "USD",
+						Type:            TransactionTypeExpense,
+						TransactionDate: now,
+						Metadata: TransactionMetadata{
+							BorrowingID:   &linkID,
+							BorrowingRole: "REPAYMENT",
+						},
+					}
+				}
+				txnStore := newTransactionStoreMock(txnMap)
+
+				setStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{
+					validSpace: {SpaceID: validSpace, BaseCurrency: "USD"},
+				})
+
+				accStore := newAccountStoreMock(map[AccountID]*Account{
+					validAccID: {
+						ID:             validAccID,
+						SpaceID:        validSpace,
+						Currency:       "USD",
+						IsActive:       true,
+						CurrentBalance: 20000,
+					},
+				})
+
+				svc := NewService(Dependencies{
+					BorrowingStore:   bStore,
+					TransactionStore: txnStore,
+					SettingsStore:    setStore,
+					AccountStore:     accStore,
+				})
+
+				res, err := svc.UpdateBorrowingTransaction(ctx, tt.req)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("UpdateBorrowingTransaction() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res == nil {
+					t.Error("expected non-nil updated transaction")
+				}
+			})
+		}
+	})
+
+	t.Run("CreateBorrowing", func(t *testing.T) {
+		tests := []struct {
+			name                string
+			borrowing           *Borrowing
+			createAsTransaction bool
+			setupStore          func() (*BorrowingStoreMock, *SettingsStoreMock, *AccountStoreMock, *TransactionStoreMock)
+			wantErr             bool
+		}{
+			{
+				name: "invalid borrowing properties",
+				borrowing: &Borrowing{
+					SpaceID:      validSpace,
+					Counterparty: "",
+					TotalAmount:  0,
+				},
+				createAsTransaction: false,
+				setupStore: func() (*BorrowingStoreMock, *SettingsStoreMock, *AccountStoreMock, *TransactionStoreMock) {
+					return newBorrowingStoreMock(nil),
+						newSettingsStoreMock(nil),
+						newAccountStoreMock(nil),
+						newTransactionStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name: "missing workspace settings fails",
+				borrowing: &Borrowing{
+					ID:              validBID,
+					SpaceID:         validSpace,
+					Direction:       BorrowingDirectionBorrowed,
+					Counterparty:    "Charlie",
+					TotalAmount:     10000,
+					RemainingAmount: 10000,
+					Currency:        "USD",
+					Status:          BorrowingStatusActive,
+					EstablishedAt:   now,
+				},
+				createAsTransaction: false,
+				setupStore: func() (*BorrowingStoreMock, *SettingsStoreMock, *AccountStoreMock, *TransactionStoreMock) {
+					return newBorrowingStoreMock(nil),
+						newSettingsStoreMock(nil), // no settings for space
+						newAccountStoreMock(nil),
+						newTransactionStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name: "createAsTransaction true with missing exchange rate fails",
+				borrowing: &Borrowing{
+					ID:              validBID,
+					SpaceID:         validSpace,
+					Direction:       BorrowingDirectionLent,
+					Counterparty:    "Charlie",
+					TotalAmount:     10000,
+					RemainingAmount: 10000,
+					Currency:        "EUR",
+					Status:          BorrowingStatusActive,
+					EstablishedAt:   now,
+					AccountID:       nil,
+				},
+				createAsTransaction: true,
+				setupStore: func() (*BorrowingStoreMock, *SettingsStoreMock, *AccountStoreMock, *TransactionStoreMock) {
+					return newBorrowingStoreMock(nil),
+						newSettingsStoreMock(map[SpaceID]*FinanceSettings{validSpace: {BaseCurrency: "USD"}}),
+						newAccountStoreMock(nil),
+						newTransactionStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name: "createAsTransaction true with missing account fails",
+				borrowing: &Borrowing{
+					ID:              validBID,
+					SpaceID:         validSpace,
+					Direction:       BorrowingDirectionLent,
+					Counterparty:    "Charlie",
+					TotalAmount:     10000,
+					RemainingAmount: 10000,
+					Currency:        "USD",
+					Status:          BorrowingStatusActive,
+					EstablishedAt:   now,
+					AccountID:       &validAccID,
+				},
+				createAsTransaction: true,
+				setupStore: func() (*BorrowingStoreMock, *SettingsStoreMock, *AccountStoreMock, *TransactionStoreMock) {
+					return newBorrowingStoreMock(nil),
+						newSettingsStoreMock(map[SpaceID]*FinanceSettings{validSpace: {BaseCurrency: "USD"}}),
+						newAccountStoreMock(nil),
+						newTransactionStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name: "valid borrowing without initial transaction",
+				borrowing: &Borrowing{
+					ID:              validBID,
+					SpaceID:         validSpace,
+					Direction:       BorrowingDirectionBorrowed,
+					Counterparty:    "Charlie",
+					TotalAmount:     10000,
+					RemainingAmount: 10000,
+					Currency:        "USD",
+					Status:          BorrowingStatusActive,
+					EstablishedAt:   now,
+				},
+				createAsTransaction: false,
+				setupStore: func() (*BorrowingStoreMock, *SettingsStoreMock, *AccountStoreMock, *TransactionStoreMock) {
+					return newBorrowingStoreMock(nil),
+						newSettingsStoreMock(map[SpaceID]*FinanceSettings{validSpace: {BaseCurrency: "USD"}}),
+						newAccountStoreMock(nil),
+						newTransactionStoreMock(nil)
+				},
+				wantErr: false,
+			},
+			{
+				name: "valid borrowing with initial transaction and account",
+				borrowing: &Borrowing{
+					ID:              validBID,
+					SpaceID:         validSpace,
+					Direction:       BorrowingDirectionBorrowed,
+					Counterparty:    "Charlie",
+					TotalAmount:     10000,
+					RemainingAmount: 10000,
+					Currency:        "USD",
+					Status:          BorrowingStatusActive,
+					EstablishedAt:   now,
+					AccountID:       &validAccID,
+				},
+				createAsTransaction: true,
+				setupStore: func() (*BorrowingStoreMock, *SettingsStoreMock, *AccountStoreMock, *TransactionStoreMock) {
+					return newBorrowingStoreMock(nil),
+						newSettingsStoreMock(map[SpaceID]*FinanceSettings{validSpace: {BaseCurrency: "USD"}}),
+						newAccountStoreMock(map[AccountID]*Account{
+							validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD", IsActive: true},
+						}),
+						newTransactionStoreMock(nil)
+				},
+				wantErr: false,
+			},
+			{
+				name: "valid borrowing with initial transaction updates existing transaction if already present",
+				borrowing: &Borrowing{
+					ID:              validBID,
+					SpaceID:         validSpace,
+					Direction:       BorrowingDirectionBorrowed,
+					Counterparty:    "Charlie",
+					TotalAmount:     10000,
+					RemainingAmount: 10000,
+					Currency:        "USD",
+					Status:          BorrowingStatusActive,
+					EstablishedAt:   now,
+					AccountID:       &validAccID,
+				},
+				createAsTransaction: true,
+				setupStore: func() (*BorrowingStoreMock, *SettingsStoreMock, *AccountStoreMock, *TransactionStoreMock) {
+					return newBorrowingStoreMock(nil),
+						newSettingsStoreMock(map[SpaceID]*FinanceSettings{validSpace: {BaseCurrency: "USD"}}),
+						newAccountStoreMock(map[AccountID]*Account{
+							validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD", IsActive: true, CurrentBalance: 20000},
+						}),
+						newTransactionStoreMock(map[TransactionID]*Transaction{
+							validTID: {
+								ID:        validTID,
+								SpaceID:   validSpace,
+								Type:      TransactionTypeIncome,
+								Amount:    10000,
+								AccountID: &validAccID,
+								Metadata: TransactionMetadata{
+									BorrowingID:   &validBID,
+									BorrowingRole: "INITIAL_FUNDING",
+								},
+							},
+						})
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				bStore, setStore, accStore, txnStore := tt.setupStore()
+				svc := NewService(Dependencies{
+					BorrowingStore:    bStore,
+					SettingsStore:     setStore,
+					AccountStore:      accStore,
+					TransactionStore:  txnStore,
+					ExchangeRateStore: newExchangeRateStoreMock(nil),
+				})
+				res, err := svc.CreateBorrowing(ctx, tt.borrowing, tt.createAsTransaction)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("CreateBorrowing() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res == nil {
+					t.Error("expected non-nil created borrowing")
+				}
+			})
+		}
+	})
+
+	t.Run("UpdateBorrowing", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			borrowing  *Borrowing
+			mask       []string
+			setupStore func() (*BorrowingStoreMock, *SettingsStoreMock, *TransactionStoreMock)
+			wantErr    bool
+		}{
+			{
+				name: "not found",
+				borrowing: &Borrowing{
+					ID:      validBID,
+					SpaceID: validSpace,
+				},
+				mask: []string{"notes"},
+				setupStore: func() (*BorrowingStoreMock, *SettingsStoreMock, *TransactionStoreMock) {
+					return newBorrowingStoreMock(nil),
+						newSettingsStoreMock(nil),
+						newTransactionStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name: "successful patch update untouched borrowing",
+				borrowing: &Borrowing{
+					ID:          validBID,
+					SpaceID:     validSpace,
+					TotalAmount: 15000,
+					Notes:       "Updated note",
+					Version:     1,
+				},
+				mask: []string{"total_amount", "notes"},
+				setupStore: func() (*BorrowingStoreMock, *SettingsStoreMock, *TransactionStoreMock) {
+					bStore := newBorrowingStoreMock(map[BorrowingID]*Borrowing{
+						validBID: {
+							ID:              validBID,
+							SpaceID:         validSpace,
+							Direction:       BorrowingDirectionBorrowed,
+							Counterparty:    "Bob",
+							TotalAmount:     10000,
+							RemainingAmount: 10000,
+							Currency:        "USD",
+							Status:          BorrowingStatusActive,
+							EstablishedAt:   now,
+							Version:         1,
+						},
+					})
+					setStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{validSpace: {BaseCurrency: "USD"}})
+					txnStore := newTransactionStoreMock(nil)
+					return bStore, setStore, txnStore
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				bStore, setStore, txnStore := tt.setupStore()
+				svc := NewService(Dependencies{
+					BorrowingStore:   bStore,
+					SettingsStore:    setStore,
+					TransactionStore: txnStore,
+				})
+				res, err := svc.UpdateBorrowing(ctx, tt.borrowing, tt.mask)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("UpdateBorrowing() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res == nil {
+					t.Error("expected non-nil updated borrowing")
+				}
+			})
+		}
+	})
+
+	t.Run("DeleteBorrowing", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			setupStore func() (*BorrowingStoreMock, *TransactionStoreMock)
+			wantErr    bool
+		}{
+			{
+				name: "not found",
+				setupStore: func() (*BorrowingStoreMock, *TransactionStoreMock) {
+					return newBorrowingStoreMock(nil),
+						newTransactionStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name: "has linked transactions rejected",
+				setupStore: func() (*BorrowingStoreMock, *TransactionStoreMock) {
+					bStore := newBorrowingStoreMock(map[BorrowingID]*Borrowing{
+						validBID: {ID: validBID, SpaceID: validSpace},
+					})
+					txnStore := newTransactionStoreMock(map[TransactionID]*Transaction{
+						validTID: {
+							ID:       validTID,
+							SpaceID:  validSpace,
+							Metadata: TransactionMetadata{BorrowingID: &validBID},
+						},
+					})
+					return bStore, txnStore
+				},
+				wantErr: true,
+			},
+			{
+				name: "successful deletion without transactions",
+				setupStore: func() (*BorrowingStoreMock, *TransactionStoreMock) {
+					bStore := newBorrowingStoreMock(map[BorrowingID]*Borrowing{
+						validBID: {ID: validBID, SpaceID: validSpace},
+					})
+					return bStore, newTransactionStoreMock(nil)
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				bStore, txnStore := tt.setupStore()
+				svc := NewService(Dependencies{
+					BorrowingStore:   bStore,
+					TransactionStore: txnStore,
+				})
+				err := svc.DeleteBorrowing(ctx, validSpace, validBID)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("DeleteBorrowing() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			})
+		}
+	})
+
+	t.Run("DeleteBorrowingTransaction", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			req        DeleteBorrowingTransactionRequest
+			setupStore func() (*TransactionStoreMock, *BorrowingStoreMock, *AccountStoreMock)
+			wantErr    bool
+		}{
+			{
+				name: "invalid space ID",
+				req: DeleteBorrowingTransactionRequest{
+					SpaceID:       "invalid",
+					BorrowingID:   validBID,
+					TransactionID: validTID,
+				},
+				setupStore: func() (*TransactionStoreMock, *BorrowingStoreMock, *AccountStoreMock) {
+					return newTransactionStoreMock(nil),
+						newBorrowingStoreMock(nil),
+						newAccountStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name: "transaction not found",
+				req: DeleteBorrowingTransactionRequest{
+					SpaceID:       validSpace,
+					BorrowingID:   validBID,
+					TransactionID: validTID,
+				},
+				setupStore: func() (*TransactionStoreMock, *BorrowingStoreMock, *AccountStoreMock) {
+					return newTransactionStoreMock(nil),
+						newBorrowingStoreMock(nil),
+						newAccountStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name: "transaction not linked to this borrowing",
+				req: DeleteBorrowingTransactionRequest{
+					SpaceID:       validSpace,
+					BorrowingID:   validBID,
+					TransactionID: validTID,
+				},
+				setupStore: func() (*TransactionStoreMock, *BorrowingStoreMock, *AccountStoreMock) {
+					otherBID := BorrowingID("bor_other")
+					return newTransactionStoreMock(map[TransactionID]*Transaction{
+							validTID: {
+								ID:       validTID,
+								SpaceID:  validSpace,
+								Metadata: TransactionMetadata{BorrowingID: &otherBID},
+							},
+						}),
+						newBorrowingStoreMock(nil),
+						newAccountStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name: "successful deletion",
+				req: DeleteBorrowingTransactionRequest{
+					SpaceID:       validSpace,
+					BorrowingID:   validBID,
+					TransactionID: validTID,
+				},
+				setupStore: func() (*TransactionStoreMock, *BorrowingStoreMock, *AccountStoreMock) {
+					return newTransactionStoreMock(map[TransactionID]*Transaction{
+							validTID: {
+								ID:        validTID,
+								SpaceID:   validSpace,
+								Type:      TransactionTypeExpense,
+								Amount:    1000,
+								AccountID: &validAccID,
+								Metadata: TransactionMetadata{
+									BorrowingID:   &validBID,
+									BorrowingRole: "REPAYMENT",
+								},
+							},
+						}),
+						newBorrowingStoreMock(map[BorrowingID]*Borrowing{
+							validBID: {
+								ID:              validBID,
+								SpaceID:         validSpace,
+								TotalAmount:     10000,
+								RemainingAmount: 4000,
+								Status:          BorrowingStatusActive,
+							},
+						}),
+						newAccountStoreMock(map[AccountID]*Account{
+							validAccID: {
+								ID:             validAccID,
+								SpaceID:        validSpace,
+								CurrentBalance: 5000,
+								IsActive:       true,
+							},
+						})
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				txnStore, bStore, accStore := tt.setupStore()
+				svc := NewService(Dependencies{
+					TransactionStore: txnStore,
+					BorrowingStore:   bStore,
+					AccountStore:     accStore,
+				})
+				err := svc.DeleteBorrowingTransaction(ctx, tt.req)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("DeleteBorrowingTransaction() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			})
+		}
+	})
+}
+
+// --- Tests from service_budget_test.go ---
+
+func TestService_ListBudgets(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	bID, _ := NewBudgetID()
+
+	tests := []struct {
+		name    string
+		spaceID SpaceID
+		wantErr bool
+	}{
+		{
+			name:    "valid list",
+			spaceID: validSpace,
+			wantErr: false,
+		},
+		{
+			name:    "empty space ID",
+			spaceID: "",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bStore := newBudgetStoreMock(map[BudgetID]*Budget{
+				bID: {ID: bID, SpaceID: validSpace, Name: "Food"},
+			})
+			svc := NewService(Dependencies{BudgetStore: bStore})
+			page, err := svc.ListBudgets(ctx, tt.spaceID, &ListBudgetsFilter{})
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ListBudgets() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && page == nil {
+				t.Error("expected non-nil page")
+			}
+		})
+	}
+}
+
+func TestService_GetBudget(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	validBID, _ := NewBudgetID()
+	notFoundBID, _ := NewBudgetID()
+
+	tests := []struct {
+		name     string
+		spaceID  SpaceID
+		budgetID BudgetID
+		wantErr  bool
+	}{
+		{
+			name:     "valid retrieval",
+			spaceID:  validSpace,
+			budgetID: validBID,
+			wantErr:  false,
+		},
+		{
+			name:     "invalid space ID",
+			spaceID:  "invalid_space",
+			budgetID: validBID,
+			wantErr:  true,
+		},
+		{
+			name:     "invalid budget ID",
+			spaceID:  validSpace,
+			budgetID: "invalid_bid",
+			wantErr:  true,
+		},
+		{
+			name:     "budget not found",
+			spaceID:  validSpace,
+			budgetID: notFoundBID,
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bStore := newBudgetStoreMock(map[BudgetID]*Budget{
+				validBID: {ID: validBID, SpaceID: validSpace, Name: "Rent"},
+			})
+			svc := NewService(Dependencies{BudgetStore: bStore})
+			res, err := svc.GetBudget(ctx, tt.spaceID, tt.budgetID)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetBudget() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && res.ID != tt.budgetID {
+				t.Errorf("res.ID = %v, want %v", res.ID, tt.budgetID)
+			}
+		})
+	}
+}
+
+func TestService_GetBudgets(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	validBID, _ := NewBudgetID()
+
+	tests := []struct {
+		name    string
+		spaceID SpaceID
+		ids     []BudgetID
+		wantErr bool
+	}{
+		{
+			name:    "valid bulk retrieval",
+			spaceID: validSpace,
+			ids:     []BudgetID{validBID},
+			wantErr: false,
+		},
+		{
+			name:    "invalid space ID",
+			spaceID: "invalid_space",
+			ids:     []BudgetID{validBID},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bStore := newBudgetStoreMock(map[BudgetID]*Budget{
+				validBID: {ID: validBID, SpaceID: validSpace, Name: "Utilities"},
+			})
+			svc := NewService(Dependencies{BudgetStore: bStore})
+			res, err := svc.GetBudgets(ctx, tt.spaceID, tt.ids)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetBudgets() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && len(res) != 1 {
+				t.Errorf("len(res) = %d, want 1", len(res))
+			}
+		})
+	}
+}
+
+func TestService_GetOrCreatePeriods(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	bID, _ := NewBudgetID()
+	now := time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC)
+
+	budget := &Budget{
+		ID:          bID,
+		SpaceID:     validSpace,
+		Name:        "Entertainment",
+		LimitAmount: 50000,
+		Currency:    "USD",
+		Interval:    IntervalMonthly,
+		Status:      BudgetStatusActive,
+	}
+
+	tests := []struct {
+		name          string
+		budgets       []*Budget
+		setupSettings bool
+		setupPeriod   bool
+		wantErr       bool
+	}{
+		{
+			name:    "empty budgets returns empty map",
+			budgets: []*Budget{},
+			wantErr: false,
+		},
+		{
+			name:          "missing settings causes error",
+			budgets:       []*Budget{budget},
+			setupSettings: false,
+			wantErr:       true,
+		},
+		{
+			name:          "lazily creates missing period",
+			budgets:       []*Budget{budget},
+			setupSettings: true,
+			setupPeriod:   false,
+			wantErr:       false,
+		},
+		{
+			name:          "reuses existing period",
+			budgets:       []*Budget{budget},
+			setupSettings: true,
+			setupPeriod:   true,
+			wantErr:       false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sStoreData := make(map[SpaceID]*FinanceSettings)
+			if tt.setupSettings {
+				sStoreData[validSpace] = &FinanceSettings{SpaceID: validSpace, BaseCurrency: "USD"}
+			}
+			sStore := newSettingsStoreMock(sStoreData)
+
+			pStore := newPeriodStoreMock(nil)
+			if tt.setupPeriod {
+				start, end := budget.CalculateBounds(now)
+				p := &BudgetPeriod{
+					ID:                 "bgp_existing",
+					BudgetID:           bID,
+					SpaceID:            validSpace,
+					StartDate:          start,
+					EndDate:            end,
+					LimitAmount:        50000,
+					Currency:           "USD",
+					BaseCurrency:       "USD",
+					ExchangeRateToBase: 1.0,
+				}
+				_ = pStore.Create(ctx, p)
+			}
+
+			rateStore := newExchangeRateStoreMock(nil)
+			svc := NewService(Dependencies{
+				SettingsStore:     sStore,
+				PeriodStore:       pStore,
+				ExchangeRateStore: rateStore,
+			})
+
+			res, err := svc.GetOrCreatePeriods(ctx, tt.budgets, now)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetOrCreatePeriods() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && len(tt.budgets) > 0 && res[bID] == nil {
+				t.Error("expected period in result map")
+			}
+		})
+	}
+}
+
+func TestService_UpdatePeriodLimit(t *testing.T) {
+	ctx := context.Background()
+	validPID, _ := NewPeriodID()
+
+	tests := []struct {
+		name     string
+		periodID PeriodID
+		newLimit int64
+		exists   bool
+		wantErr  bool
+	}{
+		{
+			name:     "valid update",
+			periodID: validPID,
+			newLimit: 60000,
+			exists:   true,
+			wantErr:  false,
+		},
+		{
+			name:     "invalid non-positive limit",
+			periodID: validPID,
+			newLimit: 0,
+			exists:   true,
+			wantErr:  true,
+		},
+		{
+			name:     "period not found",
+			periodID: validPID,
+			newLimit: 60000,
+			exists:   false,
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pData := make(map[string]*BudgetPeriod)
+			if tt.exists {
+				pData["key"] = &BudgetPeriod{ID: tt.periodID, LimitAmount: 50000}
+			}
+			pStore := newPeriodStoreMock(pData)
+			svc := NewService(Dependencies{PeriodStore: pStore})
+			err := svc.UpdatePeriodLimit(ctx, tt.periodID, tt.newLimit)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("UpdatePeriodLimit() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestService_BudgetCRUD_Table(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	validBID, _ := NewBudgetID()
+
+	t.Run("CreateBudget", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			budget     *Budget
+			setupStore func() (*BudgetStoreMock, *SettingsStoreMock)
+			wantErr    bool
+		}{
+			{
+				name: "invalid budget validation",
+				budget: &Budget{
+					SpaceID: validSpace,
+					Name:    "",
+				},
+				setupStore: func() (*BudgetStoreMock, *SettingsStoreMock) {
+					return newBudgetStoreMock(nil),
+						newSettingsStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name: "missing space settings",
+				budget: &Budget{
+					ID:          validBID,
+					SpaceID:     validSpace,
+					Name:        "Groceries",
+					LimitAmount: 50000,
+					Currency:    "USD",
+					Interval:    IntervalMonthly,
+				},
+				setupStore: func() (*BudgetStoreMock, *SettingsStoreMock) {
+					return newBudgetStoreMock(nil),
+						newSettingsStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name: "successful budget creation",
+				budget: &Budget{
+					ID:          validBID,
+					SpaceID:     validSpace,
+					Name:        "Groceries",
+					LimitAmount: 50000,
+					Currency:    "USD",
+					Interval:    IntervalMonthly,
+				},
+				setupStore: func() (*BudgetStoreMock, *SettingsStoreMock) {
+					return newBudgetStoreMock(nil),
+						newSettingsStoreMock(map[SpaceID]*FinanceSettings{
+							validSpace: {BaseCurrency: "USD"},
+						})
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				bStore, setStore := tt.setupStore()
+				svc := NewService(Dependencies{
+					BudgetStore:   bStore,
+					SettingsStore: setStore,
+				})
+				res, err := svc.CreateBudget(ctx, tt.budget)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("CreateBudget() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res == nil {
+					t.Error("expected non-nil created budget")
+				}
+			})
+		}
+	})
+
+	t.Run("UpdateBudget", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			budget     *Budget
+			mask       []string
+			setupStore func() *BudgetStoreMock
+			wantErr    bool
+		}{
+			{
+				name: "budget not found",
+				budget: &Budget{
+					ID:      validBID,
+					SpaceID: validSpace,
+					Name:    "Dining",
+				},
+				mask: []string{"name"},
+				setupStore: func() *BudgetStoreMock {
+					return newBudgetStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name: "successful update",
+				budget: &Budget{
+					ID:      validBID,
+					SpaceID: validSpace,
+					Name:    "Dining Out",
+					Version: 1,
+				},
+				mask: []string{"name"},
+				setupStore: func() *BudgetStoreMock {
+					return newBudgetStoreMock(map[BudgetID]*Budget{
+						validBID: {
+							ID:          validBID,
+							SpaceID:     validSpace,
+							Name:        "Dining",
+							LimitAmount: 40000,
+							Currency:    "USD",
+							Interval:    IntervalMonthly,
+							Version:     1,
+						},
+					})
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				bStore := tt.setupStore()
+				svc := NewService(Dependencies{BudgetStore: bStore})
+				res, err := svc.UpdateBudget(ctx, tt.budget, tt.mask)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("UpdateBudget() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res == nil {
+					t.Error("expected non-nil updated budget")
+				}
+			})
+		}
+	})
+
+	t.Run("DeleteBudget", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			spaceID    SpaceID
+			budgetID   BudgetID
+			setupStore func() (*BudgetStoreMock, *TransactionStoreMock, *ScheduledTransactionStoreMock)
+			wantErr    bool
+		}{
+			{
+				name:     "empty budget ID",
+				spaceID:  validSpace,
+				budgetID: "",
+				setupStore: func() (*BudgetStoreMock, *TransactionStoreMock, *ScheduledTransactionStoreMock) {
+					return newBudgetStoreMock(nil),
+						newTransactionStoreMock(nil),
+						newScheduledTransactionStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name:     "has transactions rejected",
+				spaceID:  validSpace,
+				budgetID: validBID,
+				setupStore: func() (*BudgetStoreMock, *TransactionStoreMock, *ScheduledTransactionStoreMock) {
+					tID, _ := NewTransactionID()
+					return newBudgetStoreMock(map[BudgetID]*Budget{validBID: {ID: validBID, SpaceID: validSpace}}),
+						newTransactionStoreMock(map[TransactionID]*Transaction{
+							tID: {ID: tID, SpaceID: validSpace, BudgetID: &validBID},
+						}),
+						newScheduledTransactionStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name:     "successful delete",
+				spaceID:  validSpace,
+				budgetID: validBID,
+				setupStore: func() (*BudgetStoreMock, *TransactionStoreMock, *ScheduledTransactionStoreMock) {
+					return newBudgetStoreMock(map[BudgetID]*Budget{validBID: {ID: validBID, SpaceID: validSpace}}),
+						newTransactionStoreMock(nil),
+						newScheduledTransactionStoreMock(nil)
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				bStore, txnStore, schedStore := tt.setupStore()
+				svc := NewService(Dependencies{
+					BudgetStore:               bStore,
+					TransactionStore:          txnStore,
+					ScheduledTransactionStore: schedStore,
+				})
+				err := svc.DeleteBudget(ctx, tt.spaceID, tt.budgetID, DeleteOptions{})
+				if (err != nil) != tt.wantErr {
+					t.Errorf("DeleteBudget() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			})
+		}
+	})
+}
+
+func TestService_AggregateSpentBatch(t *testing.T) {
+	ctx := context.Background()
+	pID, _ := NewPeriodID()
+
+	tests := []struct {
+		name       string
+		setupStore func() *TransactionStoreMock
+		wantLen    int
+		wantErr    bool
+	}{
+		{
+			name: "nil store returns nil",
+			setupStore: func() *TransactionStoreMock {
+				return nil
+			},
+			wantLen: 0,
+			wantErr: false,
+		},
+		{
+			name: "with store returns period spent",
+			setupStore: func() *TransactionStoreMock {
+				return newTransactionStoreMock(nil)
+			},
+			wantLen: 1,
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := tt.setupStore()
+			var txnStore TransactionStore
+			if store != nil {
+				txnStore = store
+			}
+			svc := NewService(Dependencies{TransactionStore: txnStore})
+			res, err := svc.AggregateSpentBatch(ctx, []PeriodID{pID})
+			if (err != nil) != tt.wantErr {
+				t.Errorf("AggregateSpentBatch() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if len(res) != tt.wantLen {
+				t.Errorf("len(res) = %d, want %d", len(res), tt.wantLen)
+			}
+		})
+	}
+}
+
+// --- Tests from service_inbox_test.go ---
+
+func TestService_ListInboxItems(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+
+	tests := []struct {
+		name    string
+		spaceID SpaceID
+		wantErr bool
+	}{
+		{
+			name:    "valid list",
+			spaceID: validSpace,
+			wantErr: false,
+		},
+		{
+			name:    "invalid space ID",
+			spaceID: "invalid_space",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := newInboxItemStoreMock(map[string]*InboxItem{
+				"item_1": {ID: "item_1", SpaceID: string(validSpace)},
+			})
+			svc := NewService(Dependencies{InboxItemStore: store})
+			res, err := svc.ListInboxItems(ctx, tt.spaceID, nil)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ListInboxItems() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && res == nil {
+				t.Error("expected non-nil page")
+			}
+		})
+	}
+}
+
+func TestService_UpdateInboxItem(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	dummyAcc := "acc_test123"
+	dummyBgt := "bgt_test123"
+	dummyPay := "sch_test123"
+	dummyTxn := "txn_test123"
+	dummyBrw := "brw_test123"
+
+	tests := []struct {
+		name       string
+		spaceID    SpaceID
+		item       *InboxItem
+		setupStore func() *InboxItemStoreMock
+		wantErr    bool
+		checkItem  func(t *testing.T, res *InboxItem)
+	}{
+		{
+			name:    "invalid space ID",
+			spaceID: "invalid_space",
+			item:    &InboxItem{ID: "ibx_1"},
+			setupStore: func() *InboxItemStoreMock {
+				return newInboxItemStoreMock(nil)
+			},
+			wantErr: true,
+		},
+		{
+			name:    "missing item ID",
+			spaceID: validSpace,
+			item:    &InboxItem{},
+			setupStore: func() *InboxItemStoreMock {
+				return newInboxItemStoreMock(nil)
+			},
+			wantErr: true,
+		},
+		{
+			name:    "item not found in store",
+			spaceID: validSpace,
+			item:    &InboxItem{ID: "ibx_notfound"},
+			setupStore: func() *InboxItemStoreMock {
+				return newInboxItemStoreMock(nil)
+			},
+			wantErr: true,
+		},
+		{
+			name:    "fallback to existing fields when incoming fields are empty",
+			spaceID: validSpace,
+			item: &InboxItem{
+				ID: "ibx_1",
+			},
+			setupStore: func() *InboxItemStoreMock {
+				return newInboxItemStoreMock(map[string]*InboxItem{
+					"ibx_1": {
+						ID:                     "ibx_1",
+						SpaceID:                string(validSpace),
+						Status:                 InboxItemPending,
+						DocType:                InboxItemDocReceipt,
+						Amount:                 2500,
+						Currency:               "USD",
+						VendorName:             "Supermarket",
+						AccountID:              &dummyAcc,
+						BudgetID:               &dummyBgt,
+						ScheduledTransactionID: &dummyPay,
+						TransactionID:          &dummyTxn,
+						BorrowingID:            &dummyBrw,
+					},
+				})
+			},
+			wantErr: false,
+			checkItem: func(t *testing.T, res *InboxItem) {
+				if res.Amount != 2500 || res.VendorName != "Supermarket" || res.Currency != "USD" {
+					t.Errorf("expected existing fields retained, got %+v", res)
+				}
+				if res.AccountID == nil || *res.AccountID != dummyAcc {
+					t.Errorf("expected account ID retained, got %v", res.AccountID)
+				}
+			},
+		},
+		{
+			name:    "explicit overrides update all fields",
+			spaceID: validSpace,
+			item: &InboxItem{
+				ID:                     "ibx_1",
+				Status:                 InboxItemProcessing,
+				DocType:                InboxItemDocInvoice,
+				Amount:                 9900,
+				Currency:               "EUR",
+				VendorName:             "Hardware Store",
+				AccountID:              &dummyAcc,
+				BudgetID:               &dummyBgt,
+				ScheduledTransactionID: &dummyPay,
+				TransactionID:          &dummyTxn,
+				BorrowingID:            &dummyBrw,
+			},
+			setupStore: func() *InboxItemStoreMock {
+				return newInboxItemStoreMock(map[string]*InboxItem{
+					"ibx_1": {
+						ID:         "ibx_1",
+						SpaceID:    string(validSpace),
+						Status:     InboxItemPending,
+						DocType:    InboxItemDocReceipt,
+						Amount:     1000,
+						Currency:   "USD",
+						VendorName: "Old",
+					},
+				})
+			},
+			wantErr: false,
+			checkItem: func(t *testing.T, res *InboxItem) {
+				if res.Amount != 9900 || res.VendorName != "Hardware Store" || res.Currency != "EUR" {
+					t.Errorf("expected updated fields, got %+v", res)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := tt.setupStore()
+			svc := NewService(Dependencies{InboxItemStore: store})
+			res, err := svc.UpdateInboxItem(ctx, tt.spaceID, tt.item)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("UpdateInboxItem() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && tt.checkItem != nil {
+				tt.checkItem(t, res)
+			}
+		})
+	}
+}
+
+func TestService_DiscardInboxItem(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+
+	tests := []struct {
+		name    string
+		spaceID SpaceID
+		itemID  string
+		wantErr bool
+	}{
+		{
+			name:    "invalid space ID",
+			spaceID: "invalid_space",
+			itemID:  "ibx_1",
+			wantErr: true,
+		},
+		{
+			name:    "valid discard item",
+			spaceID: validSpace,
+			itemID:  "ibx_1",
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := newInboxItemStoreMock(map[string]*InboxItem{
+				"ibx_1": {ID: "ibx_1", SpaceID: string(validSpace)},
+			})
+			svc := NewService(Dependencies{InboxItemStore: store})
+			err := svc.DiscardInboxItem(ctx, tt.spaceID, tt.itemID)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DiscardInboxItem() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestService_ApproveInboxItem_Extended(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	now := time.Now().UTC()
+
+	validAccID, _ := NewAccountID()
+	accIDStr := string(validAccID)
+	validBID, _ := NewBudgetID()
+	bgtIDStr := string(validBID)
+	validTxnID, _ := NewTransactionID()
+	txnIDStr := string(validTxnID)
+	validPID, _ := NewScheduledTransactionID()
+	payIDStr := string(validPID)
+	validBrwID, _ := NewBorrowingID()
+	brwIDStr := string(validBrwID)
+
+	t.Run("Validation and NotPending errors", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			spaceID    SpaceID
+			itemID     string
+			setupStore func() *InboxItemStoreMock
+			wantErr    bool
+		}{
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				itemID:  "ibx_1",
+				setupStore: func() *InboxItemStoreMock {
+					return newInboxItemStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name:    "item not found",
+				spaceID: validSpace,
+				itemID:  "ibx_nonexistent",
+				setupStore: func() *InboxItemStoreMock {
+					return newInboxItemStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name:    "item already resolved fails EnsurePending",
+				spaceID: validSpace,
+				itemID:  "ibx_resolved",
+				setupStore: func() *InboxItemStoreMock {
+					return newInboxItemStoreMock(map[string]*InboxItem{
+						"ibx_resolved": {
+							ID:      "ibx_resolved",
+							SpaceID: string(validSpace),
+							Status:  InboxItemResolved,
+						},
+					})
+				},
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				store := tt.setupStore()
+				svc := NewService(Dependencies{InboxItemStore: store})
+				_, err := svc.ApproveInboxItem(ctx, tt.spaceID, tt.itemID)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("ApproveInboxItem() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			})
+		}
+	})
+
+	t.Run("approveLinkedTransaction edge cases", func(t *testing.T) {
+		tests := []struct {
+			name        string
+			item        *InboxItem
+			setupStores func() (Dependencies, *Transaction)
+			wantErr     bool
+		}{
+			{
+				name: "invalid transaction ID format in item",
+				item: &InboxItem{
+					ID:            "ibx_1",
+					SpaceID:       string(validSpace),
+					Status:        InboxItemPending,
+					TransactionID: new(string),
+				},
+				setupStores: func() (Dependencies, *Transaction) {
+					invalidStr := "not_a_valid_txn_id"
+					ibx := &InboxItem{
+						ID:            "ibx_1",
+						SpaceID:       string(validSpace),
+						Status:        InboxItemPending,
+						TransactionID: &invalidStr,
+					}
+					return Dependencies{
+						InboxItemStore: newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": ibx}),
+					}, nil
+				},
+				wantErr: true,
+			},
+			{
+				name: "transaction not found in store",
+				item: &InboxItem{
+					ID:            "ibx_1",
+					SpaceID:       string(validSpace),
+					Status:        InboxItemPending,
+					TransactionID: &txnIDStr,
+				},
+				setupStores: func() (Dependencies, *Transaction) {
+					return Dependencies{
+						InboxItemStore:   newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": {ID: "ibx_1", SpaceID: string(validSpace), Status: InboxItemPending, TransactionID: &txnIDStr}}),
+						TransactionStore: newTransactionStoreMock(nil),
+					}, nil
+				},
+				wantErr: true,
+			},
+			{
+				name: "cannot link receipt to transfer transaction",
+				item: &InboxItem{
+					ID:            "ibx_1",
+					SpaceID:       string(validSpace),
+					Status:        InboxItemPending,
+					TransactionID: &txnIDStr,
+				},
+				setupStores: func() (Dependencies, *Transaction) {
+					txn := &Transaction{
+						ID:       validTxnID,
+						SpaceID:  validSpace,
+						Type:     TransactionTypeTransferOut,
+						Amount:   1000,
+						Currency: "USD",
+					}
+					return Dependencies{
+						InboxItemStore:   newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": {ID: "ibx_1", SpaceID: string(validSpace), Status: InboxItemPending, TransactionID: &txnIDStr}}),
+						TransactionStore: newTransactionStoreMock(map[TransactionID]*Transaction{validTxnID: txn}),
+					}, txn
+				},
+				wantErr: true,
+			},
+			{
+				name: "link borrowing repayment reducing remaining amount to zero",
+				item: &InboxItem{
+					ID:                "ibx_1",
+					SpaceID:           string(validSpace),
+					Status:            InboxItemPending,
+					Amount:            1000,
+					Currency:          "USD",
+					TransactionID:     &txnIDStr,
+					BorrowingID:       &brwIDStr,
+					BorrowingLinkType: new(BorrowingLinkType),
+				},
+				setupStores: func() (Dependencies, *Transaction) {
+					repayType := BorrowingLinkTypeRepayment
+					ibx := &InboxItem{
+						ID:                "ibx_1",
+						SpaceID:           string(validSpace),
+						Status:            InboxItemPending,
+						Amount:            1000,
+						Currency:          "USD",
+						TransactionID:     &txnIDStr,
+						BorrowingID:       &brwIDStr,
+						BorrowingLinkType: &repayType,
+					}
+					txn := &Transaction{
+						ID:        validTxnID,
+						SpaceID:   validSpace,
+						Type:      TransactionTypeExpense,
+						AccountID: &validAccID,
+						Amount:    1000,
+						Currency:  "USD",
+					}
+					brw := &Borrowing{
+						ID:              validBrwID,
+						SpaceID:         validSpace,
+						TotalAmount:     1000,
+						RemainingAmount: 1000,
+						Status:          BorrowingStatusActive,
+					}
+					return Dependencies{
+						InboxItemStore:        newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": ibx}),
+						TransactionStore:      newTransactionStoreMock(map[TransactionID]*Transaction{validTxnID: txn}),
+						BorrowingStore:        newBorrowingStoreMock(map[BorrowingID]*Borrowing{validBrwID: brw}),
+						TransactionEventStore: newTransactionEventStoreMock(nil),
+					}, txn
+				},
+				wantErr: false,
+			},
+			{
+				name: "link borrowing additional loan increasing total and remaining amount",
+				item: &InboxItem{
+					ID:                "ibx_1",
+					SpaceID:           string(validSpace),
+					Status:            InboxItemPending,
+					Amount:            500,
+					Currency:          "USD",
+					TransactionID:     &txnIDStr,
+					BorrowingID:       &brwIDStr,
+					BorrowingLinkType: new(BorrowingLinkType),
+				},
+				setupStores: func() (Dependencies, *Transaction) {
+					loanType := BorrowingLinkTypeAdditionalLoan
+					ibx := &InboxItem{
+						ID:                "ibx_1",
+						SpaceID:           string(validSpace),
+						Status:            InboxItemPending,
+						Amount:            500,
+						Currency:          "USD",
+						TransactionID:     &txnIDStr,
+						BorrowingID:       &brwIDStr,
+						BorrowingLinkType: &loanType,
+					}
+					txn := &Transaction{
+						ID:        validTxnID,
+						SpaceID:   validSpace,
+						Type:      TransactionTypeIncome,
+						AccountID: &validAccID,
+						Amount:    500,
+						Currency:  "USD",
+					}
+					brw := &Borrowing{
+						ID:              validBrwID,
+						SpaceID:         validSpace,
+						TotalAmount:     1000,
+						RemainingAmount: 1000,
+						Status:          BorrowingStatusActive,
+					}
+					return Dependencies{
+						InboxItemStore:        newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": ibx}),
+						TransactionStore:      newTransactionStoreMock(map[TransactionID]*Transaction{validTxnID: txn}),
+						BorrowingStore:        newBorrowingStoreMock(map[BorrowingID]*Borrowing{validBrwID: brw}),
+						TransactionEventStore: newTransactionEventStoreMock(nil),
+					}, txn
+				},
+				wantErr: false,
+			},
+			{
+				name: "relink borrowing to different borrowing fails",
+				item: &InboxItem{
+					ID:            "ibx_1",
+					SpaceID:       string(validSpace),
+					Status:        InboxItemPending,
+					Amount:        500,
+					Currency:      "USD",
+					TransactionID: &txnIDStr,
+					BorrowingID:   &brwIDStr,
+				},
+				setupStores: func() (Dependencies, *Transaction) {
+					otherBrwID, _ := NewBorrowingID()
+					ibx := &InboxItem{
+						ID:            "ibx_1",
+						SpaceID:       string(validSpace),
+						Status:        InboxItemPending,
+						Amount:        500,
+						Currency:      "USD",
+						TransactionID: &txnIDStr,
+						BorrowingID:   &brwIDStr,
+					}
+					txn := &Transaction{
+						ID:        validTxnID,
+						SpaceID:   validSpace,
+						Type:      TransactionTypeExpense,
+						AccountID: &validAccID,
+						Amount:    500,
+						Currency:  "USD",
+						Metadata: TransactionMetadata{
+							BorrowingID: &otherBrwID,
+						},
+					}
+					brw := &Borrowing{
+						ID:              validBrwID,
+						SpaceID:         validSpace,
+						TotalAmount:     1000,
+						RemainingAmount: 1000,
+					}
+					return Dependencies{
+						InboxItemStore:   newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": ibx}),
+						TransactionStore: newTransactionStoreMock(map[TransactionID]*Transaction{validTxnID: txn}),
+						BorrowingStore:   newBorrowingStoreMock(map[BorrowingID]*Borrowing{validBrwID: brw}),
+					}, txn
+				},
+				wantErr: true,
+			},
+			{
+				name: "relink scheduled transaction to different scheduled transaction fails",
+				item: &InboxItem{
+					ID:                     "ibx_1",
+					SpaceID:                string(validSpace),
+					Status:                 InboxItemPending,
+					Amount:                 500,
+					Currency:               "USD",
+					TransactionID:          &txnIDStr,
+					ScheduledTransactionID: &payIDStr,
+				},
+				setupStores: func() (Dependencies, *Transaction) {
+					otherPayID, _ := NewScheduledTransactionID()
+					ibx := &InboxItem{
+						ID:                     "ibx_1",
+						SpaceID:                string(validSpace),
+						Status:                 InboxItemPending,
+						Amount:                 500,
+						Currency:               "USD",
+						TransactionID:          &txnIDStr,
+						ScheduledTransactionID: &payIDStr,
+					}
+					txn := &Transaction{
+						ID:        validTxnID,
+						SpaceID:   validSpace,
+						Type:      TransactionTypeExpense,
+						AccountID: &validAccID,
+						Amount:    500,
+						Currency:  "USD",
+						Metadata: TransactionMetadata{
+							ScheduledTransactionID: &otherPayID,
+						},
+					}
+					payment := &ScheduledTransaction{
+						ID:      validPID,
+						SpaceID: validSpace,
+						Amount:  500,
+					}
+					return Dependencies{
+						InboxItemStore:            newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": ibx}),
+						TransactionStore:          newTransactionStoreMock(map[TransactionID]*Transaction{validTxnID: txn}),
+						ScheduledTransactionStore: newScheduledTransactionStoreMock(map[ScheduledTransactionID]*ScheduledTransaction{validPID: payment}),
+					}, txn
+				},
+				wantErr: true,
+			},
+			{
+				name: "link scheduled transaction to transaction successfully marks payment paid",
+				item: &InboxItem{
+					ID:                     "ibx_1",
+					SpaceID:                string(validSpace),
+					Status:                 InboxItemPending,
+					Amount:                 500,
+					Currency:               "USD",
+					TransactionID:          &txnIDStr,
+					ScheduledTransactionID: &payIDStr,
+				},
+				setupStores: func() (Dependencies, *Transaction) {
+					ibx := &InboxItem{
+						ID:                     "ibx_1",
+						SpaceID:                string(validSpace),
+						Status:                 InboxItemPending,
+						Amount:                 500,
+						Currency:               "USD",
+						TransactionID:          &txnIDStr,
+						ScheduledTransactionID: &payIDStr,
+					}
+					txn := &Transaction{
+						ID:        validTxnID,
+						SpaceID:   validSpace,
+						Type:      TransactionTypeExpense,
+						AccountID: &validAccID,
+						Amount:    500,
+						Currency:  "USD",
+					}
+					payment := &ScheduledTransaction{
+						ID:      validPID,
+						SpaceID: validSpace,
+						Amount:  500,
+						Status:  ScheduledTransactionPending,
+					}
+					return Dependencies{
+						InboxItemStore:            newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": ibx}),
+						TransactionStore:          newTransactionStoreMock(map[TransactionID]*Transaction{validTxnID: txn}),
+						ScheduledTransactionStore: newScheduledTransactionStoreMock(map[ScheduledTransactionID]*ScheduledTransaction{validPID: payment}),
+						TransactionEventStore:     newTransactionEventStoreMock(nil),
+					}, txn
+				},
+				wantErr: false,
+			},
+			{
+				name: "relink to same scheduled transaction with status pending updates status to paid",
+				item: &InboxItem{
+					ID:                     "ibx_1",
+					SpaceID:                string(validSpace),
+					Status:                 InboxItemPending,
+					Amount:                 500,
+					Currency:               "USD",
+					TransactionID:          &txnIDStr,
+					ScheduledTransactionID: &payIDStr,
+				},
+				setupStores: func() (Dependencies, *Transaction) {
+					ibx := &InboxItem{
+						ID:                     "ibx_1",
+						SpaceID:                string(validSpace),
+						Status:                 InboxItemPending,
+						Amount:                 500,
+						Currency:               "USD",
+						TransactionID:          &txnIDStr,
+						ScheduledTransactionID: &payIDStr,
+					}
+					txn := &Transaction{
+						ID:        validTxnID,
+						SpaceID:   validSpace,
+						Type:      TransactionTypeExpense,
+						AccountID: &validAccID,
+						Amount:    500,
+						Currency:  "USD",
+						Metadata: TransactionMetadata{
+							ScheduledTransactionID: &validPID,
+						},
+					}
+					payment := &ScheduledTransaction{
+						ID:      validPID,
+						SpaceID: validSpace,
+						Amount:  500,
+						Status:  ScheduledTransactionPending,
+					}
+					return Dependencies{
+						InboxItemStore:            newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": ibx}),
+						TransactionStore:          newTransactionStoreMock(map[TransactionID]*Transaction{validTxnID: txn}),
+						ScheduledTransactionStore: newScheduledTransactionStoreMock(map[ScheduledTransactionID]*ScheduledTransaction{validPID: payment}),
+						TransactionEventStore:     newTransactionEventStoreMock(nil),
+					}, txn
+				},
+				wantErr: false,
+			},
+			{
+				name: "relink to same scheduled transaction with status already paid returns nil",
+				item: &InboxItem{
+					ID:                     "ibx_1",
+					SpaceID:                string(validSpace),
+					Status:                 InboxItemPending,
+					Amount:                 500,
+					Currency:               "USD",
+					TransactionID:          &txnIDStr,
+					ScheduledTransactionID: &payIDStr,
+				},
+				setupStores: func() (Dependencies, *Transaction) {
+					ibx := &InboxItem{
+						ID:                     "ibx_1",
+						SpaceID:                string(validSpace),
+						Status:                 InboxItemPending,
+						Amount:                 500,
+						Currency:               "USD",
+						TransactionID:          &txnIDStr,
+						ScheduledTransactionID: &payIDStr,
+					}
+					txn := &Transaction{
+						ID:        validTxnID,
+						SpaceID:   validSpace,
+						Type:      TransactionTypeExpense,
+						AccountID: &validAccID,
+						Amount:    500,
+						Currency:  "USD",
+						Metadata: TransactionMetadata{
+							ScheduledTransactionID: &validPID,
+						},
+					}
+					payment := &ScheduledTransaction{
+						ID:      validPID,
+						SpaceID: validSpace,
+						Amount:  500,
+						Status:  ScheduledTransactionPaid,
+					}
+					return Dependencies{
+						InboxItemStore:            newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": ibx}),
+						TransactionStore:          newTransactionStoreMock(map[TransactionID]*Transaction{validTxnID: txn}),
+						ScheduledTransactionStore: newScheduledTransactionStoreMock(map[ScheduledTransactionID]*ScheduledTransaction{validPID: payment}),
+						TransactionEventStore:     newTransactionEventStoreMock(nil),
+					}, txn
+				},
+				wantErr: false,
+			},
+			{
+				name: "link scheduled transaction not found returns error",
+				item: &InboxItem{
+					ID:                     "ibx_1",
+					SpaceID:                string(validSpace),
+					Status:                 InboxItemPending,
+					Amount:                 500,
+					Currency:               "USD",
+					TransactionID:          &txnIDStr,
+					ScheduledTransactionID: &payIDStr,
+				},
+				setupStores: func() (Dependencies, *Transaction) {
+					ibx := &InboxItem{
+						ID:                     "ibx_1",
+						SpaceID:                string(validSpace),
+						Status:                 InboxItemPending,
+						Amount:                 500,
+						Currency:               "USD",
+						TransactionID:          &txnIDStr,
+						ScheduledTransactionID: &payIDStr,
+					}
+					txn := &Transaction{
+						ID:        validTxnID,
+						SpaceID:   validSpace,
+						Type:      TransactionTypeExpense,
+						AccountID: &validAccID,
+						Amount:    500,
+						Currency:  "USD",
+					}
+					return Dependencies{
+						InboxItemStore:            newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": ibx}),
+						TransactionStore:          newTransactionStoreMock(map[TransactionID]*Transaction{validTxnID: txn}),
+						ScheduledTransactionStore: newScheduledTransactionStoreMock(nil),
+					}, txn
+				},
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				deps, _ := tt.setupStores()
+				svc := NewService(deps)
+				res, err := svc.ApproveInboxItem(ctx, validSpace, "ibx_1")
+				if (err != nil) != tt.wantErr {
+					t.Errorf("ApproveInboxItem() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res.Status != InboxItemResolved {
+					t.Errorf("expected status resolved, got %v", res.Status)
+				}
+			})
+		}
+	})
+
+	t.Run("approveScheduledTransaction invoice branch", func(t *testing.T) {
+		tests := []struct {
+			name        string
+			docType     InboxItemDocType
+			setupStores func() Dependencies
+			wantErr     bool
+		}{
+			{
+				name:    "invoice scheduled transaction updates amount and vendor name",
+				docType: InboxItemDocInvoice,
+				setupStores: func() Dependencies {
+					ibx := &InboxItem{
+						ID:                     "ibx_1",
+						SpaceID:                string(validSpace),
+						Status:                 InboxItemPending,
+						DocType:                InboxItemDocInvoice,
+						Amount:                 7500,
+						VendorName:             "Electric Utility",
+						ScheduledTransactionID: &payIDStr,
+					}
+					pay := &ScheduledTransaction{
+						ID:         validPID,
+						SpaceID:    validSpace,
+						Amount:     5000,
+						SourceType: "Old Utility",
+					}
+					return Dependencies{
+						InboxItemStore:            newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": ibx}),
+						ScheduledTransactionStore: newScheduledTransactionStoreMock(map[ScheduledTransactionID]*ScheduledTransaction{validPID: pay}),
+					}
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				deps := tt.setupStores()
+				svc := NewService(deps)
+				res, err := svc.ApproveInboxItem(ctx, validSpace, "ibx_1")
+				if (err != nil) != tt.wantErr {
+					t.Errorf("ApproveInboxItem() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res.Status != InboxItemResolved {
+					t.Errorf("expected status resolved, got %v", res.Status)
+				}
+			})
+		}
+	})
+
+	t.Run("approveStagedInvoice creates scheduled transaction", func(t *testing.T) {
+		tests := []struct {
+			name        string
+			setupStores func() Dependencies
+			wantErr     bool
+		}{
+			{
+				name: "valid invoice creates scheduled transaction",
+				setupStores: func() Dependencies {
+					ibx := &InboxItem{
+						ID:              "ibx_1",
+						SpaceID:         string(validSpace),
+						Status:          InboxItemPending,
+						DocType:         InboxItemDocInvoice,
+						Amount:          12000,
+						Currency:        "USD",
+						VendorName:      "Cloud Services",
+						AccountID:       &accIDStr,
+						BudgetID:        &bgtIDStr,
+						TransactionDate: now,
+					}
+					return Dependencies{
+						InboxItemStore:            newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": ibx}),
+						ScheduledTransactionStore: newScheduledTransactionStoreMock(nil),
+					}
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				deps := tt.setupStores()
+				svc := NewService(deps)
+				res, err := svc.ApproveInboxItem(ctx, validSpace, "ibx_1")
+				if (err != nil) != tt.wantErr {
+					t.Errorf("ApproveInboxItem() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && (res.Status != InboxItemResolved || res.ScheduledTransactionID == nil) {
+					t.Errorf("expected resolved with scheduled transaction id, got %+v", res)
+				}
+			})
+		}
+	})
+
+	t.Run("approveScheduledTransaction non-invoice branch", func(t *testing.T) {
+		tests := []struct {
+			name        string
+			setupStores func() Dependencies
+			wantErr     bool
+		}{
+			{
+				name: "confirms scheduled transaction successfully",
+				setupStores: func() Dependencies {
+					ibx := &InboxItem{
+						ID:                     "ibx_1",
+						SpaceID:                string(validSpace),
+						Status:                 InboxItemPending,
+						DocType:                InboxItemDocReceipt,
+						Amount:                 4000,
+						VendorName:             "Coffee Shop",
+						AccountID:              &accIDStr,
+						ScheduledTransactionID: &payIDStr,
+						TransactionDate:        now,
+					}
+					pay := &ScheduledTransaction{
+						ID:       validPID,
+						SpaceID:  validSpace,
+						Amount:   4000,
+						Currency: "USD",
+						Type:     TransactionTypeIncome,
+						Status:   ScheduledTransactionPending,
+					}
+					return Dependencies{
+						InboxItemStore:            newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": ibx}),
+						ScheduledTransactionStore: newScheduledTransactionStoreMock(map[ScheduledTransactionID]*ScheduledTransaction{validPID: pay}),
+						SettingsStore:             newSettingsStoreMock(map[SpaceID]*FinanceSettings{validSpace: {BaseCurrency: "USD"}}),
+						AccountStore: newAccountStoreMock(map[AccountID]*Account{
+							validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD", IsActive: true, CurrentBalance: 10000},
+						}),
+						TransactionStore:      newTransactionStoreMock(nil),
+						TransactionEventStore: newTransactionEventStoreMock(nil),
+					}
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				deps := tt.setupStores()
+				svc := NewService(deps)
+				res, err := svc.ApproveInboxItem(ctx, validSpace, "ibx_1")
+				if (err != nil) != tt.wantErr {
+					t.Errorf("ApproveInboxItem() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res.Status != InboxItemResolved {
+					t.Errorf("expected status resolved, got %v", res.Status)
+				}
+			})
+		}
+	})
+
+	t.Run("approveStandalonePromotion branches", func(t *testing.T) {
+		tests := []struct {
+			name        string
+			setupStores func() Dependencies
+			wantErr     bool
+		}{
+			{
+				name: "missing destination account for transfer fails",
+				setupStores: func() Dependencies {
+					ibx := &InboxItem{
+						ID:       "ibx_1",
+						SpaceID:  string(validSpace),
+						Status:   InboxItemPending,
+						DocType:  InboxItemDocReceipt,
+						Amount:   1000,
+						Currency: "USD",
+						Metadata: map[string]any{
+							"transaction_type": "TRANSFER",
+						},
+					}
+					return Dependencies{
+						InboxItemStore: newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": ibx}),
+					}
+				},
+				wantErr: true,
+			},
+			{
+				name: "invalid destination account for transfer fails",
+				setupStores: func() Dependencies {
+					ibx := &InboxItem{
+						ID:       "ibx_1",
+						SpaceID:  string(validSpace),
+						Status:   InboxItemPending,
+						DocType:  InboxItemDocReceipt,
+						Amount:   1000,
+						Currency: "USD",
+						Metadata: map[string]any{
+							"transaction_type":       "TRANSFER",
+							"destination_account_id": "invalid_acc_id",
+						},
+					}
+					return Dependencies{
+						InboxItemStore: newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": ibx}),
+					}
+				},
+				wantErr: true,
+			},
+			{
+				name: "standalone promotion linking borrowing",
+				setupStores: func() Dependencies {
+					ibx := &InboxItem{
+						ID:          "ibx_1",
+						SpaceID:     string(validSpace),
+						Status:      InboxItemPending,
+						DocType:     InboxItemDocReceipt,
+						Amount:      2000,
+						Currency:    "USD",
+						VendorName:  "Merchant",
+						AccountID:   &accIDStr,
+						BorrowingID: &brwIDStr,
+						Metadata: map[string]any{
+							"transaction_type": "INCOME",
+						},
+					}
+					brw := &Borrowing{
+						ID:              validBrwID,
+						SpaceID:         validSpace,
+						TotalAmount:     5000,
+						RemainingAmount: 5000,
+						Status:          BorrowingStatusActive,
+					}
+					return Dependencies{
+						InboxItemStore: newInboxItemStoreMock(map[string]*InboxItem{"ibx_1": ibx}),
+						AccountStore: newAccountStoreMock(map[AccountID]*Account{
+							validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD", IsActive: true, CurrentBalance: 10000},
+						}),
+						SettingsStore:    newSettingsStoreMock(map[SpaceID]*FinanceSettings{validSpace: {BaseCurrency: "USD"}}),
+						TransactionStore: newTransactionStoreMock(nil),
+						BorrowingStore:   newBorrowingStoreMock(map[BorrowingID]*Borrowing{validBrwID: brw}),
+					}
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				deps := tt.setupStores()
+				svc := NewService(deps)
+				res, err := svc.ApproveInboxItem(ctx, validSpace, "ibx_1")
+				if (err != nil) != tt.wantErr {
+					t.Errorf("ApproveInboxItem() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res.Status != InboxItemResolved {
+					t.Errorf("expected status resolved, got %v", res.Status)
+				}
+			})
+		}
+	})
+}
+
+// --- Tests from service_insights_test.go ---
+
+func TestService_Insights(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	now := time.Now().UTC()
+
+	t.Run("GetSpentInsights", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			req      *GetSpentInsightsRequest
+			setupSet bool
+			storeErr error
+			wantErr  bool
+		}{
+			{
+				name: "valid spent insights",
+				req: &GetSpentInsightsRequest{
+					SpaceID:     validSpace,
+					Granularity: "monthly",
+					StartDate:   now.AddDate(0, -1, 0),
+					EndDate:     now,
+				},
+				setupSet: true,
+				storeErr: nil,
+				wantErr:  false,
+			},
+			{
+				name: "invalid range",
+				req: &GetSpentInsightsRequest{
+					SpaceID:     "invalid_space",
+					Granularity: "monthly",
+				},
+				setupSet: true,
+				wantErr:  true,
+			},
+			{
+				name: "missing settings",
+				req: &GetSpentInsightsRequest{
+					SpaceID:     validSpace,
+					Granularity: "monthly",
+				},
+				setupSet: false,
+				wantErr:  true,
+			},
+			{
+				name: "store error on spent trend",
+				req: &GetSpentInsightsRequest{
+					SpaceID:     validSpace,
+					Granularity: "monthly",
+				},
+				setupSet: true,
+				storeErr: errors.New("db error"),
+				wantErr:  true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				setStore := newSettingsStoreMock(nil)
+				if tt.setupSet {
+					_ = setStore.Create(ctx, &FinanceSettings{SpaceID: validSpace, BaseCurrency: "USD"})
+				}
+				insStore := newInsightsStoreMock(
+					[]*SpentTrend{},
+					[]*BudgetDistribution{},
+					[]*TopExpense{},
+					nil,
+					nil,
+					nil,
+					tt.storeErr,
+				)
+				svc := NewService(Dependencies{
+					SettingsStore: setStore,
+					InsightsStore: insStore,
+				})
+
+				res, err := svc.GetSpentInsights(ctx, tt.req)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("GetSpentInsights() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res == nil {
+					t.Error("expected non-nil SpentInsights")
+				}
+			})
+		}
+	})
+
+	t.Run("GetIncomeInsights", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			req      *GetSpentInsightsRequest
+			setupSet bool
+			storeErr error
+			wantErr  bool
+		}{
+			{
+				name: "valid income insights",
+				req: &GetSpentInsightsRequest{
+					SpaceID:     validSpace,
+					Granularity: "monthly",
+					StartDate:   now.AddDate(0, -1, 0),
+					EndDate:     now,
+				},
+				setupSet: true,
+				storeErr: nil,
+				wantErr:  false,
+			},
+			{
+				name: "invalid range",
+				req: &GetSpentInsightsRequest{
+					SpaceID:     "invalid_space",
+					Granularity: "monthly",
+				},
+				setupSet: true,
+				wantErr:  true,
+			},
+			{
+				name: "missing settings",
+				req: &GetSpentInsightsRequest{
+					SpaceID:     validSpace,
+					Granularity: "monthly",
+				},
+				setupSet: false,
+				wantErr:  true,
+			},
+			{
+				name: "store error on income trend",
+				req: &GetSpentInsightsRequest{
+					SpaceID:     validSpace,
+					Granularity: "monthly",
+				},
+				setupSet: true,
+				storeErr: errors.New("db error"),
+				wantErr:  true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				setStore := newSettingsStoreMock(nil)
+				if tt.setupSet {
+					_ = setStore.Create(ctx, &FinanceSettings{SpaceID: validSpace, BaseCurrency: "USD"})
+				}
+				insStore := newInsightsStoreMock(
+					nil,
+					nil,
+					nil,
+					[]*IncomeTrend{},
+					[]*IncomeSourceRow{},
+					[]*TopIncome{},
+					tt.storeErr,
+				)
+				svc := NewService(Dependencies{
+					SettingsStore: setStore,
+					InsightsStore: insStore,
+				})
+
+				res, err := svc.GetIncomeInsights(ctx, tt.req)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("GetIncomeInsights() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res == nil {
+					t.Error("expected non-nil IncomeInsights")
+				}
+			})
+		}
+	})
+}
+
+// --- Tests from service_institution_test.go ---
+
+func TestService_Institutions(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	validInstID, _ := NewInstitutionID()
+
+	t.Run("GetInstitution", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			id      InstitutionID
+			exists  bool
+			wantErr bool
+		}{
+			{
+				name:    "valid retrieval",
+				spaceID: validSpace,
+				id:      validInstID,
+				exists:  true,
+				wantErr: false,
+			},
+			{
+				name:    "not found",
+				spaceID: validSpace,
+				id:      validInstID,
+				exists:  false,
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				data := make(map[InstitutionID]*Institution)
+				if tt.exists {
+					data[validInstID] = &Institution{ID: validInstID, SpaceID: validSpace, Name: "Chase"}
+				}
+				svc := NewService(Dependencies{InstitutionStore: newInstitutionStoreMock(data)})
+				res, err := svc.GetInstitution(ctx, tt.spaceID, tt.id)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("GetInstitution() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res.ID != tt.id {
+					t.Errorf("res.ID = %v, want %v", res.ID, tt.id)
+				}
+			})
+		}
+	})
+
+	t.Run("ListInstitutions", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			hasStore bool
+		}{
+			{"with store", true},
+			{"nil store returns empty page", false},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				var store InstitutionStore
+				if tt.hasStore {
+					store = newInstitutionStoreMock(map[InstitutionID]*Institution{
+						validInstID: {ID: validInstID, SpaceID: validSpace, Name: "Bank of America"},
+					})
+				}
+				svc := NewService(Dependencies{InstitutionStore: store})
+				res, err := svc.ListInstitutions(ctx, validSpace, nil)
+				if err != nil {
+					t.Fatalf("ListInstitutions() unexpected error: %v", err)
+				}
+				if res == nil {
+					t.Error("expected non-nil page")
+				}
+			})
+		}
+	})
+
+	t.Run("GetInstitutionsByIDs", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			hasStore bool
+			ids      []InstitutionID
+			wantLen  int
+		}{
+			{
+				name:     "valid retrieval",
+				hasStore: true,
+				ids:      []InstitutionID{validInstID},
+				wantLen:  1,
+			},
+			{
+				name:     "empty ids",
+				hasStore: true,
+				ids:      []InstitutionID{},
+				wantLen:  0,
+			},
+			{
+				name:     "nil store",
+				hasStore: false,
+				ids:      []InstitutionID{validInstID},
+				wantLen:  0,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				var store InstitutionStore
+				if tt.hasStore {
+					store = newInstitutionStoreMock(map[InstitutionID]*Institution{
+						validInstID: {ID: validInstID, SpaceID: validSpace, Name: "Chase"},
+					})
+				}
+				svc := NewService(Dependencies{InstitutionStore: store})
+				res, err := svc.GetInstitutionsByIDs(ctx, validSpace, tt.ids)
+				if err != nil {
+					t.Fatalf("GetInstitutionsByIDs() unexpected error: %v", err)
+				}
+				if len(res) != tt.wantLen {
+					t.Errorf("len(res) = %d, want %d", len(res), tt.wantLen)
+				}
+			})
+		}
+	})
+
+	t.Run("ResolveInstitution", func(t *testing.T) {
+		tests := []struct {
+			name         string
+			inputName    string
+			setupExist   bool
+			wantExisting bool
+			wantDomain   string
+		}{
+			{
+				name:         "matches existing institution by name",
+				inputName:    "Chase",
+				setupExist:   true,
+				wantExisting: true,
+				wantDomain:   "chase.com",
+			},
+			{
+				name:         "generates suggestions when not found",
+				inputName:    "paypal.com",
+				setupExist:   false,
+				wantExisting: false,
+				wantDomain:   "paypal.com",
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				data := make(map[InstitutionID]*Institution)
+				if tt.setupExist {
+					data[validInstID] = &Institution{
+						ID:      validInstID,
+						SpaceID: validSpace,
+						Name:    "Chase",
+						Domain:  "chase.com",
+						LogoURL: "https://chase.com/icon.png",
+						Color:   "blue",
+					}
+				}
+				svc := NewService(Dependencies{InstitutionStore: newInstitutionStoreMock(data)})
+				res, err := svc.ResolveInstitution(ctx, validSpace, tt.inputName)
+				if err != nil {
+					t.Fatalf("ResolveInstitution() unexpected error: %v", err)
+				}
+				if (res.ExistingInstitutionID != nil) != tt.wantExisting {
+					t.Errorf("ExistingInstitutionID = %v, want existing: %v", res.ExistingInstitutionID, tt.wantExisting)
+				}
+				if res.Domain != tt.wantDomain {
+					t.Errorf("res.Domain = %q, want %q", res.Domain, tt.wantDomain)
+				}
+			})
+		}
+	})
+
+	t.Run("CreateInstitution", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			inst    *Institution
+			wantErr bool
+		}{
+			{
+				name: "invalid institution fails validation",
+				inst: &Institution{
+					SpaceID: validSpace,
+					Name:    "", // empty name fails validation
+				},
+				wantErr: true,
+			},
+			{
+				name: "valid institution creates successfully",
+				inst: &Institution{
+					SpaceID: validSpace,
+					Name:    "Wells Fargo",
+					Domain:  "wellsfargo.com",
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				svc := NewService(Dependencies{InstitutionStore: newInstitutionStoreMock(nil)})
+				res, err := svc.CreateInstitution(ctx, tt.inst)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("CreateInstitution() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res == nil {
+					t.Error("expected non-nil institution")
+				}
+			})
+		}
+	})
+
+	t.Run("UpdateInstitution", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			inst       *Institution
+			mask       []string
+			setupStore func() *InstitutionStoreMock
+			wantErr    bool
+		}{
+			{
+				name: "institution not found",
+				inst: &Institution{
+					ID:      validInstID,
+					SpaceID: validSpace,
+					Name:    "Nonexistent",
+				},
+				mask: []string{"name"},
+				setupStore: func() *InstitutionStoreMock {
+					return newInstitutionStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name: "successful update",
+				inst: &Institution{
+					ID:      validInstID,
+					SpaceID: validSpace,
+					Name:    "Updated Bank",
+					Version: 1,
+				},
+				mask: []string{"name"},
+				setupStore: func() *InstitutionStoreMock {
+					return newInstitutionStoreMock(map[InstitutionID]*Institution{
+						validInstID: {
+							ID:      validInstID,
+							SpaceID: validSpace,
+							Name:    "Old Bank",
+							Version: 1,
+						},
+					})
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				store := tt.setupStore()
+				svc := NewService(Dependencies{InstitutionStore: store})
+				res, err := svc.UpdateInstitution(ctx, tt.inst, tt.mask)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("UpdateInstitution() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res.Name != tt.inst.Name {
+					t.Errorf("Name = %q, want %q", res.Name, tt.inst.Name)
+				}
+			})
+		}
+	})
+
+	t.Run("DeleteInstitution", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			spaceID    SpaceID
+			id         InstitutionID
+			setupStore func() *InstitutionStoreMock
+			wantErr    bool
+		}{
+			{
+				name:    "not found",
+				spaceID: validSpace,
+				id:      validInstID,
+				setupStore: func() *InstitutionStoreMock {
+					return newInstitutionStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name:    "successful deletion",
+				spaceID: validSpace,
+				id:      validInstID,
+				setupStore: func() *InstitutionStoreMock {
+					return newInstitutionStoreMock(map[InstitutionID]*Institution{
+						validInstID: {ID: validInstID, SpaceID: validSpace, Name: "Bank"},
+					})
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				store := tt.setupStore()
+				svc := NewService(Dependencies{InstitutionStore: store})
+				err := svc.DeleteInstitution(ctx, tt.spaceID, tt.id, DeleteOptions{})
+				if (err != nil) != tt.wantErr {
+					t.Errorf("DeleteInstitution() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			})
+		}
+	})
+}
+
+func TestBuildInstitutionFaviconURL(t *testing.T) {
+	tests := []struct {
+		domain string
+		want   string
+	}{
+		{"", ""},
+		{"chase.com", "https://www.google.com/s2/favicons?domain=chase.com&sz=64"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.domain, func(t *testing.T) {
+			got := BuildInstitutionFaviconURL(tt.domain)
+			if got != tt.want {
+				t.Errorf("BuildInstitutionFaviconURL(%q) = %q, want %q", tt.domain, got, tt.want)
+			}
+		})
+	}
+}
+
+// --- Tests from service_rate_test.go ---
+
+func TestService_ExchangeRates(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	rateDate := time.Date(2026, 7, 30, 0, 0, 0, 0, time.UTC)
+
+	t.Run("CreateExchangeRate", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			rate    *ExchangeRate
+			wantErr bool
+		}{
+			{
+				name: "valid rate",
+				rate: &ExchangeRate{
+					SpaceID:      validSpace,
+					FromCurrency: "EUR",
+					ToCurrency:   "USD",
+					Rate:         1.08,
+					RateDate:     rateDate,
+				},
+				wantErr: false,
+			},
+			{
+				name: "invalid rate <= 0",
+				rate: &ExchangeRate{
+					SpaceID:      validSpace,
+					FromCurrency: "EUR",
+					ToCurrency:   "USD",
+					Rate:         0,
+					RateDate:     rateDate,
+				},
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				store := newExchangeRateStoreMock(nil)
+				svc := NewService(Dependencies{ExchangeRateStore: store})
+				res, err := svc.CreateExchangeRate(ctx, tt.rate)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("CreateExchangeRate() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res.ID == "" {
+					t.Error("expected generated ID")
+				}
+			})
+		}
+	})
+
+	t.Run("GetExchangeRateByID", func(t *testing.T) {
+		rate := &ExchangeRate{
+			SpaceID:      validSpace,
+			FromCurrency: "EUR",
+			ToCurrency:   "USD",
+			Rate:         1.08,
+			RateDate:     rateDate,
+		}
+		_ = rate.Init()
+		validID := rate.ID
+
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			id      string
+			exists  bool
+			wantErr bool
+		}{
+			{
+				name:    "valid retrieval",
+				spaceID: validSpace,
+				id:      validID,
+				exists:  true,
+				wantErr: false,
+			},
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				id:      validID,
+				exists:  true,
+				wantErr: true,
+			},
+			{
+				name:    "invalid rate ID format",
+				spaceID: validSpace,
+				id:      "invalid_rate_id",
+				exists:  true,
+				wantErr: true,
+			},
+			{
+				name:    "rate not found",
+				spaceID: validSpace,
+				id:      validID,
+				exists:  false,
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				store := newExchangeRateStoreMock(nil)
+				if tt.exists {
+					_ = store.Create(ctx, rate)
+				}
+				svc := NewService(Dependencies{ExchangeRateStore: store})
+				res, err := svc.GetExchangeRateByID(ctx, tt.spaceID, tt.id)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("GetExchangeRateByID() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res.ID != tt.id {
+					t.Errorf("res.ID = %v, want %v", res.ID, tt.id)
+				}
+			})
+		}
+	})
+
+	t.Run("UpdateExchangeRate", func(t *testing.T) {
+		rate := &ExchangeRate{
+			SpaceID:      validSpace,
+			FromCurrency: "EUR",
+			ToCurrency:   "USD",
+			Rate:         1.08,
+			RateDate:     rateDate,
+		}
+		_ = rate.Init()
+		validID := rate.ID
+
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			id      string
+			exists  bool
+			newRate float64
+			wantErr bool
+		}{
+			{
+				name:    "valid update",
+				spaceID: validSpace,
+				id:      validID,
+				exists:  true,
+				newRate: 1.15,
+				wantErr: false,
+			},
+			{
+				spaceID: "invalid_space",
+				id:      validID,
+				exists:  true,
+				newRate: 1.15,
+				wantErr: true,
+			},
+			{
+				name:    "invalid rate ID",
+				spaceID: validSpace,
+				id:      "invalid_id",
+				exists:  true,
+				newRate: 1.15,
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				store := newExchangeRateStoreMock(nil)
+				if tt.exists {
+					_ = store.Create(ctx, &ExchangeRate{
+						SpaceID:      rate.SpaceID,
+						FromCurrency: rate.FromCurrency,
+						ToCurrency:   rate.ToCurrency,
+						Rate:         rate.Rate,
+						RateDate:     rate.RateDate,
+					})
+				}
+				svc := NewService(Dependencies{ExchangeRateStore: store})
+				res, err := svc.UpdateExchangeRate(ctx, tt.spaceID, tt.id, &ExchangeRate{Rate: tt.newRate})
+				if (err != nil) != tt.wantErr {
+					t.Errorf("UpdateExchangeRate() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res.Rate != tt.newRate {
+					t.Errorf("res.Rate = %f, want %f", res.Rate, tt.newRate)
+				}
+			})
+		}
+	})
+
+	t.Run("ListExchangeRates", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			wantErr bool
+		}{
+			{
+				name:    "valid list",
+				spaceID: validSpace,
+				wantErr: false,
+			},
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				store := newExchangeRateStoreMock(map[string]*ExchangeRate{
+					"key": {SpaceID: validSpace},
+				})
+				svc := NewService(Dependencies{ExchangeRateStore: store})
+				list, _, err := svc.ListExchangeRates(ctx, tt.spaceID, nil)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("ListExchangeRates() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && list == nil {
+					t.Error("expected non-nil list")
+				}
+			})
+		}
+	})
+
+	t.Run("DeleteExchangeRateByID", func(t *testing.T) {
+		rate := &ExchangeRate{
+			SpaceID:      validSpace,
+			FromCurrency: "EUR",
+			ToCurrency:   "USD",
+			Rate:         1.08,
+			RateDate:     rateDate,
+		}
+		_ = rate.Init()
+		validID := rate.ID
+
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			id      string
+			wantErr bool
+		}{
+			{
+				name:    "valid deletion",
+				spaceID: validSpace,
+				id:      validID,
+				wantErr: false,
+			},
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				id:      validID,
+				wantErr: true,
+			},
+			{
+				name:    "invalid id format",
+				spaceID: validSpace,
+				id:      "bad_id",
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				store := newExchangeRateStoreMock(nil)
+				_ = store.Create(ctx, rate)
+				svc := NewService(Dependencies{ExchangeRateStore: store})
+				err := svc.DeleteExchangeRateByID(ctx, tt.spaceID, tt.id)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("DeleteExchangeRateByID() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			})
+		}
+	})
+
+	t.Run("GetLatestRates", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			wantErr bool
+		}{
+			{
+				name:    "valid call",
+				spaceID: validSpace,
+				wantErr: false,
+			},
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				store := newExchangeRateStoreMock(nil)
+				svc := NewService(Dependencies{ExchangeRateStore: store})
+				_, err := svc.GetLatestRates(ctx, tt.spaceID, []Currency{"EUR"}, "USD")
+				if (err != nil) != tt.wantErr {
+					t.Errorf("GetLatestRates() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			})
+		}
+	})
+}
+
+// --- Tests from service_recurring_test.go ---
+
+func TestService_RecurringTransactions(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	validBID, _ := NewBudgetID()
+	validRID, _ := NewRecurringTransactionID()
+	now := time.Now().UTC()
+
+	t.Run("CreateRecurringTransaction", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			rec     *RecurringTransaction
+			wantErr bool
+		}{
+			{
+				name: "valid recurring expense",
+				rec: &RecurringTransaction{
+					SpaceID:     validSpace,
+					BudgetID:    &validBID,
+					Name:        "Netflix",
+					Amount:      1500,
+					Currency:    "USD",
+					Interval:    IntervalMonthly,
+					NextDueDate: now,
+					Status:      RecurringTransactionActive,
+					Type:        TransactionTypeExpense,
+				},
+				wantErr: false,
+			},
+			{
+				name: "invalid recurring transaction amount <= 0",
+				rec: &RecurringTransaction{
+					SpaceID:  validSpace,
+					BudgetID: &validBID,
+					Name:     "Netflix",
+					Amount:   0,
+					Currency: "USD",
+					Interval: IntervalMonthly,
+					Type:     TransactionTypeExpense,
+				},
+				wantErr: true,
+			},
+			{
+				name: "invalid budget ID",
+				rec: &RecurringTransaction{
+					SpaceID:  validSpace,
+					BudgetID: (*BudgetID)(new(string)), // invalid pointer to empty string
+					Name:     "Netflix",
+					Amount:   1500,
+					Currency: "USD",
+					Interval: IntervalMonthly,
+					Type:     TransactionTypeExpense,
+				},
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				rStore := newRecurringTransactionStoreMock(nil)
+				svc := NewService(Dependencies{RecurringTransactionStore: rStore})
+				res, err := svc.CreateRecurringTransaction(ctx, tt.rec)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("CreateRecurringTransaction() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res.ID == "" {
+					t.Error("expected ID to be generated")
+				}
+			})
+		}
+	})
+
+	t.Run("GetRecurringTransaction", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			id      RecurringTransactionID
+			exists  bool
+			wantErr bool
+		}{
+			{
+				name:    "valid retrieval",
+				spaceID: validSpace,
+				id:      validRID,
+				exists:  true,
+				wantErr: false,
+			},
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				id:      validRID,
+				exists:  true,
+				wantErr: true,
+			},
+			{
+				name:    "invalid recurring ID",
+				spaceID: validSpace,
+				id:      "invalid_id",
+				exists:  true,
+				wantErr: true,
+			},
+			{
+				name:    "not found",
+				spaceID: validSpace,
+				id:      validRID,
+				exists:  false,
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				data := make(map[RecurringTransactionID]*RecurringTransaction)
+				if tt.exists {
+					data[validRID] = &RecurringTransaction{ID: validRID, SpaceID: validSpace, Name: "Gym"}
+				}
+				rStore := newRecurringTransactionStoreMock(data)
+				svc := NewService(Dependencies{RecurringTransactionStore: rStore})
+				res, err := svc.GetRecurringTransaction(ctx, tt.spaceID, tt.id)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("GetRecurringTransaction() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res.ID != tt.id {
+					t.Errorf("res.ID = %v, want %v", res.ID, tt.id)
+				}
+			})
+		}
+	})
+
+	t.Run("GetRecurringTransactions", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			ids     []RecurringTransactionID
+			wantErr bool
+		}{
+			{
+				name:    "valid batch",
+				spaceID: validSpace,
+				ids:     []RecurringTransactionID{validRID},
+				wantErr: false,
+			},
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				ids:     []RecurringTransactionID{validRID},
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				rStore := newRecurringTransactionStoreMock(map[RecurringTransactionID]*RecurringTransaction{
+					validRID: {ID: validRID, SpaceID: validSpace},
+				})
+				svc := NewService(Dependencies{RecurringTransactionStore: rStore})
+				res, err := svc.GetRecurringTransactions(ctx, tt.spaceID, tt.ids)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("GetRecurringTransactions() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && len(res) != 1 {
+					t.Errorf("len(res) = %d, want 1", len(res))
+				}
+			})
+		}
+	})
+
+	t.Run("UpdateRecurringTransaction", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			re         *RecurringTransaction
+			mask       []string
+			setupExist bool
+			existVer   int64
+			wantErr    bool
+		}{
+			{
+				name: "valid patch update",
+				re: &RecurringTransaction{
+					ID:      validRID,
+					SpaceID: validSpace,
+					Name:    "Gym Patched",
+					Amount:  5000,
+					Version: 1,
+				},
+				mask:       []string{"name", "amount"},
+				setupExist: true,
+				existVer:   1,
+				wantErr:    false,
+			},
+			{
+				name: "version mismatch",
+				re: &RecurringTransaction{
+					ID:      validRID,
+					SpaceID: validSpace,
+					Name:    "Gym Patched",
+					Version: 1,
+				},
+				mask:       []string{"name"},
+				setupExist: true,
+				existVer:   2,
+				wantErr:    true,
+			},
+			{
+				name: "not found",
+				re: &RecurringTransaction{
+					ID:      validRID,
+					SpaceID: validSpace,
+					Name:    "Gym Patched",
+				},
+				mask:       []string{"name"},
+				setupExist: false,
+				wantErr:    true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				data := make(map[RecurringTransactionID]*RecurringTransaction)
+				if tt.setupExist {
+					data[validRID] = &RecurringTransaction{
+						ID:          validRID,
+						SpaceID:     validSpace,
+						BudgetID:    &validBID,
+						Name:        "Gym",
+						Amount:      4000,
+						Currency:    "USD",
+						Interval:    IntervalMonthly,
+						NextDueDate: now,
+						Status:      RecurringTransactionActive,
+						Type:        TransactionTypeExpense,
+						Version:     tt.existVer,
+					}
+				}
+				rStore := newRecurringTransactionStoreMock(data)
+				svc := NewService(Dependencies{RecurringTransactionStore: rStore})
+				res, err := svc.UpdateRecurringTransaction(ctx, tt.re, tt.mask)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("UpdateRecurringTransaction() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && (res == nil || res.Name != tt.re.Name) {
+					t.Errorf("res.Name = %v, want %q", res, tt.re.Name)
+				}
+			})
+		}
+	})
+
+	t.Run("DeleteRecurringTransaction", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			id      RecurringTransactionID
+			exists  bool
+			wantErr bool
+		}{
+			{
+				name:    "valid deletion",
+				id:      validRID,
+				exists:  true,
+				wantErr: false,
+			},
+			{
+				name:    "invalid recurring transaction ID",
+				id:      "invalid_id",
+				exists:  false,
+				wantErr: true,
+			},
+			{
+				name:    "not found",
+				id:      validRID,
+				exists:  false,
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				data := make(map[RecurringTransactionID]*RecurringTransaction)
+				if tt.exists {
+					data[validRID] = &RecurringTransaction{ID: validRID, SpaceID: validSpace}
+				}
+				rStore := newRecurringTransactionStoreMock(data)
+				svc := NewService(Dependencies{RecurringTransactionStore: rStore})
+				err := svc.DeleteRecurringTransaction(ctx, tt.id, DeleteOptions{})
+				if (err != nil) != tt.wantErr {
+					t.Errorf("DeleteRecurringTransaction() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			})
+		}
+	})
+
+	t.Run("ListRecurringTransactions", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			wantErr bool
+		}{
+			{
+				name:    "valid list",
+				spaceID: validSpace,
+				wantErr: false,
+			},
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				rStore := newRecurringTransactionStoreMock(nil)
+				svc := NewService(Dependencies{RecurringTransactionStore: rStore})
+				_, err := svc.ListRecurringTransactions(ctx, tt.spaceID, nil)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("ListRecurringTransactions() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			})
+		}
+	})
+
+	t.Run("GenerateScheduledTransactions", func(t *testing.T) {
+		tests := []struct {
+			name        string
+			setupStores func() (*RecurringTransactionStoreMock, *ScheduledTransactionStoreMock, map[ScheduledTransactionID]*ScheduledTransaction)
+			wantErr     bool
+		}{
+			{
+				name: "template generation validation error",
+				setupStores: func() (*RecurringTransactionStoreMock, *ScheduledTransactionStoreMock, map[ScheduledTransactionID]*ScheduledTransaction) {
+					rStore := newRecurringTransactionStoreMock(map[RecurringTransactionID]*RecurringTransaction{
+						validRID: {
+							ID:          validRID,
+							SpaceID:     "invalid_space",
+							BudgetID:    &validBID,
+							Name:        "Internet",
+							Amount:      6000,
+							Currency:    "USD",
+							Interval:    IntervalMonthly,
+							NextDueDate: now,
+							Status:      RecurringTransactionActive,
+							Type:        TransactionTypeExpense,
+						},
+					})
+					payments := make(map[ScheduledTransactionID]*ScheduledTransaction)
+					sStore := newScheduledTransactionStoreMock(payments)
+					return rStore, sStore, payments
+				},
+				wantErr: true,
+			},
+			{
+				name: "successful generation",
+				setupStores: func() (*RecurringTransactionStoreMock, *ScheduledTransactionStoreMock, map[ScheduledTransactionID]*ScheduledTransaction) {
+					rStore := newRecurringTransactionStoreMock(map[RecurringTransactionID]*RecurringTransaction{
+						validRID: {
+							ID:          validRID,
+							SpaceID:     validSpace,
+							BudgetID:    &validBID,
+							Name:        "Internet",
+							Amount:      6000,
+							Currency:    "USD",
+							Interval:    IntervalMonthly,
+							NextDueDate: now,
+							Status:      RecurringTransactionActive,
+							Type:        TransactionTypeExpense,
+						},
+					})
+					payments := make(map[ScheduledTransactionID]*ScheduledTransaction)
+					sStore := newScheduledTransactionStoreMock(payments)
+					return rStore, sStore, payments
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				rStore, sStore, payments := tt.setupStores()
+				svc := NewService(Dependencies{
+					RecurringTransactionStore: rStore,
+					ScheduledTransactionStore: sStore,
+				})
+				err := svc.GenerateScheduledTransactions(ctx)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("GenerateScheduledTransactions() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && len(payments) == 0 {
+					t.Error("expected scheduled transactions to be generated")
+				}
+			})
+		}
+	})
+}
+
+// --- Tests from service_scheduled_test.go ---
+
+func TestService_ScheduledTransactions(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	otherSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pX")
+	validBID, _ := NewBudgetID()
+	validAccID, _ := NewAccountID()
+	validPID, _ := NewPeriodID()
+	validSTID, _ := NewScheduledTransactionID()
+	validTID, _ := NewTransactionID()
+	now := time.Now().UTC()
+
+	t.Run("ListScheduledTransactions", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			wantErr bool
+		}{
+			{"valid list", validSpace, false},
+			{"invalid space ID", "", true},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				sStore := newScheduledTransactionStoreMock(nil)
+				svc := NewService(Dependencies{ScheduledTransactionStore: sStore})
+				_, err := svc.ListScheduledTransactions(ctx, tt.spaceID, nil)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("ListScheduledTransactions() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			})
+		}
+	})
+
+	t.Run("ConfirmScheduledTransaction", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			req     ConfirmScheduledTransactionRequest
+			setupST bool
+			isPaid  bool
+			wantErr bool
+		}{
+			{
+				name: "successful confirmation of expense",
+				req: ConfirmScheduledTransactionRequest{
+					SpaceID:       validSpace,
+					TransactionID: validSTID,
+					AccountID:     &validAccID,
+					ActualAmount:  5000,
+				},
+				setupST: true,
+				isPaid:  false,
+				wantErr: false,
+			},
+			{
+				name: "scheduled transaction not found",
+				req: ConfirmScheduledTransactionRequest{
+					SpaceID:       validSpace,
+					TransactionID: "invalid_stid",
+				},
+				setupST: false,
+				wantErr: true,
+			},
+			{
+				name: "already paid scheduled transaction",
+				req: ConfirmScheduledTransactionRequest{
+					SpaceID:       validSpace,
+					TransactionID: validSTID,
+				},
+				setupST: true,
+				isPaid:  true,
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				stPayments := make(map[ScheduledTransactionID]*ScheduledTransaction)
+				if tt.setupST {
+					status := ScheduledTransactionPending
+					if tt.isPaid {
+						status = ScheduledTransactionPaid
+					}
+					stPayments[validSTID] = &ScheduledTransaction{
+						ID:         validSTID,
+						SpaceID:    validSpace,
+						BudgetID:   &validBID,
+						AccountID:  &validAccID,
+						Amount:     5000,
+						Currency:   "USD",
+						DueDate:    now,
+						Status:     status,
+						Type:       TransactionTypeExpense,
+						SourceType: string(SourceTypeRecurrentTransaction),
+						SourceID:   "rec_123",
+					}
+				}
+				stStore := newScheduledTransactionStoreMock(stPayments)
+
+				bStore := newBudgetStoreMock(map[BudgetID]*Budget{
+					validBID: {
+						ID:          validBID,
+						SpaceID:     validSpace,
+						LimitAmount: 50000,
+						Currency:    "USD",
+						Interval:    IntervalMonthly,
+						Status:      BudgetStatusActive,
+					},
+				})
+
+				pStore := newPeriodStoreMock(map[string]*BudgetPeriod{
+					"key": {
+						ID:                 validPID,
+						BudgetID:           validBID,
+						SpaceID:            validSpace,
+						Currency:           "USD",
+						BaseCurrency:       "USD",
+						ExchangeRateToBase: 1.0,
+					},
+				})
+
+				setStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{
+					validSpace: {SpaceID: validSpace, BaseCurrency: "USD"},
+				})
+
+				accStore := newAccountStoreMock(map[AccountID]*Account{
+					validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD", IsActive: true, CurrentBalance: 20000},
+				})
+
+				txnStore := newTransactionStoreMock(nil)
+				eventStore := newTransactionEventStoreMock(nil)
+				rStore := newRecurringTransactionStoreMock(map[RecurringTransactionID]*RecurringTransaction{
+					"rec_123": {ID: "rec_123", SpaceID: validSpace, Name: "Rec Name"},
+				})
+
+				svc := NewService(Dependencies{
+					ScheduledTransactionStore: stStore,
+					BudgetStore:               bStore,
+					PeriodStore:               pStore,
+					SettingsStore:             setStore,
+					AccountStore:              accStore,
+					TransactionStore:          txnStore,
+					TransactionEventStore:     eventStore,
+					RecurringTransactionStore: rStore,
+				})
+
+				res, err := svc.ConfirmScheduledTransaction(ctx, tt.req)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("ConfirmScheduledTransaction() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res == nil {
+					t.Error("expected non-nil transaction")
+				}
+			})
+		}
+	})
+
+	t.Run("MatchScheduledTransaction", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			req        MatchScheduledTransactionRequest
+			setupST    bool
+			setupTxn   bool
+			diffSpaces bool
+			wantErr    bool
+		}{
+			{
+				name: "valid matching",
+				req: MatchScheduledTransactionRequest{
+					SpaceID:       validSpace,
+					TransactionID: validSTID,
+					MatchedID:     validTID,
+				},
+				setupST:  true,
+				setupTxn: true,
+				wantErr:  false,
+			},
+			{
+				name: "different spaces error",
+				req: MatchScheduledTransactionRequest{
+					SpaceID:       validSpace,
+					TransactionID: validSTID,
+					MatchedID:     validTID,
+				},
+				setupST:    true,
+				setupTxn:   true,
+				diffSpaces: true,
+				wantErr:    true,
+			},
+			{
+				name: "scheduled transaction not found",
+				req: MatchScheduledTransactionRequest{
+					SpaceID:       validSpace,
+					TransactionID: "invalid_id",
+					MatchedID:     validTID,
+				},
+				setupST:  false,
+				setupTxn: true,
+				wantErr:  true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				stPayments := make(map[ScheduledTransactionID]*ScheduledTransaction)
+				if tt.setupST {
+					stPayments[validSTID] = &ScheduledTransaction{
+						ID:         validSTID,
+						SpaceID:    validSpace,
+						Amount:     5000,
+						Status:     ScheduledTransactionPending,
+						SourceType: string(SourceTypeRecurrentTransaction),
+						SourceID:   "rec_123",
+					}
+				}
+				stStore := newScheduledTransactionStoreMock(stPayments)
+
+				txnMap := make(map[TransactionID]*Transaction)
+				if tt.setupTxn {
+					space := validSpace
+					if tt.diffSpaces {
+						space = otherSpace
+					}
+					txnMap[validTID] = &Transaction{
+						ID:      validTID,
+						SpaceID: space,
+						Amount:  5000,
+					}
+				}
+				txnStore := newTransactionStoreMock(txnMap)
+
+				eventStore := newTransactionEventStoreMock(nil)
+
+				svc := NewService(Dependencies{
+					ScheduledTransactionStore: stStore,
+					TransactionStore:          txnStore,
+					TransactionEventStore:     eventStore,
+				})
+
+				res, err := svc.MatchScheduledTransaction(ctx, tt.req)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("MatchScheduledTransaction() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res == nil {
+					t.Error("expected non-nil transaction")
+				}
+			})
+		}
+	})
+
+	t.Run("SkipScheduledTransaction", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			id      ScheduledTransactionID
+			exists  bool
+			isPaid  bool
+			wantErr bool
+		}{
+			{
+				name:    "valid skip",
+				spaceID: validSpace,
+				id:      validSTID,
+				exists:  true,
+				isPaid:  false,
+				wantErr: false,
+			},
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				id:      validSTID,
+				exists:  true,
+				wantErr: true,
+			},
+			{
+				name:    "invalid scheduled transaction ID",
+				spaceID: validSpace,
+				id:      "invalid_id",
+				exists:  true,
+				wantErr: true,
+			},
+			{
+				name:    "not found",
+				spaceID: validSpace,
+				id:      validSTID,
+				exists:  false,
+				wantErr: true,
+			},
+			{
+				name:    "cannot skip paid transaction",
+				spaceID: validSpace,
+				id:      validSTID,
+				exists:  true,
+				isPaid:  true,
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				stPayments := make(map[ScheduledTransactionID]*ScheduledTransaction)
+				if tt.exists {
+					status := ScheduledTransactionPending
+					if tt.isPaid {
+						status = ScheduledTransactionPaid
+					}
+					stPayments[validSTID] = &ScheduledTransaction{
+						ID:      validSTID,
+						SpaceID: validSpace,
+						Status:  status,
+					}
+				}
+				stStore := newScheduledTransactionStoreMock(stPayments)
+
+				svc := NewService(Dependencies{ScheduledTransactionStore: stStore})
+				res, err := svc.SkipScheduledTransaction(ctx, tt.spaceID, tt.id)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("SkipScheduledTransaction() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res.Status != ScheduledTransactionSkipped {
+					t.Errorf("res.Status = %v, want SKIPPED", res.Status)
+				}
+			})
+		}
+	})
+}
+
+// --- Tests from service_settings_test.go ---
+
+func TestService_GetFinanceSettings(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	otherSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pX")
+
+	tests := []struct {
+		name      string
+		spaceID   SpaceID
+		setupData map[SpaceID]*FinanceSettings
+		wantErr   bool
+	}{
+		{
+			name:    "successful retrieval",
+			spaceID: validSpace,
+			setupData: map[SpaceID]*FinanceSettings{
+				validSpace: {SpaceID: validSpace, BaseCurrency: "USD"},
+			},
+			wantErr: false,
+		},
+		{
+			name:      "empty space ID",
+			spaceID:   "",
+			setupData: nil,
+			wantErr:   true,
+		},
+		{
+			name:      "settings not found",
+			spaceID:   otherSpace,
+			setupData: map[SpaceID]*FinanceSettings{},
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := &SettingsStoreMock{
+				GetByIDFunc: func(ctx context.Context, spaceID SpaceID) (*FinanceSettings, error) {
+					if tt.setupData != nil {
+						if s, ok := tt.setupData[spaceID]; ok {
+							return s, nil
+						}
+					}
+					return nil, errors.E(errors.NotExist, SettingsNotFound, "finance settings not found")
+				},
+			}
+			svc := NewService(Dependencies{SettingsStore: store})
+			res, err := svc.GetFinanceSettings(ctx, tt.spaceID)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetFinanceSettings() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && res.SpaceID != tt.spaceID {
+				t.Errorf("res.SpaceID = %v, want %v", res.SpaceID, tt.spaceID)
+			}
+		})
+	}
+}
+
+// --- Tests from service_statement_test.go ---
+
+func TestService_Statements(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	validSID, _ := NewStatementID()
+	validAccID, _ := NewAccountID()
+	validLineID, _ := NewStatementLineID()
+	now := time.Now().UTC()
+
+	t.Run("GetStatement", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			id      StatementID
+			exists  bool
+			wantErr bool
+		}{
+			{
+				name:    "valid retrieval",
+				spaceID: validSpace,
+				id:      validSID,
+				exists:  true,
+				wantErr: false,
+			},
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				id:      validSID,
+				exists:  true,
+				wantErr: true,
+			},
+			{
+				name:    "invalid statement ID",
+				spaceID: validSpace,
+				id:      "invalid_id",
+				exists:  true,
+				wantErr: true,
+			},
+			{
+				name:    "not found",
+				spaceID: validSpace,
+				id:      validSID,
+				exists:  false,
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				store := newStatementStoreMock(nil, nil)
+				if tt.exists {
+					_ = store.Create(ctx, &Statement{ID: validSID, SpaceID: validSpace}, nil)
+				}
+				svc := NewService(Dependencies{StatementStore: store})
+				res, err := svc.GetStatement(ctx, tt.spaceID, tt.id)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("GetStatement() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res.ID != tt.id {
+					t.Errorf("res.ID = %v, want %v", res.ID, tt.id)
+				}
+			})
+		}
+	})
+
+	t.Run("ListStatements", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			wantErr bool
+		}{
+			{
+				name:    "valid list",
+				spaceID: validSpace,
+				wantErr: false,
+			},
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				store := newStatementStoreMock(nil, nil)
+				svc := NewService(Dependencies{StatementStore: store})
+				_, err := svc.ListStatements(ctx, tt.spaceID, &ListStatementsFilter{})
+				if (err != nil) != tt.wantErr {
+					t.Errorf("ListStatements() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			})
+		}
+	})
+
+	t.Run("ImportStatement", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			accountID  AccountID
+			statement  *Statement
+			setupStore func() *AccountStoreMock
+			wantErr    bool
+		}{
+			{
+				name:      "nil statement returns error",
+				accountID: validAccID,
+				statement: nil,
+				setupStore: func() *AccountStoreMock {
+					return newAccountStoreMock(map[AccountID]*Account{validAccID: {ID: validAccID, SpaceID: validSpace}})
+				},
+				wantErr: true,
+			},
+			{
+				name:      "invalid space ID",
+				accountID: validAccID,
+				statement: &Statement{
+					SpaceID: "invalid_space",
+				},
+				setupStore: func() *AccountStoreMock {
+					return newAccountStoreMock(map[AccountID]*Account{validAccID: {ID: validAccID, SpaceID: validSpace}})
+				},
+				wantErr: true,
+			},
+			{
+				name:      "invalid account ID",
+				accountID: "invalid_acc",
+				statement: &Statement{
+					SpaceID: validSpace,
+				},
+				setupStore: func() *AccountStoreMock {
+					return newAccountStoreMock(map[AccountID]*Account{validAccID: {ID: validAccID, SpaceID: validSpace}})
+				},
+				wantErr: true,
+			},
+			{
+				name:      "account not found in store",
+				accountID: validAccID,
+				statement: &Statement{
+					SpaceID: validSpace,
+				},
+				setupStore: func() *AccountStoreMock {
+					return newAccountStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name:      "decode lines fails on unsupported format",
+				accountID: validAccID,
+				statement: &Statement{
+					ID:            validSID,
+					SpaceID:       validSpace,
+					AccountID:     validAccID,
+					Status:        StatementStatusInProgress,
+					StatementDate: now,
+					Filename:      "test.unsupported",
+					Config: StatementConfig{
+						Format: "UNSUPPORTED_FORMAT",
+					},
+					RawContent: "some random data",
+				},
+				setupStore: func() *AccountStoreMock {
+					return newAccountStoreMock(map[AccountID]*Account{validAccID: {ID: validAccID, SpaceID: validSpace}})
+				},
+				wantErr: true,
+			},
+			{
+				name:      "valid CSV import",
+				accountID: validAccID,
+				statement: &Statement{
+					ID:            validSID,
+					SpaceID:       validSpace,
+					AccountID:     validAccID,
+					Status:        StatementStatusInProgress,
+					StatementDate: now,
+					Filename:      "test.csv",
+					Config: StatementConfig{
+						Format: "CSV",
+						CSV: &CSVMapping{
+							DateColumnIndex:        0,
+							DescriptionColumnIndex: 1,
+							AmountColumnIndex:      2,
+							HasHeader:              true,
+							Delimiter:              ",",
+							DateFormat:             "2006-01-02",
+						},
+					},
+					RawContent: "Date,Description,Amount\n2026-08-01,Store,-15.50",
+				},
+				setupStore: func() *AccountStoreMock {
+					return newAccountStoreMock(map[AccountID]*Account{validAccID: {ID: validAccID, SpaceID: validSpace}})
+				},
+				wantErr: false,
+			},
+			{
+				name:      "invalid statement validation fails import",
+				accountID: validAccID,
+				statement: &Statement{
+					ID:            validSID,
+					SpaceID:       validSpace,
+					AccountID:     validAccID,
+					Status:        "UNKNOWN_STATUS",
+					StatementDate: now,
+					Filename:      "test.csv",
+					Config:        StatementConfig{Format: "CSV"},
+					RawContent:    "data",
+				},
+				setupStore: func() *AccountStoreMock {
+					return newAccountStoreMock(map[AccountID]*Account{validAccID: {ID: validAccID, SpaceID: validSpace}})
+				},
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				store := newStatementStoreMock(nil, nil)
+				accStore := tt.setupStore()
+				svc := NewService(Dependencies{StatementStore: store, AccountStore: accStore})
+				stmt, err := svc.ImportStatement(ctx, tt.accountID, tt.statement)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("ImportStatement() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && stmt == nil {
+					t.Error("expected non-nil imported statement")
+				}
+			})
+		}
+	})
+
+	t.Run("DeleteStatement", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			spaceID    SpaceID
+			id         StatementID
+			setupStore func() *StatementStoreMock
+			wantErr    bool
+		}{
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid",
+				id:      validSID,
+				setupStore: func() *StatementStoreMock {
+					return newStatementStoreMock(nil, nil)
+				},
+				wantErr: true,
+			},
+			{
+				name:    "not found",
+				spaceID: validSpace,
+				id:      validSID,
+				setupStore: func() *StatementStoreMock {
+					return newStatementStoreMock(nil, nil)
+				},
+				wantErr: true,
+			},
+			{
+				name:    "completed statement cannot be deleted",
+				spaceID: validSpace,
+				id:      validSID,
+				setupStore: func() *StatementStoreMock {
+					store := newStatementStoreMock(nil, nil)
+					_ = store.Create(ctx, &Statement{
+						ID:      validSID,
+						SpaceID: validSpace,
+						Status:  StatementStatusCompleted,
+					}, nil)
+					return store
+				},
+				wantErr: true,
+			},
+			{
+				name:    "in progress statement deleted successfully",
+				spaceID: validSpace,
+				id:      validSID,
+				setupStore: func() *StatementStoreMock {
+					store := newStatementStoreMock(nil, nil)
+					_ = store.Create(ctx, &Statement{
+						ID:      validSID,
+						SpaceID: validSpace,
+						Status:  StatementStatusInProgress,
+					}, nil)
+					return store
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				store := tt.setupStore()
+				svc := NewService(Dependencies{StatementStore: store})
+				err := svc.DeleteStatement(ctx, tt.spaceID, tt.id, DeleteOptions{})
+				if (err != nil) != tt.wantErr {
+					t.Errorf("DeleteStatement() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			})
+		}
+	})
+
+	t.Run("ListStatementLines", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			spaceID    SpaceID
+			id         StatementID
+			setupStore func() *StatementStoreMock
+			wantErr    bool
+		}{
+			{
+				name:    "valid statement ID",
+				spaceID: validSpace,
+				id:      validSID,
+				setupStore: func() *StatementStoreMock {
+					store := newStatementStoreMock(nil, nil)
+					_ = store.Create(ctx, &Statement{ID: validSID, SpaceID: validSpace}, nil)
+					return store
+				},
+				wantErr: false,
+			},
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				id:      validSID,
+				setupStore: func() *StatementStoreMock {
+					return newStatementStoreMock(nil, nil)
+				},
+				wantErr: true,
+			},
+			{
+				name:    "invalid statement ID",
+				spaceID: validSpace,
+				id:      "invalid_id",
+				setupStore: func() *StatementStoreMock {
+					return newStatementStoreMock(nil, nil)
+				},
+				wantErr: true,
+			},
+			{
+				name:    "statement not found",
+				spaceID: validSpace,
+				id:      validSID,
+				setupStore: func() *StatementStoreMock {
+					return newStatementStoreMock(nil, nil)
+				},
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				store := tt.setupStore()
+				txnStore := newTransactionStoreMock(nil)
+				svc := NewService(Dependencies{
+					StatementStore:   store,
+					TransactionStore: txnStore,
+				})
+				_, err := svc.ListStatementLines(ctx, tt.spaceID, tt.id)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("ListStatementLines() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			})
+		}
+	})
+
+	t.Run("UpdateStatementLine", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			line       *StatementLine
+			mask       []string
+			setupStore func() *StatementStoreMock
+			wantErr    bool
+		}{
+			{
+				name: "invalid line ID",
+				line: &StatementLine{
+					StatementID: validSID,
+					ID:          "invalid_id",
+				},
+				mask: []string{"status"},
+				setupStore: func() *StatementStoreMock {
+					return newStatementStoreMock(nil, nil)
+				},
+				wantErr: true,
+			},
+			{
+				name: "line not found",
+				line: &StatementLine{
+					StatementID: validSID,
+					ID:          validLineID,
+				},
+				mask: []string{"status"},
+				setupStore: func() *StatementStoreMock {
+					return newStatementStoreMock(nil, nil)
+				},
+				wantErr: true,
+			},
+			{
+				name: "successful update",
+				line: &StatementLine{
+					StatementID: validSID,
+					ID:          validLineID,
+					Status:      StatementLineStatusMatched,
+					Version:     1,
+				},
+				mask: []string{"status"},
+				setupStore: func() *StatementStoreMock {
+					store := newStatementStoreMock(nil, nil)
+					_ = store.Create(ctx, &Statement{ID: validSID, SpaceID: validSpace}, []*StatementLine{
+						{
+							ID:          validLineID,
+							StatementID: validSID,
+							RowIndex:    0,
+							DateStr:     "2026-08-01",
+							Description: "Item",
+							Amount:      1000,
+							Status:      StatementLineStatusUnmatched,
+							Version:     1,
+						},
+					})
+					return store
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				store := tt.setupStore()
+				svc := NewService(Dependencies{StatementStore: store})
+				res, err := svc.UpdateStatementLine(ctx, validSpace, tt.line, tt.mask)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("UpdateStatementLine() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res == nil {
+					t.Error("expected non-nil updated line")
+				}
+			})
+		}
+	})
+
+	t.Run("UpdateStatement", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			statement  *Statement
+			mask       []string
+			setupStore func() *StatementStoreMock
+			wantErr    bool
+		}{
+			{
+				name: "cannot update completed statement",
+				statement: &Statement{
+					ID:      validSID,
+					SpaceID: validSpace,
+					Version: 1,
+				},
+				mask: []string{"statement_ending_balance"},
+				setupStore: func() *StatementStoreMock {
+					store := newStatementStoreMock(nil, nil)
+					_ = store.Create(ctx, &Statement{
+						ID:      validSID,
+						SpaceID: validSpace,
+						Status:  StatementStatusCompleted,
+						Version: 1,
+					}, nil)
+					return store
+				},
+				wantErr: true,
+			},
+			{
+				name: "successful patch update",
+				statement: &Statement{
+					ID:                     validSID,
+					SpaceID:                validSpace,
+					StatementEndingBalance: 9000,
+					Version:                1,
+				},
+				mask: []string{"statement_ending_balance"},
+				setupStore: func() *StatementStoreMock {
+					store := newStatementStoreMock(nil, nil)
+					_ = store.Create(ctx, &Statement{
+						ID:            validSID,
+						SpaceID:       validSpace,
+						AccountID:     validAccID,
+						Status:        StatementStatusInProgress,
+						StatementDate: now,
+						Filename:      "stmt.csv",
+						Config:        StatementConfig{Format: "CSV"},
+						RawContent:    "data",
+						Version:       1,
+					}, nil)
+					return store
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				store := tt.setupStore()
+				svc := NewService(Dependencies{StatementStore: store})
+				res, err := svc.UpdateStatement(ctx, validSpace, tt.statement, tt.mask)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("UpdateStatement() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res == nil {
+					t.Error("expected non-nil updated statement")
+				}
+			})
+		}
+	})
+
+	t.Run("InvertStatementSigns", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			spaceID    SpaceID
+			id         StatementID
+			setupStore func() *StatementStoreMock
+			wantErr    bool
+		}{
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				id:      validSID,
+				setupStore: func() *StatementStoreMock {
+					return newStatementStoreMock(nil, nil)
+				},
+				wantErr: true,
+			},
+			{
+				name:    "invalid statement ID",
+				spaceID: validSpace,
+				id:      "invalid_id",
+				setupStore: func() *StatementStoreMock {
+					return newStatementStoreMock(nil, nil)
+				},
+				wantErr: true,
+			},
+			{
+				name:    "statement not found",
+				spaceID: validSpace,
+				id:      validSID,
+				setupStore: func() *StatementStoreMock {
+					return newStatementStoreMock(nil, nil)
+				},
+				wantErr: true,
+			},
+			{
+				name:    "completed statement cannot be inverted",
+				spaceID: validSpace,
+				id:      validSID,
+				setupStore: func() *StatementStoreMock {
+					store := newStatementStoreMock(nil, nil)
+					_ = store.Create(ctx, &Statement{
+						ID:                       validSID,
+						SpaceID:                  validSpace,
+						Status:                   StatementStatusCompleted,
+						StatementStartingBalance: 1000,
+						StatementEndingBalance:   2000,
+					}, nil)
+					return store
+				},
+				wantErr: true,
+			},
+			{
+				name:    "successful inversion of in-progress statement and lines",
+				spaceID: validSpace,
+				id:      validSID,
+				setupStore: func() *StatementStoreMock {
+					store := newStatementStoreMock(nil, nil)
+					_ = store.Create(ctx, &Statement{
+						ID:                       validSID,
+						SpaceID:                  validSpace,
+						AccountID:                validAccID,
+						Status:                   StatementStatusInProgress,
+						StatementStartingBalance: 1000,
+						StatementEndingBalance:   3000,
+					}, []*StatementLine{
+						{
+							ID:          validLineID,
+							StatementID: validSID,
+							Amount:      2000,
+							Action:      StatementLineAction{Type: StatementLineActionTypeCreateIncome},
+						},
+					})
+					return store
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				store := tt.setupStore()
+				txnStore := newTransactionStoreMock(nil)
+				svc := NewService(Dependencies{
+					StatementStore:   store,
+					TransactionStore: txnStore,
+				})
+				stmt, lines, err := svc.InvertStatementSigns(ctx, tt.spaceID, tt.id)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("InvertStatementSigns() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr {
+					if stmt == nil || len(lines) == 0 {
+						t.Error("expected non-nil statement and lines")
+					}
+					if stmt.StatementStartingBalance != -1000 || stmt.StatementEndingBalance != -3000 {
+						t.Errorf("expected inverted balances, got starting %d ending %d", stmt.StatementStartingBalance, stmt.StatementEndingBalance)
+					}
+				}
+			})
+		}
+	})
+
+	t.Run("CompleteStatement", func(t *testing.T) {
+		counterAccID, _ := NewAccountID()
+		validBID, _ := NewBudgetID()
+		validPID, _ := NewScheduledTransactionID()
+		validBrwID, _ := NewBorrowingID()
+		existingTxnID, _ := NewTransactionID()
+
+		tests := []struct {
+			name        string
+			spaceID     SpaceID
+			id          StatementID
+			setupStores func() Dependencies
+			wantErr     bool
+		}{
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				id:      validSID,
+				setupStores: func() Dependencies {
+					return Dependencies{StatementStore: newStatementStoreMock(nil, nil)}
+				},
+				wantErr: true,
+			},
+			{
+				name:    "invalid statement ID",
+				spaceID: validSpace,
+				id:      "invalid_id",
+				setupStores: func() Dependencies {
+					return Dependencies{StatementStore: newStatementStoreMock(nil, nil)}
+				},
+				wantErr: true,
+			},
+			{
+				name:    "statement not found",
+				spaceID: validSpace,
+				id:      validSID,
+				setupStores: func() Dependencies {
+					return Dependencies{StatementStore: newStatementStoreMock(nil, nil)}
+				},
+				wantErr: true,
+			},
+			{
+				name:    "statement already completed",
+				spaceID: validSpace,
+				id:      validSID,
+				setupStores: func() Dependencies {
+					store := newStatementStoreMock(nil, nil)
+					_ = store.Create(ctx, &Statement{
+						ID:      validSID,
+						SpaceID: validSpace,
+						Status:  StatementStatusCompleted,
+					}, nil)
+					return Dependencies{StatementStore: store}
+				},
+				wantErr: true,
+			},
+			{
+				name:    "balance mismatch discrepancy fails",
+				spaceID: validSpace,
+				id:      validSID,
+				setupStores: func() Dependencies {
+					store := newStatementStoreMock(nil, nil)
+					_ = store.Create(ctx, &Statement{
+						ID:                       validSID,
+						SpaceID:                  validSpace,
+						AccountID:                validAccID,
+						Status:                   StatementStatusInProgress,
+						StatementStartingBalance: 1000,
+						StatementEndingBalance:   5000, // expected flow is 4000
+					}, []*StatementLine{
+						{
+							ID:          validLineID,
+							StatementID: validSID,
+							Amount:      2000, // netFlow is 2000 != 4000
+							Status:      StatementLineStatusUnmatched,
+						},
+					})
+					return Dependencies{StatementStore: store}
+				},
+				wantErr: true,
+			},
+			{
+				name:    "statement account not found",
+				spaceID: validSpace,
+				id:      validSID,
+				setupStores: func() Dependencies {
+					store := newStatementStoreMock(nil, nil)
+					_ = store.Create(ctx, &Statement{
+						ID:                       validSID,
+						SpaceID:                  validSpace,
+						AccountID:                validAccID,
+						Status:                   StatementStatusInProgress,
+						StatementStartingBalance: 1000,
+						StatementEndingBalance:   3000,
+					}, []*StatementLine{
+						{
+							ID:          validLineID,
+							StatementID: validSID,
+							Amount:      2000,
+							Status:      StatementLineStatusUnmatched,
+						},
+					})
+					return Dependencies{
+						StatementStore: store,
+						AccountStore:   newAccountStoreMock(nil),
+					}
+				},
+				wantErr: true,
+			},
+			{
+				name:    "line status matched with missing transaction ID fails",
+				spaceID: validSpace,
+				id:      validSID,
+				setupStores: func() Dependencies {
+					store := newStatementStoreMock(nil, nil)
+					_ = store.Create(ctx, &Statement{
+						ID:                       validSID,
+						SpaceID:                  validSpace,
+						AccountID:                validAccID,
+						Status:                   StatementStatusInProgress,
+						StatementStartingBalance: 1000,
+						StatementEndingBalance:   3000,
+					}, []*StatementLine{
+						{
+							ID:                   validLineID,
+							StatementID:          validSID,
+							Amount:               2000,
+							Status:               StatementLineStatusMatched,
+							MatchedTransactionID: nil,
+						},
+					})
+					accStore := newAccountStoreMock(map[AccountID]*Account{
+						validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD"},
+					})
+					return Dependencies{
+						StatementStore: store,
+						AccountStore:   accStore,
+					}
+				},
+				wantErr: true,
+			},
+			{
+				name:    "successful complete with matched line and overwrite delta balance",
+				spaceID: validSpace,
+				id:      validSID,
+				setupStores: func() Dependencies {
+					store := newStatementStoreMock(nil, nil)
+					overwrite := true
+					_ = store.Create(ctx, &Statement{
+						ID:                       validSID,
+						SpaceID:                  validSpace,
+						AccountID:                validAccID,
+						Status:                   StatementStatusInProgress,
+						StatementStartingBalance: 1000,
+						StatementEndingBalance:   3000,
+					}, []*StatementLine{
+						{
+							ID:                   validLineID,
+							StatementID:          validSID,
+							Amount:               2000,
+							Status:               StatementLineStatusMatched,
+							MatchedTransactionID: &existingTxnID,
+							Action:               StatementLineAction{OverwriteTransaction: &overwrite},
+							Description:          "Updated Merchant",
+						},
+					})
+					accStore := newAccountStoreMock(map[AccountID]*Account{
+						validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD", CurrentBalance: 10000, IsActive: true},
+					})
+					txnStore := newTransactionStoreMock(map[TransactionID]*Transaction{
+						existingTxnID: {
+							ID:        existingTxnID,
+							SpaceID:   validSpace,
+							Type:      TransactionTypeIncome,
+							AccountID: &validAccID,
+							Amount:    1500,
+						},
+					})
+					return Dependencies{
+						StatementStore:   store,
+						AccountStore:     accStore,
+						TransactionStore: txnStore,
+					}
+				},
+				wantErr: false,
+			},
+			{
+				name:    "successful complete with action CreateExpense, CreateIncome, and Skip",
+				spaceID: validSpace,
+				id:      validSID,
+				setupStores: func() Dependencies {
+					store := newStatementStoreMock(nil, nil)
+					lineExpenseID, _ := NewStatementLineID()
+					lineIncomeID, _ := NewStatementLineID()
+					lineSkipID, _ := NewStatementLineID()
+
+					_ = store.Create(ctx, &Statement{
+						ID:                       validSID,
+						SpaceID:                  validSpace,
+						AccountID:                validAccID,
+						Status:                   StatementStatusInProgress,
+						StatementStartingBalance: 10000,
+						StatementEndingBalance:   12000, // net difference 2000
+					}, []*StatementLine{
+						{
+							ID:          lineExpenseID,
+							StatementID: validSID,
+							RowIndex:    0,
+							Amount:      -3000,
+							DateStr:     "2026-08-01",
+							Description: "Expense Item",
+							Status:      StatementLineStatusUnmatched,
+							Action: StatementLineAction{
+								Type:     StatementLineActionTypeCreateExpense,
+								BudgetID: &validBID,
+							},
+						},
+						{
+							ID:          lineIncomeID,
+							StatementID: validSID,
+							RowIndex:    1,
+							Amount:      5000,
+							DateStr:     "2026-08-02",
+							Description: "Income Item",
+							Status:      StatementLineStatusUnmatched,
+							Action: StatementLineAction{
+								Type: StatementLineActionTypeCreateIncome,
+							},
+						},
+						{
+							ID:          lineSkipID,
+							StatementID: validSID,
+							RowIndex:    2,
+							Amount:      0,
+							Status:      StatementLineStatusUnmatched,
+							Action: StatementLineAction{
+								Type: StatementLineActionTypeSkip,
+							},
+						},
+					})
+
+					accStore := newAccountStoreMock(map[AccountID]*Account{
+						validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD", CurrentBalance: 10000, IsActive: true},
+					})
+					bgtStore := newBudgetStoreMock(map[BudgetID]*Budget{
+						validBID: {
+							ID:          validBID,
+							SpaceID:     validSpace,
+							Name:        "General",
+							Status:      BudgetStatusActive,
+							LimitAmount: 50000,
+							Currency:    "USD",
+							Interval:    IntervalMonthly,
+						},
+					})
+					pStore := newPeriodStoreMock(nil)
+					setStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{
+						validSpace: {BaseCurrency: "USD"},
+					})
+					txnStore := newTransactionStoreMock(nil)
+
+					return Dependencies{
+						StatementStore:   store,
+						AccountStore:     accStore,
+						BudgetStore:      bgtStore,
+						PeriodStore:      pStore,
+						SettingsStore:    setStore,
+						TransactionStore: txnStore,
+					}
+				},
+				wantErr: false,
+			},
+			{
+				name:    "action CreateTransfer missing counterpart account fails",
+				spaceID: validSpace,
+				id:      validSID,
+				setupStores: func() Dependencies {
+					store := newStatementStoreMock(nil, nil)
+					_ = store.Create(ctx, &Statement{
+						ID:                       validSID,
+						SpaceID:                  validSpace,
+						AccountID:                validAccID,
+						Status:                   StatementStatusInProgress,
+						StatementStartingBalance: 1000,
+						StatementEndingBalance:   2000,
+					}, []*StatementLine{
+						{
+							ID:          validLineID,
+							StatementID: validSID,
+							Amount:      1000,
+							Status:      StatementLineStatusUnmatched,
+							Action: StatementLineAction{
+								Type: StatementLineActionTypeCreateTransfer,
+							},
+						},
+					})
+					accStore := newAccountStoreMock(map[AccountID]*Account{
+						validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD", CurrentBalance: 10000, IsActive: true},
+					})
+					return Dependencies{
+						StatementStore: store,
+						AccountStore:   accStore,
+					}
+				},
+				wantErr: true,
+			},
+			{
+				name:    "successful complete with action CreateTransfer",
+				spaceID: validSpace,
+				id:      validSID,
+				setupStores: func() Dependencies {
+					store := newStatementStoreMock(nil, nil)
+					_ = store.Create(ctx, &Statement{
+						ID:                       validSID,
+						SpaceID:                  validSpace,
+						AccountID:                validAccID,
+						Status:                   StatementStatusInProgress,
+						StatementStartingBalance: 5000,
+						StatementEndingBalance:   2000, // outflow -3000
+					}, []*StatementLine{
+						{
+							ID:          validLineID,
+							StatementID: validSID,
+							Amount:      -3000,
+							DateStr:     "2026-08-01",
+							Status:      StatementLineStatusUnmatched,
+							Action: StatementLineAction{
+								Type:                 StatementLineActionTypeCreateTransfer,
+								CounterpartAccountID: &counterAccID,
+							},
+						},
+					})
+					accStore := newAccountStoreMock(map[AccountID]*Account{
+						validAccID:   {ID: validAccID, SpaceID: validSpace, Currency: "USD", CurrentBalance: 10000, IsActive: true},
+						counterAccID: {ID: counterAccID, SpaceID: validSpace, Currency: "USD", CurrentBalance: 5000, IsActive: true},
+					})
+					setStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{
+						validSpace: {BaseCurrency: "USD"},
+					})
+					txnStore := newTransactionStoreMock(nil)
+
+					return Dependencies{
+						StatementStore:   store,
+						AccountStore:     accStore,
+						SettingsStore:    setStore,
+						TransactionStore: txnStore,
+						TransferStore:    newTransferStoreMock(nil),
+					}
+				},
+				wantErr: false,
+			},
+			{
+				name:    "successful complete with action ConfirmScheduled",
+				spaceID: validSpace,
+				id:      validSID,
+				setupStores: func() Dependencies {
+					store := newStatementStoreMock(nil, nil)
+					_ = store.Create(ctx, &Statement{
+						ID:                       validSID,
+						SpaceID:                  validSpace,
+						AccountID:                validAccID,
+						Status:                   StatementStatusInProgress,
+						StatementStartingBalance: 5000,
+						StatementEndingBalance:   3000, // expense -2000
+					}, []*StatementLine{
+						{
+							ID:          validLineID,
+							StatementID: validSID,
+							Amount:      -2000,
+							DateStr:     "2026-08-01",
+							Status:      StatementLineStatusUnmatched,
+							Action: StatementLineAction{
+								Type:                   StatementLineActionTypeConfirmScheduled,
+								ScheduledTransactionID: &validPID,
+							},
+						},
+					})
+					accStore := newAccountStoreMock(map[AccountID]*Account{
+						validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD", CurrentBalance: 10000, IsActive: true},
+					})
+					schedStore := newScheduledTransactionStoreMock(map[ScheduledTransactionID]*ScheduledTransaction{
+						validPID: {
+							ID:       validPID,
+							SpaceID:  validSpace,
+							Amount:   2000,
+							BudgetID: &validBID,
+							Status:   ScheduledTransactionPending,
+						},
+					})
+					bgtStore := newBudgetStoreMock(map[BudgetID]*Budget{
+						validBID: {
+							ID:          validBID,
+							SpaceID:     validSpace,
+							Name:        "Utilities",
+							Status:      BudgetStatusActive,
+							LimitAmount: 50000,
+							Currency:    "USD",
+							Interval:    IntervalMonthly,
+						},
+					})
+					pStore := newPeriodStoreMock(nil)
+					setStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{
+						validSpace: {BaseCurrency: "USD"},
+					})
+					txnStore := newTransactionStoreMock(nil)
+
+					return Dependencies{
+						StatementStore:            store,
+						AccountStore:              accStore,
+						ScheduledTransactionStore: schedStore,
+						BudgetStore:               bgtStore,
+						PeriodStore:               pStore,
+						SettingsStore:             setStore,
+						TransactionStore:          txnStore,
+					}
+				},
+				wantErr: false,
+			},
+			{
+				name:    "successful complete with action CreateRepayment",
+				spaceID: validSpace,
+				id:      validSID,
+				setupStores: func() Dependencies {
+					store := newStatementStoreMock(nil, nil)
+					_ = store.Create(ctx, &Statement{
+						ID:                       validSID,
+						SpaceID:                  validSpace,
+						AccountID:                validAccID,
+						Status:                   StatementStatusInProgress,
+						StatementStartingBalance: 5000,
+						StatementEndingBalance:   4000, // expense -1000
+					}, []*StatementLine{
+						{
+							ID:          validLineID,
+							StatementID: validSID,
+							Amount:      -1000,
+							DateStr:     "2026-08-01",
+							Status:      StatementLineStatusUnmatched,
+							Action: StatementLineAction{
+								Type:        StatementLineActionTypeCreateRepayment,
+								BorrowingID: &validBrwID,
+								BudgetID:    &validBID,
+							},
+						},
+					})
+					accStore := newAccountStoreMock(map[AccountID]*Account{
+						validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD", CurrentBalance: 10000, IsActive: true},
+					})
+					brwStore := newBorrowingStoreMock(map[BorrowingID]*Borrowing{
+						validBrwID: {
+							ID:              validBrwID,
+							SpaceID:         validSpace,
+							TotalAmount:     10000,
+							RemainingAmount: 5000,
+							Status:          BorrowingStatusActive,
+						},
+					})
+					bgtStore := newBudgetStoreMock(map[BudgetID]*Budget{
+						validBID: {
+							ID:          validBID,
+							SpaceID:     validSpace,
+							Name:        "Loan Repayment",
+							Status:      BudgetStatusActive,
+							LimitAmount: 50000,
+							Currency:    "USD",
+							Interval:    IntervalMonthly,
+						},
+					})
+					pStore := newPeriodStoreMock(nil)
+					setStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{
+						validSpace: {BaseCurrency: "USD"},
+					})
+					txnStore := newTransactionStoreMock(nil)
+
+					return Dependencies{
+						StatementStore:   store,
+						AccountStore:     accStore,
+						BorrowingStore:   brwStore,
+						BudgetStore:      bgtStore,
+						PeriodStore:      pStore,
+						SettingsStore:    setStore,
+						TransactionStore: txnStore,
+					}
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				deps := tt.setupStores()
+				svc := NewService(deps)
+				stmt, err := svc.CompleteStatement(ctx, tt.spaceID, tt.id)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("CompleteStatement() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && (stmt == nil || stmt.Status != StatementStatusCompleted) {
+					t.Errorf("expected completed statement, got %+v", stmt)
+				}
+			})
+		}
+	})
+}
+
+// --- Tests from service_transfer_test.go ---
+
+func TestService_TransferOperations_Table(t *testing.T) {
+	ctx := context.Background()
+	rawSpace, _ := id.Generate("spc_")
+	spaceID := SpaceID(rawSpace)
+	srcAccID, _ := NewAccountID()
+	dstAccID, _ := NewAccountID()
+	trsfID, _ := NewTransferID()
+	now := time.Now().UTC()
+
+	t.Run("GetTransfer", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			id      TransferID
+			exists  bool
+			wantErr bool
+		}{
+			{
+				name:    "valid retrieval",
+				spaceID: spaceID,
+				id:      trsfID,
+				exists:  true,
+				wantErr: false,
+			},
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				id:      trsfID,
+				exists:  true,
+				wantErr: true,
+			},
+			{
+				name:    "invalid transfer ID",
+				spaceID: spaceID,
+				id:      "invalid_id",
+				exists:  true,
+				wantErr: true,
+			},
+			{
+				name:    "transfer not found",
+				spaceID: spaceID,
+				id:      trsfID,
+				exists:  false,
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				data := make(map[TransferID]*Transfer)
+				if tt.exists {
+					data[trsfID] = &Transfer{
+						ID:                   trsfID,
+						SpaceID:              spaceID,
+						SourceAccountID:      srcAccID,
+						DestinationAccountID: dstAccID,
+						SourceAmount:         1000,
+						DestinationAmount:    1000,
+						TransferDate:         now,
+					}
+				}
+				store := newTransferStoreMock(data)
+				svc := NewService(Dependencies{TransferStore: store})
+				res, err := svc.GetTransfer(ctx, tt.spaceID, tt.id)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("GetTransfer() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res.ID != tt.id {
+					t.Errorf("res.ID = %v, want %v", res.ID, tt.id)
+				}
+			})
+		}
+	})
+
+	t.Run("ListTransfers", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			wantErr bool
+		}{
+			{
+				name:    "valid list",
+				spaceID: spaceID,
+				wantErr: false,
+			},
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				store := newTransferStoreMock(nil)
+				svc := NewService(Dependencies{TransferStore: store})
+				_, _, err := svc.ListTransfers(ctx, tt.spaceID, 10, "")
+				if (err != nil) != tt.wantErr {
+					t.Errorf("ListTransfers() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			})
+		}
+	})
+
+	t.Run("CreateTransfer", func(t *testing.T) {
+		tests := []struct {
+			name         string
+			transfer     *Transfer
+			setupStore   func() (*AccountStoreMock, *TransferStoreMock, *TransactionStoreMock, *SettingsStoreMock)
+			wantErr      bool
+			errorMessage string
+		}{
+			{
+				name: "invalid transfer properties (zero amount)",
+				transfer: &Transfer{
+					ID:                   trsfID,
+					SpaceID:              spaceID,
+					SourceAccountID:      srcAccID,
+					DestinationAccountID: dstAccID,
+					SourceAmount:         0,
+					DestinationAmount:    1000,
+					TransferDate:         now,
+				},
+				setupStore: func() (*AccountStoreMock, *TransferStoreMock, *TransactionStoreMock, *SettingsStoreMock) {
+					return newAccountStoreMock(nil),
+						newTransferStoreMock(nil),
+						newTransactionStoreMock(nil),
+						newSettingsStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name: "source and destination amounts differ for single currency",
+				transfer: &Transfer{
+					ID:                   trsfID,
+					SpaceID:              spaceID,
+					SourceAccountID:      srcAccID,
+					DestinationAccountID: dstAccID,
+					SourceAmount:         1000,
+					DestinationAmount:    2000,
+					TransferDate:         now,
+				},
+				setupStore: func() (*AccountStoreMock, *TransferStoreMock, *TransactionStoreMock, *SettingsStoreMock) {
+					accStore := newAccountStoreMock(map[AccountID]*Account{
+						srcAccID: {ID: srcAccID, SpaceID: spaceID, Name: "Src", Currency: "USD", IsActive: true},
+						dstAccID: {ID: dstAccID, SpaceID: spaceID, Name: "Dst", Currency: "USD", IsActive: true},
+					})
+					return accStore,
+						newTransferStoreMock(nil),
+						newTransactionStoreMock(nil),
+						newSettingsStoreMock(map[SpaceID]*FinanceSettings{spaceID: {BaseCurrency: "USD"}})
+				},
+				wantErr: true,
+			},
+			{
+				name: "valid transfer creates parent and both leg transactions",
+				transfer: &Transfer{
+					ID:                   trsfID,
+					SpaceID:              spaceID,
+					SourceAccountID:      srcAccID,
+					DestinationAccountID: dstAccID,
+					SourceAmount:         5000,
+					DestinationAmount:    5000,
+					TransferDate:         now,
+				},
+				setupStore: func() (*AccountStoreMock, *TransferStoreMock, *TransactionStoreMock, *SettingsStoreMock) {
+					accStore := newAccountStoreMock(map[AccountID]*Account{
+						srcAccID: {ID: srcAccID, SpaceID: spaceID, Name: "Src", Currency: "USD", CurrentBalance: 10000, IsActive: true},
+						dstAccID: {ID: dstAccID, SpaceID: spaceID, Name: "Dst", Currency: "USD", CurrentBalance: 2000, IsActive: true},
+					})
+					return accStore,
+						newTransferStoreMock(nil),
+						newTransactionStoreMock(nil),
+						newSettingsStoreMock(map[SpaceID]*FinanceSettings{spaceID: {BaseCurrency: "USD"}})
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				accStore, trsfStore, txnStore, settingsStore := tt.setupStore()
+				svc := NewService(Dependencies{
+					AccountStore:     accStore,
+					TransferStore:    trsfStore,
+					TransactionStore: txnStore,
+					SettingsStore:    settingsStore,
+				})
+				created, outLeg, inLeg, err := svc.createTransfer(ctx, tt.transfer, CreateTransferOpts{})
+				if (err != nil) != tt.wantErr {
+					t.Errorf("createTransfer() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr {
+					if created == nil || outLeg == nil || inLeg == nil {
+						t.Fatal("expected non-nil transfer and transaction legs")
+					}
+					if outLeg.Type != TransactionTypeTransferOut || inLeg.Type != TransactionTypeTransferIn {
+						t.Errorf("unexpected leg types: out=%s in=%s", outLeg.Type, inLeg.Type)
+					}
+				}
+			})
+		}
+	})
+
+	t.Run("DeleteTransfer", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			transferID TransferID
+			setupStore func() (*TransferStoreMock, *TransactionStoreMock, *AccountStoreMock, map[TransferID]*Transfer, map[TransactionID]*Transaction)
+			wantErr    bool
+		}{
+			{
+				name:       "not found",
+				transferID: trsfID,
+				setupStore: func() (*TransferStoreMock, *TransactionStoreMock, *AccountStoreMock, map[TransferID]*Transfer, map[TransactionID]*Transaction) {
+					trsfMap := make(map[TransferID]*Transfer)
+					txnMap := make(map[TransactionID]*Transaction)
+					return newTransferStoreMock(trsfMap),
+						newTransactionStoreMock(txnMap),
+						newAccountStoreMock(nil),
+						trsfMap,
+						txnMap
+				},
+				wantErr: true,
+			},
+			{
+				name:       "successful deletion cascades to leg transactions",
+				transferID: trsfID,
+				setupStore: func() (*TransferStoreMock, *TransactionStoreMock, *AccountStoreMock, map[TransferID]*Transfer, map[TransactionID]*Transaction) {
+					trsfMap := map[TransferID]*Transfer{
+						trsfID: {
+							ID:                   trsfID,
+							SpaceID:              spaceID,
+							SourceAccountID:      srcAccID,
+							DestinationAccountID: dstAccID,
+							SourceAmount:         5000,
+							DestinationAmount:    5000,
+							TransferDate:         now,
+						},
+					}
+					trsfStore := newTransferStoreMock(trsfMap)
+					tID1, _ := NewTransactionID()
+					tID2, _ := NewTransactionID()
+					txnMap := map[TransactionID]*Transaction{
+						tID1: {
+							ID:        tID1,
+							SpaceID:   spaceID,
+							Type:      TransactionTypeTransferOut,
+							AccountID: &srcAccID,
+							Amount:    5000,
+							Metadata:  TransactionMetadata{TransferID: &trsfID},
+						},
+						tID2: {
+							ID:        tID2,
+							SpaceID:   spaceID,
+							Type:      TransactionTypeTransferIn,
+							AccountID: &dstAccID,
+							Amount:    5000,
+							Metadata:  TransactionMetadata{TransferID: &trsfID},
+						},
+					}
+					txnStore := newTransactionStoreMock(txnMap)
+					accStore := newAccountStoreMock(map[AccountID]*Account{
+						srcAccID: {ID: srcAccID, SpaceID: spaceID, CurrentBalance: 5000, IsActive: true},
+						dstAccID: {ID: dstAccID, SpaceID: spaceID, CurrentBalance: 7000, IsActive: true},
+					})
+					return trsfStore, txnStore, accStore, trsfMap, txnMap
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				trsfStore, txnStore, accStore, trsfMap, txnMap := tt.setupStore()
+				svc := NewService(Dependencies{
+					TransferStore:    trsfStore,
+					TransactionStore: txnStore,
+					AccountStore:     accStore,
+				})
+				err := svc.DeleteTransfer(ctx, spaceID, tt.transferID)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("DeleteTransfer() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr {
+					if _, ok := trsfMap[tt.transferID]; ok {
+						t.Error("expected transfer record to be deleted")
+					}
+					if len(txnMap) != 0 {
+						t.Errorf("expected 0 remaining transactions, got %d", len(txnMap))
+					}
+				}
+			})
+		}
+	})
+}
+
+// --- Tests from service_txn_test.go ---
+
+func TestService_Transactions(t *testing.T) {
+	ctx := context.Background()
+	validSpace := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	validAccID, _ := NewAccountID()
+	now := time.Now().UTC()
+
+	t.Run("CreateIncome", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			txn      *Transaction
+			setupAcc bool
+			setupSet bool
+			wantErr  bool
+		}{
+			{
+				name: "valid income transaction",
+				txn: &Transaction{
+					SpaceID:         validSpace,
+					AccountID:       &validAccID,
+					Amount:          10000,
+					Currency:        "USD",
+					TransactionDate: now,
+					Description:     "Bonus",
+				},
+				setupAcc: true,
+				setupSet: true,
+				wantErr:  false,
+			},
+			{
+				name: "missing settings fails creation",
+				txn: &Transaction{
+					SpaceID:         validSpace,
+					AccountID:       &validAccID,
+					Amount:          10000,
+					Currency:        "USD",
+					TransactionDate: now,
+					Description:     "Bonus",
+				},
+				setupAcc: true,
+				setupSet: false,
+				wantErr:  true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				setData := make(map[SpaceID]*FinanceSettings)
+				if tt.setupSet {
+					setData[validSpace] = &FinanceSettings{SpaceID: validSpace, BaseCurrency: "USD"}
+				}
+				accData := make(map[AccountID]*Account)
+				if tt.setupAcc {
+					accData[validAccID] = &Account{
+						ID:             validAccID,
+						SpaceID:        validSpace,
+						Currency:       "USD",
+						IsActive:       true,
+						CurrentBalance: 50000,
+					}
+				}
+				setStore := newSettingsStoreMock(setData)
+				accStore := newAccountStoreMock(accData)
+				txnStore := newTransactionStoreMock(nil)
+				eventStore := newTransactionEventStoreMock(nil)
+
+				svc := NewService(Dependencies{
+					SettingsStore:         setStore,
+					AccountStore:          accStore,
+					TransactionStore:      txnStore,
+					TransactionEventStore: eventStore,
+				})
+
+				res, err := svc.CreateIncome(ctx, tt.txn)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("CreateIncome() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res.ID == "" {
+					t.Error("expected ID to be set")
+				}
+			})
+		}
+	})
+
+	t.Run("GetTransaction", func(t *testing.T) {
+		validTID, _ := NewTransactionID()
+		missingTID, _ := NewTransactionID()
+
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			id      TransactionID
+			exists  bool
+			wantErr bool
+		}{
+			{
+				name:    "valid retrieval",
+				spaceID: validSpace,
+				id:      validTID,
+				exists:  true,
+				wantErr: false,
+			},
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				id:      validTID,
+				exists:  true,
+				wantErr: true,
+			},
+			{
+				name:    "invalid transaction ID",
+				spaceID: validSpace,
+				id:      "invalid_id",
+				exists:  true,
+				wantErr: true,
+			},
+			{
+				name:    "not found",
+				spaceID: validSpace,
+				id:      missingTID,
+				exists:  false,
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				txnData := make(map[TransactionID]*Transaction)
+				if tt.exists {
+					txnData[validTID] = &Transaction{ID: validTID, SpaceID: validSpace, Amount: 1000}
+				}
+				txnStore := newTransactionStoreMock(txnData)
+				svc := NewService(Dependencies{TransactionStore: txnStore})
+				res, err := svc.GetTransaction(ctx, tt.spaceID, tt.id)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("GetTransaction() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res.ID != tt.id {
+					t.Errorf("res.ID = %v, want %v", res.ID, tt.id)
+				}
+			})
+		}
+	})
+
+	t.Run("UpdateIncome", func(t *testing.T) {
+		validTID, _ := NewTransactionID()
+		existingTxn := &Transaction{
+			ID:              validTID,
+			SpaceID:         validSpace,
+			AccountID:       &validAccID,
+			Amount:          10000,
+			AmountInBase:    10000,
+			Currency:        "USD",
+			Type:            TransactionTypeIncome,
+			TransactionDate: now,
+			Description:     "Old Bonus",
+		}
+
+		tests := []struct {
+			name       string
+			updateTxn  *Transaction
+			setupExist bool
+			wantErr    bool
+		}{
+			{
+				name: "valid update with diff event",
+				updateTxn: &Transaction{
+					ID:              validTID,
+					SpaceID:         validSpace,
+					AccountID:       &validAccID,
+					Amount:          15000,
+					AmountInBase:    15000,
+					Currency:        "USD",
+					TransactionDate: now,
+					Description:     "Updated Bonus",
+				},
+				setupExist: true,
+				wantErr:    false,
+			},
+			{
+				name: "transaction not found",
+				updateTxn: &Transaction{
+					ID:              validTID,
+					SpaceID:         validSpace,
+					AccountID:       &validAccID,
+					Amount:          15000,
+					Currency:        "USD",
+					TransactionDate: now,
+				},
+				setupExist: false,
+				wantErr:    true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				setStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{
+					validSpace: {SpaceID: validSpace, BaseCurrency: "USD"},
+				})
+				accStore := newAccountStoreMock(map[AccountID]*Account{
+					validAccID: {ID: validAccID, SpaceID: validSpace, Currency: "USD", IsActive: true, CurrentBalance: 50000},
+				})
+				txnData := make(map[TransactionID]*Transaction)
+				if tt.setupExist {
+					cp := *existingTxn
+					txnData[validTID] = &cp
+				}
+				txnStore := newTransactionStoreMock(txnData)
+				eventStore := newTransactionEventStoreMock(nil)
+
+				svc := NewService(Dependencies{
+					SettingsStore:         setStore,
+					AccountStore:          accStore,
+					TransactionStore:      txnStore,
+					TransactionEventStore: eventStore,
+				})
+
+				res, err := svc.UpdateIncome(ctx, tt.updateTxn)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("UpdateIncome() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res.Amount != 15000 {
+					t.Errorf("res.Amount = %d, want 15000", res.Amount)
+				}
+			})
+		}
+	})
+
+	t.Run("ListTransactions", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			wantErr bool
+		}{
+			{
+				name:    "valid list",
+				spaceID: validSpace,
+				wantErr: false,
+			},
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				txnStore := newTransactionStoreMock(nil)
+				svc := NewService(Dependencies{TransactionStore: txnStore})
+				_, err := svc.ListTransactions(ctx, tt.spaceID, &TransactionFilter{})
+				if (err != nil) != tt.wantErr {
+					t.Errorf("ListTransactions() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			})
+		}
+	})
+
+	t.Run("ListTransactionEvents", func(t *testing.T) {
+		validTID, _ := NewTransactionID()
+
+		tests := []struct {
+			name    string
+			spaceID SpaceID
+			txnID   TransactionID
+			wantErr bool
+		}{
+			{
+				name:    "valid list",
+				spaceID: validSpace,
+				txnID:   validTID,
+				wantErr: false,
+			},
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				txnID:   validTID,
+				wantErr: true,
+			},
+			{
+				name:    "invalid txn ID",
+				spaceID: validSpace,
+				txnID:   "invalid_tid",
+				wantErr: true,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				eventStore := newTransactionEventStoreMock(nil)
+				svc := NewService(Dependencies{TransactionEventStore: eventStore})
+				_, err := svc.ListTransactionEvents(ctx, tt.spaceID, tt.txnID)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("ListTransactionEvents() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			})
+		}
+	})
+
+	t.Run("DeleteTransaction", func(t *testing.T) {
+		validTID, _ := NewTransactionID()
+
+		tests := []struct {
+			name       string
+			spaceID    SpaceID
+			txnID      TransactionID
+			setupStore func() (*TransactionStoreMock, *AccountStoreMock)
+			wantErr    bool
+		}{
+			{
+				name:    "invalid space ID",
+				spaceID: "invalid_space",
+				txnID:   validTID,
+				setupStore: func() (*TransactionStoreMock, *AccountStoreMock) {
+					return newTransactionStoreMock(nil),
+						newAccountStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name:    "transaction not found",
+				spaceID: validSpace,
+				txnID:   validTID,
+				setupStore: func() (*TransactionStoreMock, *AccountStoreMock) {
+					return newTransactionStoreMock(nil),
+						newAccountStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name:    "successful delete with balance rollback",
+				spaceID: validSpace,
+				txnID:   validTID,
+				setupStore: func() (*TransactionStoreMock, *AccountStoreMock) {
+					txnStore := newTransactionStoreMock(map[TransactionID]*Transaction{
+						validTID: {
+							ID:        validTID,
+							SpaceID:   validSpace,
+							Type:      TransactionTypeExpense,
+							Amount:    2000,
+							AccountID: &validAccID,
+						},
+					})
+					accStore := newAccountStoreMock(map[AccountID]*Account{
+						validAccID: {
+							ID:             validAccID,
+							SpaceID:        validSpace,
+							Type:           AccountTypeBank,
+							CurrentBalance: 8000,
+							IsActive:       true,
+						},
+					})
+					return txnStore, accStore
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				txnStore, accStore := tt.setupStore()
+				svc := NewService(Dependencies{
+					TransactionStore: txnStore,
+					AccountStore:     accStore,
+				})
+				err := svc.DeleteTransaction(ctx, tt.spaceID, tt.txnID)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("DeleteTransaction() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			})
+		}
+	})
+
+	t.Run("CreateExpense", func(t *testing.T) {
+		validBID, _ := NewBudgetID()
+
+		tests := []struct {
+			name       string
+			txn        *Transaction
+			setupStore func() (*BudgetStoreMock, *PeriodStoreMock, *SettingsStoreMock, *TransactionStoreMock, *AccountStoreMock)
+			wantErr    bool
+		}{
+			{
+				name: "missing budget ID fails",
+				txn: &Transaction{
+					SpaceID:         validSpace,
+					Amount:          5000,
+					Currency:        "USD",
+					TransactionDate: now,
+				},
+				setupStore: func() (*BudgetStoreMock, *PeriodStoreMock, *SettingsStoreMock, *TransactionStoreMock, *AccountStoreMock) {
+					return newBudgetStoreMock(nil),
+						newPeriodStoreMock(nil),
+						newSettingsStoreMock(nil),
+						newTransactionStoreMock(nil),
+						newAccountStoreMock(nil)
+				},
+				wantErr: true,
+			},
+			{
+				name: "valid expense creates transaction",
+				txn: &Transaction{
+					SpaceID:         validSpace,
+					BudgetID:        &validBID,
+					Amount:          5000,
+					Currency:        "USD",
+					TransactionDate: now,
+					AccountID:       &validAccID,
+					Description:     "Groceries",
+				},
+				setupStore: func() (*BudgetStoreMock, *PeriodStoreMock, *SettingsStoreMock, *TransactionStoreMock, *AccountStoreMock) {
+					bStore := newBudgetStoreMock(map[BudgetID]*Budget{
+						validBID: {
+							ID:          validBID,
+							SpaceID:     validSpace,
+							Name:        "Food",
+							Status:      BudgetStatusActive,
+							LimitAmount: 50000,
+							Currency:    "USD",
+							Interval:    IntervalMonthly,
+						},
+					})
+					pStore := newPeriodStoreMock(nil)
+					setStore := newSettingsStoreMock(map[SpaceID]*FinanceSettings{
+						validSpace: {BaseCurrency: "USD"},
+					})
+					txnStore := newTransactionStoreMock(nil)
+					accStore := newAccountStoreMock(map[AccountID]*Account{
+						validAccID: {
+							ID:             validAccID,
+							SpaceID:        validSpace,
+							Type:           AccountTypeBank,
+							CurrentBalance: 10000,
+							IsActive:       true,
+						},
+					})
+					return bStore, pStore, setStore, txnStore, accStore
+				},
+				wantErr: false,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				bStore, pStore, setStore, txnStore, accStore := tt.setupStore()
+				svc := NewService(Dependencies{
+					BudgetStore:      bStore,
+					PeriodStore:      pStore,
+					SettingsStore:    setStore,
+					TransactionStore: txnStore,
+					AccountStore:     accStore,
+				})
+				res, err := svc.CreateExpense(ctx, tt.txn)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("CreateExpense() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if !tt.wantErr && res == nil {
+					t.Error("expected non-nil created expense")
+				}
+			})
+		}
+	})
 }

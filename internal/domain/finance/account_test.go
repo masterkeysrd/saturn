@@ -304,3 +304,336 @@ func TestAccount_ReconcileLifecycleAndTransfer(t *testing.T) {
 		}
 	})
 }
+
+func TestAccount_Init(t *testing.T) {
+	tests := []struct {
+		name       string
+		initialID  AccountID
+		expectDiff bool
+	}{
+		{
+			name:       "generates new ID when empty",
+			initialID:  "",
+			expectDiff: true,
+		},
+		{
+			name:       "preserves existing ID when present",
+			initialID:  AccountID("acc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO"),
+			expectDiff: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			acc := &Account{ID: tt.initialID}
+			err := acc.Init()
+			if err != nil {
+				t.Fatalf("unexpected error during Init: %v", err)
+			}
+			if !acc.IsActive {
+				t.Errorf("expected IsActive to be true")
+			}
+			if acc.CreateTime.IsZero() || acc.UpdateTime.IsZero() {
+				t.Errorf("expected timestamps to be set")
+			}
+			if tt.expectDiff && acc.ID == tt.initialID {
+				t.Errorf("expected ID to be generated, got empty")
+			}
+			if !tt.expectDiff && acc.ID != tt.initialID {
+				t.Errorf("expected ID to be preserved, got %v", acc.ID)
+			}
+		})
+	}
+}
+
+func TestAccount_ApplyPatch(t *testing.T) {
+	accID, _ := NewAccountID()
+	rawSpace, _ := id.Generate("spc_")
+	spaceID := SpaceID(rawSpace)
+	instID := InstitutionID("inst_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+
+	tests := []struct {
+		name     string
+		initial  Account
+		incoming Account
+		mask     []string
+		verify   func(t *testing.T, acc *Account)
+	}{
+		{
+			name: "patch name and credit limit",
+			initial: Account{
+				ID:          accID,
+				SpaceID:     spaceID,
+				Type:        AccountTypeCreditCard,
+				Currency:    "USD",
+				Name:        "Old Name",
+				CreditLimit: 1000,
+			},
+			incoming: Account{Name: "New Name", CreditLimit: 5000},
+			mask:     []string{"name", "credit_limit"},
+			verify: func(t *testing.T, acc *Account) {
+				if acc.Name != "New Name" || acc.CreditLimit != 5000 {
+					t.Errorf("expected updated name and credit limit, got name=%s limit=%d", acc.Name, acc.CreditLimit)
+				}
+			},
+		},
+		{
+			name: "patch color, notes, last_four, and institution_id",
+			initial: Account{
+				ID:       accID,
+				SpaceID:  spaceID,
+				Type:     AccountTypeBank,
+				Currency: "USD",
+				Name:     "Main Checking",
+				Color:    "#000",
+				Notes:    "Old",
+				LastFour: "1111",
+			},
+			incoming: Account{
+				Color:         "#fff",
+				Notes:         "New",
+				LastFour:      "4321",
+				InstitutionID: &instID,
+			},
+			mask: []string{"color", "notes", "last_four", "institution_id"},
+			verify: func(t *testing.T, acc *Account) {
+				if acc.Color != "#fff" || acc.Notes != "New" || acc.LastFour != "4321" {
+					t.Errorf("field mismatch: %+v", acc)
+				}
+				if acc.InstitutionID == nil || *acc.InstitutionID != instID {
+					t.Errorf("institution ID mismatch: %+v", acc.InstitutionID)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			acc := tt.initial
+			err := acc.ApplyPatch(&tt.incoming, tt.mask)
+			if err != nil {
+				t.Fatalf("unexpected patch error: %v", err)
+			}
+			tt.verify(t, &acc)
+		})
+	}
+}
+
+func TestAccount_RollbackTransaction_Table(t *testing.T) {
+	tests := []struct {
+		name         string
+		accountType  AccountType
+		initBalance  int64
+		txnType      TransactionType
+		impactAmount int64
+		wantBalance  int64
+	}{
+		{
+			name:         "Bank: rollback Expense adds back balance",
+			accountType:  AccountTypeBank,
+			initBalance:  8000,
+			txnType:      TransactionTypeExpense,
+			impactAmount: 2000,
+			wantBalance:  10000,
+		},
+		{
+			name:         "Bank: rollback TransferOut adds back balance",
+			accountType:  AccountTypeBank,
+			initBalance:  5000,
+			txnType:      TransactionTypeTransferOut,
+			impactAmount: 1500,
+			wantBalance:  6500,
+		},
+		{
+			name:         "Bank: rollback Income subtracts balance",
+			accountType:  AccountTypeBank,
+			initBalance:  12000,
+			txnType:      TransactionTypeIncome,
+			impactAmount: 3000,
+			wantBalance:  9000,
+		},
+		{
+			name:         "Bank: rollback TransferIn subtracts balance",
+			accountType:  AccountTypeBank,
+			initBalance:  7000,
+			txnType:      TransactionTypeTransferIn,
+			impactAmount: 2000,
+			wantBalance:  5000,
+		},
+		{
+			name:         "Credit Card: rollback Expense subtracts debt",
+			accountType:  AccountTypeCreditCard,
+			initBalance:  1500,
+			txnType:      TransactionTypeExpense,
+			impactAmount: 500,
+			wantBalance:  1000,
+		},
+		{
+			name:         "Credit Card: rollback TransferOut subtracts debt",
+			accountType:  AccountTypeCreditCard,
+			initBalance:  2000,
+			txnType:      TransactionTypeTransferOut,
+			impactAmount: 600,
+			wantBalance:  1400,
+		},
+		{
+			name:         "Credit Card: rollback Income adds debt",
+			accountType:  AccountTypeCreditCard,
+			initBalance:  800,
+			txnType:      TransactionTypeIncome,
+			impactAmount: 700,
+			wantBalance:  1500,
+		},
+		{
+			name:         "Credit Card: rollback TransferIn adds debt",
+			accountType:  AccountTypeCreditCard,
+			initBalance:  500,
+			txnType:      TransactionTypeTransferIn,
+			impactAmount: 400,
+			wantBalance:  900,
+		},
+		{
+			name:         "Balance Adjustment rollback subtracts impact",
+			accountType:  AccountTypeBank,
+			initBalance:  10000,
+			txnType:      TransactionTypeBalanceAdjustment,
+			impactAmount: 2500,
+			wantBalance:  7500,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			acc := &Account{
+				Type:           tt.accountType,
+				CurrentBalance: tt.initBalance,
+			}
+			acc.RollbackTransaction(tt.txnType, tt.impactAmount)
+			if acc.CurrentBalance != tt.wantBalance {
+				t.Errorf("CurrentBalance = %d, want %d", acc.CurrentBalance, tt.wantBalance)
+			}
+		})
+	}
+}
+
+func TestAccount_ValidateTransferTo_Table(t *testing.T) {
+	rawSpace1, _ := id.Generate("spc_")
+	rawSpace2, _ := id.Generate("spc_")
+	space1 := SpaceID(rawSpace1)
+	space2 := SpaceID(rawSpace2)
+	id1, _ := NewAccountID()
+	id2, _ := NewAccountID()
+
+	tests := []struct {
+		name    string
+		source  Account
+		dest    *Account
+		amount  int64
+		wantErr bool
+	}{
+		{
+			name:    "nil destination account",
+			source:  Account{ID: id1, SpaceID: space1, IsActive: true},
+			dest:    nil,
+			amount:  1000,
+			wantErr: true,
+		},
+		{
+			name:    "same source and destination ID",
+			source:  Account{ID: id1, SpaceID: space1, IsActive: true},
+			dest:    &Account{ID: id1, SpaceID: space1, IsActive: true},
+			amount:  1000,
+			wantErr: true,
+		},
+		{
+			name:    "different spaces",
+			source:  Account{ID: id1, SpaceID: space1, IsActive: true},
+			dest:    &Account{ID: id2, SpaceID: space2, IsActive: true},
+			amount:  1000,
+			wantErr: true,
+		},
+		{
+			name:    "source account inactive",
+			source:  Account{ID: id1, SpaceID: space1, IsActive: false},
+			dest:    &Account{ID: id2, SpaceID: space1, IsActive: true},
+			amount:  1000,
+			wantErr: true,
+		},
+		{
+			name:    "destination account inactive",
+			source:  Account{ID: id1, SpaceID: space1, IsActive: true},
+			dest:    &Account{ID: id2, SpaceID: space1, IsActive: false},
+			amount:  1000,
+			wantErr: true,
+		},
+		{
+			name:    "amount zero",
+			source:  Account{ID: id1, SpaceID: space1, IsActive: true},
+			dest:    &Account{ID: id2, SpaceID: space1, IsActive: true},
+			amount:  0,
+			wantErr: true,
+		},
+		{
+			name:    "amount negative",
+			source:  Account{ID: id1, SpaceID: space1, IsActive: true},
+			dest:    &Account{ID: id2, SpaceID: space1, IsActive: true},
+			amount:  -500,
+			wantErr: true,
+		},
+		{
+			name:    "valid transfer",
+			source:  Account{ID: id1, SpaceID: space1, IsActive: true},
+			dest:    &Account{ID: id2, SpaceID: space1, IsActive: true},
+			amount:  5000,
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.source.ValidateTransferTo(tt.dest, tt.amount)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateTransferTo() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestAccount_GetSortValue_Table(t *testing.T) {
+	acc := &Account{
+		Name:           "Treasury",
+		CurrentBalance: 1234500,
+	}
+	_ = acc.Init()
+
+	tests := []struct {
+		name      string
+		field     string
+		wantExact string
+	}{
+		{
+			name:      "name field",
+			field:     "name",
+			wantExact: "Treasury",
+		},
+		{
+			name:      "current_balance field padded",
+			field:     "current_balance",
+			wantExact: "000000000001234500",
+		},
+		{
+			name:      "fallback unknown field to name",
+			field:     "unknown_sort_field",
+			wantExact: "Treasury",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			val := acc.GetSortValue(tt.field)
+			if val != tt.wantExact {
+				t.Errorf("GetSortValue(%q) = %q, want %q", tt.field, val, tt.wantExact)
+			}
+		})
+	}
+}

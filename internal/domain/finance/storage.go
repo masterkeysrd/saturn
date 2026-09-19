@@ -8,7 +8,10 @@ import (
 	"github.com/masterkeysrd/saturn/internal/platform/sorting"
 )
 
+//go:generate go run github.com/masterkeysrd/saturn/tools/mockgen .
+
 // SettingsStore defines persistence for workspace settings.
+// @Mock
 type SettingsStore interface {
 	Create(ctx context.Context, settings *FinanceSettings) error
 	GetByID(ctx context.Context, spaceID SpaceID) (*FinanceSettings, error)
@@ -20,6 +23,7 @@ type DeleteOptions struct {
 }
 
 // BudgetStore defines persistence for budget templates.
+// @Mock
 type BudgetStore interface {
 	Create(ctx context.Context, budget *Budget) error
 	GetByID(ctx context.Context, spaceID SpaceID, id BudgetID) (*Budget, error)
@@ -37,6 +41,7 @@ type ListInstitutionsFilter struct {
 }
 
 // InstitutionStore defines persistence for financial institutions.
+// @Mock
 type InstitutionStore interface {
 	Create(ctx context.Context, inst *Institution) error
 	GetByID(ctx context.Context, spaceID SpaceID, id InstitutionID) (*Institution, error)
@@ -54,6 +59,7 @@ type PeriodRangeKey struct {
 }
 
 // PeriodStore defines persistence for budget periods.
+// @Mock
 type PeriodStore interface {
 	Create(ctx context.Context, period *BudgetPeriod) error
 	GetByRange(ctx context.Context, budgetID BudgetID, startDate, endDate time.Time) (*BudgetPeriod, error)
@@ -70,6 +76,7 @@ type ExchangeRateKey struct {
 }
 
 // ExchangeRateStore defines persistence for exchange rates.
+// @Mock
 type ExchangeRateStore interface {
 	Create(ctx context.Context, rate *ExchangeRate) error
 	Update(ctx context.Context, rate *ExchangeRate) error
@@ -91,6 +98,7 @@ type PeriodSpent struct {
 }
 
 // TransactionStore defines persistence for transactions.
+// @Mock
 type TransactionStore interface {
 	Create(ctx context.Context, txn *Transaction) error
 	GetByID(ctx context.Context, spaceID SpaceID, id TransactionID) (*Transaction, error)
@@ -103,12 +111,14 @@ type TransactionStore interface {
 }
 
 // TransactionEventStore defines persistence for transaction events.
+// @Mock
 type TransactionEventStore interface {
 	Create(ctx context.Context, event *TransactionEvent) error
 	ListByTransaction(ctx context.Context, spaceID SpaceID, txnID TransactionID) ([]*TransactionEvent, error)
 }
 
 // InsightsStore defines persistence for read-only aggregation queries.
+// @Mock
 type InsightsStore interface {
 	GetSpentTrend(ctx context.Context, filter *SpentTrendFilter) ([]*SpentTrend, error)
 	GetBudgetDistribution(ctx context.Context, filter *BudgetDistributionFilter) ([]*BudgetDistribution, error)
@@ -238,6 +248,7 @@ type TransactionFilter struct {
 }
 
 // RecurringTransactionStore defines persistence for recurring transaction templates.
+// @Mock
 type RecurringTransactionStore interface {
 	Create(ctx context.Context, transaction *RecurringTransaction) error
 	GetByID(ctx context.Context, spaceID SpaceID, id RecurringTransactionID) (*RecurringTransaction, error)
@@ -249,6 +260,7 @@ type RecurringTransactionStore interface {
 }
 
 // ScheduledTransactionStore defines persistence for scheduled transaction instances.
+// @Mock
 type ScheduledTransactionStore interface {
 	Create(ctx context.Context, payment *ScheduledTransaction) error
 	GetByID(ctx context.Context, spaceID SpaceID, id ScheduledTransactionID) (*ScheduledTransaction, error)
@@ -281,6 +293,7 @@ type ListScheduledTransactionsFilter struct {
 }
 
 // BorrowingStore defines persistence for personal borrowing/lending agreements.
+// @Mock
 type BorrowingStore interface {
 	Create(ctx context.Context, b *Borrowing) error
 	GetByID(ctx context.Context, spaceID SpaceID, id BorrowingID) (*Borrowing, error)
@@ -290,6 +303,7 @@ type BorrowingStore interface {
 }
 
 // BorrowingRepaymentStore defines persistence for repayments.
+// @Mock
 type BorrowingRepaymentStore interface {
 	Create(ctx context.Context, r *BorrowingRepayment) error
 	GetByID(ctx context.Context, spaceID SpaceID, id BorrowingRepaymentID) (*BorrowingRepayment, error)
@@ -298,6 +312,7 @@ type BorrowingRepaymentStore interface {
 }
 
 // AccountStore defines persistence for physical or digital payment accounts.
+// @Mock
 type AccountStore interface {
 	Create(ctx context.Context, account *Account) error
 	GetByID(ctx context.Context, spaceID SpaceID, id AccountID) (*Account, error)
@@ -311,6 +326,7 @@ type AccountStore interface {
 }
 
 // TransferStore defines persistence for parent transfer logs.
+// @Mock
 type TransferStore interface {
 	Create(ctx context.Context, transfer *Transfer) error
 	GetByID(ctx context.Context, spaceID SpaceID, id TransferID) (*Transfer, error)
@@ -329,6 +345,7 @@ type ListInboxItemsFilter struct {
 }
 
 // InboxItemStore defines repository operations for staged inbox items.
+// @Mock
 type InboxItemStore interface {
 	Insert(ctx context.Context, item *InboxItem) error
 	Get(ctx context.Context, spaceID SpaceID, id string) (*InboxItem, error)
@@ -345,6 +362,7 @@ type ListStatementsFilter struct {
 }
 
 // StatementStore defines persistence and retrieval operations for bank/account statements and statement lines.
+// @Mock
 type StatementStore interface {
 	// Create creates a new statement and its associated lines inside a single database transaction.
 	Create(ctx context.Context, statement *Statement, lines []*StatementLine) error

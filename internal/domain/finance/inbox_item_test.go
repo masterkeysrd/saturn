@@ -224,3 +224,172 @@ func TestInboxItem_NewTransfer(t *testing.T) {
 		t.Errorf("expected 12000, got %d", transfer.SourceAmount)
 	}
 }
+
+func TestInboxItem_EnsurePending_Table(t *testing.T) {
+	tests := []struct {
+		name    string
+		status  InboxItemStatus
+		wantErr bool
+	}{
+		{
+			name:    "pending status succeeds",
+			status:  InboxItemPending,
+			wantErr: false,
+		},
+		{
+			name:    "resolved status fails",
+			status:  InboxItemResolved,
+			wantErr: true,
+		},
+		{
+			name:    "archived status fails",
+			status:  InboxItemArchived,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			item := &InboxItem{Status: tt.status}
+			err := item.EnsurePending()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("EnsurePending() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestInboxItem_MarkResolved(t *testing.T) {
+	txnID := TransactionID("txn_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+
+	t.Run("with transaction ID", func(t *testing.T) {
+		item := &InboxItem{Status: InboxItemPending}
+		item.MarkResolved(&txnID)
+		if item.Status != InboxItemResolved {
+			t.Errorf("Status = %s, want %s", item.Status, InboxItemResolved)
+		}
+		if item.TransactionID == nil || *item.TransactionID != string(txnID) {
+			t.Errorf("TransactionID = %v, want %s", item.TransactionID, txnID)
+		}
+	})
+
+	t.Run("with nil transaction ID", func(t *testing.T) {
+		item := &InboxItem{Status: InboxItemPending}
+		item.MarkResolved(nil)
+		if item.Status != InboxItemResolved {
+			t.Errorf("Status = %s, want %s", item.Status, InboxItemResolved)
+		}
+		if item.TransactionID != nil {
+			t.Errorf("expected nil TransactionID, got %v", item.TransactionID)
+		}
+	})
+}
+
+func TestInboxItem_Events(t *testing.T) {
+	txnID := TransactionID("txn_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	item := &InboxItem{
+		ID:         "ibx_123",
+		SpaceID:    "spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO",
+		Amount:     4500,
+		Currency:   "USD",
+		VendorName: "Supermarket",
+	}
+
+	t.Run("NewReceiptIngestedEvent", func(t *testing.T) {
+		event := item.NewReceiptIngestedEvent(txnID)
+		if event.EventType != "RECEIPT_INGESTED" {
+			t.Errorf("EventType = %s, want RECEIPT_INGESTED", event.EventType)
+		}
+		if event.TransactionID != txnID {
+			t.Errorf("TransactionID = %s, want %s", event.TransactionID, txnID)
+		}
+	})
+
+	t.Run("NewTransactionLinkedEvent without overwrite", func(t *testing.T) {
+		event := item.NewTransactionLinkedEvent(txnID, false)
+		if event.EventType != "TRANSACTION_LINKED" {
+			t.Errorf("EventType = %s, want TRANSACTION_LINKED", event.EventType)
+		}
+		if event.Metadata["overwrite_linked_transaction"] != false {
+			t.Errorf("overwrite = %v, want false", event.Metadata["overwrite_linked_transaction"])
+		}
+	})
+
+	t.Run("NewTransactionLinkedEvent with overwrite", func(t *testing.T) {
+		event := item.NewTransactionLinkedEvent(txnID, true)
+		if event.EventType != "TRANSACTION_LINKED" {
+			t.Errorf("EventType = %s, want TRANSACTION_LINKED", event.EventType)
+		}
+		if event.Metadata["overwrite_linked_transaction"] != true {
+			t.Errorf("overwrite = %v, want true", event.Metadata["overwrite_linked_transaction"])
+		}
+	})
+}
+
+func TestInboxItem_NewScheduledTransactionFromInvoice_Table(t *testing.T) {
+	spaceID := SpaceID("spc_2dE1V8ZqWz4eS2N9yX3bL1mK7pO")
+	budID, _ := NewBudgetID()
+	validBudStr := string(budID)
+	invalidBudStr := "invalid_bud"
+
+	tests := []struct {
+		name       string
+		item       InboxItem
+		wantErr    bool
+		wantBudget bool
+	}{
+		{
+			name: "valid invoice with budget",
+			item: InboxItem{
+				ID:         "ibx_123",
+				BudgetID:   &validBudStr,
+				Amount:     15000,
+				Currency:   "USD",
+				VendorName: "Electric Co",
+			},
+			wantErr:    false,
+			wantBudget: true,
+		},
+		{
+			name: "invalid budget ID fails",
+			item: InboxItem{
+				ID:         "ibx_123",
+				BudgetID:   &invalidBudStr,
+				Amount:     15000,
+				Currency:   "USD",
+				VendorName: "Electric Co",
+			},
+			wantErr:    true,
+			wantBudget: false,
+		},
+		{
+			name: "invoice without budget fails validation",
+			item: InboxItem{
+				ID:         "ibx_123",
+				BudgetID:   nil,
+				Amount:     15000,
+				Currency:   "USD",
+				VendorName: "Electric Co",
+			},
+			wantErr:    true,
+			wantBudget: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			st, err := tt.item.NewScheduledTransactionFromInvoice(spaceID)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewScheduledTransactionFromInvoice() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr {
+				if tt.wantBudget && (st.BudgetID == nil || *st.BudgetID != budID) {
+					t.Errorf("BudgetID = %v, want %v", st.BudgetID, budID)
+				}
+				if !tt.wantBudget && st.BudgetID != nil {
+					t.Errorf("expected nil BudgetID, got %v", st.BudgetID)
+				}
+			}
+		})
+	}
+}
