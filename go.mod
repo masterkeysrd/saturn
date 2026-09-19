@@ -16,7 +16,7 @@ require (
 	github.com/ledongthuc/pdf v0.0.0-20260903153007-b3c860c23753
 	github.com/lib/pq v1.12.3
 	github.com/masterkeysrd/loom v0.0.5
-	github.com/ollama/ollama v0.33.3
+	github.com/ollama/ollama v0.34.0
 	github.com/openai/openai-go/v3 v3.56.0
 	github.com/pdfcpu/pdfcpu v0.15.0
 	github.com/pressly/goose/v3 v3.28.0
