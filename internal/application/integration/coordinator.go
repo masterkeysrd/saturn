@@ -14,9 +14,24 @@ type WebhookSimulator interface {
 	Simulate(ctx context.Context, spaceID string, headers map[string][]string, body []byte) (any, error)
 }
 
+//go:generate go run github.com/masterkeysrd/saturn/tools/mockgen .
+
+// Registry defines the subset of integration registry methods required by the coordinator.
+// @Mock
+type Registry interface {
+	Get(ctx context.Context, query integration.GetIntegration) (*integration.Integration, error)
+	Configure(ctx context.Context, cmd integration.ConfigureIntegration) (*integration.Integration, string, error)
+	List(ctx context.Context, spaceID string) ([]*integration.Integration, error)
+	ListCatalog() []integration.Descriptor
+	CreateToken(ctx context.Context, integrationID, name string) (*integration.IntegrationToken, string, error)
+	ListTokens(ctx context.Context, integrationID string) ([]*integration.IntegrationToken, error)
+	DeleteToken(ctx context.Context, integrationID, tokenID string) error
+	GetProvider(provider string) (integration.Provider, bool)
+}
+
 // Dependencies wraps the required resources for the integrations application.
 type Dependencies struct {
-	Registry *integration.Registry
+	Registry Registry
 }
 
 // Coordinator orchestrates application workflows for configuring integrations,
@@ -33,7 +48,7 @@ type Coordinator interface {
 }
 
 type coordinator struct {
-	registry *integration.Registry
+	registry Registry
 }
 
 // NewCoordinator creates a new integrations Coordinator.
