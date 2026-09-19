@@ -13,6 +13,7 @@ const (
 	UserNotActive errors.Code = "USER_NOT_ACTIVE"
 )
 
+//go:generate go run github.com/masterkeysrd/saturn/tools/mockgen .
 //go:generate go run github.com/masterkeysrd/saturn/tools/txgen -target=Coordinator
 //go:generate go run github.com/masterkeysrd/saturn/tools/loggen -target=Coordinator
 
@@ -195,9 +196,10 @@ func (c *coordinator) UpdateSpaceMember(ctx context.Context, req *UpdateSpaceMem
 }
 
 // SpaceService defines the interface for space domain operations.
+// @Mock
 type SpaceService interface {
-	CreateSpace(ctx context.Context, space *space.Space) (*space.Space, error)
-	UpdateSpace(ctx context.Context, session space.Session, space *space.Space, mask []string) (*space.Space, error)
+	CreateSpace(ctx context.Context, sp *space.Space) (*space.Space, error)
+	UpdateSpace(ctx context.Context, session space.Session, sp *space.Space, mask []string) (*space.Space, error)
 	DeleteSpace(ctx context.Context, session space.Session) error
 	AddSpaceMember(ctx context.Context, session space.Session, member *space.Member) (*space.Member, error)
 	RemoveSpaceMember(ctx context.Context, session space.Session, targetUserID space.SpaceID) error
@@ -205,6 +207,7 @@ type SpaceService interface {
 }
 
 // IdentityService defines the interface for required identity operations.
+// @Mock
 type IdentityService interface {
 	GetUserByID(ctx context.Context, id identity.UserID) (*identity.User, error)
 }
