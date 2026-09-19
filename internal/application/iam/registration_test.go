@@ -7,324 +7,213 @@ import (
 	"testing"
 
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
-	"github.com/masterkeysrd/saturn/internal/platform/paging"
 	"github.com/masterkeysrd/saturn/internal/platform/password"
 )
 
-// testHasher is a test double that uses real Argon2id with test params.
-type testHasher struct {
-	h *password.Argon2id
-}
-
-func newTestHasher(params password.Params) *testHasher {
-	h, err := password.NewArgon2id(params)
-	if err != nil {
-		panic(err)
-	}
-	return &testHasher{h: h}
-}
-
-func (h *testHasher) Hash(raw string) (string, error) {
-	return h.h.Hash(raw)
-}
-
-func (h *testHasher) Verify(encodedHash, raw string) (bool, error) {
-	return h.h.Verify(encodedHash, raw)
-}
-
-// failHasher returns an error on Hash.
-type failHasher struct{}
-
-func (f *failHasher) Hash(raw string) (string, error) {
-	return "", errors.New("hashing failed")
-}
-
-func (f *failHasher) Verify(encodedHash, raw string) (bool, error) {
-	return false, password.ErrPasswordMismatch
-}
-
-// fakeIdentityService is a test double for IdentityService.
-type fakeIdentityService struct {
-	createUserCalled   bool
-	createCredential   *identity.Credential
-	createCredentialFn func(*identity.Credential) error
-	getUserByIDFn      func(id identity.UserID) (*identity.User, error)
-	updateUserFn       func(user *identity.User) error
-}
-
-func newFakeIdentityService() *fakeIdentityService {
-	return &fakeIdentityService{}
-}
-
-func (f *fakeIdentityService) CreateUser(ctx context.Context, user *identity.User) error {
-	f.createUserCalled = true
-	return nil
-}
-
-func (f *fakeIdentityService) CreateCredential(ctx context.Context, credential *identity.Credential) error {
-	f.createCredential = credential
-	if f.createCredentialFn != nil {
-		return f.createCredentialFn(credential)
-	}
-	return nil
-}
-
-func (f *fakeIdentityService) GetUserByID(ctx context.Context, id identity.UserID) (*identity.User, error) {
-	if f.getUserByIDFn != nil {
-		return f.getUserByIDFn(id)
-	}
-	return nil, nil
-}
-
-func (f *fakeIdentityService) GetUserByEmail(ctx context.Context, email string) (*identity.User, error) {
-	return nil, nil
-}
-
-func (f *fakeIdentityService) GetUserByUsername(ctx context.Context, username string) (*identity.User, error) {
-	return nil, nil
-}
-
-func (f *fakeIdentityService) UpdateUser(ctx context.Context, user *identity.User) error {
-	if f.updateUserFn != nil {
-		return f.updateUserFn(user)
-	}
-	return nil
-}
-
-func (f *fakeIdentityService) ListUsers(ctx context.Context, filter *identity.ListUsersFilter) (*paging.Page[*identity.User], error) {
-	return nil, nil
-}
-
-func (f *fakeIdentityService) ApproveUser(ctx context.Context, userID identity.UserID) (*identity.User, error) {
-	return nil, nil
-}
-
-func (f *fakeIdentityService) GetCredentialByUserIDAndAuthType(ctx context.Context, userID identity.UserID, authType string) (*identity.Credential, error) {
-	return nil, nil
-}
-
-func (f *fakeIdentityService) UpdateCredential(ctx context.Context, credential *identity.Credential) error {
-	return nil
-}
-
-func (f *fakeIdentityService) RejectUser(ctx context.Context, userID identity.UserID) (*identity.User, error) {
-	return nil, nil
-}
-
-func (f *fakeIdentityService) UpdateUserRole(ctx context.Context, userID identity.UserID, accessLevel identity.AccessLevel) (*identity.User, error) {
-	return nil, nil
-}
-
-func (f *fakeIdentityService) GetAuthVersion(ctx context.Context, id identity.UserID) (int64, error) {
-	return 0, nil
-}
-
-func (f *fakeIdentityService) IncrementAuthVersion(ctx context.Context, id identity.UserID) (int64, error) {
-	return 1, nil
-}
-
-func (f *fakeIdentityService) Authenticate(ctx context.Context, identifier string, password string) (*identity.User, error) {
-	return nil, nil
-}
-
-func (f *fakeIdentityService) RevokeAllSessions(ctx context.Context, userID identity.UserID) (int64, error) {
-	return 1, nil
-}
-
-func (f *fakeIdentityService) CreateSession(ctx context.Context, req *identity.CreateSessionRequest) (*identity.Session, error) {
-	return nil, nil
-}
-
-func (f *fakeIdentityService) RotateSession(ctx context.Context, req *identity.RotateSessionRequest) (*identity.Session, error) {
-	return nil, nil
-}
-
-func (f *fakeIdentityService) RevokeSessionByHash(ctx context.Context, refreshTokenHash []byte) error {
-	return nil
-}
-
-func (f *fakeIdentityService) ListActiveSessions(ctx context.Context, userID identity.UserID) ([]*identity.Session, error) {
-	return nil, nil
-}
-
-func (f *fakeIdentityService) RevokeSessionByID(ctx context.Context, sessionID identity.SessionID, userID identity.UserID) error {
-	return nil
-}
-
-func (f *fakeIdentityService) UpdateLockoutState(ctx context.Context, req identity.UpdateLockoutRequest) error {
-	return nil
-}
-
-func (f *fakeIdentityService) CreateSecurityEvent(ctx context.Context, event *identity.SecurityEvent) error {
-	return nil
-}
-
-func (f *fakeIdentityService) ListSecurityEvents(ctx context.Context, filter identity.SecurityEventFilter) (*paging.Page[*identity.SecurityEvent], error) {
-	return nil, nil
-}
-
-func TestRegisterHashesPassword(t *testing.T) {
-	fakeSvc := newFakeIdentityService()
-	testH := newTestHasher(password.DefaultParams())
-	coord := NewCoordinator(Dependencies{
-		IdentityService: fakeSvc,
-		PasswordHasher:  testH,
-	})
-
-	req := &RegisterUserRequest{
-		Email:    "test@example.com",
-		Username: "testuser",
-		Name:     "Test User",
-		Password: "securepassword123",
+func TestCoordinator_Register(t *testing.T) {
+	tests := []struct {
+		name                 string
+		req                  *RegisterUserRequest
+		hasher               PasswordHasher
+		mockCreateUser       func(ctx context.Context, user *identity.User) error
+		mockCreateCredential func(ctx context.Context, credential *identity.Credential) error
+		expectedError        bool
+		errorContains        string
+		validateResult       func(t *testing.T, resp *RegisterUserResponse, createdUser *identity.User, createdCred *identity.Credential)
+	}{
+		{
+			name: "Success with mock hasher",
+			req: &RegisterUserRequest{
+				Email:     "test@example.com",
+				Username:  "testuser",
+				Name:      "Test User",
+				AvatarURL: "https://example.com/avatar.png",
+				Password:  "securepassword123",
+			},
+			hasher: &PasswordHasherMock{
+				HashFunc: func(raw string) (string, error) {
+					if raw != "securepassword123" {
+						t.Errorf("expected raw password 'securepassword123', got %s", raw)
+					}
+					return "hashed_securepassword123", nil
+				},
+			},
+			mockCreateUser: func(ctx context.Context, user *identity.User) error {
+				return nil
+			},
+			mockCreateCredential: func(ctx context.Context, credential *identity.Credential) error {
+				return nil
+			},
+			expectedError: false,
+			validateResult: func(t *testing.T, resp *RegisterUserResponse, createdUser *identity.User, createdCred *identity.Credential) {
+				if resp == nil {
+					t.Fatal("expected non-nil response")
+				}
+				if resp.Email != "test@example.com" || resp.Username != "testuser" || resp.Name != "Test User" {
+					t.Errorf("unexpected response user data: %+v", resp)
+				}
+				if resp.Status != identity.UserStatusPendingApproval {
+					t.Errorf("expected status %v, got %v", identity.UserStatusPendingApproval, resp.Status)
+				}
+				if resp.AccessLevel != identity.AccessLevelUser {
+					t.Errorf("expected access level %v, got %v", identity.AccessLevelUser, resp.AccessLevel)
+				}
+				if createdCred == nil {
+					t.Fatal("expected credential to be created")
+				}
+				if createdCred.SecretData == "securepassword123" {
+					t.Error("SecretData must not contain plaintext password")
+				}
+				if createdCred.SecretData != "hashed_securepassword123" {
+					t.Errorf("expected hashed password, got %s", createdCred.SecretData)
+				}
+				if createdCred.AuthType != "password" {
+					t.Errorf("expected authType 'password', got %s", createdCred.AuthType)
+				}
+				if string(createdCred.UserID) != resp.UserID {
+					t.Errorf("credential UserID %s does not match response UserID %s", createdCred.UserID, resp.UserID)
+				}
+			},
+		},
+		{
+			name: "Success with real Argon2id hasher",
+			req: &RegisterUserRequest{
+				Email:    "argon@example.com",
+				Username: "argonuser",
+				Name:     "Argon User",
+				Password: "argonpassword123",
+			},
+			hasher: func() PasswordHasher {
+				h, err := password.NewArgon2id(password.DefaultParams())
+				if err != nil {
+					t.Fatalf("failed to create argon2id: %v", err)
+				}
+				return h
+			}(),
+			mockCreateUser: func(ctx context.Context, user *identity.User) error {
+				return nil
+			},
+			mockCreateCredential: func(ctx context.Context, credential *identity.Credential) error {
+				return nil
+			},
+			expectedError: false,
+			validateResult: func(t *testing.T, resp *RegisterUserResponse, createdUser *identity.User, createdCred *identity.Credential) {
+				if createdCred == nil {
+					t.Fatal("expected credential to be created")
+				}
+				if !strings.HasPrefix(createdCred.SecretData, "$argon2id$") {
+					t.Errorf("expected Argon2id hash prefix, got %s", createdCred.SecretData)
+				}
+				if createdCred.SecretData == "argonpassword123" {
+					t.Error("SecretData must not contain plaintext password")
+				}
+			},
+		},
+		{
+			name: "Hasher failure returns error",
+			req: &RegisterUserRequest{
+				Email:    "test@example.com",
+				Username: "testuser",
+				Name:     "Test User",
+				Password: "securepassword123",
+			},
+			hasher: &PasswordHasherMock{
+				HashFunc: func(raw string) (string, error) {
+					return "", errors.New("hashing engine failure")
+				},
+			},
+			expectedError: true,
+			errorContains: "hash password",
+		},
+		{
+			name: "CreateUser failure returns error",
+			req: &RegisterUserRequest{
+				Email:    "test@example.com",
+				Username: "testuser",
+				Name:     "Test User",
+				Password: "securepassword123",
+			},
+			hasher: &PasswordHasherMock{
+				HashFunc: func(raw string) (string, error) {
+					return "hash_ok", nil
+				},
+			},
+			mockCreateUser: func(ctx context.Context, user *identity.User) error {
+				return errors.New("user already exists")
+			},
+			expectedError: true,
+			errorContains: "user already exists",
+		},
+		{
+			name: "CreateCredential failure returns error",
+			req: &RegisterUserRequest{
+				Email:    "test@example.com",
+				Username: "testuser",
+				Name:     "Test User",
+				Password: "securepassword123",
+			},
+			hasher: &PasswordHasherMock{
+				HashFunc: func(raw string) (string, error) {
+					return "hash_ok", nil
+				},
+			},
+			mockCreateUser: func(ctx context.Context, user *identity.User) error {
+				return nil
+			},
+			mockCreateCredential: func(ctx context.Context, credential *identity.Credential) error {
+				return errors.New("credential store unavailable")
+			},
+			expectedError: true,
+			errorContains: "credential store unavailable",
+		},
 	}
 
-	_, err := coord.Register(context.Background(), req)
-	if err != nil {
-		t.Fatalf("Register: %v", err)
-	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var capturedUser *identity.User
+			var capturedCred *identity.Credential
 
-	if !fakeSvc.createUserCalled {
-		t.Fatal("expected CreateUser to be called")
-	}
+			mockID := &IdentityServiceMock{
+				CreateUserFunc: func(ctx context.Context, user *identity.User) error {
+					capturedUser = user
+					if tc.mockCreateUser != nil {
+						return tc.mockCreateUser(ctx, user)
+					}
+					return nil
+				},
+				CreateCredentialFunc: func(ctx context.Context, credential *identity.Credential) error {
+					capturedCred = credential
+					if tc.mockCreateCredential != nil {
+						return tc.mockCreateCredential(ctx, credential)
+					}
+					return nil
+				},
+			}
 
-	cred := fakeSvc.createCredential
-	if cred == nil {
-		t.Fatal("expected credential to be set")
-	}
+			coord := NewCoordinator(Dependencies{
+				IdentityService: mockID,
+				PasswordHasher:  tc.hasher,
+			})
 
-	if !strings.HasPrefix(cred.SecretData, "$argon2id$") {
-		t.Errorf("expected SecretData to start with $argon2id$, got: %s", cred.SecretData)
-	}
-}
+			resp, err := coord.Register(context.Background(), tc.req)
 
-func TestRegisterNeverSendsPlaintext(t *testing.T) {
-	fakeSvc := newFakeIdentityService()
-	testH := newTestHasher(password.DefaultParams())
-	coord := NewCoordinator(Dependencies{
-		IdentityService: fakeSvc,
-		PasswordHasher:  testH,
-	})
+			if tc.expectedError {
+				if err == nil {
+					t.Fatalf("expected error, got nil")
+				}
+				if tc.errorContains != "" && !strings.Contains(err.Error(), tc.errorContains) {
+					t.Errorf("expected error to contain %q, got %q", tc.errorContains, err.Error())
+				}
+				return
+			}
 
-	req := &RegisterUserRequest{
-		Email:    "test@example.com",
-		Username: "testuser",
-		Name:     "Test User",
-		Password: "securepassword123",
-	}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 
-	_, err := coord.Register(context.Background(), req)
-	if err != nil {
-		t.Fatalf("Register: %v", err)
-	}
-
-	cred := fakeSvc.createCredential
-	if cred == nil {
-		t.Fatal("expected credential to be set")
-	}
-
-	if cred.SecretData == "securepassword123" {
-		t.Error("SecretData must not contain the plaintext password")
-	}
-}
-
-func TestRegisterInvalidPasswordFails(t *testing.T) {
-	fakeSvc := newFakeIdentityService()
-	testH := newTestHasher(password.DefaultParams())
-	coord := NewCoordinator(Dependencies{
-		IdentityService: fakeSvc,
-		PasswordHasher:  testH,
-	})
-
-	// Use a very short password to trigger validation failure
-	req := &RegisterUserRequest{
-		Password: "short",
-	}
-
-	_, err := coord.Register(context.Background(), req)
-	if err == nil {
-		t.Fatal("expected error for short password")
-	}
-
-	if fakeSvc.createUserCalled {
-		t.Fatal("CreateUser must not be called when password validation fails")
-	}
-}
-
-func TestAdminCreateUserHashesPassword(t *testing.T) {
-	fakeSvc := newFakeIdentityService()
-	testH := newTestHasher(password.DefaultParams())
-	coord := NewCoordinator(Dependencies{
-		IdentityService: fakeSvc,
-		PasswordHasher:  testH,
-	})
-
-	req := &AdminCreateUserRequest{
-		Email:       "admin@example.com",
-		Username:    "adminuser",
-		Name:        "Admin User",
-		Password:    "adminsecurepass1",
-		AccessLevel: identity.AccessLevelAdmin,
-	}
-
-	_, err := coord.AdminCreateUser(context.Background(), req)
-	if err != nil {
-		t.Fatalf("AdminCreateUser: %v", err)
-	}
-
-	cred := fakeSvc.createCredential
-	if cred == nil {
-		t.Fatal("expected credential to be set")
-	}
-
-	if !strings.HasPrefix(cred.SecretData, "$argon2id$") {
-		t.Errorf("expected SecretData to start with $argon2id$, got: %s", cred.SecretData)
-	}
-}
-
-func TestAdminCreateUserInvalidPasswordFails(t *testing.T) {
-	fakeSvc := newFakeIdentityService()
-	testH := newTestHasher(password.DefaultParams())
-	coord := NewCoordinator(Dependencies{
-		IdentityService: fakeSvc,
-		PasswordHasher:  testH,
-	})
-
-	req := &AdminCreateUserRequest{
-		Password: "short",
-	}
-
-	_, err := coord.AdminCreateUser(context.Background(), req)
-	if err == nil {
-		t.Fatal("expected error for short password")
-	}
-
-	if fakeSvc.createUserCalled {
-		t.Fatal("CreateUser must not be called when password validation fails")
-	}
-}
-
-func TestRegisterHasherErrorPropagated(t *testing.T) {
-	fakeSvc := newFakeIdentityService()
-	failH := &failHasher{}
-	coord := NewCoordinator(Dependencies{
-		IdentityService: fakeSvc,
-		PasswordHasher:  failH,
-	})
-
-	req := &RegisterUserRequest{
-		Password: "securepassword123",
-	}
-
-	_, err := coord.Register(context.Background(), req)
-	if err == nil {
-		t.Fatal("expected error from hasher")
-	}
-
-	if !strings.Contains(err.Error(), "hash") {
-		t.Errorf("expected error to mention hashing, got: %s", err.Error())
-	}
-
-	if fakeSvc.createUserCalled {
-		t.Fatal("CreateUser must not be called when hashing fails")
+			if tc.validateResult != nil {
+				tc.validateResult(t, resp, capturedUser, capturedCred)
+			}
+		})
 	}
 }

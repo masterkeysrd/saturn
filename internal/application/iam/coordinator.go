@@ -2,18 +2,20 @@ package iam
 
 import (
 	"context"
+	"time"
 
 	"github.com/masterkeysrd/saturn/internal/domain/identity"
 	"github.com/masterkeysrd/saturn/internal/domain/space"
 	"github.com/masterkeysrd/saturn/internal/platform/paging"
-	"github.com/masterkeysrd/saturn/internal/platform/password"
 	"github.com/masterkeysrd/saturn/internal/platform/token"
 )
 
+//go:generate go run github.com/masterkeysrd/saturn/tools/mockgen .
 //go:generate go run github.com/masterkeysrd/saturn/tools/txgen -target=Coordinator
 //go:generate go run github.com/masterkeysrd/saturn/tools/loggen -target=Coordinator -component=iam
 
 // Coordinator orchestrates identity operations across multiple services.
+// @Mock
 type Coordinator interface {
 	Authenticate(ctx context.Context, identifier string, password string) (*identity.User, error)
 	GetAuthVersion(ctx context.Context, id identity.UserID) (int64, error)
@@ -37,20 +39,36 @@ type Coordinator interface {
 	RevokeAllSessions(ctx context.Context, req *RevokeAllSessionsRequest) (*RevokeAllSessionsResponse, error)
 }
 
+// PasswordHasher defines the interface for computing and verifying password hashes.
+// @Mock
+type PasswordHasher interface {
+	Hash(raw string) (string, error)
+	Verify(encodedHash, raw string) (needsRehash bool, err error)
+}
+
+// TokenService defines the interface for issuing and validating auth tokens.
+// @Mock
+type TokenService interface {
+	IssueAccessToken(input token.IssueInput, now time.Time) (string, time.Time, error)
+	IssueRefreshToken(input token.IssueInput, now time.Time, absoluteExpiry time.Time) (string, time.Time, error)
+	ValidateAccessToken(raw string, now time.Time) (*token.Claims, error)
+	ValidateRefreshToken(raw string, now time.Time) (*token.Claims, error)
+}
+
 // Dependencies defines the inputs for creating a new Coordinator.
 type Dependencies struct {
 	IdentityService IdentityService
-	PasswordHasher  password.Hasher
+	PasswordHasher  PasswordHasher
 	SpaceService    SpaceService
-	TokenService    token.Service
+	TokenService    TokenService
 }
 
 // coordinator orchestrates identity operations across multiple services.
 type coordinator struct {
 	identityService IdentityService
-	passwordHasher  password.Hasher
+	passwordHasher  PasswordHasher
 	spaceService    SpaceService
-	tokenService    token.Service
+	tokenService    TokenService
 }
 
 // NewCoordinator creates a new Coordinator.
@@ -86,6 +104,7 @@ func (c *coordinator) ListSecurityEvents(ctx context.Context, filter identity.Se
 }
 
 // IdentityService defines the interface for identity domain operations.
+// @Mock
 type IdentityService interface {
 	CreateUser(ctx context.Context, user *identity.User) error
 	CreateCredential(ctx context.Context, credential *identity.Credential) error
@@ -114,6 +133,7 @@ type IdentityService interface {
 }
 
 // SpaceService defines the interface for space operations required by IAM application.
+// @Mock
 type SpaceService interface {
-	CreateSpace(ctx context.Context, space *space.Space) (*space.Space, error)
+	CreateSpace(ctx context.Context, sp *space.Space) (*space.Space, error)
 }
