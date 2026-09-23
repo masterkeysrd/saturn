@@ -128,16 +128,16 @@ clean:
 ## Start the frontend development server
 .PHONY: web-dev
 web-dev:
-	npm --prefix apps/web run dev
+	npm run dev --workspace=saturn-web
 
 ## Build the frontend for production
 .PHONY: web-build
 web-build:
-	npm --prefix apps/web run build
+	npx turbo run build --filter=saturn-web
 
 ## Run all linters (Go, frontend, and proto)
 .PHONY: lint
-lint: lint-go web-lint lint-proto
+lint: lint-go web-lint web-typecheck lint-proto
 
 ## Lint protocol buffers with buf
 .PHONY: lint-proto
@@ -154,12 +154,17 @@ lint-go: apps/web/dist/index.html
 ## Lint the frontend codebase
 .PHONY: web-lint
 web-lint:
-	npm --prefix apps/web run lint
+	npx turbo run lint
+
+## Typecheck the frontend codebase
+.PHONY: web-typecheck
+web-typecheck:
+	npx turbo run typecheck
 
 ## Format frontend source files
 .PHONY: web-format
 web-format:
-	npm --prefix apps/web run format
+	npx turbo run format
 
 ## Rebuild protoc plugins and regenerate API bindings
 .PHONY: codegen

@@ -30,7 +30,7 @@ jobs:
           push: false
 
   web-verify:
-    name: Frontend (Lint & Build)
+    name: Frontend (Lint, Typecheck & Build)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -41,16 +41,13 @@ jobs:
         with:
           node-version: 22
           cache: 'npm'
-          cache-dependency-path: 'apps/web/package-lock.json'
+          cache-dependency-path: 'package-lock.json'
 
       - name: Install dependencies
-        run: npm --prefix apps/web ci
+        run: npm ci
 
-      - name: Lint web application
-        run: make web-lint
-
-      - name: Build web application
-        run: make web-build
+      - name: Verify frontend packages (Lint, Typecheck & Build)
+        run: npx turbo run lint typecheck build
 
   go-lint:
     name: Go Lint (golangci-lint)
