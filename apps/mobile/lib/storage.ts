@@ -1,3 +1,4 @@
+import { Platform } from "react-native"
 import * as SecureStore from "expo-secure-store"
 import type { StorageAdapter, AuthSession } from "@saturn/api/storage"
 
@@ -9,7 +10,54 @@ const KEYS = {
   ACTIVE_SPACE_ID: "saturn_active_space_id",
   BIOMETRIC_ENABLED: "saturn_biometric_enabled",
   USER_PROFILE: "saturn_user_profile",
+  REMEMBERED_IDENTIFIER: "saturn_remembered_identifier",
 } as const
+
+async function secureGet(key: string): Promise<string | null> {
+  if (Platform.OS === "web") {
+    try {
+      if (typeof window !== "undefined" && window.localStorage) {
+        return window.localStorage.getItem(key)
+      }
+    } catch {
+      return null
+    }
+    return null
+  }
+  try {
+    return await SecureStore.getItemAsync(key)
+  } catch {
+    return null
+  }
+}
+
+async function secureSet(key: string, value: string): Promise<void> {
+  if (Platform.OS === "web") {
+    try {
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem(key, value)
+      }
+    } catch {}
+    return
+  }
+  try {
+    await SecureStore.setItemAsync(key, value)
+  } catch {}
+}
+
+async function secureDelete(key: string): Promise<void> {
+  if (Platform.OS === "web") {
+    try {
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.removeItem(key)
+      }
+    } catch {}
+    return
+  }
+  try {
+    await SecureStore.deleteItemAsync(key)
+  } catch {}
+}
 
 export const mobileStorage: StorageAdapter = {
   async getSession(): Promise<AuthSession> {
@@ -17,108 +65,70 @@ export const mobileStorage: StorageAdapter = {
       return { accessToken: inMemoryToken, hasSession: true }
     }
     try {
-      const storedToken = await SecureStore.getItemAsync(KEYS.ACCESS_TOKEN)
+      const storedToken = await secureGet(KEYS.ACCESS_TOKEN)
       if (storedToken) {
         inMemoryToken = storedToken
         return { accessToken: storedToken, hasSession: true }
       }
     } catch {
-      // Fallback if secure store is unavailable
+      // Fallback
     }
     return { accessToken: null, hasSession: false }
   },
 
   async setSession(accessToken: string): Promise<void> {
     inMemoryToken = accessToken
-    try {
-      await SecureStore.setItemAsync(KEYS.ACCESS_TOKEN, accessToken)
-    } catch {
-      // Fallback
-    }
+    await secureSet(KEYS.ACCESS_TOKEN, accessToken)
   },
 
   async clearSession(): Promise<void> {
     inMemoryToken = null
-    try {
-      await SecureStore.deleteItemAsync(KEYS.ACCESS_TOKEN)
-      await SecureStore.deleteItemAsync(KEYS.REFRESH_TOKEN)
-      await SecureStore.deleteItemAsync(KEYS.USER_PROFILE)
-    } catch {
-      // Fallback
-    }
+    await Promise.all([
+      secureDelete(KEYS.ACCESS_TOKEN),
+      secureDelete(KEYS.REFRESH_TOKEN),
+      secureDelete(KEYS.USER_PROFILE),
+    ])
   },
 
   async getActiveSpaceId(): Promise<string | null> {
-    try {
-      return await SecureStore.getItemAsync(KEYS.ACTIVE_SPACE_ID)
-    } catch {
-      return null
-    }
+    return secureGet(KEYS.ACTIVE_SPACE_ID)
   },
 
   async setActiveSpaceId(spaceId: string | null): Promise<void> {
-    try {
-      if (spaceId) {
-        await SecureStore.setItemAsync(KEYS.ACTIVE_SPACE_ID, spaceId)
-      } else {
-        await SecureStore.deleteItemAsync(KEYS.ACTIVE_SPACE_ID)
-      }
-    } catch {
-      // Fallback
+    if (spaceId) {
+      await secureSet(KEYS.ACTIVE_SPACE_ID, spaceId)
+    } else {
+      await secureDelete(KEYS.ACTIVE_SPACE_ID)
     }
   },
 
   async getRefreshToken(): Promise<string | null> {
-    try {
-      return await SecureStore.getItemAsync(KEYS.REFRESH_TOKEN)
-    } catch {
-      return null
-    }
+    return secureGet(KEYS.REFRESH_TOKEN)
   },
 
   async setRefreshToken(refreshToken: string): Promise<void> {
-    try {
-      await SecureStore.setItemAsync(KEYS.REFRESH_TOKEN, refreshToken)
-    } catch {
-      // Fallback
-    }
+    await secureSet(KEYS.REFRESH_TOKEN, refreshToken)
   },
 }
 
 export async function getStoredRefreshToken(): Promise<string | null> {
-  try {
-    return await SecureStore.getItemAsync(KEYS.REFRESH_TOKEN)
-  } catch {
-    return null
-  }
+  return secureGet(KEYS.REFRESH_TOKEN)
 }
 
 export async function setStoredRefreshToken(token: string): Promise<void> {
-  try {
-    await SecureStore.setItemAsync(KEYS.REFRESH_TOKEN, token)
-  } catch {
-    // Fallback
-  }
+  await secureSet(KEYS.REFRESH_TOKEN, token)
 }
 
 export async function isBiometricEnabled(): Promise<boolean> {
-  try {
-    const val = await SecureStore.getItemAsync(KEYS.BIOMETRIC_ENABLED)
-    return val === "true"
-  } catch {
-    return false
-  }
+  const val = await secureGet(KEYS.BIOMETRIC_ENABLED)
+  return val === "true"
 }
 
 export async function setBiometricEnabled(enabled: boolean): Promise<void> {
-  try {
-    if (enabled) {
-      await SecureStore.setItemAsync(KEYS.BIOMETRIC_ENABLED, "true")
-    } else {
-      await SecureStore.deleteItemAsync(KEYS.BIOMETRIC_ENABLED)
-    }
-  } catch {
-    // Fallback
+  if (enabled) {
+    await secureSet(KEYS.BIOMETRIC_ENABLED, "true")
+  } else {
+    await secureDelete(KEYS.BIOMETRIC_ENABLED)
   }
 }
 
@@ -133,7 +143,7 @@ export interface StoredUserProfile {
 
 export async function getStoredUserProfile(): Promise<StoredUserProfile | null> {
   try {
-    const raw = await SecureStore.getItemAsync(KEYS.USER_PROFILE)
+    const raw = await secureGet(KEYS.USER_PROFILE)
     return raw ? JSON.parse(raw) : null
   } catch {
     return null
@@ -143,13 +153,23 @@ export async function getStoredUserProfile(): Promise<StoredUserProfile | null> 
 export async function setStoredUserProfile(
   user: StoredUserProfile | null
 ): Promise<void> {
-  try {
-    if (user) {
-      await SecureStore.setItemAsync(KEYS.USER_PROFILE, JSON.stringify(user))
-    } else {
-      await SecureStore.deleteItemAsync(KEYS.USER_PROFILE)
-    }
-  } catch {
-    // Fallback
+  if (user) {
+    await secureSet(KEYS.USER_PROFILE, JSON.stringify(user))
+  } else {
+    await secureDelete(KEYS.USER_PROFILE)
+  }
+}
+
+export async function getRememberedIdentifier(): Promise<string | null> {
+  return secureGet(KEYS.REMEMBERED_IDENTIFIER)
+}
+
+export async function setRememberedIdentifier(
+  identifier: string | null
+): Promise<void> {
+  if (identifier && identifier.trim()) {
+    await secureSet(KEYS.REMEMBERED_IDENTIFIER, identifier.trim())
+  } else {
+    await secureDelete(KEYS.REMEMBERED_IDENTIFIER)
   }
 }

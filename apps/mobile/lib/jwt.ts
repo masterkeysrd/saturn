@@ -43,3 +43,10 @@ export function decodeJwt(token: string): JwtClaims | null {
     return null
   }
 }
+
+export function isTokenExpired(token: string, bufferSeconds = 30): boolean {
+  const decoded = decodeJwt(token)
+  if (!decoded || !decoded.exp) return true
+  const nowSeconds = Math.floor(Date.now() / 1000)
+  return decoded.exp - bufferSeconds <= nowSeconds
+}

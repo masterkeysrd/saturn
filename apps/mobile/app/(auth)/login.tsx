@@ -1,8 +1,9 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   StyleSheet,
   Text,
   View,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -10,7 +11,7 @@ import {
 } from "react-native"
 import { Link, useRouter } from "expo-router"
 import { SafeAreaView } from "react-native-safe-area-context"
-import { LogIn, Lock, Mail } from "lucide-react-native"
+import { LogIn, Lock, User, Check } from "lucide-react-native"
 import { useAuth } from "@/lib/auth-context"
 import { theme } from "@/lib/theme"
 import { Button } from "@/components/ui/button"
@@ -18,19 +19,38 @@ import { TextInput } from "@/components/ui/text-input"
 import { Card } from "@/components/ui/card"
 import { Header1, Subtitle } from "@/components/ui/typography"
 import { useToast } from "@/components/ui/toast"
+import { getRememberedIdentifier, setRememberedIdentifier } from "@/lib/storage"
+import { haptics } from "@/lib/haptics"
 
 export default function LoginScreen() {
   const router = useRouter()
   const { login } = useAuth()
   const toast = useToast()
-  const [email, setEmail] = useState("")
+  const [identifier, setIdentifier] = useState("")
   const [password, setPassword] = useState("")
+  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
+  // Load remembered username/email on screen mount
+  useEffect(() => {
+    async function loadRemembered() {
+      try {
+        const saved = await getRememberedIdentifier()
+        if (saved) {
+          setIdentifier(saved)
+          setRememberMe(true)
+        }
+      } catch {
+        // Fallback silently if storage unavailable
+      }
+    }
+    loadRemembered()
+  }, [])
+
   const handleLogin = async () => {
-    if (!email.trim() || !password) {
-      setError("Please enter both email and password")
+    if (!identifier.trim() || !password) {
+      setError("Please enter your username/email and password")
       return
     }
 
@@ -40,10 +60,18 @@ export default function LoginScreen() {
     try {
       await login({
         userPassword: {
-          identifier: email.trim(),
+          identifier: identifier.trim(),
           password,
         },
       })
+
+      // Persist or clear remembered identifier based on toggle
+      if (rememberMe) {
+        await setRememberedIdentifier(identifier.trim())
+      } else {
+        await setRememberedIdentifier(null)
+      }
+
       toast.show({
         type: "success",
         title: "Welcome back!",
@@ -73,8 +101,16 @@ export default function LoginScreen() {
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Brand Logo & Header */}
           <View style={styles.header}>
-            <Header1 style={styles.brandTitle}>🪐 Saturn</Header1>
+            <View style={styles.logoWrapper}>
+              <Image
+                source={require("@/assets/saturn_logo.jpg")}
+                style={styles.logoImage}
+                resizeMode="cover"
+              />
+            </View>
+            <Header1 style={styles.brandTitle}>Saturn</Header1>
             <Subtitle style={styles.subtitle}>
               Sign in to your Personal Life OS
             </Subtitle>
@@ -82,16 +118,16 @@ export default function LoginScreen() {
 
           <Card style={styles.formCard}>
             <TextInput
-              label="Email Address"
-              placeholder="user@example.com"
-              value={email}
+              label="Username or Email"
+              placeholder="user@example.com or username"
+              value={identifier}
               onChangeText={(val) => {
-                setEmail(val)
+                setIdentifier(val)
                 if (error) setError(null)
               }}
               autoCapitalize="none"
-              keyboardType="email-address"
-              leftIcon={<Mail size={18} color={theme.colors.textMuted} />}
+              autoCorrect={false}
+              leftIcon={<User size={18} color={theme.colors.textMuted} />}
             />
 
             <TextInput
@@ -105,6 +141,25 @@ export default function LoginScreen() {
               isPassword
               leftIcon={<Lock size={18} color={theme.colors.textMuted} />}
             />
+
+            {/* Remember Username / Email Toggle */}
+            <TouchableOpacity
+              style={styles.rememberRow}
+              activeOpacity={0.7}
+              onPress={() => {
+                haptics.selection()
+                setRememberMe((prev) => !prev)
+              }}
+            >
+              <View
+                style={[styles.checkbox, rememberMe && styles.checkboxActive]}
+              >
+                {rememberMe && (
+                  <Check size={13} color="#090d16" strokeWidth={3} />
+                )}
+              </View>
+              <Text style={styles.rememberText}>Remember me</Text>
+            </TouchableOpacity>
 
             {error && <Text style={styles.errorText}>{error}</Text>}
 
@@ -153,6 +208,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 32,
   },
+  logoWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 18,
+    overflow: "hidden",
+    borderWidth: 1.5,
+    borderColor: "rgba(255, 255, 255, 0.15)",
+    marginBottom: 14,
+    ...theme.shadows.md,
+  },
+  logoImage: {
+    width: "100%",
+    height: "100%",
+  },
   brandTitle: {
     textAlign: "center",
   },
@@ -163,6 +232,31 @@ const styles = StyleSheet.create({
   formCard: {
     padding: 20,
     gap: 16,
+  },
+  rememberRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 2,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: theme.colors.borderStrong,
+    backgroundColor: theme.colors.surfaceElevated,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  rememberText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: theme.colors.textSecondary,
   },
   errorText: {
     fontSize: 13,

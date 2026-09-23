@@ -25,8 +25,14 @@ import {
   getStoredUserProfile,
   setStoredUserProfile,
 } from "./storage"
-import { decodeJwt } from "./jwt"
+import { decodeJwt, isTokenExpired } from "./jwt"
 import { getApiBaseUrl } from "./config"
+
+// Configure client storage and base URL synchronously at module load
+configureClient({
+  baseUrl: getApiBaseUrl(),
+  storage: mobileStorage,
+})
 
 export interface AuthUser {
   id: string
@@ -69,11 +75,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isBiometricSupported, setIsBiometricSupported] = useState(false)
   const [isBiometricActive, setIsBiometricActive] = useState(false)
 
-  // Configure API client with mobile storage & unauthorized listener
+  // Configure API client with onRefreshed and onUnauthorized handlers
   useEffect(() => {
     configureClient({
       baseUrl: getApiBaseUrl(),
       storage: mobileStorage,
+      onRefreshed: (newAccessToken: string) => {
+        setAccessToken(newAccessToken)
+        setSession({ accessToken: newAccessToken, hasSession: true })
+      },
       onUnauthorized: () => {
         mobileStorage.clearSession()
         setStoredUserProfile(null)
@@ -106,19 +116,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function initSession() {
       try {
-        const [storedSession, storedSpaceId, bioEnabled, storedProfile] =
-          await Promise.all([
-            mobileStorage.getSession(),
-            mobileStorage.getActiveSpaceId(),
-            isBiometricEnabled(),
-            getStoredUserProfile(),
-          ])
+        const [
+          storedSession,
+          storedSpaceId,
+          bioEnabled,
+          storedProfile,
+          storedRefreshToken,
+        ] = await Promise.all([
+          mobileStorage.getSession(),
+          mobileStorage.getActiveSpaceId(),
+          isBiometricEnabled(),
+          getStoredUserProfile(),
+          mobileStorage.getRefreshToken?.() || null,
+        ])
 
         if (storedProfile) {
           setCachedUser(storedProfile)
         }
 
-        if (storedSession.hasSession && storedSession.accessToken) {
+        let validAccessToken = storedSession.accessToken
+        let hasActiveSession = storedSession.hasSession
+
+        // Proactively refresh expired or nearly expired access tokens
+        if (validAccessToken && isTokenExpired(validAccessToken)) {
+          if (storedRefreshToken) {
+            try {
+              const refreshUrl = `${getApiBaseUrl()}/api/v1/identity/sessions:refresh`
+              const res = await fetch(refreshUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ refreshToken: storedRefreshToken }),
+              })
+
+              if (res.ok) {
+                const data = await res.json()
+                if (data.accessToken) {
+                  validAccessToken = data.accessToken
+                  hasActiveSession = true
+                  await mobileStorage.setSession(data.accessToken)
+                  if (data.refreshToken && mobileStorage.setRefreshToken) {
+                    await mobileStorage.setRefreshToken(data.refreshToken)
+                  }
+                } else {
+                  hasActiveSession = false
+                }
+              } else {
+                hasActiveSession = false
+              }
+            } catch {
+              hasActiveSession = false
+            }
+          } else {
+            hasActiveSession = false
+          }
+        }
+
+        if (hasActiveSession && validAccessToken) {
           // If biometric unlock is enabled, prompt user before unlocking data
           if (bioEnabled) {
             const authResult = await LocalAuthentication.authenticateAsync({
@@ -133,9 +186,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           }
 
-          setSession(storedSession)
-          setAccessToken(storedSession.accessToken)
+          setSession({ accessToken: validAccessToken, hasSession: true })
+          setAccessToken(validAccessToken)
           setActiveSpaceId(storedSpaceId)
+        } else if (!hasActiveSession && storedSession.hasSession) {
+          // Session could not be restored or refreshed; cleanly reset
+          await mobileStorage.clearSession()
+          setStoredUserProfile(null)
+          setCachedUser(null)
+          setSession({ accessToken: null, hasSession: false })
+          setAccessToken(null)
         }
       } catch (err) {
         console.error("Failed to restore session from SecureStore", err)

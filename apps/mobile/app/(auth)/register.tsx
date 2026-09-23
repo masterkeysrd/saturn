@@ -3,6 +3,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -77,6 +78,13 @@ export default function RegisterScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
+            <View style={styles.logoWrapper}>
+              <Image
+                source={require("@/assets/saturn_logo.jpg")}
+                style={styles.logoImage}
+                resizeMode="cover"
+              />
+            </View>
             <Header1 style={styles.brandTitle}>Create Account</Header1>
             <Subtitle style={styles.subtitle}>Join Saturn Life OS</Subtitle>
           </View>
@@ -173,6 +181,20 @@ const styles = StyleSheet.create({
   header: {
     alignItems: "center",
     marginBottom: 32,
+  },
+  logoWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 18,
+    overflow: "hidden",
+    borderWidth: 1.5,
+    borderColor: "rgba(255, 255, 255, 0.15)",
+    marginBottom: 14,
+    ...theme.shadows.md,
+  },
+  logoImage: {
+    width: "100%",
+    height: "100%",
   },
   brandTitle: {
     textAlign: "center",
