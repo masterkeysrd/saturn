@@ -1,0 +1,32 @@
+{
+  "name": "saturn-mobile",
+  "version": "0.0.1",
+  "main": "index.ts",
+  "private": true,
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write \"**/*.{ts,tsx}\""
+  },
+  "dependencies": {
+    "@saturn/api": "*",
+    "@saturn/core": "*",
+    "@saturn/schemas": "*",
+    "@tanstack/react-query": "^5.102.8",
+    "expo": "~57.0.24",
+    "expo-secure-store": "~57.0.4",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "prettier": "^3.9.6",
+    "typescript": "~6.0.3"
+  }
+}

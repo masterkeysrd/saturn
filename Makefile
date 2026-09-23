@@ -130,6 +130,11 @@ clean:
 web-dev:
 	npm run dev --workspace=saturn-web
 
+## Start the mobile development server
+.PHONY: mobile-dev
+mobile-dev:
+	npm run dev:mobile
+
 ## Build the frontend for production
 .PHONY: web-build
 web-build:

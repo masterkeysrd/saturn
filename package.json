@@ -9,6 +9,8 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "dev:web": "npm run dev --workspace=saturn-web",
+    "dev:mobile": "npm run start --workspace=saturn-mobile",
     "lint": "turbo run lint",
     "format": "turbo run format",
     "typecheck": "turbo run typecheck"
