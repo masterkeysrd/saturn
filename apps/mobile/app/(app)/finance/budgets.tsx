@@ -1,21 +1,21 @@
-import React, { useState } from "react"
+import { useState } from "react"
 import {
   StyleSheet,
   Text,
   View,
   ScrollView,
   RefreshControl,
-  TouchableOpacity,
 } from "react-native"
-import { useRouter } from "expo-router"
-import { PiggyBank, Plus } from "lucide-react-native"
-import { formatAmount, getBudgetColors } from "@saturn/core"
+import { PiggyBank, Calendar } from "lucide-react-native"
+import { formatAmount } from "@saturn/core"
 import {
   useListBudgetsQuery,
   type Budget,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { useSpace } from "@/lib/space-context"
 import { theme, getNativeBudgetColors } from "@/lib/theme"
+import { getBudgetIcon } from "@/lib/budget-icons"
+import { formatInterval } from "@/components/finance/finance-utils"
 import { Card } from "@/components/ui/card"
 import { Caption } from "@/components/ui/typography"
 import { Badge } from "@/components/ui/badge"
@@ -24,7 +24,6 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { haptics } from "@/lib/haptics"
 
 export default function BudgetsScreen() {
-  const router = useRouter()
   const { activeSpaceId } = useSpace()
   const [refreshing, setRefreshing] = useState(false)
 
@@ -33,7 +32,7 @@ export default function BudgetsScreen() {
     isLoading,
     refetch,
   } = useListBudgetsQuery(
-    { pageSize: 100, pageToken: "" },
+    { pageSize: 100, pageToken: "", view: "FULL" },
     { enabled: !!activeSpaceId }
   )
 
@@ -83,16 +82,50 @@ export default function BudgetsScreen() {
         ) : (
           <View style={styles.budgetList}>
             {budgets.map((b: Budget) => {
-              const palette = getBudgetColors(b.color)
+              const nativeColors = getNativeBudgetColors(b.color || "indigo")
+              const BIcon = getBudgetIcon(b.icon, b.name)
+
               const spentCents = Number(b.currentPeriod?.spentAmount || "0")
               const limitCents = Number(b.limitAmount || "0")
-              const percentage =
-                limitCents > 0
-                  ? Math.min(Math.round((spentCents / limitCents) * 100), 100)
-                  : 0
+              const actualPercentage =
+                limitCents > 0 ? Math.round((spentCents / limitCents) * 100) : 0
+              const progressWidth = Math.min(actualPercentage, 100)
+              const isOver = actualPercentage >= 100
+              const isNearLimit = actualPercentage >= 85 && !isOver
 
-              const nativeColors = getNativeBudgetColors(palette.value)
-              const isOver = percentage >= 95
+              const remainingCents = Math.max(limitCents - spentCents, 0)
+              const overCents = Math.max(spentCents - limitCents, 0)
+
+              const startStr = b.currentPeriod?.startDate
+                ? new Date(b.currentPeriod.startDate).toLocaleDateString(
+                    "en-US",
+                    {
+                      month: "short",
+                      day: "numeric",
+                    }
+                  )
+                : ""
+              const endStr = b.currentPeriod?.endDate
+                ? new Date(b.currentPeriod.endDate).toLocaleDateString(
+                    "en-US",
+                    {
+                      month: "short",
+                      day: "numeric",
+                    }
+                  )
+                : ""
+              const dateRangeStr =
+                b.interval === "ONE_TIME"
+                  ? "Lifetime"
+                  : startStr && endStr
+                    ? `${startStr} - ${endStr}`
+                    : ""
+
+              const barColor = isOver
+                ? theme.colors.destructive
+                : isNearLimit
+                  ? "#f59e0b"
+                  : nativeColors.bar
 
               return (
                 <Card
@@ -101,30 +134,73 @@ export default function BudgetsScreen() {
                   onPress={() => haptics.light()}
                 >
                   <View style={styles.budgetHeader}>
-                    <View style={styles.budgetTitleRow}>
+                    <View style={styles.budgetLeftGroup}>
                       <View
                         style={[
-                          styles.colorDot,
-                          { backgroundColor: nativeColors.bar },
+                          styles.budgetIconBadge,
+                          {
+                            backgroundColor: nativeColors.bg,
+                            borderColor: nativeColors.border,
+                          },
                         ]}
-                      />
-                      <Text style={styles.budgetName}>{b.name}</Text>
+                      >
+                        <BIcon size={18} color={nativeColors.bar} />
+                      </View>
+                      <View style={styles.budgetTitleCol}>
+                        <View style={styles.budgetNameRow}>
+                          <Text style={styles.budgetName} numberOfLines={1}>
+                            {b.name}
+                          </Text>
+                          <View style={styles.intervalBadge}>
+                            <Text style={styles.intervalText}>
+                              {formatInterval(b.interval)}
+                            </Text>
+                          </View>
+                        </View>
+                        {dateRangeStr ? (
+                          <View style={styles.periodRow}>
+                            <Calendar
+                              size={11}
+                              color={theme.colors.textMuted}
+                            />
+                            <Text style={styles.periodText}>
+                              {dateRangeStr}
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
                     </View>
-                    <Badge
-                      size="sm"
-                      label={`${percentage}%`}
-                      bg={
-                        isOver
-                          ? theme.colors.destructiveSubtle
-                          : nativeColors.bg
-                      }
-                      border={
-                        isOver ? "rgba(244, 63, 94, 0.3)" : nativeColors.border
-                      }
-                      color={
-                        isOver ? theme.colors.destructive : nativeColors.text
-                      }
-                    />
+
+                    <View style={styles.budgetRightGroup}>
+                      <Text style={styles.limitAmountText}>
+                        {formatAmount(b.limitAmount, b.currency)}
+                      </Text>
+                      <Badge
+                        size="sm"
+                        label={`${actualPercentage}%`}
+                        bg={
+                          isOver
+                            ? theme.colors.destructiveSubtle
+                            : isNearLimit
+                              ? "rgba(245, 158, 11, 0.15)"
+                              : nativeColors.bg
+                        }
+                        border={
+                          isOver
+                            ? "rgba(244, 63, 94, 0.3)"
+                            : isNearLimit
+                              ? "rgba(245, 158, 11, 0.3)"
+                              : nativeColors.border
+                        }
+                        color={
+                          isOver
+                            ? theme.colors.destructive
+                            : isNearLimit
+                              ? "#f59e0b"
+                              : nativeColors.text
+                        }
+                      />
+                    </View>
                   </View>
 
                   {/* Progress Track */}
@@ -133,10 +209,8 @@ export default function BudgetsScreen() {
                       style={[
                         styles.progressBar,
                         {
-                          width: `${percentage}%`,
-                          backgroundColor: isOver
-                            ? theme.colors.destructive
-                            : nativeColors.bar,
+                          width: `${progressWidth}%`,
+                          backgroundColor: barColor,
                         },
                       ]}
                     />
@@ -145,12 +219,21 @@ export default function BudgetsScreen() {
                   <View style={styles.budgetFooter}>
                     <Text style={styles.spentText}>
                       Spent:{" "}
-                      <Text style={styles.whiteText}>
+                      <Text
+                        style={[
+                          styles.whiteText,
+                          isOver && { color: theme.colors.destructive },
+                        ]}
+                      >
                         {formatAmount(String(spentCents), b.currency)}
                       </Text>
                     </Text>
-                    <Text style={styles.limitText}>
-                      Limit: {formatAmount(b.limitAmount, b.currency)}
+                    <Text
+                      style={[styles.remainingText, isOver && styles.overText]}
+                    >
+                      {isOver
+                        ? `Over by ${formatAmount(String(overCents), b.currency)}`
+                        : `${formatAmount(String(remainingCents), b.currency)}`}
                     </Text>
                   </View>
                 </Card>
@@ -193,19 +276,66 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  budgetTitleRow: {
+  budgetLeftGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  budgetIconBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  budgetTitleCol: {
+    flex: 1,
+    gap: 3,
+  },
+  budgetNameRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-  },
-  colorDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    flexWrap: "wrap",
   },
   budgetName: {
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  intervalBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  intervalText: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: theme.colors.textMuted,
+    textTransform: "uppercase",
+  },
+  periodRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  periodText: {
+    fontSize: 11,
+    color: theme.colors.textMuted,
+  },
+  budgetRightGroup: {
+    alignItems: "flex-end",
+    gap: 4,
+  },
+  limitAmountText: {
+    fontSize: 15,
+    fontWeight: "800",
     color: theme.colors.textPrimary,
   },
   progressTrack: {
@@ -221,17 +351,22 @@ const styles = StyleSheet.create({
   budgetFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
   },
   spentText: {
-    fontSize: 13,
+    fontSize: 12,
     color: theme.colors.textMuted,
   },
   whiteText: {
     color: theme.colors.textPrimary,
-    fontWeight: "600",
+    fontWeight: "700",
   },
-  limitText: {
-    fontSize: 13,
-    color: theme.colors.textMuted,
+  remainingText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.success,
+  },
+  overText: {
+    color: theme.colors.destructive,
   },
 })

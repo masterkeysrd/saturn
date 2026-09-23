@@ -1,4 +1,4 @@
-import React, { forwardRef } from "react"
+import { forwardRef } from "react"
 import {
   Text,
   View,
@@ -139,7 +139,7 @@ export const BudgetPickerSheet = forwardRef<
                       >
                         {isOver
                           ? "Over budget"
-                          : `${formatAmount(String(remainingCents), b.currency)} left`}
+                          : `${formatAmount(String(remainingCents), b.currency)}`}
                       </Text>
                     </View>
 

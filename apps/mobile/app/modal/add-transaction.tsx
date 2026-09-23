@@ -69,7 +69,7 @@ export default function AddTransactionModal() {
   const currencies: CurrencyInfo[] = currenciesData?.currencies || []
 
   const { data: budgetsData, isLoading: budgetsLoading } = useListBudgetsQuery(
-    { pageSize: 100, pageToken: "" },
+    { pageSize: 100, pageToken: "", view: "FULL" },
     { enabled: !!activeSpaceId }
   )
   const budgets: Budget[] = budgetsData?.budgets || []

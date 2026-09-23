@@ -81,7 +81,7 @@ export default function FinanceHubScreen() {
 
   // 5. Active Budgets Preview
   const { data: budgetsData, isLoading: budgetsLoading } = useListBudgetsQuery(
-    { pageSize: 100, pageToken: "" },
+    { pageSize: 100, pageToken: "", view: "FULL" },
     { enabled: !!activeSpaceId }
   )
 
