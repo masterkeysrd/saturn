@@ -1,0 +1,41 @@
+{
+  "name": "@saturn/hooks",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "import": "./index.ts",
+      "default": "./index.ts"
+    },
+    "./finance": {
+      "types": "./finance/index.ts",
+      "import": "./finance/index.ts",
+      "default": "./finance/index.ts"
+    },
+    "./finance/*": {
+      "types": "./finance/*.ts",
+      "import": "./finance/*.ts",
+      "default": "./finance/*.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write \"**/*.ts\""
+  },
+  "dependencies": {
+    "@saturn/api": "*",
+    "@saturn/core": "*",
+    "@tanstack/react-query": "^5.102.8"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "typescript": "^6.0.3"
+  }
+}

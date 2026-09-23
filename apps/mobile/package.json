@@ -15,6 +15,7 @@
     "@gorhom/bottom-sheet": "^5.2.14",
     "@saturn/api": "*",
     "@saturn/core": "*",
+    "@saturn/hooks": "*",
     "@saturn/schemas": "*",
     "@tanstack/react-query": "^5.102.8",
     "expo": "~57.0.24",

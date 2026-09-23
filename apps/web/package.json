@@ -17,6 +17,7 @@
     "@hookform/resolvers": "^5.9.1",
     "@saturn/api": "*",
     "@saturn/core": "*",
+    "@saturn/hooks": "*",
     "@saturn/schemas": "*",
     "@tailwindcss/vite": "^4",
     "@tanstack/react-query": "^5.102.8",
