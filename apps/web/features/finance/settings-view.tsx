@@ -2,7 +2,7 @@ import { useActiveSpaceContext } from "@/features/space/use-space"
 import {
   useGetFinanceSettingsQuery,
   useListExchangeRatesQuery,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import { AlertTriangle, CheckCircle2, Settings } from "lucide-react"
 

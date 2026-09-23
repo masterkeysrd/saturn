@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "paths": {
+      "@saturn/api/*": ["./*"]
+    }
+  },
+  "include": ["index.ts", "client.ts", "storage.ts", "gen/**/*"]
+}

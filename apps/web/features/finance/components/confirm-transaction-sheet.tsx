@@ -16,7 +16,7 @@ import {
   useListTransactionsQuery,
   type ScheduledTransaction,
   type Transaction,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import {
   Sheet,
   SheetContent,

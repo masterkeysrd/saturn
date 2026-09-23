@@ -9,7 +9,7 @@ import {
   useRetryJobMutation,
   useDeleteJobMutation,
   useGetSchedulerStatusQuery,
-} from "@/gen/saturn/platform/scheduler/v1/admin"
+} from "@saturn/api/gen/saturn/platform/scheduler/v1/admin"
 import { Button } from "@/components/ui/button"
 import {
   Select,

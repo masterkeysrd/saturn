@@ -7,7 +7,7 @@ import {
   type ScheduledTransaction,
   type Transaction_Type,
   useListTransactionsQuery,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"

@@ -20,7 +20,7 @@ import {
   type RecurringTransaction,
   type Account,
   type Budget,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { toCentsString, formatCents, formatInterval } from "../utils"
 
 interface ConfirmScheduledFormProps {

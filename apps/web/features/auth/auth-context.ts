@@ -3,7 +3,7 @@ import type {
   User,
   LoginUserRequest,
   RegisterUserRequest,
-} from "@/gen/saturn/identity/v1/identity"
+} from "@saturn/api/gen/saturn/identity/v1/identity"
 
 export interface AuthUser extends Partial<User> {
   role?: "admin" | "user"

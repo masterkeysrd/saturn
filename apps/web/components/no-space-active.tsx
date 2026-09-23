@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { ArrowRight, Layers, Loader2 } from "lucide-react"
-import { useCreateSpaceMutation } from "@/gen/saturn/space/v1/space"
+import { useCreateSpaceMutation } from "@saturn/api/gen/saturn/space/v1/space"
 import { useActiveSpaceContext } from "@/features/space/use-space"
 import { useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "react-router-dom"

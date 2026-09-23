@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button"
 import {
   type Borrowing,
   useListBorrowingsQuery,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { formatCents } from "../utils"
 
 interface BorrowingSelectorProps {

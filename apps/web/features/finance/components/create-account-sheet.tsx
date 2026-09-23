@@ -10,7 +10,7 @@ import {
   useCreateAccountMutation,
   useUpdateAccountMutation,
   useListCurrenciesQuery,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { usePatch } from "@/hooks/use-patch"
 import { InstitutionSelect } from "./institution-select"
 import { Input } from "@/components/ui/input"

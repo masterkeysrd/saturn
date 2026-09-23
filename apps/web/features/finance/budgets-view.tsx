@@ -5,7 +5,7 @@ import {
   useDeleteBudgetMutation,
   useGetFinanceSettingsQuery,
   useListBudgetsQuery,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import { Globe, DollarSign, PieChart, PiggyBank } from "lucide-react"
 import { Button } from "@/components/ui/button"

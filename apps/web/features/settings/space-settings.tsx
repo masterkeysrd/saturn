@@ -23,7 +23,7 @@ import {
   useDeleteSpaceMutation,
   type CreateSpaceRequest,
   type Space,
-} from "@/gen/saturn/space/v1/space"
+} from "@saturn/api/gen/saturn/space/v1/space"
 import { toast } from "@/components/ui/toast"
 import { ManageSpaceSheet } from "./manage-space-sheet"
 

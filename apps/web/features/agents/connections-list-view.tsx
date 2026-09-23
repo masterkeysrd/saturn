@@ -6,7 +6,7 @@ import {
   useDeleteProviderMutation,
   useGetProviderCatalogQuery,
   type LLMProvider,
-} from "@/gen/saturn/platform/agent/v1/agent"
+} from "@saturn/api/gen/saturn/platform/agent/v1/agent"
 import { PageLayout } from "@/components/ui/page-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

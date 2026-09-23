@@ -10,7 +10,7 @@ import {
   useCreateBorrowingMutation,
   useUpdateBorrowingMutation,
   useListCurrenciesQuery,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { useCurrencyConversionPreview } from "@/hooks/use-currency-conversion"
 import { CurrencyConversionPreview } from "./currency-conversion-preview"
 import { Input } from "@/components/ui/input"

@@ -16,7 +16,7 @@ import {
   useCreateInstitutionMutation,
   type Institution,
   type ResolveInstitutionResponse,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { getInstitutionLogoUrl, BUDGET_COLORS } from "../utils"
 import { Landmark, Loader2, Globe, Building2, Check } from "lucide-react"
 

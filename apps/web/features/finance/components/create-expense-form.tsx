@@ -13,7 +13,7 @@ import {
   useUpdateExpenseMutation,
   useListCurrenciesQuery,
   useListAccountsQuery,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { useCurrencyConversionPreview } from "@/hooks/use-currency-conversion"
 import { BudgetSelect } from "./budget-select"
 import { AccountSelect } from "./account-select"

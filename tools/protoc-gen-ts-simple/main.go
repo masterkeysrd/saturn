@@ -54,7 +54,7 @@ func generateFile(gen *protogen.Plugin, f *protogen.File) {
 	}
 
 	if len(f.Services) > 0 {
-		g.P("import { request } from \"@/lib/api-client\";")
+		g.P("import { request } from \"@saturn/api/client\";")
 		var rqImports []string
 		if hasQueries {
 			rqImports = append(rqImports, "useQuery", "type UseQueryOptions")

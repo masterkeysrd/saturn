@@ -2,7 +2,7 @@ import {
   type Account,
   type Institution,
   type Account_Type,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import {
   Landmark,
   CreditCard,

@@ -8,7 +8,7 @@ import {
   type Account,
   useCreateBudgetMutation,
   useListCurrenciesQuery,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { useCurrencyConversionPreview } from "@/hooks/use-currency-conversion"
 import { AccountSelect } from "./account-select"
 import { AmountInput } from "@/components/ui/amount-input"

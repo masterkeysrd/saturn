@@ -9,7 +9,7 @@ import type {
   ScheduledTransaction,
   Borrowing,
   Transaction,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

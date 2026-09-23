@@ -15,6 +15,7 @@
     "@base-ui/react": "^1.8.0",
     "@fontsource-variable/noto-sans": "^5.3.0",
     "@hookform/resolvers": "^5.9.1",
+    "@saturn/api": "*",
     "@saturn/core": "*",
     "@saturn/schemas": "*",
     "@tailwindcss/vite": "^4",

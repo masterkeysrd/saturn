@@ -13,7 +13,7 @@ import {
   useListTransfersQuery,
   useGetFinanceSettingsQuery,
   useListInstitutionsQuery,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import { useDebounce } from "@/lib/use-debounce"
 import { useUrlState } from "@/lib/use-url-state"

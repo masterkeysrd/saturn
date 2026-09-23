@@ -16,7 +16,7 @@ import {
   type Budget,
   useListScheduledTransactionsQuery,
   useListRecurringTransactionsQuery,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { formatCents } from "../utils"
 
 interface ScheduledTransactionSelectorProps {

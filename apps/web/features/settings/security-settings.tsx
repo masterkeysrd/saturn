@@ -1,4 +1,4 @@
-import { useListMySecurityEventsQuery } from "@/gen/saturn/identity/v1/identity"
+import { useListMySecurityEventsQuery } from "@saturn/api/gen/saturn/identity/v1/identity"
 import {
   ShieldCheckIcon,
   ShieldAlertIcon,

@@ -1,7 +1,7 @@
 import {
   useListExchangeRatesQuery,
   type ExchangeRate,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 
 export interface ConversionPreviewSuccess {
   amount: number

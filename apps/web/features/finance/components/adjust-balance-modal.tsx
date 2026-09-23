@@ -5,7 +5,7 @@ import { z } from "zod"
 import {
   type Account,
   useAdjustAccountBalanceMutation,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { AmountInput } from "@/components/ui/amount-input"

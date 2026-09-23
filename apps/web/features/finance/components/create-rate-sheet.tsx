@@ -11,7 +11,7 @@ import {
   type FinanceSettings,
   useCreateExchangeRateMutation,
   useListCurrenciesQuery,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { DatePicker } from "@/components/ui/date-picker"

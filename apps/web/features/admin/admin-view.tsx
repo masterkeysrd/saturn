@@ -5,7 +5,7 @@ import {
   useApproveUserMutation,
   useRejectUserMutation,
   type ListUsersRequest_StatusFilter,
-} from "@/gen/saturn/identity/admin/v1/admin_identity"
+} from "@saturn/api/gen/saturn/identity/admin/v1/admin_identity"
 import { Button } from "@/components/ui/button"
 import {
   BadgeCheckIcon,

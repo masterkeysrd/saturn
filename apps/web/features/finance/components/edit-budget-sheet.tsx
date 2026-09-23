@@ -11,7 +11,7 @@ import {
   type UpdateBudgetRequest,
   useUpdateBudgetMutation,
   useListCurrenciesQuery,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { usePatch } from "@/hooks/use-patch"
 import { useCurrencyConversionPreview } from "@/hooks/use-currency-conversion"
 import { AccountSelect } from "./account-select"

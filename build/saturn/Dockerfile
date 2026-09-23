@@ -6,15 +6,20 @@
 # --- Stage 1: Web UI Builder ---
 FROM --platform=$BUILDPLATFORM node:26-alpine AS web-builder
 
-WORKDIR /app/apps/web
+WORKDIR /app
 
-# Cache node dependencies
-COPY apps/web/package*.json ./
+# Cache node dependencies across workspace
+COPY package*.json turbo.json ./
+COPY apps/web/package*.json ./apps/web/
+COPY packages/schemas/package*.json ./packages/schemas/
+COPY packages/core/package*.json ./packages/core/
+COPY packages/api/package*.json ./packages/api/
 RUN npm ci
 
-# Copy web source and build production bundle
-COPY apps/web/ ./
-RUN npm run build
+# Copy sources and build production bundle
+COPY packages/ ./packages/
+COPY apps/web/ ./apps/web/
+RUN npm run build --workspace=apps/web
 
 # --- Stage 2: Go Backend Builder ---
 FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS go-builder

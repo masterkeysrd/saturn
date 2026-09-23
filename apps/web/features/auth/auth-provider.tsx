@@ -11,14 +11,14 @@ import {
   logout,
   refreshSession,
   useGetCurrentUserQuery,
-} from "@/gen/saturn/identity/v1/identity"
+} from "@saturn/api/gen/saturn/identity/v1/identity"
 import type {
   LoginUserRequest,
   RegisterUserRequest,
   RefreshSessionResponse,
-} from "@/gen/saturn/identity/v1/identity"
+} from "@saturn/api/gen/saturn/identity/v1/identity"
 import { AuthContext, type AuthUser } from "./auth-context"
-import { authStorage } from "@/lib/auth-storage"
+import { authStorage } from "@saturn/api/storage"
 import { decodeJwt } from "@/lib/jwt"
 
 // Global promise cache to deduplicate silent refresh calls on mount (e.g. under React Strict Mode)

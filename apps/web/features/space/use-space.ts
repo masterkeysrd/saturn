@@ -7,7 +7,7 @@ import {
   createElement,
   type ReactNode,
 } from "react"
-import { useListSpacesQuery } from "@/gen/saturn/space/v1/space"
+import { useListSpacesQuery } from "@saturn/api/gen/saturn/space/v1/space"
 import { useAuth } from "@/features/auth/use-auth"
 
 const ACTIVE_SPACE_KEY = "active_space_id"

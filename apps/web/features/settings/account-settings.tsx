@@ -14,7 +14,7 @@ import {
   useListActiveSessionsQuery,
   useRevokeSessionMutation,
   useRevokeAllSessionsMutation,
-} from "@/gen/saturn/identity/v1/identity"
+} from "@saturn/api/gen/saturn/identity/v1/identity"
 import { parseUserAgent } from "@/lib/utils"
 
 export function AccountSettings() {

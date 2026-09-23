@@ -15,7 +15,7 @@ import {
   useListInboxItemsQuery,
   useGetFinanceSettingsQuery,
   useListBudgetsQuery,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { Inbox } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {

@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import {
   useListBackupsQuery,
   useTriggerBackupMutation,
-} from "@/gen/saturn/platform/backup/v1/backup"
+} from "@saturn/api/gen/saturn/platform/backup/v1/backup"
 import { Button } from "@/components/ui/button"
 import {
   DatabaseIcon,

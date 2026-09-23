@@ -7,7 +7,7 @@ import {
   useDeleteStatementMutation,
   type Statement,
   type Account,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import {
   useActiveSpaceContext,
   resolveSpacePath,

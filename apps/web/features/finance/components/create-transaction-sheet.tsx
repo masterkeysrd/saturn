@@ -15,7 +15,7 @@ import {
   type RecurringTransaction,
   type Borrowing,
   useListAccountsQuery,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { CreateExpenseForm } from "./create-expense-form"
 import { CreateIncomeForm } from "./create-income-form"
 import { ConfirmScheduledForm } from "./confirm-scheduled-form"

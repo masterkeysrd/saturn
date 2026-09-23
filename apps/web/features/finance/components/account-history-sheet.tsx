@@ -10,7 +10,7 @@ import {
   useListBudgetsQuery,
   type Account,
   useGetFinanceSettingsQuery,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { useActiveSpaceContext } from "@/features/space/use-space"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {

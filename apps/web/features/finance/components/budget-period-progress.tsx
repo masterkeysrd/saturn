@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { type Budget } from "@/gen/saturn/finance/v1/finance"
+import { type Budget } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { AlertTriangle, Calendar } from "lucide-react"
 import { formatCents, formatAmount, getBudgetColors } from "../utils"
 import { cn } from "@/lib/utils"

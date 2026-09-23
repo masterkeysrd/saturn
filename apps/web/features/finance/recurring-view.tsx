@@ -12,7 +12,7 @@ import {
   type ListScheduledTransactionsRequest,
   useGetFinanceSettingsQuery,
   useListBudgetsQuery,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { useCurrencyConversionPreview } from "@/hooks/use-currency-conversion"
 import {
   TrendingDownIcon,

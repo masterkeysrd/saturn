@@ -6,7 +6,7 @@ import {
   type SpentInsights_BudgetContribution,
   type IncomeInsights_AccountContribution,
   useGetFinanceSettingsQuery,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { FinancePageLayout } from "./components/finance-page-layout"
 import {
   formatCents,

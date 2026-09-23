@@ -4,7 +4,7 @@ import { useActiveSpaceContext } from "@/features/space/use-space"
 import {
   useGetFinanceSettingsQuery,
   useConfigureFinanceMutation,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { Button } from "@/components/ui/button"
 import { Coins, Loader2, PiggyBank } from "lucide-react"
 import { Label } from "@/components/ui/label"

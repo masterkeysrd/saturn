@@ -4,7 +4,7 @@ import {
   useListAgentsQuery,
   useListAgentRunsQuery,
   type AgentRun,
-} from "@/gen/saturn/platform/agent/v1/agent"
+} from "@saturn/api/gen/saturn/platform/agent/v1/agent"
 import { PageLayout } from "@/components/ui/page-layout"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"

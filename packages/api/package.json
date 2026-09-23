@@ -1,0 +1,50 @@
+{
+  "name": "@saturn/api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "import": "./index.ts",
+      "default": "./index.ts"
+    },
+    "./client": {
+      "types": "./client.ts",
+      "import": "./client.ts",
+      "default": "./client.ts"
+    },
+    "./storage": {
+      "types": "./storage.ts",
+      "import": "./storage.ts",
+      "default": "./storage.ts"
+    },
+    "./saturn/*": {
+      "types": "./gen/saturn/*.ts",
+      "import": "./gen/saturn/*.ts",
+      "default": "./gen/saturn/*.ts"
+    },
+    "./gen/*": {
+      "types": "./gen/*.ts",
+      "import": "./gen/*.ts",
+      "default": "./gen/*.ts"
+    },
+    "./*": {
+      "types": "./*.ts",
+      "import": "./*.ts",
+      "default": "./*.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write \"**/*.ts\""
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.102.8"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

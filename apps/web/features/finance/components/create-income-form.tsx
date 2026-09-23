@@ -12,7 +12,7 @@ import {
   useUpdateIncomeMutation,
   useListCurrenciesQuery,
   useListAccountsQuery,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { useCurrencyConversionPreview } from "@/hooks/use-currency-conversion"
 import { AccountSelect } from "./account-select"
 import { CurrencyConversionPreview } from "./currency-conversion-preview"

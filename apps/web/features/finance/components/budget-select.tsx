@@ -1,4 +1,4 @@
-import type { Budget } from "@/gen/saturn/finance/v1/finance"
+import type { Budget } from "@saturn/api/gen/saturn/finance/v1/finance"
 import {
   Select,
   SelectContent,

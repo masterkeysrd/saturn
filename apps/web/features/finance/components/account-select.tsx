@@ -3,7 +3,7 @@ import {
   useListInstitutionsQuery,
   type Account,
   type Account_Type,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import {
   Popover,
   PopoverContent,

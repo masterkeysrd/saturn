@@ -5,7 +5,7 @@ import {
   useListDeliveriesQuery,
   useRetryDeliveryMutation,
   type DeliveryInfo,
-} from "@/gen/saturn/platform/message/v1/admin"
+} from "@saturn/api/gen/saturn/platform/message/v1/admin"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"

@@ -6,7 +6,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet"
-import { useListTransactionEventsQuery } from "@/gen/saturn/finance/v1/finance"
+import { useListTransactionEventsQuery } from "@saturn/api/gen/saturn/finance/v1/finance"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Loader2,

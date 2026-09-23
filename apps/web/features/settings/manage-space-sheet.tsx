@@ -39,7 +39,7 @@ import {
   type Space,
   type SpaceMember_Role,
   type UpdateSpaceRequest,
-} from "@/gen/saturn/space/v1/space"
+} from "@saturn/api/gen/saturn/space/v1/space"
 import { toast } from "@/components/ui/toast"
 
 const roleLabels: Record<SpaceMember_Role, string> = {

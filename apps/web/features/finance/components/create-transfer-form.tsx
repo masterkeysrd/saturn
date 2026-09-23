@@ -9,7 +9,7 @@ import {
   type Account,
   useCreateTransferMutation,
   useListExchangeRatesQuery,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { AccountSelect } from "./account-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

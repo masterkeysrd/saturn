@@ -14,7 +14,7 @@ import {
   type Account,
   type BorrowingTransactionType,
   useLogBorrowingTransactionMutation,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { z } from "zod"
 import { toCentsString, formatCents } from "../utils"
 

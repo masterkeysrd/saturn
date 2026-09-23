@@ -2,7 +2,7 @@ import { useState, useMemo } from "react"
 import {
   useListInstitutionsQuery,
   type Institution,
-} from "@/gen/saturn/finance/v1/finance"
+} from "@saturn/api/gen/saturn/finance/v1/finance"
 import { getInstitutionLogoUrl } from "../utils"
 import { CreateInstitutionModal } from "./create-institution-modal"
 import {
