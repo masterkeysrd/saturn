@@ -8,5 +8,8 @@
 /.env.*
 
 # Frontend build & dependencies
+node_modules/
+.turbo/
 apps/web/node_modules/
 apps/web/dist/
+
