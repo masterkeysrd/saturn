@@ -29,6 +29,18 @@ export default function AppLayout() {
     >
       <Stack.Screen name="(tabs)" />
       <Stack.Screen
+        name="settings/index"
+        options={{
+          headerShown: true,
+          headerTitle: "Settings",
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+          },
+          headerTintColor: theme.colors.textPrimary,
+          headerBackTitle: "Back",
+        }}
+      />
+      <Stack.Screen
         name="settings/space"
         options={{
           headerShown: true,
@@ -37,7 +49,7 @@ export default function AppLayout() {
             backgroundColor: theme.colors.background,
           },
           headerTintColor: theme.colors.textPrimary,
-          headerBackTitle: "Back",
+          headerBackTitle: "Settings",
         }}
       />
     </Stack>

@@ -2,7 +2,7 @@ import React from "react"
 import { StyleSheet, View, Text, Image, TouchableOpacity } from "react-native"
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { ChevronDown, Bell } from "lucide-react-native"
+import { ChevronDown, Bell, Settings } from "lucide-react-native"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -19,7 +19,13 @@ export function AppHeader() {
 
   const handleNotifications = () => {
     haptics.light()
-    router.push("/(app)/(tabs)/settings")
+    // Open settings/alerts or upcoming notification screen
+    router.push("/(app)/settings")
+  }
+
+  const handleSettings = () => {
+    haptics.light()
+    router.push("/(app)/settings")
   }
 
   return (
@@ -38,25 +44,36 @@ export function AppHeader() {
         <Text style={styles.brandTitle}>Saturn</Text>
       </View>
 
-      {/* Right controls: Space Switcher pill + Notification Bell */}
+      {/* Right controls: Space Switcher pill + Notification Bell + Settings */}
       <View style={styles.rightControls}>
         <TouchableOpacity
           style={styles.spacePill}
           activeOpacity={0.7}
           onPress={handleSwitchSpace}
+          hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
         >
           <Text style={styles.spaceName} numberOfLines={1}>
             {activeSpace?.name || "Personal"}
           </Text>
-          <ChevronDown size={14} color={theme.colors.textMuted} />
+          <ChevronDown size={13} color={theme.colors.textMuted} />
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.bellButton}
+          style={styles.iconButton}
           activeOpacity={0.7}
           onPress={handleNotifications}
+          hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
         >
-          <Bell size={18} color={theme.colors.textSecondary} />
+          <Bell size={17} color={theme.colors.textSecondary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.iconButton}
+          activeOpacity={0.7}
+          onPress={handleSettings}
+          hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+        >
+          <Settings size={17} color={theme.colors.textSecondary} />
         </TouchableOpacity>
       </View>
     </View>
@@ -101,7 +118,7 @@ const styles = StyleSheet.create({
   rightControls: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
   },
   spacePill: {
     flexDirection: "row",
@@ -109,11 +126,11 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surfaceElevated,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    paddingHorizontal: 10,
+    paddingHorizontal: 9,
     paddingVertical: 6,
     borderRadius: theme.radius.full,
-    gap: 6,
-    maxWidth: 140,
+    gap: 5,
+    maxWidth: 120,
   },
   spaceName: {
     fontSize: 13,
@@ -121,10 +138,10 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     flexShrink: 1,
   },
-  bellButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+  iconButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: theme.colors.surfaceElevated,
     borderWidth: 1,
     borderColor: theme.colors.border,

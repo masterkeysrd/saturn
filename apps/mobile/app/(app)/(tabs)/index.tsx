@@ -43,7 +43,10 @@ export default function OverviewScreen() {
       await Promise.all([
         refetchSpaces(),
         queryClient.invalidateQueries({
-          queryKey: ["/api/v1/finance"],
+          predicate: (query) => {
+            const firstKey = query.queryKey[0]
+            return typeof firstKey === "string" && firstKey.startsWith("/api/v1/")
+          },
         }),
       ])
     } finally {
@@ -61,6 +64,8 @@ export default function OverviewScreen() {
             refreshing={refreshing}
             onRefresh={handleRefresh}
             tintColor={theme.colors.primary}
+            colors={[theme.colors.primary]}
+            progressBackgroundColor={theme.colors.surfaceElevated}
           />
         }
       >
