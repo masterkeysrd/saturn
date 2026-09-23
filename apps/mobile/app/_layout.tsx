@@ -5,6 +5,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet"
 import { AuthProvider } from "@/lib/auth-context"
+import { SpaceProvider } from "@/lib/space-context"
 import { ToastProvider } from "@/components/ui/toast"
 import { theme } from "@/lib/theme"
 
@@ -25,10 +26,11 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <BottomSheetModalProvider>
-              <ToastProvider>
-                <StatusBar style="light" />
-                <Stack
+            <SpaceProvider>
+              <BottomSheetModalProvider>
+                <ToastProvider>
+                  <StatusBar style="light" />
+                  <Stack
                   screenOptions={{
                     headerStyle: {
                       backgroundColor: theme.colors.background,
@@ -68,6 +70,16 @@ export default function RootLayout() {
                     }}
                   />
                   <Stack.Screen
+                    name="modal/create-space"
+                    options={{
+                      presentation: "modal",
+                      headerTitle: "Create Workspace",
+                      headerStyle: {
+                        backgroundColor: theme.colors.surface,
+                      },
+                    }}
+                  />
+                  <Stack.Screen
                     name="+not-found"
                     options={{
                       title: "Not Found",
@@ -76,6 +88,7 @@ export default function RootLayout() {
                 </Stack>
               </ToastProvider>
             </BottomSheetModalProvider>
+            </SpaceProvider>
           </AuthProvider>
         </QueryClientProvider>
       </SafeAreaProvider>

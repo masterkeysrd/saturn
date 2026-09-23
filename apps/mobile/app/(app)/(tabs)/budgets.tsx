@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
 import { PiggyBank, Landmark } from "lucide-react-native"
 import { formatAmount, getBudgetColors } from "@saturn/core"
 import { theme, getNativeBudgetColors } from "@/lib/theme"
@@ -61,7 +62,8 @@ export default function BudgetsScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Segment Switcher */}
       <View style={styles.segmentContainer}>
         <TouchableOpacity
@@ -238,16 +240,23 @@ export default function BudgetsScreen() {
         </View>
       )}
     </ScrollView>
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
   },
   content: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 80,
     gap: 16,
   },
   segmentContainer: {

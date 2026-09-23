@@ -28,6 +28,18 @@ export default function AppLayout() {
       }}
     >
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen
+        name="settings/space"
+        options={{
+          headerShown: true,
+          headerTitle: "Workspace Settings",
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+          },
+          headerTintColor: theme.colors.textPrimary,
+          headerBackTitle: "Back",
+        }}
+      />
     </Stack>
   )
 }

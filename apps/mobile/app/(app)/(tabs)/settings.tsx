@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   Switch,
 } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
 import { useRouter } from "expo-router"
 import {
   ShieldCheck,
   Layers,
+  Users,
   Bell,
   LogOut,
   ChevronRight,
@@ -18,6 +20,7 @@ import {
   Fingerprint,
 } from "lucide-react-native"
 import { useAuth } from "@/lib/auth-context"
+import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
 import { Avatar } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -32,11 +35,11 @@ export default function SettingsScreen() {
   const {
     user,
     logout,
-    activeSpaceId,
     isBiometricSupported,
     isBiometricActive,
     toggleBiometrics,
   } = useAuth()
+  const { activeSpace, activeSpaceRole } = useSpace()
 
   const [signOutModalVisible, setSignOutModalVisible] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
@@ -68,8 +71,9 @@ export default function SettingsScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* User Profile Card */}
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        {/* User Profile Card */}
       <Card style={styles.profileCard}>
         <Avatar name={user?.name || "User"} size={52} />
         <View style={styles.profileInfo}>
@@ -91,7 +95,7 @@ export default function SettingsScreen() {
         <Text style={styles.sectionHeader}>WORKSPACE</Text>
         <Card style={styles.menuGroup}>
           <TouchableOpacity
-            style={styles.menuItem}
+            style={[styles.menuItem, styles.menuItemBorder]}
             activeOpacity={0.7}
             onPress={() => router.push("/modal/switch-space")}
           >
@@ -101,8 +105,27 @@ export default function SettingsScreen() {
             </View>
             <View style={styles.menuRight}>
               <Text style={styles.menuValue}>
-                {activeSpaceId || "Personal"}
+                {activeSpace?.name || "Personal"}
               </Text>
+              <ChevronRight size={16} color={theme.colors.textMuted} />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.7}
+            onPress={() => router.push("/(app)/settings/space")}
+          >
+            <View style={styles.menuLeft}>
+              <Users size={18} color={theme.colors.accent} />
+              <Text style={styles.menuLabel}>Workspace Details & Members</Text>
+            </View>
+            <View style={styles.menuRight}>
+              <Badge
+                variant={activeSpaceRole === "owner" ? "primary" : "default"}
+                size="sm"
+                label={activeSpaceRole.toUpperCase()}
+              />
               <ChevronRight size={16} color={theme.colors.textMuted} />
             </View>
           </TouchableOpacity>
@@ -186,17 +209,24 @@ export default function SettingsScreen() {
         onConfirm={handleConfirmSignOut}
         onCancel={() => setSignOutModalVisible(false)}
       />
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
   },
   content: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 80,
     gap: 20,
   },
   profileCard: {

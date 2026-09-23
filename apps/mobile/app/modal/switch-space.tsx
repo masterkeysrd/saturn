@@ -8,12 +8,13 @@ import {
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Check, Plus } from "lucide-react-native"
-import { useListSpacesQuery } from "@saturn/api/saturn/space/v1/space"
+import { useSpace } from "@/lib/space-context"
 import { useAuth } from "@/lib/auth-context"
 import { theme } from "@/lib/theme"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import { SkeletonCard } from "@/components/ui/skeleton-loader"
 import { useToast } from "@/components/ui/toast"
 
@@ -21,14 +22,11 @@ export default function SwitchSpaceModal() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const toast = useToast()
-  const { activeSpaceId, setActiveSpace } = useAuth()
-  const { data: spacesData, isLoading } = useListSpacesQuery({
-    pageSize: 20,
-    pageToken: "",
-  })
+  const { user } = useAuth()
+  const { spaces, activeSpaceId, switchSpace, isLoading } = useSpace()
 
   const handleSelectSpace = async (spaceId: string, spaceName: string) => {
-    await setActiveSpace(spaceId)
+    await switchSpace(spaceId)
     toast.show({
       type: "info",
       title: "Workspace Changed",
@@ -46,8 +44,7 @@ export default function SwitchSpaceModal() {
       ]}
     >
       <Text style={styles.subtitle}>
-        Select an active workspace to view its accounts, budgets, and
-        transactions.
+        Select an active workspace to view and isolate its accounts, budgets, and transactions.
       </Text>
 
       {isLoading ? (
@@ -57,48 +54,55 @@ export default function SwitchSpaceModal() {
         </View>
       ) : (
         <Card style={styles.list}>
-          {spacesData?.spaces?.map((space) => {
+          {spaces.map((space) => {
             const isSelected = (activeSpaceId || "") === space.id
+            const isOwner = space.ownerId === user?.id
             return (
               <TouchableOpacity
                 key={space.id || space.name}
                 style={[styles.spaceItem, isSelected && styles.spaceItemActive]}
                 activeOpacity={0.7}
-                onPress={() =>
-                  handleSelectSpace(space.id || "", space.name || "Space")
-                }
+                onPress={() => handleSelectSpace(space.id || "", space.name || "Space")}
               >
                 <View style={styles.spaceLeft}>
-                  <Avatar name={space.name || "Workspace"} size={36} />
+                  <Avatar name={space.name || "Workspace"} size={40} />
                   <View style={styles.spaceInfo}>
-                    <Text style={styles.spaceName}>{space.name}</Text>
+                    <View style={styles.nameRow}>
+                      <Text style={styles.spaceName}>{space.name}</Text>
+                      <Badge
+                        variant={isOwner ? "primary" : "default"}
+                        size="sm"
+                        label={isOwner ? "Owner" : "Member"}
+                      />
+                    </View>
                     <Text style={styles.spaceDescription} numberOfLines={1}>
                       {space.description || "Workspace"}
                     </Text>
                   </View>
                 </View>
-                {isSelected && <Check size={18} color={theme.colors.primary} />}
+                {isSelected && <Check size={20} color={theme.colors.primary} />}
               </TouchableOpacity>
             )
           })}
 
           {/* Default fallback workspace if backend has no spaces yet */}
-          {(!spacesData?.spaces || spacesData.spaces.length === 0) && (
+          {spaces.length === 0 && (
             <TouchableOpacity
               style={[styles.spaceItem, styles.spaceItemActive]}
               activeOpacity={0.7}
-              onPress={() =>
-                handleSelectSpace("personal", "Personal Workspace")
-              }
+              onPress={() => handleSelectSpace("personal", "Personal Workspace")}
             >
               <View style={styles.spaceLeft}>
-                <Avatar name="Personal Workspace" size={36} />
+                <Avatar name="Personal Workspace" size={40} />
                 <View style={styles.spaceInfo}>
-                  <Text style={styles.spaceName}>Personal Workspace</Text>
-                  <Text style={styles.spaceDescription}>Default space</Text>
+                  <View style={styles.nameRow}>
+                    <Text style={styles.spaceName}>Personal Workspace</Text>
+                    <Badge variant="primary" size="sm" label="Default" />
+                  </View>
+                  <Text style={styles.spaceDescription}>Default local space</Text>
                 </View>
               </View>
-              <Check size={18} color={theme.colors.primary} />
+              <Check size={20} color={theme.colors.primary} />
             </TouchableOpacity>
           )}
         </Card>
@@ -108,7 +112,7 @@ export default function SwitchSpaceModal() {
         variant="primary"
         size="lg"
         leftIcon={<Plus size={18} color={theme.colors.primaryForeground} />}
-        onPress={() => router.back()}
+        onPress={() => router.push("/modal/create-space")}
       >
         Create New Workspace
       </Button>
@@ -152,9 +156,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     flex: 1,
+    marginRight: 8,
   },
   spaceInfo: {
     flex: 1,
+    gap: 2,
+  },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   spaceName: {
     fontSize: 15,
@@ -164,6 +175,5 @@ const styles = StyleSheet.create({
   spaceDescription: {
     fontSize: 12,
     color: theme.colors.textMuted,
-    marginTop: 2,
   },
 })

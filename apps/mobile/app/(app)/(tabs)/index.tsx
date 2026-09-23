@@ -7,6 +7,7 @@ import {
   RefreshControl,
 } from "react-native"
 import { useRouter } from "expo-router"
+import { SafeAreaView } from "react-native-safe-area-context"
 import {
   TrendingUp,
   ArrowDownLeft,
@@ -16,7 +17,7 @@ import {
   Wallet,
 } from "lucide-react-native"
 import { formatAmount, formatCents } from "@saturn/core"
-import { useListSpacesQuery } from "@saturn/api/saturn/space/v1/space"
+import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
 import { Card } from "@/components/ui/card"
 import { MonoAmount, Title, Caption } from "@/components/ui/typography"
@@ -26,174 +27,202 @@ import { haptics } from "@/lib/haptics"
 
 export default function OverviewScreen() {
   const router = useRouter()
-  const {
-    data: spacesData,
-    refetch,
-    isRefetching,
-    isLoading,
-  } = useListSpacesQuery({
-    pageSize: 10,
-    pageToken: "",
-  })
+  const { spaces, activeSpace, isLoading, refetchSpaces } = useSpace()
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl
-          refreshing={isRefetching}
-          onRefresh={() => {
-            haptics.light()
-            refetch()
-          }}
-          tintColor={theme.colors.primary}
-        />
-      }
-    >
-      {/* Net Worth Card */}
-      <Card style={styles.netWorthCard}>
-        <Caption style={styles.cardLabel}>TOTAL NET WORTH</Caption>
-        <MonoAmount size="xl" style={styles.netWorthAmount}>
-          {formatAmount("1450250", "USD")}
-        </MonoAmount>
-
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <View
-              style={[
-                styles.statIconBadge,
-                { backgroundColor: theme.colors.successSubtle },
-              ]}
-            >
-              <ArrowDownLeft size={14} color={theme.colors.success} />
-            </View>
-            <View>
-              <Caption>Income (Sep)</Caption>
-              <MonoAmount size="sm" color={theme.colors.success}>
-                {formatAmount("450000", "USD")}
-              </MonoAmount>
-            </View>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={() => {
+              haptics.light()
+              refetchSpaces()
+            }}
+            tintColor={theme.colors.primary}
+          />
+        }
+      >
+        {/* Sleek In-Page Top Header */}
+        <View style={styles.topHeader}>
+          <View>
+            <Caption style={{ letterSpacing: 0.5 }}>OVERVIEW</Caption>
+            <Title style={styles.brandTitle}>🪐 Saturn</Title>
           </View>
-
-          <View style={styles.statItem}>
-            <View
-              style={[
-                styles.statIconBadge,
-                { backgroundColor: theme.colors.destructiveSubtle },
-              ]}
-            >
-              <ArrowUpRight size={14} color={theme.colors.destructive} />
-            </View>
-            <View>
-              <Caption>Expenses (Sep)</Caption>
-              <MonoAmount size="sm" color={theme.colors.destructive}>
-                {formatAmount("185000", "USD")}
-              </MonoAmount>
-            </View>
-          </View>
+          {activeSpace && (
+            <Badge
+              variant="default"
+              size="sm"
+              label={activeSpace.name}
+            />
+          )}
         </View>
-      </Card>
 
-      {/* Quick Actions Row */}
-      <View style={styles.quickActionsRow}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          activeOpacity={0.7}
-          onPress={() => {
-            haptics.light()
-            router.push("/modal/add-transaction")
-          }}
-        >
-          <View style={styles.actionIconCircle}>
-            <Plus size={20} color={theme.colors.primary} />
-          </View>
-          <Text style={styles.actionText}>Add</Text>
-        </TouchableOpacity>
+        {/* Net Worth Card */}
+        <Card style={styles.netWorthCard}>
+          <Caption style={styles.cardLabel}>TOTAL NET WORTH</Caption>
+          <MonoAmount size="xl" style={styles.netWorthAmount}>
+            {formatAmount("1450250", "USD")}
+          </MonoAmount>
 
-        <TouchableOpacity
-          style={styles.actionButton}
-          activeOpacity={0.7}
-          onPress={() => {
-            haptics.light()
-            router.push("/(app)/(tabs)/transactions")
-          }}
-        >
-          <View style={styles.actionIconCircle}>
-            <TrendingUp size={20} color={theme.colors.primary} />
-          </View>
-          <Text style={styles.actionText}>Activity</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionButton}
-          activeOpacity={0.7}
-          onPress={() => {
-            haptics.light()
-            router.push("/(app)/(tabs)/budgets")
-          }}
-        >
-          <View style={styles.actionIconCircle}>
-            <Wallet size={20} color={theme.colors.primary} />
-          </View>
-          <Text style={styles.actionText}>Budgets</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionButton}
-          activeOpacity={0.7}
-          onPress={() => {
-            haptics.light()
-            router.push("/modal/add-transaction")
-          }}
-        >
-          <View style={styles.actionIconCircle}>
-            <ScanLine size={20} color={theme.colors.primary} />
-          </View>
-          <Text style={styles.actionText}>Scan</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Connected Workspaces Section */}
-      <View style={styles.section}>
-        <Title style={styles.sectionTitle}>Connected Workspaces</Title>
-        {isLoading ? (
-          <SkeletonCard />
-        ) : (
-          <Card style={styles.spacesCard}>
-            {spacesData?.spaces?.length ? (
-              spacesData.spaces.map((space) => (
-                <View key={space.id || space.name} style={styles.spaceRow}>
-                  <Text style={styles.spaceName}>{space.name}</Text>
-                  <Badge
-                    variant="primary"
-                    size="sm"
-                    label={space.id ? "Connected" : "Active"}
-                  />
-                </View>
-              ))
-            ) : (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>
-                  Workspace active: {formatCents(1450250)} units
-                </Text>
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <View
+                style={[
+                  styles.statIconBadge,
+                  { backgroundColor: theme.colors.successSubtle },
+                ]}
+              >
+                <ArrowDownLeft size={14} color={theme.colors.success} />
               </View>
-            )}
-          </Card>
-        )}
-      </View>
-    </ScrollView>
+              <View>
+                <Caption>Income (Sep)</Caption>
+                <MonoAmount size="sm" color={theme.colors.success}>
+                  {formatAmount("450000", "USD")}
+                </MonoAmount>
+              </View>
+            </View>
+
+            <View style={styles.statItem}>
+              <View
+                style={[
+                  styles.statIconBadge,
+                  { backgroundColor: theme.colors.destructiveSubtle },
+                ]}
+              >
+                <ArrowUpRight size={14} color={theme.colors.destructive} />
+              </View>
+              <View>
+                <Caption>Expenses (Sep)</Caption>
+                <MonoAmount size="sm" color={theme.colors.destructive}>
+                  {formatAmount("185000", "USD")}
+                </MonoAmount>
+              </View>
+            </View>
+          </View>
+        </Card>
+
+        {/* Quick Actions Row */}
+        <View style={styles.quickActionsRow}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            activeOpacity={0.7}
+            onPress={() => {
+              haptics.light()
+              router.push("/modal/add-transaction")
+            }}
+          >
+            <View style={styles.actionIconCircle}>
+              <Plus size={20} color={theme.colors.primary} />
+            </View>
+            <Text style={styles.actionText}>Add</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            activeOpacity={0.7}
+            onPress={() => {
+              haptics.light()
+              router.push("/(app)/(tabs)/transactions")
+            }}
+          >
+            <View style={styles.actionIconCircle}>
+              <TrendingUp size={20} color={theme.colors.primary} />
+            </View>
+            <Text style={styles.actionText}>Activity</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            activeOpacity={0.7}
+            onPress={() => {
+              haptics.light()
+              router.push("/(app)/(tabs)/budgets")
+            }}
+          >
+            <View style={styles.actionIconCircle}>
+              <Wallet size={20} color={theme.colors.primary} />
+            </View>
+            <Text style={styles.actionText}>Budgets</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            activeOpacity={0.7}
+            onPress={() => {
+              haptics.light()
+              router.push("/modal/add-transaction")
+            }}
+          >
+            <View style={styles.actionIconCircle}>
+              <ScanLine size={20} color={theme.colors.primary} />
+            </View>
+            <Text style={styles.actionText}>Scan</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Connected Workspaces Section */}
+        <View style={styles.section}>
+          <Title style={styles.sectionTitle}>Connected Workspaces</Title>
+          {isLoading ? (
+            <SkeletonCard />
+          ) : (
+            <Card style={styles.spacesCard}>
+              {spaces.length ? (
+                spaces.map((space) => {
+                  const isCurrent = space.id === activeSpace?.id
+                  return (
+                    <View key={space.id || space.name} style={styles.spaceRow}>
+                      <Text style={styles.spaceName}>{space.name}</Text>
+                      <Badge
+                        variant={isCurrent ? "primary" : "default"}
+                        size="sm"
+                        label={isCurrent ? "Active" : "Connected"}
+                      />
+                    </View>
+                  )
+                })
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>
+                    Workspace ready: {formatCents(1450250)} units
+                  </Text>
+                </View>
+              )}
+            </Card>
+          )}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
   },
   content: {
     padding: 16,
+    paddingBottom: 80,
     gap: 20,
+  },
+  topHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: 4,
+    paddingBottom: 2,
+  },
+  brandTitle: {
+    fontSize: 22,
+    fontWeight: "700",
   },
   netWorthCard: {
     padding: 20,
