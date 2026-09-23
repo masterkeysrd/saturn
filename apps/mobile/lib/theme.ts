@@ -1,3 +1,4 @@
+import { Platform } from "react-native"
 import {
   BUDGET_COLORS,
   getBudgetColors as getCoreBudgetColors,
@@ -88,6 +89,13 @@ export const theme = {
     sky: "#0ea5e9",
     violet: "#8b5cf6",
   } as Record<string, string>,
+  typography: {
+    mono: Platform.select({
+      ios: "Menlo",
+      android: "monospace",
+      default: "monospace",
+    }),
+  },
 } as const
 
 const BUDGET_COLOR_MAP: Record<

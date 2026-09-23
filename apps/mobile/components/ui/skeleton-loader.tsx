@@ -59,9 +59,21 @@ export function Skeleton({
   )
 }
 
-export function SkeletonCard({ style }: { style?: StyleProp<ViewStyle> }) {
+export function SkeletonCard({
+  height,
+  style,
+}: {
+  height?: number | string
+  style?: StyleProp<ViewStyle>
+}) {
   return (
-    <View style={[styles.card, style]}>
+    <View
+      style={[
+        styles.card,
+        height !== undefined ? { height: height as any } : undefined,
+        style,
+      ]}
+    >
       <View style={styles.cardHeader}>
         <Skeleton width="40%" height={16} />
         <Skeleton width="20%" height={14} />

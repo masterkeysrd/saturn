@@ -30,10 +30,12 @@ import {
   useListTransactionsQuery,
   useListBudgetsQuery,
   useListAccountsQuery,
+  useListInstitutionsQuery,
   useGetFinanceSettingsQuery,
   type Transaction,
   type Budget,
   type Account,
+  type Account_InstitutionInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
 import { useSpace } from "@/lib/space-context"
@@ -42,6 +44,7 @@ import { Card } from "@/components/ui/card"
 import { MonoAmount, Caption } from "@/components/ui/typography"
 import { Badge } from "@/components/ui/badge"
 import { SkeletonCard } from "@/components/ui/skeleton-loader"
+import { CardAccountItem } from "@/components/finance/card-account-item"
 import { haptics } from "@/lib/haptics"
 
 export default function FinanceHubScreen() {
@@ -58,7 +61,7 @@ export default function FinanceHubScreen() {
   const baseCurrency = settingsData?.baseCurrency || "USD"
 
   // 2. Exchange Rates & Multi-Currency Conversion
-  const { exchangeRates } = useCurrencyConversionPreview({
+  const { exchangeRates, getConversionPreview } = useCurrencyConversionPreview({
     spaceId: activeSpaceId || undefined,
     enabled: !!activeSpaceId,
     baseCurrency,
@@ -79,6 +82,20 @@ export default function FinanceHubScreen() {
     { pageSize: 100, pageToken: "" },
     { enabled: !!activeSpaceId }
   )
+
+  // 6. Institutions for Logo & Info
+  const { data: instData } = useListInstitutionsQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: !!activeSpaceId }
+  )
+  const institutions = instData?.institutions || []
+  const instMap = useMemo(() => {
+    const map = new Map<string, Account_InstitutionInfo>()
+    institutions.forEach((inst) => {
+      if (inst.id) map.set(inst.id, inst as Account_InstitutionInfo)
+    })
+    return map
+  }, [institutions])
 
   const accounts = accountsData?.accounts || []
   const transactions = txData?.transactions || []
@@ -422,65 +439,55 @@ export default function FinanceHubScreen() {
           </View>
 
           {accountsLoading ? (
-            <SkeletonCard />
+            <SkeletonCard height={190} />
           ) : accounts.length === 0 ? (
             <Card style={styles.emptyCard}>
               <Text style={styles.emptyText}>No accounts connected</Text>
             </Card>
           ) : (
-            <Card style={styles.listCard}>
-              {accounts.slice(0, 4).map((acc: Account, idx) => {
-                const balanceNum = Number(acc.currentBalance || "0")
-                const isCredit = acc.type === "CREDIT_CARD"
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.horizontalAccountsScroll}
+              contentContainerStyle={styles.horizontalAccountsContainer}
+            >
+              {accounts.map((acc: Account) => {
+                const balanceCents = acc.currentBalance || "0"
+                const balanceNum = Number(balanceCents)
+                const isDifferentCurrency =
+                  acc.currency && acc.currency !== baseCurrency
+
+                let convertedStr = ""
+                if (isDifferentCurrency) {
+                  const preview = getConversionPreview(
+                    String(Math.abs(balanceNum) / 100),
+                    acc.currency
+                  )
+                  if (preview && "amount" in preview) {
+                    convertedStr = `≈ ${formatAmount(
+                      Math.round(preview.amount * 100),
+                      baseCurrency
+                    )}`
+                  }
+                }
 
                 return (
-                  <TouchableOpacity
-                    key={acc.id || idx}
-                    style={[
-                      styles.txRow,
-                      idx < Math.min(accounts.length, 4) - 1 &&
-                        styles.rowBorder,
-                    ]}
-                    activeOpacity={0.7}
+                  <CardAccountItem
+                    key={acc.id}
+                    acc={acc}
+                    institution={
+                      acc.institutionId
+                        ? instMap.get(acc.institutionId)
+                        : undefined
+                    }
+                    baseCurrency={baseCurrency}
+                    convertedText={convertedStr}
+                    width={300}
                     onPress={() => navigateTo("/(app)/finance/accounts")}
-                  >
-                    <View style={styles.txLeft}>
-                      <View style={styles.accountIconBadge}>
-                        {acc.type === "CREDIT_CARD" ? (
-                          <CreditCard
-                            size={15}
-                            color={theme.colors.destructive}
-                          />
-                        ) : acc.type === "CASH" ? (
-                          <Coins size={15} color={theme.colors.success} />
-                        ) : (
-                          <Landmark size={15} color={theme.colors.primary} />
-                        )}
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.txName} numberOfLines={1}>
-                          {acc.name}
-                        </Text>
-                        <Text style={styles.txMeta}>
-                          {acc.type.replace(/_/g, " ")}
-                          {acc.lastFour ? ` •••• ${acc.lastFour}` : ""}
-                        </Text>
-                      </View>
-                    </View>
-                    <MonoAmount
-                      size="sm"
-                      color={
-                        isCredit && balanceNum > 0
-                          ? theme.colors.destructive
-                          : theme.colors.textPrimary
-                      }
-                    >
-                      {formatAmount(acc.currentBalance || "0", acc.currency)}
-                    </MonoAmount>
-                  </TouchableOpacity>
+                  />
                 )
               })}
-            </Card>
+            </ScrollView>
           )}
         </View>
       </ScrollView>
@@ -612,13 +619,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  accountIconBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: theme.colors.surfaceElevated,
-    alignItems: "center",
-    justifyContent: "center",
+  horizontalAccountsScroll: {
+    marginHorizontal: -16,
+  },
+  horizontalAccountsContainer: {
+    paddingHorizontal: 16,
+    gap: 12,
   },
   txName: {
     fontSize: 14,

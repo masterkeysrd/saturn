@@ -1,51 +1,24 @@
-import React, { useState } from "react"
-import {
-  StyleSheet,
-  Text,
-  View,
-  ScrollView,
-  RefreshControl,
-  TouchableOpacity,
-} from "react-native"
-import { useRouter } from "expo-router"
-import {
-  Landmark,
-  CreditCard,
-  Wallet,
-  ArrowRightLeft,
-  Coins,
-} from "lucide-react-native"
+import React, { useState, useMemo } from "react"
+import { StyleSheet, View, ScrollView, RefreshControl } from "react-native"
+import { Landmark } from "lucide-react-native"
 import { formatAmount } from "@saturn/core"
 import {
   useListAccountsQuery,
+  useListInstitutionsQuery,
   useGetFinanceSettingsQuery,
   type Account,
-  type Account_Type,
+  type Account_InstitutionInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
-import { Card } from "@/components/ui/card"
-import { MonoAmount, Caption } from "@/components/ui/typography"
+import { Caption } from "@/components/ui/typography"
 import { SkeletonCard } from "@/components/ui/skeleton-loader"
 import { EmptyState } from "@/components/ui/empty-state"
+import { CardAccountItem } from "@/components/finance/card-account-item"
 import { haptics } from "@/lib/haptics"
 
-function getAccountIcon(type: Account_Type) {
-  switch (type) {
-    case "BANK":
-      return <Landmark size={20} color={theme.colors.primary} />
-    case "CREDIT_CARD":
-      return <CreditCard size={20} color={theme.colors.destructive} />
-    case "CASH":
-      return <Coins size={20} color={theme.colors.success} />
-    default:
-      return <Wallet size={20} color={theme.colors.accent} />
-  }
-}
-
 export default function AccountsScreen() {
-  const router = useRouter()
   const { activeSpaceId } = useSpace()
   const [refreshing, setRefreshing] = useState(false)
 
@@ -60,6 +33,19 @@ export default function AccountsScreen() {
     isLoading,
     refetch,
   } = useListAccountsQuery({ activeOnly: true }, { enabled: !!activeSpaceId })
+
+  const { data: instData } = useListInstitutionsQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: !!activeSpaceId }
+  )
+  const institutions = instData?.institutions || []
+  const instMap = useMemo(() => {
+    const map = new Map<string, Account_InstitutionInfo>()
+    institutions.forEach((inst) => {
+      if (inst.id) map.set(inst.id, inst as Account_InstitutionInfo)
+    })
+    return map
+  }, [institutions])
 
   const { getConversionPreview } = useCurrencyConversionPreview({
     spaceId: activeSpaceId || undefined,
@@ -95,14 +81,13 @@ export default function AccountsScreen() {
         }
       >
         <Caption style={styles.sectionHeader}>
-          ACTIVE ACCOUNTS ({accounts.length})
+          ACTIVE CARDS & ACCOUNTS ({accounts.length})
         </Caption>
 
         {isLoading ? (
-          <View style={{ gap: 10 }}>
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
+          <View style={{ gap: 14 }}>
+            <SkeletonCard height={190} />
+            <SkeletonCard height={190} />
           </View>
         ) : accounts.length === 0 ? (
           <EmptyState
@@ -114,7 +99,6 @@ export default function AccountsScreen() {
           <View style={styles.accountsList}>
             {accounts.map((acc: Account) => {
               const balanceCents = acc.currentBalance || "0"
-              const isCredit = acc.type === "CREDIT_CARD"
               const balanceNum = Number(balanceCents)
               const isDifferentCurrency =
                 acc.currency && acc.currency !== baseCurrency
@@ -135,42 +119,17 @@ export default function AccountsScreen() {
               }
 
               return (
-                <Card
+                <CardAccountItem
                   key={acc.id}
-                  style={styles.accountCard}
-                  onPress={() => haptics.light()}
-                >
-                  <View style={styles.cardHeader}>
-                    <View style={styles.iconWrapper}>
-                      {getAccountIcon(acc.type)}
-                    </View>
-                    <View style={styles.accountInfo}>
-                      <Text style={styles.accountName}>{acc.name}</Text>
-                      <Text style={styles.accountSub}>
-                        {acc.type.replace(/_/g, " ")}
-                        {acc.lastFour ? ` •••• ${acc.lastFour}` : ""}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.balanceContainer}>
-                    <MonoAmount
-                      size="md"
-                      color={
-                        isCredit && balanceNum > 0
-                          ? theme.colors.destructive
-                          : theme.colors.textPrimary
-                      }
-                    >
-                      {formatAmount(balanceCents, acc.currency)}
-                    </MonoAmount>
-                    {convertedStr ? (
-                      <Caption style={styles.convertedText}>
-                        {convertedStr}
-                      </Caption>
-                    ) : null}
-                  </View>
-                </Card>
+                  acc={acc}
+                  institution={
+                    acc.institutionId
+                      ? instMap.get(acc.institutionId)
+                      : undefined
+                  }
+                  baseCurrency={baseCurrency}
+                  convertedText={convertedStr}
+                />
               )
             })}
           </View>
@@ -199,49 +158,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   accountsList: {
-    gap: 10,
-  },
-  accountCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    flex: 1,
-    marginRight: 8,
-  },
-  iconWrapper: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: theme.colors.surfaceElevated,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  accountInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  accountName: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  accountSub: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    textTransform: "capitalize",
-  },
-  balanceContainer: {
-    alignItems: "flex-end",
-    gap: 2,
-  },
-  convertedText: {
-    fontSize: 11,
-    color: theme.colors.textMuted,
+    gap: 14,
   },
 })
