@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   StyleSheet,
   Text,
@@ -7,210 +7,376 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from "react-native"
-import { useRouter } from "expo-router"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { Check, X, Tag, FileText } from "lucide-react-native"
-import { transactionSchema } from "@saturn/schemas"
+import { useRouter, useLocalSearchParams, Stack } from "expo-router"
+import {
+  ArrowUpRight,
+  ArrowDownLeft,
+  ArrowRightLeft,
+  CalendarClock,
+  HandCoins,
+} from "lucide-react-native"
+import {
+  useGetTransactionQuery,
+  useListBudgetsQuery,
+  useListAccountsQuery,
+  useGetFinanceSettingsQuery,
+  useListExchangeRatesQuery,
+  useListScheduledTransactionsQuery,
+  useListBorrowingsQuery,
+  useListCurrenciesQuery,
+  type Budget,
+  type Account,
+  type ScheduledTransaction,
+  type Borrowing,
+  type CurrencyInfo,
+} from "@saturn/api/saturn/finance/v1/finance"
+import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
-import { AmountInput } from "@/components/ui/amount-input"
-import { TextInput } from "@/components/ui/text-input"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card } from "@/components/ui/card"
-import { useToast } from "@/components/ui/toast"
+import { haptics } from "@/lib/haptics"
+import {
+  ExpenseForm,
+  IncomeForm,
+  TransferForm,
+  ScheduledConfirmForm,
+  BorrowingForm,
+} from "@/components/finance/forms"
 
-const QUICK_CATEGORIES = [
-  { id: "groceries", name: "Groceries" },
-  { id: "dining", name: "Dining" },
-  { id: "transport", name: "Transport" },
-  { id: "tech", name: "Tech" },
-  { id: "health", name: "Health" },
-]
+export type TransactionFlowType =
+  "EXPENSE" | "INCOME" | "TRANSFER" | "SCHEDULED" | "BORROWING"
 
 export default function AddTransactionModal() {
   const router = useRouter()
-  const insets = useSafeAreaInsets()
-  const toast = useToast()
-  const [cents, setCents] = useState(0)
-  const [description, setDescription] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("groceries")
-  const [validationError, setValidationError] = useState<string | null>(null)
-  const [isExpense, setIsExpense] = useState(true)
+  const { activeSpaceId } = useSpace()
+  const { id: editTransactionId } = useLocalSearchParams<{ id?: string }>()
+  const isEditMode = !!editTransactionId
 
-  const handleSave = () => {
-    const amountStr = (cents / 100).toFixed(2)
-    const result = transactionSchema.safeParse({
-      budgetId: selectedCategory,
-      description: description.trim() || (isExpense ? "Expense" : "Income"),
-      amount: amountStr,
-      currency: "USD",
-      transactionDate: new Date(),
-      hasCustomEffectiveDate: false,
-      effectiveDate: new Date(),
-    })
+  const [activeType, setActiveType] = useState<TransactionFlowType>("EXPENSE")
 
-    if (!result.success) {
-      const err = result.error.errors[0]?.message || "Invalid transaction"
-      setValidationError(err)
-      toast.show({
-        type: "error",
-        title: "Validation Error",
-        message: err,
-      })
-      return
+  // Queries
+  const { data: settingsData } = useGetFinanceSettingsQuery(
+    {},
+    { enabled: !!activeSpaceId }
+  )
+  const baseCurrency = settingsData?.baseCurrency || "USD"
+
+  const { data: currenciesData, isLoading: currenciesLoading } =
+    useListCurrenciesQuery(
+      {},
+      { enabled: !!activeSpaceId, staleTime: 1000 * 60 * 30 }
+    )
+  const currencies: CurrencyInfo[] = currenciesData?.currencies || []
+
+  const { data: budgetsData, isLoading: budgetsLoading } = useListBudgetsQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: !!activeSpaceId }
+  )
+  const budgets: Budget[] = budgetsData?.budgets || []
+
+  const { data: accountsData } = useListAccountsQuery(
+    { activeOnly: true },
+    { enabled: !!activeSpaceId }
+  )
+  const accounts: Account[] = accountsData?.accounts || []
+
+  const { data: ratesData } = useListExchangeRatesQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: !!activeSpaceId }
+  )
+  const exchangeRates = ratesData?.exchangeRates || []
+
+  const { data: scheduledData, isLoading: scheduledLoading } =
+    useListScheduledTransactionsQuery(
+      {
+        status: "PENDING",
+        pageSize: 100,
+        pageToken: "",
+        startDate: "",
+        endDate: "",
+      },
+      { enabled: !!activeSpaceId }
+    )
+  const pendingScheduled: ScheduledTransaction[] =
+    scheduledData?.scheduledTransactions || []
+
+  const { data: borrowingsData, isLoading: borrowingsLoading } =
+    useListBorrowingsQuery(
+      { status: "ACTIVE", pageSize: 100, pageToken: "" },
+      { enabled: !!activeSpaceId }
+    )
+  const activeBorrowings: Borrowing[] = borrowingsData?.borrowings || []
+
+  const { data: existingTx, isLoading: txLoading } = useGetTransactionQuery(
+    { id: editTransactionId || "", view: "FULL" },
+    { enabled: isEditMode }
+  )
+
+  // Sync activeType if editing existing transaction
+  useEffect(() => {
+    if (existingTx) {
+      setActiveType(existingTx.type === "INCOME" ? "INCOME" : "EXPENSE")
     }
+  }, [existingTx])
 
-    toast.show({
-      type: "success",
-      title: "Transaction Created",
-      message: `${isExpense ? "Spent" : "Earned"} $${amountStr}`,
-    })
-    router.back()
+  if (isEditMode && txLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={styles.loadingText}>Loading transaction...</Text>
+      </View>
+    )
   }
 
   return (
     <KeyboardAvoidingView
       style={styles.keyboardAvoid}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
     >
-      <ScrollView
-        contentContainerStyle={[
-          styles.container,
-          { paddingBottom: Math.max(insets.bottom, 20) + 16 },
-        ]}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Type Toggle: Expense vs Income */}
-        <View style={styles.toggleRow}>
-          <TouchableOpacity
-            style={[styles.toggleBtn, isExpense && styles.toggleExpenseActive]}
-            onPress={() => setIsExpense(true)}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.toggleText,
-                isExpense && {
-                  color: theme.colors.destructive,
-                  fontWeight: "bold",
-                },
-              ]}
-            >
-              Expense
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.toggleBtn, !isExpense && styles.toggleIncomeActive]}
-            onPress={() => setIsExpense(false)}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.toggleText,
-                !isExpense && {
-                  color: theme.colors.success,
-                  fontWeight: "bold",
-                },
-              ]}
-            >
-              Income
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Big Amount Input */}
-        <Card style={styles.amountCard}>
-          <Text style={styles.amountLabel}>ENTER AMOUNT (USD)</Text>
-          <AmountInput
-            cents={cents}
-            onChangeCents={(val) => {
-              setCents(val)
-              setValidationError(null)
-            }}
-            type={isExpense ? "expense" : "income"}
-          />
-        </Card>
-
-        {/* Description Input */}
-        <TextInput
-          label="Description / Merchant"
-          placeholder="e.g. Whole Foods, Uber, Salary"
-          value={description}
-          onChangeText={(val) => {
-            setDescription(val)
-            setValidationError(null)
+      <View style={styles.container}>
+        <Stack.Screen
+          options={{
+            title: isEditMode
+              ? activeType === "INCOME"
+                ? "Edit Income"
+                : "Edit Expense"
+              : "New Transaction",
+            headerStyle: {
+              backgroundColor: theme.colors.background,
+            },
+            headerTintColor: theme.colors.textPrimary,
           }}
-          leftIcon={<FileText size={18} color={theme.colors.textMuted} />}
         />
 
-        {/* Category Selector */}
-        <View style={styles.categorySection}>
-          <Text style={styles.fieldLabel}>Category / Budget</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoryPills}
-          >
-            {QUICK_CATEGORIES.map((cat) => {
-              const isSelected = selectedCategory === cat.id
-              return (
-                <TouchableOpacity
-                  key={cat.id}
-                  activeOpacity={0.7}
-                  onPress={() => setSelectedCategory(cat.id)}
+        {/* Segmented Flow Switcher (Hidden in edit mode) */}
+        {!isEditMode && (
+          <View style={styles.typeSwitcherWrapper}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.typeSwitcherContent}
+            >
+              {/* Type 1: Expense */}
+              <TouchableOpacity
+                style={[
+                  styles.typePill,
+                  activeType === "EXPENSE" && styles.typePillExpenseActive,
+                ]}
+                onPress={() => {
+                  haptics.light()
+                  setActiveType("EXPENSE")
+                }}
+                activeOpacity={0.7}
+              >
+                <ArrowDownLeft
+                  size={14}
+                  color={
+                    activeType === "EXPENSE"
+                      ? theme.colors.destructive
+                      : theme.colors.textMuted
+                  }
+                />
+                <Text
+                  style={[
+                    styles.typePillText,
+                    activeType === "EXPENSE" &&
+                      styles.typePillExpenseTextActive,
+                  ]}
                 >
-                  <Badge
-                    variant={isSelected ? "primary" : "default"}
-                    size="md"
-                    label={cat.name}
-                    icon={
-                      <Tag
-                        size={13}
-                        color={
-                          isSelected
-                            ? theme.colors.primary
-                            : theme.colors.textMuted
-                        }
-                      />
-                    }
-                  />
-                </TouchableOpacity>
-              )
-            })}
-          </ScrollView>
-        </View>
+                  Expense
+                </Text>
+              </TouchableOpacity>
 
-        {validationError && (
-          <Text style={styles.errorBanner}>{validationError}</Text>
+              {/* Type 2: Income */}
+              <TouchableOpacity
+                style={[
+                  styles.typePill,
+                  activeType === "INCOME" && styles.typePillIncomeActive,
+                ]}
+                onPress={() => {
+                  haptics.light()
+                  setActiveType("INCOME")
+                }}
+                activeOpacity={0.7}
+              >
+                <ArrowUpRight
+                  size={14}
+                  color={
+                    activeType === "INCOME"
+                      ? theme.colors.success
+                      : theme.colors.textMuted
+                  }
+                />
+                <Text
+                  style={[
+                    styles.typePillText,
+                    activeType === "INCOME" && styles.typePillIncomeTextActive,
+                  ]}
+                >
+                  Income
+                </Text>
+              </TouchableOpacity>
+
+              {/* Type 3: Transfer */}
+              <TouchableOpacity
+                style={[
+                  styles.typePill,
+                  activeType === "TRANSFER" && styles.typePillTransferActive,
+                ]}
+                onPress={() => {
+                  haptics.light()
+                  setActiveType("TRANSFER")
+                }}
+                activeOpacity={0.7}
+              >
+                <ArrowRightLeft
+                  size={14}
+                  color={
+                    activeType === "TRANSFER"
+                      ? theme.colors.primary
+                      : theme.colors.textMuted
+                  }
+                />
+                <Text
+                  style={[
+                    styles.typePillText,
+                    activeType === "TRANSFER" &&
+                      styles.typePillTransferTextActive,
+                  ]}
+                >
+                  Transfer
+                </Text>
+              </TouchableOpacity>
+
+              {/* Type 4: Scheduled */}
+              <TouchableOpacity
+                style={[
+                  styles.typePill,
+                  activeType === "SCHEDULED" && styles.typePillScheduledActive,
+                ]}
+                onPress={() => {
+                  haptics.light()
+                  setActiveType("SCHEDULED")
+                }}
+                activeOpacity={0.7}
+              >
+                <CalendarClock
+                  size={14}
+                  color={
+                    activeType === "SCHEDULED"
+                      ? "#818cf8"
+                      : theme.colors.textMuted
+                  }
+                />
+                <Text
+                  style={[
+                    styles.typePillText,
+                    activeType === "SCHEDULED" &&
+                      styles.typePillScheduledTextActive,
+                  ]}
+                >
+                  Scheduled
+                  {pendingScheduled.length > 0
+                    ? ` (${pendingScheduled.length})`
+                    : ""}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Type 5: Loan */}
+              <TouchableOpacity
+                style={[
+                  styles.typePill,
+                  activeType === "BORROWING" && styles.typePillBorrowingActive,
+                ]}
+                onPress={() => {
+                  haptics.light()
+                  setActiveType("BORROWING")
+                }}
+                activeOpacity={0.7}
+              >
+                <HandCoins
+                  size={14}
+                  color={
+                    activeType === "BORROWING"
+                      ? "#f59e0b"
+                      : theme.colors.textMuted
+                  }
+                />
+                <Text
+                  style={[
+                    styles.typePillText,
+                    activeType === "BORROWING" &&
+                      styles.typePillBorrowingTextActive,
+                  ]}
+                >
+                  Loan
+                  {activeBorrowings.length > 0
+                    ? ` (${activeBorrowings.length})`
+                    : ""}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
         )}
 
-        {/* Action Buttons */}
-        <View style={styles.actionsRow}>
-          <Button
-            variant="secondary"
-            size="lg"
-            style={styles.cancelBtn}
-            leftIcon={<X size={18} color={theme.colors.textMuted} />}
-            onPress={() => router.back()}
-          >
-            Cancel
-          </Button>
+        {/* Active Form Component */}
+        {activeType === "EXPENSE" && (
+          <ExpenseForm
+            existingTx={existingTx}
+            budgets={budgets}
+            accounts={accounts}
+            currencies={currencies}
+            exchangeRates={exchangeRates}
+            baseCurrency={baseCurrency}
+            onSuccess={() => router.back()}
+            budgetsLoading={budgetsLoading}
+            currenciesLoading={currenciesLoading}
+          />
+        )}
 
-          <Button
-            variant="primary"
-            size="lg"
-            style={styles.saveBtn}
-            leftIcon={
-              <Check size={18} color={theme.colors.primaryForeground} />
-            }
-            onPress={handleSave}
-          >
-            Save Transaction
-          </Button>
-        </View>
-      </ScrollView>
+        {activeType === "INCOME" && (
+          <IncomeForm
+            existingTx={existingTx}
+            accounts={accounts}
+            currencies={currencies}
+            exchangeRates={exchangeRates}
+            baseCurrency={baseCurrency}
+            onSuccess={() => router.back()}
+            currenciesLoading={currenciesLoading}
+          />
+        )}
+
+        {activeType === "TRANSFER" && (
+          <TransferForm
+            accounts={accounts}
+            exchangeRates={exchangeRates}
+            onSuccess={() => router.back()}
+          />
+        )}
+
+        {activeType === "SCHEDULED" && (
+          <ScheduledConfirmForm
+            pendingScheduled={pendingScheduled}
+            budgets={budgets}
+            accounts={accounts}
+            baseCurrency={baseCurrency}
+            onSuccess={() => router.back()}
+            scheduledLoading={scheduledLoading}
+            budgetsLoading={budgetsLoading}
+          />
+        )}
+
+        {activeType === "BORROWING" && (
+          <BorrowingForm
+            activeBorrowings={activeBorrowings}
+            accounts={accounts}
+            baseCurrency={baseCurrency}
+            onSuccess={() => router.back()}
+            borrowingsLoading={borrowingsLoading}
+          />
+        )}
+      </View>
     </KeyboardAvoidingView>
   )
 }
@@ -221,77 +387,84 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   container: {
-    padding: 16,
-    gap: 16,
-  },
-  toggleRow: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: theme.radius.md,
-    padding: 4,
-  },
-  toggleBtn: {
     flex: 1,
-    paddingVertical: 10,
+    backgroundColor: theme.colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
     alignItems: "center",
-    borderRadius: theme.radius.sm,
+    justifyContent: "center",
+    backgroundColor: theme.colors.background,
+    gap: 12,
   },
-  toggleExpenseActive: {
-    backgroundColor: theme.colors.destructiveSubtle,
-    borderWidth: 1,
-    borderColor: "rgba(244, 63, 94, 0.3)",
-  },
-  toggleIncomeActive: {
-    backgroundColor: theme.colors.successSubtle,
-    borderWidth: 1,
-    borderColor: "rgba(16, 185, 129, 0.3)",
-  },
-  toggleText: {
-    fontSize: 14,
+  loadingText: {
     color: theme.colors.textMuted,
+    fontSize: 14,
   },
-  amountCard: {
-    padding: 16,
+  typeSwitcherWrapper: {
+    backgroundColor: theme.colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  typeSwitcherContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  typePill: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  amountLabel: {
-    fontSize: 12,
+  typePillText: {
+    fontSize: 13,
     fontWeight: "600",
     color: theme.colors.textMuted,
-    letterSpacing: 0.8,
-    marginBottom: 8,
   },
-  categorySection: {
-    gap: 8,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: theme.colors.textSecondary,
-  },
-  categoryPills: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  errorBanner: {
+  typePillExpenseActive: {
+    borderColor: theme.colors.destructive,
     backgroundColor: theme.colors.destructiveSubtle,
+  },
+  typePillExpenseTextActive: {
     color: theme.colors.destructive,
-    borderWidth: 1,
-    borderColor: "rgba(244, 63, 94, 0.3)",
-    padding: 12,
-    borderRadius: theme.radius.md,
-    fontSize: 13,
-    textAlign: "center",
+    fontWeight: "700",
   },
-  actionsRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 8,
+  typePillIncomeActive: {
+    borderColor: theme.colors.success,
+    backgroundColor: theme.colors.successSubtle,
   },
-  cancelBtn: {
-    flex: 1,
+  typePillIncomeTextActive: {
+    color: theme.colors.success,
+    fontWeight: "700",
   },
-  saveBtn: {
-    flex: 2,
+  typePillTransferActive: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primarySubtle,
+  },
+  typePillTransferTextActive: {
+    color: theme.colors.primary,
+    fontWeight: "700",
+  },
+  typePillScheduledActive: {
+    borderColor: "#818cf8",
+    backgroundColor: "rgba(129, 140, 248, 0.15)",
+  },
+  typePillScheduledTextActive: {
+    color: "#818cf8",
+    fontWeight: "700",
+  },
+  typePillBorrowingActive: {
+    borderColor: "#f59e0b",
+    backgroundColor: "rgba(245, 158, 11, 0.15)",
+  },
+  typePillBorrowingTextActive: {
+    color: "#f59e0b",
+    fontWeight: "700",
   },
 })

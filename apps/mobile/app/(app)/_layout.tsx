@@ -53,7 +53,7 @@ export default function AppLayout() {
         }}
       />
       <Stack.Screen
-        name="finance/transactions"
+        name="finance/transactions/index"
         options={{
           headerShown: true,
           headerTitle: "Transactions",
@@ -62,6 +62,18 @@ export default function AppLayout() {
           },
           headerTintColor: theme.colors.textPrimary,
           headerBackTitle: "Finance",
+        }}
+      />
+      <Stack.Screen
+        name="finance/transactions/[id]"
+        options={{
+          headerShown: true,
+          headerTitle: "Transaction Details",
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+          },
+          headerTintColor: theme.colors.textPrimary,
+          headerBackTitle: "Transactions",
         }}
       />
       <Stack.Screen

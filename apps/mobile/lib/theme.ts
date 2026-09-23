@@ -28,6 +28,7 @@ export const theme = {
     primary: "#38bdf8",
     primaryForeground: "#090d16",
     primaryDark: "#0284c7",
+    primarySubtle: "rgba(56, 189, 248, 0.12)",
     accent: "#6366f1",
     destructive: "#f43f5e",
     destructiveSubtle: "rgba(244, 63, 94, 0.12)",

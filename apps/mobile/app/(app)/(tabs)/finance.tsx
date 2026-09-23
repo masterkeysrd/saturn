@@ -20,6 +20,7 @@ import {
   Coins,
   Wallet,
   ArrowRight,
+  Plus,
 } from "lucide-react-native"
 import {
   formatAmount,
@@ -45,6 +46,7 @@ import { MonoAmount, Caption } from "@/components/ui/typography"
 import { Badge } from "@/components/ui/badge"
 import { SkeletonCard } from "@/components/ui/skeleton-loader"
 import { CardAccountItem } from "@/components/finance/card-account-item"
+import { TransactionListItem } from "@/components/finance/transaction-list-item"
 import { haptics } from "@/lib/haptics"
 
 export default function FinanceHubScreen() {
@@ -71,9 +73,9 @@ export default function FinanceHubScreen() {
   const { data: accountsData, isLoading: accountsLoading } =
     useListAccountsQuery({ activeOnly: true }, { enabled: !!activeSpaceId })
 
-  // 4. Recent Transactions Preview (limit 5)
+  // 4. Recent Transactions Preview (limit 4)
   const { data: txData, isLoading: txLoading } = useListTransactionsQuery(
-    { pageSize: 5, pageToken: "" },
+    { pageSize: 4, pageToken: "" },
     { enabled: !!activeSpaceId }
   )
 
@@ -107,12 +109,20 @@ export default function FinanceHubScreen() {
   }, [accounts, baseCurrency, exchangeRates])
 
   const accountsMap = useMemo(() => {
-    const map = new Map<string, string>()
+    const map = new Map<string, Account>()
     accounts.forEach((a) => {
-      if (a.id) map.set(a.id, a.name)
+      if (a.id) map.set(a.id, a)
     })
     return map
   }, [accounts])
+
+  const budgetsMap = useMemo(() => {
+    const map = new Map<string, Budget>()
+    budgets.forEach((b) => {
+      if (b.id) map.set(b.id, b)
+    })
+    return map
+  }, [budgets])
 
   const handleRefresh = async () => {
     haptics.light()
@@ -253,73 +263,48 @@ export default function FinanceHubScreen() {
           ) : transactions.length === 0 ? (
             <Card style={styles.emptyCard}>
               <Text style={styles.emptyText}>No recent transactions</Text>
+              <TouchableOpacity
+                style={styles.emptyActionBtn}
+                activeOpacity={0.7}
+                onPress={() => {
+                  haptics.medium()
+                  router.push("/modal/add-transaction")
+                }}
+              >
+                <Plus size={14} color={theme.colors.primary} />
+                <Text style={styles.emptyActionText}>Add Transaction</Text>
+              </TouchableOpacity>
             </Card>
           ) : (
             <Card style={styles.listCard}>
-              {transactions.slice(0, 4).map((tx: Transaction, idx) => {
-                const isExpense = tx.type === "EXPENSE"
-                const accountName = tx.accountId
-                  ? accountsMap.get(tx.accountId)
-                  : undefined
-
-                return (
-                  <TouchableOpacity
-                    key={tx.id || idx}
-                    style={[
-                      styles.txRow,
-                      idx < Math.min(transactions.length, 4) - 1 &&
-                        styles.rowBorder,
-                    ]}
-                    activeOpacity={0.7}
-                    onPress={() => navigateTo("/(app)/finance/transactions")}
-                  >
-                    <View style={styles.txLeft}>
-                      <View
-                        style={[
-                          styles.txIconBadge,
-                          {
-                            backgroundColor: isExpense
-                              ? theme.colors.destructiveSubtle
-                              : theme.colors.successSubtle,
-                          },
-                        ]}
-                      >
-                        {isExpense ? (
-                          <ArrowUpRight
-                            size={14}
-                            color={theme.colors.destructive}
-                          />
-                        ) : (
-                          <ArrowDownLeft
-                            size={14}
-                            color={theme.colors.success}
-                          />
-                        )}
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.txName} numberOfLines={1}>
-                          {tx.description || "Unnamed"}
-                        </Text>
-                        <Text style={styles.txMeta} numberOfLines={1}>
-                          {accountName ? `${accountName} • ` : ""}
-                          {formatDate(tx.transactionDate)}
-                        </Text>
-                      </View>
-                    </View>
-                    <MonoAmount
-                      size="sm"
-                      color={
-                        isExpense
-                          ? theme.colors.textPrimary
-                          : theme.colors.success
-                      }
-                    >
-                      {isExpense ? "-" : "+"}
-                      {formatAmount(tx.amount, tx.currency)}
-                    </MonoAmount>
-                  </TouchableOpacity>
-                )
-              })}
+              {transactions.map((tx: Transaction, idx) => (
+                <TransactionListItem
+                  key={tx.id || idx}
+                  item={tx}
+                  baseCurrency={baseCurrency}
+                  account={
+                    tx.accountId ? accountsMap.get(tx.accountId) : undefined
+                  }
+                  budget={tx.budgetId ? budgetsMap.get(tx.budgetId) : undefined}
+                  onPress={() =>
+                    tx.id
+                      ? navigateTo(`/(app)/finance/transactions/${tx.id}`)
+                      : navigateTo("/(app)/finance/transactions")
+                  }
+                  showBorderBottom={idx < transactions.length - 1}
+                />
+              ))}
+              <TouchableOpacity
+                style={styles.cardFooterAction}
+                activeOpacity={0.7}
+                onPress={() => {
+                  haptics.medium()
+                  router.push("/modal/add-transaction")
+                }}
+              >
+                <Plus size={14} color={theme.colors.primary} />
+                <Text style={styles.cardFooterActionText}>Add Transaction</Text>
+              </TouchableOpacity>
             </Card>
           )}
         </View>
@@ -637,12 +622,43 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   emptyCard: {
-    padding: 16,
+    padding: 20,
     alignItems: "center",
+    justifyContent: "center",
   },
   emptyText: {
     fontSize: 13,
     color: theme.colors.textMuted,
+  },
+  emptyActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  emptyActionText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.primary,
+  },
+  cardFooterAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.02)",
+  },
+  cardFooterActionText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: theme.colors.primary,
   },
   budgetsGrid: {
     gap: 10,
