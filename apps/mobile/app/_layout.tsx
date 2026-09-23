@@ -1,10 +1,9 @@
-import React from "react"
 import { Stack } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import { SafeAreaProvider } from "react-native-safe-area-context"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { AuthProvider } from "../lib/auth-context"
-import { theme } from "../lib/theme"
+import { AuthProvider } from "@/lib/auth-context"
+import { theme } from "@/lib/theme"
 
 const queryClient = new QueryClient({
   defaultOptions: {

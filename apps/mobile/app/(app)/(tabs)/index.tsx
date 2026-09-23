@@ -1,4 +1,3 @@
-import React from "react"
 import {
   StyleSheet,
   Text,
@@ -18,7 +17,7 @@ import {
 } from "lucide-react-native"
 import { formatAmount, formatCents } from "@saturn/core"
 import { useListSpacesQuery } from "@saturn/api/saturn/space/v1/space"
-import { theme } from "../../../lib/theme"
+import { theme } from "@/lib/theme"
 
 export default function OverviewScreen() {
   const router = useRouter()

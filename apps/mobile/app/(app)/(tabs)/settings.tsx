@@ -1,4 +1,3 @@
-import React from "react"
 import {
   StyleSheet,
   Text,
@@ -6,23 +5,31 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Switch,
 } from "react-native"
 import { useRouter } from "expo-router"
 import {
-  User,
   ShieldCheck,
   Layers,
   Bell,
   LogOut,
   ChevronRight,
   Sparkles,
+  Fingerprint,
 } from "lucide-react-native"
-import { useAuth } from "../../../lib/auth-context"
-import { theme } from "../../../lib/theme"
+import { useAuth } from "@/lib/auth-context"
+import { theme } from "@/lib/theme"
 
 export default function SettingsScreen() {
   const router = useRouter()
-  const { logout, activeSpaceId } = useAuth()
+  const {
+    user,
+    logout,
+    activeSpaceId,
+    isBiometricSupported,
+    isBiometricActive,
+    toggleBiometrics,
+  } = useAuth()
 
   const handleSignOut = () => {
     Alert.alert("Sign Out", "Are you sure you want to sign out from Saturn?", [
@@ -38,18 +45,31 @@ export default function SettingsScreen() {
     ])
   }
 
+  const initials = user?.name
+    ? user.name
+        .split(" ")
+        .map((p) => p[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : "ME"
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* User Profile Card */}
       <View style={styles.profileCard}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>ME</Text>
+          <Text style={styles.avatarText}>{initials}</Text>
         </View>
         <View style={styles.profileInfo}>
-          <Text style={styles.profileName}>Masterkeys User</Text>
-          <Text style={styles.profileEmail}>masterkeysrd@gmail.com</Text>
+          <Text style={styles.profileName}>{user?.name || "Saturn User"}</Text>
+          <Text style={styles.profileEmail}>
+            {user?.email || "user@saturn.local"}
+          </Text>
           <View style={styles.roleBadge}>
-            <Text style={styles.roleText}>Space Owner</Text>
+            <Text style={styles.roleText}>
+              {user?.role === "admin" ? "System Admin" : "Active Member"}
+            </Text>
           </View>
         </View>
       </View>
@@ -79,6 +99,26 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionHeader}>SECURITY & PREFERENCES</Text>
         <View style={styles.menuGroup}>
+          {isBiometricSupported && (
+            <View style={styles.menuItem}>
+              <View style={styles.menuLeft}>
+                <Fingerprint size={18} color={theme.colors.primary} />
+                <Text style={styles.menuLabel}>Biometric Unlock</Text>
+              </View>
+              <Switch
+                value={isBiometricActive}
+                onValueChange={(val) => {
+                  toggleBiometrics(val)
+                }}
+                trackColor={{
+                  false: theme.colors.surfaceHighlight,
+                  true: theme.colors.primary,
+                }}
+                thumbColor="#ffffff"
+              />
+            </View>
+          )}
+
           <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuLeft}>
               <ShieldCheck size={18} color={theme.colors.success} />

@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import { useState } from "react"
 import {
   StyleSheet,
   Text,
@@ -12,19 +12,19 @@ import {
 import { Link, useRouter } from "expo-router"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { LogIn, Lock, Mail } from "lucide-react-native"
-import { useAuth } from "../../lib/auth-context"
-import { theme } from "../../lib/theme"
+import { useAuth } from "@/lib/auth-context"
+import { theme } from "@/lib/theme"
 
 export default function LoginScreen() {
   const router = useRouter()
-  const { setSessionToken } = useAuth()
+  const { login } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   const handleLogin = async () => {
-    if (!email || !password) {
+    if (!email.trim() || !password) {
       setError("Please enter both email and password")
       return
     }
@@ -33,8 +33,12 @@ export default function LoginScreen() {
     setError(null)
 
     try {
-      // In Task 02 we wire live identity login mutation; for routing verification, simulate auth:
-      await setSessionToken("demo_mobile_jwt_token")
+      await login({
+        userPassword: {
+          identifier: email.trim(),
+          password,
+        },
+      })
       router.replace("/(app)/(tabs)")
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to sign in")

@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import { useState } from "react"
 import {
   StyleSheet,
   Text,
@@ -12,21 +12,22 @@ import {
 import { Link, useRouter } from "expo-router"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { UserPlus, User, Mail, Lock } from "lucide-react-native"
-import { useAuth } from "../../lib/auth-context"
-import { theme } from "../../lib/theme"
+import { useAuth } from "@/lib/auth-context"
+import { theme } from "@/lib/theme"
 
 export default function RegisterScreen() {
   const router = useRouter()
-  const { setSessionToken } = useAuth()
+  const { register } = useAuth()
   const [name, setName] = useState("")
+  const [username, setUsername] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   const handleRegister = async () => {
-    if (!name || !email || !password) {
-      setError("Please fill in all fields")
+    if (!name.trim() || !email.trim() || !password) {
+      setError("Please fill in all required fields")
       return
     }
 
@@ -34,7 +35,13 @@ export default function RegisterScreen() {
     setError(null)
 
     try {
-      await setSessionToken("demo_mobile_jwt_token")
+      await register({
+        name: name.trim(),
+        username: username.trim() || email.split("@")[0],
+        email: email.trim(),
+        password,
+        avatarUrl: "",
+      })
       router.replace("/(app)/(tabs)")
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to register")

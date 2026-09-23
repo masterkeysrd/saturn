@@ -11,6 +11,8 @@ export interface SyncStorageAdapter {
   clearSession(): void
   getActiveSpaceId(): string | null
   setActiveSpaceId(spaceId: string | null): void
+  getRefreshToken?(): string | null
+  setRefreshToken?(refreshToken: string): void
 }
 
 export interface AsyncStorageAdapter {
@@ -19,6 +21,8 @@ export interface AsyncStorageAdapter {
   clearSession(): Promise<void>
   getActiveSpaceId(): Promise<string | null>
   setActiveSpaceId(spaceId: string | null): Promise<void>
+  getRefreshToken?(): Promise<string | null>
+  setRefreshToken?(refreshToken: string): Promise<void>
 }
 
 export type StorageAdapter = SyncStorageAdapter | AsyncStorageAdapter

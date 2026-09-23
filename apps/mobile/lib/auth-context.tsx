@@ -1,85 +1,272 @@
-import React, {
+import {
   createContext,
   useContext,
   useState,
   useEffect,
   type ReactNode,
 } from "react"
+import * as LocalAuthentication from "expo-local-authentication"
+import { useQueryClient } from "@tanstack/react-query"
 import { configureClient } from "@saturn/api/client"
 import type { AuthSession } from "@saturn/api/storage"
-import { mobileStorage } from "./storage"
+import {
+  loginUser,
+  registerUser,
+  logout as apiLogout,
+  type LoginUserRequest,
+  type RegisterUserRequest,
+} from "@saturn/api/gen/saturn/identity/v1/identity"
+import {
+  mobileStorage,
+  isBiometricEnabled,
+  setBiometricEnabled,
+} from "./storage"
+import { decodeJwt } from "./jwt"
+import { getApiBaseUrl } from "./config"
 
-interface AuthContextType {
+export interface AuthUser {
+  id: string
+  email: string
+  name: string
+  username?: string
+  role?: string
+  avatarUrl?: string
+}
+
+export interface AuthContextType {
+  user: AuthUser | null
   session: AuthSession | null
+  accessToken: string | null
   isLoading: boolean
   isAuthenticated: boolean
+  isBiometricSupported: boolean
+  isBiometricActive: boolean
   activeSpaceId: string | null
-  setSessionToken: (token: string) => Promise<void>
-  setActiveSpace: (spaceId: string | null) => Promise<void>
+  error: string | null
+  login: (req: LoginUserRequest) => Promise<void>
+  register: (req: RegisterUserRequest) => Promise<void>
   logout: () => Promise<void>
+  switchSpace: (spaceId: string | null) => Promise<void>
+  setActiveSpace: (spaceId: string | null) => Promise<void>
+  toggleBiometrics: (enabled: boolean) => Promise<boolean>
+  authenticateWithBiometrics: () => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Initialize Saturn client with mobile storage
-configureClient({
-  baseUrl: process.env.EXPO_PUBLIC_API_URL || "http://localhost:8080",
-  storage: mobileStorage,
-})
-
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient()
   const [session, setSession] = useState<AuthSession | null>(null)
+  const [accessToken, setAccessToken] = useState<string | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(null)
   const [activeSpaceId, setActiveSpaceId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isBiometricSupported, setIsBiometricSupported] = useState(false)
+  const [isBiometricActive, setIsBiometricActive] = useState(false)
 
+  // Configure API client with mobile storage & unauthorized listener
   useEffect(() => {
-    async function loadStoredState() {
+    configureClient({
+      baseUrl: getApiBaseUrl(),
+      storage: mobileStorage,
+      onUnauthorized: () => {
+        mobileStorage.clearSession()
+        setSession({ accessToken: null, hasSession: false })
+        setAccessToken(null)
+        setUser(null)
+      },
+    })
+  }, [])
+
+  // Check hardware biometric capabilities
+  useEffect(() => {
+    async function checkBiometrics() {
       try {
-        const [storedSession, storedSpaceId] = await Promise.all([
+        const hasHardware = await LocalAuthentication.hasHardwareAsync()
+        const isEnrolled = await LocalAuthentication.isEnrolledAsync()
+        setIsBiometricSupported(hasHardware && isEnrolled)
+
+        const enabled = await isBiometricEnabled()
+        setIsBiometricActive(enabled)
+      } catch {
+        setIsBiometricSupported(false)
+      }
+    }
+
+    checkBiometrics()
+  }, [])
+
+  // Cold start session restoration
+  useEffect(() => {
+    async function initSession() {
+      try {
+        const [storedSession, storedSpaceId, bioEnabled] = await Promise.all([
           mobileStorage.getSession(),
           mobileStorage.getActiveSpaceId(),
+          isBiometricEnabled(),
         ])
-        setSession(storedSession)
-        setActiveSpaceId(storedSpaceId)
+
+        if (storedSession.hasSession && storedSession.accessToken) {
+          // If biometric unlock is enabled, prompt user before unlocking data
+          if (bioEnabled) {
+            const authResult = await LocalAuthentication.authenticateAsync({
+              promptMessage: "Unlock Saturn",
+              cancelLabel: "Cancel",
+              fallbackLabel: "Use PIN",
+            })
+
+            if (!authResult.success) {
+              setIsLoading(false)
+              return
+            }
+          }
+
+          setSession(storedSession)
+          setAccessToken(storedSession.accessToken)
+          setActiveSpaceId(storedSpaceId)
+
+          const claims = decodeJwt(storedSession.accessToken)
+          if (claims) {
+            setUser({
+              id: claims.sub,
+              email: claims.email || "",
+              name: claims.name || claims.username || "User",
+              username: claims.username,
+              role: claims.role || "user",
+            })
+          }
+        }
       } catch (err) {
-        console.error("Failed to load auth state from SecureStore", err)
+        console.error("Failed to restore session from SecureStore", err)
       } finally {
         setIsLoading(false)
       }
     }
 
-    loadStoredState()
+    initSession()
   }, [])
 
-  const setSessionToken = async (token: string) => {
-    await mobileStorage.setSession(token)
-    setSession({ accessToken: token, hasSession: true })
+  const login = async (req: LoginUserRequest) => {
+    setError(null)
+    try {
+      const res = await loginUser(req)
+      if (res.accessToken) {
+        await mobileStorage.setSession(res.accessToken)
+        if (res.refreshToken && mobileStorage.setRefreshToken) {
+          await mobileStorage.setRefreshToken(res.refreshToken)
+        }
+
+        setAccessToken(res.accessToken)
+        setSession({ accessToken: res.accessToken, hasSession: true })
+
+        const claims = decodeJwt(res.accessToken)
+        if (claims) {
+          setUser({
+            id: claims.sub,
+            email: claims.email || "",
+            name: claims.name || claims.username || "User",
+            username: claims.username,
+            role: claims.role || "user",
+          })
+        }
+      }
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to authenticate"
+      setError(message)
+      throw err
+    }
   }
 
-  const setActiveSpace = async (spaceId: string | null) => {
-    await mobileStorage.setActiveSpaceId(spaceId)
-    setActiveSpaceId(spaceId)
+  const register = async (req: RegisterUserRequest) => {
+    setError(null)
+    try {
+      await registerUser(req)
+      // Automatically log in after registration
+      await login({
+        userPassword: {
+          identifier: req.email || req.username,
+          password: req.password,
+        },
+      })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to register"
+      setError(message)
+      throw err
+    }
   }
 
   const logout = async () => {
-    await mobileStorage.clearSession()
-    await mobileStorage.setActiveSpaceId(null)
-    setSession({ accessToken: null, hasSession: false })
-    setActiveSpaceId(null)
+    const refreshToken = (await mobileStorage.getRefreshToken?.()) || ""
+    try {
+      if (refreshToken) {
+        await apiLogout({ refreshToken })
+      }
+    } catch {
+      // Local logout proceeds even if remote server revocation fails
+    } finally {
+      await mobileStorage.clearSession()
+      await mobileStorage.setActiveSpaceId(null)
+      setSession({ accessToken: null, hasSession: false })
+      setAccessToken(null)
+      setUser(null)
+      setActiveSpaceId(null)
+      queryClient.clear()
+    }
   }
 
-  const isAuthenticated = Boolean(session?.hasSession && session?.accessToken)
+  const switchSpace = async (spaceId: string | null) => {
+    await mobileStorage.setActiveSpaceId(spaceId)
+    setActiveSpaceId(spaceId)
+    queryClient.invalidateQueries()
+  }
+
+  const toggleBiometrics = async (enabled: boolean): Promise<boolean> => {
+    if (enabled && isBiometricSupported) {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: "Authenticate to enable Biometric Unlock",
+      })
+      if (!result.success) {
+        return false
+      }
+    }
+
+    await setBiometricEnabled(enabled)
+    setIsBiometricActive(enabled)
+    return true
+  }
+
+  const authenticateWithBiometrics = async (): Promise<boolean> => {
+    if (!isBiometricSupported) return false
+    const res = await LocalAuthentication.authenticateAsync({
+      promptMessage: "Unlock Saturn",
+      cancelLabel: "Cancel",
+    })
+    return res.success
+  }
+
+  const isAuthenticated = Boolean(session?.hasSession && accessToken)
 
   return (
     <AuthContext.Provider
       value={{
+        user,
         session,
+        accessToken,
         isLoading,
         isAuthenticated,
+        isBiometricSupported,
+        isBiometricActive,
         activeSpaceId,
-        setSessionToken,
-        setActiveSpace,
+        error,
+        login,
+        register,
         logout,
+        switchSpace,
+        setActiveSpace: switchSpace,
+        toggleBiometrics,
+        authenticateWithBiometrics,
       }}
     >
       {children}

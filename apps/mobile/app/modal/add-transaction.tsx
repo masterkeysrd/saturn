@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import { useState } from "react"
 import {
   StyleSheet,
   Text,
@@ -11,10 +11,9 @@ import {
 } from "react-native"
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { Check, X, DollarSign, Tag, FileText } from "lucide-react-native"
+import { Check, X, Tag, FileText } from "lucide-react-native"
 import { transactionSchema } from "@saturn/schemas"
-import { formatAmount } from "@saturn/core"
-import { theme } from "../../lib/theme"
+import { theme } from "@/lib/theme"
 
 const QUICK_CATEGORIES = [
   { id: "groceries", name: "Groceries" },

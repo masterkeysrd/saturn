@@ -1,5 +1,4 @@
-import React from "react"
-import { TouchableOpacity, StyleSheet, Text, View } from "react-native"
+import { TouchableOpacity, StyleSheet, Text } from "react-native"
 import { Tabs, useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import {
@@ -10,8 +9,8 @@ import {
   Plus,
   Layers,
 } from "lucide-react-native"
-import { theme } from "../../../lib/theme"
-import { useAuth } from "../../../lib/auth-context"
+import { theme } from "@/lib/theme"
+import { useAuth } from "@/lib/auth-context"
 
 export default function TabsLayout() {
   const router = useRouter()

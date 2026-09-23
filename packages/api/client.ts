@@ -57,11 +57,18 @@ async function performRefresh(): Promise<string> {
   const baseUrl = clientConfig.baseUrl || ""
   const refreshUrl = `${baseUrl}/api/v1/identity/sessions:refresh`
 
+  const storedRefreshToken = storage.getRefreshToken
+    ? await storage.getRefreshToken()
+    : null
+
   const response = await fetch(refreshUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
+    body: JSON.stringify({
+      refreshToken: storedRefreshToken || "",
+    }),
     credentials: "same-origin",
   })
 
@@ -75,6 +82,9 @@ async function performRefresh(): Promise<string> {
   }
 
   await storage.setSession(data.accessToken)
+  if (data.refreshToken && storage.setRefreshToken) {
+    await storage.setRefreshToken(data.refreshToken)
+  }
   clientConfig.onRefreshed?.(data.accessToken)
 
   return data.accessToken

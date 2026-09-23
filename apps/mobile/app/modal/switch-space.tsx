@@ -1,4 +1,3 @@
-import React from "react"
 import {
   StyleSheet,
   Text,
@@ -9,10 +8,10 @@ import {
 } from "react-native"
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { Layers, Check, Plus, Shield } from "lucide-react-native"
+import { Layers, Check, Plus } from "lucide-react-native"
 import { useListSpacesQuery } from "@saturn/api/saturn/space/v1/space"
-import { useAuth } from "../../lib/auth-context"
-import { theme } from "../../lib/theme"
+import { useAuth } from "@/lib/auth-context"
+import { theme } from "@/lib/theme"
 
 export default function SwitchSpaceModal() {
   const router = useRouter()

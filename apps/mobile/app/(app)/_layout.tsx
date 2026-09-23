@@ -1,8 +1,7 @@
-import React from "react"
 import { ActivityIndicator, View, StyleSheet } from "react-native"
 import { Redirect, Stack } from "expo-router"
-import { useAuth } from "../../lib/auth-context"
-import { theme } from "../../lib/theme"
+import { useAuth } from "@/lib/auth-context"
+import { theme } from "@/lib/theme"
 
 export default function AppLayout() {
   const { isAuthenticated, isLoading } = useAuth()

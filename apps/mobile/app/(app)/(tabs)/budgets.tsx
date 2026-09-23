@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import { useState } from "react"
 import {
   StyleSheet,
   Text,
@@ -6,9 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
 } from "react-native"
-import { PiggyBank, Landmark, ArrowRightLeft } from "lucide-react-native"
+import { PiggyBank, Landmark } from "lucide-react-native"
 import { formatAmount, getBudgetColors } from "@saturn/core"
-import { theme } from "../../../lib/theme"
+import { theme } from "@/lib/theme"
 
 interface MockBudget {
   id: string

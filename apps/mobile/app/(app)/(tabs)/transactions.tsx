@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import { useState } from "react"
 import {
   StyleSheet,
   Text,
@@ -16,7 +16,7 @@ import {
   Plus,
 } from "lucide-react-native"
 import { formatAmount } from "@saturn/core"
-import { theme } from "../../../lib/theme"
+import { theme } from "@/lib/theme"
 
 interface MockTransaction {
   id: string
