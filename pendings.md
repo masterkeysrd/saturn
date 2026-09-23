@@ -19,3 +19,8 @@
 - [ ] **Identity Session Business Logic Refactoring**
   - Move session business logic (token family reuse detection, session expiration, and revocation rules) out of [`internal/domain/identity/storage/session_store.go`](file:///Users/masterkeysrd/Projects/saturn/internal/domain/identity/storage/session_store.go) into the domain service layer (`internal/domain/identity`). Storage stores should only handle pure persistence/queries, while the domain service should govern token rotation, reuse compromise detection, and lifecycle validation.
 
+## Frontend & UI
+
+- [ ] **Make Budget Select Filterable**
+  - Make the budget select component in [`budget-select.tsx`](file:///Users/masterkeysrd/Projects/saturn/apps/web/features/finance/components/budget-select.tsx) filterable / searchable to easily search and filter through budgets.
+

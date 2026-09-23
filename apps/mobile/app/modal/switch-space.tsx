@@ -4,26 +4,36 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
 } from "react-native"
 import { useRouter } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { Layers, Check, Plus } from "lucide-react-native"
+import { Check, Plus } from "lucide-react-native"
 import { useListSpacesQuery } from "@saturn/api/saturn/space/v1/space"
 import { useAuth } from "@/lib/auth-context"
 import { theme } from "@/lib/theme"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Avatar } from "@/components/ui/avatar"
+import { SkeletonCard } from "@/components/ui/skeleton-loader"
+import { useToast } from "@/components/ui/toast"
 
 export default function SwitchSpaceModal() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const toast = useToast()
   const { activeSpaceId, setActiveSpace } = useAuth()
   const { data: spacesData, isLoading } = useListSpacesQuery({
     pageSize: 20,
     pageToken: "",
   })
 
-  const handleSelectSpace = async (spaceId: string) => {
+  const handleSelectSpace = async (spaceId: string, spaceName: string) => {
     await setActiveSpace(spaceId)
+    toast.show({
+      type: "info",
+      title: "Workspace Changed",
+      message: `Active space: ${spaceName}`,
+    })
     router.back()
   }
 
@@ -41,29 +51,29 @@ export default function SwitchSpaceModal() {
       </Text>
 
       {isLoading ? (
-        <ActivityIndicator
-          size="small"
-          color={theme.colors.primary}
-          style={{ marginTop: 20 }}
-        />
+        <View style={styles.loadingContainer}>
+          <SkeletonCard />
+          <SkeletonCard style={{ marginTop: 12 }} />
+        </View>
       ) : (
-        <View style={styles.list}>
+        <Card style={styles.list}>
           {spacesData?.spaces?.map((space) => {
             const isSelected = (activeSpaceId || "") === space.id
             return (
               <TouchableOpacity
                 key={space.id || space.name}
                 style={[styles.spaceItem, isSelected && styles.spaceItemActive]}
-                onPress={() => handleSelectSpace(space.id || "")}
+                activeOpacity={0.7}
+                onPress={() =>
+                  handleSelectSpace(space.id || "", space.name || "Space")
+                }
               >
                 <View style={styles.spaceLeft}>
-                  <View style={styles.iconCircle}>
-                    <Layers size={18} color={theme.colors.primary} />
-                  </View>
-                  <View>
+                  <Avatar name={space.name || "Workspace"} size={36} />
+                  <View style={styles.spaceInfo}>
                     <Text style={styles.spaceName}>{space.name}</Text>
                     <Text style={styles.spaceDescription} numberOfLines={1}>
-                      {space.description || "Personal Workspace"}
+                      {space.description || "Workspace"}
                     </Text>
                   </View>
                 </View>
@@ -76,35 +86,32 @@ export default function SwitchSpaceModal() {
           {(!spacesData?.spaces || spacesData.spaces.length === 0) && (
             <TouchableOpacity
               style={[styles.spaceItem, styles.spaceItemActive]}
-              onPress={() => handleSelectSpace("personal")}
+              activeOpacity={0.7}
+              onPress={() =>
+                handleSelectSpace("personal", "Personal Workspace")
+              }
             >
               <View style={styles.spaceLeft}>
-                <View style={styles.iconCircle}>
-                  <Layers size={18} color={theme.colors.primary} />
-                </View>
-                <View>
+                <Avatar name="Personal Workspace" size={36} />
+                <View style={styles.spaceInfo}>
                   <Text style={styles.spaceName}>Personal Workspace</Text>
-                  <Text style={styles.spaceDescription}>
-                    Default local space
-                  </Text>
+                  <Text style={styles.spaceDescription}>Default space</Text>
                 </View>
               </View>
               <Check size={18} color={theme.colors.primary} />
             </TouchableOpacity>
           )}
-        </View>
+        </Card>
       )}
 
-      <TouchableOpacity
-        style={styles.createButton}
-        onPress={() => {
-          // Future space creation action
-          router.back()
-        }}
+      <Button
+        variant="primary"
+        size="lg"
+        leftIcon={<Plus size={18} color={theme.colors.primaryForeground} />}
+        onPress={() => router.back()}
       >
-        <Plus size={18} color="#090d16" style={{ marginRight: 6 }} />
-        <Text style={styles.createText}>Create New Workspace</Text>
-      </TouchableOpacity>
+        Create New Workspace
+      </Button>
     </ScrollView>
   )
 }
@@ -123,11 +130,10 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     lineHeight: 20,
   },
+  loadingContainer: {
+    gap: 12,
+  },
   list: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
     overflow: "hidden",
   },
   spaceItem: {
@@ -147,36 +153,17 @@ const styles = StyleSheet.create({
     gap: 12,
     flex: 1,
   },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: theme.radius.full,
-    backgroundColor: "rgba(56, 189, 248, 0.15)",
-    alignItems: "center",
-    justifyContent: "center",
+  spaceInfo: {
+    flex: 1,
   },
   spaceName: {
     fontSize: 15,
-    fontWeight: "500",
+    fontWeight: "600",
     color: theme.colors.textPrimary,
   },
   spaceDescription: {
     fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
-  },
-  createButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 14,
-    borderRadius: theme.radius.sm,
-    marginTop: 8,
-  },
-  createText: {
-    color: theme.colors.primaryForeground,
-    fontSize: 14,
-    fontWeight: "600",
   },
 })

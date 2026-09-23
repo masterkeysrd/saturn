@@ -3,21 +3,26 @@ import {
   StyleSheet,
   Text,
   View,
-  TextInput,
-  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  TouchableOpacity,
 } from "react-native"
 import { Link, useRouter } from "expo-router"
 import { SafeAreaView } from "react-native-safe-area-context"
-import { UserPlus, User, Mail, Lock } from "lucide-react-native"
+import { UserPlus, User, Mail, Lock, AtSign } from "lucide-react-native"
 import { useAuth } from "@/lib/auth-context"
 import { theme } from "@/lib/theme"
+import { Button } from "@/components/ui/button"
+import { TextInput } from "@/components/ui/text-input"
+import { Card } from "@/components/ui/card"
+import { Header1, Subtitle } from "@/components/ui/typography"
+import { useToast } from "@/components/ui/toast"
 
 export default function RegisterScreen() {
   const router = useRouter()
   const { register } = useAuth()
+  const toast = useToast()
   const [name, setName] = useState("")
   const [username, setUsername] = useState("")
   const [email, setEmail] = useState("")
@@ -42,9 +47,20 @@ export default function RegisterScreen() {
         password,
         avatarUrl: "",
       })
+      toast.show({
+        type: "success",
+        title: "Account created!",
+        message: "Welcome to Saturn",
+      })
       router.replace("/(app)/(tabs)")
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to register")
+      const msg = err instanceof Error ? err.message : "Failed to register"
+      setError(msg)
+      toast.show({
+        type: "error",
+        title: "Registration failed",
+        message: msg,
+      })
     } finally {
       setLoading(false)
     }
@@ -56,83 +72,76 @@ export default function RegisterScreen() {
         style={styles.keyboardAvoid}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <ScrollView contentContainerStyle={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.header}>
-            <Text style={styles.brandTitle}>Create Account</Text>
-            <Text style={styles.subtitle}>Join Saturn Life OS</Text>
+            <Header1 style={styles.brandTitle}>Create Account</Header1>
+            <Subtitle style={styles.subtitle}>Join Saturn Life OS</Subtitle>
           </View>
 
-          <View style={styles.formCard}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Full Name</Text>
-              <View style={styles.inputWrapper}>
-                <User
-                  size={18}
-                  color={theme.colors.textMuted}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Ada Lovelace"
-                  placeholderTextColor={theme.colors.textMuted}
-                  value={name}
-                  onChangeText={setName}
-                />
-              </View>
-            </View>
+          <Card style={styles.formCard}>
+            <TextInput
+              label="Full Name"
+              placeholder="Ada Lovelace"
+              value={name}
+              onChangeText={(val) => {
+                setName(val)
+                if (error) setError(null)
+              }}
+              leftIcon={<User size={18} color={theme.colors.textMuted} />}
+            />
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email Address</Text>
-              <View style={styles.inputWrapper}>
-                <Mail
-                  size={18}
-                  color={theme.colors.textMuted}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="user@example.com"
-                  placeholderTextColor={theme.colors.textMuted}
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                />
-              </View>
-            </View>
+            <TextInput
+              label="Username (optional)"
+              placeholder="adalovelace"
+              value={username}
+              onChangeText={setUsername}
+              autoCapitalize="none"
+              leftIcon={<AtSign size={18} color={theme.colors.textMuted} />}
+            />
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
-              <View style={styles.inputWrapper}>
-                <Lock
-                  size={18}
-                  color={theme.colors.textMuted}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="••••••••"
-                  placeholderTextColor={theme.colors.textMuted}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                />
-              </View>
-            </View>
+            <TextInput
+              label="Email Address"
+              placeholder="user@example.com"
+              value={email}
+              onChangeText={(val) => {
+                setEmail(val)
+                if (error) setError(null)
+              }}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              leftIcon={<Mail size={18} color={theme.colors.textMuted} />}
+            />
+
+            <TextInput
+              label="Password"
+              placeholder="••••••••"
+              value={password}
+              onChangeText={(val) => {
+                setPassword(val)
+                if (error) setError(null)
+              }}
+              isPassword
+              leftIcon={<Lock size={18} color={theme.colors.textMuted} />}
+            />
 
             {error && <Text style={styles.errorText}>{error}</Text>}
 
-            <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
+            <Button
+              variant="primary"
+              size="lg"
+              loading={loading}
               onPress={handleRegister}
-              disabled={loading}
+              leftIcon={
+                <UserPlus size={18} color={theme.colors.primaryForeground} />
+              }
+              style={styles.button}
             >
-              <UserPlus size={18} color="#090d16" style={{ marginRight: 8 }} />
-              <Text style={styles.buttonText}>
-                {loading ? "Creating..." : "Sign Up"}
-              </Text>
-            </TouchableOpacity>
-          </View>
+              Sign Up
+            </Button>
+          </Card>
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Already have an account? </Text>
@@ -166,69 +175,22 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   brandTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: theme.colors.textPrimary,
+    textAlign: "center",
   },
   subtitle: {
-    fontSize: 15,
-    color: theme.colors.textMuted,
     marginTop: 6,
+    textAlign: "center",
   },
   formCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
     padding: 20,
     gap: 16,
   },
-  inputGroup: {
-    gap: 6,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: theme.colors.textMuted,
-  },
-  inputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surfaceHighlight,
-    borderRadius: theme.radius.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.borderStrong,
-    paddingHorizontal: 12,
-  },
-  inputIcon: {
-    marginRight: 10,
-  },
-  input: {
-    flex: 1,
-    paddingVertical: 12,
-    color: theme.colors.textPrimary,
-    fontSize: 15,
-  },
   errorText: {
-    color: theme.colors.destructive,
     fontSize: 13,
+    color: theme.colors.destructive,
   },
   button: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.sm,
-    paddingVertical: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: theme.colors.primaryForeground,
-    fontWeight: "600",
-    fontSize: 15,
+    marginTop: 4,
   },
   footer: {
     flexDirection: "row",
@@ -241,7 +203,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     color: theme.colors.primary,
-    fontWeight: "600",
     fontSize: 14,
+    fontWeight: "600",
   },
 })

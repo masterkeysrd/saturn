@@ -18,6 +18,11 @@ import {
 import { formatAmount, formatCents } from "@saturn/core"
 import { useListSpacesQuery } from "@saturn/api/saturn/space/v1/space"
 import { theme } from "@/lib/theme"
+import { Card } from "@/components/ui/card"
+import { MonoAmount, Title, Caption } from "@/components/ui/typography"
+import { Badge } from "@/components/ui/badge"
+import { SkeletonCard } from "@/components/ui/skeleton-loader"
+import { haptics } from "@/lib/haptics"
 
 export default function OverviewScreen() {
   const router = useRouter()
@@ -25,6 +30,7 @@ export default function OverviewScreen() {
     data: spacesData,
     refetch,
     isRefetching,
+    isLoading,
   } = useListSpacesQuery({
     pageSize: 10,
     pageToken: "",
@@ -37,60 +43,67 @@ export default function OverviewScreen() {
       refreshControl={
         <RefreshControl
           refreshing={isRefetching}
-          onRefresh={refetch}
+          onRefresh={() => {
+            haptics.light()
+            refetch()
+          }}
           tintColor={theme.colors.primary}
         />
       }
     >
       {/* Net Worth Card */}
-      <View style={styles.netWorthCard}>
-        <Text style={styles.cardLabel}>TOTAL NET WORTH</Text>
-        <Text style={styles.netWorthAmount}>
+      <Card style={styles.netWorthCard}>
+        <Caption style={styles.cardLabel}>TOTAL NET WORTH</Caption>
+        <MonoAmount size="xl" style={styles.netWorthAmount}>
           {formatAmount("1450250", "USD")}
-        </Text>
+        </MonoAmount>
+
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <View
               style={[
                 styles.statIconBadge,
-                { backgroundColor: "rgba(52, 211, 153, 0.15)" },
+                { backgroundColor: theme.colors.successSubtle },
               ]}
             >
               <ArrowDownLeft size={14} color={theme.colors.success} />
             </View>
             <View>
-              <Text style={styles.statLabel}>Income (Sep)</Text>
-              <Text style={[styles.statValue, { color: theme.colors.success }]}>
+              <Caption>Income (Sep)</Caption>
+              <MonoAmount size="sm" color={theme.colors.success}>
                 {formatAmount("450000", "USD")}
-              </Text>
+              </MonoAmount>
             </View>
           </View>
+
           <View style={styles.statItem}>
             <View
               style={[
                 styles.statIconBadge,
-                { backgroundColor: "rgba(244, 63, 94, 0.15)" },
+                { backgroundColor: theme.colors.destructiveSubtle },
               ]}
             >
               <ArrowUpRight size={14} color={theme.colors.destructive} />
             </View>
             <View>
-              <Text style={styles.statLabel}>Expenses (Sep)</Text>
-              <Text
-                style={[styles.statValue, { color: theme.colors.destructive }]}
-              >
+              <Caption>Expenses (Sep)</Caption>
+              <MonoAmount size="sm" color={theme.colors.destructive}>
                 {formatAmount("185000", "USD")}
-              </Text>
+              </MonoAmount>
             </View>
           </View>
         </View>
-      </View>
+      </Card>
 
       {/* Quick Actions Row */}
       <View style={styles.quickActionsRow}>
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => router.push("/modal/add-transaction")}
+          activeOpacity={0.7}
+          onPress={() => {
+            haptics.light()
+            router.push("/modal/add-transaction")
+          }}
         >
           <View style={styles.actionIconCircle}>
             <Plus size={20} color={theme.colors.primary} />
@@ -100,7 +113,11 @@ export default function OverviewScreen() {
 
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => router.push("/(app)/(tabs)/transactions")}
+          activeOpacity={0.7}
+          onPress={() => {
+            haptics.light()
+            router.push("/(app)/(tabs)/transactions")
+          }}
         >
           <View style={styles.actionIconCircle}>
             <TrendingUp size={20} color={theme.colors.primary} />
@@ -110,7 +127,11 @@ export default function OverviewScreen() {
 
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => router.push("/(app)/(tabs)/budgets")}
+          activeOpacity={0.7}
+          onPress={() => {
+            haptics.light()
+            router.push("/(app)/(tabs)/budgets")
+          }}
         >
           <View style={styles.actionIconCircle}>
             <Wallet size={20} color={theme.colors.primary} />
@@ -120,7 +141,11 @@ export default function OverviewScreen() {
 
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => router.push("/modal/add-transaction")}
+          activeOpacity={0.7}
+          onPress={() => {
+            haptics.light()
+            router.push("/modal/add-transaction")
+          }}
         >
           <View style={styles.actionIconCircle}>
             <ScanLine size={20} color={theme.colors.primary} />
@@ -129,23 +154,33 @@ export default function OverviewScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Workspaces Section */}
+      {/* Connected Workspaces Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Connected Workspaces</Text>
-        <View style={styles.spacesCard}>
-          {spacesData?.spaces?.length ? (
-            spacesData.spaces.map((space) => (
-              <View key={space.id || space.name} style={styles.spaceRow}>
-                <Text style={styles.spaceName}>{space.name}</Text>
-                <Text style={styles.spaceId}>{space.id || "Active"}</Text>
+        <Title style={styles.sectionTitle}>Connected Workspaces</Title>
+        {isLoading ? (
+          <SkeletonCard />
+        ) : (
+          <Card style={styles.spacesCard}>
+            {spacesData?.spaces?.length ? (
+              spacesData.spaces.map((space) => (
+                <View key={space.id || space.name} style={styles.spaceRow}>
+                  <Text style={styles.spaceName}>{space.name}</Text>
+                  <Badge
+                    variant="primary"
+                    size="sm"
+                    label={space.id ? "Connected" : "Active"}
+                  />
+                </View>
+              ))
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                  Workspace active: {formatCents(1450250)} units
+                </Text>
               </View>
-            ))
-          ) : (
-            <Text style={styles.emptyText}>
-              Backend connected. Workspace ready: {formatCents(1450250)} units
-            </Text>
-          )}
-        </View>
+            )}
+          </Card>
+        )}
       </View>
     </ScrollView>
   )
@@ -161,22 +196,12 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   netWorthCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
     padding: 20,
   },
   cardLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
     letterSpacing: 1,
   },
   netWorthAmount: {
-    fontSize: 34,
-    fontWeight: "bold",
-    color: theme.colors.textPrimary,
     marginVertical: 10,
   },
   statsRow: {
@@ -199,38 +224,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  statLabel: {
-    fontSize: 11,
-    color: theme.colors.textMuted,
-  },
-  statValue: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
   quickActionsRow: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    paddingVertical: 14,
+    justifyContent: "space-between",
+    paddingHorizontal: 8,
   },
   actionButton: {
     alignItems: "center",
-    gap: 6,
+    gap: 8,
   },
   actionIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.surfaceHighlight,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     alignItems: "center",
     justifyContent: "center",
   },
   actionText: {
-    fontSize: 12,
     color: theme.colors.textSecondary,
+    fontSize: 12,
     fontWeight: "500",
   },
   section: {
@@ -238,35 +253,28 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
   },
   spacesCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
     padding: 16,
-    gap: 10,
   },
   spaceRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 6,
+    alignItems: "center",
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
   spaceName: {
-    fontSize: 14,
-    fontWeight: "500",
     color: theme.colors.textPrimary,
+    fontSize: 15,
+    fontWeight: "500",
   },
-  spaceId: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
+  emptyContainer: {
+    paddingVertical: 8,
   },
   emptyText: {
-    fontSize: 13,
     color: theme.colors.textMuted,
+    fontSize: 13,
   },
 })

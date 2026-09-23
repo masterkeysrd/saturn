@@ -8,7 +8,11 @@ import {
 } from "react-native"
 import { PiggyBank, Landmark } from "lucide-react-native"
 import { formatAmount, getBudgetColors } from "@saturn/core"
-import { theme } from "@/lib/theme"
+import { theme, getNativeBudgetColors } from "@/lib/theme"
+import { Card } from "@/components/ui/card"
+import { MonoAmount, Title, Caption } from "@/components/ui/typography"
+import { Badge } from "@/components/ui/badge"
+import { haptics } from "@/lib/haptics"
 
 interface MockBudget {
   id: string
@@ -51,6 +55,11 @@ export default function BudgetsScreen() {
     "budgets"
   )
 
+  const handleSelectSegment = (segment: "budgets" | "accounts") => {
+    haptics.selection()
+    setActiveSegment(segment)
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Segment Switcher */}
@@ -60,7 +69,8 @@ export default function BudgetsScreen() {
             styles.segmentButton,
             activeSegment === "budgets" && styles.segmentActive,
           ]}
-          onPress={() => setActiveSegment("budgets")}
+          activeOpacity={0.7}
+          onPress={() => handleSelectSegment("budgets")}
         >
           <PiggyBank
             size={16}
@@ -86,7 +96,8 @@ export default function BudgetsScreen() {
             styles.segmentButton,
             activeSegment === "accounts" && styles.segmentActive,
           ]}
-          onPress={() => setActiveSegment("accounts")}
+          activeOpacity={0.7}
+          onPress={() => handleSelectSegment("accounts")}
         >
           <Landmark
             size={16}
@@ -110,7 +121,9 @@ export default function BudgetsScreen() {
 
       {activeSegment === "budgets" ? (
         <View style={styles.listSection}>
-          <Text style={styles.sectionHeader}>Active Category Allocations</Text>
+          <Caption style={styles.sectionHeader}>
+            Active Category Allocations
+          </Caption>
           {BUDGETS.map((b) => {
             const palette = getBudgetColors(b.color)
             const spentNum = parseInt(b.spent, 10)
@@ -120,19 +133,39 @@ export default function BudgetsScreen() {
               100
             )
 
-            const hexColor =
-              theme.budgetColors[palette.value] || theme.colors.primary
+            const nativeColors = getNativeBudgetColors(palette.value)
 
             return (
-              <View key={b.id} style={styles.budgetCard}>
+              <Card key={b.id} style={styles.budgetCard}>
                 <View style={styles.budgetHeader}>
                   <View style={styles.budgetTitleRow}>
                     <View
-                      style={[styles.colorDot, { backgroundColor: hexColor }]}
+                      style={[
+                        styles.colorDot,
+                        { backgroundColor: nativeColors.bar },
+                      ]}
                     />
                     <Text style={styles.budgetName}>{b.name}</Text>
                   </View>
-                  <Text style={styles.budgetPercent}>{percentage}%</Text>
+                  <Badge
+                    size="sm"
+                    label={`${percentage}%`}
+                    bg={
+                      percentage >= 95
+                        ? theme.colors.destructiveSubtle
+                        : nativeColors.bg
+                    }
+                    border={
+                      percentage >= 95
+                        ? "rgba(244, 63, 94, 0.3)"
+                        : nativeColors.border
+                    }
+                    color={
+                      percentage >= 95
+                        ? theme.colors.destructive
+                        : nativeColors.text
+                    }
+                  />
                 </View>
 
                 {/* Progress Track */}
@@ -145,7 +178,7 @@ export default function BudgetsScreen() {
                         backgroundColor:
                           percentage >= 95
                             ? theme.colors.destructive
-                            : hexColor,
+                            : nativeColors.bar,
                       },
                     ]}
                   />
@@ -162,53 +195,46 @@ export default function BudgetsScreen() {
                     Limit: {formatAmount(b.limit, b.currency)}
                   </Text>
                 </View>
-              </View>
+              </Card>
             )
           })}
         </View>
       ) : (
         <View style={styles.listSection}>
-          <Text style={styles.sectionHeader}>Connected Accounts</Text>
-          <View style={styles.accountCard}>
+          <Caption style={styles.sectionHeader}>Connected Accounts</Caption>
+          <Card style={styles.accountCard}>
             <View style={styles.accountRow}>
               <View>
                 <Text style={styles.accountName}>Primary Checking</Text>
                 <Text style={styles.accountMeta}>Chase Bank •••• 4210</Text>
               </View>
-              <Text style={styles.accountBalance}>
-                {formatAmount("845000", "USD")}
-              </Text>
+              <MonoAmount size="md">{formatAmount("845000", "USD")}</MonoAmount>
             </View>
-          </View>
+          </Card>
 
-          <View style={styles.accountCard}>
+          <Card style={styles.accountCard}>
             <View style={styles.accountRow}>
               <View>
                 <Text style={styles.accountName}>High Yield Savings</Text>
                 <Text style={styles.accountMeta}>Marcus •••• 9811</Text>
               </View>
-              <Text style={styles.accountBalance}>
+              <MonoAmount size="md" color={theme.colors.success}>
                 {formatAmount("605250", "USD")}
-              </Text>
+              </MonoAmount>
             </View>
-          </View>
+          </Card>
 
-          <View style={styles.accountCard}>
+          <Card style={styles.accountCard}>
             <View style={styles.accountRow}>
               <View>
                 <Text style={styles.accountName}>Sapphire Preferred</Text>
                 <Text style={styles.accountMeta}>Chase Credit •••• 1044</Text>
               </View>
-              <Text
-                style={[
-                  styles.accountBalance,
-                  { color: theme.colors.destructive },
-                ]}
-              >
-                -{formatAmount("142000", "USD")}
-              </Text>
+              <MonoAmount size="md" color={theme.colors.destructive}>
+                {formatAmount("-14250", "USD")}
+              </MonoAmount>
             </View>
-          </View>
+          </Card>
         </View>
       )}
     </ScrollView>
@@ -226,9 +252,9 @@ const styles = StyleSheet.create({
   },
   segmentContainer: {
     flexDirection: "row",
-    backgroundColor: theme.colors.surface,
-    padding: 4,
+    backgroundColor: theme.colors.surfaceElevated,
     borderRadius: theme.radius.md,
+    padding: 4,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
@@ -241,7 +267,9 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.sm,
   },
   segmentActive: {
-    backgroundColor: theme.colors.surfaceHighlight,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.borderStrong,
   },
   segmentText: {
     fontSize: 14,
@@ -256,23 +284,17 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sectionHeader: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    marginTop: 4,
+    letterSpacing: 0.8,
+    paddingHorizontal: 4,
   },
   budgetCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
     padding: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
     gap: 12,
   },
   budgetHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
   },
   budgetTitleRow: {
     flexDirection: "row",
@@ -286,13 +308,8 @@ const styles = StyleSheet.create({
   },
   budgetName: {
     fontSize: 15,
-    fontWeight: "500",
-    color: theme.colors.textPrimary,
-  },
-  budgetPercent: {
-    fontSize: 13,
     fontWeight: "600",
-    color: theme.colors.textMuted,
+    color: theme.colors.textPrimary,
   },
   progressTrack: {
     height: 8,
@@ -321,30 +338,21 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
   },
   accountCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
     padding: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
   },
   accountRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
   },
   accountName: {
     fontSize: 15,
-    fontWeight: "500",
+    fontWeight: "600",
     color: theme.colors.textPrimary,
   },
   accountMeta: {
     fontSize: 12,
     color: theme.colors.textMuted,
-    marginTop: 3,
-  },
-  accountBalance: {
-    fontSize: 15,
-    fontWeight: "bold",
-    color: theme.colors.textPrimary,
+    marginTop: 2,
   },
 })

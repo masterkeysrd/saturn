@@ -4,7 +4,6 @@ import {
   Text,
   View,
   FlatList,
-  TextInput,
   TouchableOpacity,
 } from "react-native"
 import { useRouter } from "expo-router"
@@ -14,9 +13,15 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   Plus,
+  ReceiptText,
 } from "lucide-react-native"
 import { formatAmount } from "@saturn/core"
 import { theme } from "@/lib/theme"
+import { Card } from "@/components/ui/card"
+import { TextInput } from "@/components/ui/text-input"
+import { MonoAmount } from "@/components/ui/typography"
+import { EmptyState } from "@/components/ui/empty-state"
+import { haptics } from "@/lib/haptics"
 
 interface MockTransaction {
   id: string
@@ -82,20 +87,19 @@ export default function TransactionsScreen() {
       {/* Search & Filter Header */}
       <View style={styles.searchBarContainer}>
         <View style={styles.searchWrapper}>
-          <Search
-            size={18}
-            color={theme.colors.textMuted}
-            style={{ marginRight: 8 }}
-          />
           <TextInput
-            style={styles.searchInput}
             placeholder="Search transactions..."
-            placeholderTextColor={theme.colors.textMuted}
             value={search}
             onChangeText={setSearch}
+            leftIcon={<Search size={18} color={theme.colors.textMuted} />}
+            inputContainerStyle={{ minHeight: 42 }}
           />
         </View>
-        <TouchableOpacity style={styles.filterButton}>
+        <TouchableOpacity
+          style={styles.filterButton}
+          activeOpacity={0.7}
+          onPress={() => haptics.light()}
+        >
           <Filter size={18} color={theme.colors.textSecondary} />
         </TouchableOpacity>
       </View>
@@ -108,15 +112,18 @@ export default function TransactionsScreen() {
         renderItem={({ item }) => {
           const isExpense = item.type === "expense"
           return (
-            <TouchableOpacity style={styles.transactionCard}>
+            <Card
+              style={styles.transactionCard}
+              onPress={() => haptics.light()}
+            >
               <View style={styles.leftCol}>
                 <View
                   style={[
                     styles.iconCircle,
                     {
                       backgroundColor: isExpense
-                        ? "rgba(244, 63, 94, 0.15)"
-                        : "rgba(52, 211, 153, 0.15)",
+                        ? theme.colors.destructiveSubtle
+                        : theme.colors.successSubtle,
                     },
                   ]}
                 >
@@ -133,36 +140,41 @@ export default function TransactionsScreen() {
                   </Text>
                 </View>
               </View>
-              <Text
-                style={[
-                  styles.txAmount,
-                  {
-                    color: isExpense
-                      ? theme.colors.textPrimary
-                      : theme.colors.success,
-                  },
-                ]}
+              <MonoAmount
+                size="md"
+                color={
+                  isExpense ? theme.colors.textPrimary : theme.colors.success
+                }
               >
                 {isExpense ? "-" : "+"}
                 {formatAmount(item.amount, item.currency)}
-              </Text>
-            </TouchableOpacity>
+              </MonoAmount>
+            </Card>
           )
         }}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyTitle}>No transactions found</Text>
-            <Text style={styles.emptySubtitle}>
-              Tap the + button to log your first transaction.
-            </Text>
-          </View>
+          <EmptyState
+            icon={<ReceiptText size={28} color={theme.colors.textMuted} />}
+            title="No transactions found"
+            description={
+              search
+                ? `No results matching "${search}"`
+                : "Tap the + button to log your first transaction."
+            }
+            actionLabel="Add Transaction"
+            onAction={() => router.push("/modal/add-transaction")}
+          />
         }
       />
 
       {/* Floating Add Action Button */}
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => router.push("/modal/add-transaction")}
+        activeOpacity={0.8}
+        onPress={() => {
+          haptics.medium()
+          router.push("/modal/add-transaction")
+        }}
       >
         <Plus size={24} color="#090d16" />
       </TouchableOpacity>
@@ -179,65 +191,48 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     padding: 16,
     gap: 10,
-    backgroundColor: theme.colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    alignItems: "center",
   },
   searchWrapper: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    paddingHorizontal: 12,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: 10,
-    color: theme.colors.textPrimary,
-    fontSize: 14,
   },
   filterButton: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.sm,
     width: 44,
     height: 44,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     alignItems: "center",
     justifyContent: "center",
   },
   listContent: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 90,
     gap: 10,
   },
   transactionCard: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: theme.colors.surface,
     padding: 14,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
   },
   leftCol: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    flex: 1,
   },
   iconCircle: {
     width: 36,
     height: 36,
-    borderRadius: theme.radius.full,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
   txDescription: {
     fontSize: 15,
-    fontWeight: "500",
+    fontWeight: "600",
     color: theme.colors.textPrimary,
   },
   txMeta: {
@@ -245,39 +240,16 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     marginTop: 2,
   },
-  txAmount: {
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  emptyContainer: {
-    padding: 40,
-    alignItems: "center",
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  emptySubtitle: {
-    fontSize: 13,
-    color: theme.colors.textMuted,
-    marginTop: 4,
-    textAlign: "center",
-  },
   fab: {
     position: "absolute",
     right: 20,
-    bottom: 20,
+    bottom: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: theme.colors.primary,
-    width: 54,
-    height: 54,
-    borderRadius: 27,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 6,
+    ...theme.shadows.lg,
   },
 })

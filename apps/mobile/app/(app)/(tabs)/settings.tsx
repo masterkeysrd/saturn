@@ -1,10 +1,10 @@
+import { useState } from "react"
 import {
   StyleSheet,
   Text,
   View,
   ScrollView,
   TouchableOpacity,
-  Alert,
   Switch,
 } from "react-native"
 import { useRouter } from "expo-router"
@@ -19,9 +19,16 @@ import {
 } from "lucide-react-native"
 import { useAuth } from "@/lib/auth-context"
 import { theme } from "@/lib/theme"
+import { Avatar } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useToast } from "@/components/ui/toast"
 
 export default function SettingsScreen() {
   const router = useRouter()
+  const toast = useToast()
   const {
     user,
     logout,
@@ -31,55 +38,61 @@ export default function SettingsScreen() {
     toggleBiometrics,
   } = useAuth()
 
-  const handleSignOut = () => {
-    Alert.alert("Sign Out", "Are you sure you want to sign out from Saturn?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Sign Out",
-        style: "destructive",
-        onPress: async () => {
-          await logout()
-          router.replace("/(auth)/login")
-        },
-      },
-    ])
+  const [signOutModalVisible, setSignOutModalVisible] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
+
+  const handleConfirmSignOut = async () => {
+    setSigningOut(true)
+    try {
+      await logout()
+      toast.show({
+        type: "info",
+        title: "Signed Out",
+        message: "You have been logged out",
+      })
+      router.replace("/(auth)/login")
+    } catch {
+      setSigningOut(false)
+      setSignOutModalVisible(false)
+    }
   }
 
-  const initials = user?.name
-    ? user.name
-        .split(" ")
-        .map((p) => p[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase()
-    : "ME"
+  const handleToggleBiometrics = async (val: boolean) => {
+    const success = await toggleBiometrics(val)
+    if (success) {
+      toast.show({
+        type: "success",
+        title: val ? "Biometrics Enabled" : "Biometrics Disabled",
+      })
+    }
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* User Profile Card */}
-      <View style={styles.profileCard}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials}</Text>
-        </View>
+      <Card style={styles.profileCard}>
+        <Avatar name={user?.name || "User"} size={52} />
         <View style={styles.profileInfo}>
           <Text style={styles.profileName}>{user?.name || "Saturn User"}</Text>
           <Text style={styles.profileEmail}>
             {user?.email || "user@saturn.local"}
           </Text>
-          <View style={styles.roleBadge}>
-            <Text style={styles.roleText}>
-              {user?.role === "admin" ? "System Admin" : "Active Member"}
-            </Text>
-          </View>
+          <Badge
+            variant={user?.role === "admin" ? "primary" : "default"}
+            size="sm"
+            label={user?.role === "admin" ? "System Admin" : "Active Member"}
+            style={{ marginTop: 2 }}
+          />
         </View>
-      </View>
+      </Card>
 
       {/* Settings Navigation List */}
       <View style={styles.section}>
         <Text style={styles.sectionHeader}>WORKSPACE</Text>
-        <View style={styles.menuGroup}>
+        <Card style={styles.menuGroup}>
           <TouchableOpacity
             style={styles.menuItem}
+            activeOpacity={0.7}
             onPress={() => router.push("/modal/switch-space")}
           >
             <View style={styles.menuLeft}>
@@ -93,14 +106,14 @@ export default function SettingsScreen() {
               <ChevronRight size={16} color={theme.colors.textMuted} />
             </View>
           </TouchableOpacity>
-        </View>
+        </Card>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionHeader}>SECURITY & PREFERENCES</Text>
-        <View style={styles.menuGroup}>
+        <Card style={styles.menuGroup}>
           {isBiometricSupported && (
-            <View style={styles.menuItem}>
+            <View style={[styles.menuItem, styles.menuItemBorder]}>
               <View style={styles.menuLeft}>
                 <Fingerprint size={18} color={theme.colors.primary} />
                 <Text style={styles.menuLabel}>Biometric Unlock</Text>
@@ -108,7 +121,7 @@ export default function SettingsScreen() {
               <Switch
                 value={isBiometricActive}
                 onValueChange={(val) => {
-                  toggleBiometrics(val)
+                  handleToggleBiometrics(val)
                 }}
                 trackColor={{
                   false: theme.colors.surfaceHighlight,
@@ -119,7 +132,10 @@ export default function SettingsScreen() {
             </View>
           )}
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuItemBorder]}
+            activeOpacity={0.7}
+          >
             <View style={styles.menuLeft}>
               <ShieldCheck size={18} color={theme.colors.success} />
               <Text style={styles.menuLabel}>Active Sessions & Devices</Text>
@@ -127,7 +143,10 @@ export default function SettingsScreen() {
             <ChevronRight size={16} color={theme.colors.textMuted} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuItemBorder]}
+            activeOpacity={0.7}
+          >
             <View style={styles.menuLeft}>
               <Bell size={18} color={theme.colors.warning} />
               <Text style={styles.menuLabel}>Notifications & Alerts</Text>
@@ -135,25 +154,38 @@ export default function SettingsScreen() {
             <ChevronRight size={16} color={theme.colors.textMuted} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
             <View style={styles.menuLeft}>
               <Sparkles size={18} color={theme.colors.accent} />
               <Text style={styles.menuLabel}>AI Agents & Providers</Text>
             </View>
             <ChevronRight size={16} color={theme.colors.textMuted} />
           </TouchableOpacity>
-        </View>
+        </Card>
       </View>
 
       {/* Sign Out Button */}
-      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-        <LogOut
-          size={18}
-          color={theme.colors.destructive}
-          style={{ marginRight: 8 }}
-        />
-        <Text style={styles.signOutText}>Sign Out</Text>
-      </TouchableOpacity>
+      <Button
+        variant="destructive"
+        size="lg"
+        leftIcon={<LogOut size={18} color={theme.colors.destructive} />}
+        onPress={() => setSignOutModalVisible(true)}
+      >
+        Sign Out
+      </Button>
+
+      {/* Sign Out Confirmation Dialog */}
+      <ConfirmDialog
+        visible={signOutModalVisible}
+        title="Sign Out"
+        message="Are you sure you want to sign out from Saturn on this device?"
+        confirmText="Sign Out"
+        cancelText="Cancel"
+        isDestructive
+        loading={signingOut}
+        onConfirm={handleConfirmSignOut}
+        onCancel={() => setSignOutModalVisible(false)}
+      />
     </ScrollView>
   )
 }
@@ -170,25 +202,8 @@ const styles = StyleSheet.create({
   profileCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: theme.colors.surface,
     padding: 16,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
     gap: 16,
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: theme.colors.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: {
-    color: "#ffffff",
-    fontWeight: "bold",
-    fontSize: 16,
   },
   profileInfo: {
     flex: 1,
@@ -203,19 +218,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: theme.colors.textMuted,
   },
-  roleBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: theme.colors.surfaceHighlight,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: theme.radius.full,
-    marginTop: 2,
-  },
-  roleText: {
-    fontSize: 11,
-    color: theme.colors.primary,
-    fontWeight: "600",
-  },
   section: {
     gap: 8,
   },
@@ -223,21 +225,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: theme.colors.textMuted,
-    letterSpacing: 1,
-    marginLeft: 4,
+    paddingHorizontal: 4,
+    letterSpacing: 0.8,
   },
   menuGroup: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
     overflow: "hidden",
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  menuItemBorder: {
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
@@ -247,9 +248,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   menuLabel: {
-    fontSize: 14,
+    fontSize: 15,
     color: theme.colors.textPrimary,
-    fontWeight: "500",
   },
   menuRight: {
     flexDirection: "row",
@@ -257,23 +257,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   menuValue: {
-    fontSize: 13,
+    fontSize: 14,
     color: theme.colors.textMuted,
-  },
-  signOutButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.surface,
-    paddingVertical: 14,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: "rgba(244, 63, 94, 0.3)",
-    marginTop: 10,
-  },
-  signOutText: {
-    color: theme.colors.destructive,
-    fontWeight: "600",
-    fontSize: 15,
   },
 })
