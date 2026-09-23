@@ -1,10 +1,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import {
-  inboxReviewSchema,
-  type InboxReviewFormValues,
-} from "../schemas/inbox-review"
+import { inboxReviewSchema, type InboxReviewFormValues } from "@saturn/schemas"
 import type {
   InboxItem,
   Account,

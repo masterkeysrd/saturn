@@ -6,7 +6,7 @@ import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
 import {
   exchangeRateSchema,
   type ExchangeRateFormValues,
-} from "../schemas/exchange-rate"
+} from "@saturn/schemas"
 import {
   type FinanceSettings,
   useCreateExchangeRateMutation,

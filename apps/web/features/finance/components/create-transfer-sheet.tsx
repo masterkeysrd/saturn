@@ -2,7 +2,7 @@ import { useMemo, useEffect, useCallback } from "react"
 import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
-import { transferSchema, type TransferFormValues } from "../schemas/transfer"
+import { transferSchema, type TransferFormValues } from "@saturn/schemas"
 import {
   type Account,
   useCreateTransferMutation,

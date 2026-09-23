@@ -13,7 +13,7 @@ import { BudgetSelect } from "./budget-select"
 import {
   confirmTransactionSchema,
   type ConfirmTransactionFormValues,
-} from "../schemas/reconciliation"
+} from "@saturn/schemas"
 import {
   useConfirmScheduledTransactionMutation,
   type ScheduledTransaction,

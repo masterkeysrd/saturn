@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useQueryClient } from "@tanstack/react-query"
 import { FormSelect } from "@/components/ui/form-select"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
-import { borrowingSchema, type BorrowingFormValues } from "../schemas/borrowing"
+import { borrowingSchema, type BorrowingFormValues } from "@saturn/schemas"
 import {
   type Borrowing,
   useCreateBorrowingMutation,

@@ -7,7 +7,7 @@ import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
 import {
   recurringTransactionSchema,
   type RecurringTransactionFormValues,
-} from "../schemas/recurring-transaction"
+} from "@saturn/schemas"
 import {
   type Budget,
   type RecurringTransaction,

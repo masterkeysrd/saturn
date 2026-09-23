@@ -4,10 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
 import { ArrowLeft } from "lucide-react"
-import {
-  transactionSchema,
-  type TransactionFormValues,
-} from "../schemas/transaction"
+import { transactionSchema, type TransactionFormValues } from "@saturn/schemas"
 import {
   type Account,
   type Budget,

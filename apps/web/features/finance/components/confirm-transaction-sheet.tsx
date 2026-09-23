@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom"
 import {
   confirmTransactionSchema,
   type ConfirmTransactionFormValues,
-} from "../schemas/reconciliation"
+} from "@saturn/schemas"
 import {
   useConfirmScheduledTransactionMutation,
   useMatchScheduledTransactionMutation,

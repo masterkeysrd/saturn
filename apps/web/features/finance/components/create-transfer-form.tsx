@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ArrowLeft, AlertTriangle } from "lucide-react"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
-import { transferSchema, type TransferFormValues } from "../schemas/transfer"
+import { transferSchema, type TransferFormValues } from "@saturn/schemas"
 import {
   type Account,
   useCreateTransferMutation,

@@ -3,7 +3,7 @@ import { useForm, Controller, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { FormSelect } from "@/components/ui/form-select"
 import { FormDrawer, FormFieldItem } from "@/components/ui/form-drawer"
-import { accountSchema, type AccountFormValues } from "../schemas/account"
+import { accountSchema, type AccountFormValues } from "@saturn/schemas"
 import {
   type Account,
   type UpdateAccountRequest,
