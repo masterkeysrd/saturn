@@ -6,7 +6,6 @@ import {
   FlatList,
   TouchableOpacity,
 } from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
 import { useRouter } from "expo-router"
 import {
   Search,
@@ -84,7 +83,7 @@ export default function TransactionsScreen() {
   )
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <View style={styles.container}>
       {/* Search & Filter Header */}
       <View style={styles.searchBarContainer}>
         <View style={styles.searchWrapper}>
@@ -179,7 +178,7 @@ export default function TransactionsScreen() {
       >
         <Plus size={24} color="#090d16" />
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   )
 }
 

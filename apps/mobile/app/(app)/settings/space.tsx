@@ -46,7 +46,13 @@ export default function SpaceSettingsScreen() {
   const insets = useSafeAreaInsets()
   const toast = useToast()
   const { user } = useAuth()
-  const { activeSpace, activeSpaceId, isOwner, canManageMembers, refetchSpaces } = useSpace()
+  const {
+    activeSpace,
+    activeSpaceId,
+    isOwner,
+    canManageMembers,
+    refetchSpaces,
+  } = useSpace()
 
   // Form states
   const [name, setName] = useState(activeSpace?.name || "")
@@ -122,7 +128,8 @@ export default function SpaceSettingsScreen() {
       toast.show({
         type: "error",
         title: "Update Failed",
-        message: err instanceof Error ? err.message : "Failed to update workspace",
+        message:
+          err instanceof Error ? err.message : "Failed to update workspace",
       })
     }
   }
@@ -253,7 +260,9 @@ export default function SpaceSettingsScreen() {
                 variant="primary"
                 size="md"
                 loading={updateSpaceMutation.isPending}
-                leftIcon={<Check size={16} color={theme.colors.primaryForeground} />}
+                leftIcon={
+                  <Check size={16} color={theme.colors.primaryForeground} />
+                }
                 onPress={handleSaveSpace}
                 style={{ marginTop: 8 }}
               >
@@ -266,12 +275,16 @@ export default function SpaceSettingsScreen() {
         {/* Members Roster */}
         <View style={styles.section}>
           <View style={styles.membersHeaderRow}>
-            <Caption style={styles.sectionHeader}>WORKSPACE MEMBERS ({members.length})</Caption>
+            <Caption style={styles.sectionHeader}>
+              WORKSPACE MEMBERS ({members.length})
+            </Caption>
             {canManageMembers && (
               <Button
                 variant="secondary"
                 size="sm"
-                leftIcon={<UserPlus size={14} color={theme.colors.textPrimary} />}
+                leftIcon={
+                  <UserPlus size={14} color={theme.colors.textPrimary} />
+                }
                 onPress={() => {
                   haptics.light()
                   setInviteModalVisible(true)
@@ -301,7 +314,9 @@ export default function SpaceSettingsScreen() {
                   <View key={m.userId} style={styles.memberRow}>
                     <View style={styles.memberLeft}>
                       <Avatar
-                        name={m.profile?.name || m.profile?.username || m.userId}
+                        name={
+                          m.profile?.name || m.profile?.username || m.userId
+                        }
                         size={38}
                       />
                       <View style={styles.memberInfo}>
@@ -354,7 +369,8 @@ export default function SpaceSettingsScreen() {
             <Card style={styles.inviteCard}>
               <Title style={{ marginBottom: 4 }}>Add Space Member</Title>
               <Text style={styles.inviteSubtitle}>
-                Add a user by their unique User ID to collaborate in this workspace.
+                Add a user by their unique User ID to collaborate in this
+                workspace.
               </Text>
 
               <TextInput
@@ -368,26 +384,28 @@ export default function SpaceSettingsScreen() {
               <View style={styles.rolePickerSection}>
                 <Caption>ASSIGN ROLE</Caption>
                 <View style={styles.roleButtons}>
-                  {(["MEMBER", "ADMIN", "VIEWER"] as SpaceMember_Role[]).map((r) => (
-                    <TouchableOpacity
-                      key={r}
-                      activeOpacity={0.7}
-                      style={[
-                        styles.roleBtn,
-                        newRole === r && styles.roleBtnActive,
-                      ]}
-                      onPress={() => setNewRole(r)}
-                    >
-                      <Text
+                  {(["MEMBER", "ADMIN", "VIEWER"] as SpaceMember_Role[]).map(
+                    (r) => (
+                      <TouchableOpacity
+                        key={r}
+                        activeOpacity={0.7}
                         style={[
-                          styles.roleBtnText,
-                          newRole === r && styles.roleBtnTextActive,
+                          styles.roleBtn,
+                          newRole === r && styles.roleBtnActive,
                         ]}
+                        onPress={() => setNewRole(r)}
                       >
-                        {r}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text
+                          style={[
+                            styles.roleBtnText,
+                            newRole === r && styles.roleBtnTextActive,
+                          ]}
+                        >
+                          {r}
+                        </Text>
+                      </TouchableOpacity>
+                    )
+                  )}
                 </View>
               </View>
 

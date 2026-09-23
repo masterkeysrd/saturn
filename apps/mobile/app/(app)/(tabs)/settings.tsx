@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Switch,
 } from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
 import { useRouter } from "expo-router"
 import {
   ShieldCheck,
@@ -71,146 +70,153 @@ export default function SettingsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        {/* User Profile Card */}
-      <Card style={styles.profileCard}>
-        <Avatar name={user?.name || "User"} size={52} />
-        <View style={styles.profileInfo}>
-          <Text style={styles.profileName}>{user?.name || "Saturn User"}</Text>
-          <Text style={styles.profileEmail}>
-            {user?.email || "user@saturn.local"}
-          </Text>
-          <Badge
-            variant={user?.role === "admin" ? "primary" : "default"}
-            size="sm"
-            label={user?.role === "admin" ? "System Admin" : "Active Member"}
-            style={{ marginTop: 2 }}
-          />
-        </View>
-      </Card>
-
-      {/* Settings Navigation List */}
-      <View style={styles.section}>
-        <Text style={styles.sectionHeader}>WORKSPACE</Text>
-        <Card style={styles.menuGroup}>
-          <TouchableOpacity
-            style={[styles.menuItem, styles.menuItemBorder]}
-            activeOpacity={0.7}
-            onPress={() => router.push("/modal/switch-space")}
-          >
-            <View style={styles.menuLeft}>
-              <Layers size={18} color={theme.colors.primary} />
-              <Text style={styles.menuLabel}>Switch Workspace</Text>
-            </View>
-            <View style={styles.menuRight}>
-              <Text style={styles.menuValue}>
-                {activeSpace?.name || "Personal"}
-              </Text>
-              <ChevronRight size={16} color={theme.colors.textMuted} />
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            activeOpacity={0.7}
-            onPress={() => router.push("/(app)/settings/space")}
-          >
-            <View style={styles.menuLeft}>
-              <Users size={18} color={theme.colors.accent} />
-              <Text style={styles.menuLabel}>Workspace Details & Members</Text>
-            </View>
-            <View style={styles.menuRight}>
-              <Badge
-                variant={activeSpaceRole === "owner" ? "primary" : "default"}
-                size="sm"
-                label={activeSpaceRole.toUpperCase()}
-              />
-              <ChevronRight size={16} color={theme.colors.textMuted} />
-            </View>
-          </TouchableOpacity>
-        </Card>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionHeader}>SECURITY & PREFERENCES</Text>
-        <Card style={styles.menuGroup}>
-          {isBiometricSupported && (
-            <View style={[styles.menuItem, styles.menuItemBorder]}>
-              <View style={styles.menuLeft}>
-                <Fingerprint size={18} color={theme.colors.primary} />
-                <Text style={styles.menuLabel}>Biometric Unlock</Text>
-              </View>
-              <Switch
-                value={isBiometricActive}
-                onValueChange={(val) => {
-                  handleToggleBiometrics(val)
-                }}
-                trackColor={{
-                  false: theme.colors.surfaceHighlight,
-                  true: theme.colors.primary,
-                }}
-                thumbColor="#ffffff"
-              />
-            </View>
-          )}
-
-          <TouchableOpacity
-            style={[styles.menuItem, styles.menuItemBorder]}
-            activeOpacity={0.7}
-          >
-            <View style={styles.menuLeft}>
-              <ShieldCheck size={18} color={theme.colors.success} />
-              <Text style={styles.menuLabel}>Active Sessions & Devices</Text>
-            </View>
-            <ChevronRight size={16} color={theme.colors.textMuted} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.menuItem, styles.menuItemBorder]}
-            activeOpacity={0.7}
-          >
-            <View style={styles.menuLeft}>
-              <Bell size={18} color={theme.colors.warning} />
-              <Text style={styles.menuLabel}>Notifications & Alerts</Text>
-            </View>
-            <ChevronRight size={16} color={theme.colors.textMuted} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-            <View style={styles.menuLeft}>
-              <Sparkles size={18} color={theme.colors.accent} />
-              <Text style={styles.menuLabel}>AI Agents & Providers</Text>
-            </View>
-            <ChevronRight size={16} color={theme.colors.textMuted} />
-          </TouchableOpacity>
-        </Card>
-      </View>
-
-      {/* Sign Out Button */}
-      <Button
-        variant="destructive"
-        size="lg"
-        leftIcon={<LogOut size={18} color={theme.colors.destructive} />}
-        onPress={() => setSignOutModalVisible(true)}
+    <View style={styles.safeArea}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
       >
-        Sign Out
-      </Button>
+        {/* User Profile Card */}
+        <Card style={styles.profileCard}>
+          <Avatar name={user?.name || "User"} size={52} />
+          <View style={styles.profileInfo}>
+            <Text style={styles.profileName}>
+              {user?.name || "Saturn User"}
+            </Text>
+            <Text style={styles.profileEmail}>
+              {user?.email || "user@saturn.local"}
+            </Text>
+            <Badge
+              variant={user?.role === "admin" ? "primary" : "default"}
+              size="sm"
+              label={user?.role === "admin" ? "System Admin" : "Active Member"}
+              style={{ marginTop: 2 }}
+            />
+          </View>
+        </Card>
 
-      {/* Sign Out Confirmation Dialog */}
-      <ConfirmDialog
-        visible={signOutModalVisible}
-        title="Sign Out"
-        message="Are you sure you want to sign out from Saturn on this device?"
-        confirmText="Sign Out"
-        cancelText="Cancel"
-        isDestructive
-        loading={signingOut}
-        onConfirm={handleConfirmSignOut}
-        onCancel={() => setSignOutModalVisible(false)}
-      />
+        {/* Settings Navigation List */}
+        <View style={styles.section}>
+          <Text style={styles.sectionHeader}>WORKSPACE</Text>
+          <Card style={styles.menuGroup}>
+            <TouchableOpacity
+              style={[styles.menuItem, styles.menuItemBorder]}
+              activeOpacity={0.7}
+              onPress={() => router.push("/modal/switch-space")}
+            >
+              <View style={styles.menuLeft}>
+                <Layers size={18} color={theme.colors.primary} />
+                <Text style={styles.menuLabel}>Switch Workspace</Text>
+              </View>
+              <View style={styles.menuRight}>
+                <Text style={styles.menuValue}>
+                  {activeSpace?.name || "Personal"}
+                </Text>
+                <ChevronRight size={16} color={theme.colors.textMuted} />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.7}
+              onPress={() => router.push("/(app)/settings/space")}
+            >
+              <View style={styles.menuLeft}>
+                <Users size={18} color={theme.colors.accent} />
+                <Text style={styles.menuLabel}>
+                  Workspace Details & Members
+                </Text>
+              </View>
+              <View style={styles.menuRight}>
+                <Badge
+                  variant={activeSpaceRole === "owner" ? "primary" : "default"}
+                  size="sm"
+                  label={activeSpaceRole.toUpperCase()}
+                />
+                <ChevronRight size={16} color={theme.colors.textMuted} />
+              </View>
+            </TouchableOpacity>
+          </Card>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionHeader}>SECURITY & PREFERENCES</Text>
+          <Card style={styles.menuGroup}>
+            {isBiometricSupported && (
+              <View style={[styles.menuItem, styles.menuItemBorder]}>
+                <View style={styles.menuLeft}>
+                  <Fingerprint size={18} color={theme.colors.primary} />
+                  <Text style={styles.menuLabel}>Biometric Unlock</Text>
+                </View>
+                <Switch
+                  value={isBiometricActive}
+                  onValueChange={(val) => {
+                    handleToggleBiometrics(val)
+                  }}
+                  trackColor={{
+                    false: theme.colors.surfaceHighlight,
+                    true: theme.colors.primary,
+                  }}
+                  thumbColor="#ffffff"
+                />
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={[styles.menuItem, styles.menuItemBorder]}
+              activeOpacity={0.7}
+            >
+              <View style={styles.menuLeft}>
+                <ShieldCheck size={18} color={theme.colors.success} />
+                <Text style={styles.menuLabel}>Active Sessions & Devices</Text>
+              </View>
+              <ChevronRight size={16} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.menuItem, styles.menuItemBorder]}
+              activeOpacity={0.7}
+            >
+              <View style={styles.menuLeft}>
+                <Bell size={18} color={theme.colors.warning} />
+                <Text style={styles.menuLabel}>Notifications & Alerts</Text>
+              </View>
+              <ChevronRight size={16} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+              <View style={styles.menuLeft}>
+                <Sparkles size={18} color={theme.colors.accent} />
+                <Text style={styles.menuLabel}>AI Agents & Providers</Text>
+              </View>
+              <ChevronRight size={16} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+          </Card>
+        </View>
+
+        {/* Sign Out Button */}
+        <Button
+          variant="destructive"
+          size="lg"
+          leftIcon={<LogOut size={18} color={theme.colors.destructive} />}
+          onPress={() => setSignOutModalVisible(true)}
+        >
+          Sign Out
+        </Button>
+
+        {/* Sign Out Confirmation Dialog */}
+        <ConfirmDialog
+          visible={signOutModalVisible}
+          title="Sign Out"
+          message="Are you sure you want to sign out from Saturn on this device?"
+          confirmText="Sign Out"
+          cancelText="Cancel"
+          isDestructive
+          loading={signingOut}
+          onConfirm={handleConfirmSignOut}
+          onCancel={() => setSignOutModalVisible(false)}
+        />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   )
 }
 

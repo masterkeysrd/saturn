@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
 } from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
 import { PiggyBank, Landmark } from "lucide-react-native"
 import { formatAmount, getBudgetColors } from "@saturn/core"
 import { theme, getNativeBudgetColors } from "@/lib/theme"
@@ -62,185 +61,190 @@ export default function BudgetsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Segment Switcher */}
-      <View style={styles.segmentContainer}>
-        <TouchableOpacity
-          style={[
-            styles.segmentButton,
-            activeSegment === "budgets" && styles.segmentActive,
-          ]}
-          activeOpacity={0.7}
-          onPress={() => handleSelectSegment("budgets")}
-        >
-          <PiggyBank
-            size={16}
-            color={
-              activeSegment === "budgets"
-                ? theme.colors.textPrimary
-                : theme.colors.textMuted
-            }
-            style={{ marginRight: 6 }}
-          />
-          <Text
+    <View style={styles.safeArea}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+      >
+        {/* Segment Switcher */}
+        <View style={styles.segmentContainer}>
+          <TouchableOpacity
             style={[
-              styles.segmentText,
-              activeSegment === "budgets" && styles.segmentTextActive,
+              styles.segmentButton,
+              activeSegment === "budgets" && styles.segmentActive,
             ]}
+            activeOpacity={0.7}
+            onPress={() => handleSelectSegment("budgets")}
           >
-            Budgets
-          </Text>
-        </TouchableOpacity>
+            <PiggyBank
+              size={16}
+              color={
+                activeSegment === "budgets"
+                  ? theme.colors.textPrimary
+                  : theme.colors.textMuted
+              }
+              style={{ marginRight: 6 }}
+            />
+            <Text
+              style={[
+                styles.segmentText,
+                activeSegment === "budgets" && styles.segmentTextActive,
+              ]}
+            >
+              Budgets
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.segmentButton,
-            activeSegment === "accounts" && styles.segmentActive,
-          ]}
-          activeOpacity={0.7}
-          onPress={() => handleSelectSegment("accounts")}
-        >
-          <Landmark
-            size={16}
-            color={
-              activeSegment === "accounts"
-                ? theme.colors.textPrimary
-                : theme.colors.textMuted
-            }
-            style={{ marginRight: 6 }}
-          />
-          <Text
+          <TouchableOpacity
             style={[
-              styles.segmentText,
-              activeSegment === "accounts" && styles.segmentTextActive,
+              styles.segmentButton,
+              activeSegment === "accounts" && styles.segmentActive,
             ]}
+            activeOpacity={0.7}
+            onPress={() => handleSelectSegment("accounts")}
           >
-            Accounts
-          </Text>
-        </TouchableOpacity>
-      </View>
+            <Landmark
+              size={16}
+              color={
+                activeSegment === "accounts"
+                  ? theme.colors.textPrimary
+                  : theme.colors.textMuted
+              }
+              style={{ marginRight: 6 }}
+            />
+            <Text
+              style={[
+                styles.segmentText,
+                activeSegment === "accounts" && styles.segmentTextActive,
+              ]}
+            >
+              Accounts
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-      {activeSegment === "budgets" ? (
-        <View style={styles.listSection}>
-          <Caption style={styles.sectionHeader}>
-            Active Category Allocations
-          </Caption>
-          {BUDGETS.map((b) => {
-            const palette = getBudgetColors(b.color)
-            const spentNum = parseInt(b.spent, 10)
-            const limitNum = parseInt(b.limit, 10)
-            const percentage = Math.min(
-              Math.round((spentNum / limitNum) * 100),
-              100
-            )
+        {activeSegment === "budgets" ? (
+          <View style={styles.listSection}>
+            <Caption style={styles.sectionHeader}>
+              Active Category Allocations
+            </Caption>
+            {BUDGETS.map((b) => {
+              const palette = getBudgetColors(b.color)
+              const spentNum = parseInt(b.spent, 10)
+              const limitNum = parseInt(b.limit, 10)
+              const percentage = Math.min(
+                Math.round((spentNum / limitNum) * 100),
+                100
+              )
 
-            const nativeColors = getNativeBudgetColors(palette.value)
+              const nativeColors = getNativeBudgetColors(palette.value)
 
-            return (
-              <Card key={b.id} style={styles.budgetCard}>
-                <View style={styles.budgetHeader}>
-                  <View style={styles.budgetTitleRow}>
+              return (
+                <Card key={b.id} style={styles.budgetCard}>
+                  <View style={styles.budgetHeader}>
+                    <View style={styles.budgetTitleRow}>
+                      <View
+                        style={[
+                          styles.colorDot,
+                          { backgroundColor: nativeColors.bar },
+                        ]}
+                      />
+                      <Text style={styles.budgetName}>{b.name}</Text>
+                    </View>
+                    <Badge
+                      size="sm"
+                      label={`${percentage}%`}
+                      bg={
+                        percentage >= 95
+                          ? theme.colors.destructiveSubtle
+                          : nativeColors.bg
+                      }
+                      border={
+                        percentage >= 95
+                          ? "rgba(244, 63, 94, 0.3)"
+                          : nativeColors.border
+                      }
+                      color={
+                        percentage >= 95
+                          ? theme.colors.destructive
+                          : nativeColors.text
+                      }
+                    />
+                  </View>
+
+                  {/* Progress Track */}
+                  <View style={styles.progressTrack}>
                     <View
                       style={[
-                        styles.colorDot,
-                        { backgroundColor: nativeColors.bar },
+                        styles.progressBar,
+                        {
+                          width: `${percentage}%`,
+                          backgroundColor:
+                            percentage >= 95
+                              ? theme.colors.destructive
+                              : nativeColors.bar,
+                        },
                       ]}
                     />
-                    <Text style={styles.budgetName}>{b.name}</Text>
                   </View>
-                  <Badge
-                    size="sm"
-                    label={`${percentage}%`}
-                    bg={
-                      percentage >= 95
-                        ? theme.colors.destructiveSubtle
-                        : nativeColors.bg
-                    }
-                    border={
-                      percentage >= 95
-                        ? "rgba(244, 63, 94, 0.3)"
-                        : nativeColors.border
-                    }
-                    color={
-                      percentage >= 95
-                        ? theme.colors.destructive
-                        : nativeColors.text
-                    }
-                  />
-                </View>
 
-                {/* Progress Track */}
-                <View style={styles.progressTrack}>
-                  <View
-                    style={[
-                      styles.progressBar,
-                      {
-                        width: `${percentage}%`,
-                        backgroundColor:
-                          percentage >= 95
-                            ? theme.colors.destructive
-                            : nativeColors.bar,
-                      },
-                    ]}
-                  />
-                </View>
-
-                <View style={styles.budgetFooter}>
-                  <Text style={styles.spentText}>
-                    Spent:{" "}
-                    <Text style={styles.whiteText}>
-                      {formatAmount(b.spent, b.currency)}
+                  <View style={styles.budgetFooter}>
+                    <Text style={styles.spentText}>
+                      Spent:{" "}
+                      <Text style={styles.whiteText}>
+                        {formatAmount(b.spent, b.currency)}
+                      </Text>
                     </Text>
-                  </Text>
-                  <Text style={styles.limitText}>
-                    Limit: {formatAmount(b.limit, b.currency)}
-                  </Text>
+                    <Text style={styles.limitText}>
+                      Limit: {formatAmount(b.limit, b.currency)}
+                    </Text>
+                  </View>
+                </Card>
+              )
+            })}
+          </View>
+        ) : (
+          <View style={styles.listSection}>
+            <Caption style={styles.sectionHeader}>Connected Accounts</Caption>
+            <Card style={styles.accountCard}>
+              <View style={styles.accountRow}>
+                <View>
+                  <Text style={styles.accountName}>Primary Checking</Text>
+                  <Text style={styles.accountMeta}>Chase Bank •••• 4210</Text>
                 </View>
-              </Card>
-            )
-          })}
-        </View>
-      ) : (
-        <View style={styles.listSection}>
-          <Caption style={styles.sectionHeader}>Connected Accounts</Caption>
-          <Card style={styles.accountCard}>
-            <View style={styles.accountRow}>
-              <View>
-                <Text style={styles.accountName}>Primary Checking</Text>
-                <Text style={styles.accountMeta}>Chase Bank •••• 4210</Text>
+                <MonoAmount size="md">
+                  {formatAmount("845000", "USD")}
+                </MonoAmount>
               </View>
-              <MonoAmount size="md">{formatAmount("845000", "USD")}</MonoAmount>
-            </View>
-          </Card>
+            </Card>
 
-          <Card style={styles.accountCard}>
-            <View style={styles.accountRow}>
-              <View>
-                <Text style={styles.accountName}>High Yield Savings</Text>
-                <Text style={styles.accountMeta}>Marcus •••• 9811</Text>
+            <Card style={styles.accountCard}>
+              <View style={styles.accountRow}>
+                <View>
+                  <Text style={styles.accountName}>High Yield Savings</Text>
+                  <Text style={styles.accountMeta}>Marcus •••• 9811</Text>
+                </View>
+                <MonoAmount size="md" color={theme.colors.success}>
+                  {formatAmount("605250", "USD")}
+                </MonoAmount>
               </View>
-              <MonoAmount size="md" color={theme.colors.success}>
-                {formatAmount("605250", "USD")}
-              </MonoAmount>
-            </View>
-          </Card>
+            </Card>
 
-          <Card style={styles.accountCard}>
-            <View style={styles.accountRow}>
-              <View>
-                <Text style={styles.accountName}>Sapphire Preferred</Text>
-                <Text style={styles.accountMeta}>Chase Credit •••• 1044</Text>
+            <Card style={styles.accountCard}>
+              <View style={styles.accountRow}>
+                <View>
+                  <Text style={styles.accountName}>Sapphire Preferred</Text>
+                  <Text style={styles.accountMeta}>Chase Credit •••• 1044</Text>
+                </View>
+                <MonoAmount size="md" color={theme.colors.destructive}>
+                  {formatAmount("-14250", "USD")}
+                </MonoAmount>
               </View>
-              <MonoAmount size="md" color={theme.colors.destructive}>
-                {formatAmount("-14250", "USD")}
-              </MonoAmount>
-            </View>
-          </Card>
-        </View>
-      )}
-    </ScrollView>
-    </SafeAreaView>
+            </Card>
+          </View>
+        )}
+      </ScrollView>
+    </View>
   )
 }
 

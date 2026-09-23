@@ -62,7 +62,8 @@ export default function CreateSpaceModal() {
 
       router.back()
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to create workspace"
+      const msg =
+        err instanceof Error ? err.message : "Failed to create workspace"
       setError(msg)
       toast.show({
         type: "error",
@@ -85,7 +86,8 @@ export default function CreateSpaceModal() {
         keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.subtitle}>
-          Workspaces keep your accounts, budgets, transactions, and automations completely isolated.
+          Workspaces keep your accounts, budgets, transactions, and automations
+          completely isolated.
         </Text>
 
         <Card style={styles.formCard}>
@@ -130,7 +132,9 @@ export default function CreateSpaceModal() {
             size="lg"
             style={styles.createBtn}
             loading={createSpaceMutation.isPending}
-            leftIcon={<Check size={18} color={theme.colors.primaryForeground} />}
+            leftIcon={
+              <Check size={18} color={theme.colors.primaryForeground} />
+            }
             onPress={handleCreate}
           >
             Create

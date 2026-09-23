@@ -1,11 +1,7 @@
 import { Tabs } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import {
-  Home,
-  ReceiptText,
-  PiggyBank,
-  Settings,
-} from "lucide-react-native"
+import { Home, ReceiptText, PiggyBank, Settings } from "lucide-react-native"
+import { AppHeader } from "@/components/app-header"
 import { theme } from "@/lib/theme"
 
 export default function TabsLayout() {
@@ -14,7 +10,8 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
+        headerShown: true,
+        header: () => <AppHeader />,
         tabBarStyle: {
           backgroundColor: theme.colors.tabBar,
           borderTopColor: theme.colors.tabBarBorder,

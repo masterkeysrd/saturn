@@ -34,7 +34,11 @@ const SpaceContext = createContext<SpaceContextType | undefined>(undefined)
 
 export function SpaceProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
-  const { user, isAuthenticated, setActiveSpace: setAuthActiveSpace } = useAuth()
+  const {
+    user,
+    isAuthenticated,
+    setActiveSpace: setAuthActiveSpace,
+  } = useAuth()
   const [activeSpaceId, setActiveSpaceId] = useState<string | null>(null)
   const [isSwitching, setIsSwitching] = useState(false)
 
@@ -93,14 +97,17 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
     return spaces.find((s) => s.id === activeSpaceId) || null
   }, [spaces, activeSpaceId])
 
-  const activeSpaceRole = useMemo<"owner" | "admin" | "member" | "viewer">(() => {
+  const activeSpaceRole = useMemo<
+    "owner" | "admin" | "member" | "viewer"
+  >(() => {
     if (!activeSpace || !user) return "member"
     if (activeSpace.ownerId === user.id) return "owner"
     return "member"
   }, [activeSpace, user])
 
   const isOwner = activeSpaceRole === "owner"
-  const canManageMembers = activeSpaceRole === "owner" || activeSpaceRole === "admin"
+  const canManageMembers =
+    activeSpaceRole === "owner" || activeSpaceRole === "admin"
 
   const switchSpace = useCallback(
     async (newSpaceId: string) => {

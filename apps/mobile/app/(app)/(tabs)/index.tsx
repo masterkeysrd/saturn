@@ -7,14 +7,13 @@ import {
   RefreshControl,
 } from "react-native"
 import { useRouter } from "expo-router"
-import { SafeAreaView } from "react-native-safe-area-context"
 import {
-  TrendingUp,
+  ArrowRightLeft,
   ArrowDownLeft,
   ArrowUpRight,
   Plus,
   ScanLine,
-  Wallet,
+  PiggyBank,
 } from "lucide-react-native"
 import { formatAmount, formatCents } from "@saturn/core"
 import { useSpace } from "@/lib/space-context"
@@ -30,7 +29,7 @@ export default function OverviewScreen() {
   const { spaces, activeSpace, isLoading, refetchSpaces } = useSpace()
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <View style={styles.safeArea}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
@@ -45,21 +44,6 @@ export default function OverviewScreen() {
           />
         }
       >
-        {/* Sleek In-Page Top Header */}
-        <View style={styles.topHeader}>
-          <View>
-            <Caption style={{ letterSpacing: 0.5 }}>OVERVIEW</Caption>
-            <Title style={styles.brandTitle}>🪐 Saturn</Title>
-          </View>
-          {activeSpace && (
-            <Badge
-              variant="default"
-              size="sm"
-              label={activeSpace.name}
-            />
-          )}
-        </View>
-
         {/* Net Worth Card */}
         <Card style={styles.netWorthCard}>
           <Caption style={styles.cardLabel}>TOTAL NET WORTH</Caption>
@@ -129,7 +113,7 @@ export default function OverviewScreen() {
             }}
           >
             <View style={styles.actionIconCircle}>
-              <TrendingUp size={20} color={theme.colors.primary} />
+              <ArrowRightLeft size={20} color={theme.colors.primary} />
             </View>
             <Text style={styles.actionText}>Activity</Text>
           </TouchableOpacity>
@@ -143,7 +127,7 @@ export default function OverviewScreen() {
             }}
           >
             <View style={styles.actionIconCircle}>
-              <Wallet size={20} color={theme.colors.primary} />
+              <PiggyBank size={20} color={theme.colors.primary} />
             </View>
             <Text style={styles.actionText}>Budgets</Text>
           </TouchableOpacity>
@@ -195,7 +179,7 @@ export default function OverviewScreen() {
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   )
 }
 

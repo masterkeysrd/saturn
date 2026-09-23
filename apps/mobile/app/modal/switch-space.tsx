@@ -44,7 +44,8 @@ export default function SwitchSpaceModal() {
       ]}
     >
       <Text style={styles.subtitle}>
-        Select an active workspace to view and isolate its accounts, budgets, and transactions.
+        Select an active workspace to view and isolate its accounts, budgets,
+        and transactions.
       </Text>
 
       {isLoading ? (
@@ -62,7 +63,9 @@ export default function SwitchSpaceModal() {
                 key={space.id || space.name}
                 style={[styles.spaceItem, isSelected && styles.spaceItemActive]}
                 activeOpacity={0.7}
-                onPress={() => handleSelectSpace(space.id || "", space.name || "Space")}
+                onPress={() =>
+                  handleSelectSpace(space.id || "", space.name || "Space")
+                }
               >
                 <View style={styles.spaceLeft}>
                   <Avatar name={space.name || "Workspace"} size={40} />
@@ -90,7 +93,9 @@ export default function SwitchSpaceModal() {
             <TouchableOpacity
               style={[styles.spaceItem, styles.spaceItemActive]}
               activeOpacity={0.7}
-              onPress={() => handleSelectSpace("personal", "Personal Workspace")}
+              onPress={() =>
+                handleSelectSpace("personal", "Personal Workspace")
+              }
             >
               <View style={styles.spaceLeft}>
                 <Avatar name="Personal Workspace" size={40} />
@@ -99,7 +104,9 @@ export default function SwitchSpaceModal() {
                     <Text style={styles.spaceName}>Personal Workspace</Text>
                     <Badge variant="primary" size="sm" label="Default" />
                   </View>
-                  <Text style={styles.spaceDescription}>Default local space</Text>
+                  <Text style={styles.spaceDescription}>
+                    Default local space
+                  </Text>
                 </View>
               </View>
               <Check size={20} color={theme.colors.primary} />

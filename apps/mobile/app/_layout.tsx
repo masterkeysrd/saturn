@@ -31,63 +31,66 @@ export default function RootLayout() {
                 <ToastProvider>
                   <StatusBar style="light" />
                   <Stack
-                  screenOptions={{
-                    headerStyle: {
-                      backgroundColor: theme.colors.background,
-                    },
-                    headerTintColor: theme.colors.textPrimary,
-                    headerTitleStyle: {
-                      fontWeight: "600",
-                    },
-                    contentStyle: {
-                      backgroundColor: theme.colors.background,
-                    },
-                  }}
-                >
-                  <Stack.Screen name="(app)" options={{ headerShown: false }} />
-                  <Stack.Screen
-                    name="(auth)"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="modal/add-transaction"
-                    options={{
-                      presentation: "modal",
-                      headerTitle: "New Transaction",
+                    screenOptions={{
                       headerStyle: {
-                        backgroundColor: theme.colors.surface,
+                        backgroundColor: theme.colors.background,
+                      },
+                      headerTintColor: theme.colors.textPrimary,
+                      headerTitleStyle: {
+                        fontWeight: "600",
+                      },
+                      contentStyle: {
+                        backgroundColor: theme.colors.background,
                       },
                     }}
-                  />
-                  <Stack.Screen
-                    name="modal/switch-space"
-                    options={{
-                      presentation: "formSheet",
-                      headerTitle: "Switch Workspace",
-                      headerStyle: {
-                        backgroundColor: theme.colors.surface,
-                      },
-                    }}
-                  />
-                  <Stack.Screen
-                    name="modal/create-space"
-                    options={{
-                      presentation: "modal",
-                      headerTitle: "Create Workspace",
-                      headerStyle: {
-                        backgroundColor: theme.colors.surface,
-                      },
-                    }}
-                  />
-                  <Stack.Screen
-                    name="+not-found"
-                    options={{
-                      title: "Not Found",
-                    }}
-                  />
-                </Stack>
-              </ToastProvider>
-            </BottomSheetModalProvider>
+                  >
+                    <Stack.Screen
+                      name="(app)"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="(auth)"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="modal/add-transaction"
+                      options={{
+                        presentation: "modal",
+                        headerTitle: "New Transaction",
+                        headerStyle: {
+                          backgroundColor: theme.colors.surface,
+                        },
+                      }}
+                    />
+                    <Stack.Screen
+                      name="modal/switch-space"
+                      options={{
+                        presentation: "formSheet",
+                        headerTitle: "Switch Workspace",
+                        headerStyle: {
+                          backgroundColor: theme.colors.surface,
+                        },
+                      }}
+                    />
+                    <Stack.Screen
+                      name="modal/create-space"
+                      options={{
+                        presentation: "modal",
+                        headerTitle: "Create Workspace",
+                        headerStyle: {
+                          backgroundColor: theme.colors.surface,
+                        },
+                      }}
+                    />
+                    <Stack.Screen
+                      name="+not-found"
+                      options={{
+                        title: "Not Found",
+                      }}
+                    />
+                  </Stack>
+                </ToastProvider>
+              </BottomSheetModalProvider>
             </SpaceProvider>
           </AuthProvider>
         </QueryClientProvider>
