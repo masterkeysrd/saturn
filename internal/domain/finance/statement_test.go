@@ -44,11 +44,11 @@ func TestStatementLine_NewTransaction(t *testing.T) {
 	fallback := time.Date(2026, 8, 15, 12, 0, 0, 0, time.UTC)
 
 	tests := []struct {
-		name      string
-		line      *StatementLine
-		opts      StatementLineTransactionOpts
-		wantErr   bool
-		checkTxn  func(t *testing.T, txn *Transaction)
+		name     string
+		line     *StatementLine
+		opts     StatementLineTransactionOpts
+		wantErr  bool
+		checkTxn func(t *testing.T, txn *Transaction)
 	}{
 		{
 			name: "invalid space ID",
@@ -185,11 +185,11 @@ func TestStatementLine_NewTransfer(t *testing.T) {
 	fallback := time.Date(2026, 8, 15, 12, 0, 0, 0, time.UTC)
 
 	tests := []struct {
-		name      string
-		line      *StatementLine
-		opts      StatementLineTransferOpts
-		wantErr   bool
-		checkTrf  func(t *testing.T, trf *Transfer, trfOpts CreateTransferOpts)
+		name     string
+		line     *StatementLine
+		opts     StatementLineTransferOpts
+		wantErr  bool
+		checkTrf func(t *testing.T, trf *Transfer, trfOpts CreateTransferOpts)
 	}{
 		{
 			name: "invalid space ID",
