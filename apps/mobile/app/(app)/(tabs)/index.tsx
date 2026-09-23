@@ -34,7 +34,10 @@ export default function OverviewScreen() {
     return "Good evening"
   }
 
-  const firstName = user?.name?.split(" ")[0] || "there"
+  const firstName =
+    user?.name && user.name !== "User"
+      ? user.name.split(" ")[0]
+      : user?.username || "there"
 
   const handleRefresh = async () => {
     haptics.light()
@@ -45,7 +48,9 @@ export default function OverviewScreen() {
         queryClient.invalidateQueries({
           predicate: (query) => {
             const firstKey = query.queryKey[0]
-            return typeof firstKey === "string" && firstKey.startsWith("/api/v1/")
+            return (
+              typeof firstKey === "string" && firstKey.startsWith("/api/v1/")
+            )
           },
         }),
       ])

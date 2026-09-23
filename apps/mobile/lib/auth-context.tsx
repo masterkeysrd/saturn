@@ -3,6 +3,7 @@ import {
   useContext,
   useState,
   useEffect,
+  useMemo,
   type ReactNode,
 } from "react"
 import * as LocalAuthentication from "expo-local-authentication"
@@ -13,6 +14,7 @@ import {
   loginUser,
   registerUser,
   logout as apiLogout,
+  useGetCurrentUserQuery,
   type LoginUserRequest,
   type RegisterUserRequest,
 } from "@saturn/api/gen/saturn/identity/v1/identity"
@@ -20,6 +22,8 @@ import {
   mobileStorage,
   isBiometricEnabled,
   setBiometricEnabled,
+  getStoredUserProfile,
+  setStoredUserProfile,
 } from "./storage"
 import { decodeJwt } from "./jwt"
 import { getApiBaseUrl } from "./config"
@@ -58,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const [session, setSession] = useState<AuthSession | null>(null)
   const [accessToken, setAccessToken] = useState<string | null>(null)
-  const [user, setUser] = useState<AuthUser | null>(null)
+  const [cachedUser, setCachedUser] = useState<AuthUser | null>(null)
   const [activeSpaceId, setActiveSpaceId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -72,9 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       storage: mobileStorage,
       onUnauthorized: () => {
         mobileStorage.clearSession()
+        setStoredUserProfile(null)
+        setCachedUser(null)
         setSession({ accessToken: null, hasSession: false })
         setAccessToken(null)
-        setUser(null)
       },
     })
   }, [])
@@ -101,11 +106,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function initSession() {
       try {
-        const [storedSession, storedSpaceId, bioEnabled] = await Promise.all([
-          mobileStorage.getSession(),
-          mobileStorage.getActiveSpaceId(),
-          isBiometricEnabled(),
-        ])
+        const [storedSession, storedSpaceId, bioEnabled, storedProfile] =
+          await Promise.all([
+            mobileStorage.getSession(),
+            mobileStorage.getActiveSpaceId(),
+            isBiometricEnabled(),
+            getStoredUserProfile(),
+          ])
+
+        if (storedProfile) {
+          setCachedUser(storedProfile)
+        }
 
         if (storedSession.hasSession && storedSession.accessToken) {
           // If biometric unlock is enabled, prompt user before unlocking data
@@ -125,17 +136,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setSession(storedSession)
           setAccessToken(storedSession.accessToken)
           setActiveSpaceId(storedSpaceId)
-
-          const claims = decodeJwt(storedSession.accessToken)
-          if (claims) {
-            setUser({
-              id: claims.sub,
-              email: claims.email || "",
-              name: claims.name || claims.username || "User",
-              username: claims.username,
-              role: claims.role || "user",
-            })
-          }
         }
       } catch (err) {
         console.error("Failed to restore session from SecureStore", err)
@@ -146,6 +146,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initSession()
   }, [])
+
+  // Fetch full user profile from API when accessToken is present
+  const { data: apiUser } = useGetCurrentUserQuery(
+    {},
+    {
+      enabled: !!accessToken,
+      refetchOnWindowFocus: false,
+    }
+  )
+
+  // Sync fresh profile to local secure storage
+  useEffect(() => {
+    if (apiUser && accessToken) {
+      const decoded = decodeJwt(accessToken)
+      const role = decoded?.role || "user"
+      const profile: AuthUser = {
+        id: apiUser.id || decoded?.sub || "",
+        email: apiUser.email || decoded?.email || "",
+        name:
+          apiUser.name ||
+          apiUser.username ||
+          decoded?.name ||
+          decoded?.username ||
+          "User",
+        username: apiUser.username || decoded?.username,
+        role,
+        avatarUrl: apiUser.avatarUrl,
+      }
+      setStoredUserProfile(profile)
+    }
+  }, [apiUser, accessToken])
+
+  // Derive the active user, preferring API profile, then cached profile, then JWT claims
+  const user = useMemo<AuthUser | null>(() => {
+    if (!accessToken) return null
+    const decoded = decodeJwt(accessToken)
+    const role = decoded?.role || "user"
+
+    if (apiUser) {
+      return {
+        id: apiUser.id || decoded?.sub || "",
+        email: apiUser.email || decoded?.email || "",
+        name:
+          apiUser.name ||
+          apiUser.username ||
+          decoded?.name ||
+          decoded?.username ||
+          "User",
+        username: apiUser.username || decoded?.username,
+        role,
+        avatarUrl: apiUser.avatarUrl,
+      }
+    }
+
+    if (cachedUser) {
+      return cachedUser
+    }
+
+    return {
+      id: decoded?.sub || "",
+      email: decoded?.email || "",
+      name: decoded?.name || decoded?.username || "User",
+      username: decoded?.username,
+      role,
+    }
+  }, [accessToken, apiUser, cachedUser])
 
   const login = async (req: LoginUserRequest) => {
     setError(null)
@@ -159,17 +225,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setAccessToken(res.accessToken)
         setSession({ accessToken: res.accessToken, hasSession: true })
-
-        const claims = decodeJwt(res.accessToken)
-        if (claims) {
-          setUser({
-            id: claims.sub,
-            email: claims.email || "",
-            name: claims.name || claims.username || "User",
-            username: claims.username,
-            role: claims.role || "user",
-          })
-        }
       }
     } catch (err: unknown) {
       const message =
@@ -208,9 +263,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       await mobileStorage.clearSession()
       await mobileStorage.setActiveSpaceId(null)
+      await setStoredUserProfile(null)
+      setCachedUser(null)
       setSession({ accessToken: null, hasSession: false })
       setAccessToken(null)
-      setUser(null)
       setActiveSpaceId(null)
       queryClient.clear()
     }

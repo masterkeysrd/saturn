@@ -8,6 +8,7 @@ const KEYS = {
   REFRESH_TOKEN: "saturn_refresh_token",
   ACTIVE_SPACE_ID: "saturn_active_space_id",
   BIOMETRIC_ENABLED: "saturn_biometric_enabled",
+  USER_PROFILE: "saturn_user_profile",
 } as const
 
 export const mobileStorage: StorageAdapter = {
@@ -41,6 +42,7 @@ export const mobileStorage: StorageAdapter = {
     try {
       await SecureStore.deleteItemAsync(KEYS.ACCESS_TOKEN)
       await SecureStore.deleteItemAsync(KEYS.REFRESH_TOKEN)
+      await SecureStore.deleteItemAsync(KEYS.USER_PROFILE)
     } catch {
       // Fallback
     }
@@ -114,6 +116,38 @@ export async function setBiometricEnabled(enabled: boolean): Promise<void> {
       await SecureStore.setItemAsync(KEYS.BIOMETRIC_ENABLED, "true")
     } else {
       await SecureStore.deleteItemAsync(KEYS.BIOMETRIC_ENABLED)
+    }
+  } catch {
+    // Fallback
+  }
+}
+
+export interface StoredUserProfile {
+  id: string
+  email: string
+  name: string
+  username?: string
+  role?: string
+  avatarUrl?: string
+}
+
+export async function getStoredUserProfile(): Promise<StoredUserProfile | null> {
+  try {
+    const raw = await SecureStore.getItemAsync(KEYS.USER_PROFILE)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+export async function setStoredUserProfile(
+  user: StoredUserProfile | null
+): Promise<void> {
+  try {
+    if (user) {
+      await SecureStore.setItemAsync(KEYS.USER_PROFILE, JSON.stringify(user))
+    } else {
+      await SecureStore.deleteItemAsync(KEYS.USER_PROFILE)
     }
   } catch {
     // Fallback
