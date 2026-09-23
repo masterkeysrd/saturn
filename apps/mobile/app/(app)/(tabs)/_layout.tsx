@@ -1,6 +1,6 @@
 import { Tabs } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { Home, ReceiptText, PiggyBank } from "lucide-react-native"
+import { Home, Wallet } from "lucide-react-native"
 import { AppHeader } from "@/components/app-header"
 import { theme } from "@/lib/theme"
 
@@ -38,20 +38,11 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="transactions"
+        name="finance"
         options={{
-          title: "Transactions",
+          title: "Finance",
           tabBarIcon: ({ color, size }) => (
-            <ReceiptText size={size ?? 22} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="budgets"
-        options={{
-          title: "Budgets",
-          tabBarIcon: ({ color, size }) => (
-            <PiggyBank size={size ?? 22} color={color} />
+            <Wallet size={size ?? 22} color={color} />
           ),
         }}
       />

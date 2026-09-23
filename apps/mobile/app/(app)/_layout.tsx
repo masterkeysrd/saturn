@@ -52,6 +52,42 @@ export default function AppLayout() {
           headerBackTitle: "Settings",
         }}
       />
+      <Stack.Screen
+        name="finance/transactions"
+        options={{
+          headerShown: true,
+          headerTitle: "Transactions",
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+          },
+          headerTintColor: theme.colors.textPrimary,
+          headerBackTitle: "Finance",
+        }}
+      />
+      <Stack.Screen
+        name="finance/budgets"
+        options={{
+          headerShown: true,
+          headerTitle: "Budgets",
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+          },
+          headerTintColor: theme.colors.textPrimary,
+          headerBackTitle: "Finance",
+        }}
+      />
+      <Stack.Screen
+        name="finance/accounts"
+        options={{
+          headerShown: true,
+          headerTitle: "Accounts",
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+          },
+          headerTintColor: theme.colors.textPrimary,
+          headerBackTitle: "Finance",
+        }}
+      />
     </Stack>
   )
 }

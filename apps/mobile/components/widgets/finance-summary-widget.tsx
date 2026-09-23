@@ -77,7 +77,7 @@ export function FinanceSummaryWidget() {
 
   const navigateToFinance = () => {
     haptics.light()
-    router.push("/(app)/(tabs)/transactions")
+    router.push("/(app)/(tabs)/finance")
   }
 
   if (isLoading) {
