@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   TextInput,
   Keyboard,
+  StyleSheet,
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useQueryClient } from "@tanstack/react-query"
@@ -131,6 +132,27 @@ export function BorrowingForm({
   const parsedAmount = parseFloat(amountText || "0")
   const amountDecimal = isNaN(parsedAmount) ? "0.00" : parsedAmount.toFixed(2)
 
+  const isLent = selectedBorrowing?.direction === "LENT"
+  const isPayment = borrowingActionType === "BORROWING_TRANSACTION_TYPE_PAYMENT"
+  // When someone owes me (LENT): Repayment brings money in (Income), Disbursement lends more out (Expense)
+  // When I owe someone (BORROWED): Repayment pays debt out (Expense), Disbursement borrows more in (Income)
+  const isIncomeAction = isLent ? isPayment : !isPayment
+
+  const paymentLabel = isLent
+    ? "Receive Repayment (Income)"
+    : "Make Repayment (Expense)"
+  const disbursementLabel = isLent
+    ? "Lend More (Expense)"
+    : "Borrow More (Income)"
+
+  const submitButtonText = isLent
+    ? isPayment
+      ? `Record Payment Received • +${currentSymbol}${amountDecimal}`
+      : `Lend Additional Funds • -${currentSymbol}${amountDecimal}`
+    : isPayment
+      ? `Record Repayment • -${currentSymbol}${amountDecimal}`
+      : `Record Drawdown • +${currentSymbol}${amountDecimal}`
+
   // Handle Submit
   const handleSave = async () => {
     if (isSubmitting) return
@@ -171,10 +193,13 @@ export function BorrowingForm({
 
       toast.show({
         type: "success",
-        title:
-          borrowingActionType === "BORROWING_TRANSACTION_TYPE_PAYMENT"
-            ? "Payment Recorded"
-            : "Disbursement Recorded",
+        title: isPayment
+          ? isLent
+            ? "Payment Received Recorded"
+            : "Repayment Recorded"
+          : isLent
+            ? "Additional Loan Recorded"
+            : "Drawdown Recorded",
         message: `${currentSymbol}${amountDecimal} logged for ${selectedBorrowing.counterparty}`,
       })
 
@@ -234,8 +259,10 @@ export function BorrowingForm({
           <TouchableOpacity
             style={[
               formStyles.borrowingActionBtn,
-              borrowingActionType === "BORROWING_TRANSACTION_TYPE_PAYMENT" &&
-                formStyles.borrowingActionActive,
+              isPayment &&
+                (isLent
+                  ? styles.actionBtnIncomeActive
+                  : formStyles.borrowingActionActive),
             ]}
             onPress={() => {
               haptics.light()
@@ -246,20 +273,23 @@ export function BorrowingForm({
             <Text
               style={[
                 formStyles.borrowingActionText,
-                borrowingActionType === "BORROWING_TRANSACTION_TYPE_PAYMENT" &&
-                  formStyles.borrowingActionTextActive,
+                isPayment &&
+                  (isLent
+                    ? styles.actionTextIncomeActive
+                    : formStyles.borrowingActionTextActive),
               ]}
             >
-              Repayment (Expense)
+              {paymentLabel}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[
               formStyles.borrowingActionBtn,
-              borrowingActionType ===
-                "BORROWING_TRANSACTION_TYPE_DISBURSEMENT" &&
-                formStyles.borrowingActionActive,
+              !isPayment &&
+                (!isLent
+                  ? styles.actionBtnIncomeActive
+                  : formStyles.borrowingActionActive),
             ]}
             onPress={() => {
               haptics.light()
@@ -270,12 +300,13 @@ export function BorrowingForm({
             <Text
               style={[
                 formStyles.borrowingActionText,
-                borrowingActionType ===
-                  "BORROWING_TRANSACTION_TYPE_DISBURSEMENT" &&
-                  formStyles.borrowingActionTextActive,
+                !isPayment &&
+                  (!isLent
+                    ? styles.actionTextIncomeActive
+                    : formStyles.borrowingActionTextActive),
               ]}
             >
-              Drawdown (Income)
+              {disbursementLabel}
             </Text>
           </TouchableOpacity>
         </View>
@@ -285,18 +316,28 @@ export function BorrowingForm({
           <Text style={formStyles.fieldSectionLabel}>AMOUNT</Text>
           <View style={formStyles.amountInputRow}>
             <Text
-              style={[formStyles.amountCurrencyPrefix, { color: "#d97706" }]}
+              style={[
+                formStyles.amountCurrencyPrefix,
+                {
+                  color: isIncomeAction ? theme.colors.success : "#d97706",
+                },
+              ]}
             >
               {currentSymbol}
             </Text>
             <TextInput
-              style={[formStyles.amountInput, { color: "#d97706" }]}
+              style={[
+                formStyles.amountInput,
+                {
+                  color: isIncomeAction ? theme.colors.success : "#d97706",
+                },
+              ]}
               keyboardType="decimal-pad"
               value={amountText}
               placeholder="0.00"
               placeholderTextColor={theme.colors.textMuted}
               onChangeText={handleAmountChange}
-              selectionColor="#d97706"
+              selectionColor={isIncomeAction ? theme.colors.success : "#d97706"}
             />
           </View>
         </View>
@@ -373,14 +414,17 @@ export function BorrowingForm({
         ]}
       >
         <Button
-          style={[formStyles.submitBtn, formStyles.submitBtnBorrowing]}
+          style={[
+            formStyles.submitBtn,
+            isIncomeAction
+              ? formStyles.submitBtnIncome
+              : formStyles.submitBtnBorrowing,
+          ]}
           size="lg"
           loading={isSubmitting}
           onPress={handleSave}
         >
-          {borrowingActionType === "BORROWING_TRANSACTION_TYPE_PAYMENT"
-            ? `Record Payment • ${currentSymbol}${amountDecimal}`
-            : `Record Drawdown • ${currentSymbol}${amountDecimal}`}
+          {submitButtonText}
         </Button>
       </View>
 
@@ -409,3 +453,14 @@ export function BorrowingForm({
     </>
   )
 }
+
+const styles = StyleSheet.create({
+  actionBtnIncomeActive: {
+    borderColor: theme.colors.success,
+    backgroundColor: theme.colors.successSubtle,
+  },
+  actionTextIncomeActive: {
+    color: theme.colors.success,
+    fontWeight: "700",
+  },
+})

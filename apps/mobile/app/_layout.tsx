@@ -113,6 +113,16 @@ export default function RootLayout() {
                       }}
                     />
                     <Stack.Screen
+                      name="modal/manage-borrowing"
+                      options={{
+                        presentation: "modal",
+                        headerTitle: "Manage Debt / Loan",
+                        headerStyle: {
+                          backgroundColor: theme.colors.surface,
+                        },
+                      }}
+                    />
+                    <Stack.Screen
                       name="modal/adjust-balance"
                       options={{
                         presentation: "modal",
