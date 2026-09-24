@@ -5,8 +5,10 @@ import {
   View,
   ScrollView,
   RefreshControl,
+  TouchableOpacity,
 } from "react-native"
-import { PiggyBank, Calendar } from "lucide-react-native"
+import { useRouter, Stack } from "expo-router"
+import { PiggyBank, Calendar, Plus, Sparkles } from "lucide-react-native"
 import { formatAmount } from "@saturn/core"
 import {
   useListBudgetsQuery,
@@ -24,6 +26,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { haptics } from "@/lib/haptics"
 
 export default function BudgetsScreen() {
+  const router = useRouter()
   const { activeSpaceId } = useSpace()
   const [refreshing, setRefreshing] = useState(false)
 
@@ -50,6 +53,23 @@ export default function BudgetsScreen() {
 
   return (
     <View style={styles.safeArea}>
+      <Stack.Screen
+        options={{
+          headerTitle: "Budgets",
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => {
+                haptics.light()
+                router.push("/modal/manage-budget")
+              }}
+              style={styles.headerAddBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Plus size={20} color={theme.colors.primary} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
@@ -96,6 +116,33 @@ export default function BudgetsScreen() {
               const remainingCents = Math.max(limitCents - spentCents, 0)
               const overCents = Math.max(spentCents - limitCents, 0)
 
+              const now = new Date()
+              const daysLeft = b.currentPeriod?.endDate
+                ? Math.max(
+                    1,
+                    Math.ceil(
+                      (new Date(b.currentPeriod.endDate).getTime() -
+                        now.getTime()) /
+                        (1000 * 60 * 60 * 24)
+                    )
+                  )
+                : Math.max(
+                    1,
+                    Math.ceil(
+                      (new Date(
+                        now.getFullYear(),
+                        now.getMonth() + 1,
+                        0
+                      ).getTime() -
+                        now.getTime()) /
+                        (1000 * 60 * 60 * 24)
+                    )
+                  )
+              const dailyAllowanceCents =
+                !isOver && daysLeft > 0
+                  ? Math.round(remainingCents / daysLeft)
+                  : 0
+
               const startStr = b.currentPeriod?.startDate
                 ? new Date(b.currentPeriod.startDate).toLocaleDateString(
                     "en-US",
@@ -131,7 +178,13 @@ export default function BudgetsScreen() {
                 <Card
                   key={b.id}
                   style={styles.budgetCard}
-                  onPress={() => haptics.light()}
+                  onPress={() => {
+                    haptics.light()
+                    router.push({
+                      pathname: "/(app)/finance/budgets/[id]",
+                      params: { id: b.id },
+                    })
+                  }}
                 >
                   <View style={styles.budgetHeader}>
                     <View style={styles.budgetLeftGroup}>
@@ -233,9 +286,26 @@ export default function BudgetsScreen() {
                     >
                       {isOver
                         ? `Over by ${formatAmount(String(overCents), b.currency)}`
-                        : `${formatAmount(String(remainingCents), b.currency)}`}
+                        : `${formatAmount(String(remainingCents), b.currency)} left`}
                     </Text>
                   </View>
+
+                  {!isOver && dailyAllowanceCents > 0 ? (
+                    <View style={styles.allowanceSubRow}>
+                      <Sparkles size={11} color={theme.colors.primary} />
+                      <Text style={styles.allowanceSubText}>
+                        Pace:{" "}
+                        <Text style={styles.allowanceSubBold}>
+                          {formatAmount(
+                            String(dailyAllowanceCents),
+                            b.currency
+                          )}{" "}
+                          / day
+                        </Text>{" "}
+                        ({daysLeft}d left)
+                      </Text>
+                    </View>
+                  ) : null}
                 </Card>
               )
             })}
@@ -250,6 +320,10 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  headerAddBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   container: {
     flex: 1,
@@ -368,5 +442,22 @@ const styles = StyleSheet.create({
   },
   overText: {
     color: theme.colors.destructive,
+  },
+  allowanceSubRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingTop: 8,
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.06)",
+  },
+  allowanceSubText: {
+    fontSize: 11,
+    color: theme.colors.textMuted,
+  },
+  allowanceSubBold: {
+    fontWeight: "700",
+    color: theme.colors.primary,
   },
 })

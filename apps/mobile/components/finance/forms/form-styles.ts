@@ -31,6 +31,7 @@ export const formStyles = StyleSheet.create({
     fontWeight: "800",
     marginRight: 4,
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+    flexShrink: 0,
   },
   amountInput: {
     flex: 1,
@@ -42,19 +43,23 @@ export const formStyles = StyleSheet.create({
   currencySelectButton: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
     gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: theme.radius.md,
     backgroundColor: theme.colors.background,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    minWidth: 68,
   },
   currencySelectCode: {
     fontSize: 13,
     fontWeight: "700",
     color: theme.colors.textPrimary,
     letterSpacing: 0.5,
+    flexShrink: 0,
   },
   conversionBox: {
     flexDirection: "row",

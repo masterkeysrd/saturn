@@ -27,7 +27,11 @@ import { AmountInput } from "@/components/ui/amount-input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { DatePicker } from "@/components/ui/date-picker"
-import { toCentsString, formatCents } from "../utils"
+import {
+  toCentsString,
+  formatCents,
+  RECURRING_INTERVAL_OPTIONS as INTERVAL_ITEMS,
+} from "../utils"
 
 interface CreateRecurringTransactionSheetProps {
   open: boolean
@@ -38,12 +42,6 @@ interface CreateRecurringTransactionSheetProps {
   editTransaction?: RecurringTransaction | null
   refetchTransactions?: () => void
 }
-
-const INTERVAL_ITEMS = [
-  { value: "WEEKLY", label: "Weekly" },
-  { value: "MONTHLY", label: "Monthly" },
-  { value: "YEARLY", label: "Yearly" },
-]
 
 const STATUS_ITEMS = [
   { value: "ACTIVE", label: "Active" },

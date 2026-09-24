@@ -44,12 +44,14 @@ export interface TransferFormProps {
   accounts: Account[]
   exchangeRates: ExchangeRate[]
   onSuccess: () => void
+  initialFromAccountId?: string
 }
 
 export function TransferForm({
   accounts,
   exchangeRates,
   onSuccess,
+  initialFromAccountId,
 }: TransferFormProps) {
   const insets = useSafeAreaInsets()
   const toast = useToast()
@@ -63,7 +65,9 @@ export function TransferForm({
   // Form State
   const [amountText, setAmountText] = useState("")
   const [description, setDescription] = useState("")
-  const [transferFromId, setTransferFromId] = useState<string>("")
+  const [transferFromId, setTransferFromId] = useState<string>(
+    initialFromAccountId || ""
+  )
   const [transferToId, setTransferToId] = useState<string>("")
   const [transferDate, setTransferDate] = useState<Date>(new Date())
 
@@ -77,13 +81,16 @@ export function TransferForm({
   useEffect(() => {
     if (accounts.length > 0) {
       if (!transferFromId) {
-        setTransferFromId(accounts[0].id || "")
+        setTransferFromId(initialFromAccountId || accounts[0].id || "")
       }
       if (!transferToId && accounts.length > 1) {
-        setTransferToId(accounts[1].id || "")
+        const other = accounts.find(
+          (a) => a.id !== (transferFromId || initialFromAccountId)
+        )
+        setTransferToId(other ? other.id || "" : accounts[1].id || "")
       }
     }
-  }, [accounts, transferFromId, transferToId])
+  }, [accounts, transferFromId, transferToId, initialFromAccountId])
 
   const sourceAccount = useMemo(
     () => accounts.find((a) => a.id === transferFromId),

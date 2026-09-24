@@ -25,6 +25,7 @@ import {
   getBudgetColors,
   getBudgetIcon,
   toCentsString,
+  BUDGET_INTERVAL_OPTIONS as INTERVAL_ITEMS,
 } from "../utils"
 import { cn } from "@/lib/utils"
 
@@ -36,13 +37,6 @@ interface CreateBudgetSheetProps {
   accounts?: Account[]
   refetchBudgets?: () => void
 }
-
-const INTERVAL_ITEMS = [
-  { value: "WEEKLY", label: "Weekly" },
-  { value: "MONTHLY", label: "Monthly" },
-  { value: "YEARLY", label: "Yearly" },
-  { value: "ONE_TIME", label: "One-Time" },
-]
 
 export function CreateBudgetSheet({
   open,

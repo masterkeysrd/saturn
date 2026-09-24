@@ -161,17 +161,20 @@ export const sheetStyles = StyleSheet.create({
     padding: 0,
   },
   currencyBadgeCode: {
-    width: 44,
+    minWidth: 48,
+    paddingHorizontal: 6,
     height: 32,
     borderRadius: 8,
     backgroundColor: theme.colors.primarySubtle,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
   currencyBadgeCodeText: {
     fontSize: 12,
     fontWeight: "700",
     color: theme.colors.primary,
+    flexShrink: 0,
   },
   scheduledItemAmount: {
     fontSize: 15,

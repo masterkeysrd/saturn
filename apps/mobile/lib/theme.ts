@@ -2,6 +2,7 @@ import { Platform } from "react-native"
 import {
   BUDGET_COLORS,
   getBudgetColors as getCoreBudgetColors,
+  COLOR_HEX_MAP,
 } from "@saturn/core"
 
 /**
@@ -82,14 +83,7 @@ export const theme = {
       elevation: 8,
     },
   },
-  budgetColors: {
-    indigo: "#6366f1",
-    emerald: "#10b981",
-    rose: "#f43f5e",
-    amber: "#f59e0b",
-    sky: "#0ea5e9",
-    violet: "#8b5cf6",
-  } as Record<string, string>,
+  budgetColors: COLOR_HEX_MAP as Record<string, string>,
   typography: {
     mono: Platform.select({
       ios: "Menlo",

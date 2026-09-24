@@ -63,6 +63,8 @@ export interface ExpenseFormProps {
   onSuccess: () => void
   budgetsLoading?: boolean
   currenciesLoading?: boolean
+  initialBudgetId?: string
+  initialAccountId?: string
 }
 
 export function ExpenseForm({
@@ -75,6 +77,8 @@ export function ExpenseForm({
   onSuccess,
   budgetsLoading,
   currenciesLoading,
+  initialBudgetId,
+  initialAccountId,
 }: ExpenseFormProps) {
   const insets = useSafeAreaInsets()
   const toast = useToast()
@@ -90,8 +94,12 @@ export function ExpenseForm({
   // Form State
   const [amountText, setAmountText] = useState("")
   const [description, setDescription] = useState("")
-  const [selectedBudgetId, setSelectedBudgetId] = useState<string>("")
-  const [selectedAccountId, setSelectedAccountId] = useState<string>("")
+  const [selectedBudgetId, setSelectedBudgetId] = useState<string>(
+    initialBudgetId || ""
+  )
+  const [selectedAccountId, setSelectedAccountId] = useState<string>(
+    initialAccountId || ""
+  )
   const [selectedCurrency, setSelectedCurrency] = useState<string>("")
   const [transactionDate, setTransactionDate] = useState<Date>(new Date())
   const [hasCustomEffectiveDate, setHasCustomEffectiveDate] =
@@ -366,7 +374,7 @@ export function ExpenseForm({
                 currencySheetRef.current?.expand()
               }}
             >
-              <Text style={formStyles.currencySelectCode}>
+              <Text style={formStyles.currencySelectCode} numberOfLines={1}>
                 {currentCurrency.toUpperCase()}
               </Text>
               <ChevronDown size={14} color={theme.colors.textMuted} />

@@ -89,6 +89,18 @@ export default function AppLayout() {
         }}
       />
       <Stack.Screen
+        name="finance/budgets/[id]"
+        options={{
+          headerShown: true,
+          headerTitle: "Budget Details",
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+          },
+          headerTintColor: theme.colors.textPrimary,
+          headerBackTitle: "Budgets",
+        }}
+      />
+      <Stack.Screen
         name="finance/accounts"
         options={{
           headerShown: true,
@@ -98,6 +110,18 @@ export default function AppLayout() {
           },
           headerTintColor: theme.colors.textPrimary,
           headerBackTitle: "Finance",
+        }}
+      />
+      <Stack.Screen
+        name="finance/accounts/[id]"
+        options={{
+          headerShown: true,
+          headerTitle: "Account Details",
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+          },
+          headerTintColor: theme.colors.textPrimary,
+          headerBackTitle: "Accounts",
         }}
       />
     </Stack>

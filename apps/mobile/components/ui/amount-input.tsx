@@ -66,14 +66,19 @@ export function AmountInput({
     <View style={[styles.container, containerStyle]}>
       {/* Display */}
       <View style={styles.displayContainer}>
-        <Text style={[styles.currencySymbol, { color: colorByType }]}>
+        <Text
+          style={[styles.currencySymbol, { color: colorByType }]}
+          numberOfLines={1}
+        >
           {currencySymbol}
         </Text>
         <Text style={[styles.amountDisplay, { color: colorByType }]}>
           {formattedAmount}
         </Text>
         {currencyCode && (
-          <Text style={styles.currencyCode}>{currencyCode}</Text>
+          <Text style={styles.currencyCode} numberOfLines={1}>
+            {currencyCode}
+          </Text>
         )}
       </View>
 
@@ -152,6 +157,7 @@ const styles = StyleSheet.create({
   currencySymbol: {
     fontSize: 28,
     fontWeight: "700",
+    flexShrink: 0,
   },
   amountDisplay: {
     fontSize: 44,
@@ -163,6 +169,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: theme.colors.textMuted,
     marginLeft: 6,
+    flexShrink: 0,
   },
   chipsRow: {
     flexDirection: "row",

@@ -52,10 +52,22 @@ export type TransactionFlowType =
 export default function AddTransactionModal() {
   const router = useRouter()
   const { activeSpaceId } = useSpace()
-  const { id: editTransactionId } = useLocalSearchParams<{ id?: string }>()
+  const {
+    id: editTransactionId,
+    type: initialType,
+    accountId: initialAccountId,
+    budgetId: initialBudgetId,
+  } = useLocalSearchParams<{
+    id?: string
+    type?: TransactionFlowType
+    accountId?: string
+    budgetId?: string
+  }>()
   const isEditMode = !!editTransactionId
 
-  const [activeType, setActiveType] = useState<TransactionFlowType>("EXPENSE")
+  const [activeType, setActiveType] = useState<TransactionFlowType>(
+    initialType || "EXPENSE"
+  )
 
   // Queries
   const { data: settingsData } = useGetFinanceSettingsQuery(
@@ -347,6 +359,8 @@ export default function AddTransactionModal() {
               onSuccess={() => router.back()}
               budgetsLoading={budgetsLoading}
               currenciesLoading={currenciesLoading}
+              initialBudgetId={initialBudgetId}
+              initialAccountId={initialAccountId}
             />
           )}
 
@@ -367,6 +381,7 @@ export default function AddTransactionModal() {
               accounts={accounts}
               exchangeRates={exchangeRates}
               onSuccess={() => router.back()}
+              initialFromAccountId={initialAccountId}
             />
           )}
 

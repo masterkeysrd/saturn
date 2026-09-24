@@ -1,4 +1,4 @@
-import React, { forwardRef, useState, useMemo } from "react"
+import { forwardRef, useState, useMemo } from "react"
 import { Text, View, ActivityIndicator } from "react-native"
 import BottomSheet, {
   BottomSheetFlatList,
@@ -121,7 +121,10 @@ export const CurrencyPickerSheet = forwardRef<
                 }}
               >
                 <View style={sheetStyles.currencyBadgeCode}>
-                  <Text style={sheetStyles.currencyBadgeCodeText}>
+                  <Text
+                    style={sheetStyles.currencyBadgeCodeText}
+                    numberOfLines={1}
+                  >
                     {c.code}
                   </Text>
                 </View>

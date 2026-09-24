@@ -303,7 +303,7 @@ export function IncomeForm({
                 currencySheetRef.current?.expand()
               }}
             >
-              <Text style={formStyles.currencySelectCode}>
+              <Text style={formStyles.currencySelectCode} numberOfLines={1}>
                 {currentCurrency.toUpperCase()}
               </Text>
               <ChevronDown size={14} color={theme.colors.textMuted} />

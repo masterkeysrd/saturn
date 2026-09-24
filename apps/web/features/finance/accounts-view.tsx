@@ -24,7 +24,12 @@ import { CreateAccountSheet } from "./components/create-account-sheet"
 import { CreateTransferSheet } from "./components/create-transfer-sheet"
 import { AdjustBalanceModal } from "./components/adjust-balance-modal"
 import { AccountHistorySheet } from "./components/account-history-sheet"
-import { getInstitutionLogoUrl, formatAmount, formatCents } from "./utils"
+import {
+  getInstitutionLogoUrl,
+  formatAmount,
+  formatCents,
+  getAccountTypeLabel,
+} from "./utils"
 import {
   Landmark,
   CreditCard,
@@ -53,21 +58,6 @@ const ACCOUNTS_FILTER_DEFAULTS = {
   q: "",
   active: false as boolean,
   sort: "_default",
-}
-
-function getAccountTypeLabel(type: Account_Type) {
-  switch (type) {
-    case "BANK":
-      return "Bank / Checking"
-    case "CREDIT_CARD":
-      return "Credit Card"
-    case "CASH":
-      return "Cash"
-    case "DIGITAL_ACCOUNT":
-      return "Digital / E-Wallet"
-    default:
-      return "Account"
-  }
 }
 
 export function AccountsView() {

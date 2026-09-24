@@ -38,6 +38,7 @@ import {
   getBudgetIcon,
   toCentsString,
   formatCents,
+  BUDGET_INTERVAL_OPTIONS as INTERVAL_ITEMS,
 } from "../utils"
 
 interface EditBudgetSheetProps {
@@ -49,13 +50,6 @@ interface EditBudgetSheetProps {
   accounts?: Account[]
   refetchBudgets?: () => void
 }
-
-const INTERVAL_ITEMS = [
-  { value: "WEEKLY", label: "Weekly" },
-  { value: "MONTHLY", label: "Monthly" },
-  { value: "YEARLY", label: "Yearly" },
-  { value: "ONE_TIME", label: "One-Time" },
-]
 
 const STATUS_ITEMS = [
   { value: "ACTIVE", label: "Active" },

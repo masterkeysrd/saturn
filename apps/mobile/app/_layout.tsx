@@ -83,6 +83,36 @@ export default function RootLayout() {
                       }}
                     />
                     <Stack.Screen
+                      name="modal/manage-budget"
+                      options={{
+                        presentation: "modal",
+                        headerTitle: "Manage Budget",
+                        headerStyle: {
+                          backgroundColor: theme.colors.surface,
+                        },
+                      }}
+                    />
+                    <Stack.Screen
+                      name="modal/manage-account"
+                      options={{
+                        presentation: "modal",
+                        headerTitle: "Manage Account",
+                        headerStyle: {
+                          backgroundColor: theme.colors.surface,
+                        },
+                      }}
+                    />
+                    <Stack.Screen
+                      name="modal/adjust-balance"
+                      options={{
+                        presentation: "modal",
+                        headerTitle: "Adjust Balance",
+                        headerStyle: {
+                          backgroundColor: theme.colors.surface,
+                        },
+                      }}
+                    />
+                    <Stack.Screen
                       name="+not-found"
                       options={{
                         title: "Not Found",

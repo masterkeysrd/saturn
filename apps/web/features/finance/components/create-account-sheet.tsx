@@ -22,6 +22,7 @@ import {
   toCentsString,
   ACCOUNT_COLORS,
   getAccountColors,
+  ACCOUNT_TYPES,
 } from "../utils"
 import { cn } from "@/lib/utils"
 
@@ -34,12 +35,7 @@ interface CreateAccountSheetProps {
   refetchAccounts: () => void
 }
 
-const ACCOUNT_TYPE_ITEMS = [
-  { value: "BANK", label: "Bank / Checking" },
-  { value: "CREDIT_CARD", label: "Credit Card" },
-  { value: "CASH", label: "Cash Holdings" },
-  { value: "DIGITAL_ACCOUNT", label: "Digital Account" },
-]
+const ACCOUNT_TYPE_ITEMS = ACCOUNT_TYPES
 
 export function CreateAccountSheet({
   open,
