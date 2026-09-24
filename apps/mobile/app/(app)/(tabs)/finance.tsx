@@ -346,7 +346,11 @@ export default function FinanceHubScreen() {
                   <Card
                     key={b.id}
                     style={styles.budgetCard}
-                    onPress={() => navigateTo("/(app)/finance/budgets")}
+                    onPress={() =>
+                      b.id
+                        ? navigateTo(`/(app)/finance/budgets/${b.id}`)
+                        : navigateTo("/(app)/finance/budgets")
+                    }
                   >
                     <View style={styles.budgetHeader}>
                       <View style={styles.budgetNameRow}>
@@ -468,7 +472,11 @@ export default function FinanceHubScreen() {
                     baseCurrency={baseCurrency}
                     convertedText={convertedStr}
                     width={300}
-                    onPress={() => navigateTo("/(app)/finance/accounts")}
+                    onPress={() =>
+                      acc.id
+                        ? navigateTo(`/(app)/finance/accounts/${acc.id}`)
+                        : navigateTo("/(app)/finance/accounts")
+                    }
                   />
                 )
               })}
