@@ -136,6 +136,12 @@ export default function BudgetDetailScreen() {
     [transactions]
   )
 
+  const transactionsSpentCents = useMemo(() => {
+    return transactions
+      .filter((t) => t.type === "EXPENSE")
+      .reduce((sum, t) => sum + Math.abs(Number(t.amount || "0")), 0)
+  }, [transactions])
+
   const handleRefresh = async () => {
     haptics.light()
     setRefreshing(true)
@@ -182,12 +188,6 @@ export default function BudgetDetailScreen() {
 
   const nativeColors = getNativeBudgetColors(budget.color || "indigo")
   const BIcon = getBudgetIcon(budget.icon, budget.name)
-
-  const transactionsSpentCents = useMemo(() => {
-    return transactions
-      .filter((t) => t.type === "EXPENSE")
-      .reduce((sum, t) => sum + Math.abs(Number(t.amount || "0")), 0)
-  }, [transactions])
 
   const periodSpentStr = budget.currentPeriod?.spentAmount
   const periodSpentNum =
