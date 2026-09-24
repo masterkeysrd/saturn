@@ -23,6 +23,7 @@ import {
   CreditCard,
   Coins,
   Wallet,
+  Lock,
 } from "lucide-react-native"
 import {
   useCreateAccountMutation,
@@ -174,6 +175,20 @@ export default function ManageAccountModal() {
       )
     : ""
 
+  const selectedCurrencyInfo = useMemo(
+    () =>
+      currencies.find((c) => c.code.toUpperCase() === currency.toUpperCase()),
+    [currencies, currency]
+  )
+
+  const selectedTypeInfo = useMemo(
+    () => ACCOUNT_TYPES.find((t) => t.value === type),
+    [type]
+  )
+  const SelectedTypeIcon = selectedTypeInfo
+    ? ACCOUNT_TYPE_ICONS[selectedTypeInfo.iconName] || Landmark
+    : Landmark
+
   // Live Preview Account Object
   const previewAccount: Account = useMemo(
     () => ({
@@ -244,7 +259,10 @@ export default function ManageAccountModal() {
       return
     }
 
-    const initBalanceCents = toCentsString(initialBalance || "0")
+    const initBalanceCents =
+      isEditMode && existingAccount
+        ? existingAccount.initialBalance || "0"
+        : toCentsString(initialBalance || "0")
     const creditLimitCents =
       type === "CREDIT_CARD" && creditLimit ? toCentsString(creditLimit) : "0"
 
@@ -255,11 +273,7 @@ export default function ManageAccountModal() {
           req: {
             id: editAccountId,
             account: {
-              id: editAccountId,
               name: name.trim(),
-              type,
-              currency,
-              initialBalance: initBalanceCents,
               creditLimit: creditLimitCents,
               lastFour: lastFour.trim(),
               color,
@@ -267,7 +281,7 @@ export default function ManageAccountModal() {
               isDefault,
               institutionId: institutionId,
               notes: existingAccount?.notes || "",
-            },
+            } as unknown as Account,
           },
         })
         haptics.success()
@@ -417,43 +431,57 @@ export default function ManageAccountModal() {
             <Text style={styles.sectionHeaderLabel}>
               ACCOUNT CLASSIFICATION
             </Text>
-            <View style={styles.typeGrid}>
-              {ACCOUNT_TYPES.map((t) => {
-                const isSelected = type === t.value
-                const IconComponent = ACCOUNT_TYPE_ICONS[t.iconName] || Landmark
-                return (
-                  <TouchableOpacity
-                    key={t.value}
-                    onPress={() => {
-                      haptics.selection()
-                      setType(t.value)
-                    }}
-                    style={[
-                      styles.typeGridItem,
-                      isSelected && styles.typeGridItemActive,
-                    ]}
-                  >
-                    <IconComponent
-                      size={20}
-                      color={
-                        isSelected
-                          ? theme.colors.primary
-                          : theme.colors.textMuted
-                      }
-                    />
-                    <Text
+            {isEditMode ? (
+              <View style={styles.selectorRow}>
+                <View style={styles.selectorLeft}>
+                  <View style={styles.selectorIconWrap}>
+                    <SelectedTypeIcon size={16} color={theme.colors.primary} />
+                  </View>
+                  <Text style={styles.selectorValueText}>
+                    {selectedTypeInfo?.label || type}
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.typeGrid}>
+                {ACCOUNT_TYPES.map((t) => {
+                  const isSelected = type === t.value
+                  const IconComponent =
+                    ACCOUNT_TYPE_ICONS[t.iconName] || Landmark
+                  return (
+                    <TouchableOpacity
+                      key={t.value}
+                      onPress={() => {
+                        haptics.selection()
+                        setType(t.value)
+                      }}
                       style={[
-                        styles.typeGridItemText,
-                        isSelected && styles.typeGridItemTextActive,
+                        styles.typeGridItem,
+                        isSelected && styles.typeGridItemActive,
                       ]}
-                      numberOfLines={1}
                     >
-                      {t.label}
-                    </Text>
-                  </TouchableOpacity>
-                )
-              })}
-            </View>
+                      <IconComponent
+                        size={20}
+                        color={
+                          isSelected
+                            ? theme.colors.primary
+                            : theme.colors.textMuted
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.typeGridItemText,
+                          isSelected && styles.typeGridItemTextActive,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {t.label}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            )}
           </Card>
 
           {/* General Information Card */}
@@ -515,23 +543,44 @@ export default function ManageAccountModal() {
               Account Currency
             </Text>
             <TouchableOpacity
+              disabled={isEditMode}
               onPress={() => {
                 haptics.light()
                 currencySheetRef.current?.expand()
               }}
-              style={styles.selectorRow}
+              style={[
+                styles.selectorRow,
+                isEditMode && styles.selectorRowDisabled,
+              ]}
             >
               <View style={styles.selectorLeft}>
-                <View style={styles.selectorIconWrap}>
+                <View
+                  style={[
+                    styles.selectorIconWrap,
+                    isEditMode && styles.selectorIconWrapDisabled,
+                  ]}
+                >
                   <Text style={styles.currencyIconSymbol} numberOfLines={1}>
                     {getCurrencySymbol(currency)}
                   </Text>
                 </View>
-                <Text style={styles.selectorValueText} numberOfLines={1}>
-                  {currency}
+                <Text
+                  style={[
+                    styles.selectorValueText,
+                    isEditMode && styles.selectorValueTextDisabled,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {selectedCurrencyInfo
+                    ? `${selectedCurrencyInfo.name} (${currency})`
+                    : currency}
                 </Text>
               </View>
-              <ChevronDown size={16} color={theme.colors.textMuted} />
+              {isEditMode ? (
+                <Lock size={16} color={theme.colors.textMuted} />
+              ) : (
+                <ChevronDown size={16} color={theme.colors.textMuted} />
+              )}
             </TouchableOpacity>
           </Card>
 
@@ -540,10 +589,9 @@ export default function ManageAccountModal() {
             <Text style={styles.sectionHeaderLabel}>BALANCES & LIMITS</Text>
 
             <TextInput
-              label={
-                isEditMode ? "Initial Balance (Anchor)" : "Starting Balance"
-              }
+              label={isEditMode ? "Initial Balance" : "Starting Balance"}
               value={initialBalance}
+              editable={!isEditMode}
               onChangeText={(text) => {
                 setInitialBalance(text.replace(/[^0-9.-]/g, ""))
                 if (errors.initialBalance)
@@ -553,6 +601,17 @@ export default function ManageAccountModal() {
               placeholderTextColor={theme.colors.textMuted}
               keyboardType="decimal-pad"
               error={errors.initialBalance}
+              inputContainerStyle={
+                isEditMode
+                  ? {
+                      opacity: 0.75,
+                      backgroundColor: theme.colors.surfaceSubtle,
+                    }
+                  : undefined
+              }
+              style={
+                isEditMode ? { color: theme.colors.textSecondary } : undefined
+              }
               containerStyle={{ marginBottom: 16 }}
             />
 
@@ -777,6 +836,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
+  selectorRowDisabled: {
+    opacity: 0.75,
+    backgroundColor: theme.colors.surfaceSubtle,
+  },
   selectorLeft: {
     flexDirection: "row",
     alignItems: "center",
@@ -793,6 +856,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexShrink: 0,
   },
+  selectorIconWrapDisabled: {
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+  },
   currencyIconSymbol: {
     fontSize: 14,
     fontWeight: "800",
@@ -804,6 +870,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: theme.colors.textPrimary,
     flex: 1,
+  },
+  selectorValueTextDisabled: {
+    color: theme.colors.textSecondary,
   },
   selectorPlaceholder: {
     color: theme.colors.textMuted,
