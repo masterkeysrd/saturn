@@ -20,6 +20,7 @@ import {
 } from "lucide-react-native"
 import {
   useGetBudgetQuery,
+  useGetBudgetPeriodQuery,
   useListBudgetsQuery,
   useListTransactionsQuery,
   useListAccountsQuery,
@@ -99,6 +100,14 @@ export default function BudgetDetailScreen() {
 
   const budget = budgetFromList || budgetFromGet
 
+  // Fallback to fetch budget period if not provided on budget
+  const { data: periodData, refetch: refetchPeriod } = useGetBudgetPeriodQuery(
+    { budgetId: id || "", date: new Date().toISOString() },
+    { enabled: !!id && !!activeSpaceId && !budgetFromList?.currentPeriod }
+  )
+
+  const currentPeriod = budget?.currentPeriod || periodData
+
   // Fetch transactions for this budget
   const {
     data: txnsData,
@@ -136,11 +145,33 @@ export default function BudgetDetailScreen() {
     [transactions]
   )
 
-  const transactionsSpentCents = useMemo(() => {
+  const transactionsSpentInPeriodCents = useMemo(() => {
+    const periodId =
+      currentPeriod && "id" in currentPeriod ? currentPeriod.id : undefined
+    const startDate = currentPeriod?.startDate
+    const endDate = currentPeriod?.endDate
+
     return transactions
-      .filter((t) => t.type === "EXPENSE")
+      .filter((t) => {
+        if (t.type !== "EXPENSE") return false
+        if (budget?.interval === "ONE_TIME") return true
+        if (periodId && t.periodId) {
+          return t.periodId === periodId
+        }
+        if (!startDate || !endDate || !t.transactionDate) return false
+        const tTime = new Date(t.transactionDate).getTime()
+        const start = new Date(startDate).getTime()
+        const end = new Date(endDate).getTime()
+        return tTime >= start && tTime <= end
+      })
       .reduce((sum, t) => sum + Math.abs(Number(t.amount || "0")), 0)
-  }, [transactions])
+  }, [
+    transactions,
+    budget?.interval,
+    currentPeriod && "id" in currentPeriod ? currentPeriod.id : undefined,
+    currentPeriod?.startDate,
+    currentPeriod?.endDate,
+  ])
 
   const handleRefresh = async () => {
     haptics.light()
@@ -149,6 +180,7 @@ export default function BudgetDetailScreen() {
       await Promise.all([
         refetchBudgets(),
         refetchSingleBudget(),
+        refetchPeriod(),
         refetchTxns(),
       ])
     } finally {
@@ -189,16 +221,16 @@ export default function BudgetDetailScreen() {
   const nativeColors = getNativeBudgetColors(budget.color || "indigo")
   const BIcon = getBudgetIcon(budget.icon, budget.name)
 
-  const periodSpentStr = budget.currentPeriod?.spentAmount
+  const periodSpentStr = currentPeriod?.spentAmount
   const periodSpentNum =
     periodSpentStr !== undefined && periodSpentStr !== ""
       ? Number(periodSpentStr)
       : undefined
 
   const spentCents =
-    periodSpentNum !== undefined && periodSpentNum > 0
+    periodSpentNum !== undefined
       ? periodSpentNum
-      : transactionsSpentCents
+      : transactionsSpentInPeriodCents
 
   const limitCents = Number(budget.limitAmount || "0")
   const actualPercentage =
@@ -210,18 +242,18 @@ export default function BudgetDetailScreen() {
   const remainingCents = Math.max(limitCents - spentCents, 0)
   const overCents = Math.max(spentCents - limitCents, 0)
 
-  const daysLeft = calculateDaysLeft(budget.currentPeriod?.endDate)
+  const daysLeft = calculateDaysLeft(currentPeriod?.endDate)
   const dailyAllowanceCents =
     !isOver && daysLeft > 0 ? Math.round(remainingCents / daysLeft) : 0
 
-  const startStr = budget.currentPeriod?.startDate
-    ? new Date(budget.currentPeriod.startDate).toLocaleDateString("en-US", {
+  const startStr = currentPeriod?.startDate
+    ? new Date(currentPeriod.startDate).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
       })
     : ""
-  const endStr = budget.currentPeriod?.endDate
-    ? new Date(budget.currentPeriod.endDate).toLocaleDateString("en-US", {
+  const endStr = currentPeriod?.endDate
+    ? new Date(currentPeriod.endDate).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
       })
