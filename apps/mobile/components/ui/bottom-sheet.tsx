@@ -1,12 +1,11 @@
 import React, { forwardRef, useCallback, useMemo } from "react"
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native"
+import { View, Text, StyleSheet } from "react-native"
 import BottomSheet, {
   BottomSheetBackdrop,
-  BottomSheetView,
+  TouchableOpacity,
   type BottomSheetProps,
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { X } from "lucide-react-native"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -16,6 +15,32 @@ export interface AppBottomSheetProps extends Partial<BottomSheetProps> {
   snapPoints?: (string | number)[]
   onClose?: () => void
   children?: React.ReactNode
+}
+
+export function BottomSheetHeader({
+  title,
+  onClose,
+}: {
+  title: string
+  onClose?: () => void
+}) {
+  return (
+    <View style={styles.header}>
+      <Text style={styles.title}>{title}</Text>
+      {onClose && (
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => {
+            haptics.light()
+            onClose()
+          }}
+          style={styles.closeBtn}
+        >
+          <X size={18} color={theme.colors.textMuted} />
+        </TouchableOpacity>
+      )}
+    </View>
+  )
 }
 
 export const AppBottomSheet = forwardRef<BottomSheet, AppBottomSheetProps>(
@@ -30,7 +55,6 @@ export const AppBottomSheet = forwardRef<BottomSheet, AppBottomSheetProps>(
     },
     ref
   ) => {
-    const insets = useSafeAreaInsets()
     const snapPoints = useMemo(
       () => customSnapPoints || ["40%", "75%"],
       [customSnapPoints]
@@ -53,6 +77,7 @@ export const AppBottomSheet = forwardRef<BottomSheet, AppBottomSheetProps>(
       <BottomSheet
         ref={ref}
         index={-1}
+        enableDynamicSizing={props.enableDynamicSizing ?? false}
         snapPoints={snapPoints}
         enablePanDownToClose={enablePanDownToClose}
         backdropComponent={renderBackdrop}
@@ -64,31 +89,12 @@ export const AppBottomSheet = forwardRef<BottomSheet, AppBottomSheetProps>(
         }}
         {...props}
       >
-        <BottomSheetView
-          style={[
-            styles.contentContainer,
-            { paddingBottom: Math.max(insets.bottom, 16) },
-          ]}
-        >
-          {title ? (
-            <View style={styles.header}>
-              <Text style={styles.title}>{title}</Text>
-              {onClose && (
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    haptics.light()
-                    onClose()
-                  }}
-                  style={styles.closeBtn}
-                >
-                  <X size={18} color={theme.colors.textMuted} />
-                </TouchableOpacity>
-              )}
-            </View>
-          ) : null}
-          {children}
-        </BottomSheetView>
+        {title ? (
+          <View style={styles.headerWrapper}>
+            <BottomSheetHeader title={title} onClose={onClose} />
+          </View>
+        ) : null}
+        {children}
       </BottomSheet>
     )
   }
@@ -110,19 +116,18 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
   },
-  contentContainer: {
-    flex: 1,
+  headerWrapper: {
     paddingHorizontal: 16,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingBottom: 16,
-    paddingTop: 4,
+    paddingBottom: 12,
+    paddingTop: 2,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   title: {
     fontSize: 17,

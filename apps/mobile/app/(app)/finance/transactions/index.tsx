@@ -744,6 +744,7 @@ const styles = StyleSheet.create({
     ...theme.shadows.lg,
   },
   filterSheetContent: {
+    paddingHorizontal: 16,
     paddingTop: 8,
     gap: 16,
   },
