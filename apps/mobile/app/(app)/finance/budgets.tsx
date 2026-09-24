@@ -145,19 +145,21 @@ export default function BudgetsScreen() {
 
               const startStr = b.currentPeriod?.startDate
                 ? new Date(b.currentPeriod.startDate).toLocaleDateString(
-                    "en-US",
+                    undefined,
                     {
                       month: "short",
                       day: "numeric",
+                      timeZone: "UTC",
                     }
                   )
                 : ""
               const endStr = b.currentPeriod?.endDate
                 ? new Date(b.currentPeriod.endDate).toLocaleDateString(
-                    "en-US",
+                    undefined,
                     {
                       month: "short",
                       day: "numeric",
+                      timeZone: "UTC",
                     }
                   )
                 : ""

@@ -247,15 +247,17 @@ export default function BudgetDetailScreen() {
     !isOver && daysLeft > 0 ? Math.round(remainingCents / daysLeft) : 0
 
   const startStr = currentPeriod?.startDate
-    ? new Date(currentPeriod.startDate).toLocaleDateString("en-US", {
+    ? new Date(currentPeriod.startDate).toLocaleDateString(undefined, {
         month: "short",
         day: "numeric",
+        timeZone: "UTC",
       })
     : ""
   const endStr = currentPeriod?.endDate
-    ? new Date(currentPeriod.endDate).toLocaleDateString("en-US", {
+    ? new Date(currentPeriod.endDate).toLocaleDateString(undefined, {
         month: "short",
         day: "numeric",
+        timeZone: "UTC",
       })
     : ""
   const dateRangeStr =
