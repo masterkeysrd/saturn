@@ -386,6 +386,9 @@ export default function BudgetDetailScreen() {
               params: {
                 type: "EXPENSE",
                 budgetId: budget.id,
+                ...(budget.defaultAccountId
+                  ? { accountId: budget.defaultAccountId }
+                  : {}),
               },
             })
           }}

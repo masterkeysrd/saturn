@@ -100,6 +100,7 @@ export function ExpenseForm({
   const [selectedAccountId, setSelectedAccountId] = useState<string>(
     initialAccountId || ""
   )
+  const hasManuallySelectedAccount = useRef<boolean>(Boolean(initialAccountId))
   const [selectedCurrency, setSelectedCurrency] = useState<string>("")
   const [transactionDate, setTransactionDate] = useState<Date>(new Date())
   const [hasCustomEffectiveDate, setHasCustomEffectiveDate] =
@@ -116,26 +117,53 @@ export function ExpenseForm({
   const createExpenseMutation = useCreateExpenseMutation()
   const updateExpenseMutation = useUpdateExpenseMutation()
 
-  // Auto-set default budget & account
+  // Auto-set default budget & account on initial load or when budgets/accounts are loaded
   useEffect(() => {
-    if (!selectedBudgetId && budgets.length > 0 && !isEditMode) {
-      const firstB = budgets[0]
-      setSelectedBudgetId(firstB.id || "")
-      if (firstB.currency) {
-        setSelectedCurrency(firstB.currency)
-      }
-      if (firstB.defaultAccountId) {
-        setSelectedAccountId(firstB.defaultAccountId)
-      }
-    }
-  }, [budgets, selectedBudgetId, isEditMode])
+    if (isEditMode) return
 
-  useEffect(() => {
-    if (accounts.length > 0 && !isEditMode && !selectedAccountId) {
+    // Resolve target budget (either current selection, initialBudgetId, or first budget in list)
+    const targetBudgetId =
+      selectedBudgetId ||
+      initialBudgetId ||
+      (budgets.length > 0 ? budgets[0].id : "")
+    const targetBudget = budgets.find((b) => b.id === targetBudgetId)
+
+    if (targetBudget) {
+      if (!selectedBudgetId && targetBudget.id) {
+        setSelectedBudgetId(targetBudget.id)
+      }
+      if (!selectedCurrency && targetBudget.currency) {
+        setSelectedCurrency(targetBudget.currency)
+      }
+
+      // If user hasn't manually selected an account, auto-select the budget's default account
+      if (!hasManuallySelectedAccount.current) {
+        const defaultAcc = accounts.find((a) => a.isDefault) || accounts[0]
+        const resolvedAccId =
+          targetBudget.defaultAccountId || defaultAcc?.id || ""
+        if (resolvedAccId && resolvedAccId !== selectedAccountId) {
+          setSelectedAccountId(resolvedAccId)
+        }
+      }
+    } else if (
+      accounts.length > 0 &&
+      !hasManuallySelectedAccount.current &&
+      !selectedAccountId
+    ) {
       const defaultAcc = accounts.find((a) => a.isDefault) || accounts[0]
-      setSelectedAccountId(defaultAcc.id || "")
+      if (defaultAcc?.id) {
+        setSelectedAccountId(defaultAcc.id)
+      }
     }
-  }, [accounts, selectedAccountId, isEditMode])
+  }, [
+    budgets,
+    accounts,
+    selectedBudgetId,
+    initialBudgetId,
+    isEditMode,
+    selectedCurrency,
+    selectedAccountId,
+  ])
 
   // Hydrate edit mode
   useEffect(() => {
@@ -189,15 +217,21 @@ export function ExpenseForm({
   const currentSymbol = getCurrencySymbol(currentCurrency)
 
   // Budget change handler
-  const handleBudgetChange = useCallback((b: Budget) => {
-    setSelectedBudgetId(b.id || "")
-    if (b.currency) {
-      setSelectedCurrency(b.currency)
-    }
-    if (b.defaultAccountId) {
-      setSelectedAccountId(b.defaultAccountId)
-    }
-  }, [])
+  const handleBudgetChange = useCallback(
+    (b: Budget) => {
+      setSelectedBudgetId(b.id || "")
+      if (b.currency) {
+        setSelectedCurrency(b.currency)
+      }
+      hasManuallySelectedAccount.current = false
+      const defaultAcc = accounts.find((a) => a.isDefault) || accounts[0]
+      const targetAccId = b.defaultAccountId || defaultAcc?.id || ""
+      if (targetAccId) {
+        setSelectedAccountId(targetAccId)
+      }
+    },
+    [accounts]
+  )
 
   // Amount input handler
   const handleAmountChange = (text: string) => {
@@ -669,7 +703,10 @@ export function ExpenseForm({
         ref={accountSheetRef}
         accounts={accounts}
         selectedAccountId={selectedAccountId}
-        onSelect={setSelectedAccountId}
+        onSelect={(accId) => {
+          hasManuallySelectedAccount.current = true
+          setSelectedAccountId(accId)
+        }}
       />
 
       <CurrencyPickerSheet
