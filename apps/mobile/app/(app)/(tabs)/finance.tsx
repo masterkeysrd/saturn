@@ -47,6 +47,7 @@ import { Badge } from "@/components/ui/badge"
 import { SkeletonCard } from "@/components/ui/skeleton-loader"
 import { CardAccountItem } from "@/components/finance/card-account-item"
 import { TransactionListItem } from "@/components/finance/transaction-list-item"
+import { getBudgetIcon } from "@/lib/budget-icons"
 import { haptics } from "@/lib/haptics"
 
 export default function FinanceHubScreen() {
@@ -341,6 +342,7 @@ export default function FinanceHubScreen() {
                     : 0
                 const nativeColors = getNativeBudgetColors(palette.value)
                 const isOver = percentage >= 95
+                const BIcon = getBudgetIcon(b.icon, b.name)
 
                 return (
                   <Card
@@ -356,10 +358,15 @@ export default function FinanceHubScreen() {
                       <View style={styles.budgetNameRow}>
                         <View
                           style={[
-                            styles.budgetDot,
-                            { backgroundColor: nativeColors.bar },
+                            styles.budgetIconBadge,
+                            {
+                              backgroundColor: nativeColors.bg,
+                              borderColor: nativeColors.border,
+                            },
                           ]}
-                        />
+                        >
+                          <BIcon size={13} color={nativeColors.bar} />
+                        </View>
                         <Text style={styles.budgetName} numberOfLines={1}>
                           {b.name}
                         </Text>
@@ -687,10 +694,14 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 8,
   },
-  budgetDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  budgetIconBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
   budgetName: {
     fontSize: 14,
