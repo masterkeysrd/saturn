@@ -100,3 +100,56 @@ export function getCurrencySymbol(
     return currencyCode
   }
 }
+
+export function getSectionDateTitle(dateStr?: string): string {
+  if (!dateStr) return "Older"
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return "Older"
+
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const txDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+
+  const diffTime = today.getTime() - txDate.getTime()
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24))
+
+  if (diffDays === 0) return "Today"
+  if (diffDays === 1) return "Yesterday"
+
+  const options: Intl.DateTimeFormatOptions = {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: txDate.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
+  }
+  return txDate.toLocaleDateString("en-US", options)
+}
+
+export interface DateGroupedSection<T> {
+  title: string
+  data: T[]
+}
+
+export function groupTransactionsByDate<T extends { transactionDate?: string }>(
+  transactions: T[]
+): DateGroupedSection<T>[] {
+  const sorted = [...transactions].sort((a, b) => {
+    const timeA = a.transactionDate ? new Date(a.transactionDate).getTime() : 0
+    const timeB = b.transactionDate ? new Date(b.transactionDate).getTime() : 0
+    return timeB - timeA
+  })
+
+  const map = new Map<string, T[]>()
+  sorted.forEach((tx) => {
+    const title = getSectionDateTitle(tx.transactionDate)
+    if (!map.has(title)) {
+      map.set(title, [])
+    }
+    map.get(title)!.push(tx)
+  })
+
+  return Array.from(map.entries()).map(([title, items]) => ({
+    title,
+    data: items,
+  }))
+}

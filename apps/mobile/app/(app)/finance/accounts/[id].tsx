@@ -3,7 +3,7 @@ import {
   StyleSheet,
   Text,
   View,
-  FlatList,
+  SectionList,
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
@@ -26,7 +26,7 @@ import {
   type Budget,
   type Account_InstitutionInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { formatAmount } from "@saturn/core"
+import { formatAmount, groupTransactionsByDate } from "@saturn/core"
 import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
@@ -35,6 +35,7 @@ import { Caption } from "@/components/ui/typography"
 import { EmptyState } from "@/components/ui/empty-state"
 import { SkeletonCard } from "@/components/ui/skeleton-loader"
 import { TransactionListItem } from "@/components/finance/transaction-list-item"
+import { DateSectionHeader } from "@/components/finance/date-section-header"
 import { CardAccountItem } from "@/components/finance/card-account-item"
 
 export default function AccountDetailScreen() {
@@ -108,6 +109,11 @@ export default function AccountDetailScreen() {
   })
 
   const transactions = txnsData?.transactions || []
+
+  const sections = useMemo(
+    () => groupTransactionsByDate(transactions),
+    [transactions]
+  )
 
   const handleRefresh = async () => {
     haptics.light()
@@ -281,10 +287,11 @@ export default function AccountDetailScreen() {
       />
 
       <View style={styles.container}>
-        <FlatList
-          data={transactions}
+        <SectionList
+          sections={sections}
           keyExtractor={(item) => item.id || ""}
           ListHeaderComponent={renderHeader}
+          stickySectionHeadersEnabled={false}
           contentContainerStyle={styles.listContent}
           refreshControl={
             <RefreshControl
@@ -295,12 +302,17 @@ export default function AccountDetailScreen() {
               progressBackgroundColor={theme.colors.surfaceElevated}
             />
           }
+          renderSectionHeader={({ section: { title } }) => (
+            <DateSectionHeader title={title} />
+          )}
           renderItem={({ item }) => (
             <TransactionListItem
               item={item}
               account={account}
               budget={item.budgetId ? budgetsMap.get(item.budgetId) : undefined}
               baseCurrency={baseCurrency}
+              showDate={false}
+              showAccount={false}
               onPress={() => {
                 haptics.light()
                 router.push({

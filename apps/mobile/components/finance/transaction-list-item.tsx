@@ -14,6 +14,7 @@ import {
   type Account,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { theme, getNativeBudgetColors } from "@/lib/theme"
+import { getBudgetIcon } from "@/lib/budget-icons"
 import { MonoAmount } from "@/components/ui/typography"
 
 export interface TransactionListItemProps {
@@ -24,6 +25,8 @@ export interface TransactionListItemProps {
   onPress?: () => void
   showBorderBottom?: boolean
   showDate?: boolean
+  showBudget?: boolean
+  showAccount?: boolean
 }
 
 function formatRowDate(dateStr?: string): string {
@@ -47,6 +50,8 @@ export function TransactionListItem({
   onPress,
   showBorderBottom = true,
   showDate = true,
+  showBudget = true,
+  showAccount = true,
 }: TransactionListItemProps) {
   const isExpense = item.type === "EXPENSE"
   const isIncome = item.type === "INCOME"
@@ -66,13 +71,100 @@ export function TransactionListItem({
     (item.accountId ? "Account" : "No Account (Cash)")
   const budgetName = budget?.name || item.budget?.name
   const budgetColor = budget?.color || "indigo"
+  const budgetIcon = budget?.icon
   const nativeBudgetColors = getNativeBudgetColors(budgetColor)
+  const hasBudget = Boolean(budgetName || budgetIcon)
+  const BudgetIcon = getBudgetIcon(budgetIcon, budgetName)
 
   const dateStr = formatRowDate(item.transactionDate)
 
   const isRecurring = Boolean(item.metadata?.recurring_transaction_id)
   const isBorrowing = Boolean(item.metadata?.borrowing_id)
   const borrowingRole = item.metadata?.borrowing_role
+
+  const hasMetaLeft = Boolean(
+    (showAccount && accountName) || (showDate && dateStr)
+  )
+  const showBudgetTag = !isIncome && budgetName && showBudget
+  const hasTags = Boolean(
+    showBudgetTag || isRecurring || isBorrowing || isIncome
+  )
+
+  const renderTags = () => (
+    <>
+      {showBudgetTag ? (
+        <View
+          style={[
+            styles.tagPill,
+            {
+              backgroundColor: nativeBudgetColors.bg,
+              borderColor: nativeBudgetColors.border,
+            },
+          ]}
+        >
+          <View
+            style={[styles.tagDot, { backgroundColor: nativeBudgetColors.bar }]}
+          />
+          <Text
+            style={[styles.tagText, { color: nativeBudgetColors.text }]}
+            numberOfLines={1}
+          >
+            {budgetName}
+          </Text>
+        </View>
+      ) : isIncome ? (
+        <View
+          style={[
+            styles.tagPill,
+            {
+              backgroundColor: theme.colors.successSubtle,
+              borderColor: "rgba(16, 185, 129, 0.25)",
+            },
+          ]}
+        >
+          <Text style={[styles.tagText, { color: theme.colors.success }]}>
+            Income
+          </Text>
+        </View>
+      ) : null}
+
+      {isRecurring && (
+        <View
+          style={[
+            styles.tagPill,
+            {
+              backgroundColor: "rgba(99, 102, 241, 0.12)",
+              borderColor: "rgba(99, 102, 241, 0.3)",
+            },
+          ]}
+        >
+          <Repeat size={10} color="#818cf8" />
+          <Text style={[styles.tagText, { color: "#818cf8" }]}>Recurring</Text>
+        </View>
+      )}
+
+      {isBorrowing && borrowingRole && (
+        <View
+          style={[
+            styles.tagPill,
+            {
+              backgroundColor: "rgba(245, 158, 11, 0.12)",
+              borderColor: "rgba(245, 158, 11, 0.3)",
+            },
+          ]}
+        >
+          <Coins size={10} color="#fbbf24" />
+          <Text style={[styles.tagText, { color: "#fbbf24" }]}>
+            {borrowingRole === "REPAYMENT"
+              ? "Repayment"
+              : borrowingRole === "INITIAL_FUNDING" && isExpense
+                ? "Lend"
+                : "Borrow"}
+          </Text>
+        </View>
+      )}
+    </>
+  )
 
   return (
     <TouchableOpacity
@@ -84,16 +176,24 @@ export function TransactionListItem({
       <View
         style={[
           styles.iconBadge,
-          {
-            backgroundColor: isExpense
-              ? theme.colors.destructiveSubtle
-              : isIncome
-                ? theme.colors.successSubtle
-                : theme.colors.primarySubtle,
-          },
+          isExpense && hasBudget
+            ? {
+                backgroundColor: nativeBudgetColors.bg,
+                borderColor: nativeBudgetColors.border,
+                borderWidth: 1,
+              }
+            : {
+                backgroundColor: isExpense
+                  ? theme.colors.destructiveSubtle
+                  : isIncome
+                    ? theme.colors.successSubtle
+                    : theme.colors.primarySubtle,
+              },
         ]}
       >
-        {isExpense ? (
+        {isExpense && hasBudget ? (
+          <BudgetIcon size={16} color={nativeBudgetColors.bar} />
+        ) : isExpense ? (
           <ArrowUpRight size={16} color={theme.colors.destructive} />
         ) : isIncome ? (
           <ArrowDownLeft size={16} color={theme.colors.success} />
@@ -125,111 +225,51 @@ export function TransactionListItem({
           </MonoAmount>
         </View>
 
-        {/* Row 2: Account (flexShrink: 1) • Date (flexShrink: 0) & Base Currency Amount */}
-        <View style={styles.row2}>
-          <View style={styles.metaLeft}>
-            <Text style={styles.accountText} numberOfLines={1}>
-              {accountName}
-            </Text>
-            {showDate && dateStr ? (
-              <>
-                <Text style={styles.metaDot}>•</Text>
-                <Text style={styles.dateText}>{dateStr}</Text>
-              </>
-            ) : null}
-          </View>
-
-          {isCrossCurrency && item.amountInBase ? (
-            <Text style={styles.baseAmountText}>
-              ≈ {displaySign}
-              {formatAmount(item.amountInBase, baseCurrency)}
-            </Text>
-          ) : null}
-        </View>
-
-        {/* Row 3: Tags (Budget Category, Recurring, Borrowing, or Flow) */}
-        {((!isIncome && budgetName) ||
-          isRecurring ||
-          isBorrowing ||
-          isIncome) && (
-          <View style={styles.row3}>
-            {!isIncome && budgetName ? (
-              <View
-                style={[
-                  styles.tagPill,
-                  {
-                    backgroundColor: nativeBudgetColors.bg,
-                    borderColor: nativeBudgetColors.border,
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.tagDot,
-                    { backgroundColor: nativeBudgetColors.bar },
-                  ]}
-                />
-                <Text
-                  style={[styles.tagText, { color: nativeBudgetColors.text }]}
-                  numberOfLines={1}
-                >
-                  {budgetName}
-                </Text>
+        {/* Row 2 & Row 3 Content */}
+        {hasMetaLeft ? (
+          <>
+            <View style={styles.row2}>
+              <View style={styles.metaLeft}>
+                {showAccount && accountName ? (
+                  <Text style={styles.accountText} numberOfLines={1}>
+                    {accountName}
+                  </Text>
+                ) : null}
+                {showAccount && accountName && showDate && dateStr ? (
+                  <Text style={styles.metaDot}>•</Text>
+                ) : null}
+                {showDate && dateStr ? (
+                  <Text style={styles.dateText}>{dateStr}</Text>
+                ) : null}
               </View>
-            ) : isIncome ? (
-              <View
-                style={[
-                  styles.tagPill,
-                  {
-                    backgroundColor: theme.colors.successSubtle,
-                    borderColor: "rgba(16, 185, 129, 0.25)",
-                  },
-                ]}
-              >
-                <Text style={[styles.tagText, { color: theme.colors.success }]}>
-                  Income
-                </Text>
-              </View>
-            ) : null}
 
-            {isRecurring && (
-              <View
-                style={[
-                  styles.tagPill,
-                  {
-                    backgroundColor: "rgba(99, 102, 241, 0.12)",
-                    borderColor: "rgba(99, 102, 241, 0.3)",
-                  },
-                ]}
-              >
-                <Repeat size={10} color="#818cf8" />
-                <Text style={[styles.tagText, { color: "#818cf8" }]}>
-                  Recurring
+              {isCrossCurrency && item.amountInBase ? (
+                <Text style={styles.baseAmountText}>
+                  ≈ {displaySign}
+                  {formatAmount(item.amountInBase, baseCurrency)}
                 </Text>
-              </View>
-            )}
+              ) : null}
+            </View>
 
-            {isBorrowing && borrowingRole && (
-              <View
-                style={[
-                  styles.tagPill,
-                  {
-                    backgroundColor: "rgba(245, 158, 11, 0.12)",
-                    borderColor: "rgba(245, 158, 11, 0.3)",
-                  },
-                ]}
-              >
-                <Coins size={10} color="#fbbf24" />
-                <Text style={[styles.tagText, { color: "#fbbf24" }]}>
-                  {borrowingRole === "REPAYMENT"
-                    ? "Repayment"
-                    : borrowingRole === "INITIAL_FUNDING" && isExpense
-                      ? "Lend"
-                      : "Borrow"}
+            {hasTags && <View style={styles.row3}>{renderTags()}</View>}
+          </>
+        ) : (
+          (hasTags || (isCrossCurrency && item.amountInBase)) && (
+            <View style={styles.row2}>
+              {hasTags ? (
+                <View style={styles.tagsContainer}>{renderTags()}</View>
+              ) : (
+                <View style={{ flex: 1 }} />
+              )}
+
+              {isCrossCurrency && item.amountInBase ? (
+                <Text style={styles.baseAmountText}>
+                  ≈ {displaySign}
+                  {formatAmount(item.amountInBase, baseCurrency)}
                 </Text>
-              </View>
-            )}
-          </View>
+              ) : null}
+            </View>
+          )
         )}
       </View>
     </TouchableOpacity>
@@ -309,6 +349,15 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     fontFamily: theme.typography.mono,
     flexShrink: 0,
+  },
+  tagsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+    flex: 1,
+    marginRight: 8,
+    minWidth: 0,
   },
   row3: {
     flexDirection: "row",

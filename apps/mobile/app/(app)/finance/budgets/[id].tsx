@@ -3,7 +3,7 @@ import {
   StyleSheet,
   Text,
   View,
-  FlatList,
+  SectionList,
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
@@ -26,8 +26,13 @@ import {
   useGetFinanceSettingsQuery,
   type Account,
   type Budget,
+  type Transaction,
 } from "@saturn/api/saturn/finance/v1/finance"
-import { formatAmount, formatInterval } from "@saturn/core"
+import {
+  formatAmount,
+  formatInterval,
+  groupTransactionsByDate,
+} from "@saturn/core"
 import { useSpace } from "@/lib/space-context"
 import { theme, getNativeBudgetColors } from "@/lib/theme"
 import { getBudgetIcon } from "@/lib/budget-icons"
@@ -38,6 +43,7 @@ import { Caption } from "@/components/ui/typography"
 import { EmptyState } from "@/components/ui/empty-state"
 import { SkeletonCard } from "@/components/ui/skeleton-loader"
 import { TransactionListItem } from "@/components/finance/transaction-list-item"
+import { DateSectionHeader } from "@/components/finance/date-section-header"
 
 function calculateDaysLeft(endDateStr?: string): number {
   const now = new Date()
@@ -124,6 +130,11 @@ export default function BudgetDetailScreen() {
   }, [accounts])
 
   const transactions = txnsData?.transactions || []
+
+  const sections = useMemo(
+    () => groupTransactionsByDate(transactions),
+    [transactions]
+  )
 
   const handleRefresh = async () => {
     haptics.light()
@@ -429,10 +440,11 @@ export default function BudgetDetailScreen() {
       />
 
       <View style={styles.container}>
-        <FlatList
-          data={transactions}
+        <SectionList
+          sections={sections}
           keyExtractor={(item) => item.id || ""}
           ListHeaderComponent={renderHeader}
+          stickySectionHeadersEnabled={false}
           contentContainerStyle={styles.listContent}
           refreshControl={
             <RefreshControl
@@ -443,6 +455,9 @@ export default function BudgetDetailScreen() {
               progressBackgroundColor={theme.colors.surfaceElevated}
             />
           }
+          renderSectionHeader={({ section: { title } }) => (
+            <DateSectionHeader title={title} />
+          )}
           renderItem={({ item }) => (
             <TransactionListItem
               item={item}
@@ -451,6 +466,8 @@ export default function BudgetDetailScreen() {
               }
               budget={budget}
               baseCurrency={baseCurrency}
+              showDate={false}
+              showBudget={false}
               onPress={() => {
                 haptics.light()
                 router.push({

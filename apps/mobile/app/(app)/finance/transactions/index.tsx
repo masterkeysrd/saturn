@@ -29,42 +29,20 @@ import {
   type Account,
   type Budget,
 } from "@saturn/api/saturn/finance/v1/finance"
+import { groupTransactionsByDate } from "@saturn/core"
 import { useSpace } from "@/lib/space-context"
 import { useDebounce } from "@/lib/use-debounce"
 import { theme } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
 import { Card } from "@/components/ui/card"
 import { TransactionListItem } from "@/components/finance/transaction-list-item"
+import { DateSectionHeader } from "@/components/finance/date-section-header"
 import { TextInput } from "@/components/ui/text-input"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
 import { SkeletonCard } from "@/components/ui/skeleton-loader"
 import { AppBottomSheet } from "@/components/ui/bottom-sheet"
 import { useToast } from "@/components/ui/toast"
-
-function getSectionDateTitle(dateStr?: string): string {
-  if (!dateStr) return "Older"
-  const date = new Date(dateStr)
-  if (isNaN(date.getTime())) return "Older"
-
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const txDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-
-  const diffTime = today.getTime() - txDate.getTime()
-  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24))
-
-  if (diffDays === 0) return "Today"
-  if (diffDays === 1) return "Yesterday"
-
-  const options: Intl.DateTimeFormatOptions = {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: txDate.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
-  }
-  return txDate.toLocaleDateString("en-US", options)
-}
 
 export default function TransactionsScreen() {
   const router = useRouter()
@@ -156,21 +134,10 @@ export default function TransactionsScreen() {
   }, [data])
 
   // Grouped into Sections by Date
-  const sections = useMemo(() => {
-    const map = new Map<string, Transaction[]>()
-    allTransactions.forEach((tx) => {
-      const title = getSectionDateTitle(tx.transactionDate)
-      if (!map.has(title)) {
-        map.set(title, [])
-      }
-      map.get(title)!.push(tx)
-    })
-
-    return Array.from(map.entries()).map(([title, items]) => ({
-      title,
-      data: items,
-    }))
-  }, [allTransactions])
+  const sections = useMemo(
+    () => groupTransactionsByDate(allTransactions),
+    [allTransactions]
+  )
 
   const activeFilterCount =
     (selectedType ? 1 : 0) +
@@ -203,9 +170,7 @@ export default function TransactionsScreen() {
 
   const renderSectionHeader = useCallback(
     ({ section: { title } }: { section: { title: string } }) => (
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionHeaderText}>{title}</Text>
-      </View>
+      <DateSectionHeader title={title} insetHorizontal={false} />
     ),
     []
   )
@@ -704,18 +669,6 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 90,
-  },
-  sectionHeader: {
-    backgroundColor: theme.colors.background,
-    paddingVertical: 8,
-    marginTop: 8,
-  },
-  sectionHeaderText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.textMuted,
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
   },
   transactionCardWrapper: {
     padding: 0,
