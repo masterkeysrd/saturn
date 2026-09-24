@@ -31,10 +31,12 @@ import {
   useListAccountsQuery,
   useListInstitutionsQuery,
   useGetFinanceSettingsQuery,
+  type Budget,
   type Budget_RecurrenceInterval,
   type CurrencyInfo,
   type Account,
   type Account_InstitutionInfo,
+  type LimitPropagation,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { budgetSchema } from "@saturn/schemas"
 import {
@@ -45,6 +47,17 @@ import {
   AVAILABLE_COLORS,
   BUDGET_INTERVAL_OPTIONS as INTERVAL_OPTIONS,
 } from "@saturn/core"
+
+const PROPAGATION_OPTIONS: { value: LimitPropagation; label: string }[] = [
+  {
+    value: "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY",
+    label: "Future Periods Only",
+  },
+  {
+    value: "LIMIT_PROPAGATION_CURRENT_PERIOD",
+    label: "Current Period Only",
+  },
+]
 import { useSpace } from "@/lib/space-context"
 import { theme, getNativeBudgetColors } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
@@ -120,6 +133,9 @@ export default function ManageBudgetModal() {
   const [color, setColor] = useState("indigo")
   const [icon, setIcon] = useState("piggy-bank")
   const [defaultAccountId, setDefaultAccountId] = useState("")
+  const [propagation, setPropagation] = useState<LimitPropagation>(
+    "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
+  )
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   // Initialize values when existing budget is loaded
@@ -224,14 +240,12 @@ export default function ManageBudgetModal() {
             budget: {
               name: name.trim(),
               limitAmount: centsStr,
-              currency,
-              interval,
               status: existingBudget?.status || "ACTIVE",
               icon,
               color,
               defaultAccountId: defaultAccountId || undefined,
-            },
-            propagation: "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY",
+            } as unknown as Budget,
+            propagation,
           },
         })
         haptics.success()
@@ -388,16 +402,22 @@ export default function ManageBudgetModal() {
               />
 
               <TouchableOpacity
+                disabled={isEditMode}
                 onPress={() => {
                   haptics.light()
                   currencySheetRef.current?.expand()
                 }}
-                style={styles.currencySelectButton}
+                style={[
+                  styles.currencySelectButton,
+                  isEditMode && styles.currencySelectButtonDisabled,
+                ]}
               >
                 <Text style={styles.currencySelectCode} numberOfLines={1}>
                   {currency}
                 </Text>
-                <ChevronDown size={14} color={theme.colors.textMuted} />
+                {!isEditMode && (
+                  <ChevronDown size={14} color={theme.colors.textMuted} />
+                )}
               </TouchableOpacity>
             </View>
             {errors.limit ? (
@@ -423,39 +443,113 @@ export default function ManageBudgetModal() {
 
             {/* Recurrence Interval */}
             <Text style={styles.fieldSubLabel}>Recurrence Frequency</Text>
-            <View style={styles.intervalRow}>
-              {INTERVAL_OPTIONS.map((opt) => {
-                const isSelected = interval === opt.value
-                return (
-                  <TouchableOpacity
-                    key={opt.value}
-                    onPress={() => {
-                      haptics.selection()
-                      setInterval(opt.value)
-                    }}
+            {isEditMode ? (
+              <View style={styles.intervalRow}>
+                <View
+                  style={[
+                    styles.intervalPill,
+                    styles.intervalPillActive,
+                    {
+                      borderColor: activeColorMeta.bar,
+                      backgroundColor: activeColorMeta.bg,
+                    },
+                  ]}
+                >
+                  <Text
                     style={[
-                      styles.intervalPill,
-                      isSelected && [
-                        styles.intervalPillActive,
-                        { borderColor: activeColorMeta.bar },
-                      ],
+                      styles.intervalPillText,
+                      styles.intervalPillTextActive,
+                      { color: activeColorMeta.text },
                     ]}
                   >
-                    <Text
+                    {INTERVAL_OPTIONS.find((opt) => opt.value === interval)
+                      ?.label || interval}
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.intervalRow}>
+                {INTERVAL_OPTIONS.map((opt) => {
+                  const isSelected = interval === opt.value
+                  return (
+                    <TouchableOpacity
+                      key={opt.value}
+                      onPress={() => {
+                        haptics.selection()
+                        setInterval(opt.value)
+                      }}
                       style={[
-                        styles.intervalPillText,
+                        styles.intervalPill,
                         isSelected && [
-                          styles.intervalPillTextActive,
-                          { color: activeColorMeta.text },
+                          styles.intervalPillActive,
+                          { borderColor: activeColorMeta.bar },
                         ],
                       ]}
                     >
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                )
-              })}
-            </View>
+                      <Text
+                        style={[
+                          styles.intervalPillText,
+                          isSelected && [
+                            styles.intervalPillTextActive,
+                            { color: activeColorMeta.text },
+                          ],
+                        ]}
+                      >
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            )}
+
+            {/* Limit Propagation Rule (Edit mode only) */}
+            {isEditMode && (
+              <>
+                <Text style={[styles.fieldSubLabel, { marginTop: 16 }]}>
+                  Limit Propagation Rule
+                </Text>
+                <View style={styles.intervalRow}>
+                  {PROPAGATION_OPTIONS.map((opt) => {
+                    const isSelected = propagation === opt.value
+                    return (
+                      <TouchableOpacity
+                        key={opt.value}
+                        onPress={() => {
+                          haptics.selection()
+                          setPropagation(opt.value)
+                        }}
+                        style={[
+                          styles.intervalPill,
+                          isSelected && [
+                            styles.intervalPillActive,
+                            { borderColor: activeColorMeta.bar },
+                          ],
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.intervalPillText,
+                            isSelected && [
+                              styles.intervalPillTextActive,
+                              { color: activeColorMeta.text },
+                            ],
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {opt.label}
+                        </Text>
+                      </TouchableOpacity>
+                    )
+                  })}
+                </View>
+                <Text style={styles.fieldHelperText}>
+                  {propagation === "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY"
+                    ? "Applies to the current period and all future periods."
+                    : "Applies limit modification only to the current active period."}
+                </Text>
+              </>
+            )}
 
             {/* Default Account Selector */}
             <Text style={[styles.fieldSubLabel, { marginTop: 16 }]}>
@@ -749,6 +843,10 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     minWidth: 68,
   },
+  currencySelectButtonDisabled: {
+    opacity: 0.75,
+    minWidth: 52,
+  },
   currencySelectCode: {
     fontSize: 13,
     fontWeight: "700",
@@ -772,6 +870,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: theme.colors.textSecondary,
     marginBottom: 8,
+  },
+  fieldHelperText: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    marginTop: 6,
+    lineHeight: 16,
   },
   intervalRow: {
     flexDirection: "row",
