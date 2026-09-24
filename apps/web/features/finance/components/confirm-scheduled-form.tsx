@@ -21,6 +21,7 @@ import {
   type Account,
   type Budget,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
+import { getScheduledDisplayName } from "@saturn/core"
 import { toCentsString, formatCents, formatInterval } from "../utils"
 
 interface ConfirmScheduledFormProps {
@@ -50,12 +51,10 @@ export function ConfirmScheduledForm({
   const matchedTemplate = recurringTemplates.find(
     (e) => e.id === scheduledTransaction.sourceId
   )
-  const displayName =
-    matchedTemplate?.name ||
-    scheduledTransaction.recurringTransaction?.name ||
-    scheduledTransaction.metadata?.description ||
-    scheduledTransaction.metadata?.name ||
-    "Scheduled Transaction"
+  const displayName = getScheduledDisplayName(
+    scheduledTransaction,
+    recurringTemplates
+  )
 
   const intervalVal =
     matchedTemplate?.interval ||

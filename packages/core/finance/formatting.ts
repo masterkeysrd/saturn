@@ -82,3 +82,21 @@ export function formatSourceType(
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ")
 }
+
+export function getCurrencySymbol(
+  currencyCode: string | undefined | null
+): string {
+  if (!currencyCode) return "$"
+  try {
+    const formatter = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currencyCode,
+      currencyDisplay: "narrowSymbol",
+    })
+    const parts = formatter.formatToParts(0)
+    const symbolPart = parts.find((p) => p.type === "currency")
+    return symbolPart?.value || currencyCode
+  } catch {
+    return currencyCode
+  }
+}

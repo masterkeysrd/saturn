@@ -6,13 +6,18 @@ import BottomSheet, {
 } from "@gorhom/bottom-sheet"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { CalendarClock } from "lucide-react-native"
-import { type ScheduledTransaction } from "@saturn/api/saturn/finance/v1/finance"
+import {
+  type ScheduledTransaction,
+  type RecurringTransaction,
+} from "@saturn/api/saturn/finance/v1/finance"
 import { haptics } from "@/lib/haptics"
 import { AppBottomSheet, BottomSheetHeader } from "@/components/ui/bottom-sheet"
+import { getScheduledDisplayName } from "../finance-utils"
 import { sheetStyles } from "./sheet-styles"
 
 export interface ScheduledPickerSheetProps {
   scheduledTransactions: ScheduledTransaction[]
+  recurringTemplates?: RecurringTransaction[]
   selectedScheduledId?: string
   onSelect: (item: ScheduledTransaction) => void
   isLoading?: boolean
@@ -26,6 +31,7 @@ export const ScheduledPickerSheet = forwardRef<
   (
     {
       scheduledTransactions,
+      recurringTemplates = [],
       selectedScheduledId,
       onSelect,
       isLoading = false,
@@ -79,6 +85,7 @@ export const ScheduledPickerSheet = forwardRef<
           renderItem={({ item: st }) => {
             const isSelected = selectedScheduledId === st.id
             const amountVal = (parseInt(st.amount || "0", 10) / 100).toFixed(2)
+            const displayName = getScheduledDisplayName(st, recurringTemplates)
 
             return (
               <TouchableOpacity
@@ -98,10 +105,8 @@ export const ScheduledPickerSheet = forwardRef<
                   <CalendarClock size={18} color="#6366f1" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={sheetStyles.accountItemTitle}>
-                    {st.metadata?.description ||
-                      st.recurringTransaction?.name ||
-                      "Scheduled Item"}
+                  <Text style={sheetStyles.accountItemTitle} numberOfLines={1}>
+                    {displayName}
                   </Text>
                   <Text style={sheetStyles.accountItemSubtitle}>
                     Due:{" "}

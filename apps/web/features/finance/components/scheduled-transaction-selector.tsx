@@ -17,6 +17,7 @@ import {
   useListScheduledTransactionsQuery,
   useListRecurringTransactionsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
+import { getScheduledDisplayName } from "@saturn/core"
 import { formatCents } from "../utils"
 
 interface ScheduledTransactionSelectorProps {
@@ -69,27 +70,8 @@ export function ScheduledTransactionSelector({
   }, [recurringData])
 
   const getDisplayName = useCallback(
-    (st: ScheduledTransaction) => {
-      if (st.sourceType === "RECURRENT_TRANSACTION") {
-        const matchedTemplate = recurringTemplates.find(
-          (e) => e.id === st.sourceId
-        )
-        return (
-          matchedTemplate?.name ||
-          st.recurringTransaction?.name ||
-          "Scheduled Obligation"
-        )
-      }
-      if (st.sourceType === "SOURCE_TYPE_UNSPECIFIED" || !st.sourceType) {
-        if (st.metadata?.vendorName) {
-          return st.metadata.vendorName
-        }
-        if (st.metadata?.description) {
-          return st.metadata.description
-        }
-      }
-      return st.type === "INCOME" ? "Scheduled Inflow" : "Scheduled Outflow"
-    },
+    (st: ScheduledTransaction) =>
+      getScheduledDisplayName(st, recurringTemplates),
     [recurringTemplates]
   )
 

@@ -25,11 +25,13 @@ import {
   useGetFinanceSettingsQuery,
   useListExchangeRatesQuery,
   useListScheduledTransactionsQuery,
+  useListRecurringTransactionsQuery,
   useListBorrowingsQuery,
   useListCurrenciesQuery,
   type Budget,
   type Account,
   type ScheduledTransaction,
+  type RecurringTransaction,
   type Borrowing,
   type CurrencyInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
@@ -95,11 +97,19 @@ export default function AddTransactionModal() {
         pageToken: "",
         startDate: "",
         endDate: "",
+        view: "FULL",
       },
       { enabled: !!activeSpaceId }
     )
   const pendingScheduled: ScheduledTransaction[] =
     scheduledData?.scheduledTransactions || []
+
+  const { data: recurringData } = useListRecurringTransactionsQuery(
+    { status: "STATUS_UNSPECIFIED", pageSize: 100, pageToken: "" },
+    { enabled: !!activeSpaceId }
+  )
+  const recurringTemplates: RecurringTransaction[] =
+    recurringData?.recurringTransactions || []
 
   const { data: borrowingsData, isLoading: borrowingsLoading } =
     useListBorrowingsQuery(
@@ -363,6 +373,7 @@ export default function AddTransactionModal() {
           {activeType === "SCHEDULED" && (
             <ScheduledConfirmForm
               pendingScheduled={pendingScheduled}
+              recurringTemplates={recurringTemplates}
               budgets={budgets}
               accounts={accounts}
               baseCurrency={baseCurrency}

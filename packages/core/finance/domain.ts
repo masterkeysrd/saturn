@@ -40,3 +40,49 @@ export function getInstitutionLogoUrl(domain?: string, name?: string): string {
   }
   return ""
 }
+
+export interface ScheduledItemLike {
+  sourceType?: string
+  sourceId?: string
+  type?: string
+  recurringTransaction?: {
+    name?: string
+  } | null
+  metadata?: {
+    name?: string
+    description?: string
+    vendorName?: string
+  } | null
+}
+
+export interface RecurringTemplateLike {
+  id?: string
+  name?: string
+}
+
+export function getScheduledDisplayName(
+  st: ScheduledItemLike,
+  recurringTemplates: RecurringTemplateLike[] = []
+): string {
+  if (st.sourceType === "RECURRENT_TRANSACTION") {
+    const matchedTemplate = recurringTemplates.find((e) => e.id === st.sourceId)
+    return (
+      matchedTemplate?.name ||
+      st.recurringTransaction?.name ||
+      st.metadata?.vendorName ||
+      st.metadata?.description ||
+      st.metadata?.name ||
+      "Scheduled Obligation"
+    )
+  }
+  if (st.sourceType === "SOURCE_TYPE_UNSPECIFIED" || !st.sourceType) {
+    if (st.metadata?.vendorName) return st.metadata.vendorName
+    if (st.metadata?.description) return st.metadata.description
+    if (st.metadata?.name) return st.metadata.name
+  }
+  return (
+    st.metadata?.description ||
+    st.metadata?.name ||
+    (st.type === "INCOME" ? "Scheduled Inflow" : "Scheduled Outflow")
+  )
+}

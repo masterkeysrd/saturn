@@ -13,6 +13,7 @@ import {
   useGetFinanceSettingsQuery,
   useListBudgetsQuery,
 } from "@saturn/api/gen/saturn/finance/v1/finance"
+import { getScheduledDisplayName } from "@saturn/core"
 import { useCurrencyConversionPreview } from "@/hooks/use-currency-conversion"
 import {
   TrendingDownIcon,
@@ -598,27 +599,10 @@ export function RecurringView() {
                             graceDueDate.getDate() + graceDays
                           )
                           const isOverdue = graceDueDate < new Date()
-
-                          const displayName = (() => {
-                            if (pay.sourceType === "RECURRENT_TRANSACTION") {
-                              return (
-                                transactions.find((e) => e.id === pay.sourceId)
-                                  ?.name || "Scheduled Obligation"
-                              )
-                            }
-                            if (
-                              pay.sourceType === "SOURCE_TYPE_UNSPECIFIED" ||
-                              !pay.sourceType
-                            ) {
-                              if (pay.metadata?.vendorName) {
-                                return pay.metadata.vendorName
-                              }
-                              if (pay.metadata?.description) {
-                                return pay.metadata.description
-                              }
-                            }
-                            return "Scheduled Inflow"
-                          })()
+                          const displayName = getScheduledDisplayName(
+                            pay,
+                            transactions
+                          )
 
                           return (
                             <div

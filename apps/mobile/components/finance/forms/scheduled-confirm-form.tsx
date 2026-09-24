@@ -25,6 +25,7 @@ import {
   type Budget,
   type Account,
   type ScheduledTransaction,
+  type RecurringTransaction,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { theme, getNativeBudgetColors } from "@/lib/theme"
 import { getBudgetIcon } from "@/lib/budget-icons"
@@ -42,11 +43,16 @@ import {
   BudgetPickerSheet,
   AccountPickerSheet,
 } from "../sheets"
-import { getCurrencySymbol, invalidateFinanceQueries } from "../finance-utils"
+import {
+  getCurrencySymbol,
+  invalidateFinanceQueries,
+  getScheduledDisplayName,
+} from "../finance-utils"
 import { formStyles } from "./form-styles"
 
 export interface ScheduledConfirmFormProps {
   pendingScheduled: ScheduledTransaction[]
+  recurringTemplates?: RecurringTransaction[]
   budgets: Budget[]
   accounts: Account[]
   baseCurrency: string
@@ -57,6 +63,7 @@ export interface ScheduledConfirmFormProps {
 
 export function ScheduledConfirmForm({
   pendingScheduled,
+  recurringTemplates = [],
   budgets,
   accounts,
   baseCurrency,
@@ -101,9 +108,8 @@ export function ScheduledConfirmForm({
     setSelectedScheduled(st)
     const amountVal = (parseInt(st.amount || "0", 10) / 100).toFixed(2)
     setAmountText(amountVal)
-    if (st.metadata?.description) {
-      setDescription(st.metadata.description)
-    }
+    const displayName = getScheduledDisplayName(st, recurringTemplates)
+    setDescription(displayName)
     if (st.budgetId) {
       setSelectedBudgetId(st.budgetId)
     } else if (budgets.length > 0) {
@@ -246,7 +252,7 @@ export function ScheduledConfirmForm({
             <Text style={formStyles.specialSelectorLabel}>Scheduled Bill</Text>
             <Text style={formStyles.specialSelectorValue} numberOfLines={1}>
               {selectedScheduled
-                ? `${selectedScheduled.metadata?.description || selectedScheduled.recurringTransaction?.name || "Scheduled Item"} (${formatAmount(selectedScheduled.amount, selectedScheduled.currency)})`
+                ? `${getScheduledDisplayName(selectedScheduled, recurringTemplates)} (${formatAmount(selectedScheduled.amount, selectedScheduled.currency)})`
                 : "Tap to select pending bill..."}
             </Text>
           </View>
@@ -424,6 +430,7 @@ export function ScheduledConfirmForm({
       <ScheduledPickerSheet
         ref={scheduledSheetRef}
         scheduledTransactions={pendingScheduled}
+        recurringTemplates={recurringTemplates}
         selectedScheduledId={selectedScheduled?.id}
         onSelect={applyScheduledItem}
         isLoading={scheduledLoading}
