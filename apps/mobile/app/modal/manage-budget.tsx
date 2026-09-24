@@ -9,19 +9,12 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
-  Image,
+  Keyboard,
 } from "react-native"
 import { useRouter, useLocalSearchParams, Stack } from "expo-router"
 import { useQueryClient } from "@tanstack/react-query"
 import BottomSheet from "@gorhom/bottom-sheet"
-import {
-  X,
-  Check,
-  ChevronDown,
-  Trash2,
-  Wallet,
-  Landmark,
-} from "lucide-react-native"
+import { X, Check, ChevronDown, Trash2 } from "lucide-react-native"
 import {
   useCreateBudgetMutation,
   useUpdateBudgetMutation,
@@ -43,7 +36,6 @@ import {
   toCentsString,
   formatCents,
   getCurrencySymbol,
-  getInstitutionLogoUrl,
   AVAILABLE_COLORS,
   BUDGET_INTERVAL_OPTIONS as INTERVAL_OPTIONS,
   PROPAGATION_OPTIONS,
@@ -60,6 +52,7 @@ import {
   CurrencyPickerSheet,
   AccountPickerSheet,
 } from "@/components/finance/sheets"
+import { AccountCardSelect } from "@/components/finance/account-select"
 import { invalidateFinanceQueries } from "@/components/finance/finance-utils"
 
 export default function ManageBudgetModal() {
@@ -100,13 +93,6 @@ export default function ManageBudgetModal() {
     { enabled: !!activeSpaceId }
   )
   const institutions: Account_InstitutionInfo[] = instData?.institutions || []
-  const instMap = useMemo(() => {
-    const map = new Map<string, Account_InstitutionInfo>()
-    institutions.forEach((i) => {
-      if (i.id) map.set(i.id, i)
-    })
-    return map
-  }, [institutions])
 
   // Fetch existing budget if edit mode
   const { data: existingBudget, isLoading: isBudgetLoading } =
@@ -158,35 +144,6 @@ export default function ManageBudgetModal() {
     () => accounts.find((a) => a.id === defaultAccountId),
     [accounts, defaultAccountId]
   )
-
-  const selectedAccountInstitution = useMemo(() => {
-    if (!selectedAccount) return undefined
-    return (
-      selectedAccount.institution ||
-      (selectedAccount.institutionId
-        ? instMap.get(selectedAccount.institutionId)
-        : undefined)
-    )
-  }, [selectedAccount, instMap])
-
-  const [accountLogoError, setAccountLogoError] = useState(false)
-  const instLogoUrl = useMemo(() => {
-    if (!selectedAccount) return ""
-    const inst = selectedAccountInstitution
-    return (
-      inst?.logoUrl ||
-      (inst?.domain || inst?.name
-        ? getInstitutionLogoUrl(inst.domain, inst.name)
-        : undefined) ||
-      getInstitutionLogoUrl(undefined, selectedAccount.name)
-    )
-  }, [selectedAccount, selectedAccountInstitution])
-
-  const [prevInstLogoUrl, setPrevInstLogoUrl] = useState(instLogoUrl)
-  if (prevInstLogoUrl !== instLogoUrl) {
-    setPrevInstLogoUrl(instLogoUrl)
-    setAccountLogoError(false)
-  }
 
   const handleSave = async () => {
     haptics.light()
@@ -545,55 +502,15 @@ export default function ManageBudgetModal() {
             <Text style={[styles.fieldSubLabel, { marginTop: 16 }]}>
               Default Account (Optional)
             </Text>
-            <TouchableOpacity
+            <AccountCardSelect
+              account={selectedAccount}
               onPress={() => {
-                haptics.light()
+                Keyboard.dismiss()
                 accountSheetRef.current?.expand()
               }}
-              style={styles.selectorRow}
-            >
-              <View style={styles.selectorLeft}>
-                <View
-                  style={[
-                    styles.selectorIconWrap,
-                    instLogoUrl && !accountLogoError
-                      ? {
-                          backgroundColor: theme.colors.surfaceHighlight,
-                          borderWidth: 1,
-                          borderColor: theme.colors.border,
-                        }
-                      : !selectedAccount
-                        ? { backgroundColor: "rgba(255, 255, 255, 0.05)" }
-                        : undefined,
-                  ]}
-                >
-                  {instLogoUrl && !accountLogoError ? (
-                    <Image
-                      source={{ uri: instLogoUrl }}
-                      style={{ width: 20, height: 20, borderRadius: 4 }}
-                      resizeMode="contain"
-                      onError={() => setAccountLogoError(true)}
-                    />
-                  ) : selectedAccount ? (
-                    <Landmark size={16} color={theme.colors.primary} />
-                  ) : (
-                    <Wallet size={16} color={theme.colors.textMuted} />
-                  )}
-                </View>
-                <Text
-                  style={[
-                    styles.selectorValueText,
-                    !selectedAccount && styles.selectorPlaceholder,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {selectedAccount
-                    ? selectedAccount.name
-                    : "None (Any Account)"}
-                </Text>
-              </View>
-              <ChevronDown size={16} color={theme.colors.textMuted} />
-            </TouchableOpacity>
+              placeholder="None (Any Account)"
+              subtitle="Any linked payment method"
+            />
           </Card>
 
           {/* Color & Icon Customization Card */}

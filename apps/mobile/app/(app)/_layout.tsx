@@ -124,6 +124,30 @@ export default function AppLayout() {
           headerBackTitle: "Accounts",
         }}
       />
+      <Stack.Screen
+        name="finance/recurring"
+        options={{
+          headerShown: true,
+          headerTitle: "Recurring & Bills",
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+          },
+          headerTintColor: theme.colors.textPrimary,
+          headerBackTitle: "Finance",
+        }}
+      />
+      <Stack.Screen
+        name="finance/borrowing"
+        options={{
+          headerShown: true,
+          headerTitle: "Debts & Loans",
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+          },
+          headerTintColor: theme.colors.textPrimary,
+          headerBackTitle: "Finance",
+        }}
+      />
     </Stack>
   )
 }

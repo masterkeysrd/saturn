@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import {
   Text,
   View,
@@ -13,7 +13,6 @@ import BottomSheet from "@gorhom/bottom-sheet"
 import {
   Tag,
   FileText,
-  Landmark,
   Calendar,
   AlertCircle,
   ChevronRight,
@@ -43,6 +42,7 @@ import {
   BudgetPickerSheet,
   AccountPickerSheet,
 } from "../sheets"
+import { AccountRow } from "../account-select"
 import {
   getCurrencySymbol,
   invalidateFinanceQueries,
@@ -340,27 +340,14 @@ export function ScheduledConfirmForm({
           )}
 
           {/* Account Field */}
-          <TouchableOpacity
-            style={formStyles.formRow}
-            activeOpacity={0.7}
+          <AccountRow
+            label="Account"
+            account={selectedAccount}
             onPress={() => {
               Keyboard.dismiss()
               accountSheetRef.current?.expand()
             }}
-          >
-            <View style={formStyles.formRowLabelGroup}>
-              <Landmark size={16} color={theme.colors.textMuted} />
-              <Text style={formStyles.formRowLabel}>Account</Text>
-            </View>
-            <View style={formStyles.formRowValueGroup}>
-              <Text style={formStyles.formRowValueText} numberOfLines={1}>
-                {selectedAccount
-                  ? `${selectedAccount.name} (${selectedAccount.currency})`
-                  : "No Account (Cash)"}
-              </Text>
-              <ChevronRight size={14} color={theme.colors.textMuted} />
-            </View>
-          </TouchableOpacity>
+          />
 
           {/* Description */}
           <View style={formStyles.rowDivider} />

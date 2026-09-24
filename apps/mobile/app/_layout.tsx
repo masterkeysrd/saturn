@@ -103,6 +103,16 @@ export default function RootLayout() {
                       }}
                     />
                     <Stack.Screen
+                      name="modal/manage-recurring"
+                      options={{
+                        presentation: "modal",
+                        headerTitle: "Recurring Template",
+                        headerStyle: {
+                          backgroundColor: theme.colors.surface,
+                        },
+                      }}
+                    />
+                    <Stack.Screen
                       name="modal/adjust-balance"
                       options={{
                         presentation: "modal",

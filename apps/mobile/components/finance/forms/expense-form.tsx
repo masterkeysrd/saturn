@@ -14,7 +14,6 @@ import BottomSheet from "@gorhom/bottom-sheet"
 import {
   Tag,
   FileText,
-  Landmark,
   Calendar,
   CalendarClock,
   AlertCircle,
@@ -47,9 +46,10 @@ import {
 } from "@/components/ui/date-picker-sheet"
 import {
   BudgetPickerSheet,
-  AccountPickerSheet,
   CurrencyPickerSheet,
+  AccountPickerSheet,
 } from "../sheets"
+import { AccountRow } from "../account-select"
 import { getCurrencySymbol, invalidateFinanceQueries } from "../finance-utils"
 import { formStyles } from "./form-styles"
 
@@ -534,27 +534,14 @@ export function ExpenseForm({
 
           {/* Field: Account */}
           <View style={formStyles.rowDivider} />
-          <TouchableOpacity
-            style={formStyles.formRow}
-            activeOpacity={0.7}
+          <AccountRow
+            label="Account"
+            account={selectedAccount}
             onPress={() => {
               Keyboard.dismiss()
               accountSheetRef.current?.expand()
             }}
-          >
-            <View style={formStyles.formRowLabelGroup}>
-              <Landmark size={16} color={theme.colors.textMuted} />
-              <Text style={formStyles.formRowLabel}>Account</Text>
-            </View>
-            <View style={formStyles.formRowValueGroup}>
-              <Text style={formStyles.formRowValueText} numberOfLines={1}>
-                {selectedAccount
-                  ? `${selectedAccount.name} (${selectedAccount.currency})`
-                  : "No Account (Cash)"}
-              </Text>
-              <ChevronRight size={14} color={theme.colors.textMuted} />
-            </View>
-          </TouchableOpacity>
+          />
 
           {/* Field: Description */}
           <View style={formStyles.rowDivider} />

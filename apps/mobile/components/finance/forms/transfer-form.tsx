@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import {
   Text,
   View,
@@ -37,6 +37,7 @@ import {
   formatDisplayDate,
 } from "@/components/ui/date-picker-sheet"
 import { AccountPickerSheet } from "../sheets"
+import { AccountRow } from "../account-select"
 import { getCurrencySymbol, invalidateFinanceQueries } from "../finance-utils"
 import { formStyles } from "./form-styles"
 
@@ -286,51 +287,33 @@ export function TransferForm({
         {/* Form Fields Card */}
         <Card style={formStyles.formGroupCard}>
           {/* Source Account */}
-          <TouchableOpacity
-            style={formStyles.formRow}
-            activeOpacity={0.7}
+          <AccountRow
+            label="From Account"
+            account={sourceAccount}
+            placeholder="Select source"
+            fallbackIcon={
+              <ArrowUpRight size={16} color={theme.colors.destructive} />
+            }
             onPress={() => {
               Keyboard.dismiss()
               transferFromSheetRef.current?.expand()
             }}
-          >
-            <View style={formStyles.formRowLabelGroup}>
-              <ArrowUpRight size={16} color={theme.colors.destructive} />
-              <Text style={formStyles.formRowLabel}>From Account</Text>
-            </View>
-            <View style={formStyles.formRowValueGroup}>
-              <Text style={formStyles.formRowValueText} numberOfLines={1}>
-                {sourceAccount
-                  ? `${sourceAccount.name} (${sourceAccount.currency})`
-                  : "Select source"}
-              </Text>
-              <ChevronRight size={14} color={theme.colors.textMuted} />
-            </View>
-          </TouchableOpacity>
+          />
 
           {/* Destination Account */}
           <View style={formStyles.rowDivider} />
-          <TouchableOpacity
-            style={formStyles.formRow}
-            activeOpacity={0.7}
+          <AccountRow
+            label="To Account"
+            account={destinationAccount}
+            placeholder="Select target"
+            fallbackIcon={
+              <ArrowDownLeft size={16} color={theme.colors.success} />
+            }
             onPress={() => {
               Keyboard.dismiss()
               transferToSheetRef.current?.expand()
             }}
-          >
-            <View style={formStyles.formRowLabelGroup}>
-              <ArrowDownLeft size={16} color={theme.colors.success} />
-              <Text style={formStyles.formRowLabel}>To Account</Text>
-            </View>
-            <View style={formStyles.formRowValueGroup}>
-              <Text style={formStyles.formRowValueText} numberOfLines={1}>
-                {destinationAccount
-                  ? `${destinationAccount.name} (${destinationAccount.currency})`
-                  : "Select target"}
-              </Text>
-              <ChevronRight size={14} color={theme.colors.textMuted} />
-            </View>
-          </TouchableOpacity>
+          />
 
           {/* Note / Description */}
           <View style={formStyles.rowDivider} />
