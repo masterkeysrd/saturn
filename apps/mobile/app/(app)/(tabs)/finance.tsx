@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react"
+import { useState, useMemo } from "react"
 import {
   StyleSheet,
   Text,
@@ -6,9 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  ActionSheetIOS,
   Alert,
-  Platform,
 } from "react-native"
 import { useRouter } from "expo-router"
 import { useQueryClient } from "@tanstack/react-query"
@@ -17,10 +15,7 @@ import {
   PiggyBank,
   Landmark,
   ChevronRight,
-  ArrowUpRight,
   ArrowDownLeft,
-  CreditCard,
-  Coins,
   Wallet,
   ArrowRight,
   Plus,
@@ -54,6 +49,8 @@ import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
 import { useSpace } from "@/lib/space-context"
 import { theme, getNativeBudgetColors } from "@/lib/theme"
 import { Card } from "@/components/ui/card"
+import { Icon } from "@expo/ui"
+import { MenuView } from "@expo/ui/community/menu"
 import { MonoAmount, Caption } from "@/components/ui/typography"
 import { Badge } from "@/components/ui/badge"
 import { SkeletonCard } from "@/components/ui/skeleton-loader"
@@ -62,6 +59,31 @@ import { TransactionListItem } from "@/components/finance/transaction-list-item"
 import { getBudgetIcon } from "@/lib/budget-icons"
 import { useToast } from "@/components/ui/toast"
 import { haptics } from "@/lib/haptics"
+
+const depositIcon = Icon.select({
+  ios: "arrow.down.left",
+  android: require("@expo/material-symbols/arrow_downward.xml"),
+})
+
+const confirmIcon = Icon.select({
+  ios: "checkmark.circle",
+  android: require("@expo/material-symbols/check_circle.xml"),
+})
+
+const skipIcon = Icon.select({
+  ios: "forward.fill",
+  android: require("@expo/material-symbols/fast_forward.xml"),
+})
+
+const paymentIcon = Icon.select({
+  ios: "dollarsign.circle",
+  android: require("@expo/material-symbols/payments.xml"),
+})
+
+const detailsIcon = Icon.select({
+  ios: "info.circle",
+  android: require("@expo/material-symbols/info.xml"),
+})
 
 export default function FinanceHubScreen() {
   const router = useRouter()
@@ -287,105 +309,6 @@ export default function FinanceHubScreen() {
     )
   }
 
-  const handleScheduledDots = (st: ScheduledTransaction) => {
-    haptics.light()
-    const isIncome = st.type === "INCOME"
-    const confirmLabel = isIncome ? "Confirm Deposit" : "Confirm / Pay"
-    const title = getScheduledTitle(st)
-
-    if (Platform.OS === "ios") {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ["Cancel", confirmLabel, "Skip Cycle"],
-          cancelButtonIndex: 0,
-          destructiveButtonIndex: 2,
-          title,
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 1) {
-            router.push({
-              pathname: "/modal/add-transaction",
-              params: {
-                type: "SCHEDULED",
-                scheduledTransactionId: st.id,
-              },
-            })
-          } else if (buttonIndex === 2) {
-            promptSkipScheduled(st)
-          }
-        }
-      )
-    } else {
-      Alert.alert(title, "Select action", [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: confirmLabel,
-          onPress: () =>
-            router.push({
-              pathname: "/modal/add-transaction",
-              params: {
-                type: "SCHEDULED",
-                scheduledTransactionId: st.id,
-              },
-            }),
-        },
-        {
-          text: "Skip Cycle",
-          style: "destructive",
-          onPress: () => promptSkipScheduled(st),
-        },
-      ])
-    }
-  }
-
-  const handleBorrowingDots = (b: Borrowing) => {
-    haptics.light()
-    const isLent = b.direction === "LENT"
-    const actionLabel = isLent ? "Record Payment Received" : "Log Repayment"
-
-    if (Platform.OS === "ios") {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ["Cancel", actionLabel, "View Details"],
-          cancelButtonIndex: 0,
-          title: b.counterparty || "Borrowing",
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 1) {
-            router.push({
-              pathname: "/modal/add-transaction",
-              params: {
-                type: "BORROWING",
-                borrowingId: b.id,
-              },
-            })
-          } else if (buttonIndex === 2) {
-            navigateTo("/(app)/finance/borrowing")
-          }
-        }
-      )
-    } else {
-      Alert.alert(b.counterparty || "Borrowing", "Select action", [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: actionLabel,
-          onPress: () =>
-            router.push({
-              pathname: "/modal/add-transaction",
-              params: {
-                type: "BORROWING",
-                borrowingId: b.id,
-              },
-            }),
-        },
-        {
-          text: "View Details",
-          onPress: () => navigateTo("/(app)/finance/borrowing"),
-        },
-      ])
-    }
-  }
-
   return (
     <View style={styles.safeArea}>
       <ScrollView
@@ -606,98 +529,100 @@ export default function FinanceHubScreen() {
                   const dueBadge = getDueDateBadge(st.dueDate)
 
                   return (
-                    <TouchableOpacity
+                    <View
                       key={st.id || idx}
                       style={[
                         styles.txRow,
                         idx < Math.min(scheduledList.length, 3) - 1 &&
                           styles.rowBorder,
                       ]}
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        haptics.light()
-                        router.push({
-                          pathname: "/modal/add-transaction",
-                          params: {
-                            type: "SCHEDULED",
-                            scheduledTransactionId: st.id,
-                          },
-                        })
-                      }}
                     >
-                      <View style={styles.txLeft}>
-                        <View
-                          style={[
-                            styles.actionIconBadge,
-                            {
-                              backgroundColor: isIncome
-                                ? theme.colors.successSubtle
-                                : theme.colors.primarySubtle,
+                      <TouchableOpacity
+                        style={styles.txMainPressable}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          haptics.light()
+                          router.push({
+                            pathname: "/modal/add-transaction",
+                            params: {
+                              type: "SCHEDULED",
+                              scheduledTransactionId: st.id,
                             },
-                          ]}
-                        >
-                          {isIncome ? (
-                            <ArrowDownLeft
-                              size={16}
-                              color={theme.colors.success}
-                            />
-                          ) : (
-                            <CalendarClock
-                              size={16}
-                              color={theme.colors.primary}
-                            />
-                          )}
-                        </View>
-                        <View style={styles.itemInfo}>
-                          <Text style={styles.txName} numberOfLines={1}>
-                            {getScheduledTitle(st)}
-                          </Text>
-                          <View style={styles.badgeRow}>
-                            {st.dueDate ? (
-                              <Text style={styles.txMeta}>
-                                {formatDate(st.dueDate)}
-                              </Text>
-                            ) : null}
+                          })
+                        }}
+                      >
+                        <View style={styles.txLeft}>
+                          <View
+                            style={[
+                              styles.actionIconBadge,
+                              {
+                                backgroundColor: isIncome
+                                  ? theme.colors.successSubtle
+                                  : theme.colors.primarySubtle,
+                              },
+                            ]}
+                          >
                             {isIncome ? (
-                              <Badge
-                                size="sm"
-                                label="Deposit Due"
-                                bg={theme.colors.successSubtle}
-                                border="rgba(16, 185, 129, 0.3)"
+                              <ArrowDownLeft
+                                size={16}
                                 color={theme.colors.success}
                               />
-                            ) : dueBadge ? (
-                              <Badge
-                                size="sm"
-                                label={dueBadge.label}
-                                bg={
-                                  dueBadge.isOverdue
-                                    ? theme.colors.destructiveSubtle
-                                    : dueBadge.isToday
-                                      ? theme.colors.warningSubtle
-                                      : theme.colors.surfaceHighlight
-                                }
-                                border={
-                                  dueBadge.isOverdue
-                                    ? "rgba(244, 63, 94, 0.3)"
-                                    : dueBadge.isToday
-                                      ? "rgba(245, 158, 11, 0.3)"
-                                      : theme.colors.border
-                                }
-                                color={
-                                  dueBadge.isOverdue
-                                    ? theme.colors.destructive
-                                    : dueBadge.isToday
-                                      ? theme.colors.warning
-                                      : theme.colors.textMuted
-                                }
+                            ) : (
+                              <CalendarClock
+                                size={16}
+                                color={theme.colors.primary}
                               />
-                            ) : null}
+                            )}
+                          </View>
+                          <View style={styles.itemInfo}>
+                            <Text style={styles.txName} numberOfLines={1}>
+                              {getScheduledTitle(st)}
+                            </Text>
+                            <View style={styles.badgeRow}>
+                              {st.dueDate ? (
+                                <Text style={styles.txMeta}>
+                                  {formatDate(st.dueDate)}
+                                </Text>
+                              ) : null}
+                              {isIncome ? (
+                                <Badge
+                                  size="sm"
+                                  label="Deposit Due"
+                                  bg={theme.colors.successSubtle}
+                                  border="rgba(16, 185, 129, 0.3)"
+                                  color={theme.colors.success}
+                                />
+                              ) : dueBadge ? (
+                                <Badge
+                                  size="sm"
+                                  label={dueBadge.label}
+                                  bg={
+                                    dueBadge.isOverdue
+                                      ? theme.colors.destructiveSubtle
+                                      : dueBadge.isToday
+                                        ? theme.colors.warningSubtle
+                                        : theme.colors.surfaceHighlight
+                                  }
+                                  border={
+                                    dueBadge.isOverdue
+                                      ? "rgba(244, 63, 94, 0.3)"
+                                      : dueBadge.isToday
+                                        ? "rgba(245, 158, 11, 0.3)"
+                                        : theme.colors.border
+                                  }
+                                  color={
+                                    dueBadge.isOverdue
+                                      ? theme.colors.destructive
+                                      : dueBadge.isToday
+                                        ? theme.colors.warning
+                                        : theme.colors.textMuted
+                                  }
+                                />
+                              ) : null}
+                            </View>
                           </View>
                         </View>
-                      </View>
 
-                      <View style={styles.scheduledRight}>
                         <MonoAmount
                           size="sm"
                           color={
@@ -709,19 +634,52 @@ export default function FinanceHubScreen() {
                           {isIncome ? "+" : "-"}
                           {formatAmount(st.amount, st.currency || baseCurrency)}
                         </MonoAmount>
-                        <TouchableOpacity
-                          style={styles.dotsBtn}
-                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                          activeOpacity={0.6}
-                          onPress={() => handleScheduledDots(st)}
-                        >
+                      </TouchableOpacity>
+
+                      <MenuView
+                        title={getScheduledTitle(st)}
+                        colorScheme="dark"
+                        style={styles.menuTriggerWrapper}
+                        onPressAction={({ nativeEvent }) => {
+                          if (nativeEvent.event === "confirm") {
+                            haptics.light()
+                            router.push({
+                              pathname: "/modal/add-transaction",
+                              params: {
+                                type: "SCHEDULED",
+                                scheduledTransactionId: st.id,
+                              },
+                            })
+                          } else if (nativeEvent.event === "skip") {
+                            promptSkipScheduled(st)
+                          }
+                        }}
+                        actions={[
+                          {
+                            id: "confirm",
+                            title: isIncome
+                              ? "Confirm Deposit"
+                              : "Confirm / Pay",
+                            image: isIncome ? depositIcon : confirmIcon,
+                          },
+                          {
+                            id: "skip",
+                            title: "Skip Cycle",
+                            attributes: {
+                              destructive: true,
+                            },
+                            image: skipIcon,
+                          },
+                        ]}
+                      >
+                        <View style={styles.dotsBtn}>
                           <MoreVertical
-                            size={16}
+                            size={18}
                             color={theme.colors.textMuted}
                           />
-                        </TouchableOpacity>
-                      </View>
-                    </TouchableOpacity>
+                        </View>
+                      </MenuView>
+                    </View>
                   )
                 })}
             </Card>
@@ -756,79 +714,81 @@ export default function FinanceHubScreen() {
                 const isLent = b.direction === "LENT"
 
                 return (
-                  <TouchableOpacity
+                  <View
                     key={b.id || idx}
                     style={[
                       styles.txRow,
                       idx < Math.min(borrowingsList.length, 3) - 1 &&
                         styles.rowBorder,
                     ]}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      haptics.light()
-                      router.push({
-                        pathname: "/modal/add-transaction",
-                        params: {
-                          type: "BORROWING",
-                          borrowingId: b.id,
-                        },
-                      })
-                    }}
                   >
-                    <View style={styles.txLeft}>
-                      <View
-                        style={[
-                          styles.actionIconBadge,
-                          {
-                            backgroundColor: isLent
-                              ? theme.colors.successSubtle
-                              : theme.colors.destructiveSubtle,
+                    <TouchableOpacity
+                      style={styles.txMainPressable}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        haptics.light()
+                        router.push({
+                          pathname: "/modal/add-transaction",
+                          params: {
+                            type: "BORROWING",
+                            borrowingId: b.id,
                           },
-                        ]}
-                      >
-                        <HandCoins
-                          size={16}
-                          color={
-                            isLent
-                              ? theme.colors.success
-                              : theme.colors.destructive
-                          }
-                        />
-                      </View>
-                      <View style={styles.itemInfo}>
-                        <Text style={styles.txName} numberOfLines={1}>
-                          {b.counterparty || "Borrowing"}
-                        </Text>
-                        <View style={styles.badgeRow}>
-                          <Badge
-                            size="sm"
-                            label={isLent ? "Owed to you" : "You owe"}
-                            bg={
-                              isLent
+                        })
+                      }}
+                    >
+                      <View style={styles.txLeft}>
+                        <View
+                          style={[
+                            styles.actionIconBadge,
+                            {
+                              backgroundColor: isLent
                                 ? theme.colors.successSubtle
-                                : theme.colors.destructiveSubtle
-                            }
-                            border={
-                              isLent
-                                ? "rgba(16, 185, 129, 0.3)"
-                                : "rgba(244, 63, 94, 0.3)"
-                            }
+                                : theme.colors.destructiveSubtle,
+                            },
+                          ]}
+                        >
+                          <HandCoins
+                            size={16}
                             color={
                               isLent
                                 ? theme.colors.success
                                 : theme.colors.destructive
                             }
                           />
-                          {b.dueAt ? (
-                            <Text style={styles.txMeta}>
-                              Due {formatDate(b.dueAt)}
-                            </Text>
-                          ) : null}
+                        </View>
+                        <View style={styles.itemInfo}>
+                          <Text style={styles.txName} numberOfLines={1}>
+                            {b.counterparty || "Borrowing"}
+                          </Text>
+                          <View style={styles.badgeRow}>
+                            <Badge
+                              size="sm"
+                              label={isLent ? "Owed to you" : "You owe"}
+                              bg={
+                                isLent
+                                  ? theme.colors.successSubtle
+                                  : theme.colors.destructiveSubtle
+                              }
+                              border={
+                                isLent
+                                  ? "rgba(16, 185, 129, 0.3)"
+                                  : "rgba(244, 63, 94, 0.3)"
+                              }
+                              color={
+                                isLent
+                                  ? theme.colors.success
+                                  : theme.colors.destructive
+                              }
+                            />
+                            {b.dueAt ? (
+                              <Text style={styles.txMeta}>
+                                Due {formatDate(b.dueAt)}
+                              </Text>
+                            ) : null}
+                          </View>
                         </View>
                       </View>
-                    </View>
 
-                    <View style={styles.scheduledRight}>
                       <MonoAmount
                         size="sm"
                         color={
@@ -842,19 +802,49 @@ export default function FinanceHubScreen() {
                           b.currency || baseCurrency
                         )}
                       </MonoAmount>
-                      <TouchableOpacity
-                        style={styles.dotsBtn}
-                        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                        activeOpacity={0.6}
-                        onPress={() => handleBorrowingDots(b)}
-                      >
+                    </TouchableOpacity>
+
+                    <MenuView
+                      title={b.counterparty || "Borrowing"}
+                      colorScheme="dark"
+                      style={styles.menuTriggerWrapper}
+                      onPressAction={({ nativeEvent }) => {
+                        if (nativeEvent.event === "pay") {
+                          haptics.light()
+                          router.push({
+                            pathname: "/modal/add-transaction",
+                            params: {
+                              type: "BORROWING",
+                              borrowingId: b.id,
+                            },
+                          })
+                        } else if (nativeEvent.event === "details") {
+                          navigateTo("/(app)/finance/borrowing")
+                        }
+                      }}
+                      actions={[
+                        {
+                          id: "pay",
+                          title: isLent
+                            ? "Record Payment Received"
+                            : "Log Repayment",
+                          image: paymentIcon,
+                        },
+                        {
+                          id: "details",
+                          title: "View Details",
+                          image: detailsIcon,
+                        },
+                      ]}
+                    >
+                      <View style={styles.dotsBtn}>
                         <MoreVertical
-                          size={16}
+                          size={18}
                           color={theme.colors.textMuted}
                         />
-                      </TouchableOpacity>
-                    </View>
-                  </TouchableOpacity>
+                      </View>
+                    </MenuView>
+                  </View>
                 )
               })}
             </Card>
@@ -1148,8 +1138,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingLeft: 14,
+    paddingRight: 10,
+    paddingVertical: 10,
+  },
+  txMainPressable: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flex: 1,
+    marginRight: 6,
   },
   rowBorder: {
     borderBottomWidth: 1,
@@ -1186,14 +1184,16 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 2,
   },
-  scheduledRight: {
-    flexDirection: "row",
+  menuTriggerWrapper: {
     alignItems: "center",
-    gap: 8,
+    justifyContent: "center",
   },
   dotsBtn: {
-    padding: 4,
-    marginLeft: 2,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
   },
   horizontalAccountsScroll: {
     marginHorizontal: -16,

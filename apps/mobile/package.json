@@ -12,6 +12,8 @@
     "format": "prettier --write \"**/*.{ts,tsx}\""
   },
   "dependencies": {
+    "@expo/material-symbols": "^0.1.1",
+    "@expo/ui": "~57.0.19",
     "@gorhom/bottom-sheet": "^5.2.14",
     "@saturn/api": "*",
     "@saturn/core": "*",
