@@ -9,11 +9,19 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Image,
 } from "react-native"
 import { useRouter, useLocalSearchParams, Stack } from "expo-router"
 import { useQueryClient } from "@tanstack/react-query"
 import BottomSheet from "@gorhom/bottom-sheet"
-import { X, Check, ChevronDown, Trash2, Wallet } from "lucide-react-native"
+import {
+  X,
+  Check,
+  ChevronDown,
+  Trash2,
+  Wallet,
+  Landmark,
+} from "lucide-react-native"
 import {
   useCreateBudgetMutation,
   useUpdateBudgetMutation,
@@ -21,16 +29,19 @@ import {
   useGetBudgetQuery,
   useListCurrenciesQuery,
   useListAccountsQuery,
+  useListInstitutionsQuery,
   useGetFinanceSettingsQuery,
   type Budget_RecurrenceInterval,
   type CurrencyInfo,
   type Account,
+  type Account_InstitutionInfo,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { budgetSchema } from "@saturn/schemas"
 import {
   toCentsString,
   formatCents,
   getCurrencySymbol,
+  getInstitutionLogoUrl,
   AVAILABLE_COLORS,
   BUDGET_INTERVAL_OPTIONS as INTERVAL_OPTIONS,
 } from "@saturn/core"
@@ -80,6 +91,20 @@ export default function ManageBudgetModal() {
   )
   const accounts: Account[] = accountsData?.accounts || []
 
+  // Fetch institutions
+  const { data: instData } = useListInstitutionsQuery(
+    { pageSize: 100, pageToken: "" },
+    { enabled: !!activeSpaceId }
+  )
+  const institutions: Account_InstitutionInfo[] = instData?.institutions || []
+  const instMap = useMemo(() => {
+    const map = new Map<string, Account_InstitutionInfo>()
+    institutions.forEach((i) => {
+      if (i.id) map.set(i.id, i)
+    })
+    return map
+  }, [institutions])
+
   // Fetch existing budget if edit mode
   const { data: existingBudget, isLoading: isBudgetLoading } =
     useGetBudgetQuery(
@@ -128,6 +153,35 @@ export default function ManageBudgetModal() {
     [accounts, defaultAccountId]
   )
 
+  const selectedAccountInstitution = useMemo(() => {
+    if (!selectedAccount) return undefined
+    return (
+      selectedAccount.institution ||
+      (selectedAccount.institutionId
+        ? instMap.get(selectedAccount.institutionId)
+        : undefined)
+    )
+  }, [selectedAccount, instMap])
+
+  const [accountLogoError, setAccountLogoError] = useState(false)
+  const instLogoUrl = useMemo(() => {
+    if (!selectedAccount) return ""
+    const inst = selectedAccountInstitution
+    return (
+      inst?.logoUrl ||
+      (inst?.domain || inst?.name
+        ? getInstitutionLogoUrl(inst.domain, inst.name)
+        : undefined) ||
+      getInstitutionLogoUrl(undefined, selectedAccount.name)
+    )
+  }, [selectedAccount, selectedAccountInstitution])
+
+  const [prevInstLogoUrl, setPrevInstLogoUrl] = useState(instLogoUrl)
+  if (prevInstLogoUrl !== instLogoUrl) {
+    setPrevInstLogoUrl(instLogoUrl)
+    setAccountLogoError(false)
+  }
+
   const handleSave = async () => {
     haptics.light()
     setErrors({})
@@ -168,7 +222,6 @@ export default function ManageBudgetModal() {
           req: {
             id: editBudgetId,
             budget: {
-              id: editBudgetId,
               name: name.trim(),
               limitAmount: centsStr,
               currency,
@@ -416,8 +469,32 @@ export default function ManageBudgetModal() {
               style={styles.selectorRow}
             >
               <View style={styles.selectorLeft}>
-                <View style={styles.selectorIconWrap}>
-                  <Wallet size={16} color={theme.colors.primary} />
+                <View
+                  style={[
+                    styles.selectorIconWrap,
+                    instLogoUrl && !accountLogoError
+                      ? {
+                          backgroundColor: theme.colors.surfaceHighlight,
+                          borderWidth: 1,
+                          borderColor: theme.colors.border,
+                        }
+                      : !selectedAccount
+                        ? { backgroundColor: "rgba(255, 255, 255, 0.05)" }
+                        : undefined,
+                  ]}
+                >
+                  {instLogoUrl && !accountLogoError ? (
+                    <Image
+                      source={{ uri: instLogoUrl }}
+                      style={{ width: 20, height: 20, borderRadius: 4 }}
+                      resizeMode="contain"
+                      onError={() => setAccountLogoError(true)}
+                    />
+                  ) : selectedAccount ? (
+                    <Landmark size={16} color={theme.colors.primary} />
+                  ) : (
+                    <Wallet size={16} color={theme.colors.textMuted} />
+                  )}
                 </View>
                 <Text
                   style={[
@@ -573,6 +650,7 @@ export default function ManageBudgetModal() {
       <AccountPickerSheet
         ref={accountSheetRef}
         accounts={accounts}
+        institutions={institutions}
         selectedAccountId={defaultAccountId}
         onSelect={(accId) => {
           setDefaultAccountId(accId)
