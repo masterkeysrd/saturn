@@ -39,6 +39,7 @@ import {
   toCentsString,
   formatCents,
   BUDGET_INTERVAL_OPTIONS as INTERVAL_ITEMS,
+  LIMIT_PROPAGATION_OPTIONS as PROPAGATION_ITEMS,
 } from "../utils"
 
 interface EditBudgetSheetProps {
@@ -54,17 +55,6 @@ interface EditBudgetSheetProps {
 const STATUS_ITEMS = [
   { value: "ACTIVE", label: "Active" },
   { value: "ARCHIVED", label: "Archived / Disabled" },
-]
-
-const PROPAGATION_ITEMS = [
-  {
-    value: "LIMIT_PROPAGATION_CURRENT_PERIOD",
-    label: "Current Period Only",
-  },
-  {
-    value: "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY",
-    label: "Future Periods Only",
-  },
 ]
 
 export function EditBudgetSheet({

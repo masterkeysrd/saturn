@@ -86,3 +86,28 @@ export function getScheduledDisplayName(
     (st.type === "INCOME" ? "Scheduled Inflow" : "Scheduled Outflow")
   )
 }
+
+export type LimitPropagationValue =
+  "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY" | "LIMIT_PROPAGATION_CURRENT_PERIOD"
+
+export interface LimitPropagationOption {
+  label: string
+  value: LimitPropagationValue
+  description?: string
+}
+
+export const LIMIT_PROPAGATION_OPTIONS: LimitPropagationOption[] = [
+  {
+    value: "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY",
+    label: "Future Periods Only",
+    description: "Applies to the current period and all future periods.",
+  },
+  {
+    value: "LIMIT_PROPAGATION_CURRENT_PERIOD",
+    label: "Current Period Only",
+    description:
+      "Applies limit modification only to the current active period.",
+  },
+]
+
+export const PROPAGATION_OPTIONS = LIMIT_PROPAGATION_OPTIONS

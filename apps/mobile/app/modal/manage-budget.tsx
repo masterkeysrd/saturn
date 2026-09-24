@@ -46,18 +46,8 @@ import {
   getInstitutionLogoUrl,
   AVAILABLE_COLORS,
   BUDGET_INTERVAL_OPTIONS as INTERVAL_OPTIONS,
+  PROPAGATION_OPTIONS,
 } from "@saturn/core"
-
-const PROPAGATION_OPTIONS: { value: LimitPropagation; label: string }[] = [
-  {
-    value: "LIMIT_PROPAGATION_NEXT_PERIODS_ONLY",
-    label: "Future Periods Only",
-  },
-  {
-    value: "LIMIT_PROPAGATION_CURRENT_PERIOD",
-    label: "Current Period Only",
-  },
-]
 import { useSpace } from "@/lib/space-context"
 import { theme, getNativeBudgetColors } from "@/lib/theme"
 import { haptics } from "@/lib/haptics"
