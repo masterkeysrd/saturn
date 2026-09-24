@@ -57,11 +57,15 @@ export default function AddTransactionModal() {
     type: initialType,
     accountId: initialAccountId,
     budgetId: initialBudgetId,
+    scheduledTransactionId: initialScheduledId,
+    borrowingId: initialBorrowingId,
   } = useLocalSearchParams<{
     id?: string
     type?: TransactionFlowType
     accountId?: string
     budgetId?: string
+    scheduledTransactionId?: string
+    borrowingId?: string
   }>()
   const isEditMode = !!editTransactionId
 
@@ -395,6 +399,7 @@ export default function AddTransactionModal() {
               onSuccess={() => router.back()}
               scheduledLoading={scheduledLoading}
               budgetsLoading={budgetsLoading}
+              initialScheduledId={initialScheduledId}
             />
           )}
 
@@ -405,6 +410,7 @@ export default function AddTransactionModal() {
               baseCurrency={baseCurrency}
               onSuccess={() => router.back()}
               borrowingsLoading={borrowingsLoading}
+              initialBorrowingId={initialBorrowingId}
             />
           )}
         </View>

@@ -45,6 +45,7 @@ export interface BorrowingFormProps {
   baseCurrency: string
   onSuccess: () => void
   borrowingsLoading?: boolean
+  initialBorrowingId?: string
 }
 
 export function BorrowingForm({
@@ -53,6 +54,7 @@ export function BorrowingForm({
   baseCurrency,
   onSuccess,
   borrowingsLoading,
+  initialBorrowingId,
 }: BorrowingFormProps) {
   const insets = useSafeAreaInsets()
   const toast = useToast()
@@ -82,12 +84,16 @@ export function BorrowingForm({
   // Mutation
   const logBorrowingMutation = useLogBorrowingTransactionMutation()
 
-  // Auto-select first loan agreement
+  // Auto-select loan agreement
   useEffect(() => {
     if (activeBorrowings.length > 0 && !selectedBorrowing) {
-      setSelectedBorrowing(activeBorrowings[0])
+      const target = initialBorrowingId
+        ? activeBorrowings.find((b) => b.id === initialBorrowingId) ||
+          activeBorrowings[0]
+        : activeBorrowings[0]
+      setSelectedBorrowing(target)
     }
-  }, [activeBorrowings, selectedBorrowing])
+  }, [activeBorrowings, selectedBorrowing, initialBorrowingId])
 
   useEffect(() => {
     if (accounts.length > 0 && !selectedAccountId) {

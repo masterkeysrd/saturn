@@ -6,6 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  ActionSheetIOS,
+  Alert,
+  Platform,
 } from "react-native"
 import { useRouter } from "expo-router"
 import { useQueryClient } from "@tanstack/react-query"
@@ -21,6 +24,9 @@ import {
   Wallet,
   ArrowRight,
   Plus,
+  CalendarClock,
+  HandCoins,
+  MoreVertical,
 } from "lucide-react-native"
 import {
   formatAmount,
@@ -33,10 +39,16 @@ import {
   useListAccountsQuery,
   useListInstitutionsQuery,
   useGetFinanceSettingsQuery,
+  useListScheduledTransactionsQuery,
+  useSkipScheduledTransactionMutation,
+  useListBorrowingsQuery,
   type Transaction,
   type Budget,
   type Account,
   type Account_InstitutionInfo,
+  type ScheduledTransaction,
+  type Borrowing,
+  type ListScheduledTransactionsRequest,
 } from "@saturn/api/saturn/finance/v1/finance"
 import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
 import { useSpace } from "@/lib/space-context"
@@ -48,6 +60,7 @@ import { SkeletonCard } from "@/components/ui/skeleton-loader"
 import { CardAccountItem } from "@/components/finance/card-account-item"
 import { TransactionListItem } from "@/components/finance/transaction-list-item"
 import { getBudgetIcon } from "@/lib/budget-icons"
+import { useToast } from "@/components/ui/toast"
 import { haptics } from "@/lib/haptics"
 
 export default function FinanceHubScreen() {
@@ -100,6 +113,36 @@ export default function FinanceHubScreen() {
     return map
   }, [institutions])
 
+  // 7. Pending Scheduled Transactions (Urgent Recurring)
+  const { data: scheduledData, isLoading: scheduledLoading } =
+    useListScheduledTransactionsQuery(
+      {
+        pageSize: 20,
+        pageToken: "",
+        status: "PENDING",
+        startDate: "",
+        endDate: "",
+        view: "FULL",
+      } as unknown as ListScheduledTransactionsRequest,
+      { enabled: !!activeSpaceId }
+    )
+
+  // 8. Active Borrowings (Debts & Loans)
+  const { data: borrowingsData, isLoading: borrowingsLoading } =
+    useListBorrowingsQuery(
+      { pageSize: 20, pageToken: "", status: "ACTIVE" },
+      { enabled: !!activeSpaceId }
+    )
+
+  const getScheduledTitle = (st: ScheduledTransaction) =>
+    st.metadata?.name ||
+    st.recurringTransaction?.name ||
+    st.metadata?.description ||
+    (st.type === "INCOME" ? "Scheduled Income" : "Scheduled Bill")
+
+  const skipScheduledMutation = useSkipScheduledTransactionMutation()
+  const toast = useToast()
+
   const accounts = accountsData?.accounts || []
   const transactions = txData?.transactions || []
   const budgets = budgetsData?.budgets || []
@@ -124,6 +167,19 @@ export default function FinanceHubScreen() {
     })
     return map
   }, [budgets])
+
+  const scheduledList = useMemo(() => {
+    const list = scheduledData?.scheduledTransactions || []
+    return [...list].sort((a, b) => {
+      const timeA = a.dueDate ? new Date(a.dueDate).getTime() : 0
+      const timeB = b.dueDate ? new Date(b.dueDate).getTime() : 0
+      return timeA - timeB
+    })
+  }, [scheduledData])
+
+  const borrowingsList = useMemo(() => {
+    return borrowingsData?.borrowings || []
+  }, [borrowingsData])
 
   const handleRefresh = async () => {
     haptics.light()
@@ -152,6 +208,182 @@ export default function FinanceHubScreen() {
     if (!dateStr) return ""
     const d = new Date(dateStr)
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+  }
+
+  const getDueDateBadge = (dueDateStr?: string) => {
+    if (!dueDateStr) return null
+    const due = new Date(dueDateStr)
+    if (isNaN(due.getTime())) return null
+    const now = new Date()
+
+    const utcDue = Date.UTC(
+      due.getUTCFullYear(),
+      due.getUTCMonth(),
+      due.getUTCDate()
+    )
+    const utcNow = Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate()
+    )
+    const diffDays = Math.round((utcDue - utcNow) / (1000 * 60 * 60 * 24))
+
+    if (diffDays < 0) {
+      const absDays = Math.abs(diffDays)
+      return {
+        label: absDays === 1 ? "Overdue 1 day" : `Overdue ${absDays} days`,
+        isOverdue: true,
+        isToday: false,
+      }
+    }
+    if (diffDays === 0) {
+      return {
+        label: "Due Today",
+        isOverdue: false,
+        isToday: true,
+      }
+    }
+    return {
+      label: diffDays === 1 ? "Due tomorrow" : `Due in ${diffDays} days`,
+      isOverdue: false,
+      isToday: false,
+    }
+  }
+
+  const promptSkipScheduled = (st: ScheduledTransaction) => {
+    const title = getScheduledTitle(st)
+    Alert.alert(
+      "Skip Scheduled Cycle?",
+      `Are you sure you want to skip this cycle for "${title}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Skip",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await skipScheduledMutation.mutateAsync({
+                id: st.id || "",
+                req: { id: st.id || "" },
+              })
+              haptics.success()
+              toast.show({
+                title: "Cycle Skipped",
+                message: "The scheduled cycle was skipped.",
+                type: "info",
+              })
+              await handleRefresh()
+            } catch (err: any) {
+              haptics.error()
+              toast.show({
+                title: "Failed to Skip",
+                message: err?.message || "Could not skip cycle.",
+                type: "error",
+              })
+            }
+          },
+        },
+      ]
+    )
+  }
+
+  const handleScheduledDots = (st: ScheduledTransaction) => {
+    haptics.light()
+    const isIncome = st.type === "INCOME"
+    const confirmLabel = isIncome ? "Confirm Deposit" : "Confirm / Pay"
+    const title = getScheduledTitle(st)
+
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ["Cancel", confirmLabel, "Skip Cycle"],
+          cancelButtonIndex: 0,
+          destructiveButtonIndex: 2,
+          title,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            router.push({
+              pathname: "/modal/add-transaction",
+              params: {
+                type: "SCHEDULED",
+                scheduledTransactionId: st.id,
+              },
+            })
+          } else if (buttonIndex === 2) {
+            promptSkipScheduled(st)
+          }
+        }
+      )
+    } else {
+      Alert.alert(title, "Select action", [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: confirmLabel,
+          onPress: () =>
+            router.push({
+              pathname: "/modal/add-transaction",
+              params: {
+                type: "SCHEDULED",
+                scheduledTransactionId: st.id,
+              },
+            }),
+        },
+        {
+          text: "Skip Cycle",
+          style: "destructive",
+          onPress: () => promptSkipScheduled(st),
+        },
+      ])
+    }
+  }
+
+  const handleBorrowingDots = (b: Borrowing) => {
+    haptics.light()
+    const isLent = b.direction === "LENT"
+    const actionLabel = isLent ? "Record Payment Received" : "Log Repayment"
+
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ["Cancel", actionLabel, "View Details"],
+          cancelButtonIndex: 0,
+          title: b.counterparty || "Borrowing",
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            router.push({
+              pathname: "/modal/add-transaction",
+              params: {
+                type: "BORROWING",
+                borrowingId: b.id,
+              },
+            })
+          } else if (buttonIndex === 2) {
+            navigateTo("/(app)/finance/borrowing")
+          }
+        }
+      )
+    } else {
+      Alert.alert(b.counterparty || "Borrowing", "Select action", [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: actionLabel,
+          onPress: () =>
+            router.push({
+              pathname: "/modal/add-transaction",
+              params: {
+                type: "BORROWING",
+                borrowingId: b.id,
+              },
+            }),
+        },
+        {
+          text: "View Details",
+          onPress: () => navigateTo("/(app)/finance/borrowing"),
+        },
+      ])
+    }
   }
 
   return (
@@ -201,6 +433,24 @@ export default function FinanceHubScreen() {
             <Landmark size={15} color={theme.colors.success} />
             <Text style={styles.navPillText}>Accounts</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.navPill}
+            activeOpacity={0.7}
+            onPress={() => navigateTo("/(app)/finance/recurring")}
+          >
+            <CalendarClock size={15} color={theme.colors.warning} />
+            <Text style={styles.navPillText}>Recurring</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.navPill}
+            activeOpacity={0.7}
+            onPress={() => navigateTo("/(app)/finance/borrowing")}
+          >
+            <HandCoins size={15} color={theme.colors.primary} />
+            <Text style={styles.navPillText}>Borrowing</Text>
+          </TouchableOpacity>
         </ScrollView>
 
         {/* Primary Net Liquidity Card */}
@@ -232,8 +482,15 @@ export default function FinanceHubScreen() {
               </MonoAmount>
             </View>
             <View style={styles.divider} />
-            <View style={styles.assetItem}>
-              <Caption>Total Debt</Caption>
+            <TouchableOpacity
+              style={styles.assetItem}
+              activeOpacity={0.7}
+              onPress={() => navigateTo("/(app)/finance/borrowing")}
+            >
+              <View style={styles.assetItemHeader}>
+                <Caption>Total Debt</Caption>
+                <ChevronRight size={11} color={theme.colors.textMuted} />
+              </View>
               <MonoAmount size="sm" color={theme.colors.destructive}>
                 -
                 {formatAmount(
@@ -241,76 +498,370 @@ export default function FinanceHubScreen() {
                   baseCurrency
                 )}
               </MonoAmount>
-            </View>
+            </TouchableOpacity>
           </View>
         </Card>
 
-        {/* Section 1: Recent Transactions Preview */}
+        {/* Section 1: Accounts Summary Preview */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <Caption style={styles.sectionHeader}>RECENT TRANSACTIONS</Caption>
+            <Caption style={styles.sectionHeader}>ACCOUNTS SUMMARY</Caption>
             <TouchableOpacity
               style={styles.seeAllBtn}
               activeOpacity={0.7}
-              onPress={() => navigateTo("/(app)/finance/transactions")}
+              onPress={() => navigateTo("/(app)/finance/accounts")}
             >
               <Text style={styles.seeAllText}>See all</Text>
               <ArrowRight size={13} color={theme.colors.primary} />
             </TouchableOpacity>
           </View>
 
-          {txLoading ? (
-            <SkeletonCard />
-          ) : transactions.length === 0 ? (
+          {accountsLoading ? (
+            <SkeletonCard height={190} />
+          ) : accounts.length === 0 ? (
             <Card style={styles.emptyCard}>
-              <Text style={styles.emptyText}>No recent transactions</Text>
-              <TouchableOpacity
-                style={styles.emptyActionBtn}
-                activeOpacity={0.7}
-                onPress={() => {
-                  haptics.medium()
-                  router.push("/modal/add-transaction")
-                }}
-              >
-                <Plus size={14} color={theme.colors.primary} />
-                <Text style={styles.emptyActionText}>Add Transaction</Text>
-              </TouchableOpacity>
+              <Text style={styles.emptyText}>No accounts connected</Text>
+            </Card>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.horizontalAccountsScroll}
+              contentContainerStyle={styles.horizontalAccountsContainer}
+            >
+              {accounts.map((acc: Account) => {
+                const balanceCents = acc.currentBalance || "0"
+                const balanceNum = Number(balanceCents)
+                const isDifferentCurrency =
+                  acc.currency && acc.currency !== baseCurrency
+
+                let convertedStr = ""
+                if (isDifferentCurrency) {
+                  const preview = getConversionPreview(
+                    String(Math.abs(balanceNum) / 100),
+                    acc.currency
+                  )
+                  if (preview && "amount" in preview) {
+                    convertedStr = `≈ ${formatAmount(
+                      Math.round(preview.amount * 100),
+                      baseCurrency
+                    )}`
+                  }
+                }
+
+                return (
+                  <CardAccountItem
+                    key={acc.id}
+                    acc={acc}
+                    institution={
+                      acc.institutionId
+                        ? instMap.get(acc.institutionId)
+                        : undefined
+                    }
+                    baseCurrency={baseCurrency}
+                    convertedText={convertedStr}
+                    width={300}
+                    onPress={() =>
+                      acc.id
+                        ? navigateTo(`/(app)/finance/accounts/${acc.id}`)
+                        : navigateTo("/(app)/finance/accounts")
+                    }
+                  />
+                )
+              })}
+            </ScrollView>
+          )}
+        </View>
+
+        {/* Section 2: Pending Scheduled / Recurring */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <Caption style={styles.sectionHeader}>
+              PENDING SCHEDULED ({scheduledList.length})
+            </Caption>
+            <TouchableOpacity
+              style={styles.seeAllBtn}
+              activeOpacity={0.7}
+              onPress={() => navigateTo("/(app)/finance/recurring")}
+            >
+              <Text style={styles.seeAllText}>See all</Text>
+              <ArrowRight size={13} color={theme.colors.primary} />
+            </TouchableOpacity>
+          </View>
+
+          {scheduledLoading ? (
+            <SkeletonCard />
+          ) : scheduledList.length === 0 ? (
+            <Card style={styles.emptyCard}>
+              <Text style={styles.emptyText}>
+                No pending scheduled transactions
+              </Text>
             </Card>
           ) : (
             <Card style={styles.listCard}>
-              {transactions.map((tx: Transaction, idx) => (
-                <TransactionListItem
-                  key={tx.id || idx}
-                  item={tx}
-                  baseCurrency={baseCurrency}
-                  account={
-                    tx.accountId ? accountsMap.get(tx.accountId) : undefined
-                  }
-                  budget={tx.budgetId ? budgetsMap.get(tx.budgetId) : undefined}
-                  onPress={() =>
-                    tx.id
-                      ? navigateTo(`/(app)/finance/transactions/${tx.id}`)
-                      : navigateTo("/(app)/finance/transactions")
-                  }
-                  showBorderBottom={idx < transactions.length - 1}
-                />
-              ))}
-              <TouchableOpacity
-                style={styles.cardFooterAction}
-                activeOpacity={0.7}
-                onPress={() => {
-                  haptics.medium()
-                  router.push("/modal/add-transaction")
-                }}
-              >
-                <Plus size={14} color={theme.colors.primary} />
-                <Text style={styles.cardFooterActionText}>Add Transaction</Text>
-              </TouchableOpacity>
+              {scheduledList
+                .slice(0, 3)
+                .map((st: ScheduledTransaction, idx) => {
+                  const isIncome = st.type === "INCOME"
+                  const dueBadge = getDueDateBadge(st.dueDate)
+
+                  return (
+                    <TouchableOpacity
+                      key={st.id || idx}
+                      style={[
+                        styles.txRow,
+                        idx < Math.min(scheduledList.length, 3) - 1 &&
+                          styles.rowBorder,
+                      ]}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        haptics.light()
+                        router.push({
+                          pathname: "/modal/add-transaction",
+                          params: {
+                            type: "SCHEDULED",
+                            scheduledTransactionId: st.id,
+                          },
+                        })
+                      }}
+                    >
+                      <View style={styles.txLeft}>
+                        <View
+                          style={[
+                            styles.actionIconBadge,
+                            {
+                              backgroundColor: isIncome
+                                ? theme.colors.successSubtle
+                                : theme.colors.primarySubtle,
+                            },
+                          ]}
+                        >
+                          {isIncome ? (
+                            <ArrowDownLeft
+                              size={16}
+                              color={theme.colors.success}
+                            />
+                          ) : (
+                            <CalendarClock
+                              size={16}
+                              color={theme.colors.primary}
+                            />
+                          )}
+                        </View>
+                        <View style={styles.itemInfo}>
+                          <Text style={styles.txName} numberOfLines={1}>
+                            {getScheduledTitle(st)}
+                          </Text>
+                          <View style={styles.badgeRow}>
+                            {st.dueDate ? (
+                              <Text style={styles.txMeta}>
+                                {formatDate(st.dueDate)}
+                              </Text>
+                            ) : null}
+                            {isIncome ? (
+                              <Badge
+                                size="sm"
+                                label="Deposit Due"
+                                bg={theme.colors.successSubtle}
+                                border="rgba(16, 185, 129, 0.3)"
+                                color={theme.colors.success}
+                              />
+                            ) : dueBadge ? (
+                              <Badge
+                                size="sm"
+                                label={dueBadge.label}
+                                bg={
+                                  dueBadge.isOverdue
+                                    ? theme.colors.destructiveSubtle
+                                    : dueBadge.isToday
+                                      ? theme.colors.warningSubtle
+                                      : theme.colors.surfaceHighlight
+                                }
+                                border={
+                                  dueBadge.isOverdue
+                                    ? "rgba(244, 63, 94, 0.3)"
+                                    : dueBadge.isToday
+                                      ? "rgba(245, 158, 11, 0.3)"
+                                      : theme.colors.border
+                                }
+                                color={
+                                  dueBadge.isOverdue
+                                    ? theme.colors.destructive
+                                    : dueBadge.isToday
+                                      ? theme.colors.warning
+                                      : theme.colors.textMuted
+                                }
+                              />
+                            ) : null}
+                          </View>
+                        </View>
+                      </View>
+
+                      <View style={styles.scheduledRight}>
+                        <MonoAmount
+                          size="sm"
+                          color={
+                            isIncome
+                              ? theme.colors.success
+                              : theme.colors.textPrimary
+                          }
+                        >
+                          {isIncome ? "+" : "-"}
+                          {formatAmount(st.amount, st.currency || baseCurrency)}
+                        </MonoAmount>
+                        <TouchableOpacity
+                          style={styles.dotsBtn}
+                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                          activeOpacity={0.6}
+                          onPress={() => handleScheduledDots(st)}
+                        >
+                          <MoreVertical
+                            size={16}
+                            color={theme.colors.textMuted}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    </TouchableOpacity>
+                  )
+                })}
             </Card>
           )}
         </View>
 
-        {/* Section 2: Active Budgets Preview */}
+        {/* Section 3: Debts & Loans */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <Caption style={styles.sectionHeader}>
+              DEBTS & LOANS ({borrowingsList.length})
+            </Caption>
+            <TouchableOpacity
+              style={styles.seeAllBtn}
+              activeOpacity={0.7}
+              onPress={() => navigateTo("/(app)/finance/borrowing")}
+            >
+              <Text style={styles.seeAllText}>See all</Text>
+              <ArrowRight size={13} color={theme.colors.primary} />
+            </TouchableOpacity>
+          </View>
+
+          {borrowingsLoading ? (
+            <SkeletonCard />
+          ) : borrowingsList.length === 0 ? (
+            <Card style={styles.emptyCard}>
+              <Text style={styles.emptyText}>No active debts or loans</Text>
+            </Card>
+          ) : (
+            <Card style={styles.listCard}>
+              {borrowingsList.slice(0, 3).map((b: Borrowing, idx) => {
+                const isLent = b.direction === "LENT"
+
+                return (
+                  <TouchableOpacity
+                    key={b.id || idx}
+                    style={[
+                      styles.txRow,
+                      idx < Math.min(borrowingsList.length, 3) - 1 &&
+                        styles.rowBorder,
+                    ]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      haptics.light()
+                      router.push({
+                        pathname: "/modal/add-transaction",
+                        params: {
+                          type: "BORROWING",
+                          borrowingId: b.id,
+                        },
+                      })
+                    }}
+                  >
+                    <View style={styles.txLeft}>
+                      <View
+                        style={[
+                          styles.actionIconBadge,
+                          {
+                            backgroundColor: isLent
+                              ? theme.colors.successSubtle
+                              : theme.colors.destructiveSubtle,
+                          },
+                        ]}
+                      >
+                        <HandCoins
+                          size={16}
+                          color={
+                            isLent
+                              ? theme.colors.success
+                              : theme.colors.destructive
+                          }
+                        />
+                      </View>
+                      <View style={styles.itemInfo}>
+                        <Text style={styles.txName} numberOfLines={1}>
+                          {b.counterparty || "Borrowing"}
+                        </Text>
+                        <View style={styles.badgeRow}>
+                          <Badge
+                            size="sm"
+                            label={isLent ? "Owed to you" : "You owe"}
+                            bg={
+                              isLent
+                                ? theme.colors.successSubtle
+                                : theme.colors.destructiveSubtle
+                            }
+                            border={
+                              isLent
+                                ? "rgba(16, 185, 129, 0.3)"
+                                : "rgba(244, 63, 94, 0.3)"
+                            }
+                            color={
+                              isLent
+                                ? theme.colors.success
+                                : theme.colors.destructive
+                            }
+                          />
+                          {b.dueAt ? (
+                            <Text style={styles.txMeta}>
+                              Due {formatDate(b.dueAt)}
+                            </Text>
+                          ) : null}
+                        </View>
+                      </View>
+                    </View>
+
+                    <View style={styles.scheduledRight}>
+                      <MonoAmount
+                        size="sm"
+                        color={
+                          isLent
+                            ? theme.colors.success
+                            : theme.colors.destructive
+                        }
+                      >
+                        {formatAmount(
+                          b.remainingAmount || b.totalAmount,
+                          b.currency || baseCurrency
+                        )}
+                      </MonoAmount>
+                      <TouchableOpacity
+                        style={styles.dotsBtn}
+                        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                        activeOpacity={0.6}
+                        onPress={() => handleBorrowingDots(b)}
+                      >
+                        <MoreVertical
+                          size={16}
+                          color={theme.colors.textMuted}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
+                )
+              })}
+            </Card>
+          )}
+        </View>
+
+        {/* Section 4: Active Budgets Preview */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Caption style={styles.sectionHeader}>ACTIVE BUDGETS</Caption>
@@ -420,74 +971,68 @@ export default function FinanceHubScreen() {
           )}
         </View>
 
-        {/* Section 3: Accounts Summary Preview */}
+        {/* Section 5: Recent Transactions Preview */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <Caption style={styles.sectionHeader}>ACCOUNTS SUMMARY</Caption>
+            <Caption style={styles.sectionHeader}>RECENT TRANSACTIONS</Caption>
             <TouchableOpacity
               style={styles.seeAllBtn}
               activeOpacity={0.7}
-              onPress={() => navigateTo("/(app)/finance/accounts")}
+              onPress={() => navigateTo("/(app)/finance/transactions")}
             >
               <Text style={styles.seeAllText}>See all</Text>
               <ArrowRight size={13} color={theme.colors.primary} />
             </TouchableOpacity>
           </View>
 
-          {accountsLoading ? (
-            <SkeletonCard height={190} />
-          ) : accounts.length === 0 ? (
+          {txLoading ? (
+            <SkeletonCard />
+          ) : transactions.length === 0 ? (
             <Card style={styles.emptyCard}>
-              <Text style={styles.emptyText}>No accounts connected</Text>
+              <Text style={styles.emptyText}>No recent transactions</Text>
+              <TouchableOpacity
+                style={styles.emptyActionBtn}
+                activeOpacity={0.7}
+                onPress={() => {
+                  haptics.medium()
+                  router.push("/modal/add-transaction")
+                }}
+              >
+                <Plus size={14} color={theme.colors.primary} />
+                <Text style={styles.emptyActionText}>Add Transaction</Text>
+              </TouchableOpacity>
             </Card>
           ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.horizontalAccountsScroll}
-              contentContainerStyle={styles.horizontalAccountsContainer}
-            >
-              {accounts.map((acc: Account) => {
-                const balanceCents = acc.currentBalance || "0"
-                const balanceNum = Number(balanceCents)
-                const isDifferentCurrency =
-                  acc.currency && acc.currency !== baseCurrency
-
-                let convertedStr = ""
-                if (isDifferentCurrency) {
-                  const preview = getConversionPreview(
-                    String(Math.abs(balanceNum) / 100),
-                    acc.currency
-                  )
-                  if (preview && "amount" in preview) {
-                    convertedStr = `≈ ${formatAmount(
-                      Math.round(preview.amount * 100),
-                      baseCurrency
-                    )}`
+            <Card style={styles.listCard}>
+              {transactions.map((tx: Transaction, idx) => (
+                <TransactionListItem
+                  key={tx.id || idx}
+                  item={tx}
+                  baseCurrency={baseCurrency}
+                  account={
+                    tx.accountId ? accountsMap.get(tx.accountId) : undefined
                   }
-                }
-
-                return (
-                  <CardAccountItem
-                    key={acc.id}
-                    acc={acc}
-                    institution={
-                      acc.institutionId
-                        ? instMap.get(acc.institutionId)
-                        : undefined
-                    }
-                    baseCurrency={baseCurrency}
-                    convertedText={convertedStr}
-                    width={300}
-                    onPress={() =>
-                      acc.id
-                        ? navigateTo(`/(app)/finance/accounts/${acc.id}`)
-                        : navigateTo("/(app)/finance/accounts")
-                    }
-                  />
-                )
-              })}
-            </ScrollView>
+                  budget={tx.budgetId ? budgetsMap.get(tx.budgetId) : undefined}
+                  onPress={() =>
+                    tx.id
+                      ? navigateTo(`/(app)/finance/transactions/${tx.id}`)
+                      : navigateTo("/(app)/finance/transactions")
+                  }
+                  showBorderBottom={idx < transactions.length - 1}
+                />
+              ))}
+              <TouchableOpacity
+                style={styles.cardFooterAction}
+                activeOpacity={0.7}
+                onPress={() => {
+                  haptics.medium()
+                  router.push("/modal/add-transaction")
+                }}
+              >
+                <Plus size={14} color={theme.colors.primary} />
+                <Text style={styles.cardFooterActionText}>Add Transaction</Text>
+              </TouchableOpacity>
+            </Card>
           )}
         </View>
       </ScrollView>
@@ -562,6 +1107,11 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 3,
   },
+  assetItemHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
   divider: {
     width: 1,
     height: 28,
@@ -618,6 +1168,32 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
+  },
+  actionIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  itemInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  badgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 2,
+  },
+  scheduledRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  dotsBtn: {
+    padding: 4,
+    marginLeft: 2,
   },
   horizontalAccountsScroll: {
     marginHorizontal: -16,

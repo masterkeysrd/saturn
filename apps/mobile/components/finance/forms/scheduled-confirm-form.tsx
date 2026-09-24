@@ -59,6 +59,7 @@ export interface ScheduledConfirmFormProps {
   onSuccess: () => void
   scheduledLoading?: boolean
   budgetsLoading?: boolean
+  initialScheduledId?: string
 }
 
 export function ScheduledConfirmForm({
@@ -70,6 +71,7 @@ export function ScheduledConfirmForm({
   onSuccess,
   scheduledLoading,
   budgetsLoading,
+  initialScheduledId,
 }: ScheduledConfirmFormProps) {
   const insets = useSafeAreaInsets()
   const toast = useToast()
@@ -96,13 +98,16 @@ export function ScheduledConfirmForm({
   // Mutation
   const confirmScheduledMutation = useConfirmScheduledTransactionMutation()
 
-  // Auto-select first scheduled item if available
+  // Auto-select scheduled item if available
   useEffect(() => {
     if (pendingScheduled.length > 0 && !selectedScheduled) {
-      const first = pendingScheduled[0]
-      applyScheduledItem(first)
+      const target = initialScheduledId
+        ? pendingScheduled.find((s) => s.id === initialScheduledId) ||
+          pendingScheduled[0]
+        : pendingScheduled[0]
+      applyScheduledItem(target)
     }
-  }, [pendingScheduled, selectedScheduled])
+  }, [pendingScheduled, selectedScheduled, initialScheduledId])
 
   const applyScheduledItem = (st: ScheduledTransaction) => {
     setSelectedScheduled(st)
