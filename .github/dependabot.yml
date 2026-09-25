@@ -10,15 +10,25 @@ updates:
       timezone: "UTC"
     open-pull-requests-limit: 5
 
-  # 2. Keep React web app npm dependencies updated weekly
+  # 2. Keep Monorepo npm dependencies updated weekly across apps & packages
   - package-ecosystem: "npm"
-    directory: "/apps/web"
+    directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
       time: "08:30"
       timezone: "UTC"
     open-pull-requests-limit: 5
+    groups:
+      expo-mobile:
+        patterns:
+          - "expo*"
+          - "react-native*"
+      monorepo-tooling:
+        patterns:
+          - "turbo"
+          - "prettier*"
+          - "typescript"
 
   # 3. Keep GitHub Actions workflows updated weekly
   - package-ecosystem: "github-actions"
