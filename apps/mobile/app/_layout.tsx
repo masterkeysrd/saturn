@@ -2,21 +2,13 @@ import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { Stack } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import { SafeAreaProvider } from "react-native-safe-area-context"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client"
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet"
 import { AuthProvider } from "@/lib/auth-context"
 import { SpaceProvider } from "@/lib/space-context"
 import { ToastProvider } from "@/components/ui/toast"
+import { queryClient, persistOptions } from "@/lib/query-persister"
 import { theme } from "@/lib/theme"
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      staleTime: 1000 * 60,
-    },
-  },
-})
 
 export default function RootLayout() {
   return (
@@ -24,7 +16,10 @@ export default function RootLayout() {
       style={{ flex: 1, backgroundColor: theme.colors.background }}
     >
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={persistOptions}
+        >
           <AuthProvider>
             <SpaceProvider>
               <BottomSheetModalProvider>
@@ -143,7 +138,7 @@ export default function RootLayout() {
               </BottomSheetModalProvider>
             </SpaceProvider>
           </AuthProvider>
-        </QueryClientProvider>
+        </PersistQueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   )
