@@ -123,6 +123,8 @@ export default function RegisterScreen() {
                 setName(val)
                 if (error) setError(null)
               }}
+              autoComplete="name"
+              textContentType="name"
               leftIcon={<User size={18} color={theme.colors.textMuted} />}
             />
 
@@ -132,6 +134,10 @@ export default function RegisterScreen() {
               value={username}
               onChangeText={setUsername}
               autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="username"
+              textContentType="username"
+              importantForAutofill="yes"
               leftIcon={<AtSign size={18} color={theme.colors.textMuted} />}
             />
 
@@ -144,7 +150,11 @@ export default function RegisterScreen() {
                 if (error) setError(null)
               }}
               autoCapitalize="none"
+              autoCorrect={false}
               keyboardType="email-address"
+              autoComplete="email"
+              textContentType="emailAddress"
+              importantForAutofill="yes"
               leftIcon={<Mail size={18} color={theme.colors.textMuted} />}
             />
 
@@ -157,6 +167,9 @@ export default function RegisterScreen() {
                 if (error) setError(null)
               }}
               isPassword
+              autoComplete="new-password"
+              textContentType="newPassword"
+              importantForAutofill="yes"
               leftIcon={<Lock size={18} color={theme.colors.textMuted} />}
             />
 

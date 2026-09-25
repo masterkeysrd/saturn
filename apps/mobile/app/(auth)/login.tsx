@@ -144,6 +144,9 @@ export default function LoginScreen() {
               }}
               autoCapitalize="none"
               autoCorrect={false}
+              autoComplete="username"
+              textContentType="username"
+              importantForAutofill="yes"
               leftIcon={<User size={18} color={theme.colors.textMuted} />}
             />
 
@@ -156,6 +159,9 @@ export default function LoginScreen() {
                 if (error) setError(null)
               }}
               isPassword
+              autoComplete="current-password"
+              textContentType="password"
+              importantForAutofill="yes"
               leftIcon={<Lock size={18} color={theme.colors.textMuted} />}
             />
 
