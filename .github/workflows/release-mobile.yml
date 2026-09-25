@@ -55,6 +55,11 @@ jobs:
         run: npx expo prebuild --platform android --no-install
         working-directory: apps/mobile
 
+      - name: Setup Gradle Build Cache
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          build-root-directory: apps/mobile/android
+
       - name: Build Android Release APK
         run: |
           cd apps/mobile/android
@@ -116,10 +121,28 @@ jobs:
         run: npx expo prebuild --platform ios --no-install
         working-directory: apps/mobile
 
+      - name: Cache CocoaPods
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/Library/Caches/CocoaPods
+            apps/mobile/ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('apps/mobile/package.json', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
       - name: Install CocoaPods
         run: |
           cd apps/mobile/ios
           pod install
+
+      - name: Cache Xcode DerivedData
+        uses: actions/cache@v6
+        with:
+          path: apps/mobile/ios/build/Build/Intermediates.noindex
+          key: ${{ runner.os }}-derived-data-${{ hashFiles('apps/mobile/package.json', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-derived-data-
 
       - name: Build iOS Simulator Archive
         run: |
@@ -131,9 +154,18 @@ jobs:
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO
 
-          # Compress the .app bundle
-          cd build/Build/Products/Release-iphonesimulator
-          zip -r ../../../../saturn-ios-simulator.zip Saturn.app
+          # Find and compress the .app bundle
+          APP_PATH=$(find build/Build/Products -name "*.app" | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: No .app bundle found in build/Build/Products"
+            exit 1
+          fi
+          echo "Found app bundle at: $APP_PATH"
+          APP_DIR=$(dirname "$APP_PATH")
+          APP_NAME=$(basename "$APP_PATH")
+
+          (cd "$APP_DIR" && zip -r "$GITHUB_WORKSPACE/apps/mobile/saturn-ios-simulator.zip" "$APP_NAME")
+          echo "Simulator build zipped to: $GITHUB_WORKSPACE/apps/mobile/saturn-ios-simulator.zip"
 
       - name: Upload iOS Simulator Artifact
         uses: actions/upload-artifact@v7
