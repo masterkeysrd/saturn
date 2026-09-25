@@ -68,6 +68,15 @@ export default function RootLayout() {
                       }}
                     />
                     <Stack.Screen
+                      name="server-settings"
+                      options={{
+                        headerTitle: "Settings",
+                        headerStyle: {
+                          backgroundColor: theme.colors.surface,
+                        },
+                      }}
+                    />
+                    <Stack.Screen
                       name="modal/create-space"
                       options={{
                         presentation: "modal",

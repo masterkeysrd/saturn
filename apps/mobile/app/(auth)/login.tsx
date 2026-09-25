@@ -11,7 +11,7 @@ import {
 } from "react-native"
 import { Link, useRouter } from "expo-router"
 import { SafeAreaView } from "react-native-safe-area-context"
-import { LogIn, Lock, User, Check } from "lucide-react-native"
+import { LogIn, Lock, User, Check, Settings } from "lucide-react-native"
 import { useAuth } from "@/lib/auth-context"
 import { theme } from "@/lib/theme"
 import { Button } from "@/components/ui/button"
@@ -93,6 +93,23 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      {/* Top right gear for server environment settings */}
+      <View style={styles.topBar}>
+        <View style={{ flex: 1 }} />
+        <TouchableOpacity
+          style={styles.serverButton}
+          activeOpacity={0.7}
+          onPress={() => {
+            haptics.light()
+            router.push("/server-settings")
+          }}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityLabel="Server Settings"
+        >
+          <Settings size={18} color={theme.colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
+
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -198,6 +215,23 @@ const styles = StyleSheet.create({
   },
   keyboardAvoid: {
     flex: 1,
+  },
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingHorizontal: 20,
+    paddingTop: 4,
+  },
+  serverButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
   },
   container: {
     flexGrow: 1,

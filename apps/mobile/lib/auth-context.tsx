@@ -26,7 +26,12 @@ import {
   setStoredUserProfile,
 } from "./storage"
 import { decodeJwt, isTokenExpired } from "./jwt"
-import { getApiBaseUrl } from "./config"
+import {
+  getApiBaseUrl,
+  loadServerUrl,
+  setServerUrl as setConfigServerUrl,
+  resetServerUrl as resetConfigServerUrl,
+} from "./config"
 
 // Configure client storage and base URL synchronously at module load
 configureClient({
@@ -52,6 +57,7 @@ export interface AuthContextType {
   isBiometricSupported: boolean
   isBiometricActive: boolean
   activeSpaceId: string | null
+  serverUrl: string
   error: string | null
   login: (req: LoginUserRequest) => Promise<void>
   register: (req: RegisterUserRequest) => Promise<void>
@@ -60,6 +66,8 @@ export interface AuthContextType {
   setActiveSpace: (spaceId: string | null) => Promise<void>
   toggleBiometrics: (enabled: boolean) => Promise<boolean>
   authenticateWithBiometrics: () => Promise<boolean>
+  updateServerUrl: (url: string) => Promise<string>
+  resetServerUrl: () => Promise<string>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -75,23 +83,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isBiometricSupported, setIsBiometricSupported] = useState(false)
   const [isBiometricActive, setIsBiometricActive] = useState(false)
 
+  const [serverUrl, setServerUrl] = useState<string>(getApiBaseUrl())
+
   // Configure API client with onRefreshed and onUnauthorized handlers
   useEffect(() => {
-    configureClient({
-      baseUrl: getApiBaseUrl(),
-      storage: mobileStorage,
-      onRefreshed: (newAccessToken: string) => {
-        setAccessToken(newAccessToken)
-        setSession({ accessToken: newAccessToken, hasSession: true })
-      },
-      onUnauthorized: () => {
-        mobileStorage.clearSession()
-        setStoredUserProfile(null)
-        setCachedUser(null)
-        setSession({ accessToken: null, hasSession: false })
-        setAccessToken(null)
-      },
-    })
+    async function initClient() {
+      const activeUrl = await loadServerUrl()
+      setServerUrl(activeUrl)
+      configureClient({
+        baseUrl: activeUrl,
+        storage: mobileStorage,
+        onRefreshed: (newAccessToken: string) => {
+          setAccessToken(newAccessToken)
+          setSession({ accessToken: newAccessToken, hasSession: true })
+        },
+        onUnauthorized: () => {
+          mobileStorage.clearSession()
+          setStoredUserProfile(null)
+          setCachedUser(null)
+          setSession({ accessToken: null, hasSession: false })
+          setAccessToken(null)
+        },
+      })
+    }
+    initClient()
   }, [])
 
   // Check hardware biometric capabilities
@@ -362,6 +377,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return res.success
   }
 
+  const updateServerUrl = async (url: string): Promise<string> => {
+    const updated = await setConfigServerUrl(url)
+    setServerUrl(updated)
+    await queryClient.clear()
+    return updated
+  }
+
+  const resetServerUrl = async (): Promise<string> => {
+    const reset = await resetConfigServerUrl()
+    setServerUrl(reset)
+    await queryClient.clear()
+    return reset
+  }
+
   const isAuthenticated = Boolean(session?.hasSession && accessToken)
 
   return (
@@ -375,6 +404,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isBiometricSupported,
         isBiometricActive,
         activeSpaceId,
+        serverUrl,
         error,
         login,
         register,
@@ -383,6 +413,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setActiveSpace: switchSpace,
         toggleBiometrics,
         authenticateWithBiometrics,
+        updateServerUrl,
+        resetServerUrl,
       }}
     >
       {children}

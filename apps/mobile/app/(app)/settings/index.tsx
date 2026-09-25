@@ -25,6 +25,7 @@ import {
   Coins,
   Info,
   CheckCircle2,
+  Globe,
 } from "lucide-react-native"
 import { useListActiveSessionsQuery } from "@saturn/api/saturn/identity/v1/identity"
 import { useGetFinanceSettingsQuery } from "@saturn/api/saturn/finance/v1/finance"
@@ -49,6 +50,7 @@ export default function SettingsScreen() {
     isBiometricSupported,
     isBiometricActive,
     toggleBiometrics,
+    serverUrl,
   } = useAuth()
   const { activeSpace, activeSpaceRole, activeSpaceId } = useSpace()
 
@@ -305,6 +307,23 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionHeader}>STORAGE & SYSTEM</Text>
           <Card style={styles.menuGroup}>
+            <TouchableOpacity
+              style={[styles.menuItem, styles.menuItemBorder]}
+              activeOpacity={0.7}
+              onPress={() => router.push("/server-settings")}
+            >
+              <View style={styles.menuLeft}>
+                <Globe size={18} color={theme.colors.primary} />
+                <Text style={styles.menuLabel}>Server Host</Text>
+              </View>
+              <View style={styles.menuRight}>
+                <Text style={styles.menuValue} numberOfLines={1}>
+                  {serverUrl.replace(/^https?:\/\//, "")}
+                </Text>
+                <ChevronRight size={16} color={theme.colors.textMuted} />
+              </View>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={[styles.menuItem, styles.menuItemBorder]}
               activeOpacity={0.7}
