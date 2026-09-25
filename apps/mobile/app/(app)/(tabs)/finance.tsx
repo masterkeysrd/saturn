@@ -22,6 +22,7 @@ import {
   CalendarClock,
   HandCoins,
   MoreVertical,
+  Inbox,
 } from "lucide-react-native"
 import {
   formatAmount,
@@ -37,6 +38,7 @@ import {
   useListScheduledTransactionsQuery,
   useSkipScheduledTransactionMutation,
   useListBorrowingsQuery,
+  useListInboxItemsQuery,
   type Transaction,
   type Budget,
   type Account,
@@ -155,6 +157,19 @@ export default function FinanceHubScreen() {
       { pageSize: 20, pageToken: "", status: "ACTIVE" },
       { enabled: !!activeSpaceId }
     )
+
+  // 9. Pending Inbox Items (Forwarded emails & notifications for web triage)
+  const { data: inboxData } = useListInboxItemsQuery(
+    {
+      status: "PENDING",
+      pageSize: 50,
+      pageToken: "",
+      sort: "",
+      view: "BASIC",
+    },
+    { enabled: !!activeSpaceId }
+  )
+  const pendingInboxCount = inboxData?.inboxItems?.length ?? 0
 
   const getScheduledTitle = (st: ScheduledTransaction) =>
     st.metadata?.name ||
@@ -309,6 +324,16 @@ export default function FinanceHubScreen() {
     )
   }
 
+  const showInboxInfo = () => {
+    haptics.light()
+    const itemWord = pendingInboxCount === 1 ? "item" : "items"
+    Alert.alert(
+      "Pending Inbox Items",
+      `You have ${pendingInboxCount} forwarded ${itemWord} waiting for review.\n\nPlease log in to the Saturn web app on your desktop browser to review, link, and approve or discard them.`,
+      [{ text: "Got it" }]
+    )
+  }
+
   return (
     <View style={styles.safeArea}>
       <ScrollView
@@ -375,6 +400,35 @@ export default function FinanceHubScreen() {
             <Text style={styles.navPillText}>Borrowing</Text>
           </TouchableOpacity>
         </ScrollView>
+
+        {/* Pending Inbox Items Banner (Web Review Notice) */}
+        {pendingInboxCount > 0 && (
+          <TouchableOpacity
+            style={styles.inboxBanner}
+            activeOpacity={0.8}
+            onPress={showInboxInfo}
+          >
+            <View style={styles.inboxBannerIconContainer}>
+              <Inbox size={18} color="#818cf8" />
+            </View>
+            <View style={styles.inboxBannerTextContainer}>
+              <View style={styles.inboxBannerHeaderRow}>
+                <Text style={styles.inboxBannerTitle}>
+                  {pendingInboxCount === 1
+                    ? "1 Pending Inbox Item"
+                    : `${pendingInboxCount} Pending Inbox Items`}
+                </Text>
+                <View style={styles.inboxBannerBadge}>
+                  <Text style={styles.inboxBannerBadgeText}>Web Only</Text>
+                </View>
+              </View>
+              <Text style={styles.inboxBannerSubtitle}>
+                Review and resolve on the web app
+              </Text>
+            </View>
+            <ChevronRight size={16} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+        )}
 
         {/* Primary Net Liquidity Card */}
         <Card style={styles.netWorthCard}>
@@ -1305,6 +1359,59 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   budgetLimit: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+  },
+  inboxBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(99, 102, 241, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(99, 102, 241, 0.25)",
+    borderRadius: theme.radius.lg,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 16,
+    gap: 12,
+  },
+  inboxBannerIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(99, 102, 241, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  inboxBannerTextContainer: {
+    flex: 1,
+    gap: 2,
+  },
+  inboxBannerHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  inboxBannerTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: theme.colors.textPrimary,
+  },
+  inboxBannerBadge: {
+    backgroundColor: "rgba(99, 102, 241, 0.2)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(99, 102, 241, 0.35)",
+  },
+  inboxBannerBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#a5b4fc",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  inboxBannerSubtitle: {
     fontSize: 12,
     color: theme.colors.textMuted,
   },
