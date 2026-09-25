@@ -1,7 +1,7 @@
 import { Tabs } from "expo-router"
 import { View, StyleSheet } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { Home, Wallet } from "lucide-react-native"
+import { Home, Wallet, Menu } from "lucide-react-native"
 import { AppHeader } from "@/components/app-header"
 import { OfflineIndicator } from "@/components/offline-indicator"
 import { theme } from "@/lib/theme"
@@ -47,6 +47,15 @@ export default function TabsLayout() {
             title: "Finance",
             tabBarIcon: ({ color, size }) => (
               <Wallet size={size ?? 22} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="menu"
+          options={{
+            title: "Menu",
+            tabBarIcon: ({ color, size }) => (
+              <Menu size={size ?? 22} color={color} />
             ),
           }}
         />

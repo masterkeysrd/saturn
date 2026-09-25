@@ -19,8 +19,7 @@ export function AppHeader() {
 
   const handleNotifications = () => {
     haptics.light()
-    // Open settings/alerts or upcoming notification screen
-    router.push("/(app)/settings")
+    router.push("/(app)/(tabs)/menu")
   }
 
   const handleSettings = () => {
