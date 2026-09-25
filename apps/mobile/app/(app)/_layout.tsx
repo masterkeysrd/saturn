@@ -53,6 +53,18 @@ export default function AppLayout() {
         }}
       />
       <Stack.Screen
+        name="settings/security"
+        options={{
+          headerShown: true,
+          headerTitle: "Active Sessions & Security",
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+          },
+          headerTintColor: theme.colors.textPrimary,
+          headerBackTitle: "Settings",
+        }}
+      />
+      <Stack.Screen
         name="finance/transactions/index"
         options={{
           headerShown: true,
