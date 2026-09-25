@@ -49,13 +49,3 @@ updates:
       time: "09:30"
       timezone: "UTC"
     open-pull-requests-limit: 3
-
-  # 5. Keep Docker Compose service images updated weekly
-  - package-ecosystem: "docker-compose"
-    directory: "/deployments/docker-compose"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "10:00"
-      timezone: "UTC"
-    open-pull-requests-limit: 3
