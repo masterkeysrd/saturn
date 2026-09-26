@@ -1,11 +1,12 @@
 import { useMemo } from "react"
-import { StyleSheet, View, TouchableOpacity } from "react-native"
+import { StyleSheet, View, TouchableOpacity, Text } from "react-native"
 import { useRouter } from "expo-router"
 import {
   Landmark,
   ChevronRight,
   ArrowDownLeft,
   ArrowUpRight,
+  Plus,
 } from "lucide-react-native"
 import { formatAmount, calculateAccountMetrics } from "@saturn/core"
 import {
@@ -82,90 +83,114 @@ export function FinanceSummaryWidget() {
 
   if (isLoading) {
     return (
-      <Card style={styles.container}>
-        <View style={styles.header}>
-          <Skeleton width={150} height={16} />
-          <Skeleton width={50} height={16} />
+      <Card style={styles.card}>
+        <View style={styles.cardBody}>
+          <View style={styles.header}>
+            <Skeleton width={150} height={16} />
+            <Skeleton width={50} height={16} />
+          </View>
+          <View style={{ gap: 8, marginVertical: 4 }}>
+            <Skeleton width={110} height={12} />
+            <Skeleton width={180} height={32} />
+          </View>
+          <View style={styles.statsRow}>
+            <Skeleton width="45%" height={36} />
+            <Skeleton width="45%" height={36} />
+          </View>
         </View>
-        <View style={{ gap: 8, marginVertical: 4 }}>
-          <Skeleton width={110} height={12} />
-          <Skeleton width={180} height={32} />
-        </View>
-        <View style={styles.statsRow}>
-          <Skeleton width="45%" height={36} />
-          <Skeleton width="45%" height={36} />
+        <View style={styles.footerSkeleton}>
+          <Skeleton width={120} height={14} />
         </View>
       </Card>
     )
   }
 
   return (
-    <Card style={styles.container}>
-      {/* Widget Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Landmark size={15} color={theme.colors.primary} />
-          <Caption style={styles.headerTitle}>FINANCIAL SNAPSHOT</Caption>
-        </View>
-        <TouchableOpacity
-          style={styles.linkButton}
-          onPress={navigateToFinance}
-          activeOpacity={0.7}
-        >
-          <ChevronRight size={14} color={theme.colors.textMuted} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Real Net Worth Figure */}
-      <View style={styles.balanceSection}>
-        <Caption style={styles.balanceLabel}>TOTAL NET WORTH</Caption>
-        <MonoAmount size="xl" style={styles.balanceAmount}>
-          {formatAmount(netWorthCents, baseCurrency)}
-        </MonoAmount>
-      </View>
-
-      {/* Real Monthly Cashflow Stats */}
-      <View style={styles.statsRow}>
-        <View style={styles.statItem}>
-          <View
-            style={[
-              styles.statIconBadge,
-              { backgroundColor: theme.colors.successSubtle },
-            ]}
+    <Card style={styles.card}>
+      <View style={styles.cardBody}>
+        {/* Widget Header */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Landmark size={15} color={theme.colors.primary} />
+            <Caption style={styles.headerTitle}>FINANCIAL SNAPSHOT</Caption>
+          </View>
+          <TouchableOpacity
+            style={styles.linkButton}
+            onPress={navigateToFinance}
+            activeOpacity={0.7}
           >
-            <ArrowDownLeft size={14} color={theme.colors.success} />
-          </View>
-          <View>
-            <Caption>Income ({currentMonthLabel})</Caption>
-            <MonoAmount size="sm" color={theme.colors.success}>
-              +{formatAmount(totalIncomeCents, baseCurrency)}
-            </MonoAmount>
-          </View>
+            <ChevronRight size={14} color={theme.colors.textMuted} />
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.statItem}>
-          <View
-            style={[
-              styles.statIconBadge,
-              { backgroundColor: theme.colors.destructiveSubtle },
-            ]}
-          >
-            <ArrowUpRight size={14} color={theme.colors.destructive} />
+        {/* Real Net Worth Figure */}
+        <View style={styles.balanceSection}>
+          <Caption style={styles.balanceLabel}>TOTAL NET WORTH</Caption>
+          <MonoAmount size="xl" style={styles.balanceAmount}>
+            {formatAmount(netWorthCents, baseCurrency)}
+          </MonoAmount>
+        </View>
+
+        {/* Real Monthly Cashflow Stats */}
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <View
+              style={[
+                styles.statIconBadge,
+                { backgroundColor: theme.colors.successSubtle },
+              ]}
+            >
+              <ArrowDownLeft size={14} color={theme.colors.success} />
+            </View>
+            <View>
+              <Caption>Income ({currentMonthLabel})</Caption>
+              <MonoAmount size="sm" color={theme.colors.success}>
+                +{formatAmount(totalIncomeCents, baseCurrency)}
+              </MonoAmount>
+            </View>
           </View>
-          <View>
-            <Caption>Expenses ({currentMonthLabel})</Caption>
-            <MonoAmount size="sm" color={theme.colors.destructive}>
-              -{formatAmount(totalSpentCents, baseCurrency)}
-            </MonoAmount>
+
+          <View style={styles.statItem}>
+            <View
+              style={[
+                styles.statIconBadge,
+                { backgroundColor: theme.colors.destructiveSubtle },
+              ]}
+            >
+              <ArrowUpRight size={14} color={theme.colors.destructive} />
+            </View>
+            <View>
+              <Caption>Expenses ({currentMonthLabel})</Caption>
+              <MonoAmount size="sm" color={theme.colors.destructive}>
+                -{formatAmount(totalSpentCents, baseCurrency)}
+              </MonoAmount>
+            </View>
           </View>
         </View>
       </View>
+
+      {/* Card Footer Quick Action */}
+      <TouchableOpacity
+        style={styles.cardFooter}
+        activeOpacity={0.7}
+        onPress={() => {
+          haptics.medium()
+          router.push("/modal/add-transaction")
+        }}
+      >
+        <Plus size={15} color={theme.colors.primary} />
+        <Text style={styles.cardFooterText}>Add Transaction</Text>
+      </TouchableOpacity>
     </Card>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
+  card: {
+    padding: 0,
+    overflow: "hidden",
+  },
+  cardBody: {
     padding: 18,
     gap: 14,
   },
@@ -220,5 +245,29 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
+  },
+  cardFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceElevated,
+  },
+  cardFooterText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: theme.colors.primary,
+  },
+  footerSkeleton: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceElevated,
   },
 })

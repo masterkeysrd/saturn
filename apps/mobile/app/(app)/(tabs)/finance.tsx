@@ -51,6 +51,7 @@ import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
 import { useSpace } from "@/lib/space-context"
 import { theme, getNativeBudgetColors } from "@/lib/theme"
 import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Icon } from "@expo/ui"
 import { MenuView } from "@expo/ui/community/menu"
 import { MonoAmount, Caption } from "@/components/ui/typography"
@@ -478,6 +479,23 @@ export default function FinanceHubScreen() {
             </TouchableOpacity>
           </View>
         </Card>
+
+        {/* Section: Quick Actions */}
+        <View style={styles.section}>
+          <Caption style={styles.sectionHeader}>QUICK ACTIONS</Caption>
+          <Button
+            variant="secondary"
+            size="md"
+            fullWidth
+            leftIcon={<Plus size={16} color={theme.colors.primary} />}
+            onPress={() => {
+              haptics.medium()
+              router.push("/modal/add-transaction")
+            }}
+          >
+            Add Transaction
+          </Button>
+        </View>
 
         {/* Section 1: Accounts Summary Preview */}
         <View style={styles.section}>
