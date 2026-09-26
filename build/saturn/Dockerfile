@@ -13,6 +13,7 @@ COPY package*.json turbo.json ./
 COPY apps/web/package*.json ./apps/web/
 COPY packages/schemas/package*.json ./packages/schemas/
 COPY packages/core/package*.json ./packages/core/
+COPY packages/hooks/package*.json ./packages/hooks/
 COPY packages/api/package*.json ./packages/api/
 RUN npm ci
 
