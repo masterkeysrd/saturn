@@ -46,6 +46,7 @@ export interface TransferFormProps {
   exchangeRates: ExchangeRate[]
   onSuccess: () => void
   initialFromAccountId?: string
+  onAccountChange?: (accountId: string) => void
 }
 
 export function TransferForm({
@@ -53,6 +54,7 @@ export function TransferForm({
   exchangeRates,
   onSuccess,
   initialFromAccountId,
+  onAccountChange,
 }: TransferFormProps) {
   const insets = useSafeAreaInsets()
   const toast = useToast()
@@ -82,7 +84,9 @@ export function TransferForm({
   useEffect(() => {
     if (accounts.length > 0) {
       if (!transferFromId) {
-        setTransferFromId(initialFromAccountId || accounts[0].id || "")
+        const targetFrom = initialFromAccountId || accounts[0].id || ""
+        setTransferFromId(targetFrom)
+        onAccountChange?.(targetFrom)
       }
       if (!transferToId && accounts.length > 1) {
         const other = accounts.find(
@@ -91,7 +95,13 @@ export function TransferForm({
         setTransferToId(other ? other.id || "" : accounts[1].id || "")
       }
     }
-  }, [accounts, transferFromId, transferToId, initialFromAccountId])
+  }, [
+    accounts,
+    transferFromId,
+    transferToId,
+    initialFromAccountId,
+    onAccountChange,
+  ])
 
   const sourceAccount = useMemo(
     () => accounts.find((a) => a.id === transferFromId),
@@ -390,7 +400,10 @@ export function TransferForm({
         title="Transfer From"
         accounts={accounts}
         selectedAccountId={transferFromId}
-        onSelect={setTransferFromId}
+        onSelect={(accId) => {
+          setTransferFromId(accId)
+          onAccountChange?.(accId)
+        }}
         allowNoAccount={false}
       />
 

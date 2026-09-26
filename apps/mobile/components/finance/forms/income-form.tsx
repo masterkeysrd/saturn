@@ -54,6 +54,8 @@ export interface IncomeFormProps {
   baseCurrency: string
   onSuccess: () => void
   currenciesLoading?: boolean
+  initialAccountId?: string
+  onAccountChange?: (accountId: string) => void
 }
 
 export function IncomeForm({
@@ -64,6 +66,8 @@ export function IncomeForm({
   baseCurrency,
   onSuccess,
   currenciesLoading,
+  initialAccountId,
+  onAccountChange,
 }: IncomeFormProps) {
   const insets = useSafeAreaInsets()
   const toast = useToast()
@@ -78,7 +82,9 @@ export function IncomeForm({
   // Form State
   const [amountText, setAmountText] = useState("")
   const [description, setDescription] = useState("")
-  const [selectedAccountId, setSelectedAccountId] = useState<string>("")
+  const [selectedAccountId, setSelectedAccountId] = useState<string>(
+    initialAccountId || ""
+  )
   const [selectedCurrency, setSelectedCurrency] = useState<string>("")
   const [transactionDate, setTransactionDate] = useState<Date>(new Date())
   const [hasCustomEffectiveDate, setHasCustomEffectiveDate] =
@@ -98,10 +104,23 @@ export function IncomeForm({
   // Auto-set default account
   useEffect(() => {
     if (accounts.length > 0 && !isEditMode && !selectedAccountId) {
-      const defaultAcc = accounts.find((a) => a.isDefault) || accounts[0]
-      setSelectedAccountId(defaultAcc.id || "")
+      const targetAcc =
+        (initialAccountId
+          ? accounts.find((a) => a.id === initialAccountId)
+          : null) ||
+        accounts.find((a) => a.isDefault) ||
+        accounts[0]
+      const accId = targetAcc?.id || ""
+      setSelectedAccountId(accId)
+      onAccountChange?.(accId)
     }
-  }, [accounts, selectedAccountId, isEditMode])
+  }, [
+    accounts,
+    selectedAccountId,
+    isEditMode,
+    initialAccountId,
+    onAccountChange,
+  ])
 
   // Hydrate edit mode
   useEffect(() => {
@@ -511,7 +530,10 @@ export function IncomeForm({
         ref={accountSheetRef}
         accounts={accounts}
         selectedAccountId={selectedAccountId}
-        onSelect={setSelectedAccountId}
+        onSelect={(accId) => {
+          setSelectedAccountId(accId)
+          onAccountChange?.(accId)
+        }}
       />
 
       <CurrencyPickerSheet

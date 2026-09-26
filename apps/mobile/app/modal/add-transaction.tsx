@@ -72,6 +72,9 @@ export default function AddTransactionModal() {
   const [activeType, setActiveType] = useState<TransactionFlowType>(
     initialType || "EXPENSE"
   )
+  const [selectedAccountId, setSelectedAccountId] = useState<
+    string | undefined
+  >(initialAccountId)
 
   // Queries
   const { data: settingsData } = useGetFinanceSettingsQuery(
@@ -364,7 +367,8 @@ export default function AddTransactionModal() {
               budgetsLoading={budgetsLoading}
               currenciesLoading={currenciesLoading}
               initialBudgetId={initialBudgetId}
-              initialAccountId={initialAccountId}
+              initialAccountId={selectedAccountId}
+              onAccountChange={setSelectedAccountId}
             />
           )}
 
@@ -377,6 +381,8 @@ export default function AddTransactionModal() {
               baseCurrency={baseCurrency}
               onSuccess={() => router.back()}
               currenciesLoading={currenciesLoading}
+              initialAccountId={selectedAccountId}
+              onAccountChange={setSelectedAccountId}
             />
           )}
 
@@ -385,7 +391,8 @@ export default function AddTransactionModal() {
               accounts={accounts}
               exchangeRates={exchangeRates}
               onSuccess={() => router.back()}
-              initialFromAccountId={initialAccountId}
+              initialFromAccountId={selectedAccountId}
+              onAccountChange={setSelectedAccountId}
             />
           )}
 
@@ -400,6 +407,8 @@ export default function AddTransactionModal() {
               scheduledLoading={scheduledLoading}
               budgetsLoading={budgetsLoading}
               initialScheduledId={initialScheduledId}
+              initialAccountId={selectedAccountId}
+              onAccountChange={setSelectedAccountId}
             />
           )}
 
@@ -411,6 +420,8 @@ export default function AddTransactionModal() {
               onSuccess={() => router.back()}
               borrowingsLoading={borrowingsLoading}
               initialBorrowingId={initialBorrowingId}
+              initialAccountId={selectedAccountId}
+              onAccountChange={setSelectedAccountId}
             />
           )}
         </View>

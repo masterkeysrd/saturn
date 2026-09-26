@@ -65,6 +65,7 @@ export interface ExpenseFormProps {
   currenciesLoading?: boolean
   initialBudgetId?: string
   initialAccountId?: string
+  onAccountChange?: (accountId: string) => void
 }
 
 export function ExpenseForm({
@@ -79,6 +80,7 @@ export function ExpenseForm({
   currenciesLoading,
   initialBudgetId,
   initialAccountId,
+  onAccountChange,
 }: ExpenseFormProps) {
   const insets = useSafeAreaInsets()
   const toast = useToast()
@@ -143,6 +145,7 @@ export function ExpenseForm({
           targetBudget.defaultAccountId || defaultAcc?.id || ""
         if (resolvedAccId && resolvedAccId !== selectedAccountId) {
           setSelectedAccountId(resolvedAccId)
+          onAccountChange?.(resolvedAccId)
         }
       }
     } else if (
@@ -153,6 +156,7 @@ export function ExpenseForm({
       const defaultAcc = accounts.find((a) => a.isDefault) || accounts[0]
       if (defaultAcc?.id) {
         setSelectedAccountId(defaultAcc.id)
+        onAccountChange?.(defaultAcc.id)
       }
     }
   }, [
@@ -163,6 +167,7 @@ export function ExpenseForm({
     isEditMode,
     selectedCurrency,
     selectedAccountId,
+    onAccountChange,
   ])
 
   // Hydrate edit mode
@@ -693,6 +698,7 @@ export function ExpenseForm({
         onSelect={(accId) => {
           hasManuallySelectedAccount.current = true
           setSelectedAccountId(accId)
+          onAccountChange?.(accId)
         }}
       />
 

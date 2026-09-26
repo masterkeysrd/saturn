@@ -47,6 +47,8 @@ export interface BorrowingFormProps {
   onSuccess: () => void
   borrowingsLoading?: boolean
   initialBorrowingId?: string
+  initialAccountId?: string
+  onAccountChange?: (accountId: string) => void
 }
 
 export function BorrowingForm({
@@ -56,6 +58,8 @@ export function BorrowingForm({
   onSuccess,
   borrowingsLoading,
   initialBorrowingId,
+  initialAccountId,
+  onAccountChange,
 }: BorrowingFormProps) {
   const insets = useSafeAreaInsets()
   const toast = useToast()
@@ -76,7 +80,9 @@ export function BorrowingForm({
   >("BORROWING_TRANSACTION_TYPE_PAYMENT")
   const [amountText, setAmountText] = useState("")
   const [description, setDescription] = useState("")
-  const [selectedAccountId, setSelectedAccountId] = useState<string>("")
+  const [selectedAccountId, setSelectedAccountId] = useState<string>(
+    initialAccountId || ""
+  )
   const [transactionDate, setTransactionDate] = useState<Date>(new Date())
 
   const [validationError, setValidationError] = useState<string | null>(null)
@@ -98,10 +104,17 @@ export function BorrowingForm({
 
   useEffect(() => {
     if (accounts.length > 0 && !selectedAccountId) {
-      const defaultAcc = accounts.find((a) => a.isDefault) || accounts[0]
-      setSelectedAccountId(defaultAcc.id || "")
+      const target =
+        (initialAccountId
+          ? accounts.find((a) => a.id === initialAccountId)
+          : null) ||
+        accounts.find((a) => a.isDefault) ||
+        accounts[0]
+      const accId = target?.id || ""
+      setSelectedAccountId(accId)
+      onAccountChange?.(accId)
     }
-  }, [accounts, selectedAccountId])
+  }, [accounts, selectedAccountId, initialAccountId, onAccountChange])
 
   const selectedAccount = useMemo(
     () => accounts.find((a) => a.id === selectedAccountId),
@@ -441,7 +454,10 @@ export function BorrowingForm({
         ref={accountSheetRef}
         accounts={accounts}
         selectedAccountId={selectedAccountId}
-        onSelect={setSelectedAccountId}
+        onSelect={(accId) => {
+          setSelectedAccountId(accId)
+          onAccountChange?.(accId)
+        }}
       />
 
       <DatePickerSheet
