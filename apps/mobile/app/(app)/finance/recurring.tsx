@@ -51,7 +51,10 @@ import { MonoAmount, Caption } from "@/components/ui/typography"
 import { EmptyState } from "@/components/ui/empty-state"
 import { SkeletonCard } from "@/components/ui/skeleton-loader"
 import { useToast } from "@/components/ui/toast"
-import { invalidateFinanceQueries } from "@/components/finance/finance-utils"
+import {
+  invalidateFinanceQueries,
+  getScheduledDisplayName,
+} from "@/components/finance/finance-utils"
 
 const WEEKS_IN_YEAR = 52
 const MONTHS_IN_YEAR = 12
@@ -141,15 +144,6 @@ function formatDate(dateStr?: string): string {
     month: "short",
     day: "numeric",
   })
-}
-
-function getScheduledTitle(st: ScheduledTransaction) {
-  return (
-    st.metadata?.name ||
-    st.recurringTransaction?.name ||
-    st.metadata?.description ||
-    (st.type === "INCOME" ? "Scheduled Income" : "Scheduled Bill")
-  )
 }
 
 type TabType = "upcoming" | "templates"
@@ -324,7 +318,7 @@ export default function RecurringScreen() {
     haptics.warning()
     Alert.alert(
       "Skip Upcoming Cycle?",
-      `Are you sure you want to skip "${getScheduledTitle(st)}"? It will not be logged as an expense.`,
+      `Are you sure you want to skip "${getScheduledDisplayName(st, recurringList)}"? It will not be logged as an expense.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -667,7 +661,7 @@ export default function RecurringScreen() {
               {filteredScheduled.map((st, idx) => {
                 const isIncome = st.type === "INCOME"
                 const dueBadge = getDueDateBadge(st.dueDate)
-                const title = getScheduledTitle(st)
+                const title = getScheduledDisplayName(st, recurringList)
 
                 return (
                   <View

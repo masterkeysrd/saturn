@@ -64,27 +64,26 @@ export function getScheduledDisplayName(
   st: ScheduledItemLike,
   recurringTemplates: RecurringTemplateLike[] = []
 ): string {
+  const matchedTemplate = recurringTemplates.find((e) => e.id === st.sourceId)
+  if (matchedTemplate?.name) {
+    return matchedTemplate.name
+  }
+  if (st.recurringTransaction?.name) {
+    return st.recurringTransaction.name
+  }
+  if (st.metadata?.vendorName) {
+    return st.metadata.vendorName
+  }
+  if (st.metadata?.description) {
+    return st.metadata.description
+  }
+  if (st.metadata?.name) {
+    return st.metadata.name
+  }
   if (st.sourceType === "RECURRENT_TRANSACTION") {
-    const matchedTemplate = recurringTemplates.find((e) => e.id === st.sourceId)
-    return (
-      matchedTemplate?.name ||
-      st.recurringTransaction?.name ||
-      st.metadata?.vendorName ||
-      st.metadata?.description ||
-      st.metadata?.name ||
-      "Scheduled Obligation"
-    )
+    return "Scheduled Obligation"
   }
-  if (st.sourceType === "SOURCE_TYPE_UNSPECIFIED" || !st.sourceType) {
-    if (st.metadata?.vendorName) return st.metadata.vendorName
-    if (st.metadata?.description) return st.metadata.description
-    if (st.metadata?.name) return st.metadata.name
-  }
-  return (
-    st.metadata?.description ||
-    st.metadata?.name ||
-    (st.type === "INCOME" ? "Scheduled Inflow" : "Scheduled Outflow")
-  )
+  return st.type === "INCOME" ? "Scheduled Inflow" : "Scheduled Outflow"
 }
 
 export type LimitPropagationValue =

@@ -25,7 +25,11 @@ import {
   Inbox,
   AlertTriangle,
 } from "lucide-react-native"
-import { formatAmount, calculateAccountMetrics } from "@saturn/core"
+import {
+  formatAmount,
+  calculateAccountMetrics,
+  getScheduledDisplayName,
+} from "@saturn/core"
 import {
   useListTransactionsQuery,
   useGetInsightsQuery,
@@ -33,6 +37,7 @@ import {
   useListInstitutionsQuery,
   useGetFinanceSettingsQuery,
   useListScheduledTransactionsQuery,
+  useListRecurringTransactionsQuery,
   useSkipScheduledTransactionMutation,
   useListBorrowingsQuery,
   useListInboxItemsQuery,
@@ -172,11 +177,19 @@ export default function FinanceHubScreen() {
   )
   const pendingInboxCount = inboxData?.inboxItems?.length ?? 0
 
-  const getScheduledTitle = (st: ScheduledTransaction) =>
-    st.metadata?.name ||
-    st.recurringTransaction?.name ||
-    st.metadata?.description ||
-    (st.type === "INCOME" ? "Scheduled Income" : "Scheduled Bill")
+  // 10. Recurring Transaction Templates (for scheduled item name resolution)
+  const { data: recurringData } = useListRecurringTransactionsQuery(
+    {
+      pageSize: 100,
+      pageToken: "",
+      status: "STATUS_UNSPECIFIED",
+    },
+    { enabled: !!activeSpaceId }
+  )
+  const recurringTemplates = useMemo(
+    () => recurringData?.recurringTransactions || [],
+    [recurringData]
+  )
 
   const skipScheduledMutation = useSkipScheduledTransactionMutation()
   const toast = useToast()
@@ -348,7 +361,7 @@ export default function FinanceHubScreen() {
   }
 
   const promptSkipScheduled = (st: ScheduledTransaction) => {
-    const title = getScheduledTitle(st)
+    const title = getScheduledDisplayName(st, recurringTemplates)
     Alert.alert(
       "Skip Scheduled Cycle?",
       `Are you sure you want to skip this cycle for "${title}"?`,
@@ -973,7 +986,7 @@ export default function FinanceHubScreen() {
                           </View>
                           <View style={styles.itemInfo}>
                             <Text style={styles.txName} numberOfLines={1}>
-                              {getScheduledTitle(st)}
+                              {getScheduledDisplayName(st, recurringTemplates)}
                             </Text>
                             <View style={styles.badgeRow}>
                               {st.dueDate ? (
@@ -1034,7 +1047,7 @@ export default function FinanceHubScreen() {
                       </TouchableOpacity>
 
                       <MenuView
-                        title={getScheduledTitle(st)}
+                        title={getScheduledDisplayName(st, recurringTemplates)}
                         colorScheme="dark"
                         style={styles.menuTriggerWrapper}
                         onPressAction={({ nativeEvent }) => {
