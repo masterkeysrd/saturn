@@ -48,7 +48,6 @@ import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
 import { useSpace } from "@/lib/space-context"
 import { theme } from "@/lib/theme"
 import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Icon } from "@expo/ui"
 import { MenuView } from "@expo/ui/community/menu"
 import { MonoAmount, Caption } from "@/components/ui/typography"
@@ -540,24 +539,72 @@ export default function FinanceHubScreen() {
           </View>
         </Card>
 
-        {/* Section: Quick Actions */}
+        {/* Section 1: Recent Transactions Preview */}
         <View style={styles.section}>
-          <Caption style={styles.sectionHeader}>QUICK ACTIONS</Caption>
-          <Button
-            variant="secondary"
-            size="md"
-            fullWidth
-            leftIcon={<Plus size={16} color={theme.colors.primary} />}
-            onPress={() => {
-              haptics.medium()
-              router.push("/modal/add-transaction")
-            }}
-          >
-            Add Transaction
-          </Button>
+          <View style={styles.sectionHeaderRow}>
+            <Caption style={styles.sectionHeader}>RECENT TRANSACTIONS</Caption>
+            <TouchableOpacity
+              style={styles.seeAllBtn}
+              activeOpacity={0.7}
+              onPress={() => navigateTo("/(app)/finance/transactions")}
+            >
+              <Text style={styles.seeAllText}>See all</Text>
+              <ArrowRight size={13} color={theme.colors.primary} />
+            </TouchableOpacity>
+          </View>
+
+          {txLoading ? (
+            <SkeletonCard />
+          ) : transactions.length === 0 ? (
+            <Card style={styles.emptyCard}>
+              <Text style={styles.emptyText}>No recent transactions</Text>
+              <TouchableOpacity
+                style={styles.emptyActionBtn}
+                activeOpacity={0.7}
+                onPress={() => {
+                  haptics.medium()
+                  router.push("/modal/add-transaction")
+                }}
+              >
+                <Plus size={14} color={theme.colors.primary} />
+                <Text style={styles.emptyActionText}>Add Transaction</Text>
+              </TouchableOpacity>
+            </Card>
+          ) : (
+            <Card style={styles.listCard}>
+              {transactions.map((tx: Transaction, idx) => (
+                <TransactionListItem
+                  key={tx.id || idx}
+                  item={tx}
+                  baseCurrency={baseCurrency}
+                  account={
+                    tx.accountId ? accountsMap.get(tx.accountId) : undefined
+                  }
+                  budget={tx.budgetId ? budgetsMap.get(tx.budgetId) : undefined}
+                  onPress={() =>
+                    tx.id
+                      ? navigateTo(`/(app)/finance/transactions/${tx.id}`)
+                      : navigateTo("/(app)/finance/transactions")
+                  }
+                  showBorderBottom={idx < transactions.length - 1}
+                />
+              ))}
+              <TouchableOpacity
+                style={styles.cardFooterAction}
+                activeOpacity={0.7}
+                onPress={() => {
+                  haptics.medium()
+                  router.push("/modal/add-transaction")
+                }}
+              >
+                <Plus size={14} color={theme.colors.primary} />
+                <Text style={styles.cardFooterActionText}>Add Transaction</Text>
+              </TouchableOpacity>
+            </Card>
+          )}
         </View>
 
-        {/* Section 1: Accounts Summary Preview */}
+        {/* Section 2: Accounts Summary Preview */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Caption style={styles.sectionHeader}>ACCOUNTS SUMMARY</Caption>
@@ -628,362 +675,7 @@ export default function FinanceHubScreen() {
           )}
         </View>
 
-        {/* Section 2: Pending Scheduled / Recurring */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Caption style={styles.sectionHeader}>
-              PENDING SCHEDULED ({scheduledList.length})
-            </Caption>
-            <TouchableOpacity
-              style={styles.seeAllBtn}
-              activeOpacity={0.7}
-              onPress={() => navigateTo("/(app)/finance/recurring")}
-            >
-              <Text style={styles.seeAllText}>See all</Text>
-              <ArrowRight size={13} color={theme.colors.primary} />
-            </TouchableOpacity>
-          </View>
-
-          {scheduledLoading ? (
-            <SkeletonCard />
-          ) : scheduledList.length === 0 ? (
-            <Card style={styles.emptyCard}>
-              <Text style={styles.emptyText}>
-                No pending scheduled transactions
-              </Text>
-            </Card>
-          ) : (
-            <Card style={styles.listCard}>
-              {scheduledList
-                .slice(0, 3)
-                .map((st: ScheduledTransaction, idx) => {
-                  const isIncome = st.type === "INCOME"
-                  const dueBadge = getDueDateBadge(st.dueDate)
-
-                  return (
-                    <View
-                      key={st.id || idx}
-                      style={[
-                        styles.txRow,
-                        idx < Math.min(scheduledList.length, 3) - 1 &&
-                          styles.rowBorder,
-                      ]}
-                    >
-                      <TouchableOpacity
-                        style={styles.txMainPressable}
-                        activeOpacity={0.7}
-                        onPress={() => {
-                          haptics.light()
-                          router.push({
-                            pathname: "/modal/add-transaction",
-                            params: {
-                              type: "SCHEDULED",
-                              scheduledTransactionId: st.id,
-                            },
-                          })
-                        }}
-                      >
-                        <View style={styles.txLeft}>
-                          <View
-                            style={[
-                              styles.actionIconBadge,
-                              {
-                                backgroundColor: isIncome
-                                  ? theme.colors.successSubtle
-                                  : theme.colors.primarySubtle,
-                              },
-                            ]}
-                          >
-                            {isIncome ? (
-                              <ArrowDownLeft
-                                size={16}
-                                color={theme.colors.success}
-                              />
-                            ) : (
-                              <CalendarClock
-                                size={16}
-                                color={theme.colors.primary}
-                              />
-                            )}
-                          </View>
-                          <View style={styles.itemInfo}>
-                            <Text style={styles.txName} numberOfLines={1}>
-                              {getScheduledTitle(st)}
-                            </Text>
-                            <View style={styles.badgeRow}>
-                              {st.dueDate ? (
-                                <Text style={styles.txMeta}>
-                                  {formatDate(st.dueDate)}
-                                </Text>
-                              ) : null}
-                              {isIncome ? (
-                                <Badge
-                                  size="sm"
-                                  label="Deposit Due"
-                                  bg={theme.colors.successSubtle}
-                                  border="rgba(16, 185, 129, 0.3)"
-                                  color={theme.colors.success}
-                                />
-                              ) : dueBadge ? (
-                                <Badge
-                                  size="sm"
-                                  label={dueBadge.label}
-                                  bg={
-                                    dueBadge.isOverdue
-                                      ? theme.colors.destructiveSubtle
-                                      : dueBadge.isToday
-                                        ? theme.colors.warningSubtle
-                                        : theme.colors.surfaceHighlight
-                                  }
-                                  border={
-                                    dueBadge.isOverdue
-                                      ? "rgba(244, 63, 94, 0.3)"
-                                      : dueBadge.isToday
-                                        ? "rgba(245, 158, 11, 0.3)"
-                                        : theme.colors.border
-                                  }
-                                  color={
-                                    dueBadge.isOverdue
-                                      ? theme.colors.destructive
-                                      : dueBadge.isToday
-                                        ? theme.colors.warning
-                                        : theme.colors.textMuted
-                                  }
-                                />
-                              ) : null}
-                            </View>
-                          </View>
-                        </View>
-
-                        <MonoAmount
-                          size="sm"
-                          color={
-                            isIncome
-                              ? theme.colors.success
-                              : theme.colors.textPrimary
-                          }
-                        >
-                          {isIncome ? "+" : "-"}
-                          {formatAmount(st.amount, st.currency || baseCurrency)}
-                        </MonoAmount>
-                      </TouchableOpacity>
-
-                      <MenuView
-                        title={getScheduledTitle(st)}
-                        colorScheme="dark"
-                        style={styles.menuTriggerWrapper}
-                        onPressAction={({ nativeEvent }) => {
-                          if (nativeEvent.event === "confirm") {
-                            haptics.light()
-                            router.push({
-                              pathname: "/modal/add-transaction",
-                              params: {
-                                type: "SCHEDULED",
-                                scheduledTransactionId: st.id,
-                              },
-                            })
-                          } else if (nativeEvent.event === "skip") {
-                            promptSkipScheduled(st)
-                          }
-                        }}
-                        actions={[
-                          {
-                            id: "confirm",
-                            title: isIncome
-                              ? "Confirm Deposit"
-                              : "Confirm / Pay",
-                            image: isIncome ? depositIcon : confirmIcon,
-                          },
-                          {
-                            id: "skip",
-                            title: "Skip Cycle",
-                            attributes: {
-                              destructive: true,
-                            },
-                            image: skipIcon,
-                          },
-                        ]}
-                      >
-                        <View style={styles.dotsBtn}>
-                          <MoreVertical
-                            size={18}
-                            color={theme.colors.textMuted}
-                          />
-                        </View>
-                      </MenuView>
-                    </View>
-                  )
-                })}
-            </Card>
-          )}
-        </View>
-
-        {/* Section 3: Debts & Loans */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Caption style={styles.sectionHeader}>
-              DEBTS & LOANS ({borrowingsList.length})
-            </Caption>
-            <TouchableOpacity
-              style={styles.seeAllBtn}
-              activeOpacity={0.7}
-              onPress={() => navigateTo("/(app)/finance/borrowing")}
-            >
-              <Text style={styles.seeAllText}>See all</Text>
-              <ArrowRight size={13} color={theme.colors.primary} />
-            </TouchableOpacity>
-          </View>
-
-          {borrowingsLoading ? (
-            <SkeletonCard />
-          ) : borrowingsList.length === 0 ? (
-            <Card style={styles.emptyCard}>
-              <Text style={styles.emptyText}>No active debts or loans</Text>
-            </Card>
-          ) : (
-            <Card style={styles.listCard}>
-              {borrowingsList.slice(0, 3).map((b: Borrowing, idx) => {
-                const isLent = b.direction === "LENT"
-
-                return (
-                  <View
-                    key={b.id || idx}
-                    style={[
-                      styles.txRow,
-                      idx < Math.min(borrowingsList.length, 3) - 1 &&
-                        styles.rowBorder,
-                    ]}
-                  >
-                    <TouchableOpacity
-                      style={styles.txMainPressable}
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        haptics.light()
-                        router.push({
-                          pathname: "/modal/add-transaction",
-                          params: {
-                            type: "BORROWING",
-                            borrowingId: b.id,
-                          },
-                        })
-                      }}
-                    >
-                      <View style={styles.txLeft}>
-                        <View
-                          style={[
-                            styles.actionIconBadge,
-                            {
-                              backgroundColor: isLent
-                                ? theme.colors.successSubtle
-                                : theme.colors.destructiveSubtle,
-                            },
-                          ]}
-                        >
-                          <HandCoins
-                            size={16}
-                            color={
-                              isLent
-                                ? theme.colors.success
-                                : theme.colors.destructive
-                            }
-                          />
-                        </View>
-                        <View style={styles.itemInfo}>
-                          <Text style={styles.txName} numberOfLines={1}>
-                            {b.counterparty || "Borrowing"}
-                          </Text>
-                          <View style={styles.badgeRow}>
-                            <Badge
-                              size="sm"
-                              label={isLent ? "Owed to you" : "You owe"}
-                              bg={
-                                isLent
-                                  ? theme.colors.successSubtle
-                                  : theme.colors.destructiveSubtle
-                              }
-                              border={
-                                isLent
-                                  ? "rgba(16, 185, 129, 0.3)"
-                                  : "rgba(244, 63, 94, 0.3)"
-                              }
-                              color={
-                                isLent
-                                  ? theme.colors.success
-                                  : theme.colors.destructive
-                              }
-                            />
-                            {b.dueAt ? (
-                              <Text style={styles.txMeta}>
-                                Due {formatDate(b.dueAt)}
-                              </Text>
-                            ) : null}
-                          </View>
-                        </View>
-                      </View>
-
-                      <MonoAmount
-                        size="sm"
-                        color={
-                          isLent
-                            ? theme.colors.success
-                            : theme.colors.destructive
-                        }
-                      >
-                        {formatAmount(
-                          b.remainingAmount || b.totalAmount,
-                          b.currency || baseCurrency
-                        )}
-                      </MonoAmount>
-                    </TouchableOpacity>
-
-                    <MenuView
-                      title={b.counterparty || "Borrowing"}
-                      colorScheme="dark"
-                      style={styles.menuTriggerWrapper}
-                      onPressAction={({ nativeEvent }) => {
-                        if (nativeEvent.event === "pay") {
-                          haptics.light()
-                          router.push({
-                            pathname: "/modal/add-transaction",
-                            params: {
-                              type: "BORROWING",
-                              borrowingId: b.id,
-                            },
-                          })
-                        } else if (nativeEvent.event === "details") {
-                          navigateTo("/(app)/finance/borrowing")
-                        }
-                      }}
-                      actions={[
-                        {
-                          id: "pay",
-                          title: isLent
-                            ? "Record Payment Received"
-                            : "Log Repayment",
-                          image: paymentIcon,
-                        },
-                        {
-                          id: "details",
-                          title: "View Details",
-                          image: detailsIcon,
-                        },
-                      ]}
-                    >
-                      <View style={styles.dotsBtn}>
-                        <MoreVertical
-                          size={18}
-                          color={theme.colors.textMuted}
-                        />
-                      </View>
-                    </MenuView>
-                  </View>
-                )
-              })}
-            </Card>
-          )}
-        </View>
-
-        {/* Section 4: Budget Health Overview */}
+        {/* Section 3: Budget Health Overview */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Caption style={styles.sectionHeader}>BUDGET HEALTH</Caption>
@@ -1201,67 +893,357 @@ export default function FinanceHubScreen() {
           )}
         </View>
 
-        {/* Section 5: Recent Transactions Preview */}
+        {/* Section 4: Pending Scheduled / Recurring */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <Caption style={styles.sectionHeader}>RECENT TRANSACTIONS</Caption>
+            <Caption style={styles.sectionHeader}>
+              PENDING SCHEDULED ({scheduledList.length})
+            </Caption>
             <TouchableOpacity
               style={styles.seeAllBtn}
               activeOpacity={0.7}
-              onPress={() => navigateTo("/(app)/finance/transactions")}
+              onPress={() => navigateTo("/(app)/finance/recurring")}
             >
               <Text style={styles.seeAllText}>See all</Text>
               <ArrowRight size={13} color={theme.colors.primary} />
             </TouchableOpacity>
           </View>
 
-          {txLoading ? (
+          {scheduledLoading ? (
             <SkeletonCard />
-          ) : transactions.length === 0 ? (
+          ) : scheduledList.length === 0 ? (
             <Card style={styles.emptyCard}>
-              <Text style={styles.emptyText}>No recent transactions</Text>
-              <TouchableOpacity
-                style={styles.emptyActionBtn}
-                activeOpacity={0.7}
-                onPress={() => {
-                  haptics.medium()
-                  router.push("/modal/add-transaction")
-                }}
-              >
-                <Plus size={14} color={theme.colors.primary} />
-                <Text style={styles.emptyActionText}>Add Transaction</Text>
-              </TouchableOpacity>
+              <Text style={styles.emptyText}>
+                No pending scheduled transactions
+              </Text>
             </Card>
           ) : (
             <Card style={styles.listCard}>
-              {transactions.map((tx: Transaction, idx) => (
-                <TransactionListItem
-                  key={tx.id || idx}
-                  item={tx}
-                  baseCurrency={baseCurrency}
-                  account={
-                    tx.accountId ? accountsMap.get(tx.accountId) : undefined
-                  }
-                  budget={tx.budgetId ? budgetsMap.get(tx.budgetId) : undefined}
-                  onPress={() =>
-                    tx.id
-                      ? navigateTo(`/(app)/finance/transactions/${tx.id}`)
-                      : navigateTo("/(app)/finance/transactions")
-                  }
-                  showBorderBottom={idx < transactions.length - 1}
-                />
-              ))}
-              <TouchableOpacity
-                style={styles.cardFooterAction}
-                activeOpacity={0.7}
-                onPress={() => {
-                  haptics.medium()
-                  router.push("/modal/add-transaction")
-                }}
-              >
-                <Plus size={14} color={theme.colors.primary} />
-                <Text style={styles.cardFooterActionText}>Add Transaction</Text>
-              </TouchableOpacity>
+              {scheduledList
+                .slice(0, 3)
+                .map((st: ScheduledTransaction, idx) => {
+                  const isIncome = st.type === "INCOME"
+                  const dueBadge = getDueDateBadge(st.dueDate)
+
+                  return (
+                    <View
+                      key={st.id || idx}
+                      style={[
+                        styles.txRow,
+                        idx < Math.min(scheduledList.length, 3) - 1 &&
+                          styles.rowBorder,
+                      ]}
+                    >
+                      <TouchableOpacity
+                        style={styles.txMainPressable}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          haptics.light()
+                          router.push({
+                            pathname: "/modal/add-transaction",
+                            params: {
+                              type: "SCHEDULED",
+                              scheduledTransactionId: st.id,
+                            },
+                          })
+                        }}
+                      >
+                        <View style={styles.txLeft}>
+                          <View
+                            style={[
+                              styles.actionIconBadge,
+                              {
+                                backgroundColor: isIncome
+                                  ? theme.colors.successSubtle
+                                  : theme.colors.primarySubtle,
+                              },
+                            ]}
+                          >
+                            {isIncome ? (
+                              <ArrowDownLeft
+                                size={16}
+                                color={theme.colors.success}
+                              />
+                            ) : (
+                              <CalendarClock
+                                size={16}
+                                color={theme.colors.primary}
+                              />
+                            )}
+                          </View>
+                          <View style={styles.itemInfo}>
+                            <Text style={styles.txName} numberOfLines={1}>
+                              {getScheduledTitle(st)}
+                            </Text>
+                            <View style={styles.badgeRow}>
+                              {st.dueDate ? (
+                                <Text style={styles.txMeta}>
+                                  {formatDate(st.dueDate)}
+                                </Text>
+                              ) : null}
+                              {isIncome ? (
+                                <Badge
+                                  size="sm"
+                                  label="Deposit Due"
+                                  bg={theme.colors.successSubtle}
+                                  border="rgba(16, 185, 129, 0.3)"
+                                  color={theme.colors.success}
+                                />
+                              ) : dueBadge ? (
+                                <Badge
+                                  size="sm"
+                                  label={dueBadge.label}
+                                  bg={
+                                    dueBadge.isOverdue
+                                      ? theme.colors.destructiveSubtle
+                                      : dueBadge.isToday
+                                        ? theme.colors.warningSubtle
+                                        : theme.colors.surfaceHighlight
+                                  }
+                                  border={
+                                    dueBadge.isOverdue
+                                      ? "rgba(244, 63, 94, 0.3)"
+                                      : dueBadge.isToday
+                                        ? "rgba(245, 158, 11, 0.3)"
+                                        : theme.colors.border
+                                  }
+                                  color={
+                                    dueBadge.isOverdue
+                                      ? theme.colors.destructive
+                                      : dueBadge.isToday
+                                        ? theme.colors.warning
+                                        : theme.colors.textMuted
+                                  }
+                                />
+                              ) : null}
+                            </View>
+                          </View>
+                        </View>
+
+                        <MonoAmount
+                          size="sm"
+                          color={
+                            isIncome
+                              ? theme.colors.success
+                              : theme.colors.textPrimary
+                          }
+                        >
+                          {isIncome ? "+" : "-"}
+                          {formatAmount(st.amount, st.currency || baseCurrency)}
+                        </MonoAmount>
+                      </TouchableOpacity>
+
+                      <MenuView
+                        title={getScheduledTitle(st)}
+                        colorScheme="dark"
+                        style={styles.menuTriggerWrapper}
+                        onPressAction={({ nativeEvent }) => {
+                          if (nativeEvent.event === "confirm") {
+                            haptics.light()
+                            router.push({
+                              pathname: "/modal/add-transaction",
+                              params: {
+                                type: "SCHEDULED",
+                                scheduledTransactionId: st.id,
+                              },
+                            })
+                          } else if (nativeEvent.event === "skip") {
+                            promptSkipScheduled(st)
+                          }
+                        }}
+                        actions={[
+                          {
+                            id: "confirm",
+                            title: isIncome
+                              ? "Confirm Deposit"
+                              : "Confirm / Pay",
+                            image: isIncome ? depositIcon : confirmIcon,
+                          },
+                          {
+                            id: "skip",
+                            title: "Skip Cycle",
+                            attributes: {
+                              destructive: true,
+                            },
+                            image: skipIcon,
+                          },
+                        ]}
+                      >
+                        <View style={styles.dotsBtn}>
+                          <MoreVertical
+                            size={18}
+                            color={theme.colors.textMuted}
+                          />
+                        </View>
+                      </MenuView>
+                    </View>
+                  )
+                })}
+            </Card>
+          )}
+        </View>
+
+        {/* Section 5: Debts & Loans */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <Caption style={styles.sectionHeader}>
+              DEBTS & LOANS ({borrowingsList.length})
+            </Caption>
+            <TouchableOpacity
+              style={styles.seeAllBtn}
+              activeOpacity={0.7}
+              onPress={() => navigateTo("/(app)/finance/borrowing")}
+            >
+              <Text style={styles.seeAllText}>See all</Text>
+              <ArrowRight size={13} color={theme.colors.primary} />
+            </TouchableOpacity>
+          </View>
+
+          {borrowingsLoading ? (
+            <SkeletonCard />
+          ) : borrowingsList.length === 0 ? (
+            <Card style={styles.emptyCard}>
+              <Text style={styles.emptyText}>No active debts or loans</Text>
+            </Card>
+          ) : (
+            <Card style={styles.listCard}>
+              {borrowingsList.slice(0, 3).map((b: Borrowing, idx) => {
+                const isLent = b.direction === "LENT"
+
+                return (
+                  <View
+                    key={b.id || idx}
+                    style={[
+                      styles.txRow,
+                      idx < Math.min(borrowingsList.length, 3) - 1 &&
+                        styles.rowBorder,
+                    ]}
+                  >
+                    <TouchableOpacity
+                      style={styles.txMainPressable}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        haptics.light()
+                        router.push({
+                          pathname: "/modal/add-transaction",
+                          params: {
+                            type: "BORROWING",
+                            borrowingId: b.id,
+                          },
+                        })
+                      }}
+                    >
+                      <View style={styles.txLeft}>
+                        <View
+                          style={[
+                            styles.actionIconBadge,
+                            {
+                              backgroundColor: isLent
+                                ? theme.colors.successSubtle
+                                : theme.colors.destructiveSubtle,
+                            },
+                          ]}
+                        >
+                          <HandCoins
+                            size={16}
+                            color={
+                              isLent
+                                ? theme.colors.success
+                                : theme.colors.destructive
+                            }
+                          />
+                        </View>
+                        <View style={styles.itemInfo}>
+                          <Text style={styles.txName} numberOfLines={1}>
+                            {b.counterparty || "Borrowing"}
+                          </Text>
+                          <View style={styles.badgeRow}>
+                            <Badge
+                              size="sm"
+                              label={isLent ? "Owed to you" : "You owe"}
+                              bg={
+                                isLent
+                                  ? theme.colors.successSubtle
+                                  : theme.colors.destructiveSubtle
+                              }
+                              border={
+                                isLent
+                                  ? "rgba(16, 185, 129, 0.3)"
+                                  : "rgba(244, 63, 94, 0.3)"
+                              }
+                              color={
+                                isLent
+                                  ? theme.colors.success
+                                  : theme.colors.destructive
+                              }
+                            />
+                            {b.dueAt ? (
+                              <Text style={styles.txMeta}>
+                                Due {formatDate(b.dueAt)}
+                              </Text>
+                            ) : null}
+                          </View>
+                        </View>
+                      </View>
+
+                      <MonoAmount
+                        size="sm"
+                        color={
+                          isLent
+                            ? theme.colors.success
+                            : theme.colors.destructive
+                        }
+                      >
+                        {formatAmount(
+                          b.remainingAmount || b.totalAmount,
+                          b.currency || baseCurrency
+                        )}
+                      </MonoAmount>
+                    </TouchableOpacity>
+
+                    <MenuView
+                      title={b.counterparty || "Borrowing"}
+                      colorScheme="dark"
+                      style={styles.menuTriggerWrapper}
+                      onPressAction={({ nativeEvent }) => {
+                        if (nativeEvent.event === "pay") {
+                          haptics.light()
+                          router.push({
+                            pathname: "/modal/add-transaction",
+                            params: {
+                              type: "BORROWING",
+                              borrowingId: b.id,
+                            },
+                          })
+                        } else if (nativeEvent.event === "details") {
+                          navigateTo("/(app)/finance/borrowing")
+                        }
+                      }}
+                      actions={[
+                        {
+                          id: "pay",
+                          title: isLent
+                            ? "Record Payment Received"
+                            : "Log Repayment",
+                          image: paymentIcon,
+                        },
+                        {
+                          id: "details",
+                          title: "View Details",
+                          image: detailsIcon,
+                        },
+                      ]}
+                    >
+                      <View style={styles.dotsBtn}>
+                        <MoreVertical
+                          size={18}
+                          color={theme.colors.textMuted}
+                        />
+                      </View>
+                    </MenuView>
+                  </View>
+                )
+              })}
             </Card>
           )}
         </View>
