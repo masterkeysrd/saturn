@@ -103,7 +103,7 @@ func (s *InsightsStore) GetBudgetDistribution(ctx context.Context, filter *finan
 		b.name as budget_name,
 		b.color as budget_color,
 		b.icon as budget_icon,
-		b.limit_amount as budget_limit,
+		COALESCE(bp.limit_amount, b.limit_amount) as budget_limit,
 		b.currency as budget_currency,
 		t.spent_in_base,
 		t.spent_in_local_matching,
@@ -117,12 +117,12 @@ func (s *InsightsStore) GetBudgetDistribution(ctx context.Context, filter *finan
 		WHERE budget_id = b.id AND type = 'EXPENSE' AND effective_date >= $2 AND effective_date <= $3
 	) t ON TRUE
 	LEFT JOIN LATERAL (
-		SELECT exchange_rate_to_base 
+		SELECT exchange_rate_to_base, limit_amount
 		FROM finance.budget_period bp 
 		WHERE bp.budget_id = b.id AND bp.start_date <= $3 AND bp.end_date >= $2
 		ORDER BY bp.start_date DESC LIMIT 1
 	) bp ON TRUE
-	WHERE b.space_id = $1`
+	WHERE b.space_id = $1 AND (LOWER(b.status) = 'active' OR t.spent_in_base > 0)`
 
 	startDateStr := filter.StartDate.UTC().Format("2006-01-02")
 	endDateStr := filter.EndDate.UTC().Format("2006-01-02")

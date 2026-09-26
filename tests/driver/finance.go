@@ -1204,6 +1204,33 @@ func (f *FinanceDriver) DeleteBudget(tb testing.TB, opts BudgetDeleteOptions) *F
 	return f
 }
 
+// CloseBudget marks an existing budget category as closed via UpdateBudget.
+func (f *FinanceDriver) CloseBudget(tb testing.TB, budgetName string) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+	budID, ok := f.driver.state.Budgets[budgetName]
+	if !ok {
+		tb.Fatalf("budget named %q not found in state registry", budgetName)
+	}
+
+	client := f.getClient()
+	_, err := client.UpdateBudget(tb.Context(), &financev1.UpdateBudgetRequest{
+		Id: budID,
+		Budget: &financev1.Budget{
+			Status: financev1.Budget_CLOSED,
+		},
+		UpdateMask: &fieldmaskpb.FieldMask{
+			Paths: []string{"status"},
+		},
+	})
+	if err != nil {
+		tb.Fatalf("CloseBudget SDK call failed: %v", err)
+	}
+	return f
+}
+
 // CreateRecurringTransaction creates a recurring transaction subscription linked to a named budget.
 func (f *FinanceDriver) CreateRecurringTransaction(tb testing.TB, expenseName, budgetName string, amount int64, currency string) *FinanceDriver {
 	tb.Helper()
@@ -1441,6 +1468,68 @@ func (f *FinanceDriver) AssertSpentInsights(tb testing.TB, expectedTotalSpent in
 	if spent.GetTotalSpent() != expectedTotalSpent {
 		tb.Errorf("GetInsights TotalSpent = %d, want %d (Distributions: %+v, Trend: %+v)", spent.GetTotalSpent(), expectedTotalSpent, spent.GetDistributions(), spent.GetTrend())
 	}
+	return f
+}
+
+// SpentInsightsAssertions specifies granular expectations for spent insights analytics.
+type SpentInsightsAssertions struct {
+	TotalSpent          int64
+	TotalLimit          int64
+	ExpectedBudgetNames []string
+	OmittedBudgetNames  []string
+}
+
+// AssertSpentInsightsDetailed verifies analytics insights metrics with granular checks on limit, spent, and distributions.
+func (f *FinanceDriver) AssertSpentInsightsDetailed(tb testing.TB, expected SpentInsightsAssertions) *FinanceDriver {
+	tb.Helper()
+	if tb.Failed() {
+		return f
+	}
+
+	client := f.getClient()
+	now := time.Now()
+	start := timestamppb.New(now.AddDate(-1, 0, 0))
+	end := timestamppb.New(now.AddDate(1, 0, 0))
+
+	resp, err := client.GetInsights(tb.Context(), &financev1.GetInsightsRequest{
+		Granularity: financev1.InsightGranularity_MONTHLY,
+		StartDate:   start,
+		EndDate:     end,
+	})
+	if err != nil {
+		tb.Fatalf("GetInsights SDK call failed: %v", err)
+	}
+
+	spent := resp.GetSpent()
+	if spent == nil {
+		tb.Fatalf("GetInsights returned nil spent statistics")
+	}
+
+	if spent.GetTotalSpent() != expected.TotalSpent {
+		tb.Errorf("GetInsights TotalSpent = %d, want %d", spent.GetTotalSpent(), expected.TotalSpent)
+	}
+
+	if spent.GetTotalLimit() != expected.TotalLimit {
+		tb.Errorf("GetInsights TotalLimit = %d, want %d", spent.GetTotalLimit(), expected.TotalLimit)
+	}
+
+	distMap := make(map[string]bool)
+	for _, d := range spent.GetDistributions() {
+		distMap[d.GetBudgetName()] = true
+	}
+
+	for _, name := range expected.ExpectedBudgetNames {
+		if !distMap[name] {
+			tb.Errorf("GetInsights distributions missing expected budget %q (Distributions: %+v)", name, spent.GetDistributions())
+		}
+	}
+
+	for _, name := range expected.OmittedBudgetNames {
+		if distMap[name] {
+			tb.Errorf("GetInsights distributions should omit %q, but it was present (Distributions: %+v)", name, spent.GetDistributions())
+		}
+	}
+
 	return f
 }
 
