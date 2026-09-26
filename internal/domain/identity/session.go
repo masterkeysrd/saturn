@@ -99,8 +99,11 @@ func (s *Session) IsReplaced() bool {
 	return s.ReplacedAt != nil
 }
 
-// IsExpired checks whether the session has exceeded its sliding expiration.
+// IsExpired checks whether the session has exceeded its sliding or absolute expiration.
 func (s *Session) IsExpired(now time.Time) bool {
+	if !s.AbsoluteExpiresAt.IsZero() && now.After(s.AbsoluteExpiresAt) {
+		return true
+	}
 	if s.ExpiresAt.IsZero() {
 		return false
 	}

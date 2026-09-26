@@ -217,7 +217,7 @@ func (s *SessionStore) RevokeFamily(ctx context.Context, familyID identity.Token
 		Set(goqu.Record{"revoked_at": now}).
 		Where(
 			goqu.C("token_family_id").Eq(string(familyID)),
-			goqu.Or(goqu.C("revoked_at").IsNull(), goqu.C("replaced_at").IsNotNull()),
+			goqu.C("revoked_at").IsNull(),
 		).
 		Prepared(true).
 		ToSQL()
@@ -239,7 +239,7 @@ func (s *SessionStore) RevokeAllForUser(ctx context.Context, userID identity.Use
 		Set(goqu.Record{"revoked_at": now}).
 		Where(
 			goqu.C("user_id").Eq(string(userID)),
-			goqu.Or(goqu.C("revoked_at").IsNull(), goqu.C("replaced_at").IsNotNull()),
+			goqu.C("revoked_at").IsNull(),
 		).
 		Prepared(true).
 		ToSQL()
