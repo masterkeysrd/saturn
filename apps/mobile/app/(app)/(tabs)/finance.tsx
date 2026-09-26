@@ -23,15 +23,12 @@ import {
   HandCoins,
   MoreVertical,
   Inbox,
+  AlertTriangle,
 } from "lucide-react-native"
-import {
-  formatAmount,
-  getBudgetColors,
-  calculateAccountMetrics,
-} from "@saturn/core"
+import { formatAmount, calculateAccountMetrics } from "@saturn/core"
 import {
   useListTransactionsQuery,
-  useListBudgetsQuery,
+  useGetInsightsQuery,
   useListAccountsQuery,
   useListInstitutionsQuery,
   useGetFinanceSettingsQuery,
@@ -49,7 +46,7 @@ import {
 } from "@saturn/api/saturn/finance/v1/finance"
 import { useCurrencyConversionPreview } from "@saturn/hooks/finance"
 import { useSpace } from "@/lib/space-context"
-import { theme, getNativeBudgetColors } from "@/lib/theme"
+import { theme } from "@/lib/theme"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Icon } from "@expo/ui"
@@ -59,7 +56,6 @@ import { Badge } from "@/components/ui/badge"
 import { SkeletonCard } from "@/components/ui/skeleton-loader"
 import { CardAccountItem } from "@/components/finance/card-account-item"
 import { TransactionListItem } from "@/components/finance/transaction-list-item"
-import { getBudgetIcon } from "@/lib/budget-icons"
 import { useToast } from "@/components/ui/toast"
 import { haptics } from "@/lib/haptics"
 
@@ -118,11 +114,16 @@ export default function FinanceHubScreen() {
     { enabled: !!activeSpaceId }
   )
 
-  // 5. Active Budgets Preview
-  const { data: budgetsData, isLoading: budgetsLoading } = useListBudgetsQuery(
-    { pageSize: 100, pageToken: "", view: "FULL" },
-    { enabled: !!activeSpaceId }
-  )
+  // 5. Monthly Insights (Aggregated Budget Usage & Overall Spending)
+  const { data: insightsData, isLoading: insightsLoading } =
+    useGetInsightsQuery(
+      {
+        granularity: "MONTHLY",
+        startDate: "",
+        endDate: "",
+      },
+      { enabled: !!activeSpaceId }
+    )
 
   // 6. Institutions for Logo & Info
   const { data: instData } = useListInstitutionsQuery(
@@ -183,7 +184,6 @@ export default function FinanceHubScreen() {
 
   const accounts = accountsData?.accounts || []
   const transactions = txData?.transactions || []
-  const budgets = budgetsData?.budgets || []
 
   // Compute live multi-currency metrics
   const metrics = useMemo(() => {
@@ -198,13 +198,73 @@ export default function FinanceHubScreen() {
     return map
   }, [accounts])
 
+  // Pre-aggregated budget metrics & category usage from backend Insights
+  const budgetStats = useMemo(() => {
+    const spentInfo = insightsData?.spent
+    const totalLimitCents = Number(spentInfo?.totalLimit || "0")
+    const totalSpentCents = Number(spentInfo?.totalSpent || "0")
+    const remainingCents = Number(spentInfo?.remainingBudget || "0")
+    const distributions = spentInfo?.distributions || []
+
+    const hasBudgets = totalLimitCents > 0 || distributions.length > 0
+    const rawPercentage =
+      totalLimitCents > 0
+        ? Math.round((totalSpentCents / totalLimitCents) * 100)
+        : 0
+    const progressPercentage = Math.min(Math.max(rawPercentage, 0), 100)
+    const isOver = totalSpentCents > totalLimitCents && totalLimitCents > 0
+    const isWarning = rawPercentage >= 85 && !isOver
+
+    const onTrackCount = distributions.filter(
+      (d) => (d.usagePercentage || 0) < 85
+    ).length
+    const warningCount = distributions.filter(
+      (d) => (d.usagePercentage || 0) >= 85 && (d.usagePercentage || 0) <= 100
+    ).length
+    const overCount = distributions.filter(
+      (d) => (d.usagePercentage || 0) > 100
+    ).length
+
+    // Critical budget callout (highest usage with >= 85%)
+    const sortedByUsage = [...distributions].sort(
+      (a, b) => (b.usagePercentage || 0) - (a.usagePercentage || 0)
+    )
+    const topCritical =
+      sortedByUsage.length > 0 && (sortedByUsage[0].usagePercentage || 0) >= 85
+        ? sortedByUsage[0]
+        : null
+
+    return {
+      hasBudgets,
+      totalLimitCents,
+      totalSpentCents,
+      remainingCents,
+      rawPercentage,
+      progressPercentage,
+      isOver,
+      isWarning,
+      onTrackCount,
+      warningCount,
+      overCount,
+      topCritical,
+    }
+  }, [insightsData])
+
   const budgetsMap = useMemo(() => {
     const map = new Map<string, Budget>()
-    budgets.forEach((b) => {
-      if (b.id) map.set(b.id, b)
+    const distributions = insightsData?.spent?.distributions || []
+    distributions.forEach((d) => {
+      if (d.budgetId) {
+        map.set(d.budgetId, {
+          id: d.budgetId,
+          name: d.budgetName,
+          color: d.budgetColor,
+          icon: d.budgetIcon,
+        } as Budget)
+      }
     })
     return map
-  }, [budgets])
+  }, [insightsData])
 
   const scheduledList = useMemo(() => {
     const list = scheduledData?.scheduledTransactions || []
@@ -923,10 +983,10 @@ export default function FinanceHubScreen() {
           )}
         </View>
 
-        {/* Section 4: Active Budgets Preview */}
+        {/* Section 4: Budget Health Overview */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <Caption style={styles.sectionHeader}>ACTIVE BUDGETS</Caption>
+            <Caption style={styles.sectionHeader}>BUDGET HEALTH</Caption>
             <TouchableOpacity
               style={styles.seeAllBtn}
               activeOpacity={0.7}
@@ -937,99 +997,207 @@ export default function FinanceHubScreen() {
             </TouchableOpacity>
           </View>
 
-          {budgetsLoading ? (
-            <SkeletonCard />
-          ) : budgets.length === 0 ? (
+          {insightsLoading ? (
+            <SkeletonCard height={140} />
+          ) : !budgetStats.hasBudgets ? (
             <Card style={styles.emptyCard}>
               <Text style={styles.emptyText}>No active budgets configured</Text>
             </Card>
           ) : (
-            <View style={styles.budgetsGrid}>
-              {budgets.slice(0, 3).map((b: Budget) => {
-                const palette = getBudgetColors(b.color)
-                const spentCents = Number(b.currentPeriod?.spentAmount || "0")
-                const limitCents = Number(b.limitAmount || "0")
-                const percentage =
-                  limitCents > 0
-                    ? Math.min(Math.round((spentCents / limitCents) * 100), 100)
-                    : 0
-                const nativeColors = getNativeBudgetColors(palette.value)
-                const isOver = percentage >= 95
-                const BIcon = getBudgetIcon(b.icon, b.name)
+            <Card
+              style={styles.budgetStatsCard}
+              onPress={() => navigateTo("/(app)/finance/budgets")}
+            >
+              {/* Header row: Total Spent / Limit & Percentage Badge */}
+              <View style={styles.budgetStatsHeader}>
+                <View style={styles.budgetStatsSpendCol}>
+                  <View style={styles.budgetStatsLabelRow}>
+                    <PiggyBank size={15} color={theme.colors.accent} />
+                    <Caption style={styles.budgetStatsCaption}>
+                      TOTAL SPENT THIS MONTH
+                    </Caption>
+                  </View>
+                  <View style={styles.budgetStatsAmountRow}>
+                    <MonoAmount size="lg" style={styles.budgetStatsSpentAmount}>
+                      {formatAmount(
+                        String(budgetStats.totalSpentCents),
+                        baseCurrency
+                      )}
+                    </MonoAmount>
+                    <Text style={styles.budgetStatsLimitText}>
+                      {" "}
+                      of{" "}
+                      {formatAmount(
+                        String(budgetStats.totalLimitCents),
+                        baseCurrency
+                      )}
+                    </Text>
+                  </View>
+                </View>
 
-                return (
-                  <Card
-                    key={b.id}
-                    style={styles.budgetCard}
-                    onPress={() =>
-                      b.id
-                        ? navigateTo(`/(app)/finance/budgets/${b.id}`)
-                        : navigateTo("/(app)/finance/budgets")
+                <Badge
+                  size="md"
+                  label={`${budgetStats.rawPercentage}%`}
+                  bg={
+                    budgetStats.isOver
+                      ? theme.colors.destructiveSubtle
+                      : budgetStats.isWarning
+                        ? theme.colors.warningSubtle
+                        : theme.colors.primarySubtle
+                  }
+                  border={
+                    budgetStats.isOver
+                      ? "rgba(244, 63, 94, 0.3)"
+                      : budgetStats.isWarning
+                        ? "rgba(245, 158, 11, 0.3)"
+                        : "rgba(56, 189, 248, 0.3)"
+                  }
+                  color={
+                    budgetStats.isOver
+                      ? theme.colors.destructive
+                      : budgetStats.isWarning
+                        ? theme.colors.warning
+                        : theme.colors.primary
+                  }
+                />
+              </View>
+
+              {/* Progress Bar */}
+              <View style={styles.budgetStatsProgressTrack}>
+                <View
+                  style={[
+                    styles.budgetStatsProgressBar,
+                    {
+                      width: `${budgetStats.progressPercentage}%`,
+                      backgroundColor: budgetStats.isOver
+                        ? theme.colors.destructive
+                        : budgetStats.isWarning
+                          ? theme.colors.warning
+                          : theme.colors.primary,
+                    },
+                  ]}
+                />
+              </View>
+
+              {/* Remaining & Breakdown row */}
+              <View style={styles.budgetStatsFooterRow}>
+                <View style={styles.budgetStatsRemaining}>
+                  <Caption>
+                    {budgetStats.isOver
+                      ? "Over budget by"
+                      : "Remaining allowance"}
+                  </Caption>
+                  <MonoAmount
+                    size="sm"
+                    color={
+                      budgetStats.isOver
+                        ? theme.colors.destructive
+                        : theme.colors.success
                     }
                   >
-                    <View style={styles.budgetHeader}>
-                      <View style={styles.budgetNameRow}>
-                        <View
-                          style={[
-                            styles.budgetIconBadge,
-                            {
-                              backgroundColor: nativeColors.bg,
-                              borderColor: nativeColors.border,
-                            },
-                          ]}
-                        >
-                          <BIcon size={13} color={nativeColors.bar} />
-                        </View>
-                        <Text style={styles.budgetName} numberOfLines={1}>
-                          {b.name}
-                        </Text>
-                      </View>
-                      <Badge
-                        size="sm"
-                        label={`${percentage}%`}
-                        bg={
-                          isOver
-                            ? theme.colors.destructiveSubtle
-                            : nativeColors.bg
-                        }
-                        border={
-                          isOver
-                            ? "rgba(244, 63, 94, 0.3)"
-                            : nativeColors.border
-                        }
-                        color={
-                          isOver ? theme.colors.destructive : nativeColors.text
-                        }
-                      />
-                    </View>
+                    {budgetStats.isOver ? "-" : "+"}
+                    {formatAmount(
+                      String(
+                        budgetStats.isOver
+                          ? budgetStats.totalSpentCents -
+                              budgetStats.totalLimitCents
+                          : budgetStats.remainingCents
+                      ),
+                      baseCurrency
+                    )}
+                  </MonoAmount>
+                </View>
 
-                    {/* Progress Bar */}
-                    <View style={styles.progressTrack}>
+                {/* Health Pills */}
+                <View style={styles.budgetHealthPills}>
+                  {budgetStats.onTrackCount > 0 && (
+                    <View style={styles.healthPill}>
                       <View
                         style={[
-                          styles.progressBar,
-                          {
-                            width: `${percentage}%`,
-                            backgroundColor: isOver
-                              ? theme.colors.destructive
-                              : nativeColors.bar,
-                          },
+                          styles.healthDot,
+                          { backgroundColor: theme.colors.success },
                         ]}
                       />
+                      <Text style={styles.healthPillText}>
+                        {budgetStats.onTrackCount} on track
+                      </Text>
                     </View>
+                  )}
+                  {budgetStats.warningCount > 0 && (
+                    <View style={styles.healthPill}>
+                      <View
+                        style={[
+                          styles.healthDot,
+                          { backgroundColor: theme.colors.warning },
+                        ]}
+                      />
+                      <Text style={styles.healthPillText}>
+                        {budgetStats.warningCount} warning
+                      </Text>
+                    </View>
+                  )}
+                  {budgetStats.overCount > 0 && (
+                    <View style={styles.healthPill}>
+                      <View
+                        style={[
+                          styles.healthDot,
+                          { backgroundColor: theme.colors.destructive },
+                        ]}
+                      />
+                      <Text style={styles.healthPillText}>
+                        {budgetStats.overCount} over
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
 
-                    <View style={styles.budgetFooter}>
-                      <Text style={styles.budgetSpent}>
-                        {formatAmount(String(spentCents), b.currency)}
-                      </Text>
-                      <Text style={styles.budgetLimit}>
-                        of {formatAmount(b.limitAmount, b.currency)}
-                      </Text>
-                    </View>
-                  </Card>
-                )
-              })}
-            </View>
+              {/* Top Alert Callout if a category is warning or over budget */}
+              {budgetStats.topCritical && (
+                <View
+                  style={[
+                    styles.criticalCalloutRow,
+                    budgetStats.topCritical.usagePercentage > 100 &&
+                      styles.criticalCalloutRowOver,
+                  ]}
+                >
+                  <View style={styles.criticalCalloutLeft}>
+                    <AlertTriangle
+                      size={13}
+                      color={
+                        budgetStats.topCritical.usagePercentage > 100
+                          ? theme.colors.destructive
+                          : theme.colors.warning
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.criticalCalloutText,
+                        budgetStats.topCritical.usagePercentage > 100 &&
+                          styles.criticalCalloutTextOver,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {budgetStats.topCritical.budgetName} is at{" "}
+                      {Math.round(budgetStats.topCritical.usagePercentage || 0)}
+                      % (
+                      {formatAmount(
+                        budgetStats.topCritical.spent ||
+                          budgetStats.topCritical.spentInBase,
+                        baseCurrency
+                      )}{" "}
+                      of{" "}
+                      {formatAmount(
+                        budgetStats.topCritical.limit,
+                        baseCurrency
+                      )}
+                      )
+                    </Text>
+                  </View>
+                  <ChevronRight size={13} color={theme.colors.textMuted} />
+                </View>
+              )}
+            </Card>
           )}
         </View>
 
@@ -1323,62 +1491,124 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: theme.colors.primary,
   },
-  budgetsGrid: {
-    gap: 10,
+  budgetStatsCard: {
+    padding: 16,
+    gap: 12,
   },
-  budgetCard: {
-    padding: 14,
-    gap: 10,
-  },
-  budgetHeader: {
+  budgetStatsHeader: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
   },
-  budgetNameRow: {
+  budgetStatsSpendCol: {
+    flex: 1,
+    gap: 2,
+    marginRight: 10,
+  },
+  budgetStatsLabelRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    flex: 1,
-    marginRight: 8,
+    gap: 6,
   },
-  budgetIconBadge: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  budgetName: {
-    fontSize: 14,
+  budgetStatsCaption: {
+    letterSpacing: 0.8,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
   },
-  progressTrack: {
-    height: 6,
+  budgetStatsAmountRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    flexWrap: "wrap",
+    marginTop: 2,
+  },
+  budgetStatsSpentAmount: {
+    marginRight: 4,
+  },
+  budgetStatsLimitText: {
+    fontSize: 13,
+    color: theme.colors.textMuted,
+    fontWeight: "500",
+  },
+  budgetStatsProgressTrack: {
+    height: 8,
     backgroundColor: theme.colors.surfaceHighlight,
-    borderRadius: 3,
+    borderRadius: 4,
     overflow: "hidden",
   },
-  progressBar: {
+  budgetStatsProgressBar: {
     height: "100%",
+    borderRadius: 4,
+  },
+  budgetStatsFooterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  budgetStatsRemaining: {
+    gap: 2,
+  },
+  budgetHealthPills: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+  },
+  healthPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: theme.colors.surfaceElevated,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: theme.radius.full,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  healthDot: {
+    width: 6,
+    height: 6,
     borderRadius: 3,
   },
-  budgetFooter: {
+  healthPillText: {
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+    fontWeight: "500",
+  },
+  criticalCalloutRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "rgba(245, 158, 11, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(245, 158, 11, 0.2)",
+    borderRadius: theme.radius.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginTop: 2,
+    gap: 8,
   },
-  budgetSpent: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
+  criticalCalloutRowOver: {
+    backgroundColor: "rgba(244, 63, 94, 0.08)",
+    borderColor: "rgba(244, 63, 94, 0.2)",
   },
-  budgetLimit: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
+  criticalCalloutLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flex: 1,
+    marginRight: 4,
+  },
+  criticalCalloutText: {
+    fontSize: 11,
+    color: theme.colors.warning,
+    fontWeight: "500",
+    flex: 1,
+  },
+  criticalCalloutTextOver: {
+    color: theme.colors.destructive,
   },
   inboxBanner: {
     flexDirection: "row",
